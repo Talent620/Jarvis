@@ -72,6 +72,11 @@ function normalizeSettings(s: Settings & { anthropicApiKey?: string }): Settings
     s.provider = "anthropic";
   }
   delete s.anthropicApiKey;
+  // Uzupełnij brakujące klucze wartościami wstrzykniętymi przy budowie (Secrets).
+  const injected = typeof __DEFAULT_KEYS__ !== "undefined" ? __DEFAULT_KEYS__ : {};
+  for (const k of Object.keys(s.keys)) {
+    if (!s.keys[k] && injected[k]) s.keys[k] = injected[k];
+  }
   return s;
 }
 
