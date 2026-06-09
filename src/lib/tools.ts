@@ -7,7 +7,7 @@ import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
 import { gmailSearch, gmailSend, gcalList, gcalAdd } from "./google";
 import { rememberFact } from "./memory";
-import { isDesktop, launchApp, openOnPc, powerPc, volumePc } from "./desktop";
+import { launchApp, openOnPc, powerPc, volumePc } from "./desktop";
 import type { Citation } from "../types";
 
 // Bufor cytatów z ostatniego zapytania (research). Resetowany per wywołanie w brain.ts.
@@ -213,12 +213,7 @@ const tools: Tool[] = [
         "service",
       ]),
     },
-    run: ({ service, query }) => {
-      // Na komputerze bez zapytania próbuj uruchomić natywny program (np. Spotify),
-      // inaczej (lub z zapytaniem) otwórz usługę webową.
-      if (isDesktop() && !query) return launchApp(service);
-      return openService(service, query);
-    },
+    run: ({ service, query }) => openService(service, query),
   },
   {
     def: {
