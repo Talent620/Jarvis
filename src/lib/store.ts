@@ -26,6 +26,8 @@ const defaultSettings: Settings = {
   wakeWord: false,
   elevenLabsApiKey: "",
   elevenLabsVoiceId: "",
+  fishAudioApiKey: "",
+  fishAudioVoiceId: "",
   homeAssistantUrl: "",
   homeAssistantToken: "",
 };

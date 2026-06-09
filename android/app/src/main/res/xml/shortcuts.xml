@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="briefing"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_briefing_short"
+        android:shortcutLongLabel="@string/sc_briefing_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="net.serwer256.jarvis"
+            android:targetClass="net.serwer256.jarvis.MainActivity"
+            android:data="jarvis://run?text=Przedstaw%20raport%20poranny" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="weather"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_weather_short"
+        android:shortcutLongLabel="@string/sc_weather_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="net.serwer256.jarvis"
+            android:targetClass="net.serwer256.jarvis.MainActivity"
+            android:data="jarvis://run?text=Jaka%20jest%20pogoda%3F" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="tasks"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_tasks_short"
+        android:shortcutLongLabel="@string/sc_tasks_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="net.serwer256.jarvis"
+            android:targetClass="net.serwer256.jarvis.MainActivity"
+            android:data="jarvis://run?text=Co%20mam%20dzi%C5%9B%20do%20zrobienia%3F" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+</shortcuts>

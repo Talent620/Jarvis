@@ -96,6 +96,10 @@ export interface Settings {
   elevenLabsApiKey: string;
   /** ID głosu ElevenLabs. */
   elevenLabsVoiceId: string;
+  /** Opcjonalny klucz Fish Audio (tani, topowy klon głosu). */
+  fishAudioApiKey: string;
+  /** reference_id głosu Fish Audio (np. sklonowany głos JARVIS). */
+  fishAudioVoiceId: string;
   /** Adres instancji Home Assistant (np. http://homeassistant.local:8123). */
   homeAssistantUrl: string;
   /** Długoterminowy token dostępu Home Assistant. */

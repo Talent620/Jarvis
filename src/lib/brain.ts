@@ -3,7 +3,7 @@ import { toolDefs } from "./tools";
 import { PROVIDERS, autoPick } from "./providers/registry";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
 
-function systemPrompt(): string {
+export function systemPrompt(): string {
   const { userName } = store.settings;
   const memory = store.data.memory;
   const facts = memory.length

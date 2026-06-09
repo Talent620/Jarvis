@@ -21,6 +21,12 @@ modyfikować i z którego zbudujesz nowy APK.
   głos przez ElevenLabs.
 - **Sterowanie urządzeniem i usługami** — otwieranie aplikacji (Spotify, YouTube,
   Mapy, Gmail, WhatsApp, Allegro/OLX…), dzwonienie, SMS, nawigacja.
+- **Rozmowa na żywo (Gemini Live)** — pełny dupleks audio↔audio przez WebSocket:
+  mówisz i słyszysz odpowiedź w czasie rzeczywistym, z przerywaniem. Przycisk ☎.
+- **Kalendarz i kontakty telefonu** — JARVIS dodaje/odczytuje wydarzenia w kalendarzu
+  urządzenia oraz dzwoni/wysyła SMS do kontaktów po imieniu (bez OAuth/backendu).
+- **Skróty i udostępnianie** — długie przytrzymanie ikony = szybkie akcje (raport,
+  pogoda, zadania); JARVIS pojawia się też w panelu „Udostępnij" Androida.
 - **Wizja / aparat** — zrób lub wybierz zdjęcie i zapytaj „co to jest?". JARVIS
   analizuje obraz (Claude / Gemini / modele vision). 📷 obok pola tekstowego.
 - **Natywne powiadomienia** — przypomnienia odpalają się jako powiadomienia

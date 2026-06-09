@@ -2,6 +2,8 @@ import { store, uid } from "./store";
 import { openService, call, sms, navigate, smartHome } from "./deviceControl";
 import { getWeather } from "./weather";
 import { scheduleReminder } from "./notifications";
+import { addEvent, listUpcoming } from "./deviceCalendar";
+import { callContact, textContact } from "./deviceContacts";
 
 // Definicja narzędzia w formacie Claude Messages API + lokalny wykonawca.
 export interface ToolDef {
@@ -151,25 +153,31 @@ const tools: Tool[] = [
         ["title", "start"],
       ),
     },
-    run: ({ title, start, end, location }) => {
-      store.setData((d) =>
-        d.calendar.unshift({ id: uid(), title, start, end, location, createdAt: Date.now() }),
-      );
-      return `Wydarzenie „${title}” dodane na ${start}${location ? ` (${location})` : ""}.`;
-    },
+    run: ({ title, start, end, location }) => addEvent(title, start, end, location),
   },
   {
     def: {
       name: "list_calendar",
-      description: "Wypisz nadchodzące wydarzenia z kalendarza.",
+      description: "Wypisz nadchodzące wydarzenia z kalendarza (na telefonie najbliższe 7 dni).",
       input_schema: obj({}),
     },
-    run: () => {
-      const events = [...store.data.calendar].sort((a, b) => a.start.localeCompare(b.start));
-      return events.length
-        ? events.map((e) => `• ${e.start} — ${e.title}${e.location ? ` @ ${e.location}` : ""}`).join("\n")
-        : "Kalendarz jest pusty.";
+    run: () => listUpcoming(7),
+  },
+  {
+    def: {
+      name: "call_contact",
+      description: "Zadzwoń do osoby z listy kontaktów telefonu (po imieniu/nazwisku).",
+      input_schema: obj({ name: str("Imię lub nazwa kontaktu") }, ["name"]),
     },
+    run: ({ name }) => callContact(name),
+  },
+  {
+    def: {
+      name: "text_contact",
+      description: "Wyślij SMS do osoby z kontaktów telefonu (po imieniu/nazwisku).",
+      input_schema: obj({ name: str("Imię lub nazwa kontaktu"), body: str("Treść (opcjonalnie)") }, ["name"]),
+    },
+    run: ({ name, body }) => textContact(name, body),
   },
   {
     def: {

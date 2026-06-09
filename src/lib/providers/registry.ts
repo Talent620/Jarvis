@@ -23,13 +23,13 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     label: "Google Gemini (AI Studio)",
     rank: 80,
     keysUrl: "https://aistudio.google.com",
-    defaultModel: "gemini-2.0-flash",
+    defaultModel: "gemini-2.5-flash",
     impl: askGemini,
     models: [
-      { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash — darmowy, szybki" },
-      { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash-Lite" },
-      { id: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
-      { id: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
+      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash — #1 tool-calling, darmowy" },
+      { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash-Lite — najszybszy" },
+      { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro — najmocniejszy (limit 50/dzień)" },
     ],
   },
   groq: {

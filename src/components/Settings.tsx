@@ -184,6 +184,29 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           />
         </div>
 
+        <h3>Fish Audio (tani klon głosu — opcjonalnie)</h3>
+        <p className="muted">
+          Jakość zbliżona do ElevenLabs, taniej. Sklonuj głos JARVIS z 10–15 s próbki i wklej
+          jego reference_id. Ma priorytet nad ElevenLabs, gdy uzupełniony.
+        </p>
+        <div className="field">
+          <label>Klucz API Fish Audio</label>
+          <input
+            type="password"
+            value={s.fishAudioApiKey}
+            placeholder="(opcjonalnie)"
+            onChange={(e) => set({ fishAudioApiKey: e.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label>reference_id głosu Fish Audio</label>
+          <input
+            value={s.fishAudioVoiceId}
+            placeholder="np. 7f92f8afb8ec43bf81429cc1c9199cb1"
+            onChange={(e) => set({ fishAudioVoiceId: e.target.value })}
+          />
+        </div>
+
         <h3>Smart home (Home Assistant — opcjonalnie)</h3>
         <div className="field">
           <label>Adres Home Assistant</label>

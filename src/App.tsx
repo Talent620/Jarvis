@@ -4,10 +4,12 @@ import Conversation from "./components/Conversation";
 import Composer from "./components/Composer";
 import SettingsPanel from "./components/Settings";
 import Panels from "./components/Panels";
+import LiveOverlay from "./components/LiveOverlay";
 import { askJarvis, resolveProvider } from "./lib/brain";
 import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
 import { ensureNotifPerms } from "./lib/notifications";
+import { registerIntents } from "./lib/intents";
 import { store, uid } from "./lib/store";
 import { useStore } from "./hooks/useStore";
 import type { ChatMessage } from "./types";
@@ -32,6 +34,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPanels, setShowPanels] = useState(false);
+  const [showLive, setShowLive] = useState(false);
   const [micOn, setMicOn] = useState(false);
   const [liveId, setLiveId] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<PendingImage>(null);
@@ -41,12 +44,16 @@ export default function App() {
   messagesRef.current = messages;
   const pendingImageRef = useRef<PendingImage>(null);
   pendingImageRef.current = pendingImage;
+  const sendRef = useRef<(t: string) => void>(() => {});
   const micSupported = isSpeechSupported();
 
   useEffect(() => {
     loadVoices();
     ensureNotifPerms();
     if (!resolveProvider()) setShowSettings(true);
+    // Skróty (jarvis://run?text=…) i udostępnienia z Androida → polecenie do JARVIS-a.
+    const dispose = registerIntents((text) => sendRef.current(text));
+    return dispose;
   }, []);
 
   const attachImage = async () => {
@@ -105,6 +112,8 @@ export default function App() {
       setOrb(listenerRef.current?.listening ? "listening" : "idle");
     }
   };
+
+  sendRef.current = handleSend;
 
   const newChat = () => {
     stopSpeaking();
@@ -208,6 +217,17 @@ export default function App() {
           <small>{(resolveProvider()?.model || "BRAK API").toUpperCase()} · ONLINE</small>
         </div>
         <div className="spacer" />
+        <button
+          className="icon-btn"
+          onClick={() => {
+            stopSpeaking();
+            listenerRef.current?.stop();
+            setShowLive(true);
+          }}
+          title="Rozmowa na żywo"
+        >
+          ☎
+        </button>
         {messages.length > 0 && (
           <button className="icon-btn" onClick={newChat} title="Nowa rozmowa">
             ＋
@@ -245,6 +265,7 @@ export default function App() {
 
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {showPanels && <Panels onClose={() => setShowPanels(false)} />}
+      {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}
     </div>
   );
 }

@@ -46,9 +46,37 @@ function pickVoice(settings: Settings): SpeechSynthesisVoice | undefined {
 
 let currentAudio: HTMLAudioElement | null = null;
 
+async function playFromResponse(res: Response): Promise<boolean> {
+  if (!res.ok) return false;
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  currentAudio = new Audio(url);
+  currentAudio.onended = () => URL.revokeObjectURL(url);
+  await currentAudio.play();
+  return true;
+}
+
 export async function speak(text: string, settings: Settings): Promise<void> {
   if (!settings.speak || !text.trim()) return;
   stopSpeaking();
+
+  // Premium głos przez Fish Audio (tani, topowy klon), jeśli podano klucz.
+  if (settings.fishAudioApiKey && settings.fishAudioVoiceId) {
+    try {
+      const res = await fetch("https://api.fish.audio/v1/tts", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${settings.fishAudioApiKey}`,
+          "content-type": "application/json",
+          model: "s1",
+        },
+        body: JSON.stringify({ text, reference_id: settings.fishAudioVoiceId, format: "mp3" }),
+      });
+      if (await playFromResponse(res)) return;
+    } catch {
+      /* fallback niżej */
+    }
+  }
 
   // Premium głos przez ElevenLabs (najbliżej oryginalnego JARVIS-a), jeśli podano klucz.
   if (settings.elevenLabsApiKey && settings.elevenLabsVoiceId) {
@@ -69,14 +97,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
           }),
         },
       );
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        currentAudio = new Audio(url);
-        currentAudio.onended = () => URL.revokeObjectURL(url);
-        await currentAudio.play();
-        return;
-      }
+      if (await playFromResponse(res)) return;
     } catch {
       /* fallback do systemowego TTS */
     }
