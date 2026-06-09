@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import jsQR from "jsqr";
 import { store, uid } from "../lib/store";
 
-type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "pass" | "dice" | "qr";
+type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "nfc" | "pass" | "dice" | "qr";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "torch", label: "🔦 Latarka" },
@@ -14,6 +14,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "timer", label: "⏱ Stoper" },
   { id: "metro", label: "🥁 Metronom" },
   { id: "rec", label: "🎙 Dyktafon" },
+  { id: "nfc", label: "📡 NFC" },
   { id: "pass", label: "🔑 Hasła" },
   { id: "dice", label: "🎲 Losowanie" },
   { id: "qr", label: "🔳 QR" },
@@ -566,6 +567,66 @@ function Recorder() {
   );
 }
 
+// --- 📡 NFC (Web NFC) — własne tagi ---
+function NfcTool() {
+  const supported = "NDEFReader" in window;
+  const [out, setOut] = useState("");
+  const [val, setVal] = useState("");
+  const scan = async () => {
+    try {
+      const r = new (window as any).NDEFReader();
+      await r.scan();
+      setOut("Zbliż tag do telefonu…");
+      r.onreading = (e: any) => {
+        const recs: string[] = [];
+        for (const rec of e.message.records) {
+          try {
+            recs.push(`${rec.recordType}: ${new TextDecoder().decode(rec.data)}`);
+          } catch {
+            recs.push(rec.recordType);
+          }
+        }
+        setOut(`Serial: ${e.serialNumber || "—"}\n` + (recs.join("\n") || "(pusty tag)"));
+      };
+      r.onreadingerror = () => setOut("Nie udało się odczytać tagu.");
+    } catch {
+      setOut("Brak uprawnień lub NFC wyłączone.");
+    }
+  };
+  const write = async () => {
+    if (!val.trim()) return;
+    try {
+      const r = new (window as any).NDEFReader();
+      const isUrl = /^https?:|^jarvis:/i.test(val);
+      setOut("Zbliż tag, aby zapisać…");
+      await r.write({ records: [isUrl ? { recordType: "url", data: val } : { recordType: "text", data: val }] });
+      setOut("✅ Zapisano na tagu.");
+    } catch {
+      setOut("Nie udało się zapisać (przyłóż pusty/zapisywalny tag).");
+    }
+  };
+  if (!supported) return <p className="muted" style={{ paddingTop: 16 }}>To urządzenie/przeglądarka nie obsługuje Web NFC.</p>;
+  return (
+    <div style={{ paddingTop: 12 }}>
+      <button className="btn primary" onClick={scan}>Odczytaj tag</button>
+      <h3>Zapisz na własny tag</h3>
+      <div className="field" style={{ display: "flex", gap: 8 }}>
+        <input value={val} placeholder="tekst, link lub jarvis://run?text=..." onChange={(e) => setVal(e.target.value)} />
+        <button className="btn" style={{ width: "auto", marginTop: 0 }} onClick={write}>Zapisz</button>
+      </div>
+      <p className="muted">
+        Wpisz <code>jarvis://run?text=Przedstaw raport poranny</code> i zapisz na tagu — po
+        zbliżeniu telefonu tag otworzy JARVIS-a i wykona komendę. Używaj tylko własnych tagów.
+      </p>
+      {out && (
+        <div style={{ background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 10, padding: 10, marginTop: 8, whiteSpace: "pre-wrap", wordBreak: "break-all", color: "var(--gold)" }}>
+          {out}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Gadgets({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("torch");
   return (
@@ -591,6 +652,7 @@ export default function Gadgets({ onClose }: { onClose: () => void }) {
           {tab === "timer" && <Stopwatch />}
           {tab === "metro" && <Metronome />}
           {tab === "rec" && <Recorder />}
+          {tab === "nfc" && <NfcTool />}
           {tab === "pass" && <PasswordGen />}
           {tab === "dice" && <DiceCoin />}
           {tab === "qr" && <QrTool />}

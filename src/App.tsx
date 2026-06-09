@@ -14,6 +14,7 @@ import { Suspense, lazy } from "react";
 
 const Gadgets = lazy(() => import("./components/Gadgets"));
 const HudVision = lazy(() => import("./components/HudVision"));
+const Studio = lazy(() => import("./components/Studio"));
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
 import { startBackgroundWake } from "./lib/wakeword";
@@ -66,6 +67,7 @@ export default function App() {
   const [showMore, setShowMore] = useState(false);
   const [showGadgets, setShowGadgets] = useState(false);
   const [showHud, setShowHud] = useState(false);
+  const [showStudio, setShowStudio] = useState(false);
   const [interim, setInterim] = useState("");
   const [orb, setOrb] = useState<OrbState>("idle");
   const [busy, setBusy] = useState(false);
@@ -393,9 +395,15 @@ export default function App() {
           onData={() => setShowPanels(true)}
           onGadgets={() => setShowGadgets(true)}
           onHud={() => setShowHud(true)}
+          onStudio={() => setShowStudio(true)}
           onHelp={() => setShowHelp(true)}
           onClose={() => setShowMore(false)}
         />
+      )}
+      {showStudio && (
+        <Suspense fallback={null}>
+          <Studio onClose={() => setShowStudio(false)} />
+        </Suspense>
       )}
       {showGadgets && (
         <Suspense fallback={null}>
