@@ -2,13 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
 
-type Tab = "torch" | "compass" | "level" | "noise" | "pass" | "dice" | "qr";
+type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "pass" | "dice" | "qr";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "torch", label: "🔦 Latarka" },
+  { id: "magnify", label: "🔍 Lupa" },
   { id: "compass", label: "🧭 Kompas" },
   { id: "level", label: "📐 Poziomica" },
   { id: "noise", label: "🔊 Hałas" },
+  { id: "timer", label: "⏱ Stoper" },
+  { id: "metro", label: "🥁 Metronom" },
   { id: "pass", label: "🔑 Hasła" },
   { id: "dice", label: "🎲 Losowanie" },
   { id: "qr", label: "🔳 QR" },
@@ -339,6 +342,128 @@ function QrTool() {
   );
 }
 
+// --- 🔍 Lupa ---
+function Magnifier() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [zoom, setZoom] = useState(2);
+  const trackRef = useRef<any>(null);
+  const [torch, setTorch] = useState(false);
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    (async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        const v = videoRef.current!;
+        v.srcObject = stream;
+        trackRef.current = stream.getVideoTracks()[0];
+        await v.play();
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => stream?.getTracks().forEach((t) => t.stop());
+  }, []);
+  const toggleTorch = async () => {
+    try {
+      await trackRef.current?.applyConstraints({ advanced: [{ torch: !torch }] });
+      setTorch(!torch);
+    } catch {
+      /* brak latarki */
+    }
+  };
+  return (
+    <div style={{ paddingTop: 8 }}>
+      <div style={{ overflow: "hidden", borderRadius: 12, border: "1px solid var(--line)", background: "#000" }}>
+        <video
+          ref={videoRef}
+          playsInline
+          style={{ width: "100%", display: "block", transform: `scale(${zoom})`, transformOrigin: "center", transition: "0.1s" }}
+        />
+      </div>
+      <div className="field" style={{ marginTop: 12 }}>
+        <label>Powiększenie: {zoom.toFixed(1)}×</label>
+        <input type="range" min="1" max="6" step="0.1" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} />
+      </div>
+      <button className="btn" onClick={toggleTorch}>{torch ? "Zgaś światło" : "Doświetl"}</button>
+    </div>
+  );
+}
+
+// --- ⏱ Stoper + Minutnik ---
+function beep() {
+  try {
+    const c = new AudioContext();
+    const o = c.createOscillator();
+    o.frequency.value = 880;
+    o.connect(c.destination);
+    o.start();
+    setTimeout(() => { o.stop(); c.close(); }, 250);
+  } catch {
+    /* ignore */
+  }
+}
+function Stopwatch() {
+  const [ms, setMs] = useState(0);
+  const [run, setRun] = useState(false);
+  const [laps, setLaps] = useState<number[]>([]);
+  const ref = useRef<number | null>(null);
+  const start0 = useRef(0);
+  useEffect(() => {
+    if (run) {
+      start0.current = Date.now() - ms;
+      ref.current = window.setInterval(() => setMs(Date.now() - start0.current), 50);
+    } else if (ref.current) {
+      clearInterval(ref.current);
+    }
+    return () => {
+      if (ref.current) clearInterval(ref.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [run]);
+  const fmt = (t: number) =>
+    `${String(Math.floor(t / 60000)).padStart(2, "0")}:${String(Math.floor((t % 60000) / 1000)).padStart(2, "0")}.${String(Math.floor((t % 1000) / 10)).padStart(2, "0")}`;
+  return (
+    <div style={{ textAlign: "center", paddingTop: 16 }}>
+      <div style={{ fontSize: 48, fontFamily: "Share Tech Mono", color: "var(--cyan)" }}>{fmt(ms)}</div>
+      <button className="btn primary" onClick={() => setRun(!run)}>{run ? "Pauza" : "Start"}</button>
+      <button className="btn" onClick={() => setLaps((l) => [ms, ...l])} disabled={!run}>Międzyczas</button>
+      <button className="btn" onClick={() => { setRun(false); setMs(0); setLaps([]); }}>Reset</button>
+      {laps.map((l, i) => (
+        <div key={i} className="list-item" style={{ justifyContent: "center", gap: 12 }}>
+          <span className="muted">#{laps.length - i}</span> <span>{fmt(l)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// --- 🥁 Metronom ---
+function Metronome() {
+  const [bpm, setBpm] = useState(100);
+  const [on, setOn] = useState(false);
+  const ref = useRef<number | null>(null);
+  useEffect(() => {
+    if (on) {
+      ref.current = window.setInterval(beep, (60 / bpm) * 1000);
+    } else if (ref.current) {
+      clearInterval(ref.current);
+    }
+    return () => {
+      if (ref.current) clearInterval(ref.current);
+    };
+  }, [on, bpm]);
+  return (
+    <div style={{ textAlign: "center", paddingTop: 16 }}>
+      <div style={{ fontSize: 56, fontFamily: "Orbitron", color: "var(--cyan)" }}>{bpm}</div>
+      <div className="muted">BPM</div>
+      <div className="field" style={{ marginTop: 12 }}>
+        <input type="range" min="40" max="220" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} />
+      </div>
+      <button className="btn primary" onClick={() => setOn(!on)}>{on ? "Stop" : "Start"}</button>
+    </div>
+  );
+}
+
 export default function Gadgets({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("torch");
   return (
@@ -357,9 +482,12 @@ export default function Gadgets({ onClose }: { onClose: () => void }) {
         </div>
         <div className="panel-body">
           {tab === "torch" && <Flashlight />}
+          {tab === "magnify" && <Magnifier />}
           {tab === "compass" && <Compass />}
           {tab === "level" && <Level />}
           {tab === "noise" && <NoiseMeter />}
+          {tab === "timer" && <Stopwatch />}
+          {tab === "metro" && <Metronome />}
           {tab === "pass" && <PasswordGen />}
           {tab === "dice" && <DiceCoin />}
           {tab === "qr" && <QrTool />}

@@ -251,6 +251,27 @@ export default function App() {
     else startListening(settings.wakeWord);
   };
 
+  // Easter egg: 5 szybkich tapnięć w orb → tryb „Stark Industries".
+  const tapRef = useRef<{ count: number; t: number }>({ count: 0, t: 0 });
+  const onOrbTap = () => {
+    const now = Date.now();
+    const r = tapRef.current;
+    r.count = now - r.t < 1500 ? r.count + 1 : 1;
+    r.t = now;
+    if (r.count >= 5) {
+      r.count = 0;
+      document.body.classList.toggle("stark");
+      const on = document.body.classList.contains("stark");
+      const text = on
+        ? "Tryb Stark Industries aktywny. Wszystkie systemy do Twojej dyspozycji, Sir."
+        : "Powrót do trybu standardowego.";
+      const id = uid();
+      setLiveId(id);
+      setMessages((m) => [...m, { id, role: "assistant", text, tools: ["easter-egg"], createdAt: Date.now() }]);
+      if (store.settings.speak) speak(text, store.settings);
+    }
+  };
+
   // Auto-start ciągłego nasłuchu słowa-klucza, gdy włączone w ustawieniach.
   useEffect(() => {
     if (settings.wakeWord && micSupported) {
@@ -331,7 +352,9 @@ export default function App() {
         </button>
       </div>
 
-      <Orb state={orb} label={step && busy ? `⚙ ${step}…` : undefined} />
+      <div onClick={onOrbTap}>
+        <Orb state={orb} label={step && busy ? `⚙ ${step}…` : undefined} />
+      </div>
 
       <Conversation messages={messages} interim={interim} liveId={liveId} onSuggest={handleSend} />
 

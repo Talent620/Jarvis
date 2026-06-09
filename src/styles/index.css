@@ -17,6 +17,15 @@
   box-sizing: border-box;
 }
 
+/* Easter egg: tryb Stark Industries — złote akcenty */
+body.stark {
+  --cyan: #ffce6b;
+  --cyan-dim: #d6a92a;
+  --line: rgba(255, 206, 107, 0.2);
+  --line-strong: rgba(255, 206, 107, 0.45);
+  --text: #ffe7b8;
+}
+
 html,
 body,
 #root {
