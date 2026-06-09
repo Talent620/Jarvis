@@ -7,7 +7,7 @@ import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
 import { gmailSearch, gmailSend, gcalList, gcalAdd } from "./google";
 import { rememberFact } from "./memory";
-import { launchApp, openOnPc, powerPc, volumePc } from "./desktop";
+import { launchApp, openOnPc, powerPc, volumePc, mediaPc } from "./desktop";
 import type { Citation } from "../types";
 
 // Bufor cytatów z ostatniego zapytania (research). Resetowany per wywołanie w brain.ts.
@@ -255,6 +255,18 @@ const tools: Tool[] = [
       ),
     },
     run: ({ action }) => volumePc(action),
+  },
+  {
+    def: {
+      name: "desktop_media",
+      description:
+        "KOMPUTER (Windows): sterowanie odtwarzaniem multimediów (Spotify, YouTube, odtwarzacz) — playpause, next, prev, stop. Działa globalnie, niezależnie od aktywnego okna.",
+      input_schema: obj(
+        { action: { type: "string", enum: ["playpause", "next", "prev", "stop"], description: "Akcja odtwarzania" } },
+        ["action"],
+      ),
+    },
+    run: ({ action }) => mediaPc(action),
   },
   {
     def: {

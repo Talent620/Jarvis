@@ -150,7 +150,7 @@ export function systemPrompt(): string {
     `Zasady:`,
     `- Gdy użytkownik o coś prosi, DZIAŁAJ przez narzędzia (zadania, notatki, przypomnienia, kalendarz, zakupy, otwieranie aplikacji, dzwonienie, nawigacja, smart home).`,
     isDesktop()
-      ? `- Jesteś na KOMPUTERZE (Windows). Możesz sterować nim narzędziami desktop_*: uruchamiać programy (desktop_launch_app), otwierać pliki/foldery/URL (desktop_open), głośność (desktop_volume) i zasilanie (desktop_power — wymaga zgody). Używaj ich, gdy użytkownik prosi o akcję na komputerze.`
+      ? `- Jesteś na KOMPUTERZE (Windows). Możesz sterować nim narzędziami desktop_*: uruchamiać programy (desktop_launch_app), otwierać pliki/foldery/URL (desktop_open), sterować odtwarzaniem (desktop_media), głośnością (desktop_volume) i zasilaniem (desktop_power — wymaga zgody). Używaj ich, gdy użytkownik prosi o akcję na komputerze.`
       : `- Jesteś na URZĄDZENIU MOBILNYM. Korzystaj z dzwonienia, SMS, nawigacji, otwierania aplikacji i kamery.`,
     `- Gdy potrzeba aktualnych informacji lub źródeł, użyj narzędzia web_research i powołuj się na źródła numerami [1], [2].`,
     `- Akcje zewnętrzne (dzwonienie, SMS, smart home, zapisy) mogą wymagać zgody użytkownika — to normalne; po zgodzie potwierdź wynik.`,

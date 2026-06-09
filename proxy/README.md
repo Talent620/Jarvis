@@ -9,28 +9,41 @@ Trzy role:
 3. **Synchronizacja** — `/v1/sync` zapisuje/odczytuje dane (pamięć, projekty, sceny) w KV,
    dzięki czemu współdzielisz je między urządzeniami.
 
-## Wdrożenie
+## Wdrożenie — jedną komendą (zalecane)
+
+Potrzebujesz tylko **Node.js** i darmowego konta **Cloudflare**:
+
+```bash
+cd proxy
+# opcjonalnie podaj klucze od razu (utworzą się jako sekrety):
+GEMINI_API_KEY=... TAVILY_API_KEY=... bash deploy.sh
+```
+
+Skrypt sam: zaloguje do Cloudflare, utworzy namespace KV, wstawi jego id do
+`wrangler.toml`, ustawi podane sekrety i wdroży workera. Na końcu wypisze adres
+(np. `https://jarvis-bff.twoja.workers.dev`).
+
+### Albo ręcznie
 
 ```bash
 npm install -g wrangler
 wrangler login
 cd proxy
-
-# 1) utwórz namespace KV i wstaw zwrócone id do wrangler.toml (JARVIS_KV)
-wrangler kv namespace create JARVIS_KV
-
-# 2) sekrety (dowolne, których chcesz użyć)
-wrangler secret put GEMINI_API_KEY
-wrangler secret put TAVILY_API_KEY
-wrangler secret put ANTHROPIC_API_KEY
-wrangler secret put GROQ_API_KEY
-wrangler secret put OPENROUTER_API_KEY
-wrangler secret put NVIDIA_API_KEY
-wrangler secret put GITHUB_MODELS_TOKEN
-
-# 3) deploy
+wrangler kv namespace create JARVIS_KV   # wstaw zwrócone id do wrangler.toml
+wrangler secret put GEMINI_API_KEY        # i inne, których chcesz użyć
 wrangler deploy
 ```
+
+### Integracje Google (Gmail + Kalendarz) — opcjonalnie
+
+1. W [Google Cloud Console](https://console.cloud.google.com) utwórz „OAuth client ID"
+   (typ: Web). Jako **Authorized redirect URI** wpisz:
+   `https://jarvis-bff.twoja.workers.dev/v1/google/callback`.
+2. Ustaw sekrety: `wrangler secret put GOOGLE_CLIENT_ID` i `GOOGLE_CLIENT_SECRET`.
+3. W aplikacji: ⚙ → Integracje Google → Połącz konto.
+
+> Po wdrożeniu otwórz adres workera w przeglądarce — powinno pokazać
+> `{"ok":true,...}`. W aplikacji użyj **⚙ → 🔌 Testuj backend**.
 
 Adres workera (np. `https://jarvis-bff.twoja-subdomena.workers.dev`) wpisz w aplikacji:
 - **⚙ → Backend-proxy** — dla proxy kluczy AI,

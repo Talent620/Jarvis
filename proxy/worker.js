@@ -90,6 +90,20 @@ export default {
     const path = url.pathname.replace(/\/$/, "");
 
     try {
+      // --- HEALTH (test połączenia z aplikacji) ---
+      if (path === "" || path === "/v1/health") {
+        return json(200, {
+          ok: true,
+          service: "jarvis-bff",
+          kv: !!env.JARVIS_KV,
+          features: {
+            search: !!env.TAVILY_API_KEY,
+            embed: !!env.GEMINI_API_KEY,
+            google: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+          },
+        });
+      }
+
       // --- SYNC (KV) ---
       if (path === "/v1/sync") {
         const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();

@@ -7,6 +7,7 @@ export interface JarvisDesktop {
   launch(appName: string): Promise<string>;
   power(action: string): Promise<string>;
   volume(action: string): Promise<string>;
+  media(action: string): Promise<string>;
 }
 
 export function desktop(): JarvisDesktop | null {
@@ -57,4 +58,19 @@ export async function volumePc(action: string): Promise<string> {
   if (r === "ok") return a === "mute" ? "Przełączam wyciszenie." : a === "up" ? "Głośniej." : "Ciszej.";
   if (r === "err:unsupported") return "Sterowanie głośnością jest dostępne tylko na Windows.";
   return `Nie udało się zmienić głośności (${r}).`;
+}
+
+const MEDIA_LABEL: Record<string, string> = {
+  playpause: "Odtwarzam/pauzuję.", play: "Odtwarzam.", pause: "Pauzuję.",
+  next: "Następny utwór.", prev: "Poprzedni utwór.", previous: "Poprzedni utwór.", stop: "Zatrzymuję.",
+};
+
+export async function mediaPc(action: string): Promise<string> {
+  const d = desktop();
+  if (!d) return NOT_DESKTOP;
+  const a = action.toLowerCase().trim();
+  const r = await d.media(a).catch((e) => `err:${e}`);
+  if (r === "ok") return MEDIA_LABEL[a] || "Gotowe.";
+  if (r === "err:unsupported") return "Sterowanie multimediami jest dostępne tylko na Windows.";
+  return `Nie udało się sterować odtwarzaniem (${r}).`;
 }

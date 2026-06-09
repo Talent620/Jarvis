@@ -13,4 +13,6 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   power: (action) => ipcRenderer.invoke("jarvis:power", String(action || "")),
   // Sterowanie głośnością / wyciszeniem (Windows): up | down | mute.
   volume: (action) => ipcRenderer.invoke("jarvis:volume", String(action || "")),
+  // Multimedia (Windows): playpause | next | prev | stop.
+  media: (action) => ipcRenderer.invoke("jarvis:media", String(action || "")),
 });

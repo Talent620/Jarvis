@@ -3,6 +3,7 @@ const { app, BrowserWindow, shell, session, Menu, ipcMain } = require("electron"
 const path = require("path");
 const fs = require("fs");
 const { spawn, exec } = require("child_process");
+const os = require("os");
 
 const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
 
@@ -108,6 +109,26 @@ const WIN_APPS = {
   sklep: "ms-windows-store:", store: "ms-windows-store:", task: "taskmgr", menedzer: "taskmgr",
 };
 
+// Naciśnięcie klawisza systemowego (głośność/multimedia) przez keybd_event.
+// SendKeys nie obsługuje klawiszy multimedialnych — używamy P/Invoke z pliku .ps1
+// (omija problemy z cudzysłowami) i działa globalnie, niezależnie od aktywnego okna.
+let keyScriptPath = null;
+function ensureKeyScript() {
+  if (keyScriptPath) return keyScriptPath;
+  const p = path.join(os.tmpdir(), "jarvis-key.ps1");
+  const ps =
+    "param([int]$Vk)\n" +
+    "Add-Type -Name JK -Namespace W -MemberDefinition '[DllImport(\"user32.dll\")]public static extern void keybd_event(byte b,byte s,uint f,System.UIntPtr e);'\n" +
+    "[W.JK]::keybd_event($Vk,0,0,[System.UIntPtr]::Zero)\n";
+  fs.writeFileSync(p, ps);
+  keyScriptPath = p;
+  return p;
+}
+function pressVk(vk) {
+  const p = ensureKeyScript();
+  exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${p}" ${vk}`);
+}
+
 function registerDesktopControl() {
   ipcMain.handle("jarvis:open", async (_e, target) => {
     if (!target) return "err:empty";
@@ -160,10 +181,20 @@ function registerDesktopControl() {
   ipcMain.handle("jarvis:volume", async (_e, action) => {
     const a = String(action || "").toLowerCase();
     if (process.platform !== "win32") return "err:unsupported";
-    // Symuluj klawisze multimedialne (VK: 175 = głośniej, 174 = ciszej, 173 = wycisz).
+    // VK: 175 = głośniej, 174 = ciszej, 173 = wycisz.
     const vk = { up: 175, down: 174, mute: 173 }[a];
     if (!vk) return "err:unknown";
-    exec(`powershell -NoProfile -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]${vk})"`);
+    pressVk(vk);
+    return "ok";
+  });
+
+  ipcMain.handle("jarvis:media", async (_e, action) => {
+    const a = String(action || "").toLowerCase();
+    if (process.platform !== "win32") return "err:unsupported";
+    // VK multimedialne: play/pause 179, next 176, prev 177, stop 178.
+    const vk = { playpause: 179, play: 179, pause: 179, next: 176, prev: 177, previous: 177, stop: 178 }[a];
+    if (!vk) return "err:unknown";
+    pressVk(vk);
     return "ok";
   });
 }

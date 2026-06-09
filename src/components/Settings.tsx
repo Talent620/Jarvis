@@ -3,7 +3,7 @@ import { store } from "../lib/store";
 import { loadVoices, speak } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
-import { pushSync, pullSync } from "../lib/sync";
+import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { googleStartUrl } from "../lib/google";
 import { testApi } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
@@ -21,6 +21,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [syncMsg, setSyncMsg] = useState("");
   const [apiMsg, setApiMsg] = useState("");
   const [backupMsg, setBackupMsg] = useState("");
+  const [backendMsg, setBackendMsg] = useState("");
 
   useEffect(() => {
     loadVoices().then(setVoices);
@@ -142,6 +143,17 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             placeholder="https://jarvis-bff.twoja.workers.dev"
             onChange={(e) => set({ proxyUrl: e.target.value })}
           />
+          <button
+            className="btn"
+            style={{ marginTop: 8 }}
+            onClick={async () => {
+              setBackendMsg("Sprawdzam…");
+              setBackendMsg(await testBackend(s.proxyUrl || s.syncUrl));
+            }}
+          >
+            🔌 Testuj backend
+          </button>
+          {backendMsg && <p className="muted" style={{ marginTop: 6 }}>{backendMsg}</p>}
         </div>
 
         <h3>Synchronizacja (chmura)</h3>

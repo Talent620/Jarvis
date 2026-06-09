@@ -13,6 +13,23 @@ function endpoint(): string | null {
   return `${syncUrl.replace(/\/$/, "")}/v1/sync`;
 }
 
+/** Sprawdza, czy backend (proxy/sync) odpowiada i co ma włączone. */
+export async function testBackend(rawUrl: string): Promise<string> {
+  const url = rawUrl?.trim();
+  if (!url) return "Najpierw wpisz adres backendu.";
+  try {
+    const res = await fetch(`${url.replace(/\/$/, "")}/v1/health`);
+    if (!res.ok) return `❌ Backend odpowiedział błędem (${res.status}).`;
+    const d = await res.json().catch(() => ({}));
+    if (!d?.ok) return "❌ To nie wygląda na backend JARVIS.";
+    const f = d.features || {};
+    const on = (b: boolean) => (b ? "✓" : "—");
+    return `✅ Backend działa. KV ${on(d.kv)} · research ${on(f.search)} · embeddingi ${on(f.embed)} · Google ${on(f.google)}.`;
+  } catch (e) {
+    return `❌ Brak połączenia z backendem: ${e instanceof Error ? e.message : e}`;
+  }
+}
+
 export async function pushSync(): Promise<string> {
   const url = endpoint();
   if (!url) return "Najpierw uzupełnij adres i token synchronizacji.";
