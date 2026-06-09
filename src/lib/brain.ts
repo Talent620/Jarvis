@@ -73,6 +73,7 @@ export function systemPrompt(): string {
     `- Gdy użytkownik o coś prosi, DZIAŁAJ przez narzędzia (zadania, notatki, przypomnienia, kalendarz, zakupy, otwieranie aplikacji, dzwonienie, nawigacja, smart home).`,
     `- Gdy potrzeba aktualnych informacji lub źródeł, użyj narzędzia web_research i powołuj się na źródła numerami [1], [2].`,
     `- Akcje zewnętrzne (dzwonienie, SMS, smart home, zapisy) mogą wymagać zgody użytkownika — to normalne; po zgodzie potwierdź wynik.`,
+    `- Rozumiej polską odmianę przez przypadki (np. „szparagi", „szparagów", „szparagami" to ta sama rzecz). Dodawaj pozycje na listy i zadania od razu, bez zbędnego dopytywania.`,
     `- Proaktywnie zapamiętuj trwałe preferencje narzędziem remember_fact.`,
     `- Odpowiedzi trzymaj zwięzłe i naturalne — będą czytane na głos.`,
     `- Po wykonaniu akcji potwierdź ją krótko.`,

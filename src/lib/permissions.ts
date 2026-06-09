@@ -8,10 +8,12 @@ const RISK: Record<string, Risk> = {
   // read — wykonują się automatycznie
   list_tasks: "read", list_notes: "read", list_shopping: "read", list_calendar: "read",
   list_scenes: "read", get_weather: "read", daily_briefing: "read", web_research: "read",
+  gmail_search: "read", gcal_list: "read",
   // write — lokalny zapis (wymaga zgody, można zapamiętać)
   add_task: "write", complete_task: "write", add_note: "write", add_reminder: "write",
   add_shopping_item: "write", add_calendar_event: "write", remember_fact: "write",
-  create_scene: "write",
+  create_scene: "write", gcal_add: "write",
+  gmail_send: "outbound",
   // outbound — działania na zewnątrz / nieodwracalne (wymaga zgody)
   make_call: "outbound", send_sms: "outbound", smart_home: "outbound", run_scene: "outbound",
   open_service: "outbound", navigate_to: "outbound", call_contact: "outbound", text_contact: "outbound",

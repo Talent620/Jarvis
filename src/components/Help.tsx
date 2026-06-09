@@ -1,0 +1,100 @@
+export default function Help({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="sheet" onClick={onClose}>
+      <div className="panel" onClick={(e) => e.stopPropagation()}>
+        <div className="panel-head">
+          <div className="grabber" />
+          <h2>❓ Pomoc — co potrafi JARVIS</h2>
+        </div>
+        <div className="panel-body help">
+          <p className="muted">
+            JARVIS rozumie naturalny język — po prostu pisz lub mów, czego potrzebujesz. Poniżej
+            wszystkie funkcje i jak z nich korzystać.
+          </p>
+
+          <h3>🚀 Start</h3>
+          <ul>
+            <li>Wejdź w <b>⚙ Ustawienia</b> → wpisz jeden klucz API (np. <b>Gemini</b> — darmowy z aistudio.google.com) → Zapisz.</li>
+            <li>Tryb <b>auto</b> sam wybiera najlepszego dostępnego dostawcę; gdy jeden zawiedzie (np. brak kredytów), przeskakuje na innego.</li>
+          </ul>
+
+          <h3>💬 Czat i 🎤 głos</h3>
+          <ul>
+            <li>Pisz w polu na dole lub kliknij <b>🎤</b>, żeby mówić.</li>
+            <li><b>👂</b> w nagłówku = ciągłe nasłuchiwanie słowa „<b>Jarvis</b>".</li>
+            <li>Odpowiedzi są czytane na głos (można wyłączyć w ⚙). Włączenie mikrofonu przerywa mówienie.</li>
+          </ul>
+
+          <h3>☎ Rozmowa na żywo</h3>
+          <ul>
+            <li>Przycisk <b>☎</b> — rozmowa głosowa w czasie rzeczywistym (wymaga klucza Gemini).</li>
+            <li>Z trybem tłumacza (⚙) działa jak tłumacz symultaniczny.</li>
+          </ul>
+
+          <h3>🔎 Wiedza i research</h3>
+          <ul>
+            <li>„Jaka jest pogoda?", „Co nowego w…?" — JARVIS sięga do sieci.</li>
+            <li>Z kluczem <b>Tavily</b> (⚙ → Research) dostajesz odpowiedzi ze <b>źródłami [1][2]</b> pod wiadomością.</li>
+          </ul>
+
+          <h3>📁 Projekty / dokumenty</h3>
+          <ul>
+            <li><b>📁</b> — twórz projekty z własnymi instrukcjami i <b>dokumentami (PDF/tekst)</b>.</li>
+            <li>W aktywnym projekcie JARVIS używa jego dokumentów jako kontekstu („streść ten plik").</li>
+          </ul>
+
+          <h3>✅ Produktywność</h3>
+          <ul>
+            <li>„Dodaj zadanie…", „Przypomnij mi o… jutro o 18", „Dodaj mleko do zakupów", „Zapisz notatkę…".</li>
+            <li>„Dodaj spotkanie do kalendarza", „Zadzwoń do Marka", „Wyślij SMS do mamy".</li>
+            <li>„Przedstaw <b>raport poranny</b>" — pogoda + kalendarz + zadania.</li>
+            <li>Wszystko w panelu <b>▣</b> (zakładki: zadania, notatki, kalendarz, zakupy…).</li>
+          </ul>
+
+          <h3>🏠 Smart home</h3>
+          <ul>
+            <li>⚙ → Home Assistant (adres + token). „Zgaś światło w salonie".</li>
+            <li>Sceny: „Utwórz scenę Dobranoc: zgaś light.salon i włącz switch.alarm" → potem „Jarvis, dobranoc".</li>
+          </ul>
+
+          <h3>📷 Wizja</h3>
+          <ul>
+            <li><b>📷</b> przy polu tekstu — zrób/wybierz zdjęcie i zapytaj „co to jest?".</li>
+          </ul>
+
+          <h3>📧 Integracje Google</h3>
+          <ul>
+            <li>Po wdrożeniu backendu i połączeniu konta (⚙ → Integracje Google): „Pokaż nieprzeczytane maile", „Wyślij mail do…", „Co mam w Kalendarzu Google?".</li>
+          </ul>
+
+          <h3>🔐 Bezpieczeństwo</h3>
+          <ul>
+            <li>Akcje (dzwonienie, SMS, smart home, zapisy) <b>proszą o zgodę</b>; możesz ją zapamiętać.</li>
+            <li>Zakładka <b>Audyt</b> (▣) — dziennik akcji z <b>↶ cofnij</b>.</li>
+          </ul>
+
+          <h3>🧠 Pamięć</h3>
+          <ul>
+            <li>JARVIS zapamiętuje Twoje preferencje. Zarządzaj nimi w ▣ → Pamięć (📌 przypnij / ✕ usuń).</li>
+          </ul>
+
+          <h3>🕘 Historia i ☁️ synchronizacja</h3>
+          <ul>
+            <li><b>🕘</b> — wszystkie rozmowy; <b>＋</b> nowa rozmowa.</li>
+            <li>⚙ → Synchronizacja — współdziel dane między urządzeniami (wymaga backendu).</li>
+          </ul>
+
+          <h3>🖥️ Wersje</h3>
+          <ul>
+            <li>Android (APK), Windows (EXE) i iOS — wszystkie z linku Releases na GitHubie.</li>
+          </ul>
+        </div>
+        <div className="panel-foot">
+          <button className="btn" onClick={onClose}>
+            Zamknij
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

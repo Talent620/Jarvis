@@ -4,6 +4,7 @@ import { loadVoices, speak } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync } from "../lib/sync";
+import { googleStartUrl } from "../lib/google";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 
@@ -158,6 +159,23 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         {syncMsg && <p className="muted">{syncMsg}</p>}
+
+        <h3>Integracje Google (Gmail + Kalendarz)</h3>
+        <p className="muted">
+          Wymaga wdrożonego backendu (powyżej) z kluczami Google OAuth. Po połączeniu JARVIS
+          może czytać/wysyłać maile i zarządzać Kalendarzem Google. Instrukcja: <code>proxy/README</code>.
+        </p>
+        <button
+          className="btn"
+          onClick={() => {
+            store.setSettings({ syncUrl: s.syncUrl, syncToken: s.syncToken });
+            const url = googleStartUrl();
+            if (!url) { setSyncMsg("Najpierw uzupełnij adres i token synchronizacji."); return; }
+            window.open(url, "_blank", "noopener");
+          }}
+        >
+          🔗 Połącz konto Google
+        </button>
 
         <div className="field">
           <label>Jak JARVIS ma się do Ciebie zwracać</label>

@@ -5,6 +5,7 @@ import { scheduleReminder } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
 import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
+import { gmailSearch, gmailSend, gcalList, gcalAdd } from "./google";
 import type { Citation } from "../types";
 
 // Bufor cytatów z ostatniego zapytania (research). Resetowany per wywołanie w brain.ts.
@@ -392,6 +393,41 @@ const tools: Tool[] = [
           .join("\n\n")
       );
     },
+  },
+  {
+    def: {
+      name: "gmail_search",
+      description: "Przeszukaj skrzynkę Gmail (wymaga połączonego konta Google przez backend). query w składni Gmaila, np. 'is:unread from:szef'.",
+      input_schema: obj({ query: str("Zapytanie Gmail (opcjonalne)") }),
+    },
+    run: ({ query }) => gmailSearch(query || ""),
+  },
+  {
+    def: {
+      name: "gmail_send",
+      description: "Wyślij e-mail przez Gmail (wymaga połączonego konta Google).",
+      input_schema: obj({ to: str("Adres odbiorcy"), subject: str("Temat"), body: str("Treść") }, ["to", "subject", "body"]),
+    },
+    run: ({ to, subject, body }) => gmailSend(to, subject, body),
+  },
+  {
+    def: {
+      name: "gcal_list",
+      description: "Wypisz nadchodzące wydarzenia z Kalendarza Google (wymaga połączonego konta).",
+      input_schema: obj({}),
+    },
+    run: () => gcalList(),
+  },
+  {
+    def: {
+      name: "gcal_add",
+      description: "Dodaj wydarzenie do Kalendarza Google (wymaga połączonego konta). Daty w ISO 8601.",
+      input_schema: obj(
+        { summary: str("Tytuł"), start: str("Początek ISO 8601"), end: str("Koniec ISO 8601 (opcjonalnie)"), location: str("Miejsce (opcjonalnie)") },
+        ["summary", "start"],
+      ),
+    },
+    run: ({ summary, start, end, location }) => gcalAdd(summary, start, end, location),
   },
 ];
 

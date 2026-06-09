@@ -105,12 +105,19 @@ export async function speak(text: string, settings: Settings): Promise<void> {
 
   const synth = window.speechSynthesis;
   if (!synth) return;
+  // Na Androidzie lista głosów bywa pusta przy starcie — poczekaj na nią.
+  if (!cachedVoices.length) await loadVoices();
   const u = new SpeechSynthesisUtterance(text);
   const v = pickVoice(settings);
   if (v) u.voice = v;
   u.pitch = settings.voicePitch;
   u.rate = settings.voiceRate;
   u.lang = v?.lang || "pl-PL";
+  try {
+    synth.resume();
+  } catch {
+    /* ignore */
+  }
   synth.speak(u);
 }
 

@@ -7,6 +7,7 @@ import Panels from "./components/Panels";
 import LiveOverlay from "./components/LiveOverlay";
 import ChatHistory from "./components/ChatHistory";
 import Projects from "./components/Projects";
+import Help from "./components/Help";
 import PermissionDialog from "./components/PermissionDialog";
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
@@ -34,6 +35,7 @@ export default function App() {
   const [activeId, setActiveId] = useState<string>(initialChat?.id ?? uid());
   const [showHistory, setShowHistory] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [interim, setInterim] = useState("");
   const [orb, setOrb] = useState<OrbState>("idle");
   const [busy, setBusy] = useState(false);
@@ -273,6 +275,9 @@ export default function App() {
         >
           👂
         </button>
+        <button className="icon-btn" onClick={() => setShowHelp(true)} title="Pomoc">
+          ❓
+        </button>
         <button className="icon-btn" onClick={() => setShowSettings(true)} title="Ustawienia">
           ⚙
         </button>
@@ -300,6 +305,7 @@ export default function App() {
         <ChatHistory activeId={activeId} onOpen={openChat} onClose={() => setShowHistory(false)} />
       )}
       {showProjects && <Projects onClose={() => setShowProjects(false)} />}
+      {showHelp && <Help onClose={() => setShowHelp(false)} />}
       {pendingConsent && (
         <PermissionDialog
           req={pendingConsent.req}
