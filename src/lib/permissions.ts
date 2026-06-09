@@ -12,7 +12,7 @@ const RISK: Record<string, Risk> = {
   // write — lokalny zapis (wymaga zgody, można zapamiętać)
   add_task: "write", complete_task: "write", add_note: "write", add_reminder: "write",
   add_shopping_item: "write", add_calendar_event: "write", remember_fact: "write",
-  create_scene: "write", gcal_add: "write",
+  create_scene: "write", gcal_add: "write", set_timer: "write",
   gmail_send: "outbound",
   // outbound — działania na zewnątrz / nieodwracalne (wymaga zgody)
   make_call: "outbound", send_sms: "outbound", smart_home: "outbound", run_scene: "outbound",

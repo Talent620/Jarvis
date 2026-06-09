@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import type { ChatMessage } from "../types";
 import TypeText from "./TypeText";
+import { speak } from "../lib/voice";
+import { store } from "../lib/store";
 
 const SUGGESTIONS = [
   "Przedstaw raport poranny",
@@ -66,6 +68,19 @@ export default function Conversation({
                   {t}
                 </span>
               ))}
+            </div>
+          )}
+          {m.role === "assistant" && (
+            <div className="msg-actions">
+              <button onClick={() => speak(m.text, { ...store.settings, speak: true })} title="Odsłuchaj">
+                🔊
+              </button>
+              <button
+                onClick={() => navigator.clipboard?.writeText(m.text).catch(() => {})}
+                title="Kopiuj"
+              >
+                📋
+              </button>
             </div>
           )}
           {m.citations && m.citations.length > 0 && (

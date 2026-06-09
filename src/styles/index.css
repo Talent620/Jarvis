@@ -218,6 +218,24 @@ body {
   border: 1px solid var(--line);
   color: var(--cyan);
 }
+.msg-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.msg-actions button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 13px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.msg-actions button:active {
+  background: rgba(108, 231, 255, 0.12);
+}
+
 .help h3 {
   margin: 16px 0 4px;
 }

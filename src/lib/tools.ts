@@ -1,7 +1,7 @@
 import { store, uid } from "./store";
 import { openService, call, sms, navigate, smartHome } from "./deviceControl";
 import { getWeather } from "./weather";
-import { scheduleReminder } from "./notifications";
+import { scheduleReminder, scheduleTimer } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
 import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
@@ -392,6 +392,17 @@ const tools: Tool[] = [
           .map((r, i) => `[${i + 1}] ${r.title}\n${(r.content || "").slice(0, 400)}\nŹródło: ${r.url}`)
           .join("\n\n")
       );
+    },
+  },
+  {
+    def: {
+      name: "set_timer",
+      description: "Ustaw minutnik na podaną liczbę minut (powiadomienie). Np. „ustaw minutnik na 10 minut”.",
+      input_schema: obj({ minutes: { type: "number", description: "Liczba minut" }, label: str("Etykieta (opcjonalnie)") }, ["minutes"]),
+    },
+    run: ({ minutes, label }) => {
+      void scheduleTimer(Number(minutes), label);
+      return `Minutnik ustawiony na ${minutes} min${label ? ` — ${label}` : ""}.`;
     },
   },
   {

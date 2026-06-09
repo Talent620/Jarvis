@@ -10,6 +10,32 @@ function shouldFallback(msg: string): boolean {
   );
 }
 
+const isNetworkError = (msg: string) => /failed to fetch|load failed|network|networkerror|timeout/i.test(msg);
+
+// Przetłumacz techniczny błąd na zrozumiały komunikat.
+function humanize(msg: string): string {
+  if (isNetworkError(msg)) return "Brak połączenia z usługą AI. Sprawdź internet i klucz API (⚙ Ustawienia).";
+  if (/401|unauthorized|invalid.?api|forbidden|403/i.test(msg))
+    return "Klucz API jest nieprawidłowy, wygasł lub nie ma dostępu — sprawdź go w ⚙ Ustawienia.";
+  if (/credit|billing|too low|payment|quota|insufficient/i.test(msg))
+    return "Wybrany dostawca nie ma środków/limitu. Przełącz dostawcę lub dodaj inny klucz w ⚙.";
+  return msg;
+}
+
+// Jednorazowy retry przy chwilowym błędzie sieci.
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (isNetworkError(msg)) {
+      await new Promise((r) => setTimeout(r, 700));
+      return fn();
+    }
+    throw e;
+  }
+}
+
 const PERSONAS: Record<string, string> = {
   classic: "uprzejmy, lekko dowcipny brytyjski majordomus — elegancki, rzeczowy i niezwykle kompetentny.",
   concise: "maksymalnie zwięzły — odpowiadasz w 1–2 zdaniach, bez ozdobników i powtórzeń.",
@@ -140,15 +166,15 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
     const apiKey = store.settings.keys[provider];
     if (!apiKey?.trim()) continue;
     try {
-      const reply = await PROVIDERS[provider].impl({ ...baseCtx, apiKey, model });
+      const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model }));
       const citations = getCitations();
       return citations.length ? { ...reply, citations } : reply;
     } catch (e) {
       lastErr = e;
       const msg = e instanceof Error ? e.message : String(e);
-      if (i < order.length - 1 && shouldFallback(msg)) continue; // spróbuj kolejnego
-      throw e;
+      if (i < order.length - 1 && (shouldFallback(msg) || isNetworkError(msg))) continue; // spróbuj kolejnego
+      throw new Error(humanize(msg));
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+  throw new Error(humanize(lastErr instanceof Error ? lastErr.message : String(lastErr)));
 }
