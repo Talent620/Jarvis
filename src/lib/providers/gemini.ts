@@ -1,15 +1,29 @@
 import { runTool } from "../tools";
 import type { AskCtx, JarvisReply } from "./types";
 
-// Gemini odrzuca niektóre pola JSON Schema (np. additionalProperties).
+// Gemini odrzuca niektóre pola JSON Schema (np. additionalProperties) — także
+// w zagnieżdżonych obiektach/tablicach. Usuwamy je rekurencyjnie.
+function sanitize(node: any): any {
+  if (Array.isArray(node)) return node.map(sanitize);
+  if (node && typeof node === "object") {
+    const out: any = {};
+    for (const [k, v] of Object.entries(node)) {
+      if (k === "additionalProperties" || k === "$schema") continue;
+      out[k] = sanitize(v);
+    }
+    return out;
+  }
+  return node;
+}
+
 function cleanSchema(schema: Record<string, unknown>): Record<string, unknown> | undefined {
   const props = (schema.properties as Record<string, unknown>) || {};
   if (Object.keys(props).length === 0) return undefined; // brak argumentów -> bez parameters
-  return {
+  return sanitize({
     type: "object",
     properties: props,
     required: (schema.required as string[]) || [],
-  };
+  });
 }
 
 interface Part {

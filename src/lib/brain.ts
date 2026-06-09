@@ -1,7 +1,14 @@
 import { store } from "./store";
 import { toolDefs } from "./tools";
-import { PROVIDERS, autoPick } from "./providers/registry";
+import { PROVIDERS, PROVIDER_LIST, autoPick } from "./providers/registry";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
+
+// Błędy, przy których warto spróbować kolejnego dostawcy (brak kredytów, limit, autoryzacja).
+function shouldFallback(msg: string): boolean {
+  return /credit|billing|insufficient|quota|exceeded|rate.?limit|too low|payment|unauthorized|invalid.?api|forbidden|overloaded|unavailable|\b(401|402|403|429|502|503)\b/i.test(
+    msg,
+  );
+}
 
 const PERSONAS: Record<string, string> = {
   classic: "uprzejmy, lekko dowcipny brytyjski majordomus — elegancki, rzeczowy i niezwykle kompetentny.",
@@ -81,14 +88,35 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
     i === history.length - 1 ? m : { role: m.role, content: m.content },
   );
 
-  const meta = PROVIDERS[resolved.provider];
-  return meta.impl({
-    apiKey: resolved.apiKey,
-    model: resolved.model,
+  const baseCtx = {
     system: systemPrompt(),
     webSearch: store.settings.webSearch,
     tools: toolDefs,
     history: trimmed,
     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-  });
+  };
+
+  // Kolejność prób: wybrany dostawca, a potem pozostali z kluczem (wg rangi).
+  const order: { provider: ProviderId; model: string }[] = [
+    { provider: resolved.provider, model: resolved.model },
+    ...PROVIDER_LIST.filter((p) => p.id !== resolved.provider && store.settings.keys[p.id]?.trim())
+      .sort((a, b) => b.rank - a.rank)
+      .map((p) => ({ provider: p.id, model: p.defaultModel })),
+  ];
+
+  let lastErr: unknown;
+  for (let i = 0; i < order.length; i++) {
+    const { provider, model } = order[i];
+    const apiKey = store.settings.keys[provider];
+    if (!apiKey?.trim()) continue;
+    try {
+      return await PROVIDERS[provider].impl({ ...baseCtx, apiKey, model });
+    } catch (e) {
+      lastErr = e;
+      const msg = e instanceof Error ? e.message : String(e);
+      if (i < order.length - 1 && shouldFallback(msg)) continue; // spróbuj kolejnego
+      throw e;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
