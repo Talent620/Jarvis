@@ -14,6 +14,7 @@ const emptyData: AppData = {
   audit: [],
   projects: [],
   projectFiles: [],
+  tally: [],
 };
 
 const defaultSettings: Settings = {

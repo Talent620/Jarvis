@@ -8,12 +8,13 @@ const RISK: Record<string, Risk> = {
   // read — wykonują się automatycznie
   list_tasks: "read", list_notes: "read", list_shopping: "read", list_calendar: "read",
   list_scenes: "read", get_weather: "read", daily_briefing: "read", web_research: "read",
-  gmail_search: "read", gcal_list: "read",
+  gmail_search: "read", gcal_list: "read", tally_report: "read",
   // write — lokalny zapis (wymaga zgody, można zapamiętać)
   add_task: "write", complete_task: "write", add_note: "write", add_reminder: "write",
   add_shopping_item: "write", add_calendar_event: "write", remember_fact: "write",
-  create_scene: "write", gcal_add: "write", set_timer: "write",
-  gmail_send: "outbound",
+  create_scene: "write", set_timer: "write", add_tally_item: "write",
+  // outbound — zewnętrzne lub nieodwracalne (wymaga zgody)
+  gmail_send: "outbound", gcal_add: "outbound", clear_tally: "outbound",
   // outbound — działania na zewnątrz / nieodwracalne (wymaga zgody)
   make_call: "outbound", send_sms: "outbound", smart_home: "outbound", run_scene: "outbound",
   open_service: "outbound", navigate_to: "outbound", call_contact: "outbound", text_contact: "outbound",
@@ -27,9 +28,9 @@ export function riskOf(tool: string): Risk {
 const UNDO_COLLECTION: Record<string, keyof typeof emptyCollections> = {
   add_task: "tasks", add_note: "notes", add_reminder: "reminders",
   add_shopping_item: "shopping", add_calendar_event: "calendar",
-  create_scene: "scenes", remember_fact: "memory",
+  create_scene: "scenes", remember_fact: "memory", add_tally_item: "tally",
 };
-const emptyCollections = { tasks: 1, notes: 1, reminders: 1, shopping: 1, calendar: 1, scenes: 1, memory: 1 };
+const emptyCollections = { tasks: 1, notes: 1, reminders: 1, shopping: 1, calendar: 1, scenes: 1, memory: 1, tally: 1 };
 
 // --- Zgody (zapamiętane decyzje) ---
 const CONSENT_KEY = "jarvis.consents.v1";
@@ -77,7 +78,8 @@ export function undoAction(entry: AuditEntry): string {
  */
 export async function requestConsent(tool: string, input: unknown): Promise<boolean> {
   const risk = riskOf(tool);
-  if (risk === "read") return true;
+  // Pytamy tylko o akcje zewnętrzne/nieodwracalne; lokalne zapisy idą automatycznie.
+  if (risk !== "outbound") return true;
   const consents = loadConsents();
   if (consents[tool] === "allow") return true;
   if (!consentHandler) return true; // brak UI (np. tryb live) — nie blokuj

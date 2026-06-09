@@ -4,13 +4,14 @@ import { useStore } from "../hooks/useStore";
 import { smartHome } from "../lib/deviceControl";
 import { undoAction } from "../lib/permissions";
 
-type Tab = "tasks" | "notes" | "reminders" | "shopping" | "calendar" | "scenes" | "memory" | "audit";
+type Tab = "tasks" | "notes" | "reminders" | "shopping" | "tally" | "calendar" | "scenes" | "memory" | "audit";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "tasks", label: "Zadania" },
   { id: "notes", label: "Notatki" },
   { id: "reminders", label: "Przypomnienia" },
   { id: "shopping", label: "Zakupy" },
+  { id: "tally", label: "Targ" },
   { id: "calendar", label: "Kalendarz" },
   { id: "scenes", label: "Sceny" },
   { id: "memory", label: "Pamięć" },
@@ -126,6 +127,43 @@ export default function Panels({ onClose }: { onClose: () => void }) {
           ) : (
             <p className="muted">Lista zakupów pusta.</p>
           ))}
+
+        {tab === "tally" && (
+          <>
+            {data.tally.length ? (
+              <>
+                {data.tally.map((t) => (
+                  <div key={t.id} className="list-item">
+                    <span>
+                      🧾 {t.qty}× {t.name} po {t.unitPrice.toFixed(2)}{" "}
+                      <b style={{ color: "var(--gold)" }}>= {(t.qty * t.unitPrice).toFixed(2)}</b>
+                    </span>
+                    <span className="x" onClick={() => remove("tally", t.id)}>
+                      ✕
+                    </span>
+                  </div>
+                ))}
+                <div className="list-item" style={{ borderTop: "1px solid var(--line-strong)" }}>
+                  <span style={{ fontSize: 17 }}>
+                    <b>RAZEM:</b>{" "}
+                    <b style={{ color: "var(--gold)" }}>
+                      {data.tally.reduce((s, t) => s + t.qty * t.unitPrice, 0).toFixed(2)}
+                    </b>{" "}
+                    <span className="muted">({data.tally.length} poz.)</span>
+                  </span>
+                </div>
+                <button className="btn" onClick={() => store.setData((d) => { d.tally = []; })}>
+                  Wyczyść rachunek
+                </button>
+              </>
+            ) : (
+              <p className="muted">
+                Pusto. Na targu mów na bieżąco, np. „koszyk truskawek po 15", „dwa pęczki szparagów
+                po 8", a potem „podlicz".
+              </p>
+            )}
+          </>
+        )}
 
         {tab === "calendar" &&
           (data.calendar.length ? (

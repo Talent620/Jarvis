@@ -70,6 +70,14 @@ export interface CalendarEvent {
   createdAt: number;
 }
 
+export interface TallyItem {
+  id: string;
+  name: string;
+  qty: number;
+  unitPrice: number;
+  createdAt: number;
+}
+
 export interface MemoryFact {
   id: string;
   key: string;
@@ -120,6 +128,7 @@ export interface AppData {
   audit: AuditEntry[];
   projects: Project[];
   projectFiles: ProjectFile[];
+  tally: TallyItem[];
 }
 
 export interface Settings {

@@ -396,6 +396,56 @@ const tools: Tool[] = [
   },
   {
     def: {
+      name: "add_tally_item",
+      description:
+        "Dopisz pozycję do bieżącego rachunku/targu z ceną (np. na giełdzie). Rozbij wypowiedź na nazwę, ilość i cenę jednostkową. Przykłady: „koszyk truskawek po 15” → name='koszyk truskawek', qty=1, unit_price=15; „dwa pęczki szparagów po 8” → name='pęczek szparagów', qty=2, unit_price=8. Po dodaniu podaj sumę.",
+      input_schema: obj(
+        {
+          name: str("Nazwa pozycji"),
+          qty: { type: "number", description: "Ilość (domyślnie 1)" },
+          unit_price: { type: "number", description: "Cena za sztukę" },
+        },
+        ["name", "unit_price"],
+      ),
+    },
+    run: ({ name, qty, unit_price }) => {
+      const q = Number(qty) || 1;
+      const up = Number(unit_price) || 0;
+      store.setData((d) => d.tally.unshift({ id: uid(), name, qty: q, unitPrice: up, createdAt: Date.now() }));
+      const total = store.data.tally.reduce((s, t) => s + t.qty * t.unitPrice, 0);
+      return `Dodano: ${q}× ${name} po ${up} = ${(q * up).toFixed(2)}. Razem na rachunku: ${total.toFixed(2)}.`;
+    },
+  },
+  {
+    def: {
+      name: "tally_report",
+      description: "Podlicz i przedstaw raport bieżącego rachunku/targu: pozycje, ilości, ceny i sumę.",
+      input_schema: obj({}),
+    },
+    run: () => {
+      const items = store.data.tally;
+      if (!items.length) return "Rachunek jest pusty.";
+      const lines = [...items]
+        .reverse()
+        .map((t) => `• ${t.qty}× ${t.name} po ${t.unitPrice.toFixed(2)} = ${(t.qty * t.unitPrice).toFixed(2)}`);
+      const total = items.reduce((s, t) => s + t.qty * t.unitPrice, 0);
+      return `${lines.join("\n")}\n———\nRAZEM (${items.length} poz.): ${total.toFixed(2)}`;
+    },
+  },
+  {
+    def: {
+      name: "clear_tally",
+      description: "Wyczyść bieżący rachunek/targ (nowa sesja liczenia).",
+      input_schema: obj({}),
+    },
+    run: () => {
+      const n = store.data.tally.length;
+      store.setData((d) => { d.tally = []; });
+      return `Rachunek wyczyszczony (${n} poz.).`;
+    },
+  },
+  {
+    def: {
       name: "set_timer",
       description: "Ustaw minutnik na podaną liczbę minut (powiadomienie). Np. „ustaw minutnik na 10 minut”.",
       input_schema: obj({ minutes: { type: "number", description: "Liczba minut" }, label: str("Etykieta (opcjonalnie)") }, ["minutes"]),
