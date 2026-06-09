@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
+import { store, uid } from "../lib/store";
 
-type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "pass" | "dice" | "qr";
+type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "pass" | "dice" | "qr";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "torch", label: "🔦 Latarka" },
@@ -12,6 +13,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "noise", label: "🔊 Hałas" },
   { id: "timer", label: "⏱ Stoper" },
   { id: "metro", label: "🥁 Metronom" },
+  { id: "rec", label: "🎙 Dyktafon" },
   { id: "pass", label: "🔑 Hasła" },
   { id: "dice", label: "🎲 Losowanie" },
   { id: "qr", label: "🔳 QR" },
@@ -464,6 +466,106 @@ function Metronome() {
   );
 }
 
+// --- 🎙 Dyktafon z transkrypcją na żywo ---
+function Recorder() {
+  const [recording, setRecording] = useState(false);
+  const [text, setText] = useState("");
+  const [saved, setSaved] = useState("");
+  const recRef = useRef<any>(null);
+  const finalRef = useRef("");
+  const runRef = useRef(false);
+  const supported = Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+  const start = () => {
+    finalRef.current = "";
+    setText("");
+    setSaved("");
+    const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!Ctor) return;
+    const r = new Ctor();
+    r.lang = "pl-PL";
+    r.continuous = true;
+    r.interimResults = true;
+    r.onresult = (e: any) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const res = e.results[i];
+        if (res.isFinal) finalRef.current += res[0].transcript + " ";
+        else interim += res[0].transcript;
+      }
+      setText(finalRef.current + interim);
+    };
+    r.onend = () => {
+      if (runRef.current) {
+        try {
+          r.start();
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    runRef.current = true;
+    try {
+      r.start();
+    } catch {
+      /* ignore */
+    }
+    recRef.current = r;
+    setRecording(true);
+  };
+
+  const stop = () => {
+    runRef.current = false;
+    try {
+      recRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
+    setRecording(false);
+  };
+
+  const saveNote = () => {
+    const t = (finalRef.current || text).trim();
+    if (!t) return;
+    store.setData((d) => d.notes.unshift({ id: uid(), text: `🎙 ${t}`, createdAt: Date.now() }));
+    setSaved("Zapisano jako notatkę. Poproś JARVIS-a, by streścił ostatnią notatkę.");
+  };
+
+  useEffect(() => () => stop(), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!supported) return <p className="muted" style={{ paddingTop: 16 }}>Rozpoznawanie mowy niedostępne na tym urządzeniu.</p>;
+
+  return (
+    <div style={{ paddingTop: 12 }}>
+      <div style={{ textAlign: "center" }}>
+        <button className={`btn ${recording ? "" : "primary"}`} onClick={recording ? stop : start}>
+          {recording ? "■ Zatrzymaj" : "● Nagrywaj"}
+        </button>
+      </div>
+      <div
+        style={{
+          minHeight: 120,
+          background: "var(--bg)",
+          border: "1px solid var(--line)",
+          borderRadius: 10,
+          padding: 12,
+          margin: "12px 0",
+          fontSize: 15,
+          lineHeight: 1.5,
+          whiteSpace: "pre-wrap",
+        }}
+      >
+        {text || <span className="muted">Transkrypcja pojawi się tutaj…</span>}
+      </div>
+      <button className="btn" onClick={saveNote} disabled={!text.trim()}>Zapisz jako notatka</button>
+      <button className="btn" onClick={() => navigator.clipboard?.writeText(text).catch(() => {})} disabled={!text.trim()}>
+        Kopiuj
+      </button>
+      {saved && <p className="muted">{saved}</p>}
+    </div>
+  );
+}
+
 export default function Gadgets({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("torch");
   return (
@@ -488,6 +590,7 @@ export default function Gadgets({ onClose }: { onClose: () => void }) {
           {tab === "noise" && <NoiseMeter />}
           {tab === "timer" && <Stopwatch />}
           {tab === "metro" && <Metronome />}
+          {tab === "rec" && <Recorder />}
           {tab === "pass" && <PasswordGen />}
           {tab === "dice" && <DiceCoin />}
           {tab === "qr" && <QrTool />}

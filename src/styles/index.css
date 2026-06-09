@@ -26,6 +26,32 @@ body.stark {
   --text: #ffe7b8;
 }
 
+/* Motywy HUD */
+body.theme-gold {
+  --cyan: #ffce6b;
+  --cyan-dim: #d6a92a;
+  --line: rgba(255, 206, 107, 0.18);
+  --line-strong: rgba(255, 206, 107, 0.4);
+}
+body.theme-green {
+  --cyan: #62e6a8;
+  --cyan-dim: #2aa46e;
+  --line: rgba(98, 230, 168, 0.18);
+  --line-strong: rgba(98, 230, 168, 0.4);
+}
+body.theme-red {
+  --cyan: #ff7a7a;
+  --cyan-dim: #c93b3b;
+  --line: rgba(255, 122, 122, 0.18);
+  --line-strong: rgba(255, 122, 122, 0.4);
+}
+body.theme-purple {
+  --cyan: #b78cff;
+  --cyan-dim: #7a4fd6;
+  --line: rgba(183, 140, 255, 0.18);
+  --line-strong: rgba(183, 140, 255, 0.4);
+}
+
 html,
 body,
 #root {

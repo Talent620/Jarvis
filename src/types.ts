@@ -148,6 +148,8 @@ export interface Settings {
   ollamaUrl: string;
   /** Aktywny projekt/workspace ("" = ogólny). */
   activeProjectId: string;
+  /** Motyw HUD: default | gold | green | red | purple. */
+  theme: string;
   /** Imię użytkownika, którym zwraca się JARVIS. */
   userName: string;
   /** Preset osobowości: classic | concise | warm | witty | custom. */

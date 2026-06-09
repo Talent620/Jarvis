@@ -233,6 +233,26 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           />
         </div>
 
+        <h3>Motyw HUD</h3>
+        <div className="chips" style={{ marginBottom: 8 }}>
+          {[
+            { id: "default", l: "Cyan" },
+            { id: "gold", l: "Złoty" },
+            { id: "green", l: "Zielony" },
+            { id: "red", l: "Czerwony" },
+            { id: "purple", l: "Fiolet" },
+          ].map((t) => (
+            <button
+              key={t.id}
+              className={`chip ${s.theme === t.id ? "active" : ""}`}
+              style={s.theme === t.id ? { borderColor: "var(--line-strong)", background: "rgba(108,231,255,0.18)" } : {}}
+              onClick={() => set({ theme: t.id })}
+            >
+              {t.l}
+            </button>
+          ))}
+        </div>
+
         <h3>Osobowość</h3>
         <div className="field">
           <label>Charakter JARVIS-a</label>

@@ -137,6 +137,13 @@ export default function App() {
     if (img) setPendingImage(img);
   };
 
+  // Motyw HUD.
+  useEffect(() => {
+    const b = document.body;
+    ["theme-gold", "theme-green", "theme-red", "theme-purple"].forEach((c) => b.classList.remove(c));
+    if (settings.theme && settings.theme !== "default") b.classList.add(`theme-${settings.theme}`);
+  }, [settings.theme]);
+
   // Trwałość: zapisuj aktywną rozmowę do historii (najnowsze pierwsze).
   useEffect(() => {
     if (!messages.length) return;
