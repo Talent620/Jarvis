@@ -48,7 +48,7 @@ export default function Help({ onClose }: { onClose: () => void }) {
           <ul>
             <li>„Dodaj zadanie…", „Przypomnij mi o… jutro o 18", „Dodaj mleko do zakupów", „Zapisz notatkę…".</li>
             <li>„Dodaj spotkanie do kalendarza", „Zadzwoń do Marka", „Wyślij SMS do mamy".</li>
-            <li>„Przedstaw <b>raport poranny</b>" — pogoda + kalendarz + zadania.</li>
+            <li>„Przedstaw <b>raport poranny</b>" — pogoda + kalendarz + zadania. Możesz też włączyć <b>automatyczny briefing</b> o stałej porze (⚙ → Głos i zachowanie).</li>
             <li>Wszystko w panelu <b>▣</b> (zakładki: zadania, notatki, kalendarz, zakupy…).</li>
           </ul>
 

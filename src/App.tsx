@@ -26,6 +26,7 @@ import { askJarvis, resolveProvider } from "./lib/brain";
 import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop } from "./lib/desktop";
+import { getWeather } from "./lib/weather";
 import { ensureNotifPerms } from "./lib/notifications";
 import { registerIntents } from "./lib/intents";
 import { store, uid } from "./lib/store";
@@ -50,6 +51,35 @@ function buildGreeting(): string {
   const parts = [`${part}, ${s.userName}.`];
   if (bits.length) parts.push(`Masz ${bits.join(" i ")}.`);
   parts.push("W czym mogę pomóc?");
+  return parts.join(" ");
+}
+
+// Poranny raport: pora dnia + pogoda (best-effort) + kalendarz + zadania.
+async function buildBriefing(): Promise<string> {
+  const s = store.settings;
+  const d = store.data;
+  const now = new Date();
+  const h = now.getHours();
+  const part = h < 12 ? "Dzień dobry" : h < 18 ? "Dobre popołudnie" : "Dobry wieczór";
+  const today = now.toISOString().slice(0, 10);
+  const tasks = d.tasks.filter((t) => !t.done);
+  const events = d.calendar.filter((e) => e.start.slice(0, 10) === today).sort((a, b) => a.start.localeCompare(b.start));
+  const parts = [`${part}, ${s.userName}. Oto Twój poranny raport.`];
+  try {
+    const w = await getWeather();
+    if (w && !/nie udało|niedostęp/i.test(w)) parts.push(w);
+  } catch {
+    /* pomiń pogodę */
+  }
+  parts.push(events.length ? `W kalendarzu na dziś: ${events.map((e) => e.title).slice(0, 6).join(", ")}.` : "Kalendarz na dziś jest pusty.");
+  if (tasks.length) {
+    const word = tasks.length === 1 ? "zadanie" : tasks.length < 5 ? "zadania" : "zadań";
+    const list = tasks.length <= 3 ? `: ${tasks.map((t) => t.title).join(", ")}` : "";
+    parts.push(`Masz ${tasks.length} ${word} do zrobienia${list}.`);
+  } else {
+    parts.push("Nie masz aktywnych zadań.");
+  }
+  parts.push("Miłego dnia.");
   return parts.join(" ");
 }
 
@@ -347,6 +377,29 @@ export default function App() {
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
+  }, []);
+
+  // --- Poranny briefing o ustalonej porze (raz dziennie, gdy aplikacja otwarta) ---
+  useEffect(() => {
+    const tick = setInterval(async () => {
+      const st = store.settings;
+      if (!st.dailyBriefing) return;
+      const now = new Date();
+      const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      const todayStr = now.toISOString().slice(0, 10);
+      if (localStorage.getItem("jarvis.briefing.date") === todayStr) return; // już dziś było
+      if (hhmm < (st.briefingTime || "08:00")) return; // jeszcze nie pora
+      localStorage.setItem("jarvis.briefing.date", todayStr);
+      const text = await buildBriefing();
+      const id = uid();
+      setLiveId(id);
+      setMessages((m) => [...m, { id, role: "assistant", text, tools: ["briefing"], createdAt: Date.now() }]);
+      if (st.speak) {
+        setOrb("speaking");
+        speak(text, st);
+      }
+    }, 30000);
+    return () => clearInterval(tick);
   }, []);
 
   // Status sieci dla wskaźnika HUD.

@@ -42,6 +42,8 @@ const defaultSettings: Settings = {
   wakeWord: false,
   autoListenOnOpen: false,
   proactiveOnOpen: true,
+  dailyBriefing: false,
+  briefingTime: "08:00",
   backgroundWake: false,
   elevenLabsApiKey: "",
   elevenLabsVoiceId: "",

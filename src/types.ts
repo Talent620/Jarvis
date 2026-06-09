@@ -182,6 +182,10 @@ export interface Settings {
   autoListenOnOpen: boolean;
   /** Po otwarciu pokaż proaktywne powitanie/raport. */
   proactiveOnOpen: boolean;
+  /** Codzienny poranny briefing (pogoda + kalendarz + zadania) o ustalonej porze. */
+  dailyBriefing: boolean;
+  /** Godzina porannego briefingu w formacie HH:MM. */
+  briefingTime: string;
   /** Natywny nasłuch słowa "Jarvis" w tle (uruchamia apkę głosem). */
   backgroundWake: boolean;
   /** Opcjonalny klucz ElevenLabs dla premium głosu JARVIS. */

@@ -153,17 +153,38 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           </div>
         ))}
 
-        <button
-          className="btn"
-          onClick={async () => {
-            store.setSettings(s);
-            setApiMsg("⏳ Sprawdzam…");
-            setApiMsg(await testApi());
-          }}
-        >
-          🔌 Sprawdź połączenie API
-        </button>
-        {apiMsg && <p className="muted">{apiMsg}</p>}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            className="btn"
+            style={{ flex: 1 }}
+            onClick={async () => {
+              store.setSettings(s);
+              setApiMsg("⏳ Sprawdzam…");
+              setApiMsg(await testApi());
+            }}
+          >
+            🔌 Sprawdź aktywne
+          </button>
+          <button
+            className="btn"
+            style={{ flex: 1 }}
+            onClick={async () => {
+              const withKeys = PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim());
+              if (!withKeys.length) {
+                setApiMsg("Brak wpisanych kluczy do przetestowania.");
+                return;
+              }
+              store.setSettings(s);
+              setApiMsg("⏳ Testuję wszystkie klucze…");
+              const lines: string[] = [];
+              for (const p of withKeys) lines.push(await testProvider(p.id, s.keys[p.id]));
+              setApiMsg(lines.join("\n"));
+            }}
+          >
+            🔑 Testuj wszystkie
+          </button>
+        </div>
+        {apiMsg && <p className="muted" style={{ whiteSpace: "pre-line" }}>{apiMsg}</p>}
 
         <div className="field">
           <label>Lokalny model — adres Ollama (prywatny, offline)</label>
@@ -364,6 +385,20 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           <span>Proaktywne powitanie/raport po otwarciu</span>
           <Toggle on={s.proactiveOnOpen} onClick={() => set({ proactiveOnOpen: !s.proactiveOnOpen })} />
         </div>
+        <div className="row">
+          <span>
+            Poranny briefing o ustalonej porze
+            <br />
+            <span className="muted">pogoda + kalendarz + zadania, czytany głosem (gdy apka otwarta)</span>
+          </span>
+          <Toggle on={s.dailyBriefing} onClick={() => set({ dailyBriefing: !s.dailyBriefing })} />
+        </div>
+        {s.dailyBriefing && (
+          <div className="field">
+            <label>Godzina briefingu</label>
+            <input type="time" value={s.briefingTime} onChange={(e) => set({ briefingTime: e.target.value })} />
+          </div>
+        )}
         {wakeSupported() && (
           <div className="row">
             <span>
