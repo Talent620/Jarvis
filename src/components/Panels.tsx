@@ -25,19 +25,22 @@ export default function Panels({ onClose }: { onClose: () => void }) {
   return (
     <div className="sheet" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <h2>▣ Twoje dane</h2>
-        <div className="tabs">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              className={`tab ${tab === t.id ? "active" : ""}`}
-              onClick={() => setTab(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
+        <div className="panel-head">
+          <div className="grabber" />
+          <h2>▣ Twoje dane</h2>
+          <div className="tabs" style={{ marginBottom: 0, marginTop: 12 }}>
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                className={`tab ${tab === t.id ? "active" : ""}`}
+                onClick={() => setTab(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
-
+        <div className="panel-body">
         {tab === "tasks" &&
           (data.tasks.length ? (
             data.tasks.map((t) => (
@@ -155,9 +158,12 @@ export default function Panels({ onClose }: { onClose: () => void }) {
             <p className="muted">JARVIS jeszcze nic o Tobie nie zapamiętał.</p>
           ))}
 
-        <button className="btn" onClick={onClose}>
-          Zamknij
-        </button>
+        </div>
+        <div className="panel-foot">
+          <button className="btn" onClick={onClose}>
+            Zamknij
+          </button>
+        </div>
       </div>
     </div>
   );

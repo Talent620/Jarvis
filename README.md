@@ -22,6 +22,14 @@ modyfikować i z którego zbudujesz nowy APK.
 - **Sterowanie urządzeniem i usługami** — otwieranie aplikacji (Spotify, YouTube,
   Mapy, Gmail, WhatsApp, Allegro/OLX…), dzwonienie, SMS, nawigacja.
 - **Smart home** — sterowanie urządzeniami przez Home Assistant (włącz/wyłącz/przełącz).
+- **Raport poranny** — jednym poleceniem podsumowanie: pora dnia, pogoda na żywo,
+  dzisiejsze wydarzenia, aktywne zadania i przypomnienia (jak chief-of-staff).
+- **Pogoda na żywo** — Open-Meteo (bez klucza, darmowe) wg lokalizacji lub miasta.
+- **Barge-in** — włączenie mikrofonu/słowo-klucz natychmiast przerywa mówienie JARVIS-a.
+- **Płynne odpowiedzi** — efekt „pisania na żywo" + trwała historia rozmowy i „nowa rozmowa".
+- **Szybkie akcje** — podpowiadane komendy na start.
+- **Przejrzysty UI mobilny** — panele jako bottom-sheet z przewijaną treścią i stałą
+  stopką (nic się nie ucina, bezpieczne marginesy pod notch/gesty).
 - **Produktywność** — zadania, notatki, przypomnienia, kalendarz, lista zakupów.
 
 ## Konfiguracja

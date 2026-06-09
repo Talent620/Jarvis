@@ -10,15 +10,26 @@ import { store, uid } from "./lib/store";
 import { useStore } from "./hooks/useStore";
 import type { ChatMessage } from "./types";
 
+const CHAT_KEY = "jarvis.chat.v1";
+
+function loadChat(): ChatMessage[] {
+  try {
+    return JSON.parse(localStorage.getItem(CHAT_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
 export default function App() {
   const { settings } = useStore();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(loadChat);
   const [interim, setInterim] = useState("");
   const [orb, setOrb] = useState<OrbState>("idle");
   const [busy, setBusy] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPanels, setShowPanels] = useState(false);
   const [micOn, setMicOn] = useState(false);
+  const [liveId, setLiveId] = useState<string | null>(null);
 
   const listenerRef = useRef<Listener | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -29,6 +40,15 @@ export default function App() {
     loadVoices();
     if (!resolveProvider()) setShowSettings(true);
   }, []);
+
+  // Trwałość rozmowy (ostatnie 100 wiadomości).
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHAT_KEY, JSON.stringify(messages.slice(-100)));
+    } catch {
+      /* ignore */
+    }
+  }, [messages]);
 
   // --- Wysłanie polecenia do JARVIS-a (agentowa pętla) ---
   const handleSend = async (text: string) => {
@@ -52,6 +72,7 @@ export default function App() {
         tools: reply.tools,
         createdAt: Date.now(),
       };
+      setLiveId(aiMsg.id);
       setMessages((m) => [...m, aiMsg]);
 
       if (store.settings.speak) {
@@ -70,13 +91,28 @@ export default function App() {
     }
   };
 
-  // --- Sterowanie nasłuchem ---
+  const newChat = () => {
+    stopSpeaking();
+    setMessages([]);
+    setLiveId(null);
+    try {
+      localStorage.removeItem(CHAT_KEY);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  // --- Sterowanie nasłuchem (z barge-in: nasłuch przerywa mówienie) ---
   const startListening = (wake: boolean) => {
     if (!micSupported) return;
+    stopSpeaking();
     listenerRef.current?.stop();
     const listener = new Listener({
       wakeWord: wake,
-      onWake: () => setOrb("listening"),
+      onWake: () => {
+        stopSpeaking();
+        setOrb("listening");
+      },
       onInterim: (t) => setInterim(t),
       onFinal: (t) => {
         setInterim("");
@@ -131,10 +167,9 @@ export default function App() {
             if (x) x.fired = true;
           });
           const text = `Przypomnienie, ${store.settings.userName}: ${r.text}.`;
-          setMessages((m) => [
-            ...m,
-            { id: uid(), role: "assistant", text, tools: ["reminder"], createdAt: Date.now() },
-          ]);
+          const id = uid();
+          setLiveId(id);
+          setMessages((m) => [...m, { id, role: "assistant", text, tools: ["reminder"], createdAt: Date.now() }]);
           if (store.settings.speak) speak(text, store.settings);
           if ("Notification" in window && Notification.permission === "granted") {
             new Notification("JARVIS", { body: r.text });
@@ -158,6 +193,11 @@ export default function App() {
           <small>{(resolveProvider()?.model || "BRAK API").toUpperCase()} · ONLINE</small>
         </div>
         <div className="spacer" />
+        {messages.length > 0 && (
+          <button className="icon-btn" onClick={newChat} title="Nowa rozmowa">
+            ＋
+          </button>
+        )}
         <button className="icon-btn" onClick={() => setShowPanels(true)} title="Dane">
           ▣
         </button>
@@ -175,7 +215,7 @@ export default function App() {
 
       <Orb state={orb} />
 
-      <Conversation messages={messages} interim={interim} />
+      <Conversation messages={messages} interim={interim} liveId={liveId} onSuggest={handleSend} />
 
       <Composer
         onSend={handleSend}

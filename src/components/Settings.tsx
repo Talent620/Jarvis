@@ -44,9 +44,12 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="sheet" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <h2>⚙ Ustawienia</h2>
-
-        <h3>Dostawca AI</h3>
+        <div className="panel-head">
+          <div className="grabber" />
+          <h2>⚙ Ustawienia</h2>
+        </div>
+        <div className="panel-body">
+          <h3>Dostawca AI</h3>
         <div className="field">
           <label>Dostawca</label>
           <select value={s.provider} onChange={(e) => set({ provider: e.target.value, model: "auto" })}>
@@ -200,9 +203,12 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           />
         </div>
 
-        <button className="btn primary" onClick={save}>
-          Zapisz
-        </button>
+        </div>
+        <div className="panel-foot">
+          <button className="btn primary" onClick={save}>
+            Zapisz
+          </button>
+        </div>
       </div>
     </div>
   );

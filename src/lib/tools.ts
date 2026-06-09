@@ -1,5 +1,6 @@
 import { store, uid } from "./store";
 import { openService, call, sms, navigate, smartHome } from "./deviceControl";
+import { getWeather } from "./weather";
 
 // Definicja narzędzia w formacie Claude Messages API + lokalny wykonawca.
 export interface ToolDef {
@@ -235,6 +236,53 @@ const tools: Tool[] = [
       ),
     },
     run: ({ entity_id, action }) => smartHome(entity_id, action),
+  },
+  {
+    def: {
+      name: "get_weather",
+      description:
+        "Sprawdź aktualną pogodę. Bez podania miejsca użyje lokalizacji urządzenia. Dane na żywo (Open-Meteo).",
+      input_schema: obj({ location: str("Miasto/miejsce (opcjonalnie)") }),
+    },
+    run: ({ location }) => getWeather(location),
+  },
+  {
+    def: {
+      name: "daily_briefing",
+      description:
+        "Zbierz dane do porannego raportu: pora dnia, pogoda, dzisiejsze wydarzenia, aktywne zadania i dzisiejsze przypomnienia. Następnie zreferuj je użytkownikowi naturalnie.",
+      input_schema: obj({}),
+    },
+    run: async () => {
+      const now = new Date();
+      const hour = now.getHours();
+      const part = hour < 12 ? "Ranek" : hour < 18 ? "Popołudnie" : "Wieczór";
+      const todayStr = now.toISOString().slice(0, 10);
+
+      const events = store.data.calendar
+        .filter((e) => e.start.slice(0, 10) === todayStr)
+        .sort((a, b) => a.start.localeCompare(b.start));
+      const openTasks = store.data.tasks.filter((t) => !t.done);
+      const todayReminders = store.data.reminders.filter((r) => !r.fired && r.at.slice(0, 10) === todayStr);
+
+      const weather = await getWeather().catch(() => "pogoda niedostępna");
+
+      const lines = [
+        `Pora dnia: ${part} (${now.toLocaleString("pl-PL")}).`,
+        weather,
+        events.length
+          ? `Dzisiejsze wydarzenia: ${events
+              .map((e) => `${new Date(e.start).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })} ${e.title}`)
+              .join("; ")}.`
+          : "Brak wydarzeń w kalendarzu na dziś.",
+        openTasks.length
+          ? `Aktywne zadania (${openTasks.length}): ${openTasks.slice(0, 5).map((t) => t.title).join("; ")}.`
+          : "Brak aktywnych zadań.",
+        todayReminders.length ? `Przypomnienia na dziś: ${todayReminders.map((r) => r.text).join("; ")}.` : "",
+      ].filter(Boolean);
+
+      return lines.join("\n");
+    },
   },
 ];
 

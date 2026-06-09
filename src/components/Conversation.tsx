@@ -1,18 +1,31 @@
 import { useEffect, useRef } from "react";
 import type { ChatMessage } from "../types";
+import TypeText from "./TypeText";
+
+const SUGGESTIONS = [
+  "Przedstaw raport poranny",
+  "Jaka jest pogoda?",
+  "Co mam dziś do zrobienia?",
+  "Włącz Spotify",
+  "Co nowego w wiadomościach?",
+];
 
 export default function Conversation({
   messages,
   interim,
+  liveId,
+  onSuggest,
 }: {
   messages: ChatMessage[];
   interim: string;
+  liveId: string | null;
+  onSuggest: (text: string) => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, interim]);
+  }, [messages.length, interim, liveId]);
 
   if (!messages.length && !interim) {
     return (
@@ -21,12 +34,13 @@ export default function Conversation({
           Witaj. Jestem <b>JARVIS</b>.
           <br />
           Powiedz „<b>Jarvis</b>" lub napisz polecenie.
-          <br />
-          <br />
-          <span className="muted">
-            „Dodaj zadanie: zadzwonić do mamy jutro o 18", „Jaka jest pogoda w Krakowie?",
-            „Włącz Spotify — Daft Punk", „Przypomnij mi o spotkaniu w piątek".
-          </span>
+          <div className="chips" style={{ justifyContent: "center", flexWrap: "wrap", marginTop: 16 }}>
+            {SUGGESTIONS.map((s) => (
+              <button key={s} className="chip" onClick={() => onSuggest(s)}>
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
         <div ref={endRef} />
       </div>
@@ -37,7 +51,7 @@ export default function Conversation({
     <div className="convo">
       {messages.map((m) => (
         <div key={m.id} className={`bubble ${m.role}`}>
-          {m.text}
+          {m.role === "assistant" ? <TypeText text={m.text} animate={m.id === liveId} /> : m.text}
           {m.tools && m.tools.length > 0 && (
             <div className="tools">
               {m.tools.map((t) => (
