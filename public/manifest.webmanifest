@@ -1,0 +1,16 @@
+{
+  "name": "JARVIS · AI Assistant",
+  "short_name": "JARVIS",
+  "description": "Agentowy asystent głosowy i tekstowy w stylu HUD, napędzany Claude Opus 4.8.",
+  "id": ".",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#04070f",
+  "theme_color": "#04070f",
+  "categories": ["productivity", "utilities", "personalization"],
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

@@ -1,0 +1,85 @@
+import type { AppData, Settings } from "../types";
+
+const DATA_KEY = "jarvis.data.v2";
+const SETTINGS_KEY = "jarvis.settings.v2";
+
+const emptyData: AppData = {
+  tasks: [],
+  notes: [],
+  reminders: [],
+  shopping: [],
+  calendar: [],
+  memory: [],
+};
+
+const defaultSettings: Settings = {
+  anthropicApiKey: "",
+  model: "claude-opus-4-8",
+  userName: "Sir",
+  webSearch: true,
+  speak: true,
+  voiceName: "",
+  voicePitch: 0.9,
+  voiceRate: 1.0,
+  wakeWord: false,
+  elevenLabsApiKey: "",
+  elevenLabsVoiceId: "",
+};
+
+export function uid(): string {
+  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+}
+
+function read<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return { ...fallback, ...JSON.parse(raw) } as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function write(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* quota / private mode — ignore */
+  }
+}
+
+// --- Reaktywny magazyn z prostym pub/sub ---
+
+type Listener = () => void;
+
+class Store {
+  data: AppData = read<AppData>(DATA_KEY, emptyData);
+  settings: Settings = read<Settings>(SETTINGS_KEY, defaultSettings);
+  /** Rośnie przy każdej zmianie — używane jako snapshot dla Reacta. */
+  version = 0;
+  private listeners = new Set<Listener>();
+
+  subscribe(fn: Listener): () => void {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+
+  private emit() {
+    this.version++;
+    this.listeners.forEach((fn) => fn());
+  }
+
+  setData(mut: (d: AppData) => void) {
+    mut(this.data);
+    write(DATA_KEY, this.data);
+    this.emit();
+  }
+
+  setSettings(patch: Partial<Settings>) {
+    this.settings = { ...this.settings, ...patch };
+    write(SETTINGS_KEY, this.settings);
+    this.emit();
+  }
+}
+
+export const store = new Store();
