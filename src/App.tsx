@@ -10,6 +10,9 @@ import Projects from "./components/Projects";
 import Help from "./components/Help";
 import More from "./components/More";
 import PermissionDialog from "./components/PermissionDialog";
+import { Suspense, lazy } from "react";
+
+const Gadgets = lazy(() => import("./components/Gadgets"));
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
 import { startBackgroundWake } from "./lib/wakeword";
@@ -60,6 +63,7 @@ export default function App() {
   const [showProjects, setShowProjects] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  const [showGadgets, setShowGadgets] = useState(false);
   const [interim, setInterim] = useState("");
   const [orb, setOrb] = useState<OrbState>("idle");
   const [busy, setBusy] = useState(false);
@@ -355,9 +359,15 @@ export default function App() {
           onProjects={() => setShowProjects(true)}
           onHistory={() => setShowHistory(true)}
           onData={() => setShowPanels(true)}
+          onGadgets={() => setShowGadgets(true)}
           onHelp={() => setShowHelp(true)}
           onClose={() => setShowMore(false)}
         />
+      )}
+      {showGadgets && (
+        <Suspense fallback={null}>
+          <Gadgets onClose={() => setShowGadgets(false)} />
+        </Suspense>
       )}
       {pendingConsent && (
         <PermissionDialog

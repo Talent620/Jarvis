@@ -2,12 +2,14 @@ export default function More({
   onProjects,
   onHistory,
   onData,
+  onGadgets,
   onHelp,
   onClose,
 }: {
   onProjects: () => void;
   onHistory: () => void;
   onData: () => void;
+  onGadgets: () => void;
   onHelp: () => void;
   onClose: () => void;
 }) {
@@ -15,6 +17,7 @@ export default function More({
     { icon: "📁", label: "Projekty / dokumenty", fn: onProjects },
     { icon: "🕘", label: "Historia rozmów", fn: onHistory },
     { icon: "▣", label: "Dane (zadania, targ, audyt…)", fn: onData },
+    { icon: "🧰", label: "Gadżety (latarka, kompas, QR…)", fn: onGadgets },
     { icon: "❓", label: "Pomoc — jak korzystać", fn: onHelp },
   ];
   return (
