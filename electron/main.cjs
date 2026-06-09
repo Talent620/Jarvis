@@ -1,7 +1,8 @@
 // Główny proces Electrona — JARVIS na komputer (Windows .exe), pełna wersja.
-const { app, BrowserWindow, shell, session, Menu } = require("electron");
+const { app, BrowserWindow, shell, session, Menu, ipcMain } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const { spawn, exec } = require("child_process");
 
 const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
 
@@ -39,6 +40,7 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      preload: path.join(__dirname, "preload.cjs"),
     },
   });
 
@@ -93,6 +95,79 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+// --- Sterowanie komputerem (most z renderer → system) ---
+
+// Mapowanie przyjaznych nazw na polecenia/protokoły Windows.
+const WIN_APPS = {
+  spotify: "spotify:", chrome: "chrome", firefox: "firefox", edge: "msedge",
+  notatnik: "notepad", notepad: "notepad", kalkulator: "calc", calc: "calc", calculator: "calc",
+  eksplorator: "explorer", explorer: "explorer", pliki: "explorer", files: "explorer",
+  cmd: "cmd", terminal: "wt", word: "winword", excel: "excel", powerpoint: "powerpnt",
+  paint: "mspaint", malowanie: "mspaint", ustawienia: "ms-settings:", settings: "ms-settings:",
+  aparat: "microsoft.windows.camera:", camera: "microsoft.windows.camera:",
+  sklep: "ms-windows-store:", store: "ms-windows-store:", task: "taskmgr", menedzer: "taskmgr",
+};
+
+function registerDesktopControl() {
+  ipcMain.handle("jarvis:open", async (_e, target) => {
+    if (!target) return "err:empty";
+    // URL/protokół (http, mailto, spotify:, ms-settings:) → powłoka; inaczej ścieżka.
+    if (/^[a-z][a-z0-9+.-]*:/i.test(target)) {
+      await shell.openExternal(target);
+      return "ok";
+    }
+    const err = await shell.openPath(target); // plik lub folder
+    return err ? `err:${err}` : "ok";
+  });
+
+  ipcMain.handle("jarvis:launch", async (_e, name) => {
+    const key = String(name || "").toLowerCase().trim();
+    if (!key) return "err:empty";
+    const mapped = WIN_APPS[key] || key;
+    if (process.platform === "win32") {
+      // Protokoły (spotify:, ms-settings:) otwieramy przez powłokę.
+      if (/^[a-z]+:/.test(mapped)) {
+        await shell.openExternal(mapped);
+        return "ok";
+      }
+      spawn("cmd", ["/c", "start", "", mapped], { detached: true, stdio: "ignore" }).unref();
+      return "ok";
+    }
+    if (process.platform === "darwin") {
+      spawn("open", ["-a", mapped], { detached: true, stdio: "ignore" }).unref();
+      return "ok";
+    }
+    spawn("sh", ["-c", `${mapped} &`], { detached: true, stdio: "ignore" }).unref();
+    return "ok";
+  });
+
+  ipcMain.handle("jarvis:power", async (_e, action) => {
+    const a = String(action || "").toLowerCase();
+    if (process.platform !== "win32") return "err:unsupported";
+    const map = {
+      lock: "rundll32.exe user32.dll,LockWorkStation",
+      sleep: "rundll32.exe powrprof.dll,SetSuspendState 0,1,0",
+      shutdown: "shutdown /s /t 0",
+      restart: "shutdown /r /t 0",
+      logoff: "shutdown /l",
+    };
+    const cmd = map[a];
+    if (!cmd) return "err:unknown";
+    exec(cmd);
+    return "ok";
+  });
+
+  ipcMain.handle("jarvis:volume", async (_e, action) => {
+    const a = String(action || "").toLowerCase();
+    if (process.platform !== "win32") return "err:unsupported";
+    // Symuluj klawisze multimedialne (VK: 175 = głośniej, 174 = ciszej, 173 = wycisz).
+    const vk = { up: 175, down: 174, mute: 173 }[a];
+    if (!vk) return "err:unknown";
+    exec(`powershell -NoProfile -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]${vk})"`);
+    return "ok";
+  });
+}
+
 // Tylko jedna instancja aplikacji.
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -122,6 +197,7 @@ if (!gotLock) {
       });
     });
 
+    registerDesktopControl();
     buildMenu();
     createWindow();
 

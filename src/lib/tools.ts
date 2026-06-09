@@ -7,6 +7,7 @@ import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
 import { gmailSearch, gmailSend, gcalList, gcalAdd } from "./google";
 import { rememberFact } from "./memory";
+import { isDesktop, launchApp, openOnPc, powerPc, volumePc } from "./desktop";
 import type { Citation } from "../types";
 
 // Bufor cytatów z ostatniego zapytania (research). Resetowany per wywołanie w brain.ts.
@@ -212,7 +213,53 @@ const tools: Tool[] = [
         "service",
       ]),
     },
-    run: ({ service, query }) => openService(service, query),
+    run: ({ service, query }) => {
+      // Na komputerze bez zapytania próbuj uruchomić natywny program (np. Spotify),
+      // inaczej (lub z zapytaniem) otwórz usługę webową.
+      if (isDesktop() && !query) return launchApp(service);
+      return openService(service, query);
+    },
+  },
+  {
+    def: {
+      name: "desktop_launch_app",
+      description:
+        "KOMPUTER (Windows): uruchom lokalny program. Podaj nazwę (np. notatnik, kalkulator, eksplorator, spotify, chrome, word, excel, ustawienia, menedzer zadań) lub ścieżkę/polecenie. Używaj, gdy użytkownik prosi o otwarcie programu na komputerze.",
+      input_schema: obj({ app: str("Nazwa programu lub ścieżka") }, ["app"]),
+    },
+    run: ({ app }) => launchApp(app),
+  },
+  {
+    def: {
+      name: "desktop_open",
+      description:
+        "KOMPUTER (Windows): otwórz plik, folder lub adres URL w domyślnej aplikacji systemu. Np. 'C:/Users/.../raport.pdf', 'C:/Pobrane' albo 'https://...'.",
+      input_schema: obj({ target: str("Ścieżka do pliku/folderu lub URL") }, ["target"]),
+    },
+    run: ({ target }) => openOnPc(target),
+  },
+  {
+    def: {
+      name: "desktop_power",
+      description:
+        "KOMPUTER (Windows): akcja zasilania — lock (zablokuj), sleep (uśpij), restart (uruchom ponownie), shutdown (wyłącz), logoff (wyloguj). Wymaga potwierdzenia użytkownika.",
+      input_schema: obj(
+        { action: { type: "string", enum: ["lock", "sleep", "restart", "shutdown", "logoff"], description: "Akcja zasilania" } },
+        ["action"],
+      ),
+    },
+    run: ({ action }) => powerPc(action),
+  },
+  {
+    def: {
+      name: "desktop_volume",
+      description: "KOMPUTER (Windows): głośność systemu — up (głośniej), down (ciszej), mute (wycisz/włącz dźwięk).",
+      input_schema: obj(
+        { action: { type: "string", enum: ["up", "down", "mute"], description: "Zmiana głośności" } },
+        ["action"],
+      ),
+    },
+    run: ({ action }) => volumePc(action),
   },
   {
     def: {

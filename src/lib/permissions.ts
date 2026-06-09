@@ -18,6 +18,8 @@ const RISK: Record<string, Risk> = {
   // outbound — działania na zewnątrz / nieodwracalne (wymaga zgody)
   make_call: "outbound", send_sms: "outbound", smart_home: "outbound", run_scene: "outbound",
   open_service: "outbound", navigate_to: "outbound", call_contact: "outbound", text_contact: "outbound",
+  // sterowanie komputerem (Windows) — wymaga zgody
+  desktop_launch_app: "outbound", desktop_open: "outbound", desktop_power: "outbound", desktop_volume: "outbound",
 };
 
 export function riskOf(tool: string): Risk {

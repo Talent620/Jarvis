@@ -2,6 +2,7 @@ import { store } from "./store";
 import { toolDefs, resetCitations, getCitations } from "./tools";
 import { PROVIDERS, PROVIDER_LIST, autoPick } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed } from "./memory";
+import { isDesktop } from "./desktop";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
 
 // Błędy, przy których warto spróbować kolejnego dostawcy (brak kredytów, limit, autoryzacja).
@@ -148,6 +149,9 @@ export function systemPrompt(): string {
     ``,
     `Zasady:`,
     `- Gdy użytkownik o coś prosi, DZIAŁAJ przez narzędzia (zadania, notatki, przypomnienia, kalendarz, zakupy, otwieranie aplikacji, dzwonienie, nawigacja, smart home).`,
+    isDesktop()
+      ? `- Jesteś na KOMPUTERZE (Windows). Możesz sterować nim narzędziami desktop_*: uruchamiać programy (desktop_launch_app), otwierać pliki/foldery/URL (desktop_open), głośność (desktop_volume) i zasilanie (desktop_power — wymaga zgody). Używaj ich, gdy użytkownik prosi o akcję na komputerze.`
+      : `- Jesteś na URZĄDZENIU MOBILNYM. Korzystaj z dzwonienia, SMS, nawigacji, otwierania aplikacji i kamery.`,
     `- Gdy potrzeba aktualnych informacji lub źródeł, użyj narzędzia web_research i powołuj się na źródła numerami [1], [2].`,
     `- Akcje zewnętrzne (dzwonienie, SMS, smart home, zapisy) mogą wymagać zgody użytkownika — to normalne; po zgodzie potwierdź wynik.`,
     `- Rozumiej polską odmianę przez przypadki (np. „szparagi", „szparagów", „szparagami" to ta sama rzecz). Dodawaj pozycje na listy i zadania od razu, bez zbędnego dopytywania.`,
