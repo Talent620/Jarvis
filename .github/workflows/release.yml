@@ -1,0 +1,65 @@
+name: Release APK
+
+# Buduje PODPISANY APK (release) i publikuje go w GitHub Releases pod stałym
+# tagiem "latest" — dzięki temu masz niezmienny link do pobrania:
+# https://github.com/<owner>/<repo>/releases/download/latest/jarvis.apk
+#
+# Uruchamiany ręcznie (Actions → Release APK → Run workflow) lub przez tag v*.
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web + sync Capacitor
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: Build signed release APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk jarvis.apk
+
+      - name: Publish to GitHub Releases (rolling 'latest')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: JARVIS — najnowszy build
+          body: |
+            Najnowszy podpisany APK JARVIS-a (build z gałęzi roboczej).
+            Pobierz `jarvis.apk` poniżej, przerzuć na telefon i zainstaluj
+            (zezwól na instalację z nieznanych źródeł).
+          files: jarvis.apk
+          make_latest: true

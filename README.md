@@ -98,6 +98,22 @@ npx cap open android   # Build → Build APK(s)
 
 Gotowy plik: `android/app/build/outputs/apk/debug/`.
 
+### Wersja release + stały link do pobrania
+
+Workflow `.github/workflows/release.yml` buduje **podpisany** APK (`assembleRelease`)
+i publikuje go w **GitHub Releases** pod stałym tagiem `latest`. Uruchom go ręcznie
+(**Actions → Release APK → Run workflow**) lub wypchnij tag `v*`. Stały link:
+
+```
+https://github.com/Talent620/Jarvis/releases/download/latest/jarvis.apk
+```
+
+> 🔐 **Podpisywanie:** w repo dołączony jest osobisty klucz `android/keystore/jarvis.jks`
+> (hasło w `android/app/build.gradle`). To wygodne do prywatnego udostępniania, ale
+> **nie jest to klucz produkcyjny** — kto ma keystore, może podpisać aktualizację tej
+> aplikacji. Do publikacji w Google Play wygeneruj własny, tajny keystore i trzymaj go
+> w sekretach (nie w repo).
+
 ## Struktura
 
 ```
