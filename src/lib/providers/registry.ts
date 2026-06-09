@@ -141,3 +141,16 @@ export function autoPick(keys: Record<string, string>): { provider: ProviderId; 
   const best = candidates[0];
   return best ? { provider: best.id, model: best.defaultModel } : null;
 }
+
+/** Rozpoznaje dostawcę po formacie klucza (do „wklej dowolny klucz"). */
+export function detectProvider(key: string): ProviderId | null {
+  const k = (key || "").trim();
+  if (!k) return null;
+  if (k.startsWith("sk-ant-")) return "anthropic";
+  if (k.startsWith("sk-or-")) return "openrouter"; // OpenRouter: sk-or-v1-...
+  if (k.startsWith("gsk_")) return "groq";
+  if (k.startsWith("nvapi-")) return "nvidia";
+  if (k.startsWith("AIza")) return "gemini"; // klucze Google API
+  if (/^gh[posru]_/.test(k) || k.startsWith("github_pat_")) return "github";
+  return null;
+}

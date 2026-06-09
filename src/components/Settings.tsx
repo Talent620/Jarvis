@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
 import { loadVoices, speak } from "../lib/voice";
-import { PROVIDER_LIST, PROVIDERS, autoPick } from "../lib/providers/registry";
+import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { googleStartUrl } from "../lib/google";
-import { testApi } from "../lib/brain";
+import { testApi, testProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
 import { exportData, importData } from "../lib/backup";
 import type { ProviderId } from "../lib/providers/types";
@@ -22,6 +22,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [apiMsg, setApiMsg] = useState("");
   const [backupMsg, setBackupMsg] = useState("");
   const [backendMsg, setBackendMsg] = useState("");
+  const [quickKey, setQuickKey] = useState("");
+  const [quickMsg, setQuickMsg] = useState("");
 
   useEffect(() => {
     loadVoices().then(setVoices);
@@ -29,6 +31,22 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
 
   const set = (patch: Partial<Settings>) => setS((prev) => ({ ...prev, ...patch }));
   const setKey = (id: ProviderId, val: string) => setS((prev) => ({ ...prev, keys: { ...prev.keys, [id]: val } }));
+
+  // „Wklej dowolny klucz" — rozpoznaj dostawcę, zapisz i od razu przetestuj.
+  const addQuickKey = async () => {
+    const key = quickKey.trim();
+    const prov = detectProvider(key);
+    if (!prov) {
+      setQuickMsg("Nie rozpoznałem dostawcy po formacie klucza — wklej go w odpowiednie pole niżej.");
+      return;
+    }
+    const next = { ...s, keys: { ...s.keys, [prov]: key } };
+    setS(next);
+    store.setSettings(next);
+    setQuickMsg(`✓ Rozpoznano: ${PROVIDERS[prov].label}. Sprawdzam połączenie…`);
+    setQuickKey("");
+    setQuickMsg(`${PROVIDERS[prov].label} → ${await testProvider(prov, key)}`);
+  };
 
   // Lista modeli dla wybranego dostawcy (lub info o auto).
   const modelOptions = useMemo(() => {
@@ -59,6 +77,30 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           <h2>⚙ Ustawienia</h2>
         </div>
         <div className="panel-body">
+          <h3>🚀 Szybki start</h3>
+          <p className="muted">
+            Wklej <b>dowolny</b> klucz API — JARVIS sam rozpozna dostawcę i sprawdzi połączenie.
+            Nie masz?{" "}
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style={{ color: "var(--cyan)" }}>
+              Zdobądź darmowy klucz Gemini
+            </a>{" "}
+            (1 min, bez karty).
+          </p>
+          <div className="field">
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                value={quickKey}
+                placeholder="Wklej klucz API…"
+                onChange={(e) => setQuickKey(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button className="btn primary" onClick={addQuickKey} disabled={!quickKey.trim()}>
+                Dodaj
+              </button>
+            </div>
+            {quickMsg && <p className="muted" style={{ marginTop: 6 }}>{quickMsg}</p>}
+          </div>
+
           <h3>Dostawca AI</h3>
         <div className="field">
           <label>Dostawca</label>

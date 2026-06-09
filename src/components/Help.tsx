@@ -14,7 +14,8 @@ export default function Help({ onClose }: { onClose: () => void }) {
 
           <h3>🚀 Start</h3>
           <ul>
-            <li>Wejdź w <b>⚙ Ustawienia</b> → wpisz jeden klucz API (np. <b>Gemini</b> — darmowy z aistudio.google.com) → Zapisz.</li>
+            <li>Wejdź w <b>⚙ Ustawienia → Szybki start</b> i <b>wklej dowolny klucz API</b> — JARVIS sam rozpozna dostawcę i sprawdzi połączenie.</li>
+            <li>Nie masz klucza? Najłatwiejszy i darmowy: <b>Gemini</b> z aistudio.google.com/apikey (1 min, bez karty).</li>
             <li>Tryb <b>auto</b> sam wybiera najlepszego dostępnego dostawcę; gdy jeden zawiedzie (np. brak kredytów), przeskakuje na innego.</li>
           </ul>
 

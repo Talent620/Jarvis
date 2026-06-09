@@ -157,25 +157,30 @@ export function resolveProvider(): { provider: ProviderId; model: string; apiKey
   return { provider, model, apiKey };
 }
 
-/** Szybki test: czy wybrany dostawca/klucz działa. */
-export async function testApi(): Promise<string> {
-  const r = resolveProvider();
-  if (!r) return "❌ Brak skonfigurowanego dostawcy AI (⚙).";
-  if (!r.apiKey?.trim()) return `❌ Brak klucza dla ${PROVIDERS[r.provider].label}.`;
+/** Test konkretnego dostawcy + klucza (używane przy „wklej dowolny klucz"). */
+export async function testProvider(provider: ProviderId, apiKey: string, model?: string): Promise<string> {
+  if (!apiKey?.trim()) return `❌ Brak klucza dla ${PROVIDERS[provider].label}.`;
   try {
-    const reply = await PROVIDERS[r.provider].impl({
+    const reply = await PROVIDERS[provider].impl({
       system: "Odpowiedz wyłącznie jednym słowem: OK.",
       webSearch: false,
       tools: [],
       history: [{ role: "user", content: "ping" }],
-      apiKey: r.apiKey,
-      model: r.model,
+      apiKey,
+      model: model || PROVIDERS[provider].defaultModel,
       proxyUrl: store.settings.proxyUrl?.trim() || undefined,
     });
-    return reply.text ? `✅ Działa: ${PROVIDERS[r.provider].label} · ${r.model}.` : "⚠️ Połączono, ale brak odpowiedzi.";
+    return reply.text ? `✅ Działa: ${PROVIDERS[provider].label} · ${model || PROVIDERS[provider].defaultModel}.` : "⚠️ Połączono, ale brak odpowiedzi.";
   } catch (e) {
     return `❌ ${humanize(e instanceof Error ? e.message : String(e))}`;
   }
+}
+
+/** Szybki test: czy wybrany dostawca/klucz działa. */
+export async function testApi(): Promise<string> {
+  const r = resolveProvider();
+  if (!r) return "❌ Brak skonfigurowanego dostawcy AI (⚙).";
+  return testProvider(r.provider, r.apiKey, r.model);
 }
 
 // === Pamięć autonomiczna: uczenie się w tle ===
