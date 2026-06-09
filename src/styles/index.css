@@ -218,6 +218,31 @@ body {
   border: 1px solid var(--line);
   color: var(--cyan);
 }
+.citations {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.cit-head {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.cit {
+  display: block;
+  font-size: 13px;
+  color: var(--cyan);
+  text-decoration: none;
+  padding: 2px 0;
+  word-break: break-word;
+}
+.cit:active {
+  opacity: 0.7;
+}
+
 .empty {
   margin: auto;
   text-align: center;

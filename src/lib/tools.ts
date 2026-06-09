@@ -4,6 +4,13 @@ import { getWeather } from "./weather";
 import { scheduleReminder } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
 import { callContact, textContact } from "./deviceContacts";
+import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
+import type { Citation } from "../types";
+
+// Bufor cytatów z ostatniego zapytania (research). Resetowany per wywołanie w brain.ts.
+let citationBuffer: Citation[] = [];
+export function resetCitations() { citationBuffer = []; }
+export function getCitations(): Citation[] { return citationBuffer.slice(0, 8); }
 
 // Definicja narzędzia w formacie Claude Messages API + lokalny wykonawca.
 export interface ToolDef {
@@ -355,6 +362,36 @@ const tools: Tool[] = [
       return lines.join("\n");
     },
   },
+  {
+    def: {
+      name: "web_research",
+      description:
+        "Wyszukaj w sieci aktualne informacje i zwróć je ze ŹRÓDŁAMI (tryb research, Tavily). Używaj, gdy potrzeba świeżych danych lub cytatów. Po użyciu odwołuj się do źródeł numerami [1], [2].",
+      input_schema: obj({ query: str("Zapytanie do wyszukania") }, ["query"]),
+    },
+    run: async ({ query }) => {
+      const key = store.settings.tavilyApiKey;
+      if (!key) {
+        return "Brak klucza Tavily — dodaj go w ⚙ Ustawienia (sekcja Research) albo użyj modelu Claude (ma wbudowane wyszukiwanie).";
+      }
+      const res = await fetch("https://api.tavily.com/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ api_key: key, query, max_results: 5, include_answer: true, search_depth: "advanced" }),
+      });
+      const data = await res.json();
+      if (!res.ok) return `Błąd wyszukiwania: ${data?.error || res.status}.`;
+      const results: any[] = data.results || [];
+      results.forEach((r) => citationBuffer.push({ title: r.title || r.url, url: r.url }));
+      const answer = data.answer ? `Skrót: ${data.answer}\n\n` : "";
+      return (
+        answer +
+        results
+          .map((r, i) => `[${i + 1}] ${r.title}\n${(r.content || "").slice(0, 400)}\nŹródło: ${r.url}`)
+          .join("\n\n")
+      );
+    },
+  },
 ];
 
 export const toolDefs: ToolDef[] = tools.map((t) => t.def);
@@ -364,9 +401,30 @@ const executors: Record<string, Executor> = Object.fromEntries(tools.map((t) => 
 export async function runTool(name: string, input: unknown): Promise<string> {
   const fn = executors[name];
   if (!fn) return `Nieznane narzędzie: ${name}`;
+
+  // Bramka uprawnień (write/outbound wymagają zgody; read przechodzi).
+  const allowed = await requestConsent(name, input);
+  if (!allowed) {
+    audit({ tool: name, input, status: "denied" });
+    return "Anulowano — użytkownik nie wyraził zgody na tę akcję.";
+  }
+
+  emitStep(name);
   try {
-    return await fn(input);
+    const out = await fn(input);
+    audit({
+      tool: name,
+      input,
+      output: typeof out === "string" ? out.slice(0, 300) : "",
+      status: "ok",
+      undo: captureUndo(name),
+    });
+    return out;
   } catch (e) {
-    return `Błąd narzędzia ${name}: ${e instanceof Error ? e.message : String(e)}`;
+    const msg = e instanceof Error ? e.message : String(e);
+    audit({ tool: name, input, output: msg, status: "error" });
+    return `Błąd narzędzia ${name}: ${msg}`;
+  } finally {
+    emitStep(null);
   }
 }

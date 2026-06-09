@@ -12,6 +12,7 @@ export interface Msg {
 export interface JarvisReply {
   text: string;
   tools: string[];
+  citations?: { title: string; url: string }[];
 }
 
 /** Kontekst pojedynczego zapytania przekazywany adapterowi dostawcy. */

@@ -2,6 +2,11 @@
 
 export type Role = "user" | "assistant";
 
+export interface Citation {
+  title: string;
+  url: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: Role;
@@ -11,7 +16,19 @@ export interface ChatMessage {
   image?: { data: string; mediaType: string };
   /** Krótkie etykiety użytych narzędzi (np. "web_search", "add_task"). */
   tools?: string[];
+  /** Źródła z wyszukiwania (tryb research). */
+  citations?: Citation[];
   createdAt: number;
+}
+
+export interface AuditEntry {
+  id: string;
+  tool: string;
+  input: unknown;
+  output?: string;
+  status: "ok" | "error" | "denied";
+  undo?: { collection: string; id: string };
+  at: number;
 }
 
 export interface Task {
@@ -57,6 +74,7 @@ export interface MemoryFact {
   id: string;
   key: string;
   value: string;
+  pinned?: boolean;
   createdAt: number;
 }
 
@@ -80,6 +98,7 @@ export interface AppData {
   calendar: CalendarEvent[];
   memory: MemoryFact[];
   scenes: Scene[];
+  audit: AuditEntry[];
 }
 
 export interface Settings {
@@ -105,6 +124,8 @@ export interface Settings {
   interpreterTo: string;
   /** Czy włączyć wyszukiwanie w sieci (gdy dostawca je wspiera). */
   webSearch: boolean;
+  /** Klucz Tavily (research z cytatami, niezależny od dostawcy). */
+  tavilyApiKey: string;
   /** Czy mówić odpowiedzi na głos. */
   speak: boolean;
   /** Nazwa preferowanego głosu TTS (z systemu). */

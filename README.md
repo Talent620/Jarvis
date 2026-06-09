@@ -14,8 +14,11 @@ modyfikować i z którego zbudujesz nowy APK.
   wykonuje zadania, nie tylko odpowiada. Claude dodatkowo z myśleniem adaptacyjnym
   i serwerowym wyszukiwaniem w sieci.
 - **Pamięć** — zapamiętuje trwałe fakty i preferencje o użytkowniku (`remember_fact`).
-- **Wiedza w czasie rzeczywistym** — wyszukiwanie w sieci (serwerowe narzędzie Claude):
-  pogoda, wiadomości, kursy, fakty po dacie treningu.
+- **Wiedza w czasie rzeczywistym** — wyszukiwanie w sieci: tryb **research z cytatami**
+  (Tavily, niezależny od dostawcy) + serwerowe `web_search` Claude. Źródła [1],[2] pod odpowiedzią.
+- **Uprawnienia + audyt + cofanie** — akcje (dzwonienie, SMS, smart home, zapisy) wymagają
+  zgody; dziennik akcji (zakładka „Audyt") z możliwością cofnięcia dodań.
+- **Widoczne kroki agenta** — orb pokazuje, co JARVIS właśnie robi (np. „⚙ web_research…").
 - **Głos** — ciągłe nasłuchiwanie słowa-klucza „Jarvis", rozpoznawanie mowy (STT)
   i synteza mowy (TTS) z głosem dobranym pod styl JARVIS-a; opcjonalnie premium
   głos przez ElevenLabs.

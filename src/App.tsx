@@ -6,7 +6,11 @@ import SettingsPanel from "./components/Settings";
 import Panels from "./components/Panels";
 import LiveOverlay from "./components/LiveOverlay";
 import ChatHistory from "./components/ChatHistory";
+import PermissionDialog from "./components/PermissionDialog";
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
+import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
+
+type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
 import { askJarvis, resolveProvider } from "./lib/brain";
 import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
@@ -37,6 +41,8 @@ export default function App() {
   const [micOn, setMicOn] = useState(false);
   const [liveId, setLiveId] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<PendingImage>(null);
+  const [pendingConsent, setPendingConsent] = useState<PendingConsent | null>(null);
+  const [step, setStep] = useState<string | null>(null);
 
   const listenerRef = useRef<Listener | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -52,6 +58,9 @@ export default function App() {
     if (!resolveProvider()) setShowSettings(true);
     // Skróty (jarvis://run?text=…) i udostępnienia z Androida → polecenie do JARVIS-a.
     const dispose = registerIntents((text) => sendRef.current(text));
+    // Bramka zgód i podgląd kroków agenta.
+    setConsentHandler((req) => new Promise((resolve) => setPendingConsent({ req, resolve })));
+    setStepListener((tool) => setStep(tool));
     return dispose;
   }, []);
 
@@ -93,6 +102,7 @@ export default function App() {
         role: "assistant",
         text: reply.text,
         tools: reply.tools,
+        citations: reply.citations,
         createdAt: Date.now(),
       };
       setLiveId(aiMsg.id);
@@ -256,7 +266,7 @@ export default function App() {
         </button>
       </div>
 
-      <Orb state={orb} />
+      <Orb state={orb} label={step && busy ? `⚙ ${step}…` : undefined} />
 
       <Conversation messages={messages} interim={interim} liveId={liveId} onSuggest={handleSend} />
 
@@ -276,6 +286,15 @@ export default function App() {
       {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}
       {showHistory && (
         <ChatHistory activeId={activeId} onOpen={openChat} onClose={() => setShowHistory(false)} />
+      )}
+      {pendingConsent && (
+        <PermissionDialog
+          req={pendingConsent.req}
+          onDecision={(allow, remember) => {
+            pendingConsent.resolve({ allow, remember });
+            setPendingConsent(null);
+          }}
+        />
       )}
     </div>
   );

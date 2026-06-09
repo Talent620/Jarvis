@@ -2,8 +2,9 @@ import { useState } from "react";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { smartHome } from "../lib/deviceControl";
+import { undoAction } from "../lib/permissions";
 
-type Tab = "tasks" | "notes" | "reminders" | "shopping" | "calendar" | "scenes" | "memory";
+type Tab = "tasks" | "notes" | "reminders" | "shopping" | "calendar" | "scenes" | "memory" | "audit";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "tasks", label: "Zadania" },
@@ -13,6 +14,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "calendar", label: "Kalendarz" },
   { id: "scenes", label: "Sceny" },
   { id: "memory", label: "Pamięć" },
+  { id: "audit", label: "Audyt" },
 ];
 
 export default function Panels({ onClose }: { onClose: () => void }) {
@@ -173,8 +175,20 @@ export default function Panels({ onClose }: { onClose: () => void }) {
           (data.memory.length ? (
             data.memory.map((m) => (
               <div key={m.id} className="list-item">
+                <span
+                  style={{ cursor: "pointer", color: m.pinned ? "var(--gold)" : "var(--text-dim)" }}
+                  title={m.pinned ? "Odepnij" : "Przypnij (zawsze w kontekście)"}
+                  onClick={() =>
+                    store.setData((d) => {
+                      const x = d.memory.find((y) => y.id === m.id);
+                      if (x) x.pinned = !x.pinned;
+                    })
+                  }
+                >
+                  {m.pinned ? "📌" : "📍"}
+                </span>
                 <span>
-                  🧠 <b>{m.key}</b>: {m.value}
+                  <b>{m.key}</b>: {m.value}
                 </span>
                 <span className="x" onClick={() => remove("memory", m.id)}>
                   ✕
@@ -183,6 +197,31 @@ export default function Panels({ onClose }: { onClose: () => void }) {
             ))
           ) : (
             <p className="muted">JARVIS jeszcze nic o Tobie nie zapamiętał.</p>
+          ))}
+
+        {tab === "audit" &&
+          (data.audit.length ? (
+            data.audit.map((a) => (
+              <div key={a.id} className="list-item">
+                <span>
+                  {a.status === "ok" ? "✅" : a.status === "denied" ? "🚫" : "⚠️"} <b>{a.tool}</b>
+                  <br />
+                  <span className="muted">{new Date(a.at).toLocaleString("pl-PL")}</span>
+                </span>
+                {a.undo && a.status === "ok" && (
+                  <span
+                    className="x"
+                    style={{ color: "var(--gold)" }}
+                    title="Cofnij"
+                    onClick={() => undoAction(a)}
+                  >
+                    ↶
+                  </span>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="muted">Brak akcji w dzienniku.</p>
           ))}
 
         </div>

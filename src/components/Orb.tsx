@@ -7,7 +7,7 @@ const STATUS: Record<OrbState, string> = {
   speaking: "Mówię…",
 };
 
-export default function Orb({ state }: { state: OrbState }) {
+export default function Orb({ state, label }: { state: OrbState; label?: string }) {
   return (
     <div className="orb-wrap">
       <div className={`orb ${state}`}>
@@ -16,7 +16,7 @@ export default function Orb({ state }: { state: OrbState }) {
         <div className="ring r3" />
         <div className="core" />
       </div>
-      <div className="orb-status">{STATUS[state]}</div>
+      <div className="orb-status">{label || STATUS[state]}</div>
     </div>
   );
 }

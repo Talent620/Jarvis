@@ -1,0 +1,94 @@
+import { store, uid } from "./store";
+import type { AuditEntry } from "../types";
+
+// --- Klasyfikacja ryzyka narzędzi ---
+export type Risk = "read" | "write" | "outbound";
+
+const RISK: Record<string, Risk> = {
+  // read — wykonują się automatycznie
+  list_tasks: "read", list_notes: "read", list_shopping: "read", list_calendar: "read",
+  list_scenes: "read", get_weather: "read", daily_briefing: "read", web_research: "read",
+  // write — lokalny zapis (wymaga zgody, można zapamiętać)
+  add_task: "write", complete_task: "write", add_note: "write", add_reminder: "write",
+  add_shopping_item: "write", add_calendar_event: "write", remember_fact: "write",
+  create_scene: "write",
+  // outbound — działania na zewnątrz / nieodwracalne (wymaga zgody)
+  make_call: "outbound", send_sms: "outbound", smart_home: "outbound", run_scene: "outbound",
+  open_service: "outbound", navigate_to: "outbound", call_contact: "outbound", text_contact: "outbound",
+};
+
+export function riskOf(tool: string): Risk {
+  return RISK[tool] ?? "write";
+}
+
+// Mapa narzędzie -> kolekcja w store (dla cofania dodań)
+const UNDO_COLLECTION: Record<string, keyof typeof emptyCollections> = {
+  add_task: "tasks", add_note: "notes", add_reminder: "reminders",
+  add_shopping_item: "shopping", add_calendar_event: "calendar",
+  create_scene: "scenes", remember_fact: "memory",
+};
+const emptyCollections = { tasks: 1, notes: 1, reminders: 1, shopping: 1, calendar: 1, scenes: 1, memory: 1 };
+
+// --- Zgody (zapamiętane decyzje) ---
+const CONSENT_KEY = "jarvis.consents.v1";
+type ConsentMap = Record<string, "allow">;
+function loadConsents(): ConsentMap {
+  try { return JSON.parse(localStorage.getItem(CONSENT_KEY) || "{}"); } catch { return {}; }
+}
+function saveConsents(c: ConsentMap) {
+  try { localStorage.setItem(CONSENT_KEY, JSON.stringify(c)); } catch { /* ignore */ }
+}
+export function resetConsents() { saveConsents({}); }
+
+// --- Most do UI: handler zgody i emiter kroków ---
+export interface ConsentRequest { tool: string; input: unknown; risk: Risk; }
+let consentHandler: ((req: ConsentRequest) => Promise<{ allow: boolean; remember: boolean }>) | null = null;
+export function setConsentHandler(fn: typeof consentHandler) { consentHandler = fn; }
+
+type StepListener = (tool: string | null) => void;
+let stepListener: StepListener | null = null;
+export function setStepListener(fn: StepListener) { stepListener = fn; }
+export function emitStep(tool: string | null) { stepListener?.(tool); }
+
+// --- Audyt + cofanie ---
+export function audit(entry: Omit<AuditEntry, "id" | "at">) {
+  store.setData((d) => {
+    d.audit.unshift({ ...entry, id: uid(), at: Date.now() });
+    if (d.audit.length > 200) d.audit.length = 200;
+  });
+}
+
+export function undoAction(entry: AuditEntry): string {
+  const u = entry.undo;
+  if (!u) return "Tej akcji nie da się cofnąć.";
+  store.setData((d) => {
+    const list = (d as any)[u.collection] as { id: string }[];
+    const i = list.findIndex((x) => x.id === u.id);
+    if (i >= 0) list.splice(i, 1);
+  });
+  return `Cofnięto: ${entry.tool}.`;
+}
+
+/**
+ * Bramka uprawnień: dla narzędzi read przepuszcza; dla write/outbound pyta UI
+ * (chyba że użytkownik zapamiętał zgodę). Zwraca true, jeśli można wykonać.
+ */
+export async function requestConsent(tool: string, input: unknown): Promise<boolean> {
+  const risk = riskOf(tool);
+  if (risk === "read") return true;
+  const consents = loadConsents();
+  if (consents[tool] === "allow") return true;
+  if (!consentHandler) return true; // brak UI (np. tryb live) — nie blokuj
+  const { allow, remember } = await consentHandler({ tool, input, risk });
+  if (allow && remember) { consents[tool] = "allow"; saveConsents(consents); }
+  return allow;
+}
+
+/** Po udanym dodaniu — zwróć payload undo (najnowszy element kolekcji). */
+export function captureUndo(tool: string): AuditEntry["undo"] {
+  const col = UNDO_COLLECTION[tool];
+  if (!col) return undefined;
+  const list = (store.data as any)[col] as { id: string }[];
+  const id = list[0]?.id;
+  return id ? { collection: col, id } : undefined;
+}

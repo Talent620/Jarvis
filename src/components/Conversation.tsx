@@ -68,6 +68,16 @@ export default function Conversation({
               ))}
             </div>
           )}
+          {m.citations && m.citations.length > 0 && (
+            <div className="citations">
+              <div className="cit-head">Źródła</div>
+              {m.citations.map((c, i) => (
+                <a key={c.url} className="cit" href={c.url} target="_blank" rel="noopener">
+                  [{i + 1}] {c.title}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       ))}
       {interim && <div className="bubble user">{interim}</div>}

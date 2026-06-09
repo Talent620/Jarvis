@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
 import { loadVoices, speak } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick } from "../lib/providers/registry";
+import { resetConsents } from "../lib/permissions";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 
@@ -117,6 +118,25 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
         <div className="row">
           <span>Wyszukiwanie w sieci (gdy dostawca wspiera)</span>
           <Toggle on={s.webSearch} onClick={() => set({ webSearch: !s.webSearch })} />
+        </div>
+
+        <h3>Research z cytatami (Tavily)</h3>
+        <p className="muted">
+          Daje wyszukiwanie ze źródłami dla każdego dostawcy (nie tylko Claude). Darmowe
+          1000 zapytań/mies. —{" "}
+          <a href="https://tavily.com" target="_blank" rel="noopener" style={{ color: "var(--cyan)" }}>
+            klucz
+          </a>
+          .
+        </p>
+        <div className="field">
+          <label>Klucz API Tavily</label>
+          <input
+            type="password"
+            value={s.tavilyApiKey}
+            placeholder="tvly-..."
+            onChange={(e) => set({ tavilyApiKey: e.target.value })}
+          />
         </div>
 
         <h3>Osobowość</h3>
@@ -294,6 +314,15 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             onChange={(e) => set({ homeAssistantToken: e.target.value })}
           />
         </div>
+
+        <h3>Prywatność i zgody</h3>
+        <p className="muted">
+          Akcje (dzwonienie, SMS, smart home, zapisy) wymagają Twojej zgody. Możesz wyczyścić
+          zapamiętane zgody, by JARVIS znów pytał za każdym razem.
+        </p>
+        <button className="btn" onClick={() => resetConsents()}>
+          Zresetuj zapamiętane zgody
+        </button>
 
         </div>
         <div className="panel-foot">

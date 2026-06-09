@@ -1,5 +1,5 @@
 import { store } from "./store";
-import { toolDefs } from "./tools";
+import { toolDefs, resetCitations, getCitations } from "./tools";
 import { PROVIDERS, PROVIDER_LIST, autoPick } from "./providers/registry";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
 
@@ -20,9 +20,13 @@ const PERSONAS: Record<string, string> = {
 export function systemPrompt(): string {
   const s = store.settings;
   const userName = s.userName;
-  const memory = store.data.memory;
+  // Ogranicz wstrzykiwaną pamięć: przypięte najpierw, potem najnowsze (maks. 25).
+  const memory = [...store.data.memory]
+    .sort((a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false) || b.createdAt - a.createdAt)
+    .slice(0, 25);
   const facts = memory.length
-    ? "\n\nZapamiętane fakty o użytkowniku:\n" + memory.map((m) => `- ${m.key}: ${m.value}`).join("\n")
+    ? "\n\nZapamiętane fakty o użytkowniku:\n" +
+      memory.map((m) => `- ${m.key}: ${m.value}`).join("\n")
     : "";
   const now = new Date();
 
@@ -45,7 +49,8 @@ export function systemPrompt(): string {
     ``,
     `Zasady:`,
     `- Gdy użytkownik o coś prosi, DZIAŁAJ przez narzędzia (zadania, notatki, przypomnienia, kalendarz, zakupy, otwieranie aplikacji, dzwonienie, nawigacja, smart home).`,
-    `- Gdy potrzeba aktualnych informacji, korzystaj z wyszukiwania w sieci (jeśli dostępne).`,
+    `- Gdy potrzeba aktualnych informacji lub źródeł, użyj narzędzia web_research i powołuj się na źródła numerami [1], [2].`,
+    `- Akcje zewnętrzne (dzwonienie, SMS, smart home, zapisy) mogą wymagać zgody użytkownika — to normalne; po zgodzie potwierdź wynik.`,
     `- Proaktywnie zapamiętuj trwałe preferencje narzędziem remember_fact.`,
     `- Odpowiedzi trzymaj zwięzłe i naturalne — będą czytane na głos.`,
     `- Po wykonaniu akcji potwierdź ją krótko.`,
@@ -104,13 +109,16 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
       .map((p) => ({ provider: p.id, model: p.defaultModel })),
   ];
 
+  resetCitations();
   let lastErr: unknown;
   for (let i = 0; i < order.length; i++) {
     const { provider, model } = order[i];
     const apiKey = store.settings.keys[provider];
     if (!apiKey?.trim()) continue;
     try {
-      return await PROVIDERS[provider].impl({ ...baseCtx, apiKey, model });
+      const reply = await PROVIDERS[provider].impl({ ...baseCtx, apiKey, model });
+      const citations = getCitations();
+      return citations.length ? { ...reply, citations } : reply;
     } catch (e) {
       lastErr = e;
       const msg = e instanceof Error ? e.message : String(e);

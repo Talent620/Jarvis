@@ -11,6 +11,7 @@ const emptyData: AppData = {
   calendar: [],
   memory: [],
   scenes: [],
+  audit: [],
 };
 
 const defaultSettings: Settings = {
@@ -25,6 +26,7 @@ const defaultSettings: Settings = {
   interpreterFrom: "polski",
   interpreterTo: "angielski",
   webSearch: true,
+  tavilyApiKey: "",
   speak: true,
   voiceName: "",
   voicePitch: 0.9,
