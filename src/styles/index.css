@@ -40,7 +40,7 @@ body {
   height: 100dvh;
   max-width: 760px;
   margin: 0 auto;
-  padding: env(safe-area-inset-top) 14px env(safe-area-inset-bottom);
+  padding: max(env(safe-area-inset-top), 26px) 14px max(env(safe-area-inset-bottom), 8px);
 }
 
 /* --- Nagłówek --- */

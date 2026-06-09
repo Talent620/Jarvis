@@ -1,4 +1,12 @@
 import type { Settings } from "../types";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+
+// Natywny silnik mowy Androida (pewniejszy niż Web Speech w WebView).
+interface NativeTtsPlugin {
+  speak(o: { text: string; pitch: number; rate: number; lang: string }): Promise<void>;
+  stop(): Promise<void>;
+}
+const NativeTTS = registerPlugin<NativeTtsPlugin>("NativeTTS");
 
 // --- Synteza mowy (TTS) ---
 
@@ -103,6 +111,16 @@ export async function speak(text: string, settings: Settings): Promise<void> {
     }
   }
 
+  // Na urządzeniu używaj natywnego TTS (WebView często nie ma Web Speech).
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await NativeTTS.speak({ text, pitch: settings.voicePitch, rate: settings.voiceRate, lang: "pl-PL" });
+      return;
+    } catch {
+      /* fallback do Web Speech */
+    }
+  }
+
   const synth = window.speechSynthesis;
   if (!synth) return;
   // Na Androidzie lista głosów bywa pusta przy starcie — poczekaj na nią.
@@ -127,6 +145,7 @@ export function stopSpeaking(): void {
   } catch {
     /* ignore */
   }
+  if (Capacitor.isNativePlatform()) NativeTTS.stop().catch(() => {});
   if (currentAudio) {
     currentAudio.pause();
     currentAudio = null;

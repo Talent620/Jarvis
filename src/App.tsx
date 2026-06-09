@@ -12,6 +12,8 @@ import PermissionDialog from "./components/PermissionDialog";
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
 import { startBackgroundWake } from "./lib/wakeword";
+import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from "@capacitor/status-bar";
 
 type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
 import { askJarvis, resolveProvider } from "./lib/brain";
@@ -79,6 +81,11 @@ export default function App() {
   useEffect(() => {
     loadVoices();
     ensureNotifPerms();
+    // Pełny ekran / natywny wygląd: pasek stanu edge-to-edge, ciemny.
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
+      StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+    }
     if (!resolveProvider()) setShowSettings(true);
     // Skróty / udostępnienia → polecenie; jarvis://wake (nasłuch w tle) → start słuchania.
     const dispose = registerIntents(
