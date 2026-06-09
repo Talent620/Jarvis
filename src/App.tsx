@@ -8,6 +8,7 @@ import LiveOverlay from "./components/LiveOverlay";
 import ChatHistory from "./components/ChatHistory";
 import Projects from "./components/Projects";
 import Help from "./components/Help";
+import More from "./components/More";
 import PermissionDialog from "./components/PermissionDialog";
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
@@ -58,6 +59,7 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const [interim, setInterim] = useState("");
   const [orb, setOrb] = useState<OrbState>("idle");
   const [busy, setBusy] = useState(false);
@@ -317,24 +319,8 @@ export default function App() {
             ＋
           </button>
         )}
-        <button className="icon-btn" onClick={() => setShowProjects(true)} title="Projekty">
-          📁
-        </button>
-        <button className="icon-btn" onClick={() => setShowHistory(true)} title="Historia rozmów">
-          🕘
-        </button>
-        <button className="icon-btn" onClick={() => setShowPanels(true)} title="Dane">
-          ▣
-        </button>
-        <button
-          className={`icon-btn ${settings.wakeWord ? "active" : ""}`}
-          onClick={() => store.setSettings({ wakeWord: !settings.wakeWord })}
-          title="Słowo-klucz Jarvis"
-        >
-          👂
-        </button>
-        <button className="icon-btn" onClick={() => setShowHelp(true)} title="Pomoc">
-          ❓
+        <button className="icon-btn" onClick={() => setShowMore(true)} title="Menu">
+          ⋯
         </button>
         <button className="icon-btn" onClick={() => setShowSettings(true)} title="Ustawienia">
           ⚙
@@ -364,6 +350,15 @@ export default function App() {
       )}
       {showProjects && <Projects onClose={() => setShowProjects(false)} />}
       {showHelp && <Help onClose={() => setShowHelp(false)} />}
+      {showMore && (
+        <More
+          onProjects={() => setShowProjects(true)}
+          onHistory={() => setShowHistory(true)}
+          onData={() => setShowPanels(true)}
+          onHelp={() => setShowHelp(true)}
+          onClose={() => setShowMore(false)}
+        />
+      )}
       {pendingConsent && (
         <PermissionDialog
           req={pendingConsent.req}
