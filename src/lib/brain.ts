@@ -158,6 +158,7 @@ export function systemPrompt(): string {
     `- Proaktywnie zapamiętuj trwałe preferencje narzędziem remember_fact.`,
     `- Odpowiedzi trzymaj zwięzłe i naturalne — będą czytane na głos.`,
     `- Po wykonaniu akcji potwierdź ją krótko.`,
+    `- Bądź proaktywny: po wykonaniu zadania, jeśli to pomocne, krótko zaproponuj sensowny następny krok. Sam zauważaj zależności (np. termin → zaproponuj przypomnienie).`,
     `- Jeśli użytkownik dołączy zdjęcie, przeanalizuj je i odnieś się do jego treści.`,
     `- Aktualny czas: ${now.toLocaleString("pl-PL")}.`,
     facts,
@@ -178,6 +179,27 @@ export function resolveProvider(): { provider: ProviderId; model: string; apiKey
   if (!meta) return null;
   const model = s.model && s.model !== "auto" ? s.model : meta.defaultModel;
   return { provider, model, apiKey: s.keys[provider] };
+}
+
+/** Szybki test: czy wybrany dostawca/klucz działa. */
+export async function testApi(): Promise<string> {
+  const r = resolveProvider();
+  if (!r) return "❌ Brak skonfigurowanego dostawcy AI (⚙).";
+  if (!r.apiKey?.trim()) return `❌ Brak klucza dla ${PROVIDERS[r.provider].label}.`;
+  try {
+    const reply = await PROVIDERS[r.provider].impl({
+      system: "Odpowiedz wyłącznie jednym słowem: OK.",
+      webSearch: false,
+      tools: [],
+      history: [{ role: "user", content: "ping" }],
+      apiKey: r.apiKey,
+      model: r.model,
+      proxyUrl: store.settings.proxyUrl?.trim() || undefined,
+    });
+    return reply.text ? `✅ Działa: ${PROVIDERS[r.provider].label} · ${r.model}.` : "⚠️ Połączono, ale brak odpowiedzi.";
+  } catch (e) {
+    return `❌ ${humanize(e instanceof Error ? e.message : String(e))}`;
+  }
 }
 
 export async function askJarvis(history: Msg[]): Promise<JarvisReply> {

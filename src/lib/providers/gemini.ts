@@ -62,14 +62,12 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
   let guard = 0;
 
   while (guard++ < 8) {
+    const reqBody: any = { systemInstruction: { parts: [{ text: ctx.system }] }, contents };
+    if (functionDeclarations.length) reqBody.tools = [{ functionDeclarations }];
     const res = await fetch(base, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: ctx.system }] },
-        contents,
-        tools: [{ functionDeclarations }],
-      }),
+      body: JSON.stringify(reqBody),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error?.message || `Błąd API (${res.status}).`);

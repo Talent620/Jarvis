@@ -24,6 +24,25 @@ import type { ChatMessage } from "./types";
 
 type PendingImage = { data: string; mediaType: string } | null;
 
+// Lokalne proaktywne powitanie (bez API) — pora dnia + krótki raport.
+function buildGreeting(): string {
+  const s = store.settings;
+  const d = store.data;
+  const now = new Date();
+  const h = now.getHours();
+  const part = h < 12 ? "Dzień dobry" : h < 18 ? "Dobre popołudnie" : "Dobry wieczór";
+  const today = now.toISOString().slice(0, 10);
+  const tasks = d.tasks.filter((t) => !t.done).length;
+  const events = d.calendar.filter((e) => e.start.slice(0, 10) === today).length;
+  const bits: string[] = [];
+  if (tasks) bits.push(`${tasks} aktywnych zadań`);
+  if (events) bits.push(`${events} dziś w kalendarzu`);
+  const parts = [`${part}, ${s.userName}.`];
+  if (bits.length) parts.push(`Masz ${bits.join(" i ")}.`);
+  parts.push("W czym mogę pomóc?");
+  return parts.join(" ");
+}
+
 const initialChat = (() => {
   const chats = loadChats();
   return chats[0] ?? null;
@@ -65,7 +84,26 @@ export default function App() {
     // Bramka zgód i podgląd kroków agenta.
     setConsentHandler((req) => new Promise((resolve) => setPendingConsent({ req, resolve })));
     setStepListener((tool) => setStep(tool));
-    return dispose;
+
+    // Proaktywne powitanie + opcjonalny auto-nasłuch po otwarciu.
+    const t = setTimeout(() => {
+      const st = store.settings;
+      const ready = !!resolveProvider();
+      if (st.proactiveOnOpen && messagesRef.current.length === 0 && ready) {
+        const text = buildGreeting();
+        const id = uid();
+        setLiveId(id);
+        setMessages((m) => [...m, { id, role: "assistant", text, tools: ["proactive"], createdAt: Date.now() }]);
+        if (st.speak) speak(text, st);
+      }
+      if (st.autoListenOnOpen && micSupported && ready) startListening(st.wakeWord);
+    }, 800);
+
+    return () => {
+      clearTimeout(t);
+      dispose();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const attachImage = async () => {

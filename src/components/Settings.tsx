@@ -5,6 +5,7 @@ import { PROVIDER_LIST, PROVIDERS, autoPick } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync } from "../lib/sync";
 import { googleStartUrl } from "../lib/google";
+import { testApi } from "../lib/brain";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 
@@ -16,6 +17,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [s, setS] = useState<Settings>(() => ({ ...store.settings, keys: { ...store.settings.keys } }));
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [syncMsg, setSyncMsg] = useState("");
+  const [apiMsg, setApiMsg] = useState("");
 
   useEffect(() => {
     loadVoices().then(setVoices);
@@ -104,6 +106,18 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             />
           </div>
         ))}
+
+        <button
+          className="btn"
+          onClick={async () => {
+            store.setSettings(s);
+            setApiMsg("⏳ Sprawdzam…");
+            setApiMsg(await testApi());
+          }}
+        >
+          🔌 Sprawdź połączenie API
+        </button>
+        {apiMsg && <p className="muted">{apiMsg}</p>}
 
         <div className="field">
           <label>Backend-proxy (opcjonalnie — omija CORS, chowa klucze)</label>
@@ -252,6 +266,18 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           <span>Ciągłe nasłuchiwanie słowa „Jarvis"</span>
           <Toggle on={s.wakeWord} onClick={() => set({ wakeWord: !s.wakeWord })} />
         </div>
+        <div className="row">
+          <span>Słuchaj od razu po otwarciu (i zapytaj „o co chodzi?")</span>
+          <Toggle on={s.autoListenOnOpen} onClick={() => set({ autoListenOnOpen: !s.autoListenOnOpen })} />
+        </div>
+        <div className="row">
+          <span>Proaktywne powitanie/raport po otwarciu</span>
+          <Toggle on={s.proactiveOnOpen} onClick={() => set({ proactiveOnOpen: !s.proactiveOnOpen })} />
+        </div>
+        <p className="muted">
+          Wskazówka: powiedz do telefonu „Hej Google, otwórz Jarvis" — aplikacja otworzy się
+          (z auto-nasłuchem) nawet z zablokowanego ekranu.
+        </p>
         <div className="field">
           <label>Głos systemowy</label>
           <select value={s.voiceName} onChange={(e) => set({ voiceName: e.target.value })}>

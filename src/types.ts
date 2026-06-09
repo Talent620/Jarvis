@@ -172,6 +172,10 @@ export interface Settings {
   voiceRate: number;
   /** Ciągłe nasłuchiwanie słowa-klucza "Jarvis". */
   wakeWord: boolean;
+  /** Po otwarciu aplikacji od razu zacznij słuchać i zapytaj, o co chodzi. */
+  autoListenOnOpen: boolean;
+  /** Po otwarciu pokaż proaktywne powitanie/raport. */
+  proactiveOnOpen: boolean;
   /** Opcjonalny klucz ElevenLabs dla premium głosu JARVIS. */
   elevenLabsApiKey: string;
   /** ID głosu ElevenLabs. */

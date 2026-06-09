@@ -38,6 +38,8 @@ const defaultSettings: Settings = {
   voicePitch: 0.9,
   voiceRate: 1.0,
   wakeWord: false,
+  autoListenOnOpen: false,
+  proactiveOnOpen: true,
   elevenLabsApiKey: "",
   elevenLabsVoiceId: "",
   fishAudioApiKey: "",
