@@ -9,6 +9,7 @@ import type { MemoryFact } from "../types";
 // do trybu świeżości (przypięte + najnowsze).
 
 const MAX_FACTS = 25; // budżet faktów wstrzykiwanych do promptu
+const MAX_STORED = 300; // twardy limit pamięci (chroni przed nieograniczonym wzrostem)
 
 // --- Embeddingi ---
 
@@ -109,6 +110,15 @@ export function rememberFact(key: string, value: string, projectId?: string): vo
       }
     } else {
       d.memory.unshift({ id: uid(), key, value, projectId, createdAt: Date.now() });
+    }
+    // Twardy limit: usuń najstarsze, nieprzypięte fakty ponad próg.
+    if (d.memory.length > MAX_STORED) {
+      const keep = d.memory.filter((m) => m.pinned);
+      const rest = d.memory
+        .filter((m) => !m.pinned)
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, Math.max(0, MAX_STORED - keep.length));
+      d.memory = [...keep, ...rest].sort((a, b) => b.createdAt - a.createdAt);
     }
   });
   void ensureIndexed();

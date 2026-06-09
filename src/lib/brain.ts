@@ -206,10 +206,16 @@ export async function testApi(): Promise<string> {
 let lastLearnAt = 0;
 const LEARN_COOLDOWN = 15_000; // nie częściej niż co 15 s
 
+// Tania bramka: ekstrakcję uruchamiamy tylko, gdy wypowiedź wygląda na niosącą
+// trwałą informację o użytkowniku (oszczędza limity API na błahych pytaniach).
+const PERSONAL_CUES =
+  /\b(jestem|mam|m[oó]j|moja|moje|moich|lubi[eę]|wol[eę]|nie\s?lubi[eę]|nienawidz[eę]|mieszkam|pracuj[eę]|nazywam|imi[eę]|żona|m[aąż]|partner|dziecko|c[oó]rk|syn|pies|kot|urodzi|adres|alergi|uczulony|dieta|wegeta|wegan|zawsze|nigdy|codziennie|preferuj[eę]|ulubion|zapami[eę]ta|wa[zż]ne|numer|telefon|email|e-mail)/i;
+
 async function learnFromExchange(userText: string, replyText: string): Promise<void> {
   if (store.settings.interpreterMode) return; // w trybie tłumacza nie zapamiętujemy
   const text = (userText || "").trim();
   if (text.length < 12) return; // za mało treści, by warto było analizować
+  if (!PERSONAL_CUES.test(text)) return; // brak sygnałów trwałej informacji
   const now = Date.now();
   if (now - lastLearnAt < LEARN_COOLDOWN) return;
   lastLearnAt = now;

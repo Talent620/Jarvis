@@ -79,6 +79,7 @@ export default function App() {
   const [pendingImage, setPendingImage] = useState<PendingImage>(null);
   const [pendingConsent, setPendingConsent] = useState<PendingConsent | null>(null);
   const [step, setStep] = useState<string | null>(null);
+  const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
 
   const listenerRef = useRef<Listener | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -324,6 +325,18 @@ export default function App() {
     }
   }, []);
 
+  // Status sieci dla wskaźnika HUD.
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => {
+      window.removeEventListener("online", up);
+      window.removeEventListener("offline", down);
+    };
+  }, []);
+
   return (
     <div className="app">
       <div className="topbar">
@@ -335,7 +348,7 @@ export default function App() {
               const p = store.data.projects.find((x) => x.id === settings.activeProjectId);
               return p ? ` · ${p.name.toUpperCase()}` : "";
             })()}{" "}
-            · ONLINE
+            · {online ? "ONLINE" : "OFFLINE"}
           </small>
         </div>
         <div className="spacer" />

@@ -26,6 +26,7 @@ export function makeOpenAICompatible(
       type: "function",
       function: { name: d.name, description: d.description, parameters: d.input_schema },
     }));
+    const hasTools = tools.length > 0;
 
     const messages: OAIMessage[] = [
       { role: "system", content: ctx.system },
@@ -52,7 +53,14 @@ export function makeOpenAICompatible(
           authorization: `Bearer ${ctx.apiKey}`,
           ...opts.extraHeaders,
         },
-        body: JSON.stringify({ model, messages, tools, tool_choice: "auto", max_tokens: 1500 }),
+        // tool_choice/tools tylko gdy faktycznie mamy narzędzia — część API (Groq,
+        // OpenRouter, NVIDIA) odrzuca puste „tools" z „tool_choice: auto".
+        body: JSON.stringify({
+          model,
+          messages,
+          ...(hasTools ? { tools, tool_choice: "auto" } : {}),
+          max_tokens: 2048,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || `Błąd API (${res.status}).`);
