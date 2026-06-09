@@ -15,6 +15,7 @@ const DEFAULT_KEYS = {
 };
 
 export default defineConfig({
+  base: "./",
   define: {
     __DEFAULT_KEYS__: JSON.stringify(DEFAULT_KEYS),
   },

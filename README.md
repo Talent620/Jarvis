@@ -122,6 +122,30 @@ https://github.com/Talent620/Jarvis/releases/download/latest/jarvis.apk
 > aplikacji. Do publikacji w Google Play wygeneruj własny, tajny keystore i trzymaj go
 > w sekretach (nie w repo).
 
+## Wersja na komputer (Windows .exe)
+
+Aplikacja działa też jako **przenośny program na Windows** (Electron) — jeden plik
+`JARVIS.exe`, bez instalacji. CI `.github/workflows/windows.yml` buduje go i publikuje
+w Releases pod stałym linkiem:
+
+```
+https://github.com/Talent620/Jarvis/releases/download/latest/JARVIS.exe
+```
+
+Klucze API są wstrzykiwane przy buildzie z **Secrets repo** (te same `JARVIS_*_KEY`
+co APK), więc `.exe` ma je „od razu". Bez ustawionych Secrets — wpisujesz klucz w ⚙.
+
+Lokalnie (na dowolnym OS z Node):
+
+```bash
+npm install
+npm run desktop:build   # → release-desktop/JARVIS.exe (na Windows)
+```
+
+> Uwaga: `.exe` jest niepodpisany — Windows SmartScreen może ostrzec („Więcej informacji →
+> Uruchom mimo to"). Rozpoznawanie mowy (dyktowanie) bywa ograniczone w Electronie;
+> tekst, TTS i rozmowa na żywo (Gemini) działają.
+
 ## Wersja na Apple (iOS)
 
 Projekt zawiera natywny projekt iOS (`ios/`, Capacitor) z ustawionymi opisami

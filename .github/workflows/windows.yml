@@ -1,0 +1,55 @@
+name: Build Windows EXE
+
+# Buduje JEDEN przenośny plik JARVIS.exe (Electron, bez instalacji) i publikuje
+# go w GitHub Releases pod tagiem "latest". Klucze API są wstrzykiwane przy
+# buildzie z Secrets repo (te same JARVIS_*_KEY co APK), więc .exe ma je „od razu".
+#
+# Stały link: https://github.com/<owner>/<repo>/releases/download/latest/JARVIS.exe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/functionality-modification-access-z9kod1"]
+    paths:
+      - "electron/**"
+      - "src/**"
+      - "electron-builder.json"
+      - ".github/workflows/windows.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web (with injected keys)
+        env:
+          JARVIS_ANTHROPIC_KEY: ${{ secrets.JARVIS_ANTHROPIC_KEY }}
+          JARVIS_GEMINI_KEY: ${{ secrets.JARVIS_GEMINI_KEY }}
+          JARVIS_GROQ_KEY: ${{ secrets.JARVIS_GROQ_KEY }}
+          JARVIS_OPENROUTER_KEY: ${{ secrets.JARVIS_OPENROUTER_KEY }}
+          JARVIS_NVIDIA_KEY: ${{ secrets.JARVIS_NVIDIA_KEY }}
+          JARVIS_GITHUB_KEY: ${{ secrets.JARVIS_GITHUB_KEY }}
+        run: npm run build
+
+      - name: Package portable EXE
+        run: npx electron-builder --win portable --publish never
+
+      - name: Publish to GitHub Releases (rolling 'latest')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: JARVIS — najnowszy build
+          files: release-desktop/JARVIS.exe

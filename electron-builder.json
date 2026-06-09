@@ -1,0 +1,13 @@
+{
+  "appId": "net.serwer256.jarvis",
+  "productName": "JARVIS",
+  "directories": { "output": "release-desktop" },
+  "files": ["dist/**/*", "electron/**/*"],
+  "win": {
+    "target": "portable",
+    "artifactName": "JARVIS.exe"
+  },
+  "portable": {
+    "artifactName": "JARVIS.exe"
+  }
+}
