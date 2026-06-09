@@ -73,9 +73,11 @@ export default function Help({ onClose }: { onClose: () => void }) {
             <li>Zakładka <b>Audyt</b> (▣) — dziennik akcji z <b>↶ cofnij</b>.</li>
           </ul>
 
-          <h3>🧠 Pamięć</h3>
+          <h3>🧠 Pamięć autonomiczna</h3>
           <ul>
-            <li>JARVIS zapamiętuje Twoje preferencje. Zarządzaj nimi w ▣ → Pamięć (📌 przypnij / ✕ usuń).</li>
+            <li>JARVIS <b>sam uczy się</b> trwałych faktów o Tobie z rozmów (imiona bliskich, adres, praca, dieta, upodobania) — bez podawania komend.</li>
+            <li>Przy każdym pytaniu przypomina sobie <b>to, co istotne dla tematu</b> (pamięć semantyczna — wymaga klucza <b>Gemini</b>; bez niego działa wg najnowszych wpisów).</li>
+            <li>Zarządzaj wpisami w ▣ → Pamięć (📌 przypnij = zawsze w kontekście / ✕ usuń).</li>
           </ul>
 
           <h3>🕘 Historia i ☁️ synchronizacja</h3>
