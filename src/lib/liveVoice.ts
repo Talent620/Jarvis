@@ -6,11 +6,11 @@ const LIVE_MODEL = "models/gemini-2.0-flash-live-001";
 export type LiveState = "connecting" | "listening" | "speaking" | "closed" | "error";
 
 // Zamień kod/treść zamknięcia WebSocketu na zrozumiałą przyczynę.
-function closeReason(code: number, reason?: string): string | undefined {
+export function closeReason(code: number, reason?: string): string | undefined {
   const r = (reason || "").trim();
   if (/api key|api_key|unauthor|permission|denied|invalid/i.test(r))
     return "Nieprawidłowy lub niepełnoprawny klucz Gemini (sprawdź ⚙).";
-  if (/quota|exceed|rate|resource.?exhaust/i.test(r)) return "Przekroczony limit Gemini Live — spróbuj później.";
+  if (/quota|exceed|rate|exhaust/i.test(r)) return "Przekroczony limit Gemini Live — spróbuj później.";
   if (/model/i.test(r)) return "Model Gemini Live niedostępny dla tego klucza.";
   if (code === 1011) return "Błąd po stronie serwera Gemini — spróbuj ponownie.";
   if (code === 1006) return "Połączenie przerwane (sieć). Sprawdź internet.";

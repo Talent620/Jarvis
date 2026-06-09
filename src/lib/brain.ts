@@ -3,26 +3,8 @@ import { toolDefs, resetCitations, getCitations } from "./tools";
 import { PROVIDERS, PROVIDER_LIST, autoPick } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed } from "./memory";
 import { isDesktop } from "./desktop";
+import { shouldFallback, isNetworkError, humanize, isComplex, PERSONAL_CUES } from "./aiHelpers";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
-
-// Błędy, przy których warto spróbować kolejnego dostawcy (brak kredytów, limit, autoryzacja).
-function shouldFallback(msg: string): boolean {
-  return /credit|billing|insufficient|quota|exceeded|rate.?limit|too low|payment|unauthorized|invalid.?api|forbidden|overloaded|unavailable|\b(401|402|403|429|502|503)\b/i.test(
-    msg,
-  );
-}
-
-const isNetworkError = (msg: string) => /failed to fetch|load failed|network|networkerror|timeout/i.test(msg);
-
-// Przetłumacz techniczny błąd na zrozumiały komunikat.
-function humanize(msg: string): string {
-  if (isNetworkError(msg)) return "Brak połączenia z usługą AI. Sprawdź internet i klucz API (⚙ Ustawienia).";
-  if (/401|unauthorized|invalid.?api|forbidden|403/i.test(msg))
-    return "Klucz API jest nieprawidłowy, wygasł lub nie ma dostępu — sprawdź go w ⚙ Ustawienia.";
-  if (/credit|billing|too low|payment|quota|insufficient/i.test(msg))
-    return "Wybrany dostawca nie ma środków/limitu. Przełącz dostawcę lub dodaj inny klucz w ⚙.";
-  return msg;
-}
 
 // Jednorazowy retry przy chwilowym błędzie sieci.
 async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
@@ -61,14 +43,6 @@ const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision:
   github: { simple: "openai/gpt-4o-mini", complex: "openai/gpt-4o", vision: "openai/gpt-4o" },
   ollama: { simple: "llama3.2", complex: "llama3.1", vision: "llama3.2" },
 };
-
-function isComplex(text: string): boolean {
-  const t = text || "";
-  return (
-    t.length > 260 ||
-    /(zaplanuj|research|analiz|porówn|napisz|\bkod\b|program|wyjaśnij|strategi|raport|e-?mail|mail do|przeanalizuj|podsumuj|stre[śs]|przet[łl]umacz)/i.test(t)
-  );
-}
 
 function modelFor(p: ProviderId, complex: boolean, vision: boolean): string {
   const m = TASK_MODELS[p];
@@ -211,10 +185,7 @@ let lastLearnAt = 0;
 const LEARN_COOLDOWN = 15_000; // nie częściej niż co 15 s
 
 // Tania bramka: ekstrakcję uruchamiamy tylko, gdy wypowiedź wygląda na niosącą
-// trwałą informację o użytkowniku (oszczędza limity API na błahych pytaniach).
-const PERSONAL_CUES =
-  /\b(jestem|mam|m[oó]j|moja|moje|moich|lubi[eę]|wol[eę]|nie\s?lubi[eę]|nienawidz[eę]|mieszkam|pracuj[eę]|nazywam|imi[eę]|żona|m[aąż]|partner|dziecko|c[oó]rk|syn|pies|kot|urodzi|adres|alergi|uczulony|dieta|wegeta|wegan|zawsze|nigdy|codziennie|preferuj[eę]|ulubion|zapami[eę]ta|wa[zż]ne|numer|telefon|email|e-mail)/i;
-
+// trwałą informację o użytkowniku (oszczędza limity API) — PERSONAL_CUES z aiHelpers.
 async function learnFromExchange(userText: string, replyText: string): Promise<void> {
   if (store.settings.interpreterMode) return; // w trybie tłumacza nie zapamiętujemy
   const text = (userText || "").trim();

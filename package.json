@@ -14,7 +14,9 @@
     "cap:android": "cap open android",
     "android:build": "npm run build && cap sync android",
     "electron:dev": "electron .",
-    "desktop:build": "npm run build && electron-builder --win portable"
+    "desktop:build": "npm run build && electron-builder --win portable",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",
@@ -42,7 +44,9 @@
     "@vitejs/plugin-react": "^4.3.3",
     "electron": "^33.4.11",
     "electron-builder": "^25.1.8",
+    "jsdom": "^25.0.1",
     "typescript": "^5.6.3",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "vitest": "^2.1.9"
   }
 }

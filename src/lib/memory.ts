@@ -66,7 +66,7 @@ function dot(a: number[], b: number[]): number {
   return s;
 }
 
-function cosine(a: number[], b: number[]): number {
+export function cosine(a: number[], b: number[]): number {
   if (!a.length || a.length !== b.length) return 0;
   const na = Math.sqrt(dot(a, a));
   const nb = Math.sqrt(dot(b, b));
