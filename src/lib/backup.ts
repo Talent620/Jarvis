@@ -8,7 +8,15 @@ const COLLECTIONS: (keyof AppData)[] = [
 ];
 
 export function exportData(): void {
-  const payload = { app: "jarvis", version: 1, exportedAt: Date.now(), data: store.data };
+  // Tylko realne dane użytkownika (bez audytu); wektory pamięci pomijamy —
+  // odtworzą się automatycznie po imporcie i niepotrzebnie powiększają plik.
+  const data: Record<string, unknown> = {};
+  for (const c of COLLECTIONS) {
+    data[c] = c === "memory"
+      ? (store.data.memory || []).map(({ embedding, ...rest }) => rest)
+      : store.data[c];
+  }
+  const payload = { app: "jarvis", version: 1, exportedAt: Date.now(), data };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

@@ -6,6 +6,7 @@ import { addEvent, listUpcoming } from "./deviceCalendar";
 import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
 import { gmailSearch, gmailSend, gcalList, gcalAdd } from "./google";
+import { rememberFact } from "./memory";
 import type { Citation } from "../types";
 
 // Bufor cytatów z ostatniego zapytania (research). Resetowany per wywołanie w brain.ts.
@@ -198,12 +199,7 @@ const tools: Tool[] = [
       ]),
     },
     run: ({ key, value }) => {
-      const projectId = store.settings.activeProjectId || undefined;
-      store.setData((d) => {
-        const existing = d.memory.find((m) => m.key === key && (m.projectId || "") === (projectId || ""));
-        if (existing) existing.value = value;
-        else d.memory.unshift({ id: uid(), key, value, projectId, createdAt: Date.now() });
-      });
+      rememberFact(key, value, store.settings.activeProjectId || undefined);
       return `Zapamiętane: ${key} = ${value}.`;
     },
   },

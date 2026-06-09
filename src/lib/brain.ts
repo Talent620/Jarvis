@@ -1,6 +1,7 @@
 import { store } from "./store";
 import { toolDefs, resetCitations, getCitations } from "./tools";
 import { PROVIDERS, PROVIDER_LIST, autoPick } from "./providers/registry";
+import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed } from "./memory";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
 
 // Błędy, przy których warto spróbować kolejnego dostawcy (brak kredytów, limit, autoryzacja).
@@ -104,14 +105,8 @@ export function systemPrompt(): string {
   const userName = s.userName;
   const pid = s.activeProjectId;
 
-  // Pamięć: globalna + bieżącego projektu; przypięte najpierw, potem najnowsze (maks. 25).
-  const memory = [...store.data.memory]
-    .filter((m) => !m.projectId || m.projectId === pid)
-    .sort((a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false) || b.createdAt - a.createdAt)
-    .slice(0, 25);
-  const facts = memory.length
-    ? "\n\nZapamiętane fakty o użytkowniku:\n" + memory.map((m) => `- ${m.key}: ${m.value}`).join("\n")
-    : "";
+  // Pamięć autonomiczna: trafne fakty wybrane semantycznie (z fallbackiem na świeżość).
+  const facts = memoryBlock();
 
   // Kontekst projektu: instrukcje + fragmenty dokumentów (budżet ~6000 zn.).
   const project = pid ? store.data.projects.find((p) => p.id === pid) : null;
@@ -205,6 +200,73 @@ export async function testApi(): Promise<string> {
   }
 }
 
+// === Pamięć autonomiczna: uczenie się w tle ===
+// Po każdej wymianie (z rozsądnym throttlingiem) JARVIS sam wyłuskuje trwałe
+// fakty/preferencje i zapisuje je do pamięci — także gdy nie użył narzędzia.
+let lastLearnAt = 0;
+const LEARN_COOLDOWN = 15_000; // nie częściej niż co 15 s
+
+async function learnFromExchange(userText: string, replyText: string): Promise<void> {
+  if (store.settings.interpreterMode) return; // w trybie tłumacza nie zapamiętujemy
+  const text = (userText || "").trim();
+  if (text.length < 12) return; // za mało treści, by warto było analizować
+  const now = Date.now();
+  if (now - lastLearnAt < LEARN_COOLDOWN) return;
+  lastLearnAt = now;
+
+  const r = resolveProvider();
+  if (!r || !r.apiKey?.trim()) return;
+  // Do ekstrakcji bierzemy najtańszy model danego dostawcy.
+  const model = TASK_MODELS[r.provider]?.simple || r.model;
+
+  const existingKeys = store.data.memory
+    .filter((m) => !m.projectId || m.projectId === (store.settings.activeProjectId || ""))
+    .map((m) => m.key)
+    .slice(0, 60)
+    .join(", ");
+
+  const system = [
+    "Jesteś modułem pamięci długoterminowej asystenta. Z poniższej wymiany wyłuskaj WYŁĄCZNIE trwałe,",
+    "przydatne na przyszłość fakty i preferencje o użytkowniku (imiona bliskich, adresy, praca, ulubione rzeczy,",
+    "dieta, nawyki, cele, stałe ustalenia). POMIŃ rzeczy chwilowe, ogólną wiedzę i treść samej odpowiedzi asystenta.",
+    existingKeys ? `Już zapamiętane klucze (nie powielaj bez potrzeby): ${existingKeys}.` : "",
+    'Zwróć WYŁĄCZNIE JSON: {"facts":[{"key":"krotki_klucz","value":"wartosc"}]} — pusta lista, jeśli nic trwałego.',
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    const reply = await PROVIDERS[r.provider].impl({
+      system,
+      webSearch: false,
+      tools: [],
+      history: [{ role: "user", content: `Użytkownik: ${text}\n\nAsystent: ${(replyText || "").slice(0, 800)}` }],
+      apiKey: r.apiKey,
+      model,
+      proxyUrl: store.settings.proxyUrl?.trim() || undefined,
+    });
+    const raw = reply.text || "";
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) return;
+    const parsed = JSON.parse(match[0]) as { facts?: { key?: string; value?: string }[] };
+    const facts = Array.isArray(parsed.facts) ? parsed.facts.slice(0, 5) : [];
+    const pid = store.settings.activeProjectId || undefined;
+    for (const f of facts) {
+      const key = (f.key || "").trim().slice(0, 60);
+      const value = (f.value || "").trim().slice(0, 300);
+      if (!key || !value) continue;
+      const existing = store.data.memory.find(
+        (m) => m.key === key && (m.projectId || "") === (pid || ""),
+      );
+      if (existing && existing.value === value) continue; // bez zmian
+      rememberFact(key, value, pid);
+    }
+    void ensureIndexed();
+  } catch {
+    /* uczenie jest „best-effort" — błędy ignorujemy */
+  }
+}
+
 export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   const resolved = resolveProvider();
   if (!resolved) {
@@ -222,6 +284,10 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   const trimmed: Msg[] = history.map((m, i) =>
     i === history.length - 1 ? m : { role: m.role, content: m.content },
   );
+
+  // Pamięć autonomiczna: dobierz fakty trafne do bieżącego zapytania (przed promptem).
+  const lastUser = [...trimmed].reverse().find((m) => m.role === "user");
+  await prepareMemoryContext(lastUser?.content || "");
 
   const baseCtx = {
     system: systemPrompt(),
@@ -243,6 +309,8 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
     try {
       const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model }));
       const citations = getCitations();
+      // Ucz się w tle: wyłuskaj trwałe fakty z wymiany (nie blokuje odpowiedzi).
+      void learnFromExchange(lastUser?.content || "", reply.text);
       return citations.length ? { ...reply, citations } : reply;
     } catch (e) {
       lastErr = e;

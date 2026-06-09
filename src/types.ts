@@ -85,6 +85,8 @@ export interface MemoryFact {
   pinned?: boolean;
   /** Jeśli ustawione — fakt należy do projektu (inaczej globalny). */
   projectId?: string;
+  /** Wektor semantyczny (text-embedding-004) do wyszukiwania trafnych faktów. */
+  embedding?: number[];
   createdAt: number;
 }
 
