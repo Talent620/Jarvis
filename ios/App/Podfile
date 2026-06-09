@@ -16,6 +16,7 @@ def capacitor_pods
   pod 'CapacitorAppLauncher', :path => '../../node_modules/@capacitor/app-launcher'
   pod 'CapacitorCamera', :path => '../../node_modules/@capacitor/camera'
   pod 'CapacitorLocalNotifications', :path => '../../node_modules/@capacitor/local-notifications'
+  pod 'CapacitorStatusBar', :path => '../../node_modules/@capacitor/status-bar'
   pod 'EbarooniCapacitorCalendar', :path => '../../node_modules/@ebarooni/capacitor-calendar'
   pod 'SendIntent', :path => '../../node_modules/send-intent'
 end

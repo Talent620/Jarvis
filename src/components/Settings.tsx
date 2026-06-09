@@ -7,6 +7,7 @@ import { pushSync, pullSync } from "../lib/sync";
 import { googleStartUrl } from "../lib/google";
 import { testApi } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
+import { exportData, importData } from "../lib/backup";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 
@@ -19,6 +20,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [syncMsg, setSyncMsg] = useState("");
   const [apiMsg, setApiMsg] = useState("");
+  const [backupMsg, setBackupMsg] = useState("");
 
   useEffect(() => {
     loadVoices().then(setVoices);
@@ -458,6 +460,25 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             onChange={(e) => set({ homeAssistantToken: e.target.value })}
           />
         </div>
+
+        <h3>Kopia danych</h3>
+        <p className="muted">
+          Zapisz wszystkie swoje dane (zadania, notatki, pamięć, projekty, targ…) do pliku
+          i przywróć je po reinstalacji lub na innym urządzeniu. Plik nie zawiera kluczy API.
+        </p>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn" style={{ flex: 1 }} onClick={() => exportData()}>
+            ⬇ Eksportuj
+          </button>
+          <button
+            className="btn"
+            style={{ flex: 1 }}
+            onClick={async () => setBackupMsg(await importData())}
+          >
+            ⬆ Importuj
+          </button>
+        </div>
+        {backupMsg && <p className="muted">{backupMsg}</p>}
 
         <h3>Prywatność i zgody</h3>
         <p className="muted">
