@@ -142,9 +142,14 @@ npm install
 npm run desktop:build   # → release-desktop/JARVIS.exe (na Windows)
 ```
 
+Wersja desktopowa jest pełna: czat, projekty/dokumenty, research z cytatami, rozmowa na
+żywo (Gemini), TTS, smart home, sync. Naprawiono CORS w Electronie, więc **wszyscy
+dostawcy AI działają** (Gemini, Claude, Groq, OpenRouter, NVIDIA, GitHub). Dochodzą:
+menu, zapamiętywanie rozmiaru okna, pojedyncza instancja, linki w przeglądarce.
+
 > Uwaga: `.exe` jest niepodpisany — Windows SmartScreen może ostrzec („Więcej informacji →
-> Uruchom mimo to"). Rozpoznawanie mowy (dyktowanie) bywa ograniczone w Electronie;
-> tekst, TTS i rozmowa na żywo (Gemini) działają.
+> Uruchom mimo to"). Dyktowanie głosem (STT) bywa niedostępne w Electronie; tekst, TTS
+> i rozmowa na żywo (Gemini) działają.
 
 ## Wersja na Apple (iOS)
 
