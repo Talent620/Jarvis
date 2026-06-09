@@ -119,6 +119,44 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           <Toggle on={s.webSearch} onClick={() => set({ webSearch: !s.webSearch })} />
         </div>
 
+        <h3>Osobowość</h3>
+        <div className="field">
+          <label>Charakter JARVIS-a</label>
+          <select value={s.persona} onChange={(e) => set({ persona: e.target.value })}>
+            <option value="classic">Klasyczny — elegancki majordomus</option>
+            <option value="concise">Zwięzły — krótko i na temat</option>
+            <option value="warm">Ciepły — wspierający i empatyczny</option>
+            <option value="witty">Błyskotliwy — suchy brytyjski humor</option>
+          </select>
+        </div>
+        <div className="field">
+          <label>Własne wytyczne osobowości (opcjonalnie)</label>
+          <input
+            value={s.customPersona}
+            placeholder="np. mów do mnie per szefie, używaj metafor z motoryzacji"
+            onChange={(e) => set({ customPersona: e.target.value })}
+          />
+        </div>
+
+        <h3>Tryb tłumacza na żywo</h3>
+        <p className="muted">
+          JARVIS staje się tłumaczem symultanicznym — świetne z „Rozmową na żywo" (☎).
+        </p>
+        <div className="row">
+          <span>Włącz tryb tłumacza</span>
+          <Toggle on={s.interpreterMode} onClick={() => set({ interpreterMode: !s.interpreterMode })} />
+        </div>
+        <div className="field" style={{ display: "flex", gap: 8 }}>
+          <div style={{ flex: 1 }}>
+            <label>Język A</label>
+            <input value={s.interpreterFrom} onChange={(e) => set({ interpreterFrom: e.target.value })} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label>Język B</label>
+            <input value={s.interpreterTo} onChange={(e) => set({ interpreterTo: e.target.value })} />
+          </div>
+        </div>
+
         <h3>Głos</h3>
         <div className="row">
           <span>Czytaj odpowiedzi na głos</span>
@@ -138,6 +176,18 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </option>
             ))}
           </select>
+        </div>
+        <div className="chips" style={{ marginBottom: 8 }}>
+          {[
+            { l: "JARVIS", p: 0.9, r: 1.0 },
+            { l: "Głęboki", p: 0.7, r: 0.95 },
+            { l: "Neutralny", p: 1.0, r: 1.0 },
+            { l: "Energiczny", p: 1.1, r: 1.15 },
+          ].map((v) => (
+            <button key={v.l} className="chip" onClick={() => set({ voicePitch: v.p, voiceRate: v.r })}>
+              {v.l}
+            </button>
+          ))}
         </div>
         <div className="field">
           <label>Wysokość głosu: {s.voicePitch.toFixed(1)}</label>

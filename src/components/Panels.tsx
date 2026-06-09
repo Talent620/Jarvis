@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
+import { smartHome } from "../lib/deviceControl";
 
-type Tab = "tasks" | "notes" | "reminders" | "shopping" | "calendar" | "memory";
+type Tab = "tasks" | "notes" | "reminders" | "shopping" | "calendar" | "scenes" | "memory";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "tasks", label: "Zadania" },
@@ -10,6 +11,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "reminders", label: "Przypomnienia" },
   { id: "shopping", label: "Zakupy" },
   { id: "calendar", label: "Kalendarz" },
+  { id: "scenes", label: "Sceny" },
   { id: "memory", label: "Pamięć" },
 ];
 
@@ -140,6 +142,31 @@ export default function Panels({ onClose }: { onClose: () => void }) {
               ))
           ) : (
             <p className="muted">Kalendarz pusty.</p>
+          ))}
+
+        {tab === "scenes" &&
+          (data.scenes.length ? (
+            data.scenes.map((s) => (
+              <div key={s.id} className="list-item">
+                <span
+                  style={{ cursor: "pointer", color: "var(--gold)" }}
+                  title="Uruchom scenę"
+                  onClick={() => s.actions.forEach((a) => void smartHome(a.entityId, a.action))}
+                >
+                  ▶
+                </span>
+                <span>
+                  {s.name} <span className="muted">({s.actions.length} akcji)</span>
+                </span>
+                <span className="x" onClick={() => remove("scenes", s.id)}>
+                  ✕
+                </span>
+              </div>
+            ))
+          ) : (
+            <p className="muted">
+              Brak scen. Powiedz np.: „Utwórz scenę Dobranoc: zgaś light.salon i włącz switch.alarm".
+            </p>
           ))}
 
         {tab === "memory" &&

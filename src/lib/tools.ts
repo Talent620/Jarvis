@@ -250,6 +250,66 @@ const tools: Tool[] = [
   },
   {
     def: {
+      name: "create_scene",
+      description:
+        "Zapisz scenę smart home — nazwany zestaw akcji na encjach (np. 'Dobranoc' gasi światła i włącza alarm). Później uruchamiana przez run_scene.",
+      input_schema: obj(
+        {
+          name: str("Nazwa sceny, np. 'Dobranoc'"),
+          actions: {
+            type: "array",
+            description: "Lista akcji w scenie",
+            items: obj(
+              {
+                entity_id: str("Encja Home Assistant, np. light.salon"),
+                action: { type: "string", enum: ["on", "off", "toggle"] },
+              },
+              ["entity_id", "action"],
+            ),
+          },
+        },
+        ["name", "actions"],
+      ),
+    },
+    run: ({ name, actions }) => {
+      const acts = (actions || []).map((a: any) => ({ entityId: a.entity_id, action: a.action }));
+      store.setData((d) => {
+        const existing = d.scenes.find((s) => s.name.toLowerCase() === name.toLowerCase());
+        if (existing) existing.actions = acts;
+        else d.scenes.unshift({ id: uid(), name, actions: acts, createdAt: Date.now() });
+      });
+      return `Scena „${name}” zapisana (${acts.length} akcji).`;
+    },
+  },
+  {
+    def: {
+      name: "run_scene",
+      description: "Uruchom zapisaną scenę smart home po nazwie.",
+      input_schema: obj({ name: str("Nazwa sceny") }, ["name"]),
+    },
+    run: async ({ name }) => {
+      const scene = store.data.scenes.find((s) => s.name.toLowerCase().includes(name.toLowerCase()));
+      if (!scene) return `Nie znam sceny „${name}”. Najpierw ją utwórz.`;
+      const results = [];
+      for (const a of scene.actions) results.push(await smartHome(a.entityId, a.action));
+      return `Scena „${scene.name}”:\n` + results.join("\n");
+    },
+  },
+  {
+    def: {
+      name: "list_scenes",
+      description: "Wypisz zapisane sceny smart home.",
+      input_schema: obj({}),
+    },
+    run: () => {
+      const { scenes } = store.data;
+      return scenes.length
+        ? scenes.map((s) => `• ${s.name} (${s.actions.length} akcji)`).join("\n")
+        : "Brak zapisanych scen.";
+    },
+  },
+  {
+    def: {
       name: "get_weather",
       description:
         "Sprawdź aktualną pogodę. Bez podania miejsca użyje lokalizacji urządzenia. Dane na żywo (Open-Meteo).",

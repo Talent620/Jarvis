@@ -10,6 +10,7 @@ const emptyData: AppData = {
   shopping: [],
   calendar: [],
   memory: [],
+  scenes: [],
 };
 
 const defaultSettings: Settings = {
@@ -18,6 +19,11 @@ const defaultSettings: Settings = {
   model: "auto",
   proxyUrl: "",
   userName: "Sir",
+  persona: "classic",
+  customPersona: "",
+  interpreterMode: false,
+  interpreterFrom: "polski",
+  interpreterTo: "angielski",
   webSearch: true,
   speak: true,
   voiceName: "",

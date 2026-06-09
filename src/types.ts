@@ -60,6 +60,18 @@ export interface MemoryFact {
   createdAt: number;
 }
 
+export interface SceneAction {
+  entityId: string;
+  action: "on" | "off" | "toggle";
+}
+
+export interface Scene {
+  id: string;
+  name: string;
+  actions: SceneAction[];
+  createdAt: number;
+}
+
 export interface AppData {
   tasks: Task[];
   notes: Note[];
@@ -67,6 +79,7 @@ export interface AppData {
   shopping: ShoppingItem[];
   calendar: CalendarEvent[];
   memory: MemoryFact[];
+  scenes: Scene[];
 }
 
 export interface Settings {
@@ -80,6 +93,16 @@ export interface Settings {
   proxyUrl: string;
   /** Imię użytkownika, którym zwraca się JARVIS. */
   userName: string;
+  /** Preset osobowości: classic | concise | warm | witty | custom. */
+  persona: string;
+  /** Dodatkowy, własny opis osobowości (zawsze doklejany). */
+  customPersona: string;
+  /** Tryb tłumacza na żywo (JARVIS tłumaczy między językami). */
+  interpreterMode: boolean;
+  /** Język źródłowy tłumacza. */
+  interpreterFrom: string;
+  /** Język docelowy tłumacza. */
+  interpreterTo: string;
   /** Czy włączyć wyszukiwanie w sieci (gdy dostawca je wspiera). */
   webSearch: boolean;
   /** Czy mówić odpowiedzi na głos. */

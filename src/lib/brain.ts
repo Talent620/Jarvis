@@ -3,17 +3,38 @@ import { toolDefs } from "./tools";
 import { PROVIDERS, autoPick } from "./providers/registry";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
 
+const PERSONAS: Record<string, string> = {
+  classic: "uprzejmy, lekko dowcipny brytyjski majordomus — elegancki, rzeczowy i niezwykle kompetentny.",
+  concise: "maksymalnie zwięzły — odpowiadasz w 1–2 zdaniach, bez ozdobników i powtórzeń.",
+  warm: "ciepły, wspierający i empatyczny — dbasz o samopoczucie użytkownika, zachowując kompetencję.",
+  witty: "błyskotliwy, z suchym brytyjskim humorem i lekkim sarkazmem, ale zawsze pomocny i rzeczowy.",
+};
+
 export function systemPrompt(): string {
-  const { userName } = store.settings;
+  const s = store.settings;
+  const userName = s.userName;
   const memory = store.data.memory;
   const facts = memory.length
     ? "\n\nZapamiętane fakty o użytkowniku:\n" + memory.map((m) => `- ${m.key}: ${m.value}`).join("\n")
     : "";
   const now = new Date();
+
+  // Tryb tłumacza ma priorytet — JARVIS staje się tłumaczem na żywo.
+  if (s.interpreterMode) {
+    return [
+      `Jesteś tłumaczem symultanicznym JARVIS. Tłumaczysz między językami: ${s.interpreterFrom} i ${s.interpreterTo}.`,
+      `Wykryj język wypowiedzi użytkownika i przetłumacz ją na drugi z tych języków.`,
+      `Zwracaj WYŁĄCZNIE samo tłumaczenie — bez komentarzy, wyjaśnień ani powtarzania oryginału.`,
+      `Zachowuj ton i rejestr wypowiedzi.`,
+    ].join("\n");
+  }
+
+  const tone = PERSONAS[s.persona] ?? PERSONAS.classic;
+  const extra = s.customPersona.trim() ? `\nDodatkowe wytyczne osobowości: ${s.customPersona.trim()}` : "";
   return [
     `Jesteś JARVIS — zaawansowany, autonomiczny asystent AI w stylu filmowego asystenta Tony'ego Starka.`,
     `Zwracasz się do użytkownika per „${userName}". Mówisz po polsku, chyba że użytkownik użyje innego języka.`,
-    `Charakter: uprzejmy, lekko dowcipny, niezwykle kompetentny i konkretny. Bez lania wody.`,
+    `Charakter: ${tone}${extra}`,
     ``,
     `Zasady:`,
     `- Gdy użytkownik o coś prosi, DZIAŁAJ przez narzędzia (zadania, notatki, przypomnienia, kalendarz, zakupy, otwieranie aplikacji, dzwonienie, nawigacja, smart home).`,
