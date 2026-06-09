@@ -13,8 +13,10 @@ const emptyData: AppData = {
 };
 
 const defaultSettings: Settings = {
-  anthropicApiKey: "",
-  model: "claude-opus-4-8",
+  provider: "auto",
+  keys: { anthropic: "", gemini: "", groq: "", openrouter: "", nvidia: "", github: "" },
+  model: "auto",
+  proxyUrl: "",
   userName: "Sir",
   webSearch: true,
   speak: true,
@@ -24,6 +26,8 @@ const defaultSettings: Settings = {
   wakeWord: false,
   elevenLabsApiKey: "",
   elevenLabsVoiceId: "",
+  homeAssistantUrl: "",
+  homeAssistantToken: "",
 };
 
 export function uid(): string {
@@ -52,9 +56,20 @@ function write(key: string, value: unknown): void {
 
 type Listener = () => void;
 
+function normalizeSettings(s: Settings & { anthropicApiKey?: string }): Settings {
+  // Uzupełnij brakujące klucze dostawców i zmigruj stary pojedynczy klucz Anthropic.
+  s.keys = { ...defaultSettings.keys, ...(s.keys || {}) };
+  if (s.anthropicApiKey && !s.keys.anthropic) {
+    s.keys.anthropic = s.anthropicApiKey;
+    s.provider = "anthropic";
+  }
+  delete s.anthropicApiKey;
+  return s;
+}
+
 class Store {
   data: AppData = read<AppData>(DATA_KEY, emptyData);
-  settings: Settings = read<Settings>(SETTINGS_KEY, defaultSettings);
+  settings: Settings = normalizeSettings(read<Settings>(SETTINGS_KEY, defaultSettings));
   /** Rośnie przy każdej zmianie — używane jako snapshot dla Reacta. */
   version = 0;
   private listeners = new Set<Listener>();

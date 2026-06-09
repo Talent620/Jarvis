@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
 import { loadVoices, speak } from "../lib/voice";
+import { PROVIDER_LIST, PROVIDERS, autoPick } from "../lib/providers/registry";
+import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
@@ -8,7 +10,7 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
 }
 
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
-  const [s, setS] = useState<Settings>({ ...store.settings });
+  const [s, setS] = useState<Settings>(() => ({ ...store.settings, keys: { ...store.settings.keys } }));
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   useEffect(() => {
@@ -16,9 +18,26 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   }, []);
 
   const set = (patch: Partial<Settings>) => setS((prev) => ({ ...prev, ...patch }));
+  const setKey = (id: ProviderId, val: string) => setS((prev) => ({ ...prev, keys: { ...prev.keys, [id]: val } }));
+
+  // Lista modeli dla wybranego dostawcy (lub info o auto).
+  const modelOptions = useMemo(() => {
+    if (s.provider === "auto") return [];
+    return PROVIDERS[s.provider as ProviderId]?.models ?? [];
+  }, [s.provider]);
+
+  const autoTarget = useMemo(() => (s.provider === "auto" ? autoPick(s.keys) : null), [s.provider, s.keys]);
 
   const save = () => {
-    store.setSettings(s);
+    // Jeśli zmieniono dostawcę, a model nie pasuje — zresetuj na domyślny.
+    let next = { ...s };
+    if (next.provider !== "auto") {
+      const meta = PROVIDERS[next.provider as ProviderId];
+      if (meta && next.model !== "auto" && !meta.models.some((m) => m.id === next.model)) {
+        next.model = meta.defaultModel;
+      }
+    }
+    store.setSettings(next);
     onClose();
   };
 
@@ -27,30 +46,73 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
       <div className="panel" onClick={(e) => e.stopPropagation()}>
         <h2>⚙ Ustawienia</h2>
 
-        <h3>Mózg AI</h3>
+        <h3>Dostawca AI</h3>
         <div className="field">
-          <label>Klucz API Anthropic (przechowywany tylko na urządzeniu)</label>
-          <input
-            type="password"
-            value={s.anthropicApiKey}
-            placeholder="sk-ant-..."
-            onChange={(e) => set({ anthropicApiKey: e.target.value })}
-          />
-        </div>
-        <div className="field">
-          <label>Model</label>
-          <select value={s.model} onChange={(e) => set({ model: e.target.value })}>
-            <option value="claude-opus-4-8">Claude Opus 4.8 — maksymalna inteligencja</option>
-            <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — szybki i bystry</option>
-            <option value="claude-haiku-4-5">Claude Haiku 4.5 — najszybszy</option>
+          <label>Dostawca</label>
+          <select value={s.provider} onChange={(e) => set({ provider: e.target.value, model: "auto" })}>
+            <option value="auto">⚡ Auto — wybierz najlepszy dostępny</option>
+            {PROVIDER_LIST.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
           </select>
         </div>
+
+        {s.provider === "auto" ? (
+          <p className="muted">
+            {autoTarget
+              ? `Tryb auto użyje: ${PROVIDERS[autoTarget.provider].label} · ${autoTarget.model}. Wpisz klucze poniżej — im wyżej na liście, tym wyższy priorytet.`
+              : "Brak kluczy. Wprowadź przynajmniej jeden klucz API poniżej."}
+          </p>
+        ) : (
+          <div className="field">
+            <label>Model</label>
+            <select value={s.model} onChange={(e) => set({ model: e.target.value })}>
+              <option value="auto">Domyślny modelu dostawcy</option>
+              {modelOptions.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <h3>Klucze API (lokalnie na urządzeniu)</h3>
+        {PROVIDER_LIST.map((p) => (
+          <div className="field" key={p.id}>
+            <label>
+              {p.label}
+              {p.needsProxy ? " · może wymagać proxy (CORS)" : ""} —{" "}
+              <a href={p.keysUrl} target="_blank" rel="noopener" style={{ color: "var(--cyan)" }}>
+                klucz
+              </a>
+            </label>
+            <input
+              type="password"
+              value={s.keys[p.id] || ""}
+              placeholder={p.id === "anthropic" ? "sk-ant-..." : "klucz API"}
+              onChange={(e) => setKey(p.id, e.target.value)}
+            />
+          </div>
+        ))}
+
+        <div className="field">
+          <label>Backend-proxy (opcjonalnie — omija CORS, chowa klucze)</label>
+          <input
+            value={s.proxyUrl}
+            placeholder="https://twoj-proxy.vercel.app/api"
+            onChange={(e) => set({ proxyUrl: e.target.value })}
+          />
+        </div>
+
         <div className="field">
           <label>Jak JARVIS ma się do Ciebie zwracać</label>
           <input value={s.userName} onChange={(e) => set({ userName: e.target.value })} />
         </div>
         <div className="row">
-          <span>Wyszukiwanie w sieci (aktualne dane)</span>
+          <span>Wyszukiwanie w sieci (gdy dostawca wspiera)</span>
           <Toggle on={s.webSearch} onClick={() => set({ webSearch: !s.webSearch })} />
         </div>
 
@@ -101,9 +163,6 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
         </button>
 
         <h3>Premium głos JARVIS (ElevenLabs — opcjonalnie)</h3>
-        <p className="muted">
-          Dla brzmienia najbliższego oryginałowi możesz wgrać własny klucz ElevenLabs i ID głosu.
-        </p>
         <div className="field">
           <label>Klucz API ElevenLabs</label>
           <input
@@ -119,6 +178,25 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             value={s.elevenLabsVoiceId}
             placeholder="np. JBFqnCBsd6RMkjVDRZzb"
             onChange={(e) => set({ elevenLabsVoiceId: e.target.value })}
+          />
+        </div>
+
+        <h3>Smart home (Home Assistant — opcjonalnie)</h3>
+        <div className="field">
+          <label>Adres Home Assistant</label>
+          <input
+            value={s.homeAssistantUrl}
+            placeholder="http://homeassistant.local:8123"
+            onChange={(e) => set({ homeAssistantUrl: e.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label>Token dostępu (long-lived)</label>
+          <input
+            type="password"
+            value={s.homeAssistantToken}
+            placeholder="(opcjonalnie)"
+            onChange={(e) => set({ homeAssistantToken: e.target.value })}
           />
         </div>
 

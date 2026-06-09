@@ -4,7 +4,7 @@ import Conversation from "./components/Conversation";
 import Composer from "./components/Composer";
 import SettingsPanel from "./components/Settings";
 import Panels from "./components/Panels";
-import { askJarvis } from "./lib/claude";
+import { askJarvis, resolveProvider } from "./lib/brain";
 import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./lib/voice";
 import { store, uid } from "./lib/store";
 import { useStore } from "./hooks/useStore";
@@ -27,7 +27,7 @@ export default function App() {
 
   useEffect(() => {
     loadVoices();
-    if (!store.settings.anthropicApiKey) setShowSettings(true);
+    if (!resolveProvider()) setShowSettings(true);
   }, []);
 
   // --- Wysłanie polecenia do JARVIS-a (agentowa pętla) ---
@@ -155,7 +155,7 @@ export default function App() {
       <div className="topbar">
         <div className="brand">
           JARVIS
-          <small>OPUS 4.8 · ONLINE</small>
+          <small>{(resolveProvider()?.model || "BRAK API").toUpperCase()} · ONLINE</small>
         </div>
         <div className="spacer" />
         <button className="icon-btn" onClick={() => setShowPanels(true)} title="Dane">

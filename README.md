@@ -7,8 +7,12 @@ modyfikować i z którego zbudujesz nowy APK.
 
 ## Co potrafi
 
-- **Agentowy mózg (Claude Opus 4.8)** — myślenie adaptacyjne + tool-use: realnie
-  wykonuje zadania, nie tylko odpowiada.
+- **Wybór modelu z wielu dostawców** — Claude (Opus 4.8), Google Gemini, Groq,
+  OpenRouter (35+ modeli), NVIDIA NIM, GitHub Models. Tryb **auto** sam dobiera
+  najlepszy dostępny model na podstawie wpisanych kluczy.
+- **Agentowy mózg** — tool-use w każdym dostawcy (function calling): realnie
+  wykonuje zadania, nie tylko odpowiada. Claude dodatkowo z myśleniem adaptacyjnym
+  i serwerowym wyszukiwaniem w sieci.
 - **Pamięć** — zapamiętuje trwałe fakty i preferencje o użytkowniku (`remember_fact`).
 - **Wiedza w czasie rzeczywistym** — wyszukiwanie w sieci (serwerowe narzędzie Claude):
   pogoda, wiadomości, kursy, fakty po dacie treningu.
@@ -17,17 +21,31 @@ modyfikować i z którego zbudujesz nowy APK.
   głos przez ElevenLabs.
 - **Sterowanie urządzeniem i usługami** — otwieranie aplikacji (Spotify, YouTube,
   Mapy, Gmail, WhatsApp, Allegro/OLX…), dzwonienie, SMS, nawigacja.
+- **Smart home** — sterowanie urządzeniami przez Home Assistant (włącz/wyłącz/przełącz).
 - **Produktywność** — zadania, notatki, przypomnienia, kalendarz, lista zakupów.
 
 ## Konfiguracja
 
-Po pierwszym uruchomieniu wejdź w **⚙ Ustawienia** i wprowadź **klucz API Anthropic**
-(`sk-ant-...`). Klucz jest przechowywany **lokalnie na urządzeniu** (localStorage),
-nie jest nigdzie wysyłany poza oficjalne API Anthropic.
+Po pierwszym uruchomieniu wejdź w **⚙ Ustawienia**, wybierz **dostawcę** (lub zostaw
+„auto") i wpisz **przynajmniej jeden klucz API**:
 
-> ⚠️ Uwaga bezpieczeństwa: w wersji bez własnego backendu klucz API żyje w aplikacji
-> klienckiej. To wygodne do użytku osobistego, ale jeśli planujesz dystrybucję,
-> rozważ dodanie własnego serwera-proxy, który trzyma klucz po stronie serwera.
+| Dostawca | Gdzie wziąć klucz |
+|---|---|
+| Claude (Anthropic) | https://platform.claude.com |
+| Google Gemini | https://aistudio.google.com |
+| Groq | https://console.groq.com |
+| OpenRouter | https://openrouter.ai |
+| NVIDIA NIM | https://build.nvidia.com |
+| GitHub Models | https://github.com/marketplace/models |
+
+Klucze są przechowywane **lokalnie na urządzeniu** (localStorage). Tryb „auto"
+wybiera dostawcę z najwyższym priorytetem, dla którego podano klucz.
+
+> ⚠️ **Bezpieczeństwo:** w wersji bez backendu klucze żyją w aplikacji klienckiej.
+> To wygodne do użytku osobistego. Do dystrybucji użyj **backend-proxy** (katalog
+> `proxy/`) — przejmuje też ruch dla dostawców blokujących CORS (NVIDIA, GitHub Models)
+> i może chować klucze po stronie serwera. Nigdy nie wklejaj kluczy do repozytorium
+> ani do publicznych miejsc; jeśli to zrobisz — natychmiast je zresetuj.
 
 ## Uruchomienie lokalne (web)
 
@@ -43,42 +61,55 @@ Otwórz adres podany przez Vite (domyślnie http://localhost:5173).
 
 ## Budowa APK (Android)
 
+Projekt zawiera już wygenerowaną platformę Android (`android/`) z ustawionymi
+uprawnieniami (internet + mikrofon).
+
+### Najprościej — w chmurze GitHub (bez instalowania niczego)
+
+W repo jest workflow `.github/workflows/android.yml`. Po każdym pushu (albo ręcznie
+przez **Actions → Build Android APK → Run workflow**) GitHub zbuduje APK i wystawi
+go w sekcji **Artifacts** (`jarvis-debug-apk`). Pobierz i zainstaluj.
+
+### Lokalnie (Android Studio)
+
 ```bash
-# 1. Zbuduj front
 npm run build
-
-# 2. Dodaj platformę Android (jednorazowo)
-npx cap add android
-
-# 3. Zsynchronizuj i otwórz w Android Studio
 npx cap sync android
-npx cap open android
+npx cap open android   # Build → Build APK(s)
 ```
 
-W Android Studio: **Build → Build Bundle(s) / APK(s) → Build APK(s)**.
-Gotowy plik znajdziesz w `android/app/build/outputs/apk/`.
-
-Wymagane uprawnienia w `AndroidManifest.xml` (Android Studio doda część automatycznie;
-dla mikrofonu i internetu upewnij się, że są):
-
-```xml
-<uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.RECORD_AUDIO" />
-```
+Gotowy plik: `android/app/build/outputs/apk/debug/`.
 
 ## Struktura
 
 ```
 src/
   lib/
-    claude.ts        agentowa pętla Claude Opus 4.8 (tool-use + web search)
-    tools.ts         definicje i wykonawcy narzędzi
-    deviceControl.ts otwieranie aplikacji / dzwonienie / nawigacja
+    brain.ts         orkiestrator: system prompt + wybór dostawcy/modelu
+    providers/       adaptery AI (anthropic, openai-compat, gemini) + rejestr modeli
+    tools.ts         definicje i wykonawcy narzędzi agentowych
+    deviceControl.ts otwieranie aplikacji / dzwonienie / nawigacja / smart home
     voice.ts         STT (słowo-klucz) + TTS (głos JARVIS / ElevenLabs)
     store.ts         trwały magazyn danych i ustawień (localStorage)
   components/        UI w stylu HUD (orb, rozmowa, panele, ustawienia)
   App.tsx            spięcie całości
+android/             natywny projekt Android (Capacitor)
+proxy/               opcjonalny backend-proxy (Cloudflare Worker) — CORS + ukrycie kluczy
+.github/workflows/   CI budujące APK
 ```
+
+## Smart home (Home Assistant)
+
+W ⚙ Ustawieniach podaj adres instancji Home Assistant i długoterminowy token.
+Następnie mów/pisz naturalnie, np. „Jarvis, zgaś światło w salonie" — JARVIS
+wywoła encję (`light.salon`, `switch.czajnik`, `climate.sypialnia`…). Jeśli HA
+blokuje CORS, użyj `proxy/` (trasa `/passthrough`).
+
+## Backend-proxy (opcjonalnie)
+
+Dla dostawców blokujących przeglądarkę (NVIDIA NIM, GitHub Models) oraz aby ukryć
+klucze po stronie serwera — wdróż proxy z katalogu `proxy/` i wpisz jego adres
+w ustawieniach. Szczegóły: `proxy/README.md`.
 
 ## Premium głos „jak z filmu"
 

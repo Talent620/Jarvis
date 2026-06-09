@@ -68,13 +68,17 @@ export interface AppData {
 }
 
 export interface Settings {
-  /** Klucz API Anthropic (przechowywany lokalnie na urządzeniu). */
-  anthropicApiKey: string;
-  /** Model Claude. */
+  /** Wybrany dostawca AI: "auto" lub konkretny (anthropic/gemini/groq/openrouter/nvidia/github). */
+  provider: string;
+  /** Klucze API per dostawca (przechowywane lokalnie na urządzeniu). */
+  keys: Record<string, string>;
+  /** Wybrany model (id) lub "auto". */
   model: string;
+  /** Opcjonalny adres backend-proxy (omija CORS, chowa klucze). */
+  proxyUrl: string;
   /** Imię użytkownika, którym zwraca się JARVIS. */
   userName: string;
-  /** Czy włączyć wyszukiwanie w sieci (narzędzie serwerowe Claude). */
+  /** Czy włączyć wyszukiwanie w sieci (gdy dostawca je wspiera). */
   webSearch: boolean;
   /** Czy mówić odpowiedzi na głos. */
   speak: boolean;
@@ -90,4 +94,8 @@ export interface Settings {
   elevenLabsApiKey: string;
   /** ID głosu ElevenLabs. */
   elevenLabsVoiceId: string;
+  /** Adres instancji Home Assistant (np. http://homeassistant.local:8123). */
+  homeAssistantUrl: string;
+  /** Długoterminowy token dostępu Home Assistant. */
+  homeAssistantToken: string;
 }

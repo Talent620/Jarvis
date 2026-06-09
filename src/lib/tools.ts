@@ -1,5 +1,5 @@
 import { store, uid } from "./store";
-import { openService, call, sms, navigate } from "./deviceControl";
+import { openService, call, sms, navigate, smartHome } from "./deviceControl";
 
 // Definicja narzędzia w formacie Claude Messages API + lokalny wykonawca.
 export interface ToolDef {
@@ -220,6 +220,21 @@ const tools: Tool[] = [
       input_schema: obj({ destination: str("Cel podróży") }, ["destination"]),
     },
     run: ({ destination }) => navigate(destination),
+  },
+  {
+    def: {
+      name: "smart_home",
+      description:
+        "Steruj urządzeniem smart home przez Home Assistant. entity_id to identyfikator encji, np. 'light.salon', 'switch.czajnik', 'climate.sypialnia'.",
+      input_schema: obj(
+        {
+          entity_id: str("Identyfikator encji Home Assistant (domena.nazwa)"),
+          action: { type: "string", enum: ["on", "off", "toggle"], description: "Akcja" },
+        },
+        ["entity_id", "action"],
+      ),
+    },
+    run: ({ entity_id, action }) => smartHome(entity_id, action),
   },
 ];
 

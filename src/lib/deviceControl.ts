@@ -1,4 +1,5 @@
 import { AppLauncher } from "@capacitor/app-launcher";
+import { store } from "./store";
 
 // Otwieranie aplikacji i usług zewnętrznych. Na Androidzie/iOS używa AppLauncher,
 // w przeglądarce robi fallback na window.open.
@@ -66,4 +67,36 @@ export async function sms(number: string, body?: string): Promise<string> {
 export async function navigate(destination: string): Promise<string> {
   const ok = await open(`https://www.google.com/maps/dir/?api=1&destination=${q(destination)}`);
   return ok ? `Wyznaczam trasę do: ${destination}.` : "Nie udało się otworzyć nawigacji.";
+}
+
+// Sterowanie smart home przez REST API Home Assistant.
+// entityId np. "light.salon", "switch.czajnik", "climate.sypialnia".
+export async function smartHome(
+  entityId: string,
+  action: "on" | "off" | "toggle",
+): Promise<string> {
+  const { homeAssistantUrl, homeAssistantToken, proxyUrl } = store.settings;
+  if (!homeAssistantUrl || !homeAssistantToken) {
+    return "Home Assistant nie jest skonfigurowany. Dodaj adres i token w ⚙ Ustawienia.";
+  }
+  const domain = entityId.split(".")[0] || "homeassistant";
+  const service = action === "on" ? "turn_on" : action === "off" ? "turn_off" : "toggle";
+  const base = homeAssistantUrl.replace(/\/$/, "");
+  const target = `${base}/api/services/${domain}/${service}`;
+  const url = proxyUrl ? `${proxyUrl}/passthrough?u=${encodeURIComponent(target)}` : target;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${homeAssistantToken}`,
+      },
+      body: JSON.stringify({ entity_id: entityId }),
+    });
+    if (!res.ok) return `Home Assistant odrzucił żądanie (${res.status}).`;
+    const label = action === "on" ? "włączone" : action === "off" ? "wyłączone" : "przełączone";
+    return `Gotowe — ${entityId} ${label}.`;
+  } catch (e) {
+    return `Nie udało się połączyć z Home Assistant: ${e instanceof Error ? e.message : String(e)}`;
+  }
 }
