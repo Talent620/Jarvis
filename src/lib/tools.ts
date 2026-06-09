@@ -7,7 +7,7 @@ import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
 import { gmailSearch, gmailSend, gcalList, gcalAdd } from "./google";
 import { rememberFact } from "./memory";
-import { launchApp, openOnPc, powerPc, volumePc, mediaPc } from "./desktop";
+import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, hotkey as desktopHotkey } from "./desktop";
 import type { Citation } from "../types";
 
 // Bufor cytatów z ostatniego zapytania (research). Resetowany per wywołanie w brain.ts.
@@ -267,6 +267,24 @@ const tools: Tool[] = [
       ),
     },
     run: ({ action }) => mediaPc(action),
+  },
+  {
+    def: {
+      name: "desktop_type",
+      description:
+        "KOMPUTER (Windows): wpisz tekst (jakbyś pisał na klawiaturze). Opcjonalnie podaj 'window' = fragment tytułu okna, do którego wpisać (np. 'Notatnik') — JARVIS aktywuje to okno przed pisaniem. Najpierw uruchom/aktywuj docelowy program.",
+      input_schema: obj({ text: str("Tekst do wpisania"), window: str("Fragment tytułu okna docelowego (opcjonalnie)") }, ["text"]),
+    },
+    run: ({ text, window }) => typeText(text, window),
+  },
+  {
+    def: {
+      name: "desktop_hotkey",
+      description:
+        "KOMPUTER (Windows): naciśnij skrót klawiszowy, np. 'ctrl+s', 'ctrl+shift+t', 'alt+f4', 'ctrl+c'. Opcjonalnie 'window' = fragment tytułu okna docelowego. (Klawisz Windows nie jest obsługiwany.)",
+      input_schema: obj({ combo: str("Skrót, np. ctrl+s"), window: str("Fragment tytułu okna (opcjonalnie)") }, ["combo"]),
+    },
+    run: ({ combo, window }) => desktopHotkey(combo, window),
   },
   {
     def: {

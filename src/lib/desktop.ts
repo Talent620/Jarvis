@@ -8,6 +8,9 @@ export interface JarvisDesktop {
   power(action: string): Promise<string>;
   volume(action: string): Promise<string>;
   media(action: string): Promise<string>;
+  screenshot(): Promise<string>;
+  type(text: string, window?: string): Promise<string>;
+  hotkey(combo: string, window?: string): Promise<string>;
 }
 
 export function desktop(): JarvisDesktop | null {
@@ -73,4 +76,32 @@ export async function mediaPc(action: string): Promise<string> {
   if (r === "ok") return MEDIA_LABEL[a] || "Gotowe.";
   if (r === "err:unsupported") return "Sterowanie multimediami jest dostępne tylko na Windows.";
   return `Nie udało się sterować odtwarzaniem (${r}).`;
+}
+
+/** Zrzut ekranu komputera → obraz do analizy wizyjnej (lub null poza desktopem). */
+export async function captureScreen(): Promise<{ data: string; mediaType: string } | null> {
+  const d = desktop();
+  if (!d) return null;
+  const r = await d.screenshot().catch(() => "err");
+  if (!r || r.startsWith("err")) return null;
+  return { data: r, mediaType: "image/png" };
+}
+
+export async function typeText(text: string, window?: string): Promise<string> {
+  const d = desktop();
+  if (!d) return NOT_DESKTOP;
+  const r = await d.type(text, window).catch((e) => `err:${e}`);
+  if (r === "ok") return `Wpisuję tekst${window ? ` w „${window}"` : ""}.`;
+  if (r === "err:unsupported") return "Pisanie tekstu jest dostępne tylko na Windows.";
+  return `Nie udało się wpisać tekstu (${r}).`;
+}
+
+export async function hotkey(combo: string, window?: string): Promise<string> {
+  const d = desktop();
+  if (!d) return NOT_DESKTOP;
+  const r = await d.hotkey(combo, window).catch((e) => `err:${e}`);
+  if (r === "ok") return `Skrót: ${combo}${window ? ` w „${window}"` : ""}.`;
+  if (r === "err:unsupported") return "Skróty klawiszowe są dostępne tylko na Windows.";
+  if (r === "err:unknown") return `Nie rozpoznałem skrótu „${combo}".`;
+  return `Nie udało się wysłać skrótu (${r}).`;
 }

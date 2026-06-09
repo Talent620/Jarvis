@@ -5,6 +5,7 @@ export default function More({
   onGadgets,
   onHud,
   onStudio,
+  onScreen,
   onHelp,
   onClose,
 }: {
@@ -14,11 +15,13 @@ export default function More({
   onGadgets: () => void;
   onHud: () => void;
   onStudio: () => void;
+  onScreen?: () => void;
   onHelp: () => void;
   onClose: () => void;
 }) {
   const items = [
     { icon: "👁", label: "Wizja HUD (kamera) — co widzisz?", fn: onHud },
+    ...(onScreen ? [{ icon: "🖥️", label: "Spójrz na mój ekran (analiza)", fn: onScreen }] : []),
     { icon: "🎨", label: "Studio Obrazów — generuj/edytuj", fn: onStudio },
     { icon: "📁", label: "Projekty / dokumenty", fn: onProjects },
     { icon: "🕘", label: "Historia rozmów", fn: onHistory },

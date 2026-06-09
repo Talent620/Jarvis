@@ -25,6 +25,7 @@ type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; reme
 import { askJarvis, resolveProvider } from "./lib/brain";
 import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
+import { captureScreen, isDesktop } from "./lib/desktop";
 import { ensureNotifPerms } from "./lib/notifications";
 import { registerIntents } from "./lib/intents";
 import { store, uid } from "./lib/store";
@@ -164,6 +165,15 @@ export default function App() {
   const handleSend = async (text: string) => {
     setInterim("");
     stopSpeaking();
+    // Na komputerze: gdy użytkownik pyta o swój ekran, dołącz zrzut do analizy wizyjnej.
+    if (
+      isDesktop() &&
+      !pendingImageRef.current &&
+      /(m[oó]j ekran|na ekranie|zrzut ekranu|sp[oó]jrz na ekran|widzisz na ekranie|przeanalizuj ekran)/i.test(text)
+    ) {
+      const shot = await captureScreen();
+      if (shot) pendingImageRef.current = shot;
+    }
     const image = pendingImageRef.current || undefined;
     const userMsg: ChatMessage = { id: uid(), role: "user", text, image, createdAt: Date.now() };
     setMessages((m) => [...m, userMsg]);
@@ -205,6 +215,20 @@ export default function App() {
   };
 
   sendRef.current = handleSend;
+
+  // Zrzut ekranu komputera → analiza wizyjna (desktop).
+  const lookAtScreen = async () => {
+    const img = await captureScreen();
+    if (!img) {
+      setMessages((m) => [
+        ...m,
+        { id: uid(), role: "assistant", text: "Zrzut ekranu działa tylko w aplikacji desktopowej (Windows .exe).", createdAt: Date.now() },
+      ]);
+      return;
+    }
+    pendingImageRef.current = img;
+    handleSend("Przeanalizuj mój ekran — powiedz, co na nim widzisz i pomóż mi z tym.");
+  };
 
   const newChat = () => {
     stopSpeaking();
@@ -409,6 +433,7 @@ export default function App() {
           onGadgets={() => setShowGadgets(true)}
           onHud={() => setShowHud(true)}
           onStudio={() => setShowStudio(true)}
+          onScreen={isDesktop() ? lookAtScreen : undefined}
           onHelp={() => setShowHelp(true)}
           onClose={() => setShowMore(false)}
         />

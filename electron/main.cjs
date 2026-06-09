@@ -1,5 +1,5 @@
 // Główny proces Electrona — JARVIS na komputer (Windows .exe), pełna wersja.
-const { app, BrowserWindow, shell, session, Menu, ipcMain } = require("electron");
+const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { spawn, exec } = require("child_process");
@@ -129,6 +129,60 @@ function pressVk(vk) {
   exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${p}" ${vk}`);
 }
 
+// Wysyłanie tekstu/skrótów przez SendKeys (.ps1 + base64 = brak problemów z cudzysłowami).
+// Opcjonalna aktywacja okna po tytule (AppActivate) — pozwala pisać do innej aplikacji.
+let sendScriptPath = null;
+function ensureSendScript() {
+  if (sendScriptPath) return sendScriptPath;
+  const p = path.join(os.tmpdir(), "jarvis-send.ps1");
+  const ps =
+    "param([string]$B64,[string]$Win)\n" +
+    "$t=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($B64))\n" +
+    "Add-Type -AssemblyName System.Windows.Forms\n" +
+    "if($Win){ try { (New-Object -ComObject WScript.Shell).AppActivate($Win) | Out-Null; Start-Sleep -Milliseconds 350 } catch {} }\n" +
+    "[System.Windows.Forms.SendKeys]::SendWait($t)\n";
+  fs.writeFileSync(p, ps);
+  sendScriptPath = p;
+  return p;
+}
+function sendKeys(sk, win) {
+  const p = ensureSendScript();
+  const b64 = Buffer.from(String(sk), "utf8").toString("base64");
+  const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", p, b64];
+  if (win) args.push(win);
+  spawn("powershell", args, { stdio: "ignore" }).unref();
+}
+
+// Tekst → łańcuch SendKeys (escape znaków specjalnych, Enter/Tab).
+function escapeSendKeys(s) {
+  return String(s)
+    .replace(/[+^%~(){}\[\]]/g, "{$&}")
+    .replace(/\r\n|\r|\n/g, "{ENTER}")
+    .replace(/\t/g, "{TAB}");
+}
+
+const SK_KEYS = {
+  enter: "{ENTER}", tab: "{TAB}", esc: "{ESC}", escape: "{ESC}", space: " ",
+  up: "{UP}", down: "{DOWN}", left: "{LEFT}", right: "{RIGHT}",
+  home: "{HOME}", end: "{END}", del: "{DEL}", delete: "{DEL}", backspace: "{BACKSPACE}", bksp: "{BACKSPACE}",
+  pageup: "{PGUP}", pagedown: "{PGDN}", ins: "{INSERT}", insert: "{INSERT}",
+  f1: "{F1}", f2: "{F2}", f3: "{F3}", f4: "{F4}", f5: "{F5}", f6: "{F6}",
+  f7: "{F7}", f8: "{F8}", f9: "{F9}", f10: "{F10}", f11: "{F11}", f12: "{F12}",
+};
+// Kombinacja typu "ctrl+shift+s" → łańcuch SendKeys "^+s" (bez klawisza Win).
+function buildHotkey(combo) {
+  const parts = String(combo).toLowerCase().split("+").map((x) => x.trim()).filter(Boolean);
+  let mods = "";
+  let key = "";
+  for (const p of parts) {
+    if (p === "ctrl" || p === "control") mods += "^";
+    else if (p === "alt") mods += "%";
+    else if (p === "shift") mods += "+";
+    else key = SK_KEYS[p] || (p.length === 1 ? p : "");
+  }
+  return key ? mods + key : null;
+}
+
 function registerDesktopControl() {
   ipcMain.handle("jarvis:open", async (_e, target) => {
     if (!target) return "err:empty";
@@ -195,6 +249,43 @@ function registerDesktopControl() {
     const vk = { playpause: 179, play: 179, pause: 179, next: 176, prev: 177, previous: 177, stop: 178 }[a];
     if (!vk) return "err:unknown";
     pressVk(vk);
+    return "ok";
+  });
+
+  // Zrzut ekranu → base64 PNG (do analizy wizyjnej „co mam na ekranie?").
+  ipcMain.handle("jarvis:screenshot", async () => {
+    try {
+      const d = screen.getPrimaryDisplay();
+      const maxW = 1600;
+      const scale = Math.min(1, maxW / d.size.width);
+      const sources = await desktopCapturer.getSources({
+        types: ["screen"],
+        thumbnailSize: { width: Math.round(d.size.width * scale), height: Math.round(d.size.height * scale) },
+      });
+      const src = sources[0];
+      if (!src) return "err:no-source";
+      return src.thumbnail.toPNG().toString("base64");
+    } catch (e) {
+      return `err:${e && e.message ? e.message : e}`;
+    }
+  });
+
+  // Pisanie tekstu (opcjonalnie do okna o podanym tytule).
+  ipcMain.handle("jarvis:type", async (_e, payload) => {
+    if (process.platform !== "win32") return "err:unsupported";
+    const { text, window } = payload || {};
+    if (!text) return "err:empty";
+    sendKeys(escapeSendKeys(text), window);
+    return "ok";
+  });
+
+  // Skrót klawiszowy (opcjonalnie do okna o podanym tytule).
+  ipcMain.handle("jarvis:hotkey", async (_e, payload) => {
+    if (process.platform !== "win32") return "err:unsupported";
+    const { combo, window } = payload || {};
+    const sk = buildHotkey(combo);
+    if (!sk) return "err:unknown";
+    sendKeys(sk, window);
     return "ok";
   });
 }

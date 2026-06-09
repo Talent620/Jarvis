@@ -89,6 +89,8 @@ export default function Help({ onClose }: { onClose: () => void }) {
           <h3>🖥️ Sterowanie komputerem (Windows)</h3>
           <ul>
             <li>W wersji desktopowej (.exe) JARVIS steruje komputerem komendami: „Otwórz notatnik / kalkulator / eksplorator", „Uruchom Spotify", „Otwórz folder Pobrane", „Zrób ciszej / wycisz", „Pauza / następny utwór", „Zablokuj komputer".</li>
+            <li><b>Pisanie i skróty:</b> „Otwórz notatnik i wpisz…", „Naciśnij Ctrl+S" (poda tytuł okna, by pisać do wybranej aplikacji).</li>
+            <li><b>Widzi Twój ekran:</b> zapytaj „Co mam na ekranie?" albo ⋯ → „Spójrz na mój ekran" — JARVIS zrobi zrzut i go przeanalizuje.</li>
             <li>Akcje zasilania (uśpij/wyłącz/restart) i uruchamianie programów <b>proszą o zgodę</b>.</li>
           </ul>
 
