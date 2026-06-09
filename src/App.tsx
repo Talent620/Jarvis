@@ -5,6 +5,8 @@ import Composer from "./components/Composer";
 import SettingsPanel from "./components/Settings";
 import Panels from "./components/Panels";
 import LiveOverlay from "./components/LiveOverlay";
+import ChatHistory from "./components/ChatHistory";
+import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { askJarvis, resolveProvider } from "./lib/brain";
 import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
@@ -16,19 +18,16 @@ import type { ChatMessage } from "./types";
 
 type PendingImage = { data: string; mediaType: string } | null;
 
-const CHAT_KEY = "jarvis.chat.v1";
-
-function loadChat(): ChatMessage[] {
-  try {
-    return JSON.parse(localStorage.getItem(CHAT_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
+const initialChat = (() => {
+  const chats = loadChats();
+  return chats[0] ?? null;
+})();
 
 export default function App() {
   const { settings } = useStore();
-  const [messages, setMessages] = useState<ChatMessage[]>(loadChat);
+  const [messages, setMessages] = useState<ChatMessage[]>(initialChat?.messages ?? []);
+  const [activeId, setActiveId] = useState<string>(initialChat?.id ?? uid());
+  const [showHistory, setShowHistory] = useState(false);
   const [interim, setInterim] = useState("");
   const [orb, setOrb] = useState<OrbState>("idle");
   const [busy, setBusy] = useState(false);
@@ -61,14 +60,16 @@ export default function App() {
     if (img) setPendingImage(img);
   };
 
-  // Trwałość rozmowy (ostatnie 100 wiadomości).
+  // Trwałość: zapisuj aktywną rozmowę do historii (najnowsze pierwsze).
   useEffect(() => {
-    try {
-      localStorage.setItem(CHAT_KEY, JSON.stringify(messages.slice(-100)));
-    } catch {
-      /* ignore */
-    }
-  }, [messages]);
+    if (!messages.length) return;
+    upsertChat({
+      id: activeId,
+      title: titleFrom(messages),
+      messages: messages.slice(-100),
+      updatedAt: Date.now(),
+    });
+  }, [messages, activeId]);
 
   // --- Wysłanie polecenia do JARVIS-a (agentowa pętla) ---
   const handleSend = async (text: string) => {
@@ -117,13 +118,17 @@ export default function App() {
 
   const newChat = () => {
     stopSpeaking();
-    setMessages([]);
+    setMessages([]); // bieżąca jest już zapisana w historii
+    setActiveId(uid());
     setLiveId(null);
-    try {
-      localStorage.removeItem(CHAT_KEY);
-    } catch {
-      /* ignore */
-    }
+  };
+
+  const openChat = (s: ChatSession) => {
+    stopSpeaking();
+    setActiveId(s.id);
+    setMessages(s.messages);
+    setLiveId(null);
+    setShowHistory(false);
   };
 
   // --- Sterowanie nasłuchem (z barge-in: nasłuch przerywa mówienie) ---
@@ -233,6 +238,9 @@ export default function App() {
             ＋
           </button>
         )}
+        <button className="icon-btn" onClick={() => setShowHistory(true)} title="Historia rozmów">
+          🕘
+        </button>
         <button className="icon-btn" onClick={() => setShowPanels(true)} title="Dane">
           ▣
         </button>
@@ -266,6 +274,9 @@ export default function App() {
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {showPanels && <Panels onClose={() => setShowPanels(false)} />}
       {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}
+      {showHistory && (
+        <ChatHistory activeId={activeId} onOpen={openChat} onClose={() => setShowHistory(false)} />
+      )}
     </div>
   );
 }

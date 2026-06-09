@@ -177,6 +177,25 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             ))}
           </select>
         </div>
+        <button
+          className="btn"
+          onClick={() =>
+            set({
+              speak: true,
+              voicePitch: 0.85,
+              voiceRate: 0.98,
+              elevenLabsVoiceId:
+                s.elevenLabsVoiceId || (s.elevenLabsApiKey ? "onwK4e9ZLuTAKqWW03F9" : ""),
+            })
+          }
+        >
+          🎩 Ustaw głos JARVIS (Iron Man)
+        </button>
+        <p className="muted">
+          Najbliższy legalny odpowiednik filmowego JARVIS-a: niski, brytyjski męski głos.
+          Z kluczem ElevenLabs użyje stockowego głosu „Daniel"; bez niego — najlepszego
+          głosu systemowego z dostrojonym tonem.
+        </p>
         <div className="chips" style={{ marginBottom: 8 }}>
           {[
             { l: "JARVIS", p: 0.9, r: 1.0 },
