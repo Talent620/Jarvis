@@ -13,6 +13,7 @@ const LABEL: Record<LiveState, string> = {
 
 export default function LiveOverlay({ onClose }: { onClose: () => void }) {
   const [state, setState] = useState<LiveState>("connecting");
+  const [detail, setDetail] = useState("");
   const [caption, setCaption] = useState("");
   const sessionRef = useRef<LiveSession | null>(null);
   const key = store.settings.keys.gemini;
@@ -20,12 +21,16 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (!key) {
       setState("error");
+      setDetail("Tryb na żywo wymaga klucza Google Gemini. Dodaj go w ⚙ Ustawienia.");
       return;
     }
     const session = new LiveSession(
       key,
       systemPrompt(),
-      (s) => setState(s),
+      (s, d) => {
+        setState(s);
+        if (d) setDetail(d);
+      },
       (t) => setCaption((c) => (c + t).slice(-300)),
     );
     sessionRef.current = session;
@@ -63,10 +68,36 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
           {LABEL[state]}
         </div>
 
-        {!key && (
-          <p className="muted" style={{ textAlign: "center", maxWidth: 320 }}>
-            Tryb na żywo wymaga klucza Google Gemini. Dodaj go w ⚙ Ustawienia.
+        {detail && (state === "error" || state === "closed") && (
+          <p className="muted" style={{ textAlign: "center", maxWidth: 340, color: state === "error" ? "var(--danger, #ff6b6b)" : undefined }}>
+            {detail}
           </p>
+        )}
+        {(state === "error" || state === "closed") && (
+          <button
+            className="btn"
+            style={{ maxWidth: 220, marginTop: 14 }}
+            onClick={() => {
+              if (!key) return;
+              sessionRef.current?.stop(); // zwolnij mikrofon/audio starej sesji
+              setCaption("");
+              setDetail("");
+              setState("connecting");
+              const s = new LiveSession(
+                key,
+                systemPrompt(),
+                (st, d) => {
+                  setState(st);
+                  if (d) setDetail(d);
+                },
+                (t) => setCaption((c) => (c + t).slice(-300)),
+              );
+              sessionRef.current = s;
+              s.start().catch(() => setState("error"));
+            }}
+          >
+            ↻ Połącz ponownie
+          </button>
         )}
         {caption && (
           <p className="muted" style={{ textAlign: "center", maxWidth: 360, marginTop: 18 }}>

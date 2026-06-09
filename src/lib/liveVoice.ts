@@ -5,6 +5,18 @@ const LIVE_MODEL = "models/gemini-2.0-flash-live-001";
 
 export type LiveState = "connecting" | "listening" | "speaking" | "closed" | "error";
 
+// Zamień kod/treść zamknięcia WebSocketu na zrozumiałą przyczynę.
+function closeReason(code: number, reason?: string): string | undefined {
+  const r = (reason || "").trim();
+  if (/api key|api_key|unauthor|permission|denied|invalid/i.test(r))
+    return "Nieprawidłowy lub niepełnoprawny klucz Gemini (sprawdź ⚙).";
+  if (/quota|exceed|rate|resource.?exhaust/i.test(r)) return "Przekroczony limit Gemini Live — spróbuj później.";
+  if (/model/i.test(r)) return "Model Gemini Live niedostępny dla tego klucza.";
+  if (code === 1011) return "Błąd po stronie serwera Gemini — spróbuj ponownie.";
+  if (code === 1006) return "Połączenie przerwane (sieć). Sprawdź internet.";
+  return r || undefined;
+}
+
 // --- Pomocnicze: konwersje audio ---
 
 function downsampleTo16k(input: Float32Array, inRate: number): Int16Array {
@@ -46,7 +58,7 @@ export class LiveSession {
   constructor(
     private apiKey: string,
     private system: string,
-    private onState: (s: LiveState) => void,
+    private onState: (s: LiveState, detail?: string) => void,
     private onText?: (t: string) => void,
   ) {}
 
@@ -63,14 +75,22 @@ export class LiveSession {
             model: LIVE_MODEL,
             generationConfig: { responseModalities: ["AUDIO"] },
             systemInstruction: { parts: [{ text: this.system }] },
+            // Transkrypcja audio → napisy w czasie rzeczywistym (co mówi JARVIS).
+            outputAudioTranscription: {},
+            inputAudioTranscription: {},
           },
         }),
       );
     };
     this.ws.onmessage = (ev) => this.onMessage(ev);
-    this.ws.onerror = () => this.onState("error");
-    this.ws.onclose = () => {
-      if (!this.closed) this.onState("closed");
+    this.ws.onerror = () => {
+      if (!this.closed) this.onState("error", "Nie udało się połączyć z Gemini Live.");
+    };
+    this.ws.onclose = (ev) => {
+      if (this.closed) return;
+      // Kod 1000 = normalne zamknięcie; inne wskazują przyczynę (klucz, model, limit).
+      const reason = closeReason(ev.code, ev.reason);
+      this.onState(ev.code === 1000 ? "closed" : "error", reason);
     };
   }
 
@@ -83,8 +103,19 @@ export class LiveSession {
       return;
     }
 
+    // Błąd zgłoszony przez serwer (np. nieprawidłowy klucz, brak dostępu do modelu).
+    if (msg.error?.message) {
+      this.onState("error", msg.error.message);
+      return;
+    }
+
     if (msg.setupComplete) {
-      await this.startMic();
+      try {
+        await this.startMic();
+      } catch {
+        this.onState("error", "Brak dostępu do mikrofonu. Zezwól na mikrofon w ustawieniach aplikacji.");
+        return;
+      }
       this.onState("listening");
       return;
     }
@@ -99,6 +130,8 @@ export class LiveSession {
       }
       if (p.text && this.onText) this.onText(p.text);
     }
+    // Napisy z transkrypcji mowy JARVIS-a (responseModalities = AUDIO nie zwraca tekstu w parts).
+    if (sc.outputTranscription?.text && this.onText) this.onText(sc.outputTranscription.text);
     if (sc.turnComplete) this.onState("listening");
   }
 
