@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+        <string>JARVIS</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>JARVIS używa mikrofonu do rozmowy głosowej i rozpoznawania mowy.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>JARVIS używa rozpoznawania mowy, aby rozumieć Twoje polecenia.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>JARVIS używa aparatu, aby analizować zdjęcia, które mu pokażesz.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>JARVIS potrzebuje dostępu do zdjęć, aby analizować wybrany obraz.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>JARVIS używa kontaktów, aby dzwonić i wysyłać wiadomości po imieniu.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>JARVIS dodaje i odczytuje wydarzenia w Twoim kalendarzu.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>JARVIS dodaje i odczytuje wydarzenia w Twoim kalendarzu.</string>
+</dict>
+</plist>

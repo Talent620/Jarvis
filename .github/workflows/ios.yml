@@ -1,0 +1,50 @@
+name: Build iOS (verify)
+
+# Buduje aplikację iOS na runnerze macOS, aby potwierdzić, że projekt się kompiluje.
+# UWAGA: instalowalny plik .ipa na iPhone wymaga PODPISU certyfikatem Apple
+# (płatne konto Apple Developer, 99 USD/rok) — patrz README, sekcja iOS.
+# Ten workflow buduje wersję pod symulator (bez podpisu) tylko do weryfikacji.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/functionality-modification-access-z9kod1"]
+    paths:
+      - "ios/**"
+      - "src/**"
+      - ".github/workflows/ios.yml"
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web + sync Capacitor (iOS)
+        run: |
+          npm run build
+          npx cap sync ios
+
+      - name: CocoaPods install
+        working-directory: ios/App
+        run: pod install
+
+      - name: Build app (simulator, unsigned)
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            build

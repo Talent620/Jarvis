@@ -114,6 +114,33 @@ https://github.com/Talent620/Jarvis/releases/download/latest/jarvis.apk
 > aplikacji. Do publikacji w Google Play wygeneruj własny, tajny keystore i trzymaj go
 > w sekretach (nie w repo).
 
+## Wersja na Apple (iOS)
+
+Projekt zawiera natywny projekt iOS (`ios/`, Capacitor) z ustawionymi opisami
+uprawnień (mikrofon, mowa, aparat, zdjęcia, kontakty, kalendarz).
+
+**Wymagania (narzucone przez Apple):** zbudowanie i zainstalowanie aplikacji iOS
+wymaga **komputera Mac z Xcode**. Instalacja na realnym iPhonie wymaga **podpisu**
+certyfikatem z **konta Apple Developer** (darmowe konto = instalacja tylko na
+własnym urządzeniu, ważna 7 dni; konto płatne 99 USD/rok = pełna dystrybucja /
+TestFlight). Nie da się tego obejść z poziomu Windowsa/Androida ani darmowego CI.
+
+**Budowa na Macu:**
+
+```bash
+npm install
+npm run build
+npx cap sync ios
+npx cap open ios   # otwiera Xcode
+```
+
+W Xcode: wybierz swój zespół (Signing & Capabilities → Team), podłącz iPhone’a
+i kliknij ▶ (Run), albo Product → Archive → Distribute (TestFlight/Ad Hoc).
+
+> CI `.github/workflows/ios.yml` buduje wersję pod symulator (bez podpisu) na
+> macOS — to tylko weryfikacja, że projekt się kompiluje; nie tworzy pliku do
+> instalacji na telefonie (to wymaga Twojego certyfikatu Apple).
+
 ## Struktura
 
 ```
