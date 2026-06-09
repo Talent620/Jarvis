@@ -21,6 +21,8 @@ const defaultSettings: Settings = {
   keys: { anthropic: "", gemini: "", groq: "", openrouter: "", nvidia: "", github: "" },
   model: "auto",
   proxyUrl: "",
+  syncUrl: "",
+  syncToken: "",
   activeProjectId: "",
   userName: "Sir",
   persona: "classic",

@@ -3,6 +3,7 @@ import { store } from "../lib/store";
 import { loadVoices, speak } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
+import { pushSync, pullSync } from "../lib/sync";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 
@@ -13,6 +14,7 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [s, setS] = useState<Settings>(() => ({ ...store.settings, keys: { ...store.settings.keys } }));
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [syncMsg, setSyncMsg] = useState("");
 
   useEffect(() => {
     loadVoices().then(setVoices);
@@ -106,10 +108,56 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           <label>Backend-proxy (opcjonalnie — omija CORS, chowa klucze)</label>
           <input
             value={s.proxyUrl}
-            placeholder="https://twoj-proxy.vercel.app/api"
+            placeholder="https://jarvis-bff.twoja.workers.dev"
             onChange={(e) => set({ proxyUrl: e.target.value })}
           />
         </div>
+
+        <h3>Synchronizacja (chmura)</h3>
+        <p className="muted">
+          Współdziel pamięć, projekty i dane między urządzeniami przez własny backend
+          (katalog <code>proxy/</code>). Token to Twoja prywatna nazwa przestrzeni danych.
+        </p>
+        <div className="field">
+          <label>Adres backendu sync</label>
+          <input
+            value={s.syncUrl}
+            placeholder="https://jarvis-bff.twoja.workers.dev"
+            onChange={(e) => set({ syncUrl: e.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label>Token sync (prywatny)</label>
+          <input
+            type="password"
+            value={s.syncToken}
+            placeholder="dowolny sekretny ciąg"
+            onChange={(e) => set({ syncToken: e.target.value })}
+          />
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            className="btn"
+            style={{ flex: 1 }}
+            onClick={async () => {
+              store.setSettings({ syncUrl: s.syncUrl, syncToken: s.syncToken });
+              setSyncMsg("…"); setSyncMsg(await pushSync());
+            }}
+          >
+            ⬆ Wyślij
+          </button>
+          <button
+            className="btn"
+            style={{ flex: 1 }}
+            onClick={async () => {
+              store.setSettings({ syncUrl: s.syncUrl, syncToken: s.syncToken });
+              setSyncMsg("…"); setSyncMsg(await pullSync());
+            }}
+          >
+            ⬇ Pobierz
+          </button>
+        </div>
+        {syncMsg && <p className="muted">{syncMsg}</p>}
 
         <div className="field">
           <label>Jak JARVIS ma się do Ciebie zwracać</label>

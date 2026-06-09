@@ -1,0 +1,10 @@
+name = "jarvis-bff"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Synchronizacja danych — utwórz namespace i wklej id:
+#   wrangler kv namespace create JARVIS_KV
+# a następnie wstaw zwrócone id poniżej.
+kv_namespaces = [
+  { binding = "JARVIS_KV", id = "WSTAW_KV_ID" }
+]

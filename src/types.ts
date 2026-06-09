@@ -131,6 +131,10 @@ export interface Settings {
   model: string;
   /** Opcjonalny adres backend-proxy (omija CORS, chowa klucze). */
   proxyUrl: string;
+  /** Adres backendu sync (ten sam Worker). */
+  syncUrl: string;
+  /** Prywatny token przestrzeni danych sync. */
+  syncToken: string;
   /** Aktywny projekt/workspace ("" = ogólny). */
   activeProjectId: string;
   /** Imię użytkownika, którym zwraca się JARVIS. */
