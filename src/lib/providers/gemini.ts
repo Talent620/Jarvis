@@ -14,6 +14,7 @@ function cleanSchema(schema: Record<string, unknown>): Record<string, unknown> |
 
 interface Part {
   text?: string;
+  inlineData?: { mimeType: string; data: string };
   functionCall?: { name: string; args: Record<string, unknown> };
   functionResponse?: { name: string; response: { result: string } };
 }
@@ -36,7 +37,12 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
 
   const contents: Content[] = ctx.history.map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }],
+    parts: m.image
+      ? [
+          { inlineData: { mimeType: m.image.mediaType, data: m.image.data } } as Part,
+          { text: m.content || "Opisz, co widzisz na zdjęciu." },
+        ]
+      : [{ text: m.content }],
   }));
   const used = new Set<string>();
   let guard = 0;

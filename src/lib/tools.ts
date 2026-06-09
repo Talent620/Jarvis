@@ -1,6 +1,7 @@
 import { store, uid } from "./store";
 import { openService, call, sms, navigate, smartHome } from "./deviceControl";
 import { getWeather } from "./weather";
+import { scheduleReminder } from "./notifications";
 
 // Definicja narzędzia w formacie Claude Messages API + lokalny wykonawca.
 export interface ToolDef {
@@ -106,7 +107,9 @@ const tools: Tool[] = [
       ),
     },
     run: ({ text, at }) => {
-      store.setData((d) => d.reminders.unshift({ id: uid(), text, at, fired: false, createdAt: Date.now() }));
+      const reminder = { id: uid(), text, at, fired: false, createdAt: Date.now() };
+      store.setData((d) => d.reminders.unshift(reminder));
+      void scheduleReminder(reminder);
       return `Przypomnienie ustawione na ${at}: „${text}”.`;
     },
   },

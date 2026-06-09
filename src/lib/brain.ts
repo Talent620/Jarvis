@@ -21,6 +21,7 @@ function systemPrompt(): string {
     `- Proaktywnie zapamiętuj trwałe preferencje narzędziem remember_fact.`,
     `- Odpowiedzi trzymaj zwięzłe i naturalne — będą czytane na głos.`,
     `- Po wykonaniu akcji potwierdź ją krótko.`,
+    `- Jeśli użytkownik dołączy zdjęcie, przeanalizuj je i odnieś się do jego treści.`,
     `- Aktualny czas: ${now.toLocaleString("pl-PL")}.`,
     facts,
   ].join("\n");
@@ -54,6 +55,11 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
     );
   }
 
+  // Obraz dołączamy tylko do ostatniej wiadomości — nie zaśmiecamy kontekstu base64.
+  const trimmed: Msg[] = history.map((m, i) =>
+    i === history.length - 1 ? m : { role: m.role, content: m.content },
+  );
+
   const meta = PROVIDERS[resolved.provider];
   return meta.impl({
     apiKey: resolved.apiKey,
@@ -61,7 +67,7 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
     system: systemPrompt(),
     webSearch: store.settings.webSearch,
     tools: toolDefs,
-    history,
+    history: trimmed,
     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
   });
 }

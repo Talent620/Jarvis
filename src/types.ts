@@ -7,6 +7,8 @@ export interface ChatMessage {
   role: Role;
   /** Tekst widoczny dla użytkownika. */
   text: string;
+  /** Opcjonalny załączony obraz (wizja). */
+  image?: { data: string; mediaType: string };
   /** Krótkie etykiety użytych narzędzi (np. "web_search", "add_task"). */
   tools?: string[];
   createdAt: number;

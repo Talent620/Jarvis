@@ -29,7 +29,17 @@ export function makeOpenAICompatible(
 
     const messages: OAIMessage[] = [
       { role: "system", content: ctx.system },
-      ...ctx.history.map((m) => ({ role: m.role, content: m.content }) as OAIMessage),
+      ...ctx.history.map((m) =>
+        m.image
+          ? ({
+              role: m.role,
+              content: [
+                { type: "text", text: m.content || "Opisz, co widzisz na zdjęciu." },
+                { type: "image_url", image_url: { url: `data:${m.image.mediaType};base64,${m.image.data}` } },
+              ],
+            } as unknown as OAIMessage)
+          : ({ role: m.role, content: m.content } as OAIMessage),
+      ),
     ];
     const used = new Set<string>();
     let guard = 0;

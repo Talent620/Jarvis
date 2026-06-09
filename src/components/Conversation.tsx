@@ -51,6 +51,13 @@ export default function Conversation({
     <div className="convo">
       {messages.map((m) => (
         <div key={m.id} className={`bubble ${m.role}`}>
+          {m.image && (
+            <img
+              className="bubble-img"
+              src={`data:${m.image.mediaType};base64,${m.image.data}`}
+              alt="załączone zdjęcie"
+            />
+          )}
           {m.role === "assistant" ? <TypeText text={m.text} animate={m.id === liveId} /> : m.text}
           {m.tools && m.tools.length > 0 && (
             <div className="tools">

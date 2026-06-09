@@ -5,6 +5,8 @@ export type ProviderId = "anthropic" | "gemini" | "groq" | "openrouter" | "nvidi
 export interface Msg {
   role: "user" | "assistant";
   content: string;
+  /** Opcjonalny obraz dołączony do wiadomości (wizja). */
+  image?: { data: string; mediaType: string };
 }
 
 export interface JarvisReply {

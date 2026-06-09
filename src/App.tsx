@@ -6,9 +6,13 @@ import SettingsPanel from "./components/Settings";
 import Panels from "./components/Panels";
 import { askJarvis, resolveProvider } from "./lib/brain";
 import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./lib/voice";
+import { capturePhoto } from "./lib/camera";
+import { ensureNotifPerms } from "./lib/notifications";
 import { store, uid } from "./lib/store";
 import { useStore } from "./hooks/useStore";
 import type { ChatMessage } from "./types";
+
+type PendingImage = { data: string; mediaType: string } | null;
 
 const CHAT_KEY = "jarvis.chat.v1";
 
@@ -30,16 +34,25 @@ export default function App() {
   const [showPanels, setShowPanels] = useState(false);
   const [micOn, setMicOn] = useState(false);
   const [liveId, setLiveId] = useState<string | null>(null);
+  const [pendingImage, setPendingImage] = useState<PendingImage>(null);
 
   const listenerRef = useRef<Listener | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
+  const pendingImageRef = useRef<PendingImage>(null);
+  pendingImageRef.current = pendingImage;
   const micSupported = isSpeechSupported();
 
   useEffect(() => {
     loadVoices();
+    ensureNotifPerms();
     if (!resolveProvider()) setShowSettings(true);
   }, []);
+
+  const attachImage = async () => {
+    const img = await capturePhoto();
+    if (img) setPendingImage(img);
+  };
 
   // Trwałość rozmowy (ostatnie 100 wiadomości).
   useEffect(() => {
@@ -54,15 +67,17 @@ export default function App() {
   const handleSend = async (text: string) => {
     setInterim("");
     stopSpeaking();
-    const userMsg: ChatMessage = { id: uid(), role: "user", text, createdAt: Date.now() };
+    const image = pendingImageRef.current || undefined;
+    const userMsg: ChatMessage = { id: uid(), role: "user", text, image, createdAt: Date.now() };
     setMessages((m) => [...m, userMsg]);
+    setPendingImage(null);
     setBusy(true);
     setOrb("thinking");
 
     try {
       const history = [...messagesRef.current, userMsg]
         .slice(-20)
-        .map((m) => ({ role: m.role, content: m.text }));
+        .map((m) => ({ role: m.role, content: m.text, image: m.image }));
 
       const reply = await askJarvis(history);
       const aiMsg: ChatMessage = {
@@ -220,6 +235,9 @@ export default function App() {
       <Composer
         onSend={handleSend}
         onMic={toggleMic}
+        onAttach={attachImage}
+        onRemoveImage={() => setPendingImage(null)}
+        imagePreview={pendingImage ? `data:${pendingImage.mediaType};base64,${pendingImage.data}` : null}
         micOn={micOn}
         busy={busy}
         micSupported={micSupported}

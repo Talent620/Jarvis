@@ -27,7 +27,15 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
   }));
   if (ctx.webSearch) tools.push({ type: "web_search_20260209", name: "web_search" });
 
-  const messages: AnthMsg[] = ctx.history.map((m) => ({ role: m.role, content: m.content }));
+  const messages: AnthMsg[] = ctx.history.map((m) => ({
+    role: m.role,
+    content: m.image
+      ? [
+          { type: "image", source: { type: "base64", media_type: m.image.mediaType, data: m.image.data } },
+          { type: "text", text: m.content || "Opisz, co widzisz na zdjęciu." },
+        ]
+      : m.content,
+  }));
   const used = new Set<string>();
   let guard = 0;
 

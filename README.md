@@ -21,6 +21,10 @@ modyfikować i z którego zbudujesz nowy APK.
   głos przez ElevenLabs.
 - **Sterowanie urządzeniem i usługami** — otwieranie aplikacji (Spotify, YouTube,
   Mapy, Gmail, WhatsApp, Allegro/OLX…), dzwonienie, SMS, nawigacja.
+- **Wizja / aparat** — zrób lub wybierz zdjęcie i zapytaj „co to jest?". JARVIS
+  analizuje obraz (Claude / Gemini / modele vision). 📷 obok pola tekstowego.
+- **Natywne powiadomienia** — przypomnienia odpalają się jako powiadomienia
+  systemowe Androida (Capacitor Local Notifications), nawet po zamknięciu okna.
 - **Smart home** — sterowanie urządzeniami przez Home Assistant (włącz/wyłącz/przełącz).
 - **Raport poranny** — jednym poleceniem podsumowanie: pora dnia, pogoda na żywo,
   dzisiejsze wydarzenia, aktywne zadania i przypomnienia (jak chief-of-staff).
