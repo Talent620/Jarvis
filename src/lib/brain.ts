@@ -43,6 +43,61 @@ const PERSONAS: Record<string, string> = {
   witty: "błyskotliwy, z suchym brytyjskim humorem i lekkim sarkazmem, ale zawsze pomocny i rzeczowy.",
 };
 
+// --- Router: dobór dostawcy/modelu do zadania ---
+const VISION_PROVIDERS = new Set<ProviderId>(["anthropic", "gemini", "github", "openrouter"]);
+
+const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision: string }> = {
+  anthropic: { simple: "claude-haiku-4-5", complex: "claude-opus-4-8", vision: "claude-opus-4-8" },
+  gemini: { simple: "gemini-2.5-flash-lite", complex: "gemini-2.5-flash", vision: "gemini-2.5-flash" },
+  groq: { simple: "llama-3.1-8b-instant", complex: "llama-3.3-70b-versatile", vision: "llama-3.3-70b-versatile" },
+  openrouter: {
+    simple: "meta-llama/llama-3.3-70b-instruct:free",
+    complex: "meta-llama/llama-3.1-405b-instruct",
+    vision: "google/gemini-2.0-flash-exp:free",
+  },
+  nvidia: { simple: "meta/llama-3.3-70b-instruct", complex: "meta/llama-3.1-405b-instruct", vision: "meta/llama-3.3-70b-instruct" },
+  github: { simple: "openai/gpt-4o-mini", complex: "openai/gpt-4o", vision: "openai/gpt-4o" },
+};
+
+function isComplex(text: string): boolean {
+  const t = text || "";
+  return (
+    t.length > 260 ||
+    /(zaplanuj|research|analiz|porówn|napisz|\bkod\b|program|wyjaśnij|strategi|raport|e-?mail|mail do|przeanalizuj|podsumuj|stre[śs]|przet[łl]umacz)/i.test(t)
+  );
+}
+
+function modelFor(p: ProviderId, complex: boolean, vision: boolean): string {
+  const m = TASK_MODELS[p];
+  return vision ? m.vision : complex ? m.complex : m.simple;
+}
+
+/** Buduje kolejność prób (dostawca+model) dopasowaną do zadania. */
+function routeOrder(history: Msg[]): { provider: ProviderId; model: string }[] {
+  const s = store.settings;
+  const last = history[history.length - 1];
+  const hasImage = !!last?.image;
+  const complex = isComplex(last?.content || "");
+
+  if (s.provider === "auto" && (s.model === "auto" || !s.model)) {
+    let provs = PROVIDER_LIST.filter((p) => s.keys[p.id]?.trim());
+    if (hasImage) {
+      const vis = provs.filter((p) => VISION_PROVIDERS.has(p.id));
+      if (vis.length) provs = vis; // do obrazu wybierz dostawcę z wizją
+    }
+    provs.sort((a, b) => b.rank - a.rank);
+    return provs.map((p) => ({ provider: p.id, model: modelFor(p.id, complex, hasImage) }));
+  }
+
+  const resolved = resolveProvider()!;
+  return [
+    { provider: resolved.provider, model: resolved.model },
+    ...PROVIDER_LIST.filter((p) => p.id !== resolved.provider && s.keys[p.id]?.trim())
+      .sort((a, b) => b.rank - a.rank)
+      .map((p) => ({ provider: p.id, model: p.defaultModel })),
+  ];
+}
+
 export function systemPrompt(): string {
   const s = store.settings;
   const userName = s.userName;
@@ -151,13 +206,8 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
   };
 
-  // Kolejność prób: wybrany dostawca, a potem pozostali z kluczem (wg rangi).
-  const order: { provider: ProviderId; model: string }[] = [
-    { provider: resolved.provider, model: resolved.model },
-    ...PROVIDER_LIST.filter((p) => p.id !== resolved.provider && store.settings.keys[p.id]?.trim())
-      .sort((a, b) => b.rank - a.rank)
-      .map((p) => ({ provider: p.id, model: p.defaultModel })),
-  ];
+  // Router dobiera dostawcę+model do zadania (prostota/złożoność/obraz) + fallback.
+  const order = routeOrder(trimmed);
 
   resetCitations();
   let lastErr: unknown;
