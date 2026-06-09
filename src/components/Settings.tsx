@@ -90,7 +90,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
         )}
 
         <h3>Klucze API (lokalnie na urządzeniu)</h3>
-        {PROVIDER_LIST.map((p) => (
+        {PROVIDER_LIST.filter((p) => p.id !== "ollama").map((p) => (
           <div className="field" key={p.id}>
             <label>
               {p.label}
@@ -119,6 +119,19 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           🔌 Sprawdź połączenie API
         </button>
         {apiMsg && <p className="muted">{apiMsg}</p>}
+
+        <div className="field">
+          <label>Lokalny model — adres Ollama (prywatny, offline)</label>
+          <input
+            value={s.ollamaUrl}
+            placeholder="http://192.168.0.10:11434"
+            onChange={(e) => set({ ollamaUrl: e.target.value })}
+          />
+          <p className="muted" style={{ marginTop: 4 }}>
+            Wybierz dostawcę „Lokalny model (Ollama)" powyżej. Uruchom Ollamę na komputerze
+            w tej samej sieci — żadne dane nie wychodzą do chmury.
+          </p>
+        </div>
 
         <div className="field">
           <label>Backend-proxy (opcjonalnie — omija CORS, chowa klucze)</label>

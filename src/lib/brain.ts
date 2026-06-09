@@ -57,6 +57,7 @@ const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision:
   },
   nvidia: { simple: "meta/llama-3.3-70b-instruct", complex: "meta/llama-3.1-405b-instruct", vision: "meta/llama-3.3-70b-instruct" },
   github: { simple: "openai/gpt-4o-mini", complex: "openai/gpt-4o", vision: "openai/gpt-4o" },
+  ollama: { simple: "llama3.2", complex: "llama3.1", vision: "llama3.2" },
 };
 
 function isComplex(text: string): boolean {
@@ -178,7 +179,9 @@ export function resolveProvider(): { provider: ProviderId; model: string; apiKey
   const meta = PROVIDERS[provider];
   if (!meta) return null;
   const model = s.model && s.model !== "auto" ? s.model : meta.defaultModel;
-  return { provider, model, apiKey: s.keys[provider] };
+  // Lokalny model (Ollama) nie używa klucza — poświadczeniem jest adres serwera.
+  const apiKey = provider === "ollama" ? (s.ollamaUrl?.trim() ? "local" : "") : s.keys[provider];
+  return { provider, model, apiKey };
 }
 
 /** Szybki test: czy wybrany dostawca/klucz działa. */

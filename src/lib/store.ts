@@ -24,6 +24,7 @@ const defaultSettings: Settings = {
   proxyUrl: "",
   syncUrl: "",
   syncToken: "",
+  ollamaUrl: "",
   activeProjectId: "",
   userName: "Sir",
   persona: "classic",

@@ -1,7 +1,14 @@
 import { askAnthropic } from "./anthropic";
 import { makeOpenAICompatible } from "./openai";
 import { askGemini } from "./gemini";
-import type { ProviderId, ProviderMeta } from "./types";
+import { store } from "../store";
+import type { AskCtx, ProviderId, ProviderMeta } from "./types";
+
+// Lokalny model (Ollama) — endpoint z ustawień, bez klucza, pełna prywatność.
+function askOllama(ctx: AskCtx) {
+  const base = (store.settings.ollamaUrl || "http://localhost:11434").replace(/\/$/, "");
+  return makeOpenAICompatible(`${base}/v1/chat/completions`)(ctx);
+}
 
 // Katalog dostawców i darmowych/mocnych modeli. „rank" steruje trybem auto.
 export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
@@ -79,6 +86,20 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
       { id: "qwen/qwen2.5-coder-32b-instruct", label: "Qwen2.5 Coder 32B" },
     ],
   },
+  ollama: {
+    id: "ollama",
+    label: "Lokalny model (Ollama — prywatny, offline)",
+    rank: 30,
+    keysUrl: "https://ollama.com",
+    defaultModel: "llama3.2",
+    impl: askOllama,
+    models: [
+      { id: "llama3.2", label: "Llama 3.2 (lokalny)" },
+      { id: "qwen2.5", label: "Qwen2.5 (lokalny)" },
+      { id: "llama3.1", label: "Llama 3.1 (lokalny)" },
+      { id: "mistral", label: "Mistral (lokalny)" },
+    ],
+  },
   github: {
     id: "github",
     label: "GitHub Models",
@@ -108,6 +129,7 @@ export const emptyKeys: ProviderKeys = {
   openrouter: "",
   nvidia: "",
   github: "",
+  ollama: "",
 };
 
 /**

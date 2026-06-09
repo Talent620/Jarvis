@@ -144,6 +144,8 @@ export interface Settings {
   syncUrl: string;
   /** Prywatny token przestrzeni danych sync. */
   syncToken: string;
+  /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */
+  ollamaUrl: string;
   /** Aktywny projekt/workspace ("" = ogólny). */
   activeProjectId: string;
   /** Imię użytkownika, którym zwraca się JARVIS. */
