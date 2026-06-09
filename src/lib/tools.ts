@@ -197,10 +197,11 @@ const tools: Tool[] = [
       ]),
     },
     run: ({ key, value }) => {
+      const projectId = store.settings.activeProjectId || undefined;
       store.setData((d) => {
-        const existing = d.memory.find((m) => m.key === key);
+        const existing = d.memory.find((m) => m.key === key && (m.projectId || "") === (projectId || ""));
         if (existing) existing.value = value;
-        else d.memory.unshift({ id: uid(), key, value, createdAt: Date.now() });
+        else d.memory.unshift({ id: uid(), key, value, projectId, createdAt: Date.now() });
       });
       return `Zapamiętane: ${key} = ${value}.`;
     },

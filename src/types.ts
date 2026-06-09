@@ -75,6 +75,25 @@ export interface MemoryFact {
   key: string;
   value: string;
   pinned?: boolean;
+  /** Jeśli ustawione — fakt należy do projektu (inaczej globalny). */
+  projectId?: string;
+  createdAt: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  instructions: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ProjectFile {
+  id: string;
+  projectId: string;
+  name: string;
+  mime: string;
+  text: string; // wyekstrahowana treść
   createdAt: number;
 }
 
@@ -99,6 +118,8 @@ export interface AppData {
   memory: MemoryFact[];
   scenes: Scene[];
   audit: AuditEntry[];
+  projects: Project[];
+  projectFiles: ProjectFile[];
 }
 
 export interface Settings {
@@ -110,6 +131,8 @@ export interface Settings {
   model: string;
   /** Opcjonalny adres backend-proxy (omija CORS, chowa klucze). */
   proxyUrl: string;
+  /** Aktywny projekt/workspace ("" = ogólny). */
+  activeProjectId: string;
   /** Imię użytkownika, którym zwraca się JARVIS. */
   userName: string;
   /** Preset osobowości: classic | concise | warm | witty | custom. */

@@ -12,6 +12,8 @@ const emptyData: AppData = {
   memory: [],
   scenes: [],
   audit: [],
+  projects: [],
+  projectFiles: [],
 };
 
 const defaultSettings: Settings = {
@@ -19,6 +21,7 @@ const defaultSettings: Settings = {
   keys: { anthropic: "", gemini: "", groq: "", openrouter: "", nvidia: "", github: "" },
   model: "auto",
   proxyUrl: "",
+  activeProjectId: "",
   userName: "Sir",
   persona: "classic",
   customPersona: "",

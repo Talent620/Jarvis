@@ -6,6 +6,7 @@ import SettingsPanel from "./components/Settings";
 import Panels from "./components/Panels";
 import LiveOverlay from "./components/LiveOverlay";
 import ChatHistory from "./components/ChatHistory";
+import Projects from "./components/Projects";
 import PermissionDialog from "./components/PermissionDialog";
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
@@ -32,6 +33,7 @@ export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>(initialChat?.messages ?? []);
   const [activeId, setActiveId] = useState<string>(initialChat?.id ?? uid());
   const [showHistory, setShowHistory] = useState(false);
+  const [showProjects, setShowProjects] = useState(false);
   const [interim, setInterim] = useState("");
   const [orb, setOrb] = useState<OrbState>("idle");
   const [busy, setBusy] = useState(false);
@@ -229,7 +231,14 @@ export default function App() {
       <div className="topbar">
         <div className="brand">
           JARVIS
-          <small>{(resolveProvider()?.model || "BRAK API").toUpperCase()} · ONLINE</small>
+          <small>
+            {(resolveProvider()?.model || "BRAK API").toUpperCase()}
+            {(() => {
+              const p = store.data.projects.find((x) => x.id === settings.activeProjectId);
+              return p ? ` · ${p.name.toUpperCase()}` : "";
+            })()}{" "}
+            · ONLINE
+          </small>
         </div>
         <div className="spacer" />
         <button
@@ -248,6 +257,9 @@ export default function App() {
             ＋
           </button>
         )}
+        <button className="icon-btn" onClick={() => setShowProjects(true)} title="Projekty">
+          📁
+        </button>
         <button className="icon-btn" onClick={() => setShowHistory(true)} title="Historia rozmów">
           🕘
         </button>
@@ -287,6 +299,7 @@ export default function App() {
       {showHistory && (
         <ChatHistory activeId={activeId} onOpen={openChat} onClose={() => setShowHistory(false)} />
       )}
+      {showProjects && <Projects onClose={() => setShowProjects(false)} />}
       {pendingConsent && (
         <PermissionDialog
           req={pendingConsent.req}

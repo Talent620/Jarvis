@@ -39,6 +39,8 @@ modyfikować i z którego zbudujesz nowy APK.
   dzisiejsze wydarzenia, aktywne zadania i przypomnienia (jak chief-of-staff).
 - **Pogoda na żywo** — Open-Meteo (bez klucza, darmowe) wg lokalizacji lub miasta.
 - **Barge-in** — włączenie mikrofonu/słowo-klucz natychmiast przerywa mówienie JARVIS-a.
+- **Projekty / Workspace'y** (📁) — trwały kontekst: własne instrukcje, przypięte
+  **dokumenty (PDF/tekst)** i pamięć per projekt; JARVIS używa ich jako kontekstu.
 - **Historia rozmów** — wiele zapisanych rozmów (🕘): otwieraj, kontynuuj, usuwaj.
 - **Głos JARVIS (Iron Man)** — jeden przycisk w ⚙ dobiera najbliższe legalnie brzmienie
   (niski brytyjski męski; z kluczem ElevenLabs stockowy głos „Daniel").

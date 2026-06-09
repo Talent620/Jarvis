@@ -20,14 +20,36 @@ const PERSONAS: Record<string, string> = {
 export function systemPrompt(): string {
   const s = store.settings;
   const userName = s.userName;
-  // Ogranicz wstrzykiwaną pamięć: przypięte najpierw, potem najnowsze (maks. 25).
+  const pid = s.activeProjectId;
+
+  // Pamięć: globalna + bieżącego projektu; przypięte najpierw, potem najnowsze (maks. 25).
   const memory = [...store.data.memory]
+    .filter((m) => !m.projectId || m.projectId === pid)
     .sort((a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false) || b.createdAt - a.createdAt)
     .slice(0, 25);
   const facts = memory.length
-    ? "\n\nZapamiętane fakty o użytkowniku:\n" +
-      memory.map((m) => `- ${m.key}: ${m.value}`).join("\n")
+    ? "\n\nZapamiętane fakty o użytkowniku:\n" + memory.map((m) => `- ${m.key}: ${m.value}`).join("\n")
     : "";
+
+  // Kontekst projektu: instrukcje + fragmenty dokumentów (budżet ~6000 zn.).
+  const project = pid ? store.data.projects.find((p) => p.id === pid) : null;
+  let projectCtx = "";
+  if (project) {
+    projectCtx = `\n\nAktywny projekt: „${project.name}".`;
+    if (project.instructions.trim()) projectCtx += `\nInstrukcje projektu: ${project.instructions.trim()}`;
+    const files = store.data.projectFiles.filter((f) => f.projectId === pid);
+    if (files.length) {
+      let budget = 6000;
+      const chunks: string[] = [];
+      for (const f of files) {
+        const t = f.text.slice(0, Math.max(0, budget));
+        if (!t) break;
+        chunks.push(`# ${f.name}\n${t}`);
+        budget -= t.length;
+      }
+      projectCtx += `\n\nDokumenty projektu (fragmenty, używaj jako kontekst):\n${chunks.join("\n\n")}`;
+    }
+  }
   const now = new Date();
 
   // Tryb tłumacza ma priorytet — JARVIS staje się tłumaczem na żywo.
@@ -57,6 +79,7 @@ export function systemPrompt(): string {
     `- Jeśli użytkownik dołączy zdjęcie, przeanalizuj je i odnieś się do jego treści.`,
     `- Aktualny czas: ${now.toLocaleString("pl-PL")}.`,
     facts,
+    projectCtx,
   ].join("\n");
 }
 
