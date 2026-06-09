@@ -16,20 +16,29 @@ function parseRunUrl(url: string): string | null {
   }
 }
 
-export function registerIntents(onCommand: (text: string) => void): () => void {
+const isWake = (url?: string) => !!url && url.replace(/\/$/, "") === "jarvis://wake";
+
+export function registerIntents(onCommand: (text: string) => void, onWake?: () => void): () => void {
   let disposed = false;
 
   // Skróty / deep-linki przy uruchomieniu.
   App.getLaunchUrl()
     .then((res) => {
-      const cmd = res?.url ? parseRunUrl(res.url) : null;
-      if (cmd && !disposed) onCommand(cmd);
+      if (disposed) return;
+      if (isWake(res?.url)) onWake?.();
+      else {
+        const cmd = res?.url ? parseRunUrl(res.url) : null;
+        if (cmd) onCommand(cmd);
+      }
     })
     .catch(() => {});
 
   const sub = App.addListener("appUrlOpen", (data) => {
-    const cmd = parseRunUrl(data.url);
-    if (cmd) onCommand(cmd);
+    if (isWake(data.url)) onWake?.();
+    else {
+      const cmd = parseRunUrl(data.url);
+      if (cmd) onCommand(cmd);
+    }
   });
 
   // Udostępnienia (Android Share → JARVIS).

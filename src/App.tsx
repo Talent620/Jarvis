@@ -11,6 +11,7 @@ import Help from "./components/Help";
 import PermissionDialog from "./components/PermissionDialog";
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
+import { startBackgroundWake } from "./lib/wakeword";
 
 type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
 import { askJarvis, resolveProvider } from "./lib/brain";
@@ -79,8 +80,20 @@ export default function App() {
     loadVoices();
     ensureNotifPerms();
     if (!resolveProvider()) setShowSettings(true);
-    // Skróty (jarvis://run?text=…) i udostępnienia z Androida → polecenie do JARVIS-a.
-    const dispose = registerIntents((text) => sendRef.current(text));
+    // Skróty / udostępnienia → polecenie; jarvis://wake (nasłuch w tle) → start słuchania.
+    const dispose = registerIntents(
+      (text) => sendRef.current(text),
+      () => {
+        stopSpeaking();
+        const text = "Tak? Słucham.";
+        const id = uid();
+        setLiveId(id);
+        setMessages((m) => [...m, { id, role: "assistant", text, tools: ["wake"], createdAt: Date.now() }]);
+        if (store.settings.speak) speak(text, store.settings);
+        if (micSupported) startListening(false);
+      },
+    );
+    if (store.settings.backgroundWake) startBackgroundWake();
     // Bramka zgód i podgląd kroków agenta.
     setConsentHandler((req) => new Promise((resolve) => setPendingConsent({ req, resolve })));
     setStepListener((tool) => setStep(tool));

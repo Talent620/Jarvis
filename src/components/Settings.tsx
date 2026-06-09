@@ -6,6 +6,7 @@ import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync } from "../lib/sync";
 import { googleStartUrl } from "../lib/google";
 import { testApi } from "../lib/brain";
+import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 
@@ -274,9 +275,27 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           <span>Proaktywne powitanie/raport po otwarciu</span>
           <Toggle on={s.proactiveOnOpen} onClick={() => set({ proactiveOnOpen: !s.proactiveOnOpen })} />
         </div>
+        {wakeSupported() && (
+          <div className="row">
+            <span>
+              Nasłuch „Jarvis" w tle (uruchom apkę głosem)
+              <br />
+              <span className="muted">eksperymentalne · zużywa baterię · wymaga mikrofonu</span>
+            </span>
+            <Toggle
+              on={s.backgroundWake}
+              onClick={() => {
+                const next = !s.backgroundWake;
+                set({ backgroundWake: next });
+                if (next) startBackgroundWake();
+                else stopBackgroundWake();
+              }}
+            />
+          </div>
+        )}
         <p className="muted">
-          Wskazówka: powiedz do telefonu „Hej Google, otwórz Jarvis" — aplikacja otworzy się
-          (z auto-nasłuchem) nawet z zablokowanego ekranu.
+          Wskazówka: jeśli nasłuch w tle nie działa na Twoim telefonie, powiedz „Hej Google,
+          otwórz Jarvis" — aplikacja otworzy się (z auto-nasłuchem) nawet z zablokowanego ekranu.
         </p>
         <div className="field">
           <label>Głos systemowy</label>

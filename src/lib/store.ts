@@ -40,6 +40,7 @@ const defaultSettings: Settings = {
   wakeWord: false,
   autoListenOnOpen: false,
   proactiveOnOpen: true,
+  backgroundWake: false,
   elevenLabsApiKey: "",
   elevenLabsVoiceId: "",
   fishAudioApiKey: "",

@@ -176,6 +176,8 @@ export interface Settings {
   autoListenOnOpen: boolean;
   /** Po otwarciu pokaż proaktywne powitanie/raport. */
   proactiveOnOpen: boolean;
+  /** Natywny nasłuch słowa "Jarvis" w tle (uruchamia apkę głosem). */
+  backgroundWake: boolean;
   /** Opcjonalny klucz ElevenLabs dla premium głosu JARVIS. */
   elevenLabsApiKey: string;
   /** ID głosu ElevenLabs. */
