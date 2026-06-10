@@ -28,6 +28,7 @@ import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop } from "./lib/desktop";
 import { getWeather } from "./lib/weather";
+import { feedback, buzz, cue } from "./lib/feedback";
 import { ensureNotifPerms, notify } from "./lib/notifications";
 import { registerIntents } from "./lib/intents";
 import { store, uid } from "./lib/store";
@@ -136,6 +137,7 @@ export default function App() {
       (text) => sendRef.current(text),
       () => {
         stopSpeaking();
+        feedback("wake");
         const text = "Tak? Słucham.";
         const id = uid();
         setLiveId(id);
@@ -154,6 +156,7 @@ export default function App() {
       const st = store.settings;
       const ready = !!resolveProvider();
       if (st.proactiveOnOpen && messagesRef.current.length === 0 && ready) {
+        cue("wake"); // sygnał „systemy online"
         const text = buildGreeting();
         const id = uid();
         setLiveId(id);
@@ -197,6 +200,7 @@ export default function App() {
   const handleSend = async (text: string) => {
     setInterim("");
     stopSpeaking();
+    buzz(14); // subtelna haptyka przy wysłaniu
     // Na komputerze: gdy użytkownik pyta o swój ekran, dołącz zrzut do analizy wizyjnej.
     if (
       isDesktop() &&

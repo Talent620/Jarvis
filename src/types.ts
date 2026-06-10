@@ -194,6 +194,12 @@ export interface Settings {
   geminiTts: boolean;
   /** Nazwa głosu Gemini TTS (np. Charon, Orus, Puck). */
   geminiVoice: string;
+  /** Potwierdzanie akcji głosem (powiedz „tak"/„nie" w oknie zgody). */
+  voiceConfirm: boolean;
+  /** Subtelne dźwięki interfejsu (HUD). */
+  soundCues: boolean;
+  /** Wibracje (haptyka) przy akcjach. */
+  haptics: boolean;
   /** Nazwa preferowanego głosu TTS (z systemu). */
   voiceName: string;
   /** Wysokość głosu (0.1–2). */

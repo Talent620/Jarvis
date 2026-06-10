@@ -378,6 +378,22 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <span>Słuchaj od razu po otwarciu (i zapytaj „o co chodzi?")</span>
                 <Toggle on={s.autoListenOnOpen} onClick={() => set({ autoListenOnOpen: !s.autoListenOnOpen })} />
               </div>
+              <div className="row">
+                <span>
+                  Potwierdzaj akcje głosem
+                  <br />
+                  <span className="muted">JARVIS pyta, a Ty mówisz „tak"/„nie" w oknie zgody</span>
+                </span>
+                <Toggle on={s.voiceConfirm} onClick={() => set({ voiceConfirm: !s.voiceConfirm })} />
+              </div>
+              <div className="row">
+                <span>Dźwięki interfejsu (HUD)</span>
+                <Toggle on={s.soundCues} onClick={() => set({ soundCues: !s.soundCues })} />
+              </div>
+              <div className="row">
+                <span>Wibracje (haptyka)</span>
+                <Toggle on={s.haptics} onClick={() => set({ haptics: !s.haptics })} />
+              </div>
               {wakeSupported() && (
                 <div className="row">
                   <span>

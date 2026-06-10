@@ -59,15 +59,21 @@ export async function openUrl(url: string): Promise<string> {
   return ok ? `Otwieram: ${u}.` : `Nie udało się otworzyć: ${u}.`;
 }
 
+// Zostaw tylko cyfry i wiodący „+" (usuwa spacje, myślniki, nawiasy).
+const cleanNum = (n: string) => (n || "").replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "");
+
 export async function call(number: string): Promise<string> {
-  const ok = await open(`tel:${number.replace(/\s/g, "")}`);
+  const ok = await open(`tel:${cleanNum(number)}`);
   return ok ? `Dzwonię pod ${number}.` : "Nie udało się rozpocząć połączenia.";
 }
 
 export async function sms(number: string, body?: string): Promise<string> {
-  const url = `sms:${number.replace(/\s/g, "")}${body ? `?body=${q(body)}` : ""}`;
+  // „?body=" działa najszerzej na Androidzie; iOS akceptuje też ten format.
+  const url = `sms:${cleanNum(number)}${body ? `?body=${q(body)}` : ""}`;
   const ok = await open(url);
-  return ok ? `Przygotowuję SMS do ${number}.` : "Nie udało się otworzyć wiadomości.";
+  return ok
+    ? `Otwieram wiadomość do ${number}${body ? ` z treścią: „${body}"` : ""} — wystarczy wysłać.`
+    : "Nie udało się otworzyć wiadomości.";
 }
 
 export async function navigate(destination: string): Promise<string> {

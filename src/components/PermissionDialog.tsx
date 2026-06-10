@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ConsentRequest } from "../lib/permissions";
+import { Listener, isSpeechSupported, speak, stopSpeaking } from "../lib/voice";
+import { feedback } from "../lib/feedback";
+import { store } from "../lib/store";
 
 const LABELS: Record<string, string> = {
   make_call: "Zadzwonić",
@@ -28,8 +31,46 @@ export default function PermissionDialog({
   onDecision: (allow: boolean, remember: boolean) => void;
 }) {
   const [remember, setRemember] = useState(false);
+  const [listening, setListening] = useState(false);
+  const rememberRef = useRef(false);
+  rememberRef.current = remember;
   const label = LABELS[req.tool] ?? req.tool;
   const summary = JSON.stringify(req.input ?? {}, null, 0).slice(0, 200);
+
+  // Potwierdzanie głosem: JARVIS pyta i nasłuchuje „tak"/„nie".
+  useEffect(() => {
+    feedback("tap");
+    if (!store.settings.voiceConfirm || !isSpeechSupported()) return;
+    let decided = false;
+    let listener: Listener | null = null;
+    const decide = (allow: boolean) => {
+      if (decided) return;
+      decided = true;
+      listener?.stop();
+      stopSpeaking();
+      onDecision(allow, rememberRef.current);
+    };
+    speak(`${label}? Powiedz tak albo nie.`, { ...store.settings, speak: true });
+    listener = new Listener({
+      wakeWord: false,
+      onFinal: (t) => {
+        const v = t.toLowerCase();
+        if (/\b(tak|zezw|potwierdz|wy[śs]lij|dzwo[nń]|dawaj|okej|\bok\b|zgoda|jasne|r[oó]b|zr[oó]b|prosz[eę]|śmiało|smialo)\b/.test(v)) decide(true);
+        else if (/\b(nie|odm[oó]w|anuluj|stop|przerwij|zostaw|zaniechaj)\b/.test(v)) decide(false);
+        else listener?.start(); // niezrozumiałe — słuchaj dalej
+      },
+      onEnd: () => {
+        if (!decided) listener?.start();
+      },
+    });
+    setListening(true);
+    listener.start();
+    return () => {
+      decided = true;
+      listener?.stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="sheet" style={{ zIndex: 60 }}>
@@ -58,6 +99,11 @@ export default function PermissionDialog({
             >
               {summary}
             </pre>
+          )}
+          {listening && (
+            <p className="muted" style={{ margin: "0 0 8px" }}>
+              🎙 Powiedz „<b>tak</b>" albo „<b>nie</b>" — lub użyj przycisków.
+            </p>
           )}
           <label className="row" style={{ cursor: "pointer" }}>
             <span>Zapamiętaj zgodę dla tej akcji</span>
