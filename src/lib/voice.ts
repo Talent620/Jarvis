@@ -1,5 +1,6 @@
 import type { Settings } from "../types";
 import { Capacitor, registerPlugin } from "@capacitor/core";
+import { setLevel } from "./audioLevel";
 
 // Natywny silnik mowy Androida (pewniejszy niż Web Speech w WebView).
 interface NativeTtsPlugin {
@@ -53,14 +54,50 @@ function pickVoice(settings: Settings): SpeechSynthesisVoice | undefined {
 }
 
 let currentAudio: HTMLAudioElement | null = null;
+let levelCtx: AudioContext | null = null;
+let levelRaf = 0;
+
+// Odtwórz URL audio i napędzaj poziom głośności (orb „mówi" w rytm dźwięku).
+// Web Audio jest opcjonalne — przy jakimkolwiek błędzie zwykłe odtwarzanie działa.
+async function playUrlWithLevel(url: string): Promise<void> {
+  const audio = new Audio(url);
+  currentAudio = audio;
+  audio.onended = () => {
+    URL.revokeObjectURL(url);
+    cancelAnimationFrame(levelRaf);
+    setLevel(0);
+  };
+  try {
+    levelCtx = levelCtx || new (window.AudioContext || (window as any).webkitAudioContext)();
+    const ctx = levelCtx;
+    if (ctx.state === "suspended") await ctx.resume().catch(() => {});
+    const srcNode = ctx.createMediaElementSource(audio);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    srcNode.connect(ctx.destination); // audio zawsze słychać
+    srcNode.connect(analyser); // odczep do pomiaru poziomu (bez dalszego routingu)
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    const tick = () => {
+      analyser.getByteTimeDomainData(data);
+      let sum = 0;
+      for (const v of data) {
+        const c = (v - 128) / 128;
+        sum += c * c;
+      }
+      setLevel(Math.min(1, Math.sqrt(sum / data.length) * 3));
+      levelRaf = requestAnimationFrame(tick);
+    };
+    tick();
+  } catch {
+    /* Web Audio niedostępne — odtwarzaj normalnie, bez wizualizacji */
+  }
+  await audio.play();
+}
 
 async function playFromResponse(res: Response): Promise<boolean> {
   if (!res.ok) return false;
   const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  currentAudio = new Audio(url);
-  currentAudio.onended = () => URL.revokeObjectURL(url);
-  await currentAudio.play();
+  await playUrlWithLevel(URL.createObjectURL(blob));
   return true;
 }
 
@@ -116,10 +153,7 @@ async function geminiTts(text: string, settings: Settings): Promise<boolean> {
     const b64 = part?.inlineData?.data;
     if (!b64) return false;
     const rate = Number(/rate=(\d+)/.exec(part.inlineData.mimeType || "")?.[1]) || 24000;
-    const url = pcmToWavUrl(b64, rate);
-    currentAudio = new Audio(url);
-    currentAudio.onended = () => URL.revokeObjectURL(url);
-    await currentAudio.play();
+    await playUrlWithLevel(pcmToWavUrl(b64, rate));
     return true;
   } catch {
     return false;
@@ -217,6 +251,8 @@ export function stopSpeaking(): void {
     currentAudio.pause();
     currentAudio = null;
   }
+  cancelAnimationFrame(levelRaf);
+  setLevel(0);
 }
 
 // --- Rozpoznawanie mowy (STT) ---
