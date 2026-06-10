@@ -3,6 +3,7 @@ import { LiveSession, type LiveState } from "../lib/liveVoice";
 import { ConversationLoop, type LoopState } from "../lib/voiceLoop";
 import { systemPrompt, resolveProvider } from "../lib/brain";
 import { PROVIDERS } from "../lib/providers/registry";
+import { subscribeLevel } from "../lib/audioLevel";
 import { store } from "../lib/store";
 
 type Engine = "gemini" | "loop";
@@ -26,6 +27,18 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
   const [caption, setCaption] = useState("");
   const liveRef = useRef<LiveSession | null>(null);
   const loopRef = useRef<ConversationLoop | null>(null);
+  const coreRef = useRef<HTMLDivElement>(null);
+
+  // Orb pulsuje w rytm mowy JARVIS-a.
+  useEffect(() => {
+    return subscribeLevel((v) => {
+      const el = coreRef.current;
+      if (el) {
+        el.style.transform = `scale(${(1 + v * 0.5).toFixed(3)})`;
+        el.style.filter = `brightness(${(1 + v * 0.8).toFixed(2)})`;
+      }
+    });
+  }, []);
 
   const stopAll = () => {
     liveRef.current?.stop();
@@ -110,7 +123,7 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
             <div className="ring r1" />
             <div className="ring r2" />
             <div className="ring r3" />
-            <div className="core" />
+            <div className="core" ref={coreRef} />
           </div>
         </div>
 

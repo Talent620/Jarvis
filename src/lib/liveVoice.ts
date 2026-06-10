@@ -3,6 +3,8 @@
 
 const LIVE_MODEL = "models/gemini-2.0-flash-live-001";
 
+import { setLevel } from "./audioLevel";
+
 export type LiveState = "connecting" | "listening" | "speaking" | "closed" | "error";
 
 // Zamień kod/treść zamknięcia WebSocketu na zrozumiałą przyczynę.
@@ -163,7 +165,12 @@ export class LiveSession {
     if (!this.outCtx) return;
     const pcm = base64ToPcm16(b64);
     const f32 = new Float32Array(pcm.length);
-    for (let i = 0; i < pcm.length; i++) f32[i] = pcm[i] / 32768;
+    let sum = 0;
+    for (let i = 0; i < pcm.length; i++) {
+      f32[i] = pcm[i] / 32768;
+      sum += f32[i] * f32[i];
+    }
+    setLevel(Math.min(1, Math.sqrt(sum / Math.max(1, f32.length)) * 3)); // orb pulsuje z mową
     const buf = this.outCtx.createBuffer(1, f32.length, 24000);
     buf.copyToChannel(f32, 0);
     const src = this.outCtx.createBufferSource();
@@ -189,6 +196,7 @@ export class LiveSession {
     }
     this.sources = [];
     if (this.outCtx) this.playHead = this.outCtx.currentTime;
+    setLevel(0);
   }
 
   stop(): void {
