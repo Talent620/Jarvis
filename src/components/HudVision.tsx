@@ -11,6 +11,7 @@ export default function HudVision({ onClose }: { onClose: () => void }) {
   const streamRef = useRef<MediaStream | null>(null);
   const [caption, setCaption] = useState("Inicjalizacja sensorów…");
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false); // aktualny stan dla interwału auto (bez stale-closure)
   const [auto, setAuto] = useState(false);
   const autoRef = useRef<number | null>(null);
   const [err, setErr] = useState("");
@@ -49,9 +50,10 @@ export default function HudVision({ onClose }: { onClose: () => void }) {
   };
 
   const scan = async () => {
-    if (busy) return;
+    if (busyRef.current) return;
     const img = grabBase64();
     if (!img) return;
+    busyRef.current = true;
     setBusy(true);
     setCaption("Analizuję obraz…");
     try {
@@ -61,6 +63,7 @@ export default function HudVision({ onClose }: { onClose: () => void }) {
     } catch (e) {
       setCaption(`Błąd analizy: ${e instanceof Error ? e.message : e}`);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
@@ -73,7 +76,7 @@ export default function HudVision({ onClose }: { onClose: () => void }) {
     } else {
       setAuto(true);
       autoRef.current = window.setInterval(() => {
-        if (!busy) scan();
+        if (!busyRef.current) scan();
       }, 7000);
       scan();
     }
