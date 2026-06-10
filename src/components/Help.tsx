@@ -42,6 +42,7 @@ export default function Help({ onClose }: { onClose: () => void }) {
           <ul>
             <li><b>⋯ → Mój dziennik</b> — Twoja prywatna baza przemyśleń. Osobne wpisy (nie jeden ciąg), z tytułem, tagami i wyszukiwaniem.</li>
             <li>Możesz dyktować: „Jarvis, zapisz w dzienniku, że…". Eksport do pliku <b>.md</b> (np. pod książkę o sobie).</li>
+            <li><b>Prywatność:</b> wpisy są domyślnie prywatne. Ikoną 🔒/👁 (lub przełącznikiem w edycji) decydujesz, <b>które</b> wpisy czat może czytać — JARVIS widzi tylko te udostępnione.</li>
             <li>Dziennik jest objęty kopią zapasową i synchronizacją.</li>
           </ul>
 

@@ -43,12 +43,14 @@ export default function Journal({ onClose }: { onClose: () => void }) {
   const [body, setBody] = useState("");
   const [tags, setTags] = useState("");
   const [mood, setMood] = useState("");
+  const [shared, setShared] = useState(false);
 
   const openNew = () => {
     setTitle("");
     setBody("");
     setTags("");
     setMood("");
+    setShared(false);
     setEditing("new");
   };
   const openEdit = (e: JournalEntry) => {
@@ -56,6 +58,7 @@ export default function Journal({ onClose }: { onClose: () => void }) {
     setBody(e.body);
     setTags((e.tags || []).join(", "));
     setMood(e.mood || "");
+    setShared(!!e.shared);
     setEditing(e);
   };
 
@@ -76,6 +79,7 @@ export default function Journal({ onClose }: { onClose: () => void }) {
           body: body.trim(),
           tags: t,
           mood: mood.trim() || undefined,
+          shared,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         }),
@@ -89,6 +93,7 @@ export default function Journal({ onClose }: { onClose: () => void }) {
           e.body = body.trim();
           e.tags = t;
           e.mood = mood.trim() || undefined;
+          e.shared = shared;
           e.updatedAt = Date.now();
         }
       });
@@ -141,6 +146,14 @@ export default function Journal({ onClose }: { onClose: () => void }) {
             <div className="field" style={{ display: "flex", gap: 8 }}>
               <input value={tags} placeholder="Tagi po przecinku (np. rodzina, praca)" onChange={(e) => setTags(e.target.value)} style={{ flex: 2 }} />
               <input value={mood} placeholder="Nastrój" onChange={(e) => setMood(e.target.value)} style={{ flex: 1 }} />
+            </div>
+            <div className="row" style={{ marginTop: 4 }}>
+              <span>
+                👁 Widoczne dla JARVIS-a (czat może to czytać)
+                <br />
+                <span className="muted">domyślnie prywatne — włącz tylko, jeśli chcesz, by asystent znał ten wpis</span>
+              </span>
+              <div className={`switch ${shared ? "on" : ""}`} onClick={() => setShared(!shared)} />
             </div>
           </div>
           <div className="panel-foot" style={{ display: "flex", gap: 8 }}>
@@ -208,7 +221,22 @@ export default function Journal({ onClose }: { onClose: () => void }) {
               <div key={e.id} className="journal-card" onClick={() => openEdit(e)} style={{ cursor: "pointer" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                   <b style={{ fontSize: 16 }}>{e.title || "Bez tytułu"}</b>
-                  <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{fmtDate(e.createdAt)}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+                    <span
+                      title={e.shared ? "Widoczne dla JARVIS-a — kliknij, by ukryć" : "Prywatne — kliknij, by udostępnić czatowi"}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        store.setData((d) => {
+                          const x = d.journal.find((y) => y.id === e.id);
+                          if (x) x.shared = !x.shared;
+                        });
+                      }}
+                      style={{ cursor: "pointer", fontSize: 14 }}
+                    >
+                      {e.shared ? "👁" : "🔒"}
+                    </span>
+                    <span className="muted" style={{ fontSize: 12 }}>{fmtDate(e.createdAt)}</span>
+                  </span>
                 </div>
                 <p className="muted" style={{ margin: "6px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                   {e.body || "(pusty)"}

@@ -142,6 +142,8 @@ export interface JournalEntry {
   tags: string[];
   /** Nastrój/etykieta emocji (opcjonalnie). */
   mood?: string;
+  /** Jeśli true — czat JARVIS-a może czytać ten wpis (kontekst). Domyślnie prywatne. */
+  shared?: boolean;
   createdAt: number;
   updatedAt: number;
 }

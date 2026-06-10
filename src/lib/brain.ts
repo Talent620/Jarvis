@@ -102,6 +102,21 @@ export function systemPrompt(): string {
       projectCtx += `\n\nDokumenty projektu (fragmenty, używaj jako kontekst):\n${chunks.join("\n\n")}`;
     }
   }
+
+  // Dziennik: TYLKO wpisy, które użytkownik świadomie udostępnił czatowi (budżet ~3000 zn.).
+  let journalCtx = "";
+  const shared = (store.data.journal || []).filter((j) => j.shared);
+  if (shared.length) {
+    let budget = 3000;
+    const chunks: string[] = [];
+    for (const j of shared) {
+      const piece = `• ${j.title || "(bez tytułu)"}: ${j.body}`.slice(0, Math.max(0, budget));
+      if (!piece) break;
+      chunks.push(piece);
+      budget -= piece.length;
+    }
+    journalCtx = `\n\nUdostępnione fragmenty osobistego dziennika użytkownika (prywatne przemyślenia — odnoś się do nich z wyczuciem, nie cytuj publicznie bez potrzeby):\n${chunks.join("\n")}`;
+  }
   const now = new Date();
 
   // Tryb tłumacza ma priorytet — JARVIS staje się tłumaczem na żywo.
@@ -137,6 +152,7 @@ export function systemPrompt(): string {
     `- Aktualny czas: ${now.toLocaleString("pl-PL")}.`,
     facts,
     projectCtx,
+    journalCtx,
   ].join("\n");
 }
 
