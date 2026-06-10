@@ -114,7 +114,12 @@ export default function Help({ onClose }: { onClose: () => void }) {
           <h3>🖥️ Wersje</h3>
           <ul>
             <li>Android (APK), Windows (EXE) i iOS — wszystkie z linku Releases na GitHubie.</li>
+            <li><b>🔓 Tryb bez ograniczeń:</b> powiedz „wyłącz cenzurę / tryb bez ograniczeń" — JARVIS przestaje moralizować. Pełny brak granic tylko z modelem lokalnym (Ollama) lub Dolphin.</li>
           </ul>
+
+          <p className="muted" style={{ marginTop: 16, fontSize: 12, textAlign: "center" }}>
+            JARVIS · © 2026 Marcin Kubicki (serwer256). Wszelkie prawa zastrzeżone.
+          </p>
         </div>
         <div className="panel-foot">
           <button className="btn" onClick={onClose}>

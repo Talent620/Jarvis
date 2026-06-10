@@ -26,6 +26,7 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 
 type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
 import { askJarvis, resolveProvider } from "./lib/brain";
+import { isUncensored } from "./lib/providers/registry";
 import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop } from "./lib/desktop";
@@ -204,6 +205,28 @@ export default function App() {
     setInterim("");
     stopSpeaking();
     buzz(14); // subtelna haptyka przy wysłaniu
+
+    // Komenda: przełącz tryb bez ograniczeń (działa realnie z modelem lokalnym/uncensored).
+    const lc = text.toLowerCase();
+    const wantOn = /(tryb|w[łl][aą]?cz|wlacz).{0,24}(bez cenzury|bez ogranicze|nieocenzurow|posłusze|posluszen)|zdejmij.{0,16}ogranicze|wy[łl][aą]?cz.{0,16}(cenzur|filtr|ogranicze|wszelkie)|pe[łl]ne pos[łl]usze/.test(lc);
+    const wantOff = /(przywr[oó][cć]|w[łl][aą]?cz|wlacz).{0,24}(cenzur|filtr|ogranicze)|tryb.{0,8}(normaln|standardow|bezpieczn)/.test(lc);
+    if (wantOn || wantOff) {
+      const on = wantOn && !wantOff;
+      store.setSettings({ unfilteredLocal: on });
+      const r = resolveProvider();
+      const localOk = !!r && (r.provider === "ollama" || isUncensored(r.model));
+      const msg = !on
+        ? "Przywróciłem standardowy tryb."
+        : localOk
+          ? "Tryb bez ograniczeń aktywny. Słucham wprost, bez zbędnych zastrzeżeń."
+          : "Włączyłem tryb bez ograniczeń — ale używasz modelu w chmurze, który ma własne zasady dostawcy (tego nie zdejmę). Pełny brak granic działa tylko z modelem lokalnym (Ollama) lub Dolphin — ustaw w ⚙ → AI.";
+      const id = uid();
+      setLiveId(id);
+      setMessages((m) => [...m, { id, role: "assistant", text: msg, tools: ["tryb"], createdAt: Date.now() }]);
+      if (store.settings.speak) speak(msg, store.settings);
+      return;
+    }
+
     // Na komputerze: gdy użytkownik pyta o swój ekran, dołącz zrzut do analizy wizyjnej.
     if (
       isDesktop() &&
