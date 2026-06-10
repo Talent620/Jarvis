@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { store } from "./store";
 import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
 import { resolveProvider, testProvider } from "./brain";
@@ -64,9 +65,14 @@ export async function systemCheck(onStep?: (lines: string[]) => void): Promise<s
       : "➖ Gemini — brak klucza: rozmowa na żywo, Studio obrazów i pamięć semantyczna nieaktywne (klucz darmowy: aistudio.google.com/apikey).",
   );
 
-  // 6) Głos (synteza + mikrofon)
+  // 6) Głos (synteza + mikrofon). Na urządzeniu działa natywny TTS; z kluczem
+  // Gemini dostępny jest też darmowy głos premium (Gemini TTS).
   const tts =
-    typeof window.speechSynthesis !== "undefined" || s.elevenLabsApiKey || s.fishAudioApiKey;
+    Capacitor.isNativePlatform() ||
+    s.geminiTts !== false && !!s.keys.gemini?.trim() ||
+    typeof window.speechSynthesis !== "undefined" ||
+    !!s.elevenLabsApiKey ||
+    !!s.fishAudioApiKey;
   push(tts ? "✅ Głos (czytanie odpowiedzi) — dostępny." : "⚠️ Głos — brak syntezy w tym środowisku.");
   push(
     isSpeechSupported()

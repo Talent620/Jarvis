@@ -76,6 +76,11 @@ export default function Conversation({
               </button>
             ))}
           </div>
+          <p className="muted" style={{ marginTop: 18, fontSize: 13, lineHeight: 1.6 }}>
+            <b>☎</b> rozmowa na żywo · <b>＋</b> nowa rozmowa · <b>⋯</b> menu:
+            <br />
+            👁 kamera (wizja) · 🎨 studio obrazów · 📔 dziennik · 🗝 sejf · 🧰 gadżety
+          </p>
         </div>
         <div ref={endRef} />
       </div>

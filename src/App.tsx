@@ -461,7 +461,7 @@ export default function App() {
   if (locked) return <LockScreen onUnlock={() => setLocked(false)} />;
 
   return (
-    <div className="app">
+    <div className={`app${messages.length ? " chatting" : ""}`}>
       <div className="topbar">
         <div className="brand">
           JARVIS

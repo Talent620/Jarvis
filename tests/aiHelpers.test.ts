@@ -8,6 +8,8 @@ describe("shouldFallback", () => {
     expect(shouldFallback("Error 429 too many requests")).toBe(true);
     expect(shouldFallback("HTTP 503 unavailable")).toBe(true);
     expect(shouldFallback("credit balance is too low")).toBe(true);
+    expect(shouldFallback("No endpoints found for cognitivecomputations/dolphin3.0-mistral-24b:free")).toBe(true);
+    expect(shouldFallback("model not found")).toBe(true);
   });
   it("nie reaguje na zwykłe błędy", () => {
     expect(shouldFallback("coś dziwnego się stało")).toBe(false);

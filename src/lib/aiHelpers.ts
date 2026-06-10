@@ -1,8 +1,9 @@
 // Czyste funkcje pomocnicze mózgu (bez zależności) — łatwe do testowania.
 
-// Błędy, przy których warto spróbować kolejnego dostawcy (brak kredytów, limit, autoryzacja).
+// Błędy, przy których warto spróbować kolejnego dostawcy (brak kredytów, limit,
+// autoryzacja, a także martwy/nieprawidłowy model — np. zniknięte darmowe endpointy).
 export function shouldFallback(msg: string): boolean {
-  return /credit|billing|insufficient|quota|exceeded|rate.?limit|too low|payment|unauthorized|invalid.?api|forbidden|overloaded|unavailable|\b(401|402|403|429|502|503)\b/i.test(
+  return /credit|billing|insufficient|quota|exceeded|rate.?limit|too low|payment|unauthorized|invalid.?api|forbidden|overloaded|unavailable|no endpoints|no allowed providers|not a valid model|invalid model|model.{0,3}not.{0,3}found|does not exist|unsupported model|\b(401|402|403|404|429|500|502|503)\b/i.test(
     msg,
   );
 }
@@ -17,6 +18,8 @@ export function humanize(msg: string): string {
     return "Klucz API jest nieprawidłowy, wygasł lub nie ma dostępu — sprawdź go w ⚙ Ustawienia.";
   if (/credit|billing|too low|payment|quota|insufficient/i.test(msg))
     return "Wybrany dostawca nie ma środków/limitu. Przełącz dostawcę lub dodaj inny klucz w ⚙.";
+  if (/no endpoints|no allowed providers|not a valid model|invalid model|model.{0,3}not.{0,3}found|does not exist|unsupported model|404/i.test(msg))
+    return "Wybrany model AI jest chwilowo niedostępny (np. darmowy model bez endpointów). Wybierz inny model lub dostawcę w ⚙ → AI.";
   return msg;
 }
 

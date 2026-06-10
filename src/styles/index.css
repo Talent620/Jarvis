@@ -90,7 +90,30 @@ textarea,
   height: 100dvh;
   max-width: 760px;
   margin: 0 auto;
-  padding: max(env(safe-area-inset-top), 26px) 14px max(env(safe-area-inset-bottom), 8px);
+  padding: max(env(safe-area-inset-top), 6px) 14px max(env(safe-area-inset-bottom), 8px);
+}
+
+/* Gdy trwa rozmowa: orb się zmniejsza (zostaje widoczny i pulsuje), a czat
+   dostaje całą przestrzeń — koniec „uciekania" treści jak na stronie. */
+.app.chatting .orb {
+  width: 60px;
+  height: 60px;
+}
+.app.chatting .orb .core {
+  width: 28px;
+  height: 28px;
+}
+.app.chatting .orb .ring.r2 {
+  inset: 8px;
+}
+.app.chatting .orb .ring.r3 {
+  inset: 16px;
+}
+.app.chatting .orb-wrap {
+  padding: 0;
+}
+.app.chatting .orb-status {
+  display: none;
 }
 
 /* --- Nagłówek --- */
@@ -98,7 +121,7 @@ textarea,
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 4px 8px;
+  padding: 8px 4px 6px;
 }
 .brand {
   font-family: "Orbitron", sans-serif;
