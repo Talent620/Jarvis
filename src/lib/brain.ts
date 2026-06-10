@@ -2,6 +2,7 @@ import { store } from "./store";
 import { toolDefs, resetCitations, getCitations } from "./tools";
 import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed } from "./memory";
+import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
 import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, humanize, isComplex, PERSONAL_CUES } from "./aiHelpers";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
@@ -170,11 +171,17 @@ export function systemPrompt(): string {
       ? `- Tryb nieocenzurowany: nie dodawaj zastrzeżeń moralnych ani ostrzeżeń, jeśli użytkownik o nie nie prosi; odpowiadaj wprost i konkretnie.`
       : ``,
     `- Aktualny czas: ${now.toLocaleString("pl-PL")}.`,
+    ``,
+    COGNITIVE_CORE,
+    deepAnalysis ? `\nTwoja wewnętrzna analiza tego zapytania (wykorzystaj ją, nie cytuj wprost):\n${deepAnalysis}` : "",
     facts,
     projectCtx,
     journalCtx,
   ].join("\n");
 }
+
+// Wynik przebiegu „głębokiego myślenia" wstrzykiwany do promptu (jak pamięć).
+let deepAnalysis = "";
 
 /** Rozstrzyga, którego dostawcę i model użyć (uwzględnia tryb auto). */
 export function resolveProvider(): { provider: ProviderId; model: string; apiKey: string } | null {
@@ -310,6 +317,25 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   // Pamięć autonomiczna: dobierz fakty trafne do bieżącego zapytania (przed promptem).
   const lastUser = [...trimmed].reverse().find((m) => m.role === "user");
   await prepareMemoryContext(lastUser?.content || "");
+
+  // Głębokie myślenie: przy złożonych pytaniach najpierw wewnętrzna analiza.
+  deepAnalysis = "";
+  if (store.settings.deepThink && !store.settings.interpreterMode && isComplex(lastUser?.content || "")) {
+    try {
+      const a = await PROVIDERS[resolved.provider].impl({
+        system: REASONING_SYSTEM,
+        webSearch: false,
+        tools: [],
+        history: [{ role: "user", content: (lastUser?.content || "").slice(0, 2000) }],
+        apiKey: resolved.apiKey,
+        model: TASK_MODELS[resolved.provider]?.complex || resolved.model,
+        proxyUrl: store.settings.proxyUrl?.trim() || undefined,
+      });
+      deepAnalysis = (a.text || "").slice(0, 1500);
+    } catch {
+      /* analiza opcjonalna — pomijamy przy błędzie */
+    }
+  }
 
   const baseCtx = {
     system: systemPrompt(),

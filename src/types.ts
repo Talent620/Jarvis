@@ -168,6 +168,8 @@ export interface Settings {
   /** Tryb nieocenzurowany — działa realnie tylko z modelem lokalnym (Ollama):
    *  JARVIS nie dokłada własnych zastrzeżeń/moralizowania i odpowiada wprost. */
   unfilteredLocal: boolean;
+  /** Głębokie myślenie — przy złożonych pytaniach robi wewnętrzną analizę przed odpowiedzią. */
+  deepThink: boolean;
   /** Aktywny projekt/workspace ("" = ogólny). */
   activeProjectId: string;
   /** Motyw HUD: default | gold | green | red | purple. */

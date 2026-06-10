@@ -340,6 +340,14 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </span>
                 <Toggle on={s.unfilteredLocal} onClick={() => set({ unfilteredLocal: !s.unfilteredLocal })} />
               </div>
+              <div className="row">
+                <span>
+                  🧠 Głębokie myślenie
+                  <br />
+                  <span className="muted">przy trudnych pytaniach JARVIS najpierw analizuje problem (wolniej, mądrzej)</span>
+                </span>
+                <Toggle on={s.deepThink} onClick={() => set({ deepThink: !s.deepThink })} />
+              </div>
               <div className="field">
                 <label>Backend-proxy (opcjonalnie — omija CORS, chowa klucze)</label>
                 <input
