@@ -35,6 +35,13 @@ jobs:
         run: npm ci
 
       - name: Build web + sync Capacitor
+        env:
+          JARVIS_ANTHROPIC_KEY: ${{ secrets.JARVIS_ANTHROPIC_KEY }}
+          JARVIS_GEMINI_KEY: ${{ secrets.JARVIS_GEMINI_KEY }}
+          JARVIS_GROQ_KEY: ${{ secrets.JARVIS_GROQ_KEY }}
+          JARVIS_OPENROUTER_KEY: ${{ secrets.JARVIS_OPENROUTER_KEY }}
+          JARVIS_NVIDIA_KEY: ${{ secrets.JARVIS_NVIDIA_KEY }}
+          JARVIS_GITHUB_KEY: ${{ secrets.JARVIS_GITHUB_KEY }}
         run: |
           npm run build
           npx cap sync android
