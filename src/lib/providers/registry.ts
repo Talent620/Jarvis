@@ -65,6 +65,8 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     }),
     models: [
       { id: "meta-llama/llama-3.3-70b-instruct:free", label: "Llama 3.3 70B (free)" },
+      { id: "cognitivecomputations/dolphin3.0-mistral-24b:free", label: "Dolphin 3.0 — bez cenzury (free)" },
+      { id: "cognitivecomputations/dolphin3.0-r1-mistral-24b:free", label: "Dolphin 3.0 R1 — bez cenzury (free)" },
       { id: "google/gemini-2.0-flash-exp:free", label: "Gemini 2.0 Flash (free)" },
       { id: "deepseek/deepseek-chat-v3-0324:free", label: "DeepSeek V3 (free)" },
       { id: "qwen/qwen-2.5-72b-instruct:free", label: "Qwen 2.5 72B (free)" },
@@ -147,6 +149,27 @@ export function autoPick(keys: Record<string, string>): { provider: ProviderId; 
   const best = candidates[0];
   return best ? { provider: best.id, model: best.defaultModel } : null;
 }
+
+// Modele słabo/nie filtrowane (uncensored) — chmura (OpenRouter, darmowe) i lokalne (Ollama).
+// Dla nich tryb nieocenzurowany działa realnie (model nie odmawia).
+export const UNCENSORED_MODELS = new Set<string>([
+  "cognitivecomputations/dolphin3.0-mistral-24b:free",
+  "cognitivecomputations/dolphin3.0-r1-mistral-24b:free",
+  "dolphin-llama3",
+  "dolphin-mistral",
+  "dolphin3",
+  "llama2-uncensored",
+  "wizard-vicuna-uncensored",
+]);
+
+/** Czy dany model jest nieocenzurowany (chmurowy free lub lokalny). */
+export const isUncensored = (model: string): boolean => UNCENSORED_MODELS.has(model);
+
+/** Domyślny darmowy model bez cenzury w chmurze (OpenRouter). */
+export const FREE_UNCENSORED = {
+  provider: "openrouter" as ProviderId,
+  model: "cognitivecomputations/dolphin3.0-mistral-24b:free",
+};
 
 /** Rozpoznaje dostawcę po formacie klucza (do „wklej dowolny klucz"). */
 export function detectProvider(key: string): ProviderId | null {

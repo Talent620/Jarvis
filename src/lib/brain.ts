@@ -1,6 +1,6 @@
 import { store } from "./store";
 import { toolDefs, resetCitations, getCitations } from "./tools";
-import { PROVIDERS, PROVIDER_LIST, autoPick } from "./providers/registry";
+import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed } from "./memory";
 import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, humanize, isComplex, PERSONAL_CUES } from "./aiHelpers";
@@ -129,12 +129,15 @@ export function systemPrompt(): string {
     ].join("\n");
   }
 
-  // Tryb nieocenzurowany działa realnie tylko z modelem lokalnym (Ollama) —
-  // tam nie ma polityki dostawcy. JARVIS nie dokłada wtedy własnych zastrzeżeń.
-  const localUnfiltered = s.unfilteredLocal && resolveProvider()?.provider === "ollama";
+  // Tryb nieocenzurowany działa realnie z modelem lokalnym (Ollama) albo
+  // nieocenzurowanym modelem w chmurze (np. Dolphin na OpenRouterze) — tam model
+  // nie odmawia. JARVIS nie dokłada wtedy własnych zastrzeżeń ani moralizowania.
+  const resolvedNow = resolveProvider();
+  const localUnfiltered =
+    s.unfilteredLocal && !!resolvedNow && (resolvedNow.provider === "ollama" || isUncensored(resolvedNow.model));
 
   const tone = localUnfiltered
-    ? "bezpośredni, rzeczowy i konkretny — odpowiadasz wprost na to, o co prosi użytkownik, bez moralizowania, bez zbędnych ostrzeżeń i bez odmów; to prywatny, lokalny model na sprzęcie użytkownika."
+    ? "bezpośredni, rzeczowy i konkretny — odpowiadasz wprost na to, o co prosi użytkownik, bez moralizowania, bez zbędnych ostrzeżeń i bez odmów; to prywatny model do użytku osobistego."
     : PERSONAS[s.persona] ?? PERSONAS.classic;
   const extra = s.customPersona.trim() ? `\nDodatkowe wytyczne osobowości: ${s.customPersona.trim()}` : "";
   return [

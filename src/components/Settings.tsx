@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
 import { loadVoices, speak } from "../lib/voice";
-import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider } from "../lib/providers/registry";
+import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { googleStartUrl } from "../lib/google";
@@ -147,6 +147,41 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   </button>
                 </div>
                 {quickMsg && <p className="muted" style={{ marginTop: 6 }}>{quickMsg}</p>}
+              </div>
+
+              <div className="field">
+                <button
+                  className="btn"
+                  onClick={async () => {
+                    // Jeden klik: darmowy uncensored w chmurze (OpenRouter, Dolphin) + tryb bez cenzury.
+                    if (s.keys.openrouter?.trim()) {
+                      const next = {
+                        ...s,
+                        provider: FREE_UNCENSORED.provider,
+                        model: FREE_UNCENSORED.model,
+                        unfilteredLocal: true,
+                      };
+                      setS(next);
+                      store.setSettings(next);
+                      setQuickMsg(`⏳ Włączam czat bez cenzury (Dolphin)…`);
+                      setQuickMsg(`Czat bez cenzury → ${await testProvider(FREE_UNCENSORED.provider, s.keys.openrouter, FREE_UNCENSORED.model)}`);
+                    } else {
+                      setQuickMsg(
+                        "Aby włączyć darmowy czat bez cenzury w chmurze: załóż darmowe konto na openrouter.ai, skopiuj klucz (zaczyna się od sk-or-...) i wklej go w pole na górze. Potem kliknij ten przycisk ponownie.",
+                      );
+                    }
+                  }}
+                >
+                  🔓 Włącz darmowy czat bez cenzury (chmura)
+                </button>
+                <p className="muted" style={{ marginTop: 4 }}>
+                  Używa darmowego modelu <b>Dolphin</b> (OpenRouter) + trybu bez cenzury. Wymaga
+                  darmowego klucza{" "}
+                  <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" style={{ color: "var(--cyan)" }}>
+                    openrouter.ai
+                  </a>
+                  . Pełne 100% bez cenzury i prywatność = model lokalny (Ollama) niżej.
+                </p>
               </div>
 
               <h3>Dostawca AI</h3>

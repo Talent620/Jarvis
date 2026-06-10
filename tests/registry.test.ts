@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectProvider, autoPick } from "../src/lib/providers/registry";
+import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED } from "../src/lib/providers/registry";
 
 describe("detectProvider (rozpoznawanie klucza po formacie)", () => {
   it("rozpoznaje znane formaty kluczy", () => {
@@ -28,5 +28,21 @@ describe("autoPick (wybór dostawcy wg rangi)", () => {
   });
   it("zwraca null bez kluczy", () => {
     expect(autoPick({})).toBeNull();
+  });
+});
+
+describe("modele nieocenzurowane", () => {
+  it("rozpoznaje modele uncensored (chmura i lokalne)", () => {
+    expect(isUncensored("cognitivecomputations/dolphin3.0-mistral-24b:free")).toBe(true);
+    expect(isUncensored("dolphin-mistral")).toBe(true);
+    expect(isUncensored("llama2-uncensored")).toBe(true);
+  });
+  it("zwykłe modele nie są oznaczone jako uncensored", () => {
+    expect(isUncensored("gemini-2.5-flash")).toBe(false);
+    expect(isUncensored("claude-opus-4-8")).toBe(false);
+  });
+  it("preset darmowego czatu bez cenzury wskazuje istniejący model", () => {
+    expect(FREE_UNCENSORED.provider).toBe("openrouter");
+    expect(isUncensored(FREE_UNCENSORED.model)).toBe(true);
   });
 });
