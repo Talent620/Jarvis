@@ -1,5 +1,5 @@
 import { store, uid } from "./store";
-import { openService, call, sms, navigate, smartHome } from "./deviceControl";
+import { openService, call, sms, navigate, smartHome, openUrl } from "./deviceControl";
 import { getWeather } from "./weather";
 import { scheduleReminder, scheduleTimer } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
@@ -206,6 +206,52 @@ const tools: Tool[] = [
         d.journal.unshift({ id: uid(), title: (title || "").trim(), body: String(body).trim(), tags: t, createdAt: now, updatedAt: now }),
       );
       return `Zapisałem w Twoim dzienniku${title ? `: „${title}"` : ""}.`;
+    },
+  },
+  {
+    def: {
+      name: "calculate",
+      description: "Policz wyrażenie matematyczne (np. '23*1.23+10', '15% z 240'). Zwróć wynik.",
+      input_schema: obj({ expression: str("Wyrażenie do obliczenia") }, ["expression"]),
+    },
+    run: ({ expression }) => {
+      const raw = String(expression || "");
+      // „15% z 240" → 240*0.15
+      const pct = raw.match(/([\d.,]+)\s*%\s*(?:z|of)\s*([\d.,]+)/i);
+      const expr = pct ? `${pct[2]}*${pct[1]}/100` : raw;
+      const clean = expr.replace(/,/g, ".").replace(/[^0-9+\-*/().%\s]/g, "");
+      if (!clean.trim()) return "Podaj wyrażenie liczbowe.";
+      try {
+        const val = Function(`"use strict"; return (${clean})`)();
+        if (typeof val !== "number" || !isFinite(val)) return "Nie potrafię tego policzyć.";
+        return `${raw} = ${Math.round(val * 1e6) / 1e6}`;
+      } catch {
+        return "Błędne wyrażenie.";
+      }
+    },
+  },
+  {
+    def: {
+      name: "open_url",
+      description: "Otwórz dowolny adres URL/stronę w przeglądarce (lub aplikacji desktopowej).",
+      input_schema: obj({ url: str("Adres, np. github.com lub https://...") }, ["url"]),
+    },
+    run: ({ url }) => openUrl(url),
+  },
+  {
+    def: {
+      name: "forget_fact",
+      description: "Usuń zapamiętany fakt o użytkowniku po jego kluczu (np. gdy się zdezaktualizował).",
+      input_schema: obj({ key: str("Klucz faktu do usunięcia") }, ["key"]),
+    },
+    run: ({ key }) => {
+      let removed = false;
+      store.setData((d) => {
+        const before = d.memory.length;
+        d.memory = d.memory.filter((m) => m.key !== key);
+        removed = d.memory.length < before;
+      });
+      return removed ? `Usunąłem z pamięci: ${key}.` : `Nie znalazłem w pamięci klucza „${key}".`;
     },
   },
   {

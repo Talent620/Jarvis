@@ -43,11 +43,16 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   }, []);
 
   const set = (patch: Partial<Settings>) => setS((prev) => ({ ...prev, ...patch }));
-  const setKey = (id: ProviderId, val: string) => setS((prev) => ({ ...prev, keys: { ...prev.keys, [id]: val } }));
+  // Klucze zapisują się NATYCHMIAST do magazynu — nigdy nie giną po wyjściu bez „Zapisz".
+  const setKey = (id: ProviderId, val: string) => {
+    const keys = { ...s.keys, [id]: val };
+    setS((prev) => ({ ...prev, keys }));
+    store.setSettings({ keys });
+  };
 
   // „Wklej dowolny klucz" — rozpoznaj dostawcę, zapisz i od razu przetestuj.
-  const addQuickKey = async () => {
-    const key = quickKey.trim();
+  const addQuickKey = async (raw?: string) => {
+    const key = (raw ?? quickKey).trim();
     const prov = detectProvider(key);
     if (!prov) {
       setQuickMsg("Nie rozpoznałem dostawcy po formacie klucza — wklej go w odpowiednie pole niżej.");
@@ -142,10 +147,28 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     onChange={(e) => setQuickKey(e.target.value)}
                     style={{ flex: 1 }}
                   />
-                  <button className="btn primary" onClick={addQuickKey} disabled={!quickKey.trim()}>
+                  <button className="btn primary" onClick={() => addQuickKey()} disabled={!quickKey.trim()}>
                     Dodaj
                   </button>
                 </div>
+                <button
+                  className="btn"
+                  style={{ marginTop: 8 }}
+                  onClick={async () => {
+                    try {
+                      const txt = (await navigator.clipboard.readText())?.trim();
+                      if (!txt) {
+                        setQuickMsg("Schowek jest pusty.");
+                        return;
+                      }
+                      await addQuickKey(txt);
+                    } catch {
+                      setQuickMsg("Brak dostępu do schowka — wklej klucz ręcznie w pole powyżej.");
+                    }
+                  }}
+                >
+                  📋 Wklej klucz ze schowka
+                </button>
                 {quickMsg && <p className="muted" style={{ marginTop: 6 }}>{quickMsg}</p>}
               </div>
 
@@ -533,6 +556,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <div className="field">
                 <label>Charakter JARVIS-a</label>
                 <select value={s.persona} onChange={(e) => set({ persona: e.target.value })}>
+                  <option value="operator">Operacyjny — elitarny, precyzyjny, działa zamiast pytać</option>
                   <option value="classic">Klasyczny — elegancki majordomus</option>
                   <option value="concise">Zwięzły — krótko i na temat</option>
                   <option value="warm">Ciepły — wspierający i empatyczny</option>

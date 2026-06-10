@@ -114,6 +114,19 @@ describe("narzędzia lokalne — wykonanie end-to-end (runTool)", () => {
     expect(await runTool("set_timer", { minutes: 10, label: "herbata" })).toMatch(/10 min/);
   });
 
+  it("calculate liczy wyrażenia i procenty", async () => {
+    expect(await runTool("calculate", { expression: "23*2+4" })).toMatch(/=\s*50/);
+    expect(await runTool("calculate", { expression: "15% z 240" })).toMatch(/=\s*36/);
+    expect(await runTool("calculate", { expression: "rm -rf /" })).toMatch(/Podaj wyrażenie|Błędne/);
+  });
+
+  it("forget_fact usuwa zapamiętany fakt", async () => {
+    await runTool("remember_fact", { key: "miasto", value: "Kraków" });
+    expect(await runTool("forget_fact", { key: "miasto" })).toMatch(/Usunąłem/);
+    expect(store.data.memory.find((m) => m.key === "miasto")).toBeUndefined();
+    expect(await runTool("forget_fact", { key: "nieistnieje" })).toMatch(/Nie znalazłem/);
+  });
+
   it("daily_briefing zwraca raport (zadania/kalendarz; pogoda best-effort)", async () => {
     await runTool("add_task", { title: "ważna sprawa" });
     const out = await runTool("daily_briefing", {});

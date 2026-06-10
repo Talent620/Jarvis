@@ -53,6 +53,12 @@ export async function openService(service: string, query?: string): Promise<stri
   return ok ? `Otwieram ${service}${query ? ` — „${query}”` : ""}.` : `Nie udało się otworzyć ${service}.`;
 }
 
+export async function openUrl(url: string): Promise<string> {
+  const u = /^[a-z]+:\/\//i.test(url) ? url : `https://${url}`;
+  const ok = await open(u);
+  return ok ? `Otwieram: ${u}.` : `Nie udało się otworzyć: ${u}.`;
+}
+
 export async function call(number: string): Promise<string> {
   const ok = await open(`tel:${number.replace(/\s/g, "")}`);
   return ok ? `Dzwonię pod ${number}.` : "Nie udało się rozpocząć połączenia.";
