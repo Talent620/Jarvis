@@ -9,6 +9,22 @@ import type { JournalEntry } from "../types";
 const fmtDate = (t: number) =>
   new Date(t).toLocaleString("pl-PL", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
+// Inspiracje do pisania — pytania pomagające opisać siebie (np. pod książkę).
+const PROMPTS = [
+  "Jakie najwcześniejsze wspomnienie z dzieciństwa wraca do Ciebie najczęściej i dlaczego?",
+  "Kto najmocniej ukształtował to, kim dziś jesteś? Opisz tę osobę.",
+  "Jaka decyzja zmieniła bieg Twojego życia? Co byś dziś poradził sobie sprzed tej decyzji?",
+  "Z czego jesteś najbardziej dumny — a o czym rzadko komuś mówisz?",
+  "Jaki moment uznajesz za swój największy upadek i czego Cię nauczył?",
+  "Opisz dzień, który chciałbyś przeżyć jeszcze raz dokładnie tak samo.",
+  "W co naprawdę wierzysz? Jakie zasady są dla Ciebie nienaruszalne?",
+  "Czego najbardziej się boisz i skąd ten lęk się wziął?",
+  "Jak chciałbyś, żeby ludzie Cię zapamiętali za 50 lat?",
+  "Co dziś dało Ci radość, a co Cię zmęczyło? Bez filtra.",
+  "Gdyby Twoje życie było książką, jak nazywałby się obecny rozdział?",
+  "O czym marzyłeś jako dziecko? Ile z tego się spełniło?",
+];
+
 function exportMarkdown(entries: JournalEntry[]) {
   const md =
     `# Mój dziennik\n\n_${entries.length} wpisów · eksport ${new Date().toLocaleDateString("pl-PL")}_\n\n` +
@@ -45,14 +61,15 @@ export default function Journal({ onClose }: { onClose: () => void }) {
   const [mood, setMood] = useState("");
   const [shared, setShared] = useState(false);
 
-  const openNew = () => {
-    setTitle("");
+  const openNew = (seedTitle = "") => {
+    setTitle(seedTitle);
     setBody("");
     setTags("");
     setMood("");
     setShared(false);
     setEditing("new");
   };
+  const inspire = () => openNew(PROMPTS[Math.floor(Math.random() * PROMPTS.length)]);
   const openEdit = (e: JournalEntry) => {
     setTitle(e.title);
     setBody(e.body);
@@ -114,11 +131,13 @@ export default function Journal({ onClose }: { onClose: () => void }) {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return entries.filter((e) => {
-      if (activeTag && !(e.tags || []).includes(activeTag)) return false;
-      if (!q) return true;
-      return (e.title + " " + e.body + " " + (e.tags || []).join(" ")).toLowerCase().includes(q);
-    });
+    return entries
+      .filter((e) => {
+        if (activeTag && !(e.tags || []).includes(activeTag)) return false;
+        if (!q) return true;
+        return (e.title + " " + e.body + " " + (e.tags || []).join(" ")).toLowerCase().includes(q);
+      })
+      .sort((a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false) || b.createdAt - a.createdAt);
   }, [entries, query, activeTag]);
 
   // --- Widok edytora ---
@@ -192,7 +211,10 @@ export default function Journal({ onClose }: { onClose: () => void }) {
         <div className="panel-body">
           <div className="field" style={{ display: "flex", gap: 8 }}>
             <input value={query} placeholder="Szukaj w dzienniku…" onChange={(e) => setQuery(e.target.value)} style={{ flex: 1 }} />
-            <button className="btn primary" style={{ width: "auto", marginTop: 0 }} onClick={openNew}>
+            <button className="btn" style={{ width: "auto", marginTop: 0 }} onClick={inspire} title="Pytanie inspirujące do pisania">
+              💡
+            </button>
+            <button className="btn primary" style={{ width: "auto", marginTop: 0 }} onClick={() => openNew()}>
               ＋ Nowy
             </button>
           </div>
@@ -220,8 +242,24 @@ export default function Journal({ onClose }: { onClose: () => void }) {
             filtered.map((e) => (
               <div key={e.id} className="journal-card" onClick={() => openEdit(e)} style={{ cursor: "pointer" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                  <b style={{ fontSize: 16 }}>{e.title || "Bez tytułu"}</b>
+                  <b style={{ fontSize: 16 }}>
+                    {e.pinned ? "📌 " : ""}
+                    {e.title || "Bez tytułu"}
+                  </b>
                   <span style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+                    <span
+                      title={e.pinned ? "Odepnij" : "Przypnij na górze"}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        store.setData((d) => {
+                          const x = d.journal.find((y) => y.id === e.id);
+                          if (x) x.pinned = !x.pinned;
+                        });
+                      }}
+                      style={{ cursor: "pointer", fontSize: 14, opacity: e.pinned ? 1 : 0.5 }}
+                    >
+                      📌
+                    </span>
                     <span
                       title={e.shared ? "Widoczne dla JARVIS-a — kliknij, by ukryć" : "Prywatne — kliknij, by udostępnić czatowi"}
                       onClick={(ev) => {

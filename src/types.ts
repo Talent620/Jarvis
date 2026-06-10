@@ -144,6 +144,8 @@ export interface JournalEntry {
   mood?: string;
   /** Jeśli true — czat JARVIS-a może czytać ten wpis (kontekst). Domyślnie prywatne. */
   shared?: boolean;
+  /** Przypięty wpis — zawsze na górze listy. */
+  pinned?: boolean;
   createdAt: number;
   updatedAt: number;
 }
