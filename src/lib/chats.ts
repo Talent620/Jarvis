@@ -18,11 +18,39 @@ export function loadChats(): ChatSession[] {
   }
 }
 
+// Usuwa ciężkie obrazy (base64) z sesji poza `keepFirst` najnowszymi — w historii
+// zostaje znacznik, dzięki czemu zdjęcia nie wysadzają limitu localStorage.
+export function stripImages(list: ChatSession[], keepFirst: number): ChatSession[] {
+  return list.map((c, i) =>
+    i < keepFirst
+      ? c
+      : {
+          ...c,
+          messages: c.messages.map((m) =>
+            m.image ? { ...m, image: undefined, text: m.text || "📷 (zdjęcie)" } : m,
+          ),
+        },
+  );
+}
+
 export function saveChats(list: ChatSession[]): void {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(list.slice(0, 50)));
-  } catch {
-    /* ignore */
+  const capped = list.slice(0, 50);
+  // Próbuj zapisać; przy przekroczeniu limitu degraduj coraz agresywniej,
+  // zamiast po cichu nie zapisać nic.
+  const attempts: (() => string)[] = [
+    () => JSON.stringify(capped),
+    () => JSON.stringify(stripImages(capped, 3)), // obrazy tylko w 3 najnowszych
+    () => JSON.stringify(stripImages(capped, 1)), // obrazy tylko w aktywnej
+    () => JSON.stringify(stripImages(capped.slice(0, 20), 1)), // mniej sesji
+    () => JSON.stringify(stripImages(capped.slice(0, 8), 0)), // ostatnia deska ratunku
+  ];
+  for (const build of attempts) {
+    try {
+      localStorage.setItem(KEY, build());
+      return;
+    } catch {
+      /* limit — spróbuj agresywniej */
+    }
   }
 }
 
