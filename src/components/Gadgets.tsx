@@ -4,7 +4,7 @@ import jsQR from "jsqr";
 import { store, uid } from "../lib/store";
 import { encryptText, decryptText } from "../lib/cipher";
 
-type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "nfc" | "pass" | "dice" | "qr" | "cipher";
+type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "nfc" | "pass" | "dice" | "qr" | "cipher" | "radar";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "torch", label: "🔦 Latarka" },
@@ -20,6 +20,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "dice", label: "🎲 Losowanie" },
   { id: "qr", label: "🔳 QR" },
   { id: "cipher", label: "🔐 Szyfr" },
+  { id: "radar", label: "🛰 Radar" },
 ];
 
 // --- 🔦 Latarka + SOS ---
@@ -682,6 +683,161 @@ function Cipher() {
   );
 }
 
+// --- 🛰 Radar otoczenia: BLE (odległość z RSSI) + EMF/metal (magnetometr) + sieć ---
+type Dev = { name: string; rssi: number; dist: number; t: number };
+
+function Radar() {
+  const [emf, setEmf] = useState<number | null>(null);
+  const [emfBase, setEmfBase] = useState<number | null>(null);
+  const [emfOk, setEmfOk] = useState<boolean | null>(null);
+  const [devices, setDevices] = useState<Record<string, Dev>>({});
+  const [bleMsg, setBleMsg] = useState("");
+  const [net, setNet] = useState("");
+  const baseRef = useRef<number | null>(null);
+
+  // Magnetometr → pole magnetyczne (µT). Wykrywa metal/elektronikę/magnesy.
+  useEffect(() => {
+    let sensor: any;
+    try {
+      const Mag = (window as any).Magnetometer;
+      if (!Mag) {
+        setEmfOk(false);
+        return;
+      }
+      sensor = new Mag({ frequency: 15 });
+      sensor.addEventListener("reading", () => {
+        const v = Math.hypot(sensor.x || 0, sensor.y || 0, sensor.z || 0);
+        setEmf(v);
+        setEmfOk(true);
+        const b = baseRef.current;
+        baseRef.current = b == null ? v : b * 0.97 + v * 0.03;
+        setEmfBase(baseRef.current);
+      });
+      sensor.addEventListener("error", () => setEmfOk(false));
+      sensor.start();
+    } catch {
+      setEmfOk(false);
+    }
+    return () => {
+      try {
+        sensor?.stop();
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
+
+  // Informacje o sieci (pełny skan LAN wymaga backendu/natywu).
+  useEffect(() => {
+    const c = (navigator as any).connection;
+    const p: string[] = [navigator.onLine ? "online" : "offline"];
+    if (c?.effectiveType) p.push(c.effectiveType);
+    if (c?.downlink) p.push(`~${c.downlink} Mb/s`);
+    setNet(p.join(" · "));
+  }, []);
+
+  // Czyść nieaktywne urządzenia (brak sygnału > 15 s).
+  useEffect(() => {
+    const t = setInterval(() => {
+      setDevices((d) => {
+        const now = Date.now();
+        const out: Record<string, Dev> = {};
+        for (const k in d) if (now - d[k].t < 15000) out[k] = d[k];
+        return out;
+      });
+    }, 3000);
+    return () => clearInterval(t);
+  }, []);
+
+  const scanBle = async () => {
+    const bt = (navigator as any).bluetooth;
+    if (!bt?.requestLEScan) {
+      setBleMsg("Skan BLE niedostępny w tym środowisku (działa na desktopie/Chrome; na telefonie wymaga modułu natywnego — mogę dodać).");
+      return;
+    }
+    try {
+      setBleMsg("Skanuję otoczenie…");
+      bt.addEventListener("advertisementreceived", (e: any) => {
+        const id = e.device?.id || e.device?.name || "?";
+        const rssi = e.rssi ?? -80;
+        const dist = Math.min(30, Math.pow(10, (-59 - rssi) / 20));
+        setDevices((d) => ({ ...d, [id]: { name: e.device?.name || "urządzenie", rssi, dist, t: Date.now() } }));
+      });
+      await bt.requestLEScan({ acceptAllAdvertisements: true });
+      setBleMsg("Skan aktywny — zbliżaj telefon, blip podejdzie do środka.");
+    } catch (err: any) {
+      setBleMsg("Nie udało się uruchomić skanu: " + (err?.message || err));
+    }
+  };
+
+  const blipPos = (id: string, dist: number) => {
+    let h = 0;
+    for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) & 0xffff;
+    const ang = ((h % 360) * Math.PI) / 180;
+    const r = Math.min(46, (dist / 30) * 46);
+    return { left: `${50 + r * Math.cos(ang)}%`, top: `${50 + r * Math.sin(ang)}%` };
+  };
+
+  const list = Object.entries(devices).sort((a, b) => a[1].dist - b[1].dist);
+  const delta = emf != null && emfBase != null ? Math.abs(emf - emfBase) : 0;
+  const emfPct = Math.min(100, (delta / 30) * 100); // 30µT odchylenia = pełna skala
+
+  return (
+    <div style={{ paddingTop: 8 }}>
+      <p className="muted">
+        Radar otoczenia: wykrywa pobliskie urządzenia Bluetooth (odległość z siły sygnału) i
+        anomalie pola magnetycznego (metal/elektronika/ukryte magnesy). Działa pasywnie i legalnie.
+      </p>
+
+      <div className="radar">
+        <div className="radar-ring" style={{ width: "33%", height: "33%" }} />
+        <div className="radar-ring" style={{ width: "66%", height: "66%" }} />
+        <div className="radar-ring" style={{ width: "99%", height: "99%" }} />
+        <div className="radar-sweep" />
+        <div className="radar-center" />
+        {list.map(([id, d]) => (
+          <div key={id} className="radar-blip" style={blipPos(id, d.dist)} title={`${d.name} · ${d.dist.toFixed(1)} m`} />
+        ))}
+      </div>
+
+      <button className="btn primary" onClick={scanBle}>📡 Skanuj otoczenie (BLE)</button>
+      {bleMsg && <p className="muted" style={{ marginTop: 6 }}>{bleMsg}</p>}
+
+      {list.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          {list.map(([id, d]) => (
+            <div key={id} className="list-item">
+              <span>📶 {d.name}</span>
+              <span className="muted">{d.dist.toFixed(1)} m · {d.rssi} dBm</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h3 style={{ marginTop: 16 }}>🧲 Detektor metalu / EMF</h3>
+      {emfOk === false ? (
+        <p className="muted">Magnetometr niedostępny w tym urządzeniu/WebView.</p>
+      ) : (
+        <>
+          <div style={{ background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 8, padding: 3 }}>
+            <div className="emf-bar" style={{ width: `${emfPct}%` }} />
+          </div>
+          <p className="muted" style={{ marginTop: 6 }}>
+            Pole: {emf != null ? `${emf.toFixed(1)} µT` : "…"} · odchylenie {delta.toFixed(1)} µT
+            {emfPct > 60 ? " — silna anomalia (metal/elektronika)" : emfPct > 25 ? " — wykryto obiekt" : ""}
+          </p>
+        </>
+      )}
+
+      <h3 style={{ marginTop: 16 }}>🌐 Sieć</h3>
+      <p className="muted">
+        Łącze: {net || "—"}. Pełny skan urządzeń w sieci domowej wymaga backendu/modułu natywnego
+        (mogę dodać jako kolejny krok).
+      </p>
+    </div>
+  );
+}
+
 export default function Gadgets({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("torch");
   return (
@@ -712,6 +868,7 @@ export default function Gadgets({ onClose }: { onClose: () => void }) {
           {tab === "dice" && <DiceCoin />}
           {tab === "qr" && <QrTool />}
           {tab === "cipher" && <Cipher />}
+          {tab === "radar" && <Radar />}
         </div>
         <div className="panel-foot">
           <button className="btn" onClick={onClose}>Zamknij</button>

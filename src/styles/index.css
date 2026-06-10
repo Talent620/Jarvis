@@ -685,6 +685,65 @@ button:disabled {
   cursor: default;
 }
 
+/* --- 🛰 Radar otoczenia --- */
+.radar {
+  position: relative;
+  width: min(78vw, 320px);
+  height: min(78vw, 320px);
+  margin: 14px auto;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(108, 231, 255, 0.06), transparent 72%);
+  border: 1px solid var(--line-strong);
+  overflow: hidden;
+}
+.radar-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(108, 231, 255, 0.16);
+  border-radius: 50%;
+}
+.radar-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(108, 231, 255, 0.35), rgba(108, 231, 255, 0.02) 28%, transparent 40%);
+  animation: radar-spin 3.2s linear infinite;
+}
+@keyframes radar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.radar-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 14px var(--cyan);
+}
+.radar-blip {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 12px var(--gold);
+  transform: translate(-50%, -50%);
+  transition: left 0.6s ease, top 0.6s ease;
+}
+.emf-bar {
+  height: 14px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, var(--cyan), var(--gold), #ff6b6b);
+  transition: width 0.2s ease;
+}
+
 /* --- Wizja HUD (kamera) --- */
 .sheet.hud {
   background: #000;
