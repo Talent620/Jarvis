@@ -1,0 +1,156 @@
+// @vitest-environment jsdom
+// Testy KAŻDEGO narzędzia agenta:
+//  1) walidacja definicji (nazwy, schematy) — wszystkie 40+,
+//  2) klasyfikacja ryzyka — każde ma sensowny poziom,
+//  3) wykonanie narzędzi lokalnych (store) przez runTool,
+//  4) łagodna degradacja narzędzi wymagających konfiguracji (bez kluczy → czytelny
+//     komunikat zamiast wyjątku/żądania sieciowego).
+import { describe, it, expect, beforeEach } from "vitest";
+import { toolDefs, runTool } from "../src/lib/tools";
+import { riskOf } from "../src/lib/permissions";
+import { store } from "../src/lib/store";
+
+beforeEach(() => {
+  store.setData((d) => {
+    d.tasks = [];
+    d.notes = [];
+    d.reminders = [];
+    d.shopping = [];
+    d.calendar = [];
+    d.memory = [];
+    d.scenes = [];
+    d.tally = [];
+    d.journal = [];
+    d.audit = [];
+  });
+  store.setSettings({ tavilyApiKey: "", homeAssistantUrl: "", homeAssistantToken: "", syncUrl: "", syncToken: "" });
+});
+
+describe("definicje narzędzi (wszystkie)", () => {
+  it("ma unikalne nazwy", () => {
+    const names = toolDefs.map((d) => d.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it.each(toolDefs.map((d) => [d.name, d] as const))("%s — poprawny schemat", (_n, d) => {
+    expect(d.name).toMatch(/^[a-z0-9_]+$/); // bezpieczne dla wszystkich API
+    expect(d.description.length).toBeGreaterThan(10);
+    const schema = d.input_schema as any;
+    expect(schema.type).toBe("object");
+    expect(schema.properties).toBeTypeOf("object");
+    // każde pole z required istnieje w properties (inaczej Gemini/OpenAI odrzucą)
+    for (const req of schema.required || []) {
+      expect(Object.keys(schema.properties)).toContain(req);
+    }
+  });
+
+  it.each(toolDefs.map((d) => [d.name] as const))("%s — ma klasyfikację ryzyka", (name) => {
+    expect(["read", "write", "outbound"]).toContain(riskOf(name));
+  });
+});
+
+describe("narzędzia lokalne — wykonanie end-to-end (runTool)", () => {
+  it("add_task → complete_task → list_tasks", async () => {
+    expect(await runTool("add_task", { title: "kupić mleko" })).toMatch(/Dodano zadanie/);
+    expect(store.data.tasks).toHaveLength(1);
+    expect(await runTool("complete_task", { query: "mleko" })).toMatch(/wykonane/);
+    expect(store.data.tasks[0].done).toBe(true);
+    expect(await runTool("list_tasks", {})).toContain("kupić mleko");
+  });
+
+  it("add_note → list_notes", async () => {
+    expect(await runTool("add_note", { text: "pomysł na projekt" })).toMatch(/zapisana/);
+    expect(await runTool("list_notes", {})).toContain("pomysł na projekt");
+  });
+
+  it("add_reminder zapisuje przypomnienie", async () => {
+    const at = new Date(Date.now() + 3600_000).toISOString();
+    expect(await runTool("add_reminder", { text: "wyjąć pranie", at })).toMatch(/Przypomnienie/);
+    expect(store.data.reminders).toHaveLength(1);
+  });
+
+  it("add_shopping_item → list_shopping", async () => {
+    expect(await runTool("add_shopping_item", { name: "szparagi", qty: "2 pęczki" })).toMatch(/szparagi/);
+    expect(await runTool("list_shopping", {})).toContain("2 pęczki szparagi");
+  });
+
+  it("add_calendar_event → list_calendar (web: magazyn wewnętrzny)", async () => {
+    expect(await runTool("add_calendar_event", { title: "Dentysta", start: new Date().toISOString() })).toMatch(/Dentysta/);
+    expect(await runTool("list_calendar", {})).toContain("Dentysta");
+  });
+
+  it("remember_fact zapisuje do pamięci", async () => {
+    expect(await runTool("remember_fact", { key: "ulubiona_kawa", value: "flat white" })).toMatch(/Zapamiętane/);
+    expect(store.data.memory.find((m) => m.key === "ulubiona_kawa")?.value).toBe("flat white");
+  });
+
+  it("add_journal_entry zapisuje wpis (domyślnie prywatny)", async () => {
+    expect(await runTool("add_journal_entry", { title: "Refleksja", body: "dobry dzień", tags: "życie" })).toMatch(/dzienniku/);
+    const e = store.data.journal[0];
+    expect(e.title).toBe("Refleksja");
+    expect(e.tags).toEqual(["życie"]);
+    expect(e.shared).toBeFalsy();
+  });
+
+  it("targ: add_tally_item → tally_report → clear_tally", async () => {
+    await runTool("add_tally_item", { name: "truskawki", unit_price: 12.5 });
+    // alias „price" (modele czasem mylą nazwę argumentu) też musi działać
+    await runTool("add_tally_item", { name: "szparagi", price: 8 });
+    const report = await runTool("tally_report", {});
+    expect(report).toContain("truskawki");
+    expect(report).toMatch(/20[.,]50|20[.,]5/);
+    expect(await runTool("clear_tally", {})).toMatch(/wyczyszczon/i);
+    expect(store.data.tally).toHaveLength(0);
+  });
+
+  it("create_scene → list_scenes → run_scene (bez HA: czytelny komunikat)", async () => {
+    await runTool("create_scene", { name: "Dobranoc", actions: [{ entity_id: "light.salon", action: "off" }] });
+    expect(await runTool("list_scenes", {})).toContain("Dobranoc");
+    const out = await runTool("run_scene", { name: "dobranoc" });
+    expect(out).toMatch(/Home Assistant nie jest skonfigurowany/);
+  });
+
+  it("set_timer potwierdza ustawienie", async () => {
+    expect(await runTool("set_timer", { minutes: 10, label: "herbata" })).toMatch(/10 min/);
+  });
+
+  it("daily_briefing zwraca raport (zadania/kalendarz; pogoda best-effort)", async () => {
+    await runTool("add_task", { title: "ważna sprawa" });
+    const out = await runTool("daily_briefing", {});
+    expect(out).toMatch(/Pora dnia/);
+    expect(out).toContain("ważna sprawa");
+  });
+});
+
+describe("łagodna degradacja — brak konfiguracji nie wybucha", () => {
+  it("web_research bez klucza Tavily → instrukcja zamiast błędu", async () => {
+    expect(await runTool("web_research", { query: "test" })).toMatch(/Tavily/);
+  });
+
+  it("smart_home bez konfiguracji → instrukcja", async () => {
+    expect(await runTool("smart_home", { entity_id: "light.salon", action: "on" })).toMatch(/Home Assistant/);
+  });
+
+  it("gmail_search / gcal_list bez backendu → instrukcja", async () => {
+    expect(await runTool("gmail_search", { query: "" })).toMatch(/backend|Google/i);
+    expect(await runTool("gcal_list", {})).toMatch(/backend|Google/i);
+  });
+
+  it("narzędzia desktop_* poza komputerem → czytelny komunikat", async () => {
+    for (const [tool, input] of [
+      ["desktop_launch_app", { app: "notepad" }],
+      ["desktop_open", { target: "C:/" }],
+      ["desktop_power", { action: "lock" }],
+      ["desktop_volume", { action: "up" }],
+      ["desktop_media", { action: "playpause" }],
+      ["desktop_type", { text: "abc" }],
+      ["desktop_hotkey", { combo: "ctrl+s" }],
+    ] as const) {
+      expect(await runTool(tool, input)).toMatch(/desktopow/);
+    }
+  });
+
+  it("nieznane narzędzie → komunikat, nie wyjątek", async () => {
+    expect(await runTool("nie_istnieje", {})).toMatch(/Nieznane narzędzie/);
+  });
+});

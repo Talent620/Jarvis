@@ -17,6 +17,7 @@ export default function Help({ onClose }: { onClose: () => void }) {
             <li>Wejdź w <b>⚙ Ustawienia → Szybki start</b> i <b>wklej dowolny klucz API</b> — JARVIS sam rozpozna dostawcę i sprawdzi połączenie.</li>
             <li>Nie masz klucza? Najłatwiejszy i darmowy: <b>Gemini</b> z aistudio.google.com/apikey (1 min, bez karty).</li>
             <li>Tryb <b>auto</b> sam wybiera najlepszego dostępnego dostawcę; gdy jeden zawiedzie (np. brak kredytów), przeskakuje na innego.</li>
+            <li><b>🩺 Diagnostyka</b> (⚙ → AI) — jedno kliknięcie sprawdza internet, wszystkie klucze, research, głos, mikrofon i backend, z podpowiedzią co naprawić.</li>
           </ul>
 
           <h3>💬 Czat i 🎤 głos</h3>

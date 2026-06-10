@@ -495,9 +495,10 @@ const tools: Tool[] = [
         ["name", "unit_price"],
       ),
     },
-    run: ({ name, qty, unit_price }) => {
+    run: ({ name, qty, unit_price, price }) => {
       const q = Number(qty) || 1;
-      const up = Number(unit_price) || 0;
+      // Tolerancja aliasów: modele czasem wysyłają „price" zamiast „unit_price".
+      const up = Number(unit_price ?? price) || 0;
       store.setData((d) => d.tally.unshift({ id: uid(), name, qty: q, unitPrice: up, createdAt: Date.now() }));
       const total = store.data.tally.reduce((s, t) => s + t.qty * t.unitPrice, 0);
       return `Dodano: ${q}× ${name} po ${up} = ${(q * up).toFixed(2)}. Razem na rachunku: ${total.toFixed(2)}.`;
