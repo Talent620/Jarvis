@@ -27,6 +27,7 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
 import { askJarvis, resolveProvider } from "./lib/brain";
 import { isUncensored } from "./lib/providers/registry";
+import { enablePrivateMode } from "./lib/privateMode";
 import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop } from "./lib/desktop";
@@ -205,6 +206,18 @@ export default function App() {
     setInterim("");
     stopSpeaking();
     buzz(14); // subtelna haptyka przy wysłaniu
+
+    // Komenda: Tryb Prywatny (w 100% lokalnie, offline).
+    const lcp = text.toLowerCase();
+    if (/(tryb|w[łl][aą]?cz|wlacz).{0,16}(prywatn|offline|lokaln)|w pe[łl]ni prywatn|ca[łl]kowicie prywatn/.test(lcp)) {
+      const id0 = uid();
+      setLiveId(id0);
+      setMessages((m) => [...m, { id: id0, role: "assistant", text: "Szukam lokalnego modelu…", tools: ["tryb"], createdAt: Date.now() }]);
+      const r = await enablePrivateMode();
+      setMessages((m) => m.map((x) => (x.id === id0 ? { ...x, text: r.message } : x)));
+      if (store.settings.speak) speak(r.message, store.settings);
+      return;
+    }
 
     // Komenda: przełącz tryb bez ograniczeń (działa realnie z modelem lokalnym/uncensored).
     const lc = text.toLowerCase();

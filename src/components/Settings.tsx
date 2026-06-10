@@ -10,6 +10,7 @@ import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/w
 import { exportData, importData } from "../lib/backup";
 import { systemCheck } from "../lib/diagnostics";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
+import { enablePrivateMode } from "../lib/privateMode";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 
@@ -38,6 +39,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [quickMsg, setQuickMsg] = useState("");
   const [pinVal, setPinVal] = useState("");
   const [pinMsg, setPinMsg] = useState("");
+  const [privMsg, setPrivMsg] = useState("");
+  const [privBusy, setPrivBusy] = useState(false);
   const [hasPin, setHasPin] = useState(lockIsSet());
   const [diag, setDiag] = useState<string[]>([]);
   const [diagBusy, setDiagBusy] = useState(false);
@@ -343,6 +346,27 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   </span>
                 </span>
                 <Toggle on={s.unfilteredLocal} onClick={() => set({ unfilteredLocal: !s.unfilteredLocal })} />
+              </div>
+              <div className="field">
+                <button
+                  className="btn"
+                  disabled={privBusy}
+                  onClick={async () => {
+                    setPrivBusy(true);
+                    setPrivMsg("Szukam lokalnego modelu (Ollama)…");
+                    const r = await enablePrivateMode(s.ollamaUrl);
+                    if (r.enabled) setS((prev) => ({ ...prev, ...store.settings }));
+                    setPrivMsg(r.message);
+                    setPrivBusy(false);
+                  }}
+                >
+                  🛡 Włącz Tryb Prywatny (100% lokalnie, offline)
+                </button>
+                <p className="muted" style={{ marginTop: 4 }}>
+                  JARVIS działa w pełni na Twoim sprzęcie (Ollama) — żadne dane nie wychodzą do
+                  chmury, brak polityki dostawcy. To prawdziwie prywatny asystent.
+                </p>
+                {privMsg && <p className="muted" style={{ whiteSpace: "pre-line" }}>{privMsg}</p>}
               </div>
               <div className="row">
                 <span>
