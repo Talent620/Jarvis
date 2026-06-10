@@ -660,6 +660,30 @@ button:disabled {
 .chip:active {
   background: rgba(108, 231, 255, 0.18);
 }
+.chip.on {
+  background: rgba(108, 231, 255, 0.22);
+  border-color: var(--cyan);
+  color: var(--text);
+}
+
+/* --- Dziennik (osobiste przemyślenia) --- */
+.journal-card {
+  border: 1px solid var(--line);
+  background: rgba(108, 231, 255, 0.035);
+  border-radius: 12px;
+  padding: 14px 15px;
+  margin-bottom: 10px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.journal-card:active {
+  border-color: var(--cyan);
+  background: rgba(108, 231, 255, 0.08);
+}
+.journal-card .chip {
+  font-size: 11px;
+  padding: 3px 9px;
+  cursor: default;
+}
 
 /* --- Wizja HUD (kamera) --- */
 .sheet.hud {

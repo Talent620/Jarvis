@@ -38,6 +38,13 @@ export default function Help({ onClose }: { onClose: () => void }) {
             <li>Z kluczem <b>Tavily</b> (⚙ → Research) dostajesz odpowiedzi ze <b>źródłami [1][2]</b> pod wiadomością.</li>
           </ul>
 
+          <h3>📔 Mój dziennik</h3>
+          <ul>
+            <li><b>⋯ → Mój dziennik</b> — Twoja prywatna baza przemyśleń. Osobne wpisy (nie jeden ciąg), z tytułem, tagami i wyszukiwaniem.</li>
+            <li>Możesz dyktować: „Jarvis, zapisz w dzienniku, że…". Eksport do pliku <b>.md</b> (np. pod książkę o sobie).</li>
+            <li>Dziennik jest objęty kopią zapasową i synchronizacją.</li>
+          </ul>
+
           <h3>📁 Projekty / dokumenty</h3>
           <ul>
             <li><b>📁</b> — twórz projekty z własnymi instrukcjami i <b>dokumentami (PDF/tekst)</b>.</li>

@@ -12,7 +12,7 @@ const RISK: Record<string, Risk> = {
   // write — lokalny zapis (wymaga zgody, można zapamiętać)
   add_task: "write", complete_task: "write", add_note: "write", add_reminder: "write",
   add_shopping_item: "write", add_calendar_event: "write", remember_fact: "write",
-  create_scene: "write", set_timer: "write", add_tally_item: "write",
+  create_scene: "write", set_timer: "write", add_tally_item: "write", add_journal_entry: "write",
   // outbound — zewnętrzne lub nieodwracalne (wymaga zgody)
   gmail_send: "outbound", gcal_add: "outbound", clear_tally: "outbound",
   // outbound — działania na zewnątrz / nieodwracalne (wymaga zgody)
@@ -31,9 +31,9 @@ export function riskOf(tool: string): Risk {
 const UNDO_COLLECTION: Record<string, keyof typeof emptyCollections> = {
   add_task: "tasks", add_note: "notes", add_reminder: "reminders",
   add_shopping_item: "shopping", add_calendar_event: "calendar",
-  create_scene: "scenes", remember_fact: "memory", add_tally_item: "tally",
+  create_scene: "scenes", remember_fact: "memory", add_tally_item: "tally", add_journal_entry: "journal",
 };
-const emptyCollections = { tasks: 1, notes: 1, reminders: 1, shopping: 1, calendar: 1, scenes: 1, memory: 1, tally: 1 };
+const emptyCollections = { tasks: 1, notes: 1, reminders: 1, shopping: 1, calendar: 1, scenes: 1, memory: 1, tally: 1, journal: 1 };
 
 // --- Zgody (zapamiętane decyzje) ---
 const CONSENT_KEY = "jarvis.consents.v1";

@@ -7,6 +7,7 @@ import Panels from "./components/Panels";
 import LiveOverlay from "./components/LiveOverlay";
 import ChatHistory from "./components/ChatHistory";
 import Projects from "./components/Projects";
+import Journal from "./components/Journal";
 import Help from "./components/Help";
 import More from "./components/More";
 import PermissionDialog from "./components/PermissionDialog";
@@ -27,7 +28,7 @@ import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop } from "./lib/desktop";
 import { getWeather } from "./lib/weather";
-import { ensureNotifPerms } from "./lib/notifications";
+import { ensureNotifPerms, notify } from "./lib/notifications";
 import { registerIntents } from "./lib/intents";
 import { store, uid } from "./lib/store";
 import { useStore } from "./hooks/useStore";
@@ -94,6 +95,7 @@ export default function App() {
   const [activeId, setActiveId] = useState<string>(initialChat?.id ?? uid());
   const [showHistory, setShowHistory] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
+  const [showJournal, setShowJournal] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [showGadgets, setShowGadgets] = useState(false);
@@ -365,9 +367,7 @@ export default function App() {
           setLiveId(id);
           setMessages((m) => [...m, { id, role: "assistant", text, tools: ["reminder"], createdAt: Date.now() }]);
           if (store.settings.speak) speak(text, store.settings);
-          if ("Notification" in window && Notification.permission === "granted") {
-            new Notification("JARVIS", { body: r.text });
-          }
+          notify("JARVIS — przypomnienie", r.text);
         });
     }, 20000);
     return () => clearInterval(tick);
@@ -394,6 +394,7 @@ export default function App() {
       const id = uid();
       setLiveId(id);
       setMessages((m) => [...m, { id, role: "assistant", text, tools: ["briefing"], createdAt: Date.now() }]);
+      notify("JARVIS — poranny raport", text.replace(/\s+/g, " ").slice(0, 140));
       if (st.speak) {
         setOrb("speaking");
         speak(text, st);
@@ -477,10 +478,12 @@ export default function App() {
         <ChatHistory activeId={activeId} onOpen={openChat} onClose={() => setShowHistory(false)} />
       )}
       {showProjects && <Projects onClose={() => setShowProjects(false)} />}
+      {showJournal && <Journal onClose={() => setShowJournal(false)} />}
       {showHelp && <Help onClose={() => setShowHelp(false)} />}
       {showMore && (
         <More
           onProjects={() => setShowProjects(true)}
+          onJournal={() => setShowJournal(true)}
           onHistory={() => setShowHistory(true)}
           onData={() => setShowPanels(true)}
           onGadgets={() => setShowGadgets(true)}

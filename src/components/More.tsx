@@ -1,5 +1,6 @@
 export default function More({
   onProjects,
+  onJournal,
   onHistory,
   onData,
   onGadgets,
@@ -10,6 +11,7 @@ export default function More({
   onClose,
 }: {
   onProjects: () => void;
+  onJournal: () => void;
   onHistory: () => void;
   onData: () => void;
   onGadgets: () => void;
@@ -20,6 +22,7 @@ export default function More({
   onClose: () => void;
 }) {
   const items = [
+    { icon: "📔", label: "Mój dziennik (przemyślenia)", fn: onJournal },
     { icon: "👁", label: "Wizja HUD (kamera) — co widzisz?", fn: onHud },
     ...(onScreen ? [{ icon: "🖥️", label: "Spójrz na mój ekran (analiza)", fn: onScreen }] : []),
     { icon: "🎨", label: "Studio Obrazów — generuj/edytuj", fn: onStudio },

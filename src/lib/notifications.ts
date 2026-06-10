@@ -19,6 +19,25 @@ export async function ensureNotifPerms(): Promise<void> {
   }
 }
 
+// Natychmiastowe powiadomienie systemowe (działa też przy zminimalizowanej apce).
+export async function notify(title: string, body: string): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await LocalNotifications.schedule({
+        notifications: [{ id: (Date.now() % 2_000_000_000) || 1, title, body, smallIcon: "ic_launcher_foreground" }],
+      });
+      return;
+    } catch {
+      /* fallback do web */
+    }
+  }
+  try {
+    if ("Notification" in window && Notification.permission === "granted") new Notification(title, { body });
+  } catch {
+    /* ignore */
+  }
+}
+
 // Minutnik — powiadomienie za N minut.
 export async function scheduleTimer(minutes: number, label?: string): Promise<void> {
   const at = new Date(Date.now() + Math.max(0.1, minutes) * 60_000);

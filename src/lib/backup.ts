@@ -4,7 +4,7 @@ import type { AppData } from "../types";
 // Eksport/import danych (kopia zapasowa). Nie zawiera kluczy API — tylko Twoje dane.
 const COLLECTIONS: (keyof AppData)[] = [
   "tasks", "notes", "reminders", "shopping", "calendar",
-  "memory", "scenes", "projects", "projectFiles", "tally",
+  "memory", "scenes", "projects", "projectFiles", "tally", "journal",
 ];
 
 export function exportData(): void {

@@ -191,6 +191,25 @@ const tools: Tool[] = [
   },
   {
     def: {
+      name: "add_journal_entry",
+      description:
+        "Dopisz wpis do osobistego DZIENNIKA użytkownika (jego prywatne przemyślenia, refleksje, wspomnienia, np. gdy mówi: zapisz w dzienniku, że...). To NIE to samo co notatka czy zadanie. Dodaj zwięzły tytuł i treść; opcjonalnie tagi.",
+      input_schema: obj(
+        { title: str("Krótki tytuł wpisu"), body: str("Treść przemyślenia"), tags: str("Tagi po przecinku (opcjonalnie)") },
+        ["body"],
+      ),
+    },
+    run: ({ title, body, tags }) => {
+      const t = (tags || "").split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean).slice(0, 10);
+      const now = Date.now();
+      store.setData((d) =>
+        d.journal.unshift({ id: uid(), title: (title || "").trim(), body: String(body).trim(), tags: t, createdAt: now, updatedAt: now }),
+      );
+      return `Zapisałem w Twoim dzienniku${title ? `: „${title}"` : ""}.`;
+    },
+  },
+  {
+    def: {
       name: "remember_fact",
       description:
         "Zapamiętaj trwałą informację o użytkowniku lub jego preferencjach (np. ulubiona kawiarnia, adres, imię partnera). Używaj proaktywnie.",

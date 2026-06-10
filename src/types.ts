@@ -131,6 +131,19 @@ export interface AppData {
   projects: Project[];
   projectFiles: ProjectFile[];
   tally: TallyItem[];
+  journal: JournalEntry[];
+}
+
+/** Osobisty dziennik — przemyślenia użytkownika, oddzielne wpisy z tagami. */
+export interface JournalEntry {
+  id: string;
+  title: string;
+  body: string;
+  tags: string[];
+  /** Nastrój/etykieta emocji (opcjonalnie). */
+  mood?: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface Settings {
