@@ -1,16 +1,49 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "../types";
 import TypeText from "./TypeText";
 import { speak } from "../lib/voice";
 import { store } from "../lib/store";
+import { isDesktop } from "../lib/desktop";
 
-const SUGGESTIONS = [
-  "Przedstaw raport poranny",
-  "Jaka jest pogoda?",
-  "Co mam dziś do zrobienia?",
-  "Włącz Spotify",
-  "Co nowego w wiadomościach?",
-];
+// Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓).
+function MsgActions({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard?.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch {
+      /* brak dostępu do schowka */
+    }
+  };
+  return (
+    <div className="msg-actions">
+      <button onClick={() => speak(text, { ...store.settings, speak: true })} title="Odsłuchaj">
+        🔊
+      </button>
+      <button onClick={copy} title="Kopiuj">
+        {copied ? "✓" : "📋"}
+      </button>
+    </div>
+  );
+}
+
+const SUGGESTIONS = isDesktop()
+  ? [
+      "Przedstaw raport poranny",
+      "Co mam na ekranie?",
+      "Otwórz notatnik",
+      "Co mam dziś do zrobienia?",
+      "Co nowego w wiadomościach?",
+    ]
+  : [
+      "Przedstaw raport poranny",
+      "Jaka jest pogoda?",
+      "Co mam dziś do zrobienia?",
+      "Włącz Spotify",
+      "Co nowego w wiadomościach?",
+    ];
 
 export default function Conversation({
   messages,
@@ -70,19 +103,7 @@ export default function Conversation({
               ))}
             </div>
           )}
-          {m.role === "assistant" && (
-            <div className="msg-actions">
-              <button onClick={() => speak(m.text, { ...store.settings, speak: true })} title="Odsłuchaj">
-                🔊
-              </button>
-              <button
-                onClick={() => navigator.clipboard?.writeText(m.text).catch(() => {})}
-                title="Kopiuj"
-              >
-                📋
-              </button>
-            </div>
-          )}
+          {m.role === "assistant" && m.text && <MsgActions text={m.text} />}
           {m.citations && m.citations.length > 0 && (
             <div className="citations">
               <div className="cit-head">Źródła</div>

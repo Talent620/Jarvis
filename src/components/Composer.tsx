@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export default function Composer({
   onSend,
@@ -20,12 +20,22 @@ export default function Composer({
   micSupported: boolean;
 }) {
   const [text, setText] = useState("");
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-wysokość: pole rośnie z treścią (do ~5 linijek), potem przewija.
+  const autoGrow = () => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  };
 
   const submit = () => {
     const t = text.trim();
     if ((!t && !imagePreview) || busy) return;
     onSend(t);
     setText("");
+    if (taRef.current) taRef.current.style.height = "auto";
   };
 
   return (
@@ -43,9 +53,14 @@ export default function Composer({
           📷
         </button>
         <textarea
+          ref={taRef}
+          rows={1}
           value={text}
           placeholder="Wydaj polecenie JARVIS-owi…"
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            autoGrow();
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
