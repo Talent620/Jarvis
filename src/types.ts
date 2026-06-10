@@ -165,6 +165,9 @@ export interface Settings {
   syncToken: string;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */
   ollamaUrl: string;
+  /** Tryb nieocenzurowany — działa realnie tylko z modelem lokalnym (Ollama):
+   *  JARVIS nie dokłada własnych zastrzeżeń/moralizowania i odpowiada wprost. */
+  unfilteredLocal: boolean;
   /** Aktywny projekt/workspace ("" = ogólny). */
   activeProjectId: string;
   /** Motyw HUD: default | gold | green | red | purple. */

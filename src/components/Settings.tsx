@@ -271,6 +271,17 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   np. <code>ollama pull dolphin-mistral</code> (działają w pełni offline, na Twoim sprzęcie).
                 </p>
               </div>
+              <div className="row">
+                <span>
+                  🔓 Tryb nieocenzurowany (lokalny)
+                  <br />
+                  <span className="muted">
+                    JARVIS odpowiada wprost, bez moralizowania. Realnie bez cenzury działa tylko
+                    z modelem lokalnym (Ollama) — modele w chmurze mają własne zasady dostawcy.
+                  </span>
+                </span>
+                <Toggle on={s.unfilteredLocal} onClick={() => set({ unfilteredLocal: !s.unfilteredLocal })} />
+              </div>
               <div className="field">
                 <label>Backend-proxy (opcjonalnie — omija CORS, chowa klucze)</label>
                 <input

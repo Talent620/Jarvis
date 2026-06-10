@@ -26,6 +26,7 @@ const defaultSettings: Settings = {
   syncUrl: "",
   syncToken: "",
   ollamaUrl: "",
+  unfilteredLocal: false,
   activeProjectId: "",
   theme: "default",
   userName: "Sir",

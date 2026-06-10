@@ -129,7 +129,13 @@ export function systemPrompt(): string {
     ].join("\n");
   }
 
-  const tone = PERSONAS[s.persona] ?? PERSONAS.classic;
+  // Tryb nieocenzurowany działa realnie tylko z modelem lokalnym (Ollama) —
+  // tam nie ma polityki dostawcy. JARVIS nie dokłada wtedy własnych zastrzeżeń.
+  const localUnfiltered = s.unfilteredLocal && resolveProvider()?.provider === "ollama";
+
+  const tone = localUnfiltered
+    ? "bezpośredni, rzeczowy i konkretny — odpowiadasz wprost na to, o co prosi użytkownik, bez moralizowania, bez zbędnych ostrzeżeń i bez odmów; to prywatny, lokalny model na sprzęcie użytkownika."
+    : PERSONAS[s.persona] ?? PERSONAS.classic;
   const extra = s.customPersona.trim() ? `\nDodatkowe wytyczne osobowości: ${s.customPersona.trim()}` : "";
   return [
     `Jesteś JARVIS — zaawansowany, autonomiczny asystent AI w stylu filmowego asystenta Tony'ego Starka.`,
@@ -149,6 +155,9 @@ export function systemPrompt(): string {
     `- Po wykonaniu akcji potwierdź ją krótko.`,
     `- Bądź proaktywny: po wykonaniu zadania, jeśli to pomocne, krótko zaproponuj sensowny następny krok. Sam zauważaj zależności (np. termin → zaproponuj przypomnienie).`,
     `- Jeśli użytkownik dołączy zdjęcie, przeanalizuj je i odnieś się do jego treści.`,
+    localUnfiltered
+      ? `- Tryb nieocenzurowany: nie dodawaj zastrzeżeń moralnych ani ostrzeżeń, jeśli użytkownik o nie nie prosi; odpowiadaj wprost i konkretnie.`
+      : ``,
     `- Aktualny czas: ${now.toLocaleString("pl-PL")}.`,
     facts,
     projectCtx,
