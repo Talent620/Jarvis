@@ -190,6 +190,10 @@ export interface Settings {
   tavilyApiKey: string;
   /** Czy mówić odpowiedzi na głos. */
   speak: boolean;
+  /** Używaj darmowego głosu Gemini TTS (wysoka jakość, wymaga klucza Gemini). */
+  geminiTts: boolean;
+  /** Nazwa głosu Gemini TTS (np. Charon, Orus, Puck). */
+  geminiVoice: string;
   /** Nazwa preferowanego głosu TTS (z systemu). */
   voiceName: string;
   /** Wysokość głosu (0.1–2). */

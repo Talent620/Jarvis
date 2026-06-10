@@ -64,6 +64,68 @@ async function playFromResponse(res: Response): Promise<boolean> {
   return true;
 }
 
+// Pakuje surowe PCM16 (z Gemini TTS) w nagłówek WAV, by dało się odtworzyć.
+function pcmToWavUrl(b64: string, sampleRate: number): string {
+  const bin = atob(b64);
+  const len = bin.length;
+  const buffer = new ArrayBuffer(44 + len);
+  const view = new DataView(buffer);
+  const writeStr = (off: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i));
+  };
+  writeStr(0, "RIFF");
+  view.setUint32(4, 36 + len, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, "data");
+  view.setUint32(40, len, true);
+  for (let i = 0; i < len; i++) view.setUint8(44 + i, bin.charCodeAt(i));
+  return URL.createObjectURL(new Blob([view], { type: "audio/wav" }));
+}
+
+// Darmowy głos wysokiej jakości przez Gemini TTS (wymaga klucza Gemini).
+async function geminiTts(text: string, settings: Settings): Promise<boolean> {
+  const key = settings.keys?.gemini?.trim();
+  if (!key) return false;
+  try {
+    const voice = settings.geminiVoice?.trim() || "Charon";
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${key}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text }] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+          },
+        }),
+      },
+    );
+    if (!res.ok) return false;
+    const d = await res.json();
+    const part = (d?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData);
+    const b64 = part?.inlineData?.data;
+    if (!b64) return false;
+    const rate = Number(/rate=(\d+)/.exec(part.inlineData.mimeType || "")?.[1]) || 24000;
+    const url = pcmToWavUrl(b64, rate);
+    currentAudio = new Audio(url);
+    currentAudio.onended = () => URL.revokeObjectURL(url);
+    await currentAudio.play();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function speak(text: string, settings: Settings): Promise<void> {
   if (!settings.speak || !text.trim()) return;
   stopSpeaking();
@@ -109,6 +171,11 @@ export async function speak(text: string, settings: Settings): Promise<void> {
     } catch {
       /* fallback do systemowego TTS */
     }
+  }
+
+  // Darmowy, wysokiej jakości głos przez Gemini TTS (najlepszy darmowy wybór).
+  if (settings.geminiTts !== false && settings.keys?.gemini?.trim()) {
+    if (await geminiTts(text, settings)) return;
   }
 
   // Na urządzeniu używaj natywnego TTS (WebView często nie ma Web Speech).

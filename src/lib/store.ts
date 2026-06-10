@@ -38,6 +38,8 @@ const defaultSettings: Settings = {
   webSearch: true,
   tavilyApiKey: "",
   speak: true,
+  geminiTts: true,
+  geminiVoice: "Charon",
   voiceName: "",
   voicePitch: 0.9,
   voiceRate: 1.0,

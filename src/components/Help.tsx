@@ -29,8 +29,13 @@ export default function Help({ onClose }: { onClose: () => void }) {
 
           <h3>☎ Rozmowa na żywo</h3>
           <ul>
-            <li>Przycisk <b>☎</b> — rozmowa głosowa w czasie rzeczywistym (wymaga klucza Gemini).</li>
+            <li>Przycisk <b>☎</b> — rozmowa głosowa w czasie rzeczywistym. Z kluczem Gemini używa <b>Gemini Live</b>; bez niego (lub gdy limit) przełącz na <b>🎙 Tryb rozmowy</b> — działa z dowolnym modelem (mów → JARVIS odpowiada głosem → znów słucha).</li>
             <li>Z trybem tłumacza (⚙) działa jak tłumacz symultaniczny.</li>
+          </ul>
+
+          <h3>🗣 Lepszy darmowy głos</h3>
+          <ul>
+            <li>⚙ → Głos → <b>Darmowy głos premium (Gemini TTS)</b> — naturalny, wysokiej jakości głos na darmowym kluczu Gemini. Domyślny „Charon" brzmi jak JARVIS; do wyboru kilka głosów.</li>
           </ul>
 
           <h3>🔎 Wiedza i research</h3>

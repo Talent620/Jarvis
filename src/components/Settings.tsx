@@ -379,8 +379,41 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </p>
 
               <h3>Brzmienie głosu</h3>
+              <div className="row">
+                <span>
+                  🎙 Darmowy głos premium (Gemini TTS)
+                  <br />
+                  <span className="muted">wysoka jakość, naturalny — wymaga klucza Gemini (darmowy)</span>
+                </span>
+                <Toggle on={s.geminiTts} onClick={() => set({ geminiTts: !s.geminiTts })} />
+              </div>
+              {s.geminiTts && (
+                <div className="field">
+                  <label>Głos Gemini</label>
+                  <select value={s.geminiVoice} onChange={(e) => set({ geminiVoice: e.target.value })}>
+                    {[
+                      ["Charon", "Charon — głęboki, spokojny (JARVIS)"],
+                      ["Orus", "Orus — stanowczy, męski"],
+                      ["Fenrir", "Fenrir — energiczny, męski"],
+                      ["Puck", "Puck — żywy"],
+                      ["Kore", "Kore — wyrazisty"],
+                      ["Zephyr", "Zephyr — jasny"],
+                      ["Aoede", "Aoede — ciepły"],
+                      ["Leda", "Leda — młodzieńczy"],
+                    ].map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="muted" style={{ marginTop: 4 }}>
+                    Najlepszy darmowy głos. Działa też w „Przetestuj głos" niżej. Gdy wpiszesz
+                    klucz ElevenLabs/Fish, mają one priorytet.
+                  </p>
+                </div>
+              )}
               <div className="field">
-                <label>Głos systemowy</label>
+                <label>Głos systemowy (zapasowy)</label>
                 <select value={s.voiceName} onChange={(e) => set({ voiceName: e.target.value })}>
                   <option value="">Auto (najbardziej „JARVIS-owy")</option>
                   {voices.map((v) => (

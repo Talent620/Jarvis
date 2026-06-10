@@ -2,17 +2,19 @@ import { useState } from "react";
 import { generateImage } from "../lib/images";
 import { capturePhoto } from "../lib/camera";
 
+type Img = { data: string; mediaType: string };
+
 export default function Studio({ onClose }: { onClose: () => void }) {
   const [prompt, setPrompt] = useState("");
-  const [input, setInput] = useState<{ data: string; mediaType: string } | null>(null);
-  const [result, setResult] = useState<{ data: string; mediaType: string } | null>(null);
+  const [inputs, setInputs] = useState<Img[]>([]);
+  const [result, setResult] = useState<Img | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   const attach = async () => {
     const img = await capturePhoto();
     if (img) {
-      setInput(img);
+      setInputs((prev) => [...prev, img].slice(0, 4)); // do 4 zdjęć referencyjnych
       setResult(null);
     }
   };
@@ -21,7 +23,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     if (!prompt.trim()) return;
     setBusy(true);
     setErr("");
-    const r = await generateImage(prompt, input || undefined);
+    const r = await generateImage(prompt, inputs.length ? inputs : undefined);
     if ("error" in r) setErr(r.error);
     else setResult(r);
     setBusy(false);
@@ -29,7 +31,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
 
   const editFurther = () => {
     if (result) {
-      setInput(result);
+      setInputs([result]);
       setResult(null);
     }
   };
@@ -44,7 +46,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     a.remove();
   };
 
-  const src = (i: { data: string; mediaType: string }) => `data:${i.mediaType};base64,${i.data}`;
+  const src = (i: Img) => `data:${i.mediaType};base64,${i.data}`;
 
   return (
     <div className="sheet" onClick={onClose}>
@@ -55,27 +57,35 @@ export default function Studio({ onClose }: { onClose: () => void }) {
         </div>
         <div className="panel-body">
           <p className="muted">
-            Generuj obrazy z opisu lub <b>edytuj zdjęcie</b> (dołącz je i napisz, co zmienić:
-            „zmień tło na kosmos", „dodaj okulary", „w stylu cyberpunk").
+            Najwyższej klasy generowanie i <b>precyzyjna edycja</b> (Gemini 2.5 Flash Image).
+            Dołącz zdjęcie/zdjęcia i opisz dokładnie, co zmienić — np. „zmień tło na nocny
+            Tokio w deszczu", „dodaj skórzaną kurtkę i okulary", „popraw światło, zachowaj twarz",
+            „połącz osobę z 1. zdjęcia z tłem z 2.". Możesz zmieniać każdy detal, krok po kroku.
           </p>
 
-          {input && (
-            <div className="img-preview" style={{ marginBottom: 10 }}>
-              <img src={src(input)} alt="wejście" style={{ height: 90 }} />
-              <button className="img-x" onClick={() => setInput(null)}>✕</button>
+          {inputs.length > 0 && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+              {inputs.map((im, i) => (
+                <div key={i} className="img-preview" style={{ margin: 0 }}>
+                  <img src={src(im)} alt={`wejście ${i + 1}`} style={{ height: 80 }} />
+                  <button className="img-x" onClick={() => setInputs((p) => p.filter((_, j) => j !== i))}>✕</button>
+                </div>
+              ))}
             </div>
           )}
 
           <div className="field">
             <textarea
               value={prompt}
-              placeholder="Opisz obraz albo zmianę…"
+              placeholder="Opisz obraz albo dokładną zmianę…"
               onChange={(e) => setPrompt(e.target.value)}
-              style={{ width: "100%", minHeight: 70, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: 10, fontFamily: "inherit", fontSize: 15 }}
+              style={{ width: "100%", minHeight: 80, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: 10, fontFamily: "inherit", fontSize: 15 }}
             />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn" style={{ flex: 1 }} onClick={attach}>📷 Dołącz zdjęcie</button>
+            <button className="btn" style={{ flex: 1 }} onClick={attach}>
+              📷 Dołącz zdjęcie{inputs.length ? ` (${inputs.length})` : ""}
+            </button>
             <button className="btn primary" style={{ flex: 1 }} onClick={gen} disabled={busy}>
               {busy ? "Tworzę…" : "✨ Generuj"}
             </button>
