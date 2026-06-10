@@ -3,8 +3,9 @@ import QRCode from "qrcode";
 import jsQR from "jsqr";
 import { store, uid } from "../lib/store";
 import { encryptText, decryptText } from "../lib/cipher";
+import { estimateBpm, type PpgSample } from "../lib/ppg";
 
-type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "nfc" | "pass" | "dice" | "qr" | "cipher" | "radar";
+type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "nfc" | "pass" | "dice" | "qr" | "cipher" | "pulse";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "torch", label: "🔦 Latarka" },
@@ -20,7 +21,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "dice", label: "🎲 Losowanie" },
   { id: "qr", label: "🔳 QR" },
   { id: "cipher", label: "🔐 Szyfr" },
-  { id: "radar", label: "🛰 Radar" },
+  { id: "pulse", label: "❤️ Puls" },
 ];
 
 // --- 🔦 Latarka + SOS ---
@@ -683,156 +684,158 @@ function Cipher() {
   );
 }
 
-// --- 🛰 Radar otoczenia: BLE (odległość z RSSI) + EMF/metal (magnetometr) + sieć ---
-type Dev = { name: string; rssi: number; dist: number; t: number };
 
-function Radar() {
-  const [emf, setEmf] = useState<number | null>(null);
-  const [emfBase, setEmfBase] = useState<number | null>(null);
-  const [emfOk, setEmfOk] = useState<boolean | null>(null);
-  const [devices, setDevices] = useState<Record<string, Dev>>({});
-  const [bleMsg, setBleMsg] = useState("");
-  const [net, setNet] = useState("");
-  const baseRef = useRef<number | null>(null);
+// --- ❤️ Puls (fotopletyzmografia: palec na aparacie + latarka) ---
+const MEASURE_SEC = 22;
 
-  // Magnetometr → pole magnetyczne (µT). Wykrywa metal/elektronikę/magnesy.
-  useEffect(() => {
-    let sensor: any;
-    try {
-      const Mag = (window as any).Magnetometer;
-      if (!Mag) {
-        setEmfOk(false);
-        return;
-      }
-      sensor = new Mag({ frequency: 15 });
-      sensor.addEventListener("reading", () => {
-        const v = Math.hypot(sensor.x || 0, sensor.y || 0, sensor.z || 0);
-        setEmf(v);
-        setEmfOk(true);
-        const b = baseRef.current;
-        baseRef.current = b == null ? v : b * 0.97 + v * 0.03;
-        setEmfBase(baseRef.current);
+function HeartRate() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef(0);
+  const samplesRef = useRef<PpgSample[]>([]);
+  const [bpm, setBpm] = useState<number | null>(null);
+  const [status, setStatus] = useState("Zakryj palcem tylny aparat (i latarkę), trzymaj nieruchomo.");
+  const [measuring, setMeasuring] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [wave, setWave] = useState<number[]>([]);
+
+  const stop = () => {
+    cancelAnimationFrame(rafRef.current);
+    const s = streamRef.current;
+    if (s) {
+      s.getVideoTracks().forEach((t) => {
+        try {
+          t.applyConstraints({ advanced: [{ torch: false }] as any });
+        } catch {
+          /* ignore */
+        }
+        t.stop();
       });
-      sensor.addEventListener("error", () => setEmfOk(false));
-      sensor.start();
-    } catch {
-      setEmfOk(false);
     }
-    return () => {
+    streamRef.current = null;
+    setMeasuring(false);
+  };
+
+  const finish = () => {
+    cancelAnimationFrame(rafRef.current);
+    const val = estimateBpm(samplesRef.current);
+    stop();
+    if (val) {
+      setBpm(val);
+      setStatus(`Tętno: ${val} uderzeń/min.`);
+    } else {
+      setStatus("Nie udało się zmierzyć — zakryj cały obiektyw palcem i trzymaj nieruchomo. Spróbuj jeszcze raz.");
+    }
+  };
+
+  const start = async () => {
+    setBpm(null);
+    setWave([]);
+    setProgress(0);
+    samplesRef.current = [];
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      streamRef.current = stream;
+      const track = stream.getVideoTracks()[0];
       try {
-        sensor?.stop();
+        await track.applyConstraints({ advanced: [{ torch: true }] as any });
       } catch {
-        /* ignore */
+        /* niektóre urządzenia bez sterowania latarką — pomiar nadal możliwy przy świetle */
       }
-    };
-  }, []);
-
-  // Informacje o sieci (pełny skan LAN wymaga backendu/natywu).
-  useEffect(() => {
-    const c = (navigator as any).connection;
-    const p: string[] = [navigator.onLine ? "online" : "offline"];
-    if (c?.effectiveType) p.push(c.effectiveType);
-    if (c?.downlink) p.push(`~${c.downlink} Mb/s`);
-    setNet(p.join(" · "));
-  }, []);
-
-  // Czyść nieaktywne urządzenia (brak sygnału > 15 s).
-  useEffect(() => {
-    const t = setInterval(() => {
-      setDevices((d) => {
-        const now = Date.now();
-        const out: Record<string, Dev> = {};
-        for (const k in d) if (now - d[k].t < 15000) out[k] = d[k];
-        return out;
-      });
-    }, 3000);
-    return () => clearInterval(t);
-  }, []);
-
-  const scanBle = async () => {
-    const bt = (navigator as any).bluetooth;
-    if (!bt?.requestLEScan) {
-      setBleMsg("Skan BLE niedostępny w tym środowisku (działa na desktopie/Chrome; na telefonie wymaga modułu natywnego — mogę dodać).");
-      return;
-    }
-    try {
-      setBleMsg("Skanuję otoczenie…");
-      bt.addEventListener("advertisementreceived", (e: any) => {
-        const id = e.device?.id || e.device?.name || "?";
-        const rssi = e.rssi ?? -80;
-        const dist = Math.min(30, Math.pow(10, (-59 - rssi) / 20));
-        setDevices((d) => ({ ...d, [id]: { name: e.device?.name || "urządzenie", rssi, dist, t: Date.now() } }));
-      });
-      await bt.requestLEScan({ acceptAllAdvertisements: true });
-      setBleMsg("Skan aktywny — zbliżaj telefon, blip podejdzie do środka.");
-    } catch (err: any) {
-      setBleMsg("Nie udało się uruchomić skanu: " + (err?.message || err));
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setMeasuring(true);
+      setStatus("Mierzę… trzymaj palec nieruchomo.");
+      const canvas = document.createElement("canvas");
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+      const t0 = Date.now();
+      const loop = () => {
+        const v = videoRef.current;
+        if (v && v.videoWidth) {
+          ctx.drawImage(v, 0, 0, 64, 64);
+          const data = ctx.getImageData(0, 0, 64, 64).data;
+          let r = 0;
+          for (let i = 0; i < data.length; i += 4) r += data[i];
+          r /= data.length / 4;
+          const t = Date.now();
+          samplesRef.current.push({ t, v: r });
+          setWave((w) => [...w.slice(-99), r]);
+          const elapsed = (t - t0) / 1000;
+          setProgress(Math.min(1, elapsed / MEASURE_SEC));
+          if (elapsed >= MEASURE_SEC) {
+            finish();
+            return;
+          }
+        }
+        rafRef.current = requestAnimationFrame(loop);
+      };
+      loop();
+    } catch {
+      setStatus("Brak dostępu do aparatu.");
+      setMeasuring(false);
     }
   };
 
-  const blipPos = (id: string, dist: number) => {
-    let h = 0;
-    for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) & 0xffff;
-    const ang = ((h % 360) * Math.PI) / 180;
-    const r = Math.min(46, (dist / 30) * 46);
-    return { left: `${50 + r * Math.cos(ang)}%`, top: `${50 + r * Math.sin(ang)}%` };
-  };
+  useEffect(() => () => stop(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const list = Object.entries(devices).sort((a, b) => a[1].dist - b[1].dist);
-  const delta = emf != null && emfBase != null ? Math.abs(emf - emfBase) : 0;
-  const emfPct = Math.min(100, (delta / 30) * 100); // 30µT odchylenia = pełna skala
+  // Mini-wykres sygnału (PPG) — pokazuje, że bije.
+  const wavePath = (() => {
+    if (wave.length < 2) return "";
+    const min = Math.min(...wave);
+    const max = Math.max(...wave);
+    const range = max - min || 1;
+    return wave
+      .map((v, i) => `${(i / (wave.length - 1)) * 100},${30 - ((v - min) / range) * 28 - 1}`)
+      .join(" ");
+  })();
 
   return (
-    <div style={{ paddingTop: 8 }}>
+    <div style={{ textAlign: "center", paddingTop: 8 }}>
       <p className="muted">
-        Radar otoczenia: wykrywa pobliskie urządzenia Bluetooth (odległość z siły sygnału) i
-        anomalie pola magnetycznego (metal/elektronika/ukryte magnesy). Działa pasywnie i legalnie.
+        Pomiar tętna z aparatu (fotopletyzmografia): przyłóż opuszek palca tak, by zakrył tylny
+        obiektyw i latarkę. JARVIS odczyta puls z mikro-pulsacji światła w palcu.
       </p>
+      <video ref={videoRef} playsInline muted style={{ display: "none" }} />
 
-      <div className="radar">
-        <div className="radar-ring" style={{ width: "33%", height: "33%" }} />
-        <div className="radar-ring" style={{ width: "66%", height: "66%" }} />
-        <div className="radar-ring" style={{ width: "99%", height: "99%" }} />
-        <div className="radar-sweep" />
-        <div className="radar-center" />
-        {list.map(([id, d]) => (
-          <div key={id} className="radar-blip" style={blipPos(id, d.dist)} title={`${d.name} · ${d.dist.toFixed(1)} m`} />
-        ))}
+      <div style={{ fontSize: 64, lineHeight: 1, margin: "8px 0" }}>
+        <span style={{ display: "inline-block", animation: measuring ? "pulse 0.8s ease-in-out infinite" : "none" }}>❤️</span>
+      </div>
+      <div style={{ fontSize: 40, fontFamily: "Orbitron", color: "var(--cyan)", minHeight: 48 }}>
+        {bpm ? `${bpm}` : measuring ? "…" : "—"}
+        <span style={{ fontSize: 16, color: "var(--text-dim)" }}> BPM</span>
       </div>
 
-      <button className="btn primary" onClick={scanBle}>📡 Skanuj otoczenie (BLE)</button>
-      {bleMsg && <p className="muted" style={{ marginTop: 6 }}>{bleMsg}</p>}
-
-      {list.length > 0 && (
-        <div style={{ marginTop: 8 }}>
-          {list.map(([id, d]) => (
-            <div key={id} className="list-item">
-              <span>📶 {d.name}</span>
-              <span className="muted">{d.dist.toFixed(1)} m · {d.rssi} dBm</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <h3 style={{ marginTop: 16 }}>🧲 Detektor metalu / EMF</h3>
-      {emfOk === false ? (
-        <p className="muted">Magnetometr niedostępny w tym urządzeniu/WebView.</p>
-      ) : (
+      {measuring && (
         <>
-          <div style={{ background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 8, padding: 3 }}>
-            <div className="emf-bar" style={{ width: `${emfPct}%` }} />
+          <svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{ width: "100%", height: 48, marginTop: 4 }}>
+            <polyline points={wavePath} fill="none" stroke="var(--cyan)" strokeWidth="0.7" />
+          </svg>
+          <div style={{ background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 7, padding: 3, marginTop: 6 }}>
+            <div style={{ height: 8, borderRadius: 5, background: "var(--cyan)", width: `${Math.round(progress * 100)}%`, transition: "width 0.2s" }} />
           </div>
-          <p className="muted" style={{ marginTop: 6 }}>
-            Pole: {emf != null ? `${emf.toFixed(1)} µT` : "…"} · odchylenie {delta.toFixed(1)} µT
-            {emfPct > 60 ? " — silna anomalia (metal/elektronika)" : emfPct > 25 ? " — wykryto obiekt" : ""}
-          </p>
         </>
       )}
 
-      <h3 style={{ marginTop: 16 }}>🌐 Sieć</h3>
-      <p className="muted">
-        Łącze: {net || "—"}. Pełny skan urządzeń w sieci domowej wymaga backendu/modułu natywnego
-        (mogę dodać jako kolejny krok).
+      <p className="muted" style={{ marginTop: 8 }}>{status}</p>
+      {!measuring ? (
+        <button className="btn primary" onClick={start}>❤️ Zmierz tętno</button>
+      ) : (
+        <button className="btn" onClick={() => { setStatus("Przerwano."); stop(); }}>Przerwij</button>
+      )}
+      {bpm && (
+        <button
+          className="btn"
+          onClick={() => store.setData((d) => d.notes.unshift({ id: uid(), text: `❤️ Tętno: ${bpm} BPM (${new Date().toLocaleString("pl-PL")})`, createdAt: Date.now() }))}
+        >
+          💾 Zapisz w notatkach
+        </button>
+      )}
+      <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+        Orientacyjne, nie do celów medycznych.
       </p>
     </div>
   );
@@ -868,7 +871,7 @@ export default function Gadgets({ onClose }: { onClose: () => void }) {
           {tab === "dice" && <DiceCoin />}
           {tab === "qr" && <QrTool />}
           {tab === "cipher" && <Cipher />}
-          {tab === "radar" && <Radar />}
+          {tab === "pulse" && <HeartRate />}
         </div>
         <div className="panel-foot">
           <button className="btn" onClick={onClose}>Zamknij</button>
