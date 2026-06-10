@@ -9,6 +9,7 @@ import { testApi, testProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
 import { exportData, importData } from "../lib/backup";
 import { systemCheck } from "../lib/diagnostics";
+import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 
@@ -35,6 +36,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [backendMsg, setBackendMsg] = useState("");
   const [quickKey, setQuickKey] = useState("");
   const [quickMsg, setQuickMsg] = useState("");
+  const [pinVal, setPinVal] = useState("");
+  const [pinMsg, setPinMsg] = useState("");
+  const [hasPin, setHasPin] = useState(lockIsSet());
   const [diag, setDiag] = useState<string[]>([]);
   const [diagBusy, setDiagBusy] = useState(false);
 
@@ -772,6 +776,44 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </button>
               </div>
               {backupMsg && <p className="muted">{backupMsg}</p>}
+
+              <h3>🔒 Blokada aplikacji (PIN)</h3>
+              <p className="muted">
+                Zabezpiecz JARVIS-a PIN-em — bez niego apka jest bezużyteczna dla niepowołanych
+                osób (sejf haseł, dane, sterowanie). PIN trzymany tylko jako skrót, lokalnie.
+              </p>
+              {hasPin ? (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <span className="muted" style={{ flex: 1, alignSelf: "center" }}>✅ Blokada aktywna.</span>
+                  <button
+                    className="btn"
+                    style={{ width: "auto", marginTop: 0 }}
+                    onClick={() => { clearPin(); setHasPin(false); setPinMsg("Blokada wyłączona."); }}
+                  >
+                    Wyłącz
+                  </button>
+                </div>
+              ) : (
+                <div className="field" style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    value={pinVal}
+                    placeholder="Ustaw PIN"
+                    onChange={(e) => setPinVal(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    className="btn primary"
+                    style={{ width: "auto", marginTop: 0 }}
+                    disabled={pinVal.length < 4}
+                    onClick={async () => { await setLockPin(pinVal); setHasPin(true); setPinVal(""); setPinMsg("PIN ustawiony — zadziała przy następnym otwarciu."); }}
+                  >
+                    Ustaw
+                  </button>
+                </div>
+              )}
+              {pinMsg && <p className="muted">{pinMsg}</p>}
 
               <h3>Prywatność i zgody</h3>
               <p className="muted">

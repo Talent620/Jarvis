@@ -84,6 +84,8 @@ export default function Help({ onClose }: { onClose: () => void }) {
 
           <h3>🔐 Bezpieczeństwo</h3>
           <ul>
+            <li><b>🗝 Sejf haseł</b> (⋯ → Gadżety → Sejf): zapisz loginy i hasła, zaszyfrowane Twoim hasłem głównym (AES-256, lokalnie). Kopiuj jednym kliknięciem; na komputerze „⌨ Wpisz (3s)" autouzupełni login i hasło. Hasła <b>nigdy</b> nie trafiają do AI ani do chmury.</li>
+            <li><b>🔒 Blokada PIN</b> (⚙ → Dane): bez PIN-u apka jest bezużyteczna dla niepowołanych.</li>
             <li>Akcje (dzwonienie, SMS, smart home, zapisy) <b>proszą o zgodę</b>; możesz ją zapamiętać.</li>
             <li>Zakładka <b>Audyt</b> (▣) — dziennik akcji z <b>↶ cofnij</b>.</li>
           </ul>

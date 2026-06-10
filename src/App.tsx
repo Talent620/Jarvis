@@ -10,7 +10,9 @@ import Projects from "./components/Projects";
 import Journal from "./components/Journal";
 import Help from "./components/Help";
 import More from "./components/More";
+import LockScreen from "./components/LockScreen";
 import PermissionDialog from "./components/PermissionDialog";
+import { lockIsSet } from "./lib/lock";
 import { Suspense, lazy } from "react";
 
 const Gadgets = lazy(() => import("./components/Gadgets"));
@@ -114,6 +116,7 @@ export default function App() {
   const [pendingConsent, setPendingConsent] = useState<PendingConsent | null>(null);
   const [step, setStep] = useState<string | null>(null);
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
+  const [locked, setLocked] = useState(lockIsSet());
 
   const listenerRef = useRef<Listener | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -418,6 +421,8 @@ export default function App() {
       window.removeEventListener("offline", down);
     };
   }, []);
+
+  if (locked) return <LockScreen onUnlock={() => setLocked(false)} />;
 
   return (
     <div className="app">

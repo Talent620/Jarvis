@@ -4,8 +4,12 @@ import jsQR from "jsqr";
 import { store, uid } from "../lib/store";
 import { encryptText, decryptText } from "../lib/cipher";
 import { estimateBpm, type PpgSample } from "../lib/ppg";
+import {
+  vaultExists, vaultUnlocked, unlockVault, lockVault, listCreds, saveCred, removeCred, genPassword, type Cred,
+} from "../lib/vault";
+import { isDesktop, typeText } from "../lib/desktop";
 
-type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "nfc" | "pass" | "dice" | "qr" | "cipher" | "pulse";
+type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "nfc" | "pass" | "dice" | "qr" | "cipher" | "pulse" | "vault";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "torch", label: "🔦 Latarka" },
@@ -21,6 +25,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "dice", label: "🎲 Losowanie" },
   { id: "qr", label: "🔳 QR" },
   { id: "cipher", label: "🔐 Szyfr" },
+  { id: "vault", label: "🗝 Sejf haseł" },
   { id: "pulse", label: "❤️ Puls" },
 ];
 
@@ -841,6 +846,117 @@ function HeartRate() {
   );
 }
 
+// --- 🗝 Sejf haseł (zaszyfrowany, autouzupełnianie) ---
+function Vault() {
+  const [unlocked, setUnlocked] = useState(vaultUnlocked());
+  const [master, setMaster] = useState("");
+  const [msg, setMsg] = useState("");
+  const [items, setItems] = useState<Cred[]>(unlocked ? listCreds() : []);
+  const [form, setForm] = useState<{ name: string; login: string; password: string }>({ name: "", login: "", password: "" });
+  const [reveal, setReveal] = useState<Record<string, boolean>>({});
+  const [typing, setTyping] = useState("");
+  const copy = (t: string) => navigator.clipboard?.writeText(t).catch(() => {});
+
+  const refresh = () => setItems(listCreds());
+
+  const unlock = async () => {
+    setMsg("");
+    if (await unlockVault(master)) {
+      setUnlocked(true);
+      setMaster("");
+      refresh();
+    } else {
+      setMsg("Złe hasło główne.");
+    }
+  };
+
+  const add = async () => {
+    if (!form.name.trim() || !form.password) {
+      setMsg("Podaj nazwę i hasło.");
+      return;
+    }
+    await saveCred({ name: form.name.trim(), login: form.login.trim(), password: form.password });
+    setForm({ name: "", login: "", password: "" });
+    refresh();
+  };
+
+  // Autouzupełnianie na komputerze: po 3 s wpisuje login → TAB → hasło w aktywne pole.
+  const autofill = async (c: Cred) => {
+    for (let i = 3; i > 0; i--) {
+      setTyping(`Kliknij pole logowania… wpisuję za ${i}`);
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    setTyping("");
+    await typeText(`${c.login}\t${c.password}`);
+  };
+
+  if (!unlocked) {
+    return (
+      <div style={{ paddingTop: 12 }}>
+        <p className="muted">
+          {vaultExists()
+            ? "Podaj hasło główne, by odblokować sejf. Wszystkie dane są zaszyfrowane AES-256 i nie opuszczają urządzenia."
+            : "Utwórz sejf: ustaw hasło główne (zapamiętaj je — nie da się go odzyskać). Zaszyfruje Twoje loginy i hasła AES-256, lokalnie."}
+        </p>
+        <div className="field">
+          <input
+            type="password"
+            value={master}
+            placeholder="Hasło główne"
+            onChange={(e) => setMaster(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && unlock()}
+          />
+        </div>
+        <button className="btn primary" onClick={unlock} disabled={!master}>
+          {vaultExists() ? "🔓 Odblokuj sejf" : "➕ Utwórz sejf"}
+        </button>
+        {msg && <p className="muted">{msg}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ paddingTop: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span className="muted">{items.length} zapisanych kont</span>
+        <button className="btn" style={{ width: "auto", marginTop: 0 }} onClick={() => { lockVault(); setUnlocked(false); }}>
+          🔒 Zablokuj
+        </button>
+      </div>
+
+      {items.map((c) => (
+        <div key={c.id} className="journal-card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <b>{c.name}</b>
+            <span className="x" style={{ cursor: "pointer" }} onClick={async () => { await removeCred(c.id); refresh(); }}>✕</span>
+          </div>
+          {c.login && <div className="muted" style={{ fontSize: 13 }}>{c.login}</div>}
+          <div className="muted" style={{ fontSize: 13, fontFamily: "Share Tech Mono" }}>
+            {reveal[c.id] ? c.password : "••••••••••"}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+            <button className="chip" onClick={() => setReveal((r) => ({ ...r, [c.id]: !r[c.id] }))}>{reveal[c.id] ? "🙈 Ukryj" : "👁 Pokaż"}</button>
+            {c.login && <button className="chip" onClick={() => copy(c.login)}>📋 Login</button>}
+            <button className="chip" onClick={() => copy(c.password)}>📋 Hasło</button>
+            {isDesktop() && <button className="chip" onClick={() => autofill(c)}>⌨ Wpisz (3s)</button>}
+          </div>
+        </div>
+      ))}
+      {typing && <p className="muted">{typing}</p>}
+
+      <h3 style={{ marginTop: 14 }}>➕ Dodaj konto</h3>
+      <div className="field"><input value={form.name} placeholder="Nazwa (np. Gmail)" onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+      <div className="field"><input value={form.login} placeholder="Login / e-mail" onChange={(e) => setForm({ ...form, login: e.target.value })} /></div>
+      <div className="field" style={{ display: "flex", gap: 8 }}>
+        <input value={form.password} placeholder="Hasło" onChange={(e) => setForm({ ...form, password: e.target.value })} style={{ flex: 1 }} />
+        <button className="btn" style={{ width: "auto", marginTop: 0 }} onClick={() => setForm({ ...form, password: genPassword(20) })}>🎲 Generuj</button>
+      </div>
+      <button className="btn primary" onClick={add}>💾 Zapisz konto</button>
+      {msg && <p className="muted">{msg}</p>}
+    </div>
+  );
+}
+
 export default function Gadgets({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("torch");
   return (
@@ -871,6 +987,7 @@ export default function Gadgets({ onClose }: { onClose: () => void }) {
           {tab === "dice" && <DiceCoin />}
           {tab === "qr" && <QrTool />}
           {tab === "cipher" && <Cipher />}
+          {tab === "vault" && <Vault />}
           {tab === "pulse" && <HeartRate />}
         </div>
         <div className="panel-foot">
