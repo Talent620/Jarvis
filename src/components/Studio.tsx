@@ -48,6 +48,30 @@ export default function Studio({ onClose }: { onClose: () => void }) {
 
   const src = (i: Img) => `data:${i.mediaType};base64,${i.data}`;
 
+  // Presety jednym kliknięciem — wstawiają mocny prompt; z dołączonym zdjęciem od razu generują.
+  const PRESETS: { label: string; prompt: string }[] = [
+    { label: "💡 Studyjne światło", prompt: "Profesjonalne studyjne oświetlenie portretowe, miękkie cienie, wysoki detal, fotorealizm. Zachowaj twarz i rysy bez zmian." },
+    { label: "🌃 Cyberpunk", prompt: "Przekształć w styl cyberpunk: neony, deszcz, nocne miasto, refleksy. Zachowaj tożsamość osoby." },
+    { label: "✂ Usuń tło", prompt: "Usuń tło całkowicie, pozostaw przezroczyste/czyste białe tło, dokładne krawędzie." },
+    { label: "🖼 Renowacja", prompt: "Odrestauruj stare/zniszczone zdjęcie: usuń rysy i szum, popraw ostrość i kolory, naturalny efekt." },
+    { label: "🎨 Anime", prompt: "Przekształć w wysokiej jakości styl anime, zachowując kompozycję i tożsamość." },
+    { label: "📈 4K Upscale", prompt: "Zwiększ jakość i szczegółowość do poziomu 4K, wyostrz detale, popraw teksturę, bez zniekształceń." },
+    { label: "👔 Pro headshot", prompt: "Zamień w profesjonalne zdjęcie biznesowe (LinkedIn): elegancki strój, neutralne tło, studyjne światło. Zachowaj twarz." },
+    { label: "☀ Popraw światło", prompt: "Popraw ekspozycję, balans bieli i kontrast, naturalnie rozjaśnij. Nie zmieniaj treści." },
+  ];
+
+  const applyPreset = async (p: string) => {
+    setPrompt(p);
+    if (inputs.length) {
+      setBusy(true);
+      setErr("");
+      const r = await generateImage(p, inputs);
+      if ("error" in r) setErr(r.error);
+      else setResult(r);
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="sheet" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
@@ -73,6 +97,14 @@ export default function Studio({ onClose }: { onClose: () => void }) {
               ))}
             </div>
           )}
+
+          <div className="chips" style={{ flexWrap: "wrap", margin: "2px 0 8px" }}>
+            {PRESETS.map((p) => (
+              <button key={p.label} className="chip" onClick={() => applyPreset(p.prompt)} disabled={busy}>
+                {p.label}
+              </button>
+            ))}
+          </div>
 
           <div className="field">
             <textarea
