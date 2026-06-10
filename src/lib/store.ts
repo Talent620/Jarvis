@@ -28,6 +28,7 @@ const defaultSettings: Settings = {
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,
+  expertKnowledge: true,
   activeProjectId: "",
   theme: "default",
   userName: "Sir",

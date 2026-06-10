@@ -170,6 +170,8 @@ export interface Settings {
   unfilteredLocal: boolean;
   /** Głębokie myślenie — przy złożonych pytaniach robi wewnętrzną analizę przed odpowiedzią. */
   deepThink: boolean;
+  /** Wszczepiona wiedza ekspercka — dobiera modele mentalne do pytania (offline, za darmo). */
+  expertKnowledge: boolean;
   /** Aktywny projekt/workspace ("" = ogólny). */
   activeProjectId: string;
   /** Motyw HUD: default | gold | green | red | purple. */

@@ -348,6 +348,14 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </span>
                 <Toggle on={s.deepThink} onClick={() => set({ deepThink: !s.deepThink })} />
               </div>
+              <div className="row">
+                <span>
+                  📚 Wiedza ekspercka (wszczepiona)
+                  <br />
+                  <span className="muted">dobiera modele mentalne i heurystyki do pytania — offline, za darmo</span>
+                </span>
+                <Toggle on={s.expertKnowledge} onClick={() => set({ expertKnowledge: !s.expertKnowledge })} />
+              </div>
               <div className="field">
                 <label>Backend-proxy (opcjonalnie — omija CORS, chowa klucze)</label>
                 <input

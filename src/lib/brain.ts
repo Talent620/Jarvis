@@ -3,6 +3,7 @@ import { toolDefs, resetCitations, getCitations } from "./tools";
 import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed } from "./memory";
 import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
+import { retrieveKnowledge } from "./knowledge";
 import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, humanize, isComplex, PERSONAL_CUES } from "./aiHelpers";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
@@ -173,6 +174,7 @@ export function systemPrompt(): string {
     `- Aktualny czas: ${now.toLocaleString("pl-PL")}.`,
     ``,
     COGNITIVE_CORE,
+    currentKnowledge,
     deepAnalysis ? `\nTwoja wewnętrzna analiza tego zapytania (wykorzystaj ją, nie cytuj wprost):\n${deepAnalysis}` : "",
     facts,
     projectCtx,
@@ -180,8 +182,9 @@ export function systemPrompt(): string {
   ].join("\n");
 }
 
-// Wynik przebiegu „głębokiego myślenia" wstrzykiwany do promptu (jak pamięć).
+// Wynik przebiegu „głębokiego myślenia" + dobrana wiedza ekspercka (wstrzykiwane jak pamięć).
 let deepAnalysis = "";
+let currentKnowledge = "";
 
 /** Rozstrzyga, którego dostawcę i model użyć (uwzględnia tryb auto). */
 export function resolveProvider(): { provider: ProviderId; model: string; apiKey: string } | null {
@@ -317,6 +320,9 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   // Pamięć autonomiczna: dobierz fakty trafne do bieżącego zapytania (przed promptem).
   const lastUser = [...trimmed].reverse().find((m) => m.role === "user");
   await prepareMemoryContext(lastUser?.content || "");
+
+  // Wszczepiona wiedza ekspercka: dobierz pasujące modele mentalne (offline, za darmo).
+  currentKnowledge = store.settings.expertKnowledge !== false ? retrieveKnowledge(lastUser?.content || "") : "";
 
   // Głębokie myślenie: przy złożonych pytaniach najpierw wewnętrzna analiza.
   deepAnalysis = "";
