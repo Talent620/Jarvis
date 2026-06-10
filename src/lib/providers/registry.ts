@@ -90,7 +90,7 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     id: "ollama",
     label: "Lokalny model (Ollama — prywatny, offline)",
     rank: 30,
-    keysUrl: "https://ollama.com",
+    keysUrl: "https://ollama.com/library",
     defaultModel: "llama3.2",
     impl: askOllama,
     models: [
@@ -98,6 +98,12 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
       { id: "qwen2.5", label: "Qwen2.5 (lokalny)" },
       { id: "llama3.1", label: "Llama 3.1 (lokalny)" },
       { id: "mistral", label: "Mistral (lokalny)" },
+      { id: "dolphin-llama3", label: "Dolphin Llama 3 — bez cenzury (lokalny)" },
+      { id: "dolphin-mistral", label: "Dolphin Mistral — bez cenzury (lokalny)" },
+      { id: "dolphin3", label: "Dolphin 3 — bez cenzury (lokalny)" },
+      { id: "llama2-uncensored", label: "Llama 2 Uncensored (lokalny)" },
+      { id: "wizard-vicuna-uncensored", label: "Wizard-Vicuna Uncensored (lokalny)" },
+      { id: "nous-hermes2", label: "Nous Hermes 2 (lokalny)" },
     ],
   },
   github: {

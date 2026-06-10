@@ -267,7 +267,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 />
                 <p className="muted" style={{ marginTop: 4 }}>
                   Wybierz dostawcę „Lokalny model (Ollama)" powyżej. Uruchom Ollamę na komputerze
-                  w tej samej sieci — żadne dane nie wychodzą do chmury.
+                  w tej samej sieci — żadne dane nie wychodzą do chmury. Modele bez cenzury pobierzesz lokalnie,
+                  np. <code>ollama pull dolphin-mistral</code> (działają w pełni offline, na Twoim sprzęcie).
                 </p>
               </div>
               <div className="field">
