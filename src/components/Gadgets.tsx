@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
 import { store, uid } from "../lib/store";
+import { encryptText, decryptText } from "../lib/cipher";
 
-type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "nfc" | "pass" | "dice" | "qr";
+type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "nfc" | "pass" | "dice" | "qr" | "cipher";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "torch", label: "🔦 Latarka" },
@@ -18,6 +19,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "pass", label: "🔑 Hasła" },
   { id: "dice", label: "🎲 Losowanie" },
   { id: "qr", label: "🔳 QR" },
+  { id: "cipher", label: "🔐 Szyfr" },
 ];
 
 // --- 🔦 Latarka + SOS ---
@@ -627,6 +629,59 @@ function NfcTool() {
   );
 }
 
+// --- 🔐 Szyfr (AES-256-GCM, offline, pod pełną kontrolą użytkownika) ---
+function Cipher() {
+  const [text, setText] = useState("");
+  const [pass, setPass] = useState("");
+  const [out, setOut] = useState("");
+  const [msg, setMsg] = useState("");
+
+  const run = async (mode: "enc" | "dec") => {
+    setMsg("");
+    setOut("");
+    if (!text.trim() || !pass) {
+      setMsg("Podaj tekst i hasło.");
+      return;
+    }
+    try {
+      setOut(mode === "enc" ? await encryptText(text, pass) : await decryptText(text, pass));
+    } catch {
+      setMsg(mode === "dec" ? "Złe hasło lub uszkodzony szyfrogram." : "Nie udało się zaszyfrować.");
+    }
+  };
+
+  const ta = {
+    width: "100%", minHeight: 80, background: "var(--bg)", color: "var(--text)",
+    border: "1px solid var(--line)", borderRadius: 10, padding: 10, fontFamily: "inherit", fontSize: 14,
+  } as const;
+
+  return (
+    <div style={{ paddingTop: 12 }}>
+      <p className="muted">
+        Szyfr AES-256-GCM (klasa wojskowa), w 100% offline na Twoim urządzeniu. Zaszyfruj
+        notatkę/wiadomość hasłem; odszyfruje ją tylko ten, kto zna hasło. Nic nie wychodzi z urządzenia.
+      </p>
+      <div className="field">
+        <textarea value={text} placeholder="Tekst jawny lub szyfrogram (JV1:…)" onChange={(e) => setText(e.target.value)} style={ta} />
+      </div>
+      <div className="field">
+        <input type="password" value={pass} placeholder="Hasło" onChange={(e) => setPass(e.target.value)} />
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button className="btn primary" style={{ flex: 1 }} onClick={() => run("enc")}>🔒 Zaszyfruj</button>
+        <button className="btn" style={{ flex: 1 }} onClick={() => run("dec")}>🔓 Odszyfruj</button>
+      </div>
+      {msg && <p className="muted">{msg}</p>}
+      {out && (
+        <div className="field" style={{ marginTop: 10 }}>
+          <textarea readOnly value={out} style={ta} onFocus={(e) => e.currentTarget.select()} />
+          <button className="btn" onClick={() => navigator.clipboard?.writeText(out).catch(() => {})}>📋 Kopiuj</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Gadgets({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("torch");
   return (
@@ -656,6 +711,7 @@ export default function Gadgets({ onClose }: { onClose: () => void }) {
           {tab === "pass" && <PasswordGen />}
           {tab === "dice" && <DiceCoin />}
           {tab === "qr" && <QrTool />}
+          {tab === "cipher" && <Cipher />}
         </div>
         <div className="panel-foot">
           <button className="btn" onClick={onClose}>Zamknij</button>
