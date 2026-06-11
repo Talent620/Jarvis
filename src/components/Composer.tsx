@@ -9,8 +9,9 @@ export default function Composer({
   micOn,
   busy,
   micSupported,
+  councilAvailable,
 }: {
-  onSend: (text: string) => void;
+  onSend: (text: string, opts?: { council?: boolean }) => void;
   onMic: () => void;
   onAttach: () => void;
   onRemoveImage: () => void;
@@ -18,8 +19,10 @@ export default function Composer({
   micOn: boolean;
   busy: boolean;
   micSupported: boolean;
+  councilAvailable?: boolean;
 }) {
   const [text, setText] = useState("");
+  const [council, setCouncil] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-wysokość: pole rośnie z treścią (do ~5 linijek), potem przewija.
@@ -33,7 +36,7 @@ export default function Composer({
   const submit = () => {
     const t = text.trim();
     if ((!t && !imagePreview) || busy) return;
-    onSend(t);
+    onSend(t, { council: council && !imagePreview });
     setText("");
     if (taRef.current) taRef.current.style.height = "auto";
   };
@@ -52,6 +55,16 @@ export default function Composer({
         <button className="mic" onClick={onAttach} title="Zdjęcie / aparat" disabled={busy}>
           📷
         </button>
+        {councilAvailable && (
+          <button
+            className={`mic ${council ? "on" : ""}`}
+            onClick={() => setCouncil((v) => !v)}
+            title={council ? "Konsylium WŁĄCZONE — to pytanie pójdzie do kilku modeli" : "Konsylium: zapytaj kilka modeli o to pytanie"}
+            disabled={busy}
+          >
+            ⚖
+          </button>
+        )}
         <textarea
           ref={taRef}
           rows={1}

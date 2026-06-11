@@ -58,8 +58,10 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
         messages,
       }),
     });
-    const data = (await res.json()) as Resp;
-    if (!res.ok) throw new Error(data?.error?.message || `Błąd API (${res.status}).`);
+    // Brama/proxy potrafi zwrócić HTML zamiast JSON — nie wywalaj się na parsowaniu,
+    // a kod statusu dołącz do treści, by logika awaryjna rozpoznała 401/403/429/5xx.
+    const data = (await res.json().catch(() => null)) as Resp | null;
+    if (!res.ok || !data) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
 
     messages.push({ role: "assistant", content: data.content });
     for (const b of data.content) {

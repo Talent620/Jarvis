@@ -62,8 +62,10 @@ export function makeOpenAICompatible(
           max_tokens: 2048,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error?.message || `Błąd API (${res.status}).`);
+      // Brama/proxy może oddać HTML zamiast JSON — parsuj bezpiecznie i dołącz
+      // kod statusu, by rotacja klucza / fallback dostawcy rozpoznały błąd.
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
 
       const msg: OAIMessage | undefined = data.choices?.[0]?.message;
       if (!msg) throw new Error("Pusta odpowiedź modelu.");

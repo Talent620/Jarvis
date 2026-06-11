@@ -218,7 +218,7 @@ export default function App() {
   }, [messages, activeId]);
 
   // --- Wysłanie polecenia do JARVIS-a (agentowa pętla) ---
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, opts?: { council?: boolean }) => {
     setInterim("");
     stopSpeaking();
     buzz(14); // subtelna haptyka przy wysłaniu
@@ -277,10 +277,11 @@ export default function App() {
         .slice(-20)
         .map((m) => ({ role: m.role, content: m.text, image: m.image }));
 
-      // Tryb Konsylium: złożone pytania tekstowe konsultuje kilka modeli naraz.
-      // Obrazy i proste polecenia (zwykle wymagające narzędzi) idą normalną ścieżką.
-      const useCouncil =
-        store.settings.councilMode && !image && isComplex(text) && councilMembers(3).length >= 2;
+      // Tryb Konsylium: na żądanie (przycisk ⚖) albo automatycznie przy złożonych
+      // pytaniach, gdy włączony w ustawieniach. Obrazy i proste polecenia (zwykle
+      // wymagające narzędzi) idą normalną ścieżką.
+      const wantCouncil = opts?.council || (store.settings.councilMode && isComplex(text));
+      const useCouncil = !!wantCouncil && !image && councilMembers(3).length >= 2;
       const reply = useCouncil ? await askCouncil(history) : await askJarvis(history);
       const aiMsg: ChatMessage = {
         id: uid(),
@@ -628,6 +629,7 @@ export default function App() {
         micOn={micOn}
         busy={busy}
         micSupported={micSupported}
+        councilAvailable={councilMembers(3).length >= 2}
       />
 
       {showVoice && <VoiceMode onClose={() => setShowVoice(false)} />}
