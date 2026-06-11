@@ -2,8 +2,11 @@ import { useMemo, useState } from "react";
 import { useStore } from "../hooks/useStore";
 import { generateContentPack, generateProductIdeas } from "../lib/content";
 import { runProspecting } from "../lib/prospect";
+import { copyWithToast } from "../lib/toast";
+import { useEscape } from "../hooks/useEscape";
 
 export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => void; onSales: () => void; onWeb: () => void }) {
+  useEscape(onClose);
   const { data } = useStore();
   const leads = data.leads || [];
   const [niche, setNiche] = useState("");
@@ -46,7 +49,7 @@ export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => v
     setBusy("");
   };
 
-  const copy = () => navigator.clipboard?.writeText(out).catch(() => {});
+  const copy = () => copyWithToast(out);
 
   return (
     <div className="sheet" onClick={onClose}>

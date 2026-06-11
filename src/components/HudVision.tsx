@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { askJarvis } from "../lib/brain";
 import { speak, stopSpeaking } from "../lib/voice";
 import { store } from "../lib/store";
+import { useEscape } from "../hooks/useEscape";
 
 const PROMPT =
   "Jesteś wizją JARVIS-a (interfejs HUD). Zwięźle, w 1–2 zdaniach po polsku opisz co widać na obrazie, zidentyfikuj kluczowe obiekty i odczytaj widoczny tekst, jeśli jest. Bez wstępów.";
 
 export default function HudVision({ onClose }: { onClose: () => void }) {
+  useEscape(onClose);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [caption, setCaption] = useState("Inicjalizacja sensorów…");
@@ -44,7 +46,9 @@ export default function HudVision({ onClose }: { onClose: () => void }) {
     const scale = Math.min(1, 1024 / v.videoWidth);
     canvas.width = v.videoWidth * scale;
     canvas.height = v.videoHeight * scale;
-    canvas.getContext("2d")!.drawImage(v, 0, 0, canvas.width, canvas.height);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
     const url = canvas.toDataURL("image/jpeg", 0.7);
     return { data: url.slice(url.indexOf(",") + 1), mediaType: "image/jpeg" };
   };

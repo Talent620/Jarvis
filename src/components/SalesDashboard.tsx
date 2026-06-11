@@ -3,7 +3,9 @@ import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
 import { runProspecting } from "../lib/prospect";
+import { copyWithToast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
+import { useEscape } from "../hooks/useEscape";
 
 const STATUS: { id: LeadStatus; label: string; color: string }[] = [
   { id: "new", label: "Nowy", color: "var(--cyan)" },
@@ -14,6 +16,7 @@ const STATUS: { id: LeadStatus; label: string; color: string }[] = [
 ];
 
 export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: () => void; onWeb?: () => void; onMoney?: () => void }) {
+  useEscape(onClose);
   const { data } = useStore();
   const leads = data.leads || [];
   const [filter, setFilter] = useState<LeadStatus | "all">("all");
@@ -68,7 +71,10 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
       const l = d.leads.find((x) => x.id === id);
       if (l) Object.assign(l, patch, { updatedAt: Date.now() });
     });
-  const del = (id: string) => store.setData((d) => { d.leads = d.leads.filter((x) => x.id !== id); });
+  const del = (id: string) => {
+    if (!window.confirm("Usun\u0105\u0107 ten lead (razem z ofert\u0105)?")) return;
+    store.setData((d) => { d.leads = d.leads.filter((x) => x.id !== id); });
+  };
 
   const add = () => {
     const c = form.company.trim();
@@ -91,7 +97,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   }, [leads]);
 
   const shown = filter === "all" ? leads : leads.filter((l) => l.status === filter);
-  const copy = (t?: string) => t && navigator.clipboard?.writeText(t).catch(() => {});
+  const copy = (t?: string) => t && copyWithToast(t);
 
   return (
     <div className="sheet" onClick={onClose}>

@@ -357,6 +357,9 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
 
   // Router dobiera dostawcę+model do zadania (prostota/złożoność/obraz) + fallback.
   const order = routeOrder(trimmed);
+  if (!order.length) {
+    throw new Error("Żaden dostawca AI nie ma wpisanego klucza. Wejdź w ⚙ → AI i wklej dowolny klucz (Szybki start).");
+  }
 
   resetCitations();
   let lastErr: unknown;

@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { generateImage } from "../lib/images";
 import { capturePhoto } from "../lib/camera";
+import { useEscape } from "../hooks/useEscape";
 
 type Img = { data: string; mediaType: string };
 
 export default function Studio({ onClose }: { onClose: () => void }) {
+  useEscape(onClose);
   const [prompt, setPrompt] = useState("");
   const [inputs, setInputs] = useState<Img[]>([]);
   const [result, setResult] = useState<Img | null>(null);

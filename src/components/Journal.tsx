@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import type { JournalEntry } from "../types";
+import { useEscape } from "../hooks/useEscape";
 
 // Osobisty dziennik — przejrzysta baza przemyśleń. Oddzielne wpisy (nie jeden ciąg),
 // z tytułem, tagami i wyszukiwaniem. Można wyeksportować do pliku (np. pod książkę).
@@ -48,6 +49,7 @@ function exportMarkdown(entries: JournalEntry[]) {
 }
 
 export default function Journal({ onClose }: { onClose: () => void }) {
+  useEscape(onClose);
   const { data } = useStore();
   const entries = data.journal || [];
   const [query, setQuery] = useState("");
@@ -118,10 +120,12 @@ export default function Journal({ onClose }: { onClose: () => void }) {
     setEditing(null);
   };
 
-  const delEntry = (id: string) =>
+  const delEntry = (id: string) => {
+    if (!window.confirm("Usun\u0105\u0107 ten wpis z dziennika? Tego nie da si\u0119 cofn\u0105\u0107.")) return;
     store.setData((d) => {
       d.journal = d.journal.filter((x) => x.id !== id);
     });
+  };
 
   const allTags = useMemo(() => {
     const set = new Set<string>();

@@ -47,10 +47,10 @@ export async function runProspecting(): Promise<{ added: number; error?: string 
     const res = await fetch("https://api.tavily.com/search", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ api_key: s.tavilyApiKey, query, max_results: 10, search_depth: "advanced" }),
+      body: JSON.stringify({ api_key: s.tavilyApiKey.trim(), query, max_results: 10, search_depth: "advanced" }),
     });
-    const d = await res.json();
-    if (!res.ok) return { added: 0, error: d?.error || `Błąd ${res.status}.` };
+    const d = await res.json().catch(() => null);
+    if (!res.ok || !d) return { added: 0, error: d?.error || `Błąd ${res.status}.` };
 
     const cands = leadsFromResults(d.results || []);
     const fresh: Lead[] = [];

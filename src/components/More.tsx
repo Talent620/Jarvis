@@ -1,3 +1,4 @@
+import { useEscape } from "../hooks/useEscape";
 export default function More({
   onProjects,
   onJournal,
@@ -27,6 +28,7 @@ export default function More({
   onHelp: () => void;
   onClose: () => void;
 }) {
+  useEscape(onClose);
   const items = [
     { icon: "💰", label: "Zarabianie — autopilot dochodu", fn: onMoney },
     { icon: "📔", label: "Mój dziennik (przemyślenia)", fn: onJournal },

@@ -1,4 +1,6 @@
+import { useEscape } from "../hooks/useEscape";
 export default function Help({ onClose }: { onClose: () => void }) {
+  useEscape(onClose);
   return (
     <div className="sheet" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>

@@ -15,6 +15,7 @@ import { enablePrivateMode } from "../lib/privateMode";
 import { runProspecting } from "../lib/prospect";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
+import { useEscape } from "../hooks/useEscape";
 
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return <div className={`switch ${on ? "on" : ""}`} onClick={onClick} />;
@@ -30,6 +31,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
+  useEscape(onClose);
   const [s, setS] = useState<Settings>(() => ({ ...store.settings, keys: { ...store.settings.keys } }));
   const [tab, setTab] = useState<Tab>("ai");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);

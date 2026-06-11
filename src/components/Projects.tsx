@@ -2,8 +2,10 @@ import { useState } from "react";
 import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { importDocument } from "../lib/documents";
+import { useEscape } from "../hooks/useEscape";
 
 export default function Projects({ onClose }: { onClose: () => void }) {
+  useEscape(onClose);
   const { data, settings } = useStore();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -26,6 +28,7 @@ export default function Projects({ onClose }: { onClose: () => void }) {
   const select = (id: string) => store.setSettings({ activeProjectId: id });
 
   const del = (id: string) => {
+    if (!window.confirm("Usun\u0105\u0107 projekt razem z jego dokumentami?")) return;
     store.setData((d) => {
       d.projects = d.projects.filter((p) => p.id !== id);
       d.projectFiles = d.projectFiles.filter((f) => f.projectId !== id);

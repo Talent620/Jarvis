@@ -8,6 +8,7 @@ import {
   vaultExists, vaultUnlocked, unlockVault, lockVault, listCreds, saveCred, removeCred, genPassword, type Cred,
 } from "../lib/vault";
 import { isDesktop, typeText } from "../lib/desktop";
+import { useEscape } from "../hooks/useEscape";
 
 type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "nfc" | "pass" | "dice" | "qr" | "cipher" | "pulse" | "vault";
 
@@ -306,7 +307,8 @@ function QrTool() {
       v.srcObject = stream;
       await v.play();
       const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d")!;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas 2D niedostępny w tym środowisku.");
       const loop = () => {
         if (v.videoWidth) {
           canvas.width = v.videoWidth;
@@ -756,7 +758,13 @@ function HeartRate() {
       const canvas = document.createElement("canvas");
       canvas.width = 64;
       canvas.height = 64;
-      const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) {
+        stream.getTracks().forEach((t) => t.stop());
+        setStatus("Pomiar niedostępny w tym środowisku.");
+        setMeasuring(false);
+        return;
+      }
       const t0 = Date.now();
       const loop = () => {
         const v = videoRef.current;
@@ -958,6 +966,7 @@ function Vault() {
 }
 
 export default function Gadgets({ onClose }: { onClose: () => void }) {
+  useEscape(onClose);
   const [tab, setTab] = useState<Tab>("torch");
   return (
     <div className="sheet" onClick={onClose}>

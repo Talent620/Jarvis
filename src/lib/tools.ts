@@ -505,7 +505,7 @@ const tools: Tool[] = [
       input_schema: obj({ query: str("Zapytanie do wyszukania") }, ["query"]),
     },
     run: async ({ query }) => {
-      const key = store.settings.tavilyApiKey;
+      const key = store.settings.tavilyApiKey?.trim();
       if (!key) {
         return "Brak klucza Tavily — dodaj go w ⚙ Ustawienia (sekcja Research) albo użyj modelu Claude (ma wbudowane wyszukiwanie).";
       }
@@ -514,8 +514,9 @@ const tools: Tool[] = [
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ api_key: key, query, max_results: 5, include_answer: true, search_depth: "advanced" }),
       });
-      const data = await res.json();
-      if (!res.ok) return `Błąd wyszukiwania: ${data?.error || res.status}.`;
+      // Przy awarii Tavily potrafi zwrócić HTML — nie wywalaj się na parsowaniu.
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) return `Błąd wyszukiwania (${data?.error || res.status}). Spróbuj ponownie za chwilę.`;
       const results: any[] = data.results || [];
       results.forEach((r) => citationBuffer.push({ title: r.title || r.url, url: r.url }));
       const answer = data.answer ? `Skrót: ${data.answer}\n\n` : "";
@@ -590,7 +591,7 @@ const tools: Tool[] = [
       ),
     },
     run: async ({ niche, location, count }) => {
-      const key = store.settings.tavilyApiKey;
+      const key = store.settings.tavilyApiKey?.trim();
       if (!key) return "Brak klucza Tavily — dodaj go w ⚙ → AI (sekcja Research), aby szukać leadów z publicznych źródeł.";
       const n = Math.min(15, Math.max(3, Number(count) || 8));
       const query = `${niche} ${location} firma oferta kontakt strona`;
@@ -599,8 +600,8 @@ const tools: Tool[] = [
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ api_key: key, query, max_results: n, include_answer: true, search_depth: "advanced" }),
       });
-      const data = await res.json();
-      if (!res.ok) return `Błąd wyszukiwania leadów: ${data?.error || res.status}.`;
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) return `Błąd wyszukiwania leadów (${data?.error || res.status}). Spróbuj ponownie za chwilę.`;
       const results: any[] = data.results || [];
       if (!results.length) return `Nie znalazłem firm dla „${niche}" w „${location}". Spróbuj inną niszę/lokalizację.`;
       results.forEach((r) => citationBuffer.push({ title: r.title || r.url, url: r.url }));

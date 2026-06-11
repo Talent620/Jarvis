@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { generateSite } from "../lib/webgen";
+import { useEscape } from "../hooks/useEscape";
 
 const IDEAS = [
   "Strona kawiarni Aroma — menu, galeria, godziny, mapa kontaktu, ciepłe kolory",
@@ -9,6 +10,7 @@ const IDEAS = [
 ];
 
 export default function WebStudio({ onClose }: { onClose: () => void }) {
+  useEscape(onClose);
   const [prompt, setPrompt] = useState("");
   const [html, setHtml] = useState("");
   const [busy, setBusy] = useState(false);

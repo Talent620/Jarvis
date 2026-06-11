@@ -40,8 +40,11 @@ export async function notify(title: string, body: string): Promise<void> {
 
 // Minutnik — powiadomienie za N minut.
 export async function scheduleTimer(minutes: number, label?: string): Promise<void> {
-  const at = new Date(Date.now() + Math.max(0.1, minutes) * 60_000);
-  const body = label ? `Minutnik: ${label}` : "Minęło " + minutes + " min.";
+  // Model może podać śmieci (NaN/ujemne) — wymuś sensowny zakres, inaczej
+  // new Date(NaN) dałby nieważny termin i powiadomienie nigdy nie przyjdzie.
+  const mins = Math.max(0.1, Number(minutes) || 1);
+  const at = new Date(Date.now() + mins * 60_000);
+  const body = label ? `Minutnik: ${label}` : `Minęło ${mins} min.`;
   if (Capacitor.isNativePlatform()) {
     try {
       await LocalNotifications.schedule({
@@ -59,7 +62,7 @@ export async function scheduleTimer(minutes: number, label?: string): Promise<vo
     } catch {
       /* ignore */
     }
-  }, Math.max(100, minutes * 60_000));
+  }, mins * 60_000);
 }
 
 // Zaplanuj natywne powiadomienie dla przypomnienia (na urządzeniu).

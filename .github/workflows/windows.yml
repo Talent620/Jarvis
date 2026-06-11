@@ -44,6 +44,7 @@ jobs:
           JARVIS_OPENROUTER_KEY: ${{ secrets.JARVIS_OPENROUTER_KEY }}
           JARVIS_NVIDIA_KEY: ${{ secrets.JARVIS_NVIDIA_KEY }}
           JARVIS_GITHUB_KEY: ${{ secrets.JARVIS_GITHUB_KEY }}
+          JARVIS_TAVILY_KEY: ${{ secrets.JARVIS_TAVILY_KEY }}
         run: npm run build
 
       - name: Package portable EXE

@@ -106,6 +106,10 @@ function normalizeSettings(s: Settings & { anthropicApiKey?: string }): Settings
   for (const k of Object.keys(s.keys)) {
     if (!s.keys[k] && injected[k]) s.keys[k] = injected[k];
   }
+  // Tavily (research) nie jest dostawcą AI — ma własne pole w ustawieniach.
+  if (!s.tavilyApiKey && (injected as Record<string, string>).tavily) {
+    s.tavilyApiKey = (injected as Record<string, string>).tavily;
+  }
   return s;
 }
 

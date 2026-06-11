@@ -14,6 +14,8 @@ const DEFAULT_KEYS = {
   openrouter: env.JARVIS_OPENROUTER_KEY || "",
   nvidia: env.JARVIS_NVIDIA_KEY || "",
   github: env.JARVIS_GITHUB_KEY || "",
+  // Nie-AI: klucz researchu (Tavily) — wstrzykiwany tak samo, mapowany w store.
+  tavily: env.JARVIS_TAVILY_KEY || "",
 };
 
 export default defineConfig({

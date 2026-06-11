@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEscape } from "../hooks/useEscape";
 import { loadChats, saveChats, type ChatSession } from "../lib/chats";
 
 export default function ChatHistory({
@@ -10,6 +11,7 @@ export default function ChatHistory({
   onOpen: (s: ChatSession) => void;
   onClose: () => void;
 }) {
+  useEscape(onClose);
   const [chats, setChats] = useState<ChatSession[]>(() => loadChats());
 
   const remove = (id: string) => {

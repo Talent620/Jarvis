@@ -47,7 +47,7 @@ export async function systemCheck(onStep?: (lines: string[]) => void): Promise<s
       const res = await fetch("https://api.tavily.com/search", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ api_key: s.tavilyApiKey, query: "ping", max_results: 1 }),
+        body: JSON.stringify({ api_key: s.tavilyApiKey.trim(), query: "ping", max_results: 1 }),
       });
       lines[lines.length - 1] = res.ok
         ? "✅ Research (Tavily) — działa, odpowiedzi będą miały źródła [1][2]."

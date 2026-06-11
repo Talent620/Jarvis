@@ -120,7 +120,7 @@ function ensureKeyScript() {
     "param([int]$Vk)\n" +
     "Add-Type -Name JK -Namespace W -MemberDefinition '[DllImport(\"user32.dll\")]public static extern void keybd_event(byte b,byte s,uint f,System.UIntPtr e);'\n" +
     "[W.JK]::keybd_event($Vk,0,0,[System.UIntPtr]::Zero)\n";
-  fs.writeFileSync(p, ps);
+  fs.writeFileSync(p, ps, { mode: 0o600 });
   keyScriptPath = p;
   return p;
 }
@@ -141,7 +141,7 @@ function ensureSendScript() {
     "Add-Type -AssemblyName System.Windows.Forms\n" +
     "if($Win){ try { (New-Object -ComObject WScript.Shell).AppActivate($Win) | Out-Null; Start-Sleep -Milliseconds 350 } catch {} }\n" +
     "[System.Windows.Forms.SendKeys]::SendWait($t)\n";
-  fs.writeFileSync(p, ps);
+  fs.writeFileSync(p, ps, { mode: 0o600 });
   sendScriptPath = p;
   return p;
 }
@@ -303,8 +303,9 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
-    // Mikrofon (rozmowa na żywo / głos).
-    session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(true));
+    // Mikrofon/kamera (rozmowa na żywo, HUD) — tylko media; inne prośby odrzucamy.
+    const ALLOWED_PERMISSIONS = new Set(["media", "audioCapture", "videoCapture", "mediaKeySystem", "speaker-selection"]);
+    session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(ALLOWED_PERMISSIONS.has(perm)));
 
     // Naprawa CORS — wstrzykuj nagłówki, by zapytania do API działały jak w aplikacji
     // mobilnej (Gemini, Claude, Groq, OpenRouter, NVIDIA, GitHub, Tavily, Home Assistant).

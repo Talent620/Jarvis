@@ -35,7 +35,8 @@ async function geocode(city: string): Promise<Geo | null> {
     city,
   )}&count=1&language=pl&format=json`;
   const res = await fetch(url);
-  const data = await res.json();
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => null);
   const r = data?.results?.[0];
   return r ? { lat: r.latitude, lon: r.longitude, name: `${r.name}${r.country ? `, ${r.country}` : ""}` } : null;
 }
@@ -63,7 +64,8 @@ export async function getWeather(location?: string): Promise<string> {
     `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=1`;
   const res = await fetch(url);
   if (!res.ok) return "Serwis pogodowy jest chwilowo niedostępny.";
-  const d = await res.json();
+  const d = await res.json().catch(() => null);
+  if (!d?.current || !d?.daily) return "Serwis pogodowy zwrócił niepełne dane — spróbuj za chwilę.";
   const c = d.current;
   const day = d.daily;
   const desc = CODES[c.weather_code] ?? "zmiennie";

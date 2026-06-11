@@ -2,7 +2,9 @@ import { useState } from "react";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { smartHome } from "../lib/deviceControl";
+import { toast } from "../lib/toast";
 import { undoAction } from "../lib/permissions";
+import { useEscape } from "../hooks/useEscape";
 
 type Tab = "tasks" | "notes" | "reminders" | "shopping" | "tally" | "calendar" | "scenes" | "memory" | "audit";
 
@@ -19,6 +21,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function Panels({ onClose }: { onClose: () => void }) {
+  useEscape(onClose);
   const { data } = useStore();
   const [tab, setTab] = useState<Tab>("tasks");
 
@@ -191,7 +194,12 @@ export default function Panels({ onClose }: { onClose: () => void }) {
                 <span
                   style={{ cursor: "pointer", color: "var(--gold)" }}
                   title="Uruchom scenę"
-                  onClick={() => s.actions.forEach((a) => void smartHome(a.entityId, a.action))}
+                  onClick={async () => {
+                    toast(`Uruchamiam scen\u0119 \u201e${s.name}\u201d\u2026`);
+                    const results = await Promise.all(s.actions.map((a) => smartHome(a.entityId, a.action).catch((e) => String(e))));
+                    const fail = results.find((r) => /b\u0142\u0105d|error|nie jest skonfigurowany/i.test(String(r)));
+                    toast(fail ? String(fail).slice(0, 80) : "Scena wykonana \u2713");
+                  }}
                 >
                   ▶
                 </span>
