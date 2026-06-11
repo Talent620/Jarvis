@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
+import { runProspecting } from "../lib/prospect";
 import type { Lead, LeadStatus } from "../types";
 
 const STATUS: { id: LeadStatus; label: string; color: string }[] = [
@@ -12,12 +13,30 @@ const STATUS: { id: LeadStatus; label: string; color: string }[] = [
   { id: "lost", label: "Odrzucony", color: "var(--text-dim)" },
 ];
 
-export default function SalesDashboard({ onClose }: { onClose: () => void }) {
+export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: () => void; onWeb?: () => void; onMoney?: () => void }) {
   const { data } = useStore();
   const leads = data.leads || [];
   const [filter, setFilter] = useState<LeadStatus | "all">("all");
   const [form, setForm] = useState({ company: "", contact: "", value: "" });
   const [drafting, setDrafting] = useState<string>("");
+  const [hunting, setHunting] = useState(false);
+  const [huntMsg, setHuntMsg] = useState("");
+
+  // „Znajdź leady" — uruchamia auto-prospekting od ręki (ten sam silnik, co automat).
+  const hunt = async () => {
+    setHunting(true);
+    setHuntMsg("🔎 Szukam firm w Twojej niszy…");
+    const r = await runProspecting();
+    setHunting(false);
+    if (r.error) {
+      setHuntMsg(`⚙ ${r.error} Ustaw niszę, lokalizację (⚙ → Zachowanie) i klucz Tavily (⚙ → AI).`);
+    } else if (r.added > 0) {
+      setHuntMsg(`✅ Dodałem ${r.added} nowych leadów. Są na liście poniżej.`);
+      setFilter("all");
+    } else {
+      setHuntMsg("Brak nowych firm tym razem — spróbuj zmienić niszę/lokalizację w ⚙ → Zachowanie.");
+    }
+  };
 
   const writeOffer = async (l: Lead) => {
     setDrafting(l.id);
@@ -93,9 +112,23 @@ export default function SalesDashboard({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          <p className="muted" style={{ fontSize: 13 }}>
-            Powiedz JARVIS-owi: <b>„znajdź leady: [nisza] w [miasto] i zapisz je"</b> — sam wypełni ten pulpit.
-            Dla wybranej firmy: <b>⋯ → 🌐 Kreator stron</b> zbuduje demo, a JARVIS napisze ofertę.
+          {/* Skróty: dwa główne przyciski akcji */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn primary" style={{ flex: 1 }} onClick={hunt} disabled={hunting}>
+              {hunting ? "🔎 Szukam…" : "🔎 Znajdź leady"}
+            </button>
+            {onWeb && (
+              <button className="btn" style={{ flex: 1 }} onClick={onWeb}>🌐 Zbuduj demo</button>
+            )}
+          </div>
+          {onMoney && (
+            <button className="btn" style={{ marginTop: 8 }} onClick={onMoney}>💰 Centrum Zarabiania</button>
+          )}
+          {huntMsg && <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>{huntMsg}</p>}
+
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            Możesz też powiedzieć JARVIS-owi: <b>„znajdź leady: [nisza] w [miasto] i zapisz je"</b>.
+            Dla wybranej firmy <b>🌐 Zbuduj demo</b> postawi stronę, a <b>✍ Szkic oferty</b> napisze e-mail.
           </p>
 
           <div className="chips" style={{ flexWrap: "wrap", margin: "4px 0 8px" }}>

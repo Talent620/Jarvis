@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useStore } from "../hooks/useStore";
 import { generateContentPack, generateProductIdeas } from "../lib/content";
+import { runProspecting } from "../lib/prospect";
 
 export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => void; onSales: () => void; onWeb: () => void }) {
   const { data } = useStore();
@@ -9,6 +10,18 @@ export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => v
   const [platform, setPlatform] = useState("Instagram");
   const [out, setOut] = useState("");
   const [busy, setBusy] = useState("");
+  const [hunting, setHunting] = useState(false);
+  const [huntMsg, setHuntMsg] = useState("");
+
+  const hunt = async () => {
+    setHunting(true);
+    setHuntMsg("🔎 Szukam firm w Twojej niszy…");
+    const r = await runProspecting();
+    setHunting(false);
+    if (r.error) setHuntMsg(`⚙ ${r.error} Ustaw niszę i lokalizację w ⚙ → Zachowanie oraz klucz Tavily w ⚙ → AI.`);
+    else if (r.added > 0) setHuntMsg(`✅ Dodałem ${r.added} nowych leadów do Pulpitu Sprzedaży.`);
+    else setHuntMsg("Brak nowych firm tym razem — zmień niszę/lokalizację w ⚙ → Zachowanie.");
+  };
 
   const stats = useMemo(() => {
     const won = leads.filter((l) => l.status === "won");
@@ -59,15 +72,19 @@ export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => v
             </div>
           </div>
 
-          {/* Maszyna sprzedaży (agencja stron) */}
+          {/* Skróty — szybkie wejścia do narzędzi zarabiania */}
           <h3>🏢 Agencja stron na autopilocie</h3>
-          <p className="muted" style={{ fontSize: 13 }}>
+          <p className="muted" style={{ fontSize: 13, marginTop: -2 }}>
             JARVIS znajduje firmy, pisze oferty i buduje demo. Ty wysyłasz i rozmawiasz.
           </p>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn primary" style={{ flex: 1 }} onClick={onSales}>📈 Pulpit Sprzedaży</button>
-            <button className="btn" style={{ flex: 1 }} onClick={onWeb}>🌐 Kreator stron</button>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <button className="btn primary" onClick={hunt} disabled={hunting}>
+              {hunting ? "🔎 Szukam…" : "🔎 Znajdź leady"}
+            </button>
+            <button className="btn" onClick={onSales}>📈 Pulpit Sprzedaży</button>
+            <button className="btn" style={{ gridColumn: "1 / -1" }} onClick={onWeb}>🌐 Kreator stron — zbuduj demo</button>
           </div>
+          {huntMsg && <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>{huntMsg}</p>}
           <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
             Auto-prospekting i auto-oferty włączysz w ⚙ → Zachowanie. Powiedz też: „znajdź leady: [nisza] w [miasto] i zapisz je".
           </p>

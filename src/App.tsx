@@ -552,7 +552,13 @@ export default function App() {
       )}
       {showProjects && <Projects onClose={() => setShowProjects(false)} />}
       {showJournal && <Journal onClose={() => setShowJournal(false)} />}
-      {showSales && <SalesDashboard onClose={() => setShowSales(false)} />}
+      {showSales && (
+        <SalesDashboard
+          onClose={() => setShowSales(false)}
+          onWeb={() => { setShowSales(false); setShowWeb(true); }}
+          onMoney={() => { setShowSales(false); setShowMoney(true); }}
+        />
+      )}
       {showMoney && (
         <Suspense fallback={null}>
           <MoneyHub

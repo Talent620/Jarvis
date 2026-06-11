@@ -7,9 +7,14 @@ export interface GenImage {
 type Result = GenImage | { error: string };
 type Img = { data: string; mediaType: string };
 
-// Najpierw najlepszy darmowy edytor (Gemini 2.5 Flash Image „Nano Banana"),
-// z fallbackiem na starszy model, gdy nowy jest niedostępny dla danego klucza.
-const IMAGE_MODELS = ["gemini-2.5-flash-image-preview", "gemini-2.0-flash-preview-image-generation"];
+// Najpierw najlepszy darmowy edytor (Gemini 2.5 Flash Image „Nano Banana") w
+// wersji GA, potem preview, a na końcu starszy model — różne klucze mają dostęp
+// do różnych nazw, więc próbujemy po kolei, aż któryś zadziała.
+const IMAGE_MODELS = [
+  "gemini-2.5-flash-image",
+  "gemini-2.5-flash-image-preview",
+  "gemini-2.0-flash-preview-image-generation",
+];
 
 async function callImageModel(model: string, key: string, parts: any[]): Promise<Result> {
   const res = await fetch(
