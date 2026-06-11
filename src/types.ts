@@ -132,6 +132,24 @@ export interface AppData {
   projectFiles: ProjectFile[];
   tally: TallyItem[];
   journal: JournalEntry[];
+  leads: Lead[];
+}
+
+/** Lead sprzedażowy (mini-CRM / Pulpit Sprzedaży). */
+export type LeadStatus = "new" | "contacted" | "offer" | "won" | "lost";
+export interface Lead {
+  id: string;
+  company: string;
+  url?: string;
+  contact?: string; // e-mail / telefon
+  niche?: string;
+  location?: string;
+  note?: string;
+  /** Szacowana wartość zlecenia (PLN). */
+  value?: number;
+  status: LeadStatus;
+  createdAt: number;
+  updatedAt: number;
 }
 
 /** Osobisty dziennik — przemyślenia użytkownika, oddzielne wpisy z tagami. */

@@ -8,6 +8,7 @@ import LiveOverlay from "./components/LiveOverlay";
 import ChatHistory from "./components/ChatHistory";
 import Projects from "./components/Projects";
 import Journal from "./components/Journal";
+import SalesDashboard from "./components/SalesDashboard";
 import Help from "./components/Help";
 import More from "./components/More";
 import LockScreen from "./components/LockScreen";
@@ -102,6 +103,7 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
+  const [showSales, setShowSales] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [showGadgets, setShowGadgets] = useState(false);
@@ -526,11 +528,13 @@ export default function App() {
       )}
       {showProjects && <Projects onClose={() => setShowProjects(false)} />}
       {showJournal && <Journal onClose={() => setShowJournal(false)} />}
+      {showSales && <SalesDashboard onClose={() => setShowSales(false)} />}
       {showHelp && <Help onClose={() => setShowHelp(false)} />}
       {showMore && (
         <More
           onProjects={() => setShowProjects(true)}
           onJournal={() => setShowJournal(true)}
+          onSales={() => setShowSales(true)}
           onHistory={() => setShowHistory(true)}
           onData={() => setShowPanels(true)}
           onGadgets={() => setShowGadgets(true)}

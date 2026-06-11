@@ -4,7 +4,7 @@ import type { AppData } from "../types";
 // Kolekcje objęte synchronizacją (bez dziennika audytu — lokalny).
 const COLLECTIONS: (keyof AppData)[] = [
   "tasks", "notes", "reminders", "shopping", "calendar",
-  "memory", "scenes", "projects", "projectFiles", "tally", "journal",
+  "memory", "scenes", "projects", "projectFiles", "tally", "journal", "leads",
 ];
 
 function endpoint(): string | null {

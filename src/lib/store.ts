@@ -16,6 +16,7 @@ const emptyData: AppData = {
   projectFiles: [],
   tally: [],
   journal: [],
+  leads: [],
 };
 
 const defaultSettings: Settings = {

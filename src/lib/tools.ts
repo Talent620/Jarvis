@@ -529,6 +529,54 @@ const tools: Tool[] = [
   },
   {
     def: {
+      name: "save_lead",
+      description:
+        "Zapisz lead (potencjalnego klienta) do Pulpitu Sprzedaży. Używaj po find_leads, aby zachować obiecujące firmy. Podaj nazwę, a jeśli znasz — stronę, kontakt, niszę, lokalizację, szacowaną wartość zlecenia (PLN) i krótką notatkę (czego im brakuje / kąt sprzedażowy).",
+      input_schema: obj(
+        {
+          company: str("Nazwa firmy"),
+          url: str("Strona WWW (opcjonalnie)"),
+          contact: str("E-mail/telefon (opcjonalnie)"),
+          niche: str("Nisza/branża (opcjonalnie)"),
+          location: str("Miasto/region (opcjonalnie)"),
+          value: { type: "number", description: "Szacowana wartość zlecenia w PLN (opcjonalnie)" },
+          note: str("Notatka: czego im brakuje / kąt sprzedażowy (opcjonalnie)"),
+        },
+        ["company"],
+      ),
+    },
+    run: ({ company, url, contact, niche, location, value, note }) => {
+      const now = Date.now();
+      let added = false;
+      store.setData((d) => {
+        const exists = d.leads.find((l) => l.company.toLowerCase() === String(company).toLowerCase());
+        if (exists) {
+          Object.assign(exists, { url: url || exists.url, contact: contact || exists.contact, niche: niche || exists.niche, location: location || exists.location, value: value ?? exists.value, note: note || exists.note, updatedAt: now });
+        } else {
+          d.leads.unshift({ id: uid(), company, url, contact, niche, location, value: Number(value) || undefined, note, status: "new", createdAt: now, updatedAt: now });
+          added = true;
+        }
+      });
+      return added ? `Zapisałem lead: ${company}.` : `Zaktualizowałem lead: ${company}.`;
+    },
+  },
+  {
+    def: {
+      name: "list_leads",
+      description: "Wypisz zapisane leady z Pulpitu Sprzedaży (z ich statusem i wartością).",
+      input_schema: obj({}),
+    },
+    run: () => {
+      const { leads } = store.data;
+      if (!leads.length) return "Pulpit Sprzedaży jest pusty. Użyj find_leads, by znaleźć firmy.";
+      const PL: Record<string, string> = { new: "nowy", contacted: "kontakt", offer: "oferta", won: "KLIENT", lost: "odrzucony" };
+      return leads
+        .map((l) => `• ${l.company} [${PL[l.status] || l.status}]${l.value ? ` ~${l.value} zł` : ""}${l.url ? ` · ${l.url}` : ""}${l.contact ? ` · ${l.contact}` : ""}`)
+        .join("\n");
+    },
+  },
+  {
+    def: {
       name: "find_leads",
       description:
         "Znajdź potencjalnych klientów (leady) dla biznesu: lokalne firmy w danej niszy i lokalizacji, z publicznych źródeł (Tavily). Zwraca listę firm z linkami i opisem. PO UŻYCIU ułóż z tego czytelną TABELĘ leadów (firma, strona/kontakt, czego im brakuje, kąt sprzedażowy) i zaproponuj gotowy, krótki szkic oferty oraz następny krok.",

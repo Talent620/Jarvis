@@ -9,8 +9,9 @@ const RISK: Record<string, Risk> = {
   list_tasks: "read", list_notes: "read", list_shopping: "read", list_calendar: "read",
   list_scenes: "read", get_weather: "read", daily_briefing: "read", web_research: "read",
   gmail_search: "read", gcal_list: "read", tally_report: "read", calculate: "read", find_leads: "read",
+  list_leads: "read",
   // write
-  forget_fact: "write",
+  forget_fact: "write", save_lead: "write",
   // write — lokalny zapis (wymaga zgody, można zapamiętać)
   add_task: "write", complete_task: "write", add_note: "write", add_reminder: "write",
   add_shopping_item: "write", add_calendar_event: "write", remember_fact: "write",
@@ -35,8 +36,9 @@ const UNDO_COLLECTION: Record<string, keyof typeof emptyCollections> = {
   add_task: "tasks", add_note: "notes", add_reminder: "reminders",
   add_shopping_item: "shopping", add_calendar_event: "calendar",
   create_scene: "scenes", remember_fact: "memory", add_tally_item: "tally", add_journal_entry: "journal",
+  save_lead: "leads",
 };
-const emptyCollections = { tasks: 1, notes: 1, reminders: 1, shopping: 1, calendar: 1, scenes: 1, memory: 1, tally: 1, journal: 1 };
+const emptyCollections = { tasks: 1, notes: 1, reminders: 1, shopping: 1, calendar: 1, scenes: 1, memory: 1, tally: 1, journal: 1, leads: 1 };
 
 // --- Zgody (zapamiętane decyzje) ---
 const CONSENT_KEY = "jarvis.consents.v1";
