@@ -8,7 +8,7 @@ const RISK: Record<string, Risk> = {
   // read — wykonują się automatycznie
   list_tasks: "read", list_notes: "read", list_shopping: "read", list_calendar: "read",
   list_scenes: "read", get_weather: "read", daily_briefing: "read", web_research: "read",
-  gmail_search: "read", gcal_list: "read", tally_report: "read", calculate: "read",
+  gmail_search: "read", gcal_list: "read", tally_report: "read", calculate: "read", find_leads: "read",
   // write
   forget_fact: "write",
   // write — lokalny zapis (wymaga zgody, można zapamiętać)

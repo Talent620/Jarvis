@@ -529,6 +529,43 @@ const tools: Tool[] = [
   },
   {
     def: {
+      name: "find_leads",
+      description:
+        "Znajdź potencjalnych klientów (leady) dla biznesu: lokalne firmy w danej niszy i lokalizacji, z publicznych źródeł (Tavily). Zwraca listę firm z linkami i opisem. PO UŻYCIU ułóż z tego czytelną TABELĘ leadów (firma, strona/kontakt, czego im brakuje, kąt sprzedażowy) i zaproponuj gotowy, krótki szkic oferty oraz następny krok.",
+      input_schema: obj(
+        {
+          niche: str("Nisza/branża, np. 'gabinet stomatologiczny', 'fryzjer', 'kancelaria'"),
+          location: str("Miasto lub region, np. 'Kraków'"),
+          count: { type: "number", description: "Ile leadów (3–15, domyślnie 8)" },
+        },
+        ["niche", "location"],
+      ),
+    },
+    run: async ({ niche, location, count }) => {
+      const key = store.settings.tavilyApiKey;
+      if (!key) return "Brak klucza Tavily — dodaj go w ⚙ → AI (sekcja Research), aby szukać leadów z publicznych źródeł.";
+      const n = Math.min(15, Math.max(3, Number(count) || 8));
+      const query = `${niche} ${location} firma oferta kontakt strona`;
+      const res = await fetch("https://api.tavily.com/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ api_key: key, query, max_results: n, include_answer: true, search_depth: "advanced" }),
+      });
+      const data = await res.json();
+      if (!res.ok) return `Błąd wyszukiwania leadów: ${data?.error || res.status}.`;
+      const results: any[] = data.results || [];
+      if (!results.length) return `Nie znalazłem firm dla „${niche}" w „${location}". Spróbuj inną niszę/lokalizację.`;
+      results.forEach((r) => citationBuffer.push({ title: r.title || r.url, url: r.url }));
+      return (
+        `Znalezione firmy (${niche}, ${location}) — surowe wyniki do analizy:\n\n` +
+        results
+          .map((r, i) => `[${i + 1}] ${r.title}\nWWW: ${r.url}\n${(r.content || "").slice(0, 300)}`)
+          .join("\n\n")
+      );
+    },
+  },
+  {
+    def: {
       name: "add_tally_item",
       description:
         "Dopisz pozycję do bieżącego rachunku/targu z ceną (np. na giełdzie). Rozbij wypowiedź na nazwę, ilość i cenę jednostkową. Przykłady: „koszyk truskawek po 15” → name='koszyk truskawek', qty=1, unit_price=15; „dwa pęczki szparagów po 8” → name='pęczek szparagów', qty=2, unit_price=8. Po dodaniu podaj sumę.",
