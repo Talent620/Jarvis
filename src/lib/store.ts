@@ -57,6 +57,7 @@ const defaultSettings: Settings = {
   autoProspect: false,
   prospectNiche: "",
   prospectLocation: "",
+  autoDraftOffers: false,
   backgroundWake: false,
   elevenLabsApiKey: "",
   elevenLabsVoiceId: "",

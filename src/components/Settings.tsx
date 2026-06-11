@@ -663,6 +663,14 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <span>Włącz auto-prospekting (co ~4 h)</span>
                 <Toggle on={s.autoProspect} onClick={() => set({ autoProspect: !s.autoProspect })} />
               </div>
+              <div className="row">
+                <span>
+                  Auto-szkice ofert
+                  <br />
+                  <span className="muted">JARVIS sam pisze gotowe oferty dla nowych leadów — czekają w Pulpicie do wysłania</span>
+                </span>
+                <Toggle on={s.autoDraftOffers} onClick={() => set({ autoDraftOffers: !s.autoDraftOffers })} />
+              </div>
               <div className="field" style={{ display: "flex", gap: 8 }}>
                 <input value={s.prospectNiche} placeholder="Nisza (np. fryzjer)" onChange={(e) => set({ prospectNiche: e.target.value })} style={{ flex: 1 }} />
                 <input value={s.prospectLocation} placeholder="Miasto" onChange={(e) => set({ prospectLocation: e.target.value })} style={{ flex: 1 }} />

@@ -147,6 +147,8 @@ export interface Lead {
   note?: string;
   /** Szacowana wartość zlecenia (PLN). */
   value?: number;
+  /** Gotowy szkic oferty (cold mail) napisany przez JARVIS-a. */
+  offer?: string;
   status: LeadStatus;
   createdAt: number;
   updatedAt: number;
@@ -244,6 +246,8 @@ export interface Settings {
   prospectNiche: string;
   /** Lokalizacja do auto-prospektingu (np. „Kraków"). */
   prospectLocation: string;
+  /** Auto-pisanie szkiców ofert dla nowych leadów (czekają w Pulpicie). */
+  autoDraftOffers: boolean;
   /** Natywny nasłuch słowa "Jarvis" w tle (uruchamia apkę głosem). */
   backgroundWake: boolean;
   /** Opcjonalny klucz ElevenLabs dla premium głosu JARVIS. */

@@ -57,6 +57,7 @@ export default function Help({ onClose }: { onClose: () => void }) {
             <li>Powiedz: „<b>znajdź leady: [nisza] w [miasto] i zapisz je</b>" — JARVIS wyszuka firmy (wymaga klucza Tavily) i sam wypełni <b>⋯ → 📈 Pulpit Sprzedaży</b>.</li>
             <li>Dla wybranej firmy: <b>⋯ → 🌐 Kreator stron</b> zbuduje demo, a JARVIS napisze ofertę. Ty tylko wysyłasz i rozmawiasz.</li>
             <li>Pulpit śledzi statusy (nowy → kontakt → oferta → klient), wartość w toku i zarobione.</li>
+            <li><b>Automat:</b> ⚙ → Zachowanie → „Automat sprzedaży" — JARVIS sam kilka razy dziennie szuka leadów, a z „Auto-szkice ofert" pisze gotowe maile, które czekają w Pulpicie. Ty klikasz <b>📧 Wyślij</b>.</li>
           </ul>
 
           <h3>📁 Projekty / dokumenty</h3>

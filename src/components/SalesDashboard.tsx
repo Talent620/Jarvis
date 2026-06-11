@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
+import { draftOffer } from "../lib/offer";
 import type { Lead, LeadStatus } from "../types";
 
 const STATUS: { id: LeadStatus; label: string; color: string }[] = [
@@ -16,6 +17,24 @@ export default function SalesDashboard({ onClose }: { onClose: () => void }) {
   const leads = data.leads || [];
   const [filter, setFilter] = useState<LeadStatus | "all">("all");
   const [form, setForm] = useState({ company: "", contact: "", value: "" });
+  const [drafting, setDrafting] = useState<string>("");
+
+  const writeOffer = async (l: Lead) => {
+    setDrafting(l.id);
+    const offer = await draftOffer(l);
+    setDrafting("");
+    if (offer)
+      store.setData((d) => {
+        const x = d.leads.find((y) => y.id === l.id);
+        if (x) { x.offer = offer; if (x.status === "new") x.status = "offer"; x.updatedAt = Date.now(); }
+      });
+  };
+  const sendOffer = (l: Lead) => {
+    const subject = (l.offer || "").match(/Temat:\s*(.+)/i)?.[1]?.trim() || `Oferta dla ${l.company}`;
+    const body = (l.offer || "").replace(/Temat:\s*.+\n?/i, "").trim();
+    const to = l.contact && l.contact.includes("@") ? l.contact : "";
+    window.open(`mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
+  };
 
   const setStatus = (id: string, status: LeadStatus) =>
     store.setData((d) => {
@@ -116,7 +135,19 @@ export default function SalesDashboard({ onClose }: { onClose: () => void }) {
                   />
                   {l.url && <button className="chip" onClick={() => window.open(l.url, "_blank", "noopener")}>🌐 WWW</button>}
                   {l.contact && <button className="chip" onClick={() => copy(l.contact)}>📋 Kontakt</button>}
+                  <button className="chip" onClick={() => writeOffer(l)} disabled={drafting === l.id}>
+                    {drafting === l.id ? "✍ Piszę…" : l.offer ? "✍ Napisz ponownie" : "✍ Szkic oferty"}
+                  </button>
                 </div>
+                {l.offer && (
+                  <div style={{ marginTop: 8, background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 10, padding: 10 }}>
+                    <p className="muted" style={{ whiteSpace: "pre-wrap", margin: 0, fontSize: 13 }}>{l.offer}</p>
+                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                      <button className="chip" onClick={() => copy(l.offer)}>📋 Kopiuj ofertę</button>
+                      <button className="chip" onClick={() => sendOffer(l)}>📧 Wyślij</button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}

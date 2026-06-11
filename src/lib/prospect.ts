@@ -1,5 +1,7 @@
 import { store, uid } from "./store";
 import { notify } from "./notifications";
+import { draftOffer } from "./offer";
+import type { Lead } from "../types";
 
 // Auto-prospekting: kilka razy dziennie JARVIS sam wyszukuje nowe firmy (leady)
 // w Twojej niszy i zapisuje je do Pulpitu Sprzedaży. Działa, gdy aplikacja jest
@@ -51,24 +53,35 @@ export async function runProspecting(): Promise<{ added: number; error?: string 
     if (!res.ok) return { added: 0, error: d?.error || `Błąd ${res.status}.` };
 
     const cands = leadsFromResults(d.results || []);
-    let added = 0;
+    const fresh: Lead[] = [];
     const now = Date.now();
     store.setData((data) => {
       for (const c of cands) {
         if (data.leads.some((l) => l.company.toLowerCase() === c.company.toLowerCase())) continue;
-        data.leads.unshift({
-          id: uid(),
-          company: c.company,
-          url: c.url,
-          niche: s.prospectNiche,
-          location: s.prospectLocation,
-          status: "new",
-          createdAt: now,
-          updatedAt: now,
-        });
-        added++;
+        const lead: Lead = { id: uid(), company: c.company, url: c.url, niche: s.prospectNiche, location: s.prospectLocation, status: "new", createdAt: now, updatedAt: now };
+        data.leads.unshift(lead);
+        fresh.push(lead);
       }
     });
+    const added = fresh.length;
+
+    // Auto-szkice ofert: dla pierwszych kilku nowych leadów (limit kosztów).
+    if (added && s.autoDraftOffers) {
+      for (const lead of fresh.slice(0, 3)) {
+        const offer = await draftOffer(lead);
+        if (offer) {
+          store.setData((data) => {
+            const l = data.leads.find((x) => x.id === lead.id);
+            if (l) {
+              l.offer = offer;
+              l.status = "offer";
+              l.updatedAt = Date.now();
+            }
+          });
+        }
+      }
+    }
+
     if (added) notify("JARVIS — nowe leady", `Znalazłem ${added} nowych firm (${s.prospectNiche}, ${s.prospectLocation}).`);
     return { added };
   } catch (e) {
