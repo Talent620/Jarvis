@@ -24,20 +24,28 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const [drafting, setDrafting] = useState<string>("");
   const [hunting, setHunting] = useState(false);
   const [huntMsg, setHuntMsg] = useState("");
+  const [niche, setNiche] = useState(store.settings.prospectNiche || "");
+  const [city, setCity] = useState(store.settings.prospectLocation || "");
 
-  // „Znajdź leady" — uruchamia auto-prospekting od ręki (ten sam silnik, co automat).
+  // „Znajdź leady" — od ręki, prosto z pulpitu. Nisza/miasto zapisują się do
+  // ustawień, więc automat (kilka razy dziennie) używa potem tych samych.
   const hunt = async () => {
+    if (!niche.trim() || !city.trim()) {
+      setHuntMsg("Podaj niszę i miasto powyżej — np. fryzjer oraz Kraków.");
+      return;
+    }
+    store.setSettings({ prospectNiche: niche.trim(), prospectLocation: city.trim() });
     setHunting(true);
     setHuntMsg("🔎 Szukam firm w Twojej niszy…");
     const r = await runProspecting();
     setHunting(false);
     if (r.error) {
-      setHuntMsg(`⚙ ${r.error} Ustaw niszę, lokalizację (⚙ → Zachowanie) i klucz Tavily (⚙ → AI).`);
+      setHuntMsg(/tavily/i.test(r.error) ? "⚙ Brak klucza Tavily — dodaj go w ⚙ → AI (sekcja Research, darmowy)." : `⚙ ${r.error}`);
     } else if (r.added > 0) {
       setHuntMsg(`✅ Dodałem ${r.added} nowych leadów. Są na liście poniżej.`);
       setFilter("all");
     } else {
-      setHuntMsg("Brak nowych firm tym razem — spróbuj zmienić niszę/lokalizację w ⚙ → Zachowanie.");
+      setHuntMsg("Brak nowych firm tym razem — spróbuj zmienić niszę lub miasto.");
     }
   };
 
@@ -118,7 +126,11 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
             </div>
           </div>
 
-          {/* Skróty: dwa główne przyciski akcji */}
+          {/* Szukanie leadów — wszystko z pulpitu, bez wchodzenia do ustawień */}
+          <div className="field" style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <input value={niche} placeholder="Nisza (np. fryzjer)" onChange={(e) => setNiche(e.target.value)} style={{ flex: 1 }} />
+            <input value={city} placeholder="Miasto (np. Kraków)" onChange={(e) => setCity(e.target.value)} style={{ flex: 1 }} />
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn primary" style={{ flex: 1 }} onClick={hunt} disabled={hunting}>
               {hunting ? "🔎 Szukam…" : "🔎 Znajdź leady"}

@@ -46,11 +46,12 @@ function UsageChart() {
   );
 }
 
-type Tab = "ai" | "voice" | "behavior" | "integrations" | "data";
+type Tab = "ai" | "voice" | "behavior" | "interface" | "integrations" | "data";
 const TABS: { id: Tab; label: string }[] = [
   { id: "ai", label: "🤖 AI" },
   { id: "voice", label: "🗣 Głos" },
   { id: "behavior", label: "✨ Zachowanie" },
+  { id: "interface", label: "🎨 Interfejs" },
   { id: "integrations", label: "🔗 Integracje" },
   { id: "data", label: "🗄 Dane" },
 ];
@@ -718,44 +719,6 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   <input type="time" value={s.briefingTime} onChange={(e) => set({ briefingTime: e.target.value })} />
                 </div>
               )}
-              {typeof window !== "undefined" && (window as any).jarvisDesktop && (
-                <div className="row">
-                  <span>
-                    📋 Proaktywny schowek (komputer)
-                    <br />
-                    <span className="muted">
-                      Skopiuj tekst/link w dowolnym programie — JARVIS dyskretnie zaproponuje analizę.
-                      Nic nie wysyła samo. Globalne skróty: Ctrl+Alt+J — przywołaj okno, Ctrl+Alt+V — tryb głosowy.
-                    </span>
-                  </span>
-                  <Toggle on={s.clipboardWatch} onClick={() => set({ clipboardWatch: !s.clipboardWatch })} />
-                </div>
-              )}
-
-              <h3>🧠 Adaptacyjny układ</h3>
-              <div className="row">
-                <span>
-                  Menu uczy się Twoich nawyków
-                  <br />
-                  <span className="muted">
-                    Po ~7 dniach sekcje, których używasz najczęściej o danej porze dnia, wskakują
-                    na górę. Dane tylko lokalnie (max 30 dni).
-                  </span>
-                </span>
-                <Toggle on={s.adaptiveUi !== false} onClick={() => set({ adaptiveUi: s.adaptiveUi === false })} />
-              </div>
-              <UsageChart />
-              <button
-                className="btn"
-                onClick={() => {
-                  resetAdaptive();
-                  setProspMsg("");
-                  store.setSettings(s);
-                }}
-              >
-                ↺ Resetuj układ do domyślnego
-              </button>
-
               <h3>💸 Automat sprzedaży (auto-prospekting)</h3>
               <p className="muted">
                 JARVIS sam, kilka razy dziennie (gdy apka otwarta), szuka nowych firm w Twojej niszy
@@ -809,7 +772,15 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </div>
               </div>
 
+            </>
+          )}
+
+          {/* ============ 🔗 INTEGRACJE ============ */}
+          {/* ============ 🎨 INTERFEJS ============ */}
+          {tab === "interface" && (
+            <>
               <h3>Motyw HUD</h3>
+              <p className="muted">Kolor akcentów całego interfejsu.</p>
               <div className="chips" style={{ marginBottom: 8 }}>
                 {[
                   { id: "default", l: "Cyan" },
@@ -827,10 +798,55 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   </button>
                 ))}
               </div>
+
+              <h3>🧠 Adaptacyjny układ</h3>
+              <div className="row">
+                <span>
+                  Menu uczy się Twoich nawyków
+                  <br />
+                  <span className="muted">
+                    Po ~7 dniach sekcje, których używasz najczęściej o danej porze dnia, wskakują
+                    na górę. Dane tylko lokalnie (max 30 dni).
+                  </span>
+                </span>
+                <Toggle on={s.adaptiveUi !== false} onClick={() => set({ adaptiveUi: s.adaptiveUi === false })} />
+              </div>
+              <UsageChart />
+              <button className="btn" onClick={() => { resetAdaptive(); store.setSettings(s); }}>
+                ↺ Resetuj układ do domyślnego
+              </button>
+
+              {typeof window !== "undefined" && (window as any).jarvisDesktop && (
+                <>
+                  <h3>📋 Proaktywny schowek (komputer)</h3>
+                  <div className="row">
+                    <span>
+                      Analiza skopiowanego tekstu/linku
+                      <br />
+                      <span className="muted">
+                        Skopiuj cokolwiek — JARVIS dyskretnie zaproponuje analizę. Nic nie wysyła
+                        samo. Skróty: Ctrl+Alt+J — okno, Ctrl+Alt+V — tryb głosowy.
+                      </span>
+                    </span>
+                    <Toggle on={s.clipboardWatch} onClick={() => set({ clipboardWatch: !s.clipboardWatch })} />
+                  </div>
+                </>
+              )}
+
+              <h3>👋 Przewodnik powitalny</h3>
+              <p className="muted">Pokaż ponownie kreator pierwszego uruchomienia (3 kroki).</p>
+              <button
+                className="btn"
+                onClick={() => {
+                  try { localStorage.removeItem("jarvis.onboarded.v1"); } catch { /* ignore */ }
+                  location.reload();
+                }}
+              >
+                ↺ Uruchom przewodnik powitalny
+              </button>
             </>
           )}
 
-          {/* ============ 🔗 INTEGRACJE ============ */}
           {tab === "integrations" && (
             <>
               <h3>Synchronizacja (chmura)</h3>

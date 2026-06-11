@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { generateSite } from "../lib/webgen";
 import { useEscape } from "../hooks/useEscape";
+import { copyWithToast } from "../lib/toast";
 
 const IDEAS = [
   "Strona kawiarni Aroma — menu, galeria, godziny, mapa kontaktu, ciepłe kolory",
@@ -107,6 +108,11 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
               <button className="btn" style={{ flex: 1 }} onClick={download}>⬇ Pobierz .html</button>
             )}
           </div>
+          {html && (
+            <button className="btn" style={{ marginTop: 8 }} onClick={() => copyWithToast(html, "Kod skopiowany ✓")}>
+              📋 Kopiuj kod HTML
+            </button>
+          )}
           {err && <p className="muted">{err}</p>}
         </div>
         <div className="panel-foot">
