@@ -9,6 +9,8 @@ const DEFAULT_KEYS = {
   anthropic: env.JARVIS_ANTHROPIC_KEY || "",
   gemini: env.JARVIS_GEMINI_KEY || "",
   groq: env.JARVIS_GROQ_KEY || "",
+  cerebras: env.JARVIS_CEREBRAS_KEY || "",
+  mistral: env.JARVIS_MISTRAL_KEY || "",
   openrouter: env.JARVIS_OPENROUTER_KEY || "",
   nvidia: env.JARVIS_NVIDIA_KEY || "",
   github: env.JARVIS_GITHUB_KEY || "",

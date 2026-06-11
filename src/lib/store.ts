@@ -20,7 +20,7 @@ const emptyData: AppData = {
 
 const defaultSettings: Settings = {
   provider: "auto",
-  keys: { anthropic: "", gemini: "", groq: "", openrouter: "", nvidia: "", github: "" },
+  keys: { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", openrouter: "", nvidia: "", github: "" },
   model: "auto",
   proxyUrl: "",
   syncUrl: "",

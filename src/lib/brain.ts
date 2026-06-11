@@ -34,12 +34,14 @@ const PERSONAS: Record<string, string> = {
 };
 
 // --- Router: dobór dostawcy/modelu do zadania ---
-const VISION_PROVIDERS = new Set<ProviderId>(["anthropic", "gemini", "github", "openrouter"]);
+const VISION_PROVIDERS = new Set<ProviderId>(["anthropic", "gemini", "github", "openrouter", "mistral"]);
 
 const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision: string }> = {
   anthropic: { simple: "claude-haiku-4-5", complex: "claude-opus-4-8", vision: "claude-opus-4-8" },
   gemini: { simple: "gemini-2.5-flash-lite", complex: "gemini-2.5-flash", vision: "gemini-2.5-flash" },
   groq: { simple: "llama-3.1-8b-instant", complex: "llama-3.3-70b-versatile", vision: "llama-3.3-70b-versatile" },
+  cerebras: { simple: "llama3.1-8b", complex: "llama-3.3-70b", vision: "llama-3.3-70b" },
+  mistral: { simple: "mistral-small-latest", complex: "mistral-large-latest", vision: "pixtral-12b-2409" },
   openrouter: {
     simple: "meta-llama/llama-3.3-70b-instruct:free",
     complex: "meta-llama/llama-3.1-405b-instruct",

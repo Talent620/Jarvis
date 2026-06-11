@@ -39,6 +39,8 @@ jobs:
           JARVIS_ANTHROPIC_KEY: ${{ secrets.JARVIS_ANTHROPIC_KEY }}
           JARVIS_GEMINI_KEY: ${{ secrets.JARVIS_GEMINI_KEY }}
           JARVIS_GROQ_KEY: ${{ secrets.JARVIS_GROQ_KEY }}
+          JARVIS_CEREBRAS_KEY: ${{ secrets.JARVIS_CEREBRAS_KEY }}
+          JARVIS_MISTRAL_KEY: ${{ secrets.JARVIS_MISTRAL_KEY }}
           JARVIS_OPENROUTER_KEY: ${{ secrets.JARVIS_OPENROUTER_KEY }}
           JARVIS_NVIDIA_KEY: ${{ secrets.JARVIS_NVIDIA_KEY }}
           JARVIS_GITHUB_KEY: ${{ secrets.JARVIS_GITHUB_KEY }}

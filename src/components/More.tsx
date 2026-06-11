@@ -6,6 +6,7 @@ export default function More({
   onGadgets,
   onHud,
   onStudio,
+  onWeb,
   onScreen,
   onHelp,
   onClose,
@@ -17,12 +18,14 @@ export default function More({
   onGadgets: () => void;
   onHud: () => void;
   onStudio: () => void;
+  onWeb: () => void;
   onScreen?: () => void;
   onHelp: () => void;
   onClose: () => void;
 }) {
   const items = [
     { icon: "📔", label: "Mój dziennik (przemyślenia)", fn: onJournal },
+    { icon: "🌐", label: "Kreator stron — zbuduj witrynę", fn: onWeb },
     { icon: "👁", label: "Wizja HUD (kamera) — co widzisz?", fn: onHud },
     ...(onScreen ? [{ icon: "🖥️", label: "Spójrz na mój ekran (analiza)", fn: onScreen }] : []),
     { icon: "🎨", label: "Studio Obrazów — generuj/edytuj", fn: onStudio },

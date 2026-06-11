@@ -53,6 +53,34 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
       { id: "qwen/qwen3-32b", label: "Qwen3 32B" },
     ],
   },
+  cerebras: {
+    id: "cerebras",
+    label: "Cerebras (najszybszy, darmowy ~2000 tok/s)",
+    rank: 72,
+    keysUrl: "https://cloud.cerebras.ai",
+    defaultModel: "llama-3.3-70b",
+    impl: makeOpenAICompatible("https://api.cerebras.ai/v1/chat/completions"),
+    models: [
+      { id: "llama-3.3-70b", label: "Llama 3.3 70B — błyskawiczny" },
+      { id: "llama-4-scout-17b-16e-instruct", label: "Llama 4 Scout" },
+      { id: "qwen-3-32b", label: "Qwen3 32B" },
+      { id: "llama3.1-8b", label: "Llama 3.1 8B — najszybszy" },
+    ],
+  },
+  mistral: {
+    id: "mistral",
+    label: "Mistral (szeroki darmowy tier, wizja)",
+    rank: 55,
+    keysUrl: "https://console.mistral.ai",
+    defaultModel: "mistral-small-latest",
+    impl: makeOpenAICompatible("https://api.mistral.ai/v1/chat/completions"),
+    models: [
+      { id: "mistral-small-latest", label: "Mistral Small — darmowy" },
+      { id: "mistral-large-latest", label: "Mistral Large — najmocniejszy" },
+      { id: "open-mistral-nemo", label: "Mistral Nemo" },
+      { id: "pixtral-12b-2409", label: "Pixtral 12B — wizja" },
+    ],
+  },
   openrouter: {
     id: "openrouter",
     label: "OpenRouter (35+ modeli)",
@@ -134,6 +162,8 @@ export const emptyKeys: ProviderKeys = {
   anthropic: "",
   gemini: "",
   groq: "",
+  cerebras: "",
+  mistral: "",
   openrouter: "",
   nvidia: "",
   github: "",
@@ -177,6 +207,7 @@ export function detectProvider(key: string): ProviderId | null {
   if (!k) return null;
   if (k.startsWith("sk-ant-")) return "anthropic";
   if (k.startsWith("sk-or-")) return "openrouter"; // OpenRouter: sk-or-v1-...
+  if (k.startsWith("csk-")) return "cerebras";
   if (k.startsWith("gsk_")) return "groq";
   if (k.startsWith("nvapi-")) return "nvidia";
   if (k.startsWith("AIza")) return "gemini"; // klucze Google API
