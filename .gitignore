@@ -17,3 +17,6 @@ android/capacitor-cordova-android-plugins
 
 # TS build info
 tsconfig.tsbuildinfo
+
+# Klucz prywatny licencji — NIGDY nie commitować
+license-private.json

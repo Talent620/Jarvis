@@ -14,6 +14,8 @@ import Help from "./components/Help";
 import More from "./components/More";
 import LockScreen from "./components/LockScreen";
 import Onboarding, { needsOnboarding } from "./components/Onboarding";
+import LicenseGate from "./components/LicenseGate";
+import { checkActivation, licenseRequired } from "./lib/license";
 import VoiceMode from "./components/VoiceMode";
 import { watchHeadset } from "./lib/headset";
 import { toast } from "./lib/toast";
@@ -136,6 +138,12 @@ export default function App() {
   const [onboarding, setOnboarding] = useState(needsOnboarding());
   const [clipSuggest, setClipSuggest] = useState<string>("");
   const [showVoice, setShowVoice] = useState(false);
+  // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
+  const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
+
+  useEffect(() => {
+    if (licenseRequired()) checkActivation().then((r) => setLicensed(r.valid));
+  }, []);
 
   const listenerRef = useRef<Listener | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -545,6 +553,8 @@ export default function App() {
     return () => stop?.();
   }, [settings.clipboardWatch]);
 
+  if (licensed === null) return <div className="onboard"><div className="onboard-orb" /></div>;
+  if (!licensed) return <LicenseGate onActivated={() => setLicensed(true)} />;
   if (locked) return <LockScreen onUnlock={() => setLocked(false)} />;
   if (onboarding)
     return (

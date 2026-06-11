@@ -22,6 +22,8 @@ export default defineConfig({
   base: "./",
   define: {
     __DEFAULT_KEYS__: JSON.stringify(DEFAULT_KEYS),
+    // Aktywacja licencją wymagana domyślnie; ustaw JARVIS_LICENSE_REQUIRED=false, by wyłączyć.
+    __LICENSE_REQUIRED__: JSON.stringify(env.JARVIS_LICENSE_REQUIRED !== "false"),
   },
   plugins: [react()],
   build: {
