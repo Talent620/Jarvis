@@ -3,7 +3,7 @@
 // Błędy, przy których warto spróbować kolejnego dostawcy (brak kredytów, limit,
 // autoryzacja, a także martwy/nieprawidłowy model — np. zniknięte darmowe endpointy).
 export function shouldFallback(msg: string): boolean {
-  return /credit|billing|insufficient|quota|exceeded|rate.?limit|too low|payment|unauthorized|invalid.?api|forbidden|overloaded|unavailable|no endpoints|no allowed providers|not a valid model|invalid model|model.{0,3}not.{0,3}found|does not exist|unsupported model|\b(401|402|403|404|429|500|502|503)\b/i.test(
+  return /credit|billing|insufficient|quota|exceeded|rate.?limit|too low|payment|unauthorized|invalid.?api|forbidden|overloaded|unavailable|no endpoints|no allowed providers|not a valid model|invalid model|model.{0,3}not.{0,3}found|does not exist|unsupported model|invalid authentication|oauth 2 access token|api key not valid|\b(401|402|403|404|429|500|502|503)\b/i.test(
     msg,
   );
 }
@@ -15,7 +15,7 @@ export const isNetworkError = (msg: string): boolean =>
 // takim warto najpierw spróbować INNEGO klucza tego samego dostawcy (rotacja),
 // zanim zejdziemy do kolejnego dostawcy.
 export function isKeyError(msg: string): boolean {
-  return /rate.?limit|too many requests|quota|exceeded|insufficient|credit|billing|payment|too low|unauthorized|invalid.?api|forbidden|\b(401|402|403|429)\b/i.test(
+  return /rate.?limit|too many requests|quota|exceeded|insufficient|credit|billing|payment|too low|unauthorized|invalid.?api|forbidden|invalid authentication|oauth 2 access token|api key not valid|\b(401|402|403|429)\b/i.test(
     msg,
   );
 }
@@ -23,6 +23,8 @@ export function isKeyError(msg: string): boolean {
 // Przetłumacz techniczny błąd na zrozumiały komunikat.
 export function humanize(msg: string): string {
   if (isNetworkError(msg)) return "Brak połączenia z usługą AI. Sprawdź internet i klucz API (⚙ Ustawienia).";
+  if (/oauth 2 access token|invalid authentication credentials|api key not valid/i.test(msg))
+    return "Klucz Gemini jest pusty lub nieprawidłowy. Wklej poprawny klucz w ⚙ → AI (Szybki start) — darmowy: aistudio.google.com/apikey.";
   if (/401|unauthorized|invalid.?api|forbidden|403/i.test(msg))
     return "Klucz API jest nieprawidłowy, wygasł lub nie ma dostępu — sprawdź go w ⚙ Ustawienia.";
   if (/credit|billing|too low|payment|quota|insufficient/i.test(msg))

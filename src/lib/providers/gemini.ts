@@ -39,9 +39,14 @@ interface Content {
 
 // Adapter Google Gemini (AI Studio) — format contents/parts + functionDeclarations.
 export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
+  // Bez proxy klucz idzie w URL — pusty/niepełny klucz daje mylący błąd Google
+  // („Expected OAuth 2 access token"). Złap to od razu, z czytelnym komunikatem.
+  if (!ctx.proxyUrl && !ctx.apiKey?.trim()) {
+    throw new Error("Brak klucza Google Gemini (401). Wklej klucz w ⚙ → AI (Szybki start).");
+  }
   const base = ctx.proxyUrl
     ? `${ctx.proxyUrl}/gemini?model=${ctx.model}`
-    : `https://generativelanguage.googleapis.com/v1beta/models/${ctx.model}:generateContent?key=${ctx.apiKey}`;
+    : `https://generativelanguage.googleapis.com/v1beta/models/${ctx.model}:generateContent?key=${ctx.apiKey.trim()}`;
 
   const functionDeclarations = ctx.tools.map((d) => ({
     name: d.name,
@@ -69,8 +74,10 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(reqBody),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error?.message || `Błąd API (${res.status}).`);
+    const data = await res.json().catch(() => null);
+    // Dołącz kod HTTP do treści — inaczej logika awaryjna (rotacja klucza /
+    // przełączenie dostawcy) nie rozpozna 401/403/429 ukrytych w samym tekście.
+    if (!res.ok) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
 
     const parts: Part[] = data.candidates?.[0]?.content?.parts || [];
     contents.push({ role: "model", parts });
