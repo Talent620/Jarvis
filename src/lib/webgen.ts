@@ -3,18 +3,54 @@ import { PROVIDERS } from "./providers/registry";
 import { humanize } from "./aiHelpers";
 import { store } from "./store";
 
-// Autonomiczny generator stron: z opisu tworzy KOMPLETNĄ, nowoczesną stronę w
-// jednym pliku HTML (z wbudowanym CSS i JS). Działa z dowolnym dostawcą AI.
+// Autonomiczny generator stron i SKLEPÓW: z opisu tworzy KOMPLETNĄ, nowoczesną
+// witrynę w jednym pliku HTML (wbudowany CSS i JS) na poziomie premium. Działa
+// z dowolnym dostawcą AI.
 
-const SYSTEM = [
-  "Jesteś światowej klasy front-end developerem i projektantem UI. Tworzysz KOMPLETNE, nowoczesne, responsywne strony w JEDNYM pliku HTML (z wbudowanym CSS i JavaScript).",
+export type SiteKind = "auto" | "landing" | "sklep" | "firma" | "portfolio";
+
+const BASE = [
+  "Jesteś światowej klasy front-end developerem i dyrektorem artystycznym (poziom Awwwards). Tworzysz KOMPLETNE, nowoczesne, dopracowane strony w JEDNYM pliku HTML (wbudowany CSS i JavaScript).",
+  "",
   "ZASADY (bezwzględne):",
-  "- Zwróć WYŁĄCZNIE kod, zaczynając od <!DOCTYPE html>. Żadnych komentarzy poza kodem, żadnych bloków ```.",
-  "- Estetyka klasy premium: spójna paleta, świetna typografia, oddech (odstępy), mikrointerakcje, stany hover, płynne animacje, gradienty/cienie z umiarem.",
-  "- W pełni responsywne (mobile-first). Bez zewnętrznych bibliotek JS/CSS. Dozwolone tylko czcionki Google Fonts przez <link>.",
-  "- REALNA treść dopasowana do tematu (nie lorem ipsum): sensowny nagłówek z nawigacją, sekcje hero/oferta/o nas/kontakt, stopka, wyraźne CTA.",
-  "- Kod ma być kompletny i działający po otwarciu w przeglądarce.",
+  "- Zwróć WYŁĄCZNIE kod, zaczynając od <!DOCTYPE html>. Bez komentarzy poza kodem, bez bloków ```.",
+  "- Bez zewnętrznych bibliotek JS/CSS. Dozwolone wyłącznie Google Fonts przez <link> oraz zdjęcia z https://images.unsplash.com (trafne, tematyczne adresy).",
+  "- Kod kompletny i działający od razu po otwarciu w przeglądarce.",
+  "",
+  "POZIOM WIZUALNY (to ma wyglądać jak strona warta tysiące złotych):",
+  "- Paleta w zmiennych CSS (:root). Domyślnie elegancki, ciemny motyw z 1–2 kolorami akcentu i subtelnymi gradientami; jasny tylko gdy temat tego wymaga.",
+  "- Typografia z charakterem: duży, mocny nagłówek hero (font-size: clamp(...)), wyraźna hierarchia, oddech (duże odstępy, max-width treści).",
+  "- Przyklejony, półprzezroczysty nagłówek z efektem rozmycia (backdrop-filter) i nawigacją; płynne przewijanie do sekcji (scroll-behavior: smooth).",
+  "- Animacje wejścia przy przewijaniu przez IntersectionObserver (fade/slide-up, z opóźnieniami). Mikrointerakcje: hover na kartach (unoszenie + cień), animowane przyciski, podkreślenia linków.",
+  "- Nowoczesne detale: gradientowe lub świetlne tło hero, zaokrąglenia, miękkie cienie, ikony jako wklejony inline SVG (nie biblioteki).",
+  "- W pełni responsywne (mobile-first), z działającym menu mobilnym (hamburger w czystym JS). Uszanuj prefers-reduced-motion.",
+  "- REALNA treść po polsku dopasowana do tematu (nie lorem ipsum): chwytliwe nagłówki, konkretne opisy, sensowne CTA.",
 ].join("\n");
+
+const KIND_HINTS: Record<SiteKind, string> = {
+  auto: "Dobierz układ i sekcje najlepiej pasujące do opisu.",
+  landing: [
+    "TYP: landing page produktu/usługi. Sekcje: hero z mocnym hasłem i CTA, pasek zaufania/logotypy,",
+    "korzyści (siatka kart z ikonami SVG), jak to działa (kroki), opinie klientów, cennik (2–3 plany z wyróżnionym),",
+    "FAQ (rozwijane <details>), sekcja CTA, stopka z kontaktem.",
+  ].join("\n"),
+  sklep: [
+    "TYP: SKLEP INTERNETOWY (e-commerce front-end). Wymagane:",
+    "- siatka 6–9 produktów (karty: zdjęcie, nazwa, krótki opis, CENA w zł, przycisk Dodaj do koszyka),",
+    "- DZIAŁAJĄCY koszyk w czystym JS: licznik sztuk w nagłówku (badge), wysuwany panel koszyka (drawer) z listą pozycji,",
+    "  zmianą ilości, usuwaniem, sumą częściową i przyciskiem Przejdź do kasy (placeholder z informacją o podpięciu płatności),",
+    "- filtr/kategorie lub sekcje, sekcja bestsellery/wyróżnione, pasek dostawa/zwroty/gwarancja, newsletter, stopka.",
+    "Dane produktów realistyczne dla branży z opisu. Stan koszyka trzymaj w JS (tablica), bez backendu.",
+  ].join("\n"),
+  firma: [
+    "TYP: strona firmowa. Sekcje: hero z propozycją wartości, o firmie, usługi (siatka),",
+    "realizacje/portfolio, zespół, opinie, proces współpracy, kontakt z formularzem (front-end) i mapą placeholder, stopka z danymi.",
+  ].join("\n"),
+  portfolio: [
+    "TYP: portfolio. Sekcje: hero z imieniem i specjalizacją, galeria prac (siatka z hover),",
+    "o mnie, umiejętności, doświadczenie/oś czasu, kontakt. Estetyka minimalistyczna, mocna typografia.",
+  ].join("\n"),
+};
 
 function extractHtml(text: string): string {
   let s = (text || "").trim();
@@ -25,22 +61,29 @@ function extractHtml(text: string): string {
   return s.includes("<") ? s : "";
 }
 
-export async function generateSite(prompt: string, current?: string): Promise<{ html: string } | { error: string }> {
+export async function generateSite(
+  prompt: string,
+  current?: string,
+  kind: SiteKind = "auto",
+): Promise<{ html: string } | { error: string }> {
   const r = resolveProvider();
   if (!r || !r.apiKey?.trim()) return { error: "Najpierw skonfiguruj dostawcę AI w ⚙ → AI." };
 
+  const system = `${BASE}\n\n${KIND_HINTS[kind] || KIND_HINTS.auto}`;
   const userMsg = current
-    ? `Oto obecny kod strony:\n\n${current.slice(0, 14000)}\n\nWprowadź zmianę: ${prompt}\nZwróć PEŁNY, zaktualizowany plik HTML (od <!DOCTYPE html>).`
+    ? `Oto obecny kod strony:\n\n${current.slice(0, 14000)}\n\nWprowadź zmianę: ${prompt}\nZwróć PEŁNY, zaktualizowany plik HTML (od <!DOCTYPE html>), zachowując wysoki poziom wizualny.`
     : `Zbuduj stronę według opisu: ${prompt}`;
 
   try {
+    // Dla nowej, pełnej strony bierzemy mocniejszy model dostawcy (bogatszy kod).
+    const model = current ? r.model : PROVIDERS[r.provider]?.defaultModel || r.model;
     const reply = await PROVIDERS[r.provider].impl({
-      system: SYSTEM,
+      system,
       webSearch: false,
       tools: [],
       history: [{ role: "user", content: userMsg }],
       apiKey: r.apiKey,
-      model: r.model,
+      model,
       proxyUrl: store.settings.proxyUrl?.trim() || undefined,
     });
     const html = extractHtml(reply.text || "");

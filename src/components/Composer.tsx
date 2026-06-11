@@ -11,7 +11,7 @@ export default function Composer({
   micSupported,
   councilAvailable,
 }: {
-  onSend: (text: string, opts?: { council?: boolean }) => void;
+  onSend: (text: string, opts?: { council?: boolean; research?: boolean }) => void;
   onMic: () => void;
   onAttach: () => void;
   onRemoveImage: () => void;
@@ -23,6 +23,7 @@ export default function Composer({
 }) {
   const [text, setText] = useState("");
   const [council, setCouncil] = useState(false);
+  const [research, setResearch] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-wysokość: pole rośnie z treścią (do ~5 linijek), potem przewija.
@@ -36,8 +37,9 @@ export default function Composer({
   const submit = () => {
     const t = text.trim();
     if ((!t && !imagePreview) || busy) return;
-    onSend(t, { council: council && !imagePreview });
+    onSend(t, { council: council && !imagePreview, research: research && !imagePreview });
     setText("");
+    setResearch(false);
     if (taRef.current) taRef.current.style.height = "auto";
   };
 
@@ -54,6 +56,14 @@ export default function Composer({
       <div className="composer">
         <button className="mic" onClick={onAttach} title="Zdjęcie / aparat" disabled={busy}>
           📷
+        </button>
+        <button
+          className={`mic ${research ? "on" : ""}`}
+          onClick={() => setResearch((v) => !v)}
+          title={research ? "Głębokie badanie WŁĄCZONE — JARVIS zrobi dokładny research ze źródłami" : "Głębokie badanie: dokładny research w sieci ze źródłami [1][2]"}
+          disabled={busy}
+        >
+          🔬
         </button>
         {councilAvailable && (
           <button

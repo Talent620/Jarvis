@@ -4,6 +4,7 @@ import { generateContentPack, generateProductIdeas } from "../lib/content";
 import { runProspecting } from "../lib/prospect";
 import { copyWithToast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
+import Guide from "./Guide";
 
 export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => void; onSales: () => void; onWeb: () => void }) {
   useEscape(onClose);
@@ -59,6 +60,14 @@ export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => v
           <h2>💰 Zarabianie</h2>
         </div>
         <div className="panel-body">
+          <Guide title="ℹ Jak realnie na tym zarobić (krok po kroku)">
+            <p><b>Model „agencja stron":</b> 1) <b>Znajdź leady</b> (firmy bez dobrej strony) → 2) JARVIS pisze <b>ofertę</b> i buduje <b>demo strony/sklepu</b> → 3) Ty wysyłasz i rozmawiasz → 4) klient płaci za stronę.</p>
+            <p><b>Ile to przynosi:</b> prosta strona <b>800–2500 zł</b>, sklep <b>2500–8000 zł</b>, opieka/abonament <b>100–400 zł/mc</b>. Wystarczy kilku klientów miesięcznie.</p>
+            <p><b>Co darmowe:</b> szukanie leadów (klucz Tavily — darmowy tier), pisanie ofert i budowa stron (darmowe modele AI), hosting (Netlify/Vercel).</p>
+            <p><b>Co płatne (opcjonalnie):</b> własna domena ~50–120 zł/rok, bramka płatności dla sklepu (Przelewy24/PayU, prowizja ~1–2%).</p>
+            <p><b>Uczciwie:</b> JARVIS robi 95% (research, pisanie, budowa). Pieniądze powstają, gdy Ty dowieziesz ludzką część (wysyłka, rozmowa, faktura). To dźwignia, nie bankomat.</p>
+          </Guide>
+
           {/* Kokpit */}
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
             <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>

@@ -1101,3 +1101,23 @@ button:disabled {
 }
 .council-member b { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
 .council-member p { margin: 4px 0 0; font-size: 14px; white-space: pre-wrap; }
+
+/* ===== Poradnik przy narzędziu (Guide) ===== */
+.guide {
+  margin: 8px 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: rgba(108, 231, 255, 0.04);
+}
+.guide > summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--cyan);
+  list-style: none;
+  user-select: none;
+}
+.guide > summary::-webkit-details-marker { display: none; }
+.guide-body { margin-top: 6px; }
+.guide-body p { margin: 6px 0; font-size: 13px; line-height: 1.55; color: var(--text-dim); }
+.guide-body b { color: var(--text); }

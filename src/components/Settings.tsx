@@ -1071,6 +1071,17 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <button className="btn" onClick={() => resetConsents()}>
                 Zresetuj zapamiętane zgody
               </button>
+
+              <h3>© O programie / Licencja</h3>
+              <p className="muted" style={{ lineHeight: 1.6 }}>
+                <b>JARVIS</b> — osobisty asystent AI.
+                <br />
+                <b>© 2026 Artur Józefczak.</b> Wszelkie prawa zastrzeżone.
+                <br />
+                Program jest własnością autora i podlega ochronie prawa autorskiego. Kopiowanie,
+                rozpowszechnianie, przesyłanie i odsprzedaż — wyłącznie za pisemną zgodą autora.
+                Dostęp lub licencję (osobistą/komercyjną) można uzyskać za zgodą autora.
+              </p>
             </>
           )}
         </div>

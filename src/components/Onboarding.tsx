@@ -180,6 +180,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
             <span key={i} className={`onboard-dot ${i === step ? "on" : ""}`} />
           ))}
         </div>
+        <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>© 2026 Artur Józefczak · Wszelkie prawa zastrzeżone</div>
       </div>
     </div>
   );

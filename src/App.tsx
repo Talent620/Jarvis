@@ -219,7 +219,7 @@ export default function App() {
   }, [messages, activeId]);
 
   // --- Wysłanie polecenia do JARVIS-a (agentowa pętla) ---
-  const handleSend = async (text: string, opts?: { council?: boolean }) => {
+  const handleSend = async (text: string, opts?: { council?: boolean; research?: boolean }) => {
     setInterim("");
     stopSpeaking();
     buzz(14); // subtelna haptyka przy wysłaniu
@@ -278,11 +278,22 @@ export default function App() {
         .slice(-20)
         .map((m) => ({ role: m.role, content: m.text, image: m.image }));
 
+      // Głębokie badanie (🔬): wzmocnij ostatnie polecenie dyrektywą researchu ze
+      // źródłami. Używa narzędzi (web_research), więc idzie normalną ścieżką.
+      if (opts?.research) {
+        const last = history[history.length - 1];
+        last.content =
+          "Przeprowadź GŁĘBOKIE BADANIE tematu: użyj narzędzia web_research kilka razy z różnymi, " +
+          "uzupełniającymi się zapytaniami, zbierz fakty z wielu źródeł i zsyntezuj wyczerpującą, " +
+          "uporządkowaną odpowiedź (sekcje/punkty), powołując się na źródła numerami [1], [2]. " +
+          `Na końcu dodaj krótkie „W skrócie".\n\nTemat: ${text}`;
+      }
+
       // Tryb Konsylium: na żądanie (przycisk ⚖) albo automatycznie przy złożonych
-      // pytaniach, gdy włączony w ustawieniach. Obrazy i proste polecenia (zwykle
-      // wymagające narzędzi) idą normalną ścieżką.
+      // pytaniach, gdy włączony w ustawieniach. Obrazy, research (narzędzia) i proste
+      // polecenia idą normalną ścieżką.
       const wantCouncil = opts?.council || (store.settings.councilMode && isComplex(text));
-      const useCouncil = !!wantCouncil && !image && councilMembers(3).length >= 2;
+      const useCouncil = !!wantCouncil && !image && !opts?.research && councilMembers(3).length >= 2;
       if (useCouncil) setCouncilStep(`⚖ Konsylium — pytam ${councilMembers(3).length} modele…`);
       let reply;
       try {

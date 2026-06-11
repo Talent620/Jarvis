@@ -4,7 +4,7 @@
   "version": "2.0.0",
   "type": "module",
   "description": "JARVIS — futurystyczny, agentowy asystent głosowy i tekstowy napędzany Claude Opus 4.8.",
-  "author": "serwer256",
+  "author": "Artur Józefczak",
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
