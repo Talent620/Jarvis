@@ -238,6 +238,12 @@ export interface Settings {
   dailyBriefing: boolean;
   /** Godzina porannego briefingu w formacie HH:MM. */
   briefingTime: string;
+  /** Automatyczne wyszukiwanie leadów kilka razy dziennie (gdy apka otwarta). */
+  autoProspect: boolean;
+  /** Nisza/branża do auto-prospektingu (np. „fryzjer"). */
+  prospectNiche: string;
+  /** Lokalizacja do auto-prospektingu (np. „Kraków"). */
+  prospectLocation: string;
   /** Natywny nasłuch słowa "Jarvis" w tle (uruchamia apkę głosem). */
   backgroundWake: boolean;
   /** Opcjonalny klucz ElevenLabs dla premium głosu JARVIS. */

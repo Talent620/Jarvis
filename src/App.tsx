@@ -30,6 +30,7 @@ type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; reme
 import { askJarvis, resolveProvider } from "./lib/brain";
 import { isUncensored } from "./lib/providers/registry";
 import { enablePrivateMode } from "./lib/privateMode";
+import { runProspecting } from "./lib/prospect";
 import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop } from "./lib/desktop";
@@ -447,6 +448,27 @@ export default function App() {
         speak(text, st);
       }
     }, 30000);
+    return () => clearInterval(tick);
+  }, []);
+
+  // --- Auto-prospekting: co ~4 h (gdy włączone) JARVIS szuka nowych leadów ---
+  useEffect(() => {
+    const tick = setInterval(async () => {
+      const st = store.settings;
+      if (!st.autoProspect || !st.tavilyApiKey?.trim() || !st.prospectNiche?.trim()) return;
+      const last = Number(localStorage.getItem("jarvis.prospect.ts") || 0);
+      if (Date.now() - last < 4 * 3600 * 1000) return; // ~6×/dzień
+      localStorage.setItem("jarvis.prospect.ts", String(Date.now()));
+      const r = await runProspecting();
+      if (r.added) {
+        const id = uid();
+        setLiveId(id);
+        setMessages((m) => [
+          ...m,
+          { id, role: "assistant", text: `📈 Automat sprzedaży: znalazłem ${r.added} nowych leadów (${st.prospectNiche}, ${st.prospectLocation}). Są w Pulpicie Sprzedaży (⋯ → 📈).`, tools: ["prospect"], createdAt: Date.now() },
+        ]);
+      }
+    }, 60000);
     return () => clearInterval(tick);
   }, []);
 

@@ -11,6 +11,7 @@ import { exportData, importData } from "../lib/backup";
 import { systemCheck } from "../lib/diagnostics";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode } from "../lib/privateMode";
+import { runProspecting } from "../lib/prospect";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 
@@ -41,6 +42,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [pinMsg, setPinMsg] = useState("");
   const [privMsg, setPrivMsg] = useState("");
   const [privBusy, setPrivBusy] = useState(false);
+  const [prospMsg, setProspMsg] = useState("");
   const [hasPin, setHasPin] = useState(lockIsSet());
   const [diag, setDiag] = useState<string[]>([]);
   const [diagBusy, setDiagBusy] = useState(false);
@@ -651,6 +653,32 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   <input type="time" value={s.briefingTime} onChange={(e) => set({ briefingTime: e.target.value })} />
                 </div>
               )}
+
+              <h3>💸 Automat sprzedaży (auto-prospekting)</h3>
+              <p className="muted">
+                JARVIS sam, kilka razy dziennie (gdy apka otwarta), szuka nowych firm w Twojej niszy
+                i dopisuje je do Pulpitu Sprzedaży. Wymaga klucza Tavily (⚙ → AI).
+              </p>
+              <div className="row">
+                <span>Włącz auto-prospekting (co ~4 h)</span>
+                <Toggle on={s.autoProspect} onClick={() => set({ autoProspect: !s.autoProspect })} />
+              </div>
+              <div className="field" style={{ display: "flex", gap: 8 }}>
+                <input value={s.prospectNiche} placeholder="Nisza (np. fryzjer)" onChange={(e) => set({ prospectNiche: e.target.value })} style={{ flex: 1 }} />
+                <input value={s.prospectLocation} placeholder="Miasto" onChange={(e) => set({ prospectLocation: e.target.value })} style={{ flex: 1 }} />
+              </div>
+              <button
+                className="btn"
+                onClick={async () => {
+                  store.setSettings({ prospectNiche: s.prospectNiche, prospectLocation: s.prospectLocation });
+                  setProspMsg("Szukam leadów…");
+                  const r = await runProspecting();
+                  setProspMsg(r.error ? `❌ ${r.error}` : r.added ? `✅ Dodano ${r.added} nowych leadów — sprawdź ⋯ → 📈.` : "Brak nowych firm (wszystkie już masz).");
+                }}
+              >
+                ▶ Uruchom teraz
+              </button>
+              {prospMsg && <p className="muted">{prospMsg}</p>}
 
               <h3>Tryb tłumacza na żywo</h3>
               <p className="muted">
