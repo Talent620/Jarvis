@@ -379,6 +379,20 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <Toggle on={s.webSearch} onClick={() => set({ webSearch: !s.webSearch })} />
               </div>
 
+              <h3>⚖ Tryb Konsylium</h3>
+              <div className="row">
+                <span>
+                  Ważne pytania konsultuj z kilkoma modelami
+                  <br />
+                  <span className="muted">
+                    Przy złożonych pytaniach JARVIS pyta równolegle kilku różnych dostawców
+                    (np. Gemini + Groq + Cerebras), a sędzia syntezuje jedną odpowiedź i pokazuje,
+                    czy modele się zgadzają. Wymaga kluczy ≥ 2 dostawców; zużywa więcej zapytań.
+                  </span>
+                </span>
+                <Toggle on={s.councilMode} onClick={() => set({ councilMode: !s.councilMode })} />
+              </div>
+
               <h3>Zaawansowane</h3>
               <div className="field">
                 <label>Lokalny model — adres Ollama (prywatny, offline)</label>

@@ -164,6 +164,7 @@ export class LiveSession {
   private enqueueAudio(b64: string): void {
     if (!this.outCtx) return;
     const pcm = base64ToPcm16(b64);
+    if (!pcm.length) return; // pusty/uszkodzony chunk → nie twórz bufora 0-długości (NaN w poziomie)
     const f32 = new Float32Array(pcm.length);
     let sum = 0;
     for (let i = 0; i < pcm.length; i++) {

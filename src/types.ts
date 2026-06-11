@@ -18,6 +18,8 @@ export interface ChatMessage {
   tools?: string[];
   /** Źródła z wyszukiwania (tryb research). */
   citations?: Citation[];
+  /** Wynik Trybu Konsylium (kilka modeli + ocena zgodności), jeśli użyty. */
+  council?: { members: { label: string; text: string }[]; consensus: string; note: string };
   createdAt: number;
 }
 
@@ -260,6 +262,8 @@ export interface Settings {
   fishAudioVoiceId: string;
   /** Desktop: obserwuj schowek i proaktywnie proponuj akcje (prywatność: domyślnie OFF). */
   clipboardWatch: boolean;
+  /** Tryb Konsylium — przy złożonych pytaniach pytaj kilka modeli naraz i syntezuj. */
+  councilMode: boolean;
   /** Adaptacyjny układ menu — sekcje układają się wg nawyków (pora dnia). */
   adaptiveUi: boolean;
   /** Słowo „Jarvis" otwiera pełnoekranowy tryb głosowy (zamiast zwykłego nasłuchu). */

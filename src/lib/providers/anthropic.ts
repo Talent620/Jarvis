@@ -72,7 +72,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
     if (data.stop_reason === "tool_use" && toolUses.length) {
       const results = [];
       for (const tu of toolUses) {
-        const out = await runTool(tu.name!, tu.input);
+        const out = await runTool(tu.name!, tu.input ?? {});
         results.push({ type: "tool_result", tool_use_id: tu.id, content: out });
       }
       messages.push({ role: "user", content: results });

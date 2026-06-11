@@ -33,6 +33,8 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 
 type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
 import { askJarvis, resolveProvider } from "./lib/brain";
+import { askCouncil, councilMembers, type CouncilReply } from "./lib/council";
+import { isComplex } from "./lib/aiHelpers";
 import { isUncensored } from "./lib/providers/registry";
 import { enablePrivateMode } from "./lib/privateMode";
 import { runProspecting } from "./lib/prospect";
@@ -275,13 +277,18 @@ export default function App() {
         .slice(-20)
         .map((m) => ({ role: m.role, content: m.text, image: m.image }));
 
-      const reply = await askJarvis(history);
+      // Tryb Konsylium: złożone pytania tekstowe konsultuje kilka modeli naraz.
+      // Obrazy i proste polecenia (zwykle wymagające narzędzi) idą normalną ścieżką.
+      const useCouncil =
+        store.settings.councilMode && !image && isComplex(text) && councilMembers(3).length >= 2;
+      const reply = useCouncil ? await askCouncil(history) : await askJarvis(history);
       const aiMsg: ChatMessage = {
         id: uid(),
         role: "assistant",
         text: reply.text,
         tools: reply.tools,
         citations: reply.citations,
+        council: (reply as Partial<CouncilReply>).council,
         createdAt: Date.now(),
       };
       setLiveId(aiMsg.id);

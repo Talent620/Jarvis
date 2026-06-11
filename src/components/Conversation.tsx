@@ -45,6 +45,32 @@ const SUGGESTIONS = isDesktop()
       "Co nowego w wiadomościach?",
     ];
 
+const CONSENSUS: Record<string, { icon: string; label: string }> = {
+  full: { icon: "✅", label: "Pełna zgoda modeli" },
+  partial: { icon: "≈", label: "Częściowa zgoda" },
+  conflict: { icon: "⚠", label: "Modele się różnią" },
+  single: { icon: "•", label: "Jeden model" },
+};
+
+// Panel Trybu Konsylium: ocena zgodności + rozwijane odpowiedzi każdego modelu.
+function CouncilPanel({ council }: { council: NonNullable<ChatMessage["council"]> }) {
+  const c = CONSENSUS[council.consensus] || CONSENSUS.partial;
+  return (
+    <details className="council">
+      <summary>
+        ⚖ Konsylium {council.members.length} modeli · {c.icon} {c.label}
+      </summary>
+      {council.note && <p className="muted" style={{ margin: "6px 0", fontSize: 13 }}>{council.note}</p>}
+      {council.members.map((mem, i) => (
+        <div key={i} className="council-member">
+          <b>{mem.label}</b>
+          <p>{mem.text}</p>
+        </div>
+      ))}
+    </details>
+  );
+}
+
 export default function Conversation({
   messages,
   interim,
@@ -94,7 +120,7 @@ export default function Conversation({
           {m.image && (
             <img
               className="bubble-img"
-              src={`data:${m.image.mediaType};base64,${m.image.data}`}
+              src={`data:${m.image.mediaType || "image/png"};base64,${m.image.data}`}
               alt="załączone zdjęcie"
             />
           )}
@@ -108,6 +134,7 @@ export default function Conversation({
               ))}
             </div>
           )}
+          {m.council && m.council.members.length > 1 && <CouncilPanel council={m.council} />}
           {m.role === "assistant" && m.text && <MsgActions text={m.text} />}
           {m.citations && m.citations.length > 0 && (
             <div className="citations">
