@@ -118,7 +118,7 @@ export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => v
                 readOnly
                 value={out}
                 onFocus={(e) => e.currentTarget.select()}
-                style={{ width: "100%", minHeight: "32vh", background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: 10, fontFamily: "inherit", fontSize: 14, lineHeight: 1.5 }}
+                className="ta" style={{ minHeight: "32vh", fontSize: 14 }}
               />
               <button className="btn" onClick={copy}>📋 Kopiuj</button>
             </div>

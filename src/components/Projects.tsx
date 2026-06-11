@@ -104,8 +104,7 @@ export default function Projects({ onClose }: { onClose: () => void }) {
             <>
               <h3>Instrukcje projektu „{active.name}"</h3>
               <textarea
-                className="field"
-                style={{ width: "100%", minHeight: 80, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: 10, fontFamily: "inherit", fontSize: 15 }}
+                className="ta"
                 placeholder="Np. To projekt 'Praca'. Odpowiadaj formalnie, używaj kontekstu z dokumentów."
                 value={active.instructions}
                 onChange={(e) => editInstr(e.target.value)}

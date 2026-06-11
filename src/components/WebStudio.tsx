@@ -96,7 +96,7 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
               value={prompt}
               placeholder={html ? "Co zmienić? np. zmień kolor na granat, dodaj sekcję opinii…" : "Opisz stronę, którą chcesz…"}
               onChange={(e) => setPrompt(e.target.value)}
-              style={{ width: "100%", minHeight: 64, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: 10, fontFamily: "inherit", fontSize: 15 }}
+              className="ta" style={{ minHeight: 64 }}
             />
           </div>
           <div style={{ display: "flex", gap: 8 }}>

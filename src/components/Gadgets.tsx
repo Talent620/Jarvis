@@ -659,10 +659,6 @@ function Cipher() {
     }
   };
 
-  const ta = {
-    width: "100%", minHeight: 80, background: "var(--bg)", color: "var(--text)",
-    border: "1px solid var(--line)", borderRadius: 10, padding: 10, fontFamily: "inherit", fontSize: 14,
-  } as const;
 
   return (
     <div style={{ paddingTop: 12 }}>
@@ -671,7 +667,7 @@ function Cipher() {
         notatkę/wiadomość hasłem; odszyfruje ją tylko ten, kto zna hasło. Nic nie wychodzi z urządzenia.
       </p>
       <div className="field">
-        <textarea value={text} placeholder="Tekst jawny lub szyfrogram (JV1:…)" onChange={(e) => setText(e.target.value)} style={ta} />
+        <textarea value={text} placeholder="Tekst jawny lub szyfrogram (JV1:…)" onChange={(e) => setText(e.target.value)} className="ta" />
       </div>
       <div className="field">
         <input type="password" value={pass} placeholder="Hasło" onChange={(e) => setPass(e.target.value)} />
@@ -683,7 +679,7 @@ function Cipher() {
       {msg && <p className="muted">{msg}</p>}
       {out && (
         <div className="field" style={{ marginTop: 10 }}>
-          <textarea readOnly value={out} style={ta} onFocus={(e) => e.currentTarget.select()} />
+          <textarea readOnly value={out} className="ta" onFocus={(e) => e.currentTarget.select()} />
           <button className="btn" onClick={() => navigator.clipboard?.writeText(out).catch(() => {})}>📋 Kopiuj</button>
         </div>
       )}

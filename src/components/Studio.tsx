@@ -113,7 +113,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
               value={prompt}
               placeholder="Opisz obraz albo dokładną zmianę…"
               onChange={(e) => setPrompt(e.target.value)}
-              style={{ width: "100%", minHeight: 80, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: 10, fontFamily: "inherit", fontSize: 15 }}
+              className="ta"
             />
           </div>
           <div style={{ display: "flex", gap: 8 }}>

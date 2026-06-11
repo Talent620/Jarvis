@@ -837,3 +837,23 @@ button:disabled {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* Wspólny wygląd dużych pól tekstowych (edytory, wyniki generatorów) */
+.ta {
+  width: 100%;
+  min-height: 80px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Mikro-feedback: przyciski usuwania reagują na wskazanie */
+.list-item .x:hover,
+.x:hover {
+  color: #ff8585;
+}

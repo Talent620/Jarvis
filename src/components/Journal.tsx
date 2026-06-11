@@ -163,7 +163,7 @@ export default function Journal({ onClose }: { onClose: () => void }) {
                 autoFocus
                 placeholder="Tu spisuj swoje przemyślenia… (możesz pisać długo, akapitami)"
                 onChange={(e) => setBody(e.target.value)}
-                style={{ width: "100%", minHeight: 220, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: 12, fontFamily: "inherit", fontSize: 16, lineHeight: 1.6 }}
+                className="ta" style={{ minHeight: 220, padding: 12, fontSize: 16, lineHeight: 1.6 }}
               />
             </div>
             <div className="field" style={{ display: "flex", gap: 8 }}>
