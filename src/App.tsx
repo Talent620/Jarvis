@@ -130,6 +130,7 @@ export default function App() {
   const [pendingImage, setPendingImage] = useState<PendingImage>(null);
   const [pendingConsent, setPendingConsent] = useState<PendingConsent | null>(null);
   const [step, setStep] = useState<string | null>(null);
+  const [councilStep, setCouncilStep] = useState<string | null>(null);
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [locked, setLocked] = useState(lockIsSet());
   const [onboarding, setOnboarding] = useState(needsOnboarding());
@@ -282,7 +283,13 @@ export default function App() {
       // wymagające narzędzi) idą normalną ścieżką.
       const wantCouncil = opts?.council || (store.settings.councilMode && isComplex(text));
       const useCouncil = !!wantCouncil && !image && councilMembers(3).length >= 2;
-      const reply = useCouncil ? await askCouncil(history) : await askJarvis(history);
+      if (useCouncil) setCouncilStep(`⚖ Konsylium — pytam ${councilMembers(3).length} modele…`);
+      let reply;
+      try {
+        reply = useCouncil ? await askCouncil(history) : await askJarvis(history);
+      } finally {
+        setCouncilStep(null);
+      }
       const aiMsg: ChatMessage = {
         id: uid(),
         role: "assistant",
@@ -615,7 +622,7 @@ export default function App() {
       </div>
 
       <div onClick={onOrbTap}>
-        <Orb state={orb} label={step && busy ? `⚙ ${step}…` : undefined} />
+        <Orb state={orb} label={councilStep || (step && busy ? `⚙ ${step}…` : undefined)} />
       </div>
 
       <Conversation messages={messages} interim={interim} liveId={liveId} onSuggest={handleSend} />

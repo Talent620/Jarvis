@@ -46,6 +46,12 @@ export default function Help({ onClose }: { onClose: () => void }) {
             <li>Z kluczem <b>Tavily</b> (⚙ → Research) dostajesz odpowiedzi ze <b>źródłami [1][2]</b> pod wiadomością.</li>
           </ul>
 
+          <h3>⚖ Tryb Konsylium</h3>
+          <ul>
+            <li>Przy ważnym pytaniu kliknij <b>⚖</b> przy polu pisania — JARVIS zapyta <b>kilka różnych modeli naraz</b> (np. Gemini + Groq + Cerebras), a sędzia złoży jedną odpowiedź i pokaże, czy modele się zgadzają.</li>
+            <li>Pod odpowiedzią rozwiniesz panel „⚖ Konsylium" i zobaczysz, co powiedział każdy model. Chcesz to zawsze przy złożonych pytaniach? Włącz w <b>⚙ → AI</b>. (Wymaga kluczy ≥ 2 dostawców.)</li>
+          </ul>
+
           <h3>📔 Mój dziennik</h3>
           <ul>
             <li><b>⋯ → Mój dziennik</b> — Twoja prywatna baza przemyśleń. Osobne wpisy (nie jeden ciąg), z tytułem, tagami i wyszukiwaniem.</li>
