@@ -1,10 +1,19 @@
 import { AppLauncher } from "@capacitor/app-launcher";
 import { store } from "./store";
+import { desktop } from "./desktop";
 
 // Otwieranie aplikacji i usług zewnętrznych. Na Androidzie/iOS używa AppLauncher,
-// w przeglądarce robi fallback na window.open.
+// na Windows (.exe) — powłoki systemowej (tel:/sms: → Phone Link, mapy →
+// przeglądarka), a w zwykłej przeglądarce robi fallback na window.open.
 
 async function open(url: string): Promise<boolean> {
+  // Windows (.exe): powłoka systemowa obsługuje protokoły (tel:, sms:, mailto:,
+  // http:) tak jak natywna aplikacja — inaczej niż martwe window.open("tel:…").
+  const d = desktop();
+  if (d) {
+    const r = await d.open(url).catch(() => "err");
+    if (r === "ok") return true;
+  }
   try {
     const { value } = await AppLauncher.canOpenUrl({ url }).catch(() => ({ value: false }));
     if (value) {

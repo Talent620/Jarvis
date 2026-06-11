@@ -1,5 +1,5 @@
 // Główny proces Electrona — JARVIS na komputer (Windows .exe), pełna wersja.
-const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard } = require("electron");
+const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { spawn, exec } = require("child_process");
@@ -224,6 +224,21 @@ function buildHotkey(combo) {
 }
 
 function registerDesktopControl() {
+  // Natywne powiadomienie Windows (przypomnienia, minutnik, pomodoro, leady).
+  ipcMain.handle("jarvis:notify", (_e, payload) => {
+    try {
+      if (!Notification.isSupported()) return "err:unsupported";
+      const title = String((payload && payload.title) || "JARVIS");
+      const body = String((payload && payload.body) || "");
+      const n = new Notification({ title, body, silent: false });
+      n.on("click", () => summonWindow());
+      n.show();
+      return "ok";
+    } catch (e) {
+      return `err:${e}`;
+    }
+  });
+
   ipcMain.handle("jarvis:open", async (_e, target) => {
     if (!target) return "err:empty";
     // URL/protokół (http, mailto, spotify:, ms-settings:) → powłoka; inaczej ścieżka.

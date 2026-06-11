@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   media: (action) => ipcRenderer.invoke("jarvis:media", String(action || "")),
   // Zrzut ekranu → base64 PNG (analiza wizyjna).
   screenshot: () => ipcRenderer.invoke("jarvis:screenshot"),
+  // Natywne powiadomienie systemowe Windows.
+  notify: (title, body) => ipcRenderer.invoke("jarvis:notify", { title: String(title || ""), body: String(body || "") }),
   // Pisanie tekstu / skróty (Windows), opcjonalnie do okna o tytule.
   type: (text, window) => ipcRenderer.invoke("jarvis:type", { text: String(text || ""), window: window || "" }),
   hotkey: (combo, window) => ipcRenderer.invoke("jarvis:hotkey", { combo: String(combo || ""), window: window || "" }),

@@ -1,5 +1,6 @@
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import { desktopNotify } from "./desktop";
 import type { Reminder } from "../types";
 
 // Stabilny dodatni int z tekstowego id (wymagane przez LocalNotifications).
@@ -31,6 +32,8 @@ export async function notify(title: string, body: string): Promise<void> {
       /* fallback do web */
     }
   }
+  // Windows (.exe): natywne powiadomienie systemowe — działa też przy zminimalizowanym oknie.
+  if (await desktopNotify(title, body)) return;
   try {
     if ("Notification" in window && Notification.permission === "granted") new Notification(title, { body });
   } catch {
@@ -55,8 +58,9 @@ export async function scheduleTimer(minutes: number, label?: string): Promise<vo
       /* fallback */
     }
   }
-  // Web/desktop: prosty fallback w przeglądarce.
-  setTimeout(() => {
+  // Web/desktop: po upływie czasu pokaż powiadomienie (Windows natywne lub web).
+  setTimeout(async () => {
+    if (await desktopNotify("JARVIS — minutnik", body)) return;
     try {
       if ("Notification" in window && Notification.permission === "granted") new Notification("JARVIS — minutnik", { body });
     } catch {

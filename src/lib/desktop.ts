@@ -9,6 +9,7 @@ export interface JarvisDesktop {
   volume(action: string): Promise<string>;
   media(action: string): Promise<string>;
   screenshot(): Promise<string>;
+  notify(title: string, body: string): Promise<string>;
   type(text: string, window?: string): Promise<string>;
   hotkey(combo: string, window?: string): Promise<string>;
   clipWatch(enabled: boolean): Promise<boolean>;
@@ -79,6 +80,14 @@ export async function mediaPc(action: string): Promise<string> {
   if (r === "ok") return MEDIA_LABEL[a] || "Gotowe.";
   if (r === "err:unsupported") return "Sterowanie multimediami jest dostępne tylko na Windows.";
   return `Nie udało się sterować odtwarzaniem (${r}).`;
+}
+
+/** Natywne powiadomienie Windows (lub false poza desktopem / starszym .exe). */
+export async function desktopNotify(title: string, body: string): Promise<boolean> {
+  const d = desktop();
+  if (!d?.notify) return false;
+  const r = await d.notify(title, body).catch(() => "err");
+  return r === "ok";
 }
 
 /** Zrzut ekranu komputera → obraz do analizy wizyjnej (lub null poza desktopem). */
