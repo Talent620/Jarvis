@@ -1,6 +1,7 @@
 export default function More({
   onProjects,
   onJournal,
+  onMoney,
   onSales,
   onHistory,
   onData,
@@ -14,6 +15,7 @@ export default function More({
 }: {
   onProjects: () => void;
   onJournal: () => void;
+  onMoney: () => void;
   onSales: () => void;
   onHistory: () => void;
   onData: () => void;
@@ -26,6 +28,7 @@ export default function More({
   onClose: () => void;
 }) {
   const items = [
+    { icon: "💰", label: "Zarabianie — autopilot dochodu", fn: onMoney },
     { icon: "📔", label: "Mój dziennik (przemyślenia)", fn: onJournal },
     { icon: "📈", label: "Pulpit Sprzedaży (leady, CRM)", fn: onSales },
     { icon: "🌐", label: "Kreator stron — zbuduj witrynę", fn: onWeb },

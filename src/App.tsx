@@ -9,6 +9,7 @@ import ChatHistory from "./components/ChatHistory";
 import Projects from "./components/Projects";
 import Journal from "./components/Journal";
 import SalesDashboard from "./components/SalesDashboard";
+const MoneyHub = lazy(() => import("./components/MoneyHub"));
 import Help from "./components/Help";
 import More from "./components/More";
 import LockScreen from "./components/LockScreen";
@@ -105,6 +106,7 @@ export default function App() {
   const [showProjects, setShowProjects] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
   const [showSales, setShowSales] = useState(false);
+  const [showMoney, setShowMoney] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [showGadgets, setShowGadgets] = useState(false);
@@ -551,11 +553,21 @@ export default function App() {
       {showProjects && <Projects onClose={() => setShowProjects(false)} />}
       {showJournal && <Journal onClose={() => setShowJournal(false)} />}
       {showSales && <SalesDashboard onClose={() => setShowSales(false)} />}
+      {showMoney && (
+        <Suspense fallback={null}>
+          <MoneyHub
+            onClose={() => setShowMoney(false)}
+            onSales={() => { setShowMoney(false); setShowSales(true); }}
+            onWeb={() => { setShowMoney(false); setShowWeb(true); }}
+          />
+        </Suspense>
+      )}
       {showHelp && <Help onClose={() => setShowHelp(false)} />}
       {showMore && (
         <More
           onProjects={() => setShowProjects(true)}
           onJournal={() => setShowJournal(true)}
+          onMoney={() => setShowMoney(true)}
           onSales={() => setShowSales(true)}
           onHistory={() => setShowHistory(true)}
           onData={() => setShowPanels(true)}
