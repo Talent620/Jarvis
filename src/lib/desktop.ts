@@ -11,6 +11,8 @@ export interface JarvisDesktop {
   screenshot(): Promise<string>;
   type(text: string, window?: string): Promise<string>;
   hotkey(combo: string, window?: string): Promise<string>;
+  clipWatch(enabled: boolean): Promise<boolean>;
+  onClipboard(cb: (text: string) => void): () => void;
 }
 
 export function desktop(): JarvisDesktop | null {
@@ -94,6 +96,22 @@ export async function typeText(text: string, window?: string): Promise<string> {
   if (r === "ok") return `Wpisuję tekst${window ? ` w „${window}"` : ""}.`;
   if (r === "err:unsupported") return "Pisanie tekstu jest dostępne tylko na Windows.";
   return `Nie udało się wpisać tekstu (${r}).`;
+}
+
+/**
+ * Obserwator schowka (desktop, opt-in): włącza nasłuch w procesie głównym i
+ * subskrybuje świeżo skopiowane teksty. Zwraca funkcję sprzątającą (lub null
+ * poza desktopem / gdy preload nie wspiera tej funkcji — starszy .exe).
+ */
+export function watchClipboard(onText: (text: string) => void): (() => void) | null {
+  const d = desktop();
+  if (!d?.clipWatch || !d?.onClipboard) return null;
+  void d.clipWatch(true);
+  const off = d.onClipboard(onText);
+  return () => {
+    void d.clipWatch(false);
+    off();
+  };
 }
 
 export async function hotkey(combo: string, window?: string): Promise<string> {

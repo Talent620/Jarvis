@@ -13,6 +13,7 @@ const MoneyHub = lazy(() => import("./components/MoneyHub"));
 import Help from "./components/Help";
 import More from "./components/More";
 import LockScreen from "./components/LockScreen";
+import Onboarding, { needsOnboarding } from "./components/Onboarding";
 import PermissionDialog from "./components/PermissionDialog";
 import { lockIsSet } from "./lib/lock";
 import { Suspense, lazy } from "react";
@@ -34,7 +35,7 @@ import { enablePrivateMode } from "./lib/privateMode";
 import { runProspecting } from "./lib/prospect";
 import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
-import { captureScreen, isDesktop } from "./lib/desktop";
+import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
 import { getWeather } from "./lib/weather";
 import { feedback, buzz, cue } from "./lib/feedback";
 import { ensureNotifPerms, notify } from "./lib/notifications";
@@ -126,6 +127,8 @@ export default function App() {
   const [step, setStep] = useState<string | null>(null);
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [locked, setLocked] = useState(lockIsSet());
+  const [onboarding, setOnboarding] = useState(needsOnboarding());
+  const [clipSuggest, setClipSuggest] = useState<string>("");
 
   const listenerRef = useRef<Listener | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -486,10 +489,52 @@ export default function App() {
     };
   }, []);
 
+  // Proaktywny schowek (desktop, opt-in): skopiowany tekst → dyskretna propozycja.
+  useEffect(() => {
+    if (!isDesktop() || !settings.clipboardWatch) return;
+    const stop = watchClipboard((text) => setClipSuggest(text));
+    return () => stop?.();
+  }, [settings.clipboardWatch]);
+
   if (locked) return <LockScreen onUnlock={() => setLocked(false)} />;
+  if (onboarding)
+    return (
+      <Onboarding
+        onDone={() => {
+          setOnboarding(false);
+          if (resolveProvider()) setShowSettings(false); // klucz dodany w kreatorze
+        }}
+      />
+    );
 
   return (
     <div className={`app${messages.length ? " chatting" : ""}`}>
+      {clipSuggest && (
+        <div className="clip-widget">
+          <p>📋 {clipSuggest.slice(0, 120)}</p>
+          <div className="row-btns">
+            <button
+              className="btn primary"
+              style={{ flex: 1, marginTop: 0, padding: "8px 10px", fontSize: 13 }}
+              onClick={() => {
+                const t = clipSuggest;
+                setClipSuggest("");
+                const isUrl = /^https?:\/\/\S+$/i.test(t.trim());
+                sendRef.current(
+                  isUrl
+                    ? `Przeanalizuj ten link i powiedz mi, co w nim jest najważniejsze: ${t.trim()}`
+                    : `Przeanalizuj tekst, który właśnie skopiowałem, i zaproponuj, co mogę z nim zrobić:\n\n${t}`,
+                );
+              }}
+            >
+              🔍 Przeanalizuj
+            </button>
+            <button className="btn" style={{ width: "auto", marginTop: 0, padding: "8px 10px", fontSize: 13 }} onClick={() => setClipSuggest("")}>
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       <div className="topbar">
         <div className="brand">
           JARVIS

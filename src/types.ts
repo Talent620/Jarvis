@@ -258,6 +258,8 @@ export interface Settings {
   fishAudioApiKey: string;
   /** reference_id głosu Fish Audio (np. sklonowany głos JARVIS). */
   fishAudioVoiceId: string;
+  /** Desktop: obserwuj schowek i proaktywnie proponuj akcje (prywatność: domyślnie OFF). */
+  clipboardWatch: boolean;
   /** Adres instancji Home Assistant (np. http://homeassistant.local:8123). */
   homeAssistantUrl: string;
   /** Długoterminowy token dostępu Home Assistant. */

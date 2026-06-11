@@ -857,3 +857,137 @@ button:disabled {
 .x:hover {
   color: #ff8585;
 }
+
+/* ===== Onboarding — pierwsze uruchomienie ===== */
+.onboard {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 30%, rgba(108, 231, 255, 0.08), transparent 60%), var(--bg);
+  padding: 24px;
+}
+.onboard-card {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.onboard-card.enter { animation: onboard-in 0.32s ease both; }
+.onboard-card.leave { animation: onboard-out 0.18s ease both; }
+@keyframes onboard-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes onboard-out {
+  to { opacity: 0; transform: translateY(-10px) scale(0.985); }
+}
+.onboard h1 {
+  font-family: Orbitron, sans-serif;
+  font-size: 30px;
+  letter-spacing: 0.14em;
+  color: var(--cyan);
+  margin: 0;
+  text-shadow: 0 0 24px rgba(108, 231, 255, 0.5);
+}
+.onboard-sub { color: var(--text-dim); margin: 0; }
+.onboard-orb {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(108, 231, 255, 0.9), rgba(42, 169, 214, 0.25) 55%, transparent 75%);
+  box-shadow: 0 0 40px rgba(108, 231, 255, 0.45), inset 0 0 22px rgba(108, 231, 255, 0.35);
+  animation: onboard-pulse 2.6s ease-in-out infinite;
+}
+@keyframes onboard-pulse {
+  50% { transform: scale(1.06); box-shadow: 0 0 56px rgba(108, 231, 255, 0.6), inset 0 0 26px rgba(108, 231, 255, 0.45); }
+}
+.onboard-ok { color: var(--ok, #58e08a); font-weight: 600; }
+.onboard-cta { width: 100%; }
+.onboard-skip {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 2px;
+  text-decoration: underline;
+}
+.onboard-skip:hover { color: var(--text); }
+.onboard-personas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+.onboard-persona {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  padding: 12px 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.onboard-persona:hover { transform: translateY(-1px); }
+.onboard-persona.on {
+  border-color: var(--cyan);
+  box-shadow: 0 0 16px rgba(108, 231, 255, 0.25);
+}
+.onboard-tour { display: flex; flex-direction: column; gap: 10px; width: 100%; text-align: left; }
+.onboard-tip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  animation: onboard-in 0.4s ease both;
+}
+.onboard-dots { display: flex; gap: 8px; margin-top: 8px; }
+.onboard-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.onboard-dot.on { background: var(--cyan); transform: scale(1.25); }
+
+/* ===== Widget schowka (desktop) — dyskretna propozycja akcji ===== */
+.clip-widget {
+  position: fixed;
+  right: 16px;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 150;
+  max-width: 300px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.5);
+  animation: onboard-in 0.25s ease both;
+}
+.clip-widget p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.clip-widget .row-btns { display: flex; gap: 6px; }

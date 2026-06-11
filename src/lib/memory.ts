@@ -184,3 +184,47 @@ export function memoryBlock(): string {
   if (!facts.length) return "";
   return "\n\nZapamiętane fakty o użytkowniku:\n" + facts.map((m) => `- ${m.key}: ${m.value}`).join("\n");
 }
+
+// === Pamięć ewoluująca: semantyczny dobór wpisów dziennika ===
+// Udostępnione wpisy dziennika są wektoryzowane w tle (cache w RAM — wektory
+// dziennika nie puchną w localStorage) i do promptu trafiają te NAJTRAFNIEJSZE
+// dla bieżącego pytania, a nie po prostu pierwsze z brzegu. JARVIS sam „łączy
+// kropki" między rozmową a przemyśleniami użytkownika.
+
+const auxVecs = new Map<string, number[]>(); // journalId → wektor (sesyjny cache)
+const AUX_CAP = 60; // ile wpisów maksymalnie indeksujemy (koszty/limit czasu)
+let auxIndexing = false;
+
+async function ensureJournalIndexed(): Promise<void> {
+  if (auxIndexing || embedDisabled) return;
+  const shared = (store.data.journal || []).filter((j) => j.shared).slice(0, AUX_CAP);
+  const pending = shared.filter((j) => !auxVecs.has(j.id + ":" + j.updatedAt));
+  if (!pending.length) return;
+  auxIndexing = true;
+  try {
+    const vecs = await embedBatch(pending.map((j) => `${j.title}\n${j.body}`.slice(0, 800)));
+    if (!vecs) return;
+    pending.forEach((j, i) => {
+      if (vecs[i]?.length) auxVecs.set(j.id + ":" + j.updatedAt, vecs[i]);
+    });
+  } finally {
+    auxIndexing = false;
+  }
+}
+
+/**
+ * Zwraca id udostępnionych wpisów dziennika w kolejności trafności do zapytania
+ * (semantycznie), albo null gdy indeks niedostępny — wtedy brain użyje kolejności
+ * naturalnej. Wywoływane przed budową promptu, razem z prepareMemoryContext.
+ */
+export async function rankJournal(query: string): Promise<string[] | null> {
+  const shared = (store.data.journal || []).filter((j) => j.shared);
+  if (shared.length <= 3 || !query.trim()) return null; // mało wpisów — bez kosztów
+  void ensureJournalIndexed();
+  const qv = await embedText(query);
+  if (!qv) return null;
+  const scored = shared
+    .map((j) => ({ id: j.id, score: cosine(qv, auxVecs.get(j.id + ":" + j.updatedAt) || []) }))
+    .sort((a, b) => b.score - a.score);
+  return scored.map((s) => s.id);
+}

@@ -7,7 +7,7 @@ import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { googleStartUrl } from "../lib/google";
 import { testApi, testProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
-import { exportData, exportFull, importData } from "../lib/backup";
+import { exportData, exportFull, exportFullEncrypted, importData } from "../lib/backup";
 import { keyList, keyCount } from "../lib/keys";
 import { systemCheck } from "../lib/diagnostics";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
@@ -38,6 +38,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [syncMsg, setSyncMsg] = useState("");
   const [apiMsg, setApiMsg] = useState("");
   const [backupMsg, setBackupMsg] = useState("");
+  const [backupPass, setBackupPass] = useState("");
   const [backendMsg, setBackendMsg] = useState("");
   const [quickKey, setQuickKey] = useState("");
   const [quickMsg, setQuickMsg] = useState("");
@@ -873,12 +874,30 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <b style={{ color: "var(--gold)" }}>Uwaga:</b> ten plik zawiera Twoje klucze —
                 trzymaj go w bezpiecznym miejscu (nie wysyłaj nikomu, nie wrzucaj do chmury publicznej).
               </p>
+              <div className="field" style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="password"
+                  value={backupPass}
+                  placeholder="Hasło kopii (zalecane)"
+                  onChange={(e) => setBackupPass(e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  className="btn primary"
+                  style={{ width: "auto", marginTop: 0 }}
+                  disabled={backupPass.trim().length < 4}
+                  onClick={async () => setBackupMsg(await exportFullEncrypted(backupPass))}
+                >
+                  🔐 Zaszyfrowana
+                </button>
+              </div>
               <button className="btn" onClick={() => exportFull()}>
-                ⬇ Pełna kopia zapasowa
+                ⬇ Pełna kopia (jawna, bez hasła)
               </button>
               <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                Przywracasz ją tym samym przyciskiem „⬆ Importuj" — JARVIS rozpozna pełną kopię i
-                odtworzy też klucze.
+                Zaszyfrowana kopia (AES-256) jest bezpieczna nawet w chmurze — bez hasła plik jest
+                bezużyteczny. Obie przywracasz przyciskiem „⬆ Importuj" (przy zaszyfrowanej JARVIS
+                poprosi o hasło).
               </p>
               {backupMsg && <p className="muted">{backupMsg}</p>}
 

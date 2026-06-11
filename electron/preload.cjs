@@ -20,4 +20,11 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   // Pisanie tekstu / skróty (Windows), opcjonalnie do okna o tytule.
   type: (text, window) => ipcRenderer.invoke("jarvis:type", { text: String(text || ""), window: window || "" }),
   hotkey: (combo, window) => ipcRenderer.invoke("jarvis:hotkey", { combo: String(combo || ""), window: window || "" }),
+  // Obserwator schowka (opt-in): włącz/wyłącz + subskrypcja nowych tekstów.
+  clipWatch: (enabled) => ipcRenderer.invoke("jarvis:clipwatch", !!enabled),
+  onClipboard: (cb) => {
+    const listener = (_e, text) => cb(String(text || ""));
+    ipcRenderer.on("jarvis:clipboard", listener);
+    return () => ipcRenderer.removeListener("jarvis:clipboard", listener);
+  },
 });

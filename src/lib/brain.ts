@@ -1,7 +1,7 @@
 import { store } from "./store";
 import { toolDefs, resetCitations, getCitations } from "./tools";
 import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored } from "./providers/registry";
-import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed } from "./memory";
+import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed, rankJournal } from "./memory";
 import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
 import { retrieveKnowledge } from "./knowledge";
 import { isDesktop } from "./desktop";
@@ -59,28 +59,36 @@ function modelFor(p: ProviderId, complex: boolean, vision: boolean): string {
 }
 
 /** Buduje kolejność prób (dostawca+model) dopasowaną do zadania. */
-function routeOrder(history: Msg[]): { provider: ProviderId; model: string }[] {
+export function routeOrder(history: Msg[]): { provider: ProviderId; model: string }[] {
   const s = store.settings;
   const last = history[history.length - 1];
   const hasImage = !!last?.image;
   const complex = isComplex(last?.content || "");
 
+  // Local-first fallback: skonfigurowana Ollama zawsze domyka łańcuch — gdy
+  // padnie sieć/chmura, JARVIS płynnie przechodzi na model lokalny z PEŁNYM
+  // kontekstem rozmowy (historia i pamięć idą w zapytaniu jak zwykle).
+  const localTail: { provider: ProviderId; model: string }[] = s.ollamaUrl?.trim()
+    ? [{ provider: "ollama", model: s.model && s.provider === "ollama" && s.model !== "auto" ? s.model : TASK_MODELS.ollama.simple }]
+    : [];
+
   if (s.provider === "auto" && (s.model === "auto" || !s.model)) {
-    let provs = PROVIDER_LIST.filter((p) => s.keys[p.id]?.trim());
+    let provs = PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim());
     if (hasImage) {
       const vis = provs.filter((p) => VISION_PROVIDERS.has(p.id));
       if (vis.length) provs = vis; // do obrazu wybierz dostawcę z wizją
     }
     provs.sort((a, b) => b.rank - a.rank);
-    return provs.map((p) => ({ provider: p.id, model: modelFor(p.id, complex, hasImage) }));
+    return [...provs.map((p) => ({ provider: p.id, model: modelFor(p.id, complex, hasImage) })), ...localTail];
   }
 
   const resolved = resolveProvider()!;
   return [
     { provider: resolved.provider, model: resolved.model },
-    ...PROVIDER_LIST.filter((p) => p.id !== resolved.provider && s.keys[p.id]?.trim())
+    ...PROVIDER_LIST.filter((p) => p.id !== "ollama" && p.id !== resolved.provider && s.keys[p.id]?.trim())
       .sort((a, b) => b.rank - a.rank)
       .map((p) => ({ provider: p.id, model: p.defaultModel })),
+    ...localTail.filter((l) => l.provider !== resolved.provider),
   ];
 }
 
@@ -113,8 +121,13 @@ export function systemPrompt(): string {
   }
 
   // Dziennik: TYLKO wpisy, które użytkownik świadomie udostępnił czatowi (budżet ~3000 zn.).
+  // Kolejność semantyczna (pamięć ewoluująca): najtrafniejsze do pytania wchodzą pierwsze.
   let journalCtx = "";
-  const shared = (store.data.journal || []).filter((j) => j.shared);
+  let shared = (store.data.journal || []).filter((j) => j.shared);
+  if (journalRank) {
+    const pos = new Map(journalRank.map((id, i) => [id, i]));
+    shared = [...shared].sort((a, b) => (pos.get(a.id) ?? 999) - (pos.get(b.id) ?? 999));
+  }
   if (shared.length) {
     let budget = 3000;
     const chunks: string[] = [];
@@ -188,6 +201,8 @@ export function systemPrompt(): string {
 // Wynik przebiegu „głębokiego myślenia" + dobrana wiedza ekspercka (wstrzykiwane jak pamięć).
 let deepAnalysis = "";
 let currentKnowledge = "";
+// Semantyczna kolejność wpisów dziennika dla bieżącego zapytania (null = naturalna).
+let journalRank: string[] | null = null;
 
 /** Rozstrzyga, którego dostawcę i model użyć (uwzględnia tryb auto). */
 export function resolveProvider(): { provider: ProviderId; model: string; apiKey: string } | null {
@@ -324,6 +339,8 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   // Pamięć autonomiczna: dobierz fakty trafne do bieżącego zapytania (przed promptem).
   const lastUser = [...trimmed].reverse().find((m) => m.role === "user");
   await prepareMemoryContext(lastUser?.content || "");
+  // Pamięć ewoluująca: ułóż udostępnione wpisy dziennika według trafności.
+  journalRank = await rankJournal(lastUser?.content || "").catch(() => null);
 
   // Wszczepiona wiedza ekspercka: dobierz pasujące modele mentalne (offline, za darmo).
   currentKnowledge = store.settings.expertKnowledge !== false ? retrieveKnowledge(lastUser?.content || "") : "";

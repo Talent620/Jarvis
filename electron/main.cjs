@@ -1,5 +1,5 @@
 // Główny proces Electrona — JARVIS na komputer (Windows .exe), pełna wersja.
-const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen } = require("electron");
+const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { spawn, exec } = require("child_process");
@@ -25,6 +25,46 @@ function saveState(win) {
 }
 
 let mainWindow = null;
+
+// Przywołanie JARVIS-a nad każdą aplikacją (globalny skrót systemowy).
+function summonWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+// Obserwator schowka (opt-in z ustawień aplikacji): co 1,5 s sprawdza, czy
+// skopiowano NOWY tekst i wysyła go do interfejsu — JARVIS proaktywnie
+// proponuje akcję w dyskretnym widgecie. Nic nie wychodzi do sieci samo.
+let clipTimer = null;
+let clipLast = "";
+function setClipWatch(enabled) {
+  if (clipTimer) {
+    clearInterval(clipTimer);
+    clipTimer = null;
+  }
+  if (!enabled) return;
+  clipLast = clipboard.readText() || ""; // baza — nie reagujemy na to, co już jest
+  clipTimer = setInterval(() => {
+    try {
+      const t = (clipboard.readText() || "").trim();
+      if (!t || t === clipLast || t.length < 12 || t.length > 8000) {
+        if (t && t !== clipLast) clipLast = t;
+        return;
+      }
+      clipLast = t;
+      if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFocused()) {
+        mainWindow.webContents.send("jarvis:clipboard", t.slice(0, 4000));
+      }
+    } catch {
+      /* schowek chwilowo niedostępny */
+    }
+  }, 1500);
+}
 
 function createWindow() {
   const st = loadState();
@@ -324,6 +364,17 @@ if (!gotLock) {
     buildMenu();
     createWindow();
 
+    // Globalny skrót: Ctrl+Alt+J przywołuje JARVIS-a nad każdą aplikacją.
+    try {
+      globalShortcut.register("CommandOrControl+Alt+J", summonWindow);
+    } catch {
+      /* skrót zajęty przez inny program — trudno */
+    }
+    ipcMain.handle("jarvis:clipwatch", (_e, enabled) => {
+      setClipWatch(!!enabled);
+      return true;
+    });
+
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
@@ -331,5 +382,10 @@ if (!gotLock) {
 
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();
+  });
+
+  app.on("will-quit", () => {
+    globalShortcut.unregisterAll();
+    setClipWatch(false);
   });
 }

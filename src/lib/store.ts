@@ -63,6 +63,7 @@ const defaultSettings: Settings = {
   elevenLabsVoiceId: "",
   fishAudioApiKey: "",
   fishAudioVoiceId: "",
+  clipboardWatch: false,
   homeAssistantUrl: "",
   homeAssistantToken: "",
 };
