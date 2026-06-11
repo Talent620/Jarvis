@@ -1,6 +1,7 @@
 import type { Settings } from "../types";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { setLevel } from "./audioLevel";
+import { primaryKey } from "./keys";
 
 // Natywny silnik mowy Androida (pewniejszy niż Web Speech w WebView).
 interface NativeTtsPlugin {
@@ -129,7 +130,7 @@ function pcmToWavUrl(b64: string, sampleRate: number): string {
 
 // Darmowy głos wysokiej jakości przez Gemini TTS (wymaga klucza Gemini).
 async function geminiTts(text: string, settings: Settings): Promise<boolean> {
-  const key = settings.keys?.gemini?.trim();
+  const key = primaryKey("gemini");
   if (!key) return false;
   try {
     const voice = settings.geminiVoice?.trim() || "Charon";
@@ -208,7 +209,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
   }
 
   // Darmowy, wysokiej jakości głos przez Gemini TTS (najlepszy darmowy wybór).
-  if (settings.geminiTts !== false && settings.keys?.gemini?.trim()) {
+  if (settings.geminiTts !== false && primaryKey("gemini")) {
     if (await geminiTts(text, settings)) return;
   }
 

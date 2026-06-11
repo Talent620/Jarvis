@@ -1,4 +1,4 @@
-import { store } from "./store";
+import { primaryKey } from "./keys";
 
 export interface GenImage {
   data: string; // base64
@@ -33,7 +33,7 @@ async function callImageModel(model: string, key: string, parts: any[]): Promise
  * zdjęć wejściowych (np. połącz osobę z tłem, przenieś detal między zdjęciami).
  */
 export async function generateImage(prompt: string, input?: Img | Img[]): Promise<Result> {
-  const key = store.settings.keys.gemini?.trim();
+  const key = primaryKey("gemini");
   if (!key) return { error: "Dodaj klucz Google Gemini w ⚙ — Studio obrazów korzysta z Gemini (darmowy tier)." };
 
   const inputs = input ? (Array.isArray(input) ? input : [input]) : [];

@@ -4,7 +4,7 @@ import { ConversationLoop, type LoopState } from "../lib/voiceLoop";
 import { systemPrompt, resolveProvider } from "../lib/brain";
 import { PROVIDERS } from "../lib/providers/registry";
 import { subscribeLevel } from "../lib/audioLevel";
-import { store } from "../lib/store";
+import { primaryKey } from "../lib/keys";
 
 type Engine = "gemini" | "loop";
 type AnyState = LiveState | LoopState;
@@ -19,7 +19,7 @@ const LABEL: Record<string, string> = {
 };
 
 export default function LiveOverlay({ onClose }: { onClose: () => void }) {
-  const geminiKey = store.settings.keys.gemini?.trim();
+  const geminiKey = primaryKey("gemini");
   // Domyślnie Gemini Live (gdy jest klucz), inaczej uniwersalny tryb rozmowy.
   const [engine, setEngine] = useState<Engine>(geminiKey ? "gemini" : "loop");
   const [state, setState] = useState<AnyState>("connecting");

@@ -4,6 +4,7 @@ import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
 import { resolveProvider, testProvider } from "./brain";
 import { testBackend } from "./sync";
 import { isSpeechSupported } from "./voice";
+import { primaryKey, keyCount } from "./keys";
 
 // Diagnostyka startowa: sprawdza po kolei każdą usługę/API i mówi wprost,
 // co działa, a co i JAK naprawić. Wynik linia po linii (na żywo przez onStep).
@@ -33,8 +34,9 @@ export async function systemCheck(onStep?: (lines: string[]) => void): Promise<s
     (p) => p.id !== "ollama" && p.id !== r?.provider && s.keys[p.id]?.trim(),
   );
   for (const p of others) {
-    push(`⏳ ${p.label}…`);
-    lines[lines.length - 1] = await testProvider(p.id, s.keys[p.id]);
+    const n = keyCount(p.id);
+    push(`⏳ ${p.label}${n > 1 ? ` (${n} klucze)` : ""}…`);
+    lines[lines.length - 1] = await testProvider(p.id, primaryKey(p.id));
     onStep?.([...lines]);
   }
 

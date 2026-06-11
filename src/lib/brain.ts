@@ -5,7 +5,8 @@ import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed } from "
 import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
 import { retrieveKnowledge } from "./knowledge";
 import { isDesktop } from "./desktop";
-import { shouldFallback, isNetworkError, humanize, isComplex, PERSONAL_CUES } from "./aiHelpers";
+import { shouldFallback, isNetworkError, isKeyError, humanize, isComplex, PERSONAL_CUES } from "./aiHelpers";
+import { orderedKeys, primaryKey, coolDownKey } from "./keys";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
 
 // Jednorazowy retry przy chwilowym błędzie sieci.
@@ -194,14 +195,15 @@ export function resolveProvider(): { provider: ProviderId; model: string; apiKey
   if (s.provider === "auto") {
     const pick = autoPick(s.keys);
     if (!pick) return null;
-    return { ...pick, apiKey: s.keys[pick.provider] };
+    // Pierwszy świeży klucz dostawcy (gdy wpisano kilka, rotacja pomija wyczerpane).
+    return { ...pick, apiKey: primaryKey(pick.provider) };
   }
   const provider = s.provider as ProviderId;
   const meta = PROVIDERS[provider];
   if (!meta) return null;
   const model = s.model && s.model !== "auto" ? s.model : meta.defaultModel;
   // Lokalny model (Ollama) nie używa klucza — poświadczeniem jest adres serwera.
-  const apiKey = provider === "ollama" ? (s.ollamaUrl?.trim() ? "local" : "") : s.keys[provider];
+  const apiKey = provider === "ollama" ? (s.ollamaUrl?.trim() ? "local" : "") : primaryKey(provider);
   return { provider, model, apiKey };
 }
 
@@ -360,20 +362,36 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   let lastErr: unknown;
   for (let i = 0; i < order.length; i++) {
     const { provider, model } = order[i];
-    const apiKey = store.settings.keys[provider];
-    if (!apiKey?.trim()) continue;
-    try {
-      const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model }));
-      const citations = getCitations();
-      // Ucz się w tle: wyłuskaj trwałe fakty z wymiany (nie blokuje odpowiedzi).
-      void learnFromExchange(lastUser?.content || "", reply.text);
-      return citations.length ? { ...reply, citations } : reply;
-    } catch (e) {
-      lastErr = e;
-      const msg = e instanceof Error ? e.message : String(e);
-      if (i < order.length - 1 && (shouldFallback(msg) || isNetworkError(msg))) continue; // spróbuj kolejnego
-      throw new Error(humanize(msg));
+    // Ollama autoryzuje się adresem serwera, nie kluczem; pozostali — listą kluczy.
+    const keys = provider === "ollama" ? ["local"] : orderedKeys(provider);
+    if (!keys.length) continue;
+
+    let providerErr: unknown;
+    for (let j = 0; j < keys.length; j++) {
+      const apiKey = keys[j];
+      try {
+        const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model }));
+        const citations = getCitations();
+        // Ucz się w tle: wyłuskaj trwałe fakty z wymiany (nie blokuje odpowiedzi).
+        void learnFromExchange(lastUser?.content || "", reply.text);
+        return citations.length ? { ...reply, citations } : reply;
+      } catch (e) {
+        providerErr = e;
+        lastErr = e;
+        const msg = e instanceof Error ? e.message : String(e);
+        // Błąd klucza (limit/autoryzacja): odłóż go i spróbuj NASTĘPNEGO klucza tego
+        // samego dostawcy, zanim zejdziemy do kolejnego dostawcy.
+        if (provider !== "ollama" && isKeyError(msg)) {
+          coolDownKey(provider, apiKey);
+          if (j < keys.length - 1) continue;
+        }
+        break; // ten dostawca odpada — zdecyduj o fallbacku niżej
+      }
     }
+
+    const msg = providerErr instanceof Error ? providerErr.message : String(providerErr);
+    if (i < order.length - 1 && (shouldFallback(msg) || isNetworkError(msg))) continue; // następny dostawca
+    throw new Error(humanize(msg));
   }
   throw new Error(humanize(lastErr instanceof Error ? lastErr.message : String(lastErr)));
 }

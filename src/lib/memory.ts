@@ -1,4 +1,5 @@
 import { store, uid } from "./store";
+import { primaryKey } from "./keys";
 import type { MemoryFact } from "../types";
 
 // === Pamięć autonomiczna (semantyczna) ===
@@ -18,7 +19,7 @@ let embedDisabled = false; // ustawiane, gdy brak źródła embeddingów (jednor
 /** Zwraca wektory dla listy tekstów (Gemini bezpośrednio lub przez proxy) albo null. */
 async function embedBatch(texts: string[]): Promise<number[][] | null> {
   if (embedDisabled || !texts.length) return null;
-  const key = store.settings.keys.gemini?.trim();
+  const key = primaryKey("gemini");
   const proxy = store.settings.proxyUrl?.trim();
   try {
     if (key) {

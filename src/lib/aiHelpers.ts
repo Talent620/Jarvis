@@ -11,6 +11,15 @@ export function shouldFallback(msg: string): boolean {
 export const isNetworkError = (msg: string): boolean =>
   /failed to fetch|load failed|network|networkerror|timeout/i.test(msg);
 
+// Błąd „na poziomie klucza" — limit, wyczerpany kredyt lub zła autoryzacja. Przy
+// takim warto najpierw spróbować INNEGO klucza tego samego dostawcy (rotacja),
+// zanim zejdziemy do kolejnego dostawcy.
+export function isKeyError(msg: string): boolean {
+  return /rate.?limit|too many requests|quota|exceeded|insufficient|credit|billing|payment|too low|unauthorized|invalid.?api|forbidden|\b(401|402|403|429)\b/i.test(
+    msg,
+  );
+}
+
 // Przetłumacz techniczny błąd na zrozumiały komunikat.
 export function humanize(msg: string): string {
   if (isNetworkError(msg)) return "Brak połączenia z usługą AI. Sprawdź internet i klucz API (⚙ Ustawienia).";

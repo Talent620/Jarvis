@@ -7,7 +7,8 @@ import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { googleStartUrl } from "../lib/google";
 import { testApi, testProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
-import { exportData, importData } from "../lib/backup";
+import { exportData, exportFull, importData } from "../lib/backup";
+import { keyList, keyCount } from "../lib/keys";
 import { systemCheck } from "../lib/diagnostics";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode } from "../lib/privateMode";
@@ -67,12 +68,17 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
       setQuickMsg("Nie rozpoznałem dostawcy po formacie klucza — wklej go w odpowiednie pole niżej.");
       return;
     }
-    const next = { ...s, keys: { ...s.keys, [prov]: key } };
+    // Dokładaj klucz do istniejących tego dostawcy (nowa linia) — nie nadpisuj, by
+    // móc zbierać kilka kluczy do automatycznej rotacji. Pomiń, jeśli już jest.
+    const existing = keyList(prov);
+    const merged = existing.includes(key) ? existing : [...existing, key];
+    const note = existing.length && !existing.includes(key) ? ` (dodano jako ${merged.length}. klucz — rotacja)` : "";
+    const next = { ...s, keys: { ...s.keys, [prov]: merged.join("\n") } };
     setS(next);
     store.setSettings(next);
-    setQuickMsg(`✓ Rozpoznano: ${PROVIDERS[prov].label}. Sprawdzam połączenie…`);
+    setQuickMsg(`✓ Rozpoznano: ${PROVIDERS[prov].label}${note}. Sprawdzam połączenie…`);
     setQuickKey("");
-    setQuickMsg(`${PROVIDERS[prov].label} → ${await testProvider(prov, key)}`);
+    setQuickMsg(`${PROVIDERS[prov].label}${note} → ${await testProvider(prov, key)}`);
   };
 
   // Lista modeli dla wybranego dostawcy (lub info o auto).
@@ -250,23 +256,34 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               )}
 
               <h3>Klucze API (lokalnie na urządzeniu)</h3>
-              {PROVIDER_LIST.filter((p) => p.id !== "ollama").map((p) => (
-                <div className="field" key={p.id}>
-                  <label>
-                    {p.label}
-                    {p.needsProxy ? " · może wymagać proxy (CORS)" : ""} —{" "}
-                    <a href={p.keysUrl} target="_blank" rel="noopener" style={{ color: "var(--cyan)" }}>
-                      klucz
-                    </a>
-                  </label>
-                  <input
-                    type="password"
-                    value={s.keys[p.id] || ""}
-                    placeholder={p.id === "anthropic" ? "sk-ant-..." : "klucz API"}
-                    onChange={(e) => setKey(p.id, e.target.value)}
-                  />
-                </div>
-              ))}
+              <p className="muted" style={{ marginTop: -4 }}>
+                💡 Możesz wpisać <b>kilka kluczy jednego dostawcy</b> — każdy w nowej linii. Gdy
+                jeden wyczerpie limit dzienny, JARVIS automatycznie przełączy się na kolejny, żeby
+                rozmowa nie wywaliła się błędem.
+              </p>
+              {PROVIDER_LIST.filter((p) => p.id !== "ollama").map((p) => {
+                const n = keyCount(p.id);
+                return (
+                  <div className="field" key={p.id}>
+                    <label>
+                      {p.label}
+                      {p.needsProxy ? " · może wymagać proxy (CORS)" : ""} —{" "}
+                      <a href={p.keysUrl} target="_blank" rel="noopener" style={{ color: "var(--cyan)" }}>
+                        klucz
+                      </a>
+                      {n > 1 ? <span style={{ color: "var(--ok, #58e08a)" }}> · {n} kluczy (rotacja)</span> : null}
+                    </label>
+                    <textarea
+                      value={s.keys[p.id] || ""}
+                      placeholder={p.id === "anthropic" ? "sk-ant-…  (kilka? każdy w nowej linii)" : "klucz API  (kilka? każdy w nowej linii)"}
+                      onChange={(e) => setKey(p.id, e.target.value)}
+                      rows={s.keys[p.id]?.includes("\n") ? 3 : 1}
+                      spellCheck={false}
+                      style={{ resize: "vertical", fontFamily: "monospace", fontSize: 13, minHeight: 38 }}
+                    />
+                  </div>
+                );
+              })}
 
               <div style={{ display: "flex", gap: 8 }}>
                 <button
@@ -292,7 +309,16 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     store.setSettings(s);
                     setApiMsg("⏳ Testuję wszystkie klucze…");
                     const lines: string[] = [];
-                    for (const p of withKeys) lines.push(await testProvider(p.id, s.keys[p.id]));
+                    for (const p of withKeys) {
+                      const keys = keyList(p.id);
+                      if (keys.length <= 1) {
+                        lines.push(await testProvider(p.id, keys[0] || ""));
+                      } else {
+                        for (let idx = 0; idx < keys.length; idx++) {
+                          lines.push(`[#${idx + 1}] ${await testProvider(p.id, keys[idx])}`);
+                        }
+                      }
+                    }
                     setApiMsg(lines.join("\n"));
                   }}
                 >
@@ -821,11 +847,12 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <h3>Kopia danych</h3>
               <p className="muted">
                 Zapisz wszystkie swoje dane (zadania, notatki, pamięć, dziennik, projekty, targ…)
-                do pliku i przywróć je po reinstalacji lub na innym urządzeniu. Plik nie zawiera kluczy API.
+                do pliku i przywróć je po reinstalacji lub na innym urządzeniu. Ten plik
+                <b> nie zawiera kluczy API</b> — bezpieczny do przeniesienia.
               </p>
               <div style={{ display: "flex", gap: 8 }}>
                 <button className="btn" style={{ flex: 1 }} onClick={() => exportData()}>
-                  ⬇ Eksportuj
+                  ⬇ Eksportuj dane
                 </button>
                 <button
                   className="btn"
@@ -835,6 +862,22 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   ⬆ Importuj
                 </button>
               </div>
+
+              <h3 style={{ marginTop: 14 }}>🔐 Pełna kopia (z kluczami API)</h3>
+              <p className="muted">
+                Zapisuje JARVIS-a w całości — dane <b>oraz wszystkie ustawienia i klucze API</b>.
+                Odtwarza wszystko 1:1 po reinstalacji, bez ponownego wklejania kluczy.
+                <br />
+                <b style={{ color: "var(--gold)" }}>Uwaga:</b> ten plik zawiera Twoje klucze —
+                trzymaj go w bezpiecznym miejscu (nie wysyłaj nikomu, nie wrzucaj do chmury publicznej).
+              </p>
+              <button className="btn" onClick={() => exportFull()}>
+                ⬇ Pełna kopia zapasowa
+              </button>
+              <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                Przywracasz ją tym samym przyciskiem „⬆ Importuj" — JARVIS rozpozna pełną kopię i
+                odtworzy też klucze.
+              </p>
               {backupMsg && <p className="muted">{backupMsg}</p>}
 
               <h3>🔒 Blokada aplikacji (PIN)</h3>
