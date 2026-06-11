@@ -5,10 +5,20 @@
 //  3) wykonanie narzędzi lokalnych (store) przez runTool,
 //  4) łagodna degradacja narzędzi wymagających konfiguracji (bez kluczy → czytelny
 //     komunikat zamiast wyjątku/żądania sieciowego).
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { toolDefs, runTool } from "../src/lib/tools";
 import { riskOf } from "../src/lib/permissions";
 import { store } from "../src/lib/store";
+
+// Test hermetyczny: żadne narzędzie nie sięga do realnej sieci (np. daily_briefing
+// → pogoda). Stub fetch odrzuca natychmiast, więc działania kończą się szybko.
+const realFetch = global.fetch;
+beforeEach(() => {
+  global.fetch = vi.fn(() => Promise.reject(new Error("offline test"))) as any;
+});
+afterEach(() => {
+  global.fetch = realFetch;
+});
 
 beforeEach(() => {
   store.setData((d) => {
