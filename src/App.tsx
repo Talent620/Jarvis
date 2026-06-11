@@ -14,6 +14,9 @@ import Help from "./components/Help";
 import More from "./components/More";
 import LockScreen from "./components/LockScreen";
 import Onboarding, { needsOnboarding } from "./components/Onboarding";
+import VoiceMode from "./components/VoiceMode";
+import { watchHeadset } from "./lib/headset";
+import { toast } from "./lib/toast";
 import PermissionDialog from "./components/PermissionDialog";
 import { lockIsSet } from "./lib/lock";
 import { Suspense, lazy } from "react";
@@ -129,6 +132,7 @@ export default function App() {
   const [locked, setLocked] = useState(lockIsSet());
   const [onboarding, setOnboarding] = useState(needsOnboarding());
   const [clipSuggest, setClipSuggest] = useState<string>("");
+  const [showVoice, setShowVoice] = useState(false);
 
   const listenerRef = useRef<Listener | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -339,6 +343,12 @@ export default function App() {
       wakeWord: wake,
       onWake: () => {
         stopSpeaking();
+        if (store.settings.voiceModeWake) {
+          // Słowo „Jarvis" otwiera pełnoekranowy tryb głosowy (bez patrzenia).
+          listenerRef.current?.stop();
+          setShowVoice(true);
+          return;
+        }
         setOrb("listening");
       },
       onInterim: (t) => setInterim(t),
@@ -489,6 +499,19 @@ export default function App() {
     };
   }, []);
 
+  // Słuchawki BT podłączone → zaproponuj/otwórz tryb głosowy (obsługa bez patrzenia).
+  useEffect(() => {
+    const stop = watchHeadset(() => {
+      toast("🎧 Wykryto słuchawki — włączam tryb głosowy");
+      setShowVoice(true);
+    });
+    const offVoice = (window as any).jarvisDesktop?.onVoiceMode?.(() => setShowVoice((v: boolean) => !v));
+    return () => {
+      stop();
+      offVoice?.();
+    };
+  }, []);
+
   // Proaktywny schowek (desktop, opt-in): skopiowany tekst → dyskretna propozycja.
   useEffect(() => {
     if (!isDesktop() || !settings.clipboardWatch) return;
@@ -553,6 +576,17 @@ export default function App() {
           onClick={() => {
             stopSpeaking();
             listenerRef.current?.stop();
+            setShowVoice(true);
+          }}
+          title="Tryb głosowy — obsługa bez patrzenia"
+        >
+          🎙
+        </button>
+        <button
+          className="icon-btn"
+          onClick={() => {
+            stopSpeaking();
+            listenerRef.current?.stop();
             setShowLive(true);
           }}
           title="Rozmowa na żywo"
@@ -589,6 +623,7 @@ export default function App() {
         micSupported={micSupported}
       />
 
+      {showVoice && <VoiceMode onClose={() => setShowVoice(false)} />}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {showPanels && <Panels onClose={() => setShowPanels(false)} />}
       {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}

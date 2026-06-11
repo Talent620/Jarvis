@@ -716,6 +716,18 @@ export const toolDefs: ToolDef[] = tools.map((t) => t.def);
 
 const executors: Record<string, Executor> = Object.fromEntries(tools.map((t) => [t.def.name, t.run]));
 
+/**
+ * Dynamiczna rejestracja narzędzia (Plugin API). Wtyczki dokładają własne
+ * narzędzia do TEJ SAMEJ tablicy, którą mózg wysyła modelowi — model widzi je
+ * natychmiast, a runTool wykonuje przez wspólną bramkę zgód i audyt.
+ */
+export function registerTool(def: ToolDef, run: Executor): void {
+  if (!/^[a-z0-9_]+$/.test(def.name)) throw new Error(`Nieprawidłowa nazwa narzędzia: ${def.name}`);
+  if (executors[def.name]) throw new Error(`Narzędzie „${def.name}" już istnieje.`);
+  toolDefs.push(def);
+  executors[def.name] = run;
+}
+
 export async function runTool(name: string, input: unknown): Promise<string> {
   const fn = executors[name];
   if (!fn) return `Nieznane narzędzie: ${name}`;

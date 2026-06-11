@@ -4,6 +4,9 @@ import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { toast } from "./lib/toast";
 import "./styles/index.css";
+import { initPlugins } from "./plugins";
+
+initPlugins();
 
 // Self-healing: b\u0142\u0119dy poza Reactem (asynchroniczne, sieciowe) nie gin\u0105 w konsoli \u2014
 // JARVIS m\u00f3wi o nich po ludzku. Throttling chroni przed lawin\u0105 toast\u00f3w.

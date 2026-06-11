@@ -64,6 +64,8 @@ const defaultSettings: Settings = {
   fishAudioApiKey: "",
   fishAudioVoiceId: "",
   clipboardWatch: false,
+  adaptiveUi: true,
+  voiceModeWake: false,
   homeAssistantUrl: "",
   homeAssistantToken: "",
 };

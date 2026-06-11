@@ -367,6 +367,11 @@ if (!gotLock) {
     // Globalny skrót: Ctrl+Alt+J przywołuje JARVIS-a nad każdą aplikacją.
     try {
       globalShortcut.register("CommandOrControl+Alt+J", summonWindow);
+      // Ctrl+Alt+V: przywołaj okno i przełącz pełnoekranowy tryb głosowy.
+      globalShortcut.register("CommandOrControl+Alt+V", () => {
+        summonWindow();
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("jarvis:voicemode");
+      });
     } catch {
       /* skrót zajęty przez inny program — trudno */
     }

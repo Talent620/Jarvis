@@ -260,6 +260,10 @@ export interface Settings {
   fishAudioVoiceId: string;
   /** Desktop: obserwuj schowek i proaktywnie proponuj akcje (prywatność: domyślnie OFF). */
   clipboardWatch: boolean;
+  /** Adaptacyjny układ menu — sekcje układają się wg nawyków (pora dnia). */
+  adaptiveUi: boolean;
+  /** Słowo „Jarvis" otwiera pełnoekranowy tryb głosowy (zamiast zwykłego nasłuchu). */
+  voiceModeWake: boolean;
   /** Adres instancji Home Assistant (np. http://homeassistant.local:8123). */
   homeAssistantUrl: string;
   /** Długoterminowy token dostępu Home Assistant. */

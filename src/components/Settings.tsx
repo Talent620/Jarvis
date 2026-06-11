@@ -16,9 +16,34 @@ import { runProspecting } from "../lib/prospect";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 import { useEscape } from "../hooks/useEscape";
+import { listPlugins } from "../plugins/PluginRegistry";
+import { hourlyActivity, resetAdaptive } from "../lib/usage";
 
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return <div className={`switch ${on ? "on" : ""}`} onClick={onClick} />;
+}
+
+// Mini-wykres aktywności: słupki per godzina z ostatnich 7 dni (Adaptive UI).
+function UsageChart() {
+  const hours = hourlyActivity();
+  const max = Math.max(1, ...hours);
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 44, margin: "8px 0" }}>
+      {hours.map((n, h) => (
+        <div
+          key={h}
+          title={`${h}:00 — ${n} akcji`}
+          style={{
+            flex: 1,
+            height: `${Math.max(8, (n / max) * 100)}%`,
+            background: n ? "var(--cyan)" : "var(--line)",
+            opacity: n ? 0.45 + 0.55 * (n / max) : 0.5,
+            borderRadius: 2,
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 type Tab = "ai" | "voice" | "behavior" | "integrations" | "data";
@@ -450,6 +475,17 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <Toggle on={s.wakeWord} onClick={() => set({ wakeWord: !s.wakeWord })} />
               </div>
               <div className="row">
+                <span>
+                  🚗 Słowo „Jarvis" otwiera tryb głosowy
+                  <br />
+                  <span className="muted">
+                    Pełnoekranowy tryb bez patrzenia (duży tekst + głos) — idealny w aucie.
+                    Wymaga włączonego nasłuchu powyżej.
+                  </span>
+                </span>
+                <Toggle on={s.voiceModeWake} onClick={() => set({ voiceModeWake: !s.voiceModeWake })} />
+              </div>
+              <div className="row">
                 <span>Słuchaj od razu po otwarciu (i zapytaj „o co chodzi?")</span>
                 <Toggle on={s.autoListenOnOpen} onClick={() => set({ autoListenOnOpen: !s.autoListenOnOpen })} />
               </div>
@@ -682,6 +718,43 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   <input type="time" value={s.briefingTime} onChange={(e) => set({ briefingTime: e.target.value })} />
                 </div>
               )}
+              {typeof window !== "undefined" && (window as any).jarvisDesktop && (
+                <div className="row">
+                  <span>
+                    📋 Proaktywny schowek (komputer)
+                    <br />
+                    <span className="muted">
+                      Skopiuj tekst/link w dowolnym programie — JARVIS dyskretnie zaproponuje analizę.
+                      Nic nie wysyła samo. Globalne skróty: Ctrl+Alt+J — przywołaj okno, Ctrl+Alt+V — tryb głosowy.
+                    </span>
+                  </span>
+                  <Toggle on={s.clipboardWatch} onClick={() => set({ clipboardWatch: !s.clipboardWatch })} />
+                </div>
+              )}
+
+              <h3>🧠 Adaptacyjny układ</h3>
+              <div className="row">
+                <span>
+                  Menu uczy się Twoich nawyków
+                  <br />
+                  <span className="muted">
+                    Po ~7 dniach sekcje, których używasz najczęściej o danej porze dnia, wskakują
+                    na górę. Dane tylko lokalnie (max 30 dni).
+                  </span>
+                </span>
+                <Toggle on={s.adaptiveUi !== false} onClick={() => set({ adaptiveUi: s.adaptiveUi === false })} />
+              </div>
+              <UsageChart />
+              <button
+                className="btn"
+                onClick={() => {
+                  resetAdaptive();
+                  setProspMsg("");
+                  store.setSettings(s);
+                }}
+              >
+                ↺ Resetuj układ do domyślnego
+              </button>
 
               <h3>💸 Automat sprzedaży (auto-prospekting)</h3>
               <p className="muted">
@@ -841,6 +914,27 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   onChange={(e) => set({ homeAssistantToken: e.target.value })}
                 />
               </div>
+
+              <h3>🧩 Wtyczki</h3>
+              <p className="muted">
+                JARVIS to platforma: wtyczki dokładają własne narzędzia i ustawienia.
+                Jak napisać swoją — zobacz <code>PLUGIN_API.md</code> w repozytorium.
+              </p>
+              {listPlugins().map((rp) => (
+                <div key={rp.plugin.id} className="journal-card">
+                  <b>{rp.plugin.name}</b>{" "}
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    v{rp.plugin.version} · narzędzia: {rp.tools.length ? rp.tools.join(", ") : "brak"}
+                  </span>
+                  {rp.error && <p className="muted" style={{ color: "#ff8585" }}>Błąd wtyczki: {rp.error}</p>}
+                  {rp.sections.map((sec, i) => (
+                    <div key={i} style={{ marginTop: 8 }}>
+                      <h3 style={{ marginTop: 0 }}>{sec.label}</h3>
+                      {sec.render()}
+                    </div>
+                  ))}
+                </div>
+              ))}
             </>
           )}
 

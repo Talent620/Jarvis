@@ -13,6 +13,7 @@ export interface JarvisDesktop {
   hotkey(combo: string, window?: string): Promise<string>;
   clipWatch(enabled: boolean): Promise<boolean>;
   onClipboard(cb: (text: string) => void): () => void;
+  onVoiceMode(cb: () => void): () => void;
 }
 
 export function desktop(): JarvisDesktop | null {

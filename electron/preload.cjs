@@ -27,4 +27,10 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
     ipcRenderer.on("jarvis:clipboard", listener);
     return () => ipcRenderer.removeListener("jarvis:clipboard", listener);
   },
+  // Globalny skrót Ctrl+Alt+V → przełącz tryb głosowy.
+  onVoiceMode: (cb) => {
+    const listener = () => cb();
+    ipcRenderer.on("jarvis:voicemode", listener);
+    return () => ipcRenderer.removeListener("jarvis:voicemode", listener);
+  },
 });
