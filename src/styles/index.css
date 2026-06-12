@@ -1201,3 +1201,28 @@ button:disabled {
   width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
   font-size: 15px; box-shadow: 0 0 12px rgba(108,231,255,0.6);
 }
+
+/* ===== Status Deck — flagi decyzji/błędów ===== */
+.status-deck {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 12px 6px;
+  justify-content: center;
+}
+.status-flag {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--text-dim);
+}
+.status-flag.error { color: #ff8585; border-color: rgba(255,133,133,0.4); }
+.status-flag.warn { color: var(--gold); border-color: var(--line-strong); }
+.status-flag.info { color: var(--cyan); }
+.status-flag:hover { filter: brightness(1.2); }

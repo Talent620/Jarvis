@@ -29,6 +29,7 @@ const Studio = lazy(() => import("./components/Studio"));
 const WebStudio = lazy(() => import("./components/WebStudio"));
 const AdminPanel = lazy(() => import("./components/AdminPanel"));
 const Cards = lazy(() => import("./components/Cards"));
+const Transcribe = lazy(() => import("./components/Transcribe"));
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
 import { startBackgroundWake } from "./lib/wakeword";
@@ -40,6 +41,7 @@ import { askJarvis, resolveProvider } from "./lib/brain";
 import { askCouncil, councilMembers, type CouncilReply } from "./lib/council";
 import { isComplex } from "./lib/aiHelpers";
 import { dueCount } from "./lib/cards";
+import { statusFlags } from "./lib/status";
 import { isUncensored } from "./lib/providers/registry";
 import { enablePrivateMode } from "./lib/privateMode";
 import { runProspecting } from "./lib/prospect";
@@ -145,6 +147,7 @@ export default function App() {
   const [showVoice, setShowVoice] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showCards, setShowCards] = useState(false);
+  const [showTranscribe, setShowTranscribe] = useState(false);
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
   const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
 
@@ -649,6 +652,26 @@ export default function App() {
         </button>
       </div>
 
+      {(() => {
+        const flags = statusFlags();
+        if (!flags.length) return null;
+        const open = (id: string) => {
+          if (id === "decisions") setShowSales(true);
+          else if (id === "review") setShowCards(true);
+          else setShowPanels(true);
+          toast(flags.find((f) => f.id === id)?.detail || "");
+        };
+        return (
+          <div className="status-deck">
+            {flags.map((f) => (
+              <button key={f.id} className={`status-flag ${f.severity}`} onClick={() => open(f.id)} title={f.detail}>
+                {f.severity === "error" ? "⛔" : f.severity === "warn" ? "⚑" : "•"} {f.label}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
       <div onClick={onOrbTap}>
         <Orb state={orb} label={councilStep || (step && busy ? `⚙ ${step}…` : undefined)} />
       </div>
@@ -676,6 +699,11 @@ export default function App() {
       {showCards && (
         <Suspense fallback={null}>
           <Cards onClose={() => setShowCards(false)} />
+        </Suspense>
+      )}
+      {showTranscribe && (
+        <Suspense fallback={null}>
+          <Transcribe onClose={() => setShowTranscribe(false)} />
         </Suspense>
       )}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
@@ -719,6 +747,7 @@ export default function App() {
           onHelp={() => setShowHelp(true)}
           onAdmin={() => setShowAdmin(true)}
           onCards={() => setShowCards(true)}
+          onTranscribe={() => setShowTranscribe(true)}
           onClose={() => setShowMore(false)}
         />
       )}

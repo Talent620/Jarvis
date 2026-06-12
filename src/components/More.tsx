@@ -19,6 +19,7 @@ export default function More({
   onHelp,
   onAdmin,
   onCards,
+  onTranscribe,
   onClose,
 }: {
   onProjects: () => void;
@@ -35,6 +36,7 @@ export default function More({
   onHelp: () => void;
   onAdmin: () => void;
   onCards: () => void;
+  onTranscribe: () => void;
   onClose: () => void;
 }) {
   useEscape(onClose);
@@ -42,6 +44,7 @@ export default function More({
     { id: "money", icon: "💰", label: "Zarabianie — autopilot dochodu", fn: onMoney },
     { id: "journal", icon: "📔", label: "Mój dziennik (przemyślenia)", fn: onJournal },
     { id: "cards", icon: "🧠", label: "Kapsuły Wiedzy — ucz się i pamiętaj", fn: onCards },
+    { id: "transcribe", icon: "🎙", label: "Transkrypcja spotkań (mowa→tekst)", fn: onTranscribe },
     { id: "sales", icon: "📈", label: "Pulpit Sprzedaży (leady, CRM)", fn: onSales },
     { id: "web", icon: "🌐", label: "Kreator stron — zbuduj witrynę", fn: onWeb },
     { id: "hud", icon: "👁", label: "Wizja HUD (kamera) — co widzisz?", fn: onHud },

@@ -996,6 +996,30 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 />
               </div>
 
+              <h3>⚙ n8n — warstwa wykonawcza (automatyzacje)</h3>
+              <p className="muted">
+                JARVIS faktycznie WYKONUJE zadania przez Twój n8n: outreach, deployment, research,
+                integracje (WHOOP, finanse, CRM). Utwórz w n8n workflow z węzłem <b>Webhook</b> i wklej
+                jego adres. Powiedz np. „uruchom automatyzację outreach…", a JARVIS wyśle zlecenie.
+              </p>
+              <div className="field">
+                <label>Adres webhooka n8n</label>
+                <input
+                  value={s.n8nUrl}
+                  placeholder="https://twój-n8n/webhook/jarvis"
+                  onChange={(e) => set({ n8nUrl: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>Token autoryzacji (opcjonalnie)</label>
+                <input
+                  type="password"
+                  value={s.n8nToken}
+                  placeholder="Bearer token (jeśli webhook go wymaga)"
+                  onChange={(e) => set({ n8nToken: e.target.value })}
+                />
+              </div>
+
               <h3>🧩 Wtyczki</h3>
               <p className="muted">
                 JARVIS to platforma: wtyczki dokładają własne narzędzia i ustawienia.

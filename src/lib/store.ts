@@ -42,6 +42,8 @@ const defaultSettings: Settings = {
   webSearch: true,
   tavilyApiKey: "",
   falApiKey: "",
+  n8nUrl: "",
+  n8nToken: "",
   speak: true,
   geminiTts: true,
   geminiVoice: "Charon",

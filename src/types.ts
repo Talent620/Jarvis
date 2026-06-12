@@ -237,6 +237,10 @@ export interface Settings {
   tavilyApiKey: string;
   /** Klucz fal.ai — premium modele edycji obrazu (FLUX Kontext, Nano Banana Pro). */
   falApiKey: string;
+  /** Adres webhooka n8n — warstwa wykonawcza (automatyzacje robią rzeczy). */
+  n8nUrl: string;
+  /** Opcjonalny token autoryzacji do n8n. */
+  n8nToken: string;
   /** Czy mówić odpowiedzi na głos. */
   speak: boolean;
   /** Używaj darmowego głosu Gemini TTS (wysoka jakość, wymaga klucza Gemini). */

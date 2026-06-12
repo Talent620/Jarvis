@@ -8,6 +8,8 @@ import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
 import { gmailSearch, gmailSend, gcalList, gcalAdd } from "./google";
 import { rememberFact } from "./memory";
 import { generateCards } from "./cards";
+import { runAutomation } from "./n8n";
+import { getCrypto, getRate } from "./markets";
 import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, hotkey as desktopHotkey } from "./desktop";
 import type { Citation } from "../types";
 
@@ -729,6 +731,60 @@ const tools: Tool[] = [
       const n = Math.min(15, Math.max(1, Number(count) || 8));
       const r = await generateCards(String(material), deck, "JARVIS", n);
       return "error" in r ? r.error : `Dodałem ${r.added} fiszek do Kapsuł Wiedzy${deck ? ` (talia „${deck}")` : ""}. Powtórzysz je w ⋯ → 🧠 Kapsuły Wiedzy.`;
+    },
+  },
+  {
+    def: {
+      name: "run_automation",
+      description:
+        "Uruchom realną automatyzację w n8n (warstwa wykonawcza) — JARVIS faktycznie WYKONUJE zadanie, nie tylko o nim mówi: wysyłka maili/outreach, deployment, research, integracje (CRM, WHOOP, finanse). Podaj krótką nazwę akcji i szczegóły. Używaj, gdy użytkownik prosi o wykonanie czegoś, co obsługuje jego n8n.",
+      input_schema: obj(
+        { action: str("Nazwa zadania, np. send_outreach, deploy_site, sync_whoop"), details: str("Szczegóły/parametry zadania (opcjonalnie)") },
+        ["action"],
+      ),
+    },
+    run: async ({ action, details }) => {
+      const r = await runAutomation(String(action), details);
+      return r.ok ? `Automatyzacja „${action}" wykonana. ${r.result || ""}`.trim() : `Nie udało się: ${r.error}`;
+    },
+  },
+  {
+    def: {
+      name: "get_news",
+      description: "Pobierz najnowsze wiadomości na temat ze źródłami (przez research Tavily). Używaj na pytania o aktualności/newsy.",
+      input_schema: obj({ topic: str("Temat wiadomości") }, ["topic"]),
+    },
+    run: async ({ topic }) => {
+      const key = store.settings.tavilyApiKey?.trim();
+      if (!key) return "Najnowsze wiadomości wymagają klucza Tavily (⚙ → AI, darmowy) — albo użyj modelu Claude z wbudowanym wyszukiwaniem.";
+      const res = await fetch("https://api.tavily.com/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ api_key: key, query: `najnowsze wiadomości: ${topic}`, topic: "news", max_results: 6, include_answer: true }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) return `Nie udało się pobrać wiadomości (${data?.error || res.status}).`;
+      const items: any[] = data.results || [];
+      items.forEach((r) => citationBuffer.push({ title: r.title || r.url, url: r.url }));
+      const head = data.answer ? `${data.answer}\n\n` : "";
+      return head + items.map((r, i) => `[${i + 1}] ${r.title}\n${(r.content || "").slice(0, 200)}\nŹródło: ${r.url}`).join("\n\n");
+    },
+  },
+  {
+    def: {
+      name: "get_markets",
+      description: "Notowania rynkowe: krypto (BTC/ETH/SOL…) w USD i PLN ze zmianą 24h oraz kursy walut. Używaj na pytania o ceny/kursy.",
+      input_schema: obj(
+        { crypto: str("Symbole krypto po przecinku (opcjonalnie)"), currency_from: str("Waluta bazowa kursu (opcjonalnie)"), currency_to: str("Waluta docelowa (opcjonalnie)") },
+        [],
+      ),
+    },
+    run: async ({ crypto, currency_from, currency_to }) => {
+      const parts: string[] = [];
+      if (crypto?.trim()) parts.push(await getCrypto(crypto.split(/[,\s]+/).filter(Boolean)));
+      if (currency_from?.trim() || currency_to?.trim()) parts.push(await getRate(currency_from || "USD", currency_to || "PLN"));
+      if (!parts.length) parts.push(await getCrypto(["bitcoin", "ethereum"]), await getRate("USD", "PLN"));
+      return parts.join("\n");
     },
   },
 ];
