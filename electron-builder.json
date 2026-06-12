@@ -4,10 +4,18 @@
   "directories": { "output": "release-desktop" },
   "files": ["dist/**/*", "electron/**/*"],
   "win": {
-    "target": "portable",
+    "target": "nsis",
     "artifactName": "JARVIS.exe"
   },
-  "portable": {
+  "nsis": {
+    "oneClick": true,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": false,
+    "runAfterFinish": true,
+    "deleteAppDataOnUninstall": false,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "JARVIS",
     "artifactName": "JARVIS.exe"
   }
 }

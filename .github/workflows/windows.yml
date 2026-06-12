@@ -1,8 +1,9 @@
 name: Build Windows EXE
 
-# Buduje JEDEN przenośny plik JARVIS.exe (Electron, bez instalacji) i publikuje
-# go w GitHub Releases pod tagiem "latest". Klucze API są wstrzykiwane przy
-# buildzie z Secrets repo (te same JARVIS_*_KEY co APK), więc .exe ma je „od razu".
+# Buduje instalator JARVIS.exe (Electron, NSIS) i publikuje go w GitHub Releases
+# pod tagiem "latest". Instalator pewnie umieszcza wszystkie pliki (m.in. ffmpeg.dll)
+# na dysku — koniec z błędami „nie znaleziono ffmpeg.dll" przy wersji przenośnej.
+# Klucze API są wstrzykiwane przy buildzie z Secrets repo (te same JARVIS_*_KEY co APK).
 #
 # Stały link: https://github.com/<owner>/<repo>/releases/download/latest/JARVIS.exe
 
@@ -47,8 +48,8 @@ jobs:
           JARVIS_TAVILY_KEY: ${{ secrets.JARVIS_TAVILY_KEY }}
         run: npm run build
 
-      - name: Package portable EXE
-        run: npx electron-builder --win portable --publish never
+      - name: Package installer EXE
+        run: npx electron-builder --win nsis --publish never
 
       - name: Publish to GitHub Releases (rolling 'latest')
         uses: softprops/action-gh-release@v2

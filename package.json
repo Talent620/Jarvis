@@ -14,7 +14,7 @@
     "cap:android": "cap open android",
     "android:build": "npm run build && cap sync android",
     "electron:dev": "electron .",
-    "desktop:build": "npm run build && electron-builder --win portable",
+    "desktop:build": "npm run build && electron-builder --win nsis",
     "test": "vitest run",
     "test:watch": "vitest"
   },
