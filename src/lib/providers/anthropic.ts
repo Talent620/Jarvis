@@ -38,8 +38,23 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
   }));
   const used = new Set<string>();
   let guard = 0;
+  // Niektóre modele/bramki nie przyjmują adaptacyjnego myślenia ani „effort".
+  // Zaczynamy z nimi (najlepsza jakość), a przy błędzie 400 o ich braku —
+  // automatycznie ponawiamy bez tych pól, by czat działał na każdym modelu.
+  let richThinking = true;
 
   while (guard++ < 8) {
+    const body: Record<string, unknown> = {
+      model: ctx.model,
+      max_tokens: 8192,
+      system: ctx.system,
+      tools,
+      messages,
+    };
+    if (richThinking) {
+      body.thinking = { type: "adaptive" };
+      body.output_config = { effort: "high" };
+    }
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -48,20 +63,21 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
         "anthropic-version": "2023-06-01",
         "anthropic-dangerous-direct-browser-access": "true",
       },
-      body: JSON.stringify({
-        model: ctx.model,
-        max_tokens: 8192,
-        system: ctx.system,
-        thinking: { type: "adaptive" },
-        output_config: { effort: "high" },
-        tools,
-        messages,
-      }),
+      body: JSON.stringify(body),
     });
     // Brama/proxy potrafi zwrócić HTML zamiast JSON — nie wywalaj się na parsowaniu,
     // a kod statusu dołącz do treści, by logika awaryjna rozpoznała 401/403/429/5xx.
     const data = (await res.json().catch(() => null)) as Resp | null;
-    if (!res.ok || !data) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
+    if (!res.ok || !data) {
+      const msg = data?.error?.message || "Błąd API";
+      // Model nie wspiera adaptacyjnego myślenia/effortu → ponów BEZ tych pól.
+      if (res.status === 400 && richThinking && /thinking|adaptive|effort|output_config|budget/i.test(msg)) {
+        richThinking = false;
+        guard--; // ta próba się nie liczy do limitu pętli
+        continue;
+      }
+      throw new Error(`${msg} (${res.status})`);
+    }
 
     messages.push({ role: "assistant", content: data.content });
     for (const b of data.content) {
