@@ -42,6 +42,7 @@ import { askCouncil, councilMembers, type CouncilReply } from "./lib/council";
 import { isComplex } from "./lib/aiHelpers";
 import { dueCount } from "./lib/cards";
 import { statusFlags } from "./lib/status";
+import { buildContext } from "./lib/context";
 import { isUncensored } from "./lib/providers/registry";
 import { enablePrivateMode } from "./lib/privateMode";
 import { runProspecting } from "./lib/prospect";
@@ -292,9 +293,9 @@ export default function App() {
     setOrb("thinking");
 
     try {
-      const history = [...messagesRef.current, userMsg]
-        .slice(-20)
-        .map((m) => ({ role: m.role, content: m.text, image: m.image }));
+      // Okno kontekstu: czysty dialog (bez komunikatów systemowych), ostatnie 30
+      // wiadomości — żeby JARVIS pamiętał, co napisałeś, a nie powitania/briefingi.
+      const history = buildContext([...messagesRef.current, userMsg], 30);
 
       // Głębokie badanie (🔬): wzmocnij ostatnie polecenie dyrektywą researchu ze
       // źródłami. Używa narzędzi (web_research), więc idzie normalną ścieżką.
