@@ -445,6 +445,9 @@ if (!gotLock) {
           "Access-Control-Allow-Origin": ["*"],
           "Access-Control-Allow-Headers": ["*"],
           "Access-Control-Allow-Methods": ["GET, POST, OPTIONS, PUT, DELETE"],
+          // Odsłoń nagłówki limitów (anthropic-ratelimit-*, x-ratelimit-*) —
+          // dzięki temu Ustawienia pokazują % zużycia API.
+          "Access-Control-Expose-Headers": ["*"],
         },
       });
     });

@@ -10,6 +10,8 @@ import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/w
 import { exportData, exportFull, exportFullEncrypted, importData } from "../lib/backup";
 import { keyList, keyCount } from "../lib/keys";
 import { systemCheck } from "../lib/diagnostics";
+import { runHealthCheck, statusIcon, type HealthItem } from "../lib/healthCheck";
+import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode } from "../lib/privateMode";
 import { runProspecting } from "../lib/prospect";
@@ -64,6 +66,10 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [syncMsg, setSyncMsg] = useState("");
   const [apiMsg, setApiMsg] = useState("");
+  const [health, setHealth] = useState<HealthItem[] | null>(null);
+  const [healthBusy, setHealthBusy] = useState(false);
+  const [apiStatus, setApiStatus] = useState<Partial<Record<ProviderId, ApiStatus>>>({});
+  const [statusBusy, setStatusBusy] = useState(false);
   const [backupMsg, setBackupMsg] = useState("");
   const [backupPass, setBackupPass] = useState("");
   const [backendMsg, setBackendMsg] = useState("");
@@ -294,16 +300,22 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </p>
               {PROVIDER_LIST.filter((p) => p.id !== "ollama").map((p) => {
                 const n = keyCount(p.id);
+                const st = apiStatus[p.id];
                 return (
                   <div className="field" key={p.id}>
                     <label>
+                      {st && <span title={st.detail}>{stateDot(st.state)} </span>}
                       {p.label}
+                      {st?.usedPct !== undefined && (
+                        <span style={{ color: st.usedPct >= 85 ? "var(--gold)" : "var(--ok, #58e08a)" }}> · zużyte {st.usedPct}%</span>
+                      )}
                       {p.needsProxy ? " · może wymagać proxy (CORS)" : ""} —{" "}
                       <a href={p.keysUrl} target="_blank" rel="noopener" style={{ color: "var(--cyan)" }}>
                         klucz
                       </a>
                       {n > 1 ? <span style={{ color: "var(--ok, #58e08a)" }}> · {n} kluczy (rotacja)</span> : null}
                     </label>
+                    {st && <p className="muted" style={{ fontSize: 11, margin: "2px 0 4px" }}>{st.detail}</p>}
                     <textarea
                       value={s.keys[p.id] || ""}
                       placeholder={p.id === "anthropic" ? "sk-ant-…  (kilka? każdy w nowej linii)" : "klucz API  (kilka? każdy w nowej linii)"}
@@ -327,6 +339,21 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   }}
                 >
                   🔌 Sprawdź aktywne
+                </button>
+                <button
+                  className="btn"
+                  style={{ flex: 1 }}
+                  disabled={statusBusy}
+                  onClick={async () => {
+                    store.setSettings(s);
+                    setStatusBusy(true);
+                    setApiMsg("⏳ Sprawdzam status i zużycie wszystkich API…");
+                    await checkAllApis((map) => setApiStatus(map));
+                    setStatusBusy(false);
+                    setApiMsg("Gotowe — status 🟢🟡🔴 i zużycie widać przy każdym dostawcy wyżej.");
+                  }}
+                >
+                  {statusBusy ? "📊 Sprawdzam…" : "📊 Status + zużycie"}
                 </button>
                 <button
                   className="btn"
@@ -381,6 +408,61 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 🧠 Sprawdź Claude (klucz + czy jest mózgiem)
               </button>
               {apiMsg && <p className="muted" style={{ whiteSpace: "pre-line" }}>{apiMsg}</p>}
+
+              <h3>🩺 Centrum sprawdzania — czy wszystko działa</h3>
+              <p className="muted">
+                Jeden przycisk sprawdza wszystkie funkcje (mózg AI, Claude, mikrofon, głos, leady,
+                pocztę…), tłumaczy po ludzku co i dlaczego, a drobne problemy <b>naprawia sam</b>.
+              </p>
+              <button
+                className="btn primary"
+                disabled={healthBusy}
+                onClick={async () => {
+                  setHealthBusy(true);
+                  setHealth([]);
+                  await runHealthCheck((items) => setHealth(items));
+                  setHealthBusy(false);
+                }}
+              >
+                {healthBusy ? "🩺 Sprawdzam…" : "🩺 Sprawdź wszystko (z naprawami)"}
+              </button>
+              {health && health.length > 0 && (
+                <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+                  {health.map((h) => (
+                    <div key={h.id} className="journal-card" style={{ margin: 0, padding: "8px 10px" }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                        <span>{statusIcon(h.status)}</span>
+                        <b style={{ fontSize: 14 }}>{h.icon} {h.title}</b>
+                      </div>
+                      <p className="muted" style={{ fontSize: 13, margin: "4px 0 0" }}>{h.detail}</p>
+                      {h.fix && (
+                        <button
+                          className="chip"
+                          style={{ marginTop: 6, borderColor: "var(--gold)" }}
+                          onClick={async () => {
+                            h.fix!.apply();
+                            setS({ ...store.settings }); // odśwież formularz po naprawie
+                            setHealthBusy(true);
+                            await runHealthCheck((items) => setHealth(items));
+                            setHealthBusy(false);
+                          }}
+                        >
+                          🔧 {h.fix.label}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {!healthBusy && (
+                    <p className="muted" style={{ fontSize: 12 }}>
+                      {health.some((h) => h.status === "err")
+                        ? "Czerwone pozycje wymagają Twojego ruchu — opis mówi dokładnie, co zrobić."
+                        : health.some((h) => h.status === "warn")
+                          ? "Żółte pozycje warto poprawić — większość naprawisz przyciskiem 🔧."
+                          : "Wszystko gra! JARVIS w pełnej gotowości. 🚀"}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <h3>📨 Poczta — wysyłka e-maili z aplikacji</h3>
               <p className="muted">
