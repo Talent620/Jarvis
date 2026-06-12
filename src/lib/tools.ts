@@ -10,6 +10,7 @@ import { rememberFact } from "./memory";
 import { generateCards } from "./cards";
 import { runAutomation } from "./n8n";
 import { getCrypto, getRate } from "./markets";
+import { findLeads } from "./leads";
 import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, hotkey as desktopHotkey } from "./desktop";
 import type { Citation } from "../types";
 
@@ -583,37 +584,22 @@ const tools: Tool[] = [
     def: {
       name: "find_leads",
       description:
-        "Znajdź potencjalnych klientów (leady) dla biznesu: lokalne firmy w danej niszy i lokalizacji, z publicznych źródeł (Tavily). Zwraca listę firm z linkami i opisem. PO UŻYCIU ułóż z tego czytelną TABELĘ leadów (firma, strona/kontakt, czego im brakuje, kąt sprzedażowy) i zaproponuj gotowy, krótki szkic oferty oraz następny krok.",
+        "Znajdź realnych potencjalnych klientów (leady) — lokalne firmy z OpenStreetMap, z NAZWĄ, TELEFONEM, adresem i stroną. DZIAŁA OD RĘKI, za darmo, bez żadnego klucza. Nisza i lokalizacja są OPCJONALNE: bez lokalizacji użyje geolokalizacji, bez niszy znajdzie wszystkie lokalne firmy (priorytet: te BEZ strony www — idealni klienci dla agencji stron). Znalezione leady są od razu zapisywane do Pulpitu Sprzedaży. Po użyciu pokaż krótką listę (firma, telefon, czy ma stronę) i zaproponuj następny krok.",
       input_schema: obj(
         {
-          niche: str("Nisza/branża, np. 'gabinet stomatologiczny', 'fryzjer', 'kancelaria'"),
-          location: str("Miasto lub region, np. 'Kraków'"),
-          count: { type: "number", description: "Ile leadów (3–15, domyślnie 8)" },
+          niche: str("Nisza/branża (opcjonalnie), np. fryzjer, restauracja, warsztat"),
+          location: str("Miasto (opcjonalnie), np. Kraków"),
+          count: { type: "number", description: "Ile leadów (3–30, domyślnie 12)" },
+          only_without_website: { type: "boolean", description: "Tylko firmy BEZ strony www (idealne dla agencji stron)" },
         },
-        ["niche", "location"],
+        [],
       ),
     },
-    run: async ({ niche, location, count }) => {
-      const key = store.settings.tavilyApiKey?.trim();
-      if (!key) return "Brak klucza Tavily — dodaj go w ⚙ → AI (sekcja Research), aby szukać leadów z publicznych źródeł.";
-      const n = Math.min(15, Math.max(3, Number(count) || 8));
-      const query = `${niche} ${location} firma oferta kontakt strona`;
-      const res = await fetch("https://api.tavily.com/search", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ api_key: key, query, max_results: n, include_answer: true, search_depth: "advanced" }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data) return `Błąd wyszukiwania leadów (${data?.error || res.status}). Spróbuj ponownie za chwilę.`;
-      const results: any[] = data.results || [];
-      if (!results.length) return `Nie znalazłem firm dla „${niche}" w „${location}". Spróbuj inną niszę/lokalizację.`;
-      results.forEach((r) => citationBuffer.push({ title: r.title || r.url, url: r.url }));
-      return (
-        `Znalezione firmy (${niche}, ${location}) — surowe wyniki do analizy:\n\n` +
-        results
-          .map((r, i) => `[${i + 1}] ${r.title}\nWWW: ${r.url}\n${(r.content || "").slice(0, 300)}`)
-          .join("\n\n")
-      );
+    run: async ({ niche, location, count, only_without_website }) => {
+      const r = await findLeads({ niche, location, count: Number(count) || undefined, onlyNoWebsite: !!only_without_website });
+      if (r.error) return r.error;
+      const lines = r.sample.map((l) => `• ${l.company}${l.phone ? ` — ☎ ${l.phone}` : ""}${l.hasWebsite ? "" : " (BEZ strony — idealny lead)"}`);
+      return `Znalazłem ${r.found} firm w „${r.city}"${niche ? ` (${niche})` : ""} i zapisałem ${r.added} nowych do Pulpitu Sprzedaży (⋯ → 📈).\n\nPrzykłady:\n${lines.join("\n")}\n\nPowiedz, dla której firmy mam napisać ofertę albo zbudować demo strony.`;
     },
   },
   {

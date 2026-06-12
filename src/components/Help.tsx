@@ -73,7 +73,7 @@ export default function Help({ onClose }: { onClose: () => void }) {
 
           <h3>💸 Zarabianie (Pulpit Sprzedaży)</h3>
           <ul>
-            <li>Powiedz: „<b>znajdź leady: [nisza] w [miasto] i zapisz je</b>" — JARVIS wyszuka firmy (wymaga klucza Tavily) i sam wypełni <b>⋯ → 📈 Pulpit Sprzedaży</b>.</li>
+            <li>Powiedz: „<b>znajdź leady</b>" (albo „znajdź fryzjerów w Krakowie", „firmy bez strony w Gdańsku") — JARVIS znajdzie realne firmy z <b>telefonami</b> (darmowe, OpenStreetMap) i sam wypełni <b>⋯ → 📈 Pulpit Sprzedaży</b>.</li>
             <li>Dla wybranej firmy: <b>⋯ → 🌐 Kreator stron</b> zbuduje demo, a JARVIS napisze ofertę. Ty tylko wysyłasz i rozmawiasz.</li>
             <li>Pulpit śledzi statusy (nowy → kontakt → oferta → klient), wartość w toku i zarobione.</li>
             <li><b>Automat:</b> ⚙ → Zachowanie → „Automat sprzedaży" — JARVIS sam kilka razy dziennie szuka leadów, a z „Auto-szkice ofert" pisze gotowe maile, które czekają w Pulpicie. Ty klikasz <b>📧 Wyślij</b>.</li>

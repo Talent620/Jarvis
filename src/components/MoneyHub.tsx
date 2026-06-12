@@ -22,7 +22,7 @@ export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => v
     setHuntMsg("🔎 Szukam firm w Twojej niszy…");
     const r = await runProspecting();
     setHunting(false);
-    if (r.error) setHuntMsg(`⚙ ${r.error} Ustaw niszę i lokalizację w ⚙ → Zachowanie oraz klucz Tavily w ⚙ → AI.`);
+    if (r.error) setHuntMsg(`⚙ ${r.error}`);
     else if (r.added > 0) setHuntMsg(`✅ Dodałem ${r.added} nowych leadów do Pulpitu Sprzedaży.`);
     else setHuntMsg("Brak nowych firm tym razem — zmień niszę/lokalizację w ⚙ → Zachowanie.");
   };
@@ -63,7 +63,7 @@ export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => v
           <Guide title="ℹ Jak realnie na tym zarobić (krok po kroku)">
             <p><b>Model „agencja stron":</b> 1) <b>Znajdź leady</b> (firmy bez dobrej strony) → 2) JARVIS pisze <b>ofertę</b> i buduje <b>demo strony/sklepu</b> → 3) Ty wysyłasz i rozmawiasz → 4) klient płaci za stronę.</p>
             <p><b>Ile to przynosi:</b> prosta strona <b>800–2500 zł</b>, sklep <b>2500–8000 zł</b>, opieka/abonament <b>100–400 zł/mc</b>. Wystarczy kilku klientów miesięcznie.</p>
-            <p><b>Co darmowe:</b> szukanie leadów (klucz Tavily — darmowy tier), pisanie ofert i budowa stron (darmowe modele AI), hosting (Netlify/Vercel).</p>
+            <p><b>Co darmowe:</b> szukanie leadów (OpenStreetMap — z telefonami, bez klucza), pisanie ofert i budowa stron (darmowe modele AI), hosting (Netlify/Vercel).</p>
             <p><b>Co płatne (opcjonalnie):</b> własna domena ~50–120 zł/rok, bramka płatności dla sklepu (Przelewy24/PayU, prowizja ~1–2%).</p>
             <p><b>Uczciwie:</b> JARVIS robi 95% (research, pisanie, budowa). Pieniądze powstają, gdy Ty dowieziesz ludzką część (wysyłka, rozmowa, faktura). To dźwignia, nie bankomat.</p>
           </Guide>

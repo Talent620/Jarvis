@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
-import { runProspecting } from "../lib/prospect";
+import { findLeads } from "../lib/leads";
 import { copyWithToast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
 import { useEscape } from "../hooks/useEscape";
@@ -26,26 +26,23 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const [huntMsg, setHuntMsg] = useState("");
   const [niche, setNiche] = useState(store.settings.prospectNiche || "");
   const [city, setCity] = useState(store.settings.prospectLocation || "");
+  const [noWeb, setNoWeb] = useState(false);
 
-  // „Znajdź leady" — od ręki, prosto z pulpitu. Nisza/miasto zapisują się do
-  // ustawień, więc automat (kilka razy dziennie) używa potem tych samych.
+  // „Znajdź leady" — od ręki, prosto z pulpitu. Darmowe (OpenStreetMap), z
+  // telefonami. Nisza i miasto są OPCJONALNE (bez miasta użyje lokalizacji).
   const hunt = async () => {
-    if (!niche.trim() || !city.trim()) {
-      setHuntMsg("Podaj niszę i miasto powyżej — np. fryzjer oraz Kraków.");
-      return;
-    }
-    store.setSettings({ prospectNiche: niche.trim(), prospectLocation: city.trim() });
+    if (city.trim()) store.setSettings({ prospectNiche: niche.trim(), prospectLocation: city.trim() });
     setHunting(true);
-    setHuntMsg("🔎 Szukam firm w Twojej niszy…");
-    const r = await runProspecting();
+    setHuntMsg(noWeb ? "🔎 Szukam firm BEZ strony (idealni klienci)…" : "🔎 Szukam firm w okolicy…");
+    const r = await findLeads({ niche: niche.trim() || undefined, location: city.trim() || undefined, count: 15, onlyNoWebsite: noWeb });
     setHunting(false);
     if (r.error) {
-      setHuntMsg(/tavily/i.test(r.error) ? "⚙ Brak klucza Tavily — dodaj go w ⚙ → AI (sekcja Research, darmowy)." : `⚙ ${r.error}`);
+      setHuntMsg(`⚙ ${r.error}`);
     } else if (r.added > 0) {
-      setHuntMsg(`✅ Dodałem ${r.added} nowych leadów. Są na liście poniżej.`);
+      setHuntMsg(`✅ Znalazłem ${r.found} firm w ${r.city} i dodałem ${r.added} nowych. Są na liście.`);
       setFilter("all");
     } else {
-      setHuntMsg("Brak nowych firm tym razem — spróbuj zmienić niszę lub miasto.");
+      setHuntMsg(`Znalazłem ${r.found} firm w ${r.city}, ale wszystkie już masz na liście.`);
     }
   };
 
@@ -128,9 +125,13 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
 
           {/* Szukanie leadów — wszystko z pulpitu, bez wchodzenia do ustawień */}
           <div className="field" style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <input value={niche} placeholder="Nisza (np. fryzjer)" onChange={(e) => setNiche(e.target.value)} style={{ flex: 1 }} />
-            <input value={city} placeholder="Miasto (np. Kraków)" onChange={(e) => setCity(e.target.value)} style={{ flex: 1 }} />
+            <input value={niche} placeholder="Nisza — opcjonalnie (np. fryzjer)" onChange={(e) => setNiche(e.target.value)} style={{ flex: 1 }} />
+            <input value={city} placeholder="Miasto — opcjonalnie (np. Kraków)" onChange={(e) => setCity(e.target.value)} style={{ flex: 1 }} />
           </div>
+          <label className="row" style={{ cursor: "pointer", marginBottom: 8 }}>
+            <span style={{ fontSize: 13 }}>🌐 Tylko firmy <b>bez strony www</b> (idealni klienci dla agencji stron)</span>
+            <input type="checkbox" checked={noWeb} onChange={(e) => setNoWeb(e.target.checked)} />
+          </label>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn primary" style={{ flex: 1 }} onClick={hunt} disabled={hunting}>
               {hunting ? "🔎 Szukam…" : "🔎 Znajdź leady"}

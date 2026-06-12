@@ -787,7 +787,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <h3>💸 Automat sprzedaży (auto-prospekting)</h3>
               <p className="muted">
                 JARVIS sam, kilka razy dziennie (gdy apka otwarta), szuka nowych firm w Twojej niszy
-                i dopisuje je do Pulpitu Sprzedaży. Wymaga klucza Tavily (⚙ → AI).
+                i dopisuje je do Pulpitu Sprzedaży. Darmowe (OpenStreetMap) — z telefonami firm, bez klucza.
               </p>
               <div className="row">
                 <span>Włącz auto-prospekting (co ~4 h)</span>
