@@ -17,6 +17,7 @@ export default function More({
   onWeb,
   onScreen,
   onHelp,
+  onAdmin,
   onClose,
 }: {
   onProjects: () => void;
@@ -31,6 +32,7 @@ export default function More({
   onWeb: () => void;
   onScreen?: () => void;
   onHelp: () => void;
+  onAdmin: () => void;
   onClose: () => void;
 }) {
   useEscape(onClose);
@@ -47,6 +49,7 @@ export default function More({
     { id: "data", icon: "▣", label: "Dane (zadania, targ, audyt…)", fn: onData },
     { id: "gadgets", icon: "🧰", label: "Gadżety (latarka, kompas, QR…)", fn: onGadgets },
     { id: "help", icon: "❓", label: "Pomoc — jak korzystać", fn: onHelp },
+    { id: "admin", icon: "🔐", label: "Panel administratora (licencje)", fn: onAdmin },
   ];
 
   // Adaptive UI: po tygodniu danych menu układa się wg nawyków (pora dnia).

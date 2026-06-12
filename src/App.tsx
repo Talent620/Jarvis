@@ -27,6 +27,7 @@ const Gadgets = lazy(() => import("./components/Gadgets"));
 const HudVision = lazy(() => import("./components/HudVision"));
 const Studio = lazy(() => import("./components/Studio"));
 const WebStudio = lazy(() => import("./components/WebStudio"));
+const AdminPanel = lazy(() => import("./components/AdminPanel"));
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
 import { startBackgroundWake } from "./lib/wakeword";
@@ -138,6 +139,7 @@ export default function App() {
   const [onboarding, setOnboarding] = useState(needsOnboarding());
   const [clipSuggest, setClipSuggest] = useState<string>("");
   const [showVoice, setShowVoice] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
   const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
 
@@ -661,6 +663,11 @@ export default function App() {
       />
 
       {showVoice && <VoiceMode onClose={() => setShowVoice(false)} />}
+      {showAdmin && (
+        <Suspense fallback={null}>
+          <AdminPanel onClose={() => setShowAdmin(false)} />
+        </Suspense>
+      )}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {showPanels && <Panels onClose={() => setShowPanels(false)} />}
       {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}
@@ -700,6 +707,7 @@ export default function App() {
           onWeb={() => setShowWeb(true)}
           onScreen={isDesktop() ? lookAtScreen : undefined}
           onHelp={() => setShowHelp(true)}
+          onAdmin={() => setShowAdmin(true)}
           onClose={() => setShowMore(false)}
         />
       )}
