@@ -34,6 +34,7 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
 
   const history = useRef<Msg[]>([]);
   const listener = useRef<Listener | null>(null);
+  const retry = useRef<number | null>(null);
   const closed = useRef(false);
   const processing = useRef(false);
   const phaseRef = useRef<Phase>("idle");
@@ -52,7 +53,11 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
       onWake: () => { cue("wake"); setPhase("listening"); },
       onInterim: (t) => setCaption("🗣 " + t),
       onFinal: (t) => { if (!closed.current && !processing.current && t.trim()) void handle(t.trim()); },
-      onEnd: () => { if (!closed.current && !processing.current) setTimeout(() => listen(), 280); },
+      onEnd: () => {
+        if (closed.current || processing.current) return;
+        if (retry.current) clearTimeout(retry.current);
+        retry.current = window.setTimeout(() => listen(), 280);
+      },
     });
     listener.current.start();
   };
@@ -105,6 +110,7 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
     listen();
     return () => {
       closed.current = true;
+      if (retry.current) clearTimeout(retry.current);
       listener.current?.stop();
       stopSpeaking();
       stopHeadsetControls();

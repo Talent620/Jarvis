@@ -179,7 +179,7 @@ export default function App() {
         const id = uid();
         setLiveId(id);
         setMessages((m) => [...m, { id, role: "assistant", text, tools: ["wake"], createdAt: Date.now() }]);
-        if (store.settings.speak) speak(text, store.settings);
+        if (store.settings.speak) void speak(text, store.settings).catch(() => {});
         if (micSupported) startListening(false);
       },
     );
@@ -198,7 +198,7 @@ export default function App() {
         const id = uid();
         setLiveId(id);
         setMessages((m) => [...m, { id, role: "assistant", text, tools: ["proactive"], createdAt: Date.now() }]);
-        if (st.speak) speak(text, st);
+        if (st.speak) void speak(text, st).catch(() => {});
       }
       if (st.autoListenOnOpen && micSupported && ready) startListening(st.wakeWord);
     }, 800);
@@ -247,7 +247,7 @@ export default function App() {
       setMessages((m) => [...m, { id: id0, role: "assistant", text: "Szukam lokalnego modelu…", tools: ["tryb"], createdAt: Date.now() }]);
       const r = await enablePrivateMode();
       setMessages((m) => m.map((x) => (x.id === id0 ? { ...x, text: r.message } : x)));
-      if (store.settings.speak) speak(r.message, store.settings);
+      if (store.settings.speak) void speak(r.message, store.settings).catch(() => {});
       return;
     }
 
@@ -268,7 +268,7 @@ export default function App() {
       const id = uid();
       setLiveId(id);
       setMessages((m) => [...m, { id, role: "assistant", text: msg, tools: ["tryb"], createdAt: Date.now() }]);
-      if (store.settings.speak) speak(msg, store.settings);
+      if (store.settings.speak) void speak(msg, store.settings).catch(() => {});
       return;
     }
 
@@ -440,7 +440,7 @@ export default function App() {
       const id = uid();
       setLiveId(id);
       setMessages((m) => [...m, { id, role: "assistant", text, tools: ["easter-egg"], createdAt: Date.now() }]);
-      if (store.settings.speak) speak(text, store.settings);
+      if (store.settings.speak) void speak(text, store.settings).catch(() => {});
     }
   };
 
@@ -470,7 +470,7 @@ export default function App() {
           const id = uid();
           setLiveId(id);
           setMessages((m) => [...m, { id, role: "assistant", text, tools: ["reminder"], createdAt: Date.now() }]);
-          if (store.settings.speak) speak(text, store.settings);
+          if (store.settings.speak) void speak(text, store.settings).catch(() => {});
           notify("JARVIS — przypomnienie", r.text);
         });
     }, 20000);
@@ -501,7 +501,7 @@ export default function App() {
       notify("JARVIS — poranny raport", text.replace(/\s+/g, " ").slice(0, 140));
       if (st.speak) {
         setOrb("speaking");
-        speak(text, st);
+        void speak(text, st).catch(() => {});
       }
     }, 30000);
     return () => clearInterval(tick);

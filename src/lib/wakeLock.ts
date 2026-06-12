@@ -6,10 +6,7 @@ let lock: any = null;
 
 async function acquire(): Promise<void> {
   try {
-    lock = await (navigator as any).wakeLock?.request("screen");
-    lock?.addEventListener?.("release", () => {
-      lock = null;
-    });
+    lock = (await (navigator as any).wakeLock?.request("screen")) || null;
   } catch {
     lock = null;
   }
