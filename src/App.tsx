@@ -47,7 +47,7 @@ import { buildContext } from "./lib/context";
 import { isUncensored } from "./lib/providers/registry";
 import { enablePrivateMode } from "./lib/privateMode";
 import { runProspecting } from "./lib/prospect";
-import { Listener, isSpeechSupported, loadVoices, speak, stopSpeaking } from "./lib/voice";
+import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, type VoiceListener } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
 import { getWeather } from "./lib/weather";
@@ -158,7 +158,7 @@ export default function App() {
     if (licenseRequired()) checkActivation().then((r) => setLicensed(r.valid));
   }, []);
 
-  const listenerRef = useRef<Listener | null>(null);
+  const listenerRef = useRef<VoiceListener | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
   const pendingImageRef = useRef<PendingImage>(null);
@@ -386,7 +386,7 @@ export default function App() {
     if (!micSupported) return;
     stopSpeaking();
     listenerRef.current?.stop();
-    const listener = new Listener({
+    const listener = createListener({
       wakeWord: wake,
       onWake: () => {
         stopSpeaking();
@@ -402,6 +402,12 @@ export default function App() {
       onFinal: (t) => {
         setInterim("");
         if (t.trim()) handleSend(t);
+      },
+      onError: (msg) => {
+        setInterim("");
+        setMicOn(false);
+        setOrb("idle");
+        toast(msg);
       },
       onEnd: () => {
         if (!wake) {

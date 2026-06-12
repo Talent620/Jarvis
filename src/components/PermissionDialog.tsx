@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ConsentRequest } from "../lib/permissions";
-import { Listener, isSpeechSupported, speak, stopSpeaking } from "../lib/voice";
+import { createListener, isSpeechSupported, speak, stopSpeaking, type VoiceListener } from "../lib/voice";
 import { feedback } from "../lib/feedback";
 import { store } from "../lib/store";
 
@@ -42,7 +42,7 @@ export default function PermissionDialog({
     feedback("tap");
     if (!store.settings.voiceConfirm || !isSpeechSupported()) return;
     let decided = false;
-    let listener: Listener | null = null;
+    let listener: VoiceListener | null = null;
     const decide = (allow: boolean) => {
       if (decided) return;
       decided = true;
@@ -51,8 +51,13 @@ export default function PermissionDialog({
       onDecision(allow, rememberRef.current);
     };
     speak(`${label}? Powiedz tak albo nie.`, { ...store.settings, speak: true });
-    listener = new Listener({
+    listener = createListener({
       wakeWord: false,
+      onError: () => {
+        // Głos niedostępny (np. brak klucza Groq na desktopie) — zostaw decyzję ręczną.
+        decided = true; // blokuje auto-restart w onEnd; przyciski wciąż działają
+        setListening(false);
+      },
       onFinal: (t) => {
         const v = t.toLowerCase();
         if (/\b(tak|zezw|potwierdz|wy[śs]lij|dzwo[nń]|dawaj|okej|\bok\b|zgoda|jasne|r[oó]b|zr[oó]b|prosz[eę]|śmiało|smialo)\b/.test(v)) decide(true);

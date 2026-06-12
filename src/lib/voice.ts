@@ -2,6 +2,7 @@ import type { Settings } from "../types";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { setLevel } from "./audioLevel";
 import { primaryKey } from "./keys";
+import { WhisperListener } from "./whisperListener";
 
 // Natywny silnik mowy Androida (pewniejszy niż Web Speech w WebView).
 interface NativeTtsPlugin {
@@ -278,15 +279,40 @@ export function createRecognition(): SpeechRecognitionLike | null {
 }
 export type { SpeechRecognitionLike };
 
+// Czy działamy w aplikacji desktopowej (Electron / Windows .exe). Tam wbudowane
+// rozpoznawanie mowy przeglądarki (webkitSpeechRecognition) NIE działa — Chromium
+// w Electronie nie ma klucza do serwerów mowy Google'a (mikrofon zapala się i gaśnie).
+export const isDesktop = (): boolean =>
+  typeof window !== "undefined" && !!(window as any).jarvisDesktop;
+
+// Czy da się nagrywać audio (potrzebne dla silnika Whisper na desktopie).
+const canRecordAudio = (): boolean =>
+  typeof navigator !== "undefined" &&
+  !!navigator.mediaDevices?.getUserMedia &&
+  typeof (window as any).MediaRecorder !== "undefined";
+
+// Na desktopie „obsługa mowy" = możliwość nagrywania (resztę robi Whisper/Groq).
+// W przeglądarce/telefonie = natywne Web Speech.
 export const isSpeechSupported = (): boolean =>
-  Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+  isDesktop()
+    ? canRecordAudio()
+    : Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
 export interface ListenCallbacks {
   onInterim?: (text: string) => void;
   onFinal: (text: string) => void;
   onWake?: () => void;
   onEnd?: () => void;
+  onError?: (msg: string) => void;
   wakeWord?: boolean;
+}
+
+// Wspólny interfejs nasłuchu — Web Speech (Listener) i Whisper (WhisperListener)
+// są wymienne, więc reszta aplikacji nie musi wiedzieć, który silnik działa.
+export interface VoiceListener {
+  start(lang?: string): void;
+  stop(): void;
+  readonly listening: boolean;
 }
 
 /**
@@ -374,4 +400,15 @@ export class Listener {
   get listening() {
     return this.active;
   }
+}
+
+/**
+ * Tworzy nasłuch dopasowany do platformy:
+ *  - desktop (Electron/.exe) → WhisperListener (Groq Whisper), bo Web Speech tam nie działa,
+ *  - telefon/przeglądarka → Listener (natywne Web Speech).
+ * Dzięki temu mikrofon na Windowsie wreszcie działa (nie gaśnie po sekundzie).
+ */
+export function createListener(cb: ListenCallbacks): VoiceListener {
+  if (isDesktop() && canRecordAudio()) return new WhisperListener(cb);
+  return new Listener(cb);
 }

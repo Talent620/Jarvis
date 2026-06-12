@@ -3,7 +3,7 @@ import { store } from "./store";
 import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
 import { resolveProvider, testProvider } from "./brain";
 import { testBackend } from "./sync";
-import { isSpeechSupported } from "./voice";
+import { isSpeechSupported, isDesktop } from "./voice";
 import { primaryKey, keyCount } from "./keys";
 
 // Diagnostyka startowa: sprawdza po kolei każdą usługę/API i mówi wprost,
@@ -76,11 +76,23 @@ export async function systemCheck(onStep?: (lines: string[]) => void): Promise<s
     !!s.elevenLabsApiKey ||
     !!s.fishAudioApiKey;
   push(tts ? "✅ Głos (czytanie odpowiedzi) — dostępny." : "⚠️ Głos — brak syntezy w tym środowisku.");
-  push(
-    isSpeechSupported()
-      ? "✅ Mikrofon (rozpoznawanie mowy) — wspierany."
-      : "⚠️ Mikrofon — to środowisko nie wspiera rozpoznawania mowy (użyj aplikacji Android).",
-  );
+  // Na desktopie (Windows .exe) rozpoznawanie mowy idzie przez Groq Whisper —
+  // Web Speech w Electronie nie działa (mikrofon zapala się i gaśnie).
+  if (isDesktop()) {
+    push(
+      !isSpeechSupported()
+        ? "⚠️ Mikrofon — brak dostępu do nagrywania w tym środowisku."
+        : primaryKey("groq")
+          ? "✅ Mikrofon (rozpoznawanie mowy przez Whisper/Groq) — gotowy."
+          : "⚠️ Mikrofon — dodaj klucz Groq (darmowy) w ⚙ → AI, by mówić na komputerze.",
+    );
+  } else {
+    push(
+      isSpeechSupported()
+        ? "✅ Mikrofon (rozpoznawanie mowy) — wspierany."
+        : "⚠️ Mikrofon — to środowisko nie wspiera rozpoznawania mowy (użyj aplikacji Android).",
+    );
+  }
 
   // 7) Backend / synchronizacja
   const backendUrl = s.proxyUrl?.trim() || s.syncUrl?.trim();

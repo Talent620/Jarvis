@@ -1,4 +1,4 @@
-import { Listener, speak, stopSpeaking, isSpeechSupported } from "./voice";
+import { createListener, speak, stopSpeaking, isSpeechSupported, type VoiceListener } from "./voice";
 import { askJarvis } from "./brain";
 import { store } from "./store";
 import type { Msg } from "./providers/types";
@@ -9,7 +9,7 @@ export type LoopState = "listening" | "thinking" | "speaking" | "error" | "close
 // dostawca) → głos (TTS) → znów nasłuch. Działa wszędzie, gdzie jest STT
 // (desktop/przeglądarka). Pozwala prowadzić rozmowę także bez klucza Gemini.
 export class ConversationLoop {
-  private listener: Listener | null = null;
+  private listener: VoiceListener | null = null;
   private history: Msg[] = [];
   private closed = false;
   private processing = false;
@@ -34,15 +34,18 @@ export class ConversationLoop {
   private listenOnce(): void {
     if (this.closed) return;
     this.onState("listening");
-    this.listener = new Listener({
+    this.listener = createListener({
       wakeWord: false,
-      onInterim: (t) => this.onCaption("🗣 " + t),
+      onInterim: (t) => { if (t) this.onCaption("🗣 " + t); },
       onFinal: (t) => {
         if (this.closed || this.processing) return;
         if (t.trim()) {
           this.processing = true;
           void this.handle(t.trim());
         }
+      },
+      onError: (msg) => {
+        if (!this.closed) this.onState("error", msg);
       },
       onEnd: () => {
         // Cisza / koniec frazy bez treści — wznawiaj nasłuch.
