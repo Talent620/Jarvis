@@ -285,6 +285,14 @@ export interface Settings {
   clipboardWatch: boolean;
   /** Tryb Konsylium — przy złożonych pytaniach pytaj kilka modeli naraz i syntezuj. */
   councilMode: boolean;
+  /** Blokada głosu — Tryb Słuchawki reaguje tylko na głos właściciela (profil). */
+  voiceLock: boolean;
+  /** Profil głosu właściciela (embedding mel) — z funkcji „Naucz głosu". */
+  voiceProfile: number[];
+  /** Próg dopasowania głosu (0–1, wyżej = surowiej). Domyślnie 0.6. */
+  voiceMatch: number;
+  /** Cisza (ms) kończąca turę przy kompletnym zdaniu — czułość przerywania. */
+  endpointShortMs: number;
   /** Adaptacyjny układ menu — sekcje układają się wg nawyków (pora dnia). */
   adaptiveUi: boolean;
   /** Słowo „Jarvis" otwiera pełnoekranowy tryb głosowy (zamiast zwykłego nasłuchu). */

@@ -39,6 +39,8 @@ export default function Help({ onClose }: { onClose: () => void }) {
           <ul>
             <li>Przycisk <b>🎙</b> w nagłówku (albo podłącz słuchawki Bluetooth) otwiera <b>Tryb Słuchawki</b> — rozmowa hands-free jak z kolegą. Telefon możesz schować, ekran trzyma się sam (Wake Lock).</li>
             <li><b>Klik na słuchawkach</b> (play/pause) = „mów" — bez dotykania telefonu. Albo powiedz „<b>Jarvis…</b>". Krótkie dźwięki mówią, kiedy słucha/myśli/gotowe.</li>
+            <li><b>Naturalna rozmowa</b> — JARVIS <b>nie przerywa</b>, gdy się zacieniesz albo robisz pauzę na myślenie (czeka, aż zdanie się domknie). Gdy zaczniesz mówić w trakcie jego odpowiedzi — natychmiast milknie (barge-in).</li>
+            <li><b>🔒 Tylko mój głos</b> — w ⚙ → Głos „Naucz JARVIS-a mojego głosu" (3 próbki). Wtedy odsiewa inne osoby, telewizor i tło — reaguje tylko na Ciebie. Działa lokalnie i prywatnie. (Na części Androida równoległa analiza głosu bywa niedostępna — wtedy słucha normalnie.)</li>
             <li>Wydawaj polecenia: „<b>zadzwoń do…</b>" (telefon dzwoni, słuchasz w słuchawkach), „<b>puść muzykę</b>", „następna piosenka", „głośniej", „dodaj zadanie", „co mam dziś?". Na komputerze ⏮⏯⏭ sterują odtwarzaczem.</li>
             <li>Tryb „<b>Po Jarvis</b>" reaguje dopiero po słowie-kluczu (mniej pomyłek), „<b>Ciągła</b>" słucha non-stop.</li>
             <li><i>Uwaga:</i> przy <b>całkowicie zgaszonym</b> ekranie Android ogranicza nasłuch aplikacji — trzymaj ekran włączony (czarny, w kieszeni) dla pełnej niezawodności.</li>

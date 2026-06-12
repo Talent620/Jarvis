@@ -1,70 +1,79 @@
 import { useEffect, useRef, useState } from "react";
-import { Listener, speak, stopSpeaking } from "../lib/voice";
+import { speak, stopSpeaking } from "../lib/voice";
 import { askJarvis } from "../lib/brain";
 import { store } from "../lib/store";
 import { cue, buzz } from "../lib/feedback";
 import { keepAwake, releaseAwake } from "../lib/wakeLock";
 import { startHeadsetControls, stopHeadsetControls } from "../lib/mediaSession";
 import { musicCommand } from "../lib/music";
-import { subscribeLevel } from "../lib/audioLevel";
+import { useStore } from "../hooks/useStore";
+import { SmartConversation, type SmartState } from "../lib/smartConversation";
+import { DEFAULT_ENDPOINT } from "../lib/endpoint";
+import { enrollVoice, hasVoiceProfile } from "../lib/voiceEnroll";
 import { useEscape } from "../hooks/useEscape";
 import type { Msg } from "../lib/providers/types";
 
-type Phase = "idle" | "listening" | "thinking" | "speaking";
-const LABEL: Record<Phase, string> = {
-  idle: "Powiedz „Jarvis…”",
+const LABEL: Record<SmartState, string> = {
+  idle: "Gotowy",
   listening: "Słucham…",
+  capturing: "Słucham…",
   thinking: "Myślę…",
   speaking: "Mówię…",
+  error: "Błąd",
 };
 
 /**
- * Tryb Słuchawki — centrum dowodzenia w uchu. Ciągła rozmowa hands-free: mówisz
- * „Jarvis…”, on słucha, wykonuje i odpowiada głosem, potem znów słucha. Telefon
- * możesz schować — ekran trzyma Wake Lock (na OLED czarny prawie nie zużywa baterii),
- * a przycisk na słuchawkach wywołuje JARVIS-a bez dotykania telefonu. Earcony
- * (krótkie dźwięki) informują o stanie, więc nie musisz patrzeć.
+ * Tryb Słuchawki — flagowe centrum dowodzenia hands-free. Naturalna rozmowa:
+ * nie przerywa, gdy się zacinasz (semantyczny endpointing), reaguje tylko na Twój
+ * głos (blokada głosu), milknie gdy zaczynasz mówić (barge-in). Telefon możesz
+ * schować — Wake Lock + przycisk słuchawek. Earcony zamiast patrzenia.
  */
 export default function HeadsetMode({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [wakeMode, setWakeMode] = useState(true); // true: po słowie „Jarvis”; false: ciągła rozmowa
+  const { settings } = useStore();
+  const [phase, setPhase] = useState<SmartState>("listening");
+  const [wakeMode, setWakeMode] = useState(true);
   const [caption, setCaption] = useState("Gotowy. Telefon możesz schować.");
   const [level, setLevel] = useState(0);
+  const [info, setInfo] = useState("");
+  const [enrolling, setEnrolling] = useState("");
 
+  const convo = useRef<SmartConversation | null>(null);
   const history = useRef<Msg[]>([]);
-  const listener = useRef<Listener | null>(null);
-  const retry = useRef<number | null>(null);
   const closed = useRef(false);
-  const processing = useRef(false);
-  const phaseRef = useRef<Phase>("idle");
-  const wakeRef = useRef(true);
-  phaseRef.current = phase;
-  wakeRef.current = wakeMode;
+  const busy = useRef(false);
 
-  // Pętla nasłuchu (z opcjonalną bramką słowa „Jarvis”).
-  const listen = (force = false) => {
-    if (closed.current || processing.current) return;
-    const useWake = wakeRef.current && !force;
-    setPhase(useWake ? "idle" : "listening");
-    listener.current?.stop();
-    listener.current = new Listener({
-      wakeWord: useWake,
-      onWake: () => { cue("wake"); setPhase("listening"); },
-      onInterim: (t) => setCaption("🗣 " + t),
-      onFinal: (t) => { if (!closed.current && !processing.current && t.trim()) void handle(t.trim()); },
-      onEnd: () => {
-        if (closed.current || processing.current) return;
-        if (retry.current) clearTimeout(retry.current);
-        retry.current = window.setTimeout(() => listen(), 280);
+  const buildEngine = () => {
+    const s = store.settings;
+    return new SmartConversation(
+      {
+        voiceLock: !!s.voiceLock && (s.voiceProfile?.length || 0) > 0,
+        profile: s.voiceProfile || [],
+        matchThreshold: s.voiceMatch ?? 0.6,
+        endpoint: { shortMs: s.endpointShortMs || DEFAULT_ENDPOINT.shortMs, longMs: DEFAULT_ENDPOINT.longMs },
+        wakeWord: wakeMode,
       },
-    });
-    listener.current.start();
+      {
+        onState: (st) => { if (!busy.current) setPhase(st); },
+        onPartial: (t) => setCaption("🗣 " + t),
+        onLevel: (l) => setLevel(l),
+        onInfo: (m) => setInfo(m),
+        onRejected: () => setCaption("(zignorowałem — to nie Twój głos)"),
+        onBargeIn: () => { stopSpeaking(); },
+        onUtterance: (t) => void handle(t),
+      },
+    );
+  };
+
+  const restart = () => {
+    convo.current?.stop();
+    convo.current = buildEngine();
+    void convo.current.start();
   };
 
   const handle = async (text: string) => {
-    processing.current = true;
-    listener.current?.stop();
+    if (busy.current || !text.trim()) return;
+    busy.current = true;
     setCaption("🗣 " + text);
     setPhase("thinking");
     cue("tap");
@@ -74,6 +83,7 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
       history.current = [...history.current, { role: "assistant" as const, content: reply.text }].slice(-16);
       setCaption(reply.text);
       setPhase("speaking");
+      convo.current?.setSpeaking(true);
       await speak(reply.text, { ...store.settings, speak: true });
       cue("confirm");
     } catch (e) {
@@ -82,20 +92,17 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
       cue("error");
       await speak(msg, { ...store.settings, speak: true }).catch(() => {});
     } finally {
-      processing.current = false;
-      if (!closed.current) listen();
+      convo.current?.setSpeaking(false);
+      busy.current = false;
+      setPhase("listening");
     }
   };
 
-  // Przycisk na słuchawkach (play/pause) — natychmiast „gadaj”: przerwij mówienie
-  // i słuchaj, niezależnie od słowa-klucza.
+  // Przycisk słuchawek — „mów teraz": przerwij i słuchaj (barge-in/push-to-talk).
   const headsetTalk = () => {
-    if (processing.current && phaseRef.current === "speaking") {
-      stopSpeaking();
-    }
-    if (processing.current) return;
+    if (phase === "speaking") stopSpeaking();
     buzz(20);
-    listen(true);
+    cue("wake");
   };
 
   useEffect(() => {
@@ -106,27 +113,34 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
       onNext: () => void musicCommand("next"),
       onPrev: () => void musicCommand("prev"),
     });
-    const unsub = subscribeLevel(setLevel);
-    listen();
+    convo.current = buildEngine();
+    void convo.current.start();
     return () => {
       closed.current = true;
-      if (retry.current) clearTimeout(retry.current);
-      listener.current?.stop();
+      convo.current?.stop();
       stopSpeaking();
       stopHeadsetControls();
       releaseAwake();
-      unsub();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Zmiana trybu (wake/ciągły) restartuje nasłuch.
+  // Zmiana trybu wake/ciągły → przebuduj silnik.
   useEffect(() => {
-    if (!processing.current) listen();
+    if (!closed.current) restart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wakeMode]);
 
-  const scale = 1 + Math.min(0.5, level * 0.6) + (phase === "listening" ? 0.06 : 0);
+  const enroll = async () => {
+    convo.current?.stop();
+    setEnrolling("Za chwilę nagram Twój głos — mów spokojnie, np. policz do dziesięciu.");
+    const r = await enrollVoice(3, (i, t) => setEnrolling(`🎙 Próbka ${i}/${t} — mów teraz…`));
+    setEnrolling(r.ok ? "✅ Nauczyłem się Twojego głosu — blokada głosu włączona." : `❌ ${r.error}`);
+    setTimeout(() => { setEnrolling(""); restart(); }, 1600);
+  };
+
+  const voiceLockOn = !!settings.voiceLock && (settings.voiceProfile?.length || 0) > 0;
+  const scale = 1 + Math.min(0.5, level * 0.6) + (phase === "capturing" ? 0.06 : 0);
 
   return (
     <div className="headset">
@@ -135,21 +149,35 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
       <div className="headset-core" style={{ transform: `scale(${scale})` }} data-phase={phase} />
       <div className="headset-status">{LABEL[phase]}</div>
       <div className="headset-caption" aria-live="polite">{caption}</div>
+      {info && <div className="muted" style={{ fontSize: 12 }}>{info}</div>}
 
       <button className="headset-talk" onClick={headsetTalk} aria-label="Mów">🎙 Mów</button>
 
       <div className="headset-bar">
         <button className={`chip ${wakeMode ? "on" : ""}`} onClick={() => setWakeMode(true)}>🔑 Po „Jarvis”</button>
         <button className={`chip ${!wakeMode ? "on" : ""}`} onClick={() => setWakeMode(false)}>💬 Ciągła</button>
+        <button className={`chip ${voiceLockOn ? "on" : ""}`} onClick={() => store.setSettings({ voiceLock: !settings.voiceLock })} title="Reaguj tylko na mój głos">
+          {voiceLockOn ? "🔒 Mój głos" : "🔓 Każdy głos"}
+        </button>
       </div>
+
       <div className="headset-music">
         <button className="chip" onClick={() => musicCommand("prev")}>⏮</button>
         <button className="chip" onClick={() => musicCommand("playpause")}>⏯</button>
         <button className="chip" onClick={() => musicCommand("next")}>⏭</button>
       </div>
 
+      {enrolling ? (
+        <p className="headset-hint">{enrolling}</p>
+      ) : (
+        <button className="chip" onClick={enroll} style={{ marginTop: 4 }}>
+          {hasVoiceProfile() ? "🎤 Naucz głosu ponownie" : "🎤 Naucz JARVIS-a mojego głosu"}
+        </button>
+      )}
+
       <p className="headset-hint">
-        Telefon możesz schować. Klik na słuchawkach = „mów”. Powiedz np. „zadzwoń do…”, „puść muzykę”, „dodaj zadanie”.
+        Naturalna rozmowa — nie przerwę, gdy się zacieniesz. Telefon schowaj, klik na słuchawkach = „mów”.
+        Powiedz np. „zadzwoń do…”, „otwórz YouTube”, „puść muzykę”, „dodaj zadanie”.
       </p>
     </div>
   );

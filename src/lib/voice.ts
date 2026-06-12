@@ -271,11 +271,12 @@ interface SpeechRecognitionLike {
   onend: (() => void) | null;
 }
 
-function createRecognition(): SpeechRecognitionLike | null {
+export function createRecognition(): SpeechRecognitionLike | null {
   const Ctor =
     (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   return Ctor ? new Ctor() : null;
 }
+export type { SpeechRecognitionLike };
 
 export const isSpeechSupported = (): boolean =>
   Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);

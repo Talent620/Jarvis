@@ -13,6 +13,7 @@ import { systemCheck } from "../lib/diagnostics";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode } from "../lib/privateMode";
 import { runProspecting } from "../lib/prospect";
+import { enrollVoice } from "../lib/voiceEnroll";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 import { useEscape } from "../hooks/useEscape";
@@ -76,6 +77,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [hasPin, setHasPin] = useState(lockIsSet());
   const [diag, setDiag] = useState<string[]>([]);
   const [diagBusy, setDiagBusy] = useState(false);
+  const [enrollMsg, setEnrollMsg] = useState("");
 
   useEffect(() => {
     loadVoices().then(setVoices);
@@ -503,6 +505,38 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <div className="row">
                 <span>Słuchaj od razu po otwarciu (i zapytaj „o co chodzi?")</span>
                 <Toggle on={s.autoListenOnOpen} onClick={() => set({ autoListenOnOpen: !s.autoListenOnOpen })} />
+              </div>
+
+              <h3>🎧 Tryb Słuchawki — naturalna rozmowa</h3>
+              <div className="row">
+                <span>
+                  🔒 Reaguj tylko na mój głos
+                  <br />
+                  <span className="muted">
+                    Odsiewa inne osoby, telewizor i tło (lokalnie, prywatnie). Najpierw naucz
+                    JARVIS-a swojego głosu (przycisk niżej albo w samym Trybie Słuchawki).
+                  </span>
+                </span>
+                <Toggle on={s.voiceLock} onClick={() => set({ voiceLock: !s.voiceLock })} />
+              </div>
+              <button
+                className="btn"
+                disabled={enrollMsg === "rec"}
+                onClick={async () => {
+                  setEnrollMsg("rec");
+                  const r = await enrollVoice(3, (i, t) => setEnrollMsg(`🎙 Próbka ${i}/${t} — mów teraz (np. policz do dziesięciu)…`));
+                  setS((p) => ({ ...p, voiceProfile: store.settings.voiceProfile, voiceLock: store.settings.voiceLock }));
+                  setEnrollMsg(r.ok ? "✅ Nauczyłem się Twojego głosu — blokada głosu włączona." : `❌ ${r.error}`);
+                }}
+              >
+                {(s.voiceProfile?.length || 0) > 0 ? "🎤 Naucz głosu ponownie" : "🎤 Naucz JARVIS-a mojego głosu"}
+              </button>
+              {enrollMsg && enrollMsg !== "rec" && <p className="muted" style={{ marginTop: 6 }}>{enrollMsg}</p>}
+              {enrollMsg === "rec" && <p className="muted" style={{ marginTop: 6 }}>🎙 Nagrywam… mów teraz.</p>}
+              <div className="field" style={{ marginTop: 8 }}>
+                <label>Czułość przerywania (cisza kończąca zdanie): {s.endpointShortMs} ms</label>
+                <input type="range" min={500} max={1800} step={100} value={s.endpointShortMs} onChange={(e) => set({ endpointShortMs: Number(e.target.value) })} />
+                <span className="muted" style={{ fontSize: 12 }}>Wyżej = JARVIS dłużej czeka, aż skończysz (mniej przerywania).</span>
               </div>
               <div className="row">
                 <span>
