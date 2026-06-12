@@ -4,7 +4,7 @@ import { loadVoices, speak } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
-import { googleStartUrl } from "../lib/google";
+import { googleStartUrl, gmailSearch } from "../lib/google";
 import { testApi, testProvider, resolveProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
 import { exportData, exportFull, exportFullEncrypted, importData } from "../lib/backup";
@@ -70,6 +70,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [healthBusy, setHealthBusy] = useState(false);
   const [apiStatus, setApiStatus] = useState<Partial<Record<ProviderId, ApiStatus>>>({});
   const [statusBusy, setStatusBusy] = useState(false);
+  const [gmailBusy, setGmailBusy] = useState(false);
   const [backupMsg, setBackupMsg] = useState("");
   const [backupPass, setBackupPass] = useState("");
   const [backendMsg, setBackendMsg] = useState("");
@@ -1096,17 +1097,38 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 Wymaga wdrożonego backendu (powyżej) z kluczami Google OAuth. Po połączeniu JARVIS
                 może czytać/wysyłać maile i zarządzać Kalendarzem Google. Instrukcja: <code>proxy/README</code>.
               </p>
-              <button
-                className="btn"
-                onClick={() => {
-                  store.setSettings({ syncUrl: s.syncUrl, syncToken: s.syncToken });
-                  const url = googleStartUrl();
-                  if (!url) { setSyncMsg("Najpierw uzupełnij adres i token synchronizacji."); return; }
-                  window.open(url, "_blank", "noopener");
-                }}
-              >
-                🔗 Połącz konto Google
-              </button>
+              <p className="muted" style={{ fontSize: 13 }}>
+                Po połączeniu na <b>telefonie</b> oferty do leadów wyślesz <b>jednym potwierdzeniem</b>
+                {" "}prosto z Teczki Klienta — Gmailem w tle, bez otwierania aplikacji.
+              </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    store.setSettings({ syncUrl: s.syncUrl, syncToken: s.syncToken });
+                    const url = googleStartUrl();
+                    if (!url) { setSyncMsg("Najpierw uzupełnij adres i token synchronizacji."); return; }
+                    window.open(url, "_blank", "noopener");
+                  }}
+                >
+                  🔗 Połącz konto Google
+                </button>
+                <button
+                  className="btn"
+                  disabled={gmailBusy}
+                  onClick={async () => {
+                    if (!s.syncUrl?.trim() || !s.syncToken?.trim()) { setSyncMsg("Najpierw uzupełnij adres i token synchronizacji (wyżej)."); return; }
+                    store.setSettings({ syncUrl: s.syncUrl, syncToken: s.syncToken });
+                    setGmailBusy(true);
+                    setSyncMsg("⏳ Sprawdzam połączenie z Gmailem…");
+                    const r = await gmailSearch("");
+                    setGmailBusy(false);
+                    setSyncMsg(/Skonfiguruj|Błąd|błąd|error/i.test(r) ? `Gmail: ${r}` : "✅ Gmail połączony — możesz wysyłać oferty jednym potwierdzeniem (też na telefonie).");
+                  }}
+                >
+                  {gmailBusy ? "✅ Sprawdzam…" : "✅ Sprawdź Gmaila"}
+                </button>
+              </div>
 
               <h3>Smart home (Home Assistant)</h3>
               <div className="field">

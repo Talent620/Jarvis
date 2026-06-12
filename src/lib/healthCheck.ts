@@ -169,13 +169,17 @@ export async function runHealthCheck(onUpdate?: (items: HealthItem[]) => void, l
     onUpdate?.([...items]);
   }
 
-  // 6. Poczta — wysyłka ofert jednym potwierdzeniem (desktop).
-  if (isDesktop()) {
-    push(
-      s.smtpUser?.trim() && s.smtpPass?.trim()
-        ? { id: "mail", icon: "📨", title: "Poczta (wysyłka z aplikacji)", status: "ok", detail: `Skonfigurowana (${s.smtpUser}). Oferty wyślesz jednym potwierdzeniem z Teczki Klienta.` }
-        : { id: "mail", icon: "📨", title: "Poczta (wysyłka z aplikacji)", status: "info", detail: "Nieskonfigurowana — maile otwierają się w Gmailu (też OK). Chcesz wysyłać jednym kliknięciem? Sekcja ⚙ → Poczta niżej (Gmail + hasło aplikacji)." },
-    );
+  // 6. Poczta — wysyłka ofert jednym potwierdzeniem. Desktop: SMTP. Telefon: Gmail (backend).
+  const smtpReady = s.smtpUser?.trim() && s.smtpPass?.trim();
+  const gmailReady = s.syncUrl?.trim() && s.syncToken?.trim();
+  if (isDesktop() && smtpReady) {
+    push({ id: "mail", icon: "📨", title: "Poczta (wysyłka z aplikacji)", status: "ok", detail: `SMTP skonfigurowany (${s.smtpUser}). Oferty wyślesz jednym potwierdzeniem z Teczki Klienta.` });
+  } else if (gmailReady) {
+    push({ id: "mail", icon: "📨", title: "Poczta (Gmail przez backend)", status: "ok", detail: "Konto Google podłączone — oferty wyślesz jednym potwierdzeniem (też na telefonie, bez otwierania Gmaila). Pewnosc? Kliknij Sprawdz Gmaila w Synchronizacji." });
+  } else if (isDesktop()) {
+    push({ id: "mail", icon: "📨", title: "Poczta (wysyłka z aplikacji)", status: "info", detail: "Maile otwierają się w Gmailu (też OK). Chcesz wysyłać jednym kliknięciem? ⚙ → Poczta (Gmail + hasło aplikacji) albo ⚙ → Synchronizacja → Połącz konto Google." });
+  } else {
+    push({ id: "mail", icon: "📨", title: "Poczta", status: "info", detail: "Na telefonie maile otwierają się gotowe w Gmailu (jedno tapnięcie). Chcesz wysyłać w tle bez otwierania apki? ⚙ → Synchronizacja → Połącz konto Google." });
   }
 
   // 7. Wyszukiwanie w sieci dla AI.

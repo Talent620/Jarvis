@@ -3,7 +3,7 @@ import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { buildDossier, auditWeakPoints, scoreLabel, smsDraft } from "../lib/leadIntel";
 import { gmailComposeUrl, mailtoUrl, mapsSearchUrl, smsUrl, splitOffer } from "../lib/glinks";
-import { canSendMail, sendMailNow } from "../lib/mailer";
+import { canSendDirect, sendOfferEmail } from "../lib/mailer";
 import { copyWithToast, toast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
 import type { Lead, LeadStatus } from "../types";
@@ -57,7 +57,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
     if (lead.status === "new") set({ status: "contacted" });
   };
 
-  // Prawdziwa wysyłka SMTP (desktop): jedno potwierdzenie i mail leci.
+  // Prawdziwa wysyłka jednym potwierdzeniem: desktop → SMTP, telefon → Gmail (backend).
   const [sending, setSending] = useState(false);
   const sendNow = async () => {
     const text = intel?.email || lead.offer || "";
@@ -65,10 +65,10 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
     if (!email) { toast("Brak adresu e-mail firmy — użyj Gmaila i wpisz adres ręcznie."); return; }
     if (!window.confirm(`Wysłać e-mail do ${lead.company}?\n\nDo: ${email}\nTemat: ${subject}`)) return;
     setSending(true);
-    const err = await sendMailNow(email, subject, body);
+    const r = await sendOfferEmail(email, subject, body);
     setSending(false);
-    if (err) { toast(`Nie wysłano: ${err}`); return; }
-    toast(`✅ Wysłano do ${email}`);
+    if (!r.ok) { toast(`Nie wysłano: ${r.error}`); return; }
+    toast(`✅ Wysłano do ${email} (${r.via})`);
     set({ status: lead.status === "new" || lead.status === "contacted" ? "offer" : lead.status, note: `${lead.note ? lead.note + " · " : ""}E-mail wysłany ${new Date().toLocaleDateString("pl-PL")}` });
   };
 
@@ -209,7 +209,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
               <div className="journal-card">
                 <p className="muted" style={{ whiteSpace: "pre-wrap", margin: 0, fontSize: 13 }}>{intel?.email || lead.offer}</p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-                  {canSendMail() && email && (
+                  {canSendDirect() && email && (
                     <button className="chip" style={{ borderColor: "var(--ok, #58e08a)" }} onClick={sendNow} disabled={sending}>
                       {sending ? "📨 Wysyłam…" : "📨 WYŚLIJ TERAZ (potwierdź)"}
                     </button>
@@ -219,9 +219,10 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
                   {phone && <button className="chip" onClick={sendSms}>📱 SMS</button>}
                   <button className="chip" onClick={() => copyWithToast(intel?.email || lead.offer || "")}>📋 Kopiuj</button>
                 </div>
-                {!canSendMail() && email && (
+                {!canSendDirect() && email && (
                   <p className="muted" style={{ fontSize: 11, marginTop: 6 }}>
-                    💡 Chcesz wysyłać jednym kliknięciem prosto z JARVIS-a (bez otwierania poczty)? Skonfiguruj ⚙ → Poczta (Windows).
+                    💡 Chcesz wysyłać jednym kliknięciem, bez otwierania poczty? Na Windows: ⚙ → Poczta.
+                    Na telefonie: ⚙ → Synchronizacja → „Połącz konto Google" (wysyłka przez Gmaila w tle).
                   </p>
                 )}
                 {!email && <p className="muted" style={{ fontSize: 11, marginTop: 6 }}>Brak e-maila firmy — wiadomość otworzy się bez adresata (uzupełnij po znalezieniu adresu na stronie/Mapach).</p>}
