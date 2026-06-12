@@ -43,7 +43,7 @@ export interface LicenseInfo {
 /** Zweryfikuj klucz licencyjny (podpis + ewentualny termin ważności). */
 export async function verifyLicense(token: string): Promise<LicenseInfo> {
   try {
-    const [data, sigB64] = (token || "").trim().split(".");
+    const [data, sigB64] = (token || "").replace(/\s+/g, "").split(".");
     if (!data || !sigB64) return { valid: false };
     const ok = await crypto.subtle.verify(
       { name: "ECDSA", hash: "SHA-256" },

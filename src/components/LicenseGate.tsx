@@ -8,8 +8,10 @@ export default function LicenseGate({ onActivated }: { onActivated: (name?: stri
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const activate = async () => {
-    const t = key.trim();
+  const activate = async (raw?: string) => {
+    // Usuń WSZYSTKIE białe znaki — kopiowanie z telefonu/maila często wstawia
+    // spacje lub zawijania wiersza, które psuły poprawny klucz.
+    const t = (raw ?? key).replace(/\s+/g, "");
     if (!t) return;
     setBusy(true);
     setMsg("Sprawdzam i aktywuję klucz…");
@@ -20,7 +22,18 @@ export default function LicenseGate({ onActivated }: { onActivated: (name?: stri
       setMsg("✅ Aktywowano. Uruchamiam JARVIS-a…");
       setTimeout(() => onActivated(r.name), 500);
     } else {
-      setMsg("❌ Klucz nieprawidłowy, wygasły, unieważniony lub przekroczono limit urządzeń. Skontaktuj się z autorem.");
+      setMsg("❌ Klucz nieprawidłowy lub niepełny. Skopiuj go w całości (163 znaki) i wklej przyciskiem 📋 — bez spacji.");
+    }
+  };
+
+  const paste = async () => {
+    try {
+      const t = (await navigator.clipboard.readText()).replace(/\s+/g, "");
+      if (!t) { setMsg("Schowek jest pusty — skopiuj klucz i spróbuj ponownie."); return; }
+      setKey(t);
+      await activate(t);
+    } catch {
+      setMsg("Brak dostępu do schowka — wklej klucz ręcznie (Ctrl+V) w pole.");
     }
   };
 
@@ -40,10 +53,13 @@ export default function LicenseGate({ onActivated }: { onActivated: (name?: stri
             spellCheck={false}
             style={{ flex: 1, fontFamily: "monospace", fontSize: 13 }}
           />
-          <button className="btn primary" style={{ width: "auto", marginTop: 0 }} onClick={activate} disabled={!key.trim() || busy}>
+          <button className="btn primary" style={{ width: "auto", marginTop: 0 }} onClick={() => activate()} disabled={!key.trim() || busy}>
             {busy ? "⏳" : "Aktywuj"}
           </button>
         </div>
+        <button className="btn" style={{ marginTop: 8 }} onClick={paste} disabled={busy}>
+          📋 Wklej klucz ze schowka i aktywuj
+        </button>
         {msg && <p className="muted" style={{ marginTop: 8 }}>{msg}</p>}
 
         <p className="muted" style={{ marginTop: 18, fontSize: 13, lineHeight: 1.6 }}>
