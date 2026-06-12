@@ -9,7 +9,7 @@ import type { AppData, Settings } from "../types";
 //     bezpieczna nawet, gdy plik wpadnie w niepowołane ręce.
 const COLLECTIONS: (keyof AppData)[] = [
   "tasks", "notes", "reminders", "shopping", "calendar",
-  "memory", "scenes", "projects", "projectFiles", "tally", "journal", "leads",
+  "memory", "scenes", "projects", "projectFiles", "tally", "journal", "leads", "flashcards",
 ];
 
 export function exportData(): void {

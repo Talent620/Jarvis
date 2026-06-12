@@ -28,6 +28,7 @@ const HudVision = lazy(() => import("./components/HudVision"));
 const Studio = lazy(() => import("./components/Studio"));
 const WebStudio = lazy(() => import("./components/WebStudio"));
 const AdminPanel = lazy(() => import("./components/AdminPanel"));
+const Cards = lazy(() => import("./components/Cards"));
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
 import { startBackgroundWake } from "./lib/wakeword";
@@ -38,6 +39,7 @@ type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; reme
 import { askJarvis, resolveProvider } from "./lib/brain";
 import { askCouncil, councilMembers, type CouncilReply } from "./lib/council";
 import { isComplex } from "./lib/aiHelpers";
+import { dueCount } from "./lib/cards";
 import { isUncensored } from "./lib/providers/registry";
 import { enablePrivateMode } from "./lib/privateMode";
 import { runProspecting } from "./lib/prospect";
@@ -64,9 +66,11 @@ function buildGreeting(): string {
   const today = now.toISOString().slice(0, 10);
   const tasks = d.tasks.filter((t) => !t.done).length;
   const events = d.calendar.filter((e) => e.start.slice(0, 10) === today).length;
+  const cards = dueCount();
   const bits: string[] = [];
   if (tasks) bits.push(`${tasks} aktywnych zadań`);
   if (events) bits.push(`${events} dziś w kalendarzu`);
+  if (cards) bits.push(`${cards} fiszek do powtórki`);
   const parts = [`${part}, ${s.userName}.`];
   if (bits.length) parts.push(`Masz ${bits.join(" i ")}.`);
   parts.push("W czym mogę pomóc?");
@@ -140,6 +144,7 @@ export default function App() {
   const [clipSuggest, setClipSuggest] = useState<string>("");
   const [showVoice, setShowVoice] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showCards, setShowCards] = useState(false);
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
   const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
 
@@ -668,6 +673,11 @@ export default function App() {
           <AdminPanel onClose={() => setShowAdmin(false)} />
         </Suspense>
       )}
+      {showCards && (
+        <Suspense fallback={null}>
+          <Cards onClose={() => setShowCards(false)} />
+        </Suspense>
+      )}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {showPanels && <Panels onClose={() => setShowPanels(false)} />}
       {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}
@@ -708,6 +718,7 @@ export default function App() {
           onScreen={isDesktop() ? lookAtScreen : undefined}
           onHelp={() => setShowHelp(true)}
           onAdmin={() => setShowAdmin(true)}
+          onCards={() => setShowCards(true)}
           onClose={() => setShowMore(false)}
         />
       )}

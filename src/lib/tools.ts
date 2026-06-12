@@ -7,6 +7,7 @@ import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
 import { gmailSearch, gmailSend, gcalList, gcalAdd } from "./google";
 import { rememberFact } from "./memory";
+import { generateCards } from "./cards";
 import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, hotkey as desktopHotkey } from "./desktop";
 import type { Citation } from "../types";
 
@@ -709,6 +710,26 @@ const tools: Tool[] = [
       ),
     },
     run: ({ summary, start, end, location }) => gcalAdd(summary, start, end, location),
+  },
+  {
+    def: {
+      name: "create_flashcards",
+      description:
+        "Utwórz fiszki do nauki (Kapsuły Wiedzy) z podanego materiału lub tematu — do trwałego zapamiętania przez powtórki w czasie. Używaj, gdy użytkownik chce się czegoś nauczyć/zapamiętać, albo po dłuższym wyjaśnieniu/researchu zaproponuj zapis kluczowych rzeczy jako fiszki.",
+      input_schema: obj(
+        {
+          material: str("Materiał źródłowy lub temat, z którego zrobić fiszki"),
+          deck: str("Nazwa talii/tematu (opcjonalnie)"),
+          count: { type: "number", description: "Ile fiszek (1–15, domyślnie 8)" },
+        },
+        ["material"],
+      ),
+    },
+    run: async ({ material, deck, count }) => {
+      const n = Math.min(15, Math.max(1, Number(count) || 8));
+      const r = await generateCards(String(material), deck, "JARVIS", n);
+      return "error" in r ? r.error : `Dodałem ${r.added} fiszek do Kapsuł Wiedzy${deck ? ` (talia „${deck}")` : ""}. Powtórzysz je w ⋯ → 🧠 Kapsuły Wiedzy.`;
+    },
   },
 ];
 

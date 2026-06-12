@@ -121,6 +121,26 @@ export interface Scene {
   createdAt: number;
 }
 
+/**
+ * Fiszka (Kapsuły Wiedzy): aktywne przypominanie + powtórki rozłożone w czasie
+ * (algorytm SM-2, jak w Anki). JARVIS tworzy fiszki z Twoich notatek/dziennika/
+ * researchu i odpytuje Cię w optymalnych odstępach, by wiedza została na stałe.
+ */
+export interface Flashcard {
+  id: string;
+  front: string; // pytanie
+  back: string; // odpowiedź
+  deck?: string; // temat/talia
+  source?: string; // skąd pochodzi (notatka, dziennik, temat)
+  // Stan SM-2:
+  ease: number; // współczynnik łatwości (start 2.5)
+  interval: number; // dni do następnej powtórki
+  reps: number; // udane powtórki z rzędu
+  lapses: number; // ile razy zapomniana
+  due: number; // timestamp następnej powtórki
+  createdAt: number;
+}
+
 export interface AppData {
   tasks: Task[];
   notes: Note[];
@@ -135,6 +155,7 @@ export interface AppData {
   tally: TallyItem[];
   journal: JournalEntry[];
   leads: Lead[];
+  flashcards: Flashcard[];
 }
 
 /** Lead sprzedażowy (mini-CRM / Pulpit Sprzedaży). */

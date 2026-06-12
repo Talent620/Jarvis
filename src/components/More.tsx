@@ -18,6 +18,7 @@ export default function More({
   onScreen,
   onHelp,
   onAdmin,
+  onCards,
   onClose,
 }: {
   onProjects: () => void;
@@ -33,12 +34,14 @@ export default function More({
   onScreen?: () => void;
   onHelp: () => void;
   onAdmin: () => void;
+  onCards: () => void;
   onClose: () => void;
 }) {
   useEscape(onClose);
   const items = [
     { id: "money", icon: "💰", label: "Zarabianie — autopilot dochodu", fn: onMoney },
     { id: "journal", icon: "📔", label: "Mój dziennik (przemyślenia)", fn: onJournal },
+    { id: "cards", icon: "🧠", label: "Kapsuły Wiedzy — ucz się i pamiętaj", fn: onCards },
     { id: "sales", icon: "📈", label: "Pulpit Sprzedaży (leady, CRM)", fn: onSales },
     { id: "web", icon: "🌐", label: "Kreator stron — zbuduj witrynę", fn: onWeb },
     { id: "hud", icon: "👁", label: "Wizja HUD (kamera) — co widzisz?", fn: onHud },

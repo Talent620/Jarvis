@@ -16,6 +16,7 @@ const RISK: Record<string, Risk> = {
   add_task: "write", complete_task: "write", add_note: "write", add_reminder: "write",
   add_shopping_item: "write", add_calendar_event: "write", remember_fact: "write",
   create_scene: "write", set_timer: "write", add_tally_item: "write", add_journal_entry: "write",
+  create_flashcards: "write",
   // outbound — zewnętrzne lub nieodwracalne (wymaga zgody)
   gmail_send: "outbound", gcal_add: "outbound", clear_tally: "outbound",
   // outbound — działania na zewnątrz / nieodwracalne (wymaga zgody)
