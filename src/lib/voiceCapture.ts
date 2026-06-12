@@ -68,7 +68,7 @@ export class VoiceCapture {
     a.getFloatTimeDomainData(this.td as any);
     let sum = 0;
     for (let i = 0; i < this.td.length; i++) sum += this.td[i] * this.td[i];
-    const rms = Math.sqrt(sum / this.td.length);
+    const rms = this.td.length ? Math.sqrt(sum / this.td.length) : 0;
 
     // Próg = tło × współczynnik (i minimum). Tło aktualizujemy tylko w ciszy.
     const threshold = Math.max(0.006, this.noiseFloor * 2.4);

@@ -1,3 +1,4 @@
+import { fetchTimeout } from "./http";
 // Finanse/rynki — darmowe, bez kluczy i bez problemów z CORS:
 //  • krypto: CoinGecko (publiczne API),
 //  • kursy walut: open.er-api.com (publiczne, bez klucza).
@@ -21,7 +22,7 @@ export async function getCrypto(symbols: string[]): Promise<string> {
   const ids = [...new Set(symbols.map((s) => COIN_IDS[s.toLowerCase()]).filter(Boolean))];
   if (!ids.length) return "Podaj symbole krypto, np. BTC, ETH, SOL.";
   try {
-    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(",")}&vs_currencies=usd,pln&include_24hr_change=true`);
+    const res = await fetchTimeout(`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(",")}&vs_currencies=usd,pln&include_24hr_change=true`);
     const d = await res.json().catch(() => null);
     if (!res.ok || !d) return "Notowania krypto chwilowo niedostępne.";
     const lines = ids.map((id) => {
@@ -40,7 +41,7 @@ export async function getCrypto(symbols: string[]): Promise<string> {
 /** Kurs waluty względem PLN (lub dowolnej bazy). */
 export async function getRate(from = "USD", to = "PLN"): Promise<string> {
   try {
-    const res = await fetch(`https://open.er-api.com/v6/latest/${encodeURIComponent(from.toUpperCase())}`);
+    const res = await fetchTimeout(`https://open.er-api.com/v6/latest/${encodeURIComponent(from.toUpperCase())}`);
     const d = await res.json().catch(() => null);
     const rate = d?.rates?.[to.toUpperCase()];
     if (!rate) return "Nie udało się pobrać kursu.";

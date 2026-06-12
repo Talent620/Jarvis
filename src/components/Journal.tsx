@@ -82,7 +82,7 @@ export default function Journal({ onClose }: { onClose: () => void }) {
   };
 
   const parseTags = (s: string) =>
-    s.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean).slice(0, 10);
+    [...new Set(s.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean))].slice(0, 10);
 
   const saveEntry = () => {
     if (!body.trim() && !title.trim()) {

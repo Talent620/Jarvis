@@ -65,7 +65,7 @@ export class SmartConversation {
       this.h.onInfo?.("Blokada głosu niedostępna na tym urządzeniu — słucham normalnie.");
     }
     this.startRecognition();
-    this.h.onState(this.armed ? "listening" : "listening");
+    this.h.onState(this.armed ? "listening" : "idle"); // idle = czekam na słowo „Jarvis"
     this.tickTimer = window.setInterval(() => this.tick(), 140);
   }
 

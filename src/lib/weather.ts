@@ -1,3 +1,4 @@
+import { fetchTimeout } from "./http";
 // Pogoda przez Open-Meteo — darmowe, bez klucza API, działa z przeglądarki (CORS OK).
 
 const CODES: Record<number, string> = {
@@ -34,7 +35,7 @@ async function geocode(city: string): Promise<Geo | null> {
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
     city,
   )}&count=1&language=pl&format=json`;
-  const res = await fetch(url);
+  const res = await fetchTimeout(url);
   if (!res.ok) return null;
   const data = await res.json().catch(() => null);
   const r = data?.results?.[0];
@@ -62,7 +63,7 @@ export async function getWeather(location?: string): Promise<string> {
     `https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}` +
     `&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m` +
     `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=1`;
-  const res = await fetch(url);
+  const res = await fetchTimeout(url);
   if (!res.ok) return "Serwis pogodowy jest chwilowo niedostępny.";
   const d = await res.json().catch(() => null);
   if (!d?.current || !d?.daily) return "Serwis pogodowy zwrócił niepełne dane — spróbuj za chwilę.";
