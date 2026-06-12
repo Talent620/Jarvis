@@ -585,22 +585,43 @@ const tools: Tool[] = [
     def: {
       name: "find_leads",
       description:
-        "Znajdź realnych potencjalnych klientów (leady) — lokalne firmy z OpenStreetMap, z NAZWĄ, TELEFONEM, adresem i stroną. DZIAŁA OD RĘKI, za darmo, bez żadnego klucza. Nisza i lokalizacja są OPCJONALNE: bez lokalizacji użyje geolokalizacji, bez niszy znajdzie wszystkie lokalne firmy (priorytet: te BEZ strony www — idealni klienci dla agencji stron). Znalezione leady są od razu zapisywane do Pulpitu Sprzedaży. Po użyciu pokaż krótką listę (firma, telefon, czy ma stronę) i zaproponuj następny krok.",
+        "Znajdź realnych potencjalnych klientów (leady) — lokalne firmy z OpenStreetMap, z NAZWĄ, TELEFONEM, adresem i stroną. DZIAŁA OD RĘKI, za darmo, bez żadnego klucza. Nisza i lokalizacja są OPCJONALNE: bez lokalizacji użyje geolokalizacji, bez niszy znajdzie wszystkie lokalne firmy (priorytet: te BEZ strony www — idealni klienci dla agencji stron). Leady zapisują się od razu do Pulpitu Sprzedaży. AUTONOMIA: gdy użytkownik chce pełnego przygotowania (mówi np. przygotuj mi klientów / zrób profile / chcę być gotowy do rozmów / ogarnij leady za mnie) — ustaw with_dossiers=true: dla najgorętszych firm od razu powstaną teczki (audyt strony, słabe punkty, jak poprowadzić rozmowę, gotowy e-mail i skrypt). Rozumiej kontekst rozmowy: jeśli wcześniej padła branża/miasto/cel użytkownika, użyj ich bez dopytywania.",
       input_schema: obj(
         {
           niche: str("Nisza/branża (opcjonalnie), np. fryzjer, restauracja, warsztat"),
           location: str("Miasto (opcjonalnie), np. Kraków"),
           count: { type: "number", description: "Ile leadów (3–30, domyślnie 12)" },
           only_without_website: { type: "boolean", description: "Tylko firmy BEZ strony www (idealne dla agencji stron)" },
+          with_dossiers: { type: "boolean", description: "Po znalezieniu od razu przygotuj TECZKI dla 3 najgorętszych (audyt + słabe punkty + plan rozmowy + e-mail + skrypt). Włącz, gdy użytkownik chce być gotowy do kontaktu." },
         },
         [],
       ),
     },
-    run: async ({ niche, location, count, only_without_website }) => {
+    run: async ({ niche, location, count, only_without_website, with_dossiers }) => {
       const r = await findLeads({ niche, location, count: Number(count) || undefined, onlyNoWebsite: !!only_without_website });
       if (r.error) return r.error;
       const lines = r.sample.map((l) => `• ${l.company}${l.phone ? ` — ☎ ${l.phone}` : ""}${l.hasWebsite ? "" : " (BEZ strony — idealny lead)"}`);
-      return `Znalazłem ${r.found} firm w „${r.city}"${niche ? ` (${niche})` : ""} i zapisałem ${r.added} nowych do Pulpitu Sprzedaży (⋯ → 📈).\n\nPrzykłady:\n${lines.join("\n")}\n\nPowiedz „przygotuj teczkę dla [firma]" — zrobię audyt strony, analizę słabych punktów, e-mail i skrypt rozmowy.`;
+      let out = `Znalazłem ${r.found} firm w „${r.city}"${niche ? ` (${niche})` : ""} i zapisałem ${r.added} nowych do Pulpitu Sprzedaży (⋯ → 📈).\n\nPrzykłady:\n${lines.join("\n")}`;
+
+      if (with_dossiers && r.addedLeads.length) {
+        // Autonomicznie: teczki dla 3 najgorętszych (lista jest już posortowana — bez strony + telefon na górze).
+        const top = r.addedLeads.slice(0, 3);
+        const parts: string[] = [];
+        for (const lead of top) {
+          const d = await buildDossier(lead.id);
+          if ("error" in d) { parts.push(`• ${lead.company}: ${d.error}`); continue; }
+          const weak = auditWeakPoints(d.audit, !!lead.url);
+          parts.push([
+            `▸ ${lead.company} — szansa ${d.score}/100${lead.contact ? ` · ☎ ${lead.contact}` : ""}`,
+            weak.length ? `  Słabe punkty: ${weak.slice(0, 3).map((w) => w.split(" — ")[0]).join("; ")}` : "  Strona OK — sprzedawaj rozbudowę.",
+            d.analysis ? `  Jak podejść: ${d.analysis.split("\n").slice(-1)[0]?.slice(0, 160)}` : "",
+          ].filter(Boolean).join("\n"));
+        }
+        out += `\n\nTECZKI GOTOWE (pełne analizy, e-maile i skrypty rozmów czekają w 📈 Pulpit → kliknij firmę):\n${parts.join("\n\n")}`;
+      } else {
+        out += `\n\nPowiedz „przygotuj teczkę dla [firma]" — zrobię audyt strony, analizę słabych punktów, e-mail i skrypt rozmowy.`;
+      }
+      return out;
     },
   },
   {

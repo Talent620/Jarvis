@@ -382,6 +382,31 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </button>
               {apiMsg && <p className="muted" style={{ whiteSpace: "pre-line" }}>{apiMsg}</p>}
 
+              <h3>📨 Poczta — wysyłka e-maili z aplikacji</h3>
+              <p className="muted">
+                Pozwala wysyłać oferty do leadów <b>jednym potwierdzeniem</b>, prosto z Teczki Klienta
+                (Windows). Dla Gmaila: włącz weryfikację dwuetapową, potem wygeneruj{" "}
+                <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener" style={{ color: "var(--cyan)" }}>
+                  hasło aplikacji
+                </a>{" "}
+                i wklej je niżej (NIE zwykłe hasło). Dane zostają tylko na tym urządzeniu.
+              </p>
+              <div className="field">
+                <label>Adres e-mail (Gmail)</label>
+                <input value={s.smtpUser} placeholder="twoj@gmail.com" onChange={(e) => set({ smtpUser: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>Hasło aplikacji</label>
+                <input type="password" value={s.smtpPass} placeholder="xxxx xxxx xxxx xxxx" onChange={(e) => set({ smtpPass: e.target.value.replace(/\s/g, "") })} />
+              </div>
+              <div className="field" style={{ display: "flex", gap: 8 }}>
+                <input value={s.smtpHost} placeholder="smtp.gmail.com" onChange={(e) => set({ smtpHost: e.target.value })} style={{ flex: 2 }} />
+                <input type="number" value={s.smtpPort} placeholder="465" onChange={(e) => set({ smtpPort: Number(e.target.value) || 465 })} style={{ flex: 1 }} />
+              </div>
+              <p className="muted" style={{ fontSize: 12 }}>
+                Inna poczta niż Gmail? Wpisz jej serwer SMTP i port 465 (np. o2: poczta.o2.pl, WP: smtp.wp.pl).
+              </p>
+
               <h3>Research z cytatami (Tavily)</h3>
               <p className="muted">
                 Daje wyszukiwanie ze źródłami dla każdego dostawcy (nie tylko Claude). Darmowe

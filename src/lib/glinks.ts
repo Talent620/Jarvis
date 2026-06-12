@@ -28,6 +28,13 @@ export function gcalEventUrl(title: string, details = "", dateISO?: string): str
   return `https://calendar.google.com/calendar/render?${p}`;
 }
 
+/** SMS z gotową treścią — na telefonie otwiera Wiadomości (jeden klik = wysłane). */
+export function smsUrl(phone: string, body: string): string {
+  const p = phone.replace(/[\s-]/g, "");
+  // Android: ?body= ; iOS: &body= — format z „?&" działa na obu.
+  return `sms:${p}?&body=${encodeURIComponent(body)}`;
+}
+
 /** Google Maps: wyszukanie firmy (nazwa + adres/miasto) — opinie, zdjęcia, otoczenie. */
 export function mapsSearchUrl(query: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;

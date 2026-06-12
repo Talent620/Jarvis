@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
-import { buildDossier, auditWeakPoints, scoreLabel } from "../lib/leadIntel";
-import { gmailComposeUrl, mailtoUrl, mapsSearchUrl, splitOffer } from "../lib/glinks";
-import { copyWithToast } from "../lib/toast";
+import { buildDossier, auditWeakPoints, scoreLabel, smsDraft } from "../lib/leadIntel";
+import { gmailComposeUrl, mailtoUrl, mapsSearchUrl, smsUrl, splitOffer } from "../lib/glinks";
+import { canSendMail, sendMailNow } from "../lib/mailer";
+import { copyWithToast, toast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
 import type { Lead, LeadStatus } from "../types";
 
@@ -53,6 +54,27 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
     const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`);
     const url = kind === "gmail" ? gmailComposeUrl(email || "", subject, body) : mailtoUrl(email || "", subject, body);
     window.open(url, "_blank", "noopener");
+    if (lead.status === "new") set({ status: "contacted" });
+  };
+
+  // Prawdziwa wysyłka SMTP (desktop): jedno potwierdzenie i mail leci.
+  const [sending, setSending] = useState(false);
+  const sendNow = async () => {
+    const text = intel?.email || lead.offer || "";
+    const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`);
+    if (!email) { toast("Brak adresu e-mail firmy — użyj Gmaila i wpisz adres ręcznie."); return; }
+    if (!window.confirm(`Wysłać e-mail do ${lead.company}?\n\nDo: ${email}\nTemat: ${subject}`)) return;
+    setSending(true);
+    const err = await sendMailNow(email, subject, body);
+    setSending(false);
+    if (err) { toast(`Nie wysłano: ${err}`); return; }
+    toast(`✅ Wysłano do ${email}`);
+    set({ status: lead.status === "new" || lead.status === "contacted" ? "offer" : lead.status, note: `${lead.note ? lead.note + " · " : ""}E-mail wysłany ${new Date().toLocaleDateString("pl-PL")}` });
+  };
+
+  const sendSms = () => {
+    if (!phone) return;
+    window.open(smsUrl(phone, smsDraft(lead, intel?.audit)), "_blank");
     if (lead.status === "new") set({ status: "contacted" });
   };
 
@@ -114,6 +136,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
               {phone && <button className="chip" onClick={() => window.open(`tel:${phone.replace(/\s/g, "")}`)}>📞 Zadzwoń</button>}
+              {phone && <button className="chip" onClick={sendSms}>📱 SMS z zaczepką</button>}
               {lead.url && <button className="chip" onClick={() => window.open(lead.url, "_blank", "noopener")}>🌐 Strona</button>}
               <button className="chip" onClick={() => window.open(mapsSearchUrl(`${lead.company} ${lead.address || lead.location || ""}`), "_blank", "noopener")}>🗺 Mapy/opinie</button>
               {phone && <button className="chip" onClick={() => copyWithToast(phone)}>📋 Telefon</button>}
@@ -186,10 +209,21 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
               <div className="journal-card">
                 <p className="muted" style={{ whiteSpace: "pre-wrap", margin: 0, fontSize: 13 }}>{intel?.email || lead.offer}</p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-                  <button className="chip" onClick={() => sendVia("gmail")}>📨 Wyślij Gmailem</button>
+                  {canSendMail() && email && (
+                    <button className="chip" style={{ borderColor: "var(--ok, #58e08a)" }} onClick={sendNow} disabled={sending}>
+                      {sending ? "📨 Wysyłam…" : "📨 WYŚLIJ TERAZ (potwierdź)"}
+                    </button>
+                  )}
+                  <button className="chip" onClick={() => sendVia("gmail")}>✉ Gmail</button>
                   <button className="chip" onClick={() => sendVia("mail")}>📧 Program pocztowy</button>
+                  {phone && <button className="chip" onClick={sendSms}>📱 SMS</button>}
                   <button className="chip" onClick={() => copyWithToast(intel?.email || lead.offer || "")}>📋 Kopiuj</button>
                 </div>
+                {!canSendMail() && email && (
+                  <p className="muted" style={{ fontSize: 11, marginTop: 6 }}>
+                    💡 Chcesz wysyłać jednym kliknięciem prosto z JARVIS-a (bez otwierania poczty)? Skonfiguruj ⚙ → Poczta (Windows).
+                  </p>
+                )}
                 {!email && <p className="muted" style={{ fontSize: 11, marginTop: 6 }}>Brak e-maila firmy — wiadomość otworzy się bez adresata (uzupełnij po znalezieniu adresu na stronie/Mapach).</p>}
               </div>
             </>

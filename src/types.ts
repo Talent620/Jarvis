@@ -243,6 +243,14 @@ export interface Settings {
   model: string;
   /** Opcjonalny adres backend-proxy (omija CORS, chowa klucze). */
   proxyUrl: string;
+  /** Wysyłka e-maili wprost z aplikacji (desktop): adres Gmail/SMTP. */
+  smtpUser: string;
+  /** Hasło aplikacji (Gmail → Hasła aplikacji) — przechowywane lokalnie. */
+  smtpPass: string;
+  /** Serwer SMTP (domyślnie smtp.gmail.com). */
+  smtpHost: string;
+  /** Port SMTP (domyślnie 465 — szyfrowane TLS). */
+  smtpPort: number;
   /** Adres backendu sync (ten sam Worker). */
   syncUrl: string;
   /** Prywatny token przestrzeni danych sync. */

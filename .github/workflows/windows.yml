@@ -48,7 +48,19 @@ jobs:
           JARVIS_TAVILY_KEY: ${{ secrets.JARVIS_TAVILY_KEY }}
         run: npm run build
 
-      - name: Package installer EXE
+      # Podpis cyfrowy (self-signed): instalator i pliki aplikacji są podpisane —
+      # widać wydawcę i integralność pliku. UWAGA: pełne zaufanie SmartScreen
+      # wymaga płatnego certyfikatu OV/EV — wtedy podmień na sekret z PFX.
+      - name: Create code-signing certificate (self-signed)
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Artur Jozefczak - JARVIS" -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddYears(5)
+          $pwd = ConvertTo-SecureString -String "jarvis-ci-sign" -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath "$env:RUNNER_TEMP\jarvis-sign.pfx" -Password $pwd | Out-Null
+          echo "CSC_LINK=$env:RUNNER_TEMP\jarvis-sign.pfx" >> $env:GITHUB_ENV
+          echo "CSC_KEY_PASSWORD=jarvis-ci-sign" >> $env:GITHUB_ENV
+
+      - name: Package installer EXE (signed)
         run: npx electron-builder --win nsis --publish never
 
       - name: Publish to GitHub Releases (rolling 'latest')

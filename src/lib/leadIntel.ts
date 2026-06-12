@@ -195,6 +195,17 @@ function saveIntel(leadId: string, intel: LeadIntel): void {
   });
 }
 
+/** Krótki SMS pod tego leada (czysta funkcja) — zaczep od najmocniejszego braku. */
+export function smsDraft(lead: Pick<Lead, "company" | "url" | "location">, audit?: SiteAudit): string {
+  const who = store.settings.userName && store.settings.userName !== "Sir" ? `, ${store.settings.userName}` : "";
+  const hook = !lead.url
+    ? `zauważyłem, że ${lead.company} nie ma strony www — klienci szukający w Google trafiają do konkurencji`
+    : audit && !audit.viewport
+      ? `strona ${lead.company} źle wyświetla się na telefonach, a większość klientów wchodzi z komórki`
+      : `widzę, że stronę ${lead.company} da się mocno ulepszyć (Google, telefony)`;
+  return `Dzień dobry! Piszę, bo ${hook}. Robię nowoczesne strony dla firm${lead.location ? ` z ${lead.location}` : " lokalnych"} i mam gotowe darmowe demo do pokazania. Mogę podesłać link? Pozdrawiam${who}`;
+}
+
 /** Przygotuj teczki dla wielu leadów po kolei (np. wszystkich nowych). */
 export async function buildDossiers(leadIds: string[], onProgress?: (done: number, total: number) => void): Promise<number> {
   let ok = 0;

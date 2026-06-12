@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   screenshot: () => ipcRenderer.invoke("jarvis:screenshot"),
   // Natywne powiadomienie systemowe Windows.
   notify: (title, body) => ipcRenderer.invoke("jarvis:notify", { title: String(title || ""), body: String(body || "") }),
+  // Prawdziwa wysyłka e-maila przez SMTP (dane z ustawień aplikacji).
+  sendMail: (msg) => ipcRenderer.invoke("jarvis:sendmail", msg),
   // Pisanie tekstu / skróty (Windows), opcjonalnie do okna o tytule.
   type: (text, window) => ipcRenderer.invoke("jarvis:type", { text: String(text || ""), window: window || "" }),
   hotkey: (combo, window) => ipcRenderer.invoke("jarvis:hotkey", { combo: String(combo || ""), window: window || "" }),
