@@ -24,6 +24,10 @@ export default defineConfig({
     __DEFAULT_KEYS__: JSON.stringify(DEFAULT_KEYS),
     // Aktywacja licencją wymagana domyślnie; ustaw JARVIS_LICENSE_REQUIRED=false, by wyłączyć.
     __LICENSE_REQUIRED__: JSON.stringify(env.JARVIS_LICENSE_REQUIRED !== "false"),
+    // Adres serwera licencji (Cloudflare Worker). Pusty = tryb offline (sam podpis ECDSA).
+    __LICENSE_URL__: JSON.stringify(env.JARVIS_LICENSE_URL || ""),
+    // Tryb rygorystyczny: wymaga udanej aktywacji online (limit urządzeń, zdalne unieważnienie).
+    __LICENSE_STRICT__: JSON.stringify(env.JARVIS_LICENSE_STRICT === "true"),
   },
   plugins: [react()],
   build: {

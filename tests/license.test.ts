@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { verifyLicense } from "../src/lib/license";
+import { verifyLicense, deviceId } from "../src/lib/license";
 
 // Ważny klucz „master" podpisany kluczem prywatnym właściciela (pod kluczem
 // publicznym wbudowanym w aplikację). Klucza nie da się podrobić bez prywatnego.
@@ -30,5 +30,12 @@ describe("Licencja — weryfikacja ECDSA", () => {
     expect((await verifyLicense("losowy-klucz")).valid).toBe(false);
     expect((await verifyLicense("")).valid).toBe(false);
     expect((await verifyLicense("a.b")).valid).toBe(false);
+  });
+
+  it("deviceId jest stabilny (limit urządzeń + podgląd kto korzysta)", () => {
+    const a = deviceId();
+    const b = deviceId();
+    expect(a).toBe(b);
+    expect(a.length).toBeGreaterThan(8);
   });
 });

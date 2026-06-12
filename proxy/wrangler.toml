@@ -8,3 +8,7 @@ compatibility_date = "2026-01-01"
 kv_namespaces = [
   { binding = "JARVIS_KV", id = "WSTAW_KV_ID" }
 ]
+
+# Sekrety licencji i panelu admina (ustaw przez: wrangler secret put NAZWA):
+#   LICENSE_PRIVATE_JWK  — Twój klucz prywatny (JSON) do wydawania licencji
+#   ADMIN_TOKEN          — hasło Twojego konta administratora (panel /admin)

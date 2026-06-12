@@ -63,3 +63,37 @@ Adres workera (np. `https://jarvis-bff.twoja-subdomena.workers.dev`) wpisz w apl
 
 > Token sync to po prostu Twoja prywatna nazwa przestrzeni danych w KV — trzymaj go w tajemnicy;
 > każdy, kto go zna, ma dostęp do Twoich zsynchronizowanych danych.
+
+## Licencje + panel administracyjny (kto korzysta)
+
+Worker pełni też rolę serwera licencji z panelem admina pod `/admin`.
+
+### Konfiguracja (jednorazowo)
+```bash
+# 1) Twój klucz prywatny do wydawania licencji (ten z czatu, jako jedna linia JSON):
+wrangler secret put LICENSE_PRIVATE_JWK
+# 2) Hasło Twojego konta administratora:
+wrangler secret put ADMIN_TOKEN
+wrangler deploy
+```
+Klucz publiczny jest już wbudowany w aplikację (`src/lib/license.ts`) i w Workerze —
+muszą być z tej samej pary (są).
+
+### Włączenie egzekwowania online w aplikacji (build)
+Ustaw w GitHub Secrets repo:
+- `JARVIS_LICENSE_URL` = adres Workera, np. `https://jarvis-bff.twojekonto.workers.dev`
+- `JARVIS_LICENSE_STRICT` = `true`  (wymaga aktywacji online: limit urządzeń, zdalne unieważnianie)
+
+Bez `JARVIS_LICENSE_URL` aplikacja działa w trybie offline (sam podpis ECDSA — bez limitu urządzeń i podglądu).
+
+### Panel administratora
+Wejdź na `https://<twój-worker>/admin`, zaloguj się tokenem `ADMIN_TOKEN`. Możesz:
+- **wydać klucz** (imię klienta, ważność w dniach, limit urządzeń),
+- zobaczyć **kto korzysta** — urządzenia i ostatnią aktywność każdej licencji,
+- **unieważnić / przywrócić** licencję (działa zdalnie przy następnym sprawdzeniu),
+- **zresetować urządzenia** (gdy klient zmienia telefon).
+
+### Endpunkty
+- `POST /v1/license/activate` `{key, device, platform}` → aktywacja + rejestracja urządzenia
+- `POST /v1/license/check` `{key, device, platform}` → heartbeat + zdalne unieważnienie
+- `GET /v1/admin/list`, `POST /v1/admin/issue|revoke|reset-devices` (nagłówek `x-admin-token`)

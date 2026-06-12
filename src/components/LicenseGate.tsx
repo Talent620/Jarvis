@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { verifyLicense, saveLicense } from "../lib/license";
+import { activateLicense, saveLicense } from "../lib/license";
 
 // Brama aktywacji: bez ważnego klucza licencyjnego aplikacja się nie uruchamia.
 // Klucz wydaje wyłącznie autor (Artur Józefczak). Kopia bez klucza jest bezużyteczna.
@@ -12,15 +12,15 @@ export default function LicenseGate({ onActivated }: { onActivated: (name?: stri
     const t = key.trim();
     if (!t) return;
     setBusy(true);
-    setMsg("Sprawdzam klucz…");
-    const r = await verifyLicense(t);
+    setMsg("Sprawdzam i aktywuję klucz…");
+    const r = await activateLicense(t);
     setBusy(false);
     if (r.valid) {
       saveLicense(t);
       setMsg("✅ Aktywowano. Uruchamiam JARVIS-a…");
       setTimeout(() => onActivated(r.name), 500);
     } else {
-      setMsg("❌ Nieprawidłowy lub wygasły klucz licencyjny. Skontaktuj się z autorem, aby uzyskać dostęp.");
+      setMsg("❌ Klucz nieprawidłowy, wygasły, unieważniony lub przekroczono limit urządzeń. Skontaktuj się z autorem.");
     }
   };
 
