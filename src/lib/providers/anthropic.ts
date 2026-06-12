@@ -50,7 +50,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
       },
       body: JSON.stringify({
         model: ctx.model,
-        max_tokens: 4096,
+        max_tokens: 8192,
         system: ctx.system,
         thinking: { type: "adaptive" },
         output_config: { effort: "high" },
