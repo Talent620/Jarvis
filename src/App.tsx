@@ -30,6 +30,7 @@ const WebStudio = lazy(() => import("./components/WebStudio"));
 const AdminPanel = lazy(() => import("./components/AdminPanel"));
 const Cards = lazy(() => import("./components/Cards"));
 const Transcribe = lazy(() => import("./components/Transcribe"));
+const Profile = lazy(() => import("./components/Profile"));
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
 import { startBackgroundWake } from "./lib/wakeword";
@@ -149,6 +150,7 @@ export default function App() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showCards, setShowCards] = useState(false);
   const [showTranscribe, setShowTranscribe] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
   const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
 
@@ -707,6 +709,11 @@ export default function App() {
           <Transcribe onClose={() => setShowTranscribe(false)} />
         </Suspense>
       )}
+      {showProfile && (
+        <Suspense fallback={null}>
+          <Profile onClose={() => setShowProfile(false)} />
+        </Suspense>
+      )}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {showPanels && <Panels onClose={() => setShowPanels(false)} />}
       {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}
@@ -749,6 +756,7 @@ export default function App() {
           onAdmin={() => setShowAdmin(true)}
           onCards={() => setShowCards(true)}
           onTranscribe={() => setShowTranscribe(true)}
+          onProfile={() => setShowProfile(true)}
           onClose={() => setShowMore(false)}
         />
       )}

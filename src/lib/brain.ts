@@ -4,6 +4,7 @@ import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored } from "./providers/re
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed, rankJournal } from "./memory";
 import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
 import { retrieveKnowledge } from "./knowledge";
+import { buildProfileBlock } from "./profile";
 import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, isKeyError, humanize, isComplex, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
@@ -100,6 +101,9 @@ export function systemPrompt(): string {
   // Pamięć autonomiczna: trafne fakty wybrane semantycznie (z fallbackiem na świeżość).
   const facts = memoryBlock();
 
+  // Profil użytkownika: stała, curated pamięć o nim (zawsze w kontekście).
+  const profile = buildProfileBlock(s.profile);
+
   // Kontekst projektu: instrukcje + fragmenty dokumentów (budżet ~6000 zn.).
   const project = pid ? store.data.projects.find((p) => p.id === pid) : null;
   let projectCtx = "";
@@ -192,6 +196,7 @@ export function systemPrompt(): string {
     COGNITIVE_CORE,
     currentKnowledge,
     deepAnalysis ? `\nTwoja wewnętrzna analiza tego zapytania (wykorzystaj ją, nie cytuj wprost):\n${deepAnalysis}` : "",
+    profile,
     facts,
     projectCtx,
     journalCtx,

@@ -1,4 +1,5 @@
 // Współdzielone typy dla całej aplikacji JARVIS.
+import type { UserProfile } from "./lib/profile";
 
 export type Role = "user" | "assistant";
 
@@ -221,6 +222,8 @@ export interface Settings {
   theme: string;
   /** Imię użytkownika, którym zwraca się JARVIS. */
   userName: string;
+  /** Stały profil użytkownika (zainteresowania, cele…) — wbudowana pamięć o nim. */
+  profile: UserProfile;
   /** Preset osobowości: classic | concise | warm | witty | custom. */
   persona: string;
   /** Dodatkowy, własny opis osobowości (zawsze doklejany). */

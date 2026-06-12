@@ -20,6 +20,7 @@ export default function More({
   onAdmin,
   onCards,
   onTranscribe,
+  onProfile,
   onClose,
 }: {
   onProjects: () => void;
@@ -37,10 +38,12 @@ export default function More({
   onAdmin: () => void;
   onCards: () => void;
   onTranscribe: () => void;
+  onProfile: () => void;
   onClose: () => void;
 }) {
   useEscape(onClose);
   const items = [
+    { id: "profile", icon: "👤", label: "Mój profil — kim jestem (pamięć)", fn: onProfile },
     { id: "money", icon: "💰", label: "Zarabianie — autopilot dochodu", fn: onMoney },
     { id: "journal", icon: "📔", label: "Mój dziennik (przemyślenia)", fn: onJournal },
     { id: "cards", icon: "🧠", label: "Kapsuły Wiedzy — ucz się i pamiętaj", fn: onCards },

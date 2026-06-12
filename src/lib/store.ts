@@ -1,4 +1,5 @@
 import type { AppData, Settings } from "../types";
+import { emptyProfile } from "./profile";
 
 const DATA_KEY = "jarvis.data.v2";
 const SETTINGS_KEY = "jarvis.settings.v2";
@@ -34,6 +35,7 @@ const defaultSettings: Settings = {
   activeProjectId: "",
   theme: "default",
   userName: "Sir",
+  profile: { ...emptyProfile },
   persona: "classic",
   customPersona: "",
   interpreterMode: false,
@@ -122,6 +124,7 @@ function normalizeSettings(s: Settings & { anthropicApiKey?: string }): Settings
   if (!s.tavilyApiKey && (injected as Record<string, string>).tavily) {
     s.tavilyApiKey = (injected as Record<string, string>).tavily;
   }
+  s.profile = { ...emptyProfile, ...(s.profile || {}) };
   return s;
 }
 
