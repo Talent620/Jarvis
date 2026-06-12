@@ -5,7 +5,7 @@ import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED } f
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { googleStartUrl } from "../lib/google";
-import { testApi, testProvider } from "../lib/brain";
+import { testApi, testProvider, resolveProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
 import { exportData, exportFull, exportFullEncrypted, importData } from "../lib/backup";
 import { keyList, keyCount } from "../lib/keys";
@@ -356,6 +356,30 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   🔑 Testuj wszystkie
                 </button>
               </div>
+              <button
+                className="btn"
+                style={{ marginTop: 8 }}
+                onClick={async () => {
+                  // Jedno kliknięcie: czy klucz Claude działa + czy Claude jest aktywnym mózgiem.
+                  const key = keyList("anthropic")[0] || "";
+                  if (!key) {
+                    setApiMsg("🧠 Brak klucza Claude — wklej klucz sk-ant-… wyżej (platform.claude.com), a stanie się głównym mózgiem.");
+                    return;
+                  }
+                  setApiMsg("⏳ Sprawdzam Claude…");
+                  const test = await testProvider("anthropic", key);
+                  const active = resolveProvider();
+                  const isBrain = active?.provider === "anthropic";
+                  setApiMsg([
+                    `🧠 Klucz Claude: ${test}`,
+                    isBrain
+                      ? `✅ Claude JEST aktywnym mózgiem (model: ${active!.model}).`
+                      : `⚠ Aktywny mózg to teraz ${active ? PROVIDERS[active.provider].label : "—"} — ustaw Dostawcę na „auto" albo „Claude", by Claude odpowiadał.`,
+                  ].join("\n"));
+                }}
+              >
+                🧠 Sprawdź Claude (klucz + czy jest mózgiem)
+              </button>
               {apiMsg && <p className="muted" style={{ whiteSpace: "pre-line" }}>{apiMsg}</p>}
 
               <h3>Research z cytatami (Tavily)</h3>

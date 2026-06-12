@@ -61,7 +61,7 @@ export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => v
         </div>
         <div className="panel-body">
           <Guide title="ℹ Jak realnie na tym zarobić (krok po kroku)">
-            <p><b>Model „agencja stron":</b> 1) <b>Znajdź leady</b> (firmy bez dobrej strony) → 2) JARVIS pisze <b>ofertę</b> i buduje <b>demo strony/sklepu</b> → 3) Ty wysyłasz i rozmawiasz → 4) klient płaci za stronę.</p>
+            <p><b>Model „agencja stron":</b> 1) <b>Znajdź leady</b> (firmy bez dobrej strony) → 2) JARVIS robi <b>teczkę klienta</b> (audyt strony, słabe punkty, e-mail, skrypt rozmowy) i buduje <b>demo</b> → 3) Ty wysyłasz i rozmawiasz → 4) klient płaci za stronę.</p>
             <p><b>Ile to przynosi:</b> prosta strona <b>800–2500 zł</b>, sklep <b>2500–8000 zł</b>, opieka/abonament <b>100–400 zł/mc</b>. Wystarczy kilku klientów miesięcznie.</p>
             <p><b>Co darmowe:</b> szukanie leadów (OpenStreetMap — z telefonami, bez klucza), pisanie ofert i budowa stron (darmowe modele AI), hosting (Netlify/Vercel).</p>
             <p><b>Co płatne (opcjonalnie):</b> własna domena ~50–120 zł/rok, bramka płatności dla sklepu (Przelewy24/PayU, prowizja ~1–2%).</p>

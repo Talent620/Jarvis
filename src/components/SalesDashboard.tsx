@@ -3,9 +3,11 @@ import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
 import { findLeads } from "../lib/leads";
+import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { copyWithToast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
 import { useEscape } from "../hooks/useEscape";
+import LeadDetail from "./LeadDetail";
 
 const STATUS: { id: LeadStatus; label: string; color: string }[] = [
   { id: "new", label: "Nowy", color: "var(--cyan)" },
@@ -27,6 +29,19 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const [niche, setNiche] = useState(store.settings.prospectNiche || "");
   const [city, setCity] = useState(store.settings.prospectLocation || "");
   const [noWeb, setNoWeb] = useState(false);
+  const [openLead, setOpenLead] = useState<string | null>(null);
+  const [bulkMsg, setBulkMsg] = useState("");
+  const [bulking, setBulking] = useState(false);
+
+  // Teczki dla wszystkich NOWYCH leadów naraz: audyt + analiza + e-mail + skrypt.
+  const bulkDossiers = async () => {
+    const fresh = (store.data.leads || []).filter((l) => l.status === "new" && !l.intel?.analysis).slice(0, 10);
+    if (!fresh.length) { setBulkMsg("Brak nowych leadów bez teczki — wszystko już przygotowane."); return; }
+    setBulking(true);
+    const ok = await buildDossiers(fresh.map((l) => l.id), (done, total) => setBulkMsg(`🧠 Przygotowuję teczki… ${done}/${total}`));
+    setBulking(false);
+    setBulkMsg(`✅ Gotowe ${ok}/${fresh.length} teczek — każdy lead ma audyt, analizę, e-mail i skrypt rozmowy.`);
+  };
 
   // „Znajdź leady" — od ręki, prosto z pulpitu. Darmowe (OpenStreetMap), z
   // telefonami. Nisza i miasto są OPCJONALNE (bez miasta użyje lokalizacji).
@@ -101,7 +116,11 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
     };
   }, [leads]);
 
-  const shown = filter === "all" ? leads : leads.filter((l) => l.status === filter);
+  // Gorące leady (wysoki score z teczki) na górze — wiesz, do kogo dzwonić najpierw.
+  const shown = useMemo(() => {
+    const base = filter === "all" ? leads : leads.filter((l) => l.status === filter);
+    return [...base].sort((a, b) => (b.intel?.score ?? -1) - (a.intel?.score ?? -1));
+  }, [leads, filter]);
   const copy = (t?: string) => t && copyWithToast(t);
 
   return (
@@ -145,9 +164,14 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
           )}
           {huntMsg && <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>{huntMsg}</p>}
 
+          <button className="btn" style={{ marginTop: 8 }} onClick={bulkDossiers} disabled={bulking}>
+            {bulking ? "🧠 Pracuję…" : "🧠 Teczki dla wszystkich nowych (audyt + analiza + e-maile)"}
+          </button>
+          {bulkMsg && <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>{bulkMsg}</p>}
+
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-            Możesz też powiedzieć JARVIS-owi: <b>„znajdź leady: [nisza] w [miasto] i zapisz je"</b>.
-            Dla wybranej firmy <b>🌐 Zbuduj demo</b> postawi stronę, a <b>✍ Szkic oferty</b> napisze e-mail.
+            <b>Kliknij firmę</b>, by otworzyć teczkę klienta: pełne dane, audyt strony, analizę AI
+            słabych punktów, spersonalizowany e-mail i skrypt rozmowy. Gorące leady 🔥 lądują na górze.
           </p>
 
           <div className="chips" style={{ flexWrap: "wrap", margin: "4px 0 8px" }}>
@@ -165,10 +189,12 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
             shown.map((l) => (
               <div key={l.id} className="journal-card">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                  <b>{l.company}</b>
+                  <b style={{ cursor: "pointer" }} onClick={() => setOpenLead(l.id)}>
+                    {l.intel ? `${scoreLabel(l.intel.score).emoji} ` : ""}{l.company}
+                  </b>
                   <span className="x" style={{ cursor: "pointer" }} onClick={() => del(l.id)}>✕</span>
                 </div>
-                {(l.niche || l.location) && <div className="muted" style={{ fontSize: 12 }}>{[l.niche, l.location].filter(Boolean).join(" · ")}</div>}
+                {(l.niche || l.location) && <div className="muted" style={{ fontSize: 12 }}>{[l.niche, l.location].filter(Boolean).join(" · ")}{l.intel ? ` · szansa ${l.intel.score}/100` : ""}</div>}
                 {l.note && <p className="muted" style={{ fontSize: 13, margin: "4px 0 0" }}>{l.note}</p>}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, alignItems: "center" }}>
                   <select
@@ -185,6 +211,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
                     onChange={(e) => setField(l.id, { value: Number(e.target.value) || undefined })}
                     style={{ width: 70, padding: "4px 8px", borderRadius: 8, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", fontSize: 13 }}
                   />
+                  <button className="chip" onClick={() => setOpenLead(l.id)}>🗂 Teczka</button>
                   {l.url && <button className="chip" onClick={() => window.open(l.url, "_blank", "noopener")}>🌐 WWW</button>}
                   {l.contact && <button className="chip" onClick={() => copy(l.contact)}>📋 Kontakt</button>}
                   <button className="chip" onClick={() => writeOffer(l)} disabled={drafting === l.id}>
@@ -216,6 +243,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
           <button className="btn" onClick={onClose}>Zamknij</button>
         </div>
       </div>
+      {openLead && <LeadDetail leadId={openLead} onClose={() => setOpenLead(null)} onWeb={onWeb} />}
     </div>
   );
 }

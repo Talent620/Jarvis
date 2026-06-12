@@ -14,8 +14,10 @@ const NOMINATIM = "https://nominatim.openstreetmap.org";
 export interface RawLead {
   company: string;
   phone?: string;
+  email?: string;
   website?: string;
   address?: string;
+  hours?: string;
   kind?: string;
   hasWebsite: boolean;
 }
@@ -68,11 +70,13 @@ export function parseElement(el: any): RawLead | null {
   const t = el?.tags;
   if (!t?.name) return null;
   const phone = t.phone || t["contact:phone"] || t["contact:mobile"] || undefined;
+  const email = t.email || t["contact:email"] || undefined;
   const website = t.website || t["contact:website"] || t.url || undefined;
   const street = [t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" ");
   const address = [street, t["addr:city"]].filter(Boolean).join(", ") || undefined;
+  const hours = t.opening_hours || undefined;
   const kind = t.shop || t.craft || t.office || t.amenity || t.leisure || t.tourism || undefined;
-  return { company: String(t.name).slice(0, 80), phone, website, address, kind, hasWebsite: !!website };
+  return { company: String(t.name).slice(0, 80), phone, email, website, address, hours, kind, hasWebsite: !!website };
 }
 
 async function geocode(city: string): Promise<{ bbox: [number, number, number, number]; name: string } | null> {
@@ -150,7 +154,10 @@ export function saveLeads(raws: RawLead[], niche: string | undefined, city: stri
         id: uid(),
         company: r.company,
         url: r.website,
-        contact: r.phone,
+        contact: r.phone || r.email,
+        email: r.email,
+        address: r.address,
+        hours: r.hours,
         niche: niche?.trim() || r.kind,
         location: city,
         note,

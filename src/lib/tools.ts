@@ -11,6 +11,7 @@ import { generateCards } from "./cards";
 import { runAutomation } from "./n8n";
 import { getCrypto, getRate } from "./markets";
 import { findLeads } from "./leads";
+import { buildDossier, auditWeakPoints } from "./leadIntel";
 import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, hotkey as desktopHotkey } from "./desktop";
 import type { Citation } from "../types";
 
@@ -599,7 +600,30 @@ const tools: Tool[] = [
       const r = await findLeads({ niche, location, count: Number(count) || undefined, onlyNoWebsite: !!only_without_website });
       if (r.error) return r.error;
       const lines = r.sample.map((l) => `• ${l.company}${l.phone ? ` — ☎ ${l.phone}` : ""}${l.hasWebsite ? "" : " (BEZ strony — idealny lead)"}`);
-      return `Znalazłem ${r.found} firm w „${r.city}"${niche ? ` (${niche})` : ""} i zapisałem ${r.added} nowych do Pulpitu Sprzedaży (⋯ → 📈).\n\nPrzykłady:\n${lines.join("\n")}\n\nPowiedz, dla której firmy mam napisać ofertę albo zbudować demo strony.`;
+      return `Znalazłem ${r.found} firm w „${r.city}"${niche ? ` (${niche})` : ""} i zapisałem ${r.added} nowych do Pulpitu Sprzedaży (⋯ → 📈).\n\nPrzykłady:\n${lines.join("\n")}\n\nPowiedz „przygotuj teczkę dla [firma]" — zrobię audyt strony, analizę słabych punktów, e-mail i skrypt rozmowy.`;
+    },
+  },
+  {
+    def: {
+      name: "lead_dossier",
+      description:
+        "Przygotuj TECZKĘ KLIENTA dla zapisanego leada: techniczny audyt jego strony (HTTPS, wersja mobilna, SEO, kontakt), scoring szansy 0–100, analizę AI słabych punktów (problem → co tracą → rozwiązanie), spersonalizowany e-mail i skrypt rozmowy telefonicznej. Podaj nazwę firmy z Pulpitu Sprzedaży (dopasowanie częściowe). Wyniki zapisują się w leadzie (📈 Pulpit → kliknij firmę).",
+      input_schema: obj({ company: str("Nazwa firmy (lead z Pulpitu Sprzedaży)") }, ["company"]),
+    },
+    run: async ({ company }) => {
+      const q = String(company || "").toLowerCase().trim();
+      const lead = store.data.leads.find((l) => l.company.toLowerCase().includes(q));
+      if (!lead) return `Nie mam leada „${company}" w Pulpicie. Użyj find_leads albo save_lead.`;
+      const r = await buildDossier(lead.id);
+      if ("error" in r) return r.error;
+      const weak = auditWeakPoints(r.audit, !!lead.url);
+      return [
+        `Teczka gotowa: ${lead.company} — szansa ${r.score}/100.`,
+        weak.length ? `Słabe punkty:\n${weak.map((w) => `• ${w}`).join("\n")}` : "Strona w dobrym stanie — sprzedawaj rozbudowę.",
+        r.analysis ? `\nANALIZA:\n${r.analysis}` : "",
+        r.email ? `\nE-MAIL (gotowy do wysłania):\n${r.email}` : "",
+        `\nPełna teczka (skrypt rozmowy, przyciski wysyłki): 📈 Pulpit Sprzedaży → kliknij „${lead.company}".`,
+      ].filter(Boolean).join("\n");
     },
   },
   {

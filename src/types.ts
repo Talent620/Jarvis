@@ -39,6 +39,8 @@ export interface Task {
   title: string;
   done: boolean;
   due?: string; // ISO
+  /** Kto odpowiada za zadanie (np. „Ja", „Marek", „klient"). */
+  owner?: string;
   createdAt: number;
 }
 
@@ -161,11 +163,47 @@ export interface AppData {
 
 /** Lead sprzedażowy (mini-CRM / Pulpit Sprzedaży). */
 export type LeadStatus = "new" | "contacted" | "offer" | "won" | "lost";
+
+/** Techniczny audyt strony leada (sprawdzany automatycznie, bez AI). */
+export interface SiteAudit {
+  ok: boolean;        // czy udało się pobrać stronę
+  https?: boolean;    // szyfrowanie (kłódka)
+  viewport?: boolean; // wersja mobilna (meta viewport)
+  title?: string;     // tytuł strony (SEO)
+  metaDesc?: boolean; // opis w Google (meta description)
+  h1?: boolean;       // nagłówek główny (struktura SEO)
+  og?: boolean;       // podgląd przy udostępnianiu (Open Graph)
+  contact?: boolean;  // widoczny telefon/e-mail na stronie
+  socials?: string[]; // znalezione sociale (facebook/instagram…)
+  bytes?: number;     // rozmiar HTML (waga)
+  error?: string;     // czemu nie udało się pobrać
+}
+
+/** Teczka klienta — wywiad + analiza AI + materiały sprzedażowe per lead. */
+export interface LeadIntel {
+  /** 0–100: szansa na sprzedaż (im wyżej, tym cieplejszy lead). */
+  score: number;
+  audit?: SiteAudit;
+  /** Analiza AI: słabe punkty → co tracą → rozwiązanie do sprzedania. */
+  analysis?: string;
+  /** Spersonalizowany e-mail (pierwsza linia „Temat: …"). */
+  email?: string;
+  /** Skrypt rozmowy telefonicznej (otwarcie, pytania, obiekcje, domknięcie). */
+  callScript?: string;
+  updatedAt: number;
+}
+
 export interface Lead {
   id: string;
   company: string;
   url?: string;
   contact?: string; // e-mail / telefon
+  /** E-mail firmy (z OSM/strony), gdy znany — do wysyłki ofert. */
+  email?: string;
+  /** Adres (ulica, miasto) — z OSM. */
+  address?: string;
+  /** Godziny otwarcia — z OSM (wiesz, kiedy dzwonić). */
+  hours?: string;
   niche?: string;
   location?: string;
   note?: string;
@@ -173,6 +211,8 @@ export interface Lead {
   value?: number;
   /** Gotowy szkic oferty (cold mail) napisany przez JARVIS-a. */
   offer?: string;
+  /** Teczka klienta: audyt, analiza AI, e-mail, skrypt rozmowy, scoring. */
+  intel?: LeadIntel;
   status: LeadStatus;
   createdAt: number;
   updatedAt: number;
