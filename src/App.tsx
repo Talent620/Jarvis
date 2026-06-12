@@ -16,7 +16,7 @@ import LockScreen from "./components/LockScreen";
 import Onboarding, { needsOnboarding } from "./components/Onboarding";
 import LicenseGate from "./components/LicenseGate";
 import { checkActivation, licenseRequired } from "./lib/license";
-import VoiceMode from "./components/VoiceMode";
+import HeadsetMode from "./components/HeadsetMode";
 import { watchHeadset } from "./lib/headset";
 import { toast } from "./lib/toast";
 import PermissionDialog from "./components/PermissionDialog";
@@ -543,7 +543,7 @@ export default function App() {
   // Słuchawki BT podłączone → zaproponuj/otwórz tryb głosowy (obsługa bez patrzenia).
   useEffect(() => {
     const stop = watchHeadset(() => {
-      toast("🎧 Wykryto słuchawki — włączam tryb głosowy");
+      toast("🎧 Słuchawki podłączone — Tryb Słuchawki gotowy");
       setShowVoice(true);
     });
     const offVoice = (window as any).jarvisDesktop?.onVoiceMode?.(() => setShowVoice((v: boolean) => !v));
@@ -621,7 +621,7 @@ export default function App() {
             listenerRef.current?.stop();
             setShowVoice(true);
           }}
-          title="Tryb głosowy — obsługa bez patrzenia"
+          title="Tryb Słuchawki — rozmowa hands-free"
         >
           🎙
         </button>
@@ -667,7 +667,7 @@ export default function App() {
         councilAvailable={councilMembers(3).length >= 2}
       />
 
-      {showVoice && <VoiceMode onClose={() => setShowVoice(false)} />}
+      {showVoice && <HeadsetMode onClose={() => setShowVoice(false)} />}
       {showAdmin && (
         <Suspense fallback={null}>
           <AdminPanel onClose={() => setShowAdmin(false)} />

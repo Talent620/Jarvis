@@ -35,6 +35,15 @@ export default function Help({ onClose }: { onClose: () => void }) {
             <li>Z trybem tłumacza (⚙) działa jak tłumacz symultaniczny.</li>
           </ul>
 
+          <h3>🎧 Tryb Słuchawki (centrum dowodzenia)</h3>
+          <ul>
+            <li>Przycisk <b>🎙</b> w nagłówku (albo podłącz słuchawki Bluetooth) otwiera <b>Tryb Słuchawki</b> — rozmowa hands-free jak z kolegą. Telefon możesz schować, ekran trzyma się sam (Wake Lock).</li>
+            <li><b>Klik na słuchawkach</b> (play/pause) = „mów" — bez dotykania telefonu. Albo powiedz „<b>Jarvis…</b>". Krótkie dźwięki mówią, kiedy słucha/myśli/gotowe.</li>
+            <li>Wydawaj polecenia: „<b>zadzwoń do…</b>" (telefon dzwoni, słuchasz w słuchawkach), „<b>puść muzykę</b>", „następna piosenka", „głośniej", „dodaj zadanie", „co mam dziś?". Na komputerze ⏮⏯⏭ sterują odtwarzaczem.</li>
+            <li>Tryb „<b>Po Jarvis</b>" reaguje dopiero po słowie-kluczu (mniej pomyłek), „<b>Ciągła</b>" słucha non-stop.</li>
+            <li><i>Uwaga:</i> przy <b>całkowicie zgaszonym</b> ekranie Android ogranicza nasłuch aplikacji — trzymaj ekran włączony (czarny, w kieszeni) dla pełnej niezawodności.</li>
+          </ul>
+
           <h3>🗣 Lepszy darmowy głos</h3>
           <ul>
             <li>⚙ → Głos → <b>Darmowy głos premium (Gemini TTS)</b> — naturalny, wysokiej jakości głos na darmowym kluczu Gemini. Domyślny „Charon" brzmi jak JARVIS; do wyboru kilka głosów.</li>

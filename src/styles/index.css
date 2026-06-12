@@ -1121,3 +1121,45 @@ button:disabled {
 .guide-body { margin-top: 6px; }
 .guide-body p { margin: 6px 0; font-size: 13px; line-height: 1.55; color: var(--text-dim); }
 .guide-body b { color: var(--text); }
+
+/* ===== Tryb Słuchawki — centrum dowodzenia hands-free ===== */
+.headset {
+  position: fixed;
+  inset: 0;
+  z-index: 190;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  text-align: center;
+}
+.headset-core {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(108, 231, 255, 0.95), rgba(42, 169, 214, 0.25) 55%, transparent 72%);
+  box-shadow: 0 0 60px rgba(108, 231, 255, 0.5), inset 0 0 30px rgba(108, 231, 255, 0.35);
+  transition: transform 0.12s ease;
+}
+.headset-core[data-phase="thinking"] { filter: hue-rotate(40deg); animation: headset-spin 1.4s linear infinite; }
+.headset-core[data-phase="speaking"] { background: radial-gradient(circle at 35% 35%, rgba(88, 224, 138, 0.95), rgba(42, 169, 214, 0.2) 55%, transparent 72%); }
+@keyframes headset-spin { to { transform: rotate(360deg); } }
+.headset-status { font-family: Orbitron, sans-serif; font-size: 18px; letter-spacing: 0.1em; color: var(--cyan); }
+.headset-caption { font-size: 18px; line-height: 1.5; color: var(--text); max-width: 560px; max-height: 30dvh; overflow-y: auto; }
+.headset-talk {
+  background: rgba(108, 231, 255, 0.12);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  padding: 14px 28px;
+  border-radius: 40px;
+  cursor: pointer;
+}
+.headset-talk:active { transform: scale(0.97); }
+.headset-bar, .headset-music { display: flex; gap: 8px; }
+.headset-music .chip { font-size: 18px; padding: 8px 16px; }
+.headset-hint { color: var(--text-dim); font-size: 12px; max-width: 460px; line-height: 1.6; }

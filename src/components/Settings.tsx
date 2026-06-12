@@ -491,11 +491,11 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
               <div className="row">
                 <span>
-                  🚗 Słowo „Jarvis" otwiera tryb głosowy
+                  🎧 Słowo „Jarvis" otwiera Tryb Słuchawki
                   <br />
                   <span className="muted">
-                    Pełnoekranowy tryb bez patrzenia (duży tekst + głos) — idealny w aucie.
-                    Wymaga włączonego nasłuchu powyżej.
+                    Rozmowa hands-free bez patrzenia — telefon możesz schować, sterujesz głosem
+                    i przyciskiem słuchawek. Wymaga włączonego nasłuchu powyżej.
                   </span>
                 </span>
                 <Toggle on={s.voiceModeWake} onClick={() => set({ voiceModeWake: !s.voiceModeWake })} />
