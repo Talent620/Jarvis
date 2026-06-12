@@ -235,6 +235,8 @@ export interface Settings {
   webSearch: boolean;
   /** Klucz Tavily (research z cytatami, niezależny od dostawcy). */
   tavilyApiKey: string;
+  /** Klucz fal.ai — premium modele edycji obrazu (FLUX Kontext, Nano Banana Pro). */
+  falApiKey: string;
   /** Czy mówić odpowiedzi na głos. */
   speak: boolean;
   /** Używaj darmowego głosu Gemini TTS (wysoka jakość, wymaga klucza Gemini). */

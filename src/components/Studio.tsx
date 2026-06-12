@@ -1,77 +1,95 @@
-import { useState } from "react";
-import { generateImage } from "../lib/images";
+import { useRef, useState } from "react";
+import { generateImage, IMAGE_MODELS_LIST, type ImageModelId } from "../lib/images";
 import { capturePhoto } from "../lib/camera";
 import { useEscape } from "../hooks/useEscape";
+import { store } from "../lib/store";
+import Guide from "./Guide";
 
 type Img = { data: string; mediaType: string };
+const src = (i: Img) => `data:${i.mediaType};base64,${i.data}`;
+
+// Suwak porównania PRZED/PO — przeciągasz, by zobaczyć efekt edycji (jak na żywo).
+function Compare({ before, after }: { before: Img; after: Img }) {
+  const [pos, setPos] = useState(50);
+  const ref = useRef<HTMLDivElement>(null);
+  const move = (clientX: number) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setPos(Math.max(0, Math.min(100, ((clientX - r.left) / r.width) * 100)));
+  };
+  return (
+    <div
+      ref={ref}
+      className="compare"
+      onPointerDown={(e) => { (e.target as HTMLElement).setPointerCapture?.(e.pointerId); move(e.clientX); }}
+      onPointerMove={(e) => { if (e.buttons) move(e.clientX); }}
+    >
+      <img src={src(after)} alt="po" className="compare-img" draggable={false} />
+      <div className="compare-clip" style={{ width: `${pos}%` }}>
+        <img src={src(before)} alt="przed" className="compare-img" draggable={false} />
+        <span className="compare-tag">PRZED</span>
+      </div>
+      <span className="compare-tag right">PO</span>
+      <div className="compare-line" style={{ left: `${pos}%` }}><span>⇆</span></div>
+    </div>
+  );
+}
+
+const PRESETS: { label: string; prompt: string }[] = [
+  { label: "🧽 Usuń obiekt/naklejki", prompt: "Usuń naklejki i niechciane obiekty z przedmiotu. Wypełnij miejsce naturalnie — idealnie dopasuj teksturę, kolor, światło i odbicia, tak aby NIE było widać żadnego śladu edycji. Resztę zdjęcia zostaw bez zmian." },
+  { label: "🔁 Naklejki → wzór", prompt: "Zamień naklejki na elegancki, jednolity wzór (np. geometryczne paski). Dopasuj perspektywę, cień i odbicia fotorealistycznie, jakby wzór był naprawdę na przedmiocie." },
+  { label: "🎨 Zmień kolor", prompt: "Zmień kolor wskazanego elementu na podany (dopisz jaki). Zachowaj materiał, fakturę, odblaski i cienie — realistycznie, bez śladu edycji." },
+  { label: "↻ Wyprostuj/obróć", prompt: "Ustaw przedmiot we właściwej orientacji (obróć do góry właściwą stroną / wyprostuj). Zachowaj realistyczną perspektywę, cienie i tło." },
+  { label: "🦵 Wymień nogi/elementy", prompt: "Wymień nogi / wskazane elementy mebla na opisane (dopisz na jakie). Dopasuj styl, materiał, proporcje i światło — fotorealistycznie." },
+  { label: "🛍 Packshot (e-commerce)", prompt: "Profesjonalny packshot do sklepu: czyste białe tło, studyjne światło, miękkie cienie, idealna ostrość i kolory. Zachowaj przedmiot wiernie." },
+  { label: "🏠 Zmień tło/scenę", prompt: "Umieść przedmiot w eleganckiej aranżacji wnętrza. Realistyczne światło, cienie i perspektywa pasujące do nowego otoczenia." },
+  { label: "✨ Odśwież/wyczyść", prompt: "Wyczyść przedmiot: usuń kurz, zarysowania i odciski, popraw oświetlenie i ostrość. Zachowaj pełny realizm." },
+];
 
 export default function Studio({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const [model, setModel] = useState<ImageModelId>("gemini");
   const [prompt, setPrompt] = useState("");
   const [inputs, setInputs] = useState<Img[]>([]);
-  const [result, setResult] = useState<Img | null>(null);
+  const [history, setHistory] = useState<Img[]>([]); // wersje wyników (ostatnia = bieżąca)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [view, setView] = useState<"result" | "compare">("compare");
+
+  const result = history[history.length - 1] || null;
+  const before = inputs[0] || null; // zdjęcie wejściowe do porównania
 
   const attach = async () => {
     const img = await capturePhoto();
-    if (img) {
-      setInputs((prev) => [...prev, img].slice(0, 4)); // do 4 zdjęć referencyjnych
-      setResult(null);
-    }
+    if (img) { setInputs((p) => [...p, img].slice(0, 4)); }
   };
 
-  const gen = async () => {
-    if (!prompt.trim()) return;
+  const run = async (text: string, ins: Img[]) => {
+    if (!text.trim()) return;
     setBusy(true);
     setErr("");
-    const r = await generateImage(prompt, inputs.length ? inputs : undefined);
+    const r = await generateImage(text, ins.length ? ins : undefined, model);
     if ("error" in r) setErr(r.error);
-    else setResult(r);
+    else { setHistory((h) => [...h, r]); setView("compare"); }
     setBusy(false);
   };
 
+  const gen = () => run(prompt, inputs);
+  const applyPreset = (p: string) => { setPrompt(p); if (inputs.length) void run(p, inputs); };
+
+  // Edytuj dalej: wynik staje się nowym wejściem (łańcuch edycji, jak FLUX Kontext).
   const editFurther = () => {
-    if (result) {
-      setInputs([result]);
-      setResult(null);
-    }
+    if (result) { setInputs([result]); setHistory([]); setPrompt(""); setErr(""); }
   };
+  const undo = () => setHistory((h) => h.slice(0, -1));
 
   const download = () => {
     if (!result) return;
     const a = document.createElement("a");
-    a.href = `data:${result.mediaType};base64,${result.data}`;
-    a.download = `jarvis-image-${Date.now()}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  };
-
-  const src = (i: Img) => `data:${i.mediaType};base64,${i.data}`;
-
-  // Presety jednym kliknięciem — wstawiają mocny prompt; z dołączonym zdjęciem od razu generują.
-  const PRESETS: { label: string; prompt: string }[] = [
-    { label: "💡 Studyjne światło", prompt: "Profesjonalne studyjne oświetlenie portretowe, miękkie cienie, wysoki detal, fotorealizm. Zachowaj twarz i rysy bez zmian." },
-    { label: "🌃 Cyberpunk", prompt: "Przekształć w styl cyberpunk: neony, deszcz, nocne miasto, refleksy. Zachowaj tożsamość osoby." },
-    { label: "✂ Usuń tło", prompt: "Usuń tło całkowicie, pozostaw przezroczyste/czyste białe tło, dokładne krawędzie." },
-    { label: "🖼 Renowacja", prompt: "Odrestauruj stare/zniszczone zdjęcie: usuń rysy i szum, popraw ostrość i kolory, naturalny efekt." },
-    { label: "🎨 Anime", prompt: "Przekształć w wysokiej jakości styl anime, zachowując kompozycję i tożsamość." },
-    { label: "📈 4K Upscale", prompt: "Zwiększ jakość i szczegółowość do poziomu 4K, wyostrz detale, popraw teksturę, bez zniekształceń." },
-    { label: "👔 Pro headshot", prompt: "Zamień w profesjonalne zdjęcie biznesowe (LinkedIn): elegancki strój, neutralne tło, studyjne światło. Zachowaj twarz." },
-    { label: "☀ Popraw światło", prompt: "Popraw ekspozycję, balans bieli i kontrast, naturalnie rozjaśnij. Nie zmieniaj treści." },
-  ];
-
-  const applyPreset = async (p: string) => {
-    setPrompt(p);
-    if (inputs.length) {
-      setBusy(true);
-      setErr("");
-      const r = await generateImage(p, inputs);
-      if ("error" in r) setErr(r.error);
-      else setResult(r);
-      setBusy(false);
-    }
+    a.href = src(result);
+    a.download = `jarvis-edycja-${Date.now()}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
   };
 
   return (
@@ -82,59 +100,80 @@ export default function Studio({ onClose }: { onClose: () => void }) {
           <h2>🎨 Studio Obrazów</h2>
         </div>
         <div className="panel-body">
-          <p className="muted">
-            Najwyższej klasy generowanie i <b>precyzyjna edycja</b> (Gemini 2.5 Flash Image).
-            Dołącz zdjęcie/zdjęcia i opisz dokładnie, co zmienić — np. „zmień tło na nocny
-            Tokio w deszczu", „dodaj skórzaną kurtkę i okulary", „popraw światło, zachowaj twarz",
-            „połącz osobę z 1. zdjęcia z tłem z 2.". Możesz zmieniać każdy detal, krok po kroku.
-          </p>
+          {/* Wybór modelu */}
+          <div className="chips" style={{ flexWrap: "wrap", marginBottom: 6 }}>
+            {IMAGE_MODELS_LIST.map((m) => (
+              <button key={m.id} className={`chip ${model === m.id ? "on" : ""}`} onClick={() => setModel(m.id)} disabled={busy}>
+                {m.tier === "free" ? "🆓 " : "⭐ "}{m.label}
+              </button>
+            ))}
+          </div>
+          <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>{IMAGE_MODELS_LIST.find((m) => m.id === model)?.note}</p>
+          {model !== "gemini" && !store.settings.falApiKey?.trim() && (
+            <p className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>⭐ Model premium — dodaj klucz fal.ai w ⚙ → AI, aby go użyć.</p>
+          )}
 
+          {/* Zdjęcia wejściowe */}
           {inputs.length > 0 && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "6px 0" }}>
               {inputs.map((im, i) => (
                 <div key={i} className="img-preview" style={{ margin: 0 }}>
-                  <img src={src(im)} alt={`wejście ${i + 1}`} style={{ height: 80 }} />
+                  <img src={src(im)} alt={`wejście ${i + 1}`} style={{ height: 72 }} />
                   <button className="img-x" onClick={() => setInputs((p) => p.filter((_, j) => j !== i))}>✕</button>
                 </div>
               ))}
             </div>
           )}
 
+          {/* Presety — scenariusze edycji */}
           <div className="chips" style={{ flexWrap: "wrap", margin: "2px 0 8px" }}>
             {PRESETS.map((p) => (
-              <button key={p.label} className="chip" onClick={() => applyPreset(p.prompt)} disabled={busy}>
-                {p.label}
-              </button>
+              <button key={p.label} className="chip" onClick={() => applyPreset(p.prompt)} disabled={busy}>{p.label}</button>
             ))}
           </div>
 
           <div className="field">
             <textarea
               value={prompt}
-              placeholder="Opisz obraz albo dokładną zmianę…"
+              placeholder="Opisz dokładnie, co zmienić — np. zmień kolor blatu na grafitowy, usuń naklejki, nóżki na czarne metalowe…"
               onChange={(e) => setPrompt(e.target.value)}
               className="ta"
             />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn" style={{ flex: 1 }} onClick={attach}>
-              📷 Dołącz zdjęcie{inputs.length ? ` (${inputs.length})` : ""}
-            </button>
-            <button className="btn primary" style={{ flex: 1 }} onClick={gen} disabled={busy}>
-              {busy ? "Tworzę…" : "✨ Generuj"}
-            </button>
+            <button className="btn" style={{ flex: 1 }} onClick={attach}>📷 Dołącz zdjęcie{inputs.length ? ` (${inputs.length})` : ""}</button>
+            <button className="btn primary" style={{ flex: 1 }} onClick={gen} disabled={busy}>{busy ? "Tworzę…" : "✨ Przerób"}</button>
           </div>
           {err && <p className="muted">{err}</p>}
 
+          {/* Wynik + porównanie przed/po */}
           {result && (
             <>
-              <img src={src(result)} alt="wynik" style={{ width: "100%", borderRadius: 12, marginTop: 12, border: "1px solid var(--line-strong)" }} />
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              {before && (
+                <div className="chips" style={{ marginTop: 10 }}>
+                  <button className={`chip ${view === "compare" ? "on" : ""}`} onClick={() => setView("compare")}>⇆ Przed/Po</button>
+                  <button className={`chip ${view === "result" ? "on" : ""}`} onClick={() => setView("result")}>🖼 Wynik</button>
+                </div>
+              )}
+              {view === "compare" && before ? (
+                <Compare before={before} after={result} />
+              ) : (
+                <img src={src(result)} alt="wynik" style={{ width: "100%", borderRadius: 12, marginTop: 8, border: "1px solid var(--line-strong)" }} />
+              )}
+              <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                 <button className="btn" style={{ flex: 1 }} onClick={download}>⬇ Pobierz</button>
                 <button className="btn" style={{ flex: 1 }} onClick={editFurther}>✏ Edytuj dalej</button>
+                {history.length > 1 && <button className="btn" onClick={undo}>↩ Cofnij wersję</button>}
               </div>
+              {history.length > 1 && <p className="muted" style={{ fontSize: 12 }}>Wersja {history.length} — możesz cofać i nakładać kolejne zmiany.</p>}
             </>
           )}
+
+          <Guide title="ℹ Jak osiągnąć efekt nie do poznania">
+            <p><b>1. Dołącz zdjęcie</b> przedmiotu (📷). <b>2.</b> Kliknij preset albo opisz zmianę. <b>3.</b> Porównaj suwakiem <b>Przed/Po</b>.</p>
+            <p><b>Klucz do realizmu:</b> w opisie proś o <b>dopasowanie światła, cieni, faktury i perspektywy</b> oraz „bez śladu edycji". Zmiany nakładaj <b>krok po kroku</b> („Edytuj dalej") — każdą rzecz osobno, wtedy wychodzi najczyściej.</p>
+            <p><b>Darmowy</b> (Gemini Nano Banana) jest świetny do większości edycji. <b>Premium</b> (FLUX Kontext / Nano Banana Pro przez fal.ai) daje najwyższą spójność detali przy wielu poprawkach — wymaga płatnego klucza fal.ai.</p>
+          </Guide>
         </div>
         <div className="panel-foot">
           <button className="btn" onClick={onClose}>Zamknij</button>

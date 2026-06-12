@@ -381,6 +381,23 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <Toggle on={s.webSearch} onClick={() => set({ webSearch: !s.webSearch })} />
               </div>
 
+              <h3>🎨 Studio premium (edycja zdjęć)</h3>
+              <p className="muted">
+                Darmowa edycja działa na kluczu Gemini (Nano Banana). Modele <b>premium</b>
+                {" "}(FLUX.1 Kontext, Nano Banana Pro) idą przez{" "}
+                <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener" style={{ color: "var(--cyan)" }}>fal.ai</a>
+                {" "}— płatne (~$0.03–0.08/obraz), najwyższa spójność detali.
+              </p>
+              <div className="field">
+                <label>Klucz fal.ai (opcjonalnie, dla premium)</label>
+                <input
+                  type="password"
+                  value={s.falApiKey}
+                  placeholder="fal-..."
+                  onChange={(e) => set({ falApiKey: e.target.value })}
+                />
+              </div>
+
               <h3>⚖ Tryb Konsylium</h3>
               <div className="row">
                 <span>

@@ -41,6 +41,7 @@ const defaultSettings: Settings = {
   interpreterTo: "angielski",
   webSearch: true,
   tavilyApiKey: "",
+  falApiKey: "",
   speak: true,
   geminiTts: true,
   geminiVoice: "Charon",
