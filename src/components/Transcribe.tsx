@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { transcribeAudio, transcribeSupported } from "../lib/transcribe";
 import { store, uid } from "../lib/store";
@@ -18,6 +18,16 @@ export default function Transcribe({ onClose }: { onClose: () => void }) {
   const chunks = useRef<Blob[]>([]);
   const stream = useRef<MediaStream | null>(null);
   const timer = useRef<number | null>(null);
+
+  // Sprzątanie przy zamknięciu panelu (także w trakcie nagrywania): zatrzymaj
+  // timer, recorder i zwolnij mikrofon — bez „utkniętego" mikrofonu w tle.
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearInterval(timer.current);
+      try { if (rec.current && rec.current.state !== "inactive") rec.current.stop(); } catch { /* ignore */ }
+      stream.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
 
   const start = async () => {
     if (!transcribeSupported()) { toast("To urządzenie nie wspiera nagrywania."); return; }
