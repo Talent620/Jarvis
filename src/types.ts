@@ -41,6 +41,16 @@ export interface Task {
   due?: string; // ISO
   /** Kto odpowiada za zadanie (np. „Ja", „Marek", „klient"). */
   owner?: string;
+  /** Priorytet — gwiazdka, dzisiejszy fokus (widok „Priorytet" jak w Nozbe). */
+  priority?: boolean;
+  /** Przypisanie do projektu (Project.id) — puste = Skrzynka. */
+  projectId?: string;
+  /** Kontekst/etykieta (np. „telefon", „dom", „komputer"). */
+  category?: string;
+  /** Szczegóły / komentarze do zadania. */
+  notes?: string;
+  /** Powtarzalność: codziennie/tygodniowo/miesięcznie (po wykonaniu wraca). */
+  repeat?: "daily" | "weekly" | "monthly";
   createdAt: number;
 }
 

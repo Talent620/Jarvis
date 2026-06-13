@@ -50,15 +50,32 @@ const tools: Tool[] = [
   {
     def: {
       name: "add_task",
-      description: "Dodaj zadanie do listy zadań. Używaj, gdy użytkownik prosi o zapamiętanie czegoś do zrobienia.",
+      description: "Dodaj zadanie (Zadania Pro / styl Nozbe). Używaj, gdy użytkownik prosi o zapamiętanie czegoś do zrobienia. Możesz nadać priorytet (dzisiejszy fokus), przypisać do PROJEKTU po nazwie (utworzę go, jeśli nie istnieje), dodać kontekst (np. telefon, dom), osobę odpowiedzialną i powtarzalność.",
       input_schema: obj(
-        { title: str("Treść zadania"), due: str("Termin w formacie ISO 8601 (opcjonalnie)") },
+        {
+          title: str("Treść zadania"),
+          due: str("Termin ISO 8601 (opcjonalnie)"),
+          project: str("Nazwa projektu (opcjonalnie) — utworzę, jeśli nie istnieje"),
+          category: str("Kontekst/etykieta, np. telefon, dom, komputer (opcjonalnie)"),
+          owner: str("Kto odpowiada (opcjonalnie)"),
+          priority: { type: "boolean", description: "Priorytet — dzisiejszy fokus (opcjonalnie)" },
+          repeat: { type: "string", enum: ["daily", "weekly", "monthly"], description: "Powtarzalność (opcjonalnie)" },
+        },
         ["title"],
       ),
     },
-    run: ({ title, due }) => {
-      store.setData((d) => d.tasks.unshift({ id: uid(), title, done: false, due, createdAt: Date.now() }));
-      return `Dodano zadanie: „${title}”${due ? ` (termin ${due})` : ""}.`;
+    run: ({ title, due, project, category, owner, priority, repeat }) => {
+      let projectId: string | undefined;
+      if (project?.trim()) {
+        const p = String(project).trim();
+        const found = store.data.projects.find((x) => x.name.toLowerCase() === p.toLowerCase())
+          || store.data.projects.find((x) => x.name.toLowerCase().includes(p.toLowerCase()));
+        if (found) projectId = found.id;
+        else { projectId = uid(); store.setData((d) => d.projects.unshift({ id: projectId!, name: p, instructions: "", createdAt: Date.now(), updatedAt: Date.now() })); }
+      }
+      store.setData((d) => d.tasks.unshift({ id: uid(), title, done: false, due, projectId, category: category?.trim() || undefined, owner: owner?.trim() || undefined, priority: !!priority, repeat: repeat as any, createdAt: Date.now() }));
+      const extra = [project && `projekt ${project}`, priority && "priorytet", owner && `dla ${owner}`, due && `termin ${due}`].filter(Boolean).join(", ");
+      return `Dodano zadanie: „${title}”${extra ? ` (${extra})` : ""}.`;
     },
   },
   {

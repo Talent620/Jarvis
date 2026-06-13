@@ -22,6 +22,7 @@ export default function More({
   onTranscribe,
   onProfile,
   onDayPlan,
+  onTasks,
   onClose,
 }: {
   onProjects: () => void;
@@ -41,11 +42,13 @@ export default function More({
   onTranscribe: () => void;
   onProfile: () => void;
   onDayPlan: () => void;
+  onTasks: () => void;
   onClose: () => void;
 }) {
   useEscape(onClose);
   const items = [
     { id: "profile", icon: "👤", label: "Mój profil — kim jestem (pamięć)", fn: onProfile },
+    { id: "tasks", icon: "✅", label: "Zadania Pro — projekty, priorytety (GTD)", fn: onTasks },
     { id: "dayplan", icon: "🗓", label: "Plan Dnia — zadania i notatnik", fn: onDayPlan },
     { id: "money", icon: "💰", label: "Zarabianie — autopilot dochodu", fn: onMoney },
     { id: "journal", icon: "📔", label: "Mój dziennik (przemyślenia)", fn: onJournal },

@@ -32,6 +32,7 @@ const Cards = lazy(() => import("./components/Cards"));
 const Transcribe = lazy(() => import("./components/Transcribe"));
 const Profile = lazy(() => import("./components/Profile"));
 const DayPlan = lazy(() => import("./components/DayPlan"));
+const TaskHub = lazy(() => import("./components/TaskHub"));
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
 import { startBackgroundWake } from "./lib/wakeword";
@@ -153,6 +154,7 @@ export default function App() {
   const [showTranscribe, setShowTranscribe] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showDayPlan, setShowDayPlan] = useState(false);
+  const [showTasks, setShowTasks] = useState(false);
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
   const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
 
@@ -727,6 +729,11 @@ export default function App() {
           <DayPlan onClose={() => setShowDayPlan(false)} onSales={() => { setShowDayPlan(false); setShowSales(true); }} />
         </Suspense>
       )}
+      {showTasks && (
+        <Suspense fallback={null}>
+          <TaskHub onClose={() => setShowTasks(false)} />
+        </Suspense>
+      )}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {showPanels && <Panels onClose={() => setShowPanels(false)} />}
       {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}
@@ -771,6 +778,7 @@ export default function App() {
           onTranscribe={() => setShowTranscribe(true)}
           onProfile={() => setShowProfile(true)}
           onDayPlan={() => setShowDayPlan(true)}
+          onTasks={() => setShowTasks(true)}
           onClose={() => setShowMore(false)}
         />
       )}
