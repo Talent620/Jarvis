@@ -106,6 +106,9 @@ async function playFromResponse(res: Response): Promise<boolean> {
 // Token przerwania — stopSpeaking() go zwiększa, więc trwające czytanie
 // (potokowe, po kawałkach) wie, że ma się zatrzymać.
 let speakToken = 0;
+// Jawne przerwanie bieżącego odtwarzania (ustawiane przez playUrlEnded).
+// Pewniejsze niż zdarzenie „pause", które bywa odpalane także przy końcu utworu.
+let interruptPlayback: (() => void) | null = null;
 
 /** Podziel tekst na krótkie kawałki na granicach zdań (do szybkiego startu głosu). */
 export function splitForSpeech(text: string, max = 200): string[] {
@@ -136,22 +139,25 @@ function playUrlEnded(url: string): Promise<boolean> {
     const audio = new Audio(url);
     currentAudio = audio;
     let done = false;
+    let srcNode: MediaElementAudioSourceNode | null = null;
     const finish = (ok: boolean) => {
       if (done) return;
       done = true;
+      interruptPlayback = null;
+      try { srcNode?.disconnect(); } catch { /* ignore */ }
       URL.revokeObjectURL(url);
       cancelAnimationFrame(levelRaf);
       setLevel(0);
       resolve(ok);
     };
+    interruptPlayback = () => finish(false); // wywoła to stopSpeaking()
     audio.onended = () => finish(true);
     audio.onerror = () => finish(false);
-    audio.onpause = () => finish(false); // pauzujemy tylko przy stopSpeaking()
     try {
       levelCtx = levelCtx || new (window.AudioContext || (window as any).webkitAudioContext)();
       const ctx = levelCtx;
       if (ctx.state === "suspended") void ctx.resume().catch(() => {});
-      const srcNode = ctx.createMediaElementSource(audio);
+      srcNode = ctx.createMediaElementSource(audio);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
       srcNode.connect(ctx.destination);
@@ -351,6 +357,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
 
 export function stopSpeaking(): void {
   speakToken++; // przerwij trwające potokowe czytanie (Gemini, po kawałkach)
+  interruptPlayback?.(); // natychmiast rozwiąż bieżące odtwarzanie kawałka
   try {
     window.speechSynthesis?.cancel();
   } catch {

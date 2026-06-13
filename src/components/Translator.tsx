@@ -29,6 +29,7 @@ export default function Translator({ onClose }: { onClose: () => void }) {
   const [auto, setAuto] = useState(false);
   const [err, setErr] = useState("");
   const listenerRef = useRef<VoiceListener | null>(null);
+  const genRef = useRef(0); // numer „tury" — odsiewa spóźnione wyniki starego nasłuchu
   const autoRef = useRef(false);
   autoRef.current = auto;
   const langA = getLang(a);
@@ -40,6 +41,7 @@ export default function Translator({ onClose }: { onClose: () => void }) {
   useEffect(() => () => { listenerRef.current?.stop(); stopSpeaking(); }, []);
 
   const stop = () => {
+    genRef.current++; // unieważnij ewentualny spóźniony wynik
     listenerRef.current?.stop();
     listenerRef.current = null;
     setListening("");
@@ -57,22 +59,25 @@ export default function Translator({ onClose }: { onClose: () => void }) {
     setErr("");
     stopSpeaking();
     listenerRef.current?.stop();
+    const gen = ++genRef.current; // nowa tura — starsze wyniki zignorujemy
     const from = side === "A" ? langA : langB;
     const to = side === "A" ? langB : langA;
     const listener = createListener({
       wakeWord: false,
-      onInterim: (t) => setInterim(t),
-      onError: (m) => { setErr(m); setListening(""); setInterim(""); },
+      onInterim: (t) => { if (gen === genRef.current) setInterim(t); },
+      onError: (m) => { if (gen === genRef.current) { setErr(m); setListening(""); setInterim(""); } },
       onFinal: async (text) => {
+        if (gen !== genRef.current) return; // przerwane przez nowszy nasłuch
         setInterim("");
         setListening("");
         if (!text.trim()) { if (autoRef.current) listen(side); return; }
         setBusy(true);
         const dst = await translateText(text, to.name);
+        if (gen !== genRef.current) { setBusy(false); return; } // w międzyczasie ruszyła nowa tura
         setBusy(false);
         setLog((l) => [...l, { side, src: text.trim(), dst: dst || "(nie udało się przetłumaczyć)" }]);
         if (dst) await say(dst, to.tts);
-        if (autoRef.current) setTimeout(() => listen(side === "A" ? "B" : "A"), 350);
+        if (autoRef.current && gen === genRef.current) setTimeout(() => listen(side === "A" ? "B" : "A"), 350);
       },
     });
     listener.start(from.stt);
