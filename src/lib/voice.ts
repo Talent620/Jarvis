@@ -103,6 +103,75 @@ async function playFromResponse(res: Response): Promise<boolean> {
   return true;
 }
 
+// Token przerwania — stopSpeaking() go zwiększa, więc trwające czytanie
+// (potokowe, po kawałkach) wie, że ma się zatrzymać.
+let speakToken = 0;
+
+/** Podziel tekst na krótkie kawałki na granicach zdań (do szybkiego startu głosu). */
+export function splitForSpeech(text: string, max = 200): string[] {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return [];
+  const sentences = clean.match(/[^.!?…]+[.!?…]+|\S[^.!?…]*$/g) || [clean];
+  const out: string[] = [];
+  let buf = "";
+  const push = () => { if (buf.trim()) out.push(buf.trim()); buf = ""; };
+  for (const raw of sentences) {
+    const s = raw.trim();
+    if (!s) continue;
+    if ((buf + " " + s).trim().length <= max) { buf = (buf ? buf + " " : "") + s; continue; }
+    push();
+    if (s.length <= max) { buf = s; continue; }
+    // Bardzo długie zdanie → twardy podział, ostatni fragment zostaje w buforze.
+    const parts = s.match(new RegExp(`.{1,${max}}(\\s|$)`, "g")) || [s];
+    for (let i = 0; i < parts.length - 1; i++) out.push(parts[i].trim());
+    buf = parts[parts.length - 1].trim();
+  }
+  push();
+  return out;
+}
+
+/** Odtwórz URL i rozwiąż, gdy SKOŃCZY (albo przerwano). Napędza poziom orba. */
+function playUrlEnded(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const audio = new Audio(url);
+    currentAudio = audio;
+    let done = false;
+    const finish = (ok: boolean) => {
+      if (done) return;
+      done = true;
+      URL.revokeObjectURL(url);
+      cancelAnimationFrame(levelRaf);
+      setLevel(0);
+      resolve(ok);
+    };
+    audio.onended = () => finish(true);
+    audio.onerror = () => finish(false);
+    audio.onpause = () => finish(false); // pauzujemy tylko przy stopSpeaking()
+    try {
+      levelCtx = levelCtx || new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ctx = levelCtx;
+      if (ctx.state === "suspended") void ctx.resume().catch(() => {});
+      const srcNode = ctx.createMediaElementSource(audio);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      srcNode.connect(ctx.destination);
+      srcNode.connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (const v of data) { const c = (v - 128) / 128; sum += c * c; }
+        setLevel(Math.min(1, Math.sqrt(sum / data.length) * 3));
+        levelRaf = requestAnimationFrame(tick);
+      };
+      tick();
+    } catch {
+      /* bez wizualizacji */
+    }
+    audio.play().catch(() => finish(false));
+  });
+}
+
 // Pakuje surowe PCM16 (z Gemini TTS) w nagłówek WAV, by dało się odtworzyć.
 function pcmToWavUrl(b64: string, sampleRate: number): string {
   const bin = atob(b64);
@@ -135,33 +204,54 @@ function pcmToWavUrl(b64: string, sampleRate: number): string {
 export async function geminiSpeak(text: string, voiceName?: string): Promise<boolean> {
   const key = primaryKey("gemini");
   if (!key || !text.trim()) return false;
-  try {
-    const voice = voiceName?.trim() || "Charon";
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${key}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text }] }],
-          generationConfig: {
-            responseModalities: ["AUDIO"],
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
-          },
-        }),
-      },
-    );
-    if (!res.ok) return false;
-    const d = await res.json();
-    const part = (d?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData);
-    const b64 = part?.inlineData?.data;
-    if (!b64) return false;
-    const rate = Number(/rate=(\d+)/.exec(part.inlineData.mimeType || "")?.[1]) || 24000;
-    await playUrlWithLevel(pcmToWavUrl(b64, rate));
-    return true;
-  } catch {
-    return false;
+  const voice = voiceName?.trim() || "Charon";
+  const chunks = splitForSpeech(text);
+  if (!chunks.length) return false;
+  const token = ++speakToken; // przejmij „mówienie"; stopSpeaking() je unieważni
+
+  // Synteza JEDNEGO kawałka → URL audio (albo null). Bez odtwarzania.
+  const synth = async (chunk: string): Promise<string | null> => {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${key}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: chunk }] }],
+            generationConfig: {
+              responseModalities: ["AUDIO"],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+            },
+          }),
+        },
+      );
+      if (!res.ok) return null;
+      const d = await res.json();
+      const part = (d?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData);
+      const b64 = part?.inlineData?.data;
+      if (!b64) return null;
+      const rate = Number(/rate=(\d+)/.exec(part.inlineData.mimeType || "")?.[1]) || 24000;
+      return pcmToWavUrl(b64, rate);
+    } catch {
+      return null;
+    }
+  };
+
+  // Potok: czytaj bieżący kawałek, a kolejny generuj W TLE — głos startuje
+  // po wygenerowaniu pierwszego krótkiego zdania, nie całej odpowiedzi.
+  let next = synth(chunks[0]);
+  for (let i = 0; i < chunks.length; i++) {
+    const url = await next;
+    if (token !== speakToken) return true; // przerwano (stopSpeaking)
+    next = i + 1 < chunks.length ? synth(chunks[i + 1]) : Promise.resolve(null);
+    if (i === 0 && !url) return false; // pierwszy kawałek padł → pozwól na fallback (głos systemowy)
+    if (url) {
+      const ok = await playUrlEnded(url);
+      if (!ok || token !== speakToken) return true; // przerwane odtwarzanie
+    }
   }
+  return true;
 }
 
 // Głosy premium Gemini TTS — kilka naturalnych, z czytelnymi opisami.
@@ -260,6 +350,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
 }
 
 export function stopSpeaking(): void {
+  speakToken++; // przerwij trwające potokowe czytanie (Gemini, po kawałkach)
   try {
     window.speechSynthesis?.cancel();
   } catch {
