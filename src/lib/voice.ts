@@ -257,6 +257,35 @@ export function stopSpeaking(): void {
   setLevel(0);
 }
 
+/**
+ * Przeczytaj tekst w KONKRETNYM języku (kod typu „uk-UA", „pl-PL") — dla Trybu
+ * Tłumacza, niezależnie od głosu JARVIS-a. Na urządzeniu używa natywnego TTS,
+ * w przeglądarce/desktopie dobiera głos pasujący do języka.
+ */
+export async function speakLang(text: string, ttsLang: string): Promise<void> {
+  if (!text.trim()) return;
+  stopSpeaking();
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await NativeTTS.speak({ text, pitch: 1, rate: 1, lang: ttsLang });
+      return;
+    } catch {
+      /* fallback do Web Speech */
+    }
+  }
+  const synth = window.speechSynthesis;
+  if (!synth) return;
+  if (!cachedVoices.length) await loadVoices();
+  const u = new SpeechSynthesisUtterance(text);
+  const pref = ttsLang.slice(0, 2).toLowerCase();
+  const v = cachedVoices.find((x) => x.lang.toLowerCase() === ttsLang.toLowerCase())
+    || cachedVoices.find((x) => x.lang.toLowerCase().startsWith(pref));
+  if (v) u.voice = v;
+  u.lang = v?.lang || ttsLang;
+  try { synth.resume(); } catch { /* ignore */ }
+  synth.speak(u);
+}
+
 // --- Rozpoznawanie mowy (STT) ---
 
 // Minimalne typy Web Speech API (brak ich w domyślnym lib.dom).

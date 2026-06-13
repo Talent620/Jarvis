@@ -23,6 +23,7 @@ export default function More({
   onProfile,
   onDayPlan,
   onTasks,
+  onTranslator,
   onClose,
 }: {
   onProjects: () => void;
@@ -43,6 +44,7 @@ export default function More({
   onProfile: () => void;
   onDayPlan: () => void;
   onTasks: () => void;
+  onTranslator: () => void;
   onClose: () => void;
 }) {
   useEscape(onClose);
@@ -53,6 +55,7 @@ export default function More({
     { id: "money", icon: "💰", label: "Zarabianie — autopilot dochodu", fn: onMoney },
     { id: "journal", icon: "📔", label: "Mój dziennik (przemyślenia)", fn: onJournal },
     { id: "cards", icon: "🧠", label: "Kapsuły Wiedzy — ucz się i pamiętaj", fn: onCards },
+    { id: "translator", icon: "🌍", label: "Tłumacz na żywo (rozmowa 2 języki)", fn: onTranslator },
     { id: "transcribe", icon: "🎙", label: "Transkrypcja spotkań (mowa→tekst)", fn: onTranscribe },
     { id: "sales", icon: "📈", label: "Pulpit Sprzedaży (leady, CRM)", fn: onSales },
     { id: "web", icon: "🌐", label: "Kreator stron — zbuduj witrynę", fn: onWeb },
