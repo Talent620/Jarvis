@@ -130,11 +130,13 @@ function pcmToWavUrl(b64: string, sampleRate: number): string {
 }
 
 // Darmowy głos wysokiej jakości przez Gemini TTS (wymaga klucza Gemini).
-async function geminiTts(text: string, settings: Settings): Promise<boolean> {
+// Wielojęzyczny i naturalny — mówi w języku tekstu (też ukraiński/polski),
+// działa na każdej platformie (chmura), więc świetny do Trybu Tłumacza.
+export async function geminiSpeak(text: string, voiceName?: string): Promise<boolean> {
   const key = primaryKey("gemini");
-  if (!key) return false;
+  if (!key || !text.trim()) return false;
   try {
-    const voice = settings.geminiVoice?.trim() || "Charon";
+    const voice = voiceName?.trim() || "Charon";
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${key}`,
       {
@@ -160,6 +162,21 @@ async function geminiTts(text: string, settings: Settings): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// Głosy premium Gemini TTS — kilka naturalnych, z czytelnymi opisami.
+export const TTS_VOICES: { id: string; label: string }[] = [
+  { id: "Aoede", label: "Aoede — kobiecy, ciepły" },
+  { id: "Kore", label: "Kore — kobiecy, wyrazisty" },
+  { id: "Leda", label: "Leda — kobiecy, młody" },
+  { id: "Callirrhoe", label: "Callirrhoe — kobiecy, łagodny" },
+  { id: "Charon", label: "Charon — męski, spokojny" },
+  { id: "Puck", label: "Puck — męski, żywy" },
+  { id: "Orus", label: "Orus — męski, głęboki" },
+];
+
+async function geminiTts(text: string, settings: Settings): Promise<boolean> {
+  return geminiSpeak(text, settings.geminiVoice?.trim() || "Charon");
 }
 
 export async function speak(text: string, settings: Settings): Promise<void> {
@@ -262,9 +279,14 @@ export function stopSpeaking(): void {
  * Tłumacza, niezależnie od głosu JARVIS-a. Na urządzeniu używa natywnego TTS,
  * w przeglądarce/desktopie dobiera głos pasujący do języka.
  */
-export async function speakLang(text: string, ttsLang: string): Promise<void> {
+export async function speakLang(text: string, ttsLang: string, opts?: { voice?: string; premium?: boolean }): Promise<void> {
   if (!text.trim()) return;
   stopSpeaking();
+  // Głos PREMIUM (Gemini TTS) — naturalny, wielojęzyczny, działa wszędzie.
+  // Idealny do tłumacza: ukraiński/polski brzmią jak żywy człowiek.
+  if (opts?.premium !== false && primaryKey("gemini")) {
+    if (await geminiSpeak(text, opts?.voice)) return;
+  }
   if (Capacitor.isNativePlatform()) {
     try {
       await NativeTTS.speak({ text, pitch: 1, rate: 1, lang: ttsLang });

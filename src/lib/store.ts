@@ -66,6 +66,7 @@ const defaultSettings: Settings = {
   briefingTime: "08:00",
   autoProspect: false,
   salesAutopilot: true,
+  translatorVoice: "Aoede",
   prospectNiche: "",
   prospectLocation: "",
   autoDraftOffers: false,

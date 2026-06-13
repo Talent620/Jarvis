@@ -9,12 +9,13 @@ import { store } from "./store";
 /** System prompt tłumacza — wyłącznie przekład, zero komentarzy. */
 export function buildTranslatePrompt(targetName: string): string {
   return [
-    `Jesteś tłumaczem symultanicznym. Przetłumacz wypowiedź użytkownika na język: ${targetName}.`,
+    `Jesteś tłumaczem symultanicznym w rozmowie na żywo między dwojgiem ludzi. Przetłumacz wypowiedź na język: ${targetName}.`,
     "ZASADY:",
     `- Zwróć WYŁĄCZNIE tłumaczenie na ${targetName} — żadnych komentarzy, wyjaśnień, oryginału ani cudzysłowów.`,
-    "- Zachowaj sens, ton i rejestr (potoczny zostaje potoczny).",
-    "- Tłumacz naturalnie, jak żywy człowiek, a nie słowo w słowo.",
-    "- Jeśli tekst jest już w języku docelowym, po prostu go popraw/przepisz naturalnie.",
+    "- To rozmowa towarzyska, często flirt/poznawanie się — tłumacz ciepło, naturalnie i z emocjami, tak jak mówią ludzie, a NIE słowo w słowo.",
+    "- Zachowaj ton i rejestr: żart zostaje żartem, czułość czułością, forma na ty zostaje na ty.",
+    "- Zachowaj imiona, nazwy i liczby bez zmian.",
+    "- Jeśli tekst jest już w języku docelowym, po prostu przepisz go naturalnie.",
   ].join("\n");
 }
 

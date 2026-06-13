@@ -342,6 +342,8 @@ export interface Settings {
   salesAutopilot?: boolean;
   /** Data ostatniego automatycznego planu (YYYY-MM-DD) — by uruchamiać raz dziennie. */
   lastAutoPlanAt?: string;
+  /** Głos premium (Gemini) dla Trybu Tłumacza — np. „Aoede". */
+  translatorVoice?: string;
   /** Nisza/branża do auto-prospektingu (np. „fryzjer"). */
   prospectNiche: string;
   /** Lokalizacja do auto-prospektingu (np. „Kraków"). */
