@@ -35,6 +35,7 @@ const Profile = lazy(() => import("./components/Profile"));
 const DayPlan = lazy(() => import("./components/DayPlan"));
 const TaskHub = lazy(() => import("./components/TaskHub"));
 const Translator = lazy(() => import("./components/Translator"));
+const Notifications = lazy(() => import("./components/Notifications"));
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
 import { startBackgroundWake } from "./lib/wakeword";
@@ -158,6 +159,7 @@ export default function App() {
   const [showDayPlan, setShowDayPlan] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
   const [showTranslator, setShowTranslator] = useState(false);
+  const [showNotifs, setShowNotifs] = useState(false);
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
   const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
 
@@ -749,6 +751,16 @@ export default function App() {
           <Translator onClose={() => setShowTranslator(false)} />
         </Suspense>
       )}
+      {showNotifs && (
+        <Suspense fallback={null}>
+          <Notifications
+            onClose={() => setShowNotifs(false)}
+            onTasks={() => { setShowNotifs(false); setShowTasks(true); }}
+            onSales={() => { setShowNotifs(false); setShowSales(true); }}
+            onCards={() => { setShowNotifs(false); setShowCards(true); }}
+          />
+        </Suspense>
+      )}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {showPanels && <Panels onClose={() => setShowPanels(false)} />}
       {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}
@@ -795,6 +807,7 @@ export default function App() {
           onDayPlan={() => setShowDayPlan(true)}
           onTasks={() => setShowTasks(true)}
           onTranslator={() => setShowTranslator(true)}
+          onNotifications={() => setShowNotifs(true)}
           onClose={() => setShowMore(false)}
         />
       )}

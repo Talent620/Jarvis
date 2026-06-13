@@ -24,6 +24,7 @@ export default function More({
   onDayPlan,
   onTasks,
   onTranslator,
+  onNotifications,
   onClose,
 }: {
   onProjects: () => void;
@@ -45,10 +46,12 @@ export default function More({
   onDayPlan: () => void;
   onTasks: () => void;
   onTranslator: () => void;
+  onNotifications: () => void;
   onClose: () => void;
 }) {
   useEscape(onClose);
   const items = [
+    { id: "notifications", icon: "🔔", label: "Powiadomienia — co wymaga uwagi", fn: onNotifications },
     { id: "profile", icon: "👤", label: "Mój profil — kim jestem (pamięć)", fn: onProfile },
     { id: "tasks", icon: "✅", label: "Zadania Pro — projekty, priorytety (GTD)", fn: onTasks },
     { id: "dayplan", icon: "🗓", label: "Plan Dnia — zadania i notatnik", fn: onDayPlan },
