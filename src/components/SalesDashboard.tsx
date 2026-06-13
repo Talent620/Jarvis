@@ -5,6 +5,7 @@ import { draftOffer } from "../lib/offer";
 import { findLeads } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { leadsToCsv, followUpsDue, callNowList } from "../lib/salesEngine";
+import { importLeads } from "../lib/leadImport";
 import { copyWithToast, toast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
 import { useEscape } from "../hooks/useEscape";
@@ -35,6 +36,17 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const [showPlan, setShowPlan] = useState(false);
   const [bulkMsg, setBulkMsg] = useState("");
   const [bulking, setBulking] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+
+  const doImport = () => {
+    if (!importText.trim()) return;
+    const r = importLeads(importText);
+    setImportText("");
+    setShowImport(false);
+    setFilter("all");
+    toast(r.added ? `Zaimportowano ${r.added} z ${r.total} leadów ✓` : "Brak nowych — wszystkie już masz na liście.");
+  };
 
   // Licznik działań na dziś (do plakietki na przycisku planu).
   const todoCount = (callNowList(leads).length ? 1 : 0) && (callNowList(leads).length + followUpsDue(leads).length);
@@ -187,8 +199,26 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
             <button className="btn primary" style={{ flex: 1 }} onClick={() => setShowPlan(true)}>
               🎯 Plan na dziś{todoCount ? ` (${todoCount})` : ""}
             </button>
+            <button className="btn" onClick={() => setShowImport((v) => !v)} title="Wklej listę firm">📥 Import</button>
             <button className="btn" onClick={exportCsv} title="Eksport do Excela/Arkuszy">📤 CSV</button>
           </div>
+          {showImport && (
+            <div style={{ marginTop: 8 }}>
+              <textarea
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                placeholder={"Wklej listę firm — jedna na linię, albo z danymi:\nSalon Ola, 600100200, biuro@ola.pl, Kraków\nWarsztat Marek; 501502503; Wrocław"}
+                className="ta" style={{ minHeight: "14vh", fontSize: 13 }}
+              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn primary" style={{ flex: 1 }} onClick={doImport}>✅ Importuj</button>
+                <button className="btn" onClick={() => { setShowImport(false); setImportText(""); }}>Anuluj</button>
+              </div>
+              <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                Rozpoznaję telefon, e-mail, stronę i miasto automatycznie. Obsługuję też CSV z nagłówkiem (Firma, Telefon, E-mail, Miasto).
+              </p>
+            </div>
+          )}
           <button className="btn" style={{ marginTop: 8 }} onClick={bulkDossiers} disabled={bulking}>
             {bulking ? "🧠 Pracuję…" : "🧠 Teczki dla wszystkich nowych (audyt + analiza + e-maile)"}
           </button>
