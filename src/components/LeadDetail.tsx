@@ -4,6 +4,7 @@ import { useStore } from "../hooks/useStore";
 import { buildDossier, auditWeakPoints, scoreLabel, smsDraft } from "../lib/leadIntel";
 import { gmailComposeUrl, mailtoUrl, mapsSearchUrl, smsUrl, splitOffer } from "../lib/glinks";
 import { canSendDirect, sendOfferEmail } from "../lib/mailer";
+import { markContacted } from "../lib/salesEngine";
 import { copyWithToast, toast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
 import type { Lead, LeadStatus } from "../types";
@@ -54,7 +55,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
     const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`);
     const url = kind === "gmail" ? gmailComposeUrl(email || "", subject, body) : mailtoUrl(email || "", subject, body);
     window.open(url, "_blank", "noopener");
-    if (lead.status === "new") set({ status: "contacted" });
+    markContacted(lead.id);
   };
 
   // Prawdziwa wysyłka jednym potwierdzeniem: desktop → SMTP, telefon → Gmail (backend).
@@ -69,13 +70,14 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
     setSending(false);
     if (!r.ok) { toast(`Nie wysłano: ${r.error}`); return; }
     toast(`✅ Wysłano do ${email} (${r.via})`);
+    markContacted(lead.id); // napędza follow-upy (Plan na dziś przypomni o ponagleniu)
     set({ status: lead.status === "new" || lead.status === "contacted" ? "offer" : lead.status, note: `${lead.note ? lead.note + " · " : ""}E-mail wysłany ${new Date().toLocaleDateString("pl-PL")}` });
   };
 
   const sendSms = () => {
     if (!phone) return;
     window.open(smsUrl(phone, smsDraft(lead, intel?.audit)), "_blank");
-    if (lead.status === "new") set({ status: "contacted" });
+    markContacted(lead.id);
   };
 
   const audit = intel?.audit;

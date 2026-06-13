@@ -4,10 +4,12 @@ import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
 import { findLeads } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
-import { copyWithToast } from "../lib/toast";
+import { leadsToCsv, followUpsDue, callNowList } from "../lib/salesEngine";
+import { copyWithToast, toast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
 import { useEscape } from "../hooks/useEscape";
 import LeadDetail from "./LeadDetail";
+import SalesPlan from "./SalesPlan";
 
 const STATUS: { id: LeadStatus; label: string; color: string }[] = [
   { id: "new", label: "Nowy", color: "var(--cyan)" },
@@ -30,8 +32,25 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const [city, setCity] = useState(store.settings.prospectLocation || "");
   const [noWeb, setNoWeb] = useState(false);
   const [openLead, setOpenLead] = useState<string | null>(null);
+  const [showPlan, setShowPlan] = useState(false);
   const [bulkMsg, setBulkMsg] = useState("");
   const [bulking, setBulking] = useState(false);
+
+  // Licznik działań na dziś (do plakietki na przycisku planu).
+  const todoCount = (callNowList(leads).length ? 1 : 0) && (callNowList(leads).length + followUpsDue(leads).length);
+
+  // Eksport leadów do pliku CSV (Excel/Arkusze Google).
+  const exportCsv = () => {
+    if (!leads.length) { toast("Brak leadów do eksportu."); return; }
+    const csv = "﻿" + leadsToCsv(leads); // BOM → polskie znaki w Excelu
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `leady-jarvis-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast(`Wyeksportowano ${leads.length} leadów ✓`);
+  };
 
   // Teczki dla wszystkich NOWYCH leadów naraz: audyt + analiza + e-mail + skrypt.
   const bulkDossiers = async () => {
@@ -164,6 +183,12 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
           )}
           {huntMsg && <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>{huntMsg}</p>}
 
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button className="btn primary" style={{ flex: 1 }} onClick={() => setShowPlan(true)}>
+              🎯 Plan na dziś{todoCount ? ` (${todoCount})` : ""}
+            </button>
+            <button className="btn" onClick={exportCsv} title="Eksport do Excela/Arkuszy">📤 CSV</button>
+          </div>
           <button className="btn" style={{ marginTop: 8 }} onClick={bulkDossiers} disabled={bulking}>
             {bulking ? "🧠 Pracuję…" : "🧠 Teczki dla wszystkich nowych (audyt + analiza + e-maile)"}
           </button>
@@ -244,6 +269,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
         </div>
       </div>
       {openLead && <LeadDetail leadId={openLead} onClose={() => setOpenLead(null)} onWeb={onWeb} />}
+      {showPlan && <SalesPlan onClose={() => setShowPlan(false)} onLead={(id) => { setShowPlan(false); setOpenLead(id); }} />}
     </div>
   );
 }

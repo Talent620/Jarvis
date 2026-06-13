@@ -8,7 +8,14 @@ import type { Lead } from "../types";
 // Killer-feature dla agencji stron: filtr „tylko firmy BEZ strony www" — to
 // idealni klienci. Tavily (jeśli jest klucz) dokłada wyniki z sieci.
 
-const OVERPASS = "https://overpass-api.de/api/interpreter";
+// Zapasowe serwery Overpass — gdy główny pada lub limituje, próbujemy kolejnych.
+// „Super sprawne": szukanie nie poddaje się po jednym błędzie.
+const OVERPASS_MIRRORS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+  "https://overpass.openstreetmap.ru/api/interpreter",
+];
 const NOMINATIM = "https://nominatim.openstreetmap.org";
 
 export interface RawLead {
@@ -119,33 +126,49 @@ export function buildOverpassQuery(bbox: [number, number, number, number], niche
   return `[out:json][timeout:25];(${sel.join("")});out center 250;`;
 }
 
+/** Odpytaj Overpass z automatycznym przełączaniem na zapasowe serwery. */
+async function overpassQuery(query: string): Promise<any[] | null> {
+  for (const url of OVERPASS_MIRRORS) {
+    try {
+      const res = await fetchTimeout(url, { method: "POST", body: query }, 30000);
+      if (!res.ok) continue; // 429/504 → następny serwer
+      const d = await res.json().catch(() => null);
+      if (d?.elements) return d.elements as any[];
+    } catch {
+      /* timeout/sieć — próbuj kolejny serwer */
+    }
+  }
+  return null;
+}
+
+/** Posortuj i odsiej duplikaty surowych leadów (czysta, testowalna). */
+export function rankRawLeads(els: any[], count: number, onlyNoWebsite: boolean): RawLead[] {
+  const seen = new Set<string>();
+  const out: RawLead[] = [];
+  for (const el of els) {
+    const lead = parseElement(el);
+    if (!lead) continue;
+    if (onlyNoWebsite && lead.hasWebsite) continue;
+    const key = lead.company.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(lead);
+    if (out.length >= count * 3) break;
+  }
+  // Najlepsze leady dla agencji stron na górę: bez strony + z telefonem,
+  // potem bez strony, potem z telefonem. Stabilny scoring „atrakcyjności".
+  const rank = (l: RawLead) => (l.hasWebsite ? 0 : 2) + (l.phone ? 1 : 0);
+  out.sort((a, b) => rank(b) - rank(a));
+  return out.slice(0, count);
+}
+
 /** Wyszukaj firmy w OSM. `onlyNoWebsite` → tylko bez strony (idealni dla agencji). */
 export async function searchOSM(niche: string | undefined, city: string, count = 12, onlyNoWebsite = false): Promise<RawLead[]> {
   const geo = await geocode(city);
   if (!geo) return [];
-  try {
-    const res = await fetchTimeout(OVERPASS, { method: "POST", body: buildOverpassQuery(geo.bbox, niche) }, 30000);
-    const d = await res.json().catch(() => null);
-    const els: any[] = d?.elements || [];
-    const seen = new Set<string>();
-    const out: RawLead[] = [];
-    for (const el of els) {
-      const lead = parseElement(el);
-      if (!lead) continue;
-      if (onlyNoWebsite && lead.hasWebsite) continue;
-      const key = lead.company.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      // Priorytet: firmy z telefonem (da się dzwonić) i bez strony (potrzebują jej).
-      out.push(lead);
-      if (out.length >= count * 3) break;
-    }
-    // Sortuj: bez strony + z telefonem na górę (najlepsze leady dla agencji stron).
-    out.sort((a, b) => Number(!a.hasWebsite && !!a.phone) - Number(!b.hasWebsite && !!b.phone)).reverse();
-    return out.slice(0, count);
-  } catch {
-    return [];
-  }
+  const els = await overpassQuery(buildOverpassQuery(geo.bbox, niche));
+  if (!els) return [];
+  return rankRawLeads(els, count, onlyNoWebsite);
 }
 
 /** Reverse-geocode współrzędnych → miasto (gdy użytkownik nie poda lokalizacji). */

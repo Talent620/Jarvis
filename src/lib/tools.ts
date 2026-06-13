@@ -12,6 +12,7 @@ import { runAutomation } from "./n8n";
 import { getCrypto, getRate } from "./markets";
 import { findLeads } from "./leads";
 import { buildDossier, auditWeakPoints } from "./leadIntel";
+import { callNowList, followUpsDue, followUpMessage, pipelineForecast, openLabel } from "./salesEngine";
 import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, hotkey as desktopHotkey } from "./desktop";
 import type { Citation } from "../types";
 
@@ -622,6 +623,45 @@ const tools: Tool[] = [
         out += `\n\nPowiedz „przygotuj teczkę dla [firma]" — zrobię audyt strony, analizę słabych punktów, e-mail i skrypt rozmowy.`;
       }
       return out;
+    },
+  },
+  {
+    def: {
+      name: "sales_plan",
+      description:
+        "Pokaż PLAN SPRZEDAŻY NA DZIŚ z Pulpitu: do kogo dzwonić TERAZ (firmy otwarte, gorące, jeszcze niezaczepione), komu wysłać follow-up (ponaglenie — bo to one domykają sprzedaż) i ile realnie wisi w lejku. Używaj, gdy użytkownik pyta: co dziś robić, od czego zacząć, plan sprzedaży, kogo zaczepić, do kogo zadzwonić.",
+      input_schema: obj({}),
+    },
+    run: () => {
+      const leads = store.data.leads || [];
+      if (!leads.length) return "Pulpit jest pusty. Powiedz: znajdź leady w [miasto], a przygotuję plan.";
+      const now = new Date();
+      const call = callNowList(leads, now).slice(0, 5);
+      const fups = followUpsDue(leads).slice(0, 5);
+      const f = pipelineForecast(leads);
+      const parts: string[] = [`💰 W lejku: ${f.pipeline} zł · prognoza ważona: ${f.expected} zł · zarobione: ${f.won} zł.`];
+      parts.push(call.length
+        ? `\n📞 Dzwoń teraz:\n${call.map((l) => `• ${l.company}${l.contact ? ` (${l.contact})` : ""} — ${openLabel(l.hours, now).text}${l.intel ? `, szansa ${l.intel.score}/100` : ""}`).join("\n")}`
+        : "\n📞 Brak firm do dzwonienia w tej chwili (zaczepione albo zamknięte).");
+      parts.push(fups.length
+        ? `\n🔁 Follow-up dzisiaj (${fups.length}):\n${fups.map((l) => `• ${l.company} — ponaglenie #${(l.followUpCount ?? 0) + 1}`).join("\n")}`
+        : "\n🔁 Brak ponagleń na dziś.");
+      parts.push("\nSzczegóły, gotowe treści i przyciski wysyłki: 📈 Pulpit Sprzedaży → 🎯 Plan na dziś.");
+      return parts.join("\n");
+    },
+  },
+  {
+    def: {
+      name: "lead_followup",
+      description:
+        "Napisz gotowe PONAGLENIE (follow-up) do leada, który nie odpowiedział. Podaj nazwę firmy z Pulpitu. Treść eskaluje delikatnie wg numeru kontaktu — nigdy nachalnie.",
+      input_schema: obj({ company: str("Nazwa firmy (lead z Pulpitu)") }, ["company"]),
+    },
+    run: ({ company }) => {
+      const q = String(company || "").toLowerCase().trim();
+      const lead = store.data.leads.find((l) => l.company.toLowerCase().includes(q));
+      if (!lead) return `Nie mam leada „${company}" w Pulpicie.`;
+      return followUpMessage(lead, (lead.followUpCount ?? 0) + 1);
     },
   },
   {

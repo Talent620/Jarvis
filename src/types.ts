@@ -213,6 +213,10 @@ export interface Lead {
   offer?: string;
   /** Teczka klienta: audyt, analiza AI, e-mail, skrypt rozmowy, scoring. */
   intel?: LeadIntel;
+  /** Kiedy ostatnio nawiązano kontakt (mail/SMS/telefon) — do follow-upów. */
+  lastContactedAt?: number;
+  /** Ile follow-upów (ponagleń) już wysłano. */
+  followUpCount?: number;
   status: LeadStatus;
   createdAt: number;
   updatedAt: number;
