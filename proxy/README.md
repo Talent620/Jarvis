@@ -15,6 +15,19 @@ Potrzebujesz tylko **Node.js** i darmowego konta **Cloudflare**:
 
 ```bash
 cd proxy
+node setup.mjs
+```
+
+**Kreator `setup.mjs`** prowadzi przez CAŁOŚĆ krok po kroku (Windows/macOS/Linux):
+logowanie do Cloudflare → utworzenie bazy KV → wdrożenie → pokazuje dokładny
+„redirect URI" do wklejenia w Google Cloud Console i czeka → przyjmuje Client
+ID/Secret → ustawia sekrety → wdraża ponownie → wypisuje gotowy adres i losowy
+token sync. To najłatwiejsza droga do wysyłki Gmailem z telefonu.
+
+### Albo: skrypt bez pytań (gdy znasz już klucze)
+
+```bash
+cd proxy
 # opcjonalnie podaj klucze od razu (utworzą się jako sekrety):
 GEMINI_API_KEY=... TAVILY_API_KEY=... bash deploy.sh
 ```
