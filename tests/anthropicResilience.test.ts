@@ -42,6 +42,19 @@ describe("adapter Claude — odporność na brak adaptacyjnego myślenia", () =>
     await expect(askAnthropic(ctx())).rejects.toThrow(/invalid x-api-key/);
   });
 
+  it("tryb fast → bez thinking/effort od razu (niskie opóźnienie tłumaczenia)", async () => {
+    const bodies: any[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_u: string, init: any) => {
+      bodies.push(JSON.parse(init.body));
+      return new Response(JSON.stringify({ content: [{ type: "text", text: "Привіт" }], stop_reason: "end_turn" }));
+    }));
+    const r = await askAnthropic({ ...ctx(), fast: true });
+    expect(r.text).toBe("Привіт");
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0].thinking).toBeUndefined();
+    expect(bodies[0].output_config).toBeUndefined();
+  });
+
   it("model wspierający thinking → jedna próba, z polami jakości", async () => {
     const bodies: any[] = [];
     vi.stubGlobal("fetch", vi.fn(async (_u: string, init: any) => {

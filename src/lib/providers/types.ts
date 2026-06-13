@@ -25,6 +25,9 @@ export interface AskCtx {
   history: Msg[];
   /** Opcjonalny adres backend-proxy (omija CORS, ukrywa klucz). */
   proxyUrl?: string;
+  /** Tryb szybki — pomija „głębokie myślenie" (niższa jakość, dużo niższe
+   *  opóźnienie). Do zadań prostych/czasowo wrażliwych, np. tłumaczenia na żywo. */
+  fast?: boolean;
 }
 
 export type ProviderImpl = (ctx: AskCtx) => Promise<JarvisReply>;

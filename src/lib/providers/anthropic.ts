@@ -40,8 +40,9 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
   let guard = 0;
   // Niektóre modele/bramki nie przyjmują adaptacyjnego myślenia ani „effort".
   // Zaczynamy z nimi (najlepsza jakość), a przy błędzie 400 o ich braku —
-  // automatycznie ponawiamy bez tych pól, by czat działał na każdym modelu.
-  let richThinking = true;
+  // automatycznie ponawiamy bez tych pól. W trybie szybkim (ctx.fast) od razu
+  // pomijamy myślenie — niższe opóźnienie (np. tłumaczenie na żywo).
+  let richThinking = !ctx.fast;
 
   while (guard++ < 8) {
     const body: Record<string, unknown> = {

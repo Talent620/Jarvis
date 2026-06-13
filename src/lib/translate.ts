@@ -47,6 +47,7 @@ export async function translateText(text: string, targetName: string): Promise<s
       apiKey: r.apiKey,
       model: r.model,
       proxyUrl: store.settings.proxyUrl?.trim() || undefined,
+      fast: true, // tłumaczenie na żywo — bez „głębokiego myślenia", niskie opóźnienie
     });
     return cleanTranslation(reply.text || "");
   } catch {
