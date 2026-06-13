@@ -927,6 +927,14 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
               <div className="row">
                 <span>
+                  🤖 Autopilot sprzedaży
+                  <br />
+                  <span className="muted" style={{ fontSize: 12 }}>Raz dziennie sam robi zadania z leadów (telefony, follow-upy) → ✅ Zadania Pro</span>
+                </span>
+                <Toggle on={s.salesAutopilot !== false} onClick={() => set({ salesAutopilot: s.salesAutopilot === false })} />
+              </div>
+              <div className="row">
+                <span>
                   Auto-szkice ofert
                   <br />
                   <span className="muted">JARVIS sam pisze gotowe oferty dla nowych leadów — czekają w Pulpicie do wysłania</span>

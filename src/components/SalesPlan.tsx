@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useStore } from "../hooks/useStore";
 import { callNowList, followUpsDue, followUpMessage, markContacted, pipelineForecast, openLabel } from "../lib/salesEngine";
+import { syncSalesTasks, autoPlanSummary } from "../lib/autoPlan";
 import { smsUrl, gmailComposeUrl } from "../lib/glinks";
 import { scoreLabel } from "../lib/leadIntel";
-import { copyWithToast } from "../lib/toast";
+import { copyWithToast, toast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
 import type { Lead } from "../types";
 
@@ -54,6 +55,10 @@ export default function SalesPlan({ onClose, onLead }: { onClose: () => void; on
         </div>
         <div className="panel-body">
           <p className="muted" style={{ marginTop: 0, textTransform: "capitalize" }}>{dateLabel}</p>
+
+          <button className="btn primary" style={{ marginBottom: 10 }} onClick={() => { const r = syncSalesTasks(); toast(autoPlanSummary(r)); force((x) => x + 1); }}>
+            🤖 Autopilot: zrób zadania z leadów
+          </button>
 
           {/* Prognoza lejka */}
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>

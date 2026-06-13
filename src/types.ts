@@ -51,6 +51,8 @@ export interface Task {
   notes?: string;
   /** Powtarzalność: codziennie/tygodniowo/miesięcznie (po wykonaniu wraca). */
   repeat?: "daily" | "weekly" | "monthly";
+  /** Źródło autopilota (np. „call:<leadId>") — do dedupu i auto-domykania. */
+  sourceId?: string;
   createdAt: number;
 }
 
@@ -336,6 +338,10 @@ export interface Settings {
   briefingTime: string;
   /** Automatyczne wyszukiwanie leadów kilka razy dziennie (gdy apka otwarta). */
   autoProspect: boolean;
+  /** Autopilot sprzedaży: sam zamienia leady w zadania (telefony, follow-upy). Domyślnie wł. */
+  salesAutopilot?: boolean;
+  /** Data ostatniego automatycznego planu (YYYY-MM-DD) — by uruchamiać raz dziennie. */
+  lastAutoPlanAt?: string;
   /** Nisza/branża do auto-prospektingu (np. „fryzjer"). */
   prospectNiche: string;
   /** Lokalizacja do auto-prospektingu (np. „Kraków"). */

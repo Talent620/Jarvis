@@ -65,6 +65,7 @@ const defaultSettings: Settings = {
   dailyBriefing: false,
   briefingTime: "08:00",
   autoProspect: false,
+  salesAutopilot: true,
   prospectNiche: "",
   prospectLocation: "",
   autoDraftOffers: false,

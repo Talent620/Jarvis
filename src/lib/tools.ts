@@ -13,6 +13,7 @@ import { getCrypto, getRate } from "./markets";
 import { findLeads } from "./leads";
 import { buildDossier, auditWeakPoints } from "./leadIntel";
 import { callNowList, followUpsDue, followUpMessage, pipelineForecast, openLabel } from "./salesEngine";
+import { syncSalesTasks, autoPlanSummary } from "./autoPlan";
 import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, hotkey as desktopHotkey } from "./desktop";
 import type { Citation } from "../types";
 
@@ -641,6 +642,15 @@ const tools: Tool[] = [
       }
       return out;
     },
+  },
+  {
+    def: {
+      name: "sales_autopilot",
+      description:
+        "Autopilot sprzedaży: SAM zamień leady na konkretne zadania na dziś (telefony do gorących, otwartych, niezaczepionych firm + należne follow-upy) i domknij nieaktualne. Używaj, gdy użytkownik mówi: zrób to autonomicznie, ogarnij zadania, zorganizuj sprzedaż, działaj sam. Zadania trafiają do ✅ Zadania Pro → ⭐ Priorytet i do Planu Dnia.",
+      input_schema: obj({}),
+    },
+    run: () => autoPlanSummary(syncSalesTasks()),
   },
   {
     def: {

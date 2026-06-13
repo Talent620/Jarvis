@@ -19,6 +19,7 @@ import { checkActivation, licenseRequired } from "./lib/license";
 import HeadsetMode from "./components/HeadsetMode";
 import { watchHeadset } from "./lib/headset";
 import { toast } from "./lib/toast";
+import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
 import PermissionDialog from "./components/PermissionDialog";
 import { lockIsSet } from "./lib/lock";
 import { Suspense, lazy } from "react";
@@ -197,6 +198,13 @@ export default function App() {
     // Bramka zgód i podgląd kroków agenta.
     setConsentHandler((req) => new Promise((resolve) => setPendingConsent({ req, resolve })));
     setStepListener((tool) => setStep(tool));
+
+    // Autopilot sprzedaży — raz dziennie sam robi zadania z leadów (telefony,
+    // follow-upy) i domyka nieaktualne. Cicho; dyskretny toast tylko gdy coś dodał.
+    try {
+      const r = autoPlanDaily();
+      if (r && (r.added || r.completed)) toast(autoPlanSummary(r));
+    } catch { /* nie blokuj startu */ }
 
     // Proaktywne powitanie + opcjonalny auto-nasłuch po otwarciu.
     const t = setTimeout(() => {
