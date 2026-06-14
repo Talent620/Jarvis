@@ -4,7 +4,8 @@ import { useStore } from "../hooks/useStore";
 import { copyWithToast, toast } from "../lib/toast";
 import { resolveProvider } from "../lib/brain";
 import { findBargains, rankOffers, dealFlag, marketLinks, type BargainResult, type Offer, type DealFlag } from "../lib/bargain";
-import { addWatch, removeWatch, setTarget, recordObservation, findWatch } from "../lib/bargainWatch";
+import { addWatch, removeWatch, setTarget, recordObservation, findWatch, priceTrend, sparkline } from "../lib/bargainWatch";
+import type { WatchedItem } from "../types";
 
 // Łowca Okazji — wpisz przedmiot (nazwa, model lub numer części), a JARVIS znajdzie
 // go NAJTANIEJ: osobno najtańszy NOWY i najtańszy UŻYWANY, z medianą ceny i ostrzeżeniem
@@ -20,6 +21,26 @@ const FLAG: Record<DealFlag, { icon: string; label: string; color: string } | nu
 
 function money(o: { price: number; currency: string }): string {
   return `${o.price.toLocaleString("pl-PL")} ${o.currency}`;
+}
+
+// Mini-wykres + trend ceny dla obserwowanego przedmiotu.
+function WatchTrend({ item }: { item: WatchedItem }) {
+  const trend = priceTrend(item.history);
+  if (!trend || trend.points < 2) return null;
+  const pts = sparkline((item.history || []).map((h) => h.price), 84, 26);
+  const up = trend.dir === "up";
+  const color = trend.dir === "down" ? "var(--ok, #58e08a)" : up ? "#e0584f" : "var(--text-dim)";
+  const arrow = trend.dir === "down" ? "📉" : up ? "📈" : "→";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
+      <svg width="84" height="26" viewBox="0 0 84 26" preserveAspectRatio="none" style={{ flexShrink: 0 }}>
+        <polyline points={pts} fill="none" stroke={color} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+      <span style={{ fontSize: 12, color }}>
+        {arrow} {trend.changePct > 0 ? "+" : ""}{trend.changePct}% · {trend.points} sprawdzeń
+      </span>
+    </div>
+  );
 }
 
 export default function BargainHunter({ onClose }: { onClose: () => void }) {
@@ -216,6 +237,7 @@ export default function BargainHunter({ onClose }: { onClose: () => void }) {
                         {w.bestPrice ? <>Najniższa widziana: <b>{w.bestPrice.toLocaleString("pl-PL")} {w.bestCurrency || "PLN"}</b></> : "Brak ceny — sprawdź ponownie"}
                         {hit && <span style={{ color: "var(--ok, #58e08a)", marginLeft: 8 }}>🎯 cel osiągnięty</span>}
                       </div>
+                      <WatchTrend item={w} />
                       <label style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6, fontSize: 13 }}>
                         🎯 Cel (alert poniżej):
                         <input

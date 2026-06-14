@@ -186,6 +186,8 @@ export interface WatchedItem {
   /** Ostatnio widziana cena (do wskazania kierunku zmiany). */
   lastPrice?: number;
   lastCheckedAt?: number;
+  /** Historia cen (punkty w czasie) — do trendu i mini-wykresu. */
+  history?: { at: number; price: number }[];
   createdAt: number;
 }
 

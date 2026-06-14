@@ -10,6 +10,8 @@ import {
   setTarget,
   recordObservation,
   loadWatches,
+  priceTrend,
+  sparkline,
 } from "../src/lib/bargainWatch";
 import type { WatchedItem } from "../src/types";
 
@@ -66,6 +68,54 @@ describe("applyObservation", () => {
     expect(below.hitTarget).toBe(true);
     const above = applyObservation(mk({ targetPrice: 100, lastPrice: 120 }), 110, "PLN");
     expect(above.hitTarget).toBe(false);
+  });
+  it("dopisuje punkt do historii", () => {
+    const o1 = applyObservation(mk(), 120, "PLN", 1000);
+    expect(o1.item.history).toEqual([{ at: 1000, price: 120 }]);
+    const o2 = applyObservation(o1.item, 90, "PLN", 2000);
+    expect(o2.item.history).toHaveLength(2);
+    expect(o2.item.history![1]).toEqual({ at: 2000, price: 90 });
+  });
+  it("ogranicza historię do 30 punktów", () => {
+    let item = mk({ history: [] });
+    for (let i = 0; i < 40; i++) item = applyObservation(item, 100 + i, "PLN", i).item;
+    expect(item.history!.length).toBe(30);
+  });
+});
+
+describe("priceTrend", () => {
+  it("liczy kierunek i % zmiany od pierwszego pomiaru", () => {
+    const t = priceTrend([{ at: 1, price: 200 }, { at: 2, price: 180 }, { at: 3, price: 150 }])!;
+    expect(t.dir).toBe("down");
+    expect(t.changePct).toBe(-25); // 150 vs 200
+    expect(t.min).toBe(150);
+    expect(t.max).toBe(200);
+    expect(t.points).toBe(3);
+  });
+  it("rozpoznaje wzrost i brak zmiany", () => {
+    expect(priceTrend([{ at: 1, price: 100 }, { at: 2, price: 130 }])!.dir).toBe("up");
+    expect(priceTrend([{ at: 1, price: 100 }, { at: 2, price: 100 }])!.dir).toBe("same");
+  });
+  it("null dla pustej historii", () => {
+    expect(priceTrend([])).toBeNull();
+    expect(priceTrend(undefined)).toBeNull();
+  });
+});
+
+describe("sparkline", () => {
+  it("buduje punkty polyline w zadanym obszarze", () => {
+    const pts = sparkline([100, 50], 84, 26).split(" ");
+    expect(pts).toHaveLength(2);
+    // najtańsza (50) na dole (większy y), najdroższa (100) na górze (mniejszy y)
+    const [x0, y0] = pts[0].split(",").map(Number);
+    const [x1, y1] = pts[1].split(",").map(Number);
+    expect(x0).toBeCloseTo(1, 1);
+    expect(x1).toBeCloseTo(83, 1);
+    expect(y0).toBeLessThan(y1);
+  });
+  it("zwraca pusty string dla mniej niż 2 cen", () => {
+    expect(sparkline([100])).toBe("");
+    expect(sparkline([])).toBe("");
   });
 });
 
