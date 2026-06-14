@@ -25,6 +25,7 @@ export default function More({
   onTasks,
   onTranslator,
   onBargain,
+  onWhereToBuy,
   onNotifications,
   onClose,
 }: {
@@ -48,6 +49,7 @@ export default function More({
   onTasks: () => void;
   onTranslator: () => void;
   onBargain: () => void;
+  onWhereToBuy: () => void;
   onNotifications: () => void;
   onClose: () => void;
 }) {
@@ -58,6 +60,7 @@ export default function More({
     { id: "tasks", icon: "✅", label: "Zadania Pro — projekty, priorytety (GTD)", fn: onTasks },
     { id: "dayplan", icon: "🗓", label: "Plan Dnia — zadania i notatnik", fn: onDayPlan },
     { id: "bargain", icon: "🏷", label: "Łowca Okazji — znajdź najtaniej (nowe/używane)", fn: onBargain },
+    { id: "wheretobuy", icon: "📍", label: "Gdzie kupię w pobliżu (najbliżej / taniej dalej)", fn: onWhereToBuy },
     { id: "money", icon: "💰", label: "Zarabianie — autopilot dochodu", fn: onMoney },
     { id: "journal", icon: "📔", label: "Mój dziennik (przemyślenia)", fn: onJournal },
     { id: "cards", icon: "🧠", label: "Kapsuły Wiedzy — ucz się i pamiętaj", fn: onCards },

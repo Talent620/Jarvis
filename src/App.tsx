@@ -37,6 +37,7 @@ const DayPlan = lazy(() => import("./components/DayPlan"));
 const TaskHub = lazy(() => import("./components/TaskHub"));
 const Translator = lazy(() => import("./components/Translator"));
 const BargainHunter = lazy(() => import("./components/BargainHunter"));
+const WhereToBuy = lazy(() => import("./components/WhereToBuy"));
 const Notifications = lazy(() => import("./components/Notifications"));
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
@@ -162,6 +163,7 @@ export default function App() {
   const [showTasks, setShowTasks] = useState(false);
   const [showTranslator, setShowTranslator] = useState(false);
   const [showBargain, setShowBargain] = useState(false);
+  const [showWhereToBuy, setShowWhereToBuy] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
   const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
@@ -772,6 +774,11 @@ export default function App() {
           <BargainHunter onClose={() => setShowBargain(false)} />
         </Suspense>
       )}
+      {showWhereToBuy && (
+        <Suspense fallback={null}>
+          <WhereToBuy onClose={() => setShowWhereToBuy(false)} />
+        </Suspense>
+      )}
       {showNotifs && (
         <Suspense fallback={null}>
           <Notifications
@@ -829,6 +836,7 @@ export default function App() {
           onTasks={() => setShowTasks(true)}
           onTranslator={() => setShowTranslator(true)}
           onBargain={() => setShowBargain(true)}
+          onWhereToBuy={() => setShowWhereToBuy(true)}
           onNotifications={() => setShowNotifs(true)}
           onClose={() => setShowMore(false)}
         />
