@@ -783,6 +783,7 @@ export default function App() {
         liveId={liveId}
         onSuggest={handleSend}
         onRetry={() => { if (retryTextRef.current && !busy) handleSend(retryTextRef.current); }}
+        thinking={busy}
       />
 
       <Composer

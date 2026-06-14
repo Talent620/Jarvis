@@ -77,18 +77,20 @@ export default function Conversation({
   liveId,
   onSuggest,
   onRetry,
+  thinking,
 }: {
   messages: ChatMessage[];
   interim: string;
   liveId: string | null;
   onSuggest: (text: string) => void;
   onRetry?: () => void;
+  thinking?: boolean;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, interim, liveId]);
+  }, [messages.length, interim, liveId, thinking]);
 
   if (!messages.length && !interim) {
     return (
@@ -157,6 +159,11 @@ export default function Conversation({
         </div>
       ))}
       {interim && <div className="bubble user">{interim}</div>}
+      {thinking && !interim && (
+        <div className="bubble assistant typing" aria-label="JARVIS pisze">
+          <span className="typing-dots"><i /><i /><i /></span>
+        </div>
+      )}
       <div ref={endRef} />
     </div>
   );
