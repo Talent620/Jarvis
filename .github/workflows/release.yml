@@ -72,8 +72,9 @@ jobs:
           tag_name: latest
           name: JARVIS — najnowszy build
           body: |
-            Najnowszy podpisany APK JARVIS-a (build z gałęzi roboczej).
-            Pobierz `jarvis.apk` poniżej, przerzuć na telefon i zainstaluj
-            (zezwól na instalację z nieznanych źródeł).
+            Najnowsza wersja JARVIS-a. Wybierz plik z sekcji **Assets** poniżej:
+
+            💻 **Windows (komputer):** pobierz **`JARVIS.exe`** i uruchom (Dalej → Dalej → Zainstaluj).
+            📱 **Android (telefon):** pobierz **`jarvis.apk`**, otwórz i zezwól na instalację z nieznanych źródeł.
           files: jarvis.apk
           make_latest: true
