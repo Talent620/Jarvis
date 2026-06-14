@@ -285,6 +285,8 @@ export interface Settings {
   smtpHost: string;
   /** Port SMTP (domyślnie 465 — szyfrowane TLS). */
   smtpPort: number;
+  /** Podpis (stopka) dopisywany automatycznie na końcu każdego maila/oferty. */
+  emailSignature: string;
   /** Adres backendu sync (ten sam Worker). */
   syncUrl: string;
   /** Prywatny token przestrzeni danych sync. */

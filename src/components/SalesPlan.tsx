@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useStore } from "../hooks/useStore";
 import { callNowList, followUpsDue, followUpMessage, markContacted, pipelineForecast, openLabel } from "../lib/salesEngine";
 import { syncSalesTasks, autoPlanSummary } from "../lib/autoPlan";
-import { smsUrl, gmailComposeUrl } from "../lib/glinks";
+import { smsUrl, gmailComposeUrl, appendSignature } from "../lib/glinks";
+import { store } from "../lib/store";
 import { scoreLabel } from "../lib/leadIntel";
 import { copyWithToast, toast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
@@ -37,7 +38,7 @@ export default function SalesPlan({ onClose, onLead }: { onClose: () => void; on
   const sendFollowUp = (l: Lead, kind: "sms" | "gmail" | "done") => {
     const msg = followUpMessage(l, (l.followUpCount ?? 0) + 1);
     if (kind === "sms" && phone(l)) window.open(smsUrl(phone(l), msg), "_blank");
-    else if (kind === "gmail" && email(l)) window.open(gmailComposeUrl(email(l), `W sprawie strony dla ${l.company}`, msg), "_blank", "noopener");
+    else if (kind === "gmail" && email(l)) window.open(gmailComposeUrl(email(l), `W sprawie strony dla ${l.company}`, appendSignature(msg, store.settings.emailSignature)), "_blank", "noopener");
     markContacted(l.id, true);
     force((x) => x + 1);
   };

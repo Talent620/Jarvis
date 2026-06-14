@@ -52,7 +52,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
 
   const sendVia = (kind: "gmail" | "mail") => {
     const text = intel?.email || lead.offer || "";
-    const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`);
+    const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`, store.settings.emailSignature);
     const url = kind === "gmail" ? gmailComposeUrl(email || "", subject, body) : mailtoUrl(email || "", subject, body);
     window.open(url, "_blank", "noopener");
     markContacted(lead.id);
@@ -62,7 +62,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
   const [sending, setSending] = useState(false);
   const sendNow = async () => {
     const text = intel?.email || lead.offer || "";
-    const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`);
+    const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`, store.settings.emailSignature);
     if (!email) { toast("Brak adresu e-mail firmy — użyj Gmaila i wpisz adres ręcznie."); return; }
     if (!window.confirm(`Wysłać e-mail do ${lead.company}?\n\nDo: ${email}\nTemat: ${subject}`)) return;
     setSending(true);

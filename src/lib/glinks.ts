@@ -40,9 +40,22 @@ export function mapsSearchUrl(query: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
-/** Wyciągnij temat i treść z szkicu oferty (pierwsza linia „Temat: …"). */
-export function splitOffer(offer: string, fallbackSubject: string): { subject: string; body: string } {
+/** Dopisuje podpis (stopkę: telefon, strona) na końcu treści — bez dublowania. */
+export function appendSignature(body: string, signature?: string): string {
+  const sig = (signature || "").trim();
+  if (!sig) return body.trimEnd();
+  const b = body.trimEnd();
+  if (!b) return sig;
+  if (b.includes(sig)) return b; // już dopisany (np. ręcznie) — nie dubluj
+  return `${b}\n\n${sig}`;
+}
+
+/**
+ * Wyciągnij temat i treść z szkicu oferty (pierwsza linia „Temat: …").
+ * Jeśli podano `signature`, dopisuje ją automatycznie na końcu treści.
+ */
+export function splitOffer(offer: string, fallbackSubject: string, signature?: string): { subject: string; body: string } {
   const subject = /Temat:\s*(.+)/i.exec(offer)?.[1]?.trim() || fallbackSubject;
-  const body = offer.replace(/Temat:\s*.+\n?/i, "").trim();
-  return { subject, body };
+  const raw = offer.replace(/Temat:\s*.+\n?/i, "").trim();
+  return { subject, body: appendSignature(raw, signature) };
 }

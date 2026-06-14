@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
+import { splitOffer } from "../lib/glinks";
 import { findLeads } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { leadsToCsv, followUpsDue, callNowList } from "../lib/salesEngine";
@@ -103,8 +104,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
       });
   };
   const sendOffer = (l: Lead) => {
-    const subject = (l.offer || "").match(/Temat:\s*(.+)/i)?.[1]?.trim() || `Oferta dla ${l.company}`;
-    const body = (l.offer || "").replace(/Temat:\s*.+\n?/i, "").trim();
+    const { subject, body } = splitOffer(l.offer || "", `Oferta dla ${l.company}`, store.settings.emailSignature);
     const to = l.contact && l.contact.includes("@") ? l.contact : "";
     window.open(`mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
   };

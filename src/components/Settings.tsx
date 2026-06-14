@@ -489,6 +489,19 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <p className="muted" style={{ fontSize: 12 }}>
                 Inna poczta niż Gmail? Wpisz jej serwer SMTP i port 465 (np. o2: poczta.o2.pl, WP: smtp.wp.pl).
               </p>
+              <div className="field">
+                <label>Podpis (stopka maila)</label>
+                <textarea
+                  className="ta"
+                  rows={3}
+                  value={s.emailSignature}
+                  placeholder={"—\ntel. 500 390 009\nwww.v-ai.pl"}
+                  onChange={(e) => set({ emailSignature: e.target.value })}
+                />
+              </div>
+              <p className="muted" style={{ fontSize: 12 }}>
+                Dopisywany automatycznie na końcu każdej oferty i follow-upu (telefon, strona — możesz dodać też nazwisko i przykłady realizacji).
+              </p>
 
               <h3>Research z cytatami (Tavily)</h3>
               <p className="muted">
