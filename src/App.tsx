@@ -717,9 +717,11 @@ export default function App() {
         );
       })()}
 
-      <div onClick={onOrbTap}>
-        <Orb state={orb} label={councilStep || (step && busy ? `⚙ ${step}…` : undefined)} />
-      </div>
+      {(messages.length === 0 || orb !== "idle") && (
+        <div onClick={onOrbTap}>
+          <Orb state={orb} label={councilStep || (step && busy ? `⚙ ${step}…` : undefined)} />
+        </div>
+      )}
 
       <Conversation messages={messages} interim={interim} liveId={liveId} onSuggest={handleSend} />
 

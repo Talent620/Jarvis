@@ -105,24 +105,32 @@ textarea,
 /* Gdy trwa rozmowa: orb się zmniejsza (zostaje widoczny i pulsuje), a czat
    dostaje całą przestrzeń — koniec „uciekania" treści jak na stronie. */
 .app.chatting .orb {
-  width: 60px;
-  height: 60px;
+  width: 46px;
+  height: 46px;
 }
 .app.chatting .orb .core {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
 }
 .app.chatting .orb .ring.r2 {
-  inset: 8px;
+  inset: 6px;
 }
 .app.chatting .orb .ring.r3 {
-  inset: 16px;
+  inset: 12px;
 }
 .app.chatting .orb-wrap {
   padding: 0;
 }
 .app.chatting .orb-status {
   display: none;
+}
+/* W trakcie rozmowy: oddaj maksimum miejsca treści — schowaj pasek przypomnień
+   (dostępny pod 🔔) i dociśnij górę. Interfejs jak w premium komunikatorze. */
+.app.chatting .status-deck {
+  display: none;
+}
+.app.chatting .topbar {
+  padding-bottom: 2px;
 }
 
 /* --- Nagłówek --- */
@@ -254,18 +262,14 @@ textarea,
   display: flex;
   flex-direction: column;
   gap: 10px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--cyan-dim) transparent;
+  scrollbar-width: none;
   /* Górna krawędź łagodnie się wygasza — pierwsza linia nie wygląda na uciętą */
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
   mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
 }
 .convo::-webkit-scrollbar {
-  width: 6px;
-}
-.convo::-webkit-scrollbar-thumb {
-  background: var(--cyan-dim);
-  border-radius: 4px;
+  width: 0;
+  display: none;
 }
 .bubble {
   max-width: 88%;
