@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 
 export default function Composer({
   onSend,
+  onStop,
   onMic,
   onAttach,
   onRemoveImage,
@@ -12,6 +13,7 @@ export default function Composer({
   councilAvailable,
 }: {
   onSend: (text: string, opts?: { council?: boolean; research?: boolean }) => void;
+  onStop?: () => void;
   onMic: () => void;
   onAttach: () => void;
   onRemoveImage: () => void;
@@ -98,14 +100,20 @@ export default function Composer({
             {micOn ? "■" : "🎤"}
           </button>
         )}
-        <button
-          className="send"
-          onClick={submit}
-          disabled={busy || (!text.trim() && !imagePreview)}
-          title="Wyślij"
-        >
-          ➤
-        </button>
+        {busy ? (
+          <button className="send stop" onClick={onStop} title="Zatrzymaj" aria-label="Zatrzymaj generowanie">
+            ■
+          </button>
+        ) : (
+          <button
+            className="send"
+            onClick={submit}
+            disabled={!text.trim() && !imagePreview}
+            title="Wyślij"
+          >
+            ➤
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1453,6 +1453,10 @@ input:focus, textarea:focus, select:focus {
   100% { transform: translateX(320%); }
 }
 
+/* Przycisk „Stop" (zatrzymanie generowania) — wyróżniony, by nie pomylić z wysyłaniem. */
+.send.stop { background: #c0392b; color: #fff; animation: stop-pulse 1.4s infinite ease-in-out; }
+@keyframes stop-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(192,57,43,0.5); } 50% { box-shadow: 0 0 0 6px rgba(192,57,43,0); } }
+
 /* === Wskaźnik „JARVIS pisze…" (premium responsywność) === */
 .bubble.typing { padding: 12px 16px; }
 .typing-dots { display: inline-flex; gap: 5px; align-items: center; }

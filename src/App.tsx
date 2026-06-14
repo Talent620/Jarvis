@@ -22,6 +22,7 @@ import { watchHeadset } from "./lib/headset";
 import { toast } from "./lib/toast";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
 import { notifySummary } from "./lib/notifyCenter";
+import { startGeneration, cancelGeneration, isCurrent } from "./lib/generation";
 import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
 import PermissionDialog from "./components/PermissionDialog";
 import { lockIsSet } from "./lib/lock";
@@ -362,6 +363,7 @@ export default function App() {
     setPendingImage(null);
     setBusy(true);
     setOrb("thinking");
+    const genToken = startGeneration(); // do bezpiecznego „Stop"
 
     try {
       // Okno kontekstu: czysty dialog (bez komunikatów systemowych), ostatnie 30
@@ -393,6 +395,8 @@ export default function App() {
       }
       // Failover widoczny: gdy główny mózg był zajęty i odpowiedział zapasowy — powiedz to
       // wprost (koniec strachu „API się skończyło"). Tylko gdy faktycznie był fallback.
+      // Użytkownik kliknął Stop (albo wysłał coś nowego) — porzuć spóźnioną odpowiedź.
+      if (!isCurrent(genToken)) return;
       const r = reply as Partial<{ via: string; fellBack: boolean }>;
       if (r.fellBack && r.via) {
         const label = PROVIDERS[r.via as keyof typeof PROVIDERS]?.label || r.via;
@@ -415,15 +419,30 @@ export default function App() {
         await speak(reply.text, store.settings);
       }
     } catch (e) {
+      if (!isCurrent(genToken)) return; // zatrzymane przez użytkownika — nie pokazuj błędu
       const err = e instanceof Error ? e.message : String(e);
       setMessages((m) => [
         ...m,
         { id: uid(), role: "assistant", text: `⚠ ${err}`, createdAt: Date.now() },
       ]);
     } finally {
-      setBusy(false);
-      setOrb(listenerRef.current?.listening ? "listening" : "idle");
+      // Resetuj stan tylko, jeśli to wciąż ta sama generacja — inaczej Stop / nowa
+      // wiadomość już ustawiły swój stan i nie wolno go nadpisać.
+      if (isCurrent(genToken)) {
+        setBusy(false);
+        setOrb(listenerRef.current?.listening ? "listening" : "idle");
+      }
     }
+  };
+
+  // Zatrzymanie generowania: ucisz głos, porzuć trwającą odpowiedź, odblokuj wejście.
+  const stopGeneration = () => {
+    cancelGeneration();
+    stopSpeaking();
+    setCouncilStep(null);
+    setBusy(false);
+    setOrb(listenerRef.current?.listening ? "listening" : "idle");
+    toast("⏹ Zatrzymano");
   };
 
   sendRef.current = handleSend;
@@ -788,6 +807,7 @@ export default function App() {
 
       <Composer
         onSend={handleSend}
+        onStop={stopGeneration}
         onMic={toggleMic}
         onAttach={attachImage}
         onRemoveImage={() => setPendingImage(null)}
