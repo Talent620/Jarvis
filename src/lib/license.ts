@@ -10,8 +10,8 @@
 const PUBLIC_JWK: JsonWebKey = {
   kty: "EC",
   crv: "P-256",
-  x: "t9urffSCbUds8y0eFhP3pnPcQUfCdV3InW9XBh6brj4",
-  y: "sztIfFUb_CvnVDivA0LLWFmnKqGlrkZVtEDVdOaUlK0",
+  x: "yVt6bj1aOh50oDQOH8oKKEVJ2ETteQF9-N0UbSsiUFo",
+  y: "YzRn5l1wri_mFT2SHV_jsbOegqbR9b3TtjJ-5vSHzfk",
 };
 
 const STORE_KEY = "jarvis.license.v1";

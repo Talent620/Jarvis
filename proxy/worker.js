@@ -150,8 +150,8 @@ function b64url(str) {
 // prywatny do WYDAWANIA licencji to sekret Workera (LICENSE_PRIVATE_JWK).
 const LICENSE_PUBLIC_JWK = {
   kty: "EC", crv: "P-256",
-  x: "t9urffSCbUds8y0eFhP3pnPcQUfCdV3InW9XBh6brj4",
-  y: "sztIfFUb_CvnVDivA0LLWFmnKqGlrkZVtEDVdOaUlK0",
+  x: "yVt6bj1aOh50oDQOH8oKKEVJ2ETteQF9-N0UbSsiUFo",
+  y: "YzRn5l1wri_mFT2SHV_jsbOegqbR9b3TtjJ-5vSHzfk",
 };
 function b64urlToBytesW(s) {
   const b64 = s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=");

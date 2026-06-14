@@ -2,17 +2,17 @@
 import { describe, it, expect } from "vitest";
 import { verifyLicense, deviceId } from "../src/lib/license";
 
-// Ważny klucz „master" podpisany kluczem prywatnym właściciela (pod kluczem
-// publicznym wbudowanym w aplikację). Klucza nie da się podrobić bez prywatnego.
+// Ważny klucz testowy (fixture) podpisany kluczem prywatnym właściciela pod kluczem
+// publicznym wbudowanym w aplikację. Klucza nie da się podrobić bez prywatnego.
 const MASTER =
-  "eyJuIjoiQXJ0dXIgSsOzemVmY3phayIsInQiOiJtYXN0ZXIiLCJpYXQiOjE3ODEyMjE5MzA0MDN9.3xeGqPdNatvtGO0vhLzEotOBjGC1nuySdyqyxJzochsvxWg5DZyItGVer-pNp5uwlEUqfy5oEC7WoyW5HERI-A";
+  "eyJuIjoiRklYVFVSRSBURVNUT1dZIiwidCI6InBlcnBldHVhbCIsImlhdCI6MTc4MTIyMTkzMDQwM30.ThGeY2Iw7qNJ31oQz32SImiVICML-4TM8N5lRtHvO1J728d9B4lvTSnIX8x8t61sNUFbLqqEPLHulVa-8zmc5A";
 
 describe("Licencja — weryfikacja ECDSA", () => {
   it("akceptuje ważny klucz właściciela i czyta dane", async () => {
     const r = await verifyLicense(MASTER);
     expect(r.valid).toBe(true);
-    expect(r.name).toBe("Artur Józefczak");
-    expect(r.type).toBe("master");
+    expect(r.name).toBe("FIXTURE TESTOWY");
+    expect(r.type).toBe("perpetual");
   });
 
   it("odrzuca podrobiony podpis (zmieniony znak)", async () => {
