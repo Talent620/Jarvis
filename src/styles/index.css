@@ -1226,3 +1226,64 @@ button:disabled {
 .status-flag.warn { color: var(--gold); border-color: var(--line-strong); }
 .status-flag.info { color: var(--cyan); }
 .status-flag:hover { filter: brightness(1.2); }
+
+/* ============================================================
+   Dopieszczenie wyglądu — subtelne animacje i mikrointerakcje
+   (spójne z motywem HUD; bez zmiany charakteru).
+   ============================================================ */
+
+@keyframes sheetIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.992); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes bubbleIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes badgePop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Wejście arkuszy/paneli */
+.sheet { animation: sheetIn 0.18s ease both; }
+.panel { animation: panelIn 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Pojawianie się wiadomości na czacie */
+.bubble { animation: bubbleIn 0.22s ease both; }
+
+/* Plakietka powiadomień — delikatne pojawienie */
+.notif-badge { animation: badgePop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; box-shadow: 0 0 0 2px var(--bg); }
+
+/* Mikrointerakcje przycisków (płynność + lekki „lift" na desktopie) */
+.btn { transition: transform 0.12s ease, filter 0.15s ease, background 0.15s ease, border-color 0.15s ease; }
+.btn:active { transform: translateY(1px) scale(0.99); }
+@media (hover: hover) {
+  .btn:hover { filter: brightness(1.08); border-color: var(--line-strong); }
+  .btn.primary:hover { filter: brightness(1.05); }
+  .chip:hover { background: rgba(108, 231, 255, 0.16); border-color: var(--line-strong); }
+  .journal-card:hover { border-color: var(--line-strong); }
+  .list-item:hover { background: rgba(108, 231, 255, 0.05); }
+  .icon-btn:hover { transform: translateY(-1px); }
+}
+.chip { transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease; }
+.chip:active { transform: scale(0.96); }
+.icon-btn { transition: transform 0.12s ease, border-color 0.15s ease, color 0.15s ease; }
+
+/* Pola formularzy — czytelny fokus (delikatna poświata zamiast skoku) */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--cyan) !important;
+  box-shadow: 0 0 0 2px rgba(108, 231, 255, 0.18);
+}
+
+/* Płynne przewijanie i lepsza czytelność nagłówków sekcji */
+.panel-body { scroll-behavior: smooth; }
+
+/* Szacunek dla ustawień dostępności — wyłącz ruch, gdy użytkownik tak woli */
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .panel, .bubble, .notif-badge { animation: none !important; }
+  * { scroll-behavior: auto !important; }
+}
