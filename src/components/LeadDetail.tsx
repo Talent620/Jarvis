@@ -232,8 +232,8 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
                       {sending ? "📨 Wysyłam…" : "📨 WYŚLIJ TERAZ (potwierdź)"}
                     </button>
                   )}
-                  <button className="chip" onClick={() => sendVia("gmail")}>✉ Gmail</button>
-                  <button className="chip" onClick={() => sendVia("mail")}>📧 Program pocztowy</button>
+                  <button className="chip" onClick={() => sendVia("gmail")}>✉ Otwórz w Gmailu</button>
+                  <button className="chip" onClick={() => sendVia("mail")}>📧 Otwórz w poczcie</button>
                   {phone && <button className="chip" onClick={sendSms}>📱 SMS</button>}
                   <button className="chip" onClick={() => copyWithToast(intel?.email || lead.offer || "")}>📋 Kopiuj</button>
                 </div>

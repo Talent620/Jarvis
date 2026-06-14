@@ -312,7 +312,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
                     <p className="muted" style={{ whiteSpace: "pre-wrap", margin: 0, fontSize: 13 }}>{l.offer}</p>
                     <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                       <button className="chip" onClick={() => copy(l.offer)}>📋 Kopiuj ofertę</button>
-                      <button className="chip" onClick={() => sendOffer(l)}>📧 Wyślij</button>
+                      <button className="chip" onClick={() => sendOffer(l)}>📧 Otwórz w poczcie</button>
                     </div>
                   </div>
                 )}
