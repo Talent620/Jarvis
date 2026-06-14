@@ -191,6 +191,9 @@ export default function BargainHunter({ onClose }: { onClose: () => void }) {
               <div className="muted" style={{ fontSize: 12, margin: "8px 0 4px" }}>Nowe</div>
               <div className="chips" style={{ flexWrap: "wrap" }}>
                 {fresh.map((l) => <a key={l.name} className="chip" href={l.url} target="_blank" rel="noopener">{l.icon} {l.name}</a>)}
+              </div>
+              <div className="muted" style={{ fontSize: 12, margin: "8px 0 4px" }}>Zagranica i porównywarki — często taniej</div>
+              <div className="chips" style={{ flexWrap: "wrap" }}>
                 {allk.map((l) => <a key={l.name} className="chip" href={l.url} target="_blank" rel="noopener">{l.icon} {l.name}</a>)}
               </div>
             </div>

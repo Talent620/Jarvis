@@ -73,11 +73,14 @@ export function marketLinks(query: string): MarketLink[] {
     { name: "Vinted", icon: "👕", kind: "used", url: `https://www.vinted.pl/catalog?search_text=${q}&order=price_low_to_high` },
     { name: "eBay (używane)", icon: "🌍", kind: "used", url: `https://www.ebay.pl/sch/i.html?_nkw=${q}&_sop=15&LH_ItemCondition=3000` },
     { name: "Allegro (używane)", icon: "🅰", kind: "used", url: `https://allegro.pl/listing?string=${q}&stan=u%C5%BCywane&order=p` },
+    { name: "Otomoto części", icon: "🚗", kind: "used", url: `https://www.otomoto.pl/czesci/q-${olxSlug(query)}/?search%5Border%5D=filter_float_price:asc` },
     // NOWE
     { name: "Allegro (nowe)", icon: "🅰", kind: "new", url: `https://allegro.pl/listing?string=${q}&stan=nowe&order=p` },
     { name: "Amazon", icon: "🛒", kind: "new", url: `https://www.amazon.pl/s?k=${q}&s=price-asc-rank` },
     { name: "Ceneo", icon: "💹", kind: "new", url: `https://www.ceneo.pl/;szukaj-${q}` },
-    // WSZYSTKO
+    // ZAGRANICA (często taniej) + porównywarki
+    { name: "eBay.de 🇩🇪", icon: "🌍", kind: "all", url: `https://www.ebay.de/sch/i.html?_nkw=${q}&_sop=15` },
+    { name: "Amazon.de 🇩🇪", icon: "🌍", kind: "all", url: `https://www.amazon.de/s?k=${q}&s=price-asc-rank` },
     { name: "Google Zakupy", icon: "🔎", kind: "all", url: `https://www.google.com/search?tbm=shop&q=${q}` },
   ];
 }
@@ -88,6 +91,8 @@ export function buildBargainPrompt(region = "Polska"): string {
     `Jesteś łowcą okazji. Użytkownik podaje przedmiot (nazwę, model lub numer części). Znajdź NAJTAŃSZE realne oferty — osobno NOWE i UŻYWANE — w regionie: ${region}.`,
     "ZASADY:",
     "- Użyj wyszukiwarki internetowej. Sprawdź popularne serwisy: Allegro, OLX, Vinted, eBay, Amazon, Ceneo, Google Zakupy.",
+    "- Gdy to część samochodowa (np. „lampa do Golfa”), sprawdź też Otomoto Części, iParts i motoryzacyjne kategorie Allegro/OLX.",
+    "- Rozważ oferty zagraniczne (eBay.de, Amazon.de), jeśli realnie wychodzą taniej z wysyłką do Polski — zaznacz to w „note”.",
     "- Bierz realne, aktualne oferty z ceną i bezpośrednim linkiem.",
     "- Zwróć WYŁĄCZNIE poprawny JSON (bez markdown, bez komentarzy) w formacie:",
     '{"normalized":"co to za przedmiot","currency":"PLN","offers":[{"title":"...","price":199,"currency":"PLN","condition":"new","source":"Allegro","url":"https://...","note":"krótko, opcjonalnie"}],"tips":["krótka rada zakupowa"]}',

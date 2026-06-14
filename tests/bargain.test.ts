@@ -22,6 +22,19 @@ describe("marketLinks", () => {
     expect(names.some((n) => n.startsWith("eBay"))).toBe(true);
   });
 
+  it("zawiera auto-części (Otomoto) i serwisy zagraniczne posortowane po cenie", () => {
+    const links = marketLinks("lampa do golfa");
+    const otomoto = links.find((l) => l.name === "Otomoto części")!;
+    expect(otomoto.url).toContain("otomoto.pl/czesci/q-lampa-do-golfa");
+    expect(otomoto.url).toContain("filter_float_price:asc");
+    const ebayDe = links.find((l) => l.name.startsWith("eBay.de"))!;
+    expect(ebayDe.kind).toBe("all");
+    expect(ebayDe.url).toContain("_sop=15"); // najtaniej + wysyłka
+    const amazonDe = links.find((l) => l.name.startsWith("Amazon.de"))!;
+    expect(amazonDe.url).toContain("amazon.de");
+    expect(amazonDe.url).toContain("s=price-asc-rank");
+  });
+
   it("koduje zapytanie i ustawia sortowanie rosnące po cenie", () => {
     const links = marketLinks("iphone 13");
     const amazon = links.find((l) => l.name === "Amazon")!;
