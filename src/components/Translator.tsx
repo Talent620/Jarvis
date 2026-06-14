@@ -72,7 +72,9 @@ export default function Translator({ onClose }: { onClose: () => void }) {
         setListening("");
         if (!text.trim()) { if (autoRef.current) listen(side); return; }
         setBusy(true);
-        const dst = await translateText(text, to.name);
+        // Kontekst: kilka ostatnich wypowiedzi (oryginał + przekład) dla ciągłości.
+        const context = log.slice(-3).flatMap((t) => [t.src, t.dst]);
+        const dst = await translateText(text, to.name, context);
         if (gen !== genRef.current) { setBusy(false); return; } // w międzyczasie ruszyła nowa tura
         setBusy(false);
         setLog((l) => [...l, { side, src: text.trim(), dst: dst || "(nie udało się przetłumaczyć)" }]);

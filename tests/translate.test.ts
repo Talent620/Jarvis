@@ -7,6 +7,14 @@ describe("silnik tłumaczenia — czyste funkcje", () => {
     const p = buildTranslatePrompt("ukraiński");
     expect(p).toMatch(/ukraiński/);
     expect(p).toMatch(/WY[ŁL]ĄCZNIE|tylko|wyłącznie/i);
+    expect(p).not.toMatch(/KONTEKST/); // bez kontekstu — brak sekcji
+  });
+
+  it("buildTranslatePrompt z kontekstem dołącza ostatnie wypowiedzi (bez tłumaczenia ich)", () => {
+    const p = buildTranslatePrompt("polski", ["Як тебе звати?", "Jak masz na imię?"]);
+    expect(p).toMatch(/KONTEKST/);
+    expect(p).toMatch(/NIE tłumacz/i);
+    expect(p).toMatch(/Jak masz na imię/);
   });
 
   it("cleanTranslation zdejmuje etykiety i cudzysłowy", () => {
