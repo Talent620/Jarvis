@@ -6,7 +6,7 @@ import { store } from "../lib/store";
 import { isDesktop } from "../lib/desktop";
 
 // Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓).
-function MsgActions({ text }: { text: string }) {
+function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -25,6 +25,11 @@ function MsgActions({ text }: { text: string }) {
       <button onClick={copy} title="Kopiuj">
         {copied ? "✓" : "📋"}
       </button>
+      {onRegenerate && (
+        <button onClick={onRegenerate} title="Inna odpowiedź (regeneruj)">
+          🔄
+        </button>
+      )}
     </div>
   );
 }
@@ -87,6 +92,8 @@ export default function Conversation({
   thinking?: boolean;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
+  // Ostatnia odpowiedź asystenta — przy niej pokażemy „Regeneruj".
+  const lastAssistantId = [...messages].reverse().find((m) => m.role === "assistant")?.id;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -145,7 +152,12 @@ export default function Conversation({
               🔄 Ponów
             </button>
           )}
-          {m.role === "assistant" && m.text && <MsgActions text={m.text} />}
+          {m.role === "assistant" && m.text && (
+            <MsgActions
+              text={m.text}
+              onRegenerate={m.id === lastAssistantId && !m.text.startsWith("⚠") && onRetry ? onRetry : undefined}
+            />
+          )}
           {m.citations && m.citations.length > 0 && (
             <div className="citations">
               <div className="cit-head">Źródła</div>
