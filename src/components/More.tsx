@@ -29,6 +29,7 @@ export default function More({
   onShoppingList,
   onNotifications,
   onStatus,
+  onMemory,
   onClose,
 }: {
   onProjects: () => void;
@@ -55,6 +56,7 @@ export default function More({
   onShoppingList: () => void;
   onNotifications: () => void;
   onStatus: () => void;
+  onMemory: () => void;
   onClose: () => void;
 }) {
   useEscape(onClose);
@@ -62,6 +64,7 @@ export default function More({
     { id: "notifications", icon: "🔔", label: "Powiadomienia — co wymaga uwagi", fn: onNotifications },
     { id: "status", icon: "🩺", label: "Stan systemu — co działa (zielone/czerwone)", fn: onStatus },
     { id: "profile", icon: "👤", label: "Mój profil — kim jestem (pamięć)", fn: onProfile },
+    { id: "memory", icon: "🧠", label: "Co JARVIS o mnie wie (pamięć — edytuj/usuń)", fn: onMemory },
     { id: "tasks", icon: "✅", label: "Zadania Pro — projekty, priorytety (GTD)", fn: onTasks },
     { id: "dayplan", icon: "🗓", label: "Plan Dnia — zadania i notatnik", fn: onDayPlan },
     { id: "bargain", icon: "🏷", label: "Łowca Okazji — znajdź najtaniej (nowe/używane)", fn: onBargain },

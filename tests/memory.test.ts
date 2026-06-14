@@ -1,11 +1,40 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { cosine, rememberFact } from "../src/lib/memory";
+import { cosine, rememberFact, deleteFact, setFactPinned, editFact } from "../src/lib/memory";
 import { store } from "../src/lib/store";
 
 beforeEach(() => {
   store.setData((d) => {
     d.memory = [];
+  });
+});
+
+describe("Centrum Pamięci — kontrola użytkownika", () => {
+  it("deleteFact usuwa po id (inne zostają)", () => {
+    rememberFact("a", "1"); rememberFact("b", "2");
+    const id = store.data.memory.find((m) => m.key === "a")!.id;
+    deleteFact(id);
+    expect(store.data.memory.some((m) => m.key === "a")).toBe(false);
+    expect(store.data.memory.some((m) => m.key === "b")).toBe(true);
+  });
+
+  it("setFactPinned przypina i odpina", () => {
+    rememberFact("c", "3");
+    const id = store.data.memory.find((m) => m.key === "c")!.id;
+    setFactPinned(id, true);
+    expect(store.data.memory.find((m) => m.id === id)!.pinned).toBe(true);
+    setFactPinned(id, false);
+    expect(store.data.memory.find((m) => m.id === id)!.pinned).toBe(false);
+  });
+
+  it("editFact zmienia wartość i kasuje wektor (do przeliczenia)", () => {
+    rememberFact("d", "stare");
+    const f = store.data.memory.find((m) => m.key === "d")!;
+    f.embedding = [1, 2, 3];
+    editFact(f.id, "nowe");
+    const after = store.data.memory.find((m) => m.id === f.id)!;
+    expect(after.value).toBe("nowe");
+    expect(after.embedding).toBeUndefined();
   });
 });
 

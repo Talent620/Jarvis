@@ -101,6 +101,25 @@ export async function ensureIndexed(): Promise<void> {
 // --- Zapis faktu (z unieważnieniem wektora + reindeksacją) ---
 
 /** Zapamiętaj/zaktualizuj fakt; po zmianie treści wektor jest przeliczany w tle. */
+/** Usuń pojedynczy fakt po id (Centrum Pamięci — kontrola użytkownika). */
+export function deleteFact(id: string): void {
+  store.setData((d) => { d.memory = d.memory.filter((m) => m.id !== id); });
+}
+
+/** Przypnij/odepnij fakt (przypięte nie są kasowane przy limicie). */
+export function setFactPinned(id: string, pinned: boolean): void {
+  store.setData((d) => { const m = d.memory.find((x) => x.id === id); if (m) m.pinned = pinned; });
+}
+
+/** Edytuj wartość faktu (zmiana treści → przelicz wektor). */
+export function editFact(id: string, value: string): void {
+  store.setData((d) => {
+    const m = d.memory.find((x) => x.id === id);
+    if (m && m.value !== value) { m.value = value; m.embedding = undefined; }
+  });
+  void ensureIndexed();
+}
+
 export function rememberFact(key: string, value: string, projectId?: string): void {
   store.setData((d) => {
     const existing = d.memory.find((m) => m.key === key && (m.projectId || "") === (projectId || ""));
