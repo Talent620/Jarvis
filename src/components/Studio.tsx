@@ -3,6 +3,7 @@ import { generateImage, humanizeImageError, IMAGE_MODELS_LIST, type ImageModelId
 import { capturePhoto } from "../lib/camera";
 import { useEscape } from "../hooks/useEscape";
 import { store } from "../lib/store";
+import { parseKeys } from "../lib/keys";
 import Guide from "./Guide";
 
 type Img = { data: string; mediaType: string };
@@ -57,6 +58,9 @@ export default function Studio({ onClose }: { onClose: () => void }) {
   const [err, setErr] = useState("");
   const [view, setView] = useState<"result" | "compare">("compare");
   const resultRef = useRef<HTMLDivElement>(null); // do auto-przewinięcia po „Przerób"
+  const [keysOpen, setKeysOpen] = useState(false);
+  const [studioKeys, setStudioKeys] = useState(store.settings.studioKeys || "");
+  const studioKeyCount = parseKeys(studioKeys).length;
 
   const result = history[history.length - 1] || null;
   const before = inputs[0] || null; // zdjęcie wejściowe do porównania
@@ -117,6 +121,29 @@ export default function Studio({ onClose }: { onClose: () => void }) {
           <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>{IMAGE_MODELS_LIST.find((m) => m.id === model)?.note}</p>
           {model !== "gemini" && !store.settings.falApiKey?.trim() && (
             <p className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>⭐ Model premium — dodaj klucz fal.ai w ⚙ → AI, aby go użyć.</p>
+          )}
+
+          {/* Osobne klucze TYLKO dla Studia — własny dzienny limit obrazów, z rotacją. */}
+          {model === "gemini" && (
+            <div style={{ margin: "2px 0 8px" }}>
+              <button className="chip" onClick={() => setKeysOpen((o) => !o)} disabled={busy}>
+                🔑 Klucze Studia (osobne){studioKeyCount ? ` · ${studioKeyCount}` : ""} {keysOpen ? "▲" : "▼"}
+              </button>
+              {keysOpen && (
+                <div className="field" style={{ marginTop: 8 }}>
+                  <textarea
+                    className="ta"
+                    style={{ minHeight: 70 }}
+                    value={studioKeys}
+                    placeholder={"Wklej 1+ kluczy Gemini — każdy w nowej linii.\nUżywane TYLKO w Studiu. JARVIS rotuje je, gdy limit się wyczerpie."}
+                    onChange={(e) => { setStudioKeys(e.target.value); store.setSettings({ studioKeys: e.target.value }); }}
+                  />
+                  <p className="muted" style={{ fontSize: 12 }}>
+                    Darmowe klucze: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: "var(--cyan)" }}>aistudio.google.com/apikey</a> (bez karty). Każde konto Google = osobny dzienny limit obrazów. Puste pole = Studio użyje klucza z czatu.
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Zdjęcia wejściowe */}

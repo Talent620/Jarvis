@@ -322,6 +322,9 @@ export interface Settings {
   tavilyApiKey: string;
   /** Klucz fal.ai — premium modele edycji obrazu (FLUX Kontext, Nano Banana Pro). */
   falApiKey: string;
+  /** Osobne klucze Gemini TYLKO dla Studia Obrazów (wiele w nowych liniach/po przecinku).
+   *  Niezależne od kluczy czatu — dedykowana pula na generowanie/edycję zdjęć z rotacją. */
+  studioKeys?: string;
   /** Adres webhooka n8n — warstwa wykonawcza (automatyzacje robią rzeczy). */
   n8nUrl: string;
   /** Opcjonalny token autoryzacji do n8n. */

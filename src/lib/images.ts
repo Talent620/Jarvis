@@ -1,4 +1,4 @@
-import { primaryKey } from "./keys";
+import { orderedKeys, studioKeyList, coolDownKey } from "./keys";
 import { store } from "./store";
 import { humanize } from "./aiHelpers";
 
@@ -53,21 +53,33 @@ async function callGemini(model: string, key: string, parts: any[]): Promise<Res
   return { data: imgPart.inlineData.data, mediaType: imgPart.inlineData.mimeType || "image/png" };
 }
 
+// Limit/wyczerpana pula danego klucza → próbujemy następnego klucza (rotacja).
+const isQuota = (m: string) => /quota|exceeded|rate.?limit|resource exhausted|too many requests|\b429\b/i.test(m);
+// Brak/niewłaściwy model → próbujemy kolejnej nazwy modelu (ten sam klucz).
+const isModelMiss = (m: string) => /not found|not supported|unknown|404|invalid model|permission|unavailable/i.test(m);
+
 async function geminiEdit(prompt: string, inputs: Img[]): Promise<Result> {
-  const key = primaryKey("gemini");
-  if (!key) return { error: "Dodaj klucz Google Gemini w ⚙ → AI — darmowy edytor korzysta z Gemini (Nano Banana)." };
+  // Studio ma WŁASNĄ pulę kluczy (studioKeys). Gdy pusta — używa zwykłych kluczy Gemini.
+  const keys = studioKeyList().length ? studioKeyList() : orderedKeys("gemini");
+  if (!keys.length) return { error: "Dodaj darmowy klucz Gemini (w Studiu: 🔑 albo ⚙ → AI) — edytor obrazów korzysta z Gemini (Nano Banana)." };
   const parts: any[] = [{ text: prompt }];
   for (const im of inputs) parts.push({ inlineData: { mimeType: im.mediaType, data: im.data } });
   let lastErr = "Nie udało się wygenerować obrazu.";
-  for (const model of GEMINI_MODELS) {
-    try {
-      const r = await callGemini(model, key, parts);
-      if (!("error" in r)) return r;
-      lastErr = r.error;
-      if (!/not found|not supported|unknown|404|invalid model|permission|unavailable/i.test(r.error)) return r;
-    } catch (e) {
-      lastErr = `Błąd połączenia: ${e instanceof Error ? e.message : e}`;
+  for (const key of keys) {
+    let quotaHit = false;
+    for (const model of GEMINI_MODELS) {
+      try {
+        const r = await callGemini(model, key, parts);
+        if (!("error" in r)) return r;
+        lastErr = r.error;
+        if (isQuota(r.error)) { coolDownKey("gemini", key); quotaHit = true; break; } // → następny klucz
+        if (!isModelMiss(r.error)) return r; // twardy błąd (np. zły opis) — nie ma sensu rotować
+        // model nieobsługiwany tym kluczem → spróbuj kolejnej nazwy modelu
+      } catch (e) {
+        lastErr = `Błąd połączenia: ${e instanceof Error ? e.message : e}`;
+      }
     }
+    if (!quotaHit) break; // wyczerpaliśmy modele bez limitu — kolejny klucz nic nie da
   }
   return { error: lastErr };
 }

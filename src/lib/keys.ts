@@ -8,12 +8,11 @@
 import { store } from "./store";
 import type { ProviderId } from "./providers/types";
 
-/** Lista kluczy danego dostawcy (rozdziel nową linią lub przecinkiem, bez duplikatów). */
-export function keyList(provider: ProviderId): string[] {
-  const raw = store.settings.keys[provider] || "";
+/** Rozbij surowy tekst na klucze (nowa linia lub przecinek), bez duplikatów/pustych. */
+export function parseKeys(raw: string): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const part of raw.split(/[\n,]+/)) {
+  for (const part of (raw || "").split(/[\n,]+/)) {
     const k = part.trim();
     if (k && !seen.has(k)) {
       seen.add(k);
@@ -21,6 +20,23 @@ export function keyList(provider: ProviderId): string[] {
     }
   }
   return out;
+}
+
+/** Lista kluczy danego dostawcy (rozdziel nową linią lub przecinkiem, bez duplikatów). */
+export function keyList(provider: ProviderId): string[] {
+  return parseKeys(store.settings.keys[provider] || "");
+}
+
+/**
+ * Osobna pula kluczy Gemini dla Studia Obrazów (niezależna od czatu), w kolejności
+ * prób: najpierw świeże, potem te w „cooldownie". Pusta, gdy użytkownik nic nie wpisał
+ * — wtedy Studio korzysta ze zwykłych kluczy Gemini (orderedKeys("gemini")).
+ */
+export function studioKeyList(): string[] {
+  const all = parseKeys(store.settings.studioKeys || "");
+  const fresh = all.filter((k) => !isCoolingDown("gemini", k));
+  const cooled = all.filter((k) => isCoolingDown("gemini", k));
+  return [...fresh, ...cooled];
 }
 
 /** Ile kluczy ma dany dostawca (do podpowiedzi w UI). */

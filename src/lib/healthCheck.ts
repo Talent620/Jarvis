@@ -216,9 +216,9 @@ export function featureChecks(s = store.settings): HealthItem[] {
 
   // Studio obrazów — darmowo z kluczem Gemini, premium z fal.ai.
   out.push(
-    primaryKey("gemini") || s.falApiKey?.trim()
+    primaryKey("gemini") || s.studioKeys?.trim() || s.falApiKey?.trim()
       ? { id: "studio", icon: "🎨", title: "Studio obrazów", status: "ok", detail: "Edycja zdjęć gotowa (Gemini Nano Banana za darmo, premium przez fal.ai)." }
-      : { id: "studio", icon: "🎨", title: "Studio obrazów", status: "info", detail: "Dodaj darmowy klucz Gemini (⚙ → AI), by edytować zdjęcia opisem." },
+      : { id: "studio", icon: "🎨", title: "Studio obrazów", status: "info", detail: "Dodaj darmowy klucz Gemini (w Studiu: 🔑 albo ⚙ → AI), by edytować zdjęcia opisem." },
   );
 
   // Research (Tavily) — opcjonalny.

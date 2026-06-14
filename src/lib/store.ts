@@ -49,6 +49,7 @@ const defaultSettings: Settings = {
   webSearch: true,
   tavilyApiKey: "",
   falApiKey: "",
+  studioKeys: "",
   n8nUrl: "",
   n8nToken: "",
   speak: true,
