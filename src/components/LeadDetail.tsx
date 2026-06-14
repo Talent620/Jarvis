@@ -69,7 +69,6 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
     if (!text) { text = (await draftOffer(lead)).trim(); if (text) set({ offer: text }); }
     if (!text) { setSending(false); toast("Nie udało się napisać oferty — sprawdź klucz API (⚙ → Mózg)."); return; }
     const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`, store.settings.emailSignature);
-    if (!window.confirm(`Wysłać e-mail do ${lead.company}?\n\nDo: ${email}\nTemat: ${subject}`)) { setSending(false); return; }
     const r = await sendOfferEmail(email, subject, body, lead.company);
     setSending(false);
     if (!r.ok) { toast(`Nie wysłano: ${r.error}`); return; }
@@ -229,7 +228,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                   {canSendDirect() && email && (
                     <button className="chip" style={{ borderColor: "var(--ok, #58e08a)" }} onClick={sendNow} disabled={sending}>
-                      {sending ? "📨 Wysyłam…" : "📨 WYŚLIJ TERAZ (potwierdź)"}
+                      {sending ? "📨 Wysyłam…" : "📨 WYŚLIJ TERAZ"}
                     </button>
                   )}
                   <button className="chip" onClick={() => sendVia("gmail")}>✉ Otwórz w Gmailu</button>
