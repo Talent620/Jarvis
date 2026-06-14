@@ -147,8 +147,8 @@ textarea,
 .topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 4px 6px;
+  gap: 7px;
+  padding: 8px 2px 6px;
 }
 .brand {
   font-family: "Orbitron", sans-serif;
@@ -157,6 +157,9 @@ textarea,
   font-size: 20px;
   color: var(--cyan);
   text-shadow: 0 0 18px rgba(108, 231, 255, 0.5);
+  min-width: 0; /* pozwala skrócić podpis, by ikony się zmieściły (bez ucinania) */
+  flex-shrink: 1;
+  overflow: hidden;
 }
 .brand small {
   display: block;
@@ -165,18 +168,23 @@ textarea,
   letter-spacing: 2px;
   color: var(--text-dim);
   margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* długi model np. CLAUDE-OPUS-4-8 → … zamiast rozpychać pasek */
 }
 .spacer {
   flex: 1;
+  min-width: 4px;
 }
 .icon-btn {
   background: rgba(108, 231, 255, 0.06);
   border: 1px solid var(--line);
   color: var(--cyan);
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  font-size: 18px;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 16px;
   cursor: pointer;
   display: grid;
   place-items: center;
