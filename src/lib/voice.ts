@@ -174,7 +174,14 @@ function playUrlEnded(url: string): Promise<boolean> {
     } catch {
       /* bez wizualizacji */
     }
-    audio.play().catch(() => finish(false));
+    // play() bywa odrzucane (autoplay/urządzenie) — łap też wyjątek synchroniczny,
+    // żeby nie zostawić nieobsłużonej obietnicy i czysto zakończyć odtwarzanie.
+    try {
+      const p = audio.play();
+      if (p && typeof p.catch === "function") p.catch(() => finish(false));
+    } catch {
+      finish(false);
+    }
   });
 }
 

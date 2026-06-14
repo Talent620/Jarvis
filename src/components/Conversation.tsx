@@ -76,11 +76,13 @@ export default function Conversation({
   interim,
   liveId,
   onSuggest,
+  onRetry,
 }: {
   messages: ChatMessage[];
   interim: string;
   liveId: string | null;
   onSuggest: (text: string) => void;
+  onRetry?: () => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -135,6 +137,12 @@ export default function Conversation({
             </div>
           )}
           {m.council && m.council.members.length > 1 && <CouncilPanel council={m.council} />}
+          {/* Błąd odpowiedzi → jeden tap, by ponowić bez przepisywania polecenia. */}
+          {m.role === "assistant" && m.text?.startsWith("⚠") && onRetry && (
+            <button className="btn" style={{ marginTop: 8, padding: "6px 12px", fontSize: 13, width: "auto" }} onClick={onRetry}>
+              🔄 Ponów
+            </button>
+          )}
           {m.role === "assistant" && m.text && <MsgActions text={m.text} />}
           {m.citations && m.citations.length > 0 && (
             <div className="citations">

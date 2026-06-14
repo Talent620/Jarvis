@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { canSendDirect, hasBackendGmail, sendOfferEmail } from "../src/lib/mailer";
+import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow } from "../src/lib/mailer";
 import { store } from "../src/lib/store";
 
 // Wybór kanału wysyłki: desktop→SMTP, telefon→Gmail(backend), inaczej→compose.
@@ -45,5 +45,14 @@ describe("wybór kanału wysyłki e-maila", () => {
     (window as any).jarvisDesktop = { sendMail: vi.fn(async () => "ok") };
     const r = await sendOfferEmail("k@firma.pl", "Oferta", "Cześć");
     expect(r).toEqual({ ok: true, via: "SMTP" });
+  });
+
+  it("most SMTP zwraca obiekt zamiast tekstu → czytelny błąd (nie „[object Object]”)", async () => {
+    store.setSettings({ smtpUser: "a@gmail.com", smtpPass: "haslo" });
+    (window as any).jarvisDesktop = { sendMail: vi.fn(async () => ({ weird: true })) };
+    const err = await sendMailNow("k@firma.pl", "T", "B");
+    expect(err).toBeTruthy();
+    expect(err).not.toContain("[object Object]");
+    expect(err).toMatch(/mostka SMTP|Poczt/i);
   });
 });

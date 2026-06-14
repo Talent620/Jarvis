@@ -55,7 +55,7 @@ import { isComplex } from "./lib/aiHelpers";
 import { dueCount } from "./lib/cards";
 import { statusFlags } from "./lib/status";
 import { buildContext } from "./lib/context";
-import { isUncensored } from "./lib/providers/registry";
+import { isUncensored, PROVIDERS } from "./lib/providers/registry";
 import { enablePrivateMode } from "./lib/privateMode";
 import { runProspecting } from "./lib/prospect";
 import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, type VoiceListener } from "./lib/voice";
@@ -184,6 +184,7 @@ export default function App() {
   const pendingImageRef = useRef<PendingImage>(null);
   pendingImageRef.current = pendingImage;
   const sendRef = useRef<(t: string) => void>(() => {});
+  const retryTextRef = useRef<string>(""); // ostatnie polecenie — do przycisku „Ponów"
   const micSupported = isSpeechSupported();
 
   useEffect(() => {
@@ -318,6 +319,7 @@ export default function App() {
       if (shot) pendingImageRef.current = shot;
     }
     const image = pendingImageRef.current || undefined;
+    retryTextRef.current = text; // zapamiętaj do „Ponów", gdyby odpowiedź się nie udała
     const userMsg: ChatMessage = { id: uid(), role: "user", text, image, createdAt: Date.now() };
     setMessages((m) => [...m, userMsg]);
     setPendingImage(null);
@@ -351,6 +353,13 @@ export default function App() {
         reply = useCouncil ? await askCouncil(history) : await askJarvis(history);
       } finally {
         setCouncilStep(null);
+      }
+      // Failover widoczny: gdy główny mózg był zajęty i odpowiedział zapasowy — powiedz to
+      // wprost (koniec strachu „API się skończyło"). Tylko gdy faktycznie był fallback.
+      const r = reply as Partial<{ via: string; fellBack: boolean }>;
+      if (r.fellBack && r.via) {
+        const label = PROVIDERS[r.via as keyof typeof PROVIDERS]?.label || r.via;
+        toast(`🔄 Główny mózg był zajęty — odpowiedział zapasowy: ${label}`);
       }
       const aiMsg: ChatMessage = {
         id: uid(),
@@ -731,7 +740,13 @@ export default function App() {
         </div>
       )}
 
-      <Conversation messages={messages} interim={interim} liveId={liveId} onSuggest={handleSend} />
+      <Conversation
+        messages={messages}
+        interim={interim}
+        liveId={liveId}
+        onSuggest={handleSend}
+        onRetry={() => { if (retryTextRef.current && !busy) handleSend(retryTextRef.current); }}
+      />
 
       <Composer
         onSend={handleSend}

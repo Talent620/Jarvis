@@ -83,7 +83,17 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
     return [...provs.map((p) => ({ provider: p.id, model: modelFor(p.id, complex, hasImage) })), ...localTail];
   }
 
-  const resolved = resolveProvider()!;
+  const resolved = resolveProvider();
+  // Brak rozwiązanego dostawcy (np. ręczny wybór bez klucza) — nie wywalaj się; zbuduj
+  // łańcuch z wszystkich dostawców, którzy mają klucz, plus lokalny ogon.
+  if (!resolved) {
+    return [
+      ...PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim())
+        .sort((a, b) => b.rank - a.rank)
+        .map((p) => ({ provider: p.id, model: p.defaultModel })),
+      ...localTail,
+    ];
+  }
   return [
     { provider: resolved.provider, model: resolved.model },
     ...PROVIDER_LIST.filter((p) => p.id !== "ollama" && p.id !== resolved.provider && s.keys[p.id]?.trim())
@@ -318,8 +328,10 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
       rememberFact(key, value, pid);
     }
     void ensureIndexed();
-  } catch {
-    /* uczenie jest „best-effort" — błędy ignorujemy */
+  } catch (e) {
+    // Uczenie jest „best-effort" — nie blokuje odpowiedzi, ale logujemy do diagnostyki
+    // (np. gdy model zwróci uszkodzony JSON), zamiast cicho połykać.
+    console.debug("[learnFromExchange] pominięto:", e instanceof Error ? e.message : e);
   }
 }
 
@@ -384,6 +396,7 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   }
 
   resetCitations();
+  const primary = order[0].provider; // główny mózg — jeśli odpowie inny, to był failover
   let lastErr: unknown;
   for (let i = 0; i < order.length; i++) {
     const { provider, model } = order[i];
@@ -399,7 +412,9 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
         const citations = getCitations();
         // Ucz się w tle: wyłuskaj trwałe fakty z wymiany (nie blokuje odpowiedzi).
         void learnFromExchange(lastUser?.content || "", reply.text);
-        return citations.length ? { ...reply, citations } : reply;
+        // Oznacz, KTO odpowiedział i czy to był zapas — App pokaże delikatny komunikat.
+        const meta = { via: provider, fellBack: provider !== primary };
+        return { ...reply, ...meta, ...(citations.length ? { citations } : {}) };
       } catch (e) {
         providerErr = e;
         lastErr = e;

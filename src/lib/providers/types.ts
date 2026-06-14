@@ -13,6 +13,10 @@ export interface JarvisReply {
   text: string;
   tools: string[];
   citations?: { title: string; url: string }[];
+  /** Który dostawca faktycznie odpowiedział (do informacji o failoverze). */
+  via?: ProviderId;
+  /** True, gdy odpowiedział dostawca zapasowy (główny był zajęty/wyczerpany). */
+  fellBack?: boolean;
 }
 
 /** Kontekst pojedynczego zapytania przekazywany adapterowi dostawcy. */

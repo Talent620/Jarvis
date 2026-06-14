@@ -61,7 +61,9 @@ export async function pullSync(): Promise<string> {
     const { data } = await res.json();
     if (!data) return "Brak danych w chmurze.";
     store.setData((d) => {
-      for (const c of COLLECTIONS) if (data[c]) (d as any)[c] = data[c];
+      // Twardo waliduj: bierzemy tylko tablice, by uszkodzone dane z chmury nie
+      // skorumpowały lokalnego store (np. {tasks:"x"} zamiast listy).
+      for (const c of COLLECTIONS) if (Array.isArray(data[c])) (d as any)[c] = data[c];
     });
     return "✅ Dane pobrane z chmury.";
   } catch (e) {

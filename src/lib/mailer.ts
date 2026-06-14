@@ -35,7 +35,10 @@ export async function sendMailNow(to: string, subject: string, body: string): Pr
     subject,
     body,
   });
-  return r === "ok" ? null : String(r).replace(/^err:/, "");
+  // Most może zwrócić cokolwiek — twardo sprowadź do czytelnego komunikatu
+  // (koniec „[object Object]", gdy zwróci obiekt/undefined).
+  if (r === "ok") return null;
+  return typeof r === "string" ? r.replace(/^err:/, "") : "Błąd mostka SMTP — sprawdź dane poczty w ⚙ → Poczta.";
 }
 
 export type SendResult = { ok: true; via: "SMTP" | "Gmail" } | { ok: false; error: string };

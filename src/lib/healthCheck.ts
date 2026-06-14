@@ -105,6 +105,16 @@ export async function runHealthCheck(onUpdate?: (items: HealthItem[]) => void, l
     }
   }
 
+  // 1b. Zapasowy mózg — żeby NIGDY nie zabrakło. Failover działa tylko, gdy jest na co
+  // przełączyć; przy jednym dostawcy podpowiadamy dodać drugi (darmowy).
+  const brainsWithKey = Object.values(s.keys).filter((v) => (v as string)?.trim()).length;
+  if (r && r.apiKey?.trim() && brainsWithKey <= 1 && !s.ollamaUrl?.trim()) {
+    push({
+      id: "backup-brain", icon: "🧠", title: "Dodaj zapasowy mózg (nigdy nie zabraknie)", status: "info",
+      detail: "Masz tylko jeden mózg AI. Dodaj drugi DARMOWY klucz (Groq, Cerebras lub Gemini) w ⚙ → AI — gdy jeden wyczerpie limit, JARVIS sam przełączy się na zapas i odpowie dalej. Koniec strachu, że „API się skończy”.",
+    });
+  }
+
   // 2. Claude — żywy test klucza (to samo co na Windowsie, działa wszędzie).
   if (live) {
     const claudeKey = primaryKey("anthropic");
