@@ -15,6 +15,7 @@ import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode } from "../lib/privateMode";
 import { runProspecting } from "../lib/prospect";
+import { verifyMailConnection } from "../lib/mailer";
 import { enrollVoice } from "../lib/voiceEnroll";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
@@ -71,6 +72,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [apiStatus, setApiStatus] = useState<Partial<Record<ProviderId, ApiStatus>>>({});
   const [statusBusy, setStatusBusy] = useState(false);
   const [gmailBusy, setGmailBusy] = useState(false);
+  const [mailCheck, setMailCheck] = useState("");
+  const [mailChecking, setMailChecking] = useState(false);
   const [backupMsg, setBackupMsg] = useState("");
   const [backupPass, setBackupPass] = useState("");
   const [backendMsg, setBackendMsg] = useState("");
@@ -502,6 +505,22 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <p className="muted" style={{ fontSize: 12 }}>
                 Dopisywany automatycznie na końcu każdej oferty i follow-upu (telefon, strona — możesz dodać też nazwisko i przykłady realizacji).
               </p>
+              <div className="field">
+                <button
+                  className="btn"
+                  disabled={mailChecking}
+                  onClick={async () => {
+                    setMailChecking(true);
+                    setMailCheck("⏳ Sprawdzam połączenie z pocztą…");
+                    const r = await verifyMailConnection();
+                    setMailChecking(false);
+                    setMailCheck(r.ok ? r.message : `❌ ${r.message}`);
+                  }}
+                >
+                  {mailChecking ? "⏳ Sprawdzam…" : "🔌 Sprawdź połączenie poczty"}
+                </button>
+                {mailCheck && <p className="muted" style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>{mailCheck}</p>}
+              </div>
 
               <h3>Research z cytatami (Tavily)</h3>
               <p className="muted">

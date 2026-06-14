@@ -2,7 +2,7 @@
 // Wydzielone z main.cjs, by dało się testować na żywo (bez Electrona).
 const tls = require("tls");
 
-function smtpSend({ host, port, user, pass, to, subject, body, tlsOptions }) {
+function smtpSend({ host, port, user, pass, to, subject, body, tlsOptions, verifyOnly }) {
   return new Promise((resolve) => {
     const HOST = String(host || "smtp.gmail.com");
     const PORT = Number(port) || 465;
@@ -33,17 +33,27 @@ function smtpSend({ host, port, user, pass, to, subject, body, tlsOptions }) {
     ].join("\r\n");
 
     // Prosty automat SMTP: każdy krok czeka na kod odpowiedzi i wysyła kolejną komendę.
-    const steps = [
-      { expect: /^220/, send: () => `EHLO jarvis.local` },
-      { expect: /^250/, send: () => `AUTH LOGIN` },
-      { expect: /^334/, send: () => b64(user) },
-      { expect: /^334/, send: () => b64(pass) },
-      { expect: /^235/, send: () => `MAIL FROM:<${user}>`, errMsg: "Logowanie odrzucone — sprawdź adres i HASŁO APLIKACJI (nie zwykłe hasło Gmaila)." },
-      { expect: /^250/, send: () => `RCPT TO:<${to}>` },
-      { expect: /^250/, send: () => `DATA` },
-      { expect: /^354/, send: () => data },
-      { expect: /^250/, send: () => `QUIT`, thenOk: true },
-    ];
+    // verifyOnly: tylko sprawdź połączenie + logowanie (bez wysyłania testowego maila).
+    const authErr = "Logowanie odrzucone — sprawdź adres i HASŁO APLIKACJI (nie zwykłe hasło Gmaila).";
+    const steps = verifyOnly
+      ? [
+          { expect: /^220/, send: () => `EHLO jarvis.local` },
+          { expect: /^250/, send: () => `AUTH LOGIN` },
+          { expect: /^334/, send: () => b64(user) },
+          { expect: /^334/, send: () => b64(pass) },
+          { expect: /^235/, send: () => `QUIT`, thenOk: true, errMsg: authErr },
+        ]
+      : [
+          { expect: /^220/, send: () => `EHLO jarvis.local` },
+          { expect: /^250/, send: () => `AUTH LOGIN` },
+          { expect: /^334/, send: () => b64(user) },
+          { expect: /^334/, send: () => b64(pass) },
+          { expect: /^235/, send: () => `MAIL FROM:<${user}>`, errMsg: authErr },
+          { expect: /^250/, send: () => `RCPT TO:<${to}>` },
+          { expect: /^250/, send: () => `DATA` },
+          { expect: /^354/, send: () => data },
+          { expect: /^250/, send: () => `QUIT`, thenOk: true },
+        ];
     let step = 0;
     let buf = "";
     socket.on("data", (chunk) => {

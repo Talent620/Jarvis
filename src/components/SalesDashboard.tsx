@@ -126,7 +126,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
       });
     }
     if (!r.ok) { toast(`Nie wysłano: ${r.error}`); return; }
-    toast(`✅ Wysłano do ${to} (${r.via})`);
+    toast(`✅ Mail wysłany do ${to} (${r.via}) — zapisano w 📤 Skrzynce wysłanych`);
     store.setData((d) => {
       const x = d.leads.find((y) => y.id === l.id);
       if (x) { if (x.status === "new" || x.status === "contacted") x.status = "offer"; x.updatedAt = Date.now(); }

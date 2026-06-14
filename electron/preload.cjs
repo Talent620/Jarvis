@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   notify: (title, body) => ipcRenderer.invoke("jarvis:notify", { title: String(title || ""), body: String(body || "") }),
   // Prawdziwa wysyłka e-maila przez SMTP (dane z ustawień aplikacji).
   sendMail: (msg) => ipcRenderer.invoke("jarvis:sendmail", msg),
+  // Sprawdzenie połączenia z pocztą (logowanie SMTP bez wysyłki testowej).
+  verifyMail: (msg) => ipcRenderer.invoke("jarvis:verifymail", msg),
   // Pisanie tekstu / skróty (Windows), opcjonalnie do okna o tytule.
   type: (text, window) => ipcRenderer.invoke("jarvis:type", { text: String(text || ""), window: window || "" }),
   hotkey: (combo, window) => ipcRenderer.invoke("jarvis:hotkey", { combo: String(combo || ""), window: window || "" }),

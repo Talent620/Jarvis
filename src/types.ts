@@ -172,6 +172,20 @@ export interface AppData {
   leads: Lead[];
   flashcards: Flashcard[];
   bargainWatch: WatchedItem[];
+  /** Skrzynka wysłanych — potwierdzone maile wysłane wprost z aplikacji. */
+  sentMail: SentMail[];
+}
+
+/** Wpis w Skrzynce wysłanych — komu, co, kiedy i jakim kanałem poszło. */
+export interface SentMail {
+  id: string;
+  to: string;
+  subject: string;
+  /** Nazwa firmy/odbiorcy (jeśli wysłano z leada). */
+  company?: string;
+  /** Kanał wysyłki. */
+  via: "SMTP" | "Gmail";
+  at: number;
 }
 
 /** Obserwowany przedmiot w Łowcy Okazji — pamięta najlepszą widzianą cenę. */

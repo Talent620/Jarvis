@@ -235,6 +235,14 @@ function registerDesktopControl() {
     return smtpSend({ host, port, user, pass, to, subject: String(subject || ""), body: String(body || "") });
   });
 
+  // Sprawdzenie połączenia z pocztą (bez wysyłania testowego maila) — łączy się,
+  // loguje hasłem aplikacji i rozłącza. Zwraca "ok" lub "err:<powód>".
+  ipcMain.handle("jarvis:verifymail", async (_e, payload) => {
+    const { host, port, user, pass } = payload || {};
+    if (!user || !pass) return "err:Wpisz adres e-mail i hasło aplikacji.";
+    return smtpSend({ host, port, user, pass, verifyOnly: true });
+  });
+
   // Natywne powiadomienie Windows (przypomnienia, minutnik, pomodoro, leady).
   ipcMain.handle("jarvis:notify", (_e, payload) => {
     try {

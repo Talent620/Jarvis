@@ -70,10 +70,10 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
     if (!text) { setSending(false); toast("Nie udało się napisać oferty — sprawdź klucz API (⚙ → Mózg)."); return; }
     const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`, store.settings.emailSignature);
     if (!window.confirm(`Wysłać e-mail do ${lead.company}?\n\nDo: ${email}\nTemat: ${subject}`)) { setSending(false); return; }
-    const r = await sendOfferEmail(email, subject, body);
+    const r = await sendOfferEmail(email, subject, body, lead.company);
     setSending(false);
     if (!r.ok) { toast(`Nie wysłano: ${r.error}`); return; }
-    toast(`✅ Wysłano do ${email} (${r.via})`);
+    toast(`✅ Mail wysłany do ${email} (${r.via}) — zapisano w 📤 Skrzynce wysłanych`);
     markContacted(lead.id); // napędza follow-upy (Plan na dziś przypomni o ponagleniu)
     set({ status: lead.status === "new" || lead.status === "contacted" ? "offer" : lead.status, note: `${lead.note ? lead.note + " · " : ""}E-mail wysłany ${new Date().toLocaleDateString("pl-PL")}` });
   };

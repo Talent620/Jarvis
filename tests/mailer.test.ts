@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow } from "../src/lib/mailer";
+import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent } from "../src/lib/mailer";
 import { store } from "../src/lib/store";
 
 // Wybór kanału wysyłki: desktop→SMTP, telefon→Gmail(backend), inaczej→compose.
@@ -54,5 +54,56 @@ describe("wybór kanału wysyłki e-maila", () => {
     expect(err).toBeTruthy();
     expect(err).not.toContain("[object Object]");
     expect(err).toMatch(/mostka SMTP|Poczt/i);
+  });
+
+  it("udana wysyłka SMTP zapisuje wpis w Skrzynce wysłanych (z firmą)", async () => {
+    store.setData((d) => { d.sentMail = []; });
+    store.setSettings({ smtpUser: "a@gmail.com", smtpPass: "haslo" });
+    (window as any).jarvisDesktop = { sendMail: vi.fn(async () => "ok") };
+    await sendOfferEmail("k@firma.pl", "Oferta", "Cześć", "Firma X");
+    expect(store.data.sentMail).toHaveLength(1);
+    expect(store.data.sentMail[0]).toMatchObject({ to: "k@firma.pl", subject: "Oferta", company: "Firma X", via: "SMTP" });
+  });
+});
+
+describe("recordSent — skrzynka wysłanych", () => {
+  it("dokłada najnowszy wpis na początek", () => {
+    store.setData((d) => { d.sentMail = []; });
+    recordSent({ to: "a@x.pl", subject: "A", via: "SMTP" });
+    recordSent({ to: "b@x.pl", subject: "B", via: "Gmail" });
+    expect(store.data.sentMail[0].to).toBe("b@x.pl");
+    expect(store.data.sentMail).toHaveLength(2);
+  });
+});
+
+describe("verifyMailConnection — sprawdzenie połączenia", () => {
+  it("bez mostu desktop → podpowiedź dla telefonu", async () => {
+    const r = await verifyMailConnection();
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/Windows|Gmaila/);
+  });
+
+  it("most zwraca ok → połączono poprawnie", async () => {
+    store.setSettings({ smtpUser: "a@gmail.com", smtpPass: "haslo" });
+    (window as any).jarvisDesktop = { verifyMail: vi.fn(async () => "ok") };
+    const r = await verifyMailConnection();
+    expect(r.ok).toBe(true);
+    expect(r.message).toMatch(/połączona poprawnie/i);
+  });
+
+  it("most zwraca err → czytelny komunikat bez prefiksu err:", async () => {
+    store.setSettings({ smtpUser: "a@gmail.com", smtpPass: "zle" });
+    (window as any).jarvisDesktop = { verifyMail: vi.fn(async () => "err:Logowanie odrzucone — hasło aplikacji.") };
+    const r = await verifyMailConnection();
+    expect(r.ok).toBe(false);
+    expect(r.message).toBe("Logowanie odrzucone — hasło aplikacji.");
+  });
+
+  it("brak adresu/hasła → prosi o uzupełnienie", async () => {
+    store.setSettings({ smtpUser: "", smtpPass: "" });
+    (window as any).jarvisDesktop = { verifyMail: vi.fn(async () => "ok") };
+    const r = await verifyMailConnection();
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/Najpierw wpisz/);
   });
 });
