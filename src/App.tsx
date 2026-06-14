@@ -20,6 +20,7 @@ import HeadsetMode from "./components/HeadsetMode";
 import { watchHeadset } from "./lib/headset";
 import { toast } from "./lib/toast";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
+import { notifySummary } from "./lib/notifyCenter";
 import PermissionDialog from "./components/PermissionDialog";
 import { lockIsSet } from "./lib/lock";
 import { Suspense, lazy } from "react";
@@ -669,6 +670,19 @@ export default function App() {
             ＋
           </button>
         )}
+        {(() => {
+          const n = notifySummary().total;
+          return (
+            <button className="icon-btn" style={{ position: "relative" }} onClick={() => setShowNotifs(true)} title="Powiadomienia">
+              🔔
+              {n > 0 && (
+                <span style={{ position: "absolute", top: 0, right: 0, minWidth: 16, height: 16, padding: "0 3px", borderRadius: 9, background: "#e0584f", color: "#fff", fontSize: 10, lineHeight: "16px", textAlign: "center", fontWeight: 700, boxSizing: "border-box" }}>
+                  {n > 99 ? "99+" : n}
+                </span>
+              )}
+            </button>
+          );
+        })()}
         <button className="icon-btn" onClick={() => setShowMore(true)} title="Menu">
           ⋯
         </button>
