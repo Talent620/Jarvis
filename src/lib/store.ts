@@ -19,6 +19,7 @@ const emptyData: AppData = {
   journal: [],
   leads: [],
   flashcards: [],
+  bargainWatch: [],
 };
 
 const defaultSettings: Settings = {

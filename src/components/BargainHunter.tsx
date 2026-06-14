@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
-import { copyWithToast } from "../lib/toast";
+import { useStore } from "../hooks/useStore";
+import { copyWithToast, toast } from "../lib/toast";
 import { resolveProvider } from "../lib/brain";
 import { findBargains, rankOffers, dealFlag, marketLinks, type BargainResult, type Offer, type DealFlag } from "../lib/bargain";
+import { addWatch, removeWatch, setTarget, recordObservation, findWatch } from "../lib/bargainWatch";
 
 // Łowca Okazji — wpisz przedmiot (nazwa, model lub numer części), a JARVIS znajdzie
 // go NAJTANIEJ: osobno najtańszy NOWY i najtańszy UŻYWANY, z medianą ceny i ostrzeżeniem
@@ -22,6 +24,7 @@ function money(o: { price: number; currency: string }): string {
 
 export default function BargainHunter({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const { data } = useStore();
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<BargainResult | null>(null);
@@ -31,17 +34,36 @@ export default function BargainHunter({ onClose }: { onClose: () => void }) {
   const liveLinks = useMemo(() => marketLinks(query), [query]);
 
   const ranked = useMemo(() => (res ? rankOffers(res.offers) : null), [res]);
+  const watches = data.bargainWatch || [];
+  const watched = !!query.trim() && !!findWatch(query);
 
-  const search = async () => {
-    const q = query.trim();
+  const search = async (q0?: string) => {
+    const q = (q0 ?? query).trim();
     if (!q || busy) return;
+    if (q0 != null) setQuery(q0);
     setBusy(true);
     setRes(null);
     try {
-      setRes(await findBargains(q));
+      const r = await findBargains(q);
+      setRes(r);
+      // Jeśli przedmiot jest obserwowany — zapisz cenę i powiedz, czy staniało.
+      const best = rankOffers(r.offers).sorted[0];
+      if (best) {
+        const obs = recordObservation(q, best.price, r.currency);
+        if (obs?.hitTarget) toast(`🎯 Cel osiągnięty: „${q}" za ${best.price.toLocaleString("pl-PL")} ${r.currency}!`);
+        else if (obs?.change.dir === "down") toast(`▼ „${q}" staniało o ${Math.abs(obs.change.pct)}% od ostatniego sprawdzenia`);
+        else if (obs?.change.dir === "up") toast(`▲ „${q}" podrożało o ${obs.change.pct}%`);
+      }
     } finally {
       setBusy(false);
     }
+  };
+
+  const watch = () => {
+    const q = query.trim();
+    if (!q) return;
+    addWatch(q, ranked?.sorted[0]?.price, res?.currency);
+    toast(`⭐ Obserwuję „${q}" — przy kolejnym sprawdzeniu powiem, czy staniało`);
   };
 
   const links = res?.links?.length ? res.links : liveLinks;
@@ -89,10 +111,34 @@ export default function BargainHunter({ onClose }: { onClose: () => void }) {
               autoFocus
               style={{ flex: 1, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: "12px 12px", fontSize: 16 }}
             />
-            <button className="btn primary" style={{ minWidth: 96 }} onClick={search} disabled={busy || !query.trim()}>
+            <button className="btn primary" style={{ minWidth: 96 }} onClick={() => search()} disabled={busy || !query.trim()}>
               {busy ? "Szukam…" : "🔍 Szukaj"}
             </button>
           </div>
+
+          {/* Obserwowanie ceny + szybkie powtórki wcześniejszych wyszukiwań */}
+          {query.trim() && (
+            <button
+              className="chip"
+              style={{ marginTop: 8, borderColor: watched ? "var(--ok, #58e08a)" : undefined }}
+              onClick={watch}
+              disabled={watched}
+            >
+              {watched ? "⭐ Obserwowane ✓" : "⭐ Obserwuj cenę"}
+            </button>
+          )}
+          {watches.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>⭐ Obserwowane — dotknij, by sprawdzić ponownie</div>
+              <div className="chips" style={{ flexWrap: "wrap" }}>
+                {watches.map((w) => (
+                  <span key={w.id} className="chip" onClick={() => search(w.query)}>
+                    {w.query}{w.bestPrice ? ` · od ${w.bestPrice.toLocaleString("pl-PL")} ${w.bestCurrency || "PLN"}` : ""}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {busy && <p className="muted" style={{ textAlign: "center", fontSize: 14, marginTop: 10 }}>🌐 Przeszukuję serwisy i porównuję ceny…</p>}
 
@@ -148,6 +194,40 @@ export default function BargainHunter({ onClose }: { onClose: () => void }) {
                 {allk.map((l) => <a key={l.name} className="chip" href={l.url} target="_blank" rel="noopener">{l.icon} {l.name}</a>)}
               </div>
             </div>
+          )}
+
+          {/* Zarządzanie obserwowanymi — rekord ceny, próg „cel", usuwanie */}
+          {watches.length > 0 && (
+            <details style={{ marginTop: 14 }}>
+              <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>⭐ Obserwowane przedmioty ({watches.length})</summary>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                {watches.map((w) => {
+                  const hit = !!(w.targetPrice && w.bestPrice && w.bestPrice <= w.targetPrice);
+                  return (
+                    <div key={w.id} className="journal-card" style={{ padding: "10px 12px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+                        <button className="chip" onClick={() => search(w.query)}>🔍 {w.query}</button>
+                        <button className="chip" onClick={() => removeWatch(w.id)} title="Przestań obserwować">✕</button>
+                      </div>
+                      <div style={{ fontSize: 13, marginTop: 6 }}>
+                        {w.bestPrice ? <>Najniższa widziana: <b>{w.bestPrice.toLocaleString("pl-PL")} {w.bestCurrency || "PLN"}</b></> : "Brak ceny — sprawdź ponownie"}
+                        {hit && <span style={{ color: "var(--ok, #58e08a)", marginLeft: 8 }}>🎯 cel osiągnięty</span>}
+                      </div>
+                      <label style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6, fontSize: 13 }}>
+                        🎯 Cel (alert poniżej):
+                        <input
+                          type="number"
+                          defaultValue={w.targetPrice ?? ""}
+                          placeholder="np. 200"
+                          onBlur={(e) => setTarget(w.id, Number(e.target.value) || 0)}
+                          style={{ width: 90, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 8, padding: "4px 6px" }}
+                        />
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            </details>
           )}
 
           {!ready && <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>💡 Inteligentne porównanie używa mózgu AI z wyszukiwaniem w sieci — wklej klucz w ⚙ → AI. Linki powyżej działają bez klucza.</p>}

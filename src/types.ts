@@ -171,6 +171,22 @@ export interface AppData {
   journal: JournalEntry[];
   leads: Lead[];
   flashcards: Flashcard[];
+  bargainWatch: WatchedItem[];
+}
+
+/** Obserwowany przedmiot w Łowcy Okazji — pamięta najlepszą widzianą cenę. */
+export interface WatchedItem {
+  id: string;
+  query: string;
+  /** Próg alertu — gdy cena spadnie do/poniżej, oznaczamy „cel osiągnięty". */
+  targetPrice?: number;
+  /** Najniższa cena widziana dotąd. */
+  bestPrice?: number;
+  bestCurrency?: string;
+  /** Ostatnio widziana cena (do wskazania kierunku zmiany). */
+  lastPrice?: number;
+  lastCheckedAt?: number;
+  createdAt: number;
 }
 
 /** Lead sprzedażowy (mini-CRM / Pulpit Sprzedaży). */
