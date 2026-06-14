@@ -28,6 +28,7 @@ export default function More({
   onWhereToBuy,
   onShoppingList,
   onNotifications,
+  onStatus,
   onClose,
 }: {
   onProjects: () => void;
@@ -53,11 +54,13 @@ export default function More({
   onWhereToBuy: () => void;
   onShoppingList: () => void;
   onNotifications: () => void;
+  onStatus: () => void;
   onClose: () => void;
 }) {
   useEscape(onClose);
   const items = [
     { id: "notifications", icon: "🔔", label: "Powiadomienia — co wymaga uwagi", fn: onNotifications },
+    { id: "status", icon: "🩺", label: "Stan systemu — co działa (zielone/czerwone)", fn: onStatus },
     { id: "profile", icon: "👤", label: "Mój profil — kim jestem (pamięć)", fn: onProfile },
     { id: "tasks", icon: "✅", label: "Zadania Pro — projekty, priorytety (GTD)", fn: onTasks },
     { id: "dayplan", icon: "🗓", label: "Plan Dnia — zadania i notatnik", fn: onDayPlan },

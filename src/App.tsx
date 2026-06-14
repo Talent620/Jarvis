@@ -12,6 +12,7 @@ import SalesDashboard from "./components/SalesDashboard";
 const MoneyHub = lazy(() => import("./components/MoneyHub"));
 import Help from "./components/Help";
 import More from "./components/More";
+import Boot from "./components/Boot";
 import LockScreen from "./components/LockScreen";
 import Onboarding, { needsOnboarding } from "./components/Onboarding";
 import LicenseGate from "./components/LicenseGate";
@@ -28,6 +29,7 @@ import { Suspense, lazy } from "react";
 const Gadgets = lazy(() => import("./components/Gadgets"));
 const HudVision = lazy(() => import("./components/HudVision"));
 const Studio = lazy(() => import("./components/Studio"));
+const SystemStatus = lazy(() => import("./components/SystemStatus"));
 const WebStudio = lazy(() => import("./components/WebStudio"));
 const AdminPanel = lazy(() => import("./components/AdminPanel"));
 const Cards = lazy(() => import("./components/Cards"));
@@ -167,6 +169,8 @@ export default function App() {
   const [showWhereToBuy, setShowWhereToBuy] = useState(false);
   const [showShoppingList, setShowShoppingList] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showStatus, setShowStatus] = useState(false);
+  const [booting, setBooting] = useState(true); // ładne „włączanie" przy starcie
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
   const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
 
@@ -185,10 +189,13 @@ export default function App() {
   useEffect(() => {
     loadVoices();
     ensureNotifPerms();
-    // Pełny ekran / natywny wygląd: pasek stanu edge-to-edge, ciemny.
+    // Okno na telefonie (nie „strona w przeglądarce"): pasek stanu jako lity ciemny
+    // pasek, a treść RENDEROWANA PONIŻEJ niego (overlay:false) — system sam pilnuje
+    // marginesów, więc nic nie chowa się pod paskiem stanu ani nawigacji.
     if (Capacitor.isNativePlatform()) {
-      StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
+      StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
       StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: "#04070f" }).catch(() => {});
     }
     if (!resolveProvider()) setShowSettings(true);
     // Skróty / udostępnienia → polecenie; jarvis://wake (nasłuch w tle) → start słuchania.
@@ -610,6 +617,7 @@ export default function App() {
 
   return (
     <div className={`app${messages.length ? " chatting" : ""}`}>
+      {booting && <Boot onDone={() => setBooting(false)} />}
       {clipSuggest && (
         <div className="clip-widget">
           <p>📋 {clipSuggest.slice(0, 120)}</p>
@@ -848,8 +856,14 @@ export default function App() {
           onWhereToBuy={() => setShowWhereToBuy(true)}
           onShoppingList={() => setShowShoppingList(true)}
           onNotifications={() => setShowNotifs(true)}
+          onStatus={() => setShowStatus(true)}
           onClose={() => setShowMore(false)}
         />
+      )}
+      {showStatus && (
+        <Suspense fallback={null}>
+          <SystemStatus onClose={() => setShowStatus(false)} />
+        </Suspense>
       )}
       {showStudio && (
         <Suspense fallback={null}>

@@ -5,6 +5,7 @@ import { primaryKey } from "./keys";
 import { isDesktop, isSpeechSupported } from "./voice";
 import { fetchTimeout } from "./http";
 import { Capacitor } from "@capacitor/core";
+import { wakeSupported } from "./wakeword";
 
 // === Centrum Sprawdzania ===
 // Przegląd WSZYSTKICH kluczowych funkcji JARVIS-a: co działa, co nie i DLACZEGO —
@@ -200,5 +201,74 @@ export async function runHealthCheck(onUpdate?: (items: HealthItem[]) => void, l
       : { id: "sync", icon: "☁", title: "Synchronizacja", status: "info", detail: "Dane trzymane lokalnie na tym urządzeniu (prywatnie). Sync między telefonem a komputerem to opcjonalny backend — instrukcja w proxy/README." },
   );
 
+  for (const f of featureChecks(s)) push(f);
+
   return items;
+}
+
+/**
+ * Dodatkowe pozycje statusu funkcji (czyste, bez sieci — łatwe do testów). Każda
+ * mówi wprost: działa (ok), do skonfigurowania (info) albo niedostępne tu (warn).
+ */
+export function featureChecks(s = store.settings): HealthItem[] {
+  const native = Capacitor.isNativePlatform();
+  const out: HealthItem[] = [];
+
+  // Studio obrazów — darmowo z kluczem Gemini, premium z fal.ai.
+  out.push(
+    primaryKey("gemini") || s.falApiKey?.trim()
+      ? { id: "studio", icon: "🎨", title: "Studio obrazów", status: "ok", detail: "Edycja zdjęć gotowa (Gemini Nano Banana za darmo, premium przez fal.ai)." }
+      : { id: "studio", icon: "🎨", title: "Studio obrazów", status: "info", detail: "Dodaj darmowy klucz Gemini (⚙ → AI), by edytować zdjęcia opisem." },
+  );
+
+  // Research (Tavily) — opcjonalny.
+  out.push(
+    s.tavilyApiKey?.trim()
+      ? { id: "research", icon: "📚", title: "Research ze źródłami", status: "ok", detail: "Tavily podłączony — odpowiedzi mają źródła [1][2]." }
+      : { id: "research", icon: "📚", title: "Research ze źródłami", status: "info", detail: "Opcjonalny darmowy klucz Tavily (⚙ → AI). Claude ma własne wyszukiwanie." },
+  );
+
+  // Smart home (Home Assistant).
+  out.push(
+    s.homeAssistantUrl?.trim() && s.homeAssistantToken?.trim()
+      ? { id: "smarthome", icon: "🏠", title: "Smart home", status: "ok", detail: "Home Assistant podłączony — sterujesz domem głosem." }
+      : { id: "smarthome", icon: "🏠", title: "Smart home", status: "info", detail: "Opcjonalne. Podłącz Home Assistant w ⚙ → Integracje, by sterować urządzeniami." },
+  );
+
+  // Automatyzacja (n8n).
+  out.push(
+    s.n8nUrl?.trim() && s.n8nToken?.trim()
+      ? { id: "n8n", icon: "⚙", title: "Automatyzacje (n8n)", status: "ok", detail: "n8n podłączony — JARVIS uruchamia Twoje scenariusze." }
+      : { id: "n8n", icon: "⚙", title: "Automatyzacje (n8n)", status: "info", detail: "Opcjonalne. Podłącz n8n w ⚙ → Integracje, by odpalać własne automatyzacje." },
+  );
+
+  // Słowo-klucz (wybudzanie głosem) — tylko na urządzeniu.
+  out.push(
+    !wakeSupported()
+      ? { id: "wake", icon: "📢", title: "Słowo-klucz „Jarvis”", status: "warn", detail: "Dostępne w aplikacji na telefonie (Android). Tu nieaktywne." }
+      : s.wakeWord || s.backgroundWake
+        ? { id: "wake", icon: "📢", title: "Słowo-klucz „Jarvis”", status: "ok", detail: "Wybudzanie głosem włączone — powiedz „Jarvis”." }
+        : { id: "wake", icon: "📢", title: "Słowo-klucz „Jarvis”", status: "info", detail: "Wyłączone. Włącz w ⚙ → Głos, by budzić asystenta słowem „Jarvis”.",
+            fix: { label: "Włącz słowo-klucz", apply: () => store.setSettings({ wakeWord: true }) } },
+  );
+
+  // Powiadomienia — tylko na urządzeniu.
+  out.push(
+    native
+      ? { id: "notifs", icon: "🔔", title: "Powiadomienia", status: "ok", detail: "Przypomnienia i alerty działają w tle." }
+      : { id: "notifs", icon: "🔔", title: "Powiadomienia", status: "info", detail: "Pełne powiadomienia w tle działają w aplikacji na telefonie." },
+  );
+
+  // Telefon/SMS/Kalendarz/Kontakty na urządzeniu.
+  out.push(
+    native
+      ? { id: "device", icon: "📱", title: "Telefon, SMS, kalendarz, kontakty", status: "ok", detail: "Dzwonienie, SMS, dodawanie wydarzeń i kontaktów — gotowe." }
+      : { id: "device", icon: "📱", title: "Telefon, SMS, kalendarz, kontakty", status: "info", detail: "Funkcje telefonu dostępne w aplikacji na telefonie (Android)." },
+  );
+
+  // Sterowanie komputerem (tylko Windows/.exe).
+  if (isDesktop())
+    out.push({ id: "desktop", icon: "🖥", title: "Sterowanie komputerem", status: "ok", detail: "Otwieranie aplikacji, pisanie, skróty, głośność, zrzut ekranu — gotowe." });
+
+  return out;
 }
