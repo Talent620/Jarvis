@@ -256,6 +256,9 @@ textarea,
   gap: 10px;
   scrollbar-width: thin;
   scrollbar-color: var(--cyan-dim) transparent;
+  /* Górna krawędź łagodnie się wygasza — pierwsza linia nie wygląda na uciętą */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
 }
 .convo::-webkit-scrollbar {
   width: 6px;
@@ -415,11 +418,22 @@ textarea,
 }
 
 /* --- Composer --- */
+.composer-tools {
+  display: flex;
+  gap: 6px;
+  padding: 4px 2px 0;
+}
+.composer-tools .mic {
+  width: 38px;
+  height: 38px;
+  font-size: 16px;
+  border-radius: 12px;
+}
 .composer {
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  padding: 8px 2px 4px;
+  padding: 6px 2px 4px;
 }
 .composer textarea {
   flex: 1;

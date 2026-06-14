@@ -53,7 +53,7 @@ export default function Composer({
           </button>
         </div>
       )}
-      <div className="composer">
+      <div className="composer-tools">
         <button className="mic" onClick={onAttach} title="Zdjęcie / aparat" disabled={busy}>
           📷
         </button>
@@ -75,6 +75,8 @@ export default function Composer({
             ⚖
           </button>
         )}
+      </div>
+      <div className="composer">
         <textarea
           ref={taRef}
           rows={1}
