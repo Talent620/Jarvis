@@ -66,6 +66,43 @@ describe("wybór kanału wysyłki e-maila", () => {
   });
 });
 
+describe("przekaźnik SMTP (telefon, bez Google OAuth)", () => {
+  it("backend + hasło aplikacji, bez desktopu → wysyła przez /v1/smtp/send (via SMTP) i zapisuje", async () => {
+    store.setData((d) => { d.sentMail = []; });
+    store.setSettings({ syncUrl: "https://w.workers.dev", syncToken: "tok", smtpUser: "a@gmail.com", smtpPass: "haslo" });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true })));
+    vi.stubGlobal("fetch", fetchMock);
+    const r = await sendOfferEmail("k@firma.pl", "Oferta", "Cześć", "Firma Z");
+    expect(r).toEqual({ ok: true, via: "SMTP" });
+    expect(fetchMock.mock.calls[0][0]).toContain("/v1/smtp/send");
+    expect(store.data.sentMail[0]).toMatchObject({ to: "k@firma.pl", via: "SMTP", company: "Firma Z" });
+  });
+
+  it("przekaźnik ma priorytet nad Gmailem OAuth (gdy jest hasło aplikacji)", async () => {
+    store.setSettings({ syncUrl: "https://w.workers.dev", syncToken: "tok", smtpUser: "a@gmail.com", smtpPass: "haslo" });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true })));
+    vi.stubGlobal("fetch", fetchMock);
+    await sendOfferEmail("k@firma.pl", "x", "y");
+    expect(fetchMock.mock.calls[0][0]).toContain("/v1/smtp/send");
+  });
+
+  it("backend zwraca błąd przekaźnika → czytelny komunikat", async () => {
+    store.setSettings({ syncUrl: "https://w.workers.dev", syncToken: "tok", smtpUser: "a@gmail.com", smtpPass: "zle" });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "Logowanie odrzucone." }), { status: 502 })));
+    const r = await sendOfferEmail("k@firma.pl", "x", "y");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/Logowanie/);
+  });
+
+  it("verifyMailConnection przez przekaźnik (telefon) → połączono", async () => {
+    store.setSettings({ syncUrl: "https://w.workers.dev", syncToken: "tok", smtpUser: "a@gmail.com", smtpPass: "haslo" });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true }))));
+    const r = await verifyMailConnection();
+    expect(r.ok).toBe(true);
+    expect(r.message).toMatch(/w tle|poprawnie/i);
+  });
+});
+
 describe("recordSent — skrzynka wysłanych", () => {
   it("dokłada najnowszy wpis na początek", () => {
     store.setData((d) => { d.sentMail = []; });

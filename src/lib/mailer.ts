@@ -6,9 +6,10 @@ import type { Lead } from "../types";
 
 // Wysyłka e-maili WPROST z aplikacji — inteligentny wybór kanału:
 //  1) DESKTOP (Windows): SMTP przez proces Electrona (sekcja ⚙ → Poczta).
-//  2) TELEFON / dowolna platforma: Gmail przez backend OAuth (⚙ → Synchronizacja
-//     + Połącz konto Google) — wysyła NATYWNIE, bez otwierania aplikacji Gmail.
-//  3) Brak obu: sygnał „otwórz Gmail compose" (zawsze działa, jedno tapnięcie).
+//  2) TELEFON + backend: przekaźnik SMTP (/v1/smtp/send) — wysyła „w tle" hasłem
+//     aplikacji, BEZ Google OAuth i BEZ otwierania Gmaila. Wymaga tylko ⚙ → Synchronizacja.
+//  3) TELEFON + Gmail OAuth: natywna wysyłka Gmailem (gdy połączono konto Google).
+//  4) Brak wszystkiego: sygnał „otwórz Gmail compose" (zawsze działa, jedno tapnięcie).
 
 export const canSendMail = (): boolean => {
   const s = store.settings;
@@ -17,31 +18,88 @@ export const canSendMail = (): boolean => {
 
 export const mailConfigured = (): boolean => !!store.settings.smtpUser?.trim() && !!store.settings.smtpPass?.trim();
 
-/** Czy backend Gmail (OAuth) jest skonfigurowany — działa też na telefonie. */
-export const hasBackendGmail = (): boolean => !!store.settings.syncUrl?.trim() && !!store.settings.syncToken?.trim();
+/** Czy backend (Worker) jest skonfigurowany — adres + token synchronizacji. */
+export const hasBackend = (): boolean => !!store.settings.syncUrl?.trim() && !!store.settings.syncToken?.trim();
 
-/** Czy w ogóle możemy wysłać mail bezpośrednio (SMTP albo backend Gmail). */
-export const canSendDirect = (): boolean => canSendMail() || hasBackendGmail();
+/** Czy backend Gmail (OAuth) jest skonfigurowany — działa też na telefonie. */
+export const hasBackendGmail = (): boolean => hasBackend();
+
+/**
+ * Czy możemy użyć przekaźnika SMTP przez backend (telefon „pyk i samo", bez Google OAuth):
+ * mamy backend (Worker) + adres i hasło aplikacji, a NIE jesteśmy na desktopie (tam SMTP idzie wprost).
+ */
+export const canRelaySmtp = (): boolean => hasBackend() && mailConfigured() && !((window as any)?.jarvisDesktop?.sendMail);
+
+/** Czy w ogóle możemy wysłać mail bezpośrednio (desktop SMTP, przekaźnik SMTP albo Gmail). */
+export const canSendDirect = (): boolean => canSendMail() || canRelaySmtp() || hasBackendGmail();
+
+/** Niskopoziomowe wywołanie backendu (Bearer = token synchronizacji). */
+async function relayCall(path: string, payload: unknown): Promise<{ ok: boolean; error?: string }> {
+  const s = store.settings;
+  const base = s.syncUrl!.trim().replace(/\/$/, "");
+  try {
+    const res = await fetch(`${base}${path}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${s.syncToken!.trim()}`, "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: (data as any).error || `Błąd (${res.status}).` };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: `Błąd połączenia z backendem: ${e instanceof Error ? e.message : e}` };
+  }
+}
+
+/** Wyślij e-mail przez przekaźnik SMTP w backendzie (telefon). */
+async function relaySend(to: string, subject: string, body: string): Promise<{ ok: boolean; error?: string }> {
+  const s = store.settings;
+  return relayCall("/v1/smtp/send", {
+    host: s.smtpHost?.trim() || "smtp.gmail.com",
+    port: Number(s.smtpPort) || 465,
+    user: s.smtpUser.trim(),
+    pass: s.smtpPass,
+    to: to.trim(),
+    subject,
+    body,
+  });
+}
 
 /** Sprawdź połączenie z pocztą (Windows): łączy się i loguje hasłem aplikacji, bez wysyłki. */
 export async function verifyMailConnection(): Promise<{ ok: boolean; message: string }> {
   const s = store.settings;
   const bridge = (window as any).jarvisDesktop;
-  if (!bridge?.verifyMail) {
-    return { ok: false, message: "Sprawdzanie działa w aplikacji na Windows. Na telefonie: ⚙ → Synchronizacja → Połącz konto Google → Sprawdź Gmaila." };
+  // Windows: sprawdzenie wprost przez most Electrona.
+  if (bridge?.verifyMail) {
+    if (!s.smtpUser?.trim() || !s.smtpPass?.trim()) {
+      return { ok: false, message: "Najpierw wpisz adres e-mail i hasło aplikacji." };
+    }
+    const r = await bridge.verifyMail({
+      host: s.smtpHost?.trim() || "smtp.gmail.com",
+      port: Number(s.smtpPort) || 465,
+      user: s.smtpUser.trim(),
+      pass: s.smtpPass,
+    });
+    if (r === "ok") return { ok: true, message: `✅ Poczta połączona poprawnie (${s.smtpUser.trim()}) — można wysyłać.` };
+    const msg = typeof r === "string" ? r.replace(/^err:/, "") : "Nie udało się połączyć — sprawdź dane poczty.";
+    return { ok: false, message: msg };
   }
-  if (!s.smtpUser?.trim() || !s.smtpPass?.trim()) {
-    return { ok: false, message: "Najpierw wpisz adres e-mail i hasło aplikacji." };
+  // Telefon: sprawdzenie przez przekaźnik SMTP w backendzie (hasło aplikacji).
+  if (hasBackend()) {
+    if (!s.smtpUser?.trim() || !s.smtpPass?.trim()) {
+      return { ok: false, message: "Najpierw wpisz adres e-mail i hasło aplikacji (⚙ → Poczta)." };
+    }
+    const r = await relayCall("/v1/smtp/verify", {
+      host: s.smtpHost?.trim() || "smtp.gmail.com",
+      port: Number(s.smtpPort) || 465,
+      user: s.smtpUser.trim(),
+      pass: s.smtpPass,
+    });
+    return r.ok
+      ? { ok: true, message: `✅ Poczta połączona poprawnie (${s.smtpUser.trim()}) — telefon wysyła w tle.` }
+      : { ok: false, message: r.error || "Nie udało się połączyć — sprawdź dane poczty i backend." };
   }
-  const r = await bridge.verifyMail({
-    host: s.smtpHost?.trim() || "smtp.gmail.com",
-    port: Number(s.smtpPort) || 465,
-    user: s.smtpUser.trim(),
-    pass: s.smtpPass,
-  });
-  if (r === "ok") return { ok: true, message: `✅ Poczta połączona poprawnie (${s.smtpUser.trim()}) — można wysyłać.` };
-  const msg = typeof r === "string" ? r.replace(/^err:/, "") : "Nie udało się połączyć — sprawdź dane poczty.";
-  return { ok: false, message: msg };
+  return { ok: false, message: "Aby wysyłać bez Gmaila: na Windows wpisz adres + hasło aplikacji; na telefonie dodaj backend w ⚙ → Synchronizacja." };
 }
 
 /** Wyślij e-mail teraz przez SMTP (desktop). Zwraca null = sukces albo treść błędu. */
@@ -86,6 +144,12 @@ export async function sendOfferEmail(to: string, subject: string, body: string, 
   if (canSendMail()) {
     const err = await sendMailNow(to, subject, body);
     if (err) return { ok: false, error: err };
+    recordSent({ to: to.trim(), subject, via: "SMTP", company });
+    return { ok: true, via: "SMTP" };
+  }
+  if (canRelaySmtp()) {
+    const r = await relaySend(to, subject, body);
+    if (!r.ok) return { ok: false, error: r.error || "Nie udało się wysłać przez backend." };
     recordSent({ to: to.trim(), subject, via: "SMTP", company });
     return { ok: true, via: "SMTP" };
   }

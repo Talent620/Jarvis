@@ -239,8 +239,8 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
                 </div>
                 {!canSendDirect() && email && (
                   <p className="muted" style={{ fontSize: 11, marginTop: 6 }}>
-                    💡 Chcesz wysyłać jednym kliknięciem, bez otwierania poczty? Na Windows: ⚙ → Poczta.
-                    Na telefonie: ⚙ → Synchronizacja → „Połącz konto Google" (wysyłka przez Gmaila w tle).
+                    💡 Chcesz wysyłać jednym kliknięciem, bez otwierania poczty? Na Windows: ⚙ → Poczta (adres + hasło aplikacji).
+                    Na telefonie: ⚙ → Poczta (adres + hasło aplikacji) + ⚙ → Synchronizacja (adres backendu + token) — wtedy telefon wysyła w tle, bez Gmaila.
                   </p>
                 )}
                 {!email && <p className="muted" style={{ fontSize: 11, marginTop: 6 }}>Brak e-maila firmy — wiadomość otworzy się bez adresata (uzupełnij po znalezieniu adresu na stronie/Mapach).</p>}

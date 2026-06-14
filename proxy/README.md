@@ -73,6 +73,13 @@ Adres workera (np. `https://jarvis-bff.twoja-subdomena.workers.dev`) wpisz w apl
 | `/v1/search` | POST | research z cytatami (Tavily) |
 | `/v1/embed` | POST | embeddingi (Gemini text-embedding-004) |
 | `/v1/sync` | GET/POST | synchronizacja danych (Bearer = token sync) |
+| `/v1/smtp/send` | POST | przekaźnik SMTP — telefon wysyła e-mail hasłem aplikacji, bez Google OAuth (Bearer = token sync) |
+| `/v1/smtp/verify` | POST | sprawdzenie logowania SMTP bez wysyłki (Bearer = token sync) |
+
+> **Wysyłka e-maili z telefonu „w tle" — najprościej (bez Google).** Po wdrożeniu backendu
+> wystarczy w aplikacji: ⚙ → Poczta (adres Gmail + hasło aplikacji) oraz ⚙ → Synchronizacja
+> (adres backendu + token). Telefon wysyła wtedy przez `/v1/smtp/send` — jeden klik, bez
+> otwierania Gmaila i bez konfiguracji OAuth. (Pełne OAuth potrzebne tylko do czytania skrzynki/Kalendarza.)
 
 > Token sync to po prostu Twoja prywatna nazwa przestrzeni danych w KV — trzymaj go w tajemnicy;
 > każdy, kto go zna, ma dostęp do Twoich zsynchronizowanych danych.

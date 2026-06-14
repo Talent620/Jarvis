@@ -20,6 +20,69 @@
 
 const ALLOWED_OPENAI_HOSTS = ["api.groq.com", "openrouter.ai", "integrate.api.nvidia.com", "models.github.ai"];
 
+// Przekaźnik SMTP (telefon wysyła „w tle" hasłem aplikacji, bez Google OAuth).
+// Logika lustrzana do electron/smtp.cjs, ale na gniazdach Cloudflare Workers.
+import { connect } from "cloudflare:sockets";
+
+async function smtpRelay({ host, port, user, pass, to, subject, body, verifyOnly }) {
+  const HOST = String(host || "smtp.gmail.com");
+  const PORT = Number(port) || 465;
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+  const b64 = (s) => btoa(unescape(encodeURIComponent(String(s))));
+  const fail = (error) => ({ ok: false, error });
+
+  let socket, writer, reader, buf = "";
+  try {
+    socket = connect({ hostname: HOST, port: PORT }, { secureTransport: "on", allowHalfOpen: false });
+    writer = socket.writable.getWriter();
+    reader = socket.readable.getReader();
+  } catch (e) {
+    return fail(`Nie udało się połączyć z serwerem poczty: ${e?.message || e}`);
+  }
+  const close = async () => { try { await writer.close(); } catch { /* ignore */ } try { await reader.cancel(); } catch { /* ignore */ } };
+  const readResp = async () => {
+    for (let i = 0; i < 60; i++) {
+      const lines = buf.split(/\r?\n/).filter(Boolean);
+      const last = lines[lines.length - 1] || "";
+      if (/^\d{3} /.test(last)) { buf = ""; return last; }
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+    }
+    const lines = buf.split(/\r?\n/).filter(Boolean);
+    buf = "";
+    return lines[lines.length - 1] || "";
+  };
+  const send = (s) => writer.write(enc.encode(s + "\r\n"));
+  const authErr = "Logowanie odrzucone — sprawdź adres i HASŁO APLIKACJI (nie zwykłe hasło Gmaila).";
+
+  try {
+    let r = await readResp(); if (!/^220/.test(r)) return fail(`Serwer: ${r.slice(0, 120)}`);
+    await send("EHLO jarvis.worker"); r = await readResp(); if (!/^250/.test(r)) return fail(`EHLO: ${r.slice(0, 120)}`);
+    await send("AUTH LOGIN"); r = await readResp(); if (!/^334/.test(r)) return fail(`AUTH: ${r.slice(0, 120)}`);
+    await send(b64(user)); r = await readResp(); if (!/^334/.test(r)) return fail(`Login: ${r.slice(0, 120)}`);
+    await send(b64(pass)); r = await readResp(); if (!/^235/.test(r)) return fail(authErr);
+    if (verifyOnly) { await send("QUIT"); await close(); return { ok: true }; }
+    await send(`MAIL FROM:<${user}>`); r = await readResp(); if (!/^250/.test(r)) return fail(`MAIL FROM: ${r.slice(0, 120)}`);
+    await send(`RCPT TO:<${to}>`); r = await readResp(); if (!/^250/.test(r)) return fail(`RCPT TO: ${r.slice(0, 120)}`);
+    await send("DATA"); r = await readResp(); if (!/^354/.test(r)) return fail(`DATA: ${r.slice(0, 120)}`);
+    const bodyB64 = b64(body).replace(/(.{76})/g, "$1\r\n");
+    const data = [
+      `From: <${user}>`, `To: <${to}>`,
+      `Subject: =?UTF-8?B?${b64(subject)}?=`,
+      "MIME-Version: 1.0", 'Content-Type: text/plain; charset="utf-8"',
+      "Content-Transfer-Encoding: base64", "", bodyB64, ".",
+    ].join("\r\n");
+    await send(data); r = await readResp(); if (!/^250/.test(r)) return fail(`Wysyłka: ${r.slice(0, 120)}`);
+    await send("QUIT"); await close();
+    return { ok: true };
+  } catch (e) {
+    await close();
+    return fail(`Błąd SMTP: ${e?.message || e}`);
+  }
+}
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
@@ -345,6 +408,23 @@ export default {
           body: JSON.stringify({ raw }),
         });
         return json(r.ok ? 200 : 502, r.ok ? { ok: true } : { error: "Nie udało się wysłać." });
+      }
+
+      // --- SMTP RELAY (telefon: wysyłka hasłem aplikacji, bez Google OAuth) ---
+      if (path === "/v1/smtp/send" && req.method === "POST") {
+        if (!bearer(req)) return json(401, { error: "Brak tokenu synchronizacji." });
+        const { host, port, user, pass, to, subject, body } = await req.json();
+        if (!user || !pass) return json(400, { error: "Brak danych poczty (adres + hasło aplikacji)." });
+        if (!to || !String(to).includes("@")) return json(400, { error: "Brak poprawnego adresu odbiorcy." });
+        const r = await smtpRelay({ host, port, user, pass, to, subject: String(subject || ""), body: String(body || "") });
+        return json(r.ok ? 200 : 502, r.ok ? { ok: true } : { error: r.error });
+      }
+      if (path === "/v1/smtp/verify" && req.method === "POST") {
+        if (!bearer(req)) return json(401, { error: "Brak tokenu synchronizacji." });
+        const { host, port, user, pass } = await req.json();
+        if (!user || !pass) return json(400, { error: "Brak danych poczty (adres + hasło aplikacji)." });
+        const r = await smtpRelay({ host, port, user, pass, verifyOnly: true });
+        return json(r.ok ? 200 : 502, r.ok ? { ok: true } : { error: r.error });
       }
 
       // --- GOOGLE CALENDAR ---
