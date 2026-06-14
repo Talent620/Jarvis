@@ -10,6 +10,15 @@
   --text-dim: #7fa6bd;
   --danger: #ff6b6b;
   --ok: #62e6a8;
+  /* Powierzchnie, promienie i cienie — wspólna, nowoczesna baza dla wszystkich ekranów */
+  --bg-3: #0a1426;
+  --surface: rgba(108, 231, 255, 0.05);
+  --surface-2: rgba(108, 231, 255, 0.09);
+  --radius: 14px;
+  --radius-lg: 22px;
+  --shadow-1: 0 6px 24px rgba(0, 0, 0, 0.38);
+  --shadow-2: 0 12px 48px rgba(0, 0, 0, 0.5);
+  --accent-grad: linear-gradient(135deg, var(--cyan), var(--cyan-dim));
   font-family: "Rajdhani", system-ui, sans-serif;
 }
 
@@ -257,23 +266,26 @@ textarea,
 }
 .bubble {
   max-width: 88%;
-  padding: 10px 14px;
-  border-radius: 14px;
-  line-height: 1.4;
+  padding: 11px 15px;
+  border-radius: 16px;
+  line-height: 1.45;
   font-size: 16px;
   white-space: pre-wrap;
   word-break: break-word;
   border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
 }
 .bubble.user {
   align-self: flex-end;
-  background: rgba(255, 206, 107, 0.08);
+  background: linear-gradient(135deg, rgba(255, 206, 107, 0.12), rgba(255, 206, 107, 0.05));
   border-color: rgba(255, 206, 107, 0.25);
   color: #ffe7b8;
+  border-bottom-right-radius: 6px;
 }
 .bubble.assistant {
   align-self: flex-start;
-  background: rgba(108, 231, 255, 0.07);
+  background: linear-gradient(135deg, var(--surface-2), var(--surface));
+  border-bottom-left-radius: 6px;
 }
 .bubble .tools {
   margin-top: 6px;
@@ -483,20 +495,21 @@ button:disabled {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--bg-2);
+  background: linear-gradient(180deg, var(--bg-3), var(--bg-2) 24%);
   border: 1px solid var(--line-strong);
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 -8px 40px rgba(108, 231, 255, 0.18);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-2), 0 0 0 1px rgba(108, 231, 255, 0.05) inset;
 }
 @media (min-width: 600px) {
   .panel {
-    border-radius: 18px;
+    border-radius: var(--radius-lg);
   }
 }
 .panel-head {
   flex: 0 0 auto;
   padding: 14px 18px 12px;
   border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(108, 231, 255, 0.07), transparent);
 }
 .panel-body {
   flex: 1 1 auto;
@@ -515,10 +528,11 @@ button:disabled {
   margin-top: 0;
 }
 .grabber {
-  width: 38px;
+  width: 40px;
   height: 4px;
   border-radius: 4px;
-  background: var(--line-strong);
+  background: var(--accent-grad);
+  opacity: 0.55;
   margin: 0 auto 10px;
 }
 .panel h2 {
@@ -527,6 +541,7 @@ button:disabled {
   color: var(--cyan);
   margin: 0;
   font-size: 16px;
+  text-shadow: 0 0 18px rgba(108, 231, 255, 0.35);
 }
 .panel h3 {
   color: var(--gold);
@@ -550,12 +565,33 @@ button:disabled {
   width: 100%;
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
   color: var(--text);
-  padding: 10px 12px;
+  padding: 11px 12px;
   font-family: inherit;
   font-size: 15px;
   outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+/* Spójny, nowoczesny stan focus dla wszystkich pól w panelach */
+.panel-body input:focus,
+.panel-body select:focus,
+.panel-body textarea:focus,
+.field input:focus,
+.field select:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(108, 231, 255, 0.16);
+}
+/* Dyskretny pasek przewijania w panelach (desktop) */
+.panel-body::-webkit-scrollbar {
+  width: 8px;
+}
+.panel-body::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 8px;
+}
+.panel-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 .row {
   display: flex;
@@ -613,12 +649,17 @@ button:disabled {
   color: var(--text-dim);
   text-decoration: line-through;
 }
+@media (hover: hover) {
+  .list-item:hover {
+    color: var(--cyan);
+  }
+}
 .btn {
-  background: rgba(108, 231, 255, 0.1);
+  background: var(--surface-2);
   border: 1px solid var(--line-strong);
   color: var(--cyan);
-  border-radius: 10px;
-  padding: 10px 16px;
+  border-radius: 12px;
+  padding: 11px 16px;
   font-family: inherit;
   font-size: 14px;
   letter-spacing: 1px;
@@ -627,8 +668,22 @@ button:disabled {
   margin-top: 8px;
 }
 .btn.primary {
-  background: var(--cyan);
+  background: var(--accent-grad);
+  border-color: transparent;
   color: #04141d;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(108, 231, 255, 0.28);
+}
+@media (hover: hover) {
+  .btn:hover {
+    border-color: var(--cyan);
+    background: var(--surface-2);
+    filter: brightness(1.08);
+  }
+  .btn.primary:hover {
+    box-shadow: 0 8px 26px rgba(108, 231, 255, 0.42);
+    filter: brightness(1.05);
+  }
 }
 .muted {
   color: var(--text-dim);
@@ -672,16 +727,23 @@ button:disabled {
   white-space: nowrap;
   font-size: 13px;
   font-family: inherit;
-  padding: 8px 13px;
+  padding: 8px 14px;
   border-radius: 20px;
   border: 1px solid var(--line);
-  background: rgba(108, 231, 255, 0.06);
+  background: var(--surface);
   color: var(--cyan);
   cursor: pointer;
   flex-shrink: 0;
+  text-decoration: none;
 }
 .chip:active {
-  background: rgba(108, 231, 255, 0.18);
+  background: var(--surface-2);
+}
+@media (hover: hover) {
+  .chip:hover {
+    border-color: var(--line-strong);
+    background: var(--surface-2);
+  }
 }
 .chip.on {
   background: rgba(108, 231, 255, 0.22);
@@ -692,15 +754,23 @@ button:disabled {
 /* --- Dziennik (osobiste przemyślenia) --- */
 .journal-card {
   border: 1px solid var(--line);
-  background: rgba(108, 231, 255, 0.035);
-  border-radius: 12px;
+  background: linear-gradient(180deg, var(--surface), rgba(108, 231, 255, 0.02));
+  border-radius: var(--radius);
   padding: 14px 15px;
   margin-bottom: 10px;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  box-shadow: var(--shadow-1);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 .journal-card:active {
   border-color: var(--cyan);
-  background: rgba(108, 231, 255, 0.08);
+  background: var(--surface-2);
+}
+@media (hover: hover) {
+  .journal-card:hover {
+    border-color: var(--line-strong);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-2);
+  }
 }
 .journal-card .chip {
   font-size: 11px;
