@@ -27,6 +27,8 @@ export default function Translator({ onClose }: { onClose: () => void }) {
   const [interim, setInterim] = useState("");
   const [busy, setBusy] = useState(false);
   const [auto, setAuto] = useState(false);
+  const [face, setFace] = useState(false);       // tryb „twarzą w twarz"
+  const [showPhrases, setShowPhrases] = useState(false);
   const [err, setErr] = useState("");
   const listenerRef = useRef<VoiceListener | null>(null);
   const genRef = useRef(0); // numer „tury" — odsiewa spóźnione wyniki starego nasłuchu
@@ -52,6 +54,28 @@ export default function Translator({ onClose }: { onClose: () => void }) {
     setSpeaking(true);
     try { await speakLang(text, ttsLang, { voice }); } finally { setSpeaking(false); }
   };
+
+  // Zagajenia — gotowe miłe zdania; JARVIS tłumaczy na jej język i mówi na głos.
+  const PHRASES = [
+    "Bardzo miło mi Cię poznać.",
+    "Masz piękny uśmiech.",
+    "Napijesz się kawy albo herbaty?",
+    "Opowiedz mi coś o sobie.",
+    "Świetnie się z Tobą rozmawia.",
+    "Wyglądasz dziś przepięknie.",
+  ];
+  const sayPhrase = async (pl: string) => {
+    if (!ready) { setErr("Najpierw wpisz klucz AI w ⚙ → AI."); return; }
+    setBusy(true);
+    const dst = await translateText(pl, langB.name);
+    setBusy(false);
+    setLog((l) => [...l, { side: "A", src: pl, dst: dst || pl }]);
+    if (dst) await say(dst, langB.tts);
+  };
+
+  // Ostatnie wypowiedzi dla widoku „twarzą w twarz".
+  const herLast = [...log].reverse().find((t) => t.side === "A")?.dst || "";   // to, co słyszy ona
+  const yourLast = [...log].reverse().find((t) => t.side === "B")?.dst || "";  // to, co słyszysz Ty
 
   const listen = (side: "A" | "B") => {
     if (!ready) { setErr("Najpierw wpisz klucz AI w ⚙ → AI — to mózg tłumacza."); return; }
@@ -143,18 +167,24 @@ export default function Translator({ onClose }: { onClose: () => void }) {
             {premium ? "✨ Głos premium (Gemini) — naturalny, brzmi jak żywy człowiek." : "Głos systemowy. Dodaj klucz Gemini w ⚙ → AI, by włączyć naturalny głos premium ✨."}
           </p>
 
-          <label className="row" style={{ cursor: "pointer", margin: "8px 0" }}>
-            <span>🔁 Tryb Auto — po tłumaczeniu od razu słucha drugiej osoby</span>
+          <label className="row" style={{ cursor: "pointer", margin: "8px 0 2px" }}>
+            <span>🔁 Tryb Auto — po tłumaczeniu słucha drugiej osoby</span>
             <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
           </label>
+          <label className="row" style={{ cursor: "pointer", margin: "2px 0 6px" }}>
+            <span>👥 Twarzą w twarz — ekran dzielony (telefon między Wami)</span>
+            <input type="checkbox" checked={face} onChange={(e) => setFace(e.target.checked)} />
+          </label>
 
-          {/* Przyciski mówienia */}
-          <div style={{ display: "flex", gap: 8, margin: "6px 0" }}>
-            <MicBtn side="A" lang={langA} />
-            <MicBtn side="B" lang={langB} />
-          </div>
+          {/* Zagajenia — gotowe miłe zdania, JARVIS powie je w jej języku */}
+          <button className="btn" style={{ marginTop: 0 }} onClick={() => setShowPhrases((v) => !v)}>💛 Zagajenia (gotowe miłe zdania)</button>
+          {showPhrases && (
+            <div className="chips" style={{ flexWrap: "wrap", marginTop: 6 }}>
+              {PHRASES.map((p) => <span key={p} className="chip" onClick={() => sayPhrase(p)}>{p}</span>)}
+            </div>
+          )}
 
-          {/* Status na żywo */}
+          {/* Status na żywo (w obu trybach) */}
           {listening && (
             <p style={{ textAlign: "center", color: "var(--ok, #58e08a)", fontSize: 14, margin: "6px 0" }}>
               ● słucham… {interim && <span style={{ color: "var(--text-dim)", fontStyle: "italic" }}>„{interim}"</span>}
@@ -165,35 +195,55 @@ export default function Translator({ onClose }: { onClose: () => void }) {
           {err && <p style={{ color: "#e08558", fontSize: 13 }}>{err}</p>}
           {!ready && <p className="muted" style={{ fontSize: 12 }}>💡 Tłumacz używa mózgu AI — wklej klucz w ⚙ → AI (np. Claude).</p>}
 
-          {/* Rozmowa (dymki kolorowane wg strony) */}
-          <div style={{ marginTop: 10 }}>
-            {log.length === 0 ? (
-              <p className="muted" style={{ textAlign: "center", padding: "16px 0" }}>
-                Dotknij przycisku swojego języka i mów. JARVIS przetłumaczy i przeczyta na głos w drugim języku. 💛
-              </p>
-            ) : (
-              [...log].reverse().map((t, i) => {
-                const from = t.side === "A" ? langA : langB;
-                const to = t.side === "A" ? langB : langA;
-                const mine = t.side === "A";
-                return (
-                  <div key={log.length - i} className="journal-card"
-                    style={{ padding: "10px 12px", borderLeft: `3px solid ${mine ? "var(--cyan)" : "var(--gold)"}` }}>
-                    <div className="muted" style={{ fontSize: 11 }}>{from.flag} {from.label} → {to.flag} {to.label}</div>
-                    <div style={{ fontSize: 13, opacity: 0.65 }}>{t.src}</div>
-                    <div style={{ fontSize: 18, marginTop: 3, fontWeight: 500 }}>{t.dst}</div>
-                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                      <button className="chip" onClick={() => say(t.dst, to.tts)}>🔊 Powtórz</button>
-                      <button className="chip" onClick={() => copyWithToast(t.dst)}>📋 Kopiuj</button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {log.length > 0 && (
-            <button className="btn" style={{ marginTop: 8 }} onClick={() => setLog([])}>🗑 Wyczyść rozmowę</button>
+          {face ? (
+            /* WIDOK „TWARZĄ W TWARZ": góra obrócona dla niej, dół dla Ciebie */
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+              <div className="journal-card" style={{ transform: "rotate(180deg)", minHeight: "26vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", gap: 12, borderLeft: "3px solid var(--gold)" }}>
+                <div style={{ fontSize: 22, fontWeight: 500 }}>{herLast || `${langB.flag} …`}</div>
+                <div style={{ width: "70%" }}><MicBtn side="B" lang={langB} /></div>
+              </div>
+              <div className="journal-card" style={{ minHeight: "26vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", gap: 12, borderLeft: "3px solid var(--cyan)" }}>
+                <div style={{ fontSize: 22, fontWeight: 500 }}>{yourLast || `${langA.flag} …`}</div>
+                <div style={{ width: "70%" }}><MicBtn side="A" lang={langA} /></div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Przyciski mówienia */}
+              <div style={{ display: "flex", gap: 8, margin: "6px 0" }}>
+                <MicBtn side="A" lang={langA} />
+                <MicBtn side="B" lang={langB} />
+              </div>
+              {/* Rozmowa (dymki kolorowane wg strony) */}
+              <div style={{ marginTop: 10 }}>
+                {log.length === 0 ? (
+                  <p className="muted" style={{ textAlign: "center", padding: "16px 0" }}>
+                    Dotknij przycisku swojego języka i mów. JARVIS przetłumaczy i przeczyta na głos w drugim języku. 💛
+                  </p>
+                ) : (
+                  [...log].reverse().map((t, i) => {
+                    const from = t.side === "A" ? langA : langB;
+                    const to = t.side === "A" ? langB : langA;
+                    const mine = t.side === "A";
+                    return (
+                      <div key={log.length - i} className="journal-card"
+                        style={{ padding: "10px 12px", borderLeft: `3px solid ${mine ? "var(--cyan)" : "var(--gold)"}` }}>
+                        <div className="muted" style={{ fontSize: 11 }}>{from.flag} {from.label} → {to.flag} {to.label}</div>
+                        <div style={{ fontSize: 13, opacity: 0.65 }}>{t.src}</div>
+                        <div style={{ fontSize: 18, marginTop: 3, fontWeight: 500 }}>{t.dst}</div>
+                        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                          <button className="chip" onClick={() => say(t.dst, to.tts)}>🔊 Powtórz</button>
+                          <button className="chip" onClick={() => copyWithToast(t.dst)}>📋 Kopiuj</button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              {log.length > 0 && (
+                <button className="btn" style={{ marginTop: 8 }} onClick={() => setLog([])}>🗑 Wyczyść rozmowę</button>
+              )}
+            </>
           )}
         </div>
         <div className="panel-foot">

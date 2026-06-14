@@ -250,8 +250,8 @@ export async function geminiSpeak(text: string, voiceName?: string): Promise<boo
   for (let i = 0; i < chunks.length; i++) {
     const url = await next;
     if (token !== speakToken) return true; // przerwano (stopSpeaking)
+    if (i === 0 && !url) return false; // pierwszy kawałek padł → fallback (głos systemowy), bez zbędnej syntezy
     next = i + 1 < chunks.length ? synth(chunks[i + 1]) : Promise.resolve(null);
-    if (i === 0 && !url) return false; // pierwszy kawałek padł → pozwól na fallback (głos systemowy)
     if (url) {
       const ok = await playUrlEnded(url);
       if (!ok || token !== speakToken) return true; // przerwane odtwarzanie
