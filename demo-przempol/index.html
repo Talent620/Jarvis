@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Przempol Solec — Świeże szparagi i borówka amerykańska prosto z gospodarstwa</title>
+<meta name="description" content="Przempol — rodzinne gospodarstwo z Solca. Świeże szparagi zielone i białe oraz borówka amerykańska. Hurt i detal, profesjonalny transport po Polsce i Europie. Zamów świeżość prosto z pola." />
+<style>
+  :root{
+    --green:#2f7d32; --green-d:#1f5e23; --green-l:#eaf4ea;
+    --berry:#3b2a5a; --berry-2:#5a3e8c;
+    --ink:#1d2521; --muted:#5d6b62; --cream:#fbfaf5; --line:#e6e8e0; --gold:#d8a13a;
+    --radius:18px; --shadow:0 14px 40px rgba(31,94,35,.12);
+    --max:1140px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 22px}
+  h1,h2,h3{line-height:1.15;letter-spacing:-.02em}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;background:var(--green);color:#fff;padding:14px 26px;border-radius:999px;font-weight:700;font-size:1rem;border:0;cursor:pointer;transition:.2s transform,.2s box-shadow,.2s background;box-shadow:0 8px 22px rgba(47,125,50,.32)}
+  .btn:hover{transform:translateY(-2px);background:var(--green-d);box-shadow:0 12px 30px rgba(47,125,50,.42)}
+  .btn.ghost{background:#fff;color:var(--green-d);box-shadow:none;border:2px solid var(--green)}
+  .btn.ghost:hover{background:var(--green-l)}
+
+  /* NAV */
+  header.nav{position:sticky;top:0;z-index:50;background:rgba(251,250,245,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .nav .wrap{display:flex;align-items:center;justify-content:space-between;height:72px}
+  .logo{display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:1.25rem;color:var(--green-d)}
+  .logo .leaf{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--green),var(--green-d));display:grid;place-items:center;color:#fff;font-size:1.2rem}
+  .nav nav{display:flex;gap:1.6rem;align-items:center}
+  .nav nav a{font-weight:600;color:var(--muted);transition:.2s}
+  .nav nav a:hover{color:var(--green-d)}
+  .nav .cta-phone{font-weight:800;color:var(--green-d)}
+  @media(max-width:860px){.nav nav .hide{display:none}}
+
+  /* HERO */
+  .hero{position:relative;overflow:hidden;background:
+     radial-gradient(1100px 500px at 85% -10%, rgba(90,62,140,.16), transparent 60%),
+     radial-gradient(900px 500px at 0% 110%, rgba(47,125,50,.18), transparent 55%),
+     linear-gradient(180deg,#fff, var(--cream));}
+  .hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;padding:78px 22px 88px}
+  .badge{display:inline-flex;align-items:center;gap:.5rem;background:var(--green-l);color:var(--green-d);font-weight:700;font-size:.85rem;padding:7px 14px;border-radius:999px;border:1px solid #cfe6cf}
+  .hero h1{font-size:clamp(2.2rem,5vw,3.6rem);margin:18px 0 16px;font-weight:800}
+  .hero h1 .em{color:var(--green);}
+  .hero p.lead{font-size:1.2rem;color:var(--muted);max-width:33ch;margin-bottom:28px}
+  .hero .actions{display:flex;gap:14px;flex-wrap:wrap}
+  .trust{display:flex;gap:26px;margin-top:34px;flex-wrap:wrap}
+  .trust div{font-size:.9rem;color:var(--muted)}
+  .trust b{display:block;font-size:1.5rem;color:var(--green-d);font-weight:800}
+  /* hero art */
+  .art{position:relative;height:430px;border-radius:26px;overflow:hidden;box-shadow:var(--shadow);background:
+      linear-gradient(135deg,#3f8f43,#1f5e23);}
+  .art .sun{position:absolute;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#ffe39a,#f6c453);top:34px;right:40px;box-shadow:0 0 70px rgba(246,196,83,.6)}
+  .art .field{position:absolute;left:0;right:0;bottom:0;height:58%;background:
+     repeating-linear-gradient(95deg,#2a7d2e 0 26px,#256e29 26px 52px);transform:skewY(-3deg);transform-origin:bottom}
+  .art .rows{position:absolute;left:0;right:0;bottom:0;height:58%}
+  .chip-float{position:absolute;background:#fff;border-radius:14px;padding:12px 16px;box-shadow:0 10px 26px rgba(0,0,0,.16);font-weight:700;display:flex;gap:.5rem;align-items:center;font-size:.95rem}
+  .chip-float .dot{width:10px;height:10px;border-radius:50%}
+  .cf1{top:30px;left:24px;animation:float 5s ease-in-out infinite}
+  .cf2{bottom:34px;right:22px;animation:float 6s ease-in-out infinite .6s}
+  .cf3{bottom:120px;left:-10px;animation:float 5.5s ease-in-out infinite .3s}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+
+  /* SECTION */
+  section{padding:74px 0}
+  .eyebrow{color:var(--green);font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:.8rem}
+  .sec-h{font-size:clamp(1.8rem,3.5vw,2.6rem);font-weight:800;margin:10px 0 14px}
+  .sec-sub{color:var(--muted);max-width:60ch;font-size:1.08rem}
+  .center{text-align:center;margin:0 auto}
+
+  /* PRODUCTS */
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:42px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;transition:.25s transform,.25s box-shadow}
+  .card:hover{transform:translateY(-6px);box-shadow:var(--shadow)}
+  .card .top{height:140px;display:grid;place-items:center;font-size:3.4rem}
+  .c-green{background:linear-gradient(135deg,#cfeccf,#9fd6a1)}
+  .c-white{background:linear-gradient(135deg,#f2f3ec,#dfe3d4)}
+  .c-berry{background:linear-gradient(135deg,#cdbce8,#9b81c7)}
+  .c-truck{background:linear-gradient(135deg,#dfeede,#bfe0c1)}
+  .c-farm{background:linear-gradient(135deg,#fbe9c4,#f1cf86)}
+  .c-box{background:linear-gradient(135deg,#d7ead8,#aed4b0)}
+  .card .body{padding:22px}
+  .card h3{font-size:1.25rem;margin-bottom:6px}
+  .card p{color:var(--muted);font-size:.98rem}
+  .tag{display:inline-block;margin-top:12px;font-size:.8rem;font-weight:700;color:var(--green-d);background:var(--green-l);padding:5px 12px;border-radius:999px}
+
+  /* WHY band */
+  .why{background:linear-gradient(135deg,var(--green-d),var(--green));color:#fff;border-radius:30px;padding:54px;margin-top:10px}
+  .why .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:30px;margin-top:30px}
+  .why .grid h3{font-size:1.15rem;display:flex;gap:.5rem;align-items:center;margin-bottom:6px}
+  .why .grid p{opacity:.9;font-size:.96rem}
+  .why .ico{font-size:1.5rem}
+
+  /* STEPS */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:42px;counter-reset:s}
+  .step{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:28px;position:relative}
+  .step::before{counter-increment:s;content:counter(s);position:absolute;top:-18px;left:24px;width:42px;height:42px;border-radius:12px;background:var(--green);color:#fff;font-weight:800;display:grid;place-items:center;font-size:1.2rem;box-shadow:0 8px 18px rgba(47,125,50,.4)}
+  .step h3{margin:10px 0 6px}
+  .step p{color:var(--muted)}
+
+  /* TESTIMONIALS */
+  .quotes{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:42px}
+  .quote{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:26px}
+  .quote .stars{color:var(--gold);font-size:1.05rem;letter-spacing:2px}
+  .quote p{margin:12px 0;font-style:italic;color:#3a463f}
+  .quote .who{font-weight:700;color:var(--green-d)}
+  .quote .who span{display:block;font-weight:500;color:var(--muted);font-size:.86rem}
+
+  /* CONTACT */
+  .contact{background:var(--green-l);border-radius:30px;padding:54px;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+  .contact h2{font-size:2rem;margin-bottom:8px}
+  .info{list-style:none;margin-top:22px;display:grid;gap:16px}
+  .info li{display:flex;gap:14px;align-items:flex-start;font-size:1.05rem}
+  .info .ic{width:44px;height:44px;border-radius:12px;background:#fff;display:grid;place-items:center;font-size:1.25rem;flex:0 0 auto;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+  .info b{display:block;color:var(--green-d)}
+  form{background:#fff;padding:28px;border-radius:var(--radius);box-shadow:var(--shadow)}
+  form label{font-weight:700;font-size:.9rem;display:block;margin:0 0 6px}
+  form .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  form input,form select,form textarea{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;margin-bottom:16px;background:var(--cream)}
+  form input:focus,form textarea:focus,form select:focus{outline:2px solid var(--green);border-color:transparent}
+  form .btn{width:100%;justify-content:center}
+
+  /* FOOTER */
+  footer{background:var(--ink);color:#cdd6cf;margin-top:74px;padding:48px 0 28px}
+  footer .grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:30px}
+  footer h4{color:#fff;margin-bottom:12px}
+  footer a{color:#cdd6cf;display:block;margin-bottom:8px}
+  footer a:hover{color:#fff}
+  .copy{border-top:1px solid #33403a;margin-top:30px;padding-top:18px;font-size:.85rem;color:#8fa094;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+  @media(max-width:860px){
+    .hero .wrap{grid-template-columns:1fr;padding:48px 22px 60px}
+    .art{height:320px;order:-1}
+    .cards,.steps,.quotes,.why .grid{grid-template-columns:1fr}
+    .why .grid{gap:22px}
+    .contact{grid-template-columns:1fr;padding:34px}
+    footer .grid{grid-template-columns:1fr}
+    .why{padding:36px}
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="wrap">
+    <a class="logo" href="#top"><span class="leaf">🌱</span> Przempol <span style="font-weight:500;color:var(--muted);font-size:.9rem">Solec</span></a>
+    <nav>
+      <a class="hide" href="#oferta">Oferta</a>
+      <a class="hide" href="#dlaczego">Dlaczego my</a>
+      <a class="hide" href="#jak">Jak zamówić</a>
+      <a class="hide" href="#opinie">Opinie</a>
+      <a class="cta-phone" href="tel:+48662070018">📞 662 070 018</a>
+      <a class="btn" href="#kontakt" style="padding:10px 20px">Zamów świeżość</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero" id="top" style="padding-top:0">
+  <div class="wrap">
+    <div>
+      <span class="badge">🚜 Rodzinne gospodarstwo · Solec, Wielkopolska</span>
+      <h1>Świeże <span class="em">szparagi</span> i <span class="em">borówka amerykańska</span> — prosto z naszego pola</h1>
+      <p class="lead">Zbierane rano, u Ciebie świeże. Hurt i detal z profesjonalnym transportem w chłodni po całej Polsce i Europie.</p>
+      <div class="actions">
+        <a class="btn" href="#kontakt">📦 Zapytaj o dostawę</a>
+        <a class="btn ghost" href="tel:+48662070018">📞 Zadzwoń teraz</a>
+      </div>
+      <div class="trust">
+        <div><b>10+</b>lat doświadczenia</div>
+        <div><b>PL + EU</b>transport w chłodni</div>
+        <div><b>24h</b>od pola do odbiorcy</div>
+      </div>
+    </div>
+    <div class="art" aria-hidden="true">
+      <div class="sun"></div>
+      <div class="field"></div>
+      <div class="chip-float cf1"><span class="dot" style="background:#3f8f43"></span> Szparagi zielone</div>
+      <div class="chip-float cf3"><span class="dot" style="background:#e6e6df"></span> Szparagi białe</div>
+      <div class="chip-float cf2"><span class="dot" style="background:#5a3e8c"></span> Borówka amerykańska</div>
+    </div>
+  </div>
+</section>
+
+<!-- OFERTA -->
+<section id="oferta">
+  <div class="wrap">
+    <div class="center" style="max-width:680px">
+      <span class="eyebrow">Nasza oferta</span>
+      <h2 class="sec-h">Prosto z gospodarstwa — w pełni sezonu</h2>
+      <p class="sec-sub center">Uprawiamy i dostarczamy to, co najlepsze. Stała jakość, pełne palety, faktura VAT.</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="top c-green">🌿</div>
+        <div class="body">
+          <h3>Szparagi zielone</h3>
+          <p>Jędrne, słodkie, równo kalibrowane. Idealne dla restauracji, hurtowni i sklepów.</p>
+          <span class="tag">Sezon: kwiecień–czerwiec</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="top c-white">🥬</div>
+        <div class="body">
+          <h3>Szparagi białe</h3>
+          <p>Delikatne, kruche, zbierane spod kopczyka. Pakowane wg wymagań odbiorcy.</p>
+          <span class="tag">Sezon: kwiecień–czerwiec</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="top c-berry">🫐</div>
+        <div class="body">
+          <h3>Borówka amerykańska</h3>
+          <p>Duże, słodkie owoce o świetnej trwałości. Dostępna luzem i w opakowaniach detalicznych.</p>
+          <span class="tag">Sezon: lipiec–wrzesień</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="top c-truck">🚛</div>
+        <div class="body">
+          <h3>Transport w chłodni</h3>
+          <p>Własny, profesjonalny transport po Polsce i Europie. Zachowujemy chłód i świeżość.</p>
+          <span class="tag">PL + UE</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="top c-farm">🚜</div>
+        <div class="body">
+          <h3>Usługi rolne</h3>
+          <p>Uprawa i obsługa gruntów nowoczesnym sprzętem. Rzetelnie i terminowo.</p>
+          <span class="tag">Na zamówienie</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="top c-box">📦</div>
+        <div class="body">
+          <h3>Hurt i detal</h3>
+          <p>Współpraca z hurtowniami, sieciami i klientem indywidualnym. Elastyczne ilości.</p>
+          <span class="tag">Faktura VAT</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DLACZEGO MY -->
+<section id="dlaczego" style="padding-top:10px">
+  <div class="wrap">
+    <div class="why">
+      <span class="eyebrow" style="color:#bfe6c0">Dlaczego Przempol</span>
+      <h2 class="sec-h" style="color:#fff">Świeżość, na której można polegać</h2>
+      <div class="grid">
+        <div><h3><span class="ico">🌅</span> Zbierane tego dnia</h3><p>Trafiają do transportu kilka godzin po zbiorze — nie tygodnie jak u pośredników.</p></div>
+        <div><h3><span class="ico">❄️</span> Łańcuch chłodniczy</h3><p>Pełna kontrola temperatury od pola do odbiorcy. Produkt dociera w idealnym stanie.</p></div>
+        <div><h3><span class="ico">🤝</span> Bezpośrednio od rolnika</h3><p>Bez marży pośredników — lepsza cena i pełna identyfikowalność pochodzenia.</p></div>
+        <div><h3><span class="ico">📋</span> Stała jakość i terminy</h3><p>Powtarzalny kaliber, pełne palety, dostawy dopięte na czas. Zero niespodzianek.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- JAK ZAMÓWIĆ -->
+<section id="jak">
+  <div class="wrap">
+    <div class="center" style="max-width:680px">
+      <span class="eyebrow">Prosto i szybko</span>
+      <h2 class="sec-h">Jak zamówić</h2>
+      <p class="sec-sub center">Trzy kroki dzielą Cię od świeżej dostawy.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><h3>Zapytaj o dostępność</h3><p>Zadzwoń lub wypełnij formularz — podaj produkt, ilość i termin.</p></div>
+      <div class="step"><h3>Potwierdzamy ofertę</h3><p>Oddzwaniamy z ceną i terminem. Ustalamy pakowanie i transport.</p></div>
+      <div class="step"><h3>Dostawa pod adres</h3><p>Świeży towar dociera w chłodni — w Polsce lub w Europie.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- OPINIE -->
+<section id="opinie" style="padding-top:10px">
+  <div class="wrap">
+    <div class="center" style="max-width:680px">
+      <span class="eyebrow">Zaufali nam</span>
+      <h2 class="sec-h">Opinie odbiorców</h2>
+    </div>
+    <div class="quotes">
+      <div class="quote">
+        <div class="stars">★★★★★</div>
+        <p>„Szparagi w równym kalibrze i zawsze na czas. Współpracujemy drugi sezon i polecam.”</p>
+        <div class="who">Hurtownia warzyw<span>klient stały, Poznań</span></div>
+      </div>
+      <div class="quote">
+        <div class="stars">★★★★★</div>
+        <p>„Borówka dojeżdża świeża i twarda nawet na dłuższych trasach. Świetna logistyka.”</p>
+        <div class="who">Sieć delikatesów<span>odbiorca, Niemcy</span></div>
+      </div>
+      <div class="quote">
+        <div class="stars">★★★★★</div>
+        <p>„Kontakt bezpośrednio z gospodarstwem, uczciwe ceny i konkret. Tak ma być.”</p>
+        <div class="who">Restauracja<span>klient, Wrocław</span></div>
+      </div>
+    </div>
+    <p class="center" style="color:var(--muted);font-size:.82rem;margin-top:18px">* Przykładowe opinie w demo — w wersji produkcyjnej wstawimy prawdziwe referencje Państwa klientów.</p>
+  </div>
+</section>
+
+<!-- KONTAKT -->
+<section id="kontakt" style="padding-top:10px">
+  <div class="wrap">
+    <div class="contact">
+      <div>
+        <span class="eyebrow">Kontakt</span>
+        <h2>Zamów świeżość prosto z pola</h2>
+        <p style="color:var(--muted)">Odpowiadamy szybko — najlepiej telefonicznie w godzinach pracy gospodarstwa.</p>
+        <ul class="info">
+          <li><span class="ic">📞</span><div><b>Telefon</b><a href="tel:+48662070018">662 070 018</a></div></li>
+          <li><span class="ic">✉️</span><div><b>E-mail</b><a href="mailto:baca29@poczta.onet.pl">baca29@poczta.onet.pl</a></div></li>
+          <li><span class="ic">📍</span><div><b>Adres</b>Szkolna 40, 64-234 Solec (woj. wielkopolskie)</div></li>
+          <li><span class="ic">🧾</span><div><b>Dane</b>Usługi Rolne „Przempol” Przemysław Przymuszała · NIP 6981044849</div></li>
+        </ul>
+      </div>
+      <form onsubmit="event.preventDefault();this.querySelector('.ok').style.display='block';">
+        <label>Imię i nazwisko / firma</label>
+        <input type="text" placeholder="np. Hurtownia Kowalski" required />
+        <div class="row">
+          <div><label>Telefon</label><input type="tel" placeholder="600 000 000" required /></div>
+          <div><label>Produkt</label>
+            <select>
+              <option>Szparagi zielone</option>
+              <option>Szparagi białe</option>
+              <option>Borówka amerykańska</option>
+              <option>Transport</option>
+              <option>Usługi rolne</option>
+            </select>
+          </div>
+        </div>
+        <label>Wiadomość (ilość, termin, miejsce dostawy)</label>
+        <textarea rows="3" placeholder="np. 200 kg szparagów zielonych, dostawa na 15.05, Poznań"></textarea>
+        <button class="btn" type="submit">📨 Wyślij zapytanie</button>
+        <p class="ok" style="display:none;color:var(--green-d);font-weight:700;margin-top:14px;text-align:center">✅ Dziękujemy! Oddzwonimy z ofertą. (formularz demonstracyjny)</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="grid">
+      <div>
+        <div class="logo" style="color:#fff;margin-bottom:12px"><span class="leaf">🌱</span> Przempol Solec</div>
+        <p style="max-width:36ch">Rodzinne gospodarstwo z Solca. Świeże szparagi i borówka amerykańska — od pola do Państwa stołu, w Polsce i Europie.</p>
+      </div>
+      <div>
+        <h4>Oferta</h4>
+        <a href="#oferta">Szparagi zielone</a>
+        <a href="#oferta">Szparagi białe</a>
+        <a href="#oferta">Borówka amerykańska</a>
+        <a href="#oferta">Transport i usługi rolne</a>
+      </div>
+      <div>
+        <h4>Kontakt</h4>
+        <a href="tel:+48662070018">📞 662 070 018</a>
+        <a href="mailto:baca29@poczta.onet.pl">✉️ baca29@poczta.onet.pl</a>
+        <a href="#kontakt">📍 Szkolna 40, 64-234 Solec</a>
+      </div>
+    </div>
+    <div class="copy">
+      <span>© 2026 Usługi Rolne „Przempol” Przemysław Przymuszała · NIP 6981044849</span>
+      <span>Demo projektu strony — przygotował zespół v-ai.pl</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
