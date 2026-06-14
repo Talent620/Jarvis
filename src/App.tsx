@@ -33,6 +33,7 @@ const HudVision = lazy(() => import("./components/HudVision"));
 const Studio = lazy(() => import("./components/Studio"));
 const SystemStatus = lazy(() => import("./components/SystemStatus"));
 const MemoryCenter = lazy(() => import("./components/MemoryCenter"));
+const AuditLog = lazy(() => import("./components/AuditLog"));
 const WebStudio = lazy(() => import("./components/WebStudio"));
 const AdminPanel = lazy(() => import("./components/AdminPanel"));
 const Cards = lazy(() => import("./components/Cards"));
@@ -174,6 +175,7 @@ export default function App() {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
   const [showMemory, setShowMemory] = useState(false);
+  const [showAudit, setShowAudit] = useState(false);
   const [booting, setBooting] = useState(true); // ładne „włączanie" przy starcie
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
   const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
@@ -931,6 +933,7 @@ export default function App() {
           onNotifications={() => setShowNotifs(true)}
           onStatus={() => setShowStatus(true)}
           onMemory={() => setShowMemory(true)}
+          onAudit={() => setShowAudit(true)}
           onClose={() => setShowMore(false)}
         />
       )}
@@ -942,6 +945,11 @@ export default function App() {
       {showMemory && (
         <Suspense fallback={null}>
           <MemoryCenter onClose={() => setShowMemory(false)} />
+        </Suspense>
+      )}
+      {showAudit && (
+        <Suspense fallback={null}>
+          <AuditLog onClose={() => setShowAudit(false)} />
         </Suspense>
       )}
       {showStudio && (
