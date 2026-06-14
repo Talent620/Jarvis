@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { generateImage, IMAGE_MODELS_LIST, type ImageModelId } from "../lib/images";
+import { generateImage, humanizeImageError, IMAGE_MODELS_LIST, type ImageModelId } from "../lib/images";
 import { capturePhoto } from "../lib/camera";
 import { useEscape } from "../hooks/useEscape";
 import { store } from "../lib/store";
@@ -56,6 +56,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [view, setView] = useState<"result" | "compare">("compare");
+  const resultRef = useRef<HTMLDivElement>(null); // do auto-przewinięcia po „Przerób"
 
   const result = history[history.length - 1] || null;
   const before = inputs[0] || null; // zdjęcie wejściowe do porównania
@@ -70,8 +71,13 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setErr("");
     const r = await generateImage(text, ins.length ? ins : undefined, model);
-    if ("error" in r) setErr(r.error);
-    else { setHistory((h) => [...h, r]); setView("compare"); }
+    if ("error" in r) setErr(humanizeImageError(r.error, model));
+    else {
+      setHistory((h) => [...h, r]);
+      setView("compare");
+      // Pokaż użytkownikowi gdzie jest wynik — przewiń do niego po wygenerowaniu.
+      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    }
     setBusy(false);
   };
 
@@ -144,11 +150,12 @@ export default function Studio({ onClose }: { onClose: () => void }) {
             <button className="btn" style={{ flex: 1 }} onClick={attach}>📷 Dołącz zdjęcie{inputs.length ? ` (${inputs.length})` : ""}</button>
             <button className="btn primary" style={{ flex: 1 }} onClick={gen} disabled={busy}>{busy ? "Tworzę…" : "✨ Przerób"}</button>
           </div>
-          {err && <p className="muted">{err}</p>}
+          {err && <p className="notice">⚠ {err}</p>}
 
           {/* Wynik + porównanie przed/po */}
           {result && (
-            <>
+            <div ref={resultRef}>
+              <p style={{ fontWeight: 700, color: "var(--cyan)", margin: "12px 0 4px" }}>✅ Gotowe — Twój przerobiony obraz:</p>
               {before && (
                 <div className="chips" style={{ marginTop: 10 }}>
                   <button className={`chip ${view === "compare" ? "on" : ""}`} onClick={() => setView("compare")}>⇆ Przed/Po</button>
@@ -166,7 +173,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
                 {history.length > 1 && <button className="btn" onClick={undo}>↩ Cofnij wersję</button>}
               </div>
               {history.length > 1 && <p className="muted" style={{ fontSize: 12 }}>Wersja {history.length} — możesz cofać i nakładać kolejne zmiany.</p>}
-            </>
+            </div>
           )}
 
           <Guide title="ℹ Jak osiągnąć efekt nie do poznania">

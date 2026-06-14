@@ -1,5 +1,6 @@
 import { primaryKey } from "./keys";
 import { store } from "./store";
+import { humanize } from "./aiHelpers";
 
 export interface GenImage {
   data: string; // base64
@@ -127,4 +128,15 @@ export async function generateImage(prompt: string, input?: Img | Img[], model: 
   const inputs = input ? (Array.isArray(input) ? input : [input]) : [];
   if (model === "gemini") return geminiEdit(prompt, inputs);
   return falEdit(model, prompt, inputs);
+}
+
+/**
+ * Zamień techniczny błąd z API na zrozumiały, polski komunikat do pokazania w Studiu.
+ * Specjalny przypadek: wyczerpany darmowy limit Gemini → jasna podpowiedź (a nie
+ * surowy angielski „You exceeded your current quota…").
+ */
+export function humanizeImageError(msg: string, model: ImageModelId): string {
+  if (model === "gemini" && /quota|exceeded|rate.?limit|resource exhausted|\b429\b/i.test(msg))
+    return "Darmowy limit Gemini wyczerpał się na teraz. Spróbuj za chwilę, dodaj drugi klucz Gemini w ⚙ → AI, albo wybierz model premium (fal.ai).";
+  return humanize(msg);
 }

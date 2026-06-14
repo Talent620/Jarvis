@@ -61,6 +61,16 @@ body.theme-purple {
   --line-strong: rgba(183, 140, 255, 0.4);
 }
 
+/* Bezpieczne marginesy okna (paski stanu/nawigacji). Fallback do env() działa na
+   iOS/web; na Androidzie MainActivity nadpisuje --sat/--sar/--sab/--sal realnymi px,
+   bo tam env(safe-area-inset-*) nie obejmuje pasków systemowych. */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
 html,
 body,
 #root {
@@ -99,7 +109,7 @@ textarea,
   height: 100dvh;
   max-width: 760px;
   margin: 0 auto;
-  padding: max(env(safe-area-inset-top), 6px) 14px max(env(safe-area-inset-bottom), 8px);
+  padding: max(var(--sat), 6px) max(var(--sar), 14px) max(var(--sab), 8px) max(var(--sal), 14px);
 }
 
 /* Gdy trwa rozmowa: orb się zmniejsza (zostaje widoczny i pulsuje), a czat
@@ -509,7 +519,7 @@ button:disabled {
 .panel {
   width: 100%;
   max-width: 560px;
-  max-height: 92dvh;
+  max-height: calc(100dvh - var(--sat) - 6px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -538,12 +548,23 @@ button:disabled {
 }
 .panel-foot {
   flex: 0 0 auto;
-  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  padding: 12px 18px calc(12px + var(--sab));
   border-top: 1px solid var(--line);
   background: var(--bg-2);
 }
 .panel-foot .btn {
   margin-top: 0;
+}
+/* Widoczny komunikat (błąd/ostrzeżenie) — nie ginie jak szary tekst .muted. */
+.notice {
+  margin: 10px 0 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--gold);
+  background: rgba(255, 196, 0, 0.08);
+  border: 1px solid rgba(255, 196, 0, 0.32);
 }
 .grabber {
   width: 40px;
@@ -841,7 +862,7 @@ button:disabled {
 }
 .hud-top {
   position: absolute;
-  top: max(env(safe-area-inset-top), 30px);
+  top: max(var(--sat), 30px);
   left: 0;
   right: 0;
   text-align: center;
@@ -869,7 +890,7 @@ button:disabled {
   position: absolute;
   left: 14px;
   right: 14px;
-  bottom: max(env(safe-area-inset-bottom), 14px);
+  bottom: max(var(--sab), 14px);
   display: flex;
   gap: 8px;
 }
@@ -907,7 +928,7 @@ button:disabled {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(96px + env(safe-area-inset-bottom));
+  bottom: calc(96px + var(--sab));
   transform: translateX(-50%) translateY(8px);
   background: var(--bg-2);
   color: var(--text);
@@ -1059,7 +1080,7 @@ button:disabled {
 .clip-widget {
   position: fixed;
   right: 16px;
-  bottom: calc(96px + env(safe-area-inset-bottom));
+  bottom: calc(96px + var(--sab));
   z-index: 150;
   max-width: 300px;
   background: var(--bg-2);
@@ -1112,7 +1133,7 @@ button:disabled {
 }
 .voicemode-exit {
   position: absolute;
-  top: calc(14px + env(safe-area-inset-top));
+  top: calc(14px + var(--sat));
   right: 14px;
   background: none;
   border: 1px solid var(--line);
