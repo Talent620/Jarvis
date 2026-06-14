@@ -1,6 +1,7 @@
 import { AppLauncher } from "@capacitor/app-launcher";
 import { store } from "./store";
 import { desktop } from "./desktop";
+import { gmailComposeUrl, mailtoUrl } from "./glinks";
 
 // Otwieranie aplikacji i usług zewnętrznych. Na Androidzie/iOS używa AppLauncher,
 // na Windows (.exe) — powłoki systemowej (tel:/sms: → Phone Link, mapy →
@@ -74,6 +75,35 @@ const cleanNum = (n: string) => (n || "").replace(/[^\d+]/g, "").replace(/(?!^)\
 export async function call(number: string): Promise<string> {
   const ok = await open(`tel:${cleanNum(number)}`);
   return ok ? `Dzwonię pod ${number}.` : "Nie udało się rozpocząć połączenia.";
+}
+
+/**
+ * Otwórz GOTOWY e-mail (adres + temat + treść) do wysłania jednym tapnięciem —
+ * uniwersalny fallback, działa wszędzie bez konfiguracji: telefon/.exe → natywny
+ * klient poczty (mailto:), przeglądarka bez klienta → edytor Gmaila w sieci.
+ */
+export async function openCompose(to: string, subject: string, body: string): Promise<string> {
+  const mail = mailtoUrl(to, subject, body);
+  const d = desktop();
+  if (d) {
+    const r = await d.open(mail).catch(() => "err");
+    if (r === "ok") return `Otworzyłem gotowy e-mail do ${to} — sprawdź i wyślij.`;
+  }
+  try {
+    const { value } = await AppLauncher.canOpenUrl({ url: mail }).catch(() => ({ value: false }));
+    if (value) {
+      await AppLauncher.openUrl({ url: mail });
+      return `Otworzyłem gotowy e-mail do ${to} — sprawdź i wyślij.`;
+    }
+  } catch {
+    /* brak natywnego klienta → edytor Gmaila */
+  }
+  try {
+    window.open(gmailComposeUrl(to, subject, body), "_blank", "noopener");
+    return `Otworzyłem gotowy e-mail do ${to} w Gmailu — sprawdź i wyślij.`;
+  } catch {
+    return `Nie udało się otworzyć edytora poczty. Adres: ${to}, temat: „${subject}".`;
+  }
 }
 
 export async function sms(number: string, body?: string): Promise<string> {

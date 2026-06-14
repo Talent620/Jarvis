@@ -1,5 +1,6 @@
 import { store, uid } from "./store";
-import { openService, call, sms, navigate, smartHome, openUrl } from "./deviceControl";
+import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
+import { hasBackendGmail } from "./mailer";
 import { getWeather } from "./weather";
 import { scheduleReminder, scheduleTimer } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
@@ -787,10 +788,20 @@ const tools: Tool[] = [
   {
     def: {
       name: "gmail_send",
-      description: "Wyślij e-mail przez Gmail (wymaga połączonego konta Google).",
+      description: "Wyślij e-mail. Gdy konto Google jest połączone (backend) — wyśle automatycznie. W przeciwnym razie otworzy GOTOWĄ wiadomość (adres + temat + treść) do wysłania jednym tapnięciem. Zawsze działa.",
       input_schema: obj({ to: str("Adres odbiorcy"), subject: str("Temat"), body: str("Treść") }, ["to", "subject", "body"]),
     },
-    run: ({ to, subject, body }) => gmailSend(to, subject, body),
+    run: async ({ to, subject, body }) => {
+      if (hasBackendGmail()) {
+        const r = await gmailSend(to, subject, body);
+        if (/^Wysłano/i.test(r)) return r;
+        // Backend zawiódł → fallback: otwórz gotowy e-mail.
+        const opened = await openCompose(to, subject, body);
+        return `Nie wysłałem automatycznie (${r}). ${opened}`;
+      }
+      // Brak backendu → od razu gotowy e-mail (najprostsza droga, bez konfiguracji).
+      return openCompose(to, subject, body);
+    },
   },
   {
     def: {
