@@ -904,6 +904,14 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
               <div className="row">
                 <span>
+                  Proaktywny Agent — JARVIS sam się odzywa
+                  <br />
+                  <span className="muted">przypomnienia po terminie, wydarzenia za chwilę, follow-upy, zadania na dziś</span>
+                </span>
+                <Toggle on={s.proactiveAgent !== false} onClick={() => set({ proactiveAgent: s.proactiveAgent === false })} />
+              </div>
+              <div className="row">
+                <span>
                   Poranny briefing o ustalonej porze
                   <br />
                   <span className="muted">pogoda + kalendarz + zadania, czytany głosem (gdy apka otwarta)</span>

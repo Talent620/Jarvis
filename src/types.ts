@@ -353,6 +353,9 @@ export interface Settings {
   autoListenOnOpen: boolean;
   /** Po otwarciu pokaż proaktywne powitanie/raport. */
   proactiveOnOpen: boolean;
+  /** Proaktywny Agent: JARVIS sam odzywa się w trakcie pracy (przypomnienia po
+   *  terminie, zadania na dziś, follow-upy, wydarzenia za chwilę). Domyślnie wł. */
+  proactiveAgent?: boolean;
   /** Codzienny poranny briefing (pogoda + kalendarz + zadania) o ustalonej porze. */
   dailyBriefing: boolean;
   /** Godzina porannego briefingu w formacie HH:MM. */

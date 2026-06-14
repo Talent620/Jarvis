@@ -22,6 +22,7 @@ import { watchHeadset } from "./lib/headset";
 import { toast } from "./lib/toast";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
 import { notifySummary } from "./lib/notifyCenter";
+import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
 import PermissionDialog from "./components/PermissionDialog";
 import { lockIsSet } from "./lib/lock";
 import { Suspense, lazy } from "react";
@@ -185,6 +186,8 @@ export default function App() {
   pendingImageRef.current = pendingImage;
   const sendRef = useRef<(t: string) => void>(() => {});
   const retryTextRef = useRef<string>(""); // ostatnie polecenie — do przycisku „Ponów"
+  const busyRef = useRef(false); // aktualny „busy" dla pętli proaktywnej (bez stale-closure)
+  busyRef.current = busy;
   const micSupported = isSpeechSupported();
 
   useEffect(() => {
@@ -236,6 +239,9 @@ export default function App() {
         setLiveId(id);
         setMessages((m) => [...m, { id, role: "assistant", text, tools: ["proactive"], createdAt: Date.now() }]);
         if (st.speak) void speak(text, st).catch(() => {});
+        // Powitanie wspomina zadania/kalendarz/fiszki — nie powtarzaj ich od razu
+        // przez Agenta proaktywnego (zostają przypomnienia i follow-upy).
+        markShown("tasks"); markShown("cards"); markShown("event");
       }
       if (st.autoListenOnOpen && micSupported && ready) startListening(st.wakeWord);
     }, 800);
@@ -244,6 +250,35 @@ export default function App() {
       clearTimeout(t);
       dispose();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // === Proaktywny Agent: JARVIS sam się odzywa w trakcie pracy ===
+  // Co chwilę sprawdza, czy jest coś ważnego (przypomnienie po terminie, wydarzenie
+  // za moment, follow-up, zadanie na dziś, fiszka) i delikatnie to zgłasza — bubble
+  // w czacie + toast z akcją „Otwórz". Nie przerywa, gdy JARVIS pracuje, i nie spamuje.
+  const openProactiveScreen = (screen?: NudgeScreen) => {
+    if (screen === "sales") setShowSales(true);
+    else if (screen === "cards") setShowCards(true);
+    else if (screen === "tasks") setShowTasks(true);
+    else setShowPanels(true);
+  };
+  useEffect(() => {
+    const tick = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (busyRef.current || !resolveProvider()) return; // nie przerywaj pracy / brak mózgu
+      const n = nextNudge();
+      if (!n) return;
+      markShown(n.kind);
+      const id = uid();
+      setLiveId(id);
+      setMessages((m) => [...m, { id, role: "assistant", text: n.text, tools: ["proactive"], createdAt: Date.now() }]);
+      if (n.speak && store.settings.speak) void speak(n.text, store.settings).catch(() => {});
+      toast("📌 JARVIS się odezwał", { label: "Otwórz", onClick: () => openProactiveScreen(n.screen) });
+    };
+    const first = setTimeout(tick, 12_000);          // pierwszy szturchaniec ~12 s po starcie
+    const iv = setInterval(tick, 90_000);            // potem co 90 s (silnik i tak ma anty-spam)
+    return () => { clearTimeout(first); clearInterval(iv); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

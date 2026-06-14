@@ -64,6 +64,7 @@ const defaultSettings: Settings = {
   wakeWord: false,
   autoListenOnOpen: false,
   proactiveOnOpen: true,
+  proactiveAgent: true,
   dailyBriefing: false,
   briefingTime: "08:00",
   autoProspect: false,
