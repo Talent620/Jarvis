@@ -1,5 +1,8 @@
 import { store } from "./store";
 import { gmailSend } from "./google";
+import { draftOffer } from "./offer";
+import { splitOffer } from "./glinks";
+import type { Lead } from "../types";
 
 // Wysyłka e-maili WPROST z aplikacji — inteligentny wybór kanału:
 //  1) DESKTOP (Windows): SMTP przez proces Electrona (sekcja ⚙ → Poczta).
@@ -58,4 +61,22 @@ export async function sendOfferEmail(to: string, subject: string, body: string):
     return /^Wysłano/i.test(r) ? { ok: true, via: "Gmail" } : { ok: false, error: r };
   }
   return { ok: false, error: "Brak skonfigurowanej wysyłki — użyj przycisku Gmail (otworzy gotową wiadomość)." };
+}
+
+export type DraftSendResult = SendResult & { offer?: string };
+
+/**
+ * „Napisz i wyślij" jednym kliknięciem: jeśli oferta nie istnieje, JARVIS ją pisze,
+ * dopisuje podpis i wysyła najlepszym kanałem (SMTP/Gmail). Nowy szkic zwraca w `offer`
+ * (do zapisania w leadzie). Temat/treść liczone są tak samo jak przy zwykłej wysyłce.
+ */
+export async function draftAndSendOffer(lead: Lead, email: string): Promise<DraftSendResult> {
+  let text = (lead.offer || "").trim();
+  if (!text) {
+    text = (await draftOffer(lead)).trim();
+  }
+  if (!text) return { ok: false, error: "Nie udało się napisać oferty — sprawdź klucz API (⚙ → Mózg)." };
+  const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`, store.settings.emailSignature);
+  const r = await sendOfferEmail(email, subject, body);
+  return { ...r, offer: text };
 }

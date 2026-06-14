@@ -31,7 +31,7 @@ const defaultSettings: Settings = {
   smtpPass: "",
   smtpHost: "smtp.gmail.com",
   smtpPort: 465,
-  emailSignature: "—\ntel. 500 390 009\nwww.v-ai.pl",
+  emailSignature: "—\ntel. +48 500 390 009\nwww.v-ai.pl",
   syncUrl: "",
   syncToken: "",
   ollamaUrl: "",

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { appendSignature, splitOffer } from "../src/lib/glinks";
 
-const SIG = "—\ntel. 500 390 009\nwww.v-ai.pl";
+const SIG = "—\ntel. +48 500 390 009\nwww.v-ai.pl";
 
 describe("appendSignature — automatyczna stopka", () => {
   it("dopisuje podpis na końcu treści", () => {
@@ -39,7 +39,7 @@ describe("splitOffer z podpisem", () => {
 
   it("numer telefonu i strona są obecne w gotowej treści", () => {
     const { body } = splitOffer("Temat: x\nCześć", "f", SIG);
-    expect(body).toContain("500 390 009");
+    expect(body).toContain("+48 500 390 009");
     expect(body).toContain("www.v-ai.pl");
   });
 });

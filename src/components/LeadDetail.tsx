@@ -4,6 +4,7 @@ import { useStore } from "../hooks/useStore";
 import { buildDossier, auditWeakPoints, scoreLabel, smsDraft } from "../lib/leadIntel";
 import { gmailComposeUrl, mailtoUrl, mapsSearchUrl, smsUrl, splitOffer } from "../lib/glinks";
 import { canSendDirect, sendOfferEmail } from "../lib/mailer";
+import { draftOffer } from "../lib/offer";
 import { markContacted } from "../lib/salesEngine";
 import { copyWithToast, toast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
@@ -61,11 +62,14 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
   // Prawdziwa wysyłka jednym potwierdzeniem: desktop → SMTP, telefon → Gmail (backend).
   const [sending, setSending] = useState(false);
   const sendNow = async () => {
-    const text = intel?.email || lead.offer || "";
-    const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`, store.settings.emailSignature);
     if (!email) { toast("Brak adresu e-mail firmy — użyj Gmaila i wpisz adres ręcznie."); return; }
-    if (!window.confirm(`Wysłać e-mail do ${lead.company}?\n\nDo: ${email}\nTemat: ${subject}`)) return;
     setSending(true);
+    // Jeśli oferty jeszcze nie ma — JARVIS pisze ją sam (jedno kliknięcie = napisz i wyślij).
+    let text = (intel?.email || lead.offer || "").trim();
+    if (!text) { text = (await draftOffer(lead)).trim(); if (text) set({ offer: text }); }
+    if (!text) { setSending(false); toast("Nie udało się napisać oferty — sprawdź klucz API (⚙ → Mózg)."); return; }
+    const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`, store.settings.emailSignature);
+    if (!window.confirm(`Wysłać e-mail do ${lead.company}?\n\nDo: ${email}\nTemat: ${subject}`)) { setSending(false); return; }
     const r = await sendOfferEmail(email, subject, body);
     setSending(false);
     if (!r.ok) { toast(`Nie wysłano: ${r.error}`); return; }
@@ -202,6 +206,18 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
                 <button className="chip" style={{ marginTop: 8 }} onClick={() => copyWithToast(intel.analysis!)}>📋 Kopiuj analizę</button>
               </div>
             </>
+          )}
+
+          {/* Brak szkicu, ale można wysłać wprost — jedno kliknięcie: napisz i wyślij */}
+          {!(intel?.email || lead.offer) && canSendDirect() && email && (
+            <button
+              className="chip"
+              style={{ marginTop: 14, borderColor: "var(--ok, #58e08a)", fontWeight: 600 }}
+              onClick={sendNow}
+              disabled={sending}
+            >
+              {sending ? "📨 Piszę i wysyłam…" : "📨 Napisz i wyślij (JARVIS sam napisze)"}
+            </button>
           )}
 
           {/* E-mail */}

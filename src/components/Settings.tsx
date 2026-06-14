@@ -495,7 +495,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   className="ta"
                   rows={3}
                   value={s.emailSignature}
-                  placeholder={"—\ntel. 500 390 009\nwww.v-ai.pl"}
+                  placeholder={"—\ntel. +48 500 390 009\nwww.v-ai.pl"}
                   onChange={(e) => set({ emailSignature: e.target.value })}
                 />
               </div>

@@ -3,6 +3,7 @@ import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
 import { splitOffer } from "../lib/glinks";
+import { canSendDirect, draftAndSendOffer } from "../lib/mailer";
 import { findLeads } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { leadsToCsv, followUpsDue, callNowList } from "../lib/salesEngine";
@@ -28,6 +29,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const [filter, setFilter] = useState<LeadStatus | "all">("all");
   const [form, setForm] = useState({ company: "", contact: "", value: "" });
   const [drafting, setDrafting] = useState<string>("");
+  const [sending, setSending] = useState<string>("");
   const [hunting, setHunting] = useState(false);
   const [huntMsg, setHuntMsg] = useState("");
   const [niche, setNiche] = useState(store.settings.prospectNiche || "");
@@ -107,6 +109,28 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
     const { subject, body } = splitOffer(l.offer || "", `Oferta dla ${l.company}`, store.settings.emailSignature);
     const to = l.contact && l.contact.includes("@") ? l.contact : "";
     window.open(`mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
+  };
+
+  // „Napisz i wyślij" — jedno kliknięcie: JARVIS pisze ofertę (jeśli brak), dopisuje
+  // podpis i wysyła sam (SMTP/Gmail). Użytkownik tylko potwierdza adresata.
+  const writeAndSend = async (l: Lead) => {
+    const to = l.contact && l.contact.includes("@") ? l.contact.trim() : "";
+    if (!to) { toast("Brak e-maila w polu Kontakt — dodaj adres, żeby wysłać."); return; }
+    setSending(l.id);
+    const r = await draftAndSendOffer(l, to);
+    setSending("");
+    if (r.offer && r.offer !== l.offer) {
+      store.setData((d) => {
+        const x = d.leads.find((y) => y.id === l.id);
+        if (x) { x.offer = r.offer; x.updatedAt = Date.now(); }
+      });
+    }
+    if (!r.ok) { toast(`Nie wysłano: ${r.error}`); return; }
+    toast(`✅ Wysłano do ${to} (${r.via})`);
+    store.setData((d) => {
+      const x = d.leads.find((y) => y.id === l.id);
+      if (x) { if (x.status === "new" || x.status === "contacted") x.status = "offer"; x.updatedAt = Date.now(); }
+    });
   };
 
   const setStatus = (id: string, status: LeadStatus) =>
@@ -272,6 +296,16 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
                   <button className="chip" onClick={() => writeOffer(l)} disabled={drafting === l.id}>
                     {drafting === l.id ? "✍ Piszę…" : l.offer ? "✍ Napisz ponownie" : "✍ Szkic oferty"}
                   </button>
+                  {canSendDirect() && l.contact?.includes("@") && (
+                    <button
+                      className="chip"
+                      style={{ borderColor: "var(--ok, #58e08a)", fontWeight: 600 }}
+                      onClick={() => writeAndSend(l)}
+                      disabled={sending === l.id}
+                    >
+                      {sending === l.id ? "📨 Wysyłam…" : "📨 Napisz i wyślij"}
+                    </button>
+                  )}
                 </div>
                 {l.offer && (
                   <div style={{ marginTop: 8, background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 10, padding: 10 }}>
