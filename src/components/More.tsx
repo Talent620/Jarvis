@@ -24,6 +24,7 @@ export default function More({
   onDayPlan,
   onTasks,
   onTranslator,
+  onBargain,
   onNotifications,
   onClose,
 }: {
@@ -46,6 +47,7 @@ export default function More({
   onDayPlan: () => void;
   onTasks: () => void;
   onTranslator: () => void;
+  onBargain: () => void;
   onNotifications: () => void;
   onClose: () => void;
 }) {
@@ -55,6 +57,7 @@ export default function More({
     { id: "profile", icon: "👤", label: "Mój profil — kim jestem (pamięć)", fn: onProfile },
     { id: "tasks", icon: "✅", label: "Zadania Pro — projekty, priorytety (GTD)", fn: onTasks },
     { id: "dayplan", icon: "🗓", label: "Plan Dnia — zadania i notatnik", fn: onDayPlan },
+    { id: "bargain", icon: "🏷", label: "Łowca Okazji — znajdź najtaniej (nowe/używane)", fn: onBargain },
     { id: "money", icon: "💰", label: "Zarabianie — autopilot dochodu", fn: onMoney },
     { id: "journal", icon: "📔", label: "Mój dziennik (przemyślenia)", fn: onJournal },
     { id: "cards", icon: "🧠", label: "Kapsuły Wiedzy — ucz się i pamiętaj", fn: onCards },
