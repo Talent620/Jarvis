@@ -6,7 +6,7 @@ import { scheduleReminder, scheduleTimer } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
 import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
-import { gmailSearch, gmailRead, gmailSend, gmailReply, gcalList, gcalAdd } from "./google";
+import { gmailSearch, gmailRead, gmailSend, gmailReply, gcalList, gcalDay, gcalAdd } from "./google";
 import { rememberFact } from "./memory";
 import { generateCards } from "./cards";
 import { runAutomation } from "./n8n";
@@ -829,6 +829,14 @@ const tools: Tool[] = [
       input_schema: obj({}),
     },
     run: () => gcalList(),
+  },
+  {
+    def: {
+      name: "gcal_day",
+      description: "Odczytaj zapisy z Kalendarza Google na KONKRETNY dzień. dayOffset: 0=dziś, 1=jutro, -1=wczoraj. Użyj na pytania typu „co mam dziś/jutro w kalendarzu”.",
+      input_schema: obj({ dayOffset: { type: "number", description: "0=dziś, 1=jutro, -1=wczoraj (domyślnie 0)" } }),
+    },
+    run: ({ dayOffset }) => gcalDay(Number(dayOffset) || 0),
   },
   {
     def: {

@@ -464,10 +464,15 @@ export default {
       if (path === "/v1/gcal/list" && req.method === "POST") {
         const at = await googleAccessToken(env, bearer(req));
         if (!at) return json(401, { error: "Google niepołączone." });
-        const { max = 10 } = await req.json();
+        const { max = 10, timeMin, timeMax } = await req.json();
+        const params = new URLSearchParams({
+          maxResults: String(max), singleEvents: "true", orderBy: "startTime",
+          timeMin: timeMin || new Date().toISOString(),
+        });
+        if (timeMax) params.set("timeMax", timeMax);
         const d = await (
           await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=${max}&singleEvents=true&orderBy=startTime&timeMin=${new Date().toISOString()}`,
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
             { headers: { authorization: `Bearer ${at}` } },
           )
         ).json();

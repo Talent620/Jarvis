@@ -75,6 +75,26 @@ export async function gcalList(): Promise<string> {
     : "Brak nadchodzących wydarzeń w Kalendarzu Google.";
 }
 
+/** Zakres całego dnia (00:00–24:00) w ISO — do odczytu „co mam danego dnia". */
+export function dayRangeISO(date = new Date()): { timeMin: string; timeMax: string } {
+  const start = new Date(date); start.setHours(0, 0, 0, 0);
+  const end = new Date(start); end.setDate(end.getDate() + 1);
+  return { timeMin: start.toISOString(), timeMax: end.toISOString() };
+}
+
+/** Wydarzenia z konkretnego dnia (offset: 0=dziś, 1=jutro, -1=wczoraj). */
+export async function gcalDay(dayOffset = 0): Promise<string> {
+  const d = new Date(); d.setDate(d.getDate() + dayOffset);
+  const { timeMin, timeMax } = dayRangeISO(d);
+  const r = await call("/v1/gcal/list", { max: 25, timeMin, timeMax });
+  if (r.error) return r.error;
+  const ev = r.events || [];
+  const label = d.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" });
+  return ev.length
+    ? `📅 ${label}:\n` + ev.map((e: any) => `• ${new Date(e.start).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })} — ${e.summary}${e.location ? ` @ ${e.location}` : ""}`).join("\n")
+    : `📅 ${label}: brak zapisów w kalendarzu.`;
+}
+
 export async function gcalAdd(summary: string, start: string, end?: string, location?: string): Promise<string> {
   const r = await call("/v1/gcal/add", { summary, start, end, location });
   return r.error || `Dodano do Kalendarza Google: „${summary}".`;

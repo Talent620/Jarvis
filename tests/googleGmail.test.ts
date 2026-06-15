@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { gmailReply, gmailRead } from "../src/lib/google";
+import { gmailReply, gmailRead, dayRangeISO } from "../src/lib/google";
 import { store } from "../src/lib/store";
 
 // Integracja Gmail przez backend: odpowiedź w wątku i czytanie pełnej treści.
@@ -29,6 +29,19 @@ describe("gmailReply — odpowiedź w wątku", () => {
   it("błąd backendu przekazany czytelnie", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "Google niepołączone." }), { status: 401 })));
     expect(await gmailReply("a@x.pl", "T", "b")).toMatch(/niepołączone/);
+  });
+});
+
+describe("dayRangeISO — zakres dnia dla kalendarza", () => {
+  it("zwraca pełną dobę 00:00–24:00 dla podanego dnia", () => {
+    const { timeMin, timeMax } = dayRangeISO(new Date("2026-06-15T13:37:00"));
+    const min = new Date(timeMin), max = new Date(timeMax);
+    expect(min.getHours()).toBe(0);
+    expect(min.getMinutes()).toBe(0);
+    // dokładnie 24h różnicy
+    expect(max.getTime() - min.getTime()).toBe(24 * 60 * 60 * 1000);
+    // ten sam dzień startu
+    expect(min.getDate()).toBe(15);
   });
 });
 
