@@ -125,6 +125,19 @@ export async function sendMailNow(to: string, subject: string, body: string): Pr
 
 export type SendResult = { ok: true; via: "SMTP" | "Gmail" } | { ok: false; error: string };
 
+/** Eksport Skrzynki wysłanych do CSV (Excel/Arkusze) — rejestr „kogo i kiedy". */
+export function sentMailToCsv(sent: { at: number; company?: string; to: string; subject: string; via: string }[]): string {
+  const esc = (v: unknown) => {
+    const s = String(v ?? "");
+    return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const head = ["Data", "Firma", "Adres", "Temat", "Kanal"];
+  const rows = (sent || []).map((m) =>
+    [new Date(m.at).toLocaleString("pl-PL"), m.company || "", m.to, m.subject, m.via].map(esc).join(","),
+  );
+  return [head.join(","), ...rows].join("\r\n");
+}
+
 /** Czy znacznik czasu przypada na ten sam dzień kalendarzowy co `now`. */
 export function isSameDay(at: number, now = Date.now()): boolean {
   const a = new Date(at), b = new Date(now);

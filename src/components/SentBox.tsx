@@ -2,7 +2,7 @@ import { useState } from "react";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { useEscape } from "../hooks/useEscape";
-import { isSameDay, sentTodayCount } from "../lib/mailer";
+import { isSameDay, sentTodayCount, sentMailToCsv } from "../lib/mailer";
 
 // 📤 Skrzynka wysłanych — lista maili wysłanych wprost z aplikacji (komu, co, kiedy,
 // jakim kanałem). Zapis lokalny; potwierdza „że się udało" i gdzie poszło.
@@ -61,8 +61,24 @@ export default function SentBox({ onClose }: { onClose: () => void }) {
             </div>
           ))}
         </div>
-        <div className="panel-foot">
-          <button className="btn primary" style={{ width: "100%" }} onClick={onClose}>Zamknij</button>
+        <div className="panel-foot" style={{ display: "flex", gap: 8 }}>
+          {all.length > 0 && (
+            <button
+              className="btn"
+              onClick={() => {
+                const csv = "﻿" + sentMailToCsv(all); // BOM → polskie znaki w Excelu
+                const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `wyslane-jarvis-${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              📤 CSV
+            </button>
+          )}
+          <button className="btn primary" style={{ flex: 1 }} onClick={onClose}>Zamknij</button>
         </div>
       </div>
     </div>

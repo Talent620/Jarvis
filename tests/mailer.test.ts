@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent, sendTestEmail, isSameDay, sentTodayCount } from "../src/lib/mailer";
+import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent, sendTestEmail, isSameDay, sentTodayCount, sentMailToCsv } from "../src/lib/mailer";
 import { store } from "../src/lib/store";
 
 // Wybór kanału wysyłki: desktop→SMTP, telefon→Gmail(backend), inaczej→compose.
@@ -117,6 +117,23 @@ describe("Skrzynka wysłanych — licznik 'dziś'", () => {
     const sent = [{ at: todayMorning }, { at: yesterday }, { at: now }];
     expect(sentTodayCount(sent, now)).toBe(2);
     expect(sentTodayCount([], now)).toBe(0);
+  });
+});
+
+describe("sentMailToCsv — eksport skrzynki", () => {
+  it("nagłówek + wiersze, escapowanie przecinków/cudzysłowów", () => {
+    const csv = sentMailToCsv([
+      { at: new Date("2026-06-15T10:00:00").getTime(), company: "Firma, z przecinkiem", to: "a@x.pl", subject: 'Oferta "specjalna"', via: "SMTP" },
+    ]);
+    const lines = csv.split("\r\n");
+    expect(lines[0]).toBe("Data,Firma,Adres,Temat,Kanal");
+    expect(lines[1]).toContain('"Firma, z przecinkiem"');
+    expect(lines[1]).toContain('"Oferta ""specjalna"""');
+    expect(lines[1]).toContain("a@x.pl");
+  });
+
+  it("pusta skrzynka → sam nagłówek", () => {
+    expect(sentMailToCsv([])).toBe("Data,Firma,Adres,Temat,Kanal");
   });
 });
 
