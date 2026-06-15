@@ -97,8 +97,17 @@ export function callNowList(leads: Lead[], now = new Date()): Lead[] {
     });
 }
 
-// --- 3. Follow-upy — ponaglenia, które domykają sprzedaż ---
+/** Wyszukiwarka po istniejącej liście leadów (firma, kontakt, nisza, miasto, notatka). */
+export function searchLeads(leads: Lead[], q: string): Lead[] {
+  const needle = (q || "").trim().toLowerCase();
+  if (!needle) return leads;
+  return leads.filter((l) => {
+    const hay = [l.company, l.contact, l.niche, l.location, l.note, l.url].filter(Boolean).join(" ").toLowerCase();
+    return hay.includes(needle);
+  });
+}
 
+// --- 3. Follow-upy — ponaglenia, które domykają sprzedaż ---
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FOLLOWUP_AFTER_DAYS = 3; // odstęp między kontaktami
 const MAX_FOLLOWUPS = 4;       // po tylu odpuszczamy (nie nękamy)

@@ -6,7 +6,7 @@ import { splitOffer } from "../lib/glinks";
 import { canSendDirect, draftAndSendOffer } from "../lib/mailer";
 import { findLeads } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
-import { leadsToCsv, followUpsDue, callNowList } from "../lib/salesEngine";
+import { leadsToCsv, followUpsDue, callNowList, searchLeads } from "../lib/salesEngine";
 import { importLeads } from "../lib/leadImport";
 import { copyWithToast, toast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
@@ -27,6 +27,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const { data } = useStore();
   const leads = data.leads || [];
   const [filter, setFilter] = useState<LeadStatus | "all">("all");
+  const [query, setQuery] = useState("");
   const [form, setForm] = useState({ company: "", contact: "", value: "" });
   const [drafting, setDrafting] = useState<string>("");
   const [sending, setSending] = useState<string>("");
@@ -173,9 +174,10 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
 
   // Gorące leady (wysoki score z teczki) na górze — wiesz, do kogo dzwonić najpierw.
   const shown = useMemo(() => {
-    const base = filter === "all" ? leads : leads.filter((l) => l.status === filter);
+    const byStatus = filter === "all" ? leads : leads.filter((l) => l.status === filter);
+    const base = searchLeads(byStatus, query);
     return [...base].sort((a, b) => (b.intel?.score ?? -1) - (a.intel?.score ?? -1));
-  }, [leads, filter]);
+  }, [leads, filter, query]);
   const copy = (t?: string) => t && copyWithToast(t);
 
   return (
@@ -253,6 +255,15 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
             słabych punktów, spersonalizowany e-mail i skrypt rozmowy. Gorące leady 🔥 lądują na górze.
           </p>
 
+          {leads.length > 8 && (
+            <input
+              className="ta"
+              style={{ minHeight: 0, padding: "8px 10px", margin: "4px 0 8px" }}
+              placeholder="🔎 szukaj w leadach (firma, kontakt, miasto, notatka)…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          )}
           <div className="chips" style={{ flexWrap: "wrap", margin: "4px 0 8px" }}>
             <span className={`chip ${filter === "all" ? "on" : ""}`} onClick={() => setFilter("all")} style={{ cursor: "pointer" }}>wszystkie ({leads.length})</span>
             {STATUS.map((s) => (

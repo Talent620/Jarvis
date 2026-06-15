@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { isOpenNow, openLabel, callNowList, followUpsDue, followUpMessage, markContacted, pipelineForecast, leadsToCsv } from "../src/lib/salesEngine";
+import { isOpenNow, openLabel, callNowList, followUpsDue, followUpMessage, markContacted, pipelineForecast, leadsToCsv, searchLeads } from "../src/lib/salesEngine";
 import { rankRawLeads } from "../src/lib/leads";
 import { store, uid } from "../src/lib/store";
 import type { Lead, LeadStatus } from "../src/types";
@@ -13,6 +13,35 @@ const SUN_10 = new Date("2026-06-14T10:00:00"); // niedziela
 function lead(p: Partial<Lead>): Lead {
   return { id: uid(), company: "Firma", status: "new", createdAt: 0, updatedAt: 0, ...p };
 }
+
+describe("searchLeads — wyszukiwarka leadów", () => {
+  const data: Lead[] = [
+    lead({ company: "Salon Ola", location: "Kraków", contact: "ola@x.pl", niche: "fryzjer" }),
+    lead({ company: "Warsztat Marek", location: "Wrocław", note: "pilny klient" }),
+    lead({ company: "Piekarnia Nowak", contact: "600100200" }),
+  ];
+
+  it("pusty tekst → cała lista", () => {
+    expect(searchLeads(data, "")).toHaveLength(3);
+    expect(searchLeads(data, "   ")).toHaveLength(3);
+  });
+
+  it("szuka po nazwie firmy (bez względu na wielkość liter)", () => {
+    expect(searchLeads(data, "salon").map((l) => l.company)).toEqual(["Salon Ola"]);
+    expect(searchLeads(data, "NOWAK")).toHaveLength(1);
+  });
+
+  it("szuka po mieście, kontakcie, niszy i notatce", () => {
+    expect(searchLeads(data, "wrocław")).toHaveLength(1);
+    expect(searchLeads(data, "600100200")).toHaveLength(1);
+    expect(searchLeads(data, "fryzjer")).toHaveLength(1);
+    expect(searchLeads(data, "pilny")).toHaveLength(1);
+  });
+
+  it("brak dopasowania → pusto", () => {
+    expect(searchLeads(data, "xyz")).toHaveLength(0);
+  });
+});
 
 describe("godziny otwarcia (opening_hours)", () => {
   it("Mo-Fr 09:00-18:00: otwarte w pon 10:00, zamknięte w pon 20:00 i w niedzielę", () => {
