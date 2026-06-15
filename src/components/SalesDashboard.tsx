@@ -3,7 +3,7 @@ import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
 import { splitOffer } from "../lib/glinks";
-import { canSendDirect, draftAndSendOffer } from "../lib/mailer";
+import { canSendDirect, draftAndSendOffer, sentTodayCount } from "../lib/mailer";
 import { findLeads } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { leadsToCsv, followUpsDue, callNowList, searchLeads, wasLeadEmailed } from "../lib/salesEngine";
@@ -201,6 +201,10 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
             <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
               <div style={{ fontSize: 22, fontFamily: "Orbitron", color: "var(--ok, #58e08a)" }}>{stats.earned} zł</div>
               <div className="muted" style={{ fontSize: 11 }}>zarobione ({stats.won})</div>
+            </div>
+            <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
+              <div style={{ fontSize: 22, fontFamily: "Orbitron", color: "var(--cyan, #6ce7ff)" }}>{sentTodayCount(data.sentMail || [])}</div>
+              <div className="muted" style={{ fontSize: 11 }}>✉ wysłane dziś</div>
             </div>
           </div>
 
