@@ -44,4 +44,16 @@ describe("zaszyfrowana pełna kopia (AES-256)", () => {
     const cipherText = await packEncrypted(buildFullPayload(), "dobre-haslo");
     await expect(unpackEncrypted(cipherText, "zle-haslo")).rejects.toThrow();
   });
+
+  it("kopia obejmuje skrzynkę wysłanych i historię postów (nie giną przy przenosinach)", async () => {
+    store.setData((d) => {
+      d.sentMail = [{ id: "s1", to: "k@x.pl", subject: "Oferta", via: "SMTP", at: 1 } as any];
+      d.contentPosts = [{ id: "c1", platform: "instagram", topic: "promo", text: "post", at: 1 } as any];
+    });
+    const cipherText = await packEncrypted(buildFullPayload(), "h");
+    store.setData((d) => { d.sentMail = []; d.contentPosts = []; });
+    await unpackEncrypted(cipherText, "h");
+    expect(store.data.sentMail[0]?.subject).toBe("Oferta");
+    expect(store.data.contentPosts[0]?.text).toBe("post");
+  });
 });

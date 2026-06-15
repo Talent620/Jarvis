@@ -10,6 +10,7 @@ import type { AppData, Settings } from "../types";
 const COLLECTIONS: (keyof AppData)[] = [
   "tasks", "notes", "reminders", "shopping", "calendar",
   "memory", "scenes", "projects", "projectFiles", "tally", "journal", "leads", "flashcards",
+  "bargainWatch", "sentMail", "contentPosts",
 ];
 
 export function exportData(): void {
