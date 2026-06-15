@@ -6,7 +6,7 @@ import { scheduleReminder, scheduleTimer } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
 import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
-import { gmailSearch, gmailRead, gmailSend, gmailReply, gcalList, gcalDay, gcalAdd } from "./google";
+import { gmailSearch, gmailRead, gmailSend, gmailReply, gmailUnreadSummary, gcalList, gcalDay, gcalAdd } from "./google";
 import { rememberFact } from "./memory";
 import { generateCards } from "./cards";
 import { runAutomation } from "./n8n";
@@ -518,6 +518,16 @@ const tools: Tool[] = [
           : "Brak aktywnych zadań.",
         todayReminders.length ? `Przypomnienia na dziś: ${todayReminders.map((r) => r.text).join("; ")}.` : "",
       ].filter(Boolean);
+
+      // Gdy konto Google jest podłączone — dorzuć dzisiejszy kalendarz Google i nieprzeczytane maile.
+      if (hasBackendGmail()) {
+        const [gcal, unread] = await Promise.all([
+          gcalDay(0).catch(() => ""),
+          gmailUnreadSummary().catch(() => ""),
+        ]);
+        if (gcal && !/niepołączone|Skonfiguruj|błąd|error/i.test(gcal)) lines.push(`Kalendarz Google — ${gcal.replace(/^📅\s*/, "")}`);
+        if (unread) lines.push(unread);
+      }
 
       return lines.join("\n");
     },

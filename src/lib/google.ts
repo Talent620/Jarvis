@@ -39,6 +39,16 @@ export async function gmailSearch(query = ""): Promise<string> {
     : "Brak pasujących wiadomości.";
 }
 
+/** Krótkie podsumowanie nieprzeczytanych maili (do porannego briefingu). */
+export async function gmailUnreadSummary(max = 5): Promise<string> {
+  const r = await call("/v1/gmail/list", { query: "is:unread", max });
+  if (r.error) return "";
+  const items = r.messages || [];
+  if (!items.length) return "Brak nieprzeczytanych maili.";
+  return `Nieprzeczytane maile (${items.length}${items.length >= max ? "+" : ""}): ` +
+    items.map((m: any) => `${m.from} — ${m.subject}`).join("; ");
+}
+
 /** Pełna treść jednego e-maila (po id z gmail_search) — do czytania i odpowiadania. */
 export async function gmailRead(id: string): Promise<string> {
   const r = await call("/v1/gmail/get", { id });

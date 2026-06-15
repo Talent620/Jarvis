@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { gmailReply, gmailRead, dayRangeISO } from "../src/lib/google";
+import { gmailReply, gmailRead, dayRangeISO, gmailUnreadSummary } from "../src/lib/google";
 import { store } from "../src/lib/store";
 
 // Integracja Gmail przez backend: odpowiedź w wątku i czytanie pełnej treści.
@@ -42,6 +42,23 @@ describe("dayRangeISO — zakres dnia dla kalendarza", () => {
     expect(max.getTime() - min.getTime()).toBe(24 * 60 * 60 * 1000);
     // ten sam dzień startu
     expect(min.getDate()).toBe(15);
+  });
+});
+
+describe("gmailUnreadSummary — do briefingu", () => {
+  it("liczy i wypisuje nadawców/tematy", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ messages: [
+      { id: "1", from: "szef@x.pl", subject: "Pilne" },
+      { id: "2", from: "klient@y.pl", subject: "Faktura" },
+    ] }))));
+    const out = await gmailUnreadSummary();
+    expect(out).toMatch(/Nieprzeczytane maile \(2\)/);
+    expect(out).toContain("szef@x.pl — Pilne");
+  });
+
+  it("pusta skrzynka → komunikat o braku", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ messages: [] }))));
+    expect(await gmailUnreadSummary()).toMatch(/Brak nieprzeczytanych/);
   });
 });
 
