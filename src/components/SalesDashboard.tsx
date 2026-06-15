@@ -6,7 +6,7 @@ import { splitOffer } from "../lib/glinks";
 import { canSendDirect, draftAndSendOffer } from "../lib/mailer";
 import { findLeads } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
-import { leadsToCsv, followUpsDue, callNowList, searchLeads } from "../lib/salesEngine";
+import { leadsToCsv, followUpsDue, callNowList, searchLeads, wasLeadEmailed } from "../lib/salesEngine";
 import { importLeads } from "../lib/leadImport";
 import { copyWithToast, toast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
@@ -281,6 +281,9 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                   <b style={{ cursor: "pointer" }} onClick={() => setOpenLead(l.id)}>
                     {l.intel ? `${scoreLabel(l.intel.score).emoji} ` : ""}{l.company}
+                    {wasLeadEmailed(l, data.sentMail || []) && (
+                      <span className="chip" style={{ marginLeft: 6, fontSize: 11, color: "var(--ok, #58e08a)", padding: "1px 8px" }}>✉ wysłano</span>
+                    )}
                   </b>
                   <span className="x" style={{ cursor: "pointer" }} onClick={() => del(l.id)}>✕</span>
                 </div>

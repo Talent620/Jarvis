@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { isOpenNow, openLabel, callNowList, followUpsDue, followUpMessage, markContacted, pipelineForecast, leadsToCsv, searchLeads } from "../src/lib/salesEngine";
+import { isOpenNow, openLabel, callNowList, followUpsDue, followUpMessage, markContacted, pipelineForecast, leadsToCsv, searchLeads, wasLeadEmailed } from "../src/lib/salesEngine";
+import type { SentMail } from "../src/types";
 import { rankRawLeads } from "../src/lib/leads";
 import { store, uid } from "../src/lib/store";
 import type { Lead, LeadStatus } from "../src/types";
@@ -40,6 +41,23 @@ describe("searchLeads — wyszukiwarka leadów", () => {
 
   it("brak dopasowania → pusto", () => {
     expect(searchLeads(data, "xyz")).toHaveLength(0);
+  });
+});
+
+describe("wasLeadEmailed — znacznik wysłanej oferty", () => {
+  const sent: SentMail[] = [
+    { id: "1", to: "ola@x.pl", subject: "Oferta", company: "Salon Ola", via: "SMTP", at: 0 },
+  ];
+  it("dopasowuje po nazwie firmy", () => {
+    expect(wasLeadEmailed(lead({ company: "Salon Ola" }), sent)).toBe(true);
+    expect(wasLeadEmailed(lead({ company: "Inna Firma" }), sent)).toBe(false);
+  });
+  it("dopasowuje po adresie e-mail w kontakcie", () => {
+    expect(wasLeadEmailed(lead({ company: "X", contact: "ola@x.pl" }), sent)).toBe(true);
+    expect(wasLeadEmailed(lead({ company: "X", contact: "600100200" }), sent)).toBe(false);
+  });
+  it("pusta skrzynka → false", () => {
+    expect(wasLeadEmailed(lead({ company: "Salon Ola" }), [])).toBe(false);
   });
 });
 

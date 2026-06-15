@@ -1,5 +1,5 @@
 import { store } from "./store";
-import type { Lead, LeadStatus } from "../types";
+import type { Lead, LeadStatus, SentMail } from "../types";
 
 // === Silnik sprzedaży — to, co realnie domyka transakcje (= pieniądze) ===
 //  1) GODZINY OTWARCIA: parsuje opening_hours z OSM → wiesz, KOMU dzwonić TERAZ
@@ -105,6 +105,17 @@ export function searchLeads(leads: Lead[], q: string): Lead[] {
     const hay = [l.company, l.contact, l.niche, l.location, l.note, l.url].filter(Boolean).join(" ").toLowerCase();
     return hay.includes(needle);
   });
+}
+
+/** Czy do tego leada wysłano już e-mail (po firmie lub adresie ze Skrzynki wysłanych). */
+export function wasLeadEmailed(lead: Lead, sent: SentMail[]): boolean {
+  if (!sent?.length) return false;
+  const company = (lead.company || "").trim().toLowerCase();
+  const email = (lead.contact || "").trim().toLowerCase();
+  return sent.some((m) =>
+    (!!company && (m.company || "").trim().toLowerCase() === company) ||
+    (!!email && email.includes("@") && (m.to || "").trim().toLowerCase() === email),
+  );
 }
 
 // --- 3. Follow-upy — ponaglenia, które domykają sprzedaż ---
