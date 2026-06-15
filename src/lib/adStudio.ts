@@ -55,12 +55,12 @@ export function adSystem(platform: AdPlatform): string {
   ].join("\n");
 }
 
-/** User prompt z produktem, odbiorcą, celem i budżetem. */
+/** User prompt z produktem, odbiorcą, celem i budżetem. Wejście przycinane (obrona przed długim tekstem). */
 export function adUserPrompt(o: AdOpts): string {
-  const lines = [`Produkt/usługa: ${o.product.trim()}`];
-  if (o.audience?.trim()) lines.push(`Grupa docelowa: ${o.audience.trim()}`);
+  const lines = [`Produkt/usługa: ${o.product.trim().slice(0, 2000)}`];
+  if (o.audience?.trim()) lines.push(`Grupa docelowa: ${o.audience.trim().slice(0, 500)}`);
   if (o.goal) lines.push(`Cel kampanii: ${o.goal}`);
-  if (o.budget?.trim()) lines.push(`Budżet (orientacyjnie): ${o.budget.trim()}`);
+  if (o.budget?.trim()) lines.push(`Budżet (orientacyjnie): ${o.budget.trim().slice(0, 100)}`);
   return lines.join("\n");
 }
 

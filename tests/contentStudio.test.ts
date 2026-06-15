@@ -36,6 +36,13 @@ describe("contentStudio — generator postów", () => {
     expect(TONES).toContain("profesjonalny");
   });
 
+  it("contentUserPrompt przycina bardzo długi temat (obrona przed patologią)", () => {
+    const p = contentUserPrompt({ platform: "instagram", topic: "x".repeat(5000) });
+    // 'Temat posta: ' + 2000 znaków
+    expect(p.length).toBeLessThan(2100);
+    expect(p).toContain("Temat posta: ");
+  });
+
   it("saveContentPost dokłada najnowszy na górę i pomija pusty", () => {
     store.setData((d) => { d.contentPosts = []; });
     saveContentPost("instagram", "temat A", "post A");

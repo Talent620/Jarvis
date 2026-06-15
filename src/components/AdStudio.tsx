@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useEscape } from "../hooks/useEscape";
-import { copyWithToast, toast } from "../lib/toast";
+import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
 import { saveContentPost } from "../lib/contentStudio";
 import { generateAds, AD_PLATFORMS, AD_GOALS, type AdPlatform, type AdGoal } from "../lib/adStudio";
 
@@ -26,11 +26,8 @@ export default function AdStudio({ onClose }: { onClose: () => void }) {
     saveContentPost(platform === "google" ? "Google Ads" : "Meta Ads", product.trim(), r);
   };
 
-  const canShare = typeof navigator !== "undefined" && !!(navigator as any).share;
-  const share = async () => {
-    try { await (navigator as any).share({ text: out }); }
-    catch { copyWithToast(out, "Skopiowano — wklej w panelu reklam ✓"); }
-  };
+  const canShare = typeof navigator !== "undefined" && !!(navigator as { share?: unknown }).share;
+  const share = () => shareOrCopy(out, "Skopiowano — wklej w panelu reklam ✓");
 
   return (
     <div className="sheet" onClick={onClose}>

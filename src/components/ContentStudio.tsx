@@ -2,7 +2,7 @@ import { useState } from "react";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { useEscape } from "../hooks/useEscape";
-import { copyWithToast, toast } from "../lib/toast";
+import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
 import { generatePost, saveContentPost, PLATFORMS, TONES, type Platform, type Tone } from "../lib/contentStudio";
 
 // 📱 Maszynka do kontentu — JARVIS pisze gotowy post na social media. Kopiujesz
@@ -28,11 +28,8 @@ export default function ContentStudio({ onClose }: { onClose: () => void }) {
     saveContentPost(platform, topic.trim(), r);
   };
 
-  const canShare = typeof navigator !== "undefined" && !!(navigator as any).share;
-  const share = async () => {
-    try { await (navigator as any).share({ text: out }); }
-    catch { copyWithToast(out, "Skopiowano — wklej w aplikacji ✓"); }
-  };
+  const canShare = typeof navigator !== "undefined" && !!(navigator as { share?: unknown }).share;
+  const share = () => shareOrCopy(out);
 
   return (
     <div className="sheet" onClick={onClose}>

@@ -2,6 +2,7 @@ import { store } from "./store";
 import { gmailSend } from "./google";
 import { draftOffer } from "./offer";
 import { splitOffer } from "./glinks";
+import { fetchTimeout } from "./http";
 import type { Lead } from "../types";
 
 // Wysyłka e-maili WPROST z aplikacji — inteligentny wybór kanału:
@@ -38,16 +39,18 @@ async function relayCall(path: string, payload: unknown): Promise<{ ok: boolean;
   const s = store.settings;
   const base = s.syncUrl!.trim().replace(/\/$/, "");
   try {
-    const res = await fetch(`${base}${path}`, {
+    // Przekaźnik SMTP po stronie serwera łączy się z pocztą — dajemy zapas czasu (20 s).
+    const res = await fetchTimeout(`${base}${path}`, {
       method: "POST",
       headers: { authorization: `Bearer ${s.syncToken!.trim()}`, "content-type": "application/json" },
       body: JSON.stringify(payload),
-    });
+    }, 20000);
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, error: (data as any).error || `Błąd (${res.status}).` };
+    if (!res.ok) return { ok: false, error: (data as { error?: string }).error || `Błąd (${res.status}).` };
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: `Błąd połączenia z backendem: ${e instanceof Error ? e.message : e}` };
+    const aborted = e instanceof Error && e.name === "AbortError";
+    return { ok: false, error: aborted ? "Przekroczono czas wysyłki przez backend." : `Błąd połączenia z backendem: ${e instanceof Error ? e.message : e}` };
   }
 }
 

@@ -40,4 +40,10 @@ describe("adStudio — generator reklam", () => {
     expect(AD_GOALS).toContain("sprzedaż");
     expect(AD_GOALS).toContain("leady/kontakty");
   });
+
+  it("adUserPrompt przycina bardzo długi produkt", () => {
+    const p = adUserPrompt({ platform: "google", product: "y".repeat(5000) });
+    expect(p.length).toBeLessThan(2100);
+    expect(p).toContain("Produkt/usługa: ");
+  });
 });

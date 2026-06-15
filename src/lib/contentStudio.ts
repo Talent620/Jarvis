@@ -43,11 +43,11 @@ export function contentSystem(platform: Platform): string {
   ].join("\n");
 }
 
-/** User prompt z tematem, tonem i marką. */
+/** User prompt z tematem, tonem i marką. Wejście przycinane (obrona przed bardzo długim tekstem). */
 export function contentUserPrompt(o: ContentOpts): string {
-  const lines = [`Temat posta: ${o.topic.trim()}`];
+  const lines = [`Temat posta: ${o.topic.trim().slice(0, 2000)}`];
   if (o.tone) lines.push(`Ton: ${o.tone}`);
-  if (o.brand?.trim()) lines.push(`Marka/firma (wpleć naturalnie): ${o.brand.trim()}`);
+  if (o.brand?.trim()) lines.push(`Marka/firma (wpleć naturalnie): ${o.brand.trim().slice(0, 200)}`);
   return lines.join("\n");
 }
 

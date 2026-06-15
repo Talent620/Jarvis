@@ -1,4 +1,5 @@
 import { store } from "./store";
+import { fetchTimeout } from "./http";
 
 function base(): string | null {
   const u = store.settings.syncUrl?.trim();
@@ -10,16 +11,18 @@ async function call(path: string, body?: unknown): Promise<any> {
   const tok = store.settings.syncToken?.trim();
   if (!b || !tok) return { error: "Skonfiguruj backend (⚙ → Synchronizacja) i połącz konto Google." };
   try {
-    const res = await fetch(`${b}${path}`, {
+    // Backend robi po stronie serwera kilka zapytań do Google — dajemy zapas czasu (15 s).
+    const res = await fetchTimeout(`${b}${path}`, {
       method: "POST",
       headers: { authorization: `Bearer ${tok}`, "content-type": "application/json" },
       body: JSON.stringify(body || {}),
-    });
+    }, 15000);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: data.error || `Błąd (${res.status}).` };
     return data;
   } catch (e) {
-    return { error: `Błąd połączenia: ${e instanceof Error ? e.message : e}` };
+    const aborted = e instanceof Error && e.name === "AbortError";
+    return { error: aborted ? "Przekroczono czas połączenia z backendem." : `Błąd połączenia: ${e instanceof Error ? e.message : e}` };
   }
 }
 
