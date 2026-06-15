@@ -3,6 +3,7 @@ import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { useEscape } from "../hooks/useEscape";
 import { isSameDay, sentTodayCount, sentMailToCsv } from "../lib/mailer";
+import { toast } from "../lib/toast";
 
 // 📤 Skrzynka wysłanych — lista maili wysłanych wprost z aplikacji (komu, co, kiedy,
 // jakim kanałem). Zapis lokalny; potwierdza „że się udało" i gdzie poszło.
@@ -76,6 +77,18 @@ export default function SentBox({ onClose }: { onClose: () => void }) {
               }}
             >
               📤 CSV
+            </button>
+          )}
+          {all.length > 0 && (
+            <button
+              className="btn"
+              onClick={() => {
+                if (!window.confirm("Wyczyścić całą Skrzynkę wysłanych na tym urządzeniu? Tej operacji nie cofniesz.")) return;
+                store.setData((d) => { d.sentMail = []; });
+                toast("🗑 Skrzynka wysłanych wyczyszczona");
+              }}
+            >
+              🗑 Wyczyść
             </button>
           )}
           <button className="btn primary" style={{ flex: 1 }} onClick={onClose}>Zamknij</button>
