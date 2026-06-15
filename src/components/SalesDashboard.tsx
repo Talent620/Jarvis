@@ -155,10 +155,15 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const add = () => {
     const c = form.company.trim();
     if (!c) return;
+    if (leads.some((l) => l.company.trim().toLowerCase() === c.toLowerCase())) {
+      toast(`„${c}" jest już na liście.`);
+      return;
+    }
     store.setData((d) =>
       d.leads.unshift({ id: uid(), company: c, contact: form.contact.trim() || undefined, value: Number(form.value) || undefined, status: "new", createdAt: Date.now(), updatedAt: Date.now() }),
     );
     setForm({ company: "", contact: "", value: "" });
+    toast(`➕ Dodano: ${c}`);
   };
 
   const stats = useMemo(() => {
