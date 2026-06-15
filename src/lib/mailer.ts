@@ -140,26 +140,49 @@ export function recordSent(entry: { to: string; subject: string; via: "SMTP" | "
  * skonfigurowany, zwraca błąd (UI proponuje wtedy zwykły Gmail compose).
  * Po udanej wysyłce zapisuje wpis w Skrzynce wysłanych.
  */
-export async function sendOfferEmail(to: string, subject: string, body: string, company?: string): Promise<SendResult> {
+export async function sendOfferEmail(to: string, subject: string, body: string, company?: string, record = true): Promise<SendResult> {
   if (canSendMail()) {
     const err = await sendMailNow(to, subject, body);
     if (err) return { ok: false, error: err };
-    recordSent({ to: to.trim(), subject, via: "SMTP", company });
+    if (record) recordSent({ to: to.trim(), subject, via: "SMTP", company });
     return { ok: true, via: "SMTP" };
   }
   if (canRelaySmtp()) {
     const r = await relaySend(to, subject, body);
     if (!r.ok) return { ok: false, error: r.error || "Nie udało się wysłać przez backend." };
-    recordSent({ to: to.trim(), subject, via: "SMTP", company });
+    if (record) recordSent({ to: to.trim(), subject, via: "SMTP", company });
     return { ok: true, via: "SMTP" };
   }
   if (hasBackendGmail()) {
     const r = await gmailSend(to.trim(), subject, body);
     if (!/^Wysłano/i.test(r)) return { ok: false, error: r };
-    recordSent({ to: to.trim(), subject, via: "Gmail", company });
+    if (record) recordSent({ to: to.trim(), subject, via: "Gmail", company });
     return { ok: true, via: "Gmail" };
   }
   return { ok: false, error: "Brak skonfigurowanej wysyłki — użyj przycisku Gmail (otworzy gotową wiadomość)." };
+}
+
+/**
+ * Wyślij testowy e-mail na własny adres — potwierdza, że cała wysyłka działa
+ * end-to-end (nie tylko logowanie). Nie zapisuje wpisu w Skrzynce wysłanych.
+ */
+export async function sendTestEmail(): Promise<{ ok: boolean; message: string }> {
+  const s = store.settings;
+  const to = s.smtpUser?.trim();
+  if (!to) return { ok: false, message: "Najpierw wpisz swój adres e-mail (⚙ → Poczta)." };
+  if (!canSendDirect()) {
+    return { ok: false, message: "Brak gotowej wysyłki — na Windows wpisz hasło aplikacji; na telefonie dodaj backend (⚙ → Synchronizacja)." };
+  }
+  const r = await sendOfferEmail(
+    to,
+    "JARVIS — test poczty ✅",
+    "To jest wiadomość testowa wysłana z JARVIS-a.\n\nJeśli ją widzisz, wysyłka e-mail działa poprawnie. Możesz spokojnie wysyłać oferty jednym kliknięciem.",
+    undefined,
+    false,
+  );
+  return r.ok
+    ? { ok: true, message: `✅ Wysłano testowy e-mail na ${to} (${r.via}). Sprawdź swoją skrzynkę.` }
+    : { ok: false, message: r.error };
 }
 
 export type DraftSendResult = SendResult & { offer?: string };

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent } from "../src/lib/mailer";
+import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent, sendTestEmail } from "../src/lib/mailer";
 import { store } from "../src/lib/store";
 
 // Wybór kanału wysyłki: desktop→SMTP, telefon→Gmail(backend), inaczej→compose.
@@ -100,6 +100,32 @@ describe("przekaźnik SMTP (telefon, bez Google OAuth)", () => {
     const r = await verifyMailConnection();
     expect(r.ok).toBe(true);
     expect(r.message).toMatch(/w tle|poprawnie/i);
+  });
+});
+
+describe("sendTestEmail — test poczty do siebie", () => {
+  it("wysyła na własny adres i NIE zapisuje w Skrzynce wysłanych", async () => {
+    store.setData((d) => { d.sentMail = []; });
+    store.setSettings({ smtpUser: "ja@gmail.com", smtpPass: "haslo" });
+    (window as any).jarvisDesktop = { sendMail: vi.fn(async () => "ok") };
+    const r = await sendTestEmail();
+    expect(r.ok).toBe(true);
+    expect(r.message).toContain("ja@gmail.com");
+    expect(store.data.sentMail).toHaveLength(0); // test nie zaśmieca skrzynki
+  });
+
+  it("bez adresu → prosi o uzupełnienie", async () => {
+    store.setSettings({ smtpUser: "", smtpPass: "" });
+    const r = await sendTestEmail();
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/adres/i);
+  });
+
+  it("adres jest, ale brak kanału wysyłki → czytelna podpowiedź", async () => {
+    store.setSettings({ smtpUser: "ja@gmail.com", smtpPass: "" });
+    const r = await sendTestEmail();
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/Windows|backend/i);
   });
 });
 

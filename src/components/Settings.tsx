@@ -15,7 +15,7 @@ import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode } from "../lib/privateMode";
 import { runProspecting } from "../lib/prospect";
-import { verifyMailConnection } from "../lib/mailer";
+import { verifyMailConnection, sendTestEmail } from "../lib/mailer";
 import { enrollVoice } from "../lib/voiceEnroll";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
@@ -518,6 +518,20 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   }}
                 >
                   {mailChecking ? "⏳ Sprawdzam…" : "🔌 Sprawdź połączenie poczty"}
+                </button>
+                <button
+                  className="btn"
+                  style={{ marginTop: 8 }}
+                  disabled={mailChecking}
+                  onClick={async () => {
+                    setMailChecking(true);
+                    setMailCheck("⏳ Wysyłam testowy e-mail…");
+                    const r = await sendTestEmail();
+                    setMailChecking(false);
+                    setMailCheck(r.ok ? r.message : `❌ ${r.message}`);
+                  }}
+                >
+                  📧 Wyślij testowy e-mail do siebie
                 </button>
                 {mailCheck && <p className="muted" style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>{mailCheck}</p>}
               </div>
