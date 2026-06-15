@@ -6,6 +6,7 @@ import { isDesktop, isSpeechSupported } from "./voice";
 import { fetchTimeout } from "./http";
 import { Capacitor } from "@capacitor/core";
 import { wakeSupported } from "./wakeword";
+import { canSendMail, canRelaySmtp, hasBackendGmail } from "./mailer";
 
 // === Centrum Sprawdzania ===
 // Przegląd WSZYSTKICH kluczowych funkcji JARVIS-a: co działa, co nie i DLACZEGO —
@@ -180,17 +181,18 @@ export async function runHealthCheck(onUpdate?: (items: HealthItem[]) => void, l
     onUpdate?.([...items]);
   }
 
-  // 6. Poczta — wysyłka ofert jednym potwierdzeniem. Desktop: SMTP. Telefon: Gmail (backend).
-  const smtpReady = s.smtpUser?.trim() && s.smtpPass?.trim();
-  const gmailReady = s.syncUrl?.trim() && s.syncToken?.trim();
-  if (isDesktop() && smtpReady) {
-    push({ id: "mail", icon: "📨", title: "Poczta (wysyłka z aplikacji)", status: "ok", detail: `SMTP skonfigurowany (${s.smtpUser}). Oferty wyślesz jednym potwierdzeniem z Teczki Klienta.` });
-  } else if (gmailReady) {
-    push({ id: "mail", icon: "📨", title: "Poczta (Gmail przez backend)", status: "ok", detail: "Konto Google podłączone — oferty wyślesz jednym potwierdzeniem (też na telefonie, bez otwierania Gmaila). Pewnosc? Kliknij Sprawdz Gmaila w Synchronizacji." });
+  // 6. Poczta — wysyłka ofert jednym kliknięciem. Desktop: SMTP. Telefon: przekaźnik
+  //    SMTP przez backend (hasło aplikacji, bez Gmaila) lub Gmail OAuth.
+  if (canSendMail()) {
+    push({ id: "mail", icon: "📨", title: "Poczta (wysyłka z aplikacji)", status: "ok", detail: `SMTP skonfigurowany (${s.smtpUser}). Oferty wysyłasz jednym kliknięciem, bez otwierania Gmaila. Pewność? ⚙ → Poczta → Sprawdź połączenie.` });
+  } else if (canRelaySmtp()) {
+    push({ id: "mail", icon: "📨", title: "Poczta (wysyłka w tle przez backend)", status: "ok", detail: `Telefon wysyła w tle hasłem aplikacji (${s.smtpUser}), bez otwierania Gmaila. Pewność? ⚙ → Poczta → Sprawdź połączenie.` });
+  } else if (hasBackendGmail()) {
+    push({ id: "mail", icon: "📨", title: "Poczta (Gmail przez backend)", status: "ok", detail: "Backend podłączony — jeśli połączyłeś konto Google, oferty wyślesz jednym kliknięciem (też na telefonie). Pewność? Kliknij Sprawdź Gmaila w Synchronizacji." });
   } else if (isDesktop()) {
-    push({ id: "mail", icon: "📨", title: "Poczta (wysyłka z aplikacji)", status: "info", detail: "Maile otwierają się w Gmailu (też OK). Chcesz wysyłać jednym kliknięciem? ⚙ → Poczta (Gmail + hasło aplikacji) albo ⚙ → Synchronizacja → Połącz konto Google." });
+    push({ id: "mail", icon: "📨", title: "Poczta (wysyłka z aplikacji)", status: "info", detail: "Maile otwierają się w Gmailu (też OK). Chcesz wysyłać jednym kliknięciem? ⚙ → Poczta (Gmail + hasło aplikacji)." });
   } else {
-    push({ id: "mail", icon: "📨", title: "Poczta", status: "info", detail: "Na telefonie maile otwierają się gotowe w Gmailu (jedno tapnięcie). Chcesz wysyłać w tle bez otwierania apki? ⚙ → Synchronizacja → Połącz konto Google." });
+    push({ id: "mail", icon: "📨", title: "Poczta", status: "info", detail: "Na telefonie maile otwierają się gotowe w Gmailu (jedno tapnięcie). Chcesz wysyłać w tle bez otwierania apki? ⚙ → Poczta (adres + hasło aplikacji) + ⚙ → Synchronizacja (backend)." });
   }
 
   // 7. Wyszukiwanie w sieci dla AI.
