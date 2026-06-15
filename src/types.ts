@@ -174,6 +174,17 @@ export interface AppData {
   bargainWatch: WatchedItem[];
   /** Skrzynka wysłanych — potwierdzone maile wysłane wprost z aplikacji. */
   sentMail: SentMail[];
+  /** Historia postów z Maszynki do kontentu. */
+  contentPosts: ContentPost[];
+}
+
+/** Zapisany post z Maszynki do kontentu. */
+export interface ContentPost {
+  id: string;
+  platform: string;
+  topic: string;
+  text: string;
+  at: number;
 }
 
 /** Wpis w Skrzynce wysłanych — komu, co, kiedy i jakim kanałem poszło. */

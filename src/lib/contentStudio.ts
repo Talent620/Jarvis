@@ -51,6 +51,16 @@ export function contentUserPrompt(o: ContentOpts): string {
   return lines.join("\n");
 }
 
+/** Zapisz wygenerowany post w historii (najnowszy na górze, limit 50). */
+export function saveContentPost(platform: Platform, topic: string, text: string) {
+  if (!text.trim()) return;
+  store.setData((d) => {
+    if (!d.contentPosts) d.contentPosts = [];
+    d.contentPosts.unshift({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, platform, topic, text, at: Date.now() });
+    if (d.contentPosts.length > 50) d.contentPosts.length = 50;
+  });
+}
+
 /** Wygeneruj gotowy post. Pusty string = brak klucza AI lub błąd. */
 export async function generatePost(o: ContentOpts): Promise<string> {
   if (!o.topic?.trim()) return "";

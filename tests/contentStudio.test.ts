@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { contentSystem, contentUserPrompt, PLATFORMS, TONES } from "../src/lib/contentStudio";
+import { contentSystem, contentUserPrompt, PLATFORMS, TONES, saveContentPost } from "../src/lib/contentStudio";
+import { store } from "../src/lib/store";
 
 describe("contentStudio — generator postów", () => {
   it("ma 4 platformy z unikalnymi id", () => {
@@ -33,5 +34,15 @@ describe("contentStudio — generator postów", () => {
   it("dostępne tony obejmują sprzedażowy i profesjonalny", () => {
     expect(TONES).toContain("sprzedażowy");
     expect(TONES).toContain("profesjonalny");
+  });
+
+  it("saveContentPost dokłada najnowszy na górę i pomija pusty", () => {
+    store.setData((d) => { d.contentPosts = []; });
+    saveContentPost("instagram", "temat A", "post A");
+    saveContentPost("facebook", "temat B", "post B");
+    saveContentPost("tiktok", "pusty", "   "); // pominięty
+    expect(store.data.contentPosts).toHaveLength(2);
+    expect(store.data.contentPosts[0].text).toBe("post B");
+    expect(store.data.contentPosts[0].platform).toBe("facebook");
   });
 });

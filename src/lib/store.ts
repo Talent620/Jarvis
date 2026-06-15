@@ -21,6 +21,7 @@ const emptyData: AppData = {
   flashcards: [],
   bargainWatch: [],
   sentMail: [],
+  contentPosts: [],
 };
 
 const defaultSettings: Settings = {

@@ -1,12 +1,15 @@
 import { useState } from "react";
+import { store } from "../lib/store";
+import { useStore } from "../hooks/useStore";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast, toast } from "../lib/toast";
-import { generatePost, PLATFORMS, TONES, type Platform, type Tone } from "../lib/contentStudio";
+import { generatePost, saveContentPost, PLATFORMS, TONES, type Platform, type Tone } from "../lib/contentStudio";
 
 // 📱 Maszynka do kontentu — JARVIS pisze gotowy post na social media. Kopiujesz
 // albo udostępniasz jednym tapnięciem do dowolnej apki (IG/FB/TikTok/LinkedIn).
 export default function ContentStudio({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  useStore();
   const [platform, setPlatform] = useState<Platform>("instagram");
   const [topic, setTopic] = useState("");
   const [tone, setTone] = useState<Tone>("swobodny");
@@ -22,6 +25,7 @@ export default function ContentStudio({ onClose }: { onClose: () => void }) {
     setBusy(false);
     if (!r) { toast("Nie udało się wygenerować — sprawdź klucz AI (⚙ → Mózg)."); return; }
     setOut(r);
+    saveContentPost(platform, topic.trim(), r);
   };
 
   const canShare = typeof navigator !== "undefined" && !!(navigator as any).share;
@@ -80,6 +84,24 @@ export default function ContentStudio({ onClose }: { onClose: () => void }) {
                 <button className="chip" onClick={generate} disabled={busy}>🔄 Inna wersja</button>
               </div>
             </div>
+          )}
+
+          {(store.data.contentPosts || []).length > 0 && (
+            <>
+              <h3 style={{ marginTop: 16 }}>🕘 Ostatnie posty</h3>
+              {(store.data.contentPosts || []).slice(0, 10).map((p) => (
+                <div className="journal-card" key={p.id} style={{ marginTop: 6 }}>
+                  <div className="muted" style={{ fontSize: 11 }}>
+                    {PLATFORMS.find((x) => x.id === p.platform)?.emoji || "📱"} {p.topic || "post"} · {new Date(p.at).toLocaleString("pl-PL")}
+                  </div>
+                  <p style={{ whiteSpace: "pre-wrap", margin: "4px 0 0", fontSize: 13, maxHeight: 80, overflow: "hidden" }}>{p.text}</p>
+                  <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    <button className="chip" onClick={() => copyWithToast(p.text, "Skopiowano ✓")}>📋 Kopiuj</button>
+                    <button className="chip" onClick={() => store.setData((d) => { d.contentPosts = (d.contentPosts || []).filter((x) => x.id !== p.id); })}>🗑</button>
+                  </div>
+                </div>
+              ))}
+            </>
           )}
         </div>
         <div className="panel-foot">
