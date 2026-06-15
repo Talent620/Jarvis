@@ -35,13 +35,35 @@ export async function gmailSearch(query = ""): Promise<string> {
   if (r.error) return r.error;
   const items = r.messages || [];
   return items.length
-    ? items.map((m: any) => `• ${m.from} — ${m.subject}\n  ${m.snippet}`).join("\n")
+    ? items.map((m: any) => `• [${m.id}] ${m.from} — ${m.subject}\n  ${m.snippet}`).join("\n")
     : "Brak pasujących wiadomości.";
+}
+
+/** Pełna treść jednego e-maila (po id z gmail_search) — do czytania i odpowiadania. */
+export async function gmailRead(id: string): Promise<string> {
+  const r = await call("/v1/gmail/get", { id });
+  if (r.error) return r.error;
+  return [
+    `Od: ${r.from}`,
+    `Temat: ${r.subject}`,
+    r.date ? `Data: ${r.date}` : "",
+    "",
+    r.body || "(pusta treść)",
+    "",
+    `[id=${r.id}; threadId=${r.threadId}; messageId=${r.messageId}]`,
+  ].filter((x) => x !== "").join("\n");
 }
 
 export async function gmailSend(to: string, subject: string, body: string): Promise<string> {
   const r = await call("/v1/gmail/send", { to, subject, body });
   return r.error || `Wysłano e-mail do ${to}.`;
+}
+
+/** Odpowiedz na e-mail w tym samym wątku (threadId + Message-ID z gmail_read). */
+export async function gmailReply(to: string, subject: string, body: string, threadId?: string, inReplyTo?: string): Promise<string> {
+  const subj = /^re:/i.test(subject) ? subject : `Re: ${subject}`;
+  const r = await call("/v1/gmail/send", { to, subject: subj, body, threadId, inReplyTo });
+  return r.error || `Wysłano odpowiedź do ${to}.`;
 }
 
 export async function gcalList(): Promise<string> {

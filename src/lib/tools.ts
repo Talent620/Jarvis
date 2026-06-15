@@ -6,7 +6,7 @@ import { scheduleReminder, scheduleTimer } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
 import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
-import { gmailSearch, gmailSend, gcalList, gcalAdd } from "./google";
+import { gmailSearch, gmailRead, gmailSend, gmailReply, gcalList, gcalAdd } from "./google";
 import { rememberFact } from "./memory";
 import { generateCards } from "./cards";
 import { runAutomation } from "./n8n";
@@ -780,10 +780,29 @@ const tools: Tool[] = [
   {
     def: {
       name: "gmail_search",
-      description: "Przeszukaj skrzynkę Gmail (wymaga połączonego konta Google przez backend). query w składni Gmaila, np. 'is:unread from:szef'.",
+      description: "Przeszukaj skrzynkę Gmail (wymaga połączonego konta Google przez backend). query w składni Gmaila, np. 'is:unread from:szef'. Zwraca listę z [id] każdej wiadomości — użyj go w gmail_read/gmail_reply.",
       input_schema: obj({ query: str("Zapytanie Gmail (opcjonalne)") }),
     },
     run: ({ query }) => gmailSearch(query || ""),
+  },
+  {
+    def: {
+      name: "gmail_read",
+      description: "Przeczytaj PEŁNĄ treść e-maila po id (z gmail_search). Zwraca nadawcę, temat, treść oraz threadId i messageId potrzebne do odpowiedzi w wątku.",
+      input_schema: obj({ id: str("id wiadomości z gmail_search") }, ["id"]),
+    },
+    run: ({ id }) => gmailRead(id),
+  },
+  {
+    def: {
+      name: "gmail_reply",
+      description: "Odpowiedz na e-mail W TYM SAMYM WĄTKU. Najpierw gmail_read, by poznać nadawcę, threadId i messageId. Podaj to=adres nadawcy, subject=temat oryginału (dopisze się „Re:”), threadId i inReplyTo=messageId.",
+      input_schema: obj(
+        { to: str("Adres nadawcy oryginału"), subject: str("Temat oryginału"), body: str("Treść odpowiedzi"), threadId: str("threadId z gmail_read"), inReplyTo: str("messageId z gmail_read") },
+        ["to", "subject", "body"],
+      ),
+    },
+    run: ({ to, subject, body, threadId, inReplyTo }) => gmailReply(to, subject, body, threadId, inReplyTo),
   },
   {
     def: {

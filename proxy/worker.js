@@ -393,19 +393,52 @@ export default {
             )
           ).json();
           const h = (n) => (msg.payload?.headers || []).find((x) => x.name === n)?.value || "";
-          messages.push({ from: h("From"), subject: h("Subject"), date: h("Date"), snippet: msg.snippet || "" });
+          messages.push({ id: m.id, threadId: msg.threadId || m.threadId, from: h("From"), subject: h("Subject"), date: h("Date"), snippet: msg.snippet || "" });
         }
         return json(200, { messages });
+      }
+      if (path === "/v1/gmail/get" && req.method === "POST") {
+        const at = await googleAccessToken(env, bearer(req));
+        if (!at) return json(401, { error: "Google niepołączone." });
+        const { id } = await req.json();
+        if (!id) return json(400, { error: "Brak id wiadomości." });
+        const msg = await (
+          await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(id)}?format=full`, {
+            headers: { authorization: `Bearer ${at}` },
+          })
+        ).json();
+        const h = (n) => (msg.payload?.headers || []).find((x) => x.name?.toLowerCase() === n.toLowerCase())?.value || "";
+        // Wyłuskaj treść text/plain (rekurencyjnie po częściach), z dekodowaniem base64url.
+        const decode = (data) => { try { return decodeURIComponent(escape(atob(String(data).replace(/-/g, "+").replace(/_/g, "/")))); } catch { return ""; } };
+        const findPlain = (p) => {
+          if (!p) return "";
+          if (p.mimeType === "text/plain" && p.body?.data) return decode(p.body.data);
+          for (const part of p.parts || []) { const t = findPlain(part); if (t) return t; }
+          return "";
+        };
+        let bodyText = findPlain(msg.payload);
+        if (!bodyText && msg.payload?.body?.data) bodyText = decode(msg.payload.body.data);
+        return json(200, {
+          id: msg.id, threadId: msg.threadId,
+          from: h("From"), to: h("To"), subject: h("Subject"), date: h("Date"),
+          messageId: h("Message-ID"),
+          body: (bodyText || msg.snippet || "").slice(0, 8000),
+        });
       }
       if (path === "/v1/gmail/send" && req.method === "POST") {
         const at = await googleAccessToken(env, bearer(req));
         if (!at) return json(401, { error: "Google niepołączone." });
-        const { to, subject, body } = await req.json();
-        const raw = b64url(`To: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`);
+        const { to, subject, body, threadId, inReplyTo } = await req.json();
+        // Odpowiedź w wątku: dołącz nagłówki In-Reply-To/References + threadId.
+        const headers = [`To: ${to}`, `Subject: ${subject}`];
+        if (inReplyTo) { headers.push(`In-Reply-To: ${inReplyTo}`, `References: ${inReplyTo}`); }
+        headers.push('Content-Type: text/plain; charset=UTF-8', "", body);
+        const raw = b64url(headers.join("\r\n"));
+        const payload = threadId ? { raw, threadId } : { raw };
         const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
           method: "POST",
           headers: { authorization: `Bearer ${at}`, "content-type": "application/json" },
-          body: JSON.stringify({ raw }),
+          body: JSON.stringify(payload),
         });
         return json(r.ok ? 200 : 502, r.ok ? { ok: true } : { error: "Nie udało się wysłać." });
       }
