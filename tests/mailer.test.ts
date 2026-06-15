@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent, sendTestEmail } from "../src/lib/mailer";
+import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent, sendTestEmail, isSameDay, sentTodayCount } from "../src/lib/mailer";
 import { store } from "../src/lib/store";
 
 // Wybór kanału wysyłki: desktop→SMTP, telefon→Gmail(backend), inaczej→compose.
@@ -100,6 +100,23 @@ describe("przekaźnik SMTP (telefon, bez Google OAuth)", () => {
     const r = await verifyMailConnection();
     expect(r.ok).toBe(true);
     expect(r.message).toMatch(/w tle|poprawnie/i);
+  });
+});
+
+describe("Skrzynka wysłanych — licznik 'dziś'", () => {
+  const now = new Date("2026-06-15T12:00:00").getTime();
+  const todayMorning = new Date("2026-06-15T08:30:00").getTime();
+  const yesterday = new Date("2026-06-14T23:00:00").getTime();
+
+  it("isSameDay rozpoznaje ten sam dzień kalendarzowy", () => {
+    expect(isSameDay(todayMorning, now)).toBe(true);
+    expect(isSameDay(yesterday, now)).toBe(false);
+  });
+
+  it("sentTodayCount liczy tylko dzisiejsze", () => {
+    const sent = [{ at: todayMorning }, { at: yesterday }, { at: now }];
+    expect(sentTodayCount(sent, now)).toBe(2);
+    expect(sentTodayCount([], now)).toBe(0);
   });
 });
 

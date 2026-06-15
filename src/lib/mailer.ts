@@ -125,6 +125,17 @@ export async function sendMailNow(to: string, subject: string, body: string): Pr
 
 export type SendResult = { ok: true; via: "SMTP" | "Gmail" } | { ok: false; error: string };
 
+/** Czy znacznik czasu przypada na ten sam dzień kalendarzowy co `now`. */
+export function isSameDay(at: number, now = Date.now()): boolean {
+  const a = new Date(at), b = new Date(now);
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+/** Ile maili wysłano dzisiaj (do licznika w Skrzynce wysłanych). */
+export function sentTodayCount(sent: { at: number }[], now = Date.now()): number {
+  return (sent || []).filter((m) => isSameDay(m.at, now)).length;
+}
+
 /** Zapisz wysłany mail w Skrzynce wysłanych (potwierdzona wysyłka wprost z aplikacji). */
 export function recordSent(entry: { to: string; subject: string; via: "SMTP" | "Gmail"; company?: string }) {
   store.setData((d) => {

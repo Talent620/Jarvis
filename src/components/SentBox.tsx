@@ -2,6 +2,7 @@ import { useState } from "react";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { useEscape } from "../hooks/useEscape";
+import { isSameDay, sentTodayCount } from "../lib/mailer";
 
 // 📤 Skrzynka wysłanych — lista maili wysłanych wprost z aplikacji (komu, co, kiedy,
 // jakim kanałem). Zapis lokalny; potwierdza „że się udało" i gdzie poszło.
@@ -25,7 +26,7 @@ export default function SentBox({ onClose }: { onClose: () => void }) {
         </div>
         <div className="panel-body">
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-            Maile wysłane wprost z aplikacji ({all.length}). Potwierdzenie, że poszły — i do kogo.
+            Maile wysłane wprost z aplikacji ({all.length}{sentTodayCount(all) ? ` · ✉ ${sentTodayCount(all)} dziś` : ""}). Potwierdzenie, że poszły — i do kogo.
           </p>
 
           {all.length > 6 && (
@@ -47,12 +48,15 @@ export default function SentBox({ onClose }: { onClose: () => void }) {
           {shown.map((m) => (
             <div className="status-row" key={m.id}>
               <div className="status-main">
-                <div className="status-title">✅ {m.company || m.to}</div>
+                <div className="status-title">
+                  ✅ {m.company || m.to}
+                  {isSameDay(m.at) && <span className="chip" style={{ marginLeft: 6, fontSize: 10, color: "var(--ok, #58e08a)", padding: "1px 7px" }}>dziś</span>}
+                </div>
                 <div className="status-detail">{m.subject}</div>
                 <div className="muted" style={{ fontSize: 12 }}>{m.to} · {m.via}</div>
               </div>
               <div className="muted" style={{ fontSize: 11, flex: "0 0 auto", textAlign: "right" }}>
-                {new Date(m.at).toLocaleString("pl-PL")}
+                {isSameDay(m.at) ? new Date(m.at).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }) : new Date(m.at).toLocaleDateString("pl-PL")}
               </div>
             </div>
           ))}
