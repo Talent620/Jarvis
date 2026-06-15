@@ -49,6 +49,25 @@ modyfikować i z którego zbudujesz nowy APK.
 - **Przejrzysty UI mobilny** — panele jako bottom-sheet z przewijaną treścią i stałą
   stopką (nic się nie ucina, bezpieczne marginesy pod notch/gesty).
 - **Produktywność** — zadania, notatki, przypomnienia, kalendarz, lista zakupów.
+- **Pulpit Sprzedaży / CRM** (📈) — znajdowanie leadów (OpenStreetMap, bez klucza),
+  teczka klienta z analizą i skryptem rozmowy, statusy, prognoza lejka, **wyszukiwarka
+  leadów**, znacznik „✉ wysłano", import/eksport CSV, „Plan na dziś" z follow-upami.
+- **Wysyłka e-maili z aplikacji** — oferta jednym kliknięciem („Napisz i wyślij"):
+  na Windows przez **SMTP** (hasło aplikacji), na telefonie przez **przekaźnik SMTP
+  w backendzie** (bez Google OAuth) lub **Gmail OAuth**. **Skrzynka wysłanych** (komu/
+  kiedy, licznik „dziś", CSV, czyszczenie), automatyczny **podpis**, **test poczty**
+  i **sprawdzenie połączenia**.
+- **Gmail (przez backend Google)** — czytanie skrótów i **pełnej treści**, wysyłka oraz
+  **odpowiedź w wątku** (`gmail_search` / `gmail_read` / `gmail_send` / `gmail_reply`).
+- **Kalendarz Google** — nadchodzące wydarzenia, **odczyt konkretnego dnia**
+  („co mam dziś/jutro") i dodawanie zapisów (`gcal_list` / `gcal_day` / `gcal_add`).
+  Poranny briefing dorzuca dzisiejszy kalendarz Google i nieprzeczytane maile.
+- **Maszynka do kontentu** (📱) — gotowe posty na Instagram/Facebook/TikTok/LinkedIn
+  (ton, marka), Kopiuj / Udostępnij / Inna wersja, **historia postów**.
+- **Generator reklam** (📢) — gotowe zestawy reklam Google Ads (nagłówki/opisy/słowa
+  kluczowe/budżet) i Meta (tekst/CTA/kreacje/grupa docelowa). Bez API — kopiujesz do
+  panelu Google/Meta. *(Integracja przez API — czytanie wyników i zarządzanie kampaniami
+  — to planowane Fazy 1–2.)*
 
 ## Konfiguracja
 
@@ -215,3 +234,32 @@ Dokładny głos JARVIS-a z filmów jest objęty prawami autorskimi i nie jest do
 Aby uzyskać najbliższe brzmienie, w Ustawieniach podaj **klucz ElevenLabs** oraz
 **ID głosu** (np. własny sklonowany głos). Bez tego JARVIS użyje najbardziej
 „brytyjsko-męskiego" głosu dostępnego w systemie.
+
+## Status funkcji
+
+| Obszar | Status |
+|---|---|
+| Asystent AI (multi-dostawca, tool-use, pamięć, głos, wizja) | ✅ gotowe |
+| Produktywność (zadania/notatki/kalendarz/przypomnienia/zakupy) | ✅ gotowe |
+| Pulpit Sprzedaży / CRM, leady, oferty, follow-upy | ✅ gotowe |
+| Wysyłka e-maili z aplikacji (SMTP / przekaźnik / Gmail) + Skrzynka wysłanych | ✅ gotowe |
+| Gmail: czytanie + odpowiedź w wątku · Kalendarz Google: odczyt/zapis | ✅ gotowe *(wymaga podłączenia konta Google w backendzie)* |
+| Maszynka do kontentu · Generator reklam (bez API) | ✅ gotowe |
+| Automatyzacja reklam przez API (Google Ads / Meta) — wyniki i zarządzanie | 🔜 planowane (Fazy 1–2) |
+| iOS — instalowalny build (TestFlight) | 🔜 wymaga konta Apple Developer |
+
+## Changelog (ostatnia sesja dopracowania)
+
+- **Sprzedaż:** wyszukiwarka leadów, znacznik „✉ wysłano", dedup przy ręcznym dodawaniu,
+  licznik „wysłane dziś" w statystykach.
+- **Poczta:** „Napisz i wyślij" jednym kliknięciem, przekaźnik SMTP w backendzie (telefon,
+  bez Google OAuth), Skrzynka wysłanych (licznik „dziś", eksport CSV, czyszczenie),
+  automatyczny podpis, test poczty i sprawdzenie połączenia, czytelne nazwy przycisków.
+- **Gmail/Kalendarz:** czytanie pełnej treści maila i odpowiedź w wątku; odczyt kalendarza
+  na konkretny dzień; poranny briefing czyta kalendarz Google i nieprzeczytane maile.
+- **Treści/Reklamy:** Maszynka do kontentu (+historia postów) i Generator reklam (Google/Meta).
+- **Odporność (edge case'y):** kopiowanie z fallbackiem (starszy WebView), poprawne
+  anulowanie udostępniania, timeouty wywołań backendu (brak sieci nie zawiesza),
+  przycinanie zbyt długiego wejścia, kopia zapasowa obejmuje skrzynkę wysłanych
+  i historię postów (nie giną przy przenosinach na inny komputer).
+- **Licencja:** rotacja pary kluczy ECDSA (klucz prywatny poza repo).

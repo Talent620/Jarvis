@@ -94,7 +94,7 @@ export default function ContentStudio({ onClose }: { onClose: () => void }) {
                   <p style={{ whiteSpace: "pre-wrap", margin: "4px 0 0", fontSize: 13, maxHeight: 80, overflow: "hidden" }}>{p.text}</p>
                   <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
                     <button className="chip" onClick={() => copyWithToast(p.text, "Skopiowano ✓")}>📋 Kopiuj</button>
-                    <button className="chip" onClick={() => store.setData((d) => { d.contentPosts = (d.contentPosts || []).filter((x) => x.id !== p.id); })}>🗑</button>
+                    <button className="chip" onClick={() => { store.setData((d) => { d.contentPosts = (d.contentPosts || []).filter((x) => x.id !== p.id); }); toast("🗑 Usunięto z historii"); }}>🗑</button>
                   </div>
                 </div>
               ))}
