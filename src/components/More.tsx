@@ -32,6 +32,7 @@ export default function More({
   onMemory,
   onAudit,
   onSent,
+  onContent,
   onClose,
 }: {
   onProjects: () => void;
@@ -61,6 +62,7 @@ export default function More({
   onMemory: () => void;
   onAudit: () => void;
   onSent: () => void;
+  onContent: () => void;
   onClose: () => void;
 }) {
   useEscape(onClose);
@@ -81,6 +83,7 @@ export default function More({
     { id: "translator", icon: "🌍", label: "Tłumacz na żywo (rozmowa 2 języki)", fn: onTranslator },
     { id: "transcribe", icon: "🎙", label: "Transkrypcja spotkań (mowa→tekst)", fn: onTranscribe },
     { id: "sales", icon: "📈", label: "Pulpit Sprzedaży (leady, CRM)", fn: onSales },
+    { id: "content", icon: "📱", label: "Maszynka do kontentu (posty na social media)", fn: onContent },
     { id: "sent", icon: "📤", label: "Skrzynka wysłanych (gdzie wysłałem maile)", fn: onSent },
     { id: "web", icon: "🌐", label: "Kreator stron — zbuduj witrynę", fn: onWeb },
     { id: "hud", icon: "👁", label: "Wizja HUD (kamera) — co widzisz?", fn: onHud },
