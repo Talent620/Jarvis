@@ -52,7 +52,7 @@ export function contentUserPrompt(o: ContentOpts): string {
 }
 
 /** Zapisz wygenerowany post w historii (najnowszy na górze, limit 50). */
-export function saveContentPost(platform: Platform, topic: string, text: string) {
+export function saveContentPost(platform: string, topic: string, text: string) {
   if (!text.trim()) return;
   store.setData((d) => {
     if (!d.contentPosts) d.contentPosts = [];
