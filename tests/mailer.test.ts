@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent, sendTestEmail, sendAllOffers, isSameDay, sentTodayCount, sentMailToCsv } from "../src/lib/mailer";
+import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent, sendTestEmail, sendAllOffers, isValidEmail, isSameDay, sentTodayCount, sentMailToCsv } from "../src/lib/mailer";
 import { store } from "../src/lib/store";
 import type { Lead } from "../src/types";
 
@@ -161,6 +161,32 @@ describe("sendTestEmail — test poczty do siebie", () => {
     const r = await sendTestEmail();
     expect(r.ok).toBe(false);
     expect(r.message).toMatch(/Windows|backend/i);
+  });
+});
+
+describe("walidacja adresu i treści (sendOfferEmail)", () => {
+  it("isValidEmail rozpoznaje poprawne/niepoprawne", () => {
+    expect(isValidEmail("firma@domena.pl")).toBe(true);
+    expect(isValidEmail("a.b-c@x.co.uk")).toBe(true);
+    expect(isValidEmail("600100200")).toBe(false);
+    expect(isValidEmail("zly@adres")).toBe(false);
+    expect(isValidEmail("")).toBe(false);
+    expect(isValidEmail("a @b.pl")).toBe(false);
+  });
+
+  it("odrzuca wysyłkę do nie-adresu (np. telefonu) z czytelnym błędem", async () => {
+    store.setSettings({ smtpUser: "me@gmail.com", smtpPass: "haslo" });
+    (window as any).jarvisDesktop = { sendMail: vi.fn(async () => "ok") };
+    const r = await sendOfferEmail("600100200", "Temat", "Treść");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/nie wygląda na e-mail/);
+  });
+
+  it("odrzuca pusty temat / pustą treść", async () => {
+    store.setSettings({ smtpUser: "me@gmail.com", smtpPass: "haslo" });
+    (window as any).jarvisDesktop = { sendMail: vi.fn(async () => "ok") };
+    expect((await sendOfferEmail("k@x.pl", "  ", "treść")).ok).toBe(false);
+    expect((await sendOfferEmail("k@x.pl", "Temat", "")).ok).toBe(false);
   });
 });
 

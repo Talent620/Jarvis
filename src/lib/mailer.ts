@@ -167,7 +167,15 @@ export function recordSent(entry: { to: string; subject: string; via: "SMTP" | "
  * skonfigurowany, zwraca błąd (UI proponuje wtedy zwykły Gmail compose).
  * Po udanej wysyłce zapisuje wpis w Skrzynce wysłanych.
  */
+/** Prosta, praktyczna walidacja adresu e-mail (coś@coś.tld, bez spacji). */
+export const isValidEmail = (s: string): boolean => /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test((s || "").trim());
+
 export async function sendOfferEmail(to: string, subject: string, body: string, company?: string, record = true): Promise<SendResult> {
+  // Waliduj adres ZANIM wyślemy — inaczej desktop SMTP próbuje wysłać do numeru telefonu
+  // i dostajesz mglisty błąd serwera. Lepiej powiedzieć wprost.
+  if (!isValidEmail(to)) return { ok: false, error: `Adres „${(to || "").trim()}" nie wygląda na e-mail (przykład: firma@domena.pl).` };
+  if (!subject?.trim()) return { ok: false, error: "Pusty temat wiadomości." };
+  if (!body?.trim()) return { ok: false, error: "Pusta treść wiadomości." };
   if (canSendMail()) {
     const err = await sendMailNow(to, subject, body);
     if (err) return { ok: false, error: err };
