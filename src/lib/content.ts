@@ -1,25 +1,12 @@
-import { resolveProvider } from "./brain";
-import { PROVIDERS } from "./providers/registry";
+import { askModel } from "./brain";
 import { humanize } from "./aiHelpers";
-import { store } from "./store";
 
 // Generatory treści zarobkowej — paczki postów (sprzedaż przez treść/afiliacja)
 // oraz pomysły na produkty cyfrowe do sprzedaży (Gumroad/Etsy/własny sklep).
 
 async function ask(system: string, user: string): Promise<{ text: string } | { error: string }> {
-  const r = resolveProvider();
-  if (!r || !r.apiKey?.trim()) return { error: "Najpierw skonfiguruj dostawcę AI w ⚙ → AI." };
   try {
-    const reply = await PROVIDERS[r.provider].impl({
-      system,
-      webSearch: false,
-      tools: [],
-      history: [{ role: "user", content: user }],
-      apiKey: r.apiKey,
-      model: r.model,
-      proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-    });
-    return { text: (reply.text || "").trim() };
+    return { text: (await askModel({ system, history: [{ role: "user", content: user }] })).trim() };
   } catch (e) {
     return { error: humanize(e instanceof Error ? e.message : String(e)) };
   }

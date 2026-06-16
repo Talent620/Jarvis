@@ -5,10 +5,8 @@
 //      + strażnik oszustw).
 // Czyste funkcje (parsowanie/ranking/linki) — w pełni testowalne.
 
-import { resolveProvider } from "./brain";
-import { PROVIDERS } from "./providers/registry";
+import { resolveProvider, askModel } from "./brain";
 import { getCitations, resetCitations } from "./tools";
-import { store } from "./store";
 
 export type Condition = "new" | "used";
 export type DealFlag = "scam" | "deal" | "fair" | "high";
@@ -221,16 +219,8 @@ export async function findBargains(query: string, region = "Polska"): Promise<Ba
 
   resetCitations();
   try {
-    const reply = await PROVIDERS[r.provider].impl({
-      system: buildBargainPrompt(region),
-      webSearch: true,
-      tools: [],
-      history: [{ role: "user", content: `Znajdź najtaniej: ${clean}` }],
-      apiKey: r.apiKey,
-      model: r.model,
-      proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-    });
-    const parsed = parseBargain(reply.text || "");
+    const text = await askModel({ system: buildBargainPrompt(region), history: [{ role: "user", content: `Znajdź najtaniej: ${clean}` }], webSearch: true });
+    const parsed = parseBargain(text);
     return {
       query: clean,
       normalized: parsed?.normalized,

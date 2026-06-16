@@ -1,6 +1,5 @@
 import { store, uid } from "./store";
-import { resolveProvider } from "./brain";
-import { PROVIDERS } from "./providers/registry";
+import { askModel } from "./brain";
 import { humanize } from "./aiHelpers";
 import type { Flashcard } from "../types";
 
@@ -102,19 +101,9 @@ const GEN_SYSTEM = [
 
 /** Wygeneruj fiszki AI z dowolnego tekstu/tematu. Zwraca liczbę dodanych lub błąd. */
 export async function generateCards(material: string, deck?: string, source?: string, max = 8): Promise<{ added: number } | { error: string }> {
-  const r = resolveProvider();
-  if (!r || !r.apiKey?.trim()) return { error: "Najpierw skonfiguruj dostawcę AI w ⚙ → AI." };
   try {
-    const reply = await PROVIDERS[r.provider].impl({
-      system: GEN_SYSTEM,
-      webSearch: false,
-      tools: [],
-      history: [{ role: "user", content: `Zrób maksymalnie ${max} fiszek z tego materiału:\n\n${material.slice(0, 6000)}` }],
-      apiKey: r.apiKey,
-      model: r.model,
-      proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-    });
-    const m = (reply.text || "").match(/\{[\s\S]*\}/);
+    const text = await askModel({ system: GEN_SYSTEM, history: [{ role: "user", content: `Zrób maksymalnie ${max} fiszek z tego materiału:\n\n${material.slice(0, 6000)}` }] });
+    const m = text.match(/\{[\s\S]*\}/);
     if (!m) return { error: "Nie udało się utworzyć fiszek — spróbuj innym materiałem." };
     const parsed = JSON.parse(m[0]) as { cards?: { front?: string; back?: string }[] };
     const cards = Array.isArray(parsed.cards) ? parsed.cards : [];

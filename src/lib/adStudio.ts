@@ -1,6 +1,4 @@
-import { resolveProvider } from "./brain";
-import { PROVIDERS } from "./providers/registry";
-import { store } from "./store";
+import { askModel } from "./brain";
 
 // Generator reklam (Faza 0 automatyzacji reklam) — JARVIS pisze gotowe zestawy reklam
 // pod Google Ads (wyszukiwarka) i Meta (FB/IG): nagłówki, opisy, słowa kluczowe, CTA,
@@ -67,19 +65,9 @@ export function adUserPrompt(o: AdOpts): string {
 /** Wygeneruj zestaw reklam. Pusty string = brak klucza AI lub błąd. */
 export async function generateAds(o: AdOpts): Promise<string> {
   if (!o.product?.trim()) return "";
-  const r = resolveProvider();
-  if (!r || !r.apiKey?.trim()) return "";
   try {
-    const reply = await PROVIDERS[r.provider].impl({
-      system: adSystem(o.platform),
-      webSearch: false,
-      tools: [],
-      history: [{ role: "user", content: adUserPrompt(o) }],
-      apiKey: r.apiKey,
-      model: r.model,
-      proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-    });
-    return (reply.text || "").trim();
+    // askModel: pełny failover (rotacja kluczy + przełączanie dostawców + retry) — jak czat.
+    return (await askModel({ system: adSystem(o.platform), history: [{ role: "user", content: adUserPrompt(o) }] })).trim();
   } catch {
     return "";
   }

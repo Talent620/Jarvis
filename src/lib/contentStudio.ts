@@ -1,5 +1,4 @@
-import { resolveProvider } from "./brain";
-import { PROVIDERS } from "./providers/registry";
+import { askModel } from "./brain";
 import { store } from "./store";
 
 // Maszynka do kontentu — JARVIS pisze gotowy post na social media (hook, treść,
@@ -64,19 +63,8 @@ export function saveContentPost(platform: string, topic: string, text: string) {
 /** Wygeneruj gotowy post. Pusty string = brak klucza AI lub błąd. */
 export async function generatePost(o: ContentOpts): Promise<string> {
   if (!o.topic?.trim()) return "";
-  const r = resolveProvider();
-  if (!r || !r.apiKey?.trim()) return "";
   try {
-    const reply = await PROVIDERS[r.provider].impl({
-      system: contentSystem(o.platform),
-      webSearch: false,
-      tools: [],
-      history: [{ role: "user", content: contentUserPrompt(o) }],
-      apiKey: r.apiKey,
-      model: r.model,
-      proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-    });
-    return (reply.text || "").trim();
+    return (await askModel({ system: contentSystem(o.platform), history: [{ role: "user", content: contentUserPrompt(o) }] })).trim();
   } catch {
     return "";
   }

@@ -1,6 +1,5 @@
 import { fetchTimeout } from "./http";
-import { resolveProvider } from "./brain";
-import { PROVIDERS } from "./providers/registry";
+import { resolveProvider, askModel } from "./brain";
 import { store } from "./store";
 import type { Lead, LeadIntel, SiteAudit } from "../types";
 
@@ -163,16 +162,8 @@ export async function buildDossier(leadId: string): Promise<LeadIntel | { error:
   }
 
   try {
-    const reply = await PROVIDERS[r.provider].impl({
-      system: SYSTEM,
-      webSearch: false,
-      tools: [],
-      history: [{ role: "user", content: `Przygotuj teczkę klienta:\n\n${leadContext(lead, audit)}` }],
-      apiKey: r.apiKey,
-      model: r.model,
-      proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-    });
-    const { analysis, email, callScript } = splitSections(reply.text || "");
+    const text = await askModel({ system: SYSTEM, history: [{ role: "user", content: `Przygotuj teczkę klienta:\n\n${leadContext(lead, audit)}` }] });
+    const { analysis, email, callScript } = splitSections(text);
     const intel: LeadIntel = { score, audit, analysis, email, callScript, updatedAt: Date.now() };
     saveIntel(leadId, intel);
     return intel;

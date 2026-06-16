@@ -2,9 +2,7 @@
 // szybkie wywołanie: bez narzędzi, bez myślenia — sam przekład. Używane przez
 // Tryb Tłumacza (rozmowa na żywo dwóch osób w różnych językach).
 
-import { resolveProvider } from "./brain";
-import { PROVIDERS } from "./providers/registry";
-import { store } from "./store";
+import { askModel } from "./brain";
 
 /** System prompt tłumacza — wyłącznie przekład, zero komentarzy.
  *  `context` to kilka ostatnich wypowiedzi (dla ciągłości i poprawnych zaimków). */
@@ -45,20 +43,8 @@ export function cleanTranslation(raw: string): string {
 export async function translateText(text: string, targetName: string, context?: string[]): Promise<string> {
   const clean = text.trim();
   if (!clean) return "";
-  const r = resolveProvider();
-  if (!r || !r.apiKey?.trim()) return "";
   try {
-    const reply = await PROVIDERS[r.provider].impl({
-      system: buildTranslatePrompt(targetName, context),
-      webSearch: false,
-      tools: [],
-      history: [{ role: "user", content: clean }],
-      apiKey: r.apiKey,
-      model: r.model,
-      proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-      fast: true, // tłumaczenie na żywo — bez „głębokiego myślenia", niskie opóźnienie
-    });
-    return cleanTranslation(reply.text || "");
+    return cleanTranslation(await askModel({ system: buildTranslatePrompt(targetName, context), history: [{ role: "user", content: clean }] }));
   } catch {
     return "";
   }

@@ -1,7 +1,5 @@
-import { resolveProvider } from "./brain";
-import { PROVIDERS } from "./providers/registry";
+import { askModel } from "./brain";
 import { humanize } from "./aiHelpers";
-import { store } from "./store";
 
 // Autonomiczny generator stron i SKLEPÓW: z opisu tworzy KOMPLETNĄ, nowoczesną
 // witrynę w jednym pliku HTML (wbudowany CSS i JS) na poziomie premium. Działa
@@ -66,27 +64,14 @@ export async function generateSite(
   current?: string,
   kind: SiteKind = "auto",
 ): Promise<{ html: string } | { error: string }> {
-  const r = resolveProvider();
-  if (!r || !r.apiKey?.trim()) return { error: "Najpierw skonfiguruj dostawcę AI w ⚙ → AI." };
-
   const system = `${BASE}\n\n${KIND_HINTS[kind] || KIND_HINTS.auto}`;
   const userMsg = current
     ? `Oto obecny kod strony:\n\n${current.slice(0, 14000)}\n\nWprowadź zmianę: ${prompt}\nZwróć PEŁNY, zaktualizowany plik HTML (od <!DOCTYPE html>), zachowując wysoki poziom wizualny.`
     : `Zbuduj stronę według opisu: ${prompt}`;
 
   try {
-    // Dla nowej, pełnej strony bierzemy mocniejszy model dostawcy (bogatszy kod).
-    const model = current ? r.model : PROVIDERS[r.provider]?.defaultModel || r.model;
-    const reply = await PROVIDERS[r.provider].impl({
-      system,
-      webSearch: false,
-      tools: [],
-      history: [{ role: "user", content: userMsg }],
-      apiKey: r.apiKey,
-      model,
-      proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-    });
-    const html = extractHtml(reply.text || "");
+    const reply = await askModel({ system, history: [{ role: "user", content: userMsg }] });
+    const html = extractHtml(reply || "");
     if (!html) return { error: "Model nie zwrócił kodu HTML — spróbuj doprecyzować opis." };
     return { html };
   } catch (e) {

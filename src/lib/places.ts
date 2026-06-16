@@ -5,10 +5,8 @@
 //      z odległością i ceną, posortowana po odległości, z wyróżnieniem kompromisu).
 // Czyste funkcje (mapLinks, parsePlaces, normalizePlaces, rankPlaces) — testowalne.
 
-import { resolveProvider } from "./brain";
-import { PROVIDERS } from "./providers/registry";
+import { resolveProvider, askModel } from "./brain";
 import { getCitations, resetCitations } from "./tools";
-import { store } from "./store";
 import { toNumber } from "./bargain";
 
 export interface Place {
@@ -181,16 +179,8 @@ export async function findPlaces(query: string, place: string, coords?: Coords):
 
   resetCitations();
   try {
-    const reply = await PROVIDERS[r.provider].impl({
-      system: buildPlacesPrompt(where),
-      webSearch: true,
-      tools: [],
-      history: [{ role: "user", content: `Gdzie kupię w pobliżu: ${clean}` }],
-      apiKey: r.apiKey,
-      model: r.model,
-      proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-    });
-    const parsed = parsePlaces(reply.text || "");
+    const text = await askModel({ system: buildPlacesPrompt(where), history: [{ role: "user", content: `Gdzie kupię w pobliżu: ${clean}` }], webSearch: true });
+    const parsed = parsePlaces(text);
     return {
       query: clean,
       place: parsed?.place || where,

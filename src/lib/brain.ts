@@ -351,7 +351,7 @@ export async function askModel(params: {
 }): Promise<string> {
   const resolved = resolveProvider();
   if (!resolved) {
-    throw new Error("Brak skonfigurowanego dostawcy AI — wejdź w ⚙ → AI i wklej klucz (Claude, Gemini, Groq, OpenRouter…).");
+    throw new Error("Najpierw skonfiguruj dostawcę AI w ⚙ → AI (wklej klucz: Claude, Gemini, Groq, OpenRouter…).");
   }
   const baseCtx = {
     system: params.system,
