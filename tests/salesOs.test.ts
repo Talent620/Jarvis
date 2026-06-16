@@ -132,6 +132,14 @@ describe("Łącznik AI Sales OS — mapowanie", () => {
     expect(lead.status).toBe("offer");
   });
 
+  it("mapSalesOsLead oznacza pochodzenie i zapisuje etap + score w notatce", () => {
+    const lead = mapSalesOsLead({ id: "x", companyName: "ProMax", stage: "Qualified", score: 78 });
+    expect(lead.origin).toBe("salesos");
+    expect(lead.note).toContain("Sales OS");
+    expect(lead.note).toContain("Qualified");
+    expect(lead.note).toContain("78");
+  });
+
   it("leadToOutreachInput buduje ładunek outreachu z leada (e-mail z contact)", () => {
     const inp = leadToOutreachInput(baseLead({ contact: "biuro@dentmed.pl", url: "dentmed.pl", niche: "stomatolog", location: "Gdańsk", note: "Brak strony www" }), "Oferujemy stronę");
     expect(inp.email).toBe("biuro@dentmed.pl");

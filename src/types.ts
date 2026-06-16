@@ -272,6 +272,8 @@ export interface Lead {
   lastContactedAt?: number;
   /** Ile follow-upów (ponagleń) już wysłano. */
   followUpCount?: number;
+  /** Skąd lead pochodzi (np. „salesos" = zsynchronizowany z AI Sales OS). */
+  origin?: "salesos";
   status: LeadStatus;
   createdAt: number;
   updatedAt: number;

@@ -91,6 +91,9 @@ export function mapSalesOsLead(s: SalesOsLead, now = Date.now()): Lead {
     const t = iso ? Date.parse(iso) : NaN;
     return Number.isFinite(t) ? t : now;
   };
+  const crmInfo = [s.stage ? `etap ${s.stage}` : null, typeof s.score === "number" ? `score ${s.score}` : null]
+    .filter(Boolean)
+    .join(" · ");
   return {
     id: uid(),
     company,
@@ -99,9 +102,10 @@ export function mapSalesOsLead(s: SalesOsLead, now = Date.now()): Lead {
     email: s.email || undefined,
     niche: s.industry || undefined,
     location: s.region || undefined,
-    note: s.nextActionNote || (s.stage ? `Etap (Sales OS): ${s.stage}` : undefined),
+    note: s.nextActionNote || (crmInfo ? `Sales OS: ${crmInfo}` : undefined),
     value: typeof s.estimatedValue === "number" ? s.estimatedValue : undefined,
     status: mapLeadStatus(s.outcome, s.stage),
+    origin: "salesos",
     createdAt: ts(s.createdAt),
     updatedAt: ts(s.updatedAt),
   };
@@ -261,7 +265,8 @@ export async function pushLeadsToSalesOs(leads?: Lead[]): Promise<PushResult> {
   if (!url || !token()) {
     return { ok: false, message: "Najpierw uzupełnij adres AI Sales OS i token (⚙ → Integracje)." };
   }
-  const all = leads ?? (store.data.leads || []).filter((l) => l.status === "new");
+  // Domyślnie świeże leady, ale NIE te zsynchronizowane z Sales OS (bez echa).
+  const all = leads ?? (store.data.leads || []).filter((l) => l.status === "new" && l.origin !== "salesos");
   if (!all.length) return { ok: true, message: "Brak leadów do wysłania do Sales OS.", pushed: 0, failed: 0 };
 
   const cap = Math.min(50, all.length);

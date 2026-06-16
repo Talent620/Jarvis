@@ -421,6 +421,9 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                   <b style={{ cursor: "pointer" }} onClick={() => setOpenLead(l.id)}>
                     {l.intel ? `${scoreLabel(l.intel.score).emoji} ` : ""}{l.company}
+                    {l.origin === "salesos" && (
+                      <span className="chip" style={{ marginLeft: 6, fontSize: 11, color: "var(--gold)", padding: "1px 8px" }} title="Zsynchronizowany z AI Sales OS">🔗 CRM</span>
+                    )}
                     {wasLeadEmailed(l, data.sentMail || []) && (
                       <span className="chip" style={{ marginLeft: 6, fontSize: 11, color: "var(--ok, #58e08a)", padding: "1px 8px" }}>✉ wysłano</span>
                     )}
