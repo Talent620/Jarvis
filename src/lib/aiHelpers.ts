@@ -43,6 +43,14 @@ export function isComplex(text: string): boolean {
   );
 }
 
+// Żądania-AKCJE — wymagają NARZĘDZI (leady, e-mail, kalendarz, dom, przypomnienia, zakupy…).
+// Tryb konsylium nie ma narzędzi (tylko deliberacja), więc takie prośby MUSZĄ iść ścieżką
+// jednego mózgu z toolami — inaczej JARVIS „odmawia", twierdząc że nie potrafi.
+export function isActionRequest(text: string): boolean {
+  const t = text || "";
+  return /(znajd[źz]|wyszukaj\s+(lead|firm|klient)|\blead(y|a|ów)?\b|wy[śs]l[ij]|roze[śs]l[ij]|mailing|ofert\w*\s+do|dodaj\s+(do\s+)?(kalendarz|list|zadani|notatk|wydarzeni|zakup)|przypomnij|ustaw\s+(przypomnien|alarm|minutnik|budzik|stoper)|zadzwo[ńn]|zaplanuj\s+(spotkani|wydarzeni|dzie[ńn])|kalendarz|w[łl][aą]cz\b|wy[łl][aą]cz\b|otw[oó]rz\b|\bkup\b|zam[oó]w\b|utw[oó]rz\s+(fiszk|notatk|zadani|scen)|zapisz\s+(lead|kontakt|notatk|zadani))/i.test(t);
+}
+
 // Sygnały, że wypowiedź niesie trwałą informację o użytkowniku (pamięć autonomiczna).
 export const PERSONAL_CUES =
   /\b(jestem|mam|m[oó]j|moja|moje|moich|lubi[eę]|wol[eę]|nie\s?lubi[eę]|nienawidz[eę]|mieszkam|pracuj[eę]|nazywam|imi[eę]|żona|m[aąż]|partner|dziecko|c[oó]rk|syn|pies|kot|urodzi|adres|alergi|uczulony|dieta|wegeta|wegan|zawsze|nigdy|codziennie|preferuj[eę]|ulubion|zapami[eę]ta|wa[zż]ne|numer|telefon|email|e-mail)/i;

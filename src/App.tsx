@@ -59,7 +59,7 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
 import { askJarvis, resolveProvider } from "./lib/brain";
 import { askCouncil, councilMembers, type CouncilReply } from "./lib/council";
-import { isComplex } from "./lib/aiHelpers";
+import { isComplex, isActionRequest } from "./lib/aiHelpers";
 import { dueCount } from "./lib/cards";
 import { statusFlags } from "./lib/status";
 import { buildContext } from "./lib/context";
@@ -394,7 +394,9 @@ export default function App() {
       // Tryb Konsylium: na żądanie (przycisk ⚖) albo automatycznie przy złożonych
       // pytaniach, gdy włączony w ustawieniach. Obrazy, research (narzędzia) i proste
       // polecenia idą normalną ścieżką.
-      const wantCouncil = opts?.council || (store.settings.councilMode && isComplex(text));
+      // Żądania-akcje (leady, e-mail, kalendarz, dom…) NIGDY nie idą do konsylium — ono nie ma
+      // narzędzi i „odmówiłoby". Takie prośby zawsze obsługuje pojedynczy mózg z toolami.
+      const wantCouncil = (opts?.council || (store.settings.councilMode && isComplex(text))) && !isActionRequest(text);
       const useCouncil = !!wantCouncil && !image && !opts?.research && councilMembers(3).length >= 2;
       if (useCouncil) setCouncilStep(`⚖ Konsylium — pytam ${councilMembers(3).length} modele…`);
       let reply;

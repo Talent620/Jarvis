@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { shouldFallback, isNetworkError, isKeyError, humanize, isComplex, PERSONAL_CUES } from "../src/lib/aiHelpers";
+import { shouldFallback, isNetworkError, isKeyError, humanize, isComplex, isActionRequest, PERSONAL_CUES } from "../src/lib/aiHelpers";
 
 describe("shouldFallback", () => {
   it("wykrywa brak środków/limit/kody statusu", () => {
@@ -14,6 +14,23 @@ describe("shouldFallback", () => {
   it("nie reaguje na zwykłe błędy", () => {
     expect(shouldFallback("coś dziwnego się stało")).toBe(false);
     expect(shouldFallback("model zwrócił pustą odpowiedź")).toBe(false);
+  });
+});
+
+describe("isActionRequest — akcje (narzędzia) muszą omijać konsylium", () => {
+  it("wykrywa prośby-akcje (leady, e-mail, kalendarz, dom, przypomnienia)", () => {
+    expect(isActionRequest("znajdź leady oraz wyślij do nich emaile")).toBe(true); // dokładna komenda użytkownika
+    expect(isActionRequest("roześlij oferty do wszystkich")).toBe(true);
+    expect(isActionRequest("dodaj do kalendarza spotkanie jutro o 10")).toBe(true);
+    expect(isActionRequest("przypomnij mi o lekach za godzinę")).toBe(true);
+    expect(isActionRequest("włącz światło w salonie")).toBe(true);
+    expect(isActionRequest("wyślij maila do Jana")).toBe(true);
+    expect(isActionRequest("co mam jutro w kalendarzu")).toBe(true);
+  });
+  it("nie łapie zwykłych pytań do deliberacji (konsylium ma sens)", () => {
+    expect(isActionRequest("porównaj plusy i minusy pracy zdalnej")).toBe(false);
+    expect(isActionRequest("wyjaśnij jak działa fotosynteza")).toBe(false);
+    expect(isActionRequest("jaka jest stolica Francji")).toBe(false);
   });
 });
 
