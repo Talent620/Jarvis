@@ -524,11 +524,12 @@ const tools: Tool[] = [
         todayReminders.length ? `Przypomnienia na dziś: ${todayReminders.map((r) => r.text).join("; ")}.` : "",
       ].filter(Boolean);
 
-      // Gdy konto Google jest podłączone — dorzuć dzisiejszy kalendarz Google i nieprzeczytane maile.
-      if (hasBackendGmail()) {
+      // Dorzuć dzisiejszy kalendarz Google (desktop natywnie LUB backend) + nieprzeczytane maile.
+      // silent=true → gdy niepołączone, NIE otwieramy logowania w tle; funkcje zwracają puste.
+      {
         const [gcal, unread] = await Promise.all([
-          gcalDay(0).catch(() => ""),
-          gmailUnreadSummary().catch(() => ""),
+          gcalDay(0, true).catch(() => ""),
+          hasBackendGmail() ? gmailUnreadSummary().catch(() => "") : Promise.resolve(""),
         ]);
         if (gcal && !/niepołączone|Skonfiguruj|błąd|error/i.test(gcal)) lines.push(`Kalendarz Google — ${gcal.replace(/^📅\s*/, "")}`);
         if (unread) lines.push(unread);

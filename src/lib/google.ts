@@ -177,20 +177,22 @@ export function dayRangeISO(date = new Date()): { timeMin: string; timeMax: stri
 }
 
 /** Wydarzenia z konkretnego dnia (offset: 0=dziś, 1=jutro, -1=wczoraj). */
-export async function gcalDay(dayOffset = 0): Promise<string> {
+export async function gcalDay(dayOffset = 0, silent = false): Promise<string> {
+  // silent=true (np. poranny briefing): NIE otwieramy autoryzacji w tle — gdy niepołączone
+  // zwracamy "" i briefing po prostu pomija kalendarz.
   const d = new Date(); d.setDate(d.getDate() + dayOffset);
   const { timeMin, timeMax } = dayRangeISO(d);
   const label = d.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" });
   const b = deskGoogle();
   let ev: { start: string; summary: string; location?: string }[];
   if (b) {
-    if (!(await b.googleStatus?.())?.connected) return await desktopAutoConnect();
+    if (!(await b.googleStatus?.())?.connected) return silent ? "" : await desktopAutoConnect();
     const dr = await b.gcalList!({ max: 25, timeMin, timeMax });
     if (dr.error) return dr.error;
     ev = dr.events || [];
   } else {
     const r = await call("/v1/gcal/list", { max: 25, timeMin, timeMax });
-    if (r.error) return autoConnect(r.error) || r.error;
+    if (r.error) return silent ? "" : (autoConnect(r.error) || r.error);
     ev = r.events || [];
   }
   return ev.length

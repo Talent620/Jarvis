@@ -29,11 +29,16 @@ export default defineConfig({
     __LICENSE_URL__: JSON.stringify(env.JARVIS_LICENSE_URL || ""),
     // Tryb rygorystyczny: wymaga udanej aktywacji online (limit urządzeń, zdalne unieważnienie).
     __LICENSE_STRICT__: JSON.stringify(env.JARVIS_LICENSE_STRICT === "true"),
+    // Data/godzina builda (UTC) — widoczna w ⚙ → Dane; jednoznacznie mówi, którą wersję masz.
+    __APP_BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace("T", " ")),
   },
   plugins: [react()],
   build: {
     outDir: "dist",
-    target: "es2021",
+    // Niższy target = szersza zgodność ze starszym Android System WebView (np. Galaxy S9+
+    // bez aktualizacji). esbuild stranspiluje nowszą składnię (?., ??, ??=, ||=) — inaczej
+    // taki WebView wyrzuca błąd składni i aplikacja „nic nie robi".
+    target: ["es2019", "chrome79", "safari13"],
     sourcemap: false,
     rollupOptions: {
       output: {

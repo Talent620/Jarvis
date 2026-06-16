@@ -1374,6 +1374,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           {/* ============ 🗄 DANE ============ */}
           {tab === "data" && (
             <>
+              <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>
+                🧩 Wersja (build): <b>{typeof __APP_BUILD__ !== "undefined" ? __APP_BUILD__ : "dev"}</b> UTC — podaj ją, gdy zgłaszasz problem.
+              </p>
               <h3>Kopia danych</h3>
               <p className="muted">
                 Zapisz wszystkie swoje dane (zadania, notatki, pamięć, dziennik, projekty, targ…)

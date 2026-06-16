@@ -7,3 +7,5 @@ declare const __LICENSE_REQUIRED__: boolean;
 declare const __LICENSE_URL__: string;
 // Tryb rygorystyczny — wymaga udanej aktywacji online (limit urządzeń, unieważnianie).
 declare const __LICENSE_STRICT__: boolean;
+// Data/godzina zbudowania (UTC) — pokazywana w ⚙ → Dane, by jednoznacznie poznać wersję.
+declare const __APP_BUILD__: string;
