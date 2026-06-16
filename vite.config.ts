@@ -34,6 +34,18 @@ export default defineConfig({
     outDir: "dist",
     target: "es2021",
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        // Wydziel TYLKO React (zawsze ładowany, stabilny) do osobnego chunku — lepsze
+        // cache'owanie między buildami. Reszty zależności NIE scalamy: część używają wyłącznie
+        // leniwie ładowane ekrany (PDF, QR…) i wymuszenie ich do wspólnego vendora pogorszyłoby start.
+        manualChunks(id: string) {
+          if (id.includes("/node_modules/react/") || id.includes("/node_modules/react-dom/") || id.includes("/node_modules/scheduler/")) {
+            return "react-vendor";
+          }
+        },
+      },
+    },
   },
   server: {
     host: true,
