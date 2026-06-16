@@ -6,6 +6,7 @@ import { gmailComposeUrl, mailtoUrl, mapsSearchUrl, smsUrl, splitOffer } from ".
 import { canSendDirect, sendOfferEmail } from "../lib/mailer";
 import { draftOffer } from "../lib/offer";
 import { markContacted } from "../lib/salesEngine";
+import { salesOsConfigured, outreachViaSalesOs, leadToOutreachInput } from "../lib/salesOs";
 import { copyWithToast, toast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
 import type { Lead, LeadStatus } from "../types";
@@ -81,6 +82,21 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
     if (!phone) return;
     window.open(smsUrl(phone, smsDraft(lead, intel?.audit)), "_blank");
     markContacted(lead.id);
+  };
+
+  // Zleć AI Sales OS-owi napisanie i wysyłkę maila (treść + wysyłka po stronie CRM-u).
+  const [osSending, setOsSending] = useState(false);
+  const sendViaSalesOs = async () => {
+    if (!email) { toast("Brak adresu e-mail firmy — uzupełnij, by wysłać przez Sales OS."); return; }
+    setOsSending(true);
+    const ctx = intel?.analysis || lead.note || (lead.url ? undefined : "Firma bez strony www — oferujemy stronę + profil Google.");
+    const r = await outreachViaSalesOs({ ...leadToOutreachInput(lead, ctx), email });
+    setOsSending(false);
+    toast(r.message);
+    if (r.sent) {
+      markContacted(lead.id);
+      set({ status: lead.status === "new" || lead.status === "contacted" ? "offer" : lead.status, note: `${lead.note ? lead.note + " · " : ""}Mail przez Sales OS ${new Date().toLocaleDateString("pl-PL")}` });
+    }
   };
 
   const audit = intel?.audit;
@@ -219,6 +235,19 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
             </button>
           )}
 
+          {/* Wysyłka przez Sales OS (CRM pisze treść i wysyła) — gdy poczta JARVIS-a niegotowa */}
+          {!(intel?.email || lead.offer) && !canSendDirect() && salesOsConfigured() && email && (
+            <button
+              className="chip"
+              style={{ marginTop: 14, borderColor: "var(--gold)", fontWeight: 600 }}
+              onClick={sendViaSalesOs}
+              disabled={osSending}
+              title="AI Sales OS napisze i wyśle mail (treść + wysyłka w CRM-ie)"
+            >
+              {osSending ? "✉ Sales OS pisze i wysyła…" : "✉ Napisz i wyślij przez Sales OS"}
+            </button>
+          )}
+
           {/* E-mail */}
           {(intel?.email || lead.offer) && (
             <>
@@ -233,6 +262,11 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
                   )}
                   <button className="chip" onClick={() => sendVia("gmail")}>✉ Otwórz w Gmailu</button>
                   <button className="chip" onClick={() => sendVia("mail")}>📧 Otwórz w poczcie</button>
+                  {salesOsConfigured() && email && (
+                    <button className="chip" style={{ borderColor: "var(--gold)" }} onClick={sendViaSalesOs} disabled={osSending} title="AI Sales OS napisze i wyśle (treść + wysyłka w CRM-ie)">
+                      {osSending ? "✉ Sales OS…" : "✉ Wyślij przez Sales OS"}
+                    </button>
+                  )}
                   {phone && <button className="chip" onClick={sendSms}>📱 SMS</button>}
                   <button className="chip" onClick={() => copyWithToast(intel?.email || lead.offer || "")}>📋 Kopiuj</button>
                 </div>

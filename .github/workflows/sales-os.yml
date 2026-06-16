@@ -1,0 +1,50 @@
+name: Sales OS build
+
+# Type-checks and compiles the companion AI Sales OS app (sales-os/) so the
+# public integration endpoints used by JARVIS can't silently regress. Runs only
+# when something under sales-os/ changes. No database is needed — the routes are
+# dynamic, so `next build` just type-checks + compiles them.
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "sales-os/**"
+      - ".github/workflows/sales-os.yml"
+  pull_request:
+    paths:
+      - "sales-os/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sales-os
+    env:
+      # Dummy values — build never connects to a DB (dynamic routes only).
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/db?schema=public"
+      NEXTAUTH_SECRET: "ci-build-only-secret-not-used-at-runtime"
+      NEXTAUTH_URL: "http://localhost:3000"
+      AI_PROVIDER: "mock"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: sales-os/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client + validate schema
+        run: |
+          npx prisma validate
+          npx prisma generate
+
+      - name: Build (type-check + compile all routes)
+        run: npx next build
