@@ -140,6 +140,11 @@ describe("Łącznik AI Sales OS — mapowanie", () => {
     expect(lead.note).toContain("78");
   });
 
+  it("mapSalesOsLead zachowuje crmId (do dwukierunkowej synchronizacji)", () => {
+    const lead = mapSalesOsLead({ id: "crm_123", companyName: "ProMax" });
+    expect(lead.crmId).toBe("crm_123");
+  });
+
   it("leadToOutreachInput buduje ładunek outreachu z leada (e-mail z contact)", () => {
     const inp = leadToOutreachInput(baseLead({ contact: "biuro@dentmed.pl", url: "dentmed.pl", niche: "stomatolog", location: "Gdańsk", note: "Brak strony www" }), "Oferujemy stronę");
     expect(inp.email).toBe("biuro@dentmed.pl");

@@ -6,7 +6,7 @@ import { gmailComposeUrl, mailtoUrl, mapsSearchUrl, smsUrl, splitOffer } from ".
 import { canSendDirect, sendOfferEmail } from "../lib/mailer";
 import { draftOffer } from "../lib/offer";
 import { markContacted } from "../lib/salesEngine";
-import { salesOsConfigured, outreachViaSalesOs, leadToOutreachInput } from "../lib/salesOs";
+import { salesOsConfigured, outreachViaSalesOs, leadToOutreachInput, pushLeadStatusToSalesOs } from "../lib/salesOs";
 import { copyWithToast, toast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
 import type { Lead, LeadStatus } from "../types";
@@ -130,7 +130,12 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
             )}
             <select
               value={lead.status}
-              onChange={(e) => set({ status: e.target.value as LeadStatus })}
+              onChange={(e) => {
+                const status = e.target.value as LeadStatus;
+                set({ status });
+                // Lead z CRM-u → wypchnij zmianę z powrotem do lejka Sales OS (dwukierunkowo).
+                if (lead.origin === "salesos") void pushLeadStatusToSalesOs({ ...lead, status }, status).then((r) => r && toast(r.message));
+              }}
               style={{ width: "auto", padding: "4px 8px", borderRadius: 8, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", fontSize: 13 }}
             >
               {STATUS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}

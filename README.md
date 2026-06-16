@@ -269,11 +269,16 @@ leada (jeśli trzeba), wygeneruje wiadomość i ją wyśle; „auto-wyślij zale
 kolejkę szkiców do dziennego limitu firmy. Bez klucza poczty Sales OS robi „symulowaną”
 wysyłkę (pełny ślad w osi czasu) — ustaw `RESEND_API_KEY`, by wysyłać naprawdę.
 
-**Sterowanie głosem/czatem.** Asystent ma sześć narzędzi i sam je odpala w kontekście:
+**Dwukierunkowy status.** Zmiana statusu leada z CRM-u (Teczka Klienta lub komenda
+„oznacz <firma> jako klienta”) wraca do lejka Sales OS — etap i wynik aktualizują się po
+obu stronach (`POST /api/public/lead-status`, ślad `STAGE_CHANGE` w osi czasu).
+
+**Sterowanie głosem/czatem.** Asystent ma siedem narzędzi i sam je odpala w kontekście:
 `salesos_open` („otwórz Sales OS”), `salesos_sync` („zsynchronizuj leady z CRM-u”),
 `salesos_stats` („ile mam leadów w Sales OS / jak idzie pipeline”), `salesos_push`
-(„wyślij te firmy do Sales OS”), `salesos_email` („napisz i wyślij mail do <firma>”) oraz
-`salesos_flush_emails` („roześlij przygotowane wiadomości”).
+(„wyślij te firmy do Sales OS”), `salesos_email` („napisz i wyślij mail do <firma>”),
+`salesos_flush_emails` („roześlij przygotowane wiadomości”) oraz `salesos_set_status`
+(„oznacz <firma> jako klienta / przesuń na ofertę”).
 
 Pod spodem JARVIS odpytuje dodany endpoint `GET /api/public/sync` (read-only) i wysyła
 firmy przez `POST /api/public/leads` — oba autoryzowane tym samym tokenem. Sales OS

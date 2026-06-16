@@ -106,6 +106,7 @@ export function mapSalesOsLead(s: SalesOsLead, now = Date.now()): Lead {
     value: typeof s.estimatedValue === "number" ? s.estimatedValue : undefined,
     status: mapLeadStatus(s.outcome, s.stage),
     origin: "salesos",
+    crmId: s.id,
     createdAt: ts(s.createdAt),
     updatedAt: ts(s.updatedAt),
   };
@@ -375,6 +376,38 @@ export async function outreachViaSalesOs(input: OutreachInput): Promise<Outreach
       return { ok: true, sent: true, drafted: d.drafted, message: `✅ Sales OS napisał i wysłał mail do „${who}”${d.simulated ? " (tryb symulacji — ustaw RESEND_API_KEY, by wysyłać naprawdę)" : ` (${d.provider})`}.` };
     }
     return { ok: true, sent: false, drafted: true, message: `📝 Sales OS przygotował szkic maila do „${who}” w kolejce akceptacji (nie wysłano).` };
+  } catch (e) {
+    return { ok: false, message: `Brak połączenia z Sales OS: ${e instanceof Error ? e.message : e}` };
+  }
+}
+
+/**
+ * Wypchnij zmianę statusu leada z powrotem do lejka AI Sales OS (JARVIS → CRM).
+ * Identyfikuje leada po `crmId` (gdy znany z synchronizacji) lub po e-mailu.
+ * Zwraca null po cichu, gdy łącznik nie jest skonfigurowany albo nie ma jak
+ * zidentyfikować leada — wołane „best-effort" przy zmianie statusu w UI.
+ */
+export async function pushLeadStatusToSalesOs(lead: Lead, status: LeadStatus): Promise<OutreachResult | null> {
+  const url = baseUrl();
+  if (!url || !token()) return null;
+  const email = lead.email || (/\S+@\S+\.\S+/.test(lead.contact || "") ? lead.contact : undefined);
+  if (!lead.crmId && !email) return null;
+  try {
+    const res = await fetchTimeout(
+      `${url}/api/public/lead-status`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-ingest-token": token() },
+        body: JSON.stringify({ ...(lead.crmId ? { leadId: lead.crmId } : {}), email, status }),
+      },
+      15000,
+    );
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      return { ok: false, message: `Sales OS: ${(e as { error?: string }).error || res.status}` };
+    }
+    const d = (await res.json()) as { stage?: string | null; outcome?: string };
+    return { ok: true, message: `🔁 Status w Sales OS: „${lead.company}" → ${d.stage || d.outcome}.` };
   } catch (e) {
     return { ok: false, message: `Brak połączenia z Sales OS: ${e instanceof Error ? e.message : e}` };
   }

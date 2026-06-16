@@ -13,7 +13,7 @@ import { generateCards } from "./cards";
 import { runAutomation } from "./n8n";
 import { getCrypto, getRate } from "./markets";
 import { findLeads } from "./leads";
-import { openSalesOs, syncFromSalesOs, salesOsStatsText, pushLeadsToSalesOs, salesOsConfigured, outreachViaSalesOs, flushSalesOsOutreach, leadToOutreachInput } from "./salesOs";
+import { openSalesOs, syncFromSalesOs, salesOsStatsText, pushLeadsToSalesOs, salesOsConfigured, outreachViaSalesOs, flushSalesOsOutreach, leadToOutreachInput, pushLeadStatusToSalesOs } from "./salesOs";
 import { buildDossier, auditWeakPoints } from "./leadIntel";
 import { callNowList, followUpsDue, followUpMessage, pipelineForecast, openLabel } from "./salesEngine";
 import { syncSalesTasks, autoPlanSummary } from "./autoPlan";
@@ -22,7 +22,7 @@ import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
 import { primaryKey } from "./keys";
 import { exportData } from "./backup";
 import type { ProviderId } from "./providers/types";
-import type { Citation, Settings } from "../types";
+import type { Citation, Settings, LeadStatus } from "../types";
 
 // Bufor cytatów z ostatniego zapytania (research). Resetowany per wywołanie w brain.ts.
 let citationBuffer: Citation[] = [];
@@ -1180,6 +1180,34 @@ const tools: Tool[] = [
     run: async ({ max }) => {
       if (!salesOsConfigured()) return "AI Sales OS nie jest skonfigurowany — podaj adres i token w ⚙ → Integracje.";
       return (await flushSalesOsOutreach(typeof max === "number" ? max : undefined)).message;
+    },
+  },
+  {
+    def: {
+      name: "salesos_set_status",
+      description:
+        "Zmień status leada i wypchnij tę zmianę do lejka AI Sales OS (dwukierunkowo). Używaj na: „oznacz <firma> jako klienta / przesuń <firma> na ofertę / <firma> odrzucił / <firma> już po kontakcie”. Statusy: new (nowy), contacted (kontakt), offer (oferta), won (klient), lost (odrzucony).",
+      input_schema: obj(
+        {
+          company: str("Nazwa firmy/leada z Pulpitu"),
+          status: { type: "string", enum: ["new", "contacted", "offer", "won", "lost"], description: "Nowy status leada" },
+        },
+        ["company", "status"],
+      ),
+    },
+    run: async ({ company, status }) => {
+      const c = String(company || "").trim().toLowerCase();
+      if (!c) return "Podaj firmę, której status mam zmienić.";
+      const lead = (store.data.leads || []).find((l) => l.company.toLowerCase() === c)
+        || (store.data.leads || []).find((l) => l.company.toLowerCase().includes(c));
+      if (!lead) return `Nie mam „${company}" w Pulpicie. Najpierw znajdź/zsynchronizuj leada.`;
+      const st = status as LeadStatus;
+      store.setData((d) => { const l = d.leads.find((x) => x.id === lead.id); if (l) { l.status = st; l.updatedAt = Date.now(); } });
+      if (!salesOsConfigured() || lead.origin !== "salesos") {
+        return `✅ Status „${lead.company}" → ${st} (lokalnie).`;
+      }
+      const r = await pushLeadStatusToSalesOs({ ...lead, status: st }, st);
+      return r ? r.message : `✅ Status „${lead.company}" → ${st}.`;
     },
   },
 ];

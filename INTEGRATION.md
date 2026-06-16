@@ -36,6 +36,7 @@ Ten sam token autoryzuje wszystkie trzy publiczne endpointy używane przez JARVI
 | `GET /api/public/sync` | JARVIS pobiera leady + metryki (read-only) |
 | `POST /api/public/leads` | JARVIS wsyła znalezione firmy (inbound) |
 | `POST /api/public/outreach` | JARVIS zleca napisanie i wysyłkę maila |
+| `POST /api/public/lead-status` | JARVIS wypycha zmianę statusu do lejka (dwukierunkowo) |
 
 ---
 
@@ -113,8 +114,9 @@ Pełny opis zmiennych: [`sales-os/.env.example`](sales-os/.env.example).
    Pulpit / Teczka / głos                    Next.js 14 + Postgres + Prisma
         │  x-ingest-token                    leady · scoring · lejek · AI · poczta
         ├─ GET  /api/public/sync     ───────▶ czyta leady + metryki (read-only)
-        ├─ POST /api/public/leads    ───────▶ wsyła firmy → scoring → lejek
-        └─ POST /api/public/outreach ───────▶ AI pisze mail → kolejka → WYSYŁKA
+        ├─ POST /api/public/leads       ────▶ wsyła firmy → scoring → lejek
+        ├─ POST /api/public/outreach    ────▶ AI pisze mail → kolejka → WYSYŁKA
+        └─ POST /api/public/lead-status ────▶ zmiana statusu → etap lejka
 ```
 
 JARVIS niczego nie zapisuje w bazie Sales OS bezpośrednio — wszystko idzie przez

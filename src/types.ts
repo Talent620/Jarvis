@@ -274,6 +274,8 @@ export interface Lead {
   followUpCount?: number;
   /** Skąd lead pochodzi (np. „salesos" = zsynchronizowany z AI Sales OS). */
   origin?: "salesos";
+  /** Identyfikator leada w AI Sales OS (gdy origin = salesos) — do dwukierunkowej synchronizacji. */
+  crmId?: string;
   status: LeadStatus;
   createdAt: number;
   updatedAt: number;

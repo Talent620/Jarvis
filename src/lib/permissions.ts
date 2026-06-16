@@ -22,7 +22,7 @@ const RISK: Record<string, Risk> = {
   gmail_send: "outbound", gcal_add: "outbound", clear_tally: "outbound", run_automation: "outbound",
   send_test_email: "outbound", send_offers_all: "outbound",
   salesos_open: "outbound", salesos_push: "outbound",
-  salesos_email: "outbound", salesos_flush_emails: "outbound",
+  salesos_email: "outbound", salesos_flush_emails: "outbound", salesos_set_status: "outbound",
   // outbound — działania na zewnątrz / nieodwracalne (wymaga zgody)
   make_call: "outbound", send_sms: "outbound", smart_home: "outbound", run_scene: "outbound",
   open_service: "outbound", navigate_to: "outbound", call_contact: "outbound", text_contact: "outbound",
