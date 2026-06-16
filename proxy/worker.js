@@ -109,6 +109,18 @@ async function relay(target, req, headers) {
   return new Response(upstream.body, { status: upstream.status, headers: out });
 }
 
+// Zgrubny rate-limit per IP (gdy ustawiono RATE_LIMIT_PER_MIN i jest KV). Workers KV nie
+// jest atomowe — to ochrona anty-abuse/kosztowa, nie twarda granica. Puste = wyłączone.
+async function rateLimited(req, env) {
+  const lim = parseInt(env.RATE_LIMIT_PER_MIN || "0", 10);
+  if (!lim || !env.JARVIS_KV) return false;
+  const ip = req.headers.get("cf-connecting-ip") || "anon";
+  const key = `rl:${ip}:${Math.floor(Date.now() / 60000)}`;
+  const n = parseInt((await env.JARVIS_KV.get(key)) || "0", 10) + 1;
+  await env.JARVIS_KV.put(key, String(n), { expirationTtl: 70 });
+  return n > lim;
+}
+
 // --- Google OAuth (Gmail + Calendar) ---
 const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
@@ -615,14 +627,17 @@ export default {
       }
 
       // --- PROXY KLUCZY ---
-      // Opcjonalna bramka: gdy ustawiono APP_TOKEN, klient musi podać nagłówek x-app-token.
-      // Chroni Twoje klucze przed użyciem przez obcych (origin bywa podrabialny, token nie).
-      if (
-        env.APP_TOKEN &&
-        (path.endsWith("/anthropic") || path.endsWith("/gemini") || path.endsWith("/openai") || path.endsWith("/passthrough")) &&
-        req.headers.get("x-app-token") !== env.APP_TOKEN
-      ) {
-        return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });
+      // Bramka tras proxy: (1) opcjonalny token aplikacji (origin bywa podrabialny, token nie),
+      // (2) opcjonalny rate-limit anty-abuse/kosztowy. Obie env-gated (puste = bez zmian).
+      const isProxyRoute =
+        path.endsWith("/anthropic") || path.endsWith("/gemini") || path.endsWith("/openai") || path.endsWith("/passthrough");
+      if (isProxyRoute) {
+        if (env.APP_TOKEN && req.headers.get("x-app-token") !== env.APP_TOKEN) {
+          return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });
+        }
+        if (await rateLimited(req, env)) {
+          return json(429, { error: "Za dużo żądań w tej chwili — spróbuj ponownie za moment." });
+        }
       }
       if (path.endsWith("/anthropic")) {
         return relay("https://api.anthropic.com/v1/messages", req, {
