@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 30% 98%;
+    --foreground: 36 16% 11%;
+
+    --card: 40 30% 99%;
+    --card-foreground: 36 16% 11%;
+
+    --popover: 40 30% 99%;
+    --popover-foreground: 36 16% 11%;
+
+    --primary: 154 38% 22%;
+    --primary-foreground: 40 30% 98%;
+
+    --secondary: 40 18% 94%;
+    --secondary-foreground: 36 16% 18%;
+
+    --muted: 40 16% 95%;
+    --muted-foreground: 36 8% 42%;
+
+    --accent: 40 24% 92%;
+    --accent-foreground: 36 16% 16%;
+
+    --destructive: 8 62% 44%;
+    --destructive-foreground: 40 30% 98%;
+
+    --success: 150 45% 28%;
+    --success-foreground: 40 30% 98%;
+
+    --warning: 32 78% 44%;
+    --warning-foreground: 40 30% 98%;
+
+    --border: 38 16% 88%;
+    --input: 38 16% 88%;
+    --ring: 154 38% 30%;
+
+    --radius: 0.65rem;
+  }
+
+  .dark {
+    --background: 40 8% 8%;
+    --foreground: 40 18% 92%;
+
+    --card: 40 7% 11%;
+    --card-foreground: 40 18% 92%;
+
+    --popover: 40 7% 11%;
+    --popover-foreground: 40 18% 92%;
+
+    --primary: 152 40% 55%;
+    --primary-foreground: 150 35% 10%;
+
+    --secondary: 40 6% 16%;
+    --secondary-foreground: 40 18% 90%;
+
+    --muted: 40 6% 16%;
+    --muted-foreground: 40 8% 62%;
+
+    --accent: 40 6% 18%;
+    --accent-foreground: 40 18% 90%;
+
+    --destructive: 8 55% 50%;
+    --destructive-foreground: 40 18% 96%;
+
+    --success: 150 40% 50%;
+    --success-foreground: 150 35% 8%;
+
+    --warning: 36 75% 55%;
+    --warning-foreground: 36 40% 10%;
+
+    --border: 40 6% 20%;
+    --input: 40 6% 22%;
+    --ring: 152 40% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, .font-display {
+    font-feature-settings: "ss01";
+  }
+}
+
+@layer utilities {
+  /* Tabular figures for KPIs / tables */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Thin scrollbars for boards / panels */
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scroll-thin::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+}
+
+@layer base {
+  :root {
+    --font-sans: "Hanken Grotesk", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  }
+  body {
+    background-image:
+      radial-gradient(60rem 60rem at 85% -10%, hsl(154 38% 22% / 0.05), transparent 60%),
+      radial-gradient(50rem 50rem at -10% 110%, hsl(32 78% 44% / 0.04), transparent 55%);
+    background-attachment: fixed;
+  }
+  .dark body {
+    background-image:
+      radial-gradient(60rem 60rem at 85% -10%, hsl(152 40% 55% / 0.06), transparent 60%),
+      radial-gradient(50rem 50rem at -10% 110%, hsl(36 75% 55% / 0.04), transparent 55%);
+  }
+  ::selection {
+    background: hsl(var(--primary) / 0.18);
+  }
+}

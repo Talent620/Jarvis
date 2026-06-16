@@ -8,6 +8,7 @@ import { findLeads } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { leadsToCsv, followUpsDue, callNowList, searchLeads, wasLeadEmailed } from "../lib/salesEngine";
 import { importLeads } from "../lib/leadImport";
+import { openSalesOs, syncFromSalesOs } from "../lib/salesOs";
 import { copyWithToast, toast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
 import { useEscape } from "../hooks/useEscape";
@@ -42,6 +43,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const [bulking, setBulking] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
+  const [syncingOs, setSyncingOs] = useState(false);
 
   const doImport = () => {
     if (!importText.trim()) return;
@@ -316,6 +318,22 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
             <button className="btn" onClick={() => setShowImport((v) => !v)} title="Wklej listę firm">📥 Import</button>
             <button className="btn" onClick={exportCsv} title="Eksport do Excela/Arkuszy">📤 CSV</button>
           </div>
+          {(store.settings.salesOsUrl || "").trim() && (
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button className="btn" style={{ flex: 1 }} onClick={() => { if (!openSalesOs()) toast("Najpierw podaj adres AI Sales OS (⚙ → Integracje)."); }} title="Otwórz osobną aplikację AI Sales OS">
+                🚀 Sales OS
+              </button>
+              <button
+                className="btn"
+                style={{ flex: 1 }}
+                disabled={syncingOs}
+                onClick={async () => { setSyncingOs(true); const r = await syncFromSalesOs(); setSyncingOs(false); toast(r.message); if (r.added) setFilter("all"); }}
+                title="Pobierz leady z AI Sales OS (read-only)"
+              >
+                {syncingOs ? "⏳ Sync…" : "⬇ Sync z Sales OS"}
+              </button>
+            </div>
+          )}
           {showImport && (
             <div style={{ marginTop: 8 }}>
               <textarea

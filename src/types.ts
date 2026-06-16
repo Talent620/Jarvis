@@ -316,6 +316,10 @@ export interface Settings {
   syncUrl: string;
   /** Prywatny token przestrzeni danych sync. */
   syncToken: string;
+  /** Adres aplikacji AI Sales OS (osobne narzędzie, np. http://localhost:3000). */
+  salesOsUrl: string;
+  /** Token przechwytywania leadów (X-Ingest-Token) — wgląd read-only do AI Sales OS. */
+  salesOsToken: string;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */
   ollamaUrl: string;
   /** Tryb nieocenzurowany — działa realnie tylko z modelem lokalnym (Ollama):

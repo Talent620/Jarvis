@@ -18,7 +18,8 @@
     "electron:dev": "electron .",
     "desktop:build": "npm run build && electron-builder --win nsis",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "salesos": "bash sales-os/start.sh"
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",

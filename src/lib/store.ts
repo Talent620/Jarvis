@@ -37,6 +37,8 @@ const defaultSettings: Settings = {
   emailSignature: "—\ntel. +48 500 390 009\nwww.v-ai.pl",
   syncUrl: "",
   syncToken: "",
+  salesOsUrl: "",
+  salesOsToken: "",
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,

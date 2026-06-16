@@ -228,6 +228,34 @@ Następnie mów/pisz naturalnie, np. „Jarvis, zgaś światło w salonie" — J
 wywoła encję (`light.salon`, `switch.czajnik`, `climate.sypialnia`…). Jeśli HA
 blokuje CORS, użyj `proxy/` (trasa `/passthrough`).
 
+## AI Sales OS (osobne, zintegrowane narzędzie)
+
+W katalogu [`sales-os/`](sales-os/) leży **kompletna, osobna aplikacja** do pozyskiwania
+klientów (Next.js 14 + Postgres + Prisma): przechwytywanie leadów, scoring, lejek CRM,
+generowanie wiadomości przez AI i Copilot. Korzystasz z niej **w przeglądarce** — JARVIS
+jej nie wchłania, tylko ma do niej **wgląd** i synchronizuje leady. Dwa osobne narzędzia,
+jeden token.
+
+**Uruchomienie jednym poleceniem** (z katalogu JARVIS-a):
+
+```bash
+npm run salesos        # baza (Docker) → zależności → schemat → dane demo → serwer
+```
+
+Aplikacja wstaje na **http://localhost:3000** (login demo: `owner@northstar.studio` / `demo1234`).
+Warstwa AI działa od ręki, bez kluczy (wbudowany silnik „mock").
+
+**Połączenie z JARVIS-em** (⚙ → Integracje → *AI Sales OS*):
+
+1. W Sales OS skopiuj token z **⚙ → Pozyskiwanie → Inbound** (`X-Ingest-Token`).
+2. W JARVIS-ie wklej adres (`http://localhost:3000`) i ten token.
+3. **🚀 Otwórz Sales OS** — jeden klik otwiera aplikację; **⬇ Synchronizuj leady** —
+   pobiera leady (read-only) do Pulpitu Sprzedaży (dedup po nazwie firmy). Te same
+   przyciski są w Pulpicie Sprzedaży, gdy adres jest ustawiony.
+
+Pod spodem JARVIS odpytuje dodany endpoint `GET /api/public/sync` (autoryzacja tym samym
+tokenem). Sales OS pozostaje źródłem prawdy; JARVIS jedynie odzwierciedla jego dane.
+
 ## BFF — klucze poza aplikacją (zalecane)
 
 JARVIS **nie wpieka kluczy do bundla**. Wbudowane (darmowe) modele działają przez **BFF**

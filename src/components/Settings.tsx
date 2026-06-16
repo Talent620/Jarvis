@@ -4,6 +4,7 @@ import { loadVoices, speak } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
+import { openSalesOs, syncFromSalesOs } from "../lib/salesOs";
 import { googleStartUrl, gmailSearch, connectDesktopGoogle } from "../lib/google";
 import { testApi, testProvider, resolveProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
@@ -68,6 +69,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("ai");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [syncMsg, setSyncMsg] = useState("");
+  const [salesOsMsg, setSalesOsMsg] = useState("");
+  const [salesOsBusy, setSalesOsBusy] = useState(false);
   const [apiMsg, setApiMsg] = useState("");
   const [health, setHealth] = useState<HealthItem[] | null>(null);
   const [healthBusy, setHealthBusy] = useState(false);
@@ -1179,6 +1182,59 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
 
           {tab === "integrations" && (
             <>
+              <h3>AI Sales OS (osobne narzędzie)</h3>
+              <p className="muted">
+                AI Sales OS to <b>osobna aplikacja</b> (katalog <code>sales-os/</code>), z której korzystasz
+                w przeglądarce. JARVIS jej nie wchłania — ma do niej <b>wgląd</b>: jednym kliknięciem ją
+                otwierasz, a drugim pobierasz jej leady (read-only) do Pulpitu Sprzedaży. Uruchom ją raz:{" "}
+                <code>npm run salesos</code> w katalogu JARVIS-a.
+              </p>
+              <div className="field">
+                <label>Adres AI Sales OS</label>
+                <input
+                  value={s.salesOsUrl}
+                  placeholder="http://localhost:3000"
+                  onChange={(e) => set({ salesOsUrl: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>Token przechwytywania (X-Ingest-Token)</label>
+                <input
+                  type="password"
+                  value={s.salesOsToken}
+                  placeholder="token z ⚙ Sales OS → Pozyskiwanie → Inbound"
+                  onChange={(e) => set({ salesOsToken: e.target.value })}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  className="btn"
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    store.setSettings({ salesOsUrl: s.salesOsUrl, salesOsToken: s.salesOsToken });
+                    if (!openSalesOs()) setSalesOsMsg("Najpierw podaj adres AI Sales OS.");
+                  }}
+                >
+                  🚀 Otwórz Sales OS
+                </button>
+                <button
+                  className="btn"
+                  style={{ flex: 1 }}
+                  disabled={salesOsBusy}
+                  onClick={async () => {
+                    store.setSettings({ salesOsUrl: s.salesOsUrl, salesOsToken: s.salesOsToken });
+                    setSalesOsBusy(true);
+                    setSalesOsMsg("⏳ Synchronizuję z Sales OS…");
+                    const r = await syncFromSalesOs();
+                    setSalesOsBusy(false);
+                    setSalesOsMsg(r.message);
+                  }}
+                >
+                  {salesOsBusy ? "⏳ Synchronizuję…" : "⬇ Synchronizuj leady"}
+                </button>
+              </div>
+              {salesOsMsg && <p className="muted">{salesOsMsg}</p>}
+
               <h3>Synchronizacja (chmura)</h3>
               <p className="muted">
                 Współdziel pamięć, projekty i dane między urządzeniami przez własny backend
