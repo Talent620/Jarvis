@@ -1501,3 +1501,66 @@ input:focus, textarea:focus, select:focus {
   .sheet, .panel, .bubble, .notif-badge, .boot, .boot-bar span { animation: none !important; }
   * { scroll-behavior: auto !important; }
 }
+
+/* =====================================================================
+   DOPASOWANIE DO URZĄDZENIA (responsywność indywidualna)
+   Layout był responsywny (dvh, safe-area, flex, max-width), ale rozmiary
+   były w sztywnych px bez skalowania poniżej 600px. Poniżej: płynna
+   typografia (tekst dziedziczony skaluje się z szerokością ekranu) oraz
+   tryb kompaktowy dla wąskich telefonów — odzyskuje miejsce na treść.
+   ===================================================================== */
+
+/* Płynny rozmiar tekstu dziedziczonego: drobny na wąskich, większy na dużych
+   ekranach/tabletach. Elementy z własnym font-size pozostają bez zmian. */
+body {
+  font-size: clamp(13.5px, 3.7vw, 17px);
+}
+
+/* Wąskie / kompaktowe telefony (np. Galaxy S9 / S9+ ~360 px, iPhone SE).
+   Mniej marginesów i nieco mniejsze elementy nagłówka = więcej miejsca na treść. */
+@media (max-width: 380px) {
+  .app {
+    padding-left: max(var(--sal), 10px);
+    padding-right: max(var(--sar), 10px);
+  }
+  .panel-head,
+  .panel-body,
+  .panel-foot {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .brand {
+    font-size: 18px;
+    letter-spacing: 3px;
+  }
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 15px;
+  }
+  .topbar {
+    gap: 5px;
+  }
+}
+
+/* Duże telefony i tablety — delikatnie luźniejszy oddech w panelach. */
+@media (min-width: 600px) {
+  .panel-head,
+  .panel-body,
+  .panel-foot {
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+}
+
+/* Niskie okno (orientacja pozioma / podzielony ekran) — przytnij orb,
+   żeby treść i pole tekstowe nie znikały pod ekranem. */
+@media (max-height: 560px) {
+  .orb-wrap {
+    min-height: 0;
+  }
+  .orb {
+    width: clamp(96px, 26vh, 150px);
+    height: clamp(96px, 26vh, 150px);
+  }
+}
