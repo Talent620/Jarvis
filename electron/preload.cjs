@@ -29,6 +29,8 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   googleDisconnect: () => ipcRenderer.invoke("jarvis:google-disconnect"),
   gcalAdd: (ev) => ipcRenderer.invoke("jarvis:gcal-add", ev),
   gcalList: (opts) => ipcRenderer.invoke("jarvis:gcal-list", opts),
+  gmailSend: (msg) => ipcRenderer.invoke("jarvis:gmail-send", msg),
+  gmailList: (opts) => ipcRenderer.invoke("jarvis:gmail-list", opts),
   // Pisanie tekstu / skróty (Windows), opcjonalnie do okna o tytule.
   type: (text, window) => ipcRenderer.invoke("jarvis:type", { text: String(text || ""), window: window || "" }),
   hotkey: (combo, window) => ipcRenderer.invoke("jarvis:hotkey", { combo: String(combo || ""), window: window || "" }),

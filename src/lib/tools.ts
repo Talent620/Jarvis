@@ -1,7 +1,7 @@
 import { store, uid } from "./store";
 import { fetchTimeout } from "./http";
 import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
-import { hasBackendGmail, canSendDirect, sendTestEmail, sendAllOffers } from "./mailer";
+import { hasBackendGmail, canSendDirect, canSendGmailNative, sendTestEmail, sendAllOffers } from "./mailer";
 import { getWeather } from "./weather";
 import { scheduleReminder, scheduleTimer } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
@@ -529,7 +529,7 @@ const tools: Tool[] = [
       {
         const [gcal, unread] = await Promise.all([
           gcalDay(0, true).catch(() => ""),
-          hasBackendGmail() ? gmailUnreadSummary().catch(() => "") : Promise.resolve(""),
+          gmailUnreadSummary().catch(() => ""),
         ]);
         if (gcal && !/niepołączone|Skonfiguruj|błąd|error/i.test(gcal)) lines.push(`Kalendarz Google — ${gcal.replace(/^📅\s*/, "")}`);
         if (unread) lines.push(unread);
@@ -823,18 +823,20 @@ const tools: Tool[] = [
   {
     def: {
       name: "gmail_send",
-      description: "Wyślij e-mail. Gdy konto Google jest połączone (backend) — wyśle automatycznie. W przeciwnym razie otworzy GOTOWĄ wiadomość (adres + temat + treść) do wysłania jednym tapnięciem. Zawsze działa.",
+      description: "Wyślij e-mail. Gdy konto Google jest połączone (natywnie na komputerze LUB backend) — wysyła automatycznie. W przeciwnym razie otwiera GOTOWĄ wiadomość do wysłania jednym kliknięciem. Zawsze działa — używaj śmiało, nie wspominaj o n8n.",
       input_schema: obj({ to: str("Adres odbiorcy"), subject: str("Temat"), body: str("Treść") }, ["to", "subject", "body"]),
     },
     run: async ({ to, subject, body }) => {
-      if (hasBackendGmail()) {
+      if (hasBackendGmail() || canSendGmailNative()) {
         const r = await gmailSend(to, subject, body);
         if (/^Wysłano/i.test(r)) return r;
-        // Backend zawiódł → fallback: otwórz gotowy e-mail.
+        // Niepołączone konto → gmailSend sam otwiera logowanie / prowadzi do połączenia — przekaż to.
+        if (/łączę|zezwól|logowania|Połącz konto Google|Client ID|Integracje/i.test(r)) return r;
+        // Realny błąd wysyłki → fallback: otwórz gotowy e-mail (zawsze działa).
         const opened = await openCompose(to, subject, body);
-        return `Nie wysłałem automatycznie (${r}). ${opened}`;
+        return `${r} ${opened}`;
       }
-      // Brak backendu → od razu gotowy e-mail (najprostsza droga, bez konfiguracji).
+      // Brak skonfigurowanej wysyłki → od razu gotowy e-mail (najprostsza droga, bez konfiguracji).
       return openCompose(to, subject, body);
     },
   },

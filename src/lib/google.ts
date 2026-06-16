@@ -58,10 +58,16 @@ interface DesktopGoogle {
   googleStatus?: () => Promise<{ connected?: boolean }>;
   gcalAdd?: (ev: { summary: string; start: string; end?: string; location?: string }) => Promise<{ ok?: boolean; error?: string }>;
   gcalList?: (opts: { timeMin?: string; timeMax?: string; max?: number }) => Promise<{ events?: { start: string; summary: string; location?: string }[]; error?: string }>;
+  gmailSend?: (msg: { to: string; subject: string; body: string; threadId?: string; inReplyTo?: string }) => Promise<{ ok?: boolean; error?: string }>;
+  gmailList?: (opts: { query?: string; max?: number }) => Promise<{ messages?: { id: string; from: string; subject: string; snippet: string }[]; error?: string }>;
 }
 function deskGoogle(): DesktopGoogle | null {
   const b = typeof window !== "undefined" ? (window as { jarvisDesktop?: DesktopGoogle }).jarvisDesktop : null;
   return b && b.gcalList && b.gcalAdd ? b : null;
+}
+/** Czy natywny mostek Google na desktopie jest POŁĄCZONY (token zapisany). */
+async function deskConnected(b: DesktopGoogle): Promise<boolean> {
+  return !!(await b.googleStatus?.())?.connected;
 }
 
 /** Połącz Kalendarz natywnie na tym komputerze (OAuth loopback). Zwraca komunikat dla użytkownika. */
@@ -92,9 +98,20 @@ function autoConnect(err: string): string | null {
 }
 
 export async function gmailSearch(query = ""): Promise<string> {
+  const b = deskGoogle();
+  let items: { id: string; from: string; subject: string; snippet: string }[];
+  if (b) {
+    if (!(await deskConnected(b))) return await desktopAutoConnect();
+    const dr = await b.gmailList!({ query, max: 10 });
+    if (dr.error) return dr.error;
+    items = dr.messages || [];
+    return items.length
+      ? items.map((m) => `• [${m.id}] ${m.from} — ${m.subject}\n  ${m.snippet}`).join("\n")
+      : "Brak pasujących wiadomości.";
+  }
   const r = await call("/v1/gmail/list", { query, max: 10 });
   if (r.error) return autoConnect(r.error) || r.error;
-  const items = r.messages || [];
+  items = r.messages || [];
   return items.length
     ? items.map((m: any) => `• [${m.id}] ${m.from} — ${m.subject}\n  ${m.snippet}`).join("\n")
     : "Brak pasujących wiadomości.";
@@ -102,9 +119,19 @@ export async function gmailSearch(query = ""): Promise<string> {
 
 /** Krótkie podsumowanie nieprzeczytanych maili (do porannego briefingu). */
 export async function gmailUnreadSummary(max = 5): Promise<string> {
+  const b = deskGoogle();
+  let items: { from: string; subject: string }[];
+  if (b) {
+    if (!(await deskConnected(b))) return ""; // briefing: nie otwieramy logowania w tle
+    const dr = await b.gmailList!({ query: "is:unread", max });
+    if (dr.error) return "";
+    items = dr.messages || [];
+    if (!items.length) return "Brak nieprzeczytanych maili.";
+    return `Nieprzeczytane maile (${items.length}${items.length >= max ? "+" : ""}): ` + items.map((m) => `${m.from} — ${m.subject}`).join("; ");
+  }
   const r = await call("/v1/gmail/list", { query: "is:unread", max });
   if (r.error) return "";
-  const items = r.messages || [];
+  items = r.messages || [];
   if (!items.length) return "Brak nieprzeczytanych maili.";
   return `Nieprzeczytane maile (${items.length}${items.length >= max ? "+" : ""}): ` +
     items.map((m: any) => `${m.from} — ${m.subject}`).join("; ");
@@ -126,6 +153,12 @@ export async function gmailRead(id: string): Promise<string> {
 }
 
 export async function gmailSend(to: string, subject: string, body: string): Promise<string> {
+  const b = deskGoogle();
+  if (b) {
+    if (!(await deskConnected(b))) return await desktopAutoConnect();
+    const dr = await b.gmailSend!({ to, subject, body });
+    return dr.error || `Wysłano e-mail do ${to}.`;
+  }
   const r = await call("/v1/gmail/send", { to, subject, body });
   if (r.error) return autoConnect(r.error) || r.error;
   return `Wysłano e-mail do ${to}.`;
@@ -134,6 +167,12 @@ export async function gmailSend(to: string, subject: string, body: string): Prom
 /** Odpowiedz na e-mail w tym samym wątku (threadId + Message-ID z gmail_read). */
 export async function gmailReply(to: string, subject: string, body: string, threadId?: string, inReplyTo?: string): Promise<string> {
   const subj = /^re:/i.test(subject) ? subject : `Re: ${subject}`;
+  const b = deskGoogle();
+  if (b) {
+    if (!(await deskConnected(b))) return await desktopAutoConnect();
+    const dr = await b.gmailSend!({ to, subject: subj, body, threadId, inReplyTo });
+    return dr.error || `Wysłano odpowiedź do ${to}.`;
+  }
   const r = await call("/v1/gmail/send", { to, subject: subj, body, threadId, inReplyTo });
   if (r.error) return autoConnect(r.error) || r.error;
   return `Wysłano odpowiedź do ${to}.`;

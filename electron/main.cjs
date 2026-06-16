@@ -265,6 +265,21 @@ function registerDesktopControl() {
       return { events };
     } catch (e) { return { error: e && e.message ? e.message : String(e) }; }
   });
+  ipcMain.handle("jarvis:gmail-send", async (_e, msg) => {
+    try {
+      const at = await googleAccess();
+      if (!at) return { error: "Google niepołączone." };
+      await googleDesk.gmailSend({ accessToken: at, ...(msg || {}) });
+      return { ok: true };
+    } catch (e) { return { error: e && e.message ? e.message : String(e) }; }
+  });
+  ipcMain.handle("jarvis:gmail-list", async (_e, opts) => {
+    try {
+      const at = await googleAccess();
+      if (!at) return { error: "Google niepołączone." };
+      return await googleDesk.gmailList({ accessToken: at, ...(opts || {}) });
+    } catch (e) { return { error: e && e.message ? e.message : String(e) }; }
+  });
 
   // Prawdziwa wysyłka e-maila (SMTP) — z Pulpitu Sprzedaży jednym potwierdzeniem.
   ipcMain.handle("jarvis:sendmail", async (_e, payload) => {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { gmailReply, gmailRead, dayRangeISO, gmailUnreadSummary, gcalList, gcalAdd, googleBackendReady, withLocalOffset } from "../src/lib/google";
+import { gmailReply, gmailRead, dayRangeISO, gmailUnreadSummary, gcalList, gcalAdd, gmailSend, googleBackendReady, withLocalOffset } from "../src/lib/google";
 import { store } from "../src/lib/store";
 
 // Integracja Gmail przez backend: odpowiedź w wątku i czytanie pełnej treści.
@@ -80,6 +80,14 @@ describe("Kalendarz na desktopie (.exe) — routing przez mostek natywny", () =>
     setBridge({ gcalList: vi.fn(), gcalAdd: vi.fn(), googleStatus: async () => ({ connected: false }) });
     const out = await gcalAdd("X", "2026-06-20T10:00:00");
     expect(out).toMatch(/Client ID|Integracje/i);
+  });
+
+  it("połączony mostek → gmailSend wysyła natywnie (Gmail desktop, bez serwera)", async () => {
+    const send = vi.fn(async () => ({ ok: true }));
+    setBridge({ gcalList: vi.fn(), gcalAdd: vi.fn(), gmailSend: send, gmailList: vi.fn(), googleStatus: async () => ({ connected: true }) });
+    const out = await gmailSend("klient@x.pl", "Oferta", "Dzień dobry");
+    expect(send).toHaveBeenCalled();
+    expect(out).toMatch(/Wysłano e-mail do klient@x\.pl/);
   });
 });
 

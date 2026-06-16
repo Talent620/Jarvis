@@ -7,7 +7,11 @@ const http = require("http");
 const https = require("https");
 const { URL, URLSearchParams } = require("url");
 
-const SCOPES = ["https://www.googleapis.com/auth/calendar.events"].join(" ");
+const SCOPES = [
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/gmail.readonly",
+].join(" ");
 
 // Mały klient HTTPS zwracający sparsowany JSON (Electron main bywa bez globalnego fetch).
 function httpsJson(method, urlStr, { headers = {}, body } = {}) {
@@ -123,4 +127,44 @@ async function calList({ accessToken, timeMin, timeMax, max = 10 }) {
   return (d.items || []).map((e) => ({ start: e.start?.dateTime || e.start?.date, summary: e.summary, location: e.location }));
 }
 
-module.exports = { buildAuthUrl, exchangeCode, refreshAccessToken, connectGoogle, calAdd, calList, SCOPES };
+function b64urlMime(buf) {
+  return Buffer.from(buf).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// Wyślij e-mail przez Gmail API (ten sam token co kalendarz; scope gmail.send).
+async function gmailSend({ accessToken, to, subject, body, threadId, inReplyTo }) {
+  const headers = [
+    `To: ${to}`,
+    `Subject: =?UTF-8?B?${Buffer.from(String(subject || ""), "utf8").toString("base64")}?=`,
+    "MIME-Version: 1.0",
+    'Content-Type: text/plain; charset="UTF-8"',
+    "Content-Transfer-Encoding: base64",
+  ];
+  if (inReplyTo) { headers.push(`In-Reply-To: ${inReplyTo}`); headers.push(`References: ${inReplyTo}`); }
+  const raw = headers.join("\r\n") + "\r\n\r\n" + Buffer.from(String(body || ""), "utf8").toString("base64");
+  const payload = { raw: b64urlMime(raw) };
+  if (threadId) payload.threadId = threadId;
+  return httpsJson("POST", "https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+// Lista wiadomości (nagłówki: od, temat) — do podsumowań/odczytu.
+async function gmailList({ accessToken, query = "", max = 10 }) {
+  const list = await httpsJson("GET", `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${max}&q=${encodeURIComponent(query)}`, {
+    headers: { authorization: `Bearer ${accessToken}` },
+  });
+  const messages = [];
+  for (const m of (list.messages || []).slice(0, max)) {
+    const msg = await httpsJson("GET", `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`, {
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    const h = msg.payload?.headers || [];
+    const get = (n) => (h.find((x) => x.name === n) || {}).value || "";
+    messages.push({ id: m.id, from: get("From"), subject: get("Subject"), snippet: msg.snippet || "" });
+  }
+  return { messages };
+}
+
+module.exports = { buildAuthUrl, exchangeCode, refreshAccessToken, connectGoogle, calAdd, calList, gmailSend, gmailList, SCOPES };

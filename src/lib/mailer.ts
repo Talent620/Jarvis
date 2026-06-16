@@ -25,14 +25,18 @@ export const hasBackend = (): boolean => !!store.settings.syncUrl?.trim() && !!s
 /** Czy backend Gmail (OAuth) jest skonfigurowany — działa też na telefonie. */
 export const hasBackendGmail = (): boolean => hasBackend();
 
+/** Czy desktop ma natywną wysyłkę Gmail (ten sam token co kalendarz, bez serwera). */
+export const canSendGmailNative = (): boolean =>
+  typeof window !== "undefined" && !!(window as any).jarvisDesktop?.gmailSend;
+
 /**
  * Czy możemy użyć przekaźnika SMTP przez backend (telefon „pyk i samo", bez Google OAuth):
  * mamy backend (Worker) + adres i hasło aplikacji, a NIE jesteśmy na desktopie (tam SMTP idzie wprost).
  */
 export const canRelaySmtp = (): boolean => hasBackend() && mailConfigured() && !((window as any)?.jarvisDesktop?.sendMail);
 
-/** Czy w ogóle możemy wysłać mail bezpośrednio (desktop SMTP, przekaźnik SMTP albo Gmail). */
-export const canSendDirect = (): boolean => canSendMail() || canRelaySmtp() || hasBackendGmail();
+/** Czy w ogóle możemy wysłać mail bezpośrednio (desktop SMTP/Gmail, przekaźnik SMTP albo backend Gmail). */
+export const canSendDirect = (): boolean => canSendMail() || canRelaySmtp() || hasBackendGmail() || canSendGmailNative();
 
 /** Niskopoziomowe wywołanie backendu (Bearer = token synchronizacji). */
 async function relayCall(path: string, payload: unknown): Promise<{ ok: boolean; error?: string }> {
@@ -189,6 +193,17 @@ export async function sendOfferEmail(to: string, subject: string, body: string, 
     return { ok: true, via: "SMTP" };
   }
   if (hasBackendGmail()) {
+    const r = await gmailSend(to.trim(), subject, body);
+    if (!/^Wysłano/i.test(r)) return { ok: false, error: r };
+    if (record) recordSent({ to: to.trim(), subject, via: "Gmail", company });
+    return { ok: true, via: "Gmail" };
+  }
+  // Natywny Gmail na desktopie (ten sam token co kalendarz) — wysyłamy TYLKO gdy połączony,
+  // by masowa wysyłka nie otwierała okna logowania przy każdym leadzie.
+  if (canSendGmailNative()) {
+    const bridge = (window as any).jarvisDesktop;
+    const connected = !!(await bridge.googleStatus?.())?.connected;
+    if (!connected) return { ok: false, error: "Połącz konto Google (⚙ → Integracje → „Połącz Kalendarz Google”) — jednorazowo, potem wysyłka maili działa sama." };
     const r = await gmailSend(to.trim(), subject, body);
     if (!/^Wysłano/i.test(r)) return { ok: false, error: r };
     if (record) recordSent({ to: to.trim(), subject, via: "Gmail", company });
