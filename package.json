@@ -10,6 +10,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "scan:secrets": "node scripts/secret-scan.mjs --all",
+    "hooks": "git config core.hooksPath .githooks && echo '✅ Hook pre-commit aktywny (.githooks).'",
     "cap:sync": "cap sync",
     "cap:android": "cap open android",
     "android:build": "npm run build && cap sync android",

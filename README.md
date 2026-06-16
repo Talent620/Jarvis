@@ -1,5 +1,11 @@
 # JARVIS · AI Assistant 2.0
 
+> 🚨 **OSTRZEŻENIE BEZPIECZEŃSTWA:** Klucz OpenRouter `sk-or-v1-…` **wyciekł w buildach ≤ 55**
+> (był wpiekany do bundla). **Zrotuj go ręcznie** na https://openrouter.ai/keys — tego nie da się
+> cofnąć z poziomu kodu. Szczegóły i pełna lista kluczy do rotacji: **[SECURITY.md](./SECURITY.md)**.
+> Od teraz klucze trafiają wyłącznie do **BFF** (`bff/`), nie do aplikacji.
+
+
 Agentowy asystent głosowy i tekstowy w stylu HUD, napędzany **Claude Opus 4.8**.
 Aplikacja webowa (React + Vite) opakowana w Androida przez **Capacitor** — następca
 oryginalnego `JARVIS.apk`, tym razem z pełnym kodem źródłowym, który możesz dowolnie
