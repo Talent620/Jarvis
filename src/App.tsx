@@ -303,7 +303,7 @@ export default function App() {
   // Motyw HUD.
   useEffect(() => {
     const b = document.body;
-    ["theme-gold", "theme-green", "theme-red", "theme-purple"].forEach((c) => b.classList.remove(c));
+    ["theme-gold", "theme-green", "theme-red", "theme-purple", "theme-matrix"].forEach((c) => b.classList.remove(c));
     if (settings.theme && settings.theme !== "default") b.classList.add(`theme-${settings.theme}`);
   }, [settings.theme]);
 

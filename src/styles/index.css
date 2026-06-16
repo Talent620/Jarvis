@@ -60,6 +60,43 @@ body.theme-purple {
   --line: rgba(183, 140, 255, 0.18);
   --line-strong: rgba(183, 140, 255, 0.4);
 }
+/* Motyw MATRIX — zielony fosfor na czerni + lekki „cyfrowy deszcz" w tle. */
+body.theme-matrix {
+  --cyan: #2bff88;
+  --cyan-dim: #14b85f;
+  --gold: #6bff9e;
+  --line: rgba(43, 255, 136, 0.18);
+  --line-strong: rgba(43, 255, 136, 0.42);
+  --text: #c2ffd6;
+  --text-dim: #5fae7f;
+  background:
+    radial-gradient(1000px 700px at 50% -10%, #032a16 0%, transparent 60%),
+    #010500;
+}
+/* Deszcz znaków: pionowe smugi przewijające się w dół — za treścią, nie przeszkadza. */
+body.theme-matrix::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.12;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0 20px,
+    rgba(43, 255, 136, 0.55) 20px 21px,
+    transparent 21px 42px
+  );
+  background-size: 42px 240px;
+  -webkit-mask-image: repeating-linear-gradient(0deg, #000 0 3px, transparent 3px 9px);
+  mask-image: repeating-linear-gradient(0deg, #000 0 3px, transparent 3px 9px);
+  animation: matrix-rain 1.1s linear infinite;
+}
+@keyframes matrix-rain {
+  to { background-position: 0 240px; }
+}
+/* Treść nad deszczem */
+body.theme-matrix #root { position: relative; z-index: 1; }
 
 /* Bezpieczne marginesy okna (paski stanu/nawigacji). Fallback do env() działa na
    iOS/web; na Androidzie MainActivity nadpisuje --sat/--sar/--sab/--sal realnymi px,
@@ -1499,6 +1536,7 @@ input:focus, textarea:focus, select:focus {
 /* Szacunek dla ustawień dostępności — wyłącz ruch, gdy użytkownik tak woli */
 @media (prefers-reduced-motion: reduce) {
   .sheet, .panel, .bubble, .notif-badge, .boot, .boot-bar span { animation: none !important; }
+  body.theme-matrix::before { animation: none !important; }
   * { scroll-behavior: auto !important; }
 }
 

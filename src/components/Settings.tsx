@@ -1070,6 +1070,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   { id: "green", l: "Zielony" },
                   { id: "red", l: "Czerwony" },
                   { id: "purple", l: "Fiolet" },
+                  { id: "matrix", l: "Matrix 🟢" },
                 ].map((t) => (
                   <button
                     key={t.id}
