@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { mapOutcome, mapStage, mapLeadStatus, mapSalesOsLead, leadToPublicPayload, leadToOutreachInput, metricsToText, type SalesOsLead } from "../src/lib/salesOs";
+import { mapOutcome, mapStage, mapLeadStatus, mapSalesOsLead, mergeSnapshotLeads, leadToPublicPayload, leadToOutreachInput, metricsToText, type SalesOsLead } from "../src/lib/salesOs";
 import type { Lead } from "../src/types";
 
 describe("Łącznik AI Sales OS — mapowanie", () => {
@@ -161,5 +161,41 @@ describe("Łącznik AI Sales OS — mapowanie", () => {
     expect(inp.phone).toBe("+48 500 100 200");
     expect(inp.email).toBeUndefined();
     expect(inp.context).toBe("Brak strony www");
+  });
+
+  it("mergeSnapshotLeads dodaje nowe leady z CRM-u", () => {
+    const leads: Lead[] = [];
+    const r = mergeSnapshotLeads(leads, [{ id: "c1", companyName: "Nowa Firma", stage: "New" }], 1000);
+    expect(r).toEqual({ added: 1, updated: 0 });
+    expect(leads).toHaveLength(1);
+    expect(leads[0].crmId).toBe("c1");
+  });
+
+  it("mergeSnapshotLeads odświeża istniejący lead z CRM-u (po crmId, mimo zmiany nazwy)", () => {
+    const leads: Lead[] = [baseLead({ id: "local1", crmId: "c1", origin: "salesos", company: "Stara Nazwa", status: "new", value: 1000 })];
+    const r = mergeSnapshotLeads(leads, [{ id: "c1", companyName: "Stara Nazwa", stage: "Won", outcome: "WON", estimatedValue: 5000 }], 2000);
+    expect(r.added).toBe(0);
+    expect(r.updated).toBe(1);
+    expect(leads[0].status).toBe("won");
+    expect(leads[0].value).toBe(5000);
+    expect(leads[0].id).toBe("local1"); // id zachowane
+  });
+
+  it("mergeSnapshotLeads NIE nadpisuje własnego leada użytkownika o tej samej nazwie", () => {
+    const own: Lead = baseLead({ id: "own1", company: "Dent-Med", status: "won", value: 9000 });
+    const leads: Lead[] = [own];
+    const r = mergeSnapshotLeads(leads, [{ id: "c9", companyName: "Dent-Med", stage: "New", estimatedValue: 100 }], 3000);
+    expect(r.updated).toBe(0);
+    expect(r.added).toBe(0);
+    expect(leads[0].status).toBe("won"); // nietknięte
+    expect(leads[0].value).toBe(9000);
+    expect(leads[0].origin).toBeUndefined();
+  });
+
+  it("mergeSnapshotLeads bez zmian nie liczy aktualizacji", () => {
+    const leads: Lead[] = [];
+    mergeSnapshotLeads(leads, [{ id: "c1", companyName: "X", stage: "Proposal", estimatedValue: 200 }], 1000);
+    const r2 = mergeSnapshotLeads(leads, [{ id: "c1", companyName: "X", stage: "Proposal", estimatedValue: 200 }], 1000);
+    expect(r2).toEqual({ added: 0, updated: 0 });
   });
 });

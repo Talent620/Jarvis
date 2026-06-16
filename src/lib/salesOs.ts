@@ -213,8 +213,47 @@ export interface SyncResult {
 }
 
 /**
- * Pobierz (read-only) leady z AI Sales OS i dołącz NOWE do Pulpitu Sprzedaży.
- * Dedup po nazwie firmy — nie nadpisujemy tego, co już masz w JARVIS-ie.
+ * Scal snapshot Sales OS z lokalną listą leadów (mutuje `leads`): dodaje NOWE,
+ * a istniejące leady Z CRM-u (po crmId lub nazwie) odświeża — status, etap,
+ * wartość, kontakt. NIE nadpisuje własnych leadów użytkownika (np. z OSM) o tej
+ * samej nazwie. Zachowuje teczkę (intel) i id. Czysta, testowalna.
+ */
+export function mergeSnapshotLeads(leads: Lead[], incoming: SalesOsLead[], now = Date.now()): { added: number; updated: number } {
+  let added = 0;
+  let updated = 0;
+  for (const sl of incoming) {
+    const mapped = mapSalesOsLead(sl, now);
+    const existing =
+      (mapped.crmId ? leads.find((l) => l.crmId === mapped.crmId) : undefined) ||
+      leads.find((l) => l.company.toLowerCase() === mapped.company.toLowerCase());
+    if (!existing) {
+      leads.unshift(mapped);
+      added++;
+      continue;
+    }
+    // Odświeżamy tylko leady pochodzące z CRM-u — nie ruszamy własnych leadów użytkownika.
+    if (existing.crmId || existing.origin === "salesos") {
+      const before = `${existing.status}|${existing.value ?? ""}|${existing.note ?? ""}`;
+      existing.status = mapped.status;
+      existing.value = mapped.value;
+      existing.note = mapped.note;
+      existing.email = mapped.email ?? existing.email;
+      existing.contact = mapped.contact ?? existing.contact;
+      existing.url = mapped.url ?? existing.url;
+      existing.niche = mapped.niche ?? existing.niche;
+      existing.location = mapped.location ?? existing.location;
+      existing.origin = "salesos";
+      existing.crmId = mapped.crmId ?? existing.crmId;
+      existing.updatedAt = now;
+      if (before !== `${existing.status}|${existing.value ?? ""}|${existing.note ?? ""}`) updated++;
+    }
+  }
+  return { added, updated };
+}
+
+/**
+ * Pobierz (read-only) leady z AI Sales OS: dołącz NOWE i odśwież istniejące
+ * leady z CRM-u (status/etap/wartość). Własnych leadów użytkownika nie ruszamy.
  */
 export async function syncFromSalesOs(): Promise<SyncResult> {
   if (!salesOsConfigured()) {
@@ -226,23 +265,24 @@ export async function syncFromSalesOs(): Promise<SyncResult> {
     if (!incoming.length) return { ok: true, message: "Sales OS nie ma jeszcze leadów.", added: 0, total: 0 };
 
     let added = 0;
+    let updated = 0;
     const now = Date.now();
     store.setData((d) => {
-      for (const sl of incoming) {
-        const lead = mapSalesOsLead(sl, now);
-        if (d.leads.some((l) => l.company.toLowerCase() === lead.company.toLowerCase())) continue;
-        d.leads.unshift(lead);
-        added++;
-      }
+      const r = mergeSnapshotLeads(d.leads, incoming, now);
+      added = r.added;
+      updated = r.updated;
     });
     const m = snap.metrics ? ` ${metricsToText(snap.metrics, snap.company?.name)}` : "";
+    const parts: string[] = [];
+    if (added) parts.push(`${added} nowych`);
+    if (updated) parts.push(`${updated} zaktualizowanych`);
     return {
       ok: true,
       added,
       total: incoming.length,
-      message: added
-        ? `✅ Zsynchronizowano: ${added} nowych leadów z Sales OS (na ${incoming.length}).${m}`
-        : `Wszystkie ${incoming.length} leadów z Sales OS już masz w Pulpicie.${m}`,
+      message: parts.length
+        ? `✅ Sales OS: ${parts.join(" · ")} (na ${incoming.length}).${m}`
+        : `Wszystko aktualne — ${incoming.length} leadów z Sales OS bez zmian.${m}`,
     };
   } catch (e) {
     return { ok: false, message: `Brak połączenia z Sales OS: ${e instanceof Error ? e.message : e}` };
