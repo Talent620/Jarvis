@@ -33,12 +33,39 @@ export function clearPin(): void {
   localStorage.removeItem(KEY);
 }
 
+// Ochrona przed zgadywaniem PIN-u: po serii błędów krótka, rosnąca blokada.
+// Łagodna (nie kasuje danych, nie blokuje na stałe) — utrudnia brute-force.
+const ATT_KEY = "jarvis.lock.att.v1";
+interface Att { n: number; until: number }
+function loadAtt(): Att {
+  try { return JSON.parse(localStorage.getItem(ATT_KEY) || "") as Att; } catch { return { n: 0, until: 0 }; }
+}
+function saveAtt(a: Att): void {
+  try { localStorage.setItem(ATT_KEY, JSON.stringify(a)); } catch { /* ignore */ }
+}
+
+/** Ile ms pozostało chwilowej blokady po zbyt wielu błędnych PIN-ach (0 = brak). */
+export function lockoutRemainingMs(): number {
+  return Math.max(0, loadAtt().until - Date.now());
+}
+
 export async function verifyPin(pin: string): Promise<boolean> {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return true;
+    if (lockoutRemainingMs() > 0) return false; // chwilowa blokada — nie sprawdzaj
     const { salt, hash } = JSON.parse(raw) as LockData;
-    return (await sha256(salt + pin)) === hash;
+    const ok = (await sha256(salt + pin)) === hash;
+    if (ok) {
+      localStorage.removeItem(ATT_KEY); // sukces — wyzeruj licznik
+      return true;
+    }
+    const a = loadAtt();
+    a.n = (a.n || 0) + 1;
+    // Po 5 błędach krótka blokada, rosnąca: 15 s, 30 s, 45 s… (maks. 5 min).
+    if (a.n >= 5) a.until = Date.now() + Math.min(300_000, 15_000 * (a.n - 4));
+    saveAtt(a);
+    return false;
   } catch {
     return false;
   }

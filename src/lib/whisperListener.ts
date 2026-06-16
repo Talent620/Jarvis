@@ -71,8 +71,17 @@ export class WhisperListener implements VoiceListener {
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
-    } catch {
-      this.cb.onError?.("Brak dostępu do mikrofonu. Zezwól na mikrofon w ustawieniach Windows → Prywatność → Mikrofon.");
+    } catch (e) {
+      const name = e instanceof DOMException ? e.name : "";
+      this.cb.onError?.(
+        name === "NotAllowedError"
+          ? "Brak zgody na mikrofon — zezwól na mikrofon w ustawieniach urządzenia/przeglądarki."
+          : name === "NotReadableError"
+            ? "Mikrofon jest zajęty przez inną aplikację — zamknij ją i spróbuj ponownie."
+            : name === "NotFoundError"
+              ? "Nie znaleziono mikrofonu na tym urządzeniu."
+              : "Brak dostępu do mikrofonu — sprawdź uprawnienia do mikrofonu.",
+      );
       this.cb.onEnd?.();
       return;
     }
