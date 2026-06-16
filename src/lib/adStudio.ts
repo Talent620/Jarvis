@@ -67,7 +67,7 @@ export async function generateAds(o: AdOpts): Promise<string> {
   if (!o.product?.trim()) return "";
   try {
     // askModel: pełny failover (rotacja kluczy + przełączanie dostawców + retry) — jak czat.
-    return (await askModel({ system: adSystem(o.platform), history: [{ role: "user", content: adUserPrompt(o) }] })).trim();
+    return (await askModel({ system: adSystem(o.platform), history: [{ role: "user", content: adUserPrompt(o) }], heavy: true })).trim();
   } catch {
     return "";
   }

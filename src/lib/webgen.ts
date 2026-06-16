@@ -70,7 +70,7 @@ export async function generateSite(
     : `Zbuduj stronę według opisu: ${prompt}`;
 
   try {
-    const reply = await askModel({ system, history: [{ role: "user", content: userMsg }] });
+    const reply = await askModel({ system, history: [{ role: "user", content: userMsg }], heavy: true });
     const html = extractHtml(reply || "");
     if (!html) return { error: "Model nie zwrócił kodu HTML — spróbuj doprecyzować opis." };
     return { html };

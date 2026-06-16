@@ -348,6 +348,8 @@ export async function askModel(params: {
   history: Msg[];
   webSearch?: boolean;
   tools?: typeof toolDefs;
+  /** Preferuj MOCNIEJSZY model (jakość > szybkość) — oferty, strony, teczki, treści. */
+  heavy?: boolean;
 }): Promise<string> {
   const resolved = resolveProvider();
   if (!resolved) {
@@ -367,13 +369,15 @@ export async function askModel(params: {
   let lastErr: unknown;
   for (let i = 0; i < order.length; i++) {
     const { provider, model } = order[i];
+    // Dla zadań „heavy" (jakość) bierzemy mocniejszy model dostawcy zamiast szybkiego.
+    const useModel = params.heavy ? TASK_MODELS[provider]?.complex || model : model;
     const keys = provider === "ollama" ? ["local"] : orderedKeys(provider);
     if (!keys.length) continue;
     let providerErr: unknown;
     for (let j = 0; j < keys.length; j++) {
       const apiKey = keys[j];
       try {
-        const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model }));
+        const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model: useModel }));
         return (reply.text || "").trim();
       } catch (e) {
         providerErr = e;

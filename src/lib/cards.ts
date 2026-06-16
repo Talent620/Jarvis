@@ -102,7 +102,7 @@ const GEN_SYSTEM = [
 /** Wygeneruj fiszki AI z dowolnego tekstu/tematu. Zwraca liczbę dodanych lub błąd. */
 export async function generateCards(material: string, deck?: string, source?: string, max = 8): Promise<{ added: number } | { error: string }> {
   try {
-    const text = await askModel({ system: GEN_SYSTEM, history: [{ role: "user", content: `Zrób maksymalnie ${max} fiszek z tego materiału:\n\n${material.slice(0, 6000)}` }] });
+    const text = await askModel({ system: GEN_SYSTEM, history: [{ role: "user", content: `Zrób maksymalnie ${max} fiszek z tego materiału:\n\n${material.slice(0, 6000)}` }], heavy: true });
     const m = text.match(/\{[\s\S]*\}/);
     if (!m) return { error: "Nie udało się utworzyć fiszek — spróbuj innym materiałem." };
     const parsed = JSON.parse(m[0]) as { cards?: { front?: string; back?: string }[] };

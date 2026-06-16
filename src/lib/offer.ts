@@ -19,7 +19,7 @@ export async function draftOffer(lead: Lead): Promise<string> {
   try {
     // askModel ma pełny failover (rotacja kluczy + przełączanie dostawców + retry) — jak czat.
     // Dzięki temu jeden chwilowy błąd (429/timeout) nie kończy się pustą ofertą.
-    return (await askModel({ system: SYSTEM, history: [{ role: "user", content: `Napisz ofertę dla:\n${ctx}` }] })).trim();
+    return (await askModel({ system: SYSTEM, history: [{ role: "user", content: `Napisz ofertę dla:\n${ctx}` }], heavy: true })).trim();
   } catch {
     return "";
   }

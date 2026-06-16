@@ -162,7 +162,7 @@ export async function buildDossier(leadId: string): Promise<LeadIntel | { error:
   }
 
   try {
-    const text = await askModel({ system: SYSTEM, history: [{ role: "user", content: `Przygotuj teczkę klienta:\n\n${leadContext(lead, audit)}` }] });
+    const text = await askModel({ system: SYSTEM, history: [{ role: "user", content: `Przygotuj teczkę klienta:\n\n${leadContext(lead, audit)}` }], heavy: true });
     const { analysis, email, callScript } = splitSections(text);
     const intel: LeadIntel = { score, audit, analysis, email, callScript, updatedAt: Date.now() };
     saveIntel(leadId, intel);

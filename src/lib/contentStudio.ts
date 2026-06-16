@@ -64,7 +64,7 @@ export function saveContentPost(platform: string, topic: string, text: string) {
 export async function generatePost(o: ContentOpts): Promise<string> {
   if (!o.topic?.trim()) return "";
   try {
-    return (await askModel({ system: contentSystem(o.platform), history: [{ role: "user", content: contentUserPrompt(o) }] })).trim();
+    return (await askModel({ system: contentSystem(o.platform), history: [{ role: "user", content: contentUserPrompt(o) }], heavy: true })).trim();
   } catch {
     return "";
   }

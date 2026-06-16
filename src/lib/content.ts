@@ -6,7 +6,7 @@ import { humanize } from "./aiHelpers";
 
 async function ask(system: string, user: string): Promise<{ text: string } | { error: string }> {
   try {
-    return { text: (await askModel({ system, history: [{ role: "user", content: user }] })).trim() };
+    return { text: (await askModel({ system, history: [{ role: "user", content: user }], heavy: true })).trim() };
   } catch (e) {
     return { error: humanize(e instanceof Error ? e.message : String(e)) };
   }
