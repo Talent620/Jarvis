@@ -4,7 +4,7 @@ import { loadVoices, speak } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
-import { openSalesOs, syncFromSalesOs } from "../lib/salesOs";
+import { openSalesOs, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
 import { googleStartUrl, gmailSearch, connectDesktopGoogle } from "../lib/google";
 import { testApi, testProvider, resolveProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
@@ -1231,6 +1231,38 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   }}
                 >
                   {salesOsBusy ? "⏳ Synchronizuję…" : "⬇ Synchronizuj leady"}
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                <button
+                  className="btn"
+                  style={{ flex: 1 }}
+                  disabled={salesOsBusy}
+                  onClick={async () => {
+                    store.setSettings({ salesOsUrl: s.salesOsUrl, salesOsToken: s.salesOsToken });
+                    setSalesOsBusy(true);
+                    setSalesOsMsg("⏳ Sprawdzam połączenie…");
+                    setSalesOsMsg(await testSalesOs());
+                    setSalesOsBusy(false);
+                  }}
+                >
+                  🔌 Test połączenia
+                </button>
+                <button
+                  className="btn"
+                  style={{ flex: 1 }}
+                  disabled={salesOsBusy}
+                  title="Odeślij leady znalezione w JARVIS-ie do Sales OS (źródła prawdy)"
+                  onClick={async () => {
+                    store.setSettings({ salesOsUrl: s.salesOsUrl, salesOsToken: s.salesOsToken });
+                    setSalesOsBusy(true);
+                    setSalesOsMsg("⏳ Wysyłam leady do Sales OS…");
+                    const r = await pushLeadsToSalesOs();
+                    setSalesOsBusy(false);
+                    setSalesOsMsg(r.message);
+                  }}
+                >
+                  📤 Wyślij leady do Sales OS
                 </button>
               </div>
               {salesOsMsg && <p className="muted">{salesOsMsg}</p>}

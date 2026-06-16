@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { mapOutcome, mapSalesOsLead, type SalesOsLead } from "../src/lib/salesOs";
+import { mapOutcome, mapSalesOsLead, leadToPublicPayload, metricsToText, type SalesOsLead } from "../src/lib/salesOs";
+import type { Lead } from "../src/types";
 
 describe("Łącznik AI Sales OS — mapowanie", () => {
   it("mapOutcome tłumaczy statusy Sales OS na statusy JARVIS-a", () => {
@@ -56,5 +57,43 @@ describe("Łącznik AI Sales OS — mapowanie", () => {
     expect(lead.company).toBe("Bez nazwy");
     expect(lead.contact).toBeUndefined();
     expect(lead.value).toBeUndefined();
+  });
+
+  const baseLead = (over: Partial<Lead>): Lead => ({
+    id: "l1", company: "Dent-Med", status: "new", createdAt: 0, updatedAt: 0, ...over,
+  });
+
+  it("leadToPublicPayload rozdziela e-mail od telefonu w polu contact", () => {
+    const withEmail = leadToPublicPayload(baseLead({ contact: "biuro@dentmed.pl", url: "dentmed.pl", niche: "stomatolog", location: "Gdańsk" }));
+    expect(withEmail.email).toBe("biuro@dentmed.pl");
+    expect(withEmail.phone).toBeUndefined();
+    expect(withEmail.companyName).toBe("Dent-Med");
+    expect(withEmail.website).toBe("dentmed.pl");
+    expect(withEmail.industry).toBe("stomatolog");
+    expect(withEmail.region).toBe("Gdańsk");
+    expect(withEmail.sourceDetail).toBe("JARVIS");
+
+    const withPhone = leadToPublicPayload(baseLead({ contact: "+48 500 100 200" }));
+    expect(withPhone.phone).toBe("+48 500 100 200");
+    expect(withPhone.email).toBe("");
+  });
+
+  it("leadToPublicPayload preferuje pole email nad contact", () => {
+    const p = leadToPublicPayload(baseLead({ email: "kontakt@x.pl", contact: "+48 111 222 333" }));
+    expect(p.email).toBe("kontakt@x.pl");
+    expect(p.phone).toBe("+48 111 222 333");
+  });
+
+  it("metricsToText liczy otwarte = total - won - lost i formatuje wartość", () => {
+    const txt = metricsToText({ totalLeads: 10, byOutcome: { WON: 3, LOST: 2 }, wonValue: 12000 }, "Northstar");
+    expect(txt).toContain("Northstar");
+    expect(txt).toContain("10 leadów");
+    expect(txt).toContain("otwarte 5");
+    expect(txt).toContain("klienci 3");
+    expect(txt).toContain("odrzuceni 2");
+  });
+
+  it("metricsToText bez metryk zwraca komunikat zastępczy", () => {
+    expect(metricsToText(undefined)).toMatch(/Brak metryk/);
   });
 });

@@ -1,9 +1,10 @@
 // === Łącznik z AI Sales OS ===
 // AI Sales OS to OSOBNE narzędzie (pełna aplikacja SaaS w katalogu `sales-os/`),
 // z którego korzystasz w przeglądarce. JARVIS NIE wchłania go — zamiast tego ma
-// do niego WGLĄD: jednym kliknięciem otwiera aplikację i jednym kliknięciem
-// pobiera (read-only) jej leady do Pulpitu Sprzedaży. Dwa narzędzia, osobne,
-// ale zsynchronizowane. Autoryzacja: ten sam token przechwytywania (X-Ingest-Token).
+// do niego WGLĄD: jednym kliknięciem otwiera aplikację, jednym pobiera (read-only)
+// jego leady i metryki, a jednym może odesłać leady znalezione przez siebie z
+// powrotem do Sales OS (źródła prawdy). Dwa narzędzia, osobne, ale zsynchronizowane.
+// Autoryzacja: ten sam token przechwytywania (X-Ingest-Token).
 
 import { fetchTimeout } from "./http";
 import { store, uid } from "./store";
@@ -30,9 +31,15 @@ export interface SalesOsLead {
   createdAt?: string | null;
 }
 
+export interface SalesOsMetrics {
+  totalLeads: number;
+  byOutcome: Record<string, number>;
+  wonValue: number;
+}
+
 export interface SalesOsSnapshot {
   company?: { id: string; name?: string | null };
-  metrics?: { totalLeads: number; byOutcome: Record<string, number>; wonValue: number };
+  metrics?: SalesOsMetrics;
   leads: SalesOsLead[];
   syncedAt?: string;
 }
@@ -76,8 +83,41 @@ export function mapSalesOsLead(s: SalesOsLead, now = Date.now()): Lead {
   };
 }
 
+/** Lead JARVIS-a → ładunek dla publicznego endpointu inbound. Czysta, testowalna. */
+export function leadToPublicPayload(l: Lead): Record<string, unknown> {
+  const isEmail = (v?: string) => !!v && /\S+@\S+\.\S+/.test(v);
+  const email = l.email || (isEmail(l.contact) ? l.contact : undefined);
+  const phone = !isEmail(l.contact) ? l.contact : undefined;
+  return {
+    name: l.company,
+    companyName: l.company,
+    email: email || "",
+    phone: phone || undefined,
+    website: l.url || undefined,
+    industry: l.niche || undefined,
+    region: l.location || undefined,
+    sourceDetail: "JARVIS",
+    message: l.note || undefined,
+  };
+}
+
 function baseUrl(): string {
   return (store.settings.salesOsUrl || "").trim().replace(/\/$/, "");
+}
+
+function token(): string {
+  return (store.settings.salesOsToken || "").trim();
+}
+
+/** Czy łącznik jest skonfigurowany (adres + token). */
+export function salesOsConfigured(): boolean {
+  return !!baseUrl() && !!token();
+}
+
+// Ostatni pobrany snapshot — do podglądu metryk w UI bez ponownego zapytania.
+let lastSnapshot: SalesOsSnapshot | null = null;
+export function getLastSnapshot(): SalesOsSnapshot | null {
+  return lastSnapshot;
 }
 
 /** Jeden klik: otwórz aplikację AI Sales OS w przeglądarce (lub natywnie). */
@@ -86,6 +126,54 @@ export function openSalesOs(): boolean {
   if (!url) return false;
   void openUrl(url);
   return true;
+}
+
+/** Pobierz snapshot (firma + metryki + leady) bez dotykania store. */
+export async function fetchSnapshot(limit = 300): Promise<SalesOsSnapshot> {
+  const url = baseUrl();
+  if (!url || !token()) throw new Error("Brak adresu lub tokenu AI Sales OS.");
+  const res = await fetchTimeout(
+    `${url}/api/public/sync?limit=${limit}`,
+    { headers: { "x-ingest-token": token() } },
+    20000,
+  );
+  if (res.status === 401) throw new Error("Token odrzucony (sprawdź X-Ingest-Token).");
+  if (!res.ok) throw new Error(`Sales OS odpowiedział błędem (${res.status}).`);
+  const snap = (await res.json()) as SalesOsSnapshot;
+  lastSnapshot = { ...snap, leads: Array.isArray(snap.leads) ? snap.leads : [] };
+  return lastSnapshot;
+}
+
+/** Zwięzła, czytelna mapa pól metryk → tekst. Czysta, testowalna. */
+export function metricsToText(m?: SalesOsMetrics, companyName?: string | null): string {
+  if (!m) return "Brak metryk z Sales OS.";
+  const won = m.byOutcome?.WON ?? 0;
+  const lost = m.byOutcome?.LOST ?? 0;
+  const open = m.totalLeads - won - lost;
+  const who = companyName ? `${companyName}: ` : "";
+  return `📊 ${who}${m.totalLeads} leadów · otwarte ${open} · klienci ${won} · odrzuceni ${lost} · wartość wygranych ${m.wonValue.toLocaleString("pl-PL")} zł.`;
+}
+
+/** Sprawdź połączenie z Sales OS i zwróć krótki status (read-only). */
+export async function testSalesOs(): Promise<string> {
+  if (!salesOsConfigured()) return "Najpierw uzupełnij adres AI Sales OS i token (⚙ → Integracje).";
+  try {
+    const snap = await fetchSnapshot(1);
+    return `✅ Połączono z Sales OS${snap.company?.name ? ` (${snap.company.name})` : ""}. ${metricsToText(snap.metrics, snap.company?.name)}`;
+  } catch (e) {
+    return `❌ ${e instanceof Error ? e.message : e}`;
+  }
+}
+
+/** Statystyki/wgląd z Sales OS jako tekst (do czatu/asystenta). */
+export async function salesOsStatsText(): Promise<string> {
+  if (!salesOsConfigured()) return "AI Sales OS nie jest połączony (⚙ → Integracje).";
+  try {
+    const snap = await fetchSnapshot(300);
+    return metricsToText(snap.metrics, snap.company?.name);
+  } catch (e) {
+    return `Nie udało się pobrać statystyk z Sales OS: ${e instanceof Error ? e.message : e}`;
+  }
 }
 
 export interface SyncResult {
@@ -100,21 +188,12 @@ export interface SyncResult {
  * Dedup po nazwie firmy — nie nadpisujemy tego, co już masz w JARVIS-ie.
  */
 export async function syncFromSalesOs(): Promise<SyncResult> {
-  const url = baseUrl();
-  const token = (store.settings.salesOsToken || "").trim();
-  if (!url || !token) {
+  if (!salesOsConfigured()) {
     return { ok: false, message: "Najpierw uzupełnij adres AI Sales OS i token (⚙ → Integracje)." };
   }
   try {
-    const res = await fetchTimeout(
-      `${url}/api/public/sync?limit=300`,
-      { headers: { "x-ingest-token": token } },
-      20000,
-    );
-    if (res.status === 401) return { ok: false, message: "Token odrzucony przez Sales OS — sprawdź X-Ingest-Token." };
-    if (!res.ok) return { ok: false, message: `Sales OS odpowiedział błędem (${res.status}).` };
-    const snap = (await res.json()) as SalesOsSnapshot;
-    const incoming = Array.isArray(snap.leads) ? snap.leads : [];
+    const snap = await fetchSnapshot(300);
+    const incoming = snap.leads;
     if (!incoming.length) return { ok: true, message: "Sales OS nie ma jeszcze leadów.", added: 0, total: 0 };
 
     let added = 0;
@@ -127,15 +206,65 @@ export async function syncFromSalesOs(): Promise<SyncResult> {
         added++;
       }
     });
+    const m = snap.metrics ? ` ${metricsToText(snap.metrics, snap.company?.name)}` : "";
     return {
       ok: true,
       added,
       total: incoming.length,
       message: added
-        ? `✅ Zsynchronizowano: ${added} nowych leadów z Sales OS (na ${incoming.length}).`
-        : `Wszystkie ${incoming.length} leadów z Sales OS już masz w Pulpicie.`,
+        ? `✅ Zsynchronizowano: ${added} nowych leadów z Sales OS (na ${incoming.length}).${m}`
+        : `Wszystkie ${incoming.length} leadów z Sales OS już masz w Pulpicie.${m}`,
     };
   } catch (e) {
     return { ok: false, message: `Brak połączenia z Sales OS: ${e instanceof Error ? e.message : e}` };
   }
+}
+
+export interface PushResult {
+  ok: boolean;
+  message: string;
+  pushed?: number;
+  failed?: number;
+}
+
+/**
+ * Odeślij leady JARVIS-a do AI Sales OS (przez publiczny endpoint inbound).
+ * Sales OS pozostaje źródłem prawdy — to ono scoringuje, dedupuje i prowadzi
+ * lejek. Domyślnie wysyła leady o statusie „new" (świeżo znalezione przez OSM).
+ */
+export async function pushLeadsToSalesOs(leads?: Lead[]): Promise<PushResult> {
+  const url = baseUrl();
+  if (!url || !token()) {
+    return { ok: false, message: "Najpierw uzupełnij adres AI Sales OS i token (⚙ → Integracje)." };
+  }
+  const all = leads ?? (store.data.leads || []).filter((l) => l.status === "new");
+  if (!all.length) return { ok: true, message: "Brak leadów do wysłania do Sales OS.", pushed: 0, failed: 0 };
+
+  const cap = Math.min(50, all.length);
+  let pushed = 0;
+  let failed = 0;
+  for (const lead of all.slice(0, cap)) {
+    try {
+      const res = await fetchTimeout(
+        `${url}/api/public/leads`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-ingest-token": token() },
+          body: JSON.stringify(leadToPublicPayload(lead)),
+        },
+        15000,
+      );
+      if (res.ok) pushed++;
+      else failed++;
+    } catch {
+      failed++;
+    }
+  }
+  const tail = all.length > cap ? ` (limit ${cap}/turę — powtórz, by wysłać kolejne)` : "";
+  return {
+    ok: pushed > 0 || failed === 0,
+    pushed,
+    failed,
+    message: `📤 Wysłano do Sales OS: ${pushed}${failed ? ` · nieudane: ${failed}` : ""}${tail}.`,
+  };
 }

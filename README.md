@@ -250,11 +250,20 @@ Warstwa AI działa od ręki, bez kluczy (wbudowany silnik „mock").
 1. W Sales OS skopiuj token z **⚙ → Pozyskiwanie → Inbound** (`X-Ingest-Token`).
 2. W JARVIS-ie wklej adres (`http://localhost:3000`) i ten token.
 3. **🚀 Otwórz Sales OS** — jeden klik otwiera aplikację; **⬇ Synchronizuj leady** —
-   pobiera leady (read-only) do Pulpitu Sprzedaży (dedup po nazwie firmy). Te same
-   przyciski są w Pulpicie Sprzedaży, gdy adres jest ustawiony.
+   pobiera leady i metryki (read-only) do Pulpitu Sprzedaży (dedup po nazwie firmy);
+   **🔌 Test połączenia** — sprawdza token i pokazuje skrót pipeline’u; **📤 Wyślij leady
+   do Sales OS** — odsyła firmy znalezione w JARVIS-ie (OSM) do CRM-u. Te same przyciski
+   są w Pulpicie Sprzedaży, gdy adres jest ustawiony.
 
-Pod spodem JARVIS odpytuje dodany endpoint `GET /api/public/sync` (autoryzacja tym samym
-tokenem). Sales OS pozostaje źródłem prawdy; JARVIS jedynie odzwierciedla jego dane.
+**Sterowanie głosem/czatem.** Asystent ma cztery narzędzia i sam je odpala w kontekście:
+`salesos_open` („otwórz Sales OS”), `salesos_sync` („zsynchronizuj leady z CRM-u”),
+`salesos_stats` („ile mam leadów w Sales OS / jak idzie pipeline”), `salesos_push`
+(„wyślij te firmy do Sales OS”).
+
+Pod spodem JARVIS odpytuje dodany endpoint `GET /api/public/sync` (read-only) i wysyła
+firmy przez `POST /api/public/leads` — oba autoryzowane tym samym tokenem. Sales OS
+pozostaje źródłem prawdy (scoring, lejek, dedup); JARVIS odzwierciedla jego dane i może
+go zasilać znalezionymi leadami.
 
 ## BFF — klucze poza aplikacją (zalecane)
 

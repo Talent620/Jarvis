@@ -13,6 +13,7 @@ import { generateCards } from "./cards";
 import { runAutomation } from "./n8n";
 import { getCrypto, getRate } from "./markets";
 import { findLeads } from "./leads";
+import { openSalesOs, syncFromSalesOs, salesOsStatsText, pushLeadsToSalesOs, salesOsConfigured } from "./salesOs";
 import { buildDossier, auditWeakPoints } from "./leadIntel";
 import { callNowList, followUpsDue, followUpMessage, pipelineForecast, openLabel } from "./salesEngine";
 import { syncSalesTasks, autoPlanSummary } from "./autoPlan";
@@ -1094,6 +1095,45 @@ const tools: Tool[] = [
       if (r.failed) parts.push(`⚠ nieudane: ${r.failed}${r.errors.length ? ` (${r.errors.join("; ")})` : ""}`);
       if (r.sent >= cap) parts.push(`osiągnięto limit ${cap}/turę — powtórz, by wysłać kolejne`);
       return parts.join(" · ");
+    },
+  },
+  {
+    def: {
+      name: "salesos_open",
+      description:
+        "Otwórz osobną aplikację AI Sales OS w przeglądarce (pełny CRM do pozyskiwania klientów). Używaj, gdy użytkownik chce „otworzyć Sales OS / wejść do CRM-u / przejść do panelu sprzedaży”. Wymaga ustawionego adresu (⚙ → Integracje).",
+      input_schema: obj({}, []),
+    },
+    run: () => (openSalesOs() ? "Otwieram AI Sales OS." : "AI Sales OS nie jest skonfigurowany — podaj adres w ⚙ → Integracje."),
+  },
+  {
+    def: {
+      name: "salesos_sync",
+      description:
+        "Pobierz (read-only) leady z osobnej aplikacji AI Sales OS do Pulpitu Sprzedaży JARVIS-a (dedup po nazwie firmy). Używaj, gdy użytkownik mówi „zsynchronizuj Sales OS / ściągnij leady z CRM-u / zaktualizuj leady z Sales OS”.",
+      input_schema: obj({}, []),
+    },
+    run: async () => (await syncFromSalesOs()).message,
+  },
+  {
+    def: {
+      name: "salesos_stats",
+      description:
+        "Pokaż wgląd/statystyki z AI Sales OS: liczba leadów, otwarte/klienci/odrzuceni i wartość wygranych. Używaj na pytania typu „ile mam leadów w Sales OS / jak idzie sprzedaż w CRM / podsumuj pipeline z Sales OS”.",
+      input_schema: obj({}, []),
+    },
+    run: () => salesOsStatsText(),
+  },
+  {
+    def: {
+      name: "salesos_push",
+      description:
+        "Odeślij leady znalezione w JARVIS-ie do AI Sales OS (źródła prawdy) — tam zostaną zescoringowane i wpadną do lejka. Domyślnie wysyła świeże leady (status „nowy”). Używaj, gdy użytkownik mówi „wyślij leady do Sales OS / dodaj te firmy do CRM-u / przerzuć leady do Sales OS”.",
+      input_schema: obj({}, []),
+    },
+    run: async () => {
+      if (!salesOsConfigured()) return "AI Sales OS nie jest skonfigurowany — podaj adres i token w ⚙ → Integracje.";
+      return (await pushLeadsToSalesOs()).message;
     },
   },
 ];
