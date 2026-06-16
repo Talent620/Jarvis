@@ -433,4 +433,8 @@ export interface Settings {
   homeAssistantToken: string;
   /** Wybrany mikrofon (deviceId). Pusty = systemowy domyślny. Pomaga przy słuchawkach BT. */
   micDeviceId: string;
+  /** Google OAuth Client ID (do natywnej synchronizacji Kalendarza na komputerze). */
+  googleClientId: string;
+  /** Google OAuth Client Secret (przechowywany lokalnie; nie trafia do repo). */
+  googleClientSecret: string;
 }

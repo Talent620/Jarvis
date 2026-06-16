@@ -226,7 +226,46 @@ function buildHotkey(combo) {
 // Wysyłka e-maili przez SMTP — moduł electron/smtp.cjs (testowalny bez Electrona).
 const { smtpSend } = require("./smtp.cjs");
 
+// Natywna synchronizacja z Kalendarzem Google (OAuth loopback) — moduł electron/google.cjs.
+const googleDesk = require("./google.cjs");
+const GTOK_FILE = path.join(app.getPath("userData"), "google-tokens.json");
+function readGoogleTok() { try { return JSON.parse(fs.readFileSync(GTOK_FILE, "utf8")); } catch { return null; } }
+function writeGoogleTok(o) { try { fs.writeFileSync(GTOK_FILE, JSON.stringify(o)); } catch { /* ignore */ } }
+async function googleAccess() {
+  const t = readGoogleTok();
+  if (!t || !t.refresh_token) return null;
+  return googleDesk.refreshAccessToken(t);
+}
+
 function registerDesktopControl() {
+  // --- Kalendarz Google (natywnie, bez serwera) ---
+  ipcMain.handle("jarvis:google-connect", async (_e, payload) => {
+    const clientId = String((payload && payload.clientId) || "").trim();
+    const clientSecret = String((payload && payload.clientSecret) || "").trim();
+    if (!clientId || !clientSecret) return { ok: false, error: "Brak Client ID / Client Secret." };
+    const r = await googleDesk.connectGoogle({ clientId, clientSecret, openUrl: (u) => shell.openExternal(u) });
+    if (r.ok && r.refresh_token) { writeGoogleTok({ clientId, clientSecret, refresh_token: r.refresh_token }); return { ok: true }; }
+    return { ok: false, error: r.error || "Nie udało się połączyć." };
+  });
+  ipcMain.handle("jarvis:google-status", () => ({ connected: !!(readGoogleTok() && readGoogleTok().refresh_token) }));
+  ipcMain.handle("jarvis:google-disconnect", () => { try { fs.unlinkSync(GTOK_FILE); } catch { /* ignore */ } return { ok: true }; });
+  ipcMain.handle("jarvis:gcal-add", async (_e, ev) => {
+    try {
+      const at = await googleAccess();
+      if (!at) return { error: "Google niepołączone." };
+      await googleDesk.calAdd({ accessToken: at, ...(ev || {}) });
+      return { ok: true };
+    } catch (e) { return { error: e && e.message ? e.message : String(e) }; }
+  });
+  ipcMain.handle("jarvis:gcal-list", async (_e, opts) => {
+    try {
+      const at = await googleAccess();
+      if (!at) return { error: "Google niepołączone." };
+      const events = await googleDesk.calList({ accessToken: at, ...(opts || {}) });
+      return { events };
+    } catch (e) { return { error: e && e.message ? e.message : String(e) }; }
+  });
+
   // Prawdziwa wysyłka e-maila (SMTP) — z Pulpitu Sprzedaży jednym potwierdzeniem.
   ipcMain.handle("jarvis:sendmail", async (_e, payload) => {
     const { host, port, user, pass, to, subject, body } = payload || {};

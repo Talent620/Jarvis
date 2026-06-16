@@ -4,7 +4,7 @@ import { loadVoices, speak } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
-import { googleStartUrl, gmailSearch } from "../lib/google";
+import { googleStartUrl, gmailSearch, connectDesktopGoogle } from "../lib/google";
 import { testApi, testProvider, resolveProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
 import { exportData, exportFull, exportFullEncrypted, importData } from "../lib/backup";
@@ -92,6 +92,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [enrollMsg, setEnrollMsg] = useState("");
   const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
   const [micMsg, setMicMsg] = useState("");
+  const [gcalBusy, setGcalBusy] = useState(false);
+  const [gcalMsg, setGcalMsg] = useState("");
+  const desktopGoogle = typeof window !== "undefined" && !!(window as { jarvisDesktop?: { googleConnect?: unknown } }).jarvisDesktop?.googleConnect;
 
   useEffect(() => {
     loadVoices().then(setVoices);
@@ -1259,6 +1262,48 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   {gmailBusy ? "✅ Sprawdzam…" : "✅ Sprawdź Gmaila"}
                 </button>
               </div>
+
+              {desktopGoogle && (
+                <>
+                  <h3>📅 Kalendarz Google — na tym komputerze (bez serwera)</h3>
+                  <p className="muted" style={{ fontSize: 12 }}>
+                    Logowanie odbywa się wprost na tym komputerze (Google „Aplikacja desktopowa"). Wklej dane
+                    z pliku pobranego z Google Cloud — zostają lokalnie, nie są nigdzie wysyłane poza Google.
+                  </p>
+                  <div className="field">
+                    <label>Client ID</label>
+                    <input
+                      value={s.googleClientId}
+                      placeholder="…apps.googleusercontent.com"
+                      onChange={(e) => set({ googleClientId: e.target.value })}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Client Secret</label>
+                    <input
+                      type="password"
+                      value={s.googleClientSecret}
+                      placeholder="GOCSPX-…"
+                      onChange={(e) => set({ googleClientSecret: e.target.value })}
+                    />
+                  </div>
+                  <button
+                    className="btn primary"
+                    disabled={gcalBusy}
+                    onClick={async () => {
+                      store.setSettings({ googleClientId: s.googleClientId, googleClientSecret: s.googleClientSecret });
+                      setGcalBusy(true);
+                      setGcalMsg("⏳ Otwieram logowanie Google w przeglądarce — kliknij „Zezwól”…");
+                      const r = await connectDesktopGoogle();
+                      setGcalBusy(false);
+                      setGcalMsg(r);
+                    }}
+                  >
+                    {gcalBusy ? "⏳ Łączę…" : "🔗 Połącz Kalendarz Google (ten komputer)"}
+                  </button>
+                  {gcalMsg && <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>{gcalMsg}</p>}
+                </>
+              )}
 
               <h3>Smart home (Home Assistant)</h3>
               <div className="field">

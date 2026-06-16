@@ -23,6 +23,12 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   sendMail: (msg) => ipcRenderer.invoke("jarvis:sendmail", msg),
   // Sprawdzenie połączenia z pocztą (logowanie SMTP bez wysyłki testowej).
   verifyMail: (msg) => ipcRenderer.invoke("jarvis:verifymail", msg),
+  // Kalendarz Google natywnie (OAuth loopback, bez serwera).
+  googleConnect: (clientId, clientSecret) => ipcRenderer.invoke("jarvis:google-connect", { clientId, clientSecret }),
+  googleStatus: () => ipcRenderer.invoke("jarvis:google-status"),
+  googleDisconnect: () => ipcRenderer.invoke("jarvis:google-disconnect"),
+  gcalAdd: (ev) => ipcRenderer.invoke("jarvis:gcal-add", ev),
+  gcalList: (opts) => ipcRenderer.invoke("jarvis:gcal-list", opts),
   // Pisanie tekstu / skróty (Windows), opcjonalnie do okna o tytule.
   type: (text, window) => ipcRenderer.invoke("jarvis:type", { text: String(text || ""), window: window || "" }),
   hotkey: (combo, window) => ipcRenderer.invoke("jarvis:hotkey", { combo: String(combo || ""), window: window || "" }),

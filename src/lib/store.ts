@@ -93,6 +93,8 @@ const defaultSettings: Settings = {
   homeAssistantUrl: "",
   homeAssistantToken: "",
   micDeviceId: "",
+  googleClientId: "",
+  googleClientSecret: "",
 };
 
 export function uid(): string {

@@ -63,6 +63,26 @@ describe("gcalAdd — walidacja przed wysyłką (profesjonalna obsługa)", () =>
   });
 });
 
+describe("Kalendarz na desktopie (.exe) — routing przez mostek natywny", () => {
+  afterEach(() => { delete (window as unknown as { jarvisDesktop?: unknown }).jarvisDesktop; });
+  const setBridge = (b: unknown) => { (window as unknown as { jarvisDesktop?: unknown }).jarvisDesktop = b; };
+
+  it("połączony mostek → gcalAdd idzie natywnie (nie przez backend)", async () => {
+    const add = vi.fn(async () => ({ ok: true }));
+    setBridge({ gcalList: vi.fn(), gcalAdd: add, googleStatus: async () => ({ connected: true }) });
+    const out = await gcalAdd("Spotkanie", "2026-06-20T10:00:00");
+    expect(add).toHaveBeenCalled();
+    expect(out).toMatch(/Dodano do Kalendarza/);
+  });
+
+  it("niepołączony mostek bez danych → kieruje do ustawień (Client ID)", async () => {
+    store.setSettings({ googleClientId: "", googleClientSecret: "" });
+    setBridge({ gcalList: vi.fn(), gcalAdd: vi.fn(), googleStatus: async () => ({ connected: false }) });
+    const out = await gcalAdd("X", "2026-06-20T10:00:00");
+    expect(out).toMatch(/Client ID|Integracje/i);
+  });
+});
+
 describe("withLocalOffset — strefa czasowa kalendarza", () => {
   it("dokłada offset do czasu bez strefy", () => {
     expect(withLocalOffset("2026-06-20T10:00:00")).toMatch(/T10:00:00([zZ]|[+-]\d{2}:\d{2})$/);

@@ -52,6 +52,29 @@ export function startGoogleAuth(): boolean {
   }
 }
 
+// --- Natywna synchronizacja Kalendarza na DESKTOPIE (.exe) — bez serwera/BFF ---
+interface DesktopGoogle {
+  googleConnect?: (id: string, secret: string) => Promise<{ ok?: boolean; error?: string }>;
+  googleStatus?: () => Promise<{ connected?: boolean }>;
+  gcalAdd?: (ev: { summary: string; start: string; end?: string; location?: string }) => Promise<{ ok?: boolean; error?: string }>;
+  gcalList?: (opts: { timeMin?: string; timeMax?: string; max?: number }) => Promise<{ events?: { start: string; summary: string; location?: string }[]; error?: string }>;
+}
+function deskGoogle(): DesktopGoogle | null {
+  const b = typeof window !== "undefined" ? (window as { jarvisDesktop?: DesktopGoogle }).jarvisDesktop : null;
+  return b && b.gcalList && b.gcalAdd ? b : null;
+}
+
+/** Połącz Kalendarz natywnie na tym komputerze (OAuth loopback). Zwraca komunikat dla użytkownika. */
+export async function connectDesktopGoogle(): Promise<string> {
+  const b = deskGoogle();
+  if (!b?.googleConnect) return "Natywna synchronizacja działa w aplikacji na Windows (.exe).";
+  const id = store.settings.googleClientId?.trim();
+  const secret = store.settings.googleClientSecret?.trim();
+  if (!id || !secret) return "Wklej najpierw Client ID i Client Secret w ⚙ → Integracje → Kalendarz Google (z pliku od Google).";
+  const r = await b.googleConnect(id, secret);
+  return r?.ok ? "✅ Połączono Kalendarz Google na tym komputerze." : `Nie udało się połączyć: ${r?.error || "spróbuj ponownie"}.`;
+}
+
 // Gdy backend odpowie „Google niepołączone." — JARVIS SAM otwiera autoryzację (autonomicznie),
 // zamiast tylko zgłaszać błąd. Otwieramy najwyżej raz na 20 s, by nie mnożyć kart/okien.
 let lastAuthOpenedAt = 0;
@@ -116,7 +139,28 @@ export async function gmailReply(to: string, subject: string, body: string, thre
   return `Wysłano odpowiedź do ${to}.`;
 }
 
+// Desktop niepołączony → spróbuj połączyć natywnie (jeśli są dane), inaczej pokieruj.
+async function desktopAutoConnect(): Promise<string> {
+  if (store.settings.googleClientId?.trim() && store.settings.googleClientSecret?.trim()) {
+    const msg = await connectDesktopGoogle();
+    return msg.startsWith("✅") ? `${msg} Poproś ponownie o kalendarz.` : msg;
+  }
+  return "Aby połączyć Kalendarz na tym komputerze, wklej Client ID i Client Secret w ⚙ → Integracje → Kalendarz Google.";
+}
+
+function fmtEvents(events: { start: string; summary: string; location?: string }[]): string {
+  return events.length
+    ? events.map((e) => `• ${new Date(e.start).toLocaleString("pl-PL")} — ${e.summary}${e.location ? ` @ ${e.location}` : ""}`).join("\n")
+    : "Brak nadchodzących wydarzeń w Kalendarzu Google.";
+}
+
 export async function gcalList(): Promise<string> {
+  const b = deskGoogle();
+  if (b) {
+    if (!(await b.googleStatus?.())?.connected) return await desktopAutoConnect();
+    const dr = await b.gcalList!({ max: 10 });
+    return dr.error || fmtEvents(dr.events || []);
+  }
   const r = await call("/v1/gcal/list", { max: 10 });
   if (r.error) return autoConnect(r.error) || r.error;
   const ev = r.events || [];
@@ -136,10 +180,19 @@ export function dayRangeISO(date = new Date()): { timeMin: string; timeMax: stri
 export async function gcalDay(dayOffset = 0): Promise<string> {
   const d = new Date(); d.setDate(d.getDate() + dayOffset);
   const { timeMin, timeMax } = dayRangeISO(d);
-  const r = await call("/v1/gcal/list", { max: 25, timeMin, timeMax });
-  if (r.error) return autoConnect(r.error) || r.error;
-  const ev = r.events || [];
   const label = d.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" });
+  const b = deskGoogle();
+  let ev: { start: string; summary: string; location?: string }[];
+  if (b) {
+    if (!(await b.googleStatus?.())?.connected) return await desktopAutoConnect();
+    const dr = await b.gcalList!({ max: 25, timeMin, timeMax });
+    if (dr.error) return dr.error;
+    ev = dr.events || [];
+  } else {
+    const r = await call("/v1/gcal/list", { max: 25, timeMin, timeMax });
+    if (r.error) return autoConnect(r.error) || r.error;
+    ev = r.events || [];
+  }
   return ev.length
     ? `📅 ${label}:\n` + ev.map((e: any) => `• ${new Date(e.start).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })} — ${e.summary}${e.location ? ` @ ${e.location}` : ""}`).join("\n")
     : `📅 ${label}: brak zapisów w kalendarzu.`;
@@ -166,12 +219,14 @@ export async function gcalAdd(summary: string, start: string, end?: string, loca
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test((start || "").trim())) {
     return "Potrzebuję początku w formacie ISO 8601 z godziną, np. 2026-06-20T10:00:00.";
   }
-  const r = await call("/v1/gcal/add", {
-    summary: summary.trim(),
-    start: withLocalOffset(start),
-    end: end ? withLocalOffset(end) : undefined,
-    location,
-  });
+  const payload = { summary: summary.trim(), start: withLocalOffset(start), end: end ? withLocalOffset(end) : undefined, location };
+  const b = deskGoogle();
+  if (b) {
+    if (!(await b.googleStatus?.())?.connected) return await desktopAutoConnect();
+    const dr = await b.gcalAdd!(payload);
+    return dr.error || `Dodano do Kalendarza Google: „${summary.trim()}".`;
+  }
+  const r = await call("/v1/gcal/add", payload);
   if (r.error) return autoConnect(r.error) || r.error;
   return `Dodano do Kalendarza Google: „${summary.trim()}".`;
 }
