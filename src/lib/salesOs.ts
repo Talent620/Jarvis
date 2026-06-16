@@ -233,19 +233,34 @@ export function mergeSnapshotLeads(leads: Lead[], incoming: SalesOsLead[], now =
     }
     // Odświeżamy tylko leady pochodzące z CRM-u — nie ruszamy własnych leadów użytkownika.
     if (existing.crmId || existing.origin === "salesos") {
-      const before = `${existing.status}|${existing.value ?? ""}|${existing.note ?? ""}`;
-      existing.status = mapped.status;
-      existing.value = mapped.value;
-      existing.note = mapped.note;
-      existing.email = mapped.email ?? existing.email;
-      existing.contact = mapped.contact ?? existing.contact;
-      existing.url = mapped.url ?? existing.url;
-      existing.niche = mapped.niche ?? existing.niche;
-      existing.location = mapped.location ?? existing.location;
-      existing.origin = "salesos";
-      existing.crmId = mapped.crmId ?? existing.crmId;
-      existing.updatedAt = now;
-      if (before !== `${existing.status}|${existing.value ?? ""}|${existing.note ?? ""}`) updated++;
+      const next = {
+        status: mapped.status,
+        value: mapped.value,
+        note: mapped.note,
+        email: mapped.email ?? existing.email,
+        contact: mapped.contact ?? existing.contact,
+        url: mapped.url ?? existing.url,
+        niche: mapped.niche ?? existing.niche,
+        location: mapped.location ?? existing.location,
+        crmId: mapped.crmId ?? existing.crmId,
+      };
+      // Mutuj (i podbij updatedAt) TYLKO gdy coś faktycznie się zmieniło — bez tego
+      // każda auto-synchronizacja churn'owałaby updatedAt i przestawiała kolejność.
+      const changed =
+        existing.origin !== "salesos" ||
+        existing.status !== next.status ||
+        existing.value !== next.value ||
+        existing.note !== next.note ||
+        existing.email !== next.email ||
+        existing.contact !== next.contact ||
+        existing.url !== next.url ||
+        existing.niche !== next.niche ||
+        existing.location !== next.location ||
+        existing.crmId !== next.crmId;
+      if (changed) {
+        Object.assign(existing, next, { origin: "salesos", updatedAt: now });
+        updated++;
+      }
     }
   }
   return { added, updated };

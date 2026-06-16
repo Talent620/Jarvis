@@ -198,4 +198,13 @@ describe("Łącznik AI Sales OS — mapowanie", () => {
     const r2 = mergeSnapshotLeads(leads, [{ id: "c1", companyName: "X", stage: "Proposal", estimatedValue: 200 }], 1000);
     expect(r2).toEqual({ added: 0, updated: 0 });
   });
+
+  it("mergeSnapshotLeads nie rusza updatedAt, gdy nic się nie zmieniło (brak churn)", () => {
+    const leads: Lead[] = [];
+    mergeSnapshotLeads(leads, [{ id: "c1", companyName: "X", stage: "Proposal", estimatedValue: 200 }], 1000);
+    const stampBefore = leads[0].updatedAt;
+    // Ponowny merge z TYM SAMYM snapshotem, ale innym „now" — updatedAt nie może drgnąć.
+    mergeSnapshotLeads(leads, [{ id: "c1", companyName: "X", stage: "Proposal", estimatedValue: 200 }], 9999);
+    expect(leads[0].updatedAt).toBe(stampBefore);
+  });
 });
