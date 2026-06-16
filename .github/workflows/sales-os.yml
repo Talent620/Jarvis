@@ -1,9 +1,10 @@
 name: Sales OS build
 
-# Type-checks and compiles the companion AI Sales OS app (sales-os/) so the
-# public integration endpoints used by JARVIS can't silently regress. Runs only
-# when something under sales-os/ changes. No database is needed — the routes are
-# dynamic, so `next build` just type-checks + compiles them.
+# Builds AND end-to-end smoke-tests the companion AI Sales OS app (sales-os/)
+# so the public integration endpoints used by JARVIS can't silently regress.
+# Spins up a real Postgres service, seeds demo data, boots the server and runs
+# scripts/smoke-public-api.mjs against all four token-authed endpoints.
+# Runs only when something under sales-os/ changes.
 
 on:
   push:
@@ -22,12 +23,26 @@ jobs:
     defaults:
       run:
         working-directory: sales-os
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ai_sales_os
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
-      # Dummy values — build never connects to a DB (dynamic routes only).
-      DATABASE_URL: "postgresql://user:pass@localhost:5432/db?schema=public"
-      NEXTAUTH_SECRET: "ci-build-only-secret-not-used-at-runtime"
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/ai_sales_os?schema=public"
+      NEXTAUTH_SECRET: "ci-build-and-smoke-secret"
       NEXTAUTH_URL: "http://localhost:3000"
       AI_PROVIDER: "mock"
+      INGEST_TOKEN: "demo-ingest-token"
     steps:
       - uses: actions/checkout@v4
 
@@ -41,10 +56,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Generate Prisma client + validate schema
+      - name: Validate schema + generate Prisma client
         run: |
           npx prisma validate
           npx prisma generate
 
+      - name: Push schema + seed demo data
+        run: |
+          npx prisma db push --skip-generate
+          npm run db:seed
+
       - name: Build (type-check + compile all routes)
         run: npx next build
+
+      - name: Boot server + run public-API smoke test
+        run: |
+          PORT=3000 npx next start &
+          SERVER_PID=$!
+          for i in $(seq 1 60); do
+            curl -sf -o /dev/null "http://localhost:3000/api/public/sync" -H "x-ingest-token: $INGEST_TOKEN" && break
+            sleep 2
+          done
+          npm run smoke
+          kill $SERVER_PID 2>/dev/null || true

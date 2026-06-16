@@ -104,6 +104,11 @@ Sales OS to standardowy Next.js 14 — wdraża się jak każda apka Next:
 
 Pełny opis zmiennych: [`sales-os/.env.example`](sales-os/.env.example).
 
+**Weryfikacja API:** przy działającym, zseedowanym serwerze uruchom
+`cd sales-os && npm run smoke` — sprawdza wszystkie cztery publiczne endpointy
+(sync/leads/outreach/lead-status: kody 200/201/401/422 i kształty odpowiedzi).
+Ten sam test chodzi w CI (`Sales OS build`) na żywym Postgresie przy każdej zmianie.
+
 ---
 
 ## 6. Jak to wisi razem (architektura)
