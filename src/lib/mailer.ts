@@ -261,7 +261,7 @@ function leadEmailOf(l: Lead): string {
  * pomija JUŻ mailowanych (po firmie/adresie), limit na turę (domyślnie 25 — szanuje
  * dzienny limit Gmaila i chroni przed pomyłką). Sekwencyjnie, z aktualizacją statusu.
  */
-export async function sendAllOffers(max = 25): Promise<BulkSendResult> {
+export async function sendAllOffers(max = 25, onProgress?: (done: number, total: number) => void): Promise<BulkSendResult> {
   const leads = store.data.leads || [];
   const sentBox = store.data.sentMail || [];
   const wasEmailed = (l: Lead): boolean => {
@@ -269,14 +269,17 @@ export async function sendAllOffers(max = 25): Promise<BulkSendResult> {
     const em = leadEmailOf(l).toLowerCase();
     return sentBox.some((m) => (!!comp && (m.company || "").trim().toLowerCase() === comp) || (!!em && (m.to || "").trim().toLowerCase() === em));
   };
-  const res: BulkSendResult = { total: leads.length, sent: 0, noEmail: 0, alreadyEmailed: 0, failed: 0, errors: [] };
-  let count = 0;
-  for (const l of leads) {
-    if (count >= max) break;
+  // Najpierw policz dokładnie (cała lista), potem wyślij tylko do uprawnionych (limit).
+  const withEmail = leads.filter((l) => leadEmailOf(l));
+  const noEmail = leads.length - withEmail.length;
+  const targets = withEmail.filter((l) => !wasEmailed(l));
+  const alreadyEmailed = withEmail.length - targets.length;
+  const batch = targets.slice(0, Math.max(0, max));
+  const res: BulkSendResult = { total: leads.length, sent: 0, noEmail, alreadyEmailed, failed: 0, errors: [] };
+  for (let i = 0; i < batch.length; i++) {
+    const l = batch[i];
+    onProgress?.(i + 1, batch.length);
     const to = leadEmailOf(l);
-    if (!to) { res.noEmail++; continue; }
-    if (wasEmailed(l)) { res.alreadyEmailed++; continue; }
-    count++;
     const r = await draftAndSendOffer(l, to);
     if (r.offer && r.offer !== l.offer) {
       store.setData((d) => { const x = d.leads.find((y) => y.id === l.id); if (x) { x.offer = r.offer; x.updatedAt = Date.now(); } });

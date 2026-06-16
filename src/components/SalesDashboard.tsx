@@ -87,7 +87,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
     if (!window.confirm(`Wysłać ofertę do ${cap} leadów (z e-mailem, jeszcze niemailowanych)?\n\nMaks. 25 na turę. Każdy dostanie spersonalizowaną ofertę.`)) return;
     setBulking(true);
     setBulkMsg(`📤 Wysyłam oferty… (do ${cap})`);
-    const r = await sendAllOffers(cap);
+    const r = await sendAllOffers(cap, (done, total) => setBulkMsg(`📤 Wysyłam… ${done}/${total}`));
     setBulking(false);
     const parts = [`✅ Wysłano ${r.sent}.`];
     if (r.alreadyEmailed) parts.push(`pominięto ${r.alreadyEmailed} mailowanych`);

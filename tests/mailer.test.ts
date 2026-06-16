@@ -217,6 +217,22 @@ describe("sendAllOffers — masowa wysyłka z zabezpieczeniami", () => {
     expect(r.alreadyEmailed).toBe(2);
   });
 
+  it("zgłasza postęp (onProgress) dla każdego wysłanego", async () => {
+    store.setData((d) => {
+      d.sentMail = [];
+      d.leads = [
+        lead({ id: "1", company: "A", email: "a@x.pl", offer: "Temat: X\n\nt" }),
+        lead({ id: "2", company: "B", email: "b@x.pl", offer: "Temat: Y\n\nt" }),
+      ];
+    });
+    store.setSettings({ smtpUser: "me@gmail.com", smtpPass: "haslo" });
+    (window as any).jarvisDesktop = { sendMail: vi.fn(async () => "ok") };
+    const steps: string[] = [];
+    const r = await sendAllOffers(25, (done, total) => steps.push(`${done}/${total}`));
+    expect(r.sent).toBe(2);
+    expect(steps).toEqual(["1/2", "2/2"]);
+  });
+
   it("respektuje limit na turę", async () => {
     store.setData((d) => {
       d.sentMail = [];
