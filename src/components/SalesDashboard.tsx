@@ -26,7 +26,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   useEscape(onClose);
   const { data } = useStore();
   const leads = data.leads || [];
-  const [filter, setFilter] = useState<LeadStatus | "all">("all");
+  const [filter, setFilter] = useState<LeadStatus | "all" | "call" | "emailed">("all");
   const [query, setQuery] = useState("");
   const [form, setForm] = useState({ company: "", contact: "", value: "" });
   const [drafting, setDrafting] = useState<string>("");
@@ -106,17 +106,42 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
         if (x) { x.offer = offer; if (x.status === "new") x.status = "offer"; x.updatedAt = Date.now(); }
       });
   };
+  // E-mail leada: najpierw dedykowane pole `email` (z OSM/strony), w razie braku — `contact`.
+  // To naprawia „nie wysyła się z tego miejsca": adres bywał w `email`, a kod patrzył tylko na `contact`.
+  const leadEmail = (l: Lead): string => {
+    const e = (l.email || "").trim();
+    if (e.includes("@")) return e;
+    const c = (l.contact || "").trim();
+    return c.includes("@") ? c : "";
+  };
+
+  // Gdy automatyczna wysyłka nie jest skonfigurowana — i tak da się wysłać: napisz ofertę
+  // (jeśli brak) i otwórz gotową wiadomość w domyślnej poczcie (mailto). Zawsze działa.
+  const writeAndOpenMail = async (l: Lead) => {
+    const to = leadEmail(l);
+    if (!to) { toast("Ten lead nie ma adresu e-mail — dodaj go w 🗂 Teczce."); return; }
+    let offer = l.offer;
+    if (!offer) {
+      setDrafting(l.id);
+      offer = await draftOffer(l);
+      setDrafting("");
+      if (offer) store.setData((d) => { const x = d.leads.find((y) => y.id === l.id); if (x) { x.offer = offer; if (x.status === "new") x.status = "offer"; x.updatedAt = Date.now(); } });
+    }
+    const { subject, body } = splitOffer(offer || "", `Oferta dla ${l.company}`, store.settings.emailSignature);
+    window.open(`mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
+  };
+
   const sendOffer = (l: Lead) => {
     const { subject, body } = splitOffer(l.offer || "", `Oferta dla ${l.company}`, store.settings.emailSignature);
-    const to = l.contact && l.contact.includes("@") ? l.contact : "";
+    const to = leadEmail(l);
     window.open(`mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
   };
 
   // „Napisz i wyślij" — jedno kliknięcie: JARVIS pisze ofertę (jeśli brak), dopisuje
   // podpis i wysyła sam (SMTP/Gmail). Użytkownik tylko potwierdza adresata.
   const writeAndSend = async (l: Lead) => {
-    const to = l.contact && l.contact.includes("@") ? l.contact.trim() : "";
-    if (!to) { toast("Brak e-maila w polu Kontakt — dodaj adres, żeby wysłać."); return; }
+    const to = leadEmail(l);
+    if (!to) { toast("Ten lead nie ma adresu e-mail — dodaj go w 🗂 Teczce, żeby wysłać."); return; }
     setSending(l.id);
     const r = await draftAndSendOffer(l, to);
     setSending("");
@@ -178,11 +203,24 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   }, [leads]);
 
   // Gorące leady (wysoki score z teczki) na górze — wiesz, do kogo dzwonić najpierw.
+  const sent = data.sentMail || [];
+  // Liczniki CRM (pytania szefa): klienci / do dzwonienia / mailowani / odrzuceni.
+  const crm = useMemo(() => ({
+    call: leads.filter((l) => l.status === "new" || l.status === "contacted").length,
+    emailed: leads.filter((l) => wasLeadEmailed(l, sent)).length,
+    won: leads.filter((l) => l.status === "won").length,
+    lost: leads.filter((l) => l.status === "lost").length,
+  }), [leads, sent]);
+
   const shown = useMemo(() => {
-    const byStatus = filter === "all" ? leads : leads.filter((l) => l.status === filter);
-    const base = searchLeads(byStatus, query);
+    const match = (l: Lead) =>
+      filter === "all" ? true
+      : filter === "call" ? (l.status === "new" || l.status === "contacted")
+      : filter === "emailed" ? wasLeadEmailed(l, sent)
+      : l.status === filter;
+    const base = searchLeads(leads.filter(match), query);
     return [...base].sort((a, b) => (b.intel?.score ?? -1) - (a.intel?.score ?? -1));
-  }, [leads, filter, query]);
+  }, [leads, filter, query, sent]);
   const copy = (t?: string) => t && copyWithToast(t);
 
   return (
@@ -273,10 +311,18 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
               onChange={(e) => setQuery(e.target.value)}
             />
           )}
-          <div className="chips" style={{ flexWrap: "wrap", margin: "4px 0 8px" }}>
-            <span className={`chip ${filter === "all" ? "on" : ""}`} onClick={() => setFilter("all")} style={{ cursor: "pointer" }}>wszystkie ({leads.length})</span>
+          {/* CRM — szybkie kubełki: kto skorzystał, do kogo dzwonić, kogo mailowaliśmy, kto odrzucił */}
+          <div className="chips" style={{ flexWrap: "wrap", margin: "4px 0 4px" }}>
+            <span className={`chip ${filter === "all" ? "on" : ""}`} onClick={() => setFilter("all")} style={{ cursor: "pointer" }}>wszyscy ({leads.length})</span>
+            <span className={`chip ${filter === "won" ? "on" : ""}`} onClick={() => setFilter("won")} style={{ cursor: "pointer" }}>✅ Klienci ({crm.won})</span>
+            <span className={`chip ${filter === "call" ? "on" : ""}`} onClick={() => setFilter("call")} style={{ cursor: "pointer" }}>📞 Do dzwonienia ({crm.call})</span>
+            <span className={`chip ${filter === "emailed" ? "on" : ""}`} onClick={() => setFilter("emailed")} style={{ cursor: "pointer" }}>✉ Mailowani ({crm.emailed})</span>
+            <span className={`chip ${filter === "lost" ? "on" : ""}`} onClick={() => setFilter("lost")} style={{ cursor: "pointer" }}>❌ Odrzucili ({crm.lost})</span>
+          </div>
+          {/* Pełne statusy (etap lejka) */}
+          <div className="chips" style={{ flexWrap: "wrap", margin: "0 0 8px" }}>
             {STATUS.map((s) => (
-              <span key={s.id} className={`chip ${filter === s.id ? "on" : ""}`} onClick={() => setFilter(s.id)} style={{ cursor: "pointer" }}>
+              <span key={s.id} className={`chip ${filter === s.id ? "on" : ""}`} onClick={() => setFilter(s.id)} style={{ cursor: "pointer", fontSize: 12 }}>
                 {s.label} ({leads.filter((l) => l.status === s.id).length})
               </span>
             ))}
@@ -319,14 +365,30 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
                   <button className="chip" onClick={() => writeOffer(l)} disabled={drafting === l.id}>
                     {drafting === l.id ? "✍ Piszę…" : l.offer ? "✍ Napisz ponownie" : "✍ Szkic oferty"}
                   </button>
-                  {canSendDirect() && l.contact?.includes("@") && (
-                    <button
-                      className="chip"
-                      style={{ borderColor: "var(--ok, #58e08a)", fontWeight: 600 }}
-                      onClick={() => writeAndSend(l)}
-                      disabled={sending === l.id}
-                    >
-                      {sending === l.id ? "📨 Wysyłam…" : "📨 Napisz i wyślij"}
+                  {leadEmail(l) ? (
+                    canSendDirect() ? (
+                      <button
+                        className="chip"
+                        style={{ borderColor: "var(--ok, #58e08a)", fontWeight: 600 }}
+                        onClick={() => writeAndSend(l)}
+                        disabled={sending === l.id}
+                      >
+                        {sending === l.id ? "📨 Wysyłam…" : "📨 Napisz i wyślij"}
+                      </button>
+                    ) : (
+                      <button
+                        className="chip"
+                        style={{ borderColor: "var(--gold)", fontWeight: 600 }}
+                        onClick={() => writeAndOpenMail(l)}
+                        disabled={drafting === l.id}
+                        title="Automatyczna wysyłka nie jest skonfigurowana — otworzę gotową wiadomość w Twojej poczcie"
+                      >
+                        {drafting === l.id ? "✍ Piszę…" : "📧 Napisz i otwórz pocztę"}
+                      </button>
+                    )
+                  ) : (
+                    <button className="chip" onClick={() => toast("Ten lead nie ma adresu e-mail — dodaj go w 🗂 Teczce, żeby wysłać ofertę.")}>
+                      📧 Brak e-maila
                     </button>
                   )}
                 </div>

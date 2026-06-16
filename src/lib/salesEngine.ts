@@ -111,11 +111,14 @@ export function searchLeads(leads: Lead[], q: string): Lead[] {
 export function wasLeadEmailed(lead: Lead, sent: SentMail[]): boolean {
   if (!sent?.length) return false;
   const company = (lead.company || "").trim().toLowerCase();
-  const email = (lead.contact || "").trim().toLowerCase();
-  return sent.some((m) =>
-    (!!company && (m.company || "").trim().toLowerCase() === company) ||
-    (!!email && email.includes("@") && (m.to || "").trim().toLowerCase() === email),
-  );
+  // E-mail leada bywa w polu `email` LUB w `contact` — sprawdzamy oba.
+  const emails = [lead.email, lead.contact]
+    .map((x) => (x || "").trim().toLowerCase())
+    .filter((x) => x.includes("@"));
+  return sent.some((m) => {
+    const to = (m.to || "").trim().toLowerCase();
+    return (!!company && (m.company || "").trim().toLowerCase() === company) || emails.includes(to);
+  });
 }
 
 // --- 3. Follow-upy — ponaglenia, które domykają sprzedaż ---

@@ -56,6 +56,9 @@ describe("wasLeadEmailed — znacznik wysłanej oferty", () => {
     expect(wasLeadEmailed(lead({ company: "X", contact: "ola@x.pl" }), sent)).toBe(true);
     expect(wasLeadEmailed(lead({ company: "X", contact: "600100200" }), sent)).toBe(false);
   });
+  it("dopasowuje po adresie w dedykowanym polu email (regresja: adres bywa w `email`, nie `contact`)", () => {
+    expect(wasLeadEmailed(lead({ company: "X", email: "ola@x.pl", contact: "600100200" }), sent)).toBe(true);
+  });
   it("pusta skrzynka → false", () => {
     expect(wasLeadEmailed(lead({ company: "Salon Ola" }), [])).toBe(false);
   });
