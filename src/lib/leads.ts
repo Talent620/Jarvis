@@ -242,15 +242,30 @@ export interface FindResult {
  */
 export async function findLeads(opts: { niche?: string; location?: string; count?: number; onlyNoWebsite?: boolean }): Promise<FindResult> {
   const count = Math.min(30, Math.max(3, opts.count || 12));
-  let city = opts.location?.trim() || "";
+  const s = store.settings;
+  // AUTONOMIA: nisza opcjonalna — podana → zapisana w ustawieniach → pusta (OSM szuka szeroko
+  // wszystkich lokalnych firm). Bez niszy NIE blokujemy wyszukiwania.
+  const niche = opts.niche?.trim() || s.prospectNiche?.trim() || undefined;
+  // Lokalizacja: podana → zapamiętana w ustawieniach → geolokalizacja. Pierwsza, która zadziała.
+  let city = opts.location?.trim() || s.prospectLocation?.trim() || "";
   if (!city) city = (await browserCity()) || "";
-  if (!city) return { added: 0, found: 0, sample: [], addedLeads: [], error: "Podaj miasto (np. Kraków) albo zezwól na lokalizację — wtedy znajdę firmy z okolicy." };
+  if (!city)
+    return {
+      added: 0,
+      found: 0,
+      sample: [],
+      addedLeads: [],
+      error:
+        "Nie wiem jeszcze, gdzie szukać. Podaj miasto raz (np. „znajdź leady w Krakowie”) albo zezwól na lokalizację — zapamiętam je i od następnego razu znajdę leady sam, bez pytania.",
+    };
 
-  const raws = await searchOSM(opts.niche, city, count, !!opts.onlyNoWebsite);
+  const raws = await searchOSM(niche, city, count, !!opts.onlyNoWebsite);
   if (!raws.length) {
-    return { added: 0, found: 0, city, sample: [], addedLeads: [], error: `Nie znalazłem firm dla „${opts.niche || "lokalne firmy"}" w „${city}". Spróbuj inną niszę lub miasto.` };
+    return { added: 0, found: 0, city, sample: [], addedLeads: [], error: `Nie znalazłem firm dla „${niche || "lokalne firmy"}" w „${city}". Spróbuj inną niszę lub miasto.` };
   }
-  const addedLeads = saveLeads(raws, opts.niche, city);
+  // Zapamiętaj miasto, by kolejne wyszukiwania działały autonomicznie (bez podawania lokalizacji).
+  if (city && city !== s.prospectLocation) store.setSettings({ prospectLocation: city });
+  const addedLeads = saveLeads(raws, niche, city);
   return { added: addedLeads.length, found: raws.length, city, sample: raws.slice(0, 5), addedLeads };
 }
 

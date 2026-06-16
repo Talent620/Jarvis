@@ -230,6 +230,12 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
     lost: leads.filter((l) => l.status === "lost").length,
   }), [leads, sent]);
 
+  // Ilu leadów dostanie ofertę przy masowej wysyłce: z e-mailem i jeszcze niemailowanych.
+  const mailTargets = useMemo(
+    () => leads.filter((l) => leadEmail(l) && !wasLeadEmailed(l, sent)).length,
+    [leads, sent],
+  );
+
   const shown = useMemo(() => {
     const match = (l: Lead) =>
       filter === "all" ? true
@@ -286,6 +292,18 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
           )}
           {huntMsg && <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>{huntMsg}</p>}
 
+          {/* Masowa wysyłka jednym kliknięciem — od razu widoczna na górze Pulpitu. */}
+          <button
+            className="btn primary"
+            style={{ width: "100%", marginTop: 8, borderColor: "var(--ok, #58e08a)" }}
+            onClick={sendAll}
+            disabled={bulking}
+            title="Wyślij spersonalizowaną ofertę do wszystkich leadów z e-mailem, którzy nie byli jeszcze mailowani"
+          >
+            {bulking ? "📤 Wysyłam…" : `📨 Wyślij oferty do wszystkich${mailTargets ? ` (${mailTargets})` : ""}`}
+          </button>
+          {bulkMsg && <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>{bulkMsg}</p>}
+
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
             <button className="btn primary" style={{ flex: 1 }} onClick={() => setShowPlan(true)}>
               🎯 Plan na dziś{todoCount ? ` (${todoCount})` : ""}
@@ -313,10 +331,6 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
           <button className="btn" style={{ marginTop: 8 }} onClick={bulkDossiers} disabled={bulking}>
             {bulking ? "🧠 Pracuję…" : "🧠 Teczki dla wszystkich nowych (audyt + analiza + e-maile)"}
           </button>
-          <button className="btn" style={{ marginTop: 8, borderColor: "var(--ok, #58e08a)" }} onClick={sendAll} disabled={bulking}>
-            {bulking ? "📤 Pracuję…" : "📤 Wyślij oferty do wszystkich (z e-mailem, niemailowanych)"}
-          </button>
-          {bulkMsg && <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>{bulkMsg}</p>}
 
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
             <b>Kliknij firmę</b>, by otworzyć teczkę klienta: pełne dane, audyt strony, analizę AI
