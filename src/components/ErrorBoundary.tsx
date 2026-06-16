@@ -31,7 +31,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.error && this.state.restarts >= MAX_AUTO_RESTARTS) {
       return (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60dvh", gap: 12, padding: 24, textAlign: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 12, padding: 24, textAlign: "center" }}>
           <div style={{ fontSize: 40 }}>🛠</div>
           <h2 style={{ margin: 0 }}>Moduł wymaga ponownego uruchomienia</h2>
           <p className="muted" style={{ maxWidth: 360 }}>
