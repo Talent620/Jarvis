@@ -146,7 +146,12 @@ export async function gcalDay(dayOffset = 0): Promise<string> {
 }
 
 export async function gcalAdd(summary: string, start: string, end?: string, location?: string): Promise<string> {
-  const r = await call("/v1/gcal/add", { summary, start, end, location });
+  // Walidacja PRZED wysyłką — model bywa nieprecyzyjny; lepszy jasny komunikat niż surowy błąd Google.
+  if (!summary?.trim()) return "Podaj tytuł wydarzenia, które mam dodać do kalendarza.";
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test((start || "").trim())) {
+    return "Potrzebuję początku w formacie ISO 8601 z godziną, np. 2026-06-20T10:00:00.";
+  }
+  const r = await call("/v1/gcal/add", { summary: summary.trim(), start: start.trim(), end, location });
   if (r.error) return autoConnect(r.error) || r.error;
-  return `Dodano do Kalendarza Google: „${summary}".`;
+  return `Dodano do Kalendarza Google: „${summary.trim()}".`;
 }

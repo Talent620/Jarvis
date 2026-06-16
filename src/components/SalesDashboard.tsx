@@ -81,8 +81,12 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   // Masowa wysyłka ofert: do wszystkich leadów z e-mailem, którzy nie byli mailowani.
   const sendAll = async () => {
     if (!canSendDirect()) { setBulkMsg("Najpierw skonfiguruj pocztę: ⚙ → Poczta (adres + hasło aplikacji). Bez tego użyj „📧 Napisz i otwórz pocztę” przy leadzie."); return; }
-    const targets = (store.data.leads || []).filter((l) => leadEmail(l) && !wasLeadEmailed(l, store.data.sentMail || []));
-    if (!targets.length) { setBulkMsg("Brak leadów do wysłania — wszyscy z e-mailem są już mailowani (albo brak adresów)."); return; }
+    const all = store.data.leads || [];
+    const withEmail = all.filter((l) => leadEmail(l));
+    const targets = withEmail.filter((l) => !wasLeadEmailed(l, store.data.sentMail || []));
+    if (!all.length) { setBulkMsg("Pulpit jest pusty — najpierw znajdź leady (🔎 Znajdź leady)."); return; }
+    if (!withEmail.length) { setBulkMsg(`Żaden z ${all.length} leadów nie ma adresu e-mail — dodaj kontakty (klik w leada) lub znajdź firmy z e-mailem.`); return; }
+    if (!targets.length) { setBulkMsg(`Wszyscy leadzi z e-mailem (${withEmail.length}) są już zmailowani. Znajdź nowych, by wysłać kolejne.`); return; }
     const cap = Math.min(25, targets.length);
     if (!window.confirm(`Wysłać ofertę do ${cap} leadów (z e-mailem, jeszcze niemailowanych)?\n\nMaks. 25 na turę. Każdy dostanie spersonalizowaną ofertę.`)) return;
     setBulking(true);
@@ -123,6 +127,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
         const x = d.leads.find((y) => y.id === l.id);
         if (x) { x.offer = offer; if (x.status === "new") x.status = "offer"; x.updatedAt = Date.now(); }
       });
+    else toast("Nie udało się napisać oferty — sprawdź klucz AI (⚙ → AI) i spróbuj ponownie.");
   };
   // E-mail leada: najpierw dedykowane pole `email` (z OSM/strony), w razie braku — `contact`.
   // To naprawia „nie wysyła się z tego miejsca": adres bywał w `email`, a kod patrzył tylko na `contact`.

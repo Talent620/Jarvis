@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { gmailReply, gmailRead, dayRangeISO, gmailUnreadSummary, gcalList, googleBackendReady } from "../src/lib/google";
+import { gmailReply, gmailRead, dayRangeISO, gmailUnreadSummary, gcalList, gcalAdd, googleBackendReady } from "../src/lib/google";
 import { store } from "../src/lib/store";
 
 // Integracja Gmail przez backend: odpowiedź w wątku i czytanie pełnej treści.
@@ -40,6 +40,19 @@ describe("autonomiczne łączenie z Google — bez backendu", () => {
     const out = await gcalList();
     expect(out).toMatch(/synchronizacja|backend/i);
     store.setSettings({ syncUrl: "https://w.workers.dev", syncToken: "tok" }); // przywróć dla kolejnych
+  });
+});
+
+describe("gcalAdd — walidacja przed wysyłką (profesjonalna obsługa)", () => {
+  it("odrzuca brak tytułu z czytelnym komunikatem", async () => {
+    expect(await gcalAdd("", "2026-06-20T10:00:00")).toMatch(/tytuł/i);
+  });
+  it("odrzuca datę bez godziny (sama data) i podpowiada format ISO", async () => {
+    expect(await gcalAdd("Spotkanie", "2026-06-20")).toMatch(/ISO 8601|format/i);
+  });
+  it("akceptuje poprawną datę ISO i potwierdza dodanie", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true }))));
+    expect(await gcalAdd("Spotkanie z klientem", "2026-06-20T10:00:00")).toMatch(/Dodano do Kalendarza/);
   });
 });
 

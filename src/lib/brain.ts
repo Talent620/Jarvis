@@ -318,8 +318,8 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
     const facts = Array.isArray(parsed.facts) ? parsed.facts.slice(0, 5) : [];
     const pid = store.settings.activeProjectId || undefined;
     for (const f of facts) {
-      const key = (f.key || "").trim().slice(0, 60);
-      const value = (f.value || "").trim().slice(0, 300);
+      const key = String(f.key ?? "").trim().slice(0, 60);
+      const value = String(f.value ?? "").trim().slice(0, 300);
       if (!key || !value) continue;
       const existing = store.data.memory.find(
         (m) => m.key === key && (m.projectId || "") === (pid || ""),
