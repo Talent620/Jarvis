@@ -1,7 +1,7 @@
 import { store, uid } from "./store";
 import { fetchTimeout } from "./http";
 import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
-import { hasBackendGmail } from "./mailer";
+import { hasBackendGmail, canSendDirect, sendTestEmail, sendAllOffers } from "./mailer";
 import { getWeather } from "./weather";
 import { scheduleReminder, scheduleTimer } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
@@ -1060,6 +1060,37 @@ const tools: Tool[] = [
     run: () => {
       exportData();
       return "✅ Kopia zapasowa pobrana — plik JSON z Twoimi danymi (bez kluczy API). Schowaj go w bezpiecznym miejscu; wczytasz go w ⚙ → Dane.";
+    },
+  },
+  {
+    def: {
+      name: "send_test_email",
+      description:
+        "Wyślij testowy e-mail, żeby sprawdzić, czy wysyłka z aplikacji działa. Domyślnie na Twój własny adres; możesz podać inny w „to”. Wymaga skonfigurowanej poczty (⚙ → Poczta).",
+      input_schema: obj({ to: str("Adres odbiorcy testu (opcjonalnie; domyślnie Twój adres z ⚙ Poczta).") }, []),
+    },
+    run: async ({ to }) => (await sendTestEmail(to ? String(to) : undefined)).message,
+  },
+  {
+    def: {
+      name: "send_offers_all",
+      description:
+        "Wyślij ofertę e-mail do WSZYSTKICH leadów, którzy mają adres e-mail i nie byli jeszcze mailowani (resztę pomija). Dla każdego pisze ofertę (jeśli brak) i wysyła. Domyślnie maks. 25 na turę (limity Gmaila). Wymaga skonfigurowanej poczty. Używaj, gdy użytkownik mówi: wyślij do wszystkich, roześlij oferty, mailing do leadów.",
+      input_schema: obj({ max: { type: "number", description: "Maks. liczba maili w tej turze (1–50, domyślnie 25)." } }, []),
+    },
+    run: async ({ max }) => {
+      if (!canSendDirect()) {
+        return "Najpierw skonfiguruj pocztę: ⚙ → Poczta (adres Gmail + hasło aplikacji); na telefonie dodatkowo ⚙ → Synchronizacja (backend). Bez tego oferty wyślesz ręcznie z 📈 Pulpitu (przycisk „Napisz i otwórz pocztę”).";
+      }
+      const cap = Math.min(50, Math.max(1, Number(max) || 25));
+      const r = await sendAllOffers(cap);
+      if (r.total === 0) return "Pulpit jest pusty — najpierw znajdź leady (np. „znajdź leady fryzjer Poznań”).";
+      const parts = [`✅ Wysłano ${r.sent} ${r.sent === 1 ? "ofertę" : "ofert"}.`];
+      if (r.alreadyEmailed) parts.push(`↪︎ pominięto ${r.alreadyEmailed} już mailowanych`);
+      if (r.noEmail) parts.push(`✉️ pominięto ${r.noEmail} bez adresu e-mail`);
+      if (r.failed) parts.push(`⚠ nieudane: ${r.failed}${r.errors.length ? ` (${r.errors.join("; ")})` : ""}`);
+      if (r.sent >= cap) parts.push(`osiągnięto limit ${cap}/turę — powtórz, by wysłać kolejne`);
+      return parts.join(" · ");
     },
   },
 ];

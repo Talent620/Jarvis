@@ -193,10 +193,11 @@ export async function sendOfferEmail(to: string, subject: string, body: string, 
  * Wyślij testowy e-mail na własny adres — potwierdza, że cała wysyłka działa
  * end-to-end (nie tylko logowanie). Nie zapisuje wpisu w Skrzynce wysłanych.
  */
-export async function sendTestEmail(): Promise<{ ok: boolean; message: string }> {
+export async function sendTestEmail(toOverride?: string): Promise<{ ok: boolean; message: string }> {
   const s = store.settings;
-  const to = s.smtpUser?.trim();
-  if (!to) return { ok: false, message: "Najpierw wpisz swój adres e-mail (⚙ → Poczta)." };
+  const to = (toOverride?.trim()) || s.smtpUser?.trim();
+  if (!to) return { ok: false, message: "Najpierw wpisz swój adres e-mail (⚙ → Poczta) albo podaj adres testu." };
+  if (!to.includes("@")) return { ok: false, message: `Adres „${to}" jest niepoprawny (brak @).` };
   if (!canSendDirect()) {
     return { ok: false, message: "Brak gotowej wysyłki — na Windows wpisz hasło aplikacji; na telefonie dodaj backend (⚙ → Synchronizacja)." };
   }
@@ -228,4 +229,60 @@ export async function draftAndSendOffer(lead: Lead, email: string): Promise<Draf
   const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`, store.settings.emailSignature);
   const r = await sendOfferEmail(email, subject, body, lead.company);
   return { ...r, offer: text };
+}
+
+export interface BulkSendResult {
+  total: number;
+  sent: number;
+  noEmail: number;
+  alreadyEmailed: number;
+  failed: number;
+  errors: string[];
+}
+
+/** E-mail leada: pole `email`, w razie braku `contact` (jeśli zawiera @). */
+function leadEmailOf(l: Lead): string {
+  const e = (l.email || "").trim();
+  if (e.includes("@")) return e;
+  const c = (l.contact || "").trim();
+  return c.includes("@") ? c : "";
+}
+
+/**
+ * Masowa wysyłka ofert do leadów — z zabezpieczeniami: tylko ci z adresem e-mail,
+ * pomija JUŻ mailowanych (po firmie/adresie), limit na turę (domyślnie 25 — szanuje
+ * dzienny limit Gmaila i chroni przed pomyłką). Sekwencyjnie, z aktualizacją statusu.
+ */
+export async function sendAllOffers(max = 25): Promise<BulkSendResult> {
+  const leads = store.data.leads || [];
+  const sentBox = store.data.sentMail || [];
+  const wasEmailed = (l: Lead): boolean => {
+    const comp = (l.company || "").trim().toLowerCase();
+    const em = leadEmailOf(l).toLowerCase();
+    return sentBox.some((m) => (!!comp && (m.company || "").trim().toLowerCase() === comp) || (!!em && (m.to || "").trim().toLowerCase() === em));
+  };
+  const res: BulkSendResult = { total: leads.length, sent: 0, noEmail: 0, alreadyEmailed: 0, failed: 0, errors: [] };
+  let count = 0;
+  for (const l of leads) {
+    if (count >= max) break;
+    const to = leadEmailOf(l);
+    if (!to) { res.noEmail++; continue; }
+    if (wasEmailed(l)) { res.alreadyEmailed++; continue; }
+    count++;
+    const r = await draftAndSendOffer(l, to);
+    if (r.offer && r.offer !== l.offer) {
+      store.setData((d) => { const x = d.leads.find((y) => y.id === l.id); if (x) { x.offer = r.offer; x.updatedAt = Date.now(); } });
+    }
+    if (r.ok) {
+      res.sent++;
+      store.setData((d) => {
+        const x = d.leads.find((y) => y.id === l.id);
+        if (x) { if (x.status === "new" || x.status === "contacted") x.status = "offer"; x.lastContactedAt = Date.now(); x.updatedAt = Date.now(); }
+      });
+    } else {
+      res.failed++;
+      if (res.errors.length < 3) res.errors.push(`${l.company}: ${r.error}`);
+    }
+  }
+  return res;
 }

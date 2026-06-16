@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent, sendTestEmail, isSameDay, sentTodayCount, sentMailToCsv } from "../src/lib/mailer";
+import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent, sendTestEmail, sendAllOffers, isSameDay, sentTodayCount, sentMailToCsv } from "../src/lib/mailer";
 import { store } from "../src/lib/store";
+import type { Lead } from "../src/types";
 
 // Wybór kanału wysyłki: desktop→SMTP, telefon→Gmail(backend), inaczej→compose.
 
@@ -160,6 +161,68 @@ describe("sendTestEmail — test poczty do siebie", () => {
     const r = await sendTestEmail();
     expect(r.ok).toBe(false);
     expect(r.message).toMatch(/Windows|backend/i);
+  });
+});
+
+describe("sendAllOffers — masowa wysyłka z zabezpieczeniami", () => {
+  const lead = (o: Partial<Lead>): Lead => ({ id: o.id || "x", company: o.company || "Firma", status: "new", createdAt: 0, updatedAt: 0, ...o });
+  it("wysyła do leadów z e-mailem, pomija bez adresu", async () => {
+    store.setData((d) => {
+      d.sentMail = [];
+      d.leads = [
+        lead({ id: "1", company: "A", email: "a@x.pl", offer: "Temat: X\n\ntreść" }),
+        lead({ id: "2", company: "B", contact: "600100200", offer: "Temat: Y\n\ntreść" }), // brak e-maila
+        lead({ id: "3", company: "C", email: "c@x.pl", offer: "Temat: Z\n\ntreść" }),
+      ];
+    });
+    store.setSettings({ smtpUser: "me@gmail.com", smtpPass: "haslo", syncUrl: "", syncToken: "" });
+    (window as any).jarvisDesktop = { sendMail: vi.fn(async () => "ok") };
+    const r = await sendAllOffers(25);
+    expect(r.sent).toBe(2);
+    expect(r.noEmail).toBe(1);
+    expect(r.alreadyEmailed).toBe(0);
+    expect(store.data.sentMail).toHaveLength(2);
+  });
+
+  it("ponowny przebieg pomija już mailowanych (nie spamuje)", async () => {
+    (window as any).jarvisDesktop = { sendMail: vi.fn(async () => "ok") };
+    const r = await sendAllOffers(25);
+    expect(r.sent).toBe(0);
+    expect(r.alreadyEmailed).toBe(2);
+  });
+
+  it("respektuje limit na turę", async () => {
+    store.setData((d) => {
+      d.sentMail = [];
+      d.leads = [
+        lead({ id: "1", company: "A", email: "a@x.pl", offer: "Temat: X\n\nt" }),
+        lead({ id: "2", company: "B", email: "b@x.pl", offer: "Temat: Y\n\nt" }),
+        lead({ id: "3", company: "C", email: "c@x.pl", offer: "Temat: Z\n\nt" }),
+      ];
+    });
+    store.setSettings({ smtpUser: "me@gmail.com", smtpPass: "haslo" });
+    (window as any).jarvisDesktop = { sendMail: vi.fn(async () => "ok") };
+    const r = await sendAllOffers(2);
+    expect(r.sent).toBe(2);
+    expect(store.data.sentMail).toHaveLength(2);
+  });
+});
+
+describe("sendTestEmail — własny adres albo podany", () => {
+  it("wysyła na podany adres (override)", async () => {
+    store.setData((d) => { d.sentMail = []; });
+    store.setSettings({ smtpUser: "me@gmail.com", smtpPass: "haslo" });
+    (window as any).jarvisDesktop = { sendMail: vi.fn(async () => "ok") };
+    const r = await sendTestEmail("marcinkubicki.pl@gmail.com");
+    expect(r.ok).toBe(true);
+    expect(r.message).toContain("marcinkubicki.pl@gmail.com");
+  });
+  it("odrzuca niepoprawny adres", async () => {
+    store.setSettings({ smtpUser: "me@gmail.com", smtpPass: "haslo" });
+    (window as any).jarvisDesktop = { sendMail: vi.fn(async () => "ok") };
+    const r = await sendTestEmail("zly-adres");
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/niepoprawny/);
   });
 });
 
