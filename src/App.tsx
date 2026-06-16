@@ -37,6 +37,7 @@ const AuditLog = lazy(() => import("./components/AuditLog"));
 const SentBox = lazy(() => import("./components/SentBox"));
 const ContentStudio = lazy(() => import("./components/ContentStudio"));
 const AdStudio = lazy(() => import("./components/AdStudio"));
+const FAQ = lazy(() => import("./components/FAQ"));
 const WebStudio = lazy(() => import("./components/WebStudio"));
 const AdminPanel = lazy(() => import("./components/AdminPanel"));
 const Cards = lazy(() => import("./components/Cards"));
@@ -182,6 +183,7 @@ export default function App() {
   const [showSent, setShowSent] = useState(false);
   const [showContent, setShowContent] = useState(false);
   const [showAds, setShowAds] = useState(false);
+  const [showFaq, setShowFaq] = useState(false);
   const [booting, setBooting] = useState(true); // ładne „włączanie" przy starcie
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
   const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
@@ -943,6 +945,7 @@ export default function App() {
           onSent={() => setShowSent(true)}
           onContent={() => setShowContent(true)}
           onAds={() => setShowAds(true)}
+          onFaq={() => setShowFaq(true)}
           onClose={() => setShowMore(false)}
         />
       )}
@@ -974,6 +977,11 @@ export default function App() {
       {showAds && (
         <Suspense fallback={null}>
           <AdStudio onClose={() => setShowAds(false)} />
+        </Suspense>
+      )}
+      {showFaq && (
+        <Suspense fallback={null}>
+          <FAQ onClose={() => setShowFaq(false)} />
         </Suspense>
       )}
       {showStudio && (

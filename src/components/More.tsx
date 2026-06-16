@@ -34,6 +34,7 @@ export default function More({
   onSent,
   onContent,
   onAds,
+  onFaq,
   onClose,
 }: {
   onProjects: () => void;
@@ -65,6 +66,7 @@ export default function More({
   onSent: () => void;
   onContent: () => void;
   onAds: () => void;
+  onFaq: () => void;
   onClose: () => void;
 }) {
   useEscape(onClose);
@@ -96,7 +98,8 @@ export default function More({
     { id: "history", icon: "🕘", label: "Historia rozmów", fn: onHistory },
     { id: "data", icon: "▣", label: "Dane (zadania, targ, audyt…)", fn: onData },
     { id: "gadgets", icon: "🧰", label: "Gadżety (latarka, kompas, QR…)", fn: onGadgets },
-    { id: "help", icon: "❓", label: "Pomoc — jak korzystać", fn: onHelp },
+    { id: "faq", icon: "❓", label: "FAQ — do czego służy każda funkcja", fn: onFaq },
+    { id: "help", icon: "📖", label: "Pomoc — jak korzystać (szybki start)", fn: onHelp },
     { id: "admin", icon: "🔐", label: "Panel administratora (licencje)", fn: onAdmin },
   ];
 
@@ -107,7 +110,7 @@ export default function More({
     { title: "🛒 Zakupy i okazje", ids: ["bargain", "wheretobuy", "shoppinglist"] },
     { title: "🎙 Narzędzia AI", ids: ["translator", "transcribe", "hud", "screen", "studio"] },
     { title: "🧠 Ja i pamięć", ids: ["profile", "memory"] },
-    { title: "⚙️ System i pomoc", ids: ["notifications", "status", "history", "data", "audit", "gadgets", "help", "admin"] },
+    { title: "⚙️ System i pomoc", ids: ["notifications", "status", "history", "data", "audit", "gadgets", "faq", "help", "admin"] },
   ];
 
   type Item = (typeof items)[number];
