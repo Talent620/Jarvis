@@ -22,7 +22,7 @@ export function micAudioConstraints(
 /** Lista dostępnych mikrofonów (audioinput). Etykiety bywają puste, dopóki nie ma zgody
  *  na mikrofon — wtedy najpierw wywołaj ensureMicPermission(). */
 export async function listMics(): Promise<MediaDeviceInfo[]> {
-  const md = navigator.mediaDevices;
+  const md = typeof navigator !== "undefined" ? navigator.mediaDevices : undefined;
   if (!md?.enumerateDevices) return [];
   try {
     const devs = await md.enumerateDevices();
@@ -35,7 +35,7 @@ export async function listMics(): Promise<MediaDeviceInfo[]> {
 /** Krótko otwiera mikrofon, by przeglądarka odblokowała etykiety urządzeń, po czym go zwalnia.
  *  Zwraca true, gdy zgoda jest. Bezpieczne do wywołania przed listMics() w ustawieniach. */
 export async function ensureMicPermission(): Promise<boolean> {
-  const md = navigator.mediaDevices;
+  const md = typeof navigator !== "undefined" ? navigator.mediaDevices : undefined;
   if (!md?.getUserMedia) return false;
   try {
     const s = await md.getUserMedia({ audio: true });
