@@ -66,6 +66,7 @@ import { buildContext } from "./lib/context";
 import { isUncensored, PROVIDERS } from "./lib/providers/registry";
 import { enablePrivateMode } from "./lib/privateMode";
 import { runProspecting } from "./lib/prospect";
+import { syncFromSalesOs } from "./lib/salesOs";
 import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, type VoiceListener } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
@@ -641,6 +642,28 @@ export default function App() {
         setMessages((m) => [
           ...m,
           { id, role: "assistant", text: `📈 Automat sprzedaży: znalazłem ${r.added} nowych leadów (${st.prospectNiche}, ${st.prospectLocation}). Są w Pulpicie Sprzedaży (⋯ → 📈).`, tools: ["prospect"], createdAt: Date.now() },
+        ]);
+      }
+    }, 60000);
+    return () => clearInterval(tick);
+  }, []);
+
+  // --- Auto-sync z AI Sales OS: co N minut (gdy włączone) pobiera nowe leady ---
+  useEffect(() => {
+    const tick = setInterval(async () => {
+      const st = store.settings;
+      const everyMin = Number(st.salesOsAutoSync) || 0;
+      if (everyMin <= 0 || !st.salesOsUrl?.trim() || !st.salesOsToken?.trim()) return;
+      const last = Number(localStorage.getItem("jarvis.salesos.ts") || 0);
+      if (Date.now() - last < everyMin * 60_000) return;
+      localStorage.setItem("jarvis.salesos.ts", String(Date.now()));
+      const r = await syncFromSalesOs();
+      if (r.ok && r.added) {
+        const id = uid();
+        setLiveId(id);
+        setMessages((m) => [
+          ...m,
+          { id, role: "assistant", text: `🔄 AI Sales OS: pobrałem ${r.added} nowych leadów do Pulpitu Sprzedaży (⋯ → 📈).`, tools: ["salesos_sync"], createdAt: Date.now() },
         ]);
       }
     }, 60000);

@@ -1265,6 +1265,19 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   📤 Wyślij leady do Sales OS
                 </button>
               </div>
+              <div className="field" style={{ marginTop: 8 }}>
+                <label>Auto-synchronizacja</label>
+                <select
+                  value={s.salesOsAutoSync}
+                  onChange={(e) => { const v = Number(e.target.value); set({ salesOsAutoSync: v }); store.setSettings({ salesOsAutoSync: v }); }}
+                >
+                  <option value={0}>Wyłączona (synchronizuj ręcznie)</option>
+                  <option value={15}>Co 15 minut</option>
+                  <option value={30}>Co 30 minut</option>
+                  <option value={60}>Co godzinę</option>
+                  <option value={240}>Co 4 godziny</option>
+                </select>
+              </div>
               {salesOsMsg && <p className="muted">{salesOsMsg}</p>}
 
               <h3>Synchronizacja (chmura)</h3>

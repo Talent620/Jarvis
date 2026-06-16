@@ -8,7 +8,7 @@ import { findLeads } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { leadsToCsv, followUpsDue, callNowList, searchLeads, wasLeadEmailed } from "../lib/salesEngine";
 import { importLeads } from "../lib/leadImport";
-import { openSalesOs, syncFromSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
+import { openSalesOs, syncFromSalesOs, pushLeadsToSalesOs, getLastSnapshot, metricsToText } from "../lib/salesOs";
 import { copyWithToast, toast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
 import { useEscape } from "../hooks/useEscape";
@@ -44,6 +44,10 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
   const [syncingOs, setSyncingOs] = useState(false);
+  const [osInsight, setOsInsight] = useState(() => {
+    const snap = getLastSnapshot();
+    return snap?.metrics ? metricsToText(snap.metrics, snap.company?.name) : "";
+  });
 
   const doImport = () => {
     if (!importText.trim()) return;
@@ -327,7 +331,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
                 className="btn"
                 style={{ flex: 1 }}
                 disabled={syncingOs}
-                onClick={async () => { setSyncingOs(true); const r = await syncFromSalesOs(); setSyncingOs(false); toast(r.message); if (r.added) setFilter("all"); }}
+                onClick={async () => { setSyncingOs(true); const r = await syncFromSalesOs(); setSyncingOs(false); toast(r.message); const snap = getLastSnapshot(); if (snap?.metrics) setOsInsight(metricsToText(snap.metrics, snap.company?.name)); if (r.added) setFilter("all"); }}
                 title="Pobierz leady z AI Sales OS (read-only)"
               >
                 {syncingOs ? "⏳ Sync…" : "⬇ Sync z Sales OS"}
@@ -341,6 +345,11 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
               >
                 📤 Do Sales OS
               </button>
+            </div>
+          )}
+          {osInsight && (
+            <div className="muted" style={{ marginTop: 8, fontSize: 13, padding: "6px 10px", border: "1px solid var(--line, #2a2a2a)", borderRadius: 8 }}>
+              {osInsight}
             </div>
           )}
           {showImport && (

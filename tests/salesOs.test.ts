@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { mapOutcome, mapSalesOsLead, leadToPublicPayload, metricsToText, type SalesOsLead } from "../src/lib/salesOs";
+import { mapOutcome, mapStage, mapLeadStatus, mapSalesOsLead, leadToPublicPayload, metricsToText, type SalesOsLead } from "../src/lib/salesOs";
 import type { Lead } from "../src/types";
 
 describe("Łącznik AI Sales OS — mapowanie", () => {
@@ -95,5 +95,40 @@ describe("Łącznik AI Sales OS — mapowanie", () => {
 
   it("metricsToText bez metryk zwraca komunikat zastępczy", () => {
     expect(metricsToText(undefined)).toMatch(/Brak metryk/);
+  });
+
+  it("mapStage mapuje domyślne etapy lejka Sales OS 1:1", () => {
+    expect(mapStage("New")).toBe("new");
+    expect(mapStage("Contacted")).toBe("contacted");
+    expect(mapStage("Qualified")).toBe("contacted");
+    expect(mapStage("Proposal")).toBe("offer");
+    expect(mapStage("Negotiation")).toBe("offer");
+    expect(mapStage("Won")).toBe("won");
+    expect(mapStage("Lost")).toBe("lost");
+    expect(mapStage("")).toBeNull();
+    expect(mapStage(null)).toBeNull();
+    expect(mapStage("Coś dziwnego")).toBeNull();
+  });
+
+  it("mapStage rozumie polskie nazwy etapów", () => {
+    expect(mapStage("Kontakt")).toBe("contacted");
+    expect(mapStage("Oferta")).toBe("offer");
+    expect(mapStage("Negocjacje")).toBe("offer");
+    expect(mapStage("Wygrany")).toBe("won");
+    expect(mapStage("Odrzucony")).toBe("lost");
+  });
+
+  it("mapLeadStatus: WON/LOST są definitywne, inaczej decyduje etap", () => {
+    expect(mapLeadStatus("WON", "Proposal")).toBe("won");
+    expect(mapLeadStatus("LOST", "Negotiation")).toBe("lost");
+    expect(mapLeadStatus("OPEN", "Proposal")).toBe("offer");
+    expect(mapLeadStatus("OPEN", "Contacted")).toBe("contacted");
+    expect(mapLeadStatus("OPEN", null)).toBe("new");
+    expect(mapLeadStatus(null, "Negotiation")).toBe("offer");
+  });
+
+  it("mapSalesOsLead używa etapu lejka, gdy outcome jest OPEN", () => {
+    const lead = mapSalesOsLead({ id: "x", companyName: "ProMax", outcome: "OPEN", stage: "Proposal" });
+    expect(lead.status).toBe("offer");
   });
 });

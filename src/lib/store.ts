@@ -39,6 +39,7 @@ const defaultSettings: Settings = {
   syncToken: "",
   salesOsUrl: "",
   salesOsToken: "",
+  salesOsAutoSync: 0,
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,

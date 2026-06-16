@@ -255,6 +255,12 @@ Warstwa AI działa od ręki, bez kluczy (wbudowany silnik „mock").
    do Sales OS** — odsyła firmy znalezione w JARVIS-ie (OSM) do CRM-u. Te same przyciski
    są w Pulpicie Sprzedaży, gdy adres jest ustawiony.
 
+**Auto-synchronizacja.** W ⚙ → Integracje ustawisz odświeżanie co 15 min / 30 min / godzinę
+/ 4 h — JARVIS sam dociąga nowe leady w tle i melduje, ile pobrał. Statusy mapują się 1:1
+z lejkiem Sales OS (New/Contacted/Qualified → nowy/kontakt, Proposal/Negotiation → oferta,
+Won/Lost → klient/odrzucony; rozumie też polskie nazwy etapów). Po synchronizacji Pulpit
+pokazuje skrót metryk (leady, otwarte/klienci/odrzuceni, wartość wygranych).
+
 **Sterowanie głosem/czatem.** Asystent ma cztery narzędzia i sam je odpala w kontekście:
 `salesos_open` („otwórz Sales OS”), `salesos_sync` („zsynchronizuj leady z CRM-u”),
 `salesos_stats` („ile mam leadów w Sales OS / jak idzie pipeline”), `salesos_push`

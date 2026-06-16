@@ -320,6 +320,8 @@ export interface Settings {
   salesOsUrl: string;
   /** Token przechwytywania leadów (X-Ingest-Token) — wgląd read-only do AI Sales OS. */
   salesOsToken: string;
+  /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
+  salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */
   ollamaUrl: string;
   /** Tryb nieocenzurowany — działa realnie tylko z modelem lokalnym (Ollama):

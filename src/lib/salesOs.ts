@@ -60,6 +60,30 @@ export function mapOutcome(outcome?: string | null): LeadStatus {
   }
 }
 
+/**
+ * Etap lejka Sales OS (nazwa) → status JARVIS-a (mapowanie 1:1).
+ * Rozpoznaje domyślne nazwy (New/Contacted/Qualified/Proposal/Negotiation/Won/Lost)
+ * oraz polskie odpowiedniki, gdy ktoś zmieni nazwy etapów. null = brak dopasowania.
+ */
+export function mapStage(stage?: string | null): LeadStatus | null {
+  const s = (stage || "").toLowerCase().trim();
+  if (!s) return null;
+  if (/won|wygran|klient|zamkni/.test(s)) return "won";
+  if (/lost|przegran|odrzuc|utrac/.test(s)) return "lost";
+  if (/proposal|negotiat|oferta|propozycj|negocjac/.test(s)) return "offer";
+  if (/contact|qualif|kontakt|kwalif|rozmow/.test(s)) return "contacted";
+  if (/new|nowy|nowe|lead/.test(s)) return "new";
+  return null;
+}
+
+/** Najlepszy status: wynik WON/LOST jest definitywny, inaczej decyduje etap lejka. */
+export function mapLeadStatus(outcome?: string | null, stage?: string | null): LeadStatus {
+  const o = (outcome || "").toUpperCase();
+  if (o === "WON") return "won";
+  if (o === "LOST" || o === "DISQUALIFIED") return "lost";
+  return mapStage(stage) ?? mapOutcome(outcome);
+}
+
 /** Lead z Sales OS → Lead JARVIS-a (czysta, testowalna; bez dotykania store). */
 export function mapSalesOsLead(s: SalesOsLead, now = Date.now()): Lead {
   const company = (s.companyName || s.name || "Bez nazwy").slice(0, 80);
@@ -77,7 +101,7 @@ export function mapSalesOsLead(s: SalesOsLead, now = Date.now()): Lead {
     location: s.region || undefined,
     note: s.nextActionNote || (s.stage ? `Etap (Sales OS): ${s.stage}` : undefined),
     value: typeof s.estimatedValue === "number" ? s.estimatedValue : undefined,
-    status: mapOutcome(s.outcome),
+    status: mapLeadStatus(s.outcome, s.stage),
     createdAt: ts(s.createdAt),
     updatedAt: ts(s.updatedAt),
   };
