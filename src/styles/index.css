@@ -315,14 +315,14 @@ textarea,
   flex: 1;
   min-height: 0; /* KLUCZOWE w kolumnie flex: bez tego treść rozpycha ekran i nie da się przewijać (np. S9+) */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* inercyjny scroll dotykiem na starszym WebView (S9+) — bez tego scroll bywa martwy */
+  touch-action: pan-y; /* jawnie pozwól WebView na pionowy gest przewijania */
+  overscroll-behavior: contain;
   padding: 10px 2px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   scrollbar-width: none;
-  /* Górna krawędź łagodnie się wygasza — pierwsza linia nie wygląda na uciętą */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
-  mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
 }
 .convo::-webkit-scrollbar {
   width: 0;
