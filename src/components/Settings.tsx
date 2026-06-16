@@ -18,6 +18,7 @@ import { runProspecting } from "../lib/prospect";
 import { verifyMailConnection, sendTestEmail } from "../lib/mailer";
 import { enrollVoice } from "../lib/voiceEnroll";
 import { listMics, ensureMicPermission } from "../lib/mic";
+import FitnessPanel from "./FitnessPanel";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 import { useEscape } from "../hooks/useEscape";
@@ -179,6 +180,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div className="panel-body">
+          {/* Wskaźnik sprawności — zawsze widoczny u góry, niezależnie od zakładki. */}
+          <FitnessPanel />
           {/* ============ 🤖 AI ============ */}
           {tab === "ai" && (
             <>

@@ -335,6 +335,64 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
   }
 }
 
+/**
+ * Jednostrzałowe zapytanie do modelu z PEŁNYM failoverem (jak czat): rotacja kluczy,
+ * przełączanie dostawców, retry sieci i czytelny błąd na końcu. Używać we WSZYSTKICH
+ * generatorach (oferty, reklamy, treści, fiszki, strony, tłumaczenia, teczki) zamiast
+ * gołego `PROVIDERS[x].impl(...)` — to eliminuje ciche „Sprawdź klucz API" przy jednym
+ * chwilowym błędzie (429/timeout), gdy inny dostawca/klucz odpowiedziałby.
+ * Zwraca tekst odpowiedzi lub RZUCA czytelny błąd, gdy żaden dostawca nie zadziałał.
+ */
+export async function askModel(params: {
+  system: string;
+  history: Msg[];
+  webSearch?: boolean;
+  tools?: typeof toolDefs;
+}): Promise<string> {
+  const resolved = resolveProvider();
+  if (!resolved) {
+    throw new Error("Brak skonfigurowanego dostawcy AI — wejdź w ⚙ → AI i wklej klucz (Claude, Gemini, Groq, OpenRouter…).");
+  }
+  const baseCtx = {
+    system: params.system,
+    webSearch: !!params.webSearch,
+    tools: params.tools || [],
+    history: params.history,
+    proxyUrl: store.settings.proxyUrl?.trim() || undefined,
+  };
+  const order = routeOrder(params.history);
+  if (!order.length) {
+    throw new Error("Żaden dostawca AI nie ma wpisanego klucza — ⚙ → AI (Szybki start).");
+  }
+  let lastErr: unknown;
+  for (let i = 0; i < order.length; i++) {
+    const { provider, model } = order[i];
+    const keys = provider === "ollama" ? ["local"] : orderedKeys(provider);
+    if (!keys.length) continue;
+    let providerErr: unknown;
+    for (let j = 0; j < keys.length; j++) {
+      const apiKey = keys[j];
+      try {
+        const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model }));
+        return (reply.text || "").trim();
+      } catch (e) {
+        providerErr = e;
+        lastErr = e;
+        const msg = e instanceof Error ? e.message : String(e);
+        if (provider !== "ollama" && isKeyError(msg)) {
+          coolDownKey(provider, apiKey);
+          if (j < keys.length - 1) continue;
+        }
+        break;
+      }
+    }
+    const msg = providerErr instanceof Error ? providerErr.message : String(providerErr);
+    if (i < order.length - 1 && (shouldFallback(msg) || isNetworkError(msg))) continue;
+    throw new Error(humanize(msg));
+  }
+  throw new Error(humanize(lastErr instanceof Error ? lastErr.message : String(lastErr)));
+}
+
 export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   const resolved = resolveProvider();
   if (!resolved) {

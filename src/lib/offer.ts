@@ -1,6 +1,4 @@
-import { resolveProvider } from "./brain";
-import { PROVIDERS } from "./providers/registry";
-import { store } from "./store";
+import { askModel } from "./brain";
 import type { Lead } from "../types";
 
 // Generator ofert (cold outreach) — JARVIS pisze krótki, spersonalizowany mail
@@ -17,20 +15,11 @@ const SYSTEM = [
 ].join("\n");
 
 export async function draftOffer(lead: Lead): Promise<string> {
-  const r = resolveProvider();
-  if (!r || !r.apiKey?.trim()) return "";
   const ctx = `Firma: ${lead.company}\nBranża: ${lead.niche || "—"}\nLokalizacja: ${lead.location || "—"}\nStrona: ${lead.url || "brak lub słaba"}\nNotatka: ${lead.note || "—"}`;
   try {
-    const reply = await PROVIDERS[r.provider].impl({
-      system: SYSTEM,
-      webSearch: false,
-      tools: [],
-      history: [{ role: "user", content: `Napisz ofertę dla:\n${ctx}` }],
-      apiKey: r.apiKey,
-      model: r.model,
-      proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-    });
-    return (reply.text || "").trim();
+    // askModel ma pełny failover (rotacja kluczy + przełączanie dostawców + retry) — jak czat.
+    // Dzięki temu jeden chwilowy błąd (429/timeout) nie kończy się pustą ofertą.
+    return (await askModel({ system: SYSTEM, history: [{ role: "user", content: `Napisz ofertę dla:\n${ctx}` }] })).trim();
   } catch {
     return "";
   }
