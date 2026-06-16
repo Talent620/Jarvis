@@ -1,6 +1,7 @@
 import { orderedKeys, studioKeyList, coolDownKey } from "./keys";
 import { store } from "./store";
 import { humanize } from "./aiHelpers";
+import { fetchTimeout } from "./http";
 
 export interface GenImage {
   data: string; // base64
@@ -37,13 +38,14 @@ const GEMINI_MODELS = [
 ];
 
 async function callGemini(model: string, key: string, parts: any[]): Promise<Result> {
-  const res = await fetch(
+  const res = await fetchTimeout(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } }),
     },
+    120000,
   );
   const d = await res.json().catch(() => null);
   if (!res.ok || !d) return { error: d?.error?.message || `Błąd (${res.status}).` };
@@ -114,16 +116,16 @@ async function falEdit(modelId: ImageModelId, prompt: string, inputs: Img[]): Pr
   // FLUX Kontext przyjmuje pojedynczy obraz; Nano Banana edit — listę.
   if (modelId === "fal-nano-banana") body.image_urls = inputs.map((i) => `data:${i.mediaType};base64,${i.data}`);
   try {
-    const res = await fetch(viaProxy(`https://fal.run/${endpoint}`), {
+    const res = await fetchTimeout(viaProxy(`https://fal.run/${endpoint}`), {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Key ${key}` },
       body: JSON.stringify(body),
-    });
+    }, 120000);
     const d = await res.json().catch(() => null);
     if (!res.ok || !d) return { error: d?.detail?.[0]?.msg || d?.detail || d?.error || `Błąd fal.ai (${res.status}).` };
     const imgUrl = d.images?.[0]?.url || d.image?.url;
     if (!imgUrl) return { error: "fal.ai nie zwrócił obrazu." };
-    const ir = await fetch(viaProxy(imgUrl));
+    const ir = await fetchTimeout(viaProxy(imgUrl), {}, 60000);
     if (!ir.ok) return { error: "Nie udało się pobrać wyniku z fal.ai." };
     const blob = await ir.blob();
     return { data: await blobToBase64(blob), mediaType: blob.type || "image/png" };

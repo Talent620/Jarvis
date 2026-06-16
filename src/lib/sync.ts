@@ -1,4 +1,5 @@
 import { store } from "./store";
+import { fetchTimeout } from "./http";
 import type { AppData } from "../types";
 
 // Kolekcje objęte synchronizacją (bez dziennika audytu — lokalny).
@@ -18,7 +19,7 @@ export async function testBackend(rawUrl: string): Promise<string> {
   const url = rawUrl?.trim();
   if (!url) return "Najpierw wpisz adres backendu.";
   try {
-    const res = await fetch(`${url.replace(/\/$/, "")}/v1/health`);
+    const res = await fetchTimeout(`${url.replace(/\/$/, "")}/v1/health`, {}, 10000);
     if (!res.ok) return `❌ Backend odpowiedział błędem (${res.status}).`;
     const d = await res.json().catch(() => ({}));
     if (!d?.ok) return "❌ To nie wygląda na backend JARVIS.";
@@ -36,11 +37,11 @@ export async function pushSync(): Promise<string> {
   const data: Record<string, unknown> = {};
   for (const c of COLLECTIONS) data[c] = store.data[c];
   try {
-    const res = await fetch(url, {
+    const res = await fetchTimeout(url, {
       method: "POST",
       headers: { authorization: `Bearer ${store.settings.syncToken}`, "content-type": "application/json" },
       body: JSON.stringify({ data, updatedAt: Date.now() }),
-    });
+    }, 20000);
     if (res.status === 409) return "Na serwerze jest nowsza wersja — najpierw pobierz.";
     if (!res.ok) {
       const e = await res.json().catch(() => ({}));
@@ -56,7 +57,7 @@ export async function pullSync(): Promise<string> {
   const url = endpoint();
   if (!url) return "Najpierw uzupełnij adres i token synchronizacji.";
   try {
-    const res = await fetch(url, { headers: { authorization: `Bearer ${store.settings.syncToken}` } });
+    const res = await fetchTimeout(url, { headers: { authorization: `Bearer ${store.settings.syncToken}` } }, 20000);
     if (!res.ok) return `Błąd pobierania: ${res.status}.`;
     const { data } = await res.json();
     if (!data) return "Brak danych w chmurze.";

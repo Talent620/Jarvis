@@ -1,6 +1,7 @@
 import { Capacitor } from "@capacitor/core";
 import { store } from "./store";
 import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
+import { fetchTimeout } from "./http";
 import { resolveProvider, testProvider } from "./brain";
 import { testBackend } from "./sync";
 import { isSpeechSupported, isDesktop } from "./voice";
@@ -44,11 +45,11 @@ export async function systemCheck(onStep?: (lines: string[]) => void): Promise<s
   if (s.tavilyApiKey?.trim()) {
     push("⏳ Research (Tavily)…");
     try {
-      const res = await fetch("https://api.tavily.com/search", {
+      const res = await fetchTimeout("https://api.tavily.com/search", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ api_key: s.tavilyApiKey.trim(), query: "ping", max_results: 1 }),
-      });
+      }, 12000);
       lines[lines.length - 1] = res.ok
         ? "✅ Research (Tavily) — działa, odpowiedzi będą miały źródła [1][2]."
         : `❌ Research (Tavily) — klucz odrzucony (${res.status}).`;

@@ -1,4 +1,5 @@
 import { store } from "./store";
+import { fetchTimeout } from "./http";
 
 // Tryb Prywatny — JARVIS działa w 100% lokalnie (Ollama na Twoim sprzęcie):
 // żadne dane nie wychodzą do chmury, brak polityki dostawcy. To autentyczny,
@@ -20,7 +21,7 @@ export interface OllamaStatus {
 export async function detectOllama(rawUrl?: string): Promise<OllamaStatus> {
   const url = (rawUrl || store.settings.ollamaUrl || DEFAULT_OLLAMA).replace(/\/$/, "");
   try {
-    const res = await fetch(`${url}/api/tags`, { method: "GET" });
+    const res = await fetchTimeout(`${url}/api/tags`, { method: "GET" }, 8000);
     if (!res.ok) return { ok: false, url, models: [], error: `Serwer odpowiedział ${res.status}.` };
     const d = await res.json();
     const models = (d?.models || []).map((m: any) => String(m.name || m.model)).filter(Boolean);

@@ -2,6 +2,7 @@ import type { Settings } from "../types";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { setLevel } from "./audioLevel";
 import { primaryKey } from "./keys";
+import { fetchTimeout } from "./http";
 import { WhisperListener } from "./whisperListener";
 
 // Natywny silnik mowy Androida (pewniejszy niż Web Speech w WebView).
@@ -225,7 +226,7 @@ export async function geminiSpeak(text: string, voiceName?: string): Promise<boo
   // Synteza JEDNEGO kawałka → URL audio (albo null). Bez odtwarzania.
   const synth = async (chunk: string): Promise<string | null> => {
     try {
-      const res = await fetch(
+      const res = await fetchTimeout(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${key}`,
         {
           method: "POST",
@@ -238,6 +239,7 @@ export async function geminiSpeak(text: string, voiceName?: string): Promise<boo
             },
           }),
         },
+        30000,
       );
       if (!res.ok) return null;
       const d = await res.json();
@@ -289,7 +291,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
   // Premium głos przez Fish Audio (tani, topowy klon), jeśli podano klucz.
   if (settings.fishAudioApiKey && settings.fishAudioVoiceId) {
     try {
-      const res = await fetch("https://api.fish.audio/v1/tts", {
+      const res = await fetchTimeout("https://api.fish.audio/v1/tts", {
         method: "POST",
         headers: {
           authorization: `Bearer ${settings.fishAudioApiKey}`,
@@ -297,7 +299,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
           model: "s1",
         },
         body: JSON.stringify({ text, reference_id: settings.fishAudioVoiceId, format: "mp3" }),
-      });
+      }, 30000);
       if (await playFromResponse(res)) return;
     } catch {
       /* fallback niżej */
@@ -307,7 +309,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
   // Premium głos przez ElevenLabs (najbliżej oryginalnego JARVIS-a), jeśli podano klucz.
   if (settings.elevenLabsApiKey && settings.elevenLabsVoiceId) {
     try {
-      const res = await fetch(
+      const res = await fetchTimeout(
         `https://api.elevenlabs.io/v1/text-to-speech/${settings.elevenLabsVoiceId}`,
         {
           method: "POST",
@@ -322,6 +324,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
             voice_settings: { stability: 0.4, similarity_boost: 0.85 },
           }),
         },
+        30000,
       );
       if (await playFromResponse(res)) return;
     } catch {

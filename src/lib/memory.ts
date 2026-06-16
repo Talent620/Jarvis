@@ -1,5 +1,6 @@
 import { store, uid } from "./store";
 import { primaryKey } from "./keys";
+import { fetchTimeout } from "./http";
 import type { MemoryFact } from "../types";
 
 // === Pamięć autonomiczna (semantyczna) ===
@@ -25,13 +26,14 @@ async function embedBatch(texts: string[]): Promise<number[][] | null> {
     if (key) {
       const out: number[][] = [];
       for (const t of texts) {
-        const r = await fetch(
+        const r = await fetchTimeout(
           `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${key}`,
           {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ model: "models/text-embedding-004", content: { parts: [{ text: t }] } }),
           },
+          20000,
         );
         if (!r.ok) throw new Error(`embed ${r.status}`);
         const d = await r.json();
@@ -40,11 +42,11 @@ async function embedBatch(texts: string[]): Promise<number[][] | null> {
       return out;
     }
     if (proxy) {
-      const r = await fetch(`${proxy.replace(/\/$/, "")}/v1/embed`, {
+      const r = await fetchTimeout(`${proxy.replace(/\/$/, "")}/v1/embed`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ texts }),
-      });
+      }, 20000);
       if (!r.ok) throw new Error(`embed ${r.status}`);
       const d = await r.json();
       return Array.isArray(d?.vectors) ? d.vectors : null;

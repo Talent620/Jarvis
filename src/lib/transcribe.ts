@@ -1,4 +1,5 @@
 import { primaryKey } from "./keys";
+import { fetchTimeout } from "./http";
 
 // Transkrypcja audio przez Groq Whisper (whisper-large-v3-turbo) — darmowy tier
 // (~2000/dzień), endpoint zgodny z OpenAI. Świetne do transkrypcji spotkań/notatek
@@ -13,11 +14,11 @@ export async function transcribeAudio(blob: Blob, lang = "pl"): Promise<{ text: 
     form.append("model", "whisper-large-v3-turbo");
     form.append("language", lang);
     form.append("response_format", "json");
-    const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+    const res = await fetchTimeout("https://api.groq.com/openai/v1/audio/transcriptions", {
       method: "POST",
       headers: { authorization: `Bearer ${key}` },
       body: form,
-    });
+    }, 60000);
     const d = await res.json().catch(() => null);
     if (!res.ok || !d) return { error: d?.error?.message || `Błąd transkrypcji (${res.status}).` };
     return { text: (d.text || "").trim() };

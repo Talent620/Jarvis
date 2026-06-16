@@ -1,4 +1,5 @@
 import { encryptText, decryptText } from "./cipher";
+import { fetchTimeout } from "./http";
 
 // === Panel administratora (wewnątrz JARVIS-a) ===
 // Tu właściciel trzyma swoje sekrety (adres serwera licencji + token admina) i
@@ -78,7 +79,7 @@ export interface LicenseRow {
 export async function listLicenses(cfg: AdminConfig): Promise<{ licenses?: LicenseRow[]; error?: string }> {
   if (!base(cfg) || !cfg.adminToken) return { error: "Uzupełnij adres serwera i token admina." };
   try {
-    const res = await fetch(`${base(cfg)}/v1/admin/list`, { headers: headers(cfg) });
+    const res = await fetchTimeout(`${base(cfg)}/v1/admin/list`, { headers: headers(cfg) }, 15000);
     if (!res.ok) return { error: res.status === 401 ? "Zły token administratora." : `Błąd serwera (${res.status}).` };
     return await res.json();
   } catch (e) {
@@ -91,7 +92,7 @@ export async function issueLicense(
   data: { name: string; days?: number; deviceLimit?: number },
 ): Promise<{ key?: string; error?: string }> {
   try {
-    const res = await fetch(`${base(cfg)}/v1/admin/issue`, { method: "POST", headers: headers(cfg), body: JSON.stringify(data) });
+    const res = await fetchTimeout(`${base(cfg)}/v1/admin/issue`, { method: "POST", headers: headers(cfg), body: JSON.stringify(data) }, 15000);
     const d = await res.json().catch(() => ({}));
     if (!res.ok) return { error: d.error || `Błąd (${res.status}).` };
     return { key: d.key };
@@ -102,7 +103,7 @@ export async function issueLicense(
 
 export async function revokeLicense(cfg: AdminConfig, id: string, revoked: boolean): Promise<boolean> {
   try {
-    const res = await fetch(`${base(cfg)}/v1/admin/revoke`, { method: "POST", headers: headers(cfg), body: JSON.stringify({ id, revoked }) });
+    const res = await fetchTimeout(`${base(cfg)}/v1/admin/revoke`, { method: "POST", headers: headers(cfg), body: JSON.stringify({ id, revoked }) }, 15000);
     return res.ok;
   } catch {
     return false;
@@ -111,7 +112,7 @@ export async function revokeLicense(cfg: AdminConfig, id: string, revoked: boole
 
 export async function resetDevices(cfg: AdminConfig, id: string): Promise<boolean> {
   try {
-    const res = await fetch(`${base(cfg)}/v1/admin/reset-devices`, { method: "POST", headers: headers(cfg), body: JSON.stringify({ id }) });
+    const res = await fetchTimeout(`${base(cfg)}/v1/admin/reset-devices`, { method: "POST", headers: headers(cfg), body: JSON.stringify({ id }) }, 15000);
     return res.ok;
   } catch {
     return false;

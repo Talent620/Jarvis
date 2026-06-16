@@ -1,4 +1,5 @@
 import { store } from "./store";
+import { fetchTimeout } from "./http";
 
 // === n8n — warstwa wykonawcza („agenci robią rzeczy") ===
 // JARVIS wysyła zlecenie HTTP-em na webhook n8n, a tam workflow REALNIE coś robi:
@@ -18,11 +19,11 @@ export async function runAutomation(action: string, details?: unknown): Promise<
   if (!url) return { ok: false, error: "Brak adresu n8n — dodaj webhook w ⚙ → Integracje (n8n)." };
   const token = store.settings.n8nToken?.trim();
   try {
-    const res = await fetch(url, {
+    const res = await fetchTimeout(url, {
       method: "POST",
       headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ source: "jarvis", action, details: details ?? null, at: Date.now() }),
-    });
+    }, 20000);
     const text = await res.text();
     let parsed: any = null;
     try { parsed = text ? JSON.parse(text) : null; } catch { /* zwykły tekst */ }

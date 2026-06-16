@@ -2,6 +2,7 @@ import { AppLauncher } from "@capacitor/app-launcher";
 import { store } from "./store";
 import { desktop } from "./desktop";
 import { gmailComposeUrl, mailtoUrl } from "./glinks";
+import { fetchTimeout } from "./http";
 
 // Otwieranie aplikacji i usług zewnętrznych. Na Androidzie/iOS używa AppLauncher,
 // na Windows (.exe) — powłoki systemowej (tel:/sms: → Phone Link, mapy →
@@ -136,14 +137,14 @@ export async function smartHome(
   const target = `${base}/api/services/${domain}/${service}`;
   const url = proxyUrl ? `${proxyUrl}/passthrough?u=${encodeURIComponent(target)}` : target;
   try {
-    const res = await fetch(url, {
+    const res = await fetchTimeout(url, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${homeAssistantToken}`,
       },
       body: JSON.stringify({ entity_id: entityId }),
-    });
+    }, 12000);
     if (!res.ok) return `Home Assistant odrzucił żądanie (${res.status}).`;
     const label = action === "on" ? "włączone" : action === "off" ? "wyłączone" : "przełączone";
     return `Gotowe — ${entityId} ${label}.`;
