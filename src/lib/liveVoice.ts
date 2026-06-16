@@ -8,6 +8,19 @@ import { micAudioConstraints } from "./mic";
 
 export type LiveState = "connecting" | "listening" | "speaking" | "closed" | "error";
 
+// Model Live bywa „rozmowny" i potrafi wypluć w treści pseudo-wywołania narzędzi
+// (tool_code, print(default_api.…)) zamiast mówić — to NIE jest tekst dla użytkownika.
+// Wycinamy takie fragmenty z napisów, by nie pokazywać surowego „kodu" na ekranie.
+export function cleanLiveText(t: string): string {
+  return (t || "")
+    .replace(/```(?:tool_code|python|json|tool_outputs?)?[\s\S]*?```/gi, "") // bloki kodu/narzędzi
+    .replace(/^\s*tool_(code|outputs?)\b.*$/gim, "") // linie zaczynające się od tool_code/tool_outputs
+    .replace(/\bprint\s*\(\s*default_api\.[\s\S]*?\)\s*/gi, "") // print(default_api.foo(...))
+    .replace(/\bdefault_api\.\w+\s*\([^)]*\)/gi, "") // gołe wywołania default_api.foo(...)
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 // Zamień kod/treść zamknięcia WebSocketu na zrozumiałą przyczynę.
 export function closeReason(code: number, reason?: string): string | undefined {
   const r = (reason || "").trim();
@@ -131,10 +144,16 @@ export class LiveSession {
         this.enqueueAudio(p.inlineData.data);
         this.onState("speaking");
       }
-      if (p.text && this.onText) this.onText(p.text);
+      if (p.text && this.onText) {
+        const clean = cleanLiveText(p.text);
+        if (clean) this.onText(clean);
+      }
     }
     // Napisy z transkrypcji mowy JARVIS-a (responseModalities = AUDIO nie zwraca tekstu w parts).
-    if (sc.outputTranscription?.text && this.onText) this.onText(sc.outputTranscription.text);
+    if (sc.outputTranscription?.text && this.onText) {
+      const clean = cleanLiveText(sc.outputTranscription.text);
+      if (clean) this.onText(clean);
+    }
     if (sc.turnComplete) this.onState("listening");
   }
 
