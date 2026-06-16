@@ -144,6 +144,14 @@ function normalizeSettings(s: Settings & { anthropicApiKey?: string }): Settings
   if (!s.tavilyApiKey && (injected as Record<string, string>).tavily) {
     s.tavilyApiKey = (injected as Record<string, string>).tavily;
   }
+  // BFF: jeśli build podał VITE_BFF_URL, a użytkownik nie ustawił własnego proxy —
+  // domyślnie kieruj cały ruch AI przez BFF (klucze są tam, po stronie serwera).
+  try {
+    const bff = (import.meta as { env?: Record<string, string> }).env?.VITE_BFF_URL?.trim();
+    if (bff && !s.proxyUrl?.trim()) s.proxyUrl = bff;
+  } catch {
+    /* brak import.meta.env (środowisko nie-Vite) — pomiń */
+  }
   s.profile = { ...emptyProfile, ...(s.profile || {}) };
   return s;
 }

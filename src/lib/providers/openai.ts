@@ -1,5 +1,5 @@
 import { runTool } from "../tools";
-import { fetchTimeout } from "../http";
+import { fetchTimeout, appTokenHeader } from "../http";
 import type { AskCtx, JarvisReply } from "./types";
 
 interface OAIMessage {
@@ -53,6 +53,7 @@ export function makeOpenAICompatible(
           "content-type": "application/json",
           authorization: `Bearer ${ctx.apiKey}`,
           ...opts.extraHeaders,
+          ...(ctx.proxyUrl ? appTokenHeader() : {}),
         },
         // tool_choice/tools tylko gdy faktycznie mamy narzędzia — część API (Groq,
         // OpenRouter, NVIDIA) odrzuca puste „tools" z „tool_choice: auto".

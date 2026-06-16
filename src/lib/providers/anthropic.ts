@@ -1,5 +1,5 @@
 import { runTool } from "../tools";
-import { fetchTimeout } from "../http";
+import { fetchTimeout, appTokenHeader } from "../http";
 import type { AskCtx, JarvisReply } from "./types";
 
 const API_URL = "https://api.anthropic.com/v1/messages";
@@ -64,6 +64,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
         "x-api-key": ctx.apiKey,
         "anthropic-version": "2023-06-01",
         "anthropic-dangerous-direct-browser-access": "true",
+        ...(ctx.proxyUrl ? appTokenHeader() : {}),
       },
       body: JSON.stringify(body),
     }, 120000);

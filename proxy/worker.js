@@ -615,6 +615,15 @@ export default {
       }
 
       // --- PROXY KLUCZY ---
+      // Opcjonalna bramka: gdy ustawiono APP_TOKEN, klient musi podać nagłówek x-app-token.
+      // Chroni Twoje klucze przed użyciem przez obcych (origin bywa podrabialny, token nie).
+      if (
+        env.APP_TOKEN &&
+        (path.endsWith("/anthropic") || path.endsWith("/gemini") || path.endsWith("/openai") || path.endsWith("/passthrough")) &&
+        req.headers.get("x-app-token") !== env.APP_TOKEN
+      ) {
+        return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });
+      }
       if (path.endsWith("/anthropic")) {
         return relay("https://api.anthropic.com/v1/messages", req, {
           "content-type": "application/json",

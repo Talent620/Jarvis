@@ -1,5 +1,5 @@
 import { runTool } from "../tools";
-import { fetchTimeout } from "../http";
+import { fetchTimeout, appTokenHeader } from "../http";
 import type { AskCtx, JarvisReply } from "./types";
 
 // Gemini odrzuca niektóre pola JSON Schema (np. additionalProperties) — także
@@ -72,7 +72,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
     if (functionDeclarations.length) reqBody.tools = [{ functionDeclarations }];
     const res = await fetchTimeout(base, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...(ctx.proxyUrl ? appTokenHeader() : {}) },
       body: JSON.stringify(reqBody),
     }, 120000);
     const data = await res.json().catch(() => null);

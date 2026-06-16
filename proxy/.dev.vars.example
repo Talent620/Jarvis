@@ -1,0 +1,33 @@
+# BFF (Cloudflare Worker) — sekrety lokalne do `wrangler dev`.
+# Skopiuj do `.dev.vars` i UZUPEŁNIJ WŁASNYMI wartościami. NIE commituj `.dev.vars`.
+# Na produkcji ustaw je przez:  wrangler secret put NAZWA
+#
+# ⚠️ Tu NIE wpisujemy prawdziwych kluczy — to tylko szablon z nazwami.
+
+# --- Dostawcy AI (mózg) ---
+ANTHROPIC_API_KEY=""        # sk-ant-...
+OPENROUTER_API_KEY=""       # sk-or-v1-...  (ZROTUJ stary, wyciekły!)
+GROQ_API_KEY=""             # gsk_...
+GEMINI_API_KEY=""           # AIza...
+NVIDIA_API_KEY=""           # nvapi-...
+MISTRAL_API_KEY=""
+CEREBRAS_API_KEY=""
+GITHUB_MODELS_TOKEN=""      # ghp_/github_pat_...
+
+# --- Research / głos (opcjonalne) ---
+TAVILY_API_KEY=""           # research z cytatami
+ELEVENLABS_API_KEY=""       # premium TTS (opcjonalnie)
+FISHAUDIO_API_KEY=""        # premium TTS (opcjonalnie)
+
+# --- Hardening (opcjonalne; puste = wyłączone, zachowanie jak dziś) ---
+ALLOWED_ORIGINS=""          # CSV dozwolonych origin (np. "https://app.example.com,capacitor://localhost"); puste = "*"
+APP_TOKEN=""                # jeśli ustawione, klient musi słać nagłówek x-app-token
+RATE_LIMIT_PER_MIN="60"     # limit żądań/min na IP (gdy jest KV)
+
+# --- Google OAuth (Gmail/Kalendarz) ---
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+
+# --- Licencje / panel admina ---
+LICENSE_PRIVATE_JWK=""      # JSON klucza prywatnego ECDSA (wydawanie licencji)
+ADMIN_TOKEN=""              # hasło panelu administratora

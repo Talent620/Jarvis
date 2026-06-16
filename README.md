@@ -3,7 +3,7 @@
 > 🚨 **OSTRZEŻENIE BEZPIECZEŃSTWA:** Klucz OpenRouter `sk-or-v1-…` **wyciekł w buildach ≤ 55**
 > (był wpiekany do bundla). **Zrotuj go ręcznie** na https://openrouter.ai/keys — tego nie da się
 > cofnąć z poziomu kodu. Szczegóły i pełna lista kluczy do rotacji: **[SECURITY.md](./SECURITY.md)**.
-> Od teraz klucze trafiają wyłącznie do **BFF** (`bff/`), nie do aplikacji.
+> Od teraz klucze trafiają wyłącznie do **BFF** (`proxy/`), nie do aplikacji.
 
 
 Agentowy asystent głosowy i tekstowy w stylu HUD, napędzany **Claude Opus 4.8**.
@@ -228,11 +228,37 @@ Następnie mów/pisz naturalnie, np. „Jarvis, zgaś światło w salonie" — J
 wywoła encję (`light.salon`, `switch.czajnik`, `climate.sypialnia`…). Jeśli HA
 blokuje CORS, użyj `proxy/` (trasa `/passthrough`).
 
-## Backend-proxy (opcjonalnie)
+## BFF — klucze poza aplikacją (zalecane)
 
-Dla dostawców blokujących przeglądarkę (NVIDIA NIM, GitHub Models) oraz aby ukryć
-klucze po stronie serwera — wdróż proxy z katalogu `proxy/` i wpisz jego adres
-w ustawieniach. Szczegóły: `proxy/README.md`.
+JARVIS **nie wpieka kluczy do bundla**. Wbudowane (darmowe) modele działają przez **BFF**
+(Cloudflare Worker w `proxy/`), który dokleja klucze po stronie serwera. Wdrożenie:
+
+```bash
+cd proxy
+cp .dev.vars.example .dev.vars            # uzupełnij WŁASNYMI kluczami (lokalny dev)
+wrangler login
+wrangler kv namespace create JARVIS_KV    # wklej zwrócone id do wrangler.toml
+# ustaw sekrety produkcyjne (po jednym):
+wrangler secret put ANTHROPIC_API_KEY
+wrangler secret put OPENROUTER_API_KEY
+wrangler secret put GROQ_API_KEY
+wrangler secret put GEMINI_API_KEY
+# …pozostałe wg .dev.vars.example (TAVILY_API_KEY, NVIDIA_API_KEY, MISTRAL_API_KEY, CEREBRAS_API_KEY, GITHUB_MODELS_TOKEN)
+wrangler deploy                            # → https://jarvis-bff.<konto>.workers.dev
+```
+
+Następnie **zbuduj aplikację z adresem BFF**, by cały ruch AI szedł przez niego automatycznie:
+
+```bash
+VITE_BFF_URL="https://jarvis-bff.<konto>.workers.dev" npm run build
+```
+
+Hardening (opcjonalny, sekrety workera): **`APP_TOKEN`** — gdy ustawisz, klient musi słać
+`x-app-token`; zbuduj wtedy aplikację z `VITE_APP_TOKEN="…"` (ta sama wartość). Dodatkowo
+`ALLOWED_ORIGINS` (CSV) i `RATE_LIMIT_PER_MIN`. Bez tych zmiennych zachowanie jak dotąd.
+
+**Tryb „własny klucz" (BYOK):** bez BFF użytkownik może wpisać własny klucz w ⚙ → AI —
+trzymany lokalnie (opcjonalnie za blokadą PIN). Pełne szczegóły: `proxy/README.md`.
 
 ## Premium głos „jak z filmu"
 
