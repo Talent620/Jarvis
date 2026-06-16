@@ -100,21 +100,57 @@ export default function More({
     { id: "admin", icon: "🔐", label: "Panel administratora (licencje)", fn: onAdmin },
   ];
 
-  // Adaptive UI: po tygodniu danych menu układa się wg nawyków (pora dnia).
-  const ordered = useMemo(() => {
-    if (store.settings.adaptiveUi === false) return items;
+  // Funkcje pogrupowane w czytelne sekcje — łatwiej znaleźć, mniej przewijania.
+  const GROUPS: { title: string; ids: string[] }[] = [
+    { title: "📈 Sprzedaż i biznes", ids: ["sales", "sent", "content", "ads", "web", "money"] },
+    { title: "✅ Praca i organizacja", ids: ["tasks", "dayplan", "projects", "journal", "cards"] },
+    { title: "🛒 Zakupy i okazje", ids: ["bargain", "wheretobuy", "shoppinglist"] },
+    { title: "🎙 Narzędzia AI", ids: ["translator", "transcribe", "hud", "screen", "studio"] },
+    { title: "🧠 Ja i pamięć", ids: ["profile", "memory"] },
+    { title: "⚙️ System i pomoc", ids: ["notifications", "status", "history", "data", "audit", "gadgets", "help", "admin"] },
+  ];
+
+  type Item = (typeof items)[number];
+  const byId = new Map<string, Item>(items.map((i) => [i.id, i]));
+
+  // Adaptive UI: po tygodniu danych „⭐ Skróty" na górze pokazują najczęściej używane
+  // funkcje (wg pory dnia) — reszta menu zostaje czytelnie pogrupowana poniżej.
+  const shortcuts = useMemo<Item[]>(() => {
+    if (store.settings.adaptiveUi === false) return [];
     const order = adaptiveOrder(items.map((i) => i.id));
-    if (!order) return items;
+    if (!order) return [];
     if (shouldAnnounceAdapt()) {
-      toast("Dostosowałem układ menu do Twoich nawyków ✓", {
+      toast("Dodałem na górze skróty do najczęściej używanych funkcji ✓", {
         label: "Cofnij",
         onClick: () => store.setSettings({ adaptiveUi: false }),
       });
     }
-    const pos = new Map(order.map((id, i) => [id, i]));
-    return [...items].sort((a, b) => (pos.get(a.id) ?? 99) - (pos.get(b.id) ?? 99));
+    return order.map((id) => byId.get(id)).filter((x): x is Item => !!x).slice(0, 5);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const sections: { title: string; rows: Item[] }[] = [];
+  if (shortcuts.length) sections.push({ title: "⭐ Skróty (najczęściej używane)", rows: shortcuts });
+  for (const g of GROUPS) {
+    const rows = g.ids.map((id) => byId.get(id)).filter((x): x is Item => !!x);
+    if (rows.length) sections.push({ title: g.title, rows });
+  }
+
+  const Row = (it: Item) => (
+    <div
+      key={it.id}
+      className="list-item"
+      style={{ cursor: "pointer", fontSize: 16, padding: "13px 0" }}
+      onClick={() => {
+        track(it.id);
+        onClose();
+        it.fn();
+      }}
+    >
+      <span style={{ width: 28, fontSize: 18 }}>{it.icon}</span>
+      <span>{it.label}</span>
+    </div>
+  );
 
   return (
     <div className="sheet" onClick={onClose}>
@@ -124,19 +160,10 @@ export default function More({
           <h2>Menu</h2>
         </div>
         <div className="panel-body">
-          {ordered.map((it) => (
-            <div
-              key={it.id}
-              className="list-item"
-              style={{ cursor: "pointer", fontSize: 16, padding: "14px 0" }}
-              onClick={() => {
-                track(it.id);
-                onClose();
-                it.fn();
-              }}
-            >
-              <span style={{ width: 28, fontSize: 18 }}>{it.icon}</span>
-              <span>{it.label}</span>
+          {sections.map((sec) => (
+            <div key={sec.title}>
+              <h3 style={{ marginTop: sec === sections[0] ? 4 : 18 }}>{sec.title}</h3>
+              {sec.rows.map(Row)}
             </div>
           ))}
         </div>
