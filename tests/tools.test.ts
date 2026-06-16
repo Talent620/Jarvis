@@ -91,6 +91,15 @@ describe("narzędzia lokalne — wykonanie end-to-end (runTool)", () => {
     expect(await runTool("set_voice", {})).toMatch(/Podaj, co zmienić/);
   });
 
+  it("set_preference zmienia imię, wyszukiwanie i adaptacyjne menu", async () => {
+    const r = await runTool("set_preference", { name: "Szefie", web_search: false, adaptive_menu: false });
+    expect(r).toMatch(/✅/);
+    expect(store.settings.userName).toBe("Szefie");
+    expect(store.settings.webSearch).toBe(false);
+    expect(store.settings.adaptiveUi).toBe(false);
+    expect(await runTool("set_preference", {})).toMatch(/Podaj, co zmienić/);
+  });
+
   it("switch_ai: auto, przełączenie z kluczem, brak klucza → podpowiedź", async () => {
     expect(await runTool("switch_ai", { provider: "auto" })).toMatch(/automatyczny/);
     expect(store.settings.provider).toBe("auto");

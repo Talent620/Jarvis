@@ -19,6 +19,7 @@ import { syncSalesTasks, autoPlanSummary } from "./autoPlan";
 import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, hotkey as desktopHotkey } from "./desktop";
 import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
 import { primaryKey } from "./keys";
+import { exportData } from "./backup";
 import type { ProviderId } from "./providers/types";
 import type { Citation, Settings } from "../types";
 
@@ -1022,6 +1023,43 @@ const tools: Tool[] = [
       if (!t) return "Dostępne motywy: cyan, złoty, zielony, czerwony, fiolet, matrix.";
       store.setSettings({ theme: t });
       return `✅ Motyw interfejsu zmieniony na ${theme}.`;
+    },
+  },
+  {
+    def: {
+      name: "set_preference",
+      description:
+        "Zmień osobiste preferencje JARVIS-a na żądanie: jak ma się do Ciebie zwracać (imię), wyszukiwanie w sieci on/off, adaptacyjny układ menu on/off. Np. „mów do mnie Szefie”, „wyłącz wyszukiwanie w sieci”, „nie układaj menu pod moje nawyki”.",
+      input_schema: obj(
+        {
+          name: str("Jak zwracać się do użytkownika, np. „Marcin”, „Szefie” (opcjonalnie)."),
+          web_search: { type: "boolean", description: "Wyszukiwanie w sieci włączone (true) / wyłączone (false) (opcjonalnie)." },
+          adaptive_menu: { type: "boolean", description: "Adaptacyjny układ menu wg nawyków on/off (opcjonalnie)." },
+        },
+        [],
+      ),
+    },
+    run: ({ name, web_search, adaptive_menu }) => {
+      const patch: Partial<Settings> = {};
+      const changed: string[] = [];
+      if (name && String(name).trim()) { patch.userName = String(name).trim().slice(0, 40); changed.push(`zwracam się: ${patch.userName}`); }
+      if (typeof web_search === "boolean") { patch.webSearch = web_search; changed.push(web_search ? "wyszukiwanie w sieci: włączone" : "wyszukiwanie w sieci: wyłączone"); }
+      if (typeof adaptive_menu === "boolean") { patch.adaptiveUi = adaptive_menu; changed.push(adaptive_menu ? "adaptacyjne menu: włączone" : "adaptacyjne menu: wyłączone"); }
+      if (!changed.length) return "Podaj, co zmienić: imię (jak się zwracać), web_search true/false albo adaptive_menu true/false.";
+      store.setSettings(patch);
+      return `✅ Preferencje zaktualizowane — ${changed.join(", ")}.`;
+    },
+  },
+  {
+    def: {
+      name: "backup_data",
+      description:
+        "Zrób kopię zapasową danych użytkownika (zadania, leady, notatki, kalendarz, skrzynka wysłanych, historia postów…) — pobiera plik JSON na urządzenie. Bez kluczy API, bezpieczny do przechowania. Np. „zrób kopię zapasową”, „wyeksportuj moje dane”.",
+      input_schema: obj({}, []),
+    },
+    run: () => {
+      exportData();
+      return "✅ Kopia zapasowa pobrana — plik JSON z Twoimi danymi (bez kluczy API). Schowaj go w bezpiecznym miejscu; wczytasz go w ⚙ → Dane.";
     },
   },
 ];
