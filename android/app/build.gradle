@@ -1,5 +1,9 @@
 apply plugin: 'com.android.application'
 
+// Wersja zsynchronizowana z numerem builda CI (GITHUB_RUN_NUMBER / JARVIS_BUILD_NUMBER).
+// Fallback 56 — pierwszy bezpieczny build po wycieku w buildach <= 55.
+def buildNo = (System.getenv("JARVIS_BUILD_NUMBER") ?: System.getenv("GITHUB_RUN_NUMBER") ?: "56").toInteger()
+
 android {
     namespace "net.serwer256.jarvis"
     compileSdk rootProject.ext.compileSdkVersion
@@ -7,8 +11,8 @@ android {
         applicationId "net.serwer256.jarvis"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode buildNo
+        versionName "2.0." + buildNo
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
