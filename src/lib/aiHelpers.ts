@@ -9,7 +9,7 @@ export function shouldFallback(msg: string): boolean {
 }
 
 export const isNetworkError = (msg: string): boolean =>
-  /failed to fetch|load failed|network|networkerror|timeout/i.test(msg);
+  /failed to fetch|load failed|network|networkerror|timeout|abort/i.test(msg);
 
 // Błąd „na poziomie klucza" — limit, wyczerpany kredyt lub zła autoryzacja. Przy
 // takim warto najpierw spróbować INNEGO klucza tego samego dostawcy (rotacja),

@@ -1,4 +1,5 @@
 import { runTool } from "../tools";
+import { fetchTimeout } from "../http";
 import type { AskCtx, JarvisReply } from "./types";
 
 // Gemini odrzuca niektóre pola JSON Schema (np. additionalProperties) — także
@@ -69,11 +70,11 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
   while (guard++ < 8) {
     const reqBody: any = { systemInstruction: { parts: [{ text: ctx.system }] }, contents };
     if (functionDeclarations.length) reqBody.tools = [{ functionDeclarations }];
-    const res = await fetch(base, {
+    const res = await fetchTimeout(base, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(reqBody),
-    });
+    }, 120000);
     const data = await res.json().catch(() => null);
     // Dołącz kod HTTP do treści — inaczej logika awaryjna (rotacja klucza /
     // przełączenie dostawcy) nie rozpozna 401/403/429 ukrytych w samym tekście.

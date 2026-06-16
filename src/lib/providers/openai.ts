@@ -1,4 +1,5 @@
 import { runTool } from "../tools";
+import { fetchTimeout } from "../http";
 import type { AskCtx, JarvisReply } from "./types";
 
 interface OAIMessage {
@@ -46,7 +47,7 @@ export function makeOpenAICompatible(
     let guard = 0;
 
     while (guard++ < 8) {
-      const res = await fetch(url, {
+      const res = await fetchTimeout(url, {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -61,7 +62,7 @@ export function makeOpenAICompatible(
           ...(hasTools ? { tools, tool_choice: "auto" } : {}),
           max_tokens: 2048,
         }),
-      });
+      }, 120000);
       // Brama/proxy może oddać HTML zamiast JSON — parsuj bezpiecznie i dołącz
       // kod statusu, by rotacja klucza / fallback dostawcy rozpoznały błąd.
       const data = await res.json().catch(() => null);

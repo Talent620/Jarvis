@@ -1,4 +1,5 @@
 import { runTool } from "../tools";
+import { fetchTimeout } from "../http";
 import type { AskCtx, JarvisReply } from "./types";
 
 const API_URL = "https://api.anthropic.com/v1/messages";
@@ -56,7 +57,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
       body.thinking = { type: "adaptive" };
       body.output_config = { effort: "high" };
     }
-    const res = await fetch(endpoint, {
+    const res = await fetchTimeout(endpoint, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -65,7 +66,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
         "anthropic-dangerous-direct-browser-access": "true",
       },
       body: JSON.stringify(body),
-    });
+    }, 120000);
     // Brama/proxy potrafi zwrócić HTML zamiast JSON — nie wywalaj się na parsowaniu,
     // a kod statusu dołącz do treści, by logika awaryjna rozpoznała 401/403/429/5xx.
     const data = (await res.json().catch(() => null)) as Resp | null;

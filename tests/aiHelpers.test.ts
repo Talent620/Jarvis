@@ -35,6 +35,9 @@ describe("isNetworkError", () => {
     expect(isNetworkError("Failed to fetch")).toBe(true);
     expect(isNetworkError("Load failed")).toBe(true);
     expect(isNetworkError("request timeout")).toBe(true);
+    // Przekroczenie timeoutu (fetchTimeout → AbortController) musi liczyć się jako błąd sieci.
+    expect(isNetworkError("The operation was aborted")).toBe(true);
+    expect(isNetworkError("signal is aborted without reason")).toBe(true);
   });
   it("ignoruje błędy niesieciowe", () => {
     expect(isNetworkError("billing problem")).toBe(false);
