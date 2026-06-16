@@ -145,13 +145,33 @@ export async function gcalDay(dayOffset = 0): Promise<string> {
     : `📅 ${label}: brak zapisów w kalendarzu.`;
 }
 
+// Czas bez strefy (np. „2026-06-20T10:00:00") backend interpretuje w UTC → wydarzenie
+// przesunęłoby się o offset użytkownika (w PL o 1–2 h). Dokładamy LOKALNY offset, by godzina
+// w kalendarzu była dokładnie ta, którą poda użytkownik. Czas ze strefą (Z lub +/-hh:mm) zostaje.
+export function withLocalOffset(s: string): string {
+  const t = (s || "").trim();
+  if (!t || /([zZ]|[+-]\d{2}:?\d{2})$/.test(t)) return t;
+  const d = new Date(t);
+  if (isNaN(d.getTime())) return t;
+  const off = -d.getTimezoneOffset(); // minuty względem UTC (PL latem = +120)
+  const sign = off >= 0 ? "+" : "-";
+  const hh = String(Math.floor(Math.abs(off) / 60)).padStart(2, "0");
+  const mm = String(Math.abs(off) % 60).padStart(2, "0");
+  return `${t}${sign}${hh}:${mm}`;
+}
+
 export async function gcalAdd(summary: string, start: string, end?: string, location?: string): Promise<string> {
   // Walidacja PRZED wysyłką — model bywa nieprecyzyjny; lepszy jasny komunikat niż surowy błąd Google.
   if (!summary?.trim()) return "Podaj tytuł wydarzenia, które mam dodać do kalendarza.";
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test((start || "").trim())) {
     return "Potrzebuję początku w formacie ISO 8601 z godziną, np. 2026-06-20T10:00:00.";
   }
-  const r = await call("/v1/gcal/add", { summary: summary.trim(), start: start.trim(), end, location });
+  const r = await call("/v1/gcal/add", {
+    summary: summary.trim(),
+    start: withLocalOffset(start),
+    end: end ? withLocalOffset(end) : undefined,
+    location,
+  });
   if (r.error) return autoConnect(r.error) || r.error;
   return `Dodano do Kalendarza Google: „${summary.trim()}".`;
 }

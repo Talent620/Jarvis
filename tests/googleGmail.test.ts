@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { gmailReply, gmailRead, dayRangeISO, gmailUnreadSummary, gcalList, gcalAdd, googleBackendReady } from "../src/lib/google";
+import { gmailReply, gmailRead, dayRangeISO, gmailUnreadSummary, gcalList, gcalAdd, googleBackendReady, withLocalOffset } from "../src/lib/google";
 import { store } from "../src/lib/store";
 
 // Integracja Gmail przez backend: odpowiedź w wątku i czytanie pełnej treści.
@@ -53,6 +53,25 @@ describe("gcalAdd — walidacja przed wysyłką (profesjonalna obsługa)", () =>
   it("akceptuje poprawną datę ISO i potwierdza dodanie", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true }))));
     expect(await gcalAdd("Spotkanie z klientem", "2026-06-20T10:00:00")).toMatch(/Dodano do Kalendarza/);
+  });
+  it("wysyła czas z lokalnym offsetem (godzina się nie przesuwa w kalendarzu)", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true })));
+    vi.stubGlobal("fetch", fetchMock);
+    await gcalAdd("X", "2026-06-20T10:00:00");
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.start).toMatch(/T10:00:00([zZ]|[+-]\d{2}:\d{2})$/); // ma strefę
+  });
+});
+
+describe("withLocalOffset — strefa czasowa kalendarza", () => {
+  it("dokłada offset do czasu bez strefy", () => {
+    expect(withLocalOffset("2026-06-20T10:00:00")).toMatch(/T10:00:00([zZ]|[+-]\d{2}:\d{2})$/);
+  });
+  it("nie rusza czasu, który już ma strefę (Z)", () => {
+    expect(withLocalOffset("2026-06-20T10:00:00Z")).toBe("2026-06-20T10:00:00Z");
+  });
+  it("nie rusza czasu z jawnym offsetem", () => {
+    expect(withLocalOffset("2026-06-20T10:00:00+02:00")).toBe("2026-06-20T10:00:00+02:00");
   });
 });
 
