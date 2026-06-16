@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Skan sekretów (blokuje wyciek kluczy)
+        run: npm run scan:secrets
+
       - name: Run tests
         run: npm test
 
