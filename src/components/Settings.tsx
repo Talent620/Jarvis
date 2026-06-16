@@ -17,6 +17,7 @@ import { enablePrivateMode } from "../lib/privateMode";
 import { runProspecting } from "../lib/prospect";
 import { verifyMailConnection, sendTestEmail } from "../lib/mailer";
 import { enrollVoice } from "../lib/voiceEnroll";
+import { listMics, ensureMicPermission } from "../lib/mic";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 import { useEscape } from "../hooks/useEscape";
@@ -88,10 +89,30 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [diag, setDiag] = useState<string[]>([]);
   const [diagBusy, setDiagBusy] = useState(false);
   const [enrollMsg, setEnrollMsg] = useState("");
+  const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
+  const [micMsg, setMicMsg] = useState("");
 
   useEffect(() => {
     loadVoices().then(setVoices);
+    // Wstępna lista mikrofonów (etykiety bywają puste do czasu zgody — wtedy przycisk niżej).
+    listMics().then(setMics);
   }, []);
+
+  const loadMics = async () => {
+    setMicMsg("Sprawdzam mikrofony…");
+    const ok = await ensureMicPermission();
+    if (!ok) {
+      setMicMsg("Brak zgody na mikrofon — zezwól w ustawieniach systemu/przeglądarki.");
+      return;
+    }
+    const list = await listMics();
+    setMics(list);
+    setMicMsg(list.length ? "" : "Nie znaleziono żadnego mikrofonu.");
+  };
+  const pickMic = (id: string) => {
+    set({ micDeviceId: id });
+    store.setSettings({ micDeviceId: id }); // od razu obowiązuje — bez czekania na „Zapisz"
+  };
 
   const set = (patch: Partial<Settings>) => setS((prev) => ({ ...prev, ...patch }));
   // Klucze zapisują się NATYCHMIAST do magazynu — nigdy nie giną po wyjściu bez „Zapisz".
@@ -723,6 +744,26 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <div className="row">
                 <span>Słuchaj od razu po otwarciu (i zapytaj „o co chodzi?")</span>
                 <Toggle on={s.autoListenOnOpen} onClick={() => set({ autoListenOnOpen: !s.autoListenOnOpen })} />
+              </div>
+
+              <div className="field">
+                <label>🎙 Mikrofon (wejście)</label>
+                <select value={s.micDeviceId} onChange={(e) => pickMic(e.target.value)}>
+                  <option value="">Systemowy domyślny</option>
+                  {mics.map((m, i) => (
+                    <option key={m.deviceId || i} value={m.deviceId}>
+                      {m.label || `Mikrofon ${i + 1}`}
+                    </option>
+                  ))}
+                </select>
+                <button className="btn" style={{ marginTop: 6 }} onClick={loadMics}>
+                  Odśwież listę mikrofonów
+                </button>
+                <span className="muted">
+                  Jeśli JARVIS „nie słyszy" przez słuchawki Bluetooth — wybierz je tutaj. Przypnie
+                  to wejście na stałe, niezależnie od domyślnego urządzenia w Windows. Etykiety
+                  pojawią się po kliknięciu „Odśwież" (i zgodzie na mikrofon). {micMsg}
+                </span>
               </div>
 
               <h3>🎧 Tryb Słuchawki — naturalna rozmowa</h3>

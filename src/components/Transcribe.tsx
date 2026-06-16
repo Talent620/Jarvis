@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { transcribeAudio, transcribeSupported } from "../lib/transcribe";
 import { store, uid } from "../lib/store";
+import { micAudioConstraints } from "../lib/mic";
 import { copyWithToast, toast } from "../lib/toast";
 import Guide from "./Guide";
 
@@ -32,7 +33,7 @@ export default function Transcribe({ onClose }: { onClose: () => void }) {
   const start = async () => {
     if (!transcribeSupported()) { toast("To urządzenie nie wspiera nagrywania."); return; }
     try {
-      stream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.current = await navigator.mediaDevices.getUserMedia({ audio: micAudioConstraints() });
       chunks.current = [];
       const mr = new MediaRecorder(stream.current);
       mr.ondataavailable = (e) => { if (e.data.size) chunks.current.push(e.data); };

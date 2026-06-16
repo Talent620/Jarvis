@@ -92,6 +92,7 @@ const defaultSettings: Settings = {
   voiceModeWake: false,
   homeAssistantUrl: "",
   homeAssistantToken: "",
+  micDeviceId: "",
 };
 
 export function uid(): string {

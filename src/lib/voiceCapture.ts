@@ -1,4 +1,5 @@
 import { melBands, embed } from "./voiceprint";
+import { micAudioConstraints } from "./mic";
 
 // Przechwytywanie audio z mikrofonu RÓWNOLEGLE do rozpoznawania mowy: liczy
 // energię (VAD z adaptacyjnym progiem tła — odporność na muzykę/szum) oraz cechy
@@ -44,7 +45,7 @@ export class VoiceCapture {
     try {
       // Bez agresywnego tłumienia, by nie psuć cech głosu, ale z redukcją echa.
       this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: false, autoGainControl: false },
+        audio: micAudioConstraints({ channelCount: 1, echoCancellation: true, noiseSuppression: false, autoGainControl: false }),
       });
       this.ctx = new AudioContext();
       const src = this.ctx.createMediaStreamSource(this.stream);

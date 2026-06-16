@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
 import { store, uid } from "../lib/store";
+import { micAudioConstraints } from "../lib/mic";
 import { encryptText, decryptText } from "../lib/cipher";
 import { estimateBpm, type PpgSample } from "../lib/ppg";
 import {
@@ -191,7 +192,7 @@ function NoiseMeter() {
     let stream: MediaStream | null = null;
     (async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream = await navigator.mediaDevices.getUserMedia({ audio: micAudioConstraints() });
         ctx = new AudioContext();
         const src = ctx.createMediaStreamSource(stream);
         const an = ctx.createAnalyser();

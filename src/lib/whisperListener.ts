@@ -2,6 +2,7 @@ import type { ListenCallbacks, VoiceListener } from "./voice";
 import { transcribeAudio } from "./transcribe";
 import { primaryKey } from "./keys";
 import { setLevel } from "./audioLevel";
+import { micAudioConstraints } from "./mic";
 
 // Rozpoznawanie mowy dla DESKTOPA (Electron / Windows .exe). W Electronie wbudowane
 // Web Speech (webkitSpeechRecognition) nie działa — Chromium nie ma dostępu do serwerów
@@ -69,7 +70,7 @@ export class WhisperListener implements VoiceListener {
   private async boot(): Promise<void> {
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        audio: micAudioConstraints({ channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }),
       });
     } catch (e) {
       const name = e instanceof DOMException ? e.name : "";

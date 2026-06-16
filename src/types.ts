@@ -431,4 +431,6 @@ export interface Settings {
   homeAssistantUrl: string;
   /** Długoterminowy token dostępu Home Assistant. */
   homeAssistantToken: string;
+  /** Wybrany mikrofon (deviceId). Pusty = systemowy domyślny. Pomaga przy słuchawkach BT. */
+  micDeviceId: string;
 }

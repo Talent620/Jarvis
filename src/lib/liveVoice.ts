@@ -4,6 +4,7 @@
 const LIVE_MODEL = "models/gemini-2.0-flash-live-001";
 
 import { setLevel } from "./audioLevel";
+import { micAudioConstraints } from "./mic";
 
 export type LiveState = "connecting" | "listening" | "speaking" | "closed" | "error";
 
@@ -139,7 +140,7 @@ export class LiveSession {
 
   private async startMic(): Promise<void> {
     this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      audio: micAudioConstraints({ channelCount: 1, echoCancellation: true, noiseSuppression: true }),
     });
     this.inCtx = new AudioContext();
     this.source = this.inCtx.createMediaStreamSource(this.stream);
