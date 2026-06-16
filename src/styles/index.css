@@ -313,6 +313,7 @@ textarea,
 /* --- Rozmowa --- */
 .convo {
   flex: 1;
+  min-height: 0; /* KLUCZOWE w kolumnie flex: bez tego treść rozpycha ekran i nie da się przewijać (np. S9+) */
   overflow-y: auto;
   padding: 10px 2px;
   display: flex;
