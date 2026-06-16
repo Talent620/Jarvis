@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { gmailReply, gmailRead, dayRangeISO, gmailUnreadSummary } from "../src/lib/google";
+import { gmailReply, gmailRead, dayRangeISO, gmailUnreadSummary, gcalList, googleBackendReady } from "../src/lib/google";
 import { store } from "../src/lib/store";
 
 // Integracja Gmail przez backend: odpowiedź w wątku i czytanie pełnej treści.
@@ -26,9 +26,20 @@ describe("gmailReply — odpowiedź w wątku", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).subject).toBe("RE: Cześć");
   });
 
-  it("błąd backendu przekazany czytelnie", async () => {
+  it("gdy Google niepołączone → autonomicznie uruchamia łączenie (a nie suchy błąd)", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "Google niepołączone." }), { status: 401 })));
-    expect(await gmailReply("a@x.pl", "T", "b")).toMatch(/niepołączone/);
+    // Backend jest skonfigurowany (beforeEach) → JARVIS sam otwiera autoryzację i mówi o tym wprost.
+    expect(await gmailReply("a@x.pl", "T", "b")).toMatch(/łączę z kontem google|logowania|zezwól/i);
+  });
+});
+
+describe("autonomiczne łączenie z Google — bez backendu", () => {
+  it("gcalList bez backendu kieruje do konfiguracji (zamiast cichego błędu)", async () => {
+    store.setSettings({ syncUrl: "", syncToken: "" });
+    expect(googleBackendReady()).toBe(false);
+    const out = await gcalList();
+    expect(out).toMatch(/synchronizacja|backend/i);
+    store.setSettings({ syncUrl: "https://w.workers.dev", syncToken: "tok" }); // przywróć dla kolejnych
   });
 });
 

@@ -840,7 +840,7 @@ const tools: Tool[] = [
   {
     def: {
       name: "gcal_list",
-      description: "Wypisz nadchodzące wydarzenia z Kalendarza Google (wymaga połączonego konta).",
+      description: "Wypisz nadchodzące wydarzenia z Kalendarza Google. Jeśli konto Google nie jest jeszcze połączone, JARVIS sam otworzy stronę autoryzacji — po prostu użyj narzędzia.",
       input_schema: obj({}),
     },
     run: () => gcalList(),
@@ -856,7 +856,7 @@ const tools: Tool[] = [
   {
     def: {
       name: "gcal_add",
-      description: "Dodaj wydarzenie do Kalendarza Google (wymaga połączonego konta). Daty w ISO 8601.",
+      description: "Dodaj wydarzenie do Kalendarza Google. Jeśli konto nie jest połączone, JARVIS sam otworzy autoryzację — używaj śmiało. Daty w ISO 8601.",
       input_schema: obj(
         { summary: str("Tytuł"), start: str("Początek ISO 8601"), end: str("Koniec ISO 8601 (opcjonalnie)"), location: str("Miejsce (opcjonalnie)") },
         ["summary", "start"],

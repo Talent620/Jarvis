@@ -33,9 +33,44 @@ export function googleStartUrl(): string | null {
   return b && tok ? `${b}/v1/google/start?token=${encodeURIComponent(tok)}` : null;
 }
 
+/** Czy backend (BFF) jest gotowy — warunek konieczny połączenia z Google. */
+export function googleBackendReady(): boolean {
+  return !!base() && !!store.settings.syncToken?.trim();
+}
+
+/** Otwórz autoryzację Google: na desktopie w systemowej przeglądarce, na webie w nowej karcie. */
+export function startGoogleAuth(): boolean {
+  const url = googleStartUrl();
+  if (!url || typeof window === "undefined") return false;
+  try {
+    const bridge = (window as { jarvisDesktop?: { open?: (u: string) => void } }).jarvisDesktop;
+    if (bridge?.open) bridge.open(url);
+    else window.open(url, "_blank", "noopener");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Gdy backend odpowie „Google niepołączone." — JARVIS SAM otwiera autoryzację (autonomicznie),
+// zamiast tylko zgłaszać błąd. Otwieramy najwyżej raz na 20 s, by nie mnożyć kart/okien.
+let lastAuthOpenedAt = 0;
+function autoConnect(err: string): string | null {
+  if (!/google niepo|połącz konto google|reconnect|invalid_grant|reauth/i.test(err)) return null;
+  if (!googleBackendReady()) {
+    return "Aby JARVIS sam korzystał z Kalendarza i Gmaila, ustaw najpierw backend: ⚙ → Integracje → Synchronizacja (adres + token). Potem połączę konto Google automatycznie.";
+  }
+  const now = Date.now();
+  if (now - lastAuthOpenedAt > 20000) {
+    lastAuthOpenedAt = now;
+    startGoogleAuth();
+  }
+  return "🔗 Łączę z Kontem Google — otworzyłem stronę logowania. Kliknij „Zezwól”, a potem poproś ponownie (np. „co mam jutro w kalendarzu”).";
+}
+
 export async function gmailSearch(query = ""): Promise<string> {
   const r = await call("/v1/gmail/list", { query, max: 10 });
-  if (r.error) return r.error;
+  if (r.error) return autoConnect(r.error) || r.error;
   const items = r.messages || [];
   return items.length
     ? items.map((m: any) => `• [${m.id}] ${m.from} — ${m.subject}\n  ${m.snippet}`).join("\n")
@@ -55,7 +90,7 @@ export async function gmailUnreadSummary(max = 5): Promise<string> {
 /** Pełna treść jednego e-maila (po id z gmail_search) — do czytania i odpowiadania. */
 export async function gmailRead(id: string): Promise<string> {
   const r = await call("/v1/gmail/get", { id });
-  if (r.error) return r.error;
+  if (r.error) return autoConnect(r.error) || r.error;
   return [
     `Od: ${r.from}`,
     `Temat: ${r.subject}`,
@@ -69,19 +104,21 @@ export async function gmailRead(id: string): Promise<string> {
 
 export async function gmailSend(to: string, subject: string, body: string): Promise<string> {
   const r = await call("/v1/gmail/send", { to, subject, body });
-  return r.error || `Wysłano e-mail do ${to}.`;
+  if (r.error) return autoConnect(r.error) || r.error;
+  return `Wysłano e-mail do ${to}.`;
 }
 
 /** Odpowiedz na e-mail w tym samym wątku (threadId + Message-ID z gmail_read). */
 export async function gmailReply(to: string, subject: string, body: string, threadId?: string, inReplyTo?: string): Promise<string> {
   const subj = /^re:/i.test(subject) ? subject : `Re: ${subject}`;
   const r = await call("/v1/gmail/send", { to, subject: subj, body, threadId, inReplyTo });
-  return r.error || `Wysłano odpowiedź do ${to}.`;
+  if (r.error) return autoConnect(r.error) || r.error;
+  return `Wysłano odpowiedź do ${to}.`;
 }
 
 export async function gcalList(): Promise<string> {
   const r = await call("/v1/gcal/list", { max: 10 });
-  if (r.error) return r.error;
+  if (r.error) return autoConnect(r.error) || r.error;
   const ev = r.events || [];
   return ev.length
     ? ev.map((e: any) => `• ${new Date(e.start).toLocaleString("pl-PL")} — ${e.summary}${e.location ? ` @ ${e.location}` : ""}`).join("\n")
@@ -100,7 +137,7 @@ export async function gcalDay(dayOffset = 0): Promise<string> {
   const d = new Date(); d.setDate(d.getDate() + dayOffset);
   const { timeMin, timeMax } = dayRangeISO(d);
   const r = await call("/v1/gcal/list", { max: 25, timeMin, timeMax });
-  if (r.error) return r.error;
+  if (r.error) return autoConnect(r.error) || r.error;
   const ev = r.events || [];
   const label = d.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" });
   return ev.length
@@ -110,5 +147,6 @@ export async function gcalDay(dayOffset = 0): Promise<string> {
 
 export async function gcalAdd(summary: string, start: string, end?: string, location?: string): Promise<string> {
   const r = await call("/v1/gcal/add", { summary, start, end, location });
-  return r.error || `Dodano do Kalendarza Google: „${summary}".`;
+  if (r.error) return autoConnect(r.error) || r.error;
+  return `Dodano do Kalendarza Google: „${summary}".`;
 }
