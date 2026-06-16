@@ -17,7 +17,10 @@ import { buildDossier, auditWeakPoints } from "./leadIntel";
 import { callNowList, followUpsDue, followUpMessage, pipelineForecast, openLabel } from "./salesEngine";
 import { syncSalesTasks, autoPlanSummary } from "./autoPlan";
 import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, hotkey as desktopHotkey } from "./desktop";
-import type { Citation } from "../types";
+import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
+import { primaryKey } from "./keys";
+import type { ProviderId } from "./providers/types";
+import type { Citation, Settings } from "../types";
 
 // Bufor cytatów z ostatniego zapytania (research). Resetowany per wywołanie w brain.ts.
 let citationBuffer: Citation[] = [];
@@ -932,6 +935,93 @@ const tools: Tool[] = [
       if (currency_from?.trim() || currency_to?.trim()) parts.push(await getRate(currency_from || "USD", currency_to || "PLN"));
       if (!parts.length) parts.push(await getCrypto(["bitcoin", "ethereum"]), await getRate("USD", "PLN"));
       return parts.join("\n");
+    },
+  },
+
+  // === Sterowanie ustawieniami JARVIS-a głosem/czatem (automatyzacja) ===
+  {
+    def: {
+      name: "set_voice",
+      description:
+        "Zmień ustawienia GŁOSU JARVIS-a na żądanie: barwę głosu (Gemini), charakter (persona), tempo mówienia albo włącz/wyłącz mówienie na głos. Używaj, gdy użytkownik prosi np. „zmień głos na głębszy”, „mów wolniej”, „bądź bardziej zwięzły”, „wycisz się”, „mów do mnie”.",
+      input_schema: obj(
+        {
+          voice: { type: "string", enum: ["Charon", "Orus", "Fenrir", "Puck", "Kore", "Zephyr", "Aoede", "Leda"], description: "Barwa głosu Gemini (opcjonalnie). Charon = głęboki JARVIS." },
+          persona: { type: "string", enum: ["classic", "concise", "warm", "witty", "operator"], description: "Charakter: classic (majordomus), concise (zwięzły), warm (ciepły), witty (dowcipny), operator (operacyjny). Opcjonalnie." },
+          speed: { type: "string", enum: ["slower", "normal", "faster"], description: "Tempo mówienia (opcjonalnie)." },
+          speak: { type: "boolean", description: "true = mów na głos, false = wycisz (opcjonalnie)." },
+        },
+        [],
+      ),
+    },
+    run: ({ voice, persona, speed, speak }) => {
+      const patch: Partial<Settings> = {};
+      const changed: string[] = [];
+      if (voice) { patch.geminiVoice = String(voice); changed.push(`barwa: ${voice}`); }
+      if (persona) { patch.persona = String(persona); changed.push(`charakter: ${persona}`); }
+      if (speed) { patch.voiceRate = speed === "slower" ? 0.85 : speed === "faster" ? 1.15 : 1; changed.push(`tempo: ${speed === "slower" ? "wolniej" : speed === "faster" ? "szybciej" : "normalne"}`); }
+      if (typeof speak === "boolean") { patch.speak = speak; changed.push(speak ? "głos włączony" : "głos wyciszony"); }
+      if (!changed.length) return "Podaj, co zmienić w głosie: barwa (np. Charon), charakter (np. operator), tempo (slower/faster) albo speak true/false.";
+      store.setSettings(patch);
+      return `✅ Ustawienia głosu zmienione — ${changed.join(", ")}.`;
+    },
+  },
+  {
+    def: {
+      name: "switch_ai",
+      description:
+        "Przełącz aktywnego dostawcę AI (mózg) lub model na żądanie — np. „przełącz na Claude”, „użyj Gemini”, „wróć do auto”. Działa tylko dla dostawców z wpisanym kluczem API; w razie braku podpowiada dostępnych.",
+      input_schema: obj(
+        {
+          provider: str("Dostawca: auto, claude/anthropic, gemini, groq, cerebras, mistral, openrouter, nvidia, github, ollama."),
+          model: str("Opcjonalnie id modelu albo 'auto'."),
+        },
+        ["provider"],
+      ),
+    },
+    run: ({ provider, model }) => {
+      const raw = String(provider || "").trim().toLowerCase();
+      const alias: Record<string, string> = { claude: "anthropic", anthropic: "anthropic", google: "gemini", gemini: "gemini", groq: "groq", cerebras: "cerebras", mistral: "mistral", openrouter: "openrouter", nvidia: "nvidia", github: "github", ollama: "ollama", auto: "auto" };
+      const id = alias[raw] || raw;
+      const available = PROVIDER_LIST.filter((p) => primaryKey(p.id)).map((p) => p.id);
+      const hasOllama = !!store.settings.ollamaUrl?.trim();
+      if (id === "auto") {
+        store.setSettings({ provider: "auto", model: "auto" });
+        return "✅ Wybór mózgu AI: automatyczny (sam dobiorę najlepszy dostępny).";
+      }
+      if (!PROVIDERS[id as ProviderId]) {
+        return `Nie znam dostawcy „${provider}”. Dostępni z kluczem: ${available.join(", ") || "brak — dodaj klucz w ⚙ → AI"}${hasOllama ? ", ollama" : ""}.`;
+      }
+      const ready = id === "ollama" ? hasOllama : !!primaryKey(id as ProviderId);
+      if (!ready) {
+        return `Nie masz klucza do „${PROVIDERS[id as ProviderId].label}”. Dostępni teraz: ${available.join(", ") || "brak"}${hasOllama ? ", ollama" : ""}. Klucz dodasz w ⚙ → AI.`;
+      }
+      const meta = PROVIDERS[id as ProviderId];
+      const m = model && String(model).trim() && String(model).toLowerCase() !== "auto" ? String(model).trim() : meta.defaultModel;
+      store.setSettings({ provider: id, model: m });
+      return `✅ Mózg AI przełączony na ${meta.label} (model: ${m}).`;
+    },
+  },
+  {
+    def: {
+      name: "set_theme",
+      description:
+        "Zmień motyw kolorystyczny interfejsu (HUD) na żądanie: cyan (domyślny), złoty, zielony, czerwony, fiolet lub Matrix. Np. „włącz motyw Matrix”, „zmień na złoty”.",
+      input_schema: obj({ theme: str("cyan, złoty/gold, zielony/green, czerwony/red, fiolet/purple, matrix") }, ["theme"]),
+    },
+    run: ({ theme }) => {
+      const map: Record<string, string> = {
+        cyan: "default", default: "default", domyslny: "default", niebieski: "default",
+        zloty: "gold", złoty: "gold", gold: "gold",
+        zielony: "green", green: "green",
+        czerwony: "red", red: "red",
+        fiolet: "purple", fioletowy: "purple", purple: "purple",
+        matrix: "matrix",
+      };
+      const t = map[String(theme || "").trim().toLowerCase()];
+      if (!t) return "Dostępne motywy: cyan, złoty, zielony, czerwony, fiolet, matrix.";
+      store.setSettings({ theme: t });
+      return `✅ Motyw interfejsu zmieniony na ${theme}.`;
     },
   },
 ];

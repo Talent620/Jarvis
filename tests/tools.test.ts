@@ -73,6 +73,38 @@ describe("narzędzia lokalne — wykonanie end-to-end (runTool)", () => {
     expect(await runTool("list_notes", {})).toContain("pomysł na projekt");
   });
 
+  it("set_theme zmienia motyw (Matrix) i odrzuca nieznany", async () => {
+    expect(await runTool("set_theme", { theme: "matrix" })).toMatch(/Matrix|matrix/);
+    expect(store.settings.theme).toBe("matrix");
+    expect(await runTool("set_theme", { theme: "zloty" })).toMatch(/złoty|zloty|gold|✅/i);
+    expect(store.settings.theme).toBe("gold");
+    expect(await runTool("set_theme", { theme: "tęcza" })).toMatch(/Dostępne motywy/);
+  });
+
+  it("set_voice zmienia barwę, charakter, tempo i mówienie", async () => {
+    const r = await runTool("set_voice", { voice: "Charon", persona: "operator", speed: "slower", speak: false });
+    expect(r).toMatch(/✅/);
+    expect(store.settings.geminiVoice).toBe("Charon");
+    expect(store.settings.persona).toBe("operator");
+    expect(store.settings.voiceRate).toBeCloseTo(0.85);
+    expect(store.settings.speak).toBe(false);
+    expect(await runTool("set_voice", {})).toMatch(/Podaj, co zmienić/);
+  });
+
+  it("switch_ai: auto, przełączenie z kluczem, brak klucza → podpowiedź", async () => {
+    expect(await runTool("switch_ai", { provider: "auto" })).toMatch(/automatyczny/);
+    expect(store.settings.provider).toBe("auto");
+    // bez klucza Claude → czytelna podpowiedź, brak przełączenia
+    store.setSettings({ keys: {}, provider: "auto" });
+    expect(await runTool("switch_ai", { provider: "claude" })).toMatch(/Nie masz klucza|Dostępni/);
+    expect(store.settings.provider).toBe("auto");
+    // z kluczem Gemini → przełącza na gemini
+    store.setSettings({ keys: { gemini: "AIzaTESTKEY" } });
+    const r = await runTool("switch_ai", { provider: "gemini" });
+    expect(r).toMatch(/przełączony|Gemini/i);
+    expect(store.settings.provider).toBe("gemini");
+  });
+
   it("add_reminder zapisuje przypomnienie", async () => {
     const at = new Date(Date.now() + 3600_000).toISOString();
     expect(await runTool("add_reminder", { text: "wyjąć pranie", at })).toMatch(/Przypomnienie/);
