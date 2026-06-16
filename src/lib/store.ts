@@ -1,5 +1,6 @@
 import type { AppData, Settings } from "../types";
 import { emptyProfile } from "./profile";
+import { toast } from "./toast";
 
 const DATA_KEY = "jarvis.data.v2";
 const SETTINGS_KEY = "jarvis.settings.v2";
@@ -107,11 +108,18 @@ function read<T>(key: string, fallback: T): T {
   }
 }
 
+let quotaWarned = false;
 function write(key: string, value: unknown): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* quota / private mode — ignore */
+  } catch (e) {
+    // Przepełniona pamięć (quota) = ciche gubienie danych. Ostrzeż użytkownika RAZ,
+    // by zdążył zrobić kopię i wyczyścić stare czaty (tryb prywatny/SSR pomijamy).
+    const quota = e instanceof Error && (e.name === "QuotaExceededError" || /quota/i.test(e.message));
+    if (quota && !quotaWarned) {
+      quotaWarned = true;
+      toast("⚠ Brak miejsca w pamięci — zrób kopię (⚙ → Dane) i wyczyść stare czaty, by nic nie zginęło.");
+    }
   }
 }
 

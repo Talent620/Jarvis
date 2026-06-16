@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { verifyLicense, deviceId } from "../src/lib/license";
+import { verifyLicense, deviceId, normalizeKey } from "../src/lib/license";
 
 // Ważny klucz testowy (fixture) podpisany kluczem prywatnym właściciela pod kluczem
 // publicznym wbudowanym w aplikację. Klucza nie da się podrobić bez prywatnego.
@@ -37,5 +37,17 @@ describe("Licencja — weryfikacja ECDSA", () => {
     const b = deviceId();
     expect(a).toBe(b);
     expect(a.length).toBeGreaterThan(8);
+  });
+
+  // Regresja: użytkownik nie mógł aktywować, bo wklejenie z telefonu wstawiało
+  // niewidoczne znaki/spacje. normalizeKey ma je usuwać, a verify — przyjąć klucz.
+  it("normalizeKey usuwa spacje, nowe linie i znaki zero-width/BOM", () => {
+    expect(normalizeKey("  ab c\n d\t")).toBe("abcd");
+    expect(normalizeKey("a​b­c﻿d⁠")).toBe("abcd");
+  });
+
+  it("akceptuje ważny klucz mimo brudnego wklejenia (spacje + zero-width)", async () => {
+    const dirty = "  " + MASTER.slice(0, 20) + "​ \n" + MASTER.slice(20) + "﻿";
+    expect((await verifyLicense(dirty)).valid).toBe(true);
   });
 });

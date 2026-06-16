@@ -349,8 +349,12 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   }
 
   // Obraz dołączamy tylko do ostatniej wiadomości — nie zaśmiecamy kontekstu base64.
+  // Tekst przycinamy do rozsądnego limitu — wklejone megabajty zamroziłyby przetwarzanie.
+  const MAX_MSG = 120000;
+  const capTxt = (c: Msg["content"]): Msg["content"] =>
+    typeof c === "string" && c.length > MAX_MSG ? c.slice(0, MAX_MSG) : c;
   const trimmed: Msg[] = history.map((m, i) =>
-    i === history.length - 1 ? m : { role: m.role, content: m.content },
+    i === history.length - 1 ? { ...m, content: capTxt(m.content) } : { role: m.role, content: capTxt(m.content) },
   );
 
   // Pamięć autonomiczna: dobierz fakty trafne do bieżącego zapytania (przed promptem).

@@ -416,22 +416,53 @@ export default {
           for (const part of p.parts || []) { const t = findPlain(part); if (t) return t; }
           return "";
         };
+        // Wiele maili przychodzi WYŁĄCZNIE jako text/html — bez tego użytkownik widział
+        // tylko 1-zdaniowy podgląd. Fallback: weź HTML i zdejmij tagi do czytelnego tekstu.
+        const findHtml = (p) => {
+          if (!p) return "";
+          if (p.mimeType === "text/html" && p.body?.data) return decode(p.body.data);
+          for (const part of p.parts || []) { const t = findHtml(part); if (t) return t; }
+          return "";
+        };
         let bodyText = findPlain(msg.payload);
         if (!bodyText && msg.payload?.body?.data) bodyText = decode(msg.payload.body.data);
+        if (!bodyText) {
+          const html = findHtml(msg.payload);
+          if (html) {
+            bodyText = html
+              .replace(/<style[\s\S]*?<\/style>/gi, " ")
+              .replace(/<script[\s\S]*?<\/script>/gi, " ")
+              .replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n")
+              .replace(/<br\s*\/?>(?=)/gi, "\n")
+              .replace(/<[^>]+>/g, " ")
+              .replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
+              .replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+          }
+        }
         return json(200, {
           id: msg.id, threadId: msg.threadId,
           from: h("From"), to: h("To"), subject: h("Subject"), date: h("Date"),
           messageId: h("Message-ID"),
-          body: (bodyText || msg.snippet || "").slice(0, 8000),
+          body: (bodyText || msg.snippet || "").slice(0, 16000),
         });
       }
       if (path === "/v1/gmail/send" && req.method === "POST") {
         const at = await googleAccessToken(env, bearer(req));
         if (!at) return json(401, { error: "Google niepołączone." });
         const { to, subject, body, threadId, inReplyTo } = await req.json();
+        // Temat z polskimi znakami musi być zakodowany jako MIME-word (=?UTF-8?B?…?=),
+        // inaczej w skrzynce odbiorcy bywa krzaczasty.
+        const subjHeader = /[^\x00-\x7F]/.test(String(subject || ""))
+          ? `=?UTF-8?B?${b64(String(subject || ""))}?=`
+          : String(subject || "");
         // Odpowiedź w wątku: dołącz nagłówki In-Reply-To/References + threadId.
-        const headers = [`To: ${to}`, `Subject: ${subject}`];
-        if (inReplyTo) { headers.push(`In-Reply-To: ${inReplyTo}`, `References: ${inReplyTo}`); }
+        const headers = [`To: ${to}`, `Subject: ${subjHeader}`];
+        if (inReplyTo) {
+          // Message-ID musi być w nawiasach <…>, inaczej Gmail nie zawsze wpina w wątek.
+          const mid = String(inReplyTo).trim();
+          const norm = /^<.*>$/.test(mid) ? mid : `<${mid}>`;
+          headers.push(`In-Reply-To: ${norm}`, `References: ${norm}`);
+        }
         headers.push('Content-Type: text/plain; charset=UTF-8', "", body);
         const raw = b64url(headers.join("\r\n"));
         const payload = threadId ? { raw, threadId } : { raw };

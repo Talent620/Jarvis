@@ -7,6 +7,8 @@
 // Generowanie kluczy dla kupujących: scripts/license.mjs (wymaga klucza prywatnego,
 // który NIE jest w repozytorium).
 
+import { fetchTimeout } from "./http";
+
 const PUBLIC_JWK: JsonWebKey = {
   kty: "EC",
   crv: "P-256",
@@ -40,10 +42,18 @@ export interface LicenseInfo {
   exp?: number;
 }
 
+/**
+ * Oczyść klucz z białych ORAZ niewidocznych znaków (zero-width, soft hyphen, BOM),
+ * które kopiowanie z telefonu/maila potrafi wstawić — to one „psuły" poprawny klucz.
+ */
+export function normalizeKey(s: string): string {
+  return (s || "").replace(/[\s\u200B-\u200D\u00AD\uFEFF\u2060]/g, "");
+}
+
 /** Zweryfikuj klucz licencyjny (podpis + ewentualny termin ważności). */
 export async function verifyLicense(token: string): Promise<LicenseInfo> {
   try {
-    const [data, sigB64] = (token || "").replace(/\s+/g, "").split(".");
+    const [data, sigB64] = normalizeKey(token).split(".");
     if (!data || !sigB64) return { valid: false };
     const ok = await crypto.subtle.verify(
       { name: "ECDSA", hash: "SHA-256" },
@@ -118,14 +128,15 @@ async function callServer(path: string, token: string): Promise<{ valid: boolean
   const base = licenseUrl();
   if (!base) return null;
   try {
-    const res = await fetch(`${base}${path}`, {
+    // Twardy limit czasu — bez tego wiszący serwer licencji zamroziłby aktywację/start.
+    const res = await fetchTimeout(`${base}${path}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ key: token, device: deviceId(), platform: platformName() }),
-    });
+    }, 7000);
     return await res.json().catch(() => null);
   } catch {
-    return null; // serwer nieosiągalny — obsługa zależna od trybu (offline grace / strict)
+    return null; // serwer nieosiągalny/timeout — obsługa zależna od trybu (offline grace / strict)
   }
 }
 

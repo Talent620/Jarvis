@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { activateLicense, saveLicense } from "../lib/license";
+import { activateLicense, saveLicense, normalizeKey } from "../lib/license";
 
 // Brama aktywacji: bez ważnego klucza licencyjnego aplikacja się nie uruchamia.
 // Klucz wydaje wyłącznie autor (Artur Józefczak). Kopia bez klucza jest bezużyteczna.
@@ -9,10 +9,10 @@ export default function LicenseGate({ onActivated }: { onActivated: (name?: stri
   const [busy, setBusy] = useState(false);
 
   const activate = async (raw?: string) => {
-    // Usuń WSZYSTKIE białe znaki — kopiowanie z telefonu/maila często wstawia
-    // spacje lub zawijania wiersza, które psuły poprawny klucz.
-    const t = (raw ?? key).replace(/\s+/g, "");
-    if (!t) return;
+    const t = normalizeKey(raw ?? key);
+    if (!t) { setMsg("Wklej klucz licencyjny."); return; }
+    // Format poprawnego klucza: dwie części base64url rozdzielone kropką (dane.podpis).
+    const looksComplete = /^[A-Za-z0-9_-]{40,}\.[A-Za-z0-9_-]{40,}$/.test(t);
     setBusy(true);
     setMsg("Sprawdzam i aktywuję klucz…");
     const r = await activateLicense(t);
@@ -21,19 +21,21 @@ export default function LicenseGate({ onActivated }: { onActivated: (name?: stri
       saveLicense(t);
       setMsg("✅ Aktywowano. Uruchamiam JARVIS-a…");
       setTimeout(() => onActivated(r.name), 500);
+    } else if (!looksComplete) {
+      setMsg(`❌ Klucz wygląda na niepełny (masz ${t.length} znaków). Skopiuj CAŁY ciąg — z kropką w środku, do samego końca — najlepiej z pliku/przyciskiem 📋.`);
     } else {
-      setMsg("❌ Klucz nieprawidłowy lub niepełny. Skopiuj go w całości (163 znaki) i wklej przyciskiem 📋 — bez spacji.");
+      setMsg("❌ Klucz nieprawidłowy lub wygasł. Sprawdź, czy to klucz do tej (najnowszej) wersji aplikacji.");
     }
   };
 
   const paste = async () => {
     try {
-      const t = (await navigator.clipboard.readText()).replace(/\s+/g, "");
+      const t = normalizeKey(await navigator.clipboard.readText());
       if (!t) { setMsg("Schowek jest pusty — skopiuj klucz i spróbuj ponownie."); return; }
       setKey(t);
       await activate(t);
     } catch {
-      setMsg("Brak dostępu do schowka — wklej klucz ręcznie (Ctrl+V) w pole.");
+      setMsg("Brak dostępu do schowka — wklej klucz ręcznie (przytrzymaj pole → Wklej).");
     }
   };
 

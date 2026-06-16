@@ -21,6 +21,14 @@ export function exportData(): void {
 
 /** Zastosuj odczytaną kopię (dane i — przy pełnej — ustawienia). Zwraca komunikat. */
 function applyParsed(parsed: any): string {
+  // Zanim nadpiszemy dane — upewnij się, że to w ogóle kopia JARVIS-a. Inaczej wybór
+  // przypadkowego pliku JSON mógłby po cichu wyczyścić/uszkodzić istniejące dane.
+  const looksLikeBackup =
+    parsed && typeof parsed === "object" &&
+    (parsed.app === "jarvis" ||
+      (parsed.data && typeof parsed.data === "object") ||
+      COLLECTIONS.some((c) => Array.isArray((parsed as Record<string, unknown>)[c])));
+  if (!looksLikeBackup) return "❌ To nie wygląda na kopię zapasową JARVIS-a — nic nie zmieniono.";
   const d = (parsed.data ?? parsed) as Record<string, unknown>;
   store.setData((s) => {
     for (const c of COLLECTIONS) if (Array.isArray(d[c])) (s as any)[c] = d[c];

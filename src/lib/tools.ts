@@ -1,4 +1,5 @@
 import { store, uid } from "./store";
+import { fetchTimeout } from "./http";
 import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
 import { hasBackendGmail } from "./mailer";
 import { getWeather } from "./weather";
@@ -544,11 +545,11 @@ const tools: Tool[] = [
       if (!key) {
         return "Brak klucza Tavily — dodaj go w ⚙ Ustawienia (sekcja Research) albo użyj modelu Claude (ma wbudowane wyszukiwanie).";
       }
-      const res = await fetch("https://api.tavily.com/search", {
+      const res = await fetchTimeout("https://api.tavily.com/search", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ api_key: key, query, max_results: 5, include_answer: true, search_depth: "advanced" }),
-      });
+      }, 12000);
       // Przy awarii Tavily potrafi zwrócić HTML — nie wywalaj się na parsowaniu.
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) return `Błąd wyszukiwania (${data?.error || res.status}). Spróbuj ponownie za chwilę.`;
@@ -903,11 +904,11 @@ const tools: Tool[] = [
     run: async ({ topic }) => {
       const key = store.settings.tavilyApiKey?.trim();
       if (!key) return "Najnowsze wiadomości wymagają klucza Tavily (⚙ → AI, darmowy) — albo użyj modelu Claude z wbudowanym wyszukiwaniem.";
-      const res = await fetch("https://api.tavily.com/search", {
+      const res = await fetchTimeout("https://api.tavily.com/search", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ api_key: key, query: `najnowsze wiadomości: ${topic}`, topic: "news", max_results: 6, include_answer: true }),
-      });
+      }, 12000);
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) return `Nie udało się pobrać wiadomości (${data?.error || res.status}).`;
       const items: any[] = data.results || [];
