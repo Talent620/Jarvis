@@ -477,6 +477,29 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </a>{" "}
                 i wklej je niżej (NIE zwykłe hasło). Dane zostają tylko na tym urządzeniu.
               </p>
+              <details className="journal-card" style={{ margin: "0 0 10px", padding: "10px 12px" }}>
+                <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>
+                  📖 Jak zdobyć „hasło aplikacji" Google (krok po kroku)
+                </summary>
+                <ol style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 13, lineHeight: 1.6 }}>
+                  <li>Zaloguj się na swoje konto Google na telefonie/komputerze.</li>
+                  <li>Włącz <b>weryfikację dwuetapową</b> (Konto Google → Bezpieczeństwo). Bez niej hasła aplikacji są niedostępne.</li>
+                  <li>Otwórz stronę haseł aplikacji (przycisk niżej) i zaloguj się ponownie, jeśli poprosi.</li>
+                  <li>Wpisz nazwę, np. <b>JARVIS</b>, i kliknij <b>Utwórz</b>.</li>
+                  <li>Google pokaże <b>16-znakowy kod</b> (4 grupy po 4). Skopiuj go.</li>
+                  <li>Wklej kod w pole <b>„Hasło aplikacji"</b> poniżej (spacje znikną same).</li>
+                  <li>Naciśnij <b>„Sprawdź połączenie"</b>, a potem <b>„Wyślij testowy e-mail"</b>.</li>
+                </ol>
+                <a
+                  href="https://myaccount.google.com/apppasswords"
+                  target="_blank"
+                  rel="noopener"
+                  className="btn"
+                  style={{ display: "inline-block", marginTop: 10, textDecoration: "none" }}
+                >
+                  🔑 Otwórz stronę haseł aplikacji Google
+                </a>
+              </details>
               <div className="field">
                 <label>Adres e-mail (Gmail)</label>
                 <input value={s.smtpUser} placeholder="twoj@gmail.com" onChange={(e) => set({ smtpUser: e.target.value })} />
