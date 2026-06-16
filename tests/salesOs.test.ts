@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { mapOutcome, mapStage, mapLeadStatus, mapSalesOsLead, leadToPublicPayload, metricsToText, type SalesOsLead } from "../src/lib/salesOs";
+import { mapOutcome, mapStage, mapLeadStatus, mapSalesOsLead, leadToPublicPayload, leadToOutreachInput, metricsToText, type SalesOsLead } from "../src/lib/salesOs";
 import type { Lead } from "../src/types";
 
 describe("Łącznik AI Sales OS — mapowanie", () => {
@@ -130,5 +130,23 @@ describe("Łącznik AI Sales OS — mapowanie", () => {
   it("mapSalesOsLead używa etapu lejka, gdy outcome jest OPEN", () => {
     const lead = mapSalesOsLead({ id: "x", companyName: "ProMax", outcome: "OPEN", stage: "Proposal" });
     expect(lead.status).toBe("offer");
+  });
+
+  it("leadToOutreachInput buduje ładunek outreachu z leada (e-mail z contact)", () => {
+    const inp = leadToOutreachInput(baseLead({ contact: "biuro@dentmed.pl", url: "dentmed.pl", niche: "stomatolog", location: "Gdańsk", note: "Brak strony www" }), "Oferujemy stronę");
+    expect(inp.email).toBe("biuro@dentmed.pl");
+    expect(inp.phone).toBeUndefined();
+    expect(inp.companyName).toBe("Dent-Med");
+    expect(inp.industry).toBe("stomatolog");
+    expect(inp.region).toBe("Gdańsk");
+    expect(inp.context).toBe("Oferujemy stronę");
+    expect(inp.send).toBe(true);
+  });
+
+  it("leadToOutreachInput: telefon w contact → phone, context spada na notatkę", () => {
+    const inp = leadToOutreachInput(baseLead({ contact: "+48 500 100 200", note: "Brak strony www" }));
+    expect(inp.phone).toBe("+48 500 100 200");
+    expect(inp.email).toBeUndefined();
+    expect(inp.context).toBe("Brak strony www");
   });
 });

@@ -261,10 +261,19 @@ z lejkiem Sales OS (New/Contacted/Qualified → nowy/kontakt, Proposal/Negotiati
 Won/Lost → klient/odrzucony; rozumie też polskie nazwy etapów). Po synchronizacji Pulpit
 pokazuje skrót metryk (leady, otwarte/klienci/odrzuceni, wartość wygranych).
 
-**Sterowanie głosem/czatem.** Asystent ma cztery narzędzia i sam je odpala w kontekście:
+**Maile pisane i wysyłane w CRM-ie.** JARVIS może zlecić Sales OS-owi napisanie (AI) i
+**automatyczną wysyłkę** pierwszego kontaktu do leada — treść, scoring, kolejka akceptacji
+i dostawca poczty (Resend/Mailgun) żyją w Sales OS, a JARVIS tylko wyzwala akcję tokenem
+(`POST /api/public/outreach`). „Napisz i wyślij mail do <firma> przez Sales OS” utworzy
+leada (jeśli trzeba), wygeneruje wiadomość i ją wyśle; „auto-wyślij zaległe maile” opróżni
+kolejkę szkiców do dziennego limitu firmy. Bez klucza poczty Sales OS robi „symulowaną”
+wysyłkę (pełny ślad w osi czasu) — ustaw `RESEND_API_KEY`, by wysyłać naprawdę.
+
+**Sterowanie głosem/czatem.** Asystent ma sześć narzędzi i sam je odpala w kontekście:
 `salesos_open` („otwórz Sales OS”), `salesos_sync` („zsynchronizuj leady z CRM-u”),
 `salesos_stats` („ile mam leadów w Sales OS / jak idzie pipeline”), `salesos_push`
-(„wyślij te firmy do Sales OS”).
+(„wyślij te firmy do Sales OS”), `salesos_email` („napisz i wyślij mail do <firma>”) oraz
+`salesos_flush_emails` („roześlij przygotowane wiadomości”).
 
 Pod spodem JARVIS odpytuje dodany endpoint `GET /api/public/sync` (read-only) i wysyła
 firmy przez `POST /api/public/leads` — oba autoryzowane tym samym tokenem. Sales OS

@@ -8,7 +8,7 @@ import { findLeads } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { leadsToCsv, followUpsDue, callNowList, searchLeads, wasLeadEmailed } from "../lib/salesEngine";
 import { importLeads } from "../lib/leadImport";
-import { openSalesOs, syncFromSalesOs, pushLeadsToSalesOs, getLastSnapshot, metricsToText } from "../lib/salesOs";
+import { openSalesOs, syncFromSalesOs, pushLeadsToSalesOs, flushSalesOsOutreach, getLastSnapshot, metricsToText } from "../lib/salesOs";
 import { copyWithToast, toast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
 import { useEscape } from "../hooks/useEscape";
@@ -344,6 +344,15 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
                 title="Odeślij świeże leady do AI Sales OS (źródła prawdy)"
               >
                 📤 Do Sales OS
+              </button>
+              <button
+                className="btn"
+                style={{ flex: 1 }}
+                disabled={syncingOs}
+                onClick={async () => { setSyncingOs(true); const r = await flushSalesOsOutreach(); setSyncingOs(false); toast(r.message); }}
+                title="Sales OS pisze (AI) i auto-wysyła zaległe maile z kolejki"
+              >
+                ✉ Auto-wyślij maile
               </button>
             </div>
           )}

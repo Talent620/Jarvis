@@ -292,3 +292,117 @@ export async function pushLeadsToSalesOs(leads?: Lead[]): Promise<PushResult> {
     message: `📤 Wysłano do Sales OS: ${pushed}${failed ? ` · nieudane: ${failed}` : ""}${tail}.`,
   };
 }
+
+// --- Outreach: JARVIS zleca Sales OS-owi napisanie maila AI i jego WYSYŁKĘ ---
+// Treść, scoring, kolejka akceptacji i wysyłka żyją w Sales OS (źródło prawdy);
+// JARVIS jedynie wyzwala akcję tokenem. To znaczenie „żeby tworzyło tam maile,
+// które się auto-wysyłają".
+
+export interface OutreachInput {
+  email?: string;
+  name?: string;
+  companyName?: string;
+  phone?: string;
+  website?: string;
+  industry?: string;
+  region?: string;
+  /** Dodatkowy kontekst dla AI (np. „brak strony www; oferujemy stronę + Google profil"). */
+  context?: string;
+  /** Domyślnie true (napisz i WYŚLIJ). false = tylko szkic do kolejki akceptacji. */
+  send?: boolean;
+}
+
+export interface OutreachResult {
+  ok: boolean;
+  message: string;
+  sent?: boolean;
+  drafted?: boolean;
+}
+
+/** Lead JARVIS-a → dane wejściowe outreachu (rozdziela e-mail/telefon z `contact`). */
+export function leadToOutreachInput(l: Lead, context?: string): OutreachInput {
+  const isEmail = (v?: string) => !!v && /\S+@\S+\.\S+/.test(v);
+  const email = l.email || (isEmail(l.contact) ? l.contact : undefined);
+  const phone = !isEmail(l.contact) ? l.contact : undefined;
+  return {
+    email,
+    phone,
+    name: l.company,
+    companyName: l.company,
+    website: l.url,
+    industry: l.niche,
+    region: l.location,
+    context: context || l.note,
+    send: true,
+  };
+}
+
+/**
+ * Zleć Sales OS-owi napisanie (AI) i wysyłkę maila do leada. Sales OS utworzy
+ * lead (jeśli trzeba), wygeneruje pierwszy kontakt, wrzuci do kolejki akceptacji
+ * i — domyślnie — od razu wyśle. Wymaga adresu e-mail przy wysyłce.
+ */
+export async function outreachViaSalesOs(input: OutreachInput): Promise<OutreachResult> {
+  const url = baseUrl();
+  if (!url || !token()) return { ok: false, message: "Najpierw uzupełnij adres AI Sales OS i token (⚙ → Integracje)." };
+  const send = input.send !== false;
+  if (send && !input.email?.trim()) {
+    return { ok: false, message: "Do wysyłki potrzebny jest adres e-mail leada (albo użyj trybu „tylko szkic”)." };
+  }
+  try {
+    const res = await fetchTimeout(
+      `${url}/api/public/outreach`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-ingest-token": token() },
+        body: JSON.stringify({ ...input, send }),
+      },
+      30000,
+    );
+    if (res.status === 401) return { ok: false, message: "Token odrzucony przez Sales OS." };
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      return { ok: false, message: `Sales OS: ${(e as { error?: string }).error || res.status}` };
+    }
+    const d = (await res.json()) as { sent?: boolean; drafted?: boolean; provider?: string; simulated?: boolean };
+    const who = input.companyName || input.name || "lead";
+    if (d.sent) {
+      return { ok: true, sent: true, drafted: d.drafted, message: `✅ Sales OS napisał i wysłał mail do „${who}”${d.simulated ? " (tryb symulacji — ustaw RESEND_API_KEY, by wysyłać naprawdę)" : ` (${d.provider})`}.` };
+    }
+    return { ok: true, sent: false, drafted: true, message: `📝 Sales OS przygotował szkic maila do „${who}” w kolejce akceptacji (nie wysłano).` };
+  } catch (e) {
+    return { ok: false, message: `Brak połączenia z Sales OS: ${e instanceof Error ? e.message : e}` };
+  }
+}
+
+/**
+ * Wyślij zaległe szkice maili z kolejki Sales OS (do dziennego limitu firmy).
+ * To „opróżnij kolejkę i auto-wyślij" — np. po masowym wysłaniu leadów z autoDraft.
+ */
+export async function flushSalesOsOutreach(max?: number): Promise<OutreachResult> {
+  const url = baseUrl();
+  if (!url || !token()) return { ok: false, message: "Najpierw uzupełnij adres AI Sales OS i token (⚙ → Integracje)." };
+  try {
+    const res = await fetchTimeout(
+      `${url}/api/public/outreach`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-ingest-token": token() },
+        body: JSON.stringify({ flushPending: true, ...(max ? { max } : {}) }),
+      },
+      30000,
+    );
+    if (!res.ok) return { ok: false, message: `Sales OS odpowiedział błędem (${res.status}).` };
+    const d = (await res.json()) as { sent?: number; failed?: number; skipped?: number };
+    const sent = d.sent ?? 0;
+    return {
+      ok: true,
+      sent: sent > 0,
+      message: sent
+        ? `✅ Sales OS auto-wysłał ${sent} maili z kolejki${d.failed ? ` · nieudane: ${d.failed}` : ""}.`
+        : "Brak maili do wysłania w kolejce Sales OS (albo osiągnięto dzienny limit).",
+    };
+  } catch (e) {
+    return { ok: false, message: `Brak połączenia z Sales OS: ${e instanceof Error ? e.message : e}` };
+  }
+}

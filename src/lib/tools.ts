@@ -13,7 +13,7 @@ import { generateCards } from "./cards";
 import { runAutomation } from "./n8n";
 import { getCrypto, getRate } from "./markets";
 import { findLeads } from "./leads";
-import { openSalesOs, syncFromSalesOs, salesOsStatsText, pushLeadsToSalesOs, salesOsConfigured } from "./salesOs";
+import { openSalesOs, syncFromSalesOs, salesOsStatsText, pushLeadsToSalesOs, salesOsConfigured, outreachViaSalesOs, flushSalesOsOutreach, leadToOutreachInput } from "./salesOs";
 import { buildDossier, auditWeakPoints } from "./leadIntel";
 import { callNowList, followUpsDue, followUpMessage, pipelineForecast, openLabel } from "./salesEngine";
 import { syncSalesTasks, autoPlanSummary } from "./autoPlan";
@@ -1134,6 +1134,52 @@ const tools: Tool[] = [
     run: async () => {
       if (!salesOsConfigured()) return "AI Sales OS nie jest skonfigurowany — podaj adres i token w ⚙ → Integracje.";
       return (await pushLeadsToSalesOs()).message;
+    },
+  },
+  {
+    def: {
+      name: "salesos_email",
+      description:
+        "Zleć AI Sales OS-owi napisanie i WYSŁANIE maila (pierwszy kontakt) do leada — treść i wysyłka dzieją się w Sales OS (źródło prawdy: scoring, kolejka akceptacji, dostawca poczty). Używaj na: „napisz i wyślij mail do <firma> przez Sales OS / odezwij się do <firma> mailowo z CRM / wyślij ofertę do <firma>”. Podaj firmę (znajdę jej e-mail w Pulpicie) lub bezpośrednio e-mail. Ustaw draft_only=true, gdy użytkownik chce tylko szkic do akceptacji (bez wysyłki).",
+      input_schema: obj(
+        {
+          company: str("Nazwa firmy/leada z Pulpitu (znajdę kontakt) — opcjonalnie, jeśli podasz e-mail"),
+          email: str("Adres e-mail odbiorcy (opcjonalnie, jeśli podasz firmę)"),
+          context: str("Kontekst dla AI: co oferujemy / czego im brakuje (opcjonalnie)"),
+          draft_only: { type: "boolean", description: "Tylko szkic do kolejki akceptacji, bez wysyłki (opcjonalnie)" },
+        },
+        [],
+      ),
+    },
+    run: async ({ company, email, context, draft_only }) => {
+      if (!salesOsConfigured()) return "AI Sales OS nie jest skonfigurowany — podaj adres i token w ⚙ → Integracje.";
+      const send = draft_only !== true;
+      if (company?.trim()) {
+        const c = String(company).trim().toLowerCase();
+        const lead = (store.data.leads || []).find((l) => l.company.toLowerCase() === c)
+          || (store.data.leads || []).find((l) => l.company.toLowerCase().includes(c));
+        if (lead) {
+          const input = leadToOutreachInput(lead, context);
+          input.send = send;
+          if (email?.trim()) input.email = String(email).trim();
+          return (await outreachViaSalesOs(input)).message;
+        }
+        if (!email?.trim()) return `Nie mam „${company}" w Pulpicie. Podaj e-mail albo najpierw znajdź/zsynchronizuj leada.`;
+      }
+      if (!email?.trim()) return "Podaj firmę (z Pulpitu) lub adres e-mail odbiorcy.";
+      return (await outreachViaSalesOs({ email: String(email).trim(), companyName: company?.trim(), context: context?.trim(), send })).message;
+    },
+  },
+  {
+    def: {
+      name: "salesos_flush_emails",
+      description:
+        "Auto-wyślij zaległe szkice maili z kolejki akceptacji AI Sales OS (do dziennego limitu firmy). Używaj na: „wyślij wszystkie zaległe maile z CRM / opróżnij kolejkę Sales OS / roześlij przygotowane wiadomości”.",
+      input_schema: obj({ max: { type: "number", description: "Maks. liczba maili do wysłania (opcjonalnie)" } }, []),
+    },
+    run: async ({ max }) => {
+      if (!salesOsConfigured()) return "AI Sales OS nie jest skonfigurowany — podaj adres i token w ⚙ → Integracje.";
+      return (await flushSalesOsOutreach(typeof max === "number" ? max : undefined)).message;
     },
   },
 ];
