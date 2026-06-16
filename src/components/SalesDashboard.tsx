@@ -3,7 +3,7 @@ import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
 import { splitOffer } from "../lib/glinks";
-import { canSendDirect, draftAndSendOffer, sentTodayCount } from "../lib/mailer";
+import { canSendDirect, draftAndSendOffer, sentTodayCount, sendAllOffers } from "../lib/mailer";
 import { findLeads } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { leadsToCsv, followUpsDue, callNowList, searchLeads, wasLeadEmailed } from "../lib/salesEngine";
@@ -76,6 +76,24 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
     const ok = await buildDossiers(fresh.map((l) => l.id), (done, total) => setBulkMsg(`🧠 Przygotowuję teczki… ${done}/${total}`));
     setBulking(false);
     setBulkMsg(`✅ Gotowe ${ok}/${fresh.length} teczek — każdy lead ma audyt, analizę, e-mail i skrypt rozmowy.`);
+  };
+
+  // Masowa wysyłka ofert: do wszystkich leadów z e-mailem, którzy nie byli mailowani.
+  const sendAll = async () => {
+    if (!canSendDirect()) { setBulkMsg("Najpierw skonfiguruj pocztę: ⚙ → Poczta (adres + hasło aplikacji). Bez tego użyj „📧 Napisz i otwórz pocztę” przy leadzie."); return; }
+    const targets = (store.data.leads || []).filter((l) => leadEmail(l) && !wasLeadEmailed(l, store.data.sentMail || []));
+    if (!targets.length) { setBulkMsg("Brak leadów do wysłania — wszyscy z e-mailem są już mailowani (albo brak adresów)."); return; }
+    const cap = Math.min(25, targets.length);
+    if (!window.confirm(`Wysłać ofertę do ${cap} leadów (z e-mailem, jeszcze niemailowanych)?\n\nMaks. 25 na turę. Każdy dostanie spersonalizowaną ofertę.`)) return;
+    setBulking(true);
+    setBulkMsg(`📤 Wysyłam oferty… (do ${cap})`);
+    const r = await sendAllOffers(cap);
+    setBulking(false);
+    const parts = [`✅ Wysłano ${r.sent}.`];
+    if (r.alreadyEmailed) parts.push(`pominięto ${r.alreadyEmailed} mailowanych`);
+    if (r.noEmail) parts.push(`${r.noEmail} bez e-maila`);
+    if (r.failed) parts.push(`⚠ nieudane ${r.failed}`);
+    setBulkMsg(parts.join(" · ") + " — szczegóły w 📤 Skrzynce wysłanych.");
   };
 
   // „Znajdź leady" — od ręki, prosto z pulpitu. Darmowe (OpenStreetMap), z
@@ -294,6 +312,9 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
           )}
           <button className="btn" style={{ marginTop: 8 }} onClick={bulkDossiers} disabled={bulking}>
             {bulking ? "🧠 Pracuję…" : "🧠 Teczki dla wszystkich nowych (audyt + analiza + e-maile)"}
+          </button>
+          <button className="btn" style={{ marginTop: 8, borderColor: "var(--ok, #58e08a)" }} onClick={sendAll} disabled={bulking}>
+            {bulking ? "📤 Pracuję…" : "📤 Wyślij oferty do wszystkich (z e-mailem, niemailowanych)"}
           </button>
           {bulkMsg && <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>{bulkMsg}</p>}
 
