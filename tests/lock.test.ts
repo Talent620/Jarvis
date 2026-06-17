@@ -32,6 +32,30 @@ describe("Blokada PIN — skrót + sól", () => {
     clearPin();
     expect(lockIsSet()).toBe(false);
   });
+
+  it("nowy PIN używa PBKDF2 (pole iter w rekordzie)", async () => {
+    await setPin("1234");
+    const rec = JSON.parse(localStorage.getItem("jarvis.lock.v1") || "{}");
+    expect(rec.iter).toBeGreaterThan(0);
+  });
+
+  it("odrzuca zbyt krótki PIN", async () => {
+    await expect(setPin("12")).rejects.toThrow();
+  });
+
+  it("weryfikuje stary rekord SHA-256 i migruje go do PBKDF2", async () => {
+    // Zasymuluj starszy rekord (sól + jednokrotny SHA-256, bez pola iter).
+    const enc = new TextEncoder();
+    const salt = "abcd1234";
+    const buf = await crypto.subtle.digest("SHA-256", enc.encode(salt + "1234"));
+    const hash = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    localStorage.setItem("jarvis.lock.v1", JSON.stringify({ salt, hash }));
+
+    expect(await verifyPin("1234")).toBe(true); // stary skrót nadal działa
+    const migrated = JSON.parse(localStorage.getItem("jarvis.lock.v1") || "{}");
+    expect(migrated.iter).toBeGreaterThan(0); // po udanym wejściu rekord podniesiony do PBKDF2
+    expect(await verifyPin("1234")).toBe(true); // i dalej weryfikuje poprawnie (już PBKDF2)
+  });
 });
 
 describe("Rate-limit PIN — ochrona przed zgadywaniem", () => {

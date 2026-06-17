@@ -1,16 +1,37 @@
 // Blokada aplikacji PIN-em — chroni dostęp do JARVIS-a (sejf, dane, sterowanie),
-// nawet gdy ktoś pobierze plik. PIN przechowywany wyłącznie jako skrót SHA-256+sól.
+// nawet gdy ktoś pobierze plik. PIN rozciągany przez PBKDF2-SHA256 (sól + iteracje),
+// więc krótkiego PIN-u nie da się szybko zgadnąć z kopii localStorage.
 
 const KEY = "jarvis.lock.v1";
+const PBKDF2_ITER = 210_000; // koszt obliczeniowy — utrudnia brute-force offline
+const MIN_PIN = 4;
 
 interface LockData {
   salt: string;
   hash: string;
+  /** Liczba iteracji PBKDF2. Brak pola = stary rekord SHA-256 (migrowany przy 1. udanym logowaniu). */
+  iter?: number;
 }
 
-async function sha256(text: string): Promise<string> {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+function hex(buf: ArrayBuffer): string {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Stary, jednokrotny SHA-256 — TYLKO do weryfikacji istniejących rekordów (migracja).
+async function sha256(text: string): Promise<string> {
+  return hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
+}
+
+// PBKDF2-SHA256 → 256-bitowy skrót (hex). Rozciąga PIN o `iterations` rund.
+async function pbkdf2(pin: string, salt: string, iterations: number): Promise<string> {
+  const enc = new TextEncoder();
+  const km = await crypto.subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: enc.encode(salt), iterations, hash: "SHA-256" },
+    km,
+    256,
+  );
+  return hex(bits);
 }
 
 function randHex(n: number): string {
@@ -24,9 +45,10 @@ export function lockIsSet(): boolean {
 }
 
 export async function setPin(pin: string): Promise<void> {
-  const salt = randHex(8);
-  const hash = await sha256(salt + pin);
-  localStorage.setItem(KEY, JSON.stringify({ salt, hash } as LockData));
+  if (!pin || pin.length < MIN_PIN) throw new Error(`PIN musi mieć co najmniej ${MIN_PIN} znaki.`);
+  const salt = randHex(16);
+  const hash = await pbkdf2(pin, salt, PBKDF2_ITER);
+  localStorage.setItem(KEY, JSON.stringify({ salt, hash, iter: PBKDF2_ITER } as LockData));
 }
 
 export function clearPin(): void {
@@ -54,10 +76,17 @@ export async function verifyPin(pin: string): Promise<boolean> {
     const raw = localStorage.getItem(KEY);
     if (!raw) return true;
     if (lockoutRemainingMs() > 0) return false; // chwilowa blokada — nie sprawdzaj
-    const { salt, hash } = JSON.parse(raw) as LockData;
-    const ok = (await sha256(salt + pin)) === hash;
+    const { salt, hash, iter } = JSON.parse(raw) as LockData;
+    // Rekord PBKDF2 (iter) → PBKDF2; stary rekord SHA-256 (brak iter) → weryfikuj po staremu.
+    const ok = iter
+      ? (await pbkdf2(pin, salt, iter)) === hash
+      : (await sha256(salt + pin)) === hash;
     if (ok) {
       localStorage.removeItem(ATT_KEY); // sukces — wyzeruj licznik
+      // Migracja starego SHA-256 → PBKDF2 przy pierwszym udanym logowaniu (nie blokuj wejścia, gdy się nie uda).
+      if (!iter && pin.length >= MIN_PIN) {
+        try { await setPin(pin); } catch { /* migracja nieobowiązkowa */ }
+      }
       return true;
     }
     const a = loadAtt();
