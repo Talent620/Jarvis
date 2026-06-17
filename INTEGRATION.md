@@ -98,9 +98,15 @@ Sales OS to standardowy Next.js 14 — wdraża się jak każda apka Next:
    EMAIL_FROM=Twoja Firma <kontakt@twojadomena.pl>
    AI_PROVIDER=mock                       # lub openai/anthropic + odpowiedni klucz
    ```
-4. **Migracja:** po pierwszym deployu uruchom `npx prisma migrate deploy` (lub
-   `prisma db push`) względem produkcyjnej bazy, a potem opcjonalnie `npm run db:seed`.
+4. **Deploy** — to wszystko. Schemat bazy **zakłada się sam** przy buildzie:
+   skrypt `vercel-build` uruchamia `prisma db push` przed `next build`, więc nie
+   musisz ręcznie migrować. (Opcjonalnie, dla danych demo, raz lokalnie:
+   `DATABASE_URL=… npm run db:seed`.)
 5. W JARVIS-ie wpisz adres `https://twoj-sales-os.vercel.app` i token z kroku 2.
+
+One-click (po wgraniu repo na GitHub):
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new) — wskaż
+katalog `sales-os` jako Root Directory i uzupełnij zmienne z kroku 3.
 
 Pełny opis zmiennych: [`sales-os/.env.example`](sales-os/.env.example).
 
