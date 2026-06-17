@@ -23,6 +23,24 @@ const STATUS: { id: LeadStatus; label: string; color: string }[] = [
   { id: "lost", label: "Odrzucony", color: "var(--text-dim)" },
 ];
 
+/** Otwórz URL leada tylko gdy to http/https — dane leada bywają z sieci (blokuj javascript:/data:). */
+function openLeadUrl(raw?: string): void {
+  if (!raw) return;
+  try {
+    const u = new URL(raw, window.location.origin);
+    if (u.protocol === "http:" || u.protocol === "https:") window.open(u.toString(), "_blank", "noopener,noreferrer");
+  } catch {
+    /* nieprawidłowy URL — pomiń */
+  }
+}
+
+/** Parsuj liczbę z inputu zachowując 0; puste/niepoprawne → undefined. */
+function numOrUndef(v: string): number | undefined {
+  if (v.trim() === "") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: () => void; onWeb?: () => void; onMoney?: () => void }) {
   useEscape(onClose);
   const { data } = useStore();
@@ -126,14 +144,17 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
 
   const writeOffer = async (l: Lead) => {
     setDrafting(l.id);
-    const offer = await draftOffer(l);
-    setDrafting("");
-    if (offer)
-      store.setData((d) => {
-        const x = d.leads.find((y) => y.id === l.id);
-        if (x) { x.offer = offer; if (x.status === "new") x.status = "offer"; x.updatedAt = Date.now(); }
-      });
-    else toast("Nie udało się napisać oferty — sprawdź klucz AI (⚙ → AI) i spróbuj ponownie.");
+    try {
+      const offer = await draftOffer(l);
+      if (offer)
+        store.setData((d) => {
+          const x = d.leads.find((y) => y.id === l.id);
+          if (x) { x.offer = offer; if (x.status === "new") x.status = "offer"; x.updatedAt = Date.now(); }
+        });
+      else toast("Nie udało się napisać oferty — sprawdź klucz AI (⚙ → AI) i spróbuj ponownie.");
+    } finally {
+      setDrafting(""); // zawsze odblokuj stan, nawet gdy draftOffer rzuci wyjątek
+    }
   };
   // E-mail leada: najpierw dedykowane pole `email` (z OSM/strony), w razie braku — `contact`.
   // To naprawia „nie wysyła się z tego miejsca": adres bywał w `email`, a kod patrzył tylko na `contact`.
@@ -214,7 +235,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
       return;
     }
     store.setData((d) =>
-      d.leads.unshift({ id: uid(), company: c, contact: form.contact.trim() || undefined, value: Number(form.value) || undefined, status: "new", createdAt: Date.now(), updatedAt: Date.now() }),
+      d.leads.unshift({ id: uid(), company: c, contact: form.contact.trim() || undefined, value: numOrUndef(form.value), status: "new", createdAt: Date.now(), updatedAt: Date.now() }),
     );
     setForm({ company: "", contact: "", value: "" });
     toast(`➕ Dodano: ${c}`);
@@ -444,11 +465,11 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
                     type="number"
                     value={l.value ?? ""}
                     placeholder="zł"
-                    onChange={(e) => setField(l.id, { value: Number(e.target.value) || undefined })}
+                    onChange={(e) => setField(l.id, { value: numOrUndef(e.target.value) })}
                     style={{ width: 70, padding: "4px 8px", borderRadius: 8, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", fontSize: 13 }}
                   />
                   <button className="chip" onClick={() => setOpenLead(l.id)}>🗂 Teczka</button>
-                  {l.url && <button className="chip" onClick={() => window.open(l.url, "_blank", "noopener")}>🌐 WWW</button>}
+                  {l.url && <button className="chip" onClick={() => openLeadUrl(l.url)}>🌐 WWW</button>}
                   {l.contact && <button className="chip" onClick={() => copy(l.contact)}>📋 Kontakt</button>}
                   <button className="chip" onClick={() => writeOffer(l)} disabled={drafting === l.id}>
                     {drafting === l.id ? "✍ Piszę…" : l.offer ? "✍ Napisz ponownie" : "✍ Szkic oferty"}

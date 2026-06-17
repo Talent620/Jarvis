@@ -20,13 +20,24 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    // Osobisty klucz podpisujący (dołączony w repo — patrz README, sekcja podpisywanie).
+    // Klucz podpisujący: najpierw zmienne środowiskowe / gradle.properties (sekrety CI),
+    // a w razie ich braku fallback na lokalny klucz dev. Nie trzymaj realnych sekretów w repo —
+    // ustaw JARVIS_RELEASE_* w GitHub Actions secrets (patrz README, sekcja podpisywanie).
     signingConfigs {
         release {
-            storeFile file("../keystore/jarvis.jks")
-            storePassword "jarvis2026"
-            keyAlias "jarvis"
-            keyPassword "jarvis2026"
+            def envStoreFile = System.getenv("JARVIS_RELEASE_STORE_FILE") ?: project.findProperty("JARVIS_RELEASE_STORE_FILE")
+            if (envStoreFile != null && !envStoreFile.toString().isBlank()) {
+                storeFile file(envStoreFile)
+                storePassword System.getenv("JARVIS_RELEASE_STORE_PASSWORD") ?: project.findProperty("JARVIS_RELEASE_STORE_PASSWORD")
+                keyAlias System.getenv("JARVIS_RELEASE_KEY_ALIAS") ?: project.findProperty("JARVIS_RELEASE_KEY_ALIAS")
+                keyPassword System.getenv("JARVIS_RELEASE_KEY_PASSWORD") ?: project.findProperty("JARVIS_RELEASE_KEY_PASSWORD")
+            } else {
+                // Fallback dev (lokalny klucz). Zalecane: rotacja klucza i przeniesienie do sekretów.
+                storeFile file("../keystore/jarvis.jks")
+                storePassword "jarvis2026"
+                keyAlias "jarvis"
+                keyPassword "jarvis2026"
+            }
         }
     }
     buildTypes {

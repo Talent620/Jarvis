@@ -39,14 +39,19 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
     if (!prompt.trim()) return;
     setBusy(true);
     setErr("");
-    const r = await generateSite(prompt, edit && html ? html : undefined, kind);
-    if ("error" in r) setErr(r.error);
-    else {
-      setHtml(r.html);
-      setView("preview");
-      if (edit) setPrompt("");
+    try {
+      const r = await generateSite(prompt, edit && html ? html : undefined, kind);
+      if ("error" in r) setErr(r.error);
+      else {
+        setHtml(r.html);
+        setView("preview");
+        if (edit) setPrompt("");
+      }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false); // zawsze odblokuj przycisk, nawet przy nieoczekiwanym błędzie
     }
-    setBusy(false);
   };
 
   const download = () => {

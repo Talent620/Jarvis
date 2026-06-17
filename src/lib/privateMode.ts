@@ -77,7 +77,7 @@ export async function enablePrivateMode(rawUrl?: string): Promise<PrivateResult>
   return {
     enabled: true,
     message:
-      `🛡 Tryb Prywatny aktywny. Działam w 100% lokalnie na modelu „${model}" — żadne dane nie opuszczają tego urządzenia, brak polityki dostawcy.` +
+      `🛡 Tryb Prywatny aktywny. Model „${model}" działa lokalnie (Ollama) — rozmowy z AI nie idą do zewnętrznego dostawcy. Uwaga: pojedyncze funkcje pomocnicze (np. pogoda) mogą nadal korzystać z sieci.` +
       (uncensored
         ? " Model jest nieocenzurowany: odpowiadam wprost, bez ograniczeń zewnętrznych usług."
         : " Wskazówka: dla pełnego braku ograniczeń pobierz model bez cenzury:  ollama pull dolphin-mistral."),

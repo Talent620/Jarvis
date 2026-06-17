@@ -659,7 +659,10 @@ export default {
         const u = url.searchParams.get("u");
         if (!u) return json(400, { error: "Brak parametru u." });
         const host = new URL(u).host;
-        if (!ALLOWED_OPENAI_HOSTS.some((h) => host.includes(h))) return json(403, { error: `Host niedozwolony: ${host}` });
+        const hostname = new URL(u).hostname.toLowerCase();
+        // Ścisłe dopasowanie: dokładny host lub jego subdomena. `includes` przepuszczał
+        // np. api.groq.com.attacker.tld i wyciekłby klucz Bearer dostawcy.
+        if (!ALLOWED_OPENAI_HOSTS.some((h) => hostname === h || hostname.endsWith(`.${h}`))) return json(403, { error: `Host niedozwolony: ${host}` });
         const key = envKeyForHost(host, env) || (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
         return relay(u, req, { "content-type": "application/json", authorization: `Bearer ${key}` });
       }

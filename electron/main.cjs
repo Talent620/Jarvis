@@ -238,6 +238,13 @@ async function googleAccess() {
 }
 
 function registerDesktopControl() {
+  // Zaufane źródło IPC: aplikacja ładuje się z file://…/dist/index.html (loadFile).
+  // Uprzywilejowane akcje OS (uruchamianie aplikacji, zasilanie, klawiatura, zrzut ekranu)
+  // wykonujemy TYLKO dla własnej ramki — żeby kompromitacja renderera nie sterowała komputerem.
+  const isTrustedIpc = (event) => {
+    const url = event?.senderFrame?.url || event?.sender?.getURL?.() || "";
+    return url.startsWith("file://");
+  };
   // --- Kalendarz Google (natywnie, bez serwera) ---
   ipcMain.handle("jarvis:google-connect", async (_e, payload) => {
     const clientId = String((payload && payload.clientId) || "").trim();
@@ -312,7 +319,8 @@ function registerDesktopControl() {
     }
   });
 
-  ipcMain.handle("jarvis:open", async (_e, target) => {
+  ipcMain.handle("jarvis:open", async (event, target) => {
+    if (!isTrustedIpc(event)) return "err:forbidden";
     if (!target) return "err:empty";
     // URL/protokół (http, mailto, spotify:, ms-settings:) → powłoka; inaczej ścieżka.
     if (/^[a-z][a-z0-9+.-]*:/i.test(target)) {
@@ -323,7 +331,8 @@ function registerDesktopControl() {
     return err ? `err:${err}` : "ok";
   });
 
-  ipcMain.handle("jarvis:launch", async (_e, name) => {
+  ipcMain.handle("jarvis:launch", async (event, name) => {
+    if (!isTrustedIpc(event)) return "err:forbidden";
     const key = String(name || "").toLowerCase().trim();
     if (!key) return "err:empty";
     const mapped = WIN_APPS[key] || key;
@@ -340,11 +349,15 @@ function registerDesktopControl() {
       spawn("open", ["-a", mapped], { detached: true, stdio: "ignore" }).unref();
       return "ok";
     }
-    spawn("sh", ["-c", `${mapped} &`], { detached: true, stdio: "ignore" }).unref();
+    // Bez powłoki — bezpośredni exec (sh -c z interpolacją groził wstrzyknięciem poleceń).
+    const [cmd, ...args] = String(mapped).split(/\s+/).filter(Boolean);
+    if (!cmd) return "err:unknown";
+    spawn(cmd, args, { detached: true, stdio: "ignore" }).unref();
     return "ok";
   });
 
-  ipcMain.handle("jarvis:power", async (_e, action) => {
+  ipcMain.handle("jarvis:power", async (event, action) => {
+    if (!isTrustedIpc(event)) return "err:forbidden";
     const a = String(action || "").toLowerCase();
     if (process.platform !== "win32") return "err:unsupported";
     const map = {
@@ -360,7 +373,8 @@ function registerDesktopControl() {
     return "ok";
   });
 
-  ipcMain.handle("jarvis:volume", async (_e, action) => {
+  ipcMain.handle("jarvis:volume", async (event, action) => {
+    if (!isTrustedIpc(event)) return "err:forbidden";
     const a = String(action || "").toLowerCase();
     if (process.platform !== "win32") return "err:unsupported";
     // VK: 175 = głośniej, 174 = ciszej, 173 = wycisz.
@@ -370,7 +384,8 @@ function registerDesktopControl() {
     return "ok";
   });
 
-  ipcMain.handle("jarvis:media", async (_e, action) => {
+  ipcMain.handle("jarvis:media", async (event, action) => {
+    if (!isTrustedIpc(event)) return "err:forbidden";
     const a = String(action || "").toLowerCase();
     if (process.platform !== "win32") return "err:unsupported";
     // VK multimedialne: play/pause 179, next 176, prev 177, stop 178.
@@ -381,7 +396,8 @@ function registerDesktopControl() {
   });
 
   // Zrzut ekranu → base64 PNG (do analizy wizyjnej „co mam na ekranie?").
-  ipcMain.handle("jarvis:screenshot", async () => {
+  ipcMain.handle("jarvis:screenshot", async (event) => {
+    if (!isTrustedIpc(event)) return "err:forbidden";
     try {
       const d = screen.getPrimaryDisplay();
       const maxW = 1600;
@@ -399,7 +415,8 @@ function registerDesktopControl() {
   });
 
   // Pisanie tekstu (opcjonalnie do okna o podanym tytule).
-  ipcMain.handle("jarvis:type", async (_e, payload) => {
+  ipcMain.handle("jarvis:type", async (event, payload) => {
+    if (!isTrustedIpc(event)) return "err:forbidden";
     if (process.platform !== "win32") return "err:unsupported";
     const { text, window } = payload || {};
     if (!text) return "err:empty";
@@ -408,7 +425,8 @@ function registerDesktopControl() {
   });
 
   // Skrót klawiszowy (opcjonalnie do okna o podanym tytule).
-  ipcMain.handle("jarvis:hotkey", async (_e, payload) => {
+  ipcMain.handle("jarvis:hotkey", async (event, payload) => {
+    if (!isTrustedIpc(event)) return "err:forbidden";
     if (process.platform !== "win32") return "err:unsupported";
     const { combo, window } = payload || {};
     const sk = buildHotkey(combo);

@@ -34,6 +34,14 @@ export default function PermissionDialog({
   const [listening, setListening] = useState(false);
   const rememberRef = useRef(false);
   rememberRef.current = remember;
+  // Współdzielona blokada: i głos, i kliknięcie przycisku idą przez nią, więc
+  // onDecision nie odpali się dwa razy (wyścig głos ↔ przycisk).
+  const decidedRef = useRef(false);
+  const finish = (allow: boolean, rememberFlag: boolean) => {
+    if (decidedRef.current) return;
+    decidedRef.current = true;
+    onDecision(allow, rememberFlag);
+  };
   const label = LABELS[req.tool] ?? req.tool;
   const summary = JSON.stringify(req.input ?? {}, null, 0).slice(0, 200);
 
@@ -48,7 +56,7 @@ export default function PermissionDialog({
       decided = true;
       listener?.stop();
       stopSpeaking();
-      onDecision(allow, rememberRef.current);
+      finish(allow, rememberRef.current);
     };
     speak(`${label}? Powiedz tak albo nie.`, { ...store.settings, speak: true });
     listener = createListener({
@@ -121,10 +129,10 @@ export default function PermissionDialog({
           </label>
         </div>
         <div className="panel-foot" style={{ display: "flex", gap: 8 }}>
-          <button className="btn" style={{ flex: 1 }} onClick={() => onDecision(false, false)}>
+          <button className="btn" style={{ flex: 1 }} onClick={() => finish(false, false)}>
             Odmów
           </button>
-          <button className="btn primary" style={{ flex: 1 }} onClick={() => onDecision(true, remember)}>
+          <button className="btn primary" style={{ flex: 1 }} onClick={() => finish(true, remember)}>
             Zezwól
           </button>
         </div>

@@ -67,6 +67,7 @@ export class ConversationLoop {
       this.onState("speaking");
       await speak(reply.text, { ...store.settings, speak: true });
     } catch (e) {
+      this.history.pop(); // zdejmij nieodpowiedzianą wiadomość użytkownika — historia musi zostać sparowana
       this.onState("error", e instanceof Error ? e.message : String(e));
     } finally {
       this.processing = false;

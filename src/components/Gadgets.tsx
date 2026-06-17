@@ -653,6 +653,11 @@ function Cipher() {
       setMsg("Podaj tekst i hasło.");
       return;
     }
+    if (mode === "enc" && pass.length < 12) {
+      // Najmocniejszy szyfr nie pomoże przy słabym haśle — wymuś sensowną długość.
+      setMsg("Hasło musi mieć min. 12 znaków — inaczej szyfr łatwo złamać.");
+      return;
+    }
     try {
       setOut(mode === "enc" ? await encryptText(text, pass) : await decryptText(text, pass));
     } catch {

@@ -52,6 +52,8 @@ export function saveChats(list: ChatSession[]): void {
       /* limit — spróbuj agresywniej */
     }
   }
+  // Wszystkie próby wyczerpały limit — nie gub po cichu, zasygnalizuj.
+  console.error("[chats] Nie udało się zapisać historii czatu — pamięć (localStorage) pełna.");
 }
 
 export function titleFrom(messages: ChatMessage[]): string {

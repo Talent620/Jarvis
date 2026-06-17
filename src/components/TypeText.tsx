@@ -11,6 +11,7 @@ export default function TypeText({ text, animate }: { text: string; animate: boo
       setShown(text);
       return;
     }
+    setShown(""); // restart animacji od zera, gdy zmieni się text/animate
     let i = 0;
     const step = Math.max(1, Math.round(text.length / 120)); // skok, by długie odpowiedzi nie ciągnęły się wiecznie
     ref.current = window.setInterval(() => {
@@ -24,8 +25,7 @@ export default function TypeText({ text, animate }: { text: string; animate: boo
     return () => {
       if (ref.current) clearInterval(ref.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [text, animate]);
 
   const typing = animate && shown.length < text.length;
   return <span className={typing ? "caret" : ""}>{shown}</span>;

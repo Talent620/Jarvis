@@ -26,6 +26,10 @@ export const vaultUnlocked = (): boolean => cache !== null;
 /** Odblokuj istniejący sejf (lub utwórz nowy) hasłem głównym. */
 export async function unlockVault(pass: string): Promise<boolean> {
   if (!pass) return false;
+  // Wyzeruj sesję ZANIM spróbujemy odszyfrować — błędne hasło przy otwartym sejfie
+  // musi go zaryglować, a nie zostawić stare wpisy widoczne przez listCreds().
+  cache = null;
+  master = "";
   const blob = localStorage.getItem(KEY);
   if (!blob) {
     cache = [];
@@ -38,6 +42,8 @@ export async function unlockVault(pass: string): Promise<boolean> {
     master = pass;
     return true;
   } catch {
+    cache = null;
+    master = "";
     return false;
   }
 }
