@@ -100,12 +100,13 @@ export class LiveSession {
     };
     this.ws.onmessage = (ev) => this.onMessage(ev);
     this.ws.onerror = () => {
-      if (!this.closed) this.onState("error", "Nie udało się połączyć z Gemini Live.");
+      if (!this.closed) { this.teardownOnError(); this.onState("error", "Nie udało się połączyć z Gemini Live."); }
     };
     this.ws.onclose = (ev) => {
       if (this.closed) return;
       // Kod 1000 = normalne zamknięcie; inne wskazują przyczynę (klucz, model, limit).
       const reason = closeReason(ev.code, ev.reason);
+      if (ev.code !== 1000) this.teardownOnError(); // zwolnij mic/konteksty — inaczej retry stackuje
       this.onState(ev.code === 1000 ? "closed" : "error", reason);
     };
   }
@@ -220,9 +221,13 @@ export class LiveSession {
     setLevel(0);
   }
 
-  stop(): void {
-    this.closed = true;
-    this.flushPlayback();
+  // Zwolnij zasoby audio + WS (idempotentnie). Bez zmiany stanu — używane też na
+  // ścieżce błędu (onerror/onclose), żeby nieudane połączenie nie zostawiało
+  // otwartego mikrofonu i dwóch AudioContextów przy ponownych próbach.
+  private torn = false;
+  private teardownOnError(): void {
+    if (this.torn) return;
+    this.torn = true;
     try {
       this.processor?.disconnect();
       this.source?.disconnect();
@@ -233,6 +238,12 @@ export class LiveSession {
     } catch {
       /* ignore */
     }
+  }
+
+  stop(): void {
+    this.closed = true;
+    this.flushPlayback();
+    this.teardownOnError();
     this.onState("closed");
   }
 }

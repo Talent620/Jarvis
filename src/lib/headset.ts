@@ -42,7 +42,15 @@ export function watchHeadset(onConnect: () => void): () => void {
   };
 
   void scan(false); // baza startowa
-  const handler = () => void scan(true);
+  // Debounce: (re)połączenie BT potrafi wystrzelić serię `devicechange` — skanuj raz.
+  let deb: ReturnType<typeof setTimeout> | null = null;
+  const handler = () => {
+    if (deb) clearTimeout(deb);
+    deb = setTimeout(() => void scan(true), 300);
+  };
   md.addEventListener("devicechange", handler);
-  return () => md.removeEventListener("devicechange", handler);
+  return () => {
+    if (deb) clearTimeout(deb);
+    md.removeEventListener("devicechange", handler);
+  };
 }

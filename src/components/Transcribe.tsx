@@ -8,6 +8,8 @@ import Guide from "./Guide";
 
 type Phase = "idle" | "recording" | "working" | "done";
 
+const MAX_SECS = 600; // ~10 min — twarda granica, by blob nie urósł ponad limit Whisper/Groq i pamięci
+
 // Transkrypcja spotkań/notatek głosowych — nagrywasz, Groq Whisper zamienia na
 // tekst, zapisujesz jako notatkę lub wpis dziennika. Darmowe (klucz Groq).
 export default function Transcribe({ onClose }: { onClose: () => void }) {
@@ -53,6 +55,15 @@ export default function Transcribe({ onClose }: { onClose: () => void }) {
     rec.current?.stop();
     stream.current?.getTracks().forEach((t) => t.stop());
   };
+
+  // Auto-stop po limicie — długie nagranie inaczej rośnie bez ograniczeń (pamięć + limit API).
+  useEffect(() => {
+    if (phase === "recording" && secs >= MAX_SECS) {
+      stop();
+      toast("Osiągnięto limit nagrania (10 min) — przetwarzam, co mam.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secs, phase]);
 
   const finish = async () => {
     setPhase("working");
