@@ -46,6 +46,7 @@ const defaultSettings: Settings = {
   mcpAllowlist: "",
   aiPricingOverrides: "",
   aiMonthlyBudgetUsd: 0,
+  onDeviceOnly: false,
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,

@@ -674,6 +674,18 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </span>
                 <Toggle on={s.unfilteredLocal} onClick={() => set({ unfilteredLocal: !s.unfilteredLocal })} />
               </div>
+              <div className="row">
+                <span>
+                  🔒 Tryb on-device (blokada chmury)
+                  <br />
+                  <span className="muted">
+                    Twarda blokada prywatności: JARVIS używa <b>wyłącznie</b> modelu lokalnego (Ollama),
+                    nigdy chmury, a web-search jest wyłączony. Nic nie opuszcza urządzenia. Wymaga
+                    skonfigurowanej Ollamy (adres poniżej); bez niej rozmowa zgłosi instrukcję.
+                  </span>
+                </span>
+                <Toggle on={s.onDeviceOnly} onClick={() => set({ onDeviceOnly: !s.onDeviceOnly })} />
+              </div>
               <div className="field">
                 <button
                   className="btn"

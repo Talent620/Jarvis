@@ -5,6 +5,12 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Program premium — Faza 8 (tryb on-device / prywatność)
+- **Twarda blokada chmury:** ustawienie `onDeviceOnly` — `routeOrder` zwraca wtedy wyłącznie model
+  lokalny (Ollama), nigdy chmury; web-search wyłączony (zero egres do sieci). Bez skonfigurowanej
+  Ollamy rozmowa zgłasza czytelną instrukcję zamiast cicho sięgać do chmury. Toggle w ⚙ → AI. +3 testy.
+  Decyzja: bez wbijania WASM/WebGPU (WebLLM) w bundle PWA — model lokalny przez Ollamę; WebLLM jako opcja przyszła.
+
 ### Program premium — Faza 7 (proaktywność + pamięć epizodyczna)
 - **`episodicMemory.ts`:** dziennik zdarzeń (czas+temat) — `topicOf`/`keywords`/`topTopics` oraz
   `staleRecurringTopics` (tematy częste w 30 dni, ale porzucone w ostatnich dniach). Zapis epizodu po

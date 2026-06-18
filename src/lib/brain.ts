@@ -77,6 +77,10 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
     ? [{ provider: "ollama", model: s.model && s.provider === "ollama" && s.model !== "auto" ? s.model : TASK_MODELS.ollama.simple }]
     : [];
 
+  // Tryb on-device (Faza 8): TYLKO model lokalny — żadna chmura, nic nie opuszcza urządzenia.
+  // Brak skonfigurowanej Ollamy → pusty łańcuch (caller pokaże instrukcję konfiguracji).
+  if (s.onDeviceOnly) return localTail;
+
   if (s.provider === "auto" && (s.model === "auto" || !s.model)) {
     let provs = PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim());
     if (hasImage) {
@@ -466,7 +470,8 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
 
   const baseCtx = {
     system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block }),
-    webSearch: store.settings.webSearch,
+    // Tryb on-device wyłącza web-search (zero egres do sieci — pełna prywatność/offline).
+    webSearch: store.settings.onDeviceOnly ? false : store.settings.webSearch,
     tools: toolDefs,
     history: trimmed,
     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
@@ -475,6 +480,11 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   // Router dobiera dostawcę+model do zadania (prostota/złożoność/obraz) + fallback.
   const order = routeOrder(trimmed);
   if (!order.length) {
+    if (store.settings.onDeviceOnly) {
+      throw new Error(
+        "Tryb on-device jest włączony, ale brak modelu lokalnego. Uruchom Ollamę i podaj jej adres w ⚙ → AI (np. http://localhost:11434), albo wyłącz tryb on-device.",
+      );
+    }
     throw new Error("Żaden dostawca AI nie ma wpisanego klucza. Wejdź w ⚙ → AI i wklej dowolny klucz (Szybki start).");
   }
 

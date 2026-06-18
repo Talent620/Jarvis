@@ -336,6 +336,8 @@ export interface Settings {
   aiPricingOverrides: string;
   /** Miesięczny budżet AI w USD (0 = brak limitu — tylko podgląd kosztów). */
   aiMonthlyBudgetUsd: number;
+  /** Tryb on-device (Faza 8): wyłącznie model lokalny (Ollama), bez chmury i web-search — prywatność/offline. */
+  onDeviceOnly: boolean;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */
