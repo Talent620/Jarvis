@@ -47,6 +47,7 @@ const defaultSettings: Settings = {
   aiPricingOverrides: "",
   aiMonthlyBudgetUsd: 0,
   onDeviceOnly: false,
+  brandName: "",
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,

@@ -9,6 +9,7 @@ import { subscribeLevel } from "../lib/audioLevel";
 import { primaryKey } from "../lib/keys";
 import { memoryContextBlock, resolveNamespace } from "../lib/memoryService";
 import { store } from "../lib/store";
+import { brand } from "../lib/brand";
 
 type Engine = "gemini" | "loop";
 type AnyState = LiveState | LoopState;
@@ -167,7 +168,7 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
     <div className="sheet live" onClick={(e) => e.stopPropagation()}>
       <div className="live-inner">
         <div className="brand" style={{ textAlign: "center" }}>
-          JARVIS
+          {brand()}
           <small>ROZMOWA NA ŻYWO · {engine === "gemini" ? "GEMINI LIVE" : providerLabel}</small>
         </div>
 

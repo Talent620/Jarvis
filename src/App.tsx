@@ -77,6 +77,7 @@ import { feedback, buzz, cue } from "./lib/feedback";
 import { ensureNotifPerms, notify } from "./lib/notifications";
 import { registerIntents } from "./lib/intents";
 import { store, uid } from "./lib/store";
+import { brand } from "./lib/brand";
 import { useStore } from "./hooks/useStore";
 import type { ChatMessage } from "./types";
 
@@ -776,7 +777,7 @@ export default function App() {
       )}
       <div className="topbar">
         <div className="brand">
-          JARVIS
+          {brand()}
           <small>
             {(resolveProvider()?.model || "BRAK API").toUpperCase()}
             {(() => {

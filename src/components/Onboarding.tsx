@@ -4,6 +4,7 @@ import { detectProvider, PROVIDERS, autoPick } from "../lib/providers/registry";
 import { testProvider } from "../lib/brain";
 import { speak } from "../lib/voice";
 import { cue } from "../lib/feedback";
+import { brand } from "../lib/brand";
 
 // Pierwsze uruchomienie: 3 kroki — (1) mózg AI, (2) głos i charakter, (3) tour po
 // funkcjach. Pokazywany raz; pomijalny w każdej chwili. Stan w localStorage.
@@ -97,7 +98,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
         {step === 0 && (
           <>
             <div className="onboard-orb" />
-            <h1>JARVIS</h1>
+            <h1>{brand()}</h1>
             <p className="onboard-sub">Twój osobisty system AI — głos, działanie, pamięć.</p>
             {builtIn ? (
               <>

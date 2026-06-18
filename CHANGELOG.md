@@ -5,6 +5,15 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Program premium — Faza 9 (produktyzacja)
+- **White-label:** ustawienie `brandName` + helper `brand()` (domyślnie „JARVIS", cap 32) — własna marka
+  w nagłówku, ekranie powitalnym (onboarding) i rozmowie na żywo; pole w ⚙ → Zachowanie. Nie zmienia
+  działania modelu, tylko prezentację. +4 testy.
+- **Onboarding kluczy:** potwierdzony (istniejący `Onboarding.tsx`: wklej dowolny klucz → auto-rozpoznanie
+  dostawcy → test połączenia → wybór imienia/charakteru → tour).
+- **Docs:** `USER_GUIDE.md` — przewodnik użytkownika (onboarding, klucze/auto-failover, rozmowa/czat prywatny,
+  pamięć, koszty/budżet, prywatność i tryb on-device, white-label, instalacja APK/EXE/PWA).
+
 ### Program premium — Faza 8 (tryb on-device / prywatność)
 - **Twarda blokada chmury:** ustawienie `onDeviceOnly` — `routeOrder` zwraca wtedy wyłącznie model
   lokalny (Ollama), nigdy chmury; web-search wyłączony (zero egres do sieci). Bez skonfigurowanej

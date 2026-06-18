@@ -1016,6 +1016,19 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <input value={s.userName} onChange={(e) => set({ userName: e.target.value })} />
               </div>
               <div className="field">
+                <label>Nazwa asystenta (white-label)</label>
+                <input
+                  value={s.brandName}
+                  placeholder="JARVIS"
+                  maxLength={32}
+                  onChange={(e) => set({ brandName: e.target.value })}
+                />
+                <p className="muted" style={{ marginTop: 4 }}>
+                  Własna marka w interfejsie (nagłówek, ekran powitalny, rozmowa na żywo).
+                  Puste = „JARVIS". Nie zmienia działania modelu — tylko wygląd.
+                </p>
+              </div>
+              <div className="field">
                 <label>Charakter JARVIS-a</label>
                 <select value={s.persona} onChange={(e) => set({ persona: e.target.value })}>
                   <option value="operator">Operacyjny — elitarny, precyzyjny, działa zamiast pytać</option>
