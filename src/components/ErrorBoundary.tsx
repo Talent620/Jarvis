@@ -12,6 +12,7 @@ type State = { error: Error | null; restarts: number; epoch: number };
 
 export default class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null, restarts: 0, epoch: 0 };
+  private lastCrashAt = 0;
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
@@ -19,12 +20,19 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error): void {
     console.error("[JARVIS] moduł uległ awarii:", error);
-    if (this.state.restarts < MAX_AUTO_RESTARTS) {
+    // Decay: po ≥60 s stabilnego renderu traktuj kolejną awarię jak świeżą (zeruj licznik),
+    // by jednorazowy crash sprzed godziny nie blokował samoleczenia na stałe.
+    const now = Date.now();
+    const restarts = now - this.lastCrashAt > 60_000 ? 0 : this.state.restarts;
+    this.lastCrashAt = now;
+    if (restarts < MAX_AUTO_RESTARTS) {
       // Auto-restart: zdejmij błąd i przemontuj poddrzewo w następnej klatce.
       setTimeout(() => {
         toast(`Napotkałem problem z modułem ${this.props.label || "interfejsu"} — zrestartowałem go ✓`);
-        this.setState((s) => ({ error: null, restarts: s.restarts + 1, epoch: s.epoch + 1 }));
+        this.setState((s) => ({ error: null, restarts: restarts + 1, epoch: s.epoch + 1 }));
       }, 60);
+    } else if (restarts !== this.state.restarts) {
+      this.setState({ restarts });
     }
   }
 

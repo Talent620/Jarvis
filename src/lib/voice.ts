@@ -29,12 +29,20 @@ export function loadVoices(): Promise<SpeechSynthesisVoice[]> {
       resolve([]);
       return;
     }
+    let settled = false;
+    const finish = (v: SpeechSynthesisVoice[]) => {
+      if (settled) return;
+      settled = true;
+      synth.onvoiceschanged = null; // nie zostawiaj wiszącego handlera na globalnym synth
+      clearTimeout(timer);
+      resolve(v);
+    };
     synth.onvoiceschanged = () => {
       cachedVoices = synth.getVoices();
-      resolve(cachedVoices);
+      finish(cachedVoices);
     };
     // Fallback, gdyby zdarzenie nie wystąpiło.
-    setTimeout(() => resolve(cachedVoices.length ? cachedVoices : synth.getVoices()), 500);
+    const timer = setTimeout(() => finish(cachedVoices.length ? cachedVoices : synth.getVoices()), 500);
   });
 }
 
@@ -65,17 +73,28 @@ let levelRaf = 0;
 async function playUrlWithLevel(url: string): Promise<void> {
   const audio = new Audio(url);
   currentAudio = audio;
-  audio.onended = () => {
-    URL.revokeObjectURL(url);
+  let srcNode: MediaElementAudioSourceNode | null = null;
+  let analyserNode: AnalyserNode | null = null;
+  // Sprzątanie: odłącz węzły Web Audio — inaczej akumulują się na współdzielonym
+  // levelCtx przy każdym premium-TTS (wyciek pamięci + CPU w wątku audio).
+  const cleanup = () => {
+    try { srcNode?.disconnect(); } catch { /* ignore */ }
+    try { analyserNode?.disconnect(); } catch { /* ignore */ }
     cancelAnimationFrame(levelRaf);
     setLevel(0);
   };
+  audio.onended = () => {
+    URL.revokeObjectURL(url);
+    cleanup();
+  };
+  audio.onerror = () => cleanup();
   try {
     levelCtx = levelCtx || new (window.AudioContext || (window as any).webkitAudioContext)();
     const ctx = levelCtx;
     if (ctx.state === "suspended") await ctx.resume().catch(() => {});
-    const srcNode = ctx.createMediaElementSource(audio);
+    srcNode = ctx.createMediaElementSource(audio);
     const analyser = ctx.createAnalyser();
+    analyserNode = analyser;
     analyser.fftSize = 256;
     srcNode.connect(ctx.destination); // audio zawsze słychać
     srcNode.connect(analyser); // odczep do pomiaru poziomu (bez dalszego routingu)
@@ -287,6 +306,7 @@ async function geminiTts(text: string, settings: Settings): Promise<boolean> {
 export async function speak(text: string, settings: Settings): Promise<void> {
   if (!settings.speak || !text.trim()) return;
   stopSpeaking();
+  const myToken = speakToken; // bieżąca „tura mówienia"; nowszy speak()/stop unieważni
 
   // Premium głos przez Fish Audio (tani, topowy klon), jeśli podano klucz.
   if (settings.fishAudioApiKey && settings.fishAudioVoiceId) {
@@ -300,6 +320,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
         },
         body: JSON.stringify({ text, reference_id: settings.fishAudioVoiceId, format: "mp3" }),
       }, 30000);
+      if (myToken !== speakToken) return; // nowsza tura przejęła w czasie pobierania
       if (await playFromResponse(res)) return;
     } catch {
       /* fallback niżej */
@@ -326,6 +347,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
         },
         30000,
       );
+      if (myToken !== speakToken) return; // nowsza tura przejęła w czasie pobierania
       if (await playFromResponse(res)) return;
     } catch {
       /* fallback do systemowego TTS */
@@ -482,6 +504,10 @@ export class Listener {
   private rec: SpeechRecognitionLike | null = null;
   private active = false;
   private cb: ListenCallbacks;
+  // Anty-storm: zlicz puste, natychmiastowe restarty (utrata mic/sieci) → backoff i poddanie się.
+  private restarts = 0;
+  private gotResult = false;
+  private restartTimer: number | null = null;
 
   constructor(cb: ListenCallbacks) {
     this.cb = cb;
@@ -499,6 +525,7 @@ export class Listener {
     let armed = !this.cb.wakeWord; // bez wakeWord od razu zbieramy komendę
 
     this.rec.onresult = (e: any) => {
+      this.gotResult = true; // produktywna sesja — zeruje licznik anty-stormu w onend
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i];
@@ -528,13 +555,23 @@ export class Listener {
 
     this.rec.onend = () => {
       if (this.active && this.cb.wakeWord) {
-        // tryb ciągły — wznawiaj
-        try {
-          this.rec?.start();
+        // Sesja produktywna (był wynik) → restart natychmiast i zeruj licznik.
+        // Pusta, natychmiastowa (utrata mic/sieci) → backoff; po 8 z rzędu poddaj się,
+        // by nie pętlić w kółko obciążając CPU/silnik mowy.
+        if (this.gotResult) this.restarts = 0;
+        else this.restarts++;
+        if (this.restarts > 8) {
+          this.active = false;
+          this.cb.onEnd?.();
           return;
-        } catch {
-          /* ignore */
         }
+        const delay = this.gotResult ? 0 : Math.min(5000, 150 * 2 ** this.restarts);
+        this.gotResult = false;
+        this.restartTimer = window.setTimeout(() => {
+          if (!this.active) return;
+          try { this.rec?.start(); } catch { /* ignore */ }
+        }, delay);
+        return;
       }
       this.active = false;
       this.cb.onEnd?.();
@@ -549,6 +586,8 @@ export class Listener {
 
   stop() {
     this.active = false;
+    this.restarts = 0;
+    if (this.restartTimer != null) { clearTimeout(this.restartTimer); this.restartTimer = null; }
     try {
       this.rec?.stop();
     } catch {

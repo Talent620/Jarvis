@@ -19,6 +19,40 @@ export function exportData(): void {
   download(payload, `jarvis-backup-${new Date().toISOString().slice(0, 10)}.json`);
 }
 
+// Pola, które przekierowują ruch/pocztę — wstrzyknięte ze spreparowanej kopii mogłyby
+// po cichu wyprowadzić klucze i maile na wrogi serwer. Wymagają potwierdzenia.
+const ENDPOINT_KEYS = ["proxyUrl", "syncUrl", "salesOsUrl", "smtpHost", "homeAssistantUrl", "ollamaUrl", "n8nUrl"] as const;
+
+/**
+ * Odsiej importowane ustawienia: tylko znane klucze o pasującym typie; zmianę
+ * adresów-endpointów dopuść jedynie po jawnym potwierdzeniu. Czysta, testowalna.
+ */
+export function sanitizeImportedSettings(
+  raw: unknown,
+  current: Settings,
+  confirmEndpoints: (keys: string[]) => boolean,
+): Partial<Settings> {
+  if (!raw || typeof raw !== "object") return {};
+  const cur = current as unknown as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!(k in cur)) continue; // nieznany klucz — pomiń (anty-injection)
+    const tc = typeof cur[k];
+    // typ musi pasować (obiekty: object===object); null/undefined w bieżącym → akceptuj
+    if (cur[k] != null && typeof v !== tc) {
+      if (!(typeof v === "object" && tc === "object")) continue;
+    }
+    out[k] = v;
+  }
+  const changed = ENDPOINT_KEYS.filter(
+    (k) => typeof out[k] === "string" && (out[k] as string).trim() && out[k] !== cur[k],
+  );
+  if (changed.length && !confirmEndpoints(changed)) {
+    for (const k of changed) delete out[k]; // odrzuć podmianę adresów
+  }
+  return out as Partial<Settings>;
+}
+
 /** Zastosuj odczytaną kopię (dane i — przy pełnej — ustawienia). Zwraca komunikat. */
 function applyParsed(parsed: any): string {
   // Zanim nadpiszemy dane — upewnij się, że to w ogóle kopia JARVIS-a. Inaczej wybór
@@ -34,7 +68,11 @@ function applyParsed(parsed: any): string {
     for (const c of COLLECTIONS) if (Array.isArray(d[c])) (s as any)[c] = d[c];
   });
   if (parsed.settings && typeof parsed.settings === "object") {
-    store.setSettings(parsed.settings as Partial<Settings>);
+    const safe = sanitizeImportedSettings(parsed.settings, store.settings, (keys) =>
+      typeof window !== "undefined" &&
+      window.confirm(`Kopia zmienia adresy serwerów: ${keys.join(", ")}.\nPrzywrócić je? To może przekierować ruch AI i pocztę na inny serwer.`),
+    );
+    store.setSettings(safe);
     return "✅ Przywrócono dane i ustawienia (klucze API) z kopii.";
   }
   return "✅ Dane przywrócone z kopii.";

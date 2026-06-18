@@ -19,13 +19,13 @@ Bazowo: 665 testów zielone. Każda partia: zmiana → test/build → commit.
 - [x] (m6) Timeout na fetch w `email/index.ts`.
 
 ### Batch 3 — klient: głos + store + backup + bezpieczeństwo
-- [ ] (Voice D) `playUrlWithLevel` — odłączać węzły audio (lub kierować przez `playUrlEnded`).
-- [ ] (Voice M4) Backoff + give-up na restart Web Speech.
-- [ ] (Voice m2/m6) `loadVoices` cleanup + `speakToken` guard w gałęziach Fish/ElevenLabs.
-- [ ] (Data E) `backup.ts` — walidacja/whitelist ustawień przy imporcie (pola-endpointy).
-- [ ] (Store M4/M5) Quota: głośny trwały sygnał + capy `memory`/`sentMail`/`contentPosts`.
-- [ ] (Audit M4) Redakcja `input` w `audit()`.
-- [ ] (m1) `ErrorBoundary` — decay licznika restartów.
+- [x] (Voice D) `playUrlWithLevel` — odłączać węzły audio (lub kierować przez `playUrlEnded`).
+- [x] (Voice M4) Backoff + give-up na restart Web Speech.
+- [x] (Voice m2/m6) `loadVoices` cleanup + `speakToken` guard w gałęziach Fish/ElevenLabs.
+- [x] (Data E) `backup.ts` — walidacja/whitelist ustawień przy imporcie (pola-endpointy).
+- [x] (Store M4/M5) Quota: głośny trwały sygnał + capy `memory`/`sentMail`/`contentPosts`.
+- [x] (Audit M4) Redakcja `input` w `audit()`.
+- [x] (m1) `ErrorBoundary` — decay licznika restartów.
 
 ### Batch 4 — Electron
 - [ ] (M4) `will-navigate` guard + `sandbox:true` + `isTrustedIpc` na google/smtp/notify.

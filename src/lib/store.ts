@@ -114,18 +114,43 @@ function read<T>(key: string, fallback: T): T {
   }
 }
 
-let quotaWarned = false;
+// Trwały sygnał przepełnienia pamięci (UI może pokazać baner). Nie tylko jednorazowy toast —
+// po przepełnieniu KAŻDY kolejny zapis cicho przepada, więc utrzymujemy flagę i co jakiś czas
+// ponawiamy ostrzeżenie, zamiast udawać, że dane się zapisały.
+let storageFull = false;
+let lastQuotaWarn = 0;
+export function isStorageFull(): boolean {
+  return storageFull;
+}
 function write(key: string, value: unknown): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    storageFull = false;
   } catch (e) {
-    // Przepełniona pamięć (quota) = ciche gubienie danych. Ostrzeż użytkownika RAZ,
-    // by zdążył zrobić kopię i wyczyścić stare czaty (tryb prywatny/SSR pomijamy).
     const quota = e instanceof Error && (e.name === "QuotaExceededError" || /quota/i.test(e.message));
-    if (quota && !quotaWarned) {
-      quotaWarned = true;
-      toast("⚠ Brak miejsca w pamięci — zrób kopię (⚙ → Dane) i wyczyść stare czaty, by nic nie zginęło.");
+    if (quota) {
+      storageFull = true;
+      const now = Date.now();
+      if (now - lastQuotaWarn > 300_000) { // ponów co ~5 min, nie tylko raz na sesję
+        lastQuotaWarn = now;
+        toast("⚠ Brak miejsca w pamięci — zrób kopię (⚙ → Dane) i wyczyść stare czaty/leady. Nowe zmiany NIE zapisują się!");
+      }
     }
+  }
+}
+
+// Górne limity dla kolekcji automatycznie rosnących (logi), by nie dobić quoty.
+// Dane tworzone wprost przez użytkownika (zadania, notatki, dziennik, leady) NIE są przycinane.
+const COLLECTION_CAPS: Partial<Record<keyof AppData, number>> = {
+  sentMail: 500,
+  contentPosts: 500,
+};
+function capCollections(d: AppData): void {
+  const rec = d as unknown as Record<string, unknown[]>;
+  for (const k in COLLECTION_CAPS) {
+    const cap = COLLECTION_CAPS[k as keyof AppData]!;
+    const arr = rec[k];
+    if (Array.isArray(arr) && arr.length > cap) rec[k] = arr.slice(0, cap);
   }
 }
 
@@ -181,6 +206,7 @@ class Store {
 
   setData(mut: (d: AppData) => void) {
     mut(this.data);
+    capCollections(this.data); // utnij rozrośnięte logi (sentMail/contentPosts) przed zapisem
     write(DATA_KEY, this.data);
     this.emit();
   }

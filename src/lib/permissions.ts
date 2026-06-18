@@ -66,10 +66,21 @@ let stepListener: StepListener | null = null;
 export function setStepListener(fn: StepListener) { stepListener = fn; }
 export function emitStep(tool: string | null) { stepListener?.(tool); }
 
+// Skróć `input` przed zapisem do audytu — inaczej w plaintext localStorage lądują pełne
+// treści maili/SMS i base64 obrazów. Trzymamy tylko podgląd (jak `output`, do 300 znaków).
+function redactInput(input: unknown): unknown {
+  try {
+    const s = typeof input === "string" ? input : JSON.stringify(input);
+    return s.length > 300 ? s.slice(0, 300) + "…" : s;
+  } catch {
+    return "[nieserializowalne]";
+  }
+}
+
 // --- Audyt + cofanie ---
 export function audit(entry: Omit<AuditEntry, "id" | "at">) {
   store.setData((d) => {
-    d.audit.unshift({ ...entry, id: uid(), at: Date.now() });
+    d.audit.unshift({ ...entry, input: redactInput(entry.input), id: uid(), at: Date.now() });
     if (d.audit.length > 200) d.audit.length = 200;
   });
 }
