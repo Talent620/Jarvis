@@ -5,6 +5,16 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Program premium — Faza 3 (głos live)
+- **Pamięć Mem0 w głosie:** `LiveOverlay` pobiera trafny kontekst i buduje `systemPrompt({ mem0Block })`
+  przed startem sesji Gemini Live — głos „pamięta" to samo co czat (degraduje cicho bez serwisu).
+  Token startu (`genRef`) chroni przed wyścigiem przy przełączaniu silnika/zamknięciu.
+- **Narzędzia w sesji live (function calling):** `LiveSession` wysyła deklaracje funkcji i obsługuje
+  `toolCall`/`toolResponse`. Wystawiany jest **bezpieczny podzbiór**: `read`+`write` (odwracalne) oraz
+  narzędzia **MCP** (Faza 2). `outbound` (mail/telefon/smart-home/pulpit) **pomijane** — w trybie live
+  nie ma bramki zgody, więc błędne rozpoznanie mowy nie wywoła nieodwracalnej akcji (dodatkowy blok
+  defensywny w runnerze). Pełny tok z potwierdzeniami pozostaje w czacie i „Trybie rozmowy". +3 testy.
+
 ### Program premium — Faza 0 + Faza 1 + Faza 2
 - **Faza 2 — warstwa MCP:** `mcp.ts` (`McpManager`) — klient zgodny z MCP (JSON-RPC
   initialize/tools/list/tools/call), allowlista hostów (anty tool-poisoning), narzędzia

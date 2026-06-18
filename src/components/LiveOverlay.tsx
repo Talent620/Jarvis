@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { LiveSession, type LiveState } from "../lib/liveVoice";
+import { LiveSession, liveToolDeclarations, type LiveState } from "../lib/liveVoice";
+import { toolDefs, runTool } from "../lib/tools";
+import { riskOf } from "../lib/permissions";
 import { ConversationLoop, type LoopState } from "../lib/voiceLoop";
 import { systemPrompt, resolveProvider } from "../lib/brain";
 import { PROVIDERS } from "../lib/providers/registry";
@@ -77,6 +79,15 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
           /* brak pamięci → czysty prompt */
         }
         if (genRef.current !== myGen) return; // przełączono silnik / zamknięto w międzyczasie
+        // Narzędzia (Faza 2 MCP + odczyt/zapis lokalny) — bezpieczny podzbiór dla głosu.
+        const liveTools = liveToolDeclarations(toolDefs, riskOf);
+        const liveRunTool = async (name: string, args: unknown) => {
+          // Defensywnie: outbound (poza MCP) nigdy nie wykonuje się w trybie live (brak zgody).
+          if (!name.startsWith("mcp_") && riskOf(name) === "outbound") {
+            return "Ta akcja wymaga potwierdzenia — wykonaj ją w czacie tekstowym lub trybie rozmowy.";
+          }
+          return runTool(name, args);
+        };
         const session = new LiveSession(
           geminiKey,
           systemPrompt({ mem0Block }),
@@ -85,6 +96,8 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
             if (d) setDetail(d);
           },
           (t) => setCaption((c) => (c + t).slice(-300)),
+          liveTools,
+          liveRunTool,
         );
         liveRef.current = session;
         session.start().catch(() => {

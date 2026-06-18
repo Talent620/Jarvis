@@ -33,6 +33,38 @@ export function closeReason(code: number, reason?: string): string | undefined {
   return r || undefined;
 }
 
+// --- Narzędzia w sesji live (function calling) ---
+// Bezpieczeństwo: do głosu live wystawiamy TYLKO narzędzia odczytu i lokalnego zapisu
+// (odwracalne, z undo) oraz narzędzia MCP (skonfigurowane, na allowliście). Narzędzia
+// `outbound` (wysyłka maila, telefon, smart-home, sterowanie pulpitem itd.) są POMIJANE —
+// w trybie live nie ma bramki zgody (consentHandler), więc błędne rozpoznanie mowy nie
+// może wywołać nieodwracalnej akcji. Pełny agentowy tok z potwierdzeniami pozostaje w
+// czacie tekstowym i w „Trybie rozmowy" (dowolny model, przez askJarvis).
+
+export interface LiveToolDecl {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+/** Definicja narzędzia (kształt z tools.ts) — minimalny, by uniknąć zależności cyklicznej. */
+interface ToolDefLike {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+}
+
+/** Wybierz narzędzia bezpieczne dla głosu live i zmapuj do deklaracji funkcji Gemini.
+ *  `riskOf` wstrzykiwane (z permissions.ts), by funkcja pozostała czysta/testowalna. */
+export function liveToolDeclarations(
+  defs: ToolDefLike[],
+  riskOf: (name: string) => "read" | "write" | "outbound",
+): LiveToolDecl[] {
+  return defs
+    .filter((d) => d.name.startsWith("mcp_") || riskOf(d.name) !== "outbound")
+    .map((d) => ({ name: d.name, description: d.description, parameters: d.input_schema }));
+}
+
 // --- Pomocnicze: konwersje audio ---
 
 function downsampleTo16k(input: Float32Array, inRate: number): Int16Array {
@@ -76,6 +108,9 @@ export class LiveSession {
     private system: string,
     private onState: (s: LiveState, detail?: string) => void,
     private onText?: (t: string) => void,
+    // Narzędzia (function calling) — bezpieczny podzbiór; `runTool` wykonuje wywołanie.
+    private tools: LiveToolDecl[] = [],
+    private runTool?: (name: string, args: unknown) => Promise<string>,
   ) {}
 
   async start(): Promise<void> {
@@ -94,6 +129,8 @@ export class LiveSession {
             // Transkrypcja audio → napisy w czasie rzeczywistym (co mówi JARVIS).
             outputAudioTranscription: {},
             inputAudioTranscription: {},
+            // Narzędzia (jeśli są) — bezpieczny podzbiór; model woła je przez toolCall.
+            ...(this.tools.length ? { tools: [{ functionDeclarations: this.tools }] } : {}),
           },
         }),
       );
@@ -123,6 +160,12 @@ export class LiveSession {
     // Błąd zgłoszony przez serwer (np. nieprawidłowy klucz, brak dostępu do modelu).
     if (msg.error?.message) {
       this.onState("error", msg.error.message);
+      return;
+    }
+
+    // Model prosi o wykonanie narzędzia (function calling).
+    if (msg.toolCall?.functionCalls?.length) {
+      await this.handleToolCall(msg.toolCall.functionCalls);
       return;
     }
 
@@ -156,6 +199,25 @@ export class LiveSession {
       if (clean) this.onText(clean);
     }
     if (sc.turnComplete) this.onState("listening");
+  }
+
+  // Wykonaj narzędzia zażądane przez model i odeślij wyniki (toolResponse).
+  private async handleToolCall(calls: Array<{ id?: string; name: string; args?: unknown }>): Promise<void> {
+    const responses: Array<{ id?: string; name: string; response: { result: string } }> = [];
+    for (const c of calls) {
+      let result = "Narzędzie niedostępne w trybie live.";
+      if (this.runTool) {
+        try {
+          result = await this.runTool(c.name, c.args ?? {});
+        } catch (e) {
+          result = `Błąd narzędzia: ${e instanceof Error ? e.message : String(e)}`;
+        }
+      }
+      responses.push({ id: c.id, name: c.name, response: { result } });
+    }
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ toolResponse: { functionResponses: responses } }));
+    }
   }
 
   private async startMic(): Promise<void> {
