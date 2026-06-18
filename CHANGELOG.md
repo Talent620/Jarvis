@@ -5,6 +5,14 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Funkcje
+- **Czat prywatny / tymczasowy (jak w ChatGPT):** nowy przełącznik 🕶 w nagłówku — rozmowa
+  w tym trybie **nie trafia do historii** (pomijany `upsertChat`), startuje czysto, znika po
+  odświeżeniu. Widoczny baner „nie zapisuję tej rozmowy" + wyjście jednym kliknięciem.
+  „Nowa rozmowa" i otwarcie zapisanej rozmowy wychodzą z trybu prywatnego.
+  *(Historia czatów — lista, wyszukiwarka, grupowanie po dacie, zmiana nazwy, usuwanie —
+  już istniała w `chats.ts` + `ChatHistory.tsx`; dodano brakujący tryb prywatny.)*
+
 ### Poprawność współbieżności
 - **brain.ts:** `deepAnalysis`/`currentKnowledge`/`journalRank` przeniesione z **globali modułu**
   do kontekstu per-żądanie (`systemPrompt(ctx)`). Usuwa przeciek kontekstu między równoległymi

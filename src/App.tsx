@@ -140,6 +140,8 @@ export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>(initialChat?.messages ?? []);
   const [activeId, setActiveId] = useState<string>(initialChat?.id ?? uid());
   const [showHistory, setShowHistory] = useState(false);
+  // Czat prywatny/tymczasowy (jak w ChatGPT) — rozmowa NIE trafia do historii.
+  const [privateChat, setPrivateChat] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
   const [showSales, setShowSales] = useState(false);
@@ -309,15 +311,16 @@ export default function App() {
   }, [settings.theme]);
 
   // Trwałość: zapisuj aktywną rozmowę do historii (najnowsze pierwsze).
+  // Czat prywatny pomijamy — z założenia nie zostawia śladu w historii.
   useEffect(() => {
-    if (!messages.length) return;
+    if (!messages.length || privateChat) return;
     upsertChat({
       id: activeId,
       title: titleFrom(messages),
       messages: messages.slice(-100),
       updatedAt: Date.now(),
     });
-  }, [messages, activeId]);
+  }, [messages, activeId, privateChat]);
 
   // --- Wysłanie polecenia do JARVIS-a (agentowa pętla) ---
   const handleSend = async (text: string, opts?: { council?: boolean; research?: boolean }) => {
@@ -479,6 +482,7 @@ export default function App() {
     setMessages([]); // bieżąca jest już zapisana w historii
     setActiveId(uid());
     setLiveId(null);
+    setPrivateChat(false); // „nowa rozmowa" wychodzi z trybu prywatnego
   };
 
   const openChat = (s: ChatSession) => {
@@ -487,6 +491,22 @@ export default function App() {
     setMessages(s.messages);
     setLiveId(null);
     setShowHistory(false);
+    setPrivateChat(false); // otwierasz zapisaną rozmowę → tryb normalny
+  };
+
+  // Włącz/wyłącz czat prywatny. Wejście: czysta, nietrwała rozmowa (jak „Temporary chat").
+  const togglePrivateChat = () => {
+    stopSpeaking();
+    setMessages([]);
+    setActiveId(uid());
+    setLiveId(null);
+    setPrivateChat((p) => {
+      const next = !p;
+      toast(next
+        ? "🕶 Czat prywatny — ta rozmowa NIE trafi do historii."
+        : "Czat prywatny wyłączony — wracam do normalnych, zapisywanych rozmów.");
+      return next;
+    });
   };
 
   // --- Sterowanie nasłuchem (z barge-in: nasłuch przerywa mówienie) ---
@@ -783,6 +803,15 @@ export default function App() {
             ＋
           </button>
         )}
+        <button
+          className="icon-btn"
+          onClick={togglePrivateChat}
+          title={privateChat ? "Czat prywatny WŁĄCZONY — nie zapisuję. Kliknij, by wyłączyć." : "Czat prywatny (tymczasowy — nie trafia do historii)"}
+          style={privateChat ? { color: "var(--gold)", borderColor: "var(--gold)" } : undefined}
+          aria-pressed={privateChat}
+        >
+          🕶
+        </button>
         {(() => {
           const n = notifySummary().total;
           return (
@@ -827,6 +856,16 @@ export default function App() {
       {(messages.length === 0 || orb !== "idle") && (
         <div onClick={onOrbTap}>
           <Orb state={orb} label={councilStep || (step && busy ? `⚙ ${step}…` : undefined)} />
+        </div>
+      )}
+
+      {privateChat && (
+        <div
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "6px 12px", margin: "0 8px 4px", fontSize: 12, color: "var(--gold)", border: "1px solid var(--gold)", borderRadius: 8, background: "rgba(0,0,0,0.15)" }}
+          title="Ta rozmowa nie jest zapisywana w historii"
+        >
+          🕶 Czat prywatny — nie zapisuję tej rozmowy.
+          <button className="chip" style={{ fontSize: 11, padding: "1px 8px" }} onClick={togglePrivateChat}>Wyłącz</button>
         </div>
       )}
 
