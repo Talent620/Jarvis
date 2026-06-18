@@ -5,6 +5,7 @@ import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED } f
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
+import { getAllMemories, memoryServiceAvailable } from "../lib/memoryService";
 import { googleStartUrl, gmailSearch, connectDesktopGoogle } from "../lib/google";
 import { testApi, testProvider, resolveProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
@@ -71,6 +72,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [syncMsg, setSyncMsg] = useState("");
   const [salesOsMsg, setSalesOsMsg] = useState("");
   const [salesOsBusy, setSalesOsBusy] = useState(false);
+  const [memMsg, setMemMsg] = useState("");
+  const [memBusy, setMemBusy] = useState(false);
   const [apiMsg, setApiMsg] = useState("");
   const [health, setHealth] = useState<HealthItem[] | null>(null);
   const [healthBusy, setHealthBusy] = useState(false);
@@ -1182,6 +1185,47 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
 
           {tab === "integrations" && (
             <>
+              <h3>Pamięć długoterminowa (Mem0 + Qdrant)</h3>
+              <p className="muted">
+                JARVIS pamięta fakty o Tobie i ustalenia między sesjami. Postaw serwer raz
+                (katalog <code>server/</code>: <code>docker compose up -d</code>) i podaj adres.
+                Puste = pamięć wyłączona, JARVIS działa normalnie.
+              </p>
+              <div className="field">
+                <label>Adres serwera pamięci</label>
+                <input
+                  value={s.memoryServiceUrl}
+                  placeholder="http://localhost:8000"
+                  onChange={(e) => set({ memoryServiceUrl: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>Token serwera pamięci (MEM0_API_TOKEN)</label>
+                <input
+                  type="password"
+                  value={s.memoryServiceToken}
+                  placeholder="ten sam co w server/.env"
+                  onChange={(e) => set({ memoryServiceToken: e.target.value })}
+                />
+              </div>
+              <button
+                className="btn"
+                disabled={memBusy}
+                onClick={async () => {
+                  store.setSettings({ memoryServiceUrl: s.memoryServiceUrl, memoryServiceToken: s.memoryServiceToken });
+                  if (!memoryServiceAvailable()) { setMemMsg("Podaj adres serwera pamięci."); return; }
+                  setMemBusy(true); setMemMsg("⏳ Sprawdzam połączenie…");
+                  try {
+                    const mems = await getAllMemories("personal");
+                    setMemMsg(`✅ Połączono z pamięcią. Wspomnień (personal): ${mems.length}.`);
+                  } catch { setMemMsg("❌ Brak połączenia z serwerem pamięci."); }
+                  setMemBusy(false);
+                }}
+              >
+                🔌 Test pamięci
+              </button>
+              {memMsg && <p className="muted">{memMsg}</p>}
+
               <h3>AI Sales OS (osobne narzędzie)</h3>
               <p className="muted">
                 AI Sales OS to <b>osobna aplikacja</b> (katalog <code>sales-os/</code>), z której korzystasz

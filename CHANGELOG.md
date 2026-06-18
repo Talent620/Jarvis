@@ -5,6 +5,14 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Program premium — Faza 0 + Faza 1
+- **Faza 0:** `ARCHITECTURE.md` (mermaid + punkty zaczepienia) + 10-fazowy plan w `PROGRESS.md`.
+- **Faza 1 — pamięć długoterminowa (Mem0 + Qdrant):** `server/` (docker-compose + .env.example +
+  README), `memoryService.ts` (add/search/getAll/update/delete; namespace personal/business;
+  graceful degradation), wpięcie w `brain.ts` (search przed modelem → blok w system prompt;
+  add po odpowiedzi), pole konfiguracji w ⚙ Integracje + test połączenia. 8 testów (w tym
+  izolacja namespace) zielonych. Live wymaga hosta Docker; bez niego JARVIS działa normalnie.
+
 ### Funkcje
 - **Czat prywatny / tymczasowy (jak w ChatGPT):** nowy przełącznik 🕶 w nagłówku — rozmowa
   w tym trybie **nie trafia do historii** (pomijany `upsertChat`), startuje czysto, znika po

@@ -324,6 +324,10 @@ export interface Settings {
   salesOsUrl: string;
   /** Token przechwytywania leadów (X-Ingest-Token) — wgląd read-only do AI Sales OS. */
   salesOsToken: string;
+  /** Adres serwera pamięci długoterminowej (Mem0 + Qdrant, self-hosted). Puste = pamięć wyłączona. */
+  memoryServiceUrl: string;
+  /** Opcjonalny token autoryzacji serwera pamięci. */
+  memoryServiceToken: string;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

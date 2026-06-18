@@ -40,6 +40,8 @@ const defaultSettings: Settings = {
   salesOsUrl: "",
   salesOsToken: "",
   salesOsAutoSync: 0,
+  memoryServiceUrl: "",
+  memoryServiceToken: "",
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,

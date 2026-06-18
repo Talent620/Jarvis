@@ -1,0 +1,41 @@
+# JARVIS — pamięć długoterminowa (Faza 1): Mem0 (REST) + Qdrant (wektory).
+# Self-hosted, osobny serwis. Uruchom na swoim hoście:  docker compose up -d
+# Klient JARVIS łączy się przez VITE/ustawienie `memoryServiceUrl` = http://<host>:8000
+#
+# Kontrakt REST używany przez src/lib/memoryService.ts:
+#   POST /memories            {messages:[{role,content}], user_id}     → zapis
+#   POST /search              {query, user_id, limit}                   → {results:[{id,memory,score}]}
+#   GET  /memories?user_id=…                                           → {results:[...]}  (debug/podgląd)
+#   PUT  /memories/:id        {text}                                    → aktualizacja
+#   DELETE /memories/:id                                                → usunięcie
+# user_id = namespace: "personal" (o użytkowniku) lub "business" (klienci) — bez mieszania.
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    restart: unless-stopped
+    volumes:
+      - qdrant_data:/qdrant/storage
+    # Port wewnętrzny — nie wystawiaj publicznie; Mem0 łączy się po sieci dockera.
+    expose:
+      - "6333"
+
+  mem0:
+    image: mem0/mem0-api-server:latest   # oficjalny serwer REST Mem0
+    restart: unless-stopped
+    depends_on:
+      - qdrant
+    environment:
+      # Klucze WYŁĄCZNIE z env hosta (zero sekretów w repo) — patrz .env.example.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}          # embeddingi/LLM Mem0 (lub poniżej własny)
+      MEM0_LLM_PROVIDER: ${MEM0_LLM_PROVIDER:-openai}
+      MEM0_EMBEDDER_PROVIDER: ${MEM0_EMBEDDER_PROVIDER:-openai}
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: "6333"
+      # Token ochrony API (klient wysyła Authorization: Bearer …). Ustaw własny.
+      MEM0_API_TOKEN: ${MEM0_API_TOKEN:?ustaw MEM0_API_TOKEN}
+    ports:
+      - "8000:8000"
+
+volumes:
+  qdrant_data:

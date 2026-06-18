@@ -17,7 +17,7 @@ Część faz to **net-new, ciężka infrastruktura**, której nie da się w peł
 
 ### Status faz
 - [x] **Faza 0 — Audyt i fundament:** `ARCHITECTURE.md` (mermaid + punkty zaczepienia) + ten plan + git. ✅
-- [ ] **Faza 1 — Pamięć (Mem0 + Qdrant):** `server/` docker-compose + `MemoryService` (add/search/getAll/update/delete) + wpięcie w `brain.ts` (search PRZED / add PO) + 2 namespace'y + endpoint debug. Klient degraduje się, gdy serwis niedostępny.
+- [x] **Faza 1 — Pamięć (Mem0 + Qdrant):** ✅ `server/docker-compose.yml` (Mem0+Qdrant) + `.env.example` + README; `memoryService.ts` (add/search/getAll/update/delete, 2 namespace'y personal/business, graceful degradation); wpięte w `brain.ts` (search PRZED → blok w `systemPrompt`; add PO odpowiedzi, w tle); UI w ⚙ Integracje (adres/token/test). Testy 8/8 (dodanie, retrieval, **izolacja namespace**, degradacja) zielone; build OK. **Live Qdrant wymaga Twojego hosta Docker** (klient działa też bez niego). Debug/podgląd: `GET /memories?user_id=…` (token).
 - [ ] **Faza 2 — MCP:** `McpManager` (oficjalny TS SDK), allowlista, narzędzia → `toolDefs`, Calendar/Gmail przez MCP, graceful degradation.
 - [ ] **Faza 3 — Głos live (Gemini Live):** *w dużej części istnieje* (`liveVoice.ts` WS+barge-in) — dopiąć MCP+Mem0, uprawnienia Android, fallback; opcjonalna kamera (toggle).
 - [ ] **Faza 4 — Mastra + router modeli:** orkiestracja + router Groq (Scout vs Kimi), logowanie decyzji, retry/fallback, osobowość bez zmian.

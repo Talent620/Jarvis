@@ -2,6 +2,7 @@ import { store } from "./store";
 import { toolDefs, resetCitations, getCitations } from "./tools";
 import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed, rankJournal } from "./memory";
+import { memoryContextBlock, addMemory, resolveNamespace, memoryServiceAvailable } from "./memoryService";
 import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
 import { retrieveKnowledge } from "./knowledge";
 import { buildProfileBlock } from "./profile";
@@ -109,10 +110,12 @@ export interface PromptContext {
   deepAnalysis?: string;
   currentKnowledge?: string;
   journalRank?: string[] | null;
+  /** Trafne wspomnienia z pamięci długoterminowej (Mem0) — Faza 1. */
+  mem0Block?: string;
 }
 
 export function systemPrompt(ctx: PromptContext = {}): string {
-  const { deepAnalysis = "", currentKnowledge = "", journalRank = null } = ctx;
+  const { deepAnalysis = "", currentKnowledge = "", journalRank = null, mem0Block = "" } = ctx;
   const s = store.settings;
   const userName = s.userName;
   const pid = s.activeProjectId;
@@ -216,6 +219,7 @@ export function systemPrompt(ctx: PromptContext = {}): string {
     `- Aktualny czas: ${now.toLocaleString("pl-PL")}.`,
     ``,
     COGNITIVE_CORE,
+    mem0Block,
     currentKnowledge,
     deepAnalysis ? `\nTwoja wewnętrzna analiza tego zapytania (wykorzystaj ją, nie cytuj wprost):\n${deepAnalysis}` : "",
     profile,
@@ -428,6 +432,10 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   // Pamięć autonomiczna: dobierz fakty trafne do bieżącego zapytania (przed promptem).
   const lastUser = [...trimmed].reverse().find((m) => m.role === "user");
   await prepareMemoryContext(lastUser?.content || "");
+  // Pamięć długoterminowa (Mem0, Faza 1): search PRZED modelem; namespace wg aktywnego projektu.
+  // Graceful: gdy serwis niedostępny → pusty blok, JARVIS działa dalej.
+  const memNamespace = resolveNamespace(store.settings.activeProjectId);
+  const mem0Block = await memoryContextBlock(lastUser?.content || "", memNamespace).catch(() => "");
   // Pamięć ewoluująca: ułóż udostępnione wpisy dziennika według trafności.
   const journalRank = await rankJournal(lastUser?.content || "").catch(() => null);
 
@@ -454,7 +462,7 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   }
 
   const baseCtx = {
-    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank }),
+    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block }),
     webSearch: store.settings.webSearch,
     tools: toolDefs,
     history: trimmed,
@@ -484,6 +492,13 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
         const citations = getCitations();
         // Ucz się w tle: wyłuskaj trwałe fakty z wymiany (nie blokuje odpowiedzi).
         void learnFromExchange(lastUser?.content || "", reply.text);
+        // Pamięć długoterminowa (Mem0, Faza 1): add PO odpowiedzi (w tle, graceful).
+        if (memoryServiceAvailable() && lastUser?.content && reply.text) {
+          void addMemory(
+            [{ role: "user", content: lastUser.content }, { role: "assistant", content: reply.text }],
+            memNamespace,
+          ).catch(() => {});
+        }
         // Oznacz, KTO odpowiedział i czy to był zapas — App pokaże delikatny komunikat.
         const meta = { via: provider, fellBack: provider !== primary };
         return { ...reply, ...meta, ...(citations.length ? { citations } : {}) };
