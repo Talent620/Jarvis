@@ -76,7 +76,8 @@ Bazowo: 665 testów zielone. Każda partia: zmiana → test/build → commit.
 ## Zrobione
 - Batche 1–6 (`e1e983e → 45905dd`): bezpieczeństwo BFF/sales-os/klient/Electron/leady/CI + niezawodność głosu/store.
 - Batch 7 (`6fd007c`): **sync merge** po `id` (nowsze wygrywa — koniec utraty edycji między urządzeniami) + batch zapisu przypomnień.
-- 665 → **678 testów** zielone. Drzewo czyste.
+- Batch 8 (`84499d1`): LiveSession teardown na błędzie (koniec stackowania mic/AudioContext przy retry) + limit nagrania Transcribe (10 min) + debounce `devicechange` w headset.
+- 665 → **678 testów** zielone. CI build+test zielone. Drzewo czyste.
 
 ### Pozostałe bezpieczne, ale z subtelną zmianą zachowania (czekają na nod)
 - `brain.ts` globalny stan modułu → parametry: realna poprawka (przeciek kontekstu przy równoległych `askJarvis`), ale zmienia treść promptu w trybie live (dziś dziedziczy resztki z ostatniego czatu). Mały blast radius (2 callery) — zrobię na potwierdzenie.
