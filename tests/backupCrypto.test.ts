@@ -26,7 +26,7 @@ describe("zaszyfrowana pełna kopia (AES-256)", () => {
     });
     store.setSettings({ userName: "Marcin" });
     const cipherText = await packEncrypted(buildFullPayload(), "moje-haslo");
-    expect(cipherText.startsWith("JV1:")).toBe(true);
+    expect(cipherText.startsWith("JV2:")).toBe(true);
     expect(cipherText).not.toContain("sekretna"); // treść NIE jest jawna
 
     // Zniszcz stan i odtwórz z kopii.

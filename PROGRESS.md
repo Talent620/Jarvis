@@ -37,8 +37,8 @@ Bazowo: 665 testów zielone. Każda partia: zmiana → test/build → commit.
 - [x] (m3) `parseElement` — limity długości pól.
 
 ### Batch 6 — krypto + CI
-- [ ] (cipher m4) Zapis `iter`+wersji w nagłówku `JV1:` (wstecznie zgodnie).
-- [ ] (CI M2) Usunąć martwe bloki `JARVIS_*_KEY` + mylące komentarze z workflowów.
+- [x] (cipher m4) Zapis `iter`+wersji w nagłówku `JV1:` (wstecznie zgodnie).
+- [x] (CI M2) Usunąć martwe bloki `JARVIS_*_KEY` + mylące komentarze z workflowów.
 
 ## DO MOJEJ DECYZJI (nie wdrażam) — patrz AUDIT.md §9
 
