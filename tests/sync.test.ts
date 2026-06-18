@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { pullSync } from "../src/lib/sync";
+import { pullSync, mergeById } from "../src/lib/sync";
 import { store } from "../src/lib/store";
 
 // Pobieranie z chmury MUSI być odporne na uszkodzone dane — bierzemy tylko tablice,
@@ -17,7 +17,7 @@ describe("pullSync — walidacja danych z chmury", () => {
       data: { tasks: "ZEPSUTE", notes: [{ id: "n1", text: "ok", createdAt: 1 }] },
     }), { status: 200 })));
     const r = await pullSync();
-    expect(r).toMatch(/pobrane/i);
+    expect(r).toMatch(/scalone/i);
     expect(Array.isArray(store.data.tasks)).toBe(true);      // nie nadpisane stringiem
     expect((store.data.tasks as any)[0].id).toBe("t1");       // stare dane nietknięte
     expect(store.data.notes.length).toBe(1);                  // poprawna tablica scalona
@@ -28,5 +28,30 @@ describe("pullSync — walidacja danych z chmury", () => {
     const r = await pullSync();
     expect(r).toMatch(/Brak danych/i);
     expect(Array.isArray(store.data.tasks)).toBe(true);
+  });
+});
+
+describe("mergeById — scalanie po id, nowsze wygrywa", () => {
+  it("suma obu stron, brak gubienia lokalnych wpisów", () => {
+    const local = [{ id: "a", updatedAt: 5 }, { id: "b", updatedAt: 5 }];
+    const remote = [{ id: "b", updatedAt: 1 }, { id: "c", updatedAt: 9 }];
+    const out = mergeById(local, remote);
+    const ids = out.map((x) => x.id).sort();
+    expect(ids).toEqual(["a", "b", "c"]);
+  });
+
+  it("przy kolizji id zostaje nowszy (po updatedAt)", () => {
+    const out = mergeById([{ id: "x", updatedAt: 10, v: "local" } as any], [{ id: "x", updatedAt: 2, v: "remote" } as any]);
+    expect(out.find((i) => i.id === "x")!.v).toBe("local"); // lokalna edycja nowsza → wygrywa
+  });
+
+  it("chmura nowsza nadpisuje lokalny wpis", () => {
+    const out = mergeById([{ id: "x", updatedAt: 2, v: "local" } as any], [{ id: "x", updatedAt: 10, v: "remote" } as any]);
+    expect(out.find((i) => i.id === "x")!.v).toBe("remote");
+  });
+
+  it("fallback na createdAt, gdy brak updatedAt; sortowanie newest-first", () => {
+    const out = mergeById([{ id: "a", createdAt: 1 }], [{ id: "b", createdAt: 9 }]);
+    expect(out[0].id).toBe("b"); // najnowszy na górze
   });
 });

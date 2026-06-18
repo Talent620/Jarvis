@@ -579,20 +579,19 @@ export default function App() {
   useEffect(() => {
     const tick = setInterval(() => {
       const now = Date.now();
-      store.data.reminders
-        .filter((r) => !r.fired && new Date(r.at).getTime() <= now)
-        .forEach((r) => {
-          store.setData((d) => {
-            const x = d.reminders.find((y) => y.id === r.id);
-            if (x) x.fired = true;
-          });
-          const text = `Przypomnienie, ${store.settings.userName}: ${r.text}.`;
-          const id = uid();
-          setLiveId(id);
-          setMessages((m) => [...m, { id, role: "assistant", text, tools: ["reminder"], createdAt: Date.now() }]);
-          if (store.settings.speak) void speak(text, store.settings).catch(() => {});
-          notify("JARVIS — przypomnienie", r.text);
-        });
+      const due = store.data.reminders.filter((r) => !r.fired && new Date(r.at).getTime() <= now);
+      if (!due.length) return;
+      // Jeden zapis store na wszystkie zapalone naraz (zamiast N zapisów+renderów w pętli).
+      const dueIds = new Set(due.map((r) => r.id));
+      store.setData((d) => { for (const x of d.reminders) if (dueIds.has(x.id)) x.fired = true; });
+      for (const r of due) {
+        const text = `Przypomnienie, ${store.settings.userName}: ${r.text}.`;
+        const id = uid();
+        setLiveId(id);
+        setMessages((m) => [...m, { id, role: "assistant", text, tools: ["reminder"], createdAt: Date.now() }]);
+        if (store.settings.speak) void speak(text, store.settings).catch(() => {});
+        notify("JARVIS — przypomnienie", r.text);
+      }
     }, 20000);
     return () => clearInterval(tick);
   }, []);

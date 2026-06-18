@@ -8,6 +8,30 @@ const COLLECTIONS: (keyof AppData)[] = [
   "memory", "scenes", "projects", "projectFiles", "tally", "journal", "leads", "flashcards",
 ];
 
+/**
+ * Scal dwie listy po `id`, zachowując NOWSZY wpis (po `updatedAt`, w razie braku
+ * `createdAt`). Suma obu stron — edycje lokalne nowsze niż w chmurze nie giną
+ * (poprzednio pull hurtowo nadpisywał, kasując zmiany z tego urządzenia).
+ * Uwaga: bez tombstone'ów usunięcia mogą „wrócić" — i tak lepsze niż utrata edycji.
+ * Czysta, testowalna.
+ */
+export function mergeById<T extends { id?: string; updatedAt?: number; createdAt?: number }>(local: T[], remote: T[]): T[] {
+  const recency = (x: T) => x.updatedAt ?? x.createdAt ?? 0;
+  const byId = new Map<string, T>();
+  const noId: T[] = [];
+  for (const item of local) {
+    if (item && typeof item.id === "string") byId.set(item.id, item);
+    else if (item) noId.push(item);
+  }
+  for (const item of remote) {
+    if (!item) continue;
+    if (typeof item.id !== "string") { noId.push(item); continue; }
+    const existing = byId.get(item.id);
+    if (!existing || recency(item) >= recency(existing)) byId.set(item.id, item);
+  }
+  return [...byId.values(), ...noId].sort((a, b) => recency(b) - recency(a));
+}
+
 function endpoint(): string | null {
   const { syncUrl, syncToken } = store.settings;
   if (!syncUrl?.trim() || !syncToken?.trim()) return null;
@@ -63,10 +87,11 @@ export async function pullSync(): Promise<string> {
     if (!data) return "Brak danych w chmurze.";
     store.setData((d) => {
       // Twardo waliduj: bierzemy tylko tablice, by uszkodzone dane z chmury nie
-      // skorumpowały lokalnego store (np. {tasks:"x"} zamiast listy).
-      for (const c of COLLECTIONS) if (Array.isArray(data[c])) (d as any)[c] = data[c];
+      // skorumpowały lokalnego store. Scalamy po id (nowsze wygrywa) zamiast nadpisywać,
+      // żeby nie gubić lokalnych edycji nowszych niż w chmurze.
+      for (const c of COLLECTIONS) if (Array.isArray(data[c])) (d as any)[c] = mergeById((d as any)[c] || [], data[c]);
     });
-    return "✅ Dane pobrane z chmury.";
+    return "✅ Dane scalone z chmurą (nowsze wpisy wygrywają).";
   } catch (e) {
     return `Błąd połączenia: ${e instanceof Error ? e.message : e}`;
   }
