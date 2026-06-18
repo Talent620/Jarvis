@@ -5,7 +5,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { toast } from "./lib/toast";
 import "./styles/index.css";
 import { initPlugins } from "./plugins";
+import { installSecretsVault } from "./lib/secretsVault";
 
+installSecretsVault(); // szyfrowanie kluczy w spoczynku (no-op, gdy wyłączone)
 initPlugins();
 
 // Self-healing: b\u0142\u0119dy poza Reactem (asynchroniczne, sieciowe) nie gin\u0105 w konsoli \u2014

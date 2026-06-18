@@ -78,6 +78,8 @@ import { ensureNotifPerms, notify } from "./lib/notifications";
 import { registerIntents } from "./lib/intents";
 import { store, uid } from "./lib/store";
 import { brand } from "./lib/brand";
+import { isLocked as keysAreLocked } from "./lib/secretsVault";
+import UnlockKeys from "./components/UnlockKeys";
 import { useStore } from "./hooks/useStore";
 import type { ChatMessage } from "./types";
 
@@ -170,6 +172,7 @@ export default function App() {
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [locked, setLocked] = useState(lockIsSet());
   const [onboarding, setOnboarding] = useState(needsOnboarding());
+  const [keysLocked, setKeysLocked] = useState(keysAreLocked());
   const [clipSuggest, setClipSuggest] = useState<string>("");
   const [showVoice, setShowVoice] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
@@ -736,6 +739,7 @@ export default function App() {
   if (licensed === null) return <div className="onboard"><div className="onboard-orb" /></div>;
   if (!licensed) return <LicenseGate onActivated={() => setLicensed(true)} />;
   if (locked) return <LockScreen onUnlock={() => setLocked(false)} />;
+  if (keysLocked) return <UnlockKeys onDone={() => setKeysLocked(false)} />;
   if (onboarding)
     return (
       <Onboarding

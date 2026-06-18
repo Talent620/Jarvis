@@ -5,6 +5,15 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Bezpieczeństwo — szyfrowanie kluczy API w spoczynku (opcjonalne)
+- **`secretsVault.ts`:** opt-in blokada kluczy hasłem (AES-256-GCM + PBKDF2, format JV2). Domyślnie
+  **wyłączone** → zero zmian dla obecnych użytkowników. Po włączeniu: klucze w PAMIĘCI pozostają jawne
+  (wszyscy czytelnicy bez zmian), a na DYSK (`localStorage`) idą wyłącznie zaszyfrowane (osobny blob
+  `jarvis.secrets.v1`; pola wrażliwe w `settings.v2` wymazane przez `setSettingsPersistTransform`).
+  Przy starcie ekran odblokowania (`UnlockKeys`), kontrolki włącz/wyłącz w ⚙ → AI. Odzyskiwalne:
+  zapomniane hasło = wpisz klucze ponownie (odtwarzalne) — nic nieodwracalnego. +7 testów. Domyka
+  pozycję odłożoną z `SECURITY.md` (klucze BYOK plaintext).
+
 ### Program premium — Faza 9 (produktyzacja)
 - **White-label:** ustawienie `brandName` + helper `brand()` (domyślnie „JARVIS", cap 32) — własna marka
   w nagłówku, ekranie powitalnym (onboarding) i rozmowie na żywo; pole w ⚙ → Zachowanie. Nie zmienia

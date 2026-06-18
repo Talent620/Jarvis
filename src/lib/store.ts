@@ -48,6 +48,7 @@ const defaultSettings: Settings = {
   aiMonthlyBudgetUsd: 0,
   onDeviceOnly: false,
   brandName: "",
+  secretsAtRest: false,
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,
@@ -195,6 +196,14 @@ function normalizeSettings(s: Settings & { anthropicApiKey?: string }): Settings
   return s;
 }
 
+// Transformacja ustawień TUŻ PRZED zapisem na dysk (nie zmienia kopii w pamięci).
+// Rejestrowana przez secretsVault, by wymazać klucze API z localStorage, gdy włączone
+// jest szyfrowanie w spoczynku (klucze trzymane wtedy w osobnym, zaszyfrowanym blobie).
+let settingsPersistTransform: (s: Settings) => Settings = (s) => s;
+export function setSettingsPersistTransform(fn: (s: Settings) => Settings): void {
+  settingsPersistTransform = fn;
+}
+
 class Store {
   data: AppData = read<AppData>(DATA_KEY, emptyData);
   settings: Settings = normalizeSettings(read<Settings>(SETTINGS_KEY, defaultSettings));
@@ -221,7 +230,8 @@ class Store {
 
   setSettings(patch: Partial<Settings>) {
     this.settings = { ...this.settings, ...patch };
-    write(SETTINGS_KEY, this.settings);
+    // Na dysk idzie wersja po transformacji (np. z wymazanymi kluczami); pamięć bez zmian.
+    write(SETTINGS_KEY, settingsPersistTransform(this.settings));
     this.emit();
   }
 }

@@ -340,6 +340,8 @@ export interface Settings {
   onDeviceOnly: boolean;
   /** White-label (Faza 9): własna nazwa asystenta w UI. Puste = „JARVIS". */
   brandName: string;
+  /** Szyfrowanie kluczy API w spoczynku (opcjonalne, hasłem). Domyślnie false = bez zmian. */
+  secretsAtRest: boolean;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

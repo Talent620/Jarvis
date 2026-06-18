@@ -7,6 +7,7 @@ import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
 import { getAllMemories, memoryServiceAvailable } from "../lib/memoryService";
 import { mcpManager } from "../lib/mcp";
+import { enableAtRest, disableAtRest } from "../lib/secretsVault";
 import { googleStartUrl, gmailSearch, connectDesktopGoogle } from "../lib/google";
 import { testApi, testProvider, resolveProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
@@ -78,6 +79,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [mcpMsg, setMcpMsg] = useState("");
   const [mcpLoaded, setMcpLoaded] = useState(() => mcpManager.listLoaded());
   const [apiMsg, setApiMsg] = useState("");
+  const [secPass, setSecPass] = useState("");
+  const [secMsg, setSecMsg] = useState("");
   const [health, setHealth] = useState<HealthItem[] | null>(null);
   const [healthBusy, setHealthBusy] = useState(false);
   const [apiStatus, setApiStatus] = useState<Partial<Record<ProviderId, ApiStatus>>>({});
@@ -422,6 +425,53 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 >
                   🔑 Testuj wszystkie
                 </button>
+              </div>
+
+              {/* Szyfrowanie kluczy w spoczynku (opcjonalne, hasłem) */}
+              <div className="field" style={{ marginTop: 12 }}>
+                <label>🔒 Szyfrowanie kluczy w spoczynku</label>
+                {store.settings.secretsAtRest ? (
+                  <>
+                    <p className="muted" style={{ marginTop: 4 }}>
+                      ✅ Klucze API są zapisywane na dysku zaszyfrowane (AES-256). Przy starcie pytamy o hasło.
+                    </p>
+                    <button
+                      className="btn"
+                      style={{ marginTop: 6 }}
+                      onClick={() => setSecMsg(disableAtRest())}
+                    >
+                      🔓 Wyłącz szyfrowanie (zapis jawny)
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="muted" style={{ marginTop: 4 }}>
+                      Zaszyfruj klucze API hasłem (AES-256). Bez tego są w pamięci urządzenia jawnie.
+                      Zapomniane hasło = wpisz klucze ponownie (są odtwarzalne) — nic nieodwracalnego.
+                    </p>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        type="password"
+                        value={secPass}
+                        placeholder="Hasło (min. 4 znaki)"
+                        onChange={(e) => setSecPass(e.target.value)}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        className="btn"
+                        style={{ width: "auto", marginTop: 0 }}
+                        disabled={secPass.trim().length < 4}
+                        onClick={async () => {
+                          setSecMsg(await enableAtRest(secPass));
+                          setSecPass("");
+                        }}
+                      >
+                        Zaszyfruj
+                      </button>
+                    </div>
+                  </>
+                )}
+                {secMsg && <p className="muted" style={{ marginTop: 6, whiteSpace: "pre-line" }}>{secMsg}</p>}
               </div>
               <button
                 className="btn"
