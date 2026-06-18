@@ -9,7 +9,7 @@ Kontekst między sesjami. Najnowsze na górze. Szczegóły audytu: `AUDIT.md`; p
 ### Co zrobione (wdrożone, przetestowane)
 Audyt całości (6 klastrów, `AUDIT.md`) + 8 partii poprawek + staged-review (etap 4):
 - **Bezpieczeństwo:** realny bug Gmaila (`b64` → 500 na PL tematach) ✓; sales-os outreach respektuje zgodę+limit ✓; rate-limit na token (nie XFF) ✓; walidacja importu kopii (anty-eksfiltracja) ✓; CRLF/host-allowlist w BFF ✓; **SSRF blok metadanych chmury w `/passthrough`** ✓; auth `x-app-token` na `/v1/search|embed` (gdy ustawiony) ✓; Electron `will-navigate`+`sandbox`+IPC-gate ✓; cipher wersjonowany KDF (JV2) ✓; PIN PBKDF2 ✓; redakcja audytu ✓; usunięte martwe wstrzykiwanie kluczy w CI ✓; `calculate` bez `Function()` (parser `safeCalc`) ✓.
-- **Niezawodność:** **sync merge po `id`** (koniec utraty danych między urządzeniami) ✓; wyciek węzłów audio (premium-TTS) ✓; teardown LiveSession na błędzie ✓; backoff Web Speech ✓; capy/quota w store ✓; limit nagrania Transcribe ✓; debounce słuchawek ✓; batch przypomnień ✓.
+- **Niezawodność:** **sync merge po `id`** (koniec utraty danych między urządzeniami) ✓; wyciek węzłów audio (premium-TTS) ✓; teardown LiveSession na błędzie ✓; backoff Web Speech ✓; capy/quota w store ✓; limit nagrania Transcribe ✓; debounce słuchawek ✓; batch przypomnień ✓; **timeouty na wszystkich zewnętrznych fetchach BFF + guard KV** ✓.
 
 ### Świadomie ODŁOŻONE (wymagają decyzji właściciela — NIE ruszać autonomicznie)
 - **BFF fail-closed `APP_TOKEN`** na trasach relay — może zerwać wdrożenie bez `APP_TOKEN`.
