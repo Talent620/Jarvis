@@ -269,6 +269,66 @@
     }
   })();
 
+  /* ---------- Demo modal + form ---------- */
+  (function demoModal() {
+    const modal = document.getElementById("modal");
+    const form = document.getElementById("demoForm");
+    if (!modal || !form) return;
+    const body = document.getElementById("modalBody");
+    const success = document.getElementById("modalSuccess");
+    let lastFocus = null;
+
+    function open(e) {
+      if (e) e.preventDefault();
+      lastFocus = document.activeElement;
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+      setTimeout(() => modal.querySelector("input")?.focus(), 120);
+    }
+    function close() {
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+      lastFocus?.focus?.();
+      // reset after transition
+      setTimeout(() => { body.hidden = false; success.hidden = true; form.reset(); form.querySelectorAll(".field").forEach((f) => f.classList.remove("is-invalid")); }, 350);
+    }
+    document.querySelectorAll("[data-demo]").forEach((b) => b.addEventListener("click", open));
+    modal.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", close));
+    addEventListener("keydown", (e) => { if (e.key === "Escape" && modal.classList.contains("is-open")) close(); });
+
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    function validate() {
+      let ok = true;
+      const rules = [
+        ["name", (v) => v.trim().length >= 2, "Podaj imię i nazwisko."],
+        ["email", (v) => emailRe.test(v.trim()), "Podaj poprawny adres e-mail."],
+        ["company", (v) => v.trim().length >= 2, "Podaj nazwę firmy."],
+      ];
+      rules.forEach(([name, test, msg]) => {
+        const input = form.elements[name];
+        const field = input.closest(".field");
+        const err = field.querySelector("[data-err]");
+        if (!test(input.value)) { field.classList.add("is-invalid"); if (err) err.textContent = msg; ok = false; }
+        else field.classList.remove("is-invalid");
+      });
+      return ok;
+    }
+    // live-clear errors
+    form.addEventListener("input", (e) => { const f = e.target.closest(".field"); if (f?.classList.contains("is-invalid")) f.classList.remove("is-invalid"); });
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!validate()) { form.querySelector(".is-invalid input")?.focus(); return; }
+      const name = form.elements["name"].value.trim().split(" ")[0];
+      document.getElementById("successName").textContent = name + "!";
+      body.hidden = true;
+      success.hidden = false;
+      // NOTE: no backend wired — this is a front-end demo submission.
+    });
+  })();
+
   /* ---------- Aurora canvas background ---------- */
   (function aurora() {
     const canvas = document.getElementById("aurora");

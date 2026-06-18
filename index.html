@@ -3,8 +3,33 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="description" content="V-AI — autonomiczna platforma do automatyzacji biznesu. Od chaosu do automatyzacji w 14 dni." />
+<meta name="description" content="V-AI — autonomiczna platforma do automatyzacji biznesu. Asystenci AI, automatyzacje, dashboardy i integracje CRM. Od chaosu do automatyzacji w 14 dni." />
+<meta name="theme-color" content="#ff7a18" />
+<meta name="author" content="V-AI" />
+<meta name="keywords" content="automatyzacja biznesu, asystenci AI, CRM, dashboardy, V-AI, automatyzacja procesów" />
+<link rel="canonical" href="https://v-ai.example/" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="V-AI · Od chaosu do automatyzacji" />
+<meta property="og:description" content="Autonomiczna platforma AI: asystenci 24/7, automatyzacje, dashboardy i integracje. Wdrożenie w 14 dni." />
+<meta property="og:locale" content="pl_PL" />
+<meta property="og:site_name" content="V-AI" />
+<meta property="og:image" content="og-image.svg" />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="V-AI · Od chaosu do automatyzacji" />
+<meta name="twitter:description" content="Autonomiczna platforma AI do automatyzacji biznesu. Wdrożenie w 14 dni." />
+<meta name="twitter:image" content="og-image.svg" />
+
+<!-- Favicon (inline SVG, no external file needed) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23060710'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial,sans-serif' font-weight='800' font-size='30' fill='%23ff7a18'%3EV%3C/text%3E%3C/svg%3E" />
+
 <title>V-AI · Autonomiczna automatyzacja biznesu</title>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"V-AI","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Autonomiczna platforma AI do automatyzacji biznesu — asystenci AI, automatyzacje, dashboardy i integracje CRM.","offers":{"@type":"Offer","price":"990","priceCurrency":"PLN"}}
+</script>
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -38,7 +63,7 @@
       <a href="#compare">Przed / po</a>
       <a href="#bento">Możliwości</a>
       <a href="#pricing">Cennik</a>
-      <a href="#cta" class="nav__cta" data-magnetic><span>Umów demo</span></a>
+      <a href="#cta" class="nav__cta" data-magnetic data-demo><span>Umów demo</span></a>
     </nav>
     <button class="burger" id="burger" aria-label="Menu" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -52,7 +77,7 @@
     <a href="#bento">Możliwości</a>
     <a href="#pricing">Cennik</a>
     <a href="#faq">FAQ</a>
-    <a href="#cta" class="btn btn--primary"><span>Umów demo</span></a>
+    <a href="#cta" class="btn btn--primary" data-demo><span>Umów demo</span></a>
   </div>
 
   <main>
@@ -328,7 +353,7 @@
       <div class="cta__card" data-reveal data-glow>
         <h2 data-scramble>Zamień chaos w automatyzację</h2>
         <p>15 minut rozmowy. Pokażemy na żywo, co V-AI zautomatyzuje w Twojej firmie.</p>
-        <a href="#" class="btn btn--primary btn--lg" data-magnetic><span>Umów bezpłatne demo</span></a>
+        <a href="#" class="btn btn--primary btn--lg" data-magnetic data-demo><span>Umów bezpłatne demo</span></a>
       </div>
     </section>
   </main>
@@ -338,6 +363,47 @@
     <p>Od chaosu do automatyzacji.</p>
     <p class="footer__copy">© 2026 V-AI · Autonomiczna automatyzacja biznesu</p>
   </footer>
+
+  <!-- Demo modal -->
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal__x" data-close aria-label="Zamknij">×</button>
+      <div class="modal__body" id="modalBody">
+        <p class="tag">// Demo</p>
+        <h3 id="modalTitle">Umów bezpłatne demo</h3>
+        <p class="modal__lead">15 minut. Pokażemy na żywo, co V-AI zautomatyzuje w Twojej firmie.</p>
+        <form class="form" id="demoForm" novalidate>
+          <div class="field">
+            <label for="f-name">Imię i nazwisko</label>
+            <input id="f-name" name="name" type="text" autocomplete="name" required />
+            <small class="err" data-err></small>
+          </div>
+          <div class="field">
+            <label for="f-email">E-mail służbowy</label>
+            <input id="f-email" name="email" type="email" autocomplete="email" required />
+            <small class="err" data-err></small>
+          </div>
+          <div class="field">
+            <label for="f-company">Firma</label>
+            <input id="f-company" name="company" type="text" autocomplete="organization" required />
+            <small class="err" data-err></small>
+          </div>
+          <div class="field">
+            <label for="f-msg">Co chcesz zautomatyzować? <span class="opt">(opcjonalnie)</span></label>
+            <textarea id="f-msg" name="message" rows="3"></textarea>
+          </div>
+          <button type="submit" class="btn btn--primary btn--full"><span>Wyślij zgłoszenie</span></button>
+        </form>
+      </div>
+      <div class="modal__success" id="modalSuccess" hidden>
+        <div class="check" aria-hidden="true"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" fill="none"/><path fill="none" d="M14 27l8 8 16-16"/></svg></div>
+        <h3>Dziękujemy, <span id="successName">!</span></h3>
+        <p>Twoje zgłoszenie poszło. Odezwiemy się w ciągu 24 godzin na podany e-mail.</p>
+        <button class="btn btn--ghost" data-close><span>Zamknij</span></button>
+      </div>
+    </div>
+  </div>
 
   <script src="js/main.js"></script>
 </body>
