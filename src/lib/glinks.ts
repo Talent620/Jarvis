@@ -3,6 +3,20 @@
 // użytkownik jest zalogowany w przeglądarce, więc działa od ręki.
 // Pełny dostęp przez API (czytanie skrzynki itd.) to backend OAuth — src/lib/google.ts.
 
+/**
+ * Otwórz URL z niezaufanego źródła (np. strona leada z OSM) tylko gdy to http/https —
+ * blokuje `javascript:`/`data:` i inne schematy. Pusty/niepoprawny URL → nic.
+ */
+export function safeOpenExternal(raw?: string): void {
+  if (!raw) return;
+  try {
+    const u = new URL(raw, typeof window !== "undefined" ? window.location.origin : "https://x");
+    if (u.protocol === "http:" || u.protocol === "https:") window.open(u.toString(), "_blank", "noopener,noreferrer");
+  } catch {
+    /* nieprawidłowy URL — pomiń */
+  }
+}
+
 /** Gmail: okno nowej wiadomości z gotowym adresatem, tematem i treścią. */
 export function gmailComposeUrl(to: string, subject: string, body: string): string {
   const p = new URLSearchParams({ view: "cm", fs: "1", to, su: subject, body });

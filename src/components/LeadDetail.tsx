@@ -2,7 +2,7 @@ import { useState } from "react";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { buildDossier, auditWeakPoints, scoreLabel, smsDraft } from "../lib/leadIntel";
-import { gmailComposeUrl, mailtoUrl, mapsSearchUrl, smsUrl, splitOffer } from "../lib/glinks";
+import { gmailComposeUrl, mailtoUrl, mapsSearchUrl, smsUrl, splitOffer, safeOpenExternal } from "../lib/glinks";
 import { canSendDirect, sendOfferEmail } from "../lib/mailer";
 import { draftOffer } from "../lib/offer";
 import { markContacted } from "../lib/salesEngine";
@@ -163,7 +163,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
               {phone && <button className="chip" onClick={() => window.open(`tel:${phone.replace(/\s/g, "")}`)}>📞 Zadzwoń</button>}
               {phone && <button className="chip" onClick={sendSms}>📱 SMS z zaczepką</button>}
-              {lead.url && <button className="chip" onClick={() => window.open(lead.url, "_blank", "noopener")}>🌐 Strona</button>}
+              {lead.url && <button className="chip" onClick={() => safeOpenExternal(lead.url)}>🌐 Strona</button>}
               <button className="chip" onClick={() => window.open(mapsSearchUrl(`${lead.company} ${lead.address || lead.location || ""}`), "_blank", "noopener")}>🗺 Mapy/opinie</button>
               {phone && <button className="chip" onClick={() => copyWithToast(phone)}>📋 Telefon</button>}
               {email && <button className="chip" onClick={() => copyWithToast(email)}>📋 E-mail</button>}

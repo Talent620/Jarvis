@@ -32,9 +32,9 @@ Bazowo: 665 testów zielone. Każda partia: zmiana → test/build → commit.
 - [x] (m3) DevTools tylko gdy `!app.isPackaged`.
 
 ### Batch 5 — leady + LeadDetail
-- [ ] (M3) Overpass: timeout per-mirror 12s.
-- [ ] (m4) `LeadDetail` — `window.open(lead.url)` przez wspólny guard http/https.
-- [ ] (m3) `parseElement` — limity długości pól.
+- [x] (M3) Overpass: timeout per-mirror 12s.
+- [x] (m4) `LeadDetail` — `window.open(lead.url)` przez wspólny guard http/https.
+- [x] (m3) `parseElement` — limity długości pól.
 
 ### Batch 6 — krypto + CI
 - [ ] (cipher m4) Zapis `iter`+wersji w nagłówku `JV1:` (wstecznie zgodnie).

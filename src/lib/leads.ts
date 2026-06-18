@@ -94,13 +94,15 @@ export function toOverpassBbox(nominatimBB: string[]): [number, number, number, 
 export function parseElement(el: any): RawLead | null {
   const t = el?.tags;
   if (!t?.name) return null;
-  const phone = t.phone || t["contact:phone"] || t["contact:mobile"] || undefined;
-  const email = t.email || t["contact:email"] || undefined;
-  const website = t.website || t["contact:website"] || t.url || undefined;
+  // Tagi OSM są niezaufane — utnij każde pole do sensownej długości (anty-bloat store/CRM).
+  const cap = (v: unknown, n: number) => (v ? String(v).slice(0, n) : undefined);
+  const phone = cap(t.phone || t["contact:phone"] || t["contact:mobile"], 40);
+  const email = cap(t.email || t["contact:email"], 120);
+  const website = cap(t.website || t["contact:website"] || t.url, 200);
   const street = [t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" ");
-  const address = [street, t["addr:city"]].filter(Boolean).join(", ") || undefined;
-  const hours = t.opening_hours || undefined;
-  const kind = t.shop || t.craft || t.office || t.amenity || t.leisure || t.tourism || undefined;
+  const address = cap([street, t["addr:city"]].filter(Boolean).join(", "), 160);
+  const hours = cap(t.opening_hours, 120);
+  const kind = cap(t.shop || t.craft || t.office || t.amenity || t.leisure || t.tourism, 40);
   return { company: String(t.name).slice(0, 80), phone, email, website, address, hours, kind, hasWebsite: !!website };
 }
 
@@ -130,7 +132,9 @@ export function buildOverpassQuery(bbox: [number, number, number, number], niche
 async function overpassQuery(query: string): Promise<any[] | null> {
   for (const url of OVERPASS_MIRRORS) {
     try {
-      const res = await fetchTimeout(url, { method: "POST", body: query }, 30000);
+      // 12s/mirror (Overpass i tak ma [timeout:25] po stronie serwera) — 4×30s = ~2 min
+      // zawieszenia UI przy wszystkich wiszących serwerach było za dużo.
+      const res = await fetchTimeout(url, { method: "POST", body: query }, 12000);
       if (!res.ok) continue; // 429/504 → następny serwer
       const d = await res.json().catch(() => null);
       if (d?.elements) return d.elements as any[];
