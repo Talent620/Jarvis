@@ -1,4 +1,41 @@
-# JARVIS — Postęp prac (Faza 2)
+# JARVIS — Postęp prac
+
+## ▶ PROGRAM 10 FAZ (aktywny) — produkt premium na sprzedaż
+
+Baza: **685 testów zielone**, web build OK, na branchu `claude/functionality-modification-access-z9kod1`.
+Zasada: faza nie zamyka się bez zielonych testów + buildu; commit po każdej fazie; STOP tylko przy płatnościach (Faza 6).
+
+### Realność wykonania (uczciwie, na starcie)
+Część faz to **net-new, ciężka infrastruktura**, której nie da się w pełni *uruchomić* w tym środowisku
+(brak działającego demona Docker, brak kluczy live, APK buduje wyłącznie CI). Dlatego:
+- Kod + testy (mock/HTTP) + **graceful degradation** wdrażam normalnie.
+- „Żywe" usługi (Qdrant/Mem0 przez Docker, Gemini Live na kluczu, podpisany APK) wymagają hosta/kluczy
+  po Twojej stronie — zaznaczam to przy każdej fazie. To nie wymówka, to warunek brzegowy środowiska.
+- **Decyzja architektoniczna:** Mem0+Qdrant (Faza 1) i lokalny model (Faza 8) zakładają **host serwera**,
+  którego dziś nie ma (klient to PWA + Worker; Worker nie uruchomi Qdrant). Stawiam je jako **osobny
+  serwis `server/` (docker-compose)** zgodnie z fazą; klient łączy się przez env URL i działa też bez niego.
+
+### Status faz
+- [x] **Faza 0 — Audyt i fundament:** `ARCHITECTURE.md` (mermaid + punkty zaczepienia) + ten plan + git. ✅
+- [ ] **Faza 1 — Pamięć (Mem0 + Qdrant):** `server/` docker-compose + `MemoryService` (add/search/getAll/update/delete) + wpięcie w `brain.ts` (search PRZED / add PO) + 2 namespace'y + endpoint debug. Klient degraduje się, gdy serwis niedostępny.
+- [ ] **Faza 2 — MCP:** `McpManager` (oficjalny TS SDK), allowlista, narzędzia → `toolDefs`, Calendar/Gmail przez MCP, graceful degradation.
+- [ ] **Faza 3 — Głos live (Gemini Live):** *w dużej części istnieje* (`liveVoice.ts` WS+barge-in) — dopiąć MCP+Mem0, uprawnienia Android, fallback; opcjonalna kamera (toggle).
+- [ ] **Faza 4 — Mastra + router modeli:** orkiestracja + router Groq (Scout vs Kimi), logowanie decyzji, retry/fallback, osobowość bez zmian.
+- [ ] **Faza 5 — Panel kosztów:** telemetria per wywołanie, cennik w configu, agregacje/prognoza/budżety, osobny ekran.
+- [ ] **Faza 6 — Saldo/OpenRouter:** ⛔ **STOP przy płatnościach** — pytam przed konfiguracją billingu.
+- [ ] **Faza 7 — Proaktywność + pamięć epizodyczna.**
+- [ ] **Faza 8 — Tryb on-device (offline/prywatność).**
+- [ ] **Faza 9 — Produktyzacja (onboarding kluczy, white-label, docs).**
+- [ ] **Faza 10 — Samokontrola + `RELEASE_NOTES.md`.**
+
+### Znane problemy / decyzje (Faza 0)
+- Brief mówił „Node za tunelem Cloudflare" — realnie **Cloudflare Worker**; Mem0/Qdrant wymagają
+  *nowego* hosta serwera (poza Workerem). Przyjęto: osobny `server/` + docker-compose.
+- Sekrety klienta (klucze BYOK) są dziś w localStorage *plaintext* — do utwardzenia w Fazie 9 (onboarding) i wg `SECURITY.md`.
+
+---
+
+# (Archiwum) Wcześniejszy przegląd — Postęp prac (Faza 2)
 
 Bazowo: 665 testów zielone. Każda partia: zmiana → test/build → commit.
 
