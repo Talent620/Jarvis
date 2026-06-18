@@ -32,6 +32,7 @@ const Gadgets = lazy(() => import("./components/Gadgets"));
 const HudVision = lazy(() => import("./components/HudVision"));
 const Studio = lazy(() => import("./components/Studio"));
 const SystemStatus = lazy(() => import("./components/SystemStatus"));
+const CostPanel = lazy(() => import("./components/CostPanel"));
 const MemoryCenter = lazy(() => import("./components/MemoryCenter"));
 const AuditLog = lazy(() => import("./components/AuditLog"));
 const SentBox = lazy(() => import("./components/SentBox"));
@@ -182,6 +183,7 @@ export default function App() {
   const [showShoppingList, setShowShoppingList] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
+  const [showCosts, setShowCosts] = useState(false);
   const [showMemory, setShowMemory] = useState(false);
   const [showAudit, setShowAudit] = useState(false);
   const [showSent, setShowSent] = useState(false);
@@ -1012,6 +1014,7 @@ export default function App() {
           onShoppingList={() => setShowShoppingList(true)}
           onNotifications={() => setShowNotifs(true)}
           onStatus={() => setShowStatus(true)}
+          onCosts={() => setShowCosts(true)}
           onMemory={() => setShowMemory(true)}
           onAudit={() => setShowAudit(true)}
           onSent={() => setShowSent(true)}
@@ -1024,6 +1027,11 @@ export default function App() {
       {showStatus && (
         <Suspense fallback={null}>
           <SystemStatus onClose={() => setShowStatus(false)} />
+        </Suspense>
+      )}
+      {showCosts && (
+        <Suspense fallback={null}>
+          <CostPanel onClose={() => setShowCosts(false)} />
         </Suspense>
       )}
       {showMemory && (

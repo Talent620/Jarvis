@@ -15,6 +15,7 @@ interface Resp {
   content: Block[];
   stop_reason: string;
   error?: { message: string };
+  usage?: { input_tokens?: number; output_tokens?: number };
 }
 type AnthMsg = { role: "user" | "assistant"; content: any };
 
@@ -38,6 +39,8 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
       : m.content,
   }));
   const used = new Set<string>();
+  let inTok = 0;
+  let outTok = 0;
   let guard = 0;
   // Niektóre modele/bramki nie przyjmują adaptacyjnego myślenia ani „effort".
   // Zaczynamy z nimi (najlepsza jakość), a przy błędzie 400 o ich braku —
@@ -82,6 +85,10 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
       throw new Error(`${msg} (${res.status})`);
     }
 
+    if (data.usage) {
+      inTok += data.usage.input_tokens || 0;
+      outTok += data.usage.output_tokens || 0;
+    }
     messages.push({ role: "assistant", content: data.content });
     for (const b of data.content) {
       if ((b.type === "tool_use" || b.type === "server_tool_use") && b.name) used.add(b.name);
@@ -105,7 +112,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
       .map((b) => b.text)
       .join("")
       .trim();
-    return { text: text || "…", tools: [...used] };
+    return { text: text || "…", tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok } };
   }
-  return { text: "Zapętliłem się przy realizacji zadania.", tools: [...used] };
+  return { text: "Zapętliłem się przy realizacji zadania.", tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok } };
 }

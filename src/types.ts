@@ -332,6 +332,10 @@ export interface Settings {
   mcpServers: string;
   /** Dodatkowe zaufane hosty MCP (allowlista), oddzielone przecinkiem/spacją. */
   mcpAllowlist: string;
+  /** Nadpisania cennika AI (JSON: {"model":{"in":USD/1M,"out":USD/1M}}). Puste = domyślny cennik. */
+  aiPricingOverrides: string;
+  /** Miesięczny budżet AI w USD (0 = brak limitu — tylko podgląd kosztów). */
+  aiMonthlyBudgetUsd: number;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

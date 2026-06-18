@@ -29,6 +29,7 @@ export default function More({
   onShoppingList,
   onNotifications,
   onStatus,
+  onCosts,
   onMemory,
   onAudit,
   onSent,
@@ -61,6 +62,7 @@ export default function More({
   onShoppingList: () => void;
   onNotifications: () => void;
   onStatus: () => void;
+  onCosts: () => void;
   onMemory: () => void;
   onAudit: () => void;
   onSent: () => void;
@@ -76,6 +78,7 @@ export default function More({
     { id: "profile", icon: "👤", label: "Mój profil — kim jestem (pamięć)", fn: onProfile },
     { id: "memory", icon: "🧠", label: "Co JARVIS o mnie wie (pamięć — edytuj/usuń)", fn: onMemory },
     { id: "audit", icon: "📜", label: "Dziennik działań — co przeszło przez program", fn: onAudit },
+    { id: "costs", icon: "💸", label: "Koszty AI — zużycie, prognoza, budżet", fn: onCosts },
     { id: "tasks", icon: "✅", label: "Zadania Pro — projekty, priorytety (GTD)", fn: onTasks },
     { id: "dayplan", icon: "🗓", label: "Plan Dnia — zadania i notatnik", fn: onDayPlan },
     { id: "bargain", icon: "🏷", label: "Łowca Okazji — znajdź najtaniej (nowe/używane)", fn: onBargain },

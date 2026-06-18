@@ -44,6 +44,8 @@ export function makeOpenAICompatible(
       ),
     ];
     const used = new Set<string>();
+    let inTok = 0;
+    let outTok = 0;
     let guard = 0;
 
     while (guard++ < 8) {
@@ -69,6 +71,12 @@ export function makeOpenAICompatible(
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
 
+      // Telemetria tokenów (sumuj przez całą turę, łącznie z iteracjami narzędzi).
+      if (data.usage) {
+        inTok += data.usage.prompt_tokens || 0;
+        outTok += data.usage.completion_tokens || 0;
+      }
+
       const msg: OAIMessage | undefined = data.choices?.[0]?.message;
       if (!msg) throw new Error("Pusta odpowiedź modelu.");
       messages.push(msg);
@@ -88,8 +96,8 @@ export function makeOpenAICompatible(
         continue;
       }
 
-      return { text: (msg.content || "").trim() || "…", tools: [...used] };
+      return { text: (msg.content || "").trim() || "…", tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok } };
     }
-    return { text: "Zapętliłem się przy realizacji zadania.", tools: [...used] };
+    return { text: "Zapętliłem się przy realizacji zadania.", tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok } };
   };
 }

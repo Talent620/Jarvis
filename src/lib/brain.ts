@@ -10,6 +10,7 @@ import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, isKeyError, humanize, isComplex, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
 import { classifyTask, logRouteDecision, GROQ_SCOUT, GROQ_KIMI } from "./modelRouter";
+import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
 
 // Jednorazowy retry przy chwilowym błędzie sieci.
@@ -505,6 +506,18 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
         // Router (Faza 4): zapisz faktyczną decyzję (model, klasyfikacja, czy failover) — zasila panel kosztów.
         const cls = classifyTask(lastUser?.content || "", !!lastUser?.image);
         logRouteDecision({ provider, model, kind: cls.kind, reason: cls.reason, fellBack: meta.fellBack });
+        // Telemetria kosztów (Faza 5): wyceń zużycie tokenów wg cennika (z nadpisaniami z configu).
+        if (reply.usage && (reply.usage.inputTokens || reply.usage.outputTokens)) {
+          const price = priceFor(model, parsePricingOverrides(store.settings.aiPricingOverrides));
+          recordUsage({
+            at: Date.now(),
+            provider,
+            model,
+            inputTokens: reply.usage.inputTokens,
+            outputTokens: reply.usage.outputTokens,
+            costUsd: costOf(reply.usage, price),
+          });
+        }
         return { ...reply, ...meta, ...(citations.length ? { citations } : {}) };
       } catch (e) {
         providerErr = e;

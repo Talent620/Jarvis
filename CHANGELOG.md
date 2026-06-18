@@ -5,6 +5,15 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Program premium — Faza 5 (panel kosztów)
+- **Telemetria zużycia tokenów:** adaptery `anthropic`/`gemini`/openai-compat zwracają teraz
+  `usage` (sumowane przez całą turę, łącznie z pętlą narzędzi) → `JarvisReply.usage`.
+- **`usageTelemetry.ts`:** wycena (cennik domyślny + nadpisania w configu), agregacje (dziś/7/30 dni),
+  rozbicie per dostawca/model, prognoza miesięczna (run-rate 7 dni × 30), status budżetu (⚠ ≥80%, ⛔ ≥100%).
+  Zapis w `brain.ts` po udanej odpowiedzi (localStorage, cap 2000). +9 testów.
+- **Ekran 💸 Koszty AI** (`CostPanel`, z menu „Więcej"): sumy, prognoza, pasek budżetu, rozbicia,
+  edycja budżetu i cennika (JSON), ostatnie decyzje routera (Faza 4). Ustawienia: `aiMonthlyBudgetUsd`, `aiPricingOverrides`.
+
 ### Program premium — Faza 4 (router modeli)
 - **`modelRouter.ts`:** `classifyTask` (simple/complex/vision wg heurystyk: kod/analiza/długość/obraz),
   router Groq **Llama 4 Scout** (szybki, multimodalny — proste+wizja) vs **Kimi K2** (mocne rozumowanie/kod),

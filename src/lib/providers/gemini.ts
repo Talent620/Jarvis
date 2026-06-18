@@ -65,6 +65,8 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
       : [{ text: m.content }],
   }));
   const used = new Set<string>();
+  let inTok = 0;
+  let outTok = 0;
   let guard = 0;
 
   while (guard++ < 8) {
@@ -79,6 +81,11 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
     // Dołącz kod HTTP do treści — inaczej logika awaryjna (rotacja klucza /
     // przełączenie dostawcy) nie rozpozna 401/403/429 ukrytych w samym tekście.
     if (!res.ok) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
+
+    if (data.usageMetadata) {
+      inTok += data.usageMetadata.promptTokenCount || 0;
+      outTok += data.usageMetadata.candidatesTokenCount || 0;
+    }
 
     const parts: Part[] = data.candidates?.[0]?.content?.parts || [];
     contents.push({ role: "model", parts });
@@ -101,7 +108,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
       .map((p) => p.text)
       .join("")
       .trim();
-    return { text: text || "…", tools: [...used] };
+    return { text: text || "…", tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok } };
   }
-  return { text: "Zapętliłem się przy realizacji zadania.", tools: [...used] };
+  return { text: "Zapętliłem się przy realizacji zadania.", tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok } };
 }

@@ -9,6 +9,12 @@ export interface Msg {
   image?: { data: string; mediaType: string };
 }
 
+/** Zużycie tokenów (do telemetrii kosztów — Faza 5). Sumowane przez całą turę (z pętlą narzędzi). */
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export interface JarvisReply {
   text: string;
   tools: string[];
@@ -17,6 +23,8 @@ export interface JarvisReply {
   via?: ProviderId;
   /** True, gdy odpowiedział dostawca zapasowy (główny był zajęty/wyczerpany). */
   fellBack?: boolean;
+  /** Zużycie tokenów zgłoszone przez API (gdy dostępne). */
+  usage?: TokenUsage;
 }
 
 /** Kontekst pojedynczego zapytania przekazywany adapterowi dostawcy. */

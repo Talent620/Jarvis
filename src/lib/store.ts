@@ -44,6 +44,8 @@ const defaultSettings: Settings = {
   memoryServiceToken: "",
   mcpServers: "",
   mcpAllowlist: "",
+  aiPricingOverrides: "",
+  aiMonthlyBudgetUsd: 0,
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,
