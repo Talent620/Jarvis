@@ -6,6 +6,7 @@ import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
 import { getAllMemories, memoryServiceAvailable } from "../lib/memoryService";
+import { mcpManager } from "../lib/mcp";
 import { googleStartUrl, gmailSearch, connectDesktopGoogle } from "../lib/google";
 import { testApi, testProvider, resolveProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
@@ -74,6 +75,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [salesOsBusy, setSalesOsBusy] = useState(false);
   const [memMsg, setMemMsg] = useState("");
   const [memBusy, setMemBusy] = useState(false);
+  const [mcpMsg, setMcpMsg] = useState("");
+  const [mcpLoaded, setMcpLoaded] = useState(() => mcpManager.listLoaded());
   const [apiMsg, setApiMsg] = useState("");
   const [health, setHealth] = useState<HealthItem[] | null>(null);
   const [healthBusy, setHealthBusy] = useState(false);
@@ -1225,6 +1228,50 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 🔌 Test pamięci
               </button>
               {memMsg && <p className="muted">{memMsg}</p>}
+
+              <h3>Serwery MCP (narzędzia)</h3>
+              <p className="muted">
+                Podłącz narzędzia przez standard MCP. Tylko hosty z allowlisty (domyślnie localhost +
+                mcp.googleapis.com). Niedostępny serwer jest pomijany — JARVIS działa dalej.
+              </p>
+              <div className="field">
+                <label>Serwery MCP (JSON)</label>
+                <textarea
+                  className="ta"
+                  rows={3}
+                  value={s.mcpServers}
+                  placeholder='[{"name":"gcal","url":"http://localhost:9100/mcp"}]'
+                  onChange={(e) => set({ mcpServers: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>Dodatkowe zaufane hosty (allowlista)</label>
+                <input
+                  value={s.mcpAllowlist}
+                  placeholder="np. mcp.mojadomena.pl"
+                  onChange={(e) => set({ mcpAllowlist: e.target.value })}
+                />
+              </div>
+              <button
+                className="btn"
+                onClick={async () => {
+                  store.setSettings({ mcpServers: s.mcpServers, mcpAllowlist: s.mcpAllowlist });
+                  setMcpMsg("⏳ Łączę z serwerami MCP…");
+                  try {
+                    const loaded = await mcpManager.loadAll();
+                    setMcpLoaded(mcpManager.listLoaded());
+                    setMcpMsg(loaded.length ? `✅ Załadowano ${loaded.length} narzędzi.` : "Brak narzędzi (sprawdź adres/allowlistę).");
+                  } catch { setMcpMsg("❌ Nie udało się połączyć z serwerami MCP."); }
+                }}
+              >
+                🔌 Połącz / odśwież MCP
+              </button>
+              {mcpMsg && <p className="muted">{mcpMsg}</p>}
+              {mcpLoaded.length > 0 && (
+                <ul className="muted" style={{ fontSize: 12, marginTop: 4, paddingLeft: 18 }}>
+                  {mcpLoaded.map((t) => <li key={t.toolName}>{t.original} <span style={{ opacity: 0.6 }}>({t.server})</span></li>)}
+                </ul>
+              )}
 
               <h3>AI Sales OS (osobne narzędzie)</h3>
               <p className="muted">

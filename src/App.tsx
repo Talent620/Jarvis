@@ -51,6 +51,7 @@ const WhereToBuy = lazy(() => import("./components/WhereToBuy"));
 const ShoppingList = lazy(() => import("./components/ShoppingList"));
 const Notifications = lazy(() => import("./components/Notifications"));
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
+import { mcpManager } from "./lib/mcp";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
 import { startBackgroundWake } from "./lib/wakeword";
 import { Capacitor } from "@capacitor/core";
@@ -620,6 +621,14 @@ export default function App() {
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
+  }, []);
+
+  // Faza 2 — załaduj narzędzia z zaufanych serwerów MCP (jeśli skonfigurowane).
+  // Graceful: serwer niedostępny/poza allowlistą → pominięty, JARVIS działa dalej.
+  useEffect(() => {
+    void mcpManager.loadAll().then((loaded) => {
+      if (loaded.length) toast(`🔌 MCP: załadowano ${loaded.length} narzędzi z ${new Set(loaded.map((t) => t.server)).size} serwer(ów).`);
+    }).catch(() => {});
   }, []);
 
   // --- Poranny briefing o ustalonej porze (raz dziennie, gdy aplikacja otwarta) ---

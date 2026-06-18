@@ -5,7 +5,14 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
-### Program premium — Faza 0 + Faza 1
+### Program premium — Faza 0 + Faza 1 + Faza 2
+- **Faza 2 — warstwa MCP:** `mcp.ts` (`McpManager`) — klient zgodny z MCP (JSON-RPC
+  initialize/tools/list/tools/call), allowlista hostów (anty tool-poisoning), narzędzia
+  rejestrowane w `toolDefs` (model widzi je natywnie; `runTool` routuje do serwera),
+  ładowanie przy starcie + UI (config + lista narzędzi), graceful degradation. 7 testów.
+  Decyzja: lekki klient protokolarny zamiast node-SDK w bundlu PWA; Google MCP dodany jako
+  ścieżka konfigurowalna, `google.ts` pozostaje fallbackiem (bez wyrywania działającego kodu).
+
 - **Faza 0:** `ARCHITECTURE.md` (mermaid + punkty zaczepienia) + 10-fazowy plan w `PROGRESS.md`.
 - **Faza 1 — pamięć długoterminowa (Mem0 + Qdrant):** `server/` (docker-compose + .env.example +
   README), `memoryService.ts` (add/search/getAll/update/delete; namespace personal/business;

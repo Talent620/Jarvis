@@ -328,6 +328,10 @@ export interface Settings {
   memoryServiceUrl: string;
   /** Opcjonalny token autoryzacji serwera pamięci. */
   memoryServiceToken: string;
+  /** Serwery MCP (JSON): [{name,url,enabled?,token?}]. Puste = brak narzędzi MCP. */
+  mcpServers: string;
+  /** Dodatkowe zaufane hosty MCP (allowlista), oddzielone przecinkiem/spacją. */
+  mcpAllowlist: string;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

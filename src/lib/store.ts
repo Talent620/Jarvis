@@ -42,6 +42,8 @@ const defaultSettings: Settings = {
   salesOsAutoSync: 0,
   memoryServiceUrl: "",
   memoryServiceToken: "",
+  mcpServers: "",
+  mcpAllowlist: "",
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,
