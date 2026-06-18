@@ -13,6 +13,7 @@ import { generateCards } from "./cards";
 import { runAutomation } from "./n8n";
 import { getCrypto, getRate } from "./markets";
 import { findLeads } from "./leads";
+import { safeCalc } from "./calc";
 import { openSalesOs, syncFromSalesOs, salesOsStatsText, pushLeadsToSalesOs, salesOsConfigured, outreachViaSalesOs, flushSalesOsOutreach, leadToOutreachInput, pushLeadStatusToSalesOs } from "./salesOs";
 import { buildDossier, auditWeakPoints } from "./leadIntel";
 import { callNowList, followUpsDue, followUpMessage, pipelineForecast, openLabel } from "./salesEngine";
@@ -252,13 +253,9 @@ const tools: Tool[] = [
       const expr = pct ? `${pct[2]}*${pct[1]}/100` : raw;
       const clean = expr.replace(/,/g, ".").replace(/[^0-9+\-*/().%\s]/g, "");
       if (!clean.trim()) return "Podaj wyrażenie liczbowe.";
-      try {
-        const val = Function(`"use strict"; return (${clean})`)();
-        if (typeof val !== "number" || !isFinite(val)) return "Nie potrafię tego policzyć.";
-        return `${raw} = ${Math.round(val * 1e6) / 1e6}`;
-      } catch {
-        return "Błędne wyrażenie.";
-      }
+      const val = safeCalc(clean); // parser zamiast Function() — bez ryzyka wykonania kodu
+      if (val === null) return "Błędne wyrażenie.";
+      return `${raw} = ${Math.round(val * 1e6) / 1e6}`;
     },
   },
   {

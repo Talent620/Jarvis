@@ -29,6 +29,27 @@ const noCRLF = (s) => String(s ?? "").replace(/[\r\n]+/g, " ").trim();
 // fetch z twardym limitem czasu — wiszący upstream nie blokuje invocation workera.
 const fetchT = (url, opts = {}, ms = 20000) => fetch(url, { ...opts, signal: AbortSignal.timeout(ms) });
 
+// Token aplikacji niepoprawny? (egzekwowane TYLKO gdy APP_TOKEN ustawiony — puste = bez zmian).
+const appTokenBad = (req, env) => !!env.APP_TOKEN && req.headers.get("x-app-token") !== env.APP_TOKEN;
+
+// Blokada SSRF do metadanych chmury: link-local 169.254.x (AWS/GCP/Azure 169.254.169.254),
+// metadata.google.internal, Alibaba 100.100.100.200. NIE blokujemy LAN (192.168/10/172.16),
+// bo passthrough obsługuje Home Assistant w sieci lokalnej.
+function blocksCloudMetadata(rawUrl) {
+  try {
+    const host = new URL(rawUrl).hostname.toLowerCase();
+    return (
+      host === "metadata.google.internal" ||
+      host === "100.100.100.200" ||
+      /^169\.254\./.test(host) ||
+      host === "[fd00:ec2::254]" || host === "fd00:ec2::254"
+    );
+  } catch {
+    return true; // nieparsowalny URL → odrzuć
+  }
+}
+
+
 
 // Przekaźnik SMTP (telefon wysyła „w tle" hasłem aplikacji, bez Google OAuth).
 // Logika lustrzana do electron/smtp.cjs, ale na gniazdach Cloudflare Workers.
@@ -317,6 +338,7 @@ export default {
 
       // --- RESEARCH (Tavily) ---
       if (path === "/v1/search" && req.method === "POST") {
+        if (appTokenBad(req, env)) return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });
         if (!env.TAVILY_API_KEY) return json(500, { error: "Brak TAVILY_API_KEY." });
         const { query, max_results = 5 } = await req.json();
         const r = await fetch("https://api.tavily.com/search", {
@@ -331,6 +353,7 @@ export default {
 
       // --- EMBEDDINGS (Gemini) ---
       if (path === "/v1/embed" && req.method === "POST") {
+        if (appTokenBad(req, env)) return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });
         if (!env.GEMINI_API_KEY) return json(500, { error: "Brak GEMINI_API_KEY." });
         const { texts } = await req.json();
         const list = Array.isArray(texts) ? texts.slice(0, 64) : []; // cap fan-out (koszt/CPU)
@@ -682,6 +705,7 @@ export default {
       if (path.endsWith("/passthrough")) {
         const u = url.searchParams.get("u");
         if (!u) return json(400, { error: "Brak parametru u." });
+        if (blocksCloudMetadata(u)) return json(403, { error: "Adres niedozwolony." }); // anty-SSRF (metadane chmury)
         const h = { "content-type": "application/json" };
         const auth = req.headers.get("authorization");
         if (auth) h.authorization = auth;

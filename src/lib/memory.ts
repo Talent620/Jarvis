@@ -1,6 +1,6 @@
 import { store, uid } from "./store";
 import { primaryKey } from "./keys";
-import { fetchTimeout } from "./http";
+import { fetchTimeout, appTokenHeader } from "./http";
 import type { MemoryFact } from "../types";
 
 // === Pamięć autonomiczna (semantyczna) ===
@@ -44,7 +44,7 @@ async function embedBatch(texts: string[]): Promise<number[][] | null> {
     if (proxy) {
       const r = await fetchTimeout(`${proxy.replace(/\/$/, "")}/v1/embed`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...appTokenHeader() },
         body: JSON.stringify({ texts }),
       }, 20000);
       if (!r.ok) throw new Error(`embed ${r.status}`);
