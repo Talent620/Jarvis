@@ -53,7 +53,9 @@ async function main() {
   });
   d = await j(r);
   check("POST /outreach → 201", r.status === 201, `got ${r.status}`);
-  check("POST /outreach drafted:true", d.drafted === true, JSON.stringify(d));
+  // A draft exists (newly generated OR reused from the inbound autoDraft in step 3);
+  // it only actually sends when the owner enabled autoSendEmails (gated otherwise).
+  check("POST /outreach produced a draft", typeof d.campaignMessageId === "string" && !!d.body, JSON.stringify(d));
 
   // 5) outreach validation: send without email → 422
   r = await fetch(`${BASE}/api/public/outreach`, { method: "POST", headers: H, body: JSON.stringify({ companyName: "No Email" }) });
