@@ -210,6 +210,65 @@
     });
   });
 
+  /* ---------- Mobile menu ---------- */
+  (function mobileMenu() {
+    const burger = document.getElementById("burger");
+    const menu = document.getElementById("mobileMenu");
+    if (!burger || !menu) return;
+    const close = () => { burger.classList.remove("is-open"); menu.classList.remove("is-open"); burger.setAttribute("aria-expanded", "false"); document.body.style.overflow = ""; };
+    burger.addEventListener("click", () => {
+      const open = menu.classList.toggle("is-open");
+      burger.classList.toggle("is-open", open);
+      burger.setAttribute("aria-expanded", String(open));
+      document.body.style.overflow = open ? "hidden" : "";
+    });
+    menu.querySelectorAll("a").forEach((a) => a.addEventListener("click", close));
+    addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+  })();
+
+  /* ---------- Before / after compare slider ---------- */
+  (function compare() {
+    const ba = document.getElementById("ba");
+    const before = document.getElementById("baBefore");
+    const handle = document.getElementById("baHandle");
+    if (!ba || !before || !handle) return;
+    let dragging = false;
+    function setPos(pct) {
+      const p = clamp(pct, 0, 100);
+      before.style.width = p + "%";
+      handle.style.left = p + "%";
+      handle.setAttribute("aria-valuenow", Math.round(p));
+    }
+    function fromEvent(clientX) {
+      const r = ba.getBoundingClientRect();
+      setPos(((clientX - r.left) / r.width) * 100);
+    }
+    ba.addEventListener("pointerdown", (e) => { dragging = true; fromEvent(e.clientX); ba.setPointerCapture(e.pointerId); });
+    ba.addEventListener("pointermove", (e) => { if (dragging) fromEvent(e.clientX); });
+    ba.addEventListener("pointerup", () => (dragging = false));
+    ba.addEventListener("pointercancel", () => (dragging = false));
+    handle.addEventListener("keydown", (e) => {
+      const cur = parseFloat(handle.getAttribute("aria-valuenow")) || 50;
+      if (e.key === "ArrowLeft") { setPos(cur - 4); e.preventDefault(); }
+      if (e.key === "ArrowRight") { setPos(cur + 4); e.preventDefault(); }
+    });
+    // subtle auto-hint on first reveal
+    if (!reduce) {
+      const hintIO = new IntersectionObserver((entries) => entries.forEach((en) => {
+        if (!en.isIntersecting) return;
+        hintIO.disconnect();
+        let v = 50, dir = 1, n = 0;
+        const id = setInterval(() => {
+          v += dir * 2; n++;
+          if (v >= 62 || v <= 38) dir *= -1;
+          setPos(v);
+          if (n > 24) { clearInterval(id); setPos(50); }
+        }, 24);
+      }), { threshold: 0.5 });
+      hintIO.observe(ba);
+    }
+  })();
+
   /* ---------- Aurora canvas background ---------- */
   (function aurora() {
     const canvas = document.getElementById("aurora");

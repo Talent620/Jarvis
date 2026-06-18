@@ -23,6 +23,7 @@
   <nav class="dots" id="dots" aria-label="Sekcje">
     <a href="#hero" class="dot is-active" data-label="Start"></a>
     <a href="#showcase" class="dot" data-label="Jak działa"></a>
+    <a href="#compare" class="dot" data-label="Przed / po"></a>
     <a href="#bento" class="dot" data-label="Możliwości"></a>
     <a href="#stats" class="dot" data-label="Efekty"></a>
     <a href="#pricing" class="dot" data-label="Cennik"></a>
@@ -34,11 +35,25 @@
     <a href="#hero" class="nav__brand">V<span>-</span>AI</a>
     <nav class="nav__links">
       <a href="#showcase">Jak działa</a>
+      <a href="#compare">Przed / po</a>
       <a href="#bento">Możliwości</a>
       <a href="#pricing">Cennik</a>
       <a href="#cta" class="nav__cta" data-magnetic><span>Umów demo</span></a>
     </nav>
+    <button class="burger" id="burger" aria-label="Menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
   </header>
+
+  <!-- Mobile menu -->
+  <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+    <a href="#showcase">Jak działa</a>
+    <a href="#compare">Przed / po</a>
+    <a href="#bento">Możliwości</a>
+    <a href="#pricing">Cennik</a>
+    <a href="#faq">FAQ</a>
+    <a href="#cta" class="btn btn--primary"><span>Umów demo</span></a>
+  </div>
 
   <main>
     <!-- HERO -->
@@ -108,6 +123,52 @@
       </div>
     </section>
 
+    <!-- COMPARE (before / after) -->
+    <section class="section compare" id="compare">
+      <header class="section__head">
+        <p class="tag" data-reveal>// Przed / po</p>
+        <h2 class="section__title" data-scramble>Przeciągnij i zobacz różnicę</h2>
+      </header>
+      <div class="ba" id="ba" data-reveal>
+        <!-- AFTER (clean, automated) -->
+        <div class="ba__layer ba__after">
+          <div class="ba__label ba__label--after">Po V-AI</div>
+          <div class="dash">
+            <div class="dash__row">
+              <span class="dash__pill on">Auto</span>
+              <span class="dash__pill on">CRM</span>
+              <span class="dash__pill on">AI 24/7</span>
+            </div>
+            <div class="dash__bars">
+              <i style="--h:46%"></i><i style="--h:68%"></i><i style="--h:55%"></i>
+              <i style="--h:82%"></i><i style="--h:73%"></i><i style="--h:95%"></i>
+            </div>
+            <div class="dash__cards">
+              <div class="dash__card"><b>+38%</b><span>sprzedaż</span></div>
+              <div class="dash__card"><b>0</b><span>zaległych maili</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- BEFORE (chaos) -->
+        <div class="ba__layer ba__before" id="baBefore">
+          <div class="ba__label ba__label--before">Przed</div>
+          <div class="chaos">
+            <span class="chip" style="--x:8%;--y:18%;--r:-9deg">📧 47 nowych</span>
+            <span class="chip" style="--x:54%;--y:12%;--r:6deg">🔔 Pilne!</span>
+            <span class="chip" style="--x:30%;--y:40%;--r:-4deg">📄 Faktura?</span>
+            <span class="chip" style="--x:66%;--y:48%;--r:8deg">⏰ Deadline</span>
+            <span class="chip" style="--x:14%;--y:64%;--r:5deg">📊 Excel x12</span>
+            <span class="chip" style="--x:48%;--y:74%;--r:-7deg">💬 Brak odp.</span>
+            <span class="chip" style="--x:74%;--y:78%;--r:3deg">❗ Reklamacja</span>
+          </div>
+        </div>
+        <!-- Handle -->
+        <div class="ba__handle" id="baHandle" role="slider" aria-label="Suwak porównania" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" tabindex="0">
+          <span class="ba__grip">⟺</span>
+        </div>
+      </div>
+    </section>
+
     <!-- BENTO -->
     <section class="section bento" id="bento">
       <header class="section__head">
@@ -162,6 +223,36 @@
         <div class="stat" data-reveal data-reveal-delay="0.3">
           <div class="stat__num" data-count="14" data-suffix=" dni">0</div>
           <p>do pełnego wdrożenia</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section class="testimonials" id="testimonials">
+      <header class="section__head">
+        <p class="tag" data-reveal>// Opinie</p>
+        <h2 class="section__title" data-scramble>Mówią to za nas</h2>
+      </header>
+      <div class="tcols" aria-hidden="false">
+        <div class="tcol">
+          <div class="tcol__track">
+            <figure class="tcard"><blockquote>"Skrzynka przestała być koszmarem. AI ogarnia 80% maili sama."</blockquote><figcaption><b>Marta K.</b> · e-commerce</figcaption></figure>
+            <figure class="tcard"><blockquote>"Wdrożenie w 11 dni. Następnego tygodnia widziałem efekty na dashboardzie."</blockquote><figcaption><b>Tomasz W.</b> · agencja</figcaption></figure>
+            <figure class="tcard"><blockquote>"Wreszcie nie pracuję po nocach. System pilnuje terminów za mnie."</blockquote><figcaption><b>Anna R.</b> · usługi B2B</figcaption></figure>
+            <figure class="tcard"><blockquote>"Skrzynka przestała być koszmarem. AI ogarnia 80% maili sama."</blockquote><figcaption><b>Marta K.</b> · e-commerce</figcaption></figure>
+            <figure class="tcard"><blockquote>"Wdrożenie w 11 dni. Następnego tygodnia widziałem efekty na dashboardzie."</blockquote><figcaption><b>Tomasz W.</b> · agencja</figcaption></figure>
+            <figure class="tcard"><blockquote>"Wreszcie nie pracuję po nocach. System pilnuje terminów za mnie."</blockquote><figcaption><b>Anna R.</b> · usługi B2B</figcaption></figure>
+          </div>
+        </div>
+        <div class="tcol tcol--rev">
+          <div class="tcol__track">
+            <figure class="tcard"><blockquote>"Leady kwalifikują się same. Sprzedaż urosła o 38% w kwartał."</blockquote><figcaption><b>Paweł M.</b> · SaaS</figcaption></figure>
+            <figure class="tcard"><blockquote>"Zero przełączania między 12 narzędziami. Wszystko w jednym miejscu."</blockquote><figcaption><b>Kasia L.</b> · marketing</figcaption></figure>
+            <figure class="tcard"><blockquote>"Najlepsza decyzja operacyjna tego roku. Po prostu działa."</blockquote><figcaption><b>Michał B.</b> · logistyka</figcaption></figure>
+            <figure class="tcard"><blockquote>"Leady kwalifikują się same. Sprzedaż urosła o 38% w kwartał."</blockquote><figcaption><b>Paweł M.</b> · SaaS</figcaption></figure>
+            <figure class="tcard"><blockquote>"Zero przełączania między 12 narzędziami. Wszystko w jednym miejscu."</blockquote><figcaption><b>Kasia L.</b> · marketing</figcaption></figure>
+            <figure class="tcard"><blockquote>"Najlepsza decyzja operacyjna tego roku. Po prostu działa."</blockquote><figcaption><b>Michał B.</b> · logistyka</figcaption></figure>
+          </div>
         </div>
       </div>
     </section>
