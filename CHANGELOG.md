@@ -5,6 +5,17 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Program premium — Faza 7 (proaktywność + pamięć epizodyczna)
+- **`episodicMemory.ts`:** dziennik zdarzeń (czas+temat) — `topicOf`/`keywords`/`topTopics` oraz
+  `staleRecurringTopics` (tematy częste w 30 dni, ale porzucone w ostatnich dniach). Zapis epizodu po
+  każdej wymianie w `brain.ts` (localStorage, cap 500). +5 testów.
+- **`proactivity.ts`:** `staleTasks`/`upcomingEvents`/`buildSuggestions` — propozycje „z inicjatywy":
+  najbliższe wydarzenie → poranny briefing → zaległe zadania (>3 dni) → powracający porzucony temat.
+  Czysta logika (`proactiveSuggestions()` czyta store+epizody). +7 testów.
+- **UI:** sekcja **💡 Propozycje JARVIS-a** w Centrum powiadomień.
+
+### Faza 6 — POMINIĘTA (decyzja właściciela): nie dotykam płatności/auto-top-up.
+
 ### Program premium — Faza 5 (panel kosztów)
 - **Telemetria zużycia tokenów:** adaptery `anthropic`/`gemini`/openai-compat zwracają teraz
   `usage` (sumowane przez całą turę, łącznie z pętlą narzędzi) → `JarvisReply.usage`.

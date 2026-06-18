@@ -1,5 +1,6 @@
 import { useStore } from "../hooks/useStore";
 import { dueReminders, soonReminders, notifySummary, dismissReminder } from "../lib/notifyCenter";
+import { proactiveSuggestions } from "../lib/proactivity";
 import { useEscape } from "../hooks/useEscape";
 
 // Centrum powiadomień — jedno miejsce z tym, co wymaga uwagi: przypomnienia
@@ -18,6 +19,7 @@ export default function Notifications({
   const due = dueReminders(now);
   const soon = soonReminders(now);
   const s = notifySummary(now);
+  const suggestions = proactiveSuggestions(now);
 
   const time = (iso: string) => new Date(iso).toLocaleString("pl-PL", { weekday: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -35,6 +37,18 @@ export default function Notifications({
           <h2>🔔 Powiadomienia</h2>
         </div>
         <div className="panel-body">
+          {/* Proaktywne propozycje JARVIS-a (Faza 7) */}
+          {suggestions.length > 0 && (
+            <>
+              <h3 style={{ marginTop: 0 }}>💡 Propozycje JARVIS-a</h3>
+              {suggestions.map((sg) => (
+                <div key={sg.id} className="journal-card" style={{ padding: "8px 10px" }}>
+                  <div style={{ fontSize: 14 }}>{sg.icon} {sg.text}</div>
+                </div>
+              ))}
+            </>
+          )}
+
           {/* Przypomnienia po czasie */}
           {due.length > 0 && (
             <>
@@ -77,7 +91,7 @@ export default function Notifications({
             </>
           )}
 
-          {due.length === 0 && soon.length === 0 && !chips.some((c) => c.show) && (
+          {due.length === 0 && soon.length === 0 && !chips.some((c) => c.show) && suggestions.length === 0 && (
             <p className="muted" style={{ textAlign: "center", padding: "20px 0" }}>
               Czysto! Nic nie wymaga teraz Twojej uwagi. ✨
             </p>

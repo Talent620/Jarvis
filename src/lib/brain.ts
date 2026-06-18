@@ -11,6 +11,7 @@ import { shouldFallback, isNetworkError, isKeyError, humanize, isComplex, PERSON
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
 import { classifyTask, logRouteDecision, GROQ_SCOUT, GROQ_KIMI } from "./modelRouter";
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
+import { recordEpisode } from "./episodicMemory";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
 
 // Jednorazowy retry przy chwilowym błędzie sieci.
@@ -494,6 +495,8 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
         const citations = getCitations();
         // Ucz się w tle: wyłuskaj trwałe fakty z wymiany (nie blokuje odpowiedzi).
         void learnFromExchange(lastUser?.content || "", reply.text);
+        // Pamięć epizodyczna (Faza 7): zapisz temat wymiany — z tego wyłaniamy wzorce/proaktywność.
+        if (lastUser?.content) recordEpisode("chat", lastUser.content);
         // Pamięć długoterminowa (Mem0, Faza 1): add PO odpowiedzi (w tle, graceful).
         if (memoryServiceAvailable() && lastUser?.content && reply.text) {
           void addMemory(
