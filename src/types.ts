@@ -102,8 +102,11 @@ export interface MemoryFact {
   pinned?: boolean;
   /** Jeśli ustawione — fakt należy do projektu (inaczej globalny). */
   projectId?: string;
-  /** Wektor semantyczny (text-embedding-004) do wyszukiwania trafnych faktów. */
+  /** Wektor semantyczny do wyszukiwania trafnych faktów. */
   embedding?: number[];
+  /** Tag modelu, który policzył wektor (np. "cloud:gemini-004" / "local:minilm-l6").
+   *  Porównujemy tylko wektory z tego samego modelu — inaczej wymiary się nie zgadzają. */
+  embModel?: string;
   createdAt: number;
 }
 
@@ -344,6 +347,8 @@ export interface Settings {
   secretsAtRest: boolean;
   /** Próg alertu niskiego salda OpenRouter w USD (0 = wyłączony). Tylko odczyt salda, bez płatności. */
   openrouterLowBalanceUsd: number;
+  /** Embeddingi pamięci liczone on-device (Transformers.js/WebGPU) zamiast w chmurze. Fallback do chmury. */
+  localEmbeddings: boolean;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

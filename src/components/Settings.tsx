@@ -736,6 +736,18 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </span>
                 <Toggle on={s.onDeviceOnly} onClick={() => set({ onDeviceOnly: !s.onDeviceOnly })} />
               </div>
+              <div className="row">
+                <span>
+                  🧠 Pamięć on-device (embeddingi lokalnie)
+                  <br />
+                  <span className="muted">
+                    Wektory pamięci liczone <b>na urządzeniu</b> (Transformers.js, WebGPU→WASM) zamiast
+                    w chmurze — prywatnie i bez kosztów. Pierwsze użycie pobiera mały model (~45 MB,
+                    cache w przeglądarce). Gdy WebGPU/WASM niedostępne → cicho wraca do chmury.
+                  </span>
+                </span>
+                <Toggle on={s.localEmbeddings} onClick={() => set({ localEmbeddings: !s.localEmbeddings })} />
+              </div>
               <div className="field">
                 <button
                   className="btn"

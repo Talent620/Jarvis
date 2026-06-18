@@ -57,6 +57,7 @@ const defaultSettings: Settings = {
   brandName: "",
   secretsAtRest: false,
   openrouterLowBalanceUsd: 0,
+  localEmbeddings: false,
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,

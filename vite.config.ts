@@ -33,6 +33,9 @@ export default defineConfig({
     __APP_BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace("T", " ")),
   },
   plugins: [react()],
+  // Workery (np. embeddingi on-device) dynamicznie importują ciężkie biblioteki —
+  // wymaga formatu ES (iife nie wspiera code-splittingu w workerze).
+  worker: { format: "es" },
   build: {
     outDir: "dist",
     // Niższy target = szersza zgodność ze starszym Android System WebView (np. Galaxy S9+

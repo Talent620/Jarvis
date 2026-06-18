@@ -1,7 +1,26 @@
 import { store, uid } from "./store";
 import { primaryKey } from "./keys";
 import { fetchTimeout, appTokenHeader } from "./http";
+import { embedLocal, localEmbedUsable, LOCAL_EMBED_TAG } from "./localEmbed";
 import type { MemoryFact } from "../types";
+
+// Tag modelu embeddingów — porównujemy tylko wektory z tego samego modelu (różne wymiary).
+const CLOUD_EMBED_TAG = "cloud:gemini-004";
+
+/** Czy preferować embeddingi on-device (ustawienie włączone + lokalny embedder użyteczny). */
+function localEmbedOn(): boolean {
+  return !!store.settings.localEmbeddings && localEmbedUsable();
+}
+
+/** Tag, którego embeddingów oczekujemy w tej chwili (do doboru, co reindeksować). */
+function intendedEmbedTag(): string {
+  return localEmbedOn() ? LOCAL_EMBED_TAG : CLOUD_EMBED_TAG;
+}
+
+interface Embedded {
+  vectors: number[][];
+  tag: string;
+}
 
 // === Pamięć autonomiczna (semantyczna) ===
 // Fakty o użytkowniku są indeksowane wektorami (Gemini text-embedding-004) i
@@ -15,11 +34,11 @@ const MAX_STORED = 300; // twardy limit pamięci (chroni przed nieograniczonym w
 
 // --- Embeddingi ---
 
-let embedDisabled = false; // ustawiane, gdy brak źródła embeddingów (jednorazowo)
+let embedDisabled = false; // ustawiane, gdy brak źródła embeddingów w CHMURZE (jednorazowo)
 
-/** Zwraca wektory dla listy tekstów (Gemini bezpośrednio lub przez proxy) albo null. */
-async function embedBatch(texts: string[]): Promise<number[][] | null> {
-  if (embedDisabled || !texts.length) return null;
+/** Embeddingi chmurowe (Gemini bezpośrednio lub przez proxy) albo null. */
+async function embedCloud(texts: string[]): Promise<number[][] | null> {
+  if (embedDisabled) return null;
   const key = primaryKey("gemini");
   const proxy = store.settings.proxyUrl?.trim();
   try {
@@ -27,10 +46,10 @@ async function embedBatch(texts: string[]): Promise<number[][] | null> {
       const out: number[][] = [];
       for (const t of texts) {
         const r = await fetchTimeout(
-          `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${key}`,
+          "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent",
           {
             method: "POST",
-            headers: { "content-type": "application/json" },
+            headers: { "content-type": "application/json", "x-goog-api-key": key },
             body: JSON.stringify({ model: "models/text-embedding-004", content: { parts: [{ text: t }] } }),
           },
           20000,
@@ -54,13 +73,29 @@ async function embedBatch(texts: string[]): Promise<number[][] | null> {
   } catch {
     return null; // chwilowy błąd — spróbujemy ponownie później
   }
-  embedDisabled = true; // brak jakiegokolwiek źródła embeddingów
+  embedDisabled = true; // brak jakiegokolwiek źródła embeddingów w chmurze
   return null;
 }
 
-async function embedText(text: string): Promise<number[] | null> {
-  const v = await embedBatch([text]);
-  return v?.[0]?.length ? v[0] : null;
+/**
+ * Zwraca wektory + tag modelu. PREFERUJE on-device (Transformers.js/WebGPU), a gdy
+ * niedostępne/nieudane → płynnie spada do chmury (Gemini). Tag pozwala porównywać tylko
+ * wektory z tego samego modelu (różne wymiary: lokal 384 vs chmura 768).
+ */
+async function embedBatch(texts: string[]): Promise<Embedded | null> {
+  if (!texts.length) return null;
+  if (localEmbedOn()) {
+    const v = await embedLocal(texts);
+    if (v && v.length === texts.length && v[0]?.length) return { vectors: v, tag: LOCAL_EMBED_TAG };
+    // null/niepełne → fallback do chmury poniżej
+  }
+  const cloud = await embedCloud(texts);
+  return cloud ? { vectors: cloud, tag: CLOUD_EMBED_TAG } : null;
+}
+
+async function embedText(text: string): Promise<{ vector: number[]; tag: string } | null> {
+  const e = await embedBatch([text]);
+  return e && e.vectors[0]?.length ? { vector: e.vectors[0], tag: e.tag } : null;
 }
 
 function dot(a: number[], b: number[]): number {
@@ -80,19 +115,21 @@ export function cosine(a: number[], b: number[]): number {
 
 let indexing = false;
 
-/** Dolicza wektory dla faktów, które ich jeszcze nie mają. Bezpieczne do wołania „w tle". */
+/** Dolicza wektory dla faktów bez wektora LUB policzonych innym modelem. Bezpieczne „w tle". */
 export async function ensureIndexed(): Promise<void> {
-  if (indexing || embedDisabled) return;
-  const pending = store.data.memory.filter((m) => !m.embedding?.length);
+  if (indexing) return;
+  if (embedDisabled && !localEmbedOn()) return; // brak jakiegokolwiek źródła
+  const want = intendedEmbedTag();
+  const pending = store.data.memory.filter((m) => !m.embedding?.length || m.embModel !== want);
   if (!pending.length) return;
   indexing = true;
   try {
-    const vecs = await embedBatch(pending.map((m) => `${m.key}: ${m.value}`));
-    if (!vecs) return;
+    const e = await embedBatch(pending.map((m) => `${m.key}: ${m.value}`));
+    if (!e) return;
     store.setData((d) => {
       for (let i = 0; i < pending.length; i++) {
         const f = d.memory.find((x) => x.id === pending[i].id);
-        if (f && vecs[i]?.length) f.embedding = vecs[i];
+        if (f && e.vectors[i]?.length) { f.embedding = e.vectors[i]; f.embModel = e.tag; }
       }
     });
   } finally {
@@ -117,7 +154,7 @@ export function setFactPinned(id: string, pinned: boolean): void {
 export function editFact(id: string, value: string): void {
   store.setData((d) => {
     const m = d.memory.find((x) => x.id === id);
-    if (m && m.value !== value) { m.value = value; m.embedding = undefined; }
+    if (m && m.value !== value) { m.value = value; m.embedding = undefined; m.embModel = undefined; }
   });
   void ensureIndexed();
 }
@@ -129,6 +166,7 @@ export function rememberFact(key: string, value: string, projectId?: string): vo
       if (existing.value !== value) {
         existing.value = value;
         existing.embedding = undefined; // treść się zmieniła — przelicz wektor
+        existing.embModel = undefined;
       }
     } else {
       d.memory.unshift({ id: uid(), key, value, projectId, createdAt: Date.now() });
@@ -163,12 +201,14 @@ async function retrieve(query: string, pid: string): Promise<MemoryFact[]> {
   void ensureIndexed(); // uzupełnij indeks w tle (nie blokujemy odpowiedzi)
   if (all.length <= MAX_FACTS) return sortByFreshness(all);
 
-  const qv = query.trim() ? await embedText(query) : null;
-  if (!qv) return sortByFreshness(all).slice(0, MAX_FACTS);
+  const q = query.trim() ? await embedText(query) : null;
+  if (!q) return sortByFreshness(all).slice(0, MAX_FACTS);
+  const qv = q.vector;
 
+  // Porównujemy tylko wektory z tego samego modelu co zapytanie (zgodny wymiar).
   const pinned = all.filter((m) => m.pinned);
-  const indexed = all.filter((m) => !m.pinned && m.embedding?.length);
-  const unindexed = all.filter((m) => !m.pinned && !m.embedding?.length);
+  const indexed = all.filter((m) => !m.pinned && m.embedding?.length && m.embModel === q.tag);
+  const unindexed = all.filter((m) => !m.pinned && !(m.embedding?.length && m.embModel === q.tag));
   indexed.sort((a, b) => cosine(qv, b.embedding!) - cosine(qv, a.embedding!));
 
   const result: MemoryFact[] = [...pinned];
@@ -216,17 +256,23 @@ const auxVecs = new Map<string, number[]>(); // journalId → wektor (sesyjny ca
 const AUX_CAP = 60; // ile wpisów maksymalnie indeksujemy (koszty/limit czasu)
 let auxIndexing = false;
 
+function auxKey(id: string, updatedAt: number, tag: string): string {
+  return `${id}:${updatedAt}:${tag}`;
+}
+
 async function ensureJournalIndexed(): Promise<void> {
-  if (auxIndexing || embedDisabled) return;
+  if (auxIndexing) return;
+  if (embedDisabled && !localEmbedOn()) return;
+  const tag = intendedEmbedTag();
   const shared = (store.data.journal || []).filter((j) => j.shared).slice(0, AUX_CAP);
-  const pending = shared.filter((j) => !auxVecs.has(j.id + ":" + j.updatedAt));
+  const pending = shared.filter((j) => !auxVecs.has(auxKey(j.id, j.updatedAt, tag)));
   if (!pending.length) return;
   auxIndexing = true;
   try {
-    const vecs = await embedBatch(pending.map((j) => `${j.title}\n${j.body}`.slice(0, 800)));
-    if (!vecs) return;
+    const e = await embedBatch(pending.map((j) => `${j.title}\n${j.body}`.slice(0, 800)));
+    if (!e) return;
     pending.forEach((j, i) => {
-      if (vecs[i]?.length) auxVecs.set(j.id + ":" + j.updatedAt, vecs[i]);
+      if (e.vectors[i]?.length) auxVecs.set(auxKey(j.id, j.updatedAt, e.tag), e.vectors[i]);
     });
   } finally {
     auxIndexing = false;
@@ -242,10 +288,10 @@ export async function rankJournal(query: string): Promise<string[] | null> {
   const shared = (store.data.journal || []).filter((j) => j.shared);
   if (shared.length <= 3 || !query.trim()) return null; // mało wpisów — bez kosztów
   void ensureJournalIndexed();
-  const qv = await embedText(query);
-  if (!qv) return null;
+  const q = await embedText(query);
+  if (!q) return null;
   const scored = shared
-    .map((j) => ({ id: j.id, score: cosine(qv, auxVecs.get(j.id + ":" + j.updatedAt) || []) }))
+    .map((j) => ({ id: j.id, score: cosine(q.vector, auxVecs.get(auxKey(j.id, j.updatedAt, q.tag)) || []) }))
     .sort((a, b) => b.score - a.score);
   return scored.map((s) => s.id);
 }
