@@ -5,6 +5,14 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Program premium — Faza 4 (router modeli)
+- **`modelRouter.ts`:** `classifyTask` (simple/complex/vision wg heurystyk: kod/analiza/długość/obraz),
+  router Groq **Llama 4 Scout** (szybki, multimodalny — proste+wizja) vs **Kimi K2** (mocne rozumowanie/kod),
+  **dziennik decyzji** (`logRouteDecision`/`getRouteLog`, ring 100 — zasila panel kosztów Fazy 5).
+  Wpięte w `brain.ts` (`TASK_MODELS.groq` → Scout/Kimi; log faktycznej, udanej decyzji + flaga failover);
+  Scout/Kimi dodane do `registry.ts` (Scout domyślny dla Groq). Retry+fallback już były (`withRetry`+łańcuch).
+  Osobowość bez zmian. **Decyzja:** bez Mastry w bundlu PWA (Node/serwer-first) — te same pojęcia lekko. +8 testów.
+
 ### Program premium — Faza 3 (głos live)
 - **Pamięć Mem0 w głosie:** `LiveOverlay` pobiera trafny kontekst i buduje `systemPrompt({ mem0Block })`
   przed startem sesji Gemini Live — głos „pamięta" to samo co czat (degraduje cicho bez serwisu).

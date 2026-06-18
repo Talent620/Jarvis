@@ -44,9 +44,11 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     label: "Groq (błyskawiczny)",
     rank: 70,
     keysUrl: "https://console.groq.com",
-    defaultModel: "llama-3.3-70b-versatile",
+    defaultModel: "meta-llama/llama-4-scout-17b-16e-instruct",
     impl: makeOpenAICompatible("https://api.groq.com/openai/v1/chat/completions"),
     models: [
+      { id: "meta-llama/llama-4-scout-17b-16e-instruct", label: "Llama 4 Scout — szybki, multimodalny" },
+      { id: "moonshotai/kimi-k2-instruct", label: "Kimi K2 — mocne rozumowanie i kod" },
       { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B — darmowy" },
       { id: "llama-3.1-8b-instant", label: "Llama 3.1 8B — najszybszy" },
       { id: "openai/gpt-oss-120b", label: "GPT-OSS 120B" },

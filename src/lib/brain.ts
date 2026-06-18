@@ -9,6 +9,7 @@ import { buildProfileBlock } from "./profile";
 import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, isKeyError, humanize, isComplex, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
+import { classifyTask, logRouteDecision, GROQ_SCOUT, GROQ_KIMI } from "./modelRouter";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
 
 // Jednorazowy retry przy chwilowym błędzie sieci.
@@ -42,7 +43,7 @@ const VISION_PROVIDERS = new Set<ProviderId>(["anthropic", "gemini", "github", "
 const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision: string }> = {
   anthropic: { simple: "claude-haiku-4-5", complex: "claude-opus-4-8", vision: "claude-opus-4-8" },
   gemini: { simple: "gemini-2.5-flash-lite", complex: "gemini-2.5-flash", vision: "gemini-2.5-flash" },
-  groq: { simple: "llama-3.1-8b-instant", complex: "llama-3.3-70b-versatile", vision: "llama-3.3-70b-versatile" },
+  groq: { simple: GROQ_SCOUT, complex: GROQ_KIMI, vision: GROQ_SCOUT },
   cerebras: { simple: "llama3.1-8b", complex: "llama-3.3-70b", vision: "llama-3.3-70b" },
   mistral: { simple: "mistral-small-latest", complex: "mistral-large-latest", vision: "pixtral-12b-2409" },
   openrouter: {
@@ -501,6 +502,9 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
         }
         // Oznacz, KTO odpowiedział i czy to był zapas — App pokaże delikatny komunikat.
         const meta = { via: provider, fellBack: provider !== primary };
+        // Router (Faza 4): zapisz faktyczną decyzję (model, klasyfikacja, czy failover) — zasila panel kosztów.
+        const cls = classifyTask(lastUser?.content || "", !!lastUser?.image);
+        logRouteDecision({ provider, model, kind: cls.kind, reason: cls.reason, fellBack: meta.fellBack });
         return { ...reply, ...meta, ...(citations.length ? { citations } : {}) };
       } catch (e) {
         providerErr = e;
