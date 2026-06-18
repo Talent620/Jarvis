@@ -28,8 +28,8 @@ Bazowo: 665 testów zielone. Każda partia: zmiana → test/build → commit.
 - [x] (m1) `ErrorBoundary` — decay licznika restartów.
 
 ### Batch 4 — Electron
-- [ ] (M4) `will-navigate` guard + `sandbox:true` + `isTrustedIpc` na google/smtp/notify.
-- [ ] (m3) DevTools tylko gdy `!app.isPackaged`.
+- [x] (M4) `will-navigate` guard + `sandbox:true` + `isTrustedIpc` na google/smtp/notify.
+- [x] (m3) DevTools tylko gdy `!app.isPackaged`.
 
 ### Batch 5 — leady + LeadDetail
 - [ ] (M3) Overpass: timeout per-mirror 12s.

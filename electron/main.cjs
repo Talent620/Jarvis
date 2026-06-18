@@ -81,11 +81,18 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true, // izolacja renderera (mostek IPC przez preload pozostaje)
       preload: path.join(__dirname, "preload.cjs"),
     },
   });
 
   mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+
+  // Twarda blokada nawigacji: renderer nie może opuścić własnego file:// (inaczej
+  // wroga strona przejęłaby cały mostek jarvisDesktop — uruchamianie, klawiatura, tokeny).
+  const allowNav = (e, url) => { if (!url.startsWith("file://")) e.preventDefault(); };
+  mainWindow.webContents.on("will-navigate", allowNav);
+  mainWindow.webContents.on("will-redirect", allowNav);
 
   // Linki zewnętrzne (Spotify, YouTube, mapy itd.) → przeglądarka systemowa.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -105,7 +112,8 @@ function buildMenu() {
       label: "JARVIS",
       submenu: [
         { role: "reload", label: "Odśwież" },
-        { role: "toggleDevTools", label: "Narzędzia deweloperskie" },
+        // DevTools tylko w buildzie deweloperskim — w produkcji ułatwiają wyciek kluczy/tokenów.
+        ...(app.isPackaged ? [] : [{ role: "toggleDevTools", label: "Narzędzia deweloperskie" }]),
         { type: "separator" },
         { role: "quit", label: "Zamknij" },
       ],
@@ -246,7 +254,8 @@ function registerDesktopControl() {
     return url.startsWith("file://");
   };
   // --- Kalendarz Google (natywnie, bez serwera) ---
-  ipcMain.handle("jarvis:google-connect", async (_e, payload) => {
+  ipcMain.handle("jarvis:google-connect", async (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     const clientId = String((payload && payload.clientId) || "").trim();
     const clientSecret = String((payload && payload.clientSecret) || "").trim();
     if (!clientId || !clientSecret) return { ok: false, error: "Brak Client ID / Client Secret." };
@@ -256,7 +265,8 @@ function registerDesktopControl() {
   });
   ipcMain.handle("jarvis:google-status", () => ({ connected: !!(readGoogleTok() && readGoogleTok().refresh_token) }));
   ipcMain.handle("jarvis:google-disconnect", () => { try { fs.unlinkSync(GTOK_FILE); } catch { /* ignore */ } return { ok: true }; });
-  ipcMain.handle("jarvis:gcal-add", async (_e, ev) => {
+  ipcMain.handle("jarvis:gcal-add", async (event, ev) => {
+    if (!isTrustedIpc(event)) return { error: "forbidden" };
     try {
       const at = await googleAccess();
       if (!at) return { error: "Google niepołączone." };
@@ -264,7 +274,8 @@ function registerDesktopControl() {
       return { ok: true };
     } catch (e) { return { error: e && e.message ? e.message : String(e) }; }
   });
-  ipcMain.handle("jarvis:gcal-list", async (_e, opts) => {
+  ipcMain.handle("jarvis:gcal-list", async (event, opts) => {
+    if (!isTrustedIpc(event)) return { error: "forbidden" };
     try {
       const at = await googleAccess();
       if (!at) return { error: "Google niepołączone." };
@@ -272,7 +283,8 @@ function registerDesktopControl() {
       return { events };
     } catch (e) { return { error: e && e.message ? e.message : String(e) }; }
   });
-  ipcMain.handle("jarvis:gmail-send", async (_e, msg) => {
+  ipcMain.handle("jarvis:gmail-send", async (event, msg) => {
+    if (!isTrustedIpc(event)) return { error: "forbidden" };
     try {
       const at = await googleAccess();
       if (!at) return { error: "Google niepołączone." };
@@ -280,7 +292,8 @@ function registerDesktopControl() {
       return { ok: true };
     } catch (e) { return { error: e && e.message ? e.message : String(e) }; }
   });
-  ipcMain.handle("jarvis:gmail-list", async (_e, opts) => {
+  ipcMain.handle("jarvis:gmail-list", async (event, opts) => {
+    if (!isTrustedIpc(event)) return { error: "forbidden" };
     try {
       const at = await googleAccess();
       if (!at) return { error: "Google niepołączone." };
@@ -289,7 +302,8 @@ function registerDesktopControl() {
   });
 
   // Prawdziwa wysyłka e-maila (SMTP) — z Pulpitu Sprzedaży jednym potwierdzeniem.
-  ipcMain.handle("jarvis:sendmail", async (_e, payload) => {
+  ipcMain.handle("jarvis:sendmail", async (event, payload) => {
+    if (!isTrustedIpc(event)) return "err:forbidden";
     const { host, port, user, pass, to, subject, body } = payload || {};
     if (!user || !pass) return "err:Skonfiguruj pocztę w ⚙ → Poczta (adres + hasło aplikacji).";
     if (!to || !to.includes("@")) return "err:Brak poprawnego adresu odbiorcy.";
@@ -298,14 +312,16 @@ function registerDesktopControl() {
 
   // Sprawdzenie połączenia z pocztą (bez wysyłania testowego maila) — łączy się,
   // loguje hasłem aplikacji i rozłącza. Zwraca "ok" lub "err:<powód>".
-  ipcMain.handle("jarvis:verifymail", async (_e, payload) => {
+  ipcMain.handle("jarvis:verifymail", async (event, payload) => {
+    if (!isTrustedIpc(event)) return "err:forbidden";
     const { host, port, user, pass } = payload || {};
     if (!user || !pass) return "err:Wpisz adres e-mail i hasło aplikacji.";
     return smtpSend({ host, port, user, pass, verifyOnly: true });
   });
 
   // Natywne powiadomienie Windows (przypomnienia, minutnik, pomodoro, leady).
-  ipcMain.handle("jarvis:notify", (_e, payload) => {
+  ipcMain.handle("jarvis:notify", (event, payload) => {
+    if (!isTrustedIpc(event)) return "err:forbidden";
     try {
       if (!Notification.isSupported()) return "err:unsupported";
       const title = String((payload && payload.title) || "JARVIS");
