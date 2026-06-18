@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="V-AI — Od chaosu do automatyzacji. Inteligentna automatyzacja biznesu: dashboardy, CRM i asystenci AI, które pracują za Ciebie." />
+<title>V-AI — Od chaosu do automatyzacji</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Animated particle field -->
+  <canvas id="particles" aria-hidden="true"></canvas>
+  <!-- Cursor glow -->
+  <div class="cursor-glow" id="cursorGlow" aria-hidden="true"></div>
+  <!-- Scroll progress bar -->
+  <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+  <!-- Page loader -->
+  <div class="loader" id="loader">
+    <div class="loader__logo">V<span>-</span>AI</div>
+    <div class="loader__bar"><span></span></div>
+  </div>
+
+  <!-- Nav -->
+  <header class="nav" id="nav">
+    <a href="#top" class="nav__brand">V<span>-</span>AI</a>
+    <nav class="nav__links">
+      <a href="#process">Proces</a>
+      <a href="#features">Możliwości</a>
+      <a href="#stats">Efekty</a>
+      <a href="#cta" class="nav__cta">Zacznij teraz</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero__glow"></div>
+      <div class="hero__inner">
+        <p class="hero__eyebrow" data-reveal>Inteligentna automatyzacja biznesu</p>
+        <h1 class="hero__title">
+          <span class="line" data-split>Od&nbsp;chaosu</span>
+          <span class="line line--accent" data-split>do&nbsp;automatyzacji</span>
+        </h1>
+        <p class="hero__sub" data-reveal data-reveal-delay="0.2">
+          V-AI zamienia bałagan maili, dokumentów i powiadomień w jeden,
+          samosterujący się system. Dashboardy, CRM i asystenci AI pracują
+          za Ciebie — 24/7.
+        </p>
+        <div class="hero__actions" data-reveal data-reveal-delay="0.35">
+          <a href="#cta" class="btn btn--primary" data-magnetic>
+            <span>Uruchom automatyzację</span>
+          </a>
+          <a href="#process" class="btn btn--ghost" data-magnetic>
+            <span>Zobacz jak to działa</span>
+          </a>
+        </div>
+      </div>
+      <div class="hero__scroll" aria-hidden="true">
+        <span></span> scroll
+      </div>
+    </section>
+
+    <!-- MARQUEE -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee__track">
+        <span>Automatyzacja</span><span class="dot">•</span>
+        <span>CRM</span><span class="dot">•</span>
+        <span>Asystenci AI</span><span class="dot">•</span>
+        <span>Dashboardy</span><span class="dot">•</span>
+        <span>Bez chaosu</span><span class="dot">•</span>
+        <span>Automatyzacja</span><span class="dot">•</span>
+        <span>CRM</span><span class="dot">•</span>
+        <span>Asystenci AI</span><span class="dot">•</span>
+        <span>Dashboardy</span><span class="dot">•</span>
+        <span>Bez chaosu</span><span class="dot">•</span>
+      </div>
+    </div>
+
+    <!-- PROCESS -->
+    <section class="section process" id="process">
+      <header class="section__head">
+        <p class="section__tag" data-reveal>// Proces</p>
+        <h2 class="section__title" data-reveal>Cztery kroki do spokoju</h2>
+      </header>
+      <div class="steps">
+        <article class="step" data-reveal>
+          <div class="step__num">01</div>
+          <h3>Chaos</h3>
+          <p>Maile, dokumenty, powiadomienia — wszystko spada na Ciebie naraz.</p>
+        </article>
+        <article class="step" data-reveal data-reveal-delay="0.1">
+          <div class="step__num">02</div>
+          <h3>Analiza AI</h3>
+          <p>V-AI skanuje procesy i wyłapuje wszystko, co da się zautomatyzować.</p>
+        </article>
+        <article class="step" data-reveal data-reveal-delay="0.2">
+          <div class="step__num">03</div>
+          <h3>Automatyzacja</h3>
+          <p>Powtarzalne zadania przejmują asystenci AI i połączone systemy.</p>
+        </article>
+        <article class="step" data-reveal data-reveal-delay="0.3">
+          <div class="step__num">04</div>
+          <h3>Kontrola</h3>
+          <p>Ty patrzysz na dashboard. Firma działa sama — pewnie i bez stresu.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="section features" id="features">
+      <header class="section__head">
+        <p class="section__tag" data-reveal>// Możliwości</p>
+        <h2 class="section__title" data-reveal>Jeden system. Pełna kontrola.</h2>
+      </header>
+      <div class="cards">
+        <article class="card" data-reveal data-tilt>
+          <div class="card__icon">⚡</div>
+          <h3>Automatyzacja procesów</h3>
+          <p>Łączymy Twoje narzędzia i eliminujemy ręczną, powtarzalną pracę.</p>
+        </article>
+        <article class="card" data-reveal data-reveal-delay="0.1" data-tilt>
+          <div class="card__icon">🧠</div>
+          <h3>Asystenci AI</h3>
+          <p>Odpowiadają na maile, kwalifikują leady i pilnują terminów.</p>
+        </article>
+        <article class="card" data-reveal data-reveal-delay="0.2" data-tilt>
+          <div class="card__icon">📊</div>
+          <h3>Dashboardy na żywo</h3>
+          <p>Wszystkie metryki w jednym miejscu — w czasie rzeczywistym.</p>
+        </article>
+        <article class="card" data-reveal data-reveal-delay="0.3" data-tilt>
+          <div class="card__icon">🔗</div>
+          <h3>Integracje CRM</h3>
+          <p>Spójne dane klientów łączące sprzedaż, marketing i obsługę.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="section stats" id="stats">
+      <div class="stats__grid">
+        <div class="stat" data-reveal>
+          <div class="stat__num" data-count="87" data-suffix="%">0</div>
+          <p>mniej ręcznej pracy</p>
+        </div>
+        <div class="stat" data-reveal data-reveal-delay="0.1">
+          <div class="stat__num" data-count="24" data-suffix="/7">0</div>
+          <p>nieprzerwana praca AI</p>
+        </div>
+        <div class="stat" data-reveal data-reveal-delay="0.2">
+          <div class="stat__num" data-count="3" data-suffix="x">0</div>
+          <p>szybsza obsługa klienta</p>
+        </div>
+        <div class="stat" data-reveal data-reveal-delay="0.3">
+          <div class="stat__num" data-count="14" data-suffix=" dni">0</div>
+          <p>do pełnego wdrożenia</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section cta" id="cta">
+      <div class="cta__card" data-reveal>
+        <div class="cta__glow"></div>
+        <h2>Gotowy zamienić chaos w&nbsp;automatyzację?</h2>
+        <p>Pokażemy Ci na żywo, co V-AI zautomatyzuje w Twojej firmie.</p>
+        <a href="#" class="btn btn--primary btn--lg" data-magnetic>
+          <span>Umów demo</span>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer__brand">V<span>-</span>AI</div>
+    <p>Od chaosu do automatyzacji.</p>
+    <p class="footer__copy">© 2026 V-AI. Wszelkie prawa zastrzeżone.</p>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
