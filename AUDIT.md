@@ -68,7 +68,7 @@
 
 ### Dane / krypto
 - **Sync last-write-wins → utrata danych** (`sync.ts:34-73`) — pull hurtowo nadpisuje kolekcje, brak merge po `id`+`updatedAt`. [H·M] → DO DECYZJI/propozycja.
-- **Embeddingi pamięci ~4MB w localStorage** (`memory.ts:95`, 300×768 float) — napędza quota. [M·M] (IndexedDB/int8/niższy cap).
+- ~~**Embeddingi pamięci ~4MB w localStorage** (`memory.ts:95`, 300×768 float) — napędza quota. [M·M]~~ ✅ **ZAMKNIĘTE (Faza A)**: `db.ts` (Dexie/IndexedDB) — kolekcje `memory`/`sentMail`/`contentPosts` (z embeddingami) przeniesione do IndexedDB; localStorage trzyma tylko odchudzony blob + drobne ustawienia. Migracja jednorazowa + hydratacja przy starcie, bezpieczny fallback do localStorage gdy brak IDB. Zdejmuje sufit ~5 MB.
 - **`cipher.ts` 150k iter < `lock.ts` 210k; iter NIE zapisane w blobie** (`cipher.ts:23,43-52`) — podniesienie iteracji w przyszłości zbrickuje istniejące sejfy/backupy. [M(latentny)·M] ✅ (zapisać iter+wersję w nagłówku, wstecznie zgodnie).
 - **Plaintext sekrety w `jarvis.settings.v2`** (klucze, `smtpPass`, `googleClientSecret`, tokeny) — niezaszyfrowane. [M·H] (znany tradeoff).
 
@@ -95,7 +95,7 @@
 ---
 
 ## 6. Pomysły na rozbudowę (skrót — do sekcji TOP 5 w PROGRESS.md)
-- Migracja `sentMail`/`contentPosts`/embeddingów do IndexedDB (zdejmuje presję quota).
+- ~~Migracja `sentMail`/`contentPosts`/embeddingów do IndexedDB (zdejmuje presję quota).~~ ✅ ZROBIONE (Faza A — `db.ts`).
 - `AudioWorklet` zamiast `ScriptProcessorNode` (głos na żywo — płynność/bateria).
 - Selektory store (`useSyncExternalStore`) — mniej re-renderów.
 - Telemetria błędów (opcjonalna, lokalna) zamiast cichych `console.debug`.

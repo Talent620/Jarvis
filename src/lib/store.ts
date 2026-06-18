@@ -1,9 +1,16 @@
 import type { AppData, Settings } from "../types";
 import { emptyProfile } from "./profile";
 import { toast } from "./toast";
+import { idbAvailable, idbGet, idbSet } from "./db";
 
 const DATA_KEY = "jarvis.data.v2";
 const SETTINGS_KEY = "jarvis.settings.v2";
+
+// Kolekcje, które rosną (embeddingi pamięci, logi) — trzymane w IndexedDB zamiast localStorage,
+// by zdjąć sufit ~5 MB (AUDIT.md dług #1). `store.data` zostaje w RAM i synchroniczne; tu tylko
+// trwałość. Gdy IndexedDB niedostępny → wszystko wraca do localStorage (jak dotąd).
+const IDB_COLLECTIONS: (keyof AppData)[] = ["memory", "sentMail", "contentPosts"];
+const IDB_MIGRATED_KEY = "jarvis.idb.migrated.v1";
 
 const emptyData: AppData = {
   tasks: [],
@@ -211,6 +218,13 @@ class Store {
   /** Rośnie przy każdej zmianie — używane jako snapshot dla Reacta. */
   version = 0;
   private listeners = new Set<Listener>();
+  /** Czy duże kolekcje są obsługiwane przez IndexedDB (po udanej migracji/hydratacji). */
+  private idbReady = false;
+  private idbFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    void this.initPersistence();
+  }
 
   subscribe(fn: Listener): () => void {
     this.listeners.add(fn);
@@ -222,10 +236,68 @@ class Store {
     this.listeners.forEach((fn) => fn());
   }
 
+  // Trwałość danych: gdy IndexedDB gotowy, duże kolekcje idą do IDB, a w localStorage
+  // zostaje odchudzony blob (bez nich). Inaczej — pełny blob w localStorage (zachowanie sprzed).
+  private persistData() {
+    if (this.idbReady) {
+      const slim = { ...this.data } as AppData;
+      for (const c of IDB_COLLECTIONS) (slim as unknown as Record<string, unknown[]>)[c] = [];
+      write(DATA_KEY, slim);
+      this.scheduleIdbFlush();
+    } else {
+      write(DATA_KEY, this.data);
+    }
+  }
+
+  // Debounce: duże tablice zapisujemy do IDB zbiorczo, nie na każdą mikro-zmianę.
+  private scheduleIdbFlush() {
+    if (this.idbFlushTimer) clearTimeout(this.idbFlushTimer);
+    this.idbFlushTimer = setTimeout(() => {
+      this.idbFlushTimer = null;
+      void this.flushIdb();
+    }, 300);
+  }
+
+  private async flushIdb() {
+    const rec = this.data as unknown as Record<string, unknown[]>;
+    for (const c of IDB_COLLECTIONS) await idbSet(c as string, rec[c as string]);
+  }
+
+  // Jednorazowa migracja localStorage → IndexedDB + hydratacja przy starcie. Bezpieczne:
+  // dane usuwamy z localStorage DOPIERO po udanym zapisie do IDB i ustawieniu flagi (idempotentne).
+  private async initPersistence() {
+    if (!idbAvailable()) return; // brak IDB → pełny localStorage, jak dotąd
+    try {
+      const rec = this.data as unknown as Record<string, unknown[]>;
+      const migrated = (() => { try { return localStorage.getItem(IDB_MIGRATED_KEY) === "1"; } catch { return false; } })();
+      if (!migrated) {
+        let ok = true;
+        for (const c of IDB_COLLECTIONS) {
+          const arr = rec[c as string];
+          if (Array.isArray(arr) && arr.length) ok = (await idbSet(c as string, arr)) && ok;
+        }
+        if (!ok) return; // migracja nieudana — zostajemy na localStorage (zero utraty)
+        try { localStorage.setItem(IDB_MIGRATED_KEY, "1"); } catch { /* ignore */ }
+        this.idbReady = true;
+        this.persistData(); // odchudź blob localStorage (duże kolekcje są już w IDB)
+      } else {
+        this.idbReady = true;
+        for (const c of IDB_COLLECTIONS) {
+          const arr = await idbGet<unknown[]>(c as string);
+          // Nie nadpisuj świeżych zapisów, gdyby setData wyprzedził hydratację.
+          if (Array.isArray(arr) && !rec[c as string]?.length) rec[c as string] = arr;
+        }
+        this.emit();
+      }
+    } catch {
+      this.idbReady = false; // jakikolwiek błąd → bezpieczny powrót do localStorage
+    }
+  }
+
   setData(mut: (d: AppData) => void) {
     mut(this.data);
     capCollections(this.data); // utnij rozrośnięte logi (sentMail/contentPosts) przed zapisem
-    write(DATA_KEY, this.data);
+    this.persistData();
     this.emit();
   }
 

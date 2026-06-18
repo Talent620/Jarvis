@@ -1,6 +1,25 @@
 # JARVIS — Postęp prac
 
-## ▶ PROGRAM 10 FAZ (aktywny) — produkt premium na sprzedaż
+## ▶ PROGRAM ON-DEVICE (aktywny) — warstwa AI lokalna (WebGPU/WASM) + fundament IndexedDB
+
+Baza startowa: **760 testów zielone** (753 + 7 z Fazy A), web build OK, branch `claude/functionality-modification-access-z9kod1`.
+Zasady: on-device = OPCJA z capability-check + cichy fallback do chmury; inferencja w Web Workerze; wagi w IndexedDB; commit po fazie; STOP tylko przy płatnościach i zmianach mogących zerwać wdrożenie (BFF/keystore/CORS — Faza F).
+
+- [x] **Faza A — Fundament: IndexedDB (Dexie)** ✅ `src/lib/db.ts` (tabela klucz→wartość, bezpieczny fallback gdy brak IndexedDB). Duże kolekcje (`memory` z embeddingami, `sentMail`, `contentPosts`) przeniesione z localStorage do IndexedDB jako **warstwa trwałości** — `store.data` zostaje w RAM i synchroniczne (zero zmian u callerów). **Migracja jednorazowa** przy starcie (localStorage→IDB, dane usuwane z localStorage dopiero po udanym zapisie + fladze — idempotentnie) + **hydratacja** przy kolejnych startach. Zdejmuje dług #1 z AUDIT.md (sufit ~5 MB). Zapis do IDB debounced (300 ms). 7 testów (roundtrip db, migracja+odchudzenie blobu, hydratacja, debounce); **760 zielonych**; build OK. Bundle +~27 KB gzip (Dexie, rdzeń ładowany od startu).
+- [ ] **Faza B — Pamięć on-device (Transformers.js embeddingi)** — w toku.
+- [ ] **Faza C — Mózg on-device (WebLLM provider)**
+- [ ] **Faza D — Głos on-device (Whisper STT + Silero VAD + Kokoro TTS)**
+- [ ] **Faza E — Odświeżenie modeli + brama OpenRouter**
+- [ ] **Faza F — Utwardzenie pod sprzedaż (STOP-and-ASK na ryzykownych)**
+- [ ] **Faza G — Samokontrola + RELEASE_NOTES.md**
+
+### Decyzje (Program on-device)
+- **Warstwa trwałości, nie przepisanie store:** wybrałem podejście „store w RAM + split trwałości" zamiast async-owego API store — zero zmian u setek callerów, pełna wsteczna zgodność, trywialny rollback (czytaj z localStorage). Embeddingi (główny żłop quota) lądują w IDB wraz z kolekcją `memory`.
+- **Ciężkie biblioteki ML (Fazy B–D) ładowane LENIWIE** (dynamic import w Web Workerze) — nie wchodzą do głównego bundla; ścieżka chmurowa pozostaje lekka.
+
+---
+
+## ▶ PROGRAM 10 FAZ (zamknięty) — produkt premium na sprzedaż
 
 Baza: **685 testów zielone**, web build OK, na branchu `claude/functionality-modification-access-z9kod1`.
 Zasada: faza nie zamyka się bez zielonych testów + buildu; commit po każdej fazie; STOP tylko przy płatnościach (Faza 6).
