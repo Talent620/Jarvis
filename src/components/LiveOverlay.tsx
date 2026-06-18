@@ -5,6 +5,8 @@ import { systemPrompt, resolveProvider } from "../lib/brain";
 import { PROVIDERS } from "../lib/providers/registry";
 import { subscribeLevel } from "../lib/audioLevel";
 import { primaryKey } from "../lib/keys";
+import { memoryContextBlock, resolveNamespace } from "../lib/memoryService";
+import { store } from "../lib/store";
 
 type Engine = "gemini" | "loop";
 type AnyState = LiveState | LoopState;
@@ -28,6 +30,9 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
   const liveRef = useRef<LiveSession | null>(null);
   const loopRef = useRef<ConversationLoop | null>(null);
   const coreRef = useRef<HTMLDivElement>(null);
+  // Token startu: unieważnia asynchroniczne budowanie sesji, gdy w międzyczasie
+  // doszło do przełączenia silnika lub zamknięcia (zapobiega „wskrzeszeniu" sesji).
+  const genRef = useRef(0);
 
   // Orb pulsuje w rytm mowy JARVIS-a.
   useEffect(() => {
@@ -41,6 +46,7 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
   }, []);
 
   const stopAll = () => {
+    genRef.current++; // unieważnij ewentualne trwające async budowanie sesji
     liveRef.current?.stop();
     liveRef.current = null;
     loopRef.current?.stop();
@@ -49,6 +55,7 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
 
   const startEngine = (which: Engine) => {
     stopAll();
+    const myGen = genRef.current;
     setCaption("");
     setDetail("");
     setState("connecting");
@@ -58,17 +65,32 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
         setDetail("Tryb Gemini Live wymaga klucza Gemini. Możesz użyć trybu rozmowy (dowolny model) poniżej.");
         return;
       }
-      const session = new LiveSession(
-        geminiKey,
-        systemPrompt(),
-        (s, d) => {
-          setState(s);
-          if (d) setDetail(d);
-        },
-        (t) => setCaption((c) => (c + t).slice(-300)),
-      );
-      liveRef.current = session;
-      session.start().catch(() => setState("error"));
+      // Pamięć długoterminowa (Mem0, Faza 1): pobierz trafny kontekst i wstrzyknij do
+      // promptu sesji live — tak jak w czacie tekstowym. Degraduje cicho (pusty blok),
+      // gdy serwis pamięci nie jest skonfigurowany/dostępny.
+      void (async () => {
+        let mem0Block = "";
+        try {
+          const ns = resolveNamespace(store.settings.activeProjectId);
+          mem0Block = await memoryContextBlock("Rozmowa głosowa na żywo z użytkownikiem.", ns);
+        } catch {
+          /* brak pamięci → czysty prompt */
+        }
+        if (genRef.current !== myGen) return; // przełączono silnik / zamknięto w międzyczasie
+        const session = new LiveSession(
+          geminiKey,
+          systemPrompt({ mem0Block }),
+          (s, d) => {
+            setState(s);
+            if (d) setDetail(d);
+          },
+          (t) => setCaption((c) => (c + t).slice(-300)),
+        );
+        liveRef.current = session;
+        session.start().catch(() => {
+          if (genRef.current === myGen) setState("error");
+        });
+      })();
     } else {
       if (!resolveProvider()) {
         setState("error");
