@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
+import { primaryKey } from "../lib/keys";
+import { fetchOpenRouterCredits, isLowBalance, type Credits } from "../lib/openrouterBalance";
 import {
   loadUsage,
   within,
@@ -26,6 +28,13 @@ export default function CostPanel({ onClose }: { onClose: () => void }) {
   const [tick, setTick] = useState(0); // odśwież po wyczyszczeniu / zmianie budżetu
   const [budget, setBudget] = useState(String(store.settings.aiMonthlyBudgetUsd || ""));
   const [pricing, setPricing] = useState(store.settings.aiPricingOverrides || "");
+  const [credits, setCredits] = useState<Credits | null>(null);
+
+  // Saldo OpenRouter (Faza 6 — tylko odczyt, bez płatności). Pobierane, gdy jest klucz.
+  useEffect(() => {
+    const key = primaryKey("openrouter");
+    if (key) void fetchOpenRouterCredits(key).then(setCredits);
+  }, []);
 
   const data = useMemo(() => {
     const all = loadUsage();
@@ -92,6 +101,28 @@ export default function CostPanel({ onClose }: { onClose: () => void }) {
           <h2>💸 Koszty AI</h2>
         </div>
         <div className="panel-body">
+          {credits && (
+            <div
+              className="status-row"
+              style={{
+                border: isLowBalance(credits.remaining, store.settings.openrouterLowBalanceUsd)
+                  ? "1px solid var(--danger,#ff6b6b)"
+                  : undefined,
+                borderRadius: 8,
+                padding: 8,
+                marginBottom: 8,
+              }}
+            >
+              <div className="status-main">
+                <div className="status-title">OpenRouter — saldo</div>
+                <div className="status-detail">
+                  zużyto {usd(credits.usage)} z {usd(credits.total)}
+                  {isLowBalance(credits.remaining, store.settings.openrouterLowBalanceUsd) ? " · ⚠ niskie saldo" : ""}
+                </div>
+              </div>
+              <strong style={{ fontSize: 15 }}>{usd(credits.remaining)}</strong>
+            </div>
+          )}
           {data.empty ? (
             <p className="muted" style={{ marginTop: 0 }}>
               Brak danych o zużyciu. Koszty pojawią się po pierwszych odpowiedziach modeli
@@ -141,6 +172,18 @@ export default function CostPanel({ onClose }: { onClose: () => void }) {
                 />
                 <button className="btn" style={{ maxWidth: 120 }} onClick={saveBudget}>Zapisz</button>
               </div>
+              {credits && (
+                <div style={{ display: "flex", gap: 8, margin: "4px 0", alignItems: "center" }}>
+                  <input
+                    className="input"
+                    inputMode="decimal"
+                    placeholder="Alert salda OpenRouter $ (0 = off)"
+                    defaultValue={store.settings.openrouterLowBalanceUsd || ""}
+                    onChange={(e) => store.setSettings({ openrouterLowBalanceUsd: Math.max(0, Number(e.target.value) || 0) })}
+                    style={{ flex: 1 }}
+                  />
+                </div>
+              )}
 
               <details style={{ marginTop: 6 }}>
                 <summary className="status-detail" style={{ cursor: "pointer" }}>Cennik (nadpisz, JSON)</summary>

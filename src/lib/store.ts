@@ -49,6 +49,7 @@ const defaultSettings: Settings = {
   onDeviceOnly: false,
   brandName: "",
   secretsAtRest: false,
+  openrouterLowBalanceUsd: 0,
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,

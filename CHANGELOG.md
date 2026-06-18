@@ -5,6 +5,21 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Faza 6 (część bezpieczna) + utwardzenie (CORS Electron, BFF fail-closed)
+- **Saldo OpenRouter (read-only):** `openrouterBalance.ts` — `GET /credits`, `parseCredits`/`isLowBalance`
+  (czyste). Saldo + alert niskiego stanu w ekranie 💸 Koszty AI; próg `openrouterLowBalanceUsd` (0 = off).
+  **Zero płatności** — sam odczyt. +3 testy.
+- **Electron CORS (zero-regresji):** koniec blankietowego nadpisywania `Access-Control-Allow-Origin: *`
+  na każdej odpowiedzi — gdy serwer ma własną politykę CORS, zostawiamy ją; permisywne nagłówki
+  dokładamy tylko tam, gdzie odpowiedź ich nie ma (czyli gdzie i tak były potrzebne). Nic działającego
+  się nie psuje, znika nadgorliwe rozluźnianie cudzych polityk.
+- **BFF fail-closed (opt-in):** `appTokenBad` honoruje `REQUIRE_APP_TOKEN=1` — wtedy wymaga poprawnego
+  `x-app-token` ZAWSZE (brak skonfigurowanego `APP_TOKEN` ⇒ odrzuć, zamiast po cichu wpuszczać).
+  Domyślnie bez zmian (egzekwcja tylko gdy `APP_TOKEN` ustawiony) — zero ryzyka dla obecnych wdrożeń.
+  Trasy proxy (anthropic/gemini/openai/passthrough) idą teraz przez wspólny `appTokenBad`. +4 testy
+  (worker walidowany `node --check`). **Deploy fail-closed:** ustaw w workerze `APP_TOKEN` ORAZ
+  `REQUIRE_APP_TOKEN=1`, a w buildzie klienta `VITE_APP_TOKEN` = ten sam token.
+
 ### Bezpieczeństwo — szyfrowanie kluczy API w spoczynku (opcjonalne)
 - **`secretsVault.ts`:** opt-in blokada kluczy hasłem (AES-256-GCM + PBKDF2, format JV2). Domyślnie
   **wyłączone** → zero zmian dla obecnych użytkowników. Po włączeniu: klucze w PAMIĘCI pozostają jawne

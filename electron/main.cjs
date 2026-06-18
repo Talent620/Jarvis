@@ -471,10 +471,22 @@ if (!gotLock) {
 
     // Naprawa CORS — wstrzykuj nagłówki, by zapytania do API działały jak w aplikacji
     // mobilnej (Gemini, Claude, Groq, OpenRouter, NVIDIA, GitHub, Tavily, Home Assistant).
+    //
+    // Utwardzenie: NIE nadpisujemy już na ślepo cudzej polityki CORS. Gdy serwer sam
+    // przysłał `Access-Control-Allow-Origin` (świadoma, często restrykcyjna polityka),
+    // zostawiamy ją bez zmian. Permisywne nagłówki dokładamy WYŁĄCZNIE, gdy odpowiedź
+    // ich nie ma (czyli tam, gdzie i tak były potrzebne, by zapytanie zadziałało) —
+    // zero regresji wobec dotychczasowego zachowania, a koniec blankietowego „*".
     session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+      const headers = details.responseHeaders || {};
+      const hasAcao = Object.keys(headers).some((h) => h.toLowerCase() === "access-control-allow-origin");
+      if (hasAcao) {
+        cb({ responseHeaders: headers }); // serwer ma własną politykę — nie ruszamy
+        return;
+      }
       cb({
         responseHeaders: {
-          ...details.responseHeaders,
+          ...headers,
           "Access-Control-Allow-Origin": ["*"],
           "Access-Control-Allow-Headers": ["*"],
           "Access-Control-Allow-Methods": ["GET, POST, OPTIONS, PUT, DELETE"],

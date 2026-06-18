@@ -29,8 +29,20 @@ const noCRLF = (s) => String(s ?? "").replace(/[\r\n]+/g, " ").trim();
 // fetch z twardym limitem czasu — wiszący upstream nie blokuje invocation workera.
 const fetchT = (url, opts = {}, ms = 20000) => fetch(url, { ...opts, signal: AbortSignal.timeout(ms) });
 
-// Token aplikacji niepoprawny? (egzekwowane TYLKO gdy APP_TOKEN ustawiony — puste = bez zmian).
-const appTokenBad = (req, env) => !!env.APP_TOKEN && req.headers.get("x-app-token") !== env.APP_TOKEN;
+// Token aplikacji niepoprawny?
+// Dwa tryby:
+//  • Domyślny (zgodny wstecz): egzekwujemy TYLKO gdy APP_TOKEN ustawiony — puste = bez zmian.
+//  • Fail-closed (opt-in, REQUIRE_APP_TOKEN=1): wymagamy poprawnego tokenu ZAWSZE; brak
+//    skonfigurowanego APP_TOKEN ⇒ odrzuć (zamiast po cichu wpuszczać). Włącz dopiero, gdy
+//    APP_TOKEN jest ustawiony w workerze, a klient wysyła x-app-token (VITE_APP_TOKEN) —
+//    inaczej fail-closed świadomie zablokuje wywołania.
+const truthy = (v) => v === "1" || v === "true" || v === true;
+export const appTokenBad = (req, env) => {
+  const failClosed = truthy(env.REQUIRE_APP_TOKEN);
+  if (failClosed && !env.APP_TOKEN) return true; // brak konfiguracji w trybie fail-closed = odrzuć
+  if (!env.APP_TOKEN) return false; // tryb domyślny, token nieustawiony = bez zmian
+  return req.headers.get("x-app-token") !== env.APP_TOKEN;
+};
 
 // Blokada SSRF do metadanych chmury: link-local 169.254.x (AWS/GCP/Azure 169.254.169.254),
 // metadata.google.internal, Alibaba 100.100.100.200. NIE blokujemy LAN (192.168/10/172.16),
@@ -669,7 +681,7 @@ export default {
       const isProxyRoute =
         path.endsWith("/anthropic") || path.endsWith("/gemini") || path.endsWith("/openai") || path.endsWith("/passthrough");
       if (isProxyRoute) {
-        if (env.APP_TOKEN && req.headers.get("x-app-token") !== env.APP_TOKEN) {
+        if (appTokenBad(req, env)) {
           return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });
         }
         if (await rateLimited(req, env)) {

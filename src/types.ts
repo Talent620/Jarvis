@@ -342,6 +342,8 @@ export interface Settings {
   brandName: string;
   /** Szyfrowanie kluczy API w spoczynku (opcjonalne, hasłem). Domyślnie false = bez zmian. */
   secretsAtRest: boolean;
+  /** Próg alertu niskiego salda OpenRouter w USD (0 = wyłączony). Tylko odczyt salda, bez płatności. */
+  openrouterLowBalanceUsd: number;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */
