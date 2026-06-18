@@ -171,7 +171,7 @@ async function googleAccessToken(env, token) {
   const rec = await env.JARVIS_KV.get(`google:${token}`);
   if (!rec) return null;
   const { refresh_token } = JSON.parse(rec);
-  const r = await fetch("https://oauth2.googleapis.com/token", {
+  const r = await fetchT("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -341,7 +341,7 @@ export default {
         if (appTokenBad(req, env)) return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });
         if (!env.TAVILY_API_KEY) return json(500, { error: "Brak TAVILY_API_KEY." });
         const { query, max_results = 5 } = await req.json();
-        const r = await fetch("https://api.tavily.com/search", {
+        const r = await fetchT("https://api.tavily.com/search", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ api_key: env.TAVILY_API_KEY, query, max_results, include_answer: true, search_depth: "advanced" }),
@@ -393,7 +393,7 @@ export default {
         const token = url.searchParams.get("state");
         if (!code || !token) return new Response("Brak code/state.", { status: 400 });
         const redirect = `${url.origin}/v1/google/callback`;
-        const r = await fetch("https://oauth2.googleapis.com/token", {
+        const r = await fetchT("https://oauth2.googleapis.com/token", {
           method: "POST",
           headers: { "content-type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({
@@ -408,6 +408,7 @@ export default {
         if (!d.refresh_token) {
           return new Response("Brak refresh_token (odłącz aplikację w koncie Google i spróbuj ponownie).", { status: 400 });
         }
+        if (!env.JARVIS_KV) return new Response("Brak bindingu KV — nie mogę zapisać połączenia.", { status: 500 });
         await env.JARVIS_KV.put(`google:${token}`, JSON.stringify({ refresh_token: d.refresh_token }));
         return new Response(
           "<html><body style='background:#04070f;color:#6ce7ff;font-family:sans-serif;text-align:center;padding-top:60px'><h2>✅ Połączono z Google</h2><p>Możesz wrócić do JARVIS-a.</p></body></html>",
@@ -426,7 +427,7 @@ export default {
         if (!at) return json(401, { error: "Google niepołączone." });
         const { query = "", max = 10 } = await req.json();
         const list = await (
-          await fetch(
+          await fetchT(
             `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${max}&q=${encodeURIComponent(query)}`,
             { headers: { authorization: `Bearer ${at}` } },
           )
@@ -434,7 +435,7 @@ export default {
         const messages = [];
         for (const m of list.messages || []) {
           const msg = await (
-            await fetch(
+            await fetchT(
               `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
               { headers: { authorization: `Bearer ${at}` } },
             )
@@ -450,7 +451,7 @@ export default {
         const { id } = await req.json();
         if (!id) return json(400, { error: "Brak id wiadomości." });
         const msg = await (
-          await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(id)}?format=full`, {
+          await fetchT(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(id)}?format=full`, {
             headers: { authorization: `Bearer ${at}` },
           })
         ).json();
@@ -514,7 +515,7 @@ export default {
         headers.push('Content-Type: text/plain; charset=UTF-8', "", body);
         const raw = b64url(headers.join("\r\n"));
         const payload = threadId ? { raw, threadId } : { raw };
-        const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+        const r = await fetchT("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
           method: "POST",
           headers: { authorization: `Bearer ${at}`, "content-type": "application/json" },
           body: JSON.stringify(payload),
@@ -550,7 +551,7 @@ export default {
         });
         if (timeMax) params.set("timeMax", timeMax);
         const d = await (
-          await fetch(
+          await fetchT(
             `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
             { headers: { authorization: `Bearer ${at}` } },
           )
@@ -566,7 +567,7 @@ export default {
         const at = await googleAccessToken(env, bearer(req));
         if (!at) return json(401, { error: "Google niepołączone." });
         const { summary, start, end, location } = await req.json();
-        const r = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+        const r = await fetchT("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
           method: "POST",
           headers: { authorization: `Bearer ${at}`, "content-type": "application/json" },
           body: JSON.stringify({
