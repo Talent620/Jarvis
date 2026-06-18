@@ -102,6 +102,11 @@ export class LiveSession {
   private playHead = 0;
   private sources: AudioBufferSourceNode[] = [];
   private closed = false;
+  // Kamera (opcjonalna) — klatki JPEG wysyłane oszczędnie (1 fps) jako realtimeInput.
+  private videoStream?: MediaStream;
+  private videoEl?: HTMLVideoElement;
+  private frameCanvas?: HTMLCanvasElement;
+  private frameTimer?: ReturnType<typeof setInterval>;
 
   constructor(
     private apiKey: string,
@@ -220,6 +225,51 @@ export class LiveSession {
     }
   }
 
+  // Włącz kamerę: strumień wideo → klatki JPEG → Gemini Live (model „widzi"). Domyślnie tylna
+  // kamera (facingMode environment) — typowe „spójrz na to". Oszczędnie: 1 klatka/s, 640×480.
+  async startCamera(facing: "user" | "environment" = "environment"): Promise<void> {
+    if (this.videoStream) return;
+    this.videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } },
+    });
+    const v = document.createElement("video");
+    v.srcObject = this.videoStream;
+    v.muted = true;
+    v.playsInline = true;
+    try {
+      await v.play();
+    } catch {
+      /* autoplay bywa odrzucany — i tak rysujemy z elementu */
+    }
+    this.videoEl = v;
+    const c = document.createElement("canvas");
+    c.width = 640;
+    c.height = 480;
+    this.frameCanvas = c;
+    this.frameTimer = setInterval(() => this.sendFrame(), 1000);
+  }
+
+  private sendFrame(): void {
+    if (this.ws?.readyState !== WebSocket.OPEN || !this.videoEl || !this.frameCanvas) return;
+    const ctx = this.frameCanvas.getContext("2d");
+    if (!ctx || !this.videoEl.videoWidth) return; // klatka jeszcze niegotowa
+    ctx.drawImage(this.videoEl, 0, 0, this.frameCanvas.width, this.frameCanvas.height);
+    const b64 = this.frameCanvas.toDataURL("image/jpeg", 0.6).split(",")[1];
+    if (!b64) return;
+    this.ws.send(JSON.stringify({ realtimeInput: { mediaChunks: [{ mimeType: "image/jpeg", data: b64 }] } }));
+  }
+
+  stopCamera(): void {
+    if (this.frameTimer) {
+      clearInterval(this.frameTimer);
+      this.frameTimer = undefined;
+    }
+    this.videoStream?.getTracks().forEach((t) => t.stop());
+    this.videoStream = undefined;
+    this.videoEl = undefined;
+    this.frameCanvas = undefined;
+  }
+
   private async startMic(): Promise<void> {
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: micAudioConstraints({ channelCount: 1, echoCancellation: true, noiseSuppression: true }),
@@ -291,6 +341,7 @@ export class LiveSession {
     if (this.torn) return;
     this.torn = true;
     try {
+      this.stopCamera();
       this.processor?.disconnect();
       this.source?.disconnect();
       this.stream?.getTracks().forEach((t) => t.stop());

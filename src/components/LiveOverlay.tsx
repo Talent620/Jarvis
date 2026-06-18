@@ -29,6 +29,7 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
   const [state, setState] = useState<AnyState>("connecting");
   const [detail, setDetail] = useState("");
   const [caption, setCaption] = useState("");
+  const [camOn, setCamOn] = useState(false);
   const liveRef = useRef<LiveSession | null>(null);
   const loopRef = useRef<ConversationLoop | null>(null);
   const coreRef = useRef<HTMLDivElement>(null);
@@ -47,8 +48,25 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
     });
   }, []);
 
+  const toggleCamera = async () => {
+    const s = liveRef.current;
+    if (!s) return;
+    if (camOn) {
+      s.stopCamera();
+      setCamOn(false);
+    } else {
+      try {
+        await s.startCamera();
+        setCamOn(true);
+      } catch {
+        setDetail("Brak dostępu do kamery. Zezwól na kamerę w ustawieniach aplikacji.");
+      }
+    }
+  };
+
   const stopAll = () => {
     genRef.current++; // unieważnij ewentualne trwające async budowanie sesji
+    setCamOn(false);
     liveRef.current?.stop();
     liveRef.current = null;
     loopRef.current?.stop();
@@ -190,6 +208,12 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
               ⚡ Wróć do Gemini Live
             </button>
           )
+        )}
+
+        {engine === "gemini" && !failed && (
+          <button className="btn" style={{ maxWidth: 280, marginTop: 10 }} onClick={() => void toggleCamera()}>
+            {camOn ? "📷 Wyłącz kamerę" : "📷 Pokaż kamerę (JARVIS widzi)"}
+          </button>
         )}
 
         {caption && (

@@ -14,6 +14,9 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
   narzędzia **MCP** (Faza 2). `outbound` (mail/telefon/smart-home/pulpit) **pomijane** — w trybie live
   nie ma bramki zgody, więc błędne rozpoznanie mowy nie wywoła nieodwracalnej akcji (dodatkowy blok
   defensywny w runnerze). Pełny tok z potwierdzeniami pozostaje w czacie i „Trybie rozmowy". +3 testy.
+- **Kamera w trybie live (opcjonalna, domyślnie OFF):** `LiveSession.startCamera/stopCamera` —
+  tylna kamera, klatki JPEG 1 fps 640×480 wysyłane jako `realtimeInput` (model „widzi"), sprzątane
+  przy teardown/błędzie; przycisk „📷 Pokaż kamerę" w `LiveOverlay`. Uprawnienie CAMERA już w manifeście.
 
 ### Program premium — Faza 0 + Faza 1 + Faza 2
 - **Faza 2 — warstwa MCP:** `mcp.ts` (`McpManager`) — klient zgodny z MCP (JSON-RPC
