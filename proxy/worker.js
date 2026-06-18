@@ -20,6 +20,16 @@
 
 const ALLOWED_OPENAI_HOSTS = ["api.groq.com", "openrouter.ai", "integrate.api.nvidia.com", "models.github.ai"];
 
+// Base64 dla UTF-8 (MIME-word). Moduł-globalne, bo używane też poza smtpRelay (np. /v1/gmail/send).
+const b64 = (s) => btoa(unescape(encodeURIComponent(String(s))));
+
+// Usuń CR/LF z wartości trafiających do linii protokołu/nagłówków (anty-injection SMTP/MIME).
+const noCRLF = (s) => String(s ?? "").replace(/[\r\n]+/g, " ").trim();
+
+// fetch z twardym limitem czasu — wiszący upstream nie blokuje invocation workera.
+const fetchT = (url, opts = {}, ms = 20000) => fetch(url, { ...opts, signal: AbortSignal.timeout(ms) });
+
+
 // Przekaźnik SMTP (telefon wysyła „w tle" hasłem aplikacji, bez Google OAuth).
 // Logika lustrzana do electron/smtp.cjs, ale na gniazdach Cloudflare Workers.
 import { connect } from "cloudflare:sockets";
@@ -64,13 +74,14 @@ async function smtpRelay({ host, port, user, pass, to, subject, body, verifyOnly
     await send(b64(user)); r = await readResp(); if (!/^334/.test(r)) return fail(`Login: ${r.slice(0, 120)}`);
     await send(b64(pass)); r = await readResp(); if (!/^235/.test(r)) return fail(authErr);
     if (verifyOnly) { await send("QUIT"); await close(); return { ok: true }; }
-    await send(`MAIL FROM:<${user}>`); r = await readResp(); if (!/^250/.test(r)) return fail(`MAIL FROM: ${r.slice(0, 120)}`);
-    await send(`RCPT TO:<${to}>`); r = await readResp(); if (!/^250/.test(r)) return fail(`RCPT TO: ${r.slice(0, 120)}`);
+    const sUser = noCRLF(user), sTo = noCRLF(to); // anty-injection: bez CR/LF w liniach protokołu
+    await send(`MAIL FROM:<${sUser}>`); r = await readResp(); if (!/^250/.test(r)) return fail(`MAIL FROM: ${r.slice(0, 120)}`);
+    await send(`RCPT TO:<${sTo}>`); r = await readResp(); if (!/^250/.test(r)) return fail(`RCPT TO: ${r.slice(0, 120)}`);
     await send("DATA"); r = await readResp(); if (!/^354/.test(r)) return fail(`DATA: ${r.slice(0, 120)}`);
     const bodyB64 = b64(body).replace(/(.{76})/g, "$1\r\n");
     const data = [
-      `From: <${user}>`, `To: <${to}>`,
-      `Subject: =?UTF-8?B?${b64(subject)}?=`,
+      `From: <${sUser}>`, `To: <${sTo}>`,
+      `Subject: =?UTF-8?B?${b64(noCRLF(subject))}?=`,
       "MIME-Version: 1.0", 'Content-Type: text/plain; charset="utf-8"',
       "Content-Transfer-Encoding: base64", "", bodyB64, ".",
     ].join("\r\n");
@@ -322,13 +333,14 @@ export default {
       if (path === "/v1/embed" && req.method === "POST") {
         if (!env.GEMINI_API_KEY) return json(500, { error: "Brak GEMINI_API_KEY." });
         const { texts } = await req.json();
+        const list = Array.isArray(texts) ? texts.slice(0, 64) : []; // cap fan-out (koszt/CPU)
         const vectors = [];
-        for (const t of texts || []) {
-          const r = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${env.GEMINI_API_KEY}`,
+        for (const t of list) {
+          const r = await fetchT(
+            "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent",
             {
               method: "POST",
-              headers: { "content-type": "application/json" },
+              headers: { "content-type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
               body: JSON.stringify({ model: "models/text-embedding-004", content: { parts: [{ text: t }] } }),
             },
           );
@@ -462,16 +474,17 @@ export default {
         const at = await googleAccessToken(env, bearer(req));
         if (!at) return json(401, { error: "Google niepołączone." });
         const { to, subject, body, threadId, inReplyTo } = await req.json();
+        const sTo = noCRLF(to), sSubject = noCRLF(subject); // anty-injection nagłówków MIME
         // Temat z polskimi znakami musi być zakodowany jako MIME-word (=?UTF-8?B?…?=),
         // inaczej w skrzynce odbiorcy bywa krzaczasty.
-        const subjHeader = /[^\x00-\x7F]/.test(String(subject || ""))
-          ? `=?UTF-8?B?${b64(String(subject || ""))}?=`
-          : String(subject || "");
+        const subjHeader = /[^\x00-\x7F]/.test(sSubject)
+          ? `=?UTF-8?B?${b64(sSubject)}?=`
+          : sSubject;
         // Odpowiedź w wątku: dołącz nagłówki In-Reply-To/References + threadId.
-        const headers = [`To: ${to}`, `Subject: ${subjHeader}`];
+        const headers = [`To: ${sTo}`, `Subject: ${subjHeader}`];
         if (inReplyTo) {
           // Message-ID musi być w nawiasach <…>, inaczej Gmail nie zawsze wpina w wątek.
-          const mid = String(inReplyTo).trim();
+          const mid = noCRLF(inReplyTo);
           const norm = /^<.*>$/.test(mid) ? mid : `<${mid}>`;
           headers.push(`In-Reply-To: ${norm}`, `References: ${norm}`);
         }
@@ -650,9 +663,9 @@ export default {
         const model = url.searchParams.get("model");
         if (!model || !env.GEMINI_API_KEY) return json(400, { error: "Brak modelu lub GEMINI_API_KEY." });
         return relay(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
           req,
-          { "content-type": "application/json" },
+          { "content-type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
         );
       }
       if (path.endsWith("/openai")) {
@@ -677,7 +690,8 @@ export default {
 
       return json(404, { error: "Nieznana trasa." });
     } catch (e) {
-      return json(500, { error: String(e) });
+      console.error("[worker]", e); // szczegóły do logów serwera, nie do klienta
+      return json(500, { error: "Wewnętrzny błąd serwera." });
     }
   },
 };

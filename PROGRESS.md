@@ -5,12 +5,12 @@ Bazowo: 665 testów zielone. Każda partia: zmiana → test/build → commit.
 ## Plan napraw (bezpieczne, wysoki wpływ, niskie/średnie ryzyko)
 
 ### Batch 1 — BFF `proxy/worker.js`
-- [ ] (C) REALNY BUG: `b64` niezdefiniowane w `/v1/gmail/send` → 500 na PL tematach — dodać moduł-globalny `b64`.
-- [ ] (M3) Sanityzacja CRLF w SMTP/MIME (`to/user/subject/inReplyTo`).
-- [ ] (M4) Klucz Gemini z URL → nagłówek `x-goog-api-key` (`/v1/embed`, `/gemini`).
-- [ ] (M6) Cap długości `texts[]` w `/v1/embed`.
-- [ ] (m1) Timeouty na upstream-fetchach workera.
-- [ ] (M5) 500 → generyczny komunikat (bez `String(e)`).
+- [x] (C) REALNY BUG: `b64` niezdefiniowane w `/v1/gmail/send` → 500 na PL tematach — dodać moduł-globalny `b64`.
+- [x] (M3) Sanityzacja CRLF w SMTP/MIME (`to/user/subject/inReplyTo`).
+- [x] (M4) Klucz Gemini z URL → nagłówek `x-goog-api-key` (`/v1/embed`, `/gemini`).
+- [x] (M6) Cap długości `texts[]` w `/v1/embed`.
+- [x] (m1) Timeouty na upstream-fetchach workera.
+- [x] (M5) 500 → generyczny komunikat (bez `String(e)`).
 
 ### Batch 2 — sales-os public API
 - [ ] (C1) Per-lead outreach: gate na `autoSendEmails` + `dailyEmailCap`.
