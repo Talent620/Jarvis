@@ -69,7 +69,9 @@ export function appendSignature(body: string, signature?: string): string {
  * Jeśli podano `signature`, dopisuje ją automatycznie na końcu treści.
  */
 export function splitOffer(offer: string, fallbackSubject: string, signature?: string): { subject: string; body: string } {
-  const subject = /Temat:\s*(.+)/i.exec(offer)?.[1]?.trim() || fallbackSubject;
-  const raw = offer.replace(/Temat:\s*.+\n?/i, "").trim();
+  // Zakotwicz do POCZĄTKU linii (m), żeby „Temat:" w środku treści nie ucinał maila;
+  // \r?\n obsługuje CRLF (bez zostawiania osieroconego \r).
+  const subject = /^\s*Temat:\s*(.+)/im.exec(offer)?.[1]?.trim() || fallbackSubject;
+  const raw = offer.replace(/^\s*Temat:\s*.+\r?\n?/im, "").trim();
   return { subject, body: appendSignature(raw, signature) };
 }

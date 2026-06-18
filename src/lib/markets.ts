@@ -19,18 +19,27 @@ export function formatPrice(n: number): string {
 
 /** Notowania krypto (w PLN i USD) + zmiana 24h. */
 export async function getCrypto(symbols: string[]): Promise<string> {
-  const ids = [...new Set(symbols.map((s) => COIN_IDS[s.toLowerCase()]).filter(Boolean))];
-  if (!ids.length) return "Podaj symbole krypto, np. BTC, ETH, SOL.";
+  // Zachowaj symbol użytkownika (BTC), nie kanoniczne id CoinGecko (bitcoin). Dedup po id.
+  const seen = new Map<string, string>();
+  for (const s of symbols) {
+    const id = COIN_IDS[s.toLowerCase()];
+    if (id && !seen.has(id)) seen.set(id, s.toUpperCase());
+  }
+  const pairs = [...seen.entries()];
+  if (!pairs.length) return "Podaj symbole krypto, np. BTC, ETH, SOL.";
+  const ids = pairs.map(([id]) => id);
   try {
     const res = await fetchTimeout(`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(",")}&vs_currencies=usd,pln&include_24hr_change=true`);
     const d = await res.json().catch(() => null);
     if (!res.ok || !d) return "Notowania krypto chwilowo niedostępne.";
-    const lines = ids.map((id) => {
+    const lines = pairs.map(([id, sym]) => {
       const c = d[id];
-      if (!c) return `${id}: brak danych`;
+      if (!c) return `${sym}: brak danych`;
       const ch = c.usd_24h_change;
-      const arrow = ch >= 0 ? "▲" : "▼";
-      return `${id.toUpperCase()}: $${formatPrice(c.usd)} / ${formatPrice(c.pln)} zł ${arrow}${Math.abs(ch || 0).toFixed(1)}% (24h)`;
+      // Gdy API nie poda zmiany 24h — nie pokazuj fałszywej strzałki w dół / „0.0%".
+      const hasCh = typeof ch === "number" && isFinite(ch);
+      const chTxt = hasCh ? ` ${ch >= 0 ? "▲" : "▼"}${Math.abs(ch).toFixed(1)}% (24h)` : "";
+      return `${sym}: $${formatPrice(c.usd)} / ${formatPrice(c.pln)} zł${chTxt}`;
     });
     return lines.join("\n");
   } catch {

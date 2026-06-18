@@ -76,4 +76,10 @@ describe("nextRepeat — kolejny termin powtarzalnego zadania", () => {
     const r = nextRepeat("2026-06-01", "weekly", WED);
     expect(r >= "2026-06-10").toBe(true);
   });
+  it("miesięcznie nie dryfuje na krótkich miesiącach (31 I → 28/29 II, nie 3 III)", () => {
+    // Bez przytrzymania dnia: 2026-01-31 + 1 mc dawało 2026-03-03. Po poprawce → 2026-02-28.
+    expect(nextRepeat("2026-01-31", "monthly", new Date("2026-01-31T12:00:00"))).toBe("2026-02-28");
+    // 31 III → 30 IV (kwiecień ma 30 dni)
+    expect(nextRepeat("2026-03-31", "monthly", new Date("2026-03-31T12:00:00"))).toBe("2026-04-30");
+  });
 });

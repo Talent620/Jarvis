@@ -93,15 +93,23 @@ export function parseQuickTask(input: string, today = new Date()): ParsedTask {
 export function nextRepeat(due: string | undefined, repeat: "daily" | "weekly" | "monthly", from = new Date()): string {
   const base = due ? new Date(due + "T00:00:00") : startOfDay(from);
   const d = new Date(base);
-  if (repeat === "daily") d.setDate(d.getDate() + 1);
-  else if (repeat === "weekly") d.setDate(d.getDate() + 7);
-  else d.setMonth(d.getMonth() + 1);
-  // Nie cofaj w przeszłość — gdy zaległe, przeskocz do najbliższego przyszłego.
-  const todayStart = startOfDay(from);
-  while (d.getTime() < todayStart.getTime()) {
+  // Dodanie miesiąca z przytrzymaniem dnia w granicach miesiąca — bez tego 31 I + 1 mc
+  // przeskakiwało na 3 III (luty nie ma 31.) i dryfowało dalej.
+  const addMonth = (dt: Date) => {
+    const day = dt.getDate();
+    dt.setDate(1);
+    dt.setMonth(dt.getMonth() + 1);
+    const daysInMonth = new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
+    dt.setDate(Math.min(day, daysInMonth));
+  };
+  const step = () => {
     if (repeat === "daily") d.setDate(d.getDate() + 1);
     else if (repeat === "weekly") d.setDate(d.getDate() + 7);
-    else d.setMonth(d.getMonth() + 1);
-  }
+    else addMonth(d);
+  };
+  step();
+  // Nie cofaj w przeszłość — gdy zaległe, przeskocz do najbliższego przyszłego.
+  const todayStart = startOfDay(from);
+  while (d.getTime() < todayStart.getTime()) step();
   return toISO(d);
 }

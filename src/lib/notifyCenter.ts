@@ -37,7 +37,11 @@ export interface NotifSummary {
 export function notifySummary(now = Date.now()): NotifSummary {
   const today = new Date(now).toISOString().slice(0, 10);
   const tasks = store.data.tasks || [];
-  const tasksToday = tasks.filter((t) => !t.done && t.due && t.due.slice(0, 10) <= today).length;
+  // Wyklucz zadania-źródła autopilota (fup:/call:) — follow-upy liczymy osobno (followUps),
+  // inaczej ten sam follow-up wpadał do sumy dwa razy (jako zadanie i jako follow-up).
+  const tasksToday = tasks.filter(
+    (t) => !t.done && t.due && t.due.slice(0, 10) <= today && !/^(fup|call):/.test(t.sourceId || ""),
+  ).length;
   const followUps = followUpsDue(store.data.leads || [], now).length;
   const cards = dueCount(now);
   const remindersDue = dueReminders(now).length;

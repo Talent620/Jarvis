@@ -39,7 +39,7 @@ export async function addEvent(
 // Lista wydarzeń z kalendarza telefonu na najbliższe dni.
 export async function listUpcoming(days = 7): Promise<string> {
   if (!Capacitor.isNativePlatform()) {
-    const events = [...store.data.calendar].sort((a, b) => a.start.localeCompare(b.start));
+    const events = [...(store.data.calendar || [])].sort((a, b) => a.start.localeCompare(b.start));
     return events.length
       ? events.map((e) => `• ${new Date(e.start).toLocaleString("pl-PL")} — ${e.title}`).join("\n")
       : "Kalendarz jest pusty.";

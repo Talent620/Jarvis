@@ -67,7 +67,10 @@ export function syncSalesTasks(now = new Date()): AutoPlanResult {
       const stale =
         !lead ||
         (kind === "call" && lead.status !== "new") ||
-        (kind === "fup" && (lead.status === "won" || lead.status === "lost"));
+        // Follow-up: zamknięty gdy klient/odrzucony LUB gdy zadanie zostało zastąpione nowym
+        // cyklem (sourceId koduje followUpCount) / nie jest już „due" — inaczej stare
+        // fup:<id>:0, fup:<id>:1… kumulowały się bez końca dla tego samego leada.
+        (kind === "fup" && (lead.status === "won" || lead.status === "lost" || !want.has(t.sourceId || "")));
       if (stale) { t.done = true; completed++; }
     }
   });

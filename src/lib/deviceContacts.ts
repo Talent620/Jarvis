@@ -3,7 +3,9 @@ import { Contacts } from "@capacitor-community/contacts";
 import { call, sms } from "./deviceControl";
 
 async function findNumber(name: string): Promise<string | null> {
-  await Contacts.requestPermissions();
+  // Sprawdź wynik zgody — przy odmowie nie wołaj getContacts (uniknij zbędnego wyjątku).
+  const perm = await Contacts.requestPermissions();
+  if (perm?.contacts && perm.contacts !== "granted") return null;
   const { contacts } = await Contacts.getContacts({ projection: { name: true, phones: true } });
   const q = name.toLowerCase().trim();
   const hit = contacts.find(

@@ -53,6 +53,21 @@ describe("autopilot sprzedaży — zadania z leadów", () => {
     expect(store.data.tasks[0].title).toMatch(/Follow-up: B/);
   });
 
+  it("zamyka przeterminowane follow-upy ze starego cyklu (bez kumulacji)", () => {
+    // Stare zadanie z cyklu 0 (fup:L1:0) wisi otwarte, a lead jest już w cyklu 1
+    // (followUpCount=1) → fup:L1:0 nie jest już „want" → musi zostać domknięte.
+    const old = NOW.getTime() - 5 * 86400000;
+    store.setData((d) => {
+      d.leads = [lead({ id: "L1", company: "B", status: "contacted", lastContactedAt: old, followUpCount: 1 })];
+      d.tasks = [{ id: uid(), title: "🔁 Follow-up: B", done: false, due: "2026-06-10", priority: true, category: "sprzedaż", sourceId: "fup:L1:0", createdAt: 0 }];
+    });
+    syncSalesTasks(NOW);
+    const oldTask = store.data.tasks.find((t) => t.sourceId === "fup:L1:0")!;
+    expect(oldTask.done).toBe(true); // stary cykl domknięty
+    // Co najwyżej JEDEN otwarty follow-up dla tego leada (brak kumulacji fup:L1:0 + fup:L1:1).
+    expect(store.data.tasks.filter((t) => !t.done && (t.sourceId || "").startsWith("fup:L1")).length).toBeLessThanOrEqual(1);
+  });
+
   it("nie odtwarza zadania raz wykonanego w tym cyklu", () => {
     store.setData((d) => { d.leads = [lead({ id: "L1", company: "A", contact: "111", hours: "24/7" })]; });
     syncSalesTasks(NOW);

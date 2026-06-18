@@ -70,13 +70,21 @@ export async function getWeather(location?: string): Promise<string> {
   const c = d.current;
   const day = d.daily;
   const desc = CODES[c.weather_code] ?? "zmiennie";
+  // Open-Meteo bywa, że zwraca puste/niekompletne tablice dzienne albo null dla opadów —
+  // bez tych zabezpieczeń pojawiało się „NaN°" / „null%".
+  const tMin = day.temperature_2m_min?.[0];
+  const tMax = day.temperature_2m_max?.[0];
+  const rng = Number.isFinite(tMin) && Number.isFinite(tMax)
+    ? `Dziś od ${Math.round(tMin)}° do ${Math.round(tMax)}°. `
+    : "";
+  const pop = day.precipitation_probability_max?.[0];
+  const popTxt = Number.isFinite(pop) ? `Szansa opadów ${pop}%.` : "";
 
   return (
     `Pogoda — ${geo.name}: ${Math.round(c.temperature_2m)}°C (odczuwalna ${Math.round(
       c.apparent_temperature,
     )}°C), ${desc}. ` +
     `Wilgotność ${c.relative_humidity_2m}%, wiatr ${Math.round(c.wind_speed_10m)} km/h. ` +
-    `Dziś od ${Math.round(day.temperature_2m_min[0])}° do ${Math.round(day.temperature_2m_max[0])}°, ` +
-    `szansa opadów ${day.precipitation_probability_max[0]}%.`
-  );
+    rng + popTxt
+  ).trim();
 }
