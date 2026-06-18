@@ -85,5 +85,5 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
   albo jest nieodwracalne, albo mogłoby zerwać działające wdrożenie.
 
 ### Jakość
-- Testy: 665 → **683** (Vitest) zielone. Build web/APK/EXE zielone w CI. Worker walidowany
+- Testy: 665 → **685** (Vitest) zielone. Build web/APK/EXE zielone w CI. Worker walidowany
   `node --check` + osobny test logiki SSRF.
