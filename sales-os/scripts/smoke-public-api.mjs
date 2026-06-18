@@ -4,13 +4,13 @@
  * Hits all four token-authed endpoints against a running, seeded server and
  * asserts status codes + shapes. No deps — uses global fetch (Node 18+).
  *
- *   BASE_URL=http://localhost:3000 INGEST_TOKEN=demo-ingest-token \
+ *   BASE_URL=http://localhost:3000 INGEST_TOKEN=demo-ingest-token-demo-demo \
  *     node scripts/smoke-public-api.mjs
  *
  * Exit 0 = all good, 1 = a check failed.
  */
 const BASE = (process.env.BASE_URL || "http://localhost:3000").replace(/\/$/, "");
-const TOKEN = process.env.INGEST_TOKEN || "demo-ingest-token";
+const TOKEN = process.env.INGEST_TOKEN || "demo-ingest-token-demo-demo";
 
 let failures = 0;
 function check(name, cond, detail = "") {
@@ -45,14 +45,15 @@ async function main() {
   check("POST /leads → 201", r.status === 201, `got ${r.status}`);
   check("POST /leads ok:true", d.ok === true);
 
-  // 4) outreach: AI draft + auto-send → 201, sent
+  // 4) outreach: AI draft (auto-send is gated on the owner's autoSendEmails setting,
+  //    so per-lead always produces a draft; it only sends when the owner enabled it).
   r = await fetch(`${BASE}/api/public/outreach`, {
     method: "POST", headers: H,
     body: JSON.stringify({ email, companyName: "Smoke Co", context: "Smoke test" }),
   });
   d = await j(r);
   check("POST /outreach → 201", r.status === 201, `got ${r.status}`);
-  check("POST /outreach sent:true", d.sent === true, JSON.stringify(d));
+  check("POST /outreach drafted:true", d.drafted === true, JSON.stringify(d));
 
   // 5) outreach validation: send without email → 422
   r = await fetch(`${BASE}/api/public/outreach`, { method: "POST", headers: H, body: JSON.stringify({ companyName: "No Email" }) });

@@ -525,7 +525,7 @@ async function main() {
         type: "WEBHOOK",
         provider: "inbound-capture",
         status: "CONNECTED",
-        config: { token: "demo-ingest-token", autoDraft: true },
+        config: { token: "demo-ingest-token-demo-demo", autoDraft: true },
       },
     ],
   });

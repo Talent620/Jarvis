@@ -13,7 +13,9 @@ export interface ResolvedInbound {
 export async function resolveCompanyByToken(
   token: string | null | undefined,
 ): Promise<ResolvedInbound | null> {
-  if (!token || token.length < 6) return null;
+  // Realne tokeny to 32 hex (randomBytes(16)). Odrzucaj krótkie wcześnie — niższy próg
+  // dawał fałszywe poczucie walidacji i ułatwiał zgadywanie.
+  if (!token || token.length < 24) return null;
   const integration = await prisma.integration.findFirst({
     where: {
       type: "WEBHOOK",

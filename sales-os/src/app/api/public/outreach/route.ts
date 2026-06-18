@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveCompanyByToken, rateLimit } from "@/lib/acquisition/token";
 import { ingestLead } from "@/lib/acquisition/ingest";
 import { draftAndSendForLead } from "@/lib/acquisition/public-outreach";
-import { autoSendPendingEmails } from "@/lib/email/outreach";
+import { autoSendPendingEmails, emailsSentToday } from "@/lib/email/outreach";
 import { ensureAcquisitionSettings } from "@/lib/acquisition/settings";
 
 export const dynamic = "force-dynamic";
@@ -43,8 +43,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid or missing capture token" }, { status: 401, headers: CORS });
   }
 
-  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
-  if (!rateLimit(`outreach:${token}:${ip}`, 20, 60_000)) {
+  // Klucz na sam token — X-Forwarded-For jest kontrolowany przez klienta (rotacja omijała limit).
+  // Token to twarda granica wysyłki na minutę, niezależnie od deklarowanego IP.
+  if (!rateLimit(`outreach:${token}`, 20, 60_000)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: CORS });
   }
 
@@ -108,14 +109,29 @@ export async function POST(req: Request) {
       leadId = r.leadId;
     }
 
+    // Bezpieczeństwo: realna wysyłka tylko gdy właściciel włączył auto-send i nie przekroczono
+    // dziennego limitu. Inaczej szkic ląduje w kolejce akceptacji (zgodnie z modelem CRM-u).
+    let effectiveSend = send;
+    let gated: string | undefined;
+    if (send) {
+      const settings = await ensureAcquisitionSettings(company.companyId);
+      if (!settings.autoSendEmails) {
+        effectiveSend = false;
+        gated = "auto-send disabled — drafted to approval queue";
+      } else if ((await emailsSentToday(company.companyId)) >= settings.dailyEmailCap) {
+        effectiveSend = false;
+        gated = "daily email cap reached — drafted to approval queue";
+      }
+    }
+
     const result = await draftAndSendForLead({
       companyId: company.companyId,
       leadId,
-      send,
+      send: effectiveSend,
       context: str("context"),
     });
 
-    return NextResponse.json({ ok: true, mode: "lead", ...result }, { status: 201, headers: CORS });
+    return NextResponse.json({ ok: true, mode: "lead", ...result, ...(gated ? { gated } : {}) }, { status: 201, headers: CORS });
   } catch (e) {
     console.error("[public.outreach]", e);
     return NextResponse.json({ error: "Could not process outreach" }, { status: 500, headers: CORS });

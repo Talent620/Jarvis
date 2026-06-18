@@ -13,10 +13,10 @@ Bazowo: 665 testów zielone. Każda partia: zmiana → test/build → commit.
 - [x] (M5) 500 → generyczny komunikat (bez `String(e)`).
 
 ### Batch 2 — sales-os public API
-- [ ] (C1) Per-lead outreach: gate na `autoSendEmails` + `dailyEmailCap`.
-- [ ] (C2) Rate-limit wysyłki: klucz na sam token (bez `X-Forwarded-For`).
-- [ ] (M2) Token min. długość 24.
-- [ ] (m6) Timeout na fetch w `email/index.ts`.
+- [x] (C1) Per-lead outreach: gate na `autoSendEmails` + `dailyEmailCap`.
+- [x] (C2) Rate-limit wysyłki: klucz na sam token (bez `X-Forwarded-For`).
+- [x] (M2) Token min. długość 24.
+- [x] (m6) Timeout na fetch w `email/index.ts`.
 
 ### Batch 3 — klient: głos + store + backup + bezpieczeństwo
 - [ ] (Voice D) `playUrlWithLevel` — odłączać węzły audio (lub kierować przez `playUrlEnded`).

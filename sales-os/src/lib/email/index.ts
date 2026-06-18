@@ -36,6 +36,7 @@ export function isEmailLive(): boolean {
 async function sendViaResend(args: SendEmailArgs, apiKey: string): Promise<SendEmailResult> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
+    signal: AbortSignal.timeout(15000), // wiszący dostawca nie może blokować funkcji serverless
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       from: args.from ?? defaultFrom(),
@@ -66,6 +67,7 @@ async function sendViaMailgun(
   if (args.html) form.set("html", args.html);
   const res = await fetch(`https://api.mailgun.net/v3/${domain}/messages`, {
     method: "POST",
+    signal: AbortSignal.timeout(15000), // wiszący dostawca nie może blokować funkcji serverless
     headers: {
       Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString("base64")}`,
       "Content-Type": "application/x-www-form-urlencoded",
