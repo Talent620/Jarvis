@@ -60,7 +60,7 @@ Bazowo: 665 testów zielone. Każda partia: zmiana → test/build → commit.
 1. **BFF auth/SSRF/CORS** — `APP_TOKEN` fail-closed, allowlista `/passthrough`, auth na `/v1/search|embed|sync`. *Ryzyko: zerwanie działającego wdrożenia.*
 2. **`admin.ts`** — sekret admina szyfrowany numerem telefonu (hash w bundlu) → przeprojektować logowanie właściciela + migracja.
 3. **`permissions.ts`** — consent fail-closed dla outbound (dziś tryb live celowo omija zgodę).
-4. **`sync.ts`** — merge po `id`+`updatedAt` zamiast last-write-wins.
+4. ~~**`sync.ts`** — merge po `id`+`updatedAt`~~ ✅ ZROBIONE (Batch 7).
 5. **Keystore Android + self-signed EXE** — rotacja klucza (nieodwracalne wobec Sklepu Play) / prawdziwy cert.
 6. **`release.yml` na push brancha** — ograniczyć do tagów (zerwie obecny rolling `latest`).
 7. **Electron wildcard CORS** — zawęzić do allowlisty hostów.
@@ -74,4 +74,9 @@ Bazowo: 665 testów zielone. Każda partia: zmiana → test/build → commit.
 5. **Decyzja o keystore/kluczach + `release.yml` na tagi** — domknięcie higieny wydania.
 
 ## Zrobione
-Batche 1–6 wdrożone i wypchnięte (commity `e1e983e → 45905dd`). 665 → **674 testy** zielone.
+- Batche 1–6 (`e1e983e → 45905dd`): bezpieczeństwo BFF/sales-os/klient/Electron/leady/CI + niezawodność głosu/store.
+- Batch 7 (`6fd007c`): **sync merge** po `id` (nowsze wygrywa — koniec utraty edycji między urządzeniami) + batch zapisu przypomnień.
+- 665 → **678 testów** zielone. Drzewo czyste.
+
+### Pozostałe bezpieczne, ale z subtelną zmianą zachowania (czekają na nod)
+- `brain.ts` globalny stan modułu → parametry: realna poprawka (przeciek kontekstu przy równoległych `askJarvis`), ale zmienia treść promptu w trybie live (dziś dziedziczy resztki z ostatniego czatu). Mały blast radius (2 callery) — zrobię na potwierdzenie.
