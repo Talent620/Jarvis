@@ -103,7 +103,16 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
   ];
 }
 
-export function systemPrompt(): string {
+/** Kontekst per-żądanie (zamiast globali modułu — bez przecieku między równoległymi askJarvis
+ *  i bez „resztek" w trybie live). Wszystkie pola opcjonalne; brak = czysty prompt. */
+export interface PromptContext {
+  deepAnalysis?: string;
+  currentKnowledge?: string;
+  journalRank?: string[] | null;
+}
+
+export function systemPrompt(ctx: PromptContext = {}): string {
+  const { deepAnalysis = "", currentKnowledge = "", journalRank = null } = ctx;
   const s = store.settings;
   const userName = s.userName;
   const pid = s.activeProjectId;
@@ -215,12 +224,6 @@ export function systemPrompt(): string {
     journalCtx,
   ].join("\n");
 }
-
-// Wynik przebiegu „głębokiego myślenia" + dobrana wiedza ekspercka (wstrzykiwane jak pamięć).
-let deepAnalysis = "";
-let currentKnowledge = "";
-// Semantyczna kolejność wpisów dziennika dla bieżącego zapytania (null = naturalna).
-let journalRank: string[] | null = null;
 
 /** Rozstrzyga, którego dostawcę i model użyć (uwzględnia tryb auto). */
 export function resolveProvider(): { provider: ProviderId; model: string; apiKey: string } | null {
@@ -426,13 +429,13 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   const lastUser = [...trimmed].reverse().find((m) => m.role === "user");
   await prepareMemoryContext(lastUser?.content || "");
   // Pamięć ewoluująca: ułóż udostępnione wpisy dziennika według trafności.
-  journalRank = await rankJournal(lastUser?.content || "").catch(() => null);
+  const journalRank = await rankJournal(lastUser?.content || "").catch(() => null);
 
   // Wszczepiona wiedza ekspercka: dobierz pasujące modele mentalne (offline, za darmo).
-  currentKnowledge = store.settings.expertKnowledge !== false ? retrieveKnowledge(lastUser?.content || "") : "";
+  const currentKnowledge = store.settings.expertKnowledge !== false ? retrieveKnowledge(lastUser?.content || "") : "";
 
   // Głębokie myślenie: przy złożonych pytaniach najpierw wewnętrzna analiza.
-  deepAnalysis = "";
+  let deepAnalysis = "";
   if (store.settings.deepThink && !store.settings.interpreterMode && isComplex(lastUser?.content || "")) {
     try {
       const a = await PROVIDERS[resolved.provider].impl({
@@ -451,7 +454,7 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   }
 
   const baseCtx = {
-    system: systemPrompt(),
+    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank }),
     webSearch: store.settings.webSearch,
     tools: toolDefs,
     history: trimmed,

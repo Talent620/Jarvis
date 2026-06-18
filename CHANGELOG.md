@@ -5,6 +5,11 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Poprawność współbieżności
+- **brain.ts:** `deepAnalysis`/`currentKnowledge`/`journalRank` przeniesione z **globali modułu**
+  do kontekstu per-żądanie (`systemPrompt(ctx)`). Usuwa przeciek kontekstu między równoległymi
+  `askJarvis` oraz „resztki" z ostatniego czatu w trybie live (LiveOverlay dostaje czysty prompt).
+
 ### Przegląd modułów produktywności (bug-hunt nieaudytowanej części)
 - **autoPlan.ts (Krytyczny):** follow-upy kumulowały się bez końca — `sourceId` koduje
   `followUpCount`, więc każdy cykl tworzył nowe zadanie, a stare nigdy nie były zamykane
@@ -75,7 +80,7 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ### Świadomie odłożone (wymagają decyzji właściciela — `AUDIT.md §9`, `SECURITY.md`)
 - BFF fail-closed `APP_TOKEN`; `admin.ts` (sekret na nr telefonu); consent fail-closed dla
-  outbound; `brain.ts` globalny stan modułu; rotacja keystore + self-signed EXE; `release.yml`
+  outbound; rotacja keystore + self-signed EXE; `release.yml`
   na push brancha; Electron/sales-os wildcard CORS. Każde albo zmienia logowanie/tryb live,
   albo jest nieodwracalne, albo mogłoby zerwać działające wdrożenie.
 
