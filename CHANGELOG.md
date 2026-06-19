@@ -5,6 +5,23 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Premium UX + niezawodność (po audycie „dlaczego wygląda amatorsko")
+- **Streaming odpowiedzi (słowo-po-słowie)** dla WSZYSTKICH głównych dostawców: OpenAI-compat
+  (Groq/Cerebras/OpenRouter/NVIDIA/GitHub/Ollama), **Claude** i **Gemini** — koniec „gapienia się
+  w pusty orb". `stream.ts` (3 akumulatory SSE + `drainSSE`), bąbel tworzony leniwie przy 1. tokenie,
+  akumulator per-próba (czysty failover), **bezpieczny fallback** do pełnej odpowiedzi (najgorszy
+  przypadek = obecne zachowanie). Claude: streaming wyłącza „thinking" (poprawne tury z narzędziami);
+  Gemini: streaming tylko bezpośrednio (proxy → pełna odpowiedź).
+- **Rdzeń niezawodności** (`resilience.ts`): wykładniczy backoff+jitter, deduplikacja żądań,
+  circuit breaker per-dostawca (half-open), cache warstwowy (RAM+IndexedDB, TTL). Wpięty w `brain.ts`.
+- **Obserwowalność** (`errorLog.ts`): lokalny pierścień zdarzeń + metryki (latencja p50/p95,
+  successRate, błędy per scope) — bez wysyłki na zewnątrz.
+- **Jednolity styl komunikatów**: `normalizeToastText` usuwa znaczniki „✓/✅/✔" (toast SAM jest
+  potwierdzeniem), zachowuje emoji semantyczne; pomocnicy `toastOk/toastErr/toastInfo`.
+- Dokumentacja: `docs/PREMIUM_AUDIT.md` (brutalny audyt + dowody) i `docs/ROADMAP.md`.
+- +37 testów (resilience, errorLog, stream ×3 formaty, toast). Razem **815+** zielonych; build OK.
+
+
 ### Faza 6 (część bezpieczna) + utwardzenie (CORS Electron, BFF fail-closed)
 - **Saldo OpenRouter (read-only):** `openrouterBalance.ts` — `GET /credits`, `parseCredits`/`isLowBalance`
   (czyste). Saldo + alert niskiego stanu w ekranie 💸 Koszty AI; próg `openrouterLowBalanceUsd` (0 = off).

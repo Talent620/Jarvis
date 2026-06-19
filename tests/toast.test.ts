@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { toast, copyWithToast, copyText, shareOrCopy } from "../src/lib/toast";
+import { toast, copyWithToast, copyText, shareOrCopy, normalizeToastText } from "../src/lib/toast";
 
 function setNav(prop: "share" | "clipboard", value: unknown) {
   Object.defineProperty(navigator, prop, { configurable: true, writable: true, value });
@@ -34,6 +34,25 @@ describe("toast", () => {
     (document as unknown as { execCommand?: () => boolean }).execCommand = () => false;
     await copyWithToast("x");
     expect(document.querySelector(".toast")?.textContent).toMatch(/Nie mogę skopiować/);
+  });
+});
+
+describe("normalizeToastText — jednolity styl komunikatów", () => {
+  it("usuwa końcowy znacznik potwierdzenia (✓ / ✅)", () => {
+    expect(normalizeToastText("Fiszka dodana ✓")).toBe("Fiszka dodana");
+    expect(normalizeToastText("Zapisano jako notatka ✅")).toBe("Zapisano jako notatka");
+  });
+  it("usuwa początkowy znacznik potwierdzenia", () => {
+    expect(normalizeToastText("✅ Zapamiętane")).toBe("Zapamiętane");
+    expect(normalizeToastText("✓ Cennik zapisany")).toBe("Cennik zapisany");
+  });
+  it("ZACHOWUJE emoji semantyczne (nie-sukcesowe)", () => {
+    expect(normalizeToastText("📌 JARVIS się odezwał")).toBe("📌 JARVIS się odezwał");
+    expect(normalizeToastText("🔄 Główny mózg był zajęty")).toBe("🔄 Główny mózg był zajęty");
+    expect(normalizeToastText("🗑 Usunięto z pamięci")).toBe("🗑 Usunięto z pamięci");
+  });
+  it("przycina i scala białe znaki", () => {
+    expect(normalizeToastText("  Gotowe   teraz  ")).toBe("Gotowe teraz");
   });
 });
 

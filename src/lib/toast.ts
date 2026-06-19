@@ -9,6 +9,18 @@ export interface ToastAction {
   onClick: () => void;
 }
 
+// Jeden styl potwierdzeń: sam toast JEST potwierdzeniem, więc usuwamy znaczniki „✓/✅/✔"
+// (z początku i końca) — koniec chaosu „raz ✓ na końcu, raz ✅ na początku, raz wcale".
+// Emoji semantyczne (📌 🔄 🎧 🗑 …) zostają — niosą znaczenie, nie tylko „sukces".
+export function normalizeToastText(message: string): string {
+  return (message || "")
+    .trim()
+    .replace(/^[✓✔✅]+\s*/u, "")
+    .replace(/\s*[✓✔✅]+$/u, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 export function toast(message: string, action?: ToastAction): void {
   if (typeof document === "undefined") return;
   if (!el) {
@@ -16,7 +28,7 @@ export function toast(message: string, action?: ToastAction): void {
     el.className = "toast";
     document.body.appendChild(el);
   }
-  el.textContent = message;
+  el.textContent = normalizeToastText(message);
   if (action) {
     const btn = document.createElement("button");
     btn.className = "toast-action";
@@ -30,6 +42,21 @@ export function toast(message: string, action?: ToastAction): void {
   el.classList.add("show");
   window.clearTimeout(hideTimer);
   hideTimer = window.setTimeout(() => el?.classList.remove("show"), action ? 6000 : 1600);
+}
+
+// Pomocnicy o jednolitym stylu (do stopniowej migracji wywołań):
+/** Potwierdzenie sukcesu — bez znacznika (sam toast jest potwierdzeniem). */
+export function toastOk(message: string, action?: ToastAction): void {
+  toast(message, action);
+}
+/** Błąd/ostrzeżenie — jednolity marker „⚠" na początku (jeśli go brak). */
+export function toastErr(message: string): void {
+  const m = normalizeToastText(message);
+  toast(/^⚠/.test(m) ? m : `⚠ ${m}`);
+}
+/** Informacja neutralna. */
+export function toastInfo(message: string, action?: ToastAction): void {
+  toast(message, action);
 }
 
 /** Skopiuj tekst — Clipboard API z fallbackiem na execCommand (starszy WebView/non-HTTPS). */
