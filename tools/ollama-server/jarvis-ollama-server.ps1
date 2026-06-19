@@ -63,11 +63,17 @@ netsh advfirewall firewall add rule name="JARVIS Ollama" dir=in action=allow pro
 powercfg /change standby-timeout-ac 0 2>$null | Out-Null
 powercfg /change hibernate-timeout-ac 0 2>$null | Out-Null
 
-# 4) Restart serwera, by zlapal 0.0.0.0 (tray-app slucha tylko 127.0.0.1).
-Step 3 "Uruchamiam serwer..."
+# 4) Uruchom Ollame jako NIEZALEZNY proces w tle — przezyje zamkniecie tego okna.
+#    Preferujemy aplikacje zasobnika (ollama app.exe): dziala trwale w tle i lapie env (0.0.0.0).
+Step 3 "Uruchamiam serwer w tle (niezaleznie od tego okna)..."
 Get-Process "ollama app", "ollama" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
-Start-Process -WindowStyle Hidden ollama "serve"
+$ollamaApp = Join-Path $env:LOCALAPPDATA "Programs\Ollama\ollama app.exe"
+if (Test-Path $ollamaApp) {
+  Start-Process $ollamaApp                                        # aplikacja Ollama w zasobniku (trwale)
+} else {
+  Start-Process ollama -ArgumentList "serve" -WindowStyle Hidden  # samodzielny proces serwera
+}
 Start-Sleep -Seconds 3
 
 # 4b) Sprawdz, czy serwer faktycznie odpowiada (czesta przyczyna „nic nie dziala").
@@ -142,8 +148,8 @@ Write-Host ""
 Write-Host "  - Telefon i PC w tej samej sieci Wi-Fi (uzyj APK JARVIS)." -ForegroundColor Gray
 Write-Host "  - Poza domem: zainstaluj Tailscale na PC i telefonie (adres 100.x wykryje sie sam)." -ForegroundColor Gray
 Write-Host ""
-Write-Host "  ZOSTAW TO OKNO OTWARTE — zamkniecie zatrzymuje serwer." -ForegroundColor Yellow
+Write-Host "  Serwer Ollamy dziala TERAZ W TLE (jako aplikacja Ollama) — to okno mozesz spokojnie" -ForegroundColor Green
+Write-Host "  ZAMKNAC, serwer zostaje wlaczony. Aby go zatrzymac: ikona Ollamy w zasobniku (obok zegara) -> Quit." -ForegroundColor Green
 Write-Host ""
-Read-Host "Enter zatrzymuje serwer i zamyka okno"
-
-Get-Process "ollama" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Read-Host "Enter zamyka to okno (serwer Ollamy dziala dalej w tle)"
+# UWAGA: celowo NIE zatrzymujemy Ollamy — ma dzialac niezaleznie od tego okna.
