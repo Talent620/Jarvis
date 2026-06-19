@@ -767,6 +767,137 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   np. <code>ollama pull dolphin-mistral</code> (działają w pełni offline, na Twoim sprzęcie).
                 </p>
               </div>
+
+              <details className="journal-card" style={{ margin: "10px 0", padding: "10px 12px" }}>
+                <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>
+                  🧠 Refleks i Kora — dwubiegowy mózg (zaawansowane)
+                </summary>
+                <p className="muted" style={{ marginTop: 6 }}>
+                  Lokalny model (Ollama, „Refleks") odpowiada od ręki, a chmura („Kora") wkracza tylko wtedy,
+                  gdy naprawdę trzeba. Wszystko domyślnie wyłączone i wymaga skonfigurowanej Ollamy (adres powyżej).
+                </p>
+
+                <div className="row">
+                  <span>
+                    ⚡ Lokalnie najpierw dla prostych pytań
+                    <br />
+                    <span className="muted">
+                      Krótkie/proste pytania kierowane najpierw do modelu lokalnego (szybko, prywatnie, za darmo);
+                      chmura zostaje w rezerwie, gdyby lokalny zawiódł.
+                    </span>
+                  </span>
+                  <Toggle on={s.localFirstSimple} onClick={() => set({ localFirstSimple: !s.localFirstSimple })} />
+                </div>
+
+                <div className="row">
+                  <span>
+                    🚪 Brama Pewności (eskalacja Refleks→Kora)
+                    <br />
+                    <span className="muted">
+                      Gdy odpowiedź lokalna jest niepewna (zgadywanie, „nie wiem", urwana), JARVIS sam dopytuje
+                      model w chmurze i zwraca lepszą wersję.
+                    </span>
+                  </span>
+                  <Toggle on={s.confidenceGate} onClick={() => set({ confidenceGate: !s.confidenceGate })} />
+                </div>
+                {s.confidenceGate && (
+                  <div className="field">
+                    <label>Próg pewności: {Math.round((s.confidenceThreshold ?? 0.55) * 100)}%</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={0.95}
+                      step={0.05}
+                      value={s.confidenceThreshold ?? 0.55}
+                      onChange={(e) => set({ confidenceThreshold: Number(e.target.value) })}
+                    />
+                    <span className="muted" style={{ fontSize: 12 }}>
+                      Wyżej = częstsza eskalacja do chmury (ostrożniej). 0% praktycznie wyłącza bramę.
+                    </span>
+                  </div>
+                )}
+
+                <div className="row">
+                  <span>
+                    🔮 Spekulacja Refleks→Kora (szkic, potem weryfikacja)
+                    <br />
+                    <span className="muted">
+                      Przy złożonych pytaniach lokalny model daje szybki szkic, a chmura równolegle go
+                      weryfikuje i poprawia tylko, gdy odpowiedzi istotnie się różnią.
+                    </span>
+                  </span>
+                  <Toggle on={s.speculativeMode} onClick={() => set({ speculativeMode: !s.speculativeMode })} />
+                </div>
+
+                <div className="row">
+                  <span>
+                    ⚖ Konsylium hybrydowe (dołącz lokalny głos)
+                    <br />
+                    <span className="muted">
+                      W „Trybie Konsylium" (powyżej) dorzuca lokalny model jako dodatkowego, prywatnego
+                      rozmówcę obok modeli z chmury.
+                    </span>
+                  </span>
+                  <Toggle on={s.councilIncludeLocal} onClick={() => set({ councilIncludeLocal: !s.councilIncludeLocal })} />
+                </div>
+
+                <div className="row">
+                  <span>
+                    📈 Router, który się uczy
+                    <br />
+                    <span className="muted">
+                      JARVIS zapamiętuje (lokalnie), które ścieżki sprawdzają się dla danego typu pytań,
+                      i stopniowo dostraja próg eskalacji. Nic nie wychodzi do chmury.
+                    </span>
+                  </span>
+                  <Toggle on={s.adaptiveRouter} onClick={() => set({ adaptiveRouter: !s.adaptiveRouter })} />
+                </div>
+
+                <div className="row">
+                  <span>
+                    🔥 Trzymaj model lokalny „gorący" (prewarm)
+                    <br />
+                    <span className="muted">
+                      Po starcie i przy powrocie do aplikacji JARVIS wstępnie ładuje model do pamięci serwera,
+                      żeby pierwsza odpowiedź nie czekała na rozgrzewkę.
+                    </span>
+                  </span>
+                  <Toggle on={s.prewarmLocal} onClick={() => set({ prewarmLocal: !s.prewarmLocal })} />
+                </div>
+
+                <div className="field">
+                  <label>Okno kontekstu Ollamy (num_ctx): {s.ollamaNumCtx ?? 4096} tokenów</label>
+                  <input
+                    type="range"
+                    min={2048}
+                    max={16384}
+                    step={1024}
+                    value={s.ollamaNumCtx ?? 4096}
+                    onChange={(e) => set({ ollamaNumCtx: Number(e.target.value) })}
+                  />
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    Większe okno = dłuższa pamięć rozmowy, ale więcej VRAM i wolniej. Dobierz do swojej karty.
+                  </span>
+                </div>
+
+                <div className="field">
+                  <label>
+                    Warstwy na GPU (num_gpu): {(s.ollamaNumGpu ?? -1) < 0 ? "auto (wszystkie)" : s.ollamaNumGpu}
+                  </label>
+                  <input
+                    type="range"
+                    min={-1}
+                    max={60}
+                    step={1}
+                    value={s.ollamaNumGpu ?? -1}
+                    onChange={(e) => set({ ollamaNumGpu: Number(e.target.value) })}
+                  />
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    -1 = auto (Ollama decyduje). Zmniejsz, jeśli model nie mieści się w VRAM (część warstw trafi na CPU).
+                  </span>
+                </div>
+              </details>
+
               <div className="row">
                 <span>
                   🔓 Tryb nieocenzurowany (lokalny)
