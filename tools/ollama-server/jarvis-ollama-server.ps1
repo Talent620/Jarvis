@@ -16,8 +16,18 @@ trap {
 }
 
 $port = 11434
+# Czysty wyglad: UTF-8 w konsoli (inaczej pasek postepu Ollamy to krzaki) i brak migotania.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $OutputEncoding = [System.Text.Encoding]::UTF8; chcp 65001 | Out-Null } catch {}
 function Line($c) { Write-Host "================================================" -ForegroundColor $c }
 function Step($n, $t) { Write-Host ("[{0}] {1}" -f $n, $t) -ForegroundColor Cyan }
+# Pobieranie modelu BEZ czerwonego "ERROR" (Ollama pisze postep na stderr; uruchamiamy ja jako
+# proces dziedziczacy konsole, wiec pasek postepu wyglada normalnie, nie jak blad).
+function Pull-Model($m) {
+  Write-Host ("  ⬇  {0} — pobieram (to normalne, ze leci pasek postepu)..." -f $m) -ForegroundColor Green
+  $p = Start-Process -FilePath "ollama" -ArgumentList @("pull", $m) -NoNewWindow -Wait -PassThru
+  if ($p.ExitCode -eq 0) { Write-Host ("  ✓  {0} gotowy." -f $m) -ForegroundColor Green }
+  else { Write-Host ("  !  {0} — nie udalo sie pobrac (kod {1}). Sprobuj pozniej." -f $m, $p.ExitCode) -ForegroundColor Yellow }
+}
 
 Write-Host ""
 Line Cyan
@@ -73,13 +83,12 @@ Step 4 "Pobieram modele (premium) — jednorazowo, moze potrwac..."
 $PREMIUM = @("qwen3:1.7b", "qwen3.5:4b", "gemma3:4b-it-qat")
 $have = (& ollama list 2>$null | Select-Object -Skip 1 | ForEach-Object { ($_ -split '\s+')[0] }) | Where-Object { $_ }
 foreach ($m in $PREMIUM) {
-  if ($have -contains $m) { Write-Host "    $m — juz jest." -ForegroundColor DarkGray; continue }
-  Write-Host "    Pobieram $m ..." -ForegroundColor Green
-  & ollama pull $m
+  if ($have -contains $m) { Write-Host "  ✓  $m — juz jest." -ForegroundColor DarkGray; continue }
+  Pull-Model $m
 }
 # Opcjonalnie model bez cenzury.
 $unc = Read-Host "    Dodac model BEZ CENZURY (dolphin-mistral, ~4 GB)? [t/N]"
-if ($unc -match '^(t|y|tak|yes)$') { Write-Host "    Pobieram dolphin-mistral ..." -ForegroundColor Green; & ollama pull dolphin-mistral }
+if ($unc -match '^(t|y|tak|yes)$') { Pull-Model "dolphin-mistral" }
 
 # 6) Wykryj adres LAN (interfejs z brama domyslna) + ewentualnie Tailscale.
 Step 5 "Wykrywam adres serwera..."
