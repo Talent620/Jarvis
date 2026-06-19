@@ -5,6 +5,25 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### „Premium lokalny" — maksimum z PC + Ollama, prosto i zdalnie z telefonu (opt-in)
+- **Ollama Maestro:** „🚀 Tryb premium lokalny (auto)" dobiera modele do ról, sam pobiera brakujące na PC
+  i włącza inteligentny routing; „⚙ Dobierz z moich modeli" konfiguruje się z już zainstalowanych
+  (`autoAssignRoles`/`paramB`); klikalny **katalog modeli** (`ADDABLE_MODELS`) — dodawanie tapnięciem.
+- **Pobieranie modeli z aplikacji** (`ollamaPull.ts`, strumień NDJSON) + **model per typ zadania**
+  (`ollamaModelSimple/Complex/Vision/Uncensored`, routing w `pickOllamaModel`).
+- **Pionierskie, w całości lokalnie (offline):** 🪜 **Drabina Mądrości** (`localRefine` — samokrytyka i
+  poprawa złożonej odpowiedzi) oraz 🎯 **self-consistency** (`localConsensus` — kilka prób, wybór
+  najspójniejszej, odporność na halucynacje). Drabina trójstopniowa: Refleks → Namysł → Kora.
+- **Modele wizji** w katalogu (moondream/llava/minicpm-v/llama3.2-vision) — Ollama do rozumienia obrazu.
+- **Studio obrazów lokalnie** (`localImage.ts`): generowanie/edycja na PC przez Stable Diffusion
+  (A1111/Forge, `local-sd`), suwaki jakości (kroki/rozmiar/siła zmian), „🔌 Sprawdź połączenie SD",
+  domyślny wybór lokalnego, gdy serwer jest. Generowanie obrazów nie wymaga już chmury.
+- **Serwery „pod klucz" na PC:** `JARVIS-Ollama-Server.exe` (utwardzony: nie usypia PC, czyste
+  pobieranie, strona QR) i `JARVIS-SD-Server.exe` (dopisuje flagi `--api --listen --cors`),
+  oba z dwuklikalnym `.cmd`. Dostęp zdalny z telefonu (LAN/Tailscale). `docs/INSTALACJA.md`.
+- **Czytelne błędy zamiast „failed to fetch"** (`diagnoseOllamaError`/`diagnoseSdError`): CORS /
+  mixed-content / timeout / zły adres — z konkretną naprawą.
+
 ### „Refleks i Kora" — Część II (Zadania 8–14, metakognicja; wszystko opt-in)
 - **Z8 — Brama Pewności (`confidenceGate`):** `confidence.ts` — czysta heurystyka `estimateConfidence`
   (wahanie/odmowa/pustka/degeneracja/za-krótko-vs-złożoność). Gdy refleks lokalny niepewny
