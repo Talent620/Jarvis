@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { shouldPrewarm, prewarmModel, maybePrewarm, __resetPrewarm } from "../src/lib/prewarm";
+import { shouldPrewarm, prewarmModel, maybePrewarm, warmNow, __resetPrewarm } from "../src/lib/prewarm";
 import { store } from "../src/lib/store";
 import { PROVIDERS } from "../src/lib/providers/registry";
 
@@ -62,6 +62,25 @@ describe("prewarm — maybePrewarm", () => {
     const fetchMock = vi.fn(async () => new Response("{}"));
     vi.stubGlobal("fetch", fetchMock);
     expect(await maybePrewarm()).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("prewarm — warmNow (jednorazowo, niezależnie od prewarmLocal)", () => {
+  it("rozgrzewa NAWET gdy prewarmLocal=OFF, byle był adres", async () => {
+    store.setSettings({ prewarmLocal: false, ollamaUrl: "http://localhost:11434", provider: "ollama", model: "qwen3:1.7b" });
+    const fetchMock = vi.fn(async () => new Response("{}"));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await warmNow()).toBe(true);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/api/generate");
+    expect(JSON.parse((init as RequestInit).body as string)).toMatchObject({ model: "qwen3:1.7b", keep_alive: "30m" });
+  });
+  it("bez adresu → false, bez fetch", async () => {
+    store.setSettings({ ollamaUrl: "" });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await warmNow()).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

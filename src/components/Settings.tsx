@@ -19,6 +19,7 @@ import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode, detectOllama, findOllamaServer } from "../lib/privateMode";
 import { pullOllamaModel } from "../lib/ollamaPull";
+import { warmNow } from "../lib/prewarm";
 import { applyPremiumSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
 import { detectSd } from "../lib/localImage";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
@@ -902,6 +903,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                         store.setSettings({ ollamaUrl: r.url, provider: "ollama" });
                         setFindMsg(`✅ Znaleziono: ${r.url} (${r.models.length} model(i)). Wybrano dostawcę lokalnego.`);
                         void loadOllamaModels();
+                        void warmNow(); // rozgrzej model — pierwsza odpowiedź od ręki
                       } else {
                         setFindMsg(`❌ ${r.error}`);
                       }

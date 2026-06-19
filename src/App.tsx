@@ -76,7 +76,7 @@ import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
 import ScreenBoundary from "./components/ScreenBoundary";
 import { getWeather } from "./lib/weather";
 import { buildDailyBriefing, briefingToText } from "./lib/dailyBriefing";
-import { maybePrewarm } from "./lib/prewarm";
+import { maybePrewarm, warmNow } from "./lib/prewarm";
 import { feedback, buzz, cue } from "./lib/feedback";
 import { ensureNotifPerms, notify } from "./lib/notifications";
 import { registerIntents } from "./lib/intents";
@@ -759,6 +759,7 @@ export default function App() {
       if (r.ok && !store.settings.ollamaUrl?.trim()) {
         store.setSettings({ ollamaUrl: r.url });
         toast(`🧠 Wykryto lokalny serwer Ollama (${r.models.length} model(i)) — gotowy w ⚙ → AI.`);
+        void warmNow(); // rozgrzej model, by pierwsza odpowiedź była natychmiastowa
       }
     });
   }, []);

@@ -44,6 +44,28 @@ export async function maybePrewarm(now = Date.now()): Promise<boolean> {
   }
 }
 
+/**
+ * Jednorazowe rozgrzanie „na żądanie" (np. zaraz po wykryciu/podłączeniu serwera) — ŁADUJE model
+ * do VRAM niezależnie od ustawienia `prewarmLocal`, żeby PIERWSZA odpowiedź była natychmiastowa.
+ * Wymaga tylko adresu Ollamy. Fire-and-forget (błąd nic nie psuje).
+ */
+export async function warmNow(model?: string): Promise<boolean> {
+  const url = store.settings.ollamaUrl?.trim();
+  if (!url) return false;
+  const base = url.replace(/\/$/, "");
+  lastPrewarm = Date.now(); // licz jako rozgrzewkę (throttle dla maybePrewarm)
+  try {
+    await fetchTimeout(
+      `${base}/api/generate`,
+      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ model: model || prewarmModel(), keep_alive: "30m" }) },
+      8000,
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Tylko do testów — wyzeruj throttle. */
 export function __resetPrewarm(): void {
   lastPrewarm = 0;
