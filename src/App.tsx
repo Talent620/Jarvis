@@ -69,6 +69,7 @@ import { isUncensored, PROVIDERS } from "./lib/providers/registry";
 import { enablePrivateMode } from "./lib/privateMode";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs } from "./lib/salesOs";
+import { currentBrainMode } from "./lib/brainMode";
 import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, type VoiceListener } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
@@ -818,6 +819,14 @@ export default function App() {
               return p ? ` · ${p.name.toUpperCase()}` : "";
             })()}{" "}
             · {online ? "ONLINE" : "OFFLINE"}
+            {(() => {
+              const m = currentBrainMode(online);
+              return (
+                <span title={m.title} style={{ color: m.kind === "cloud" ? "var(--cyan)" : "var(--gold)" }}>
+                  {" · "}{m.icon} {m.label}
+                </span>
+              );
+            })()}
           </small>
         </div>
         <div className="spacer" />
