@@ -67,6 +67,7 @@ import { statusFlags } from "./lib/status";
 import { buildContext } from "./lib/context";
 import { isUncensored, PROVIDERS } from "./lib/providers/registry";
 import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
+import { runAndFix } from "./lib/selfHeal";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
 import { currentBrainMode } from "./lib/brainMode";
@@ -165,6 +166,22 @@ export default function App() {
   const [pendingConsent, setPendingConsent] = useState<PendingConsent | null>(null);
   const [step, setStep] = useState<string | null>(null);
   const [councilStep, setCouncilStep] = useState<string | null>(null);
+  const [healing, setHealing] = useState(false);
+  // „Uruchom i napraw": sprawdź serwer, wybierz działający mózg, napraw ustawienia, daj status.
+  const runHealNow = async () => {
+    if (healing) return;
+    setHealing(true);
+    setCouncilStep("🩹 Uruchamiam i sprawdzam…");
+    try {
+      const r = await runAndFix((m) => setCouncilStep(`🩹 ${m}`));
+      toast(r.summary);
+    } catch {
+      toast("⚠ Nie udało się dokończyć sprawdzania — spróbuj ponownie.");
+    } finally {
+      setHealing(false);
+      setCouncilStep(null);
+    }
+  };
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [locked, setLocked] = useState(lockIsSet());
   const [onboarding, setOnboarding] = useState(needsOnboarding());
@@ -860,6 +877,16 @@ export default function App() {
           </small>
         </div>
         <div className="spacer" />
+        <button
+          className="icon-btn"
+          disabled={healing}
+          onClick={runHealNow}
+          title="Uruchom i napraw — sprawdź serwer, wybierz działający mózg, napraw ustawienia"
+          aria-label="Uruchom i napraw"
+          style={healing ? undefined : { color: "var(--gold)", borderColor: "var(--gold)" }}
+        >
+          {healing ? "⏳" : "🩹"}
+        </button>
         <button
           className="icon-btn"
           onClick={() => {
