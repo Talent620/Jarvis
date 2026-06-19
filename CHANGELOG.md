@@ -17,6 +17,9 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 - **Z10 — Konsylium Hybrydowe (`councilIncludeLocal`):** lokalny model (Ollama) dołącza jako DODATKOWY
   głos w naradzie (na końcu listy — sędzia zostaje najlepszą Korą). `askMember` obsługuje keyless
   (Ollama/WebLLM = „local"). Bez chmury + sam lokalny → narada degraduje do single (działa offline).
+- **Z11 — RAG dla modelu lokalnego:** potwierdzono i otestowano, że `baseCtx.system` (fakty + profil +
+  Mem0 + Szósty Zmysł) trafia TEŻ do Ollamy/WebLLM — mały model odpowiada z Twoim kontekstem; bez Mem0
+  degraduje do lokalnego profilu (zero zależności sieciowych). +2 testy integracyjne.
 
 ### „Refleks i Kora" — Część I (Fundament, Zadania 1–7)
 Dwuprędkościowy mózg: model lokalny (Refleks) staje się pełnym poziomem, nie tylko awaryjnym ogonem.

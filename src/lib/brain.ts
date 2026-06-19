@@ -520,6 +520,9 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
     lastUser?.content || "",
   );
 
+  // Z11 — RAG dla modelu lokalnego: `baseCtx.system` (pamięć: fakty + profil + Mem0 + Szósty Zmysł)
+  // jest TEN SAM dla WSZYSTKICH dostawców, w tym Ollamy/WebLLM. Mały model lokalny odpowiada z
+  // Twoim kontekstem; bez Mem0 degraduje do lokalnego profilu/faktów (zero zależności sieciowych).
   const baseCtx = {
     system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock }),
     // Tryb on-device wyłącza web-search (zero egres do sieci — pełna prywatność/offline).
