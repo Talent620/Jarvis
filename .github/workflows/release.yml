@@ -63,9 +63,13 @@ jobs:
           tag_name: latest
           name: JARVIS — najnowszy build
           body: |
-            Najnowsza wersja JARVIS-a. Wybierz plik z sekcji **Assets** poniżej:
+            Najnowsza wersja JARVIS-a. Wybierz plik z sekcji **Assets** poniżej.
+            Pełna instrukcja: [docs/INSTALACJA.md](https://github.com/Talent620/Jarvis/blob/main/docs/INSTALACJA.md)
 
-            💻 **Windows (komputer):** pobierz **`JARVIS.exe`** i uruchom (Dalej → Dalej → Zainstaluj).
-            📱 **Android (telefon):** pobierz **`jarvis.apk`**, otwórz i zezwól na instalację z nieznanych źródeł.
+            📱 **Android (telefon):** `jarvis.apk` — otwórz i zezwól na instalację z nieznanych źródeł.
+            💻 **Windows (aplikacja):** `JARVIS.exe` — uruchom (Dalej → Dalej → Zainstaluj).
+            🧠 **Serwer Ollama na PC (mózg dla telefonu):** `JARVIS-Ollama-Server.exe` — dwuklik, zostaw okno otwarte,
+            wklej pokazany adres w aplikacji (⚙ → AI). `.ps1` NIE odpala się dwuklikiem — użyj `.exe` lub `JARVIS-Serwer.cmd`.
+            🖼 **Obrazy lokalnie (Studio):** uruchom Stable Diffusion (A1111/Forge) — patrz docs/INSTALACJA.md.
           files: jarvis.apk
           make_latest: true
