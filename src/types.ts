@@ -365,6 +365,10 @@ export interface Settings {
   ollamaNumCtx: number;
   /** Ollama: liczba warstw na GPU (num_gpu). -1 = pełny offload na GPU. */
   ollamaNumGpu: number;
+  /** Ollama: nadpisanie modelu lokalnego per typ zadania (puste = katalog domyślny). */
+  ollamaModelSimple: string;
+  ollamaModelComplex: string;
+  ollamaModelVision: string;
   /** Brama Pewności: niepewna odpowiedź lokalna eskaluje do silniejszego dostawcy (Kory). */
   confidenceGate: boolean;
   /** Próg pewności (0..1) poniżej którego następuje eskalacja. Domyślnie 0.55. */

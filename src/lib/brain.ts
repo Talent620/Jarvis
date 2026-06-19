@@ -9,7 +9,7 @@ import { buildProfileBlock } from "./profile";
 import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, isKeyError, humanize, isComplex, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
-import { classifyTask, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI } from "./modelRouter";
+import { classifyTask, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
 import { recordEpisode, loadEpisodes } from "./episodicMemory";
 import { buildFusionBlock } from "./contextFusion";
@@ -77,12 +77,21 @@ function modelFor(p: ProviderId, complex: boolean, vision: boolean): string {
   return vision ? m.vision : complex ? m.complex : m.simple;
 }
 
+/** Model Ollamy dla danego typu zadania: jawny wybór użytkownika > nadpisanie per-kind > katalog. */
+function pickOllamaModel(kind: TaskKind): string {
+  const s = store.settings;
+  if (s.provider === "ollama" && s.model && s.model !== "auto") return s.model; // jawny wybór wygrywa
+  const ov = kind === "vision" ? s.ollamaModelVision : kind === "complex" ? s.ollamaModelComplex : s.ollamaModelSimple;
+  return ov?.trim() || TASK_MODELS.ollama[kind];
+}
+
 /** Buduje kolejność prób (dostawca+model) dopasowaną do zadania. */
 export function routeOrder(history: Msg[]): { provider: ProviderId; model: string }[] {
   const s = store.settings;
   const last = history[history.length - 1];
   const hasImage = !!last?.image;
   const complex = isComplex(last?.content || "");
+  const cls = classifyTask(last?.content || "", hasImage);
 
   // Local-first fallback: model lokalny zawsze domyka łańcuch — gdy padnie sieć/chmura,
   // JARVIS płynnie przechodzi na on-device z PEŁNYM kontekstem rozmowy.
@@ -92,7 +101,7 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
     localTail.push({ provider: "webllm", model: s.webllmModel?.trim() || TASK_MODELS.webllm.simple });
   }
   if (s.ollamaUrl?.trim()) {
-    localTail.push({ provider: "ollama", model: s.model && s.provider === "ollama" && s.model !== "auto" ? s.model : TASK_MODELS.ollama.simple });
+    localTail.push({ provider: "ollama", model: pickOllamaModel(cls.kind) });
   }
 
   // Tryb on-device (Faza 8): TYLKO model lokalny — żadna chmura, nic nie opuszcza urządzenia.
@@ -103,11 +112,10 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
   // brak sieci → model lokalny NA POCZĄTEK łańcucha; chmura zostaje fallbackiem. Klasyfikujemy
   // przez classifyTask (kind), nie tylko isComplex. complex/vision dalej domyślnie chmura.
   const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-  const cls = classifyTask(last?.content || "", hasImage);
   const localHead: { provider: ProviderId; model: string }[] = [];
   if (offline || (s.localFirstSimple && !!s.ollamaUrl?.trim() && cls.kind === "simple")) {
     if (s.ollamaUrl?.trim()) {
-      localHead.push({ provider: "ollama", model: s.model && s.provider === "ollama" && s.model !== "auto" ? s.model : TASK_MODELS.ollama.simple });
+      localHead.push({ provider: "ollama", model: pickOllamaModel(cls.kind) });
     } else if (s.webllmEnabled && webllmSupported() && !hasImage) {
       localHead.push({ provider: "webllm", model: s.webllmModel?.trim() || TASK_MODELS.webllm.simple });
     }

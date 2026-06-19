@@ -955,6 +955,31 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     -1 = auto (Ollama decyduje). Zmniejsz, jeśli model nie mieści się w VRAM (część warstw trafi na CPU).
                   </span>
                 </div>
+
+                <label style={{ display: "block", marginTop: 10, fontSize: 13, color: "var(--cyan)" }}>
+                  Model lokalny per typ zadania (puste = katalog domyślny)
+                </label>
+                <span className="muted" style={{ fontSize: 12, display: "block", marginBottom: 4 }}>
+                  Dobierz osobny model Ollamy do prostych pytań (szybki), złożonych (mocniejszy) i obrazów (wizja).
+                  Działa dla trybu lokalnie-najpierw i offline. Jawny wybór modelu wyżej nadal ma pierwszeństwo.
+                </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <input
+                    value={s.ollamaModelSimple}
+                    placeholder="proste — np. qwen3:1.7b"
+                    onChange={(e) => set({ ollamaModelSimple: e.target.value })}
+                  />
+                  <input
+                    value={s.ollamaModelComplex}
+                    placeholder="złożone — np. qwen3.5:4b"
+                    onChange={(e) => set({ ollamaModelComplex: e.target.value })}
+                  />
+                  <input
+                    value={s.ollamaModelVision}
+                    placeholder="obraz/wizja — np. gemma3:4b-it-qat"
+                    onChange={(e) => set({ ollamaModelVision: e.target.value })}
+                  />
+                </div>
               </details>
 
               <details
