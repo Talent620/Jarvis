@@ -43,6 +43,20 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
   ostatnich decyzji routera — co poszło do Refleksu, co do Kory, eskalacje, latencja, pewność. Liczone
   i trzymane wyłącznie lokalnie. Zwijany podgląd w Ustawieniach (odśwież/wyczyść). +12 testów.
 
+#### Ollama Maestro — premium lokalny mózg „pod klucz"
+- **`ollamaMaestro.ts` + przycisk „🚀 Tryb premium lokalny (auto)":** jedno kliknięcie dobiera modele do
+  ról (szybki `qwen3:1.7b` / mądry `qwen3.5:4b` / wizja `gemma3:4b-it-qat` / bez cenzury `dolphin-mistral`),
+  **sam pobiera brakujące na PC** (`ensurePremiumModels` → `pullOllamaModel`, z postępem) i włącza
+  inteligentny routing (lokalnie-najpierw + Brama Pewności + prewarm + adaptacja). Czyste:
+  `recommendedOverrides`/`requiredModels`/`missingModels`/`applyPremiumSetup`. +12 testów.
+- **Tryb bez cenzury — auto-routing:** ustawienie `ollamaModelUncensored` + `pickOllamaModel` kieruje
+  tekst do modelu uncensored, gdy włączony tryb nieocenzurowany (wizja zostaje przy modelu wizji).
+- **Zdalnie z telefonu (APK) jak serwer:** `setup.ps1` wyłącza usypianie PC i wypisuje gotowy adres
+  (LAN + Tailscale); README z gotowym scenariuszem. Kolejne modele dociągasz z apki (⬇ Pobierz).
+- **Drobne poprawki z przeglądu:** auto-prospekting odblokowany (był gated na nieużywany klucz Tavily),
+  plakietka „plan na dziś" liczy też follow-upy (`&&`→`+`), spekulacja ufa Korze przy zerowym drafcie,
+  prewarm respektuje model „prosty".
+
 #### Ollama + leady (fokus operacyjny)
 - **Hardening BFF — testy bezpieczeństwa (`tests/workerSecurity.test.ts`):** zamknięto regresjami
   krytyczne funkcje proxy: `blocksCloudMetadata` (anty-SSRF: IMDS/metadata chmury), `openaiHostAllowed`

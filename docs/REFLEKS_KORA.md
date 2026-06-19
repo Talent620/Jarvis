@@ -29,6 +29,16 @@ postęp. Po pobraniu model pojawi się na liście wyboru.
 lokalny dla pytań **prostych** (szybki), **złożonych** (mocniejszy) i **obrazów** (wizja). Puste =
 katalog domyślny. Jawny wybór modelu na górze ekranu nadal ma pierwszeństwo.
 
+## Najprościej: „🚀 Tryb premium lokalny (auto)"
+W sekcji **⚙ → AI → „🧠 Refleks i Kora"** jest przycisk, który robi wszystko za Ciebie jednym kliknięciem:
+1. **dobiera najlepsze modele do ról** — `qwen3:1.7b` (szybki), `qwen3.5:4b` (mądry), `gemma3:4b-it-qat`
+   (wizja), a z opcją „🔓 + bez cenzury" także `dolphin-mistral`,
+2. **pobiera brakujące modele wprost na Twój PC** (z paskiem postępu — nie musisz iść do terminala),
+3. **włącza inteligentny routing**: lokalnie-najpierw + Brama Pewności + prewarm + adaptacja.
+
+Wystarczy mieć wpisany adres Ollamy (pole niżej). To najszybsza droga do „premium" wyniku
+(szybkość + mądrość + wizja + opcjonalnie tryb bez cenzury) bez ręcznego dłubania w ustawieniach.
+
 ## Przełączniki (⚙ → AI → „🧠 Refleks i Kora")
 Wszystkie domyślnie **wyłączone**; wymagają skonfigurowanej Ollamy.
 
