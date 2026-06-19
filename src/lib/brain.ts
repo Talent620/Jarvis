@@ -77,10 +77,12 @@ function modelFor(p: ProviderId, complex: boolean, vision: boolean): string {
   return vision ? m.vision : complex ? m.complex : m.simple;
 }
 
-/** Model Ollamy dla danego typu zadania: jawny wybór użytkownika > nadpisanie per-kind > katalog. */
+/** Model Ollamy dla typu zadania: jawny wybór > bez-cenzury (gdy włączone) > nadpisanie per-kind > katalog. */
 function pickOllamaModel(kind: TaskKind): string {
   const s = store.settings;
   if (s.provider === "ollama" && s.model && s.model !== "auto") return s.model; // jawny wybór wygrywa
+  // Tryb nieocenzurowany (tekst): kieruj do modelu uncensored, gdy ustawiony. Wizja zostaje przy modelu wizji.
+  if (s.unfilteredLocal && kind !== "vision" && s.ollamaModelUncensored?.trim()) return s.ollamaModelUncensored.trim();
   const ov = kind === "vision" ? s.ollamaModelVision : kind === "complex" ? s.ollamaModelComplex : s.ollamaModelSimple;
   return ov?.trim() || TASK_MODELS.ollama[kind];
 }

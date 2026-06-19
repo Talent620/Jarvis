@@ -19,6 +19,7 @@ import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode, detectOllama } from "../lib/privateMode";
 import { pullOllamaModel } from "../lib/ollamaPull";
+import { applyPremiumSetup, ensurePremiumModels } from "../lib/ollamaMaestro";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
 import { clearRouteLog } from "../lib/modelRouter";
 import { toast } from "../lib/toast";
@@ -193,6 +194,32 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   // „Mózg na żywo" — podgląd ostatnich decyzji routera (Refleks vs Kora). Tylko lokalnie.
   const [routeLines, setRouteLines] = useState<RouteLine[]>([]);
   const refreshRoutes = () => setRouteLines(recentRoutes(12));
+
+  // Tryb premium lokalny „pod klucz" — dobór modeli + auto-pobranie + inteligentny routing.
+  const [maestroBusy, setMaestroBusy] = useState(false);
+  const [maestroMsg, setMaestroMsg] = useState("");
+  const runMaestro = async (uncensored: boolean) => {
+    if (maestroBusy) return;
+    if (!store.settings.ollamaUrl?.trim()) { toast("Najpierw wpisz adres Ollamy (pole niżej)."); return; }
+    setMaestroBusy(true);
+    setMaestroMsg("Konfiguruję tryb premium…");
+    const sum = applyPremiumSetup({ uncensored });
+    setS((prev) => ({ ...prev, ...store.settings }));
+    const r = await ensurePremiumModels({ uncensored, onProgress: setMaestroMsg });
+    setMaestroBusy(false);
+    if (r.ok) {
+      setMaestroMsg(
+        `✅ Gotowe. ${sum.overrides.simple} (szybki) · ${sum.overrides.complex} (mądry) · ${sum.overrides.vision} (wizja)` +
+        `${uncensored ? ` · ${sum.overrides.uncensored} (bez cenzury)` : ""}. Włączone: ${sum.enabled.join(", ")}.` +
+        `${r.pulled.length ? ` Pobrano na PC: ${r.pulled.join(", ")}.` : " Wszystkie modele już były."}`,
+      );
+      void loadOllamaModels();
+      toast("🚀 Tryb premium lokalny gotowy.");
+    } else {
+      setMaestroMsg(`❌ ${r.error}`);
+      toast(`❌ ${r.error}`);
+    }
+  };
 
   // Pobieranie modeli Ollamy z aplikacji (bez terminala) — z podglądem postępu.
   const [pullName, setPullName] = useState("");
@@ -836,6 +863,22 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   gdy naprawdę trzeba. Wszystko domyślnie wyłączone i wymaga skonfigurowanej Ollamy (adres powyżej).
                 </p>
 
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "8px 0 12px" }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button className="btn primary" style={{ width: "auto", marginTop: 0 }} disabled={maestroBusy} onClick={() => void runMaestro(false)}>
+                      {maestroBusy ? "⏳ Pracuję…" : "🚀 Tryb premium lokalny (auto)"}
+                    </button>
+                    <button className="btn" style={{ width: "auto", marginTop: 0 }} disabled={maestroBusy} onClick={() => void runMaestro(true)}>
+                      🔓 + bez cenzury
+                    </button>
+                  </div>
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    Jedno kliknięcie: dobiera najlepsze modele (szybki / mądry / wizja), <b>pobiera brakujące wprost na Twój PC</b>
+                    {" "}i włącza inteligentny routing (lokalnie-najpierw + Brama Pewności + prewarm + adaptacja). Wymaga adresu Ollamy poniżej.
+                  </span>
+                  {maestroMsg && <p className="muted" style={{ fontSize: 12, whiteSpace: "pre-line", marginTop: 2 }}>{maestroMsg}</p>}
+                </div>
+
                 <div className="row">
                   <span>
                     ⚡ Lokalnie najpierw dla prostych pytań
@@ -978,6 +1021,11 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     value={s.ollamaModelVision}
                     placeholder="obraz/wizja — np. gemma3:4b-it-qat"
                     onChange={(e) => set({ ollamaModelVision: e.target.value })}
+                  />
+                  <input
+                    value={s.ollamaModelUncensored}
+                    placeholder="bez cenzury — np. dolphin-mistral (gdy tryb nieocenzurowany)"
+                    onChange={(e) => set({ ollamaModelUncensored: e.target.value })}
                   />
                 </div>
               </details>

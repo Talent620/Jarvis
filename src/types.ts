@@ -371,6 +371,8 @@ export interface Settings {
   ollamaModelSimple: string;
   ollamaModelComplex: string;
   ollamaModelVision: string;
+  /** Ollama: model bez cenzury (używany lokalnie, gdy włączony tryb nieocenzurowany). */
+  ollamaModelUncensored: string;
   /** Brama Pewności: niepewna odpowiedź lokalna eskaluje do silniejszego dostawcy (Kory). */
   confidenceGate: boolean;
   /** Próg pewności (0..1) poniżej którego następuje eskalacja. Domyślnie 0.55. */

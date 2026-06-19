@@ -68,6 +68,7 @@ const defaultSettings: Settings = {
   ollamaModelSimple: "",
   ollamaModelComplex: "",
   ollamaModelVision: "",
+  ollamaModelUncensored: "",
   confidenceGate: false,
   confidenceThreshold: 0.55,
   speculativeMode: false,
