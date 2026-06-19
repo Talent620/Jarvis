@@ -96,6 +96,11 @@ export const ADDABLE_MODELS: CatalogModel[] = [
   { id: "qwen2.5-coder:3b", role: "kod", size: "~2 GB", desc: "Programowanie lokalnie" },
   { id: "gemma2:2b", role: "szybki", size: "~1.7 GB", desc: "Najszybszy na CPU" },
   { id: "dolphin-mistral", role: "bez cenzury", size: "~4 GB", desc: "Odpowiada wprost, bez moralizowania" },
+  // Wizja (rozumienie/opis/OCR obrazu — NIE generowanie). Generowanie obrazów robi Studio (chmura).
+  { id: "moondream", role: "wizja", size: "~1.8 GB", desc: "Malutki, szybki podpis do obrazu (mało VRAM)" },
+  { id: "llava:7b", role: "wizja", size: "~4.7 GB", desc: "Klasyczny opis obrazów, lekki" },
+  { id: "minicpm-v", role: "wizja", size: "~5.5 GB", desc: "Najlepsze OCR i detale — tekst na obrazie, dokumenty" },
+  { id: "llama3.2-vision", role: "wizja", size: "~7.8 GB", desc: "Topowa wizja ogólna (opis, analiza) — wymaga ~8 GB VRAM" },
 ];
 
 // === Auto-dobór ról z modeli JUŻ zainstalowanych (najlepsze ustawienia z tego, co masz) ===
@@ -104,7 +109,7 @@ export function paramB(name: string): number {
   const m = name.toLowerCase().match(/(\d+(?:\.\d+)?)\s*b(?:[^a-z0-9]|$)/);
   return m ? parseFloat(m[1]) : 0;
 }
-const isVision = (n: string): boolean => /llava|vision|gemma3|minicpm-v|bakllava|moondream/i.test(n);
+const isVision = (n: string): boolean => /llava|vision|gemma3|minicpm-v|bakllava|moondream|internvl|cogvlm|qwen2(\.5)?-?vl|pixtral/i.test(n);
 const isUncensored = (n: string): boolean => /dolphin|uncensored|wizard-vicuna|abliterated/i.test(n);
 const isCoder = (n: string): boolean => /coder|codellama|code-/i.test(n);
 

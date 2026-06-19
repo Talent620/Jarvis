@@ -97,6 +97,17 @@ describe("ollamaMaestro — paramB + autoAssignRoles", () => {
     expect(ADDABLE_MODELS[0]).toHaveProperty("id");
     expect(ADDABLE_MODELS[0]).toHaveProperty("desc");
   });
+
+  it("katalog zawiera modele wizji do pracy z obrazem", () => {
+    const vision = ADDABLE_MODELS.filter((m) => m.role === "wizja").map((m) => m.id);
+    expect(vision).toEqual(expect.arrayContaining(["minicpm-v", "llama3.2-vision"]));
+  });
+
+  it("autoAssignRoles wykrywa nowoczesne modele wizji (llama3.2-vision, minicpm-v, qwen2.5-vl)", () => {
+    expect(autoAssignRoles(["qwen3.5:4b", "llama3.2-vision"]).vision).toBe("llama3.2-vision");
+    expect(autoAssignRoles(["qwen3.5:4b", "minicpm-v"]).vision).toBe("minicpm-v");
+    expect(autoAssignRoles(["qwen3.5:4b", "qwen2.5-vl:7b"]).vision).toBe("qwen2.5-vl:7b");
+  });
 });
 
 describe("ollamaMaestro — applyAutoFromInstalled", () => {
