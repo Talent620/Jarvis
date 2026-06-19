@@ -5,6 +5,19 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### Niezawodność, szybkość, język — „zawsze działa, po polsku, dobrym głosem"
+- **🩹 „Uruchom i napraw" (`selfHeal.ts`)** na głównym ekranie: stosuje bezpieczne poprawki ustawień,
+  wykrywa/sprawdza serwer Ollama, **autonomicznie wybiera dostawcę+model, który odpowie**
+  (`pickWorkingBrain`), rozgrzewa model i daje status „✅ gotowe". Rozwiązuje „nie odpowiada".
+- **🏎 Benchmark modeli (`benchmarkOllama.ts`):** mierzy realną prędkość (tok/s) każdego modelu na
+  Twoim sprzęcie + „⚡ ustaw najszybszy jako Refleks".
+- **Zawsze po polsku** (twarda zasada w prompt) + **najlepszy polski głos** TTS (`voice.ts pickVoice`).
+- **Płynność:** batching tokenów (gładki streaming), `warmNow` po połączeniu (pierwsza odpowiedź od
+  ręki), wskaźnik „⟳ dopracowuję…" przy Drabinie/consensus, pasek postępu w Studiu SD.
+- **Mniej tarcia z serwerem:** „🔍 Znajdź serwer", auto‑wykrycie Ollamy na desktopie, **serwer działa
+  w tle** (nie zamyka się z oknem), naprawa tool‑callingu (modele bez tools → ponów bez tools),
+  czytelne błędy zamiast „failed to fetch".
+
 ### „Premium lokalny" — maksimum z PC + Ollama, prosto i zdalnie z telefonu (opt-in)
 - **Ollama Maestro:** „🚀 Tryb premium lokalny (auto)" dobiera modele do ról, sam pobiera brakujące na PC
   i włącza inteligentny routing; „⚙ Dobierz z moich modeli" konfiguruje się z już zainstalowanych
