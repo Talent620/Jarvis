@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { gatherSignals, relevance, rankSignals, fuseContext, type FusionInput } from "../src/lib/contextFusion";
+import { gatherSignals, relevance, rankSignals, fuseContext, suggestPrompts, type FusionInput } from "../src/lib/contextFusion";
 import type { Task, Reminder, Project, Lead, CalendarEvent } from "../src/types";
 import type { Episode } from "../src/lib/episodicMemory";
 
@@ -89,5 +89,16 @@ describe("contextFusion — fuseContext (połączenie z wyczuciem)", () => {
     const f = fuseContext(base(), "cokolwiek", NOW);
     expect(f.awareness).toBe("");
     expect(f.connection).toBeNull();
+  });
+});
+
+describe("contextFusion — suggestPrompts (proaktywne podpowiedzi)", () => {
+  it("zaległy lead → gotowe polecenie follow-up", () => {
+    const s = suggestPrompts(base({ leads: [lead({ company: "Kowalski", status: "offer", lastContactedAt: NOW - 5 * DAY })] }), 2, NOW);
+    expect(s[0]).toMatch(/follow-up do „Kowalski"/);
+  });
+
+  it("najpilniejsze najpierw + brak sygnałów → pusta lista", () => {
+    expect(suggestPrompts(base(), 2, NOW)).toEqual([]);
   });
 });

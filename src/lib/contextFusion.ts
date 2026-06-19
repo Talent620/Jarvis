@@ -188,3 +188,22 @@ export function fuseContext(input: FusionInput, query: string, now = Date.now())
 export function buildFusionBlock(input: FusionInput, query: string, now = Date.now()): string {
   return fuseContext(input, query, now).awareness;
 }
+
+// Zamiana otwartego wątku na propozycję AKCJI (do podpowiedzi „tap-to-fill" w UI).
+const ACTION: Record<SignalKind, (e: string) => string> = {
+  lead_stale: (e) => `Napisz follow-up do „${e}"`,
+  lead_ready: (e) => `Przygotuj pierwszy kontakt do „${e}"`,
+  task_overdue: (e) => `Pomóż mi domknąć „${e}"`,
+  reminder_overdue: (e) => `Co zrobić z „${e}"?`,
+  project_attention: (e) => `Co dalej z projektem „${e}"?`,
+  event_soon: (e) => `Przygotuj mnie na „${e}"`,
+  topic_recurring: (e) => `Wróćmy do tematu „${e}"`,
+};
+
+/** Najpilniejsze otwarte wątki jako gotowe polecenia (proaktywne podpowiedzi). Czysta. */
+export function suggestPrompts(input: FusionInput, max = 2, now = Date.now()): string[] {
+  return gatherSignals(input, now)
+    .sort((a, b) => b.urgency - a.urgency)
+    .slice(0, max)
+    .map((s) => ACTION[s.kind](s.entity));
+}

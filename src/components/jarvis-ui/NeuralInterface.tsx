@@ -8,6 +8,8 @@ import { subscribeLog, reliabilityStats, logError, type LogEvent } from "../../l
 import { store } from "../../lib/store";
 import { askJarvis, resolveProvider } from "../../lib/brain";
 import { speak, stopSpeaking } from "../../lib/voice";
+import { suggestPrompts } from "../../lib/contextFusion";
+import { loadEpisodes } from "../../lib/episodicMemory";
 import type { Msg } from "../../lib/providers/types";
 import "./neural.css";
 
@@ -72,8 +74,18 @@ export default function NeuralInterface() {
   const step = useRef(0);
   const seq = useRef(0);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  // Proaktywne podpowiedzi z realnych otwartych wątków (Szósty Zmysł) — liczone raz.
+  const [suggests] = useState<string[]>(() => {
+    const d = store.data;
+    return suggestPrompts({ tasks: d.tasks, reminders: d.reminders, projects: d.projects, leads: d.leads, events: d.calendar, episodes: loadEpisodes() }, 3);
+  });
 
   const started = history.length > 0 || live;
+
+  function fill(text: string) {
+    setInput(text);
+    taRef.current?.focus();
+  }
 
   // Realne sygnały (read-only): poziom TTS → orb; telemetria → strumień myśli.
   useEffect(() => subscribeLevel(setLevel), []);
@@ -194,9 +206,22 @@ export default function NeuralInterface() {
                     {busy && <span className="ml-0.5 inline-block h-4 w-2 animate-pulse bg-neural-cyan align-middle" />}
                   </motion.div>
                 ) : (
-                  <motion.div key="hint" {...reveal(0.2)} className="flex flex-col items-center gap-2 text-center text-zinc-500">
+                  <motion.div key="hint" {...reveal(0.2)} className="flex flex-col items-center gap-3 text-center text-zinc-500">
                     <Sparkles size={18} className="text-neural-cyan/70" />
                     <p className="max-w-md font-mono text-[13px]">Zapytaj o cokolwiek. Odpowiem strumieniowo i połączę to z Twoimi otwartymi wątkami.</p>
+                    {suggests.length > 0 && (
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        {suggests.map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => fill(s)}
+                            className="rounded-full border border-neural-cyan/30 bg-neural-cyan/5 px-3.5 py-1.5 text-[12px] text-zinc-300 transition-colors hover:border-neural-cyan/60 hover:text-neural-cyan"
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
