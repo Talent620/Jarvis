@@ -21,7 +21,7 @@ export function exportData(): void {
 
 // Pola, które przekierowują ruch/pocztę — wstrzyknięte ze spreparowanej kopii mogłyby
 // po cichu wyprowadzić klucze i maile na wrogi serwer. Wymagają potwierdzenia.
-const ENDPOINT_KEYS = ["proxyUrl", "syncUrl", "salesOsUrl", "smtpHost", "homeAssistantUrl", "ollamaUrl", "n8nUrl"] as const;
+const ENDPOINT_KEYS = ["proxyUrl", "syncUrl", "salesOsUrl", "smtpHost", "homeAssistantUrl", "ollamaUrl", "sdUrl", "n8nUrl"] as const;
 
 /**
  * Odsiej importowane ustawienia: tylko znane klucze o pasującym typie; zmianę

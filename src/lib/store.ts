@@ -77,6 +77,7 @@ const defaultSettings: Settings = {
   prewarmLocal: false,
   localRefine: false,
   ollamaUrl: "",
+  sdUrl: "",
   unfilteredLocal: false,
   deepThink: false,
   expertKnowledge: true,

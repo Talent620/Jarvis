@@ -2,6 +2,7 @@ import { orderedKeys, studioKeyList, coolDownKey } from "./keys";
 import { store } from "./store";
 import { humanize } from "./aiHelpers";
 import { fetchTimeout } from "./http";
+import { localSdGenerate } from "./localImage";
 
 export interface GenImage {
   data: string; // base64
@@ -15,7 +16,7 @@ type Img = { data: string; mediaType: string };
 // Gemini z darmowym tierem). Premium: FLUX.1 Kontext / Nano Banana Pro przez fal.ai
 // (płatne, ~$0.03–0.08 za obraz, wymaga klucza fal.ai) — najmocniejsza spójność
 // detali przy wielokrotnej edycji.
-export type ImageModelId = "gemini" | "fal-flux-kontext" | "fal-nano-banana";
+export type ImageModelId = "gemini" | "fal-flux-kontext" | "fal-nano-banana" | "local-sd";
 
 export interface ImageModelMeta {
   id: ImageModelId;
@@ -28,6 +29,7 @@ export const IMAGE_MODELS_LIST: ImageModelMeta[] = [
   { id: "gemini", label: "Gemini Nano Banana", tier: "free", note: "Darmowy (klucz Gemini). Topowy edytor opisem — czołówka 2026." },
   { id: "fal-flux-kontext", label: "FLUX.1 Kontext Pro", tier: "premium", note: "Najlepsza spójność detali przy wielu edycjach. fal.ai, płatny (~$0.04/obraz)." },
   { id: "fal-nano-banana", label: "Nano Banana Pro", tier: "premium", note: "Najmocniejszy edytor Google przez fal.ai. Płatny (~$0.08/obraz)." },
+  { id: "local-sd", label: "Lokalny (Stable Diffusion)", tier: "free", note: "Na Twoim PC (A1111/Forge) — za darmo, offline, bez limitów. Wymaga adresu serwera w ⚙ → AI." },
 ];
 
 // Gemini „Nano Banana" — różne klucze mają dostęp do różnych nazw; próbujemy po kolei.
@@ -141,6 +143,7 @@ async function falEdit(modelId: ImageModelId, prompt: string, inputs: Img[]): Pr
 export async function generateImage(prompt: string, input?: Img | Img[], model: ImageModelId = "gemini"): Promise<Result> {
   const inputs = input ? (Array.isArray(input) ? input : [input]) : [];
   if (model === "gemini") return geminiEdit(prompt, inputs);
+  if (model === "local-sd") return localSdGenerate(prompt, inputs);
   return falEdit(model, prompt, inputs);
 }
 

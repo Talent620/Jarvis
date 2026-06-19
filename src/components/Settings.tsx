@@ -889,6 +889,19 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   np. <code>ollama pull dolphin-mistral</code> (działają w pełni offline, na Twoim sprzęcie).
                 </p>
               </div>
+              <div className="field">
+                <label>🖼 Lokalny generator obrazów — adres Stable Diffusion (Studio, offline)</label>
+                <input
+                  value={s.sdUrl}
+                  placeholder="http://192.168.0.10:7860"
+                  onChange={(e) => set({ sdUrl: e.target.value })}
+                />
+                <p className="muted" style={{ marginTop: 4 }}>
+                  Uruchom Automatic1111/Forge na PC z flagami <code>--api --listen --cors-allow-origins=*</code>,
+                  podaj jego adres tutaj i w Studiu wybierz „Lokalny (Stable Diffusion)". Tworzenie obrazów dzieje się
+                  wtedy na Twoim komputerze — za darmo, offline; zdalnie przez tę samą sieć lub Tailscale.
+                </p>
+              </div>
 
               <details className="journal-card" style={{ margin: "10px 0", padding: "10px 12px" }}>
                 <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>

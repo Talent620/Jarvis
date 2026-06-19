@@ -391,6 +391,8 @@ export interface Settings {
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */
   ollamaUrl: string;
+  /** Adres lokalnego generatora obrazów Stable Diffusion (A1111/Forge, np. http://192.168.0.10:7860). */
+  sdUrl: string;
   /** Tryb nieocenzurowany — działa realnie tylko z modelem lokalnym (Ollama):
    *  JARVIS nie dokłada własnych zastrzeżeń/moralizowania i odpowiada wprost. */
   unfilteredLocal: boolean;

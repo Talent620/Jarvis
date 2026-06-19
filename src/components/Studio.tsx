@@ -119,8 +119,11 @@ export default function Studio({ onClose }: { onClose: () => void }) {
             ))}
           </div>
           <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>{IMAGE_MODELS_LIST.find((m) => m.id === model)?.note}</p>
-          {model !== "gemini" && !store.settings.falApiKey?.trim() && (
+          {model !== "gemini" && model !== "local-sd" && !store.settings.falApiKey?.trim() && (
             <p className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>⭐ Model premium — dodaj klucz fal.ai w ⚙ → AI, aby go użyć.</p>
+          )}
+          {model === "local-sd" && !store.settings.sdUrl?.trim() && (
+            <p className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>🖥 Lokalny generator — uruchom Stable Diffusion (A1111/Forge) na PC i wpisz jego adres w ⚙ → AI (np. http://192.168.0.10:7860).</p>
           )}
 
           {/* Osobne klucze TYLKO dla Studia — własny dzienny limit obrazów, z rotacją. */}
