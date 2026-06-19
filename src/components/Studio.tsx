@@ -50,7 +50,8 @@ const PRESETS: { label: string; prompt: string }[] = [
 
 export default function Studio({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
-  const [model, setModel] = useState<ImageModelId>("gemini");
+  // Domyślnie wybierz lokalny generator, gdy serwer SD jest skonfigurowany (prywatnie, za darmo).
+  const [model, setModel] = useState<ImageModelId>(store.settings.sdUrl?.trim() ? "local-sd" : "gemini");
   const [prompt, setPrompt] = useState("");
   const [inputs, setInputs] = useState<Img[]>([]);
   const [history, setHistory] = useState<Img[]>([]); // wersje wyników (ostatnia = bieżąca)
