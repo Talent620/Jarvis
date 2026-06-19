@@ -63,7 +63,7 @@ const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision:
   },
   nvidia: { simple: "meta/llama-3.3-70b-instruct", complex: "meta/llama-3.1-405b-instruct", vision: "meta/llama-3.3-70b-instruct" },
   github: { simple: "openai/gpt-4o-mini", complex: "openai/gpt-4o", vision: "openai/gpt-4o" },
-  ollama: { simple: "llama3.2", complex: "llama3.1", vision: "llama3.2" },
+  ollama: { simple: "qwen3:1.7b", complex: "qwen3.5:4b", vision: "gemma3:4b-it-qat" },
   webllm: { simple: WEBLLM_DEFAULT_MODEL, complex: WEBLLM_DEFAULT_MODEL, vision: WEBLLM_DEFAULT_MODEL },
 };
 
@@ -97,6 +97,24 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
   // Brak skonfigurowanej Ollamy → pusty łańcuch (caller pokaże instrukcję konfiguracji).
   if (s.onDeviceOnly) return localTail;
 
+  // Zadanie 3 — Refleks jako pełny POZIOM (local-first): proste zapytanie (gdy włączone) LUB
+  // brak sieci → model lokalny NA POCZĄTEK łańcucha; chmura zostaje fallbackiem. Klasyfikujemy
+  // przez classifyTask (kind), nie tylko isComplex. complex/vision dalej domyślnie chmura.
+  const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+  const cls = classifyTask(last?.content || "", hasImage);
+  const localHead: { provider: ProviderId; model: string }[] = [];
+  if (offline || (s.localFirstSimple && !!s.ollamaUrl?.trim() && cls.kind === "simple")) {
+    if (s.ollamaUrl?.trim()) {
+      localHead.push({ provider: "ollama", model: s.model && s.provider === "ollama" && s.model !== "auto" ? s.model : TASK_MODELS.ollama.simple });
+    } else if (s.webllmEnabled && webllmSupported() && !hasImage) {
+      localHead.push({ provider: "webllm", model: s.webllmModel?.trim() || TASK_MODELS.webllm.simple });
+    }
+    if (localHead.length) {
+      logRouteDecision({ provider: localHead[0].provider, model: localHead[0].model, kind: cls.kind, reason: offline ? "local-first: offline" : "local-first: proste", fellBack: false });
+    }
+  }
+
+  let base: { provider: ProviderId; model: string }[];
   if (s.provider === "auto" && (s.model === "auto" || !s.model)) {
     let provs = PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim());
     if (hasImage) {
@@ -104,27 +122,31 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
       if (vis.length) provs = vis; // do obrazu wybierz dostawcę z wizją
     }
     provs.sort((a, b) => b.rank - a.rank);
-    return [...provs.map((p) => ({ provider: p.id, model: modelFor(p.id, complex, hasImage) })), ...localTail];
+    base = [...provs.map((p) => ({ provider: p.id, model: modelFor(p.id, complex, hasImage) })), ...localTail];
+  } else {
+    const resolved = resolveProvider();
+    if (!resolved) {
+      // Brak rozwiązanego dostawcy (np. ręczny wybór bez klucza) — łańcuch z dostawców z kluczem + ogon.
+      base = [
+        ...PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim())
+          .sort((a, b) => b.rank - a.rank)
+          .map((p) => ({ provider: p.id, model: p.defaultModel })),
+        ...localTail,
+      ];
+    } else {
+      base = [
+        { provider: resolved.provider, model: resolved.model },
+        ...PROVIDER_LIST.filter((p) => p.id !== "ollama" && p.id !== resolved.provider && s.keys[p.id]?.trim())
+          .sort((a, b) => b.rank - a.rank)
+          .map((p) => ({ provider: p.id, model: p.defaultModel })),
+        ...localTail.filter((l) => l.provider !== resolved.provider),
+      ];
+    }
   }
 
-  const resolved = resolveProvider();
-  // Brak rozwiązanego dostawcy (np. ręczny wybór bez klucza) — nie wywalaj się; zbuduj
-  // łańcuch z wszystkich dostawców, którzy mają klucz, plus lokalny ogon.
-  if (!resolved) {
-    return [
-      ...PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim())
-        .sort((a, b) => b.rank - a.rank)
-        .map((p) => ({ provider: p.id, model: p.defaultModel })),
-      ...localTail,
-    ];
-  }
-  return [
-    { provider: resolved.provider, model: resolved.model },
-    ...PROVIDER_LIST.filter((p) => p.id !== "ollama" && p.id !== resolved.provider && s.keys[p.id]?.trim())
-      .sort((a, b) => b.rank - a.rank)
-      .map((p) => ({ provider: p.id, model: p.defaultModel })),
-    ...localTail.filter((l) => l.provider !== resolved.provider),
-  ];
+  // Refleks na początek + usuń duplikaty dostawcy (pierwsze wystąpienie wygrywa).
+  const seen = new Set<ProviderId>();
+  return [...localHead, ...base].filter((o) => (seen.has(o.provider) ? false : (seen.add(o.provider), true)));
 }
 
 /** Kontekst per-żądanie (zamiast globali modułu — bez przecieku między równoległymi askJarvis

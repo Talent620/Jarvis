@@ -180,6 +180,12 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (s.provider === "ollama" && store.settings.ollamaUrl?.trim()) void loadOllamaModels();
   }, [s.provider]);
+  // Debounce: po wpisaniu/zmianie adresu Ollamy (~600 ms) wykryj modele z serwera.
+  useEffect(() => {
+    if (!s.ollamaUrl?.trim()) return;
+    const t = setTimeout(() => void loadOllamaModels(), 600);
+    return () => clearTimeout(t);
+  }, [s.ollamaUrl]);
 
   const modelOptions = useMemo(() => {
     if (s.provider === "auto") return [];

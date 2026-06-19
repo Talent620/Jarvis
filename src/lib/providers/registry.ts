@@ -7,9 +7,17 @@ import { store } from "../store";
 import type { AskCtx, ProviderId, ProviderMeta } from "./types";
 
 // Lokalny model (Ollama) — endpoint z ustawień, bez klucza, pełna prywatność.
+// Tuning pod ~4 GB VRAM (Zadanie 4): keep_alive trzyma model w VRAM między turami (mniej
+// przeładowań), options.num_ctx/num_gpu sterują pamięcią i offloadem na GPU.
 function askOllama(ctx: AskCtx) {
-  const base = (store.settings.ollamaUrl || "http://localhost:11434").replace(/\/$/, "");
-  return makeOpenAICompatible(`${base}/v1/chat/completions`)(ctx);
+  const s = store.settings;
+  const base = (s.ollamaUrl || "http://localhost:11434").replace(/\/$/, "");
+  return makeOpenAICompatible(`${base}/v1/chat/completions`, {
+    extraBody: {
+      keep_alive: "30m",
+      options: { num_ctx: s.ollamaNumCtx ?? 4096, num_gpu: s.ollamaNumGpu ?? -1 },
+    },
+  })(ctx);
 }
 
 // Katalog dostawców i darmowych/mocnych modeli. „rank" steruje trybem auto.
@@ -125,16 +133,22 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     label: "Lokalny model (Ollama — prywatny, offline)",
     rank: 30,
     keysUrl: "https://ollama.com/library",
-    defaultModel: "llama3.2",
+    defaultModel: "qwen3.5:4b",
     impl: askOllama,
+    // Katalog pod ~4 GB VRAM (2026) z rolą i ~VRAM @ Q4. To podpowiedzi — realne modele
+    // wykrywa „Odśwież modele z Ollamy" (Settings) z /api/tags. Uncensored zostają na końcu.
     models: [
-      { id: "llama3.2", label: "Llama 3.2 (lokalny)" },
-      { id: "qwen2.5", label: "Qwen2.5 (lokalny)" },
-      { id: "llama3.1", label: "Llama 3.1 (lokalny)" },
-      { id: "mistral", label: "Mistral (lokalny)" },
-      { id: "dolphin-llama3", label: "Dolphin Llama 3 — bez cenzury (lokalny)" },
+      { id: "qwen3.5:4b", label: "Qwen3.5 4B — główny mózg agentowy, najlepsze tool-calling (~2.7 GB)" },
+      { id: "phi4-mini", label: "Phi-4 mini — rozumowanie/analiza (~2.8 GB)" },
+      { id: "gemma3:4b-it-qat", label: "Gemma 3 4B — multimodalny: lokalna wizja + 140 języków (~3 GB)" },
+      { id: "llama3.2:3b", label: "Llama 3.2 3B — szybki ogólny, dobre narzędzia (~2.5 GB)" },
+      { id: "qwen3:1.7b", label: "Qwen3 1.7B — refleks: voice/parsing intencji, błyskawiczny (~1.4 GB)" },
+      { id: "gemma2:2b", label: "Gemma 2 2B — najszybszy na CPU, fallback (~1.7 GB)" },
+      { id: "deepseek-r1:1.5b", label: "DeepSeek-R1 1.5B — łańcuch myśli/matematyka w 4 GB (~1.2 GB)" },
+      { id: "qwen2.5-coder:3b", label: "Qwen2.5 Coder 3B — kod lokalnie (~2 GB)" },
       { id: "dolphin-mistral", label: "Dolphin Mistral — bez cenzury (lokalny)" },
       { id: "dolphin3", label: "Dolphin 3 — bez cenzury (lokalny)" },
+      { id: "dolphin-llama3", label: "Dolphin Llama 3 — bez cenzury (lokalny)" },
       { id: "llama2-uncensored", label: "Llama 2 Uncensored (lokalny)" },
       { id: "wizard-vicuna-uncensored", label: "Wizard-Vicuna Uncensored (lokalny)" },
       { id: "nous-hermes2", label: "Nous Hermes 2 (lokalny)" },

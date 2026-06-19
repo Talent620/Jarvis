@@ -5,6 +5,25 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### „Refleks i Kora" — Część I (Fundament, Zadania 1–7)
+Dwuprędkościowy mózg: model lokalny (Refleks) staje się pełnym poziomem, nie tylko awaryjnym ogonem.
+- **Z1 — katalog Ollamy pod ~4 GB VRAM (2026):** `qwen3.5:4b` (domyślny), `phi4-mini`, `gemma3:4b-it-qat`
+  (wizja), `llama3.2:3b`, `qwen3:1.7b`, `gemma2:2b`, `deepseek-r1:1.5b`, `qwen2.5-coder:3b` (uncensored na końcu).
+  `TASK_MODELS.ollama` → simple `qwen3:1.7b`, complex `qwen3.5:4b`, vision `gemma3:4b-it-qat`.
+- **Z2 — dynamiczny dropdown modeli:** Settings wykrywa realne modele z `/api/tags` (debounce 600 ms +
+  „🔄 Odśwież modele z Ollamy"); degradacja do listy statycznej, gdy serwer nieosiągalny.
+- **Z3 — local-first:** setting `localFirstSimple` — proste zapytania (wg `classifyTask`) idą NAJPIERW do
+  Ollamy (chmura fallbackiem); **offline → model lokalny na początek automatycznie**. complex/vision dalej
+  chmura (chyba że `onDeviceOnly`). Decyzje logowane (`logRouteDecision`).
+- **Z4 — tuning pod 4 GB:** `makeOpenAICompatible` przyjmuje `extraBody`; Ollama dostaje `keep_alive: "30m"`
+  + `options.num_ctx/num_gpu` (settingi `ollamaNumCtx`=4096, `ollamaNumGpu`=-1). Zero zmian dla innych dostawców.
+- **Z5 — health-check serwera inferencji:** `runHealthCheck` pinguje `/api/tags` (+ `/api/ps`: model w VRAM);
+  z telefonu widać, czy domowe GPU żyje (np. przez Tailscale).
+- **Z6 — infrastruktura `server/ollama/`:** README (Windows + Tailscale/Cloudflare + pułapka mixed-content),
+  `docker-compose.yml` (Linux/NAS), `setup.ps1` (env + pull modeli + opcjonalny `tailscale serve`).
+- **Z7 — testy:** routeOrder (local-first/offline/complex/onDeviceOnly) — 852 zielone; lint/tsc czyste.
+Wszystkie nowe funkcje **opt-in** (domyślnie off), zachowanie domyślne bez zmian.
+
 ### Premium UX + niezawodność (po audycie „dlaczego wygląda amatorsko")
 - **Streaming odpowiedzi (słowo-po-słowie)** dla WSZYSTKICH głównych dostawców: OpenAI-compat
   (Groq/Cerebras/OpenRouter/NVIDIA/GitHub/Ollama), **Claude** i **Gemini** — koniec „gapienia się

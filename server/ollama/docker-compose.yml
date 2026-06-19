@@ -1,0 +1,27 @@
+# JARVIS — serwer inferencji Ollama (wariant Linux / NAS).
+# Uruchom: docker compose up -d   (modele pobierz potem: docker exec -it jarvis-ollama ollama pull qwen3.5:4b)
+# CORS (OLLAMA_ORIGINS) jest KRYTYCZNY — PWA woła Ollamę z innego origin.
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: jarvis-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"            # wystaw w LAN/tailnecie — NIE publicznie bez bramki (Access)
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_ORIGINS=*          # CORS dla PWA/WebView JARVIS-a
+      - OLLAMA_KEEP_ALIVE=30m     # model zostaje w VRAM między turami (mniej przeładowań)
+    volumes:
+      - ollama-models:/root/.ollama   # modele przeżywają restart kontenera
+    # Odkomentuj dla GPU NVIDIA (wymaga nvidia-container-toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  ollama-models:

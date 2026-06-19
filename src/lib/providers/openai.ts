@@ -13,7 +13,7 @@ interface OAIMessage {
 // Wspólny adapter dla dostawców z API zgodnym z OpenAI (chat/completions + function calling).
 export function makeOpenAICompatible(
   endpoint: string,
-  opts: { extraHeaders?: Record<string, string>; onlineSuffix?: boolean } = {},
+  opts: { extraHeaders?: Record<string, string>; onlineSuffix?: boolean; extraBody?: Record<string, unknown> } = {},
 ) {
   return async function ask(ctx: AskCtx): Promise<JarvisReply> {
     const url = ctx.proxyUrl ? `${ctx.proxyUrl}/openai?u=${encodeURIComponent(endpoint)}` : endpoint;
@@ -56,7 +56,9 @@ export function makeOpenAICompatible(
       ...opts.extraHeaders,
       ...(ctx.proxyUrl ? appTokenHeader() : {}),
     };
-    const baseBody = { model, messages, ...(hasTools ? { tools, tool_choice: "auto" } : {}), max_tokens: 2048 };
+    // extraBody płytko domieszane — domyślnie puste (zero zmian dla pozostałych dostawców);
+    // Ollama dokłada tu keep_alive/options (Zadanie 4).
+    const baseBody = { model, messages, ...(hasTools ? { tools, tool_choice: "auto" } : {}), max_tokens: 2048, ...(opts.extraBody || {}) };
 
     // Pełna odpowiedź (bez strumienia) — ścieżka klasyczna / fallback.
     const requestFull = async (): Promise<OAIMessage> => {

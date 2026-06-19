@@ -116,6 +116,38 @@ export async function runHealthCheck(onUpdate?: (items: HealthItem[]) => void, l
     });
   }
 
+  // 1c. Serwer inferencji (Ollama) — „czy mój PC-mózg żyje?" (Zadanie 5). Z poziomu telefonu
+  // odpowiada na pytanie: czy domowe GPU jest osiągalne (np. przez Tailscale).
+  if (s.ollamaUrl?.trim()) {
+    if (live) {
+      const url = s.ollamaUrl.trim().replace(/\/$/, "");
+      const host = (() => { try { return new URL(url).host; } catch { return url; } })();
+      try {
+        const res = await fetchTimeout(`${url}/api/tags`, { method: "GET" }, 6000);
+        if (res.ok) {
+          const d = await res.json().catch(() => null);
+          const n = Array.isArray(d?.models) ? d.models.length : 0;
+          let loaded = "";
+          try {
+            const ps = await fetchTimeout(`${url}/api/ps`, { method: "GET" }, 4000);
+            if (ps.ok) {
+              const pd = await ps.json().catch(() => null);
+              const names = (pd?.models || []).map((m: { name?: string; model?: string }) => String(m.name || m.model)).filter(Boolean);
+              if (names.length) loaded = ` · w pamięci: ${names.join(", ")}`;
+            }
+          } catch { /* /api/ps opcjonalne — pomiń łagodnie */ }
+          push({ id: "ollama", icon: "🖥", title: "Serwer inferencji aktywny", status: "ok", detail: `${n} model(i) na ${host}${loaded}` });
+        } else {
+          push({ id: "ollama", icon: "🖥", title: "Serwer inferencji nie odpowiada", status: "warn", detail: `Ollama na ${host} zwróciła ${res.status}. Sprawdź, czy działa i czy ustawiono OLLAMA_ORIGINS=* (CORS).` });
+        }
+      } catch {
+        push({ id: "ollama", icon: "🖥", title: "Serwer inferencji nieosiągalny", status: "warn", detail: `Nie łączę z ${host}. W terenie najprościej: Tailscale (PC + telefon w jednym tailnecie) i adres 100.x.x.x; na telefonie użyj APK.` });
+      }
+    }
+  } else {
+    push({ id: "ollama", icon: "🖥", title: "Lokalny serwer AI (opcjonalnie)", status: "info", detail: "Możesz postawić własny mózg na PC (Ollama) i łączyć się z telefonu — patrz JARVIS-Ollama-Server.exe lub server/ollama/. Wtedy refleks działa offline i prywatnie." });
+  }
+
   // 2. Claude — żywy test klucza (to samo co na Windowsie, działa wszędzie).
   if (live) {
     const claudeKey = primaryKey("anthropic");

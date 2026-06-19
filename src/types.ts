@@ -359,6 +359,12 @@ export interface Settings {
   localStt: boolean;
   /** Synteza mowy on-device (Kokoro) zamiast chmury/systemu. Fallback do dotychczasowych głosów. */
   localTts: boolean;
+  /** Local-first: proste zapytania kieruj NAJPIERW do Ollamy (chmura zostaje fallbackiem). */
+  localFirstSimple: boolean;
+  /** Ollama: rozmiar kontekstu (num_ctx). Pod 4 GB VRAM nie windować. Domyślnie 4096. */
+  ollamaNumCtx: number;
+  /** Ollama: liczba warstw na GPU (num_gpu). -1 = pełny offload na GPU. */
+  ollamaNumGpu: number;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

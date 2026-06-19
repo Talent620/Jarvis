@@ -32,3 +32,25 @@ Audyt całości (6 klastrów, `AUDIT.md`) + 8 partii poprawek + staged-review (e
 - BFF: `proxy/worker.js` (Cloudflare Worker) — `node --check` lokalnie; brak CI.
 - sales-os: własny build+E2E smoke w CI (`Sales OS build`).
 - Pobranie buildów: GitHub Release `latest` (APK/EXE) — odświeżany przy pushu na branch.
+
+---
+
+## „Refleks i Kora" — Część I (Fundament) — raport
+
+Dwuprędkościowy mózg: Refleks (lokalny Ollama/WebLLM) jako pełny poziom, Kora (chmura) do rozumowania.
+Wszystko **opt-in** — domyślne zachowanie bez zmian.
+
+**Co zrobione (Z1–Z7):** katalog Ollamy pod 4 GB + `TASK_MODELS.ollama`; dynamiczny dropdown modeli z
+`/api/tags` (debounce + przycisk); local-first (`localFirstSimple`) + auto-lokalny offline; tuning Ollamy
+(`keep_alive`, `num_ctx`, `num_gpu` via `extraBody`); health-check serwera inferencji (`/api/tags`+`/api/ps`);
+`server/ollama/` (README+compose+setup.ps1); testy routeOrder. 852 testy, lint/tsc/build zielone.
+
+**Co włączyć w ⚙ → AI (kolejność klikania):**
+1. „Lokalny model — adres Ollama" → wklej adres serwera (np. `http://100.x.x.x:11434` przez Tailscale).
+2. Dostawca → „Lokalny model (Ollama)" → „🔄 Odśwież modele z Ollamy" → wybierz model.
+3. (Opcjonalnie) `localFirstSimple` = on → proste pytania lecą najpierw lokalnie, prywatnie i szybko.
+4. Pod 4 GB VRAM: `ollamaNumCtx` zostaw 4096; `ollamaNumGpu` -1 (pełny GPU).
+5. Stan systemu pokaże „Serwer inferencji aktywny + model w VRAM".
+
+**Część II (8–14, opt-in) — do decyzji właściciela:** brama pewności, spekulacja Refleks→Kora,
+konsylium hybrydowe, RAG do modelu lokalnego, router uczący się, prewarm, szkielet LoRA (server-only).
