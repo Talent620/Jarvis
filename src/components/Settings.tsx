@@ -18,6 +18,8 @@ import { runHealthCheck, statusIcon, type HealthItem } from "../lib/healthCheck"
 import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode, detectOllama } from "../lib/privateMode";
+import { recentRoutes, type RouteLine } from "../lib/routeView";
+import { clearRouteLog } from "../lib/modelRouter";
 import { toast } from "../lib/toast";
 import { runProspecting } from "../lib/prospect";
 import { verifyMailConnection, sendTestEmail, mailReadiness } from "../lib/mailer";
@@ -186,6 +188,10 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     const t = setTimeout(() => void loadOllamaModels(), 600);
     return () => clearTimeout(t);
   }, [s.ollamaUrl]);
+
+  // „Mózg na żywo" — podgląd ostatnich decyzji routera (Refleks vs Kora). Tylko lokalnie.
+  const [routeLines, setRouteLines] = useState<RouteLine[]>([]);
+  const refreshRoutes = () => setRouteLines(recentRoutes(12));
 
   const modelOptions = useMemo(() => {
     if (s.provider === "auto") return [];
@@ -895,6 +901,61 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   <span className="muted" style={{ fontSize: 12 }}>
                     -1 = auto (Ollama decyduje). Zmniejsz, jeśli model nie mieści się w VRAM (część warstw trafi na CPU).
                   </span>
+                </div>
+              </details>
+
+              <details
+                className="journal-card"
+                style={{ margin: "10px 0", padding: "10px 12px" }}
+                onToggle={(e) => { if ((e.currentTarget as HTMLDetailsElement).open) refreshRoutes(); }}
+              >
+                <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>
+                  🧭 Mózg na żywo — dziennik decyzji (diagnostyka)
+                </summary>
+                <p className="muted" style={{ marginTop: 6 }}>
+                  Ostatnie decyzje routera: co poszło do <b>Refleksu</b> (lokalny), co do <b>Kory</b> (chmura),
+                  czy nastąpiła eskalacja i jak szybko. Wszystko liczone i trzymane <b>lokalnie</b> — nic nie
+                  wychodzi do chmury.
+                </p>
+                {routeLines.length === 0 ? (
+                  <p className="muted" style={{ fontSize: 13 }}>
+                    Brak danych — zadaj kilka pytań przy włączonych opcjach powyżej, potem odśwież.
+                  </p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {routeLines.map((r, i) => (
+                      <div
+                        key={`${r.at}-${i}`}
+                        style={{ display: "flex", alignItems: "baseline", gap: 8, fontSize: 13, lineHeight: 1.35 }}
+                      >
+                        <span style={{ flex: "0 0 auto" }}>{r.badge}</span>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <b>{r.kind}</b> → {r.tier}
+                          {r.outcome !== "ok" && <span style={{ color: "var(--cyan)" }}> · {r.outcome}</span>}
+                          <br />
+                          <span className="muted">
+                            {r.provider}{r.meta ? ` · ${r.meta}` : ""} · {r.when}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <button
+                    className="btn"
+                    style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }}
+                    onClick={refreshRoutes}
+                  >
+                    🔄 Odśwież
+                  </button>
+                  <button
+                    className="btn"
+                    style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }}
+                    onClick={() => { clearRouteLog(); refreshRoutes(); toast("Wyczyszczono dziennik tras."); }}
+                  >
+                    🗑 Wyczyść
+                  </button>
                 </div>
               </details>
 
