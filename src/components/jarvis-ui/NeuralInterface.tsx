@@ -3,7 +3,33 @@ import { motion } from "framer-motion";
 import { Activity, BrainCircuit, Cpu, Radio, ShieldCheck, Wifi, Zap } from "lucide-react";
 import VoiceCore, { type CoreState } from "./VoiceCore";
 import CognitiveStream, { type ThoughtLine } from "./CognitiveStream";
+import { subscribeLevel } from "../../lib/audioLevel";
+import { subscribeLog, reliabilityStats, type LogEvent } from "../../lib/errorLog";
+import { store } from "../../lib/store";
 import "./neural.css";
+
+interface HudState { model: string; mode: string; online: boolean; latency: string }
+
+function readHud(): HudState {
+  const s = store.settings;
+  const model = s.provider === "auto" || !s.model || s.model === "auto" ? "auto" : s.model;
+  const p50 = reliabilityStats().latencyP50;
+  return {
+    model: `${s.provider} · ${model}`.slice(0, 26),
+    mode: s.onDeviceOnly ? "on-device" : "chmura / auto",
+    online: typeof navigator !== "undefined" ? navigator.onLine : true,
+    latency: typeof p50 === "number" ? `${p50} ms` : "—",
+  };
+}
+
+// Realna telemetria → linia „myśli”. Bez treści użytkownika — tylko scope/komunikat/latencja.
+function eventToLine(e: LogEvent): ThoughtLine {
+  const kind: ThoughtLine["kind"] = e.level === "error" ? "warn" : e.level === "warn" ? "warn" : "ok";
+  const ms = typeof e.ms === "number" ? ` (${e.ms} ms)` : "";
+  const ctx = e.ctx ? ` · ${e.ctx}` : "";
+  const msg = e.message === "ok" ? "odpowiedź dostarczona" : e.message;
+  return { id: `${e.at}-${Math.random().toString(36).slice(2, 6)}`, text: `${e.scope}${ctx}: ${msg}${ms}`, kind };
+}
 
 // Demo-scenariusz strumienia myśli (zastąp realnymi zdarzeniami z logiki).
 const SCRIPT: { state: CoreState; line: string; kind?: ThoughtLine["kind"] }[] = [
@@ -36,36 +62,53 @@ function HudChip({ icon, label, value, color }: { icon: ReactNode; label: string
  * do podpięcia istniejącej logiki bez zmiany API.
  */
 export default function NeuralInterface() {
-  const [coreState, setCoreState] = useState<CoreState>("idle");
+  const [manualState, setManualState] = useState<CoreState>("idle");
   const [level, setLevel] = useState(0);
   const [lines, setLines] = useState<ThoughtLine[]>([]);
+  const [live, setLive] = useState(false); // czy płynie REALNA telemetria
   const step = useRef(0);
   const seq = useRef(0);
 
-  // Demo „życia” interfejsu. Cyklicznie odgrywa SCRIPT, by pulpit wyglądał na żywy.
-  // TODO: Connect to voiceCapture.ts state here — ustaw setCoreState('listening'|'speaking'|'idle')
-  // TODO: Connect to audioLevel.ts here — setLevel(rms) w trakcie mowy (0..1).
-  // TODO: Connect to chat/errorLog.ts here — pushLine(realna myśl) zamiast SCRIPT.
+  // REALNY poziom audio z audioLevel.ts (TTS JARVIS-a) — orb „mówi" w rytm dźwięku.
+  useEffect(() => subscribeLevel(setLevel), []);
+
+  // REALNE myśli ze strumienia telemetrii (errorLog.ts): routing, latencja, błędy.
+  // Pierwsze realne zdarzenie przełącza pulpit w tryb „live" (gasi demo).
+  useEffect(
+    () =>
+      subscribeLog((e) => {
+        setLive(true);
+        setLines((prev) => [...prev, eventToLine(e)].slice(-60));
+      }),
+    [],
+  );
+
+  // Ambientowe „życie" — TYLKO dopóki nie ma realnej telemetrii (np. samodzielny podgląd
+  // #neural bez aktywnej rozmowy). Gdy ruszy prawdziwy ruch, demo cichnie samo.
   useEffect(() => {
+    if (live) return;
     const t = setInterval(() => {
       const s = SCRIPT[step.current % SCRIPT.length];
       step.current += 1;
-      setCoreState(s.state);
+      setManualState(s.state);
       setLines((prev) => [...prev, { id: `l${seq.current++}`, text: s.line, kind: s.kind }].slice(-40));
     }, 2200);
     return () => clearInterval(t);
+  }, [live]);
+
+  // Realny HUD (model/tryb/łącze/latencja) — odczyt store + metryk, odświeżany lekko.
+  const [hud, setHud] = useState<HudState>(readHud);
+  useEffect(() => {
+    const t = setInterval(() => setHud(readHud()), 2000);
+    const on = () => setHud(readHud());
+    window.addEventListener("online", on);
+    window.addEventListener("offline", on);
+    return () => { clearInterval(t); window.removeEventListener("online", on); window.removeEventListener("offline", on); };
   }, []);
 
-  // Symulacja poziomu audio w trakcie „mówienia”.
-  // TODO: Replace with real RMS from audioLevel.ts subscription.
-  useEffect(() => {
-    if (coreState !== "speaking") {
-      setLevel(0);
-      return;
-    }
-    const t = setInterval(() => setLevel(0.3 + Math.random() * 0.7), 120);
-    return () => clearInterval(t);
-  }, [coreState]);
+  // Stan rdzenia: realny dźwięk (mowa) ma pierwszeństwo; inaczej stan demo/ręczny.
+  const coreState: CoreState = level > 0.04 ? "speaking" : manualState;
+  const setCoreState = setManualState;
 
   return (
     <div className="neural-root relative h-screen w-screen overflow-hidden bg-zinc-950 font-sans text-zinc-200">
@@ -81,11 +124,11 @@ export default function NeuralInterface() {
           <span className="font-mono text-sm font-semibold tracking-[0.2em] text-zinc-100">J.A.R.V.I.S</span>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {/* TODO: Connect to resolveProvider()/apiStatus.ts — pokaż realny model/dostawcę. */}
-          <HudChip icon={<Cpu size={16} />} label="Model" value="auto · opus-4.8" color="#22d3ee" />
-          <HudChip icon={<Activity size={16} />} label="Latencja" value="142 ms" color="#34d399" />
-          <HudChip icon={<ShieldCheck size={16} />} label="Tryb" value="suwerenny" color="#fbbf24" />
-          <HudChip icon={<Wifi size={16} />} label="Łącze" value="online" color="#3b82f6" />
+          {/* Realne wartości (read-only) ze store + metryk — bez dotykania logiki API. */}
+          <HudChip icon={<Cpu size={16} />} label="Model" value={hud.model} color="#22d3ee" />
+          <HudChip icon={<Activity size={16} />} label="Latencja p50" value={hud.latency} color="#34d399" />
+          <HudChip icon={<ShieldCheck size={16} />} label="Tryb" value={hud.mode} color="#fbbf24" />
+          <HudChip icon={<Wifi size={16} />} label="Łącze" value={hud.online ? "online" : "offline"} color={hud.online ? "#3b82f6" : "#ef4444"} />
         </div>
       </header>
 

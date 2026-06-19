@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { logError, recordLatency, getEvents, reliabilityStats, clearEvents } from "../src/lib/errorLog";
+import { logError, recordLatency, getEvents, reliabilityStats, clearEvents, subscribeLog, type LogEvent } from "../src/lib/errorLog";
 
 beforeEach(() => clearEvents());
 
@@ -31,5 +31,23 @@ describe("errorLog — pierścień zdarzeń", () => {
   it("pierścień jest ograniczony (nie rośnie w nieskończoność)", () => {
     for (let i = 0; i < 400; i++) logError("s", `e${i}`);
     expect(getEvents(1000).length).toBeLessThanOrEqual(300);
+  });
+
+  it("subscribeLog dostaje zdarzenia na żywo i odsubskrybowuje", () => {
+    const got: LogEvent[] = [];
+    const off = subscribeLog((e) => got.push(e));
+    logError("provider:groq", "rate limit", "llama");
+    expect(got).toHaveLength(1);
+    expect(got[0].scope).toBe("provider:groq");
+    off();
+    logError("provider:gemini", "boom");
+    expect(got).toHaveLength(1); // po odsubskrybowaniu — bez nowych
+  });
+
+  it("błąd subskrybenta NIE przerywa logowania", () => {
+    const off = subscribeLog(() => { throw new Error("zły subskrybent"); });
+    expect(() => logError("x", "y")).not.toThrow();
+    expect(getEvents()[0].scope).toBe("x");
+    off();
   });
 });

@@ -17,10 +17,21 @@ export interface LogEvent {
 
 const CAP = 300;
 const ring: LogEvent[] = [];
+const subs = new Set<(e: LogEvent) => void>();
+
+/** Subskrybuj nowe zdarzenia na żywo (np. wizualizacja „strumienia poznawczego"). */
+export function subscribeLog(fn: (e: LogEvent) => void): () => void {
+  subs.add(fn);
+  return () => subs.delete(fn);
+}
 
 export function logEvent(e: Omit<LogEvent, "at">): void {
-  ring.push({ at: Date.now(), ...e });
+  const ev: LogEvent = { at: Date.now(), ...e };
+  ring.push(ev);
   if (ring.length > CAP) ring.splice(0, ring.length - CAP);
+  subs.forEach((fn) => {
+    try { fn(ev); } catch { /* subskrybent nie może zerwać logowania */ }
+  });
 }
 
 /** Zaloguj błąd (skrót). Nie loguje treści użytkownika — tylko komunikat + kontekst techniczny. */
