@@ -469,10 +469,12 @@ export default function App() {
       cancelStreamFlush(); // żaden spóźniony batch nie nadpisze finalnego tekstu
       if (streamId) {
         // Tekst już przyleciał strumieniowo — domknij tę samą wiadomość (narzędzia/cytaty/finalny tekst).
+        // Jeśli finalny tekst jest pusty/„…" (rzadki przypadek tur z narzędziami) — zostaw to, co już zeszło.
         const sid = streamId;
+        const finalText = reply.text && reply.text.trim() && reply.text !== "…" ? reply.text : (pendingText || reply.text);
         setMessages((m) =>
           m.map((x) =>
-            x.id === sid ? { ...x, text: reply.text, tools: reply.tools, citations: reply.citations } : x,
+            x.id === sid ? { ...x, text: finalText, tools: reply.tools, citations: reply.citations } : x,
           ),
         );
       } else {

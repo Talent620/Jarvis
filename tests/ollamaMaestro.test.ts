@@ -92,6 +92,19 @@ describe("ollamaMaestro — paramB + autoAssignRoles", () => {
     expect(o.uncensored).toBe("");
   });
 
+  it("TYLKO model wizji (gemma3) → simple/complex NIE puste (fallback na realny model)", () => {
+    const o = autoAssignRoles(["gemma3:4b-it-qat"]);
+    expect(o.vision).toBe("gemma3:4b-it-qat");
+    expect(o.simple).toBe("gemma3:4b-it-qat"); // zamiast "" (które routowałoby na niezainstalowany katalog)
+    expect(o.complex).toBe("gemma3:4b-it-qat");
+  });
+
+  it("tylko model bez cenzury → simple/complex fallback na niego (nie puste)", () => {
+    const o = autoAssignRoles(["dolphin-mistral"]);
+    expect(o.uncensored).toBe("dolphin-mistral");
+    expect(o.simple).toBe("dolphin-mistral");
+  });
+
   it("ADDABLE_MODELS to niepusty katalog z polami id/role/size/desc", () => {
     expect(ADDABLE_MODELS.length).toBeGreaterThan(4);
     expect(ADDABLE_MODELS[0]).toHaveProperty("id");

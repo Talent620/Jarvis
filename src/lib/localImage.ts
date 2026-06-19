@@ -128,7 +128,7 @@ export async function localSdGenerate(prompt: string, inputs: GenImage[] = [], o
         while (live) {
           await new Promise((r) => setTimeout(r, 700));
           if (!live) break;
-          try { onProgress(await getSdProgress(base)); } catch { /* serwer zajęty — pomiń */ }
+          try { const pct = await getSdProgress(base); if (live) onProgress(pct); } catch { /* serwer zajęty — pomiń */ }
         }
       })();
     }

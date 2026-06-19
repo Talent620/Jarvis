@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { generateImage, humanizeImageError, IMAGE_MODELS_LIST, type ImageModelId } from "../lib/images";
 import { capturePhoto } from "../lib/camera";
 import { useEscape } from "../hooks/useEscape";
@@ -67,6 +67,8 @@ export default function Studio({ onClose }: { onClose: () => void }) {
   const [sdSize, setSdSize] = useState(1024);
   const [sdDenoise, setSdDenoise] = useState(0.6);
   const [sdProgress, setSdProgress] = useState(0); // 0..1, postęp lokalnego generowania
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
   const result = history[history.length - 1] || null;
   const before = inputs[0] || null; // zdjęcie wejściowe do porównania
@@ -82,7 +84,10 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     setErr("");
     const sdOpts = model === "local-sd" ? { steps: sdSteps, width: sdSize, height: sdSize, denoising: sdDenoise } : undefined;
     if (model === "local-sd") setSdProgress(0);
-    const r = await generateImage(text, ins.length ? ins : undefined, model, sdOpts, model === "local-sd" ? setSdProgress : undefined);
+    // Strażnik odmontowania: jeśli użytkownik zamknie Studio w trakcie, nie ruszamy stanu.
+    const onProg = model === "local-sd" ? (p: number) => { if (mounted.current) setSdProgress(p); } : undefined;
+    const r = await generateImage(text, ins.length ? ins : undefined, model, sdOpts, onProg);
+    if (!mounted.current) return;
     setSdProgress(0);
     if ("error" in r) setErr(humanizeImageError(r.error, model));
     else {

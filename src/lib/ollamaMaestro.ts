@@ -117,11 +117,16 @@ const isCoder = (n: string): boolean => /coder|codellama|code-/i.test(n);
 export function autoAssignRoles(installed: string[]): PremiumOverrides {
   const general = installed.filter((n) => !isVision(n) && !isUncensored(n) && !isCoder(n));
   const bySize = [...general].sort((a, b) => paramB(a) - paramB(b));
+  const vision = installed.find(isVision) || "";
+  const uncensored = installed.find(isUncensored) || "";
+  // Nigdy nie zostawiaj „" dla simple/complex, gdy COKOLWIEK jest zainstalowane — inaczej routing
+  // spadłby na model z katalogu, którego użytkownik może NIE mieć. Lepszy jest realny, choć nie-„ogólny".
+  const fallback = general[0] || vision || installed.find((n) => !isUncensored(n)) || installed[0] || "";
   return {
-    simple: bySize[0] || "", // najmniejszy ogólny = najszybszy
-    complex: bySize[bySize.length - 1] || bySize[0] || "", // największy ogólny = najmądrzejszy
-    vision: installed.find(isVision) || "",
-    uncensored: installed.find(isUncensored) || "",
+    simple: bySize[0] || fallback, // najmniejszy ogólny = najszybszy
+    complex: bySize[bySize.length - 1] || bySize[0] || fallback, // największy ogólny = najmądrzejszy
+    vision,
+    uncensored,
   };
 }
 
