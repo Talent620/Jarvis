@@ -13,6 +13,7 @@ import { classifyTask, logRouteDecision, GROQ_SCOUT, GROQ_KIMI } from "./modelRo
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
 import { recordEpisode, loadEpisodes } from "./episodicMemory";
 import { buildFusionBlock } from "./contextFusion";
+import { estimateConfidence, isLowConfidence } from "./confidence";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
 import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
@@ -541,6 +542,10 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   resetCitations();
   const primary = order[0].provider; // główny mózg — jeśli odpowie inny, to był failover
   let lastErr: unknown;
+  // Brama Pewności (Zadanie 8): jeśli refleks lokalny był niepewny i eskalujemy, trzymamy
+  // jego odpowiedź jako deskę ratunku — gdyby Kora też padła, nie gubimy lokalnej odpowiedzi.
+  let escalateFallback: JarvisReply | null = null;
+  providerLoop:
   for (let i = 0; i < order.length; i++) {
     const { provider, model } = order[i];
     // Bezpiecznik: dostawcę „otwartego" (świeża seria awarii) pomijamy szybko — ale NIGDY nie
@@ -564,6 +569,20 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model, onToken: onTok }));
         providerBreaker.onSuccess(provider); // udało się — zamknij bezpiecznik
         recordLatency("provider:" + provider, Date.now() - t0, true, model);
+
+        // Brama Pewności (Zadanie 8): niepewny refleks lokalny → eskaluj do Kory (mocniejszego
+        // dostawcy dalej w łańcuchu), o ile jest sieć. Lokalną odpowiedź zachowujemy na wypadek,
+        // gdyby eskalacja zawiodła. Side-effecty (pamięć/telemetria) liczymy dopiero dla FINALNEJ.
+        if (store.settings.confidenceGate && isKeyless(provider) && i < order.length - 1 && (typeof navigator === "undefined" || navigator.onLine !== false)) {
+          const k = classifyTask(lastUser?.content || "", !!lastUser?.image).kind;
+          const conf = estimateConfidence(reply.text, k);
+          if (isLowConfidence(conf, store.settings.confidenceThreshold ?? 0.55)) {
+            logRouteDecision({ provider, model, kind: k, reason: `eskalacja: niska pewność refleksu (${conf.toFixed(2)})`, fellBack: provider !== primary });
+            escalateFallback = { ...reply, via: provider, fellBack: provider !== primary };
+            continue providerLoop; // spróbuj kolejnego (silniejszego) dostawcy
+          }
+        }
+
         const citations = getCitations();
         // Ucz się w tle: wyłuskaj trwałe fakty z wymiany (nie blokuje odpowiedzi).
         void learnFromExchange(lastUser?.content || "", reply.text);
@@ -613,7 +632,11 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
     logError("provider:" + provider, providerErr, model);
     const msg = providerErr instanceof Error ? providerErr.message : String(providerErr);
     if (i < order.length - 1 && (shouldFallback(msg) || isNetworkError(msg))) continue; // następny dostawca
+    // Eskalacja Bramy Pewności zawiodła (Kora padła) — oddaj lokalną odpowiedź zamiast błędu.
+    if (escalateFallback) return escalateFallback;
     throw new Error(humanize(msg));
   }
+  // Wszyscy dostawcy wyczerpani — jeśli mieliśmy lokalną odpowiedź z eskalacji, oddaj ją.
+  if (escalateFallback) return escalateFallback;
   throw new Error(humanize(lastErr instanceof Error ? lastErr.message : String(lastErr)));
 }

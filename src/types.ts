@@ -365,6 +365,10 @@ export interface Settings {
   ollamaNumCtx: number;
   /** Ollama: liczba warstw na GPU (num_gpu). -1 = pełny offload na GPU. */
   ollamaNumGpu: number;
+  /** Brama Pewności: niepewna odpowiedź lokalna eskaluje do silniejszego dostawcy (Kory). */
+  confidenceGate: boolean;
+  /** Próg pewności (0..1) poniżej którego następuje eskalacja. Domyślnie 0.55. */
+  confidenceThreshold: number;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

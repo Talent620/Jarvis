@@ -5,6 +5,12 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 
 ## [Unreleased]
 
+### „Refleks i Kora" — Część II (Zadania 8–14, metakognicja; wszystko opt-in)
+- **Z8 — Brama Pewności (`confidenceGate`):** `confidence.ts` — czysta heurystyka `estimateConfidence`
+  (wahanie/odmowa/pustka/degeneracja/za-krótko-vs-złożoność). Gdy refleks lokalny niepewny
+  (`< confidenceThreshold`, domyślnie 0.55) i jest sieć → tura eskaluje do silniejszego dostawcy
+  (Kory); lokalna odpowiedź trzymana jako deska ratunku, gdyby Kora padła. Decyzja w `logRouteDecision`.
+
 ### „Refleks i Kora" — Część I (Fundament, Zadania 1–7)
 Dwuprędkościowy mózg: model lokalny (Refleks) staje się pełnym poziomem, nie tylko awaryjnym ogonem.
 - **Z1 — katalog Ollamy pod ~4 GB VRAM (2026):** `qwen3.5:4b` (domyślny), `phi4-mini`, `gemma3:4b-it-qat`

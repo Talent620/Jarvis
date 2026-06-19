@@ -65,6 +65,8 @@ const defaultSettings: Settings = {
   localFirstSimple: false,
   ollamaNumCtx: 4096,
   ollamaNumGpu: -1,
+  confidenceGate: false,
+  confidenceThreshold: 0.55,
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,
