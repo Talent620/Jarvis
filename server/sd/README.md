@@ -18,7 +18,13 @@ Pobierz model bazowy do katalogu `models/Stable-diffusion`, np.:
 - **FLUX.1 [dev/schnell]** — topowa jakość 2026 (większe wymagania VRAM).
 
 ## 2. Włącz API + dostęp z sieci (krytyczne)
-W pliku **`webui-user.bat`** (Windows) ustaw flagi:
+**Najprościej (jeden klik):** pobierz **`JARVIS-SD-Server.exe`** z
+[releases/latest](https://github.com/Talent620/Jarvis/releases/tag/latest), **połóż go w folderze
+swojego Forge/A1111** (tam, gdzie `webui-user.bat`) i uruchom — sam dopisze flagi, otworzy port,
+wyłączy usypianie PC, wystartuje serwer i pokaże gotowy adres. (`.ps1` nie odpala się dwuklikiem —
+użyj `.exe` albo `JARVIS-SD.cmd`.)
+
+**Ręcznie:** w pliku **`webui-user.bat`** (Windows) ustaw flagi:
 ```bat
 set COMMANDLINE_ARGS=--api --listen --cors-allow-origins=*
 ```

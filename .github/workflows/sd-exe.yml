@@ -1,0 +1,51 @@
+name: Build SD Server EXE
+
+# Kompiluje launcher PowerShell (tools/sd-server) do JEDNOPLIKOWEGO .exe (ps2exe) i publikuje
+# go w GitHub Releases pod stałym tagiem "latest" — obok jarvis.apk / JARVIS-Ollama-Server.exe:
+#   https://github.com/<owner>/<repo>/releases/download/latest/JARVIS-SD-Server.exe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/functionality-modification-access-z9kod1"]
+    paths:
+      - "tools/sd-server/**"
+      - ".github/workflows/sd-exe.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ps2exe
+        shell: powershell
+        run: Install-Module -Name ps2exe -Force -Scope CurrentUser
+
+      - name: Compile PS1 -> EXE
+        shell: powershell
+        run: |
+          Import-Module ps2exe
+          Invoke-ps2exe `
+            -InputFile  tools/sd-server/jarvis-sd-server.ps1 `
+            -OutputFile JARVIS-SD-Server.exe `
+            -title      "JARVIS - Serwer obrazow (SD)" `
+            -description "Uruchamia Stable Diffusion (A1111/Forge) dla telefonu i daje gotowy adres" `
+            -company    "JARVIS" `
+            -noConfigFile
+
+      - name: Stage launcher next to the EXE
+        shell: powershell
+        run: Copy-Item tools/sd-server/JARVIS-SD.cmd .
+
+      - name: Publish to GitHub Releases (rolling 'latest')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          files: |
+            JARVIS-SD-Server.exe
+            JARVIS-SD.cmd
+          make_latest: true
