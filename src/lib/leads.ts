@@ -187,13 +187,47 @@ export async function cityFromCoords(lat: number, lon: number): Promise<string |
   }
 }
 
-/** Zapisz surowe leady do Pulpitu Sprzedaży (z dedupem). Zwraca NOWE leady. */
+// --- Dedup leadów odporny na warianty nazwy (ten sam biznes, inny zapis) ---
+// Poza nazwą firmy dopasowujemy też TELEFON i E-MAIL. Dzięki temu kolejne
+// wyszukiwania w tym samym mieście nie zaśmiecają pipeline'u duplikatami
+// (np. „Pizza Roma" i „Pizzeria Roma" z tym samym numerem to jeden lead).
+export const normName = (s?: string): string => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
+export const normPhone = (s?: string): string => {
+  const d = String(s || "").replace(/\D/g, "");
+  return d.length >= 9 ? d.slice(-9) : ""; // ostatnie 9 cyfr (PL) — ignoruje prefiks kraju/formatowanie
+};
+export const normEmail = (s?: string): string => {
+  const e = String(s || "").trim().toLowerCase();
+  return e.includes("@") ? e : "";
+};
+
+/** Klucze tożsamości leada (nazwa/telefon/email) do dedupu. Czysta, testowalna. */
+export function leadKeys(l: { company?: string; phone?: string; email?: string; contact?: string }): string[] {
+  const keys: string[] = [];
+  const n = normName(l.company);
+  if (n) keys.push(`n:${n}`);
+  for (const cand of [l.phone, l.contact]) {
+    if (cand && cand.includes("@")) continue; // contact bywa e-mailem — to nie telefon
+    const p = normPhone(cand);
+    if (p) { keys.push(`p:${p}`); break; }
+  }
+  for (const cand of [l.email, l.contact]) {
+    const e = normEmail(cand);
+    if (e) { keys.push(`e:${e}`); break; }
+  }
+  return keys;
+}
+
+/** Zapisz surowe leady do Pulpitu Sprzedaży (z dedupem nazwa+telefon+email). Zwraca NOWE leady. */
 export function saveLeads(raws: RawLead[], niche: string | undefined, city: string): Lead[] {
   const fresh: Lead[] = [];
   const now = Date.now();
   store.setData((d) => {
+    const seen = new Set<string>();
+    for (const l of d.leads) for (const k of leadKeys(l)) seen.add(k);
     for (const r of raws) {
-      if (d.leads.some((l) => l.company.toLowerCase() === r.company.toLowerCase())) continue;
+      const keys = leadKeys(r);
+      if (keys.some((k) => seen.has(k))) continue; // duplikat po nazwie, telefonie lub e-mailu
       const note = !r.hasWebsite ? "Brak strony www — idealny lead dla agencji stron." : undefined;
       const lead: Lead = {
         id: uid(),
@@ -211,6 +245,7 @@ export function saveLeads(raws: RawLead[], niche: string | undefined, city: stri
         updatedAt: now,
       };
       d.leads.unshift(lead);
+      for (const k of keys) seen.add(k); // dedup także WEWNĄTRZ tej partii
       fresh.push(lead);
     }
   });
