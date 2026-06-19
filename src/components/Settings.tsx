@@ -19,7 +19,7 @@ import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode, detectOllama } from "../lib/privateMode";
 import { pullOllamaModel } from "../lib/ollamaPull";
-import { applyPremiumSetup, ensurePremiumModels } from "../lib/ollamaMaestro";
+import { applyPremiumSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
 import { clearRouteLog } from "../lib/modelRouter";
 import { toast } from "../lib/toast";
@@ -219,6 +219,42 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
       setMaestroMsg(`❌ ${r.error}`);
       toast(`❌ ${r.error}`);
     }
+  };
+
+  // „Dobierz automatycznie z moich modeli" — konfiguracja ról z tego, co już zainstalowane.
+  const runAutoFromInstalled = async () => {
+    if (maestroBusy) return;
+    if (!store.settings.ollamaUrl?.trim()) { toast("Najpierw wpisz adres Ollamy (pole niżej)."); return; }
+    setMaestroBusy(true);
+    setMaestroMsg("Dobieram role z Twoich modeli…");
+    const r = await applyAutoFromInstalled();
+    setMaestroBusy(false);
+    if (r.ok && r.overrides) {
+      setS((prev) => ({ ...prev, ...store.settings }));
+      const o = r.overrides;
+      setMaestroMsg(`✅ Dobrane: ${o.simple || "—"} (szybki) · ${o.complex || "—"} (mądry)${o.vision ? ` · ${o.vision} (wizja)` : ""}${o.uncensored ? ` · ${o.uncensored} (bez cenzury)` : ""}. Włączony inteligentny routing.`);
+      toast("⚙ Skonfigurowano z Twoich modeli.");
+    } else {
+      setMaestroMsg(`❌ ${r.error}`);
+      toast(`❌ ${r.error}`);
+    }
+  };
+
+  // Katalog „dodaj jednym tapnięciem" — pobiera wybrany model z listy (zamiast wpisywania nazwy).
+  const [catalogPulling, setCatalogPulling] = useState<string>("");
+  const isInstalled = (id: string): boolean => {
+    const base = id.toLowerCase().split(":")[0];
+    return ollamaModels.some((m) => { const ml = m.toLowerCase(); return ml === id.toLowerCase() || ml.split(":")[0] === base; });
+  };
+  const pullFromCatalog = async (id: string) => {
+    if (catalogPulling) return;
+    if (!store.settings.ollamaUrl?.trim()) { toast("Najpierw wpisz adres Ollamy (pole niżej)."); return; }
+    setCatalogPulling(id);
+    setMaestroMsg(`⬇ Pobieram ${id}…`);
+    const r = await pullOllamaModel(id, (p) => setMaestroMsg(`${id}: ${p.status}${p.percent != null ? ` ${p.percent}%` : ""}`), store.settings.ollamaUrl);
+    setCatalogPulling("");
+    if (r.ok) { setMaestroMsg(`✅ ${id} gotowy.`); toast(`✅ ${id} pobrany.`); void loadOllamaModels(); }
+    else { setMaestroMsg(`❌ ${r.error}`); toast(`❌ ${r.error || "Nie udało się pobrać."}`); }
   };
 
   // Pobieranie modeli Ollamy z aplikacji (bez terminala) — z podglądem postępu.
@@ -871,12 +907,44 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     <button className="btn" style={{ width: "auto", marginTop: 0 }} disabled={maestroBusy} onClick={() => void runMaestro(true)}>
                       🔓 + bez cenzury
                     </button>
+                    <button className="btn" style={{ width: "auto", marginTop: 0 }} disabled={maestroBusy} onClick={() => void runAutoFromInstalled()} title="Skonfiguruj z modeli, które już masz — bez pobierania">
+                      ⚙ Dobierz z moich modeli
+                    </button>
                   </div>
                   <span className="muted" style={{ fontSize: 12 }}>
-                    Jedno kliknięcie: dobiera najlepsze modele (szybki / mądry / wizja), <b>pobiera brakujące wprost na Twój PC</b>
-                    {" "}i włącza inteligentny routing (lokalnie-najpierw + Brama Pewności + prewarm + adaptacja). Wymaga adresu Ollamy poniżej.
+                    „🚀 Premium" dobiera najlepsze modele, <b>pobiera brakujące na Twój PC</b> i włącza inteligentny routing.
+                    „⚙ Dobierz z moich modeli" — to samo, ale tylko z tego, co już masz (bez pobierania). Wymaga adresu Ollamy poniżej.
                   </span>
                   {maestroMsg && <p className="muted" style={{ fontSize: 12, whiteSpace: "pre-line", marginTop: 2 }}>{maestroMsg}</p>}
+
+                  <details style={{ marginTop: 4 }}>
+                    <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--cyan)" }}>➕ Dodaj model jednym tapnięciem (katalog)</summary>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
+                      {ADDABLE_MODELS.map((m) => {
+                        const installed = isInstalled(m.id);
+                        return (
+                          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <b>{m.id}</b> <span className="muted">· {m.role} · {m.size}</span>
+                              <br /><span className="muted">{m.desc}</span>
+                            </span>
+                            {installed ? (
+                              <span style={{ color: "var(--ok, #58e08a)", flex: "0 0 auto" }}>✓ jest</span>
+                            ) : (
+                              <button
+                                className="btn"
+                                style={{ width: "auto", marginTop: 0, padding: "4px 8px", fontSize: 12, flex: "0 0 auto" }}
+                                disabled={!!catalogPulling}
+                                onClick={() => void pullFromCatalog(m.id)}
+                              >
+                                {catalogPulling === m.id ? "⏳" : "⬇ Pobierz"}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </details>
                 </div>
 
                 <div className="row">

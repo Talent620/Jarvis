@@ -84,6 +84,66 @@ export function applyPremiumSetup(opts: { uncensored?: boolean } = {}): PremiumS
   return { overrides: o, enabled };
 }
 
+// === Klikalny katalog do dodawania modeli (łatwiej niż wpisywanie nazwy) ===
+export interface CatalogModel { id: string; role: string; size: string; desc: string }
+export const ADDABLE_MODELS: CatalogModel[] = [
+  { id: "qwen3:1.7b", role: "szybki", size: "~1.4 GB", desc: "Refleks — błyskawiczne, proste tury" },
+  { id: "qwen3.5:4b", role: "mądry", size: "~2.7 GB", desc: "Najlepszy ogólny 4B (domyślny)" },
+  { id: "gemma3:4b-it-qat", role: "wizja", size: "~3 GB", desc: "Widzi obrazy + 140 języków" },
+  { id: "llama3.2:3b", role: "szybki", size: "~2 GB", desc: "Szybki, dobre narzędzia" },
+  { id: "phi4-mini", role: "mądry", size: "~2.8 GB", desc: "Mocne rozumowanie" },
+  { id: "deepseek-r1:1.5b", role: "myślenie", size: "~1.2 GB", desc: "Łańcuch myśli / matematyka" },
+  { id: "qwen2.5-coder:3b", role: "kod", size: "~2 GB", desc: "Programowanie lokalnie" },
+  { id: "gemma2:2b", role: "szybki", size: "~1.7 GB", desc: "Najszybszy na CPU" },
+  { id: "dolphin-mistral", role: "bez cenzury", size: "~4 GB", desc: "Odpowiada wprost, bez moralizowania" },
+];
+
+// === Auto-dobór ról z modeli JUŻ zainstalowanych (najlepsze ustawienia z tego, co masz) ===
+/** Szacuje rozmiar modelu (mld parametrów) z tagu nazwy, np. „qwen3.5:4b" → 4. Czysta. */
+export function paramB(name: string): number {
+  const m = name.toLowerCase().match(/(\d+(?:\.\d+)?)\s*b(?:[^a-z0-9]|$)/);
+  return m ? parseFloat(m[1]) : 0;
+}
+const isVision = (n: string): boolean => /llava|vision|gemma3|minicpm-v|bakllava|moondream/i.test(n);
+const isUncensored = (n: string): boolean => /dolphin|uncensored|wizard-vicuna|abliterated/i.test(n);
+const isCoder = (n: string): boolean => /coder|codellama|code-/i.test(n);
+
+/** Przypisz role (szybki/mądry/wizja/bez-cenzury) do modeli ZAINSTALOWANYCH. Czysta. „" = brak. */
+export function autoAssignRoles(installed: string[]): PremiumOverrides {
+  const general = installed.filter((n) => !isVision(n) && !isUncensored(n) && !isCoder(n));
+  const bySize = [...general].sort((a, b) => paramB(a) - paramB(b));
+  return {
+    simple: bySize[0] || "", // najmniejszy ogólny = najszybszy
+    complex: bySize[bySize.length - 1] || bySize[0] || "", // największy ogólny = najmądrzejszy
+    vision: installed.find(isVision) || "",
+    uncensored: installed.find(isUncensored) || "",
+  };
+}
+
+/**
+ * Skonfiguruj się SAM z modeli już obecnych na serwerze: dobierz role + włącz premium-routing,
+ * bez pobierania czegokolwiek. Idealne, gdy masz już jakieś modele. Czyta sieć (detectOllama).
+ */
+export async function applyAutoFromInstalled(): Promise<{ ok: boolean; overrides?: PremiumOverrides; error?: string }> {
+  const det = await detectOllama(store.settings.ollamaUrl);
+  if (!det.ok) return { ok: false, error: det.error || "Nie połączono z Ollamą — sprawdź adres serwera." };
+  if (!det.models.length) return { ok: false, error: "Brak modeli na serwerze — najpierw pobierz przynajmniej jeden." };
+  const o = autoAssignRoles(det.models);
+  store.setSettings({
+    provider: "ollama",
+    ollamaModelSimple: o.simple,
+    ollamaModelComplex: o.complex,
+    ollamaModelVision: o.vision,
+    ollamaModelUncensored: o.uncensored,
+    localFirstSimple: true,
+    confidenceGate: true,
+    prewarmLocal: true,
+    adaptiveRouter: true,
+    localRefine: true,
+  });
+  return { ok: true, overrides: o };
+}
+
 export interface EnsureResult {
   ok: boolean;
   installed: string[];

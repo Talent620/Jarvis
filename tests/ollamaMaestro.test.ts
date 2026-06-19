@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 vi.mock("../src/lib/privateMode", () => ({ detectOllama: vi.fn() }));
 vi.mock("../src/lib/ollamaPull", () => ({ pullOllamaModel: vi.fn() }));
 
-import { recommendedOverrides, requiredModels, missingModels, applyPremiumSetup, ensurePremiumModels, PREMIUM_CATALOG } from "../src/lib/ollamaMaestro";
+import { recommendedOverrides, requiredModels, missingModels, applyPremiumSetup, ensurePremiumModels, PREMIUM_CATALOG, paramB, autoAssignRoles, applyAutoFromInstalled, ADDABLE_MODELS } from "../src/lib/ollamaMaestro";
 import { detectOllama } from "../src/lib/privateMode";
 import { pullOllamaModel } from "../src/lib/ollamaPull";
 import { store } from "../src/lib/store";
@@ -66,6 +66,59 @@ describe("ollamaMaestro — applyPremiumSetup (zapis ustawień)", () => {
     applyPremiumSetup({ uncensored: true });
     expect(store.settings.unfilteredLocal).toBe(true);
     expect(store.settings.ollamaModelUncensored).toBe("dolphin-mistral");
+  });
+});
+
+describe("ollamaMaestro — paramB + autoAssignRoles", () => {
+  it("paramB wyciąga rozmiar z tagu", () => {
+    expect(paramB("qwen3.5:4b")).toBe(4);
+    expect(paramB("qwen3:1.7b")).toBe(1.7);
+    expect(paramB("dolphin-mistral")).toBe(0);
+  });
+
+  it("dobiera najmniejszy jako szybki, największy jako mądry; wykrywa wizję i bez cenzury", () => {
+    const o = autoAssignRoles(["qwen3:1.7b", "qwen3.5:4b", "llama3.2:3b", "llava:7b", "dolphin-mistral"]);
+    expect(o.simple).toBe("qwen3:1.7b");      // najmniejszy ogólny
+    expect(o.complex).toBe("qwen3.5:4b");     // największy ogólny (llava/dolphin wyłączone z „ogólnych")
+    expect(o.vision).toBe("llava:7b");
+    expect(o.uncensored).toBe("dolphin-mistral");
+  });
+
+  it("jeden model ogólny → szybki=mądry; brak wizji/uncensored → puste", () => {
+    const o = autoAssignRoles(["qwen3.5:4b"]);
+    expect(o.simple).toBe("qwen3.5:4b");
+    expect(o.complex).toBe("qwen3.5:4b");
+    expect(o.vision).toBe("");
+    expect(o.uncensored).toBe("");
+  });
+
+  it("ADDABLE_MODELS to niepusty katalog z polami id/role/size/desc", () => {
+    expect(ADDABLE_MODELS.length).toBeGreaterThan(4);
+    expect(ADDABLE_MODELS[0]).toHaveProperty("id");
+    expect(ADDABLE_MODELS[0]).toHaveProperty("desc");
+  });
+});
+
+describe("ollamaMaestro — applyAutoFromInstalled", () => {
+  it("konfiguruje role z zainstalowanych i włącza routing", async () => {
+    vi.mocked(detectOllama).mockResolvedValue({ ok: true, url: "u", models: ["qwen3:1.7b", "qwen3.5:4b", "llava:7b"] });
+    const r = await applyAutoFromInstalled();
+    expect(r.ok).toBe(true);
+    expect(store.settings.ollamaModelSimple).toBe("qwen3:1.7b");
+    expect(store.settings.ollamaModelComplex).toBe("qwen3.5:4b");
+    expect(store.settings.ollamaModelVision).toBe("llava:7b");
+    expect(store.settings.localFirstSimple).toBe(true);
+    expect(store.settings.localRefine).toBe(true);
+  });
+  it("brak modeli → błąd, nie konfiguruje na ślepo", async () => {
+    vi.mocked(detectOllama).mockResolvedValue({ ok: true, url: "u", models: [] });
+    const r = await applyAutoFromInstalled();
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Brak modeli/);
+  });
+  it("brak połączenia → błąd", async () => {
+    vi.mocked(detectOllama).mockResolvedValue({ ok: false, url: "", models: [], error: "timeout" });
+    expect((await applyAutoFromInstalled()).ok).toBe(false);
   });
 });
 
