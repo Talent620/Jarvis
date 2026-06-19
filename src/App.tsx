@@ -68,7 +68,7 @@ import { buildContext } from "./lib/context";
 import { isUncensored, PROVIDERS } from "./lib/providers/registry";
 import { enablePrivateMode } from "./lib/privateMode";
 import { runProspecting } from "./lib/prospect";
-import { syncFromSalesOs } from "./lib/salesOs";
+import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
 import { currentBrainMode } from "./lib/brainMode";
 import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, type VoiceListener } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
@@ -716,10 +716,8 @@ export default function App() {
   useEffect(() => {
     const tick = setInterval(async () => {
       const st = store.settings;
-      const everyMin = Number(st.salesOsAutoSync) || 0;
-      if (everyMin <= 0 || !st.salesOsUrl?.trim() || !st.salesOsToken?.trim()) return;
-      const last = Number(localStorage.getItem("jarvis.salesos.ts") || 0);
-      if (Date.now() - last < everyMin * 60_000) return;
+      const lastTs = Number(localStorage.getItem("jarvis.salesos.ts") || 0);
+      if (!shouldAutoSyncSalesOs({ everyMin: Number(st.salesOsAutoSync) || 0, url: st.salesOsUrl, token: st.salesOsToken, lastTs })) return;
       localStorage.setItem("jarvis.salesos.ts", String(Date.now()));
       const r = await syncFromSalesOs();
       if (r.ok && r.added) {

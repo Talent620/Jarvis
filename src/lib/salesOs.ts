@@ -11,6 +11,16 @@ import { store, uid } from "./store";
 import { openUrl } from "./deviceControl";
 import type { Lead, LeadStatus } from "../types";
 
+/**
+ * Czy zrobić autonomiczną auto-synchronizację z Sales OS? Czysta (testowalna).
+ * Warunki: włączone (everyMin>0), skonfigurowane (url+token), minęło ≥ everyMin od ostatniej.
+ */
+export function shouldAutoSyncSalesOs(opts: { everyMin: number; url?: string; token?: string; lastTs: number; now?: number }): boolean {
+  const now = opts.now ?? Date.now();
+  if (!(opts.everyMin > 0) || !opts.url?.trim() || !opts.token?.trim()) return false;
+  return now - opts.lastTs >= opts.everyMin * 60_000;
+}
+
 /** Surowy lead zwracany przez `GET /api/public/sync` w AI Sales OS. */
 export interface SalesOsLead {
   id: string;

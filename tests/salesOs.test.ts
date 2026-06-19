@@ -1,7 +1,27 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { mapOutcome, mapStage, mapLeadStatus, mapSalesOsLead, mergeSnapshotLeads, leadToPublicPayload, leadToOutreachInput, metricsToText, type SalesOsLead } from "../src/lib/salesOs";
+import { mapOutcome, mapStage, mapLeadStatus, mapSalesOsLead, mergeSnapshotLeads, leadToPublicPayload, leadToOutreachInput, metricsToText, shouldAutoSyncSalesOs, type SalesOsLead } from "../src/lib/salesOs";
 import type { Lead } from "../src/types";
+
+describe("Łącznik AI Sales OS — autonomiczna auto-synchronizacja (shouldAutoSyncSalesOs)", () => {
+  const base = { everyMin: 30, url: "https://crm.example.com", token: "tok", lastTs: 0, now: 31 * 60_000 };
+  it("włączone + skonfigurowane + minął interwał → true", () => {
+    expect(shouldAutoSyncSalesOs(base)).toBe(true);
+  });
+  it("wyłączone (everyMin=0) → false", () => {
+    expect(shouldAutoSyncSalesOs({ ...base, everyMin: 0 })).toBe(false);
+  });
+  it("brak url lub token → false (nie strzela na ślepo)", () => {
+    expect(shouldAutoSyncSalesOs({ ...base, url: "" })).toBe(false);
+    expect(shouldAutoSyncSalesOs({ ...base, token: "  " })).toBe(false);
+  });
+  it("interwał jeszcze nie minął → false (throttle)", () => {
+    expect(shouldAutoSyncSalesOs({ ...base, now: 10 * 60_000 })).toBe(false);
+  });
+  it("dokładnie na granicy interwału → true", () => {
+    expect(shouldAutoSyncSalesOs({ ...base, now: 30 * 60_000 })).toBe(true);
+  });
+});
 
 describe("Łącznik AI Sales OS — mapowanie", () => {
   it("mapOutcome tłumaczy statusy Sales OS na statusy JARVIS-a", () => {
