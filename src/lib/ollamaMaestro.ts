@@ -70,14 +70,16 @@ export function applyPremiumSetup(opts: { uncensored?: boolean } = {}): PremiumS
     ollamaModelComplex: o.complex,
     ollamaModelVision: o.vision,
     ollamaModelUncensored: o.uncensored,
-    // Premium routing: szybko lokalnie, eskalacja gdy niepewne, gorący model, uczenie się.
+    // Premium routing: szybko lokalnie, eskalacja gdy niepewne, gorący model, uczenie się,
+    // oraz lokalna samokorekta złożonych odpowiedzi (Drabina Mądrości).
     localFirstSimple: true,
     confidenceGate: true,
     prewarmLocal: true,
     adaptiveRouter: true,
+    localRefine: true,
     ...(opts.uncensored ? { unfilteredLocal: true } : {}),
   });
-  const enabled = ["lokalnie-najpierw", "Brama Pewności", "prewarm", "adaptacja"];
+  const enabled = ["lokalnie-najpierw", "Brama Pewności", "prewarm", "adaptacja", "Drabina Mądrości"];
   if (opts.uncensored) enabled.push("bez cenzury");
   return { overrides: o, enabled };
 }

@@ -967,6 +967,18 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   <Toggle on={s.prewarmLocal} onClick={() => set({ prewarmLocal: !s.prewarmLocal })} />
                 </div>
 
+                <div className="row">
+                  <span>
+                    🪜 Drabina Mądrości (lokalna samokorekta)
+                    <br />
+                    <span className="muted">
+                      Przy złożonych pytaniach model lokalny sam sprawdza i poprawia swoją odpowiedź w drugiej
+                      turze — w całości na PC (działa też offline). Mądrzej, kosztem chwili dłużej.
+                    </span>
+                  </span>
+                  <Toggle on={s.localRefine} onClick={() => set({ localRefine: !s.localRefine })} />
+                </div>
+
                 <div className="field">
                   <label>Okno kontekstu Ollamy (num_ctx): {s.ollamaNumCtx ?? 4096} tokenów</label>
                   <input

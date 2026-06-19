@@ -15,6 +15,7 @@ import { recordEpisode, loadEpisodes } from "./episodicMemory";
 import { buildFusionBlock } from "./contextFusion";
 import { estimateConfidence, isLowConfidence } from "./confidence";
 import { speculativeAnswer } from "./speculative";
+import { localRefine, critiqueInstruction } from "./localRefine";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
 import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
@@ -618,7 +619,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         const onTok = onToken
           ? (delta: string) => { streamed += delta; onToken(streamed); }
           : undefined;
-        const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model, onToken: onTok }));
+        let reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model, onToken: onTok }));
         providerBreaker.onSuccess(provider); // udało się — zamknij bezpiecznik
         recordLatency("provider:" + provider, Date.now() - t0, true, model);
 
@@ -636,6 +637,26 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
             escalateFallback = { ...reply, via: provider, fellBack: provider !== primary };
             continue providerLoop; // spróbuj kolejnego (silniejszego) dostawcy
           }
+        }
+
+        // Drabina Mądrości (Z-premium): duży model lokalny SAM krytykuje i poprawia złożoną
+        // odpowiedź — druga tura w całości na PC (działa też offline). Opt-in, tylko keyless+complex.
+        if (store.settings.localRefine && isKeyless(provider) && clsTop.kind === "complex" && reply.text?.trim()) {
+          try {
+            const refined = await localRefine({
+              draft: reply,
+              runCritique: () => PROVIDERS[provider].impl({
+                ...baseCtx,
+                apiKey,
+                model,
+                history: [...trimmed, { role: "assistant", content: reply.text }, { role: "user", content: critiqueInstruction() }],
+              }),
+            });
+            if (refined.improved) {
+              reply = refined.reply;
+              logRouteDecision({ provider, model, kind: "complex", reason: "Drabina Mądrości: lokalna samokorekta", fellBack: provider !== primary, tier: "reflex" });
+            }
+          } catch { /* graceful — zostaje pierwsza odpowiedź lokalna */ }
         }
 
         const citations = getCitations();

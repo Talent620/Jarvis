@@ -385,6 +385,8 @@ export interface Settings {
   adaptiveRouter: boolean;
   /** Prewarm: trzymaj model lokalny gorący w VRAM (rozgrzewka po focusie/turze) — mniejszy cold-start. */
   prewarmLocal: boolean;
+  /** Drabina Mądrości: model lokalny sam krytykuje i poprawia złożoną odpowiedź (druga tura na PC). */
+  localRefine: boolean;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

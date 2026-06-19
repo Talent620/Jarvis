@@ -75,6 +75,7 @@ const defaultSettings: Settings = {
   councilIncludeLocal: false,
   adaptiveRouter: false,
   prewarmLocal: false,
+  localRefine: false,
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,
