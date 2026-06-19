@@ -24,6 +24,12 @@ Write-Host "Ustawiono OLLAMA_HOST=0.0.0.0:11434, OLLAMA_ORIGINS=*, OLLAMA_KEEP_A
 netsh advfirewall firewall delete rule name="JARVIS Ollama" 2>$null | Out-Null
 netsh advfirewall firewall add rule name="JARVIS Ollama" dir=in action=allow protocol=TCP localport=11434 2>$null | Out-Null
 
+# 2b) Nie usypiaj PC na zasilaniu sieciowym — serwer ma być dostępny zdalnie 24/7.
+#     (Ekran może gasnąć; liczy się, by system nie zasypiał i nie hibernował.)
+powercfg /change standby-timeout-ac 0 2>$null | Out-Null
+powercfg /change hibernate-timeout-ac 0 2>$null | Out-Null
+Write-Host "PC nie będzie usypiał na zasilaniu (serwer dostępny dla telefonu)." -ForegroundColor Green
+
 # 3) Restart serwera, by złapał ustawienia.
 Get-Process "ollama app", "ollama" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
@@ -47,5 +53,18 @@ if ($Tailscale) {
   }
 }
 
+# 6) Pokaż gotowe adresy do wklejenia w telefonie (LAN + Tailscale, jeśli jest).
+$lan = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+  Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" } |
+  Select-Object -First 1).IPAddress
 Write-Host ""
-Write-Host "Gotowe. W JARVIS (telefon): wklej adres serwera w ⚙ → AI, potem 'Odśwież modele z Ollamy'." -ForegroundColor Cyan
+Write-Host "=== Adres serwera do wklejenia w telefonie (⚙ → AI) ===" -ForegroundColor Cyan
+if ($lan) { Write-Host ("  Ta sama sieć WiFi (APK):  http://{0}:11434" -f $lan) -ForegroundColor Green }
+if (Get-Command tailscale -ErrorAction SilentlyContinue) {
+  $ts = (& tailscale ip -4 2>$null | Select-Object -First 1)
+  if ($ts) { Write-Host ("  Zdalnie z dowolnej sieci:  http://{0}:11434" -f $ts) -ForegroundColor Green }
+  if ($Tailscale) { Write-Host "  (PWA przez HTTPS: użyj adresu MagicDNS z 'tailscale serve status')" -ForegroundColor Green }
+}
+Write-Host ""
+Write-Host "W JARVIS: wklej adres w ⚙ → AI, 'Odśwież modele z Ollamy'. Kolejne modele dociągniesz" -ForegroundColor Cyan
+Write-Host "wprost z apki (pole + ⬇ Pobierz) — bez wracania do tego komputera." -ForegroundColor Cyan

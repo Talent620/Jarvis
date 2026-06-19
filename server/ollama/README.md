@@ -7,6 +7,21 @@ rozumowania. Nic nie wychodzi na zewnątrz, gdy używasz lokalnego modelu.
 > Najprostsza ścieżka na Windows: **`JARVIS-Ollama-Server.exe`** (jedno kliknięcie — ustawia
 > wszystko i daje adres). Poniżej pełny opis ręczny + warianty Linux/NAS i dostęp „w terenie".
 
+## TL;DR — „PC włączony, używam zdalnie z telefonu (APK)"
+Twój dokładny scenariusz w 4 krokach:
+1. **PC (raz):** uruchom `JARVIS-Ollama-Server.exe` albo `setup.ps1`. Ustawi nasłuch+CORS, **wyłączy
+   usypianie PC na zasilaniu** (serwer dostępny 24/7), pobierze komplet modeli i **wypisze gotowy adres**.
+2. **Zdalny dostęp:** zainstaluj **Tailscale** na PC i telefonie (jeden tailnet, darmowy). Wtedy
+   telefon dosięgnie PC z dowolnej sieci, bez otwierania portów.
+3. **Telefon (APK):** ⚙ → AI → dostawca „Lokalny model (Ollama)", wklej adres `http://100.x.x.x:11434`
+   (Tailscale) lub `http://192.168.x.x:11434` (ta sama WiFi), → „🔄 Odśwież modele z Ollamy".
+4. **Kolejne modele dodajesz z telefonu:** w tym samym ekranie wpisz nazwę (np. `phi4-mini`) i kliknij
+   **⬇ Pobierz** — ściągnie się wprost na PC, bez wracania do komputera. Model per typ zadania ustawisz
+   w sekcji „🧠 Refleks i Kora".
+
+> APK (nie PWA) jest tu najwygodniejsze: WebView dopuszcza cleartext `http://` do tailnetu/LAN, więc
+> nie musisz kombinować z HTTPS. Dla PWA po `https://` → `tailscale serve https / 11434` (patrz niżej).
+
 ## 1. Windows — krok po kroku
 1. Zainstaluj Ollamę: https://ollama.com
 2. Ustaw nasłuch w sieci + CORS (PWA woła Ollamę z innego origin — **CORS jest krytyczny**):
