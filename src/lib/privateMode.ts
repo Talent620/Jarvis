@@ -56,6 +56,30 @@ export async function detectOllama(rawUrl?: string): Promise<OllamaStatus> {
   }
 }
 
+/**
+ * Auto-znajdź działający serwer Ollama: próbuje kolejno kandydatów (obecny adres, localhost,
+ * 127.0.0.1) i zwraca pierwszy, który odpowiada — żeby użytkownik nie musiał wpisywać adresu.
+ * Na PC localhost trafia od ręki; dla telefonu poda się adres LAN/Tailscale osobno.
+ */
+export async function findOllamaServer(candidates?: string[]): Promise<OllamaStatus & { tried: string[] }> {
+  const cur = store.settings.ollamaUrl?.trim();
+  const raw = candidates ?? [cur, "http://localhost:11434", "http://127.0.0.1:11434"];
+  const list = Array.from(new Set(raw.filter((u): u is string => !!u && !!u.trim()).map((u) => u.trim())));
+  const tried: string[] = [];
+  for (const url of list) {
+    tried.push(url);
+    const r = await detectOllama(url);
+    if (r.ok) return { ...r, tried };
+  }
+  return {
+    ok: false,
+    url: list[0] || "",
+    models: [],
+    error: "Nie znalazłem serwera Ollama (próbowałem localhost). Uruchom na PC JARVIS-Ollama-Server.exe albo wpisz adres ręcznie (telefon: adres PC, nie localhost).",
+    tried,
+  };
+}
+
 /** Wybiera najlepszy lokalny model (preferuje uncensored, potem cokolwiek). */
 export function pickLocalModel(models: string[]): string | null {
   const base = (m: string) => m.split(":")[0].toLowerCase();

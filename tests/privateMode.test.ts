@@ -1,5 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { pickLocalModel, diagnoseOllamaError } from "../src/lib/privateMode";
+// @vitest-environment jsdom
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { pickLocalModel, diagnoseOllamaError, findOllamaServer } from "../src/lib/privateMode";
+import { store } from "../src/lib/store";
 
 describe("Tryb Prywatny — wybór modelu lokalnego", () => {
   it("preferuje model bez cenzury (dolphin), gdy dostępny", () => {
@@ -30,5 +32,35 @@ describe("diagnoseOllamaError — czytelna diagnoza zamiast 'failed to fetch'", 
   });
   it("nieznany błąd → przekazuje treść", () => {
     expect(diagnoseOllamaError("http://x:11434", new Error("coś dziwnego"), false)).toBe("coś dziwnego");
+  });
+});
+
+describe("findOllamaServer — auto-znajdowanie serwera", () => {
+  beforeEach(() => { store.setSettings({ ollamaUrl: "" }); vi.unstubAllGlobals(); });
+
+  it("znajduje pierwszy odpowiadający (localhost) i zwraca modele", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (String(url).includes("localhost")) return new Response(JSON.stringify({ models: [{ name: "qwen3.5:4b" }] }), { status: 200 });
+      throw new TypeError("Failed to fetch");
+    }));
+    const r = await findOllamaServer();
+    expect(r.ok).toBe(true);
+    expect(r.url).toBe("http://localhost:11434");
+    expect(r.models).toEqual(["qwen3.5:4b"]);
+  });
+
+  it("żaden nie odpowiada → ok:false z czytelną radą", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
+    const r = await findOllamaServer(["http://localhost:11434"]);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/JARVIS-Ollama-Server\.exe|adres recznie|ręcznie/);
+    expect(r.tried).toContain("http://localhost:11434");
+  });
+
+  it("dedupuje kandydatów", async () => {
+    const f = vi.fn(async () => { throw new TypeError("Failed to fetch"); });
+    vi.stubGlobal("fetch", f);
+    const r = await findOllamaServer(["http://localhost:11434", "http://localhost:11434"]);
+    expect(r.tried).toEqual(["http://localhost:11434"]);
   });
 });

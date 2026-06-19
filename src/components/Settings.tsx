@@ -17,7 +17,7 @@ import { systemCheck } from "../lib/diagnostics";
 import { runHealthCheck, statusIcon, type HealthItem } from "../lib/healthCheck";
 import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
-import { enablePrivateMode, detectOllama } from "../lib/privateMode";
+import { enablePrivateMode, detectOllama, findOllamaServer } from "../lib/privateMode";
 import { pullOllamaModel } from "../lib/ollamaPull";
 import { applyPremiumSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
 import { detectSd } from "../lib/localImage";
@@ -201,6 +201,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [maestroMsg, setMaestroMsg] = useState("");
   const [sdChecking, setSdChecking] = useState(false);
   const [sdMsg, setSdMsg] = useState("");
+  const [findingServer, setFindingServer] = useState(false);
+  const [findMsg, setFindMsg] = useState("");
   const runMaestro = async (uncensored: boolean) => {
     if (maestroBusy) return;
     if (!store.settings.ollamaUrl?.trim()) { toast("Najpierw wpisz adres Ollamy (pole niżej)."); return; }
@@ -886,6 +888,30 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   placeholder="http://192.168.0.10:11434"
                   onChange={(e) => set({ ollamaUrl: e.target.value })}
                 />
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                  <button
+                    className="btn"
+                    style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }}
+                    disabled={findingServer}
+                    onClick={async () => {
+                      setFindingServer(true); setFindMsg("Szukam serwera (localhost)…");
+                      const r = await findOllamaServer();
+                      setFindingServer(false);
+                      if (r.ok) {
+                        set({ ollamaUrl: r.url, provider: "ollama" });
+                        store.setSettings({ ollamaUrl: r.url, provider: "ollama" });
+                        setFindMsg(`✅ Znaleziono: ${r.url} (${r.models.length} model(i)). Wybrano dostawcę lokalnego.`);
+                        void loadOllamaModels();
+                      } else {
+                        setFindMsg(`❌ ${r.error}`);
+                      }
+                    }}
+                  >
+                    {findingServer ? "⏳ Szukam…" : "🔍 Znajdź serwer automatycznie"}
+                  </button>
+                  <span className="muted" style={{ fontSize: 12 }}>na tym PC łączy localhost od ręki</span>
+                </div>
+                {findMsg && <p className="muted" style={{ fontSize: 12, marginTop: 4, whiteSpace: "pre-line" }}>{findMsg}</p>}
                 <p className="muted" style={{ marginTop: 4 }}>
                   Wybierz dostawcę „Lokalny model (Ollama)" powyżej. Uruchom Ollamę na komputerze
                   w tej samej sieci — żadne dane nie wychodzą do chmury. Modele bez cenzury pobierzesz lokalnie,
