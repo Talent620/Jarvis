@@ -410,8 +410,16 @@ export default function App() {
       // Strumieniowanie: bąbel tworzymy LENIWIE przy pierwszym tokenie — dostawcy bez
       // streamingu zachowują się dokładnie jak dotąd (bez pustego bąbla, zero regresji).
       let streamId = "";
-      const onTok = (full: string) => {
+      // Batching tokenów: pierwszy token tworzy bąbel NATYCHMIAST, kolejne aktualizacje dławimy do
+      // ~25 fps (40 ms). Mniej re-renderów = płynniejszy streaming na szybkich modelach (bez „szarpania").
+      let pendingText = "";
+      let lastFlush = 0;
+      let flushTimer: ReturnType<typeof setTimeout> | null = null;
+      const flushStream = () => {
+        flushTimer = null;
+        lastFlush = Date.now();
         if (!isCurrent(genToken)) return;
+        const full = pendingText;
         if (!streamId) {
           streamId = uid();
           setLiveId(streamId);
@@ -419,6 +427,13 @@ export default function App() {
         } else {
           setMessages((m) => m.map((x) => (x.id === streamId ? { ...x, text: full } : x)));
         }
+      };
+      const cancelStreamFlush = () => { if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; } };
+      const onTok = (full: string) => {
+        if (!isCurrent(genToken)) return;
+        pendingText = full;
+        if (Date.now() - lastFlush >= 40) { cancelStreamFlush(); flushStream(); }
+        else if (!flushTimer) { flushTimer = setTimeout(flushStream, 40); }
       };
       try {
         reply = useCouncil ? await askCouncil(history) : await askJarvis(history, onTok);
@@ -434,6 +449,7 @@ export default function App() {
         const label = PROVIDERS[r.via as keyof typeof PROVIDERS]?.label || r.via;
         toast(`🔄 Główny mózg był zajęty — odpowiedział zapasowy: ${label}`);
       }
+      cancelStreamFlush(); // żaden spóźniony batch nie nadpisze finalnego tekstu
       if (streamId) {
         // Tekst już przyleciał strumieniowo — domknij tę samą wiadomość (narzędzia/cytaty/finalny tekst).
         const sid = streamId;
