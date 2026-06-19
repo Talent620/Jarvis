@@ -18,6 +18,7 @@ import { runHealthCheck, statusIcon, type HealthItem } from "../lib/healthCheck"
 import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode, detectOllama } from "../lib/privateMode";
+import { pullOllamaModel } from "../lib/ollamaPull";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
 import { clearRouteLog } from "../lib/modelRouter";
 import { toast } from "../lib/toast";
@@ -192,6 +193,32 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   // „Mózg na żywo" — podgląd ostatnich decyzji routera (Refleks vs Kora). Tylko lokalnie.
   const [routeLines, setRouteLines] = useState<RouteLine[]>([]);
   const refreshRoutes = () => setRouteLines(recentRoutes(12));
+
+  // Pobieranie modeli Ollamy z aplikacji (bez terminala) — z podglądem postępu.
+  const [pullName, setPullName] = useState("");
+  const [pulling, setPulling] = useState(false);
+  const [pullStatus, setPullStatus] = useState("");
+  const doPull = async () => {
+    const name = pullName.trim();
+    if (pulling || !name) return;
+    setPulling(true);
+    setPullStatus("Łączę z Ollamą…");
+    const r = await pullOllamaModel(
+      name,
+      (p) => setPullStatus(`${p.status}${p.percent != null ? ` ${p.percent}%` : ""}`),
+      store.settings.ollamaUrl,
+    );
+    setPulling(false);
+    if (r.ok) {
+      setPullStatus(`✅ Pobrano ${name}.`);
+      toast(`✅ Model ${name} gotowy.`);
+      setPullName("");
+      void loadOllamaModels();
+    } else {
+      setPullStatus(`❌ ${r.error || "Nie udało się pobrać."}`);
+      toast(`❌ ${r.error || "Nie udało się pobrać modelu."}`);
+    }
+  };
 
   const modelOptions = useMemo(() => {
     if (s.provider === "auto") return [];
@@ -368,14 +395,40 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     ))}
                   </select>
                   {s.provider === "ollama" && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                      <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }} disabled={ollamaLoading} onClick={() => void loadOllamaModels()}>
-                        {ollamaLoading ? "⏳ Sprawdzam…" : "🔄 Odśwież modele z Ollamy"}
-                      </button>
-                      <span className="muted" style={{ fontSize: 12 }}>
-                        {ollamaModels.length ? `Znaleziono ${ollamaModels.length} — wybierz z listy.` : "Podaj adres Ollamy niżej i odśwież."}
+                    <>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                        <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }} disabled={ollamaLoading} onClick={() => void loadOllamaModels()}>
+                          {ollamaLoading ? "⏳ Sprawdzam…" : "🔄 Odśwież modele z Ollamy"}
+                        </button>
+                        <span className="muted" style={{ fontSize: 12 }}>
+                          {ollamaModels.length ? `Znaleziono ${ollamaModels.length} — wybierz z listy.` : "Podaj adres Ollamy niżej i odśwież."}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                        <input
+                          value={pullName}
+                          placeholder="np. qwen3.5:4b — pobierz nowy model"
+                          disabled={pulling}
+                          onChange={(e) => setPullName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") void doPull(); }}
+                          style={{ flex: 1, minWidth: 0 }}
+                        />
+                        <button
+                          className="btn"
+                          style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }}
+                          disabled={pulling || !pullName.trim()}
+                          onClick={() => void doPull()}
+                        >
+                          {pulling ? "⏳ Pobieram…" : "⬇ Pobierz"}
+                        </button>
+                      </div>
+                      {pullStatus && (
+                        <p className="muted" style={{ fontSize: 12, marginTop: 4, whiteSpace: "pre-line" }}>{pullStatus}</p>
+                      )}
+                      <span className="muted" style={{ fontSize: 12, display: "block", marginTop: 2 }}>
+                        Ściągasz model wprost na swój serwer Ollama — bez terminala. Po pobraniu pojawi się na liście.
                       </span>
-                    </div>
+                    </>
                   )}
                 </div>
               )}
