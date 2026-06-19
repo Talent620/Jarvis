@@ -73,3 +73,111 @@ export function drainSSE(buffer: string): { events: any[]; rest: string } {
   }
   return { events, rest };
 }
+
+// --- Anthropic (Claude) — zdarzenia SSE typu message_start / content_block_delta / ... ---
+// UWAGA: w trybie strumieniowym wyłączamy „thinking" (caller), więc bloki to tekst + tool_use.
+
+interface AnthBlock {
+  type: string;
+  text?: string;
+  id?: string;
+  name?: string;
+  input?: unknown;
+  _json?: string;
+}
+
+export class AnthStreamAccumulator {
+  usage = { inputTokens: 0, outputTokens: 0 };
+  stopReason: string | null = null;
+  private blocks: AnthBlock[] = [];
+
+  push(obj: any): string {
+    const t = obj?.type;
+    if (t === "message_start") {
+      this.usage.inputTokens += obj.message?.usage?.input_tokens || 0;
+      return "";
+    }
+    if (t === "content_block_start") {
+      const cb = obj.content_block || {};
+      this.blocks[obj.index] = {
+        type: cb.type,
+        id: cb.id,
+        name: cb.name,
+        ...(cb.type === "text" ? { text: "" } : {}),
+        ...(cb.type === "tool_use" ? { _json: "" } : {}),
+      };
+      return "";
+    }
+    if (t === "content_block_delta") {
+      const d = obj.delta || {};
+      const b = this.blocks[obj.index] || (this.blocks[obj.index] = { type: "text", text: "" });
+      if (d.type === "text_delta") {
+        b.text = (b.text || "") + (d.text || "");
+        return d.text || "";
+      }
+      if (d.type === "input_json_delta") {
+        b._json = (b._json || "") + (d.partial_json || "");
+      }
+      return "";
+    }
+    if (t === "content_block_stop") {
+      const b = this.blocks[obj.index];
+      if (b && b._json !== undefined) {
+        try { b.input = JSON.parse(b._json || "{}"); } catch { b.input = {}; }
+      }
+      return "";
+    }
+    if (t === "message_delta") {
+      if (obj.delta?.stop_reason) this.stopReason = obj.delta.stop_reason;
+      this.usage.outputTokens += obj.usage?.output_tokens || 0;
+      return "";
+    }
+    return "";
+  }
+
+  /** Bloki treści w formacie API (text + tool_use z poskładanym input). */
+  content(): { type: string; text?: string; id?: string; name?: string; input?: unknown }[] {
+    return this.blocks
+      .filter((b) => b && b.type)
+      .map((b) =>
+        b.type === "text"
+          ? { type: "text", text: b.text || "" }
+          : { type: b.type, id: b.id, name: b.name, input: b.input ?? {} },
+      );
+  }
+}
+
+// --- Gemini — SSE z candidates[0].content.parts[] (text lub functionCall) ---
+
+export class GeminiStreamAccumulator {
+  usage = { inputTokens: 0, outputTokens: 0 };
+  text = "";
+  private functionCalls: { name: string; args: unknown }[] = [];
+
+  push(obj: any): string {
+    let out = "";
+    const parts = obj?.candidates?.[0]?.content?.parts;
+    if (Array.isArray(parts)) {
+      for (const p of parts) {
+        if (typeof p.text === "string" && p.text) {
+          this.text += p.text;
+          out += p.text;
+        }
+        if (p.functionCall?.name) {
+          this.functionCalls.push({ name: p.functionCall.name, args: p.functionCall.args ?? {} });
+        }
+      }
+    }
+    const u = obj?.usageMetadata;
+    if (u) {
+      this.usage.inputTokens = u.promptTokenCount || this.usage.inputTokens;
+      this.usage.outputTokens = u.candidatesTokenCount || this.usage.outputTokens;
+    }
+    return out;
+  }
+
+  calls(): { name: string; args: unknown }[] {
+    return this.functionCalls;
+  }
+}
+

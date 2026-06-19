@@ -1,5 +1,6 @@
 import { runTool } from "../tools";
 import { fetchTimeout, appTokenHeader } from "../http";
+import { GeminiStreamAccumulator, drainSSE } from "../stream";
 import type { AskCtx, JarvisReply } from "./types";
 
 // Gemini odrzuca niektóre pola JSON Schema (np. additionalProperties) — także
@@ -68,26 +69,65 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
   let inTok = 0;
   let outTok = 0;
   let guard = 0;
-
-  while (guard++ < 8) {
+  // Strumieniujemy tylko BEZPOŚREDNIO (proxy /gemini mapuje na generateContent, nie SSE).
+  let canStream = !!ctx.onToken && !ctx.proxyUrl;
+  const headers = { "content-type": "application/json", ...(ctx.proxyUrl ? appTokenHeader() : {}) };
+  const buildBody = (): any => {
     const reqBody: any = { systemInstruction: { parts: [{ text: ctx.system }] }, contents };
     if (functionDeclarations.length) reqBody.tools = [{ functionDeclarations }];
-    const res = await fetchTimeout(base, {
-      method: "POST",
-      headers: { "content-type": "application/json", ...(ctx.proxyUrl ? appTokenHeader() : {}) },
-      body: JSON.stringify(reqBody),
-    }, 120000);
+    return reqBody;
+  };
+
+  // Pełna odpowiedź — ścieżka klasyczna / fallback.
+  const requestFull = async (): Promise<Part[]> => {
+    const res = await fetchTimeout(base, { method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
     const data = await res.json().catch(() => null);
-    // Dołącz kod HTTP do treści — inaczej logika awaryjna (rotacja klucza /
-    // przełączenie dostawcy) nie rozpozna 401/403/429 ukrytych w samym tekście.
     if (!res.ok) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
+    if (data.usageMetadata) { inTok += data.usageMetadata.promptTokenCount || 0; outTok += data.usageMetadata.candidatesTokenCount || 0; }
+    return data.candidates?.[0]?.content?.parts || [];
+  };
 
-    if (data.usageMetadata) {
-      inTok += data.usageMetadata.promptTokenCount || 0;
-      outTok += data.usageMetadata.candidatesTokenCount || 0;
+  // Strumieniowanie (SSE, tylko bezpośrednio) — tekst leci deltami; functionCall składamy.
+  const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${ctx.model}:streamGenerateContent?alt=sse&key=${ctx.apiKey.trim()}`;
+  const requestStream = async (): Promise<Part[]> => {
+    const res = await fetchTimeout(streamUrl, { method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
     }
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("stream-unsupported");
+    const dec = new TextDecoder();
+    const acc = new GeminiStreamAccumulator();
+    let buf = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const { events, rest } = drainSSE(buf);
+      buf = rest;
+      for (const ev of events) { const delta = acc.push(ev); if (delta) ctx.onToken?.(delta); }
+    }
+    const tail = drainSSE(buf + "\n\n");
+    for (const ev of tail.events) { const delta = acc.push(ev); if (delta) ctx.onToken?.(delta); }
+    inTok += acc.usage.inputTokens; outTok += acc.usage.outputTokens;
+    return [
+      ...(acc.text ? [{ text: acc.text } as Part] : []),
+      ...acc.calls().map((c) => ({ functionCall: { name: c.name, args: (c.args as Record<string, unknown>) || {} } }) as Part),
+    ];
+  };
 
-    const parts: Part[] = data.candidates?.[0]?.content?.parts || [];
+  while (guard++ < 8) {
+    let parts: Part[];
+    try {
+      parts = canStream ? await requestStream() : await requestFull();
+    } catch (e) {
+      const em = e instanceof Error ? e.message : String(e);
+      if (canStream && !/timeout|abort|failed to fetch|load failed|network/i.test(em)) {
+        canStream = false; guard--; continue; // hiccup strumienia → pełna odpowiedź
+      }
+      throw e;
+    }
     contents.push({ role: "model", parts });
 
     const calls = parts.filter((p) => p.functionCall);

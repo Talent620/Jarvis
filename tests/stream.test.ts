@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { OAIStreamAccumulator, drainSSE } from "../src/lib/stream";
+import { OAIStreamAccumulator, AnthStreamAccumulator, GeminiStreamAccumulator, drainSSE } from "../src/lib/stream";
 
 describe("stream — OAIStreamAccumulator", () => {
   it("składa treść z delt i zwraca przyrost", () => {
@@ -48,5 +48,39 @@ describe("stream — drainSSE", () => {
   it("pomija uszkodzony JSON bez wywrotki", () => {
     const { events } = drainSSE('data: {nie-json}\n\ndata: {"ok":true}\n\n');
     expect(events).toEqual([{ ok: true }]);
+  });
+});
+
+describe("stream — AnthStreamAccumulator (Claude)", () => {
+  it("składa tekst z delt + usage + stop_reason", () => {
+    const acc = new AnthStreamAccumulator();
+    acc.push({ type: "message_start", message: { usage: { input_tokens: 10 } } });
+    acc.push({ type: "content_block_start", index: 0, content_block: { type: "text" } });
+    expect(acc.push({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "Dzień " } })).toBe("Dzień ");
+    expect(acc.push({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "dobry" } })).toBe("dobry");
+    acc.push({ type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 5 } });
+    expect(acc.content()).toEqual([{ type: "text", text: "Dzień dobry" }]);
+    expect(acc.usage).toEqual({ inputTokens: 10, outputTokens: 5 });
+    expect(acc.stopReason).toBe("end_turn");
+  });
+
+  it("składa tool_use z input_json_delta", () => {
+    const acc = new AnthStreamAccumulator();
+    acc.push({ type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "t1", name: "add_task" } });
+    acc.push({ type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: '{"x":' } });
+    acc.push({ type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: "1}" } });
+    acc.push({ type: "content_block_stop", index: 0 });
+    expect(acc.content()).toEqual([{ type: "tool_use", id: "t1", name: "add_task", input: { x: 1 } }]);
+  });
+});
+
+describe("stream — GeminiStreamAccumulator", () => {
+  it("składa tekst i functionCall + usage", () => {
+    const acc = new GeminiStreamAccumulator();
+    expect(acc.push({ candidates: [{ content: { parts: [{ text: "Cześć" }] } }] })).toBe("Cześć");
+    acc.push({ candidates: [{ content: { parts: [{ functionCall: { name: "add_task", args: { t: "x" } } }] } }], usageMetadata: { promptTokenCount: 8, candidatesTokenCount: 3 } });
+    expect(acc.text).toBe("Cześć");
+    expect(acc.calls()).toEqual([{ name: "add_task", args: { t: "x" } }]);
+    expect(acc.usage).toEqual({ inputTokens: 8, outputTokens: 3 });
   });
 });
