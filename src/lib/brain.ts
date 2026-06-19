@@ -9,7 +9,7 @@ import { buildProfileBlock } from "./profile";
 import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, isKeyError, humanize, isComplex, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
-import { classifyTask, logRouteDecision, GROQ_SCOUT, GROQ_KIMI } from "./modelRouter";
+import { classifyTask, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI } from "./modelRouter";
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
 import { recordEpisode, loadEpisodes } from "./episodicMemory";
 import { buildFusionBlock } from "./contextFusion";
@@ -618,8 +618,11 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         if (store.settings.confidenceGate && isKeyless(provider) && i < order.length - 1 && (typeof navigator === "undefined" || navigator.onLine !== false)) {
           const k = classifyTask(lastUser?.content || "", !!lastUser?.image).kind;
           const conf = estimateConfidence(reply.text, k);
-          if (isLowConfidence(conf, store.settings.confidenceThreshold ?? 0.55)) {
-            logRouteDecision({ provider, model, kind: k, reason: `eskalacja: niska pewność refleksu (${conf.toFixed(2)})`, fellBack: provider !== primary });
+          // Router uczący się (Z12): próg eskalacji adaptuje się do skuteczności refleksu na tym kind.
+          const base = store.settings.confidenceThreshold ?? 0.55;
+          const gate = store.settings.adaptiveRouter ? adaptiveConfidenceThreshold(k, base) : { threshold: base };
+          if (isLowConfidence(conf, gate.threshold)) {
+            logRouteDecision({ provider, model, kind: k, reason: `${gate.reason ? gate.reason + "; " : ""}eskalacja: niska pewność refleksu (${conf.toFixed(2)})`, fellBack: provider !== primary, tier: "reflex", localConfidence: conf, escalated: true, latencyMs: Date.now() - t0 });
             escalateFallback = { ...reply, via: provider, fellBack: provider !== primary };
             continue providerLoop; // spróbuj kolejnego (silniejszego) dostawcy
           }
@@ -641,7 +644,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         const meta = { via: provider, fellBack: provider !== primary };
         // Router (Faza 4): zapisz faktyczną decyzję (model, klasyfikacja, czy failover) — zasila panel kosztów.
         const cls = classifyTask(lastUser?.content || "", !!lastUser?.image);
-        logRouteDecision({ provider, model, kind: cls.kind, reason: cls.reason, fellBack: meta.fellBack });
+        logRouteDecision({ provider, model, kind: cls.kind, reason: cls.reason, fellBack: meta.fellBack, latencyMs: Date.now() - t0 });
         // Telemetria kosztów (Faza 5): wyceń zużycie tokenów wg cennika (z nadpisaniami z configu).
         if (reply.usage && (reply.usage.inputTokens || reply.usage.outputTokens)) {
           const price = priceFor(model, parsePricingOverrides(store.settings.aiPricingOverrides));

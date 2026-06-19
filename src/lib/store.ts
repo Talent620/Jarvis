@@ -69,6 +69,7 @@ const defaultSettings: Settings = {
   confidenceThreshold: 0.55,
   speculativeMode: false,
   councilIncludeLocal: false,
+  adaptiveRouter: false,
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,

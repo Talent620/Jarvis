@@ -11,6 +11,7 @@
 
 import type { ProviderId } from "./providers/types";
 import { isComplex } from "./aiHelpers";
+import { idbGet, idbSet } from "./db";
 
 export type TaskKind = "simple" | "complex" | "vision";
 
@@ -45,7 +46,14 @@ export function groqModelFor(kind: TaskKind): string {
   return kind === "complex" ? GROQ_KIMI : GROQ_SCOUT;
 }
 
-// --- Dziennik decyzji routera (orkiestracja widoczna; zasila panel kosztów — Faza 5) ---
+// --- Dziennik decyzji routera + pętla ucząca (Z12) ---
+export type Tier = "reflex" | "cortex";
+
+/** Warstwa decyzji: refleks = model lokalny (Ollama/WebLLM), kora = chmura. */
+export function tierOf(provider: ProviderId): Tier {
+  return provider === "ollama" || provider === "webllm" ? "reflex" : "cortex";
+}
+
 export interface RouteLogEntry {
   at: number;
   provider: ProviderId;
@@ -53,15 +61,37 @@ export interface RouteLogEntry {
   kind: TaskKind;
   reason: string;
   fellBack: boolean; // czy odpowiedział model zapasowy (failover), nie główny
+  tier?: Tier; // wyliczane z provider, jeśli nie podano
+  latencyMs?: number; // czas odpowiedzi (do mediany latencji)
+  localConfidence?: number; // pewność refleksu (0..1), gdy dotyczy
+  escalated?: boolean; // czy decyzja zakończyła się eskalacją do Kory (porażka refleksu)
 }
 
 const LOG: RouteLogEntry[] = [];
-const MAX_LOG = 100;
+const MAX_LOG = 500;
+const IDB_KEY = "routerLog";
 
-/** Zapisz decyzję routera (po faktycznej, udanej odpowiedzi). */
+// Trwałość: hydratacja z IndexedDB przy starcie (graceful — brak IDB = sam RAM) + zapis debounced.
+let hydrated = false;
+async function hydrate(): Promise<void> {
+  if (hydrated) return;
+  hydrated = true;
+  const saved = await idbGet<RouteLogEntry[]>(IDB_KEY);
+  if (Array.isArray(saved) && !LOG.length) LOG.push(...saved.slice(0, MAX_LOG));
+}
+void hydrate();
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleSave(): void {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { saveTimer = null; void idbSet(IDB_KEY, LOG.slice(0, MAX_LOG)); }, 600);
+}
+
+/** Zapisz decyzję routera (po faktycznej, udanej odpowiedzi lub eskalacji). */
 export function logRouteDecision(e: Omit<RouteLogEntry, "at">): void {
-  LOG.unshift({ ...e, at: Date.now() });
+  LOG.unshift({ ...e, tier: e.tier || tierOf(e.provider), at: Date.now() });
   if (LOG.length > MAX_LOG) LOG.length = MAX_LOG;
+  scheduleSave();
 }
 
 /** Ostatnie decyzje (najnowsze pierwsze) — do podglądu/telemetrii. */
@@ -71,4 +101,58 @@ export function getRouteLog(): RouteLogEntry[] {
 
 export function clearRouteLog(): void {
   LOG.length = 0;
+  scheduleSave();
+}
+
+// --- Statystyki skuteczności tras (Z12) ---
+export interface RouterTierStat {
+  kind: TaskKind;
+  tier: Tier;
+  count: number;
+  successRate: number; // odsetek decyzji BEZ eskalacji/failoveru (0..1)
+  medianLatencyMs?: number;
+}
+
+/** Krocząca skuteczność per (kind, tier) z dziennika — do strojenia/diagnostyki. Czysta. */
+export function getRouterStats(): RouterTierStat[] {
+  const groups = new Map<string, RouteLogEntry[]>();
+  for (const e of LOG) {
+    const tier = e.tier || tierOf(e.provider);
+    const key = `${e.kind}|${tier}`;
+    const arr = groups.get(key) || [];
+    arr.push(e);
+    groups.set(key, arr);
+  }
+  const out: RouterTierStat[] = [];
+  for (const [key, entries] of groups) {
+    const [kind, tier] = key.split("|") as [TaskKind, Tier];
+    const ok = entries.filter((e) => !e.fellBack && !e.escalated).length;
+    const lats = entries.map((e) => e.latencyMs).filter((x): x is number => typeof x === "number").sort((a, b) => a - b);
+    out.push({
+      kind,
+      tier,
+      count: entries.length,
+      successRate: entries.length ? ok / entries.length : 0,
+      medianLatencyMs: lats.length ? lats[Math.floor(lats.length / 2)] : undefined,
+    });
+  }
+  return out.sort((a, b) => b.count - a.count);
+}
+
+const RELIABLE = 0.85; // refleks wiarygodny → ufamy bardziej (niższy próg eskalacji)
+const WEAK = 0.5; // refleks słaby → eskalujemy częściej (wyższy próg)
+const MIN_SAMPLES = 5; // bez minimum próbek nie adaptujemy (za mało danych)
+
+/**
+ * Dostosuj próg eskalacji (Brama Pewności) do skuteczności refleksu na danym `kind`.
+ * Gdy refleks historycznie wiarygodny → obniż próg (mniej eskalacji); gdy słaby → podnieś.
+ * Czysta (czyta dziennik). Zwraca też `reason` do zalogowania, gdy nastąpiła adaptacja.
+ */
+export function adaptiveConfidenceThreshold(kind: TaskKind, base: number): { threshold: number; reason?: string } {
+  const stat = getRouterStats().find((s) => s.kind === kind && s.tier === "reflex");
+  if (!stat || stat.count < MIN_SAMPLES) return { threshold: base };
+  const pct = Math.round(stat.successRate * 100);
+  if (stat.successRate >= RELIABLE) return { threshold: Math.max(0.2, base - 0.15), reason: `adaptacja: refleks ${pct}% skuteczny na '${kind}' → niższy próg` };
+  if (stat.successRate < WEAK) return { threshold: Math.min(0.9, base + 0.15), reason: `adaptacja: refleks ${pct}% słaby na '${kind}' → wyższy próg` };
+  return { threshold: base };
 }

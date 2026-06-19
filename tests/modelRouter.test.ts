@@ -48,10 +48,10 @@ describe("modelRouter — dziennik decyzji", () => {
     expect(typeof log[0].at).toBe("number");
   });
 
-  it("przycina do 100 wpisów", () => {
-    for (let i = 0; i < 120; i++) {
+  it("przycina dziennik do limitu (500 — większe okno dla statystyk routera Z12)", () => {
+    for (let i = 0; i < 540; i++) {
       logRouteDecision({ provider: "groq", model: GROQ_SCOUT, kind: "simple", reason: String(i), fellBack: false });
     }
-    expect(getRouteLog()).toHaveLength(100);
+    expect(getRouteLog()).toHaveLength(500);
   });
 });

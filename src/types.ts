@@ -373,6 +373,8 @@ export interface Settings {
   speculativeMode: boolean;
   /** Konsylium Hybrydowe: dołącz lokalny model (Ollama) jako dodatkowy głos w naradzie. */
   councilIncludeLocal: boolean;
+  /** Router uczący się: próg eskalacji (Brama Pewności) adaptuje się do skuteczności refleksu. */
+  adaptiveRouter: boolean;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

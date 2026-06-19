@@ -7,6 +7,7 @@ import { fetchTimeout } from "./http";
 import { Capacitor } from "@capacitor/core";
 import { wakeSupported } from "./wakeword";
 import { canSendMail, canRelaySmtp, hasBackendGmail } from "./mailer";
+import { getRouterStats } from "./modelRouter";
 
 // === Centrum Sprawdzania ===
 // Przegląd WSZYSTKICH kluczowych funkcji JARVIS-a: co działa, co nie i DLACZEGO —
@@ -146,6 +147,16 @@ export async function runHealthCheck(onUpdate?: (items: HealthItem[]) => void, l
     }
   } else {
     push({ id: "ollama", icon: "🖥", title: "Lokalny serwer AI (opcjonalnie)", status: "info", detail: "Możesz postawić własny mózg na PC (Ollama) i łączyć się z telefonu — patrz JARVIS-Ollama-Server.exe lub server/ollama/. Wtedy refleks działa offline i prywatnie." });
+  }
+
+  // 1d. Router uczący się (Z12) — podgląd skuteczności tras (refleks vs kora), gdy są dane.
+  const rstats = getRouterStats();
+  if (rstats.length) {
+    const top = rstats
+      .slice(0, 4)
+      .map((s) => `${s.kind}/${s.tier}: ${Math.round(s.successRate * 100)}% bez eskalacji (${s.count}${s.medianLatencyMs != null ? `, ~${s.medianLatencyMs} ms` : ""})`)
+      .join(" · ");
+    push({ id: "router-stats", icon: "🧭", title: "Skuteczność tras (router)", status: "info", detail: top });
   }
 
   // 2. Claude — żywy test klucza (to samo co na Windowsie, działa wszędzie).
