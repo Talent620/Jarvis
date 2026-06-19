@@ -66,7 +66,7 @@ import { dueCount } from "./lib/cards";
 import { statusFlags } from "./lib/status";
 import { buildContext } from "./lib/context";
 import { isUncensored, PROVIDERS } from "./lib/providers/registry";
-import { enablePrivateMode } from "./lib/privateMode";
+import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
 import { currentBrainMode } from "./lib/brainMode";
@@ -749,6 +749,18 @@ export default function App() {
       }
     }, 60000);
     return () => clearInterval(tick);
+  }, []);
+
+  // Auto-wykrycie lokalnego serwera Ollama na DESKTOPIE (localhost = ten PC) — żeby nie trzeba
+  // było wpisywać adresu. Tylko gdy nic nie skonfigurowano; ustawia adres (nie przejmuje providera).
+  useEffect(() => {
+    if (!isDesktop() || store.settings.ollamaUrl?.trim()) return;
+    void findOllamaServer(["http://localhost:11434", "http://127.0.0.1:11434"]).then((r) => {
+      if (r.ok && !store.settings.ollamaUrl?.trim()) {
+        store.setSettings({ ollamaUrl: r.url });
+        toast(`🧠 Wykryto lokalny serwer Ollama (${r.models.length} model(i)) — gotowy w ⚙ → AI.`);
+      }
+    });
   }, []);
 
   // Status sieci dla wskaźnika HUD.
