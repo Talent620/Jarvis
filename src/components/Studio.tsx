@@ -61,6 +61,10 @@ export default function Studio({ onClose }: { onClose: () => void }) {
   const [keysOpen, setKeysOpen] = useState(false);
   const [studioKeys, setStudioKeys] = useState(store.settings.studioKeys || "");
   const studioKeyCount = parseKeys(studioKeys).length;
+  // Suwaki jakości dla lokalnego Stable Diffusion.
+  const [sdSteps, setSdSteps] = useState(28);
+  const [sdSize, setSdSize] = useState(1024);
+  const [sdDenoise, setSdDenoise] = useState(0.6);
 
   const result = history[history.length - 1] || null;
   const before = inputs[0] || null; // zdjęcie wejściowe do porównania
@@ -74,7 +78,8 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     if (!text.trim()) return;
     setBusy(true);
     setErr("");
-    const r = await generateImage(text, ins.length ? ins : undefined, model);
+    const sdOpts = model === "local-sd" ? { steps: sdSteps, width: sdSize, height: sdSize, denoising: sdDenoise } : undefined;
+    const r = await generateImage(text, ins.length ? ins : undefined, model, sdOpts);
     if ("error" in r) setErr(humanizeImageError(r.error, model));
     else {
       setHistory((h) => [...h, r]);
@@ -124,6 +129,20 @@ export default function Studio({ onClose }: { onClose: () => void }) {
           )}
           {model === "local-sd" && !store.settings.sdUrl?.trim() && (
             <p className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>🖥 Lokalny generator — uruchom Stable Diffusion (A1111/Forge) na PC i wpisz jego adres w ⚙ → AI (np. http://192.168.0.10:7860).</p>
+          )}
+          {model === "local-sd" && store.settings.sdUrl?.trim() && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, margin: "4px 0 8px" }}>
+              <label style={{ fontSize: 12 }}>Jakość (kroki): {sdSteps} <span className="muted">— więcej = ładniej, ale wolniej</span></label>
+              <input type="range" min={8} max={50} step={1} value={sdSteps} onChange={(e) => setSdSteps(Number(e.target.value))} disabled={busy} />
+              <label style={{ fontSize: 12 }}>Rozmiar: {sdSize}×{sdSize} px</label>
+              <input type="range" min={512} max={1536} step={128} value={sdSize} onChange={(e) => setSdSize(Number(e.target.value))} disabled={busy} />
+              {inputs.length > 0 && (
+                <>
+                  <label style={{ fontSize: 12 }}>Siła zmian (edycja zdjęcia): {Math.round(sdDenoise * 100)}% <span className="muted">— niżej = bliżej oryginału</span></label>
+                  <input type="range" min={0.2} max={0.95} step={0.05} value={sdDenoise} onChange={(e) => setSdDenoise(Number(e.target.value))} disabled={busy} />
+                </>
+              )}
+            </div>
           )}
 
           {/* Osobne klucze TYLKO dla Studia — własny dzienny limit obrazów, z rotacją. */}
