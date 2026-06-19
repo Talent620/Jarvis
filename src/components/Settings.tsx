@@ -213,7 +213,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     if (benchBusy) return;
     if (!store.settings.ollamaUrl?.trim()) { toast("Najpierw podaj adres Ollamy."); return; }
     const models = ollamaModels.length ? ollamaModels : [];
-    if (!models.length) { setBenchMsg("Brak wykrytych modeli — kliknij „🔄 Odśwież modele z Ollamy" wyżej."); return; }
+    if (!models.length) { setBenchMsg("Brak wykrytych modeli — kliknij Odśwież modele z Ollamy wyżej."); return; }
     setBenchBusy(true); setBenchResults([]); setBenchMsg("Mierzę (pierwszy bieg ładuje model — chwilę to trwa)…");
     const res = await benchmarkModels(models, (m) => setBenchMsg(m));
     setBenchResults(res);
