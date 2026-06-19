@@ -75,6 +75,7 @@ import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
 import ScreenBoundary from "./components/ScreenBoundary";
 import { getWeather } from "./lib/weather";
 import { buildDailyBriefing, briefingToText } from "./lib/dailyBriefing";
+import { maybePrewarm } from "./lib/prewarm";
 import { feedback, buzz, cue } from "./lib/feedback";
 import { ensureNotifPerms, notify } from "./lib/notifications";
 import { registerIntents } from "./lib/intents";
@@ -473,6 +474,8 @@ export default function App() {
         setBusy(false);
         setOrb(listenerRef.current?.listening ? "listening" : "idle");
       }
+      // Prewarm (Z13): po turze trzymaj model lokalny gorący na następną (opt-in, throttlowany).
+      void maybePrewarm();
     }
   };
 
@@ -653,6 +656,14 @@ export default function App() {
     void mcpManager.loadAll().then((loaded) => {
       if (loaded.length) toast(`🔌 MCP: załadowano ${loaded.length} narzędzi z ${new Set(loaded.map((t) => t.server)).size} serwer(ów).`);
     }).catch(() => {});
+  }, []);
+
+  // --- Prewarm (Z13): rozgrzej model lokalny po powrocie do aplikacji (opt-in, throttlowany) ---
+  useEffect(() => {
+    const onFocus = () => { void maybePrewarm(); };
+    window.addEventListener("focus", onFocus);
+    void maybePrewarm(); // i raz na starcie
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
   // --- Poranny briefing o ustalonej porze (raz dziennie, gdy aplikacja otwarta) ---

@@ -70,6 +70,7 @@ const defaultSettings: Settings = {
   speculativeMode: false,
   councilIncludeLocal: false,
   adaptiveRouter: false,
+  prewarmLocal: false,
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,

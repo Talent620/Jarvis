@@ -25,6 +25,9 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
   `getRouterStats()` — krocząca skuteczność (% bez eskalacji/failoveru) + mediana latencji per
   (kind, tier). `adaptiveConfidenceThreshold` dostraja próg Bramy Pewności: refleks wiarygodny
   (≥85%) → niższy próg, słaby (<50%) → wyższy. Statystyki widoczne w „Stan systemu".
+- **Z13 — Prewarm (`prewarmLocal`):** `prewarm.ts` — po focusie aplikacji i po turze ładuje model
+  lokalny do VRAM (`POST /api/generate` bez promptu + `keep_alive`), throttlowany (≤1/min),
+  fire-and-forget. Wyprzedza cold-start pierwszej tury. Opt-in.
 
 ### „Refleks i Kora" — Część I (Fundament, Zadania 1–7)
 Dwuprędkościowy mózg: model lokalny (Refleks) staje się pełnym poziomem, nie tylko awaryjnym ogonem.

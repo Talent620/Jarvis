@@ -375,6 +375,8 @@ export interface Settings {
   councilIncludeLocal: boolean;
   /** Router uczący się: próg eskalacji (Brama Pewności) adaptuje się do skuteczności refleksu. */
   adaptiveRouter: boolean;
+  /** Prewarm: trzymaj model lokalny gorący w VRAM (rozgrzewka po focusie/turze) — mniejszy cold-start. */
+  prewarmLocal: boolean;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */
