@@ -66,6 +66,19 @@ export function diagnoseSdError(url: string, err: unknown, pageHttps: boolean): 
   return msg || "Nieznany błąd serwera SD.";
 }
 
+/** Postęp generowania 0..1 z /sdapi/v1/progress. Czysta. */
+export function parseSdProgress(json: unknown): number {
+  const p = (json as { progress?: number })?.progress;
+  return typeof p === "number" && isFinite(p) ? Math.max(0, Math.min(1, p)) : 0;
+}
+
+/** Pobierz aktualny postęp generowania z serwera SD (0..1). */
+export async function getSdProgress(base: string): Promise<number> {
+  const res = await fetchTimeout(`${base}/sdapi/v1/progress?skip_current_image=true`, {}, 5000);
+  const d = await res.json().catch(() => null);
+  return parseSdProgress(d);
+}
+
 export interface SdStatus { ok: boolean; models: string[]; error?: string }
 
 /** Wyłuskaj nazwy checkpointów z /sdapi/v1/sd-models. Czysta. */
@@ -92,7 +105,7 @@ export async function detectSd(rawUrl?: string): Promise<SdStatus> {
 }
 
 /** Wygeneruj/edytuj obraz na lokalnym serwerze SD. Bez zdjęcia → txt2img; ze zdjęciem → img2img. */
-export async function localSdGenerate(prompt: string, inputs: GenImage[] = [], opts: SdOpts = {}): Promise<Result> {
+export async function localSdGenerate(prompt: string, inputs: GenImage[] = [], opts: SdOpts = {}, onProgress?: (pct: number) => void): Promise<Result> {
   const base = (store.settings.sdUrl || "").trim().replace(/\/+$/, "");
   if (!base) return { error: "Lokalny generator (Stable Diffusion): wpisz adres serwera (A1111/Forge) w ⚙ → AI — Studio." };
   if (!prompt.trim()) return { error: "Podaj opis obrazu." };
@@ -101,11 +114,26 @@ export async function localSdGenerate(prompt: string, inputs: GenImage[] = [], o
   const path = hasImg ? "/sdapi/v1/img2img" : "/sdapi/v1/txt2img";
   const body = hasImg ? sdImg2ImgBody(prompt, inputs[0].data, opts) : sdTxt2ImgBody(prompt, opts);
   try {
-    const res = await fetchTimeout(`${base}${path}`, {
+    const genP = fetchTimeout(`${base}${path}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     }, 180000); // generowanie potrafi trwać — duży timeout
+
+    // Pasek postępu: odpytujemy /progress, dopóki generowanie trwa (fire-and-forget, błędy ignorujemy).
+    if (onProgress) {
+      let live = true;
+      void genP.then(() => { live = false; }, () => { live = false; });
+      void (async () => {
+        while (live) {
+          await new Promise((r) => setTimeout(r, 700));
+          if (!live) break;
+          try { onProgress(await getSdProgress(base)); } catch { /* serwer zajęty — pomiń */ }
+        }
+      })();
+    }
+
+    const res = await genP;
     const d = await res.json().catch(() => null);
     if (!res.ok || !d) return { error: `Błąd serwera SD (${res.status}). Sprawdź, czy działa z --api.` };
     return parseSdImage(d);

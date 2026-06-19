@@ -140,10 +140,10 @@ async function falEdit(modelId: ImageModelId, prompt: string, inputs: Img[]): Pr
  * Generowanie / precyzyjna edycja obrazu. Domyślnie darmowy Gemini (Nano Banana);
  * można wybrać model premium (fal.ai). Obsługuje wiele zdjęć wejściowych.
  */
-export async function generateImage(prompt: string, input?: Img | Img[], model: ImageModelId = "gemini", sdOpts?: SdOpts): Promise<Result> {
+export async function generateImage(prompt: string, input?: Img | Img[], model: ImageModelId = "gemini", sdOpts?: SdOpts, onSdProgress?: (pct: number) => void): Promise<Result> {
   const inputs = input ? (Array.isArray(input) ? input : [input]) : [];
   if (model === "gemini") return geminiEdit(prompt, inputs);
-  if (model === "local-sd") return localSdGenerate(prompt, inputs, sdOpts);
+  if (model === "local-sd") return localSdGenerate(prompt, inputs, sdOpts, onSdProgress);
   return falEdit(model, prompt, inputs);
 }
 

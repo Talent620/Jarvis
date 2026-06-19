@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { sdTxt2ImgBody, sdImg2ImgBody, parseSdImage, diagnoseSdError, localSdGenerate, parseSdModels, detectSd } from "../src/lib/localImage";
+import { sdTxt2ImgBody, sdImg2ImgBody, parseSdImage, diagnoseSdError, localSdGenerate, parseSdModels, detectSd, parseSdProgress } from "../src/lib/localImage";
 import { store } from "../src/lib/store";
 
 beforeEach(() => {
@@ -84,6 +84,16 @@ describe("localImage — localSdGenerate", () => {
     vi.stubGlobal("fetch", async () => new Response("nope", { status: 500 }));
     const r = await localSdGenerate("x");
     expect("error" in r && r.error).toMatch(/500|--api/);
+  });
+});
+
+describe("localImage — parseSdProgress", () => {
+  it("zwraca progress 0..1 i przycina poza zakres", () => {
+    expect(parseSdProgress({ progress: 0.42 })).toBe(0.42);
+    expect(parseSdProgress({ progress: 1.5 })).toBe(1);
+    expect(parseSdProgress({ progress: -0.2 })).toBe(0);
+    expect(parseSdProgress({})).toBe(0);
+    expect(parseSdProgress(null)).toBe(0);
   });
 });
 

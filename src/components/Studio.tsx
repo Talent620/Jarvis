@@ -66,6 +66,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
   const [sdSteps, setSdSteps] = useState(28);
   const [sdSize, setSdSize] = useState(1024);
   const [sdDenoise, setSdDenoise] = useState(0.6);
+  const [sdProgress, setSdProgress] = useState(0); // 0..1, postęp lokalnego generowania
 
   const result = history[history.length - 1] || null;
   const before = inputs[0] || null; // zdjęcie wejściowe do porównania
@@ -80,7 +81,9 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setErr("");
     const sdOpts = model === "local-sd" ? { steps: sdSteps, width: sdSize, height: sdSize, denoising: sdDenoise } : undefined;
-    const r = await generateImage(text, ins.length ? ins : undefined, model, sdOpts);
+    if (model === "local-sd") setSdProgress(0);
+    const r = await generateImage(text, ins.length ? ins : undefined, model, sdOpts, model === "local-sd" ? setSdProgress : undefined);
+    setSdProgress(0);
     if ("error" in r) setErr(humanizeImageError(r.error, model));
     else {
       setHistory((h) => [...h, r]);
@@ -198,8 +201,15 @@ export default function Studio({ onClose }: { onClose: () => void }) {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn" style={{ flex: 1 }} onClick={attach}>📷 Dołącz zdjęcie{inputs.length ? ` (${inputs.length})` : ""}</button>
-            <button className="btn primary" style={{ flex: 1 }} onClick={gen} disabled={busy}>{busy ? "Tworzę…" : "✨ Przerób"}</button>
+            <button className="btn primary" style={{ flex: 1 }} onClick={gen} disabled={busy}>
+              {busy ? (model === "local-sd" && sdProgress > 0 ? `Tworzę… ${Math.round(sdProgress * 100)}%` : "Tworzę…") : "✨ Przerób"}
+            </button>
           </div>
+          {busy && model === "local-sd" && (
+            <div style={{ height: 4, background: "rgba(108,231,255,.15)", borderRadius: 4, overflow: "hidden", margin: "2px 0 6px" }}>
+              <div style={{ height: "100%", width: `${Math.round(sdProgress * 100)}%`, background: "var(--cyan)", transition: "width .3s" }} />
+            </div>
+          )}
           {err && <p className="notice">⚠ {err}</p>}
 
           {/* Wynik + porównanie przed/po */}
