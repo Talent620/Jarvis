@@ -1,5 +1,6 @@
 import { runTool } from "../tools";
 import { fetchTimeout, appTokenHeader } from "../http";
+import { OAIStreamAccumulator, drainSSE } from "../stream";
 import type { AskCtx, JarvisReply } from "./types";
 
 interface OAIMessage {
@@ -47,38 +48,83 @@ export function makeOpenAICompatible(
     let inTok = 0;
     let outTok = 0;
     let guard = 0;
+    let canStream = !!ctx.onToken; // strumieniujemy tylko, gdy caller chce deltami
 
-    while (guard++ < 8) {
-      const res = await fetchTimeout(url, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${ctx.apiKey}`,
-          ...opts.extraHeaders,
-          ...(ctx.proxyUrl ? appTokenHeader() : {}),
-        },
-        // tool_choice/tools tylko gdy faktycznie mamy narzędzia — część API (Groq,
-        // OpenRouter, NVIDIA) odrzuca puste „tools" z „tool_choice: auto".
-        body: JSON.stringify({
-          model,
-          messages,
-          ...(hasTools ? { tools, tool_choice: "auto" } : {}),
-          max_tokens: 2048,
-        }),
-      }, 120000);
-      // Brama/proxy może oddać HTML zamiast JSON — parsuj bezpiecznie i dołącz
-      // kod statusu, by rotacja klucza / fallback dostawcy rozpoznały błąd.
+    const headers = {
+      "content-type": "application/json",
+      authorization: `Bearer ${ctx.apiKey}`,
+      ...opts.extraHeaders,
+      ...(ctx.proxyUrl ? appTokenHeader() : {}),
+    };
+    const baseBody = { model, messages, ...(hasTools ? { tools, tool_choice: "auto" } : {}), max_tokens: 2048 };
+
+    // Pełna odpowiedź (bez strumienia) — ścieżka klasyczna / fallback.
+    const requestFull = async (): Promise<OAIMessage> => {
+      const res = await fetchTimeout(url, { method: "POST", headers, body: JSON.stringify(baseBody) }, 120000);
+      // Brama/proxy może oddać HTML zamiast JSON — parsuj bezpiecznie i dołącz kod statusu.
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
+      if (data.usage) { inTok += data.usage.prompt_tokens || 0; outTok += data.usage.completion_tokens || 0; }
+      const m: OAIMessage | undefined = data.choices?.[0]?.message;
+      if (!m) throw new Error("Pusta odpowiedź modelu.");
+      return m;
+    };
 
-      // Telemetria tokenów (sumuj przez całą turę, łącznie z iteracjami narzędzi).
-      if (data.usage) {
-        inTok += data.usage.prompt_tokens || 0;
-        outTok += data.usage.completion_tokens || 0;
+    // Strumieniowanie (SSE) — treść leci deltami przez ctx.onToken; narzędzia składamy z fragmentów.
+    const requestStream = async (): Promise<OAIMessage> => {
+      const res = await fetchTimeout(
+        url,
+        { method: "POST", headers, body: JSON.stringify({ ...baseBody, stream: true, stream_options: { include_usage: true } }) },
+        120000,
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
       }
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("stream-unsupported"); // brak strumienia → fallback do pełnej
+      const dec = new TextDecoder();
+      const acc = new OAIStreamAccumulator();
+      let buf = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const { events, rest } = drainSSE(buf);
+        buf = rest;
+        for (const ev of events) {
+          const delta = acc.push(ev);
+          if (delta) ctx.onToken?.(delta);
+        }
+      }
+      const tail = drainSSE(buf + "\n\n");
+      for (const ev of tail.events) {
+        const delta = acc.push(ev);
+        if (delta) ctx.onToken?.(delta);
+      }
+      if (acc.usage) { inTok += acc.usage.inputTokens; outTok += acc.usage.outputTokens; }
+      const tcs = acc.toolCalls();
+      return {
+        role: "assistant",
+        content: acc.content || null,
+        ...(tcs.length ? { tool_calls: tcs.map((t) => ({ id: t.id, type: "function", function: { name: t.name, arguments: t.arguments } })) } : {}),
+      };
+    };
 
-      const msg: OAIMessage | undefined = data.choices?.[0]?.message;
-      if (!msg) throw new Error("Pusta odpowiedź modelu.");
+    while (guard++ < 8) {
+      let msg: OAIMessage;
+      try {
+        msg = canStream ? await requestStream() : await requestFull();
+      } catch (e) {
+        const em = e instanceof Error ? e.message : String(e);
+        // Hiccup strumienia (nie sieć/timeout) → zdegraduj do pełnej odpowiedzi, by NIE zawieść tury.
+        if (canStream && !/timeout|abort|failed to fetch|load failed|network/i.test(em)) {
+          canStream = false;
+          msg = await requestFull();
+        } else {
+          throw e;
+        }
+      }
       messages.push(msg);
 
       if (msg.tool_calls?.length) {

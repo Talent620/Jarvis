@@ -430,7 +430,7 @@ export async function askModel(params: {
   throw new Error(humanize(lastErr instanceof Error ? lastErr.message : String(lastErr)));
 }
 
-export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
+export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void): Promise<JarvisReply> {
   const resolved = resolveProvider();
   if (!resolved) {
     throw new Error(
@@ -521,7 +521,13 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
       const apiKey = keys[j];
       const t0 = Date.now();
       try {
-        const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model }));
+        // Strumieniowanie: akumulator PER PRÓBA — przy failoverze tekst resetuje się czysto
+        // (App pokazuje zawsze cumulatywny tekst aktualnego dostawcy, bez sklejania prób).
+        let streamed = "";
+        const onTok = onToken
+          ? (delta: string) => { streamed += delta; onToken(streamed); }
+          : undefined;
+        const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model, onToken: onTok }));
         providerBreaker.onSuccess(provider); // udało się — zamknij bezpiecznik
         recordLatency("provider:" + provider, Date.now() - t0, true, model);
         const citations = getCitations();

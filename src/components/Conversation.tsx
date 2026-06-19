@@ -135,7 +135,7 @@ export default function Conversation({
               alt="załączone zdjęcie"
             />
           )}
-          {m.role === "assistant" ? <TypeText text={m.text} animate={m.id === liveId} /> : m.text}
+          {m.role === "assistant" ? <TypeText text={m.text} animate={m.id === liveId && !m.streamed} /> : m.text}
           {m.tools && m.tools.length > 0 && (
             <div className="tools">
               {m.tools.map((t) => (

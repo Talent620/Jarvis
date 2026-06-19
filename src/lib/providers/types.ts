@@ -40,6 +40,9 @@ export interface AskCtx {
   /** Tryb szybki — pomija „głębokie myślenie" (niższa jakość, dużo niższe
    *  opóźnienie). Do zadań prostych/czasowo wrażliwych, np. tłumaczenia na żywo. */
   fast?: boolean;
+  /** Callback strumieniowania: wywoływany z każdą deltą tekstu w miarę generowania.
+   *  Gdy podany, adapter streamuje odpowiedź (jeśli potrafi); inaczej zwraca całość naraz. */
+  onToken?: (delta: string) => void;
 }
 
 export type ProviderImpl = (ctx: AskCtx) => Promise<JarvisReply>;

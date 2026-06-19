@@ -21,6 +21,8 @@ export interface ChatMessage {
   citations?: Citation[];
   /** Wynik Trybu Konsylium (kilka modeli + ocena zgodności), jeśli użyty. */
   council?: { members: { label: string; text: string }[]; consensus: string; note: string };
+  /** Wiadomość pojawiła się strumieniowo (słowo-po-słowie) — nie animuj jej ponownie maszyną do pisania. */
+  streamed?: boolean;
   createdAt: number;
 }
 

@@ -411,8 +411,21 @@ export default function App() {
       const useCouncil = !!wantCouncil && !image && !opts?.research && councilMembers(3).length >= 2;
       if (useCouncil) setCouncilStep(`⚖ Konsylium — pytam ${councilMembers(3).length} modele…`);
       let reply;
+      // Strumieniowanie: bąbel tworzymy LENIWIE przy pierwszym tokenie — dostawcy bez
+      // streamingu zachowują się dokładnie jak dotąd (bez pustego bąbla, zero regresji).
+      let streamId = "";
+      const onTok = (full: string) => {
+        if (!isCurrent(genToken)) return;
+        if (!streamId) {
+          streamId = uid();
+          setLiveId(streamId);
+          setMessages((m) => [...m, { id: streamId, role: "assistant", text: full, streamed: true, createdAt: Date.now() }]);
+        } else {
+          setMessages((m) => m.map((x) => (x.id === streamId ? { ...x, text: full } : x)));
+        }
+      };
       try {
-        reply = useCouncil ? await askCouncil(history) : await askJarvis(history);
+        reply = useCouncil ? await askCouncil(history) : await askJarvis(history, onTok);
       } finally {
         setCouncilStep(null);
       }
@@ -425,17 +438,28 @@ export default function App() {
         const label = PROVIDERS[r.via as keyof typeof PROVIDERS]?.label || r.via;
         toast(`🔄 Główny mózg był zajęty — odpowiedział zapasowy: ${label}`);
       }
-      const aiMsg: ChatMessage = {
-        id: uid(),
-        role: "assistant",
-        text: reply.text,
-        tools: reply.tools,
-        citations: reply.citations,
-        council: (reply as Partial<CouncilReply>).council,
-        createdAt: Date.now(),
-      };
-      setLiveId(aiMsg.id);
-      setMessages((m) => [...m, aiMsg]);
+      if (streamId) {
+        // Tekst już przyleciał strumieniowo — domknij tę samą wiadomość (narzędzia/cytaty/finalny tekst).
+        const sid = streamId;
+        setMessages((m) =>
+          m.map((x) =>
+            x.id === sid ? { ...x, text: reply.text, tools: reply.tools, citations: reply.citations } : x,
+          ),
+        );
+      } else {
+        // Dostawca bez strumienia (np. konsylium/obraz) — utwórz wiadomość jak dotąd.
+        const aiMsg: ChatMessage = {
+          id: uid(),
+          role: "assistant",
+          text: reply.text,
+          tools: reply.tools,
+          citations: reply.citations,
+          council: (reply as Partial<CouncilReply>).council,
+          createdAt: Date.now(),
+        };
+        setLiveId(aiMsg.id);
+        setMessages((m) => [...m, aiMsg]);
+      }
 
       if (store.settings.speak) {
         setOrb("speaking");
