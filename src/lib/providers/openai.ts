@@ -58,11 +58,15 @@ export function makeOpenAICompatible(
     };
     // extraBody płytko domieszane — domyślnie puste (zero zmian dla pozostałych dostawców);
     // Ollama dokłada tu keep_alive/options (Zadanie 4).
-    const baseBody = { model, messages, ...(hasTools ? { tools, tool_choice: "auto" } : {}), max_tokens: 2048, ...(opts.extraBody || {}) };
+    // Niektóre modele lokalne (np. dolphin-mistral) NIE obsługują narzędzi i odrzucają request
+    // z `tools` błędem 400. Trzymamy to przełączalnie i przy takim błędzie ponawiamy BEZ tools.
+    let useTools = hasTools;
+    const body = (): Record<string, unknown> =>
+      ({ model, messages, ...(useTools ? { tools, tool_choice: "auto" } : {}), max_tokens: 2048, ...(opts.extraBody || {}) });
 
     // Pełna odpowiedź (bez strumienia) — ścieżka klasyczna / fallback.
     const requestFull = async (): Promise<OAIMessage> => {
-      const res = await fetchTimeout(url, { method: "POST", headers, body: JSON.stringify(baseBody) }, 120000);
+      const res = await fetchTimeout(url, { method: "POST", headers, body: JSON.stringify(body()) }, 120000);
       // Brama/proxy może oddać HTML zamiast JSON — parsuj bezpiecznie i dołącz kod statusu.
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
@@ -76,7 +80,7 @@ export function makeOpenAICompatible(
     const requestStream = async (): Promise<OAIMessage> => {
       const res = await fetchTimeout(
         url,
-        { method: "POST", headers, body: JSON.stringify({ ...baseBody, stream: true, stream_options: { include_usage: true } }) },
+        { method: "POST", headers, body: JSON.stringify({ ...body(), stream: true, stream_options: { include_usage: true } }) },
         120000,
       );
       if (!res.ok) {
@@ -119,6 +123,12 @@ export function makeOpenAICompatible(
         msg = canStream ? await requestStream() : await requestFull();
       } catch (e) {
         const em = e instanceof Error ? e.message : String(e);
+        // Model bez obsługi narzędzi (np. dolphin-mistral, wiele uncensored) → ponów BEZ tools,
+        // zamiast wywalać całą turę błędem 400 „does not support tools".
+        if (useTools && /does not support tools|tool.?use.*not support|not support.*tool|tools? (are )?not (yet )?support/i.test(em)) {
+          useTools = false;
+          continue;
+        }
         // Hiccup strumienia (nie sieć/timeout) → zdegraduj do pełnej odpowiedzi, by NIE zawieść tury.
         if (canStream && !/timeout|abort|failed to fetch|load failed|network/i.test(em)) {
           canStream = false;
