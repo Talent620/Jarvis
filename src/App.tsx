@@ -695,7 +695,9 @@ export default function App() {
   useEffect(() => {
     const tick = setInterval(async () => {
       const st = store.settings;
-      if (!st.autoProspect || !st.tavilyApiKey?.trim() || !st.prospectNiche?.trim()) return;
+      // Auto-prospekting używa DARMOWEGO źródła (OpenStreetMap) — nie wymaga klucza Tavily ani niszy.
+      // Wystarczy włączone + znane miasto (nisza jest opcjonalna; bez niej szukamy szeroko).
+      if (!st.autoProspect || !st.prospectLocation?.trim()) return;
       const last = Number(localStorage.getItem("jarvis.prospect.ts") || 0);
       if (Date.now() - last < 4 * 3600 * 1000) return; // ~6×/dzień
       localStorage.setItem("jarvis.prospect.ts", String(Date.now()));
@@ -703,9 +705,10 @@ export default function App() {
       if (r.added) {
         const id = uid();
         setLiveId(id);
+        const where = [st.prospectNiche?.trim(), st.prospectLocation?.trim()].filter(Boolean).join(", ");
         setMessages((m) => [
           ...m,
-          { id, role: "assistant", text: `📈 Automat sprzedaży: znalazłem ${r.added} nowych leadów (${st.prospectNiche}, ${st.prospectLocation}). Są w Pulpicie Sprzedaży (⋯ → 📈).`, tools: ["prospect"], createdAt: Date.now() },
+          { id, role: "assistant", text: `📈 Automat sprzedaży: znalazłem ${r.added} nowych leadów${where ? ` (${where})` : ""}. Są w Pulpicie Sprzedaży (⋯ → 📈).`, tools: ["prospect"], createdAt: Date.now() },
         ]);
       }
     }, 60000);

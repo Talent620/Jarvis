@@ -35,6 +35,8 @@ export function divergence(a: string, b: string): number {
 export function shouldCorrect(localText: string, cortexText: string, threshold = 0.5): boolean {
   if (!localText.trim()) return true;
   if (!cortexText.trim()) return false;
+  // Draft zbyt krótki/stopwordowy (zero tokenów) — Jaccard nic nie powie; zaufaj weryfikatorowi (Kora).
+  if (tokens(localText).size === 0) return true;
   return divergence(localText, cortexText) >= threshold;
 }
 

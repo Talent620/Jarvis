@@ -26,6 +26,12 @@ describe("speculative — shouldCorrect", () => {
   it("rozbieżne → korekta", () => {
     expect(shouldCorrect("odpowiedź A o kotach", "zupełnie inna B o samochodach silnikach", 0.5)).toBe(true);
   });
+  it("draft zbyt krótki/stopwordowy (zero tokenów) → korekta z Kory", () => {
+    // „Nie"/„Ok" → zero tokenów (stop-word / <3 znaki). Bez poprawki dawały divergence 0 = „zgodne"
+    // i zostawiały draft; teraz, gdy draftu nie da się porównać, ufamy Korze (poprawność > oszczędność).
+    expect(shouldCorrect("Nie.", "Ok.", 0.5)).toBe(true);
+    expect(shouldCorrect("Ok", "Nie", 0.5)).toBe(true);
+  });
 });
 
 describe("speculative — speculativeAnswer (orkiestracja)", () => {

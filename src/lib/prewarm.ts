@@ -17,10 +17,11 @@ export function shouldPrewarm(now = Date.now()): boolean {
   return now - lastPrewarm >= THROTTLE_MS;
 }
 
-/** Model do rozgrzania: wybrany ręcznie (gdy dostawca = Ollama) albo domyślny lokalny. */
+/** Model do rozgrzania: wybrany ręcznie > nadpisanie modelu „prostego" (najczęstsza szybka tura) > domyślny. */
 export function prewarmModel(): string {
   const s = store.settings;
-  return s.provider === "ollama" && s.model && s.model !== "auto" ? s.model : PROVIDERS.ollama.defaultModel;
+  if (s.provider === "ollama" && s.model && s.model !== "auto") return s.model;
+  return s.ollamaModelSimple?.trim() || PROVIDERS.ollama.defaultModel;
 }
 
 /**

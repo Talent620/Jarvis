@@ -78,7 +78,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   };
 
   // Licznik działań na dziś (do plakietki na przycisku planu).
-  const todoCount = (callNowList(leads).length ? 1 : 0) && (callNowList(leads).length + followUpsDue(leads).length);
+  const todoCount = callNowList(leads).length + followUpsDue(leads).length;
 
   // Eksport leadów do pliku CSV (Excel/Arkusze Google).
   const exportCsv = () => {
