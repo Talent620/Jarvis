@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent, sendTestEmail, sendAllOffers, isValidEmail, isSameDay, sentTodayCount, sentMailToCsv } from "../src/lib/mailer";
+import { canSendDirect, hasBackendGmail, sendOfferEmail, sendMailNow, verifyMailConnection, recordSent, sendTestEmail, sendAllOffers, isValidEmail, isSameDay, sentTodayCount, sentMailToCsv, explainMailReadiness, type MailFlags } from "../src/lib/mailer";
 import { store } from "../src/lib/store";
 import type { Lead } from "../src/types";
 
@@ -307,5 +307,41 @@ describe("verifyMailConnection — sprawdzenie połączenia", () => {
     const r = await verifyMailConnection();
     expect(r.ok).toBe(false);
     expect(r.message).toMatch(/Najpierw wpisz/);
+  });
+});
+
+describe("explainMailReadiness — diagnostyka „dlaczego nie idzie”", () => {
+  const base: MailFlags = { desktopSmtp: false, relay: false, backendGmail: false, isDesktop: false, mailCreds: false, backend: false };
+
+  it("desktop SMTP gotowy", () => {
+    const r = explainMailReadiness({ ...base, desktopSmtp: true, isDesktop: true });
+    expect(r.ready).toBe(true);
+    expect(r.channel).toBe("SMTP-desktop");
+  });
+
+  it("przekaźnik (telefon) gotowy", () => {
+    expect(explainMailReadiness({ ...base, relay: true, backend: true, mailCreds: true }).channel).toBe("SMTP-relay");
+  });
+
+  it("Gmail backend gotowy", () => {
+    expect(explainMailReadiness({ ...base, backendGmail: true, backend: true }).channel).toBe("Gmail-backend");
+  });
+
+  it("desktop bez danych poczty → instrukcja o haśle aplikacji", () => {
+    const r = explainMailReadiness({ ...base, isDesktop: true });
+    expect(r.ready).toBe(false);
+    expect(r.reason).toMatch(/hasło aplikacji/i);
+  });
+
+  it("telefon bez backendu → instrukcja o synchronizacji", () => {
+    const r = explainMailReadiness({ ...base, isDesktop: false });
+    expect(r.ready).toBe(false);
+    expect(r.reason).toMatch(/Synchronizacj/i);
+  });
+
+  it("telefon z backendem, bez danych poczty → poproś o pocztę/Gmaila", () => {
+    const r = explainMailReadiness({ ...base, backend: true });
+    expect(r.ready).toBe(false);
+    expect(r.reason).toMatch(/Poczta|Gmail/i);
   });
 });

@@ -38,6 +38,52 @@ export const canRelaySmtp = (): boolean => hasBackend() && mailConfigured() && !
 /** Czy w ogóle możemy wysłać mail bezpośrednio (desktop SMTP/Gmail, przekaźnik SMTP albo backend Gmail). */
 export const canSendDirect = (): boolean => canSendMail() || canRelaySmtp() || hasBackendGmail() || canSendGmailNative();
 
+// --- Diagnostyka gotowości wysyłki (jeden, czytelny powód „dlaczego nie idzie") ---
+
+export type MailChannel = "SMTP-desktop" | "SMTP-relay" | "Gmail-backend" | "none";
+
+export interface MailReadiness {
+  ready: boolean;
+  channel: MailChannel;
+  reason: string;
+}
+
+export interface MailFlags {
+  desktopSmtp: boolean; // canSendMail()
+  relay: boolean; // canRelaySmtp()
+  backendGmail: boolean; // hasBackendGmail()
+  isDesktop: boolean; // most Electrona obecny
+  mailCreds: boolean; // adres + hasło aplikacji
+  backend: boolean; // syncUrl + syncToken
+}
+
+/** Czysta logika: z flag → gotowość + JEDEN powód/instrukcja. Łatwa do testów. */
+export function explainMailReadiness(f: MailFlags): MailReadiness {
+  if (f.desktopSmtp) return { ready: true, channel: "SMTP-desktop", reason: "Gotowe — wysyłka SMTP (komputer)." };
+  if (f.relay) return { ready: true, channel: "SMTP-relay", reason: "Gotowe — wysyłka w tle przez backend (SMTP)." };
+  if (f.backendGmail) return { ready: true, channel: "Gmail-backend", reason: "Gotowe — wysyłka przez Gmail (backend)." };
+
+  if (f.isDesktop) {
+    return { ready: false, channel: "none", reason: "Wpisz adres e-mail i hasło aplikacji w ⚙ → Poczta (hasło aplikacji, nie zwykłe)." };
+  }
+  // Telefon/PWA:
+  if (!f.backend) return { ready: false, channel: "none", reason: "Dodaj backend w ⚙ → Synchronizacja (adres + token), potem dane poczty — telefon wyśle w tle." };
+  if (!f.mailCreds) return { ready: false, channel: "none", reason: "Masz backend — dodaj jeszcze adres + hasło aplikacji w ⚙ → Poczta (albo połącz Gmaila w ⚙ → Integracje)." };
+  return { ready: false, channel: "none", reason: "Brak gotowej wysyłki — sprawdź dane poczty (⚙ → Poczta) lub połącz Gmaila (⚙ → Integracje)." };
+}
+
+/** Gotowość wysyłki maili „tu i teraz" — z czytelnym powodem (do UI/diagnostyki). */
+export function mailReadiness(): MailReadiness {
+  return explainMailReadiness({
+    desktopSmtp: canSendMail(),
+    relay: canRelaySmtp(),
+    backendGmail: hasBackendGmail(),
+    isDesktop: typeof window !== "undefined" && !!(window as any).jarvisDesktop?.sendMail,
+    mailCreds: mailConfigured(),
+    backend: hasBackend(),
+  });
+}
+
 /** Niskopoziomowe wywołanie backendu (Bearer = token synchronizacji). */
 async function relayCall(path: string, payload: unknown): Promise<{ ok: boolean; error?: string }> {
   const s = store.settings;

@@ -19,7 +19,7 @@ import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode } from "../lib/privateMode";
 import { runProspecting } from "../lib/prospect";
-import { verifyMailConnection, sendTestEmail } from "../lib/mailer";
+import { verifyMailConnection, sendTestEmail, mailReadiness } from "../lib/mailer";
 import { enrollVoice } from "../lib/voiceEnroll";
 import { listMics, ensureMicPermission } from "../lib/mic";
 import FitnessPanel from "./FitnessPanel";
@@ -556,6 +556,21 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               )}
 
               <h3>📨 Poczta — wysyłka e-maili z aplikacji</h3>
+              {(() => {
+                // Diagnostyka „dlaczego nie idzie" — jeden czytelny powód (reaguje na zmiany w `s`).
+                const rd = mailReadiness();
+                return (
+                  <div
+                    className="status-row"
+                    style={{ borderRadius: 8, padding: "8px 10px", marginBottom: 8, border: `1px solid ${rd.ready ? "var(--ok,#62e6a8)" : "var(--line)"}` }}
+                  >
+                    <span style={{ fontSize: 13 }}>
+                      {rd.ready ? "✅ " : "⚠ "}
+                      <b>Wysyłka:</b> {rd.reason}
+                    </span>
+                  </div>
+                );
+              })()}
               <p className="muted">
                 Pozwala wysyłać oferty do leadów <b>jednym potwierdzeniem</b>, prosto z Teczki Klienta
                 (Windows). Dla Gmaila: włącz weryfikację dwuetapową, potem wygeneruj{" "}
