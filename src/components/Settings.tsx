@@ -220,6 +220,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
         `${r.pulled.length ? ` Pobrano na PC: ${r.pulled.join(", ")}.` : " Wszystkie modele już były."}`,
       );
       void loadOllamaModels();
+      void warmNow(); // rozgrzej, by pierwsza odpowiedź była natychmiastowa
       toast("🚀 Tryb premium lokalny gotowy.");
     } else {
       setMaestroMsg(`❌ ${r.error}`);
@@ -239,6 +240,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
       setS((prev) => ({ ...prev, ...store.settings }));
       const o = r.overrides;
       setMaestroMsg(`✅ Dobrane: ${o.simple || "—"} (szybki) · ${o.complex || "—"} (mądry)${o.vision ? ` · ${o.vision} (wizja)` : ""}${o.uncensored ? ` · ${o.uncensored} (bez cenzury)` : ""}. Włączony inteligentny routing.`);
+      void warmNow();
       toast("⚙ Skonfigurowano z Twoich modeli.");
     } else {
       setMaestroMsg(`❌ ${r.error}`);
