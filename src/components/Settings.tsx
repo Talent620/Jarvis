@@ -1081,6 +1081,18 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   <Toggle on={s.localRefine} onClick={() => set({ localRefine: !s.localRefine })} />
                 </div>
 
+                <div className="row">
+                  <span>
+                    🎯 Self-consistency (kilka prób, wybór najspójniejszej)
+                    <br />
+                    <span className="muted">
+                      Najtrudniejsze pytania: model lokalny odpowiada kilka razy, a JARVIS wybiera odpowiedź
+                      zgodną z większością własnych prób — odporność na halucynacje. Najwolniejsze (kilka razy dłużej).
+                    </span>
+                  </span>
+                  <Toggle on={s.localConsensus} onClick={() => set({ localConsensus: !s.localConsensus })} />
+                </div>
+
                 <div className="field">
                   <label>Okno kontekstu Ollamy (num_ctx): {s.ollamaNumCtx ?? 4096} tokenów</label>
                   <input

@@ -76,6 +76,7 @@ const defaultSettings: Settings = {
   adaptiveRouter: false,
   prewarmLocal: false,
   localRefine: false,
+  localConsensus: false,
   ollamaUrl: "",
   sdUrl: "",
   unfilteredLocal: false,

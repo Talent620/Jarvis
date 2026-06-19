@@ -16,6 +16,7 @@ import { buildFusionBlock } from "./contextFusion";
 import { estimateConfidence, isLowConfidence } from "./confidence";
 import { speculativeAnswer } from "./speculative";
 import { localRefine, critiqueInstruction } from "./localRefine";
+import { localSelfConsistency } from "./localConsensus";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
 import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
@@ -637,6 +638,21 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
             escalateFallback = { ...reply, via: provider, fellBack: provider !== primary };
             continue providerLoop; // spróbuj kolejnego (silniejszego) dostawcy
           }
+        }
+
+        // Self-consistency (premium): najtrudniejsze pytania — kilka prób lokalnych, wybierz
+        // najspójniejszą (odporność na halucynacje). Opt-in, tylko keyless+complex. Przed korektą.
+        if (store.settings.localConsensus && isKeyless(provider) && clsTop.kind === "complex" && reply.text?.trim()) {
+          try {
+            const cons = await localSelfConsistency({
+              first: reply,
+              run: () => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model }),
+            });
+            if (cons.samples > 1) {
+              reply = cons.reply;
+              logRouteDecision({ provider, model, kind: "complex", reason: `self-consistency: ${cons.samples} prób`, fellBack: provider !== primary, tier: "reflex" });
+            }
+          } catch { /* graceful — zostaje pierwsza odpowiedź */ }
         }
 
         // Drabina Mądrości (Z-premium): duży model lokalny SAM krytykuje i poprawia złożoną

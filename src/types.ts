@@ -387,6 +387,8 @@ export interface Settings {
   prewarmLocal: boolean;
   /** Drabina Mądrości: model lokalny sam krytykuje i poprawia złożoną odpowiedź (druga tura na PC). */
   localRefine: boolean;
+  /** Self-consistency: dla trudnych pytań model lokalny próbuje kilka razy, wybieramy najspójniejszą. */
+  localConsensus: boolean;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */
