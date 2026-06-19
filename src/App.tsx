@@ -436,7 +436,7 @@ export default function App() {
         else if (!flushTimer) { flushTimer = setTimeout(flushStream, 40); }
       };
       try {
-        reply = useCouncil ? await askCouncil(history) : await askJarvis(history, onTok);
+        reply = useCouncil ? await askCouncil(history) : await askJarvis(history, onTok, setCouncilStep);
       } finally {
         setCouncilStep(null);
       }

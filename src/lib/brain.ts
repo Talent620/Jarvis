@@ -476,7 +476,7 @@ export async function askModel(params: {
   throw new Error(humanize(lastErr instanceof Error ? lastErr.message : String(lastErr)));
 }
 
-export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void): Promise<JarvisReply> {
+export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void): Promise<JarvisReply> {
   const resolved = resolveProvider();
   if (!resolved) {
     throw new Error(
@@ -650,6 +650,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         // najspójniejszą (odporność na halucynacje). Opt-in, tylko keyless+complex. Przed korektą.
         if (store.settings.localConsensus && isKeyless(provider) && clsTop.kind === "complex" && reply.text?.trim()) {
           try {
+            onStatus?.("⟳ Sprawdzam kilka razy (spójność)…");
             const cons = await localSelfConsistency({
               first: reply,
               run: () => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model }),
@@ -658,13 +659,14 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
               reply = cons.reply;
               logRouteDecision({ provider, model, kind: "complex", reason: `self-consistency: ${cons.samples} prób`, fellBack: provider !== primary, tier: "reflex" });
             }
-          } catch { /* graceful — zostaje pierwsza odpowiedź */ }
+          } catch { /* graceful — zostaje pierwsza odpowiedź */ } finally { onStatus?.(null); }
         }
 
         // Drabina Mądrości (Z-premium): duży model lokalny SAM krytykuje i poprawia złożoną
         // odpowiedź — druga tura w całości na PC (działa też offline). Opt-in, tylko keyless+complex.
         if (store.settings.localRefine && isKeyless(provider) && clsTop.kind === "complex" && reply.text?.trim()) {
           try {
+            onStatus?.("⟳ Dopracowuję odpowiedź lokalnie…");
             const refined = await localRefine({
               draft: reply,
               runCritique: () => PROVIDERS[provider].impl({
@@ -678,7 +680,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
               reply = refined.reply;
               logRouteDecision({ provider, model, kind: "complex", reason: "Drabina Mądrości: lokalna samokorekta", fellBack: provider !== primary, tier: "reflex" });
             }
-          } catch { /* graceful — zostaje pierwsza odpowiedź lokalna */ }
+          } catch { /* graceful — zostaje pierwsza odpowiedź lokalna */ } finally { onStatus?.(null); }
         }
 
         const citations = getCitations();
