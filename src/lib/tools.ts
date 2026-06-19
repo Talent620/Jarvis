@@ -1,13 +1,13 @@
 import { store, uid } from "./store";
 import { fetchTimeout } from "./http";
 import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
-import { hasBackendGmail, canSendDirect, canSendGmailNative, sendTestEmail, sendAllOffers } from "./mailer";
+import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
 import { getWeather } from "./weather";
 import { scheduleReminder, scheduleTimer } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
 import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
-import { gmailSearch, gmailRead, gmailSend, gmailReply, gmailUnreadSummary, gcalList, gcalDay, gcalAdd } from "./google";
+import { gmailSearch, gmailRead, gmailReply, gmailUnreadSummary, gcalList, gcalDay, gcalAdd } from "./google";
 import { rememberFact } from "./memory";
 import { generateCards } from "./cards";
 import { runAutomation } from "./n8n";
@@ -821,21 +821,26 @@ const tools: Tool[] = [
   {
     def: {
       name: "gmail_send",
-      description: "Wyślij e-mail. Gdy konto Google jest połączone (natywnie na komputerze LUB backend) — wysyła automatycznie. W przeciwnym razie otwiera GOTOWĄ wiadomość do wysłania jednym kliknięciem. Zawsze działa — używaj śmiało, nie wspominaj o n8n.",
+      description: "Wyślij e-mail PROSTO Z JARVIS-a, bez wychodzenia z aplikacji — używa dowolnego skonfigurowanego kanału (SMTP komputera, przekaźnik SMTP przez backend, albo Gmail). Zapisuje w Skrzynce wysłanych. Dopiero gdy NIC nie jest skonfigurowane, otwiera gotową wiadomość. Zawsze działa — używaj śmiało, nie wspominaj o n8n.",
       input_schema: obj({ to: str("Adres odbiorcy"), subject: str("Temat"), body: str("Treść") }, ["to", "subject", "body"]),
     },
     run: async ({ to, subject, body }) => {
-      if (hasBackendGmail() || canSendGmailNative()) {
-        const r = await gmailSend(to, subject, body);
-        if (/^Wysłano/i.test(r)) return r;
-        // Niepołączone konto → gmailSend sam otwiera logowanie / prowadzi do połączenia — przekaż to.
-        if (/łączę|zezwól|logowania|Połącz konto Google|Client ID|Integracje/i.test(r)) return r;
-        // Realny błąd wysyłki → fallback: otwórz gotowy e-mail (zawsze działa).
-        const opened = await openCompose(to, subject, body);
-        return `${r} ${opened}`;
+      const addr = String(to || "").trim();
+      if (!isValidEmail(addr)) return `Adres „${addr}" nie wygląda na e-mail (przykład: firma@domena.pl).`;
+      // Inteligentny wybór kanału (SMTP/przekaźnik/Gmail) — wysyłka W APLIKACJI.
+      if (canSendDirect()) {
+        const r = await sendOfferEmail(addr, String(subject || ""), String(body || ""));
+        if (r.ok) return `✅ Wysłano e-mail do ${addr} (${r.via}). Zapisałem w 📤 Skrzynce wysłanych.`;
+        // Błąd „dokończ konfigurację" (połącz Google / hasło aplikacji) → poprowadź, zostań w aplikacji.
+        if (/Połącz|zezwól|Integracje|hasło aplikacji|Synchronizacj|Google|backend/i.test(r.error))
+          return `Nie wysłałem automatycznie: ${r.error}`;
+        // Realny błąd transportu → ostateczność: gotowa wiadomość.
+        const opened = await openCompose(addr, String(subject || ""), String(body || ""));
+        return `Automatyczna wysyłka nie wyszła (${r.error}). ${opened}`;
       }
-      // Brak skonfigurowanej wysyłki → od razu gotowy e-mail (najprostsza droga, bez konfiguracji).
-      return openCompose(to, subject, body);
+      // Nic nieskonfigurowane → gotowa wiadomość + jak włączyć wysyłkę bez wychodzenia z aplikacji.
+      const opened = await openCompose(addr, String(subject || ""), String(body || ""));
+      return `${opened} Aby następnym razem wysłać bez wychodzenia z JARVIS-a: ${mailReadiness().reason}`;
     },
   },
   {
