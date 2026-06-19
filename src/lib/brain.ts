@@ -13,20 +13,26 @@ import { classifyTask, logRouteDecision, GROQ_SCOUT, GROQ_KIMI } from "./modelRo
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
 import { recordEpisode } from "./episodicMemory";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
+import { withBackoff, CircuitBreaker } from "./resilience";
+import { logError, recordLatency } from "./errorLog";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
 
-// Jednorazowy retry przy chwilowym błędzie sieci.
+// Retry przy chwilowym błędzie sieci — z WYKŁADNICZYM backoffem + jitterem (do 2 ponowień).
+// Ponawiamy TYLKO błędy sieciowe (nie błędy klucza/limitu — te idą do rotacji/fallbacku wyżej).
 async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
-  try {
-    return await fn();
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (isNetworkError(msg)) {
-      await new Promise((r) => setTimeout(r, 700));
-      return fn();
-    }
-    throw e;
-  }
+  return withBackoff(fn, {
+    retries: 2,
+    baseMs: 600,
+    shouldRetry: (e) => isNetworkError(e instanceof Error ? e.message : String(e)),
+  });
+}
+
+// Bezpiecznik per-dostawca: po serii awarii pomijamy padniętego dostawcę na chwilę
+// (szybszy failover), z automatycznym „half-open" po cooldownie. Żyje w pamięci sesji.
+const providerBreaker = new CircuitBreaker(4, 30_000);
+/** Eksport do diagnostyki (stan bezpiecznika dostawcy). */
+export function providerBreakerState(provider: ProviderId): "closed" | "open" | "half" {
+  return providerBreaker.state(provider);
 }
 
 const PERSONAS: Record<string, string> = {
@@ -503,6 +509,9 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   let lastErr: unknown;
   for (let i = 0; i < order.length; i++) {
     const { provider, model } = order[i];
+    // Bezpiecznik: dostawcę „otwartego" (świeża seria awarii) pomijamy szybko — ale NIGDY nie
+    // zostawiamy pustego łańcucha (ostatniego z listy próbujemy zawsze, jako deska ratunku).
+    if (!providerBreaker.canPass(provider) && i < order.length - 1) continue;
     // Ollama autoryzuje się adresem serwera, nie kluczem; pozostali — listą kluczy.
     const keys = isKeyless(provider) ? ["local"] : orderedKeys(provider);
     if (!keys.length) continue;
@@ -510,8 +519,11 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
     let providerErr: unknown;
     for (let j = 0; j < keys.length; j++) {
       const apiKey = keys[j];
+      const t0 = Date.now();
       try {
         const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model }));
+        providerBreaker.onSuccess(provider); // udało się — zamknij bezpiecznik
+        recordLatency("provider:" + provider, Date.now() - t0, true, model);
         const citations = getCitations();
         // Ucz się w tle: wyłuskaj trwałe fakty z wymiany (nie blokuje odpowiedzi).
         void learnFromExchange(lastUser?.content || "", reply.text);
@@ -546,6 +558,7 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
         providerErr = e;
         lastErr = e;
         const msg = e instanceof Error ? e.message : String(e);
+        recordLatency("provider:" + provider, Date.now() - t0, false, model);
         // Błąd klucza (limit/autoryzacja): odłóż go i spróbuj NASTĘPNEGO klucza tego
         // samego dostawcy, zanim zejdziemy do kolejnego dostawcy.
         if (!isKeyless(provider) && isKeyError(msg)) {
@@ -556,6 +569,8 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
       }
     }
 
+    providerBreaker.onFailure(provider); // dostawca padł — przybliż otwarcie bezpiecznika
+    logError("provider:" + provider, providerErr, model);
     const msg = providerErr instanceof Error ? providerErr.message : String(providerErr);
     if (i < order.length - 1 && (shouldFallback(msg) || isNetworkError(msg))) continue; // następny dostawca
     throw new Error(humanize(msg));
