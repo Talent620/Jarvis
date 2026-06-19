@@ -51,7 +51,7 @@ function exportMarkdown(entries: JournalEntry[]) {
 export default function Journal({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
   const { data } = useStore();
-  const entries = data.journal || [];
+  const entries = useMemo(() => data.journal || [], [data.journal]);
   const [query, setQuery] = useState("");
   const [activeTag, setActiveTag] = useState("");
   const [editing, setEditing] = useState<JournalEntry | "new" | null>(null);

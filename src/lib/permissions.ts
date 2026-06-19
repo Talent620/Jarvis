@@ -36,14 +36,16 @@ export function riskOf(tool: string): Risk {
   return RISK[tool] ?? "write";
 }
 
+// Kolekcje store, do których trafiają dodania narzędzi (cofalne).
+type CollectionKey = "tasks" | "notes" | "reminders" | "shopping" | "calendar" | "scenes" | "memory" | "tally" | "journal" | "leads";
+
 // Mapa narzędzie -> kolekcja w store (dla cofania dodań)
-const UNDO_COLLECTION: Record<string, keyof typeof emptyCollections> = {
+const UNDO_COLLECTION: Record<string, CollectionKey> = {
   add_task: "tasks", add_note: "notes", add_reminder: "reminders",
   add_shopping_item: "shopping", add_calendar_event: "calendar",
   create_scene: "scenes", remember_fact: "memory", add_tally_item: "tally", add_journal_entry: "journal",
   save_lead: "leads",
 };
-const emptyCollections = { tasks: 1, notes: 1, reminders: 1, shopping: 1, calendar: 1, scenes: 1, memory: 1, tally: 1, journal: 1, leads: 1 };
 
 // --- Zgody (zapamiętane decyzje) ---
 const CONSENT_KEY = "jarvis.consents.v1";

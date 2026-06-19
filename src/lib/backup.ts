@@ -114,7 +114,7 @@ function dataDump(): Record<string, unknown> {
   const data: Record<string, unknown> = {};
   for (const c of COLLECTIONS) {
     data[c] = c === "memory"
-      ? (store.data.memory || []).map(({ embedding, ...rest }) => rest)
+      ? (store.data.memory || []).map(({ embedding: _embedding, ...rest }) => rest)
       : store.data[c];
   }
   return data;

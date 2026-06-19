@@ -18,10 +18,12 @@ import type { Lead } from "../types";
 export default function SalesPlan({ onClose, onLead }: { onClose: () => void; onLead?: (id: string) => void }) {
   useEscape(onClose);
   const { data } = useStore();
-  const leads = data.leads || [];
+  const leads = useMemo(() => data.leads || [], [data.leads]);
   const now = new Date();
   const [, force] = useState(0);
 
+  // `now` to świadomy snapshot z bieżącego renderu (użyty też niżej w etykietach) — memo na [leads].
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const callNow = useMemo(() => callNowList(leads, now).slice(0, 12), [leads]);
   const followUps = useMemo(() => followUpsDue(leads).slice(0, 12), [leads]);
   const fc = useMemo(() => pipelineForecast(leads), [leads]);

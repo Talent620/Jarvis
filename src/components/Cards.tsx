@@ -15,6 +15,8 @@ const GRADES: { g: Grade; label: string; color: string }[] = [
 export default function Cards({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
   const { data } = useStore();
+  // Przelicz statystyki przy zmianie fiszek (cardStats czyta store wewnątrz — dep to trigger).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const stats = useMemo(() => cardStats(), [data.flashcards]);
 
   const [mode, setMode] = useState<"home" | "review" | "make">("home");

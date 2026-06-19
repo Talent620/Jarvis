@@ -44,7 +44,7 @@ function numOrUndef(v: string): number | undefined {
 export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: () => void; onWeb?: () => void; onMoney?: () => void }) {
   useEscape(onClose);
   const { data } = useStore();
-  const leads = data.leads || [];
+  const leads = useMemo(() => data.leads || [], [data.leads]);
   const [filter, setFilter] = useState<LeadStatus | "all" | "call" | "emailed">("all");
   const [query, setQuery] = useState("");
   const [form, setForm] = useState({ company: "", contact: "", value: "" });
@@ -253,7 +253,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   }, [leads]);
 
   // Gorące leady (wysoki score z teczki) na górze — wiesz, do kogo dzwonić najpierw.
-  const sent = data.sentMail || [];
+  const sent = useMemo(() => data.sentMail || [], [data.sentMail]);
   // Liczniki CRM (pytania szefa): klienci / do dzwonienia / mailowani / odrzuceni.
   const crm = useMemo(() => ({
     call: leads.filter((l) => l.status === "new" || l.status === "contacted").length,

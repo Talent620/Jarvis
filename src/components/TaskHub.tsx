@@ -17,7 +17,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 export default function TaskHub({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
   const { data } = useStore();
-  const tasks = data.tasks || [];
+  const tasks = useMemo(() => data.tasks || [], [data.tasks]);
   const projects = data.projects || [];
   const [view, setView] = useState<View>("priority");
   const [activeProject, setActiveProject] = useState<string>("");

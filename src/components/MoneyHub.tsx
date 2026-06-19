@@ -9,7 +9,7 @@ import Guide from "./Guide";
 export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => void; onSales: () => void; onWeb: () => void }) {
   useEscape(onClose);
   const { data } = useStore();
-  const leads = data.leads || [];
+  const leads = useMemo(() => data.leads || [], [data.leads]);
   const [niche, setNiche] = useState("");
   const [platform, setPlatform] = useState("Instagram");
   const [out, setOut] = useState("");

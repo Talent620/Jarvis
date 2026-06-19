@@ -19,10 +19,12 @@ export default function Boot({ onDone }: { onDone: () => void }) {
     setTimeout(onDone, 420); // po fade-out
   };
 
+  // Splash uruchamiany raz przy montażu (timery sprzątane w cleanupie) — `finish` celowo poza deps.
   useEffect(() => {
     const tick = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 420);
     const done = setTimeout(finish, 1900);
     return () => { clearInterval(tick); clearTimeout(done); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
