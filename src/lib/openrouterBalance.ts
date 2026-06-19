@@ -3,6 +3,7 @@
 // żadnego doładowywania, nic nie obciąża karty.
 
 import { fetchTimeout } from "./http";
+import { dedupe } from "./resilience";
 
 export interface Credits {
   total: number; // przyznane środki (USD)
@@ -29,6 +30,11 @@ export function isLowBalance(remaining: number, thresholdUsd: number): boolean {
 export async function fetchOpenRouterCredits(apiKey: string): Promise<Credits | null> {
   const key = (apiKey || "").trim();
   if (!key) return null;
+  // Deduplikacja: równoległe otwarcia panelu kosztów współdzielą jedno zapytanie.
+  return dedupe("orcredits:" + key, () => fetchCreditsRaw(key));
+}
+
+async function fetchCreditsRaw(key: string): Promise<Credits | null> {
   try {
     const res = await fetchTimeout(
       "https://openrouter.ai/api/v1/credits",

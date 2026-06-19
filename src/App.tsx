@@ -26,7 +26,7 @@ import { startGeneration, cancelGeneration, isCurrent } from "./lib/generation";
 import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
 import PermissionDialog from "./components/PermissionDialog";
 import { lockIsSet } from "./lib/lock";
-import { Suspense, lazy } from "react";
+import { lazy } from "react";
 
 const Gadgets = lazy(() => import("./components/Gadgets"));
 const HudVision = lazy(() => import("./components/HudVision"));
@@ -72,7 +72,9 @@ import { syncFromSalesOs } from "./lib/salesOs";
 import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, type VoiceListener } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
+import ScreenBoundary from "./components/ScreenBoundary";
 import { getWeather } from "./lib/weather";
+import { buildDailyBriefing, briefingToText } from "./lib/dailyBriefing";
 import { feedback, buzz, cue } from "./lib/feedback";
 import { ensureNotifPerms, notify } from "./lib/notifications";
 import { registerIntents } from "./lib/intents";
@@ -108,31 +110,23 @@ function buildGreeting(): string {
 
 // Poranny raport: pora dnia + pogoda (best-effort) + kalendarz + zadania.
 async function buildBriefing(): Promise<string> {
-  const s = store.settings;
+  // Chief of Staff: strukturalny przegląd z istniejących danych (zadania/zaległości/projekty/
+  // rekomendacje) — logika w testowanym `dailyBriefing.ts`. Tu tylko doklejamy pogodę.
   const d = store.data;
-  const now = new Date();
-  const h = now.getHours();
-  const part = h < 12 ? "Dzień dobry" : h < 18 ? "Dobre popołudnie" : "Dobry wieczór";
-  const today = now.toISOString().slice(0, 10);
-  const tasks = d.tasks.filter((t) => !t.done);
-  const events = d.calendar.filter((e) => e.start.slice(0, 10) === today).sort((a, b) => a.start.localeCompare(b.start));
-  const parts = [`${part}, ${s.userName}. Oto Twój poranny raport.`];
+  const b = buildDailyBriefing(
+    { tasks: d.tasks, reminders: d.reminders, projects: d.projects, events: d.calendar },
+    Date.now(),
+    store.settings.userName,
+  );
+  let weather = "";
   try {
     const w = await getWeather();
-    if (w && !/nie udało|niedostęp/i.test(w)) parts.push(w);
+    if (w && !/nie udało|niedostęp/i.test(w)) weather = w;
   } catch {
     /* pomiń pogodę */
   }
-  parts.push(events.length ? `W kalendarzu na dziś: ${events.map((e) => e.title).slice(0, 6).join(", ")}.` : "Kalendarz na dziś jest pusty.");
-  if (tasks.length) {
-    const word = tasks.length === 1 ? "zadanie" : tasks.length < 5 ? "zadania" : "zadań";
-    const list = tasks.length <= 3 ? `: ${tasks.map((t) => t.title).join(", ")}` : "";
-    parts.push(`Masz ${tasks.length} ${word} do zrobienia${list}.`);
-  } else {
-    parts.push("Nie masz aktywnych zadań.");
-  }
-  parts.push("Miłego dnia.");
-  return parts.join(" ");
+  const text = briefingToText(b);
+  return weather ? `${text}\n🌤 ${weather}` : text;
 }
 
 const initialChat = (() => {
@@ -823,7 +817,7 @@ export default function App() {
             listenerRef.current?.stop();
             setShowVoice(true);
           }}
-          title="Tryb Słuchawki — rozmowa hands-free"
+          title="Tryb Słuchawki — rozmowa hands-free" aria-label="Tryb Słuchawki"
         >
           🎙
         </button>
@@ -834,12 +828,12 @@ export default function App() {
             listenerRef.current?.stop();
             setShowLive(true);
           }}
-          title="Rozmowa na żywo"
+          title="Rozmowa na żywo" aria-label="Rozmowa na żywo"
         >
           ☎
         </button>
         {messages.length > 0 && (
-          <button className="icon-btn" onClick={newChat} title="Nowa rozmowa">
+          <button className="icon-btn" onClick={newChat} title="Nowa rozmowa" aria-label="Nowa rozmowa">
             ＋
           </button>
         )}
@@ -848,6 +842,7 @@ export default function App() {
           onClick={togglePrivateChat}
           title={privateChat ? "Czat prywatny WŁĄCZONY — nie zapisuję. Kliknij, by wyłączyć." : "Czat prywatny (tymczasowy — nie trafia do historii)"}
           style={privateChat ? { color: "var(--gold)", borderColor: "var(--gold)" } : undefined}
+          aria-label="Czat prywatny"
           aria-pressed={privateChat}
         >
           🕶
@@ -855,7 +850,7 @@ export default function App() {
         {(() => {
           const n = notifySummary().total;
           return (
-            <button className="icon-btn" style={{ position: "relative" }} onClick={() => setShowNotifs(true)} title="Powiadomienia">
+            <button className="icon-btn" style={{ position: "relative" }} onClick={() => setShowNotifs(true)} title="Powiadomienia" aria-label="Powiadomienia">
               🔔
               {n > 0 && (
                 <span className="notif-badge" style={{ position: "absolute", top: 0, right: 0, minWidth: 16, height: 16, padding: "0 3px", borderRadius: 9, background: "#e0584f", color: "#fff", fontSize: 10, lineHeight: "16px", textAlign: "center", fontWeight: 700, boxSizing: "border-box" }}>
@@ -865,10 +860,10 @@ export default function App() {
             </button>
           );
         })()}
-        <button className="icon-btn" onClick={() => setShowMore(true)} title="Menu">
+        <button className="icon-btn" onClick={() => setShowMore(true)} title="Menu" aria-label="Menu">
           ⋯
         </button>
-        <button className="icon-btn" onClick={() => setShowSettings(true)} title="Ustawienia">
+        <button className="icon-btn" onClick={() => setShowSettings(true)} title="Ustawienia" aria-label="Ustawienia">
           ⚙
         </button>
       </div>
@@ -933,64 +928,64 @@ export default function App() {
 
       {showVoice && <HeadsetMode onClose={() => setShowVoice(false)} />}
       {showAdmin && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <AdminPanel onClose={() => setShowAdmin(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showCards && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <Cards onClose={() => setShowCards(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showTranscribe && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <Transcribe onClose={() => setShowTranscribe(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showProfile && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <Profile onClose={() => setShowProfile(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showDayPlan && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <DayPlan onClose={() => setShowDayPlan(false)} onSales={() => { setShowDayPlan(false); setShowSales(true); }} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showTasks && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <TaskHub onClose={() => setShowTasks(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showTranslator && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <Translator onClose={() => setShowTranslator(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showBargain && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <BargainHunter onClose={() => setShowBargain(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showWhereToBuy && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <WhereToBuy onClose={() => setShowWhereToBuy(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showShoppingList && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <ShoppingList onClose={() => setShowShoppingList(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showNotifs && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <Notifications
             onClose={() => setShowNotifs(false)}
             onTasks={() => { setShowNotifs(false); setShowTasks(true); }}
             onSales={() => { setShowNotifs(false); setShowSales(true); }}
             onCards={() => { setShowNotifs(false); setShowCards(true); }}
           />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {showPanels && <Panels onClose={() => setShowPanels(false)} />}
@@ -1008,13 +1003,13 @@ export default function App() {
         />
       )}
       {showMoney && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <MoneyHub
             onClose={() => setShowMoney(false)}
             onSales={() => { setShowMoney(false); setShowSales(true); }}
             onWeb={() => { setShowMoney(false); setShowWeb(true); }}
           />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showHelp && <Help onClose={() => setShowHelp(false)} />}
       {showMore && (
@@ -1054,64 +1049,64 @@ export default function App() {
         />
       )}
       {showStatus && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <SystemStatus onClose={() => setShowStatus(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showCosts && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <CostPanel onClose={() => setShowCosts(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showMemory && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <MemoryCenter onClose={() => setShowMemory(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showAudit && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <AuditLog onClose={() => setShowAudit(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showSent && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <SentBox onClose={() => setShowSent(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showContent && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <ContentStudio onClose={() => setShowContent(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showAds && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <AdStudio onClose={() => setShowAds(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showFaq && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <FAQ onClose={() => setShowFaq(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showStudio && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <Studio onClose={() => setShowStudio(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showWeb && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <WebStudio onClose={() => setShowWeb(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showGadgets && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <Gadgets onClose={() => setShowGadgets(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {showHud && (
-        <Suspense fallback={null}>
+        <ScreenBoundary>
           <HudVision onClose={() => setShowHud(false)} />
-        </Suspense>
+        </ScreenBoundary>
       )}
       {pendingConsent && (
         <PermissionDialog

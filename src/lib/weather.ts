@@ -1,5 +1,26 @@
 import { fetchTimeout } from "./http";
+import { dedupe } from "./resilience";
 // Pogoda przez Open-Meteo — darmowe, bez klucza API, działa z przeglądarki (CORS OK).
+// Odczyt: cache 10 min na UDANY wynik + deduplikacja równoległych wywołań (anty request-storm).
+
+let wxCache: { key: string; text: string; exp: number } | null = null;
+const WX_FAIL = /nie udało|niedostęp|niepełne/i;
+
+export async function getWeather(location?: string): Promise<string> {
+  const key = (location || "").trim().toLowerCase() || "__auto__";
+  const now = Date.now();
+  if (wxCache && wxCache.key === key && wxCache.exp > now) return wxCache.text;
+  return dedupe("weather:" + key, async () => {
+    const text = await fetchWeatherRaw(location);
+    if (!WX_FAIL.test(text)) wxCache = { key, text, exp: now + 600_000 }; // cache TYLKO sukces
+    return text;
+  });
+}
+
+/** Tylko do testów — wyczyść cache pogody. */
+export function __clearWeatherCache(): void {
+  wxCache = null;
+}
 
 const CODES: Record<number, string> = {
   0: "bezchmurnie",
@@ -53,7 +74,7 @@ function browserLocation(): Promise<Geo | null> {
   });
 }
 
-export async function getWeather(location?: string): Promise<string> {
+async function fetchWeatherRaw(location?: string): Promise<string> {
   let geo: Geo | null = null;
   if (location && location.trim()) geo = await geocode(location.trim());
   else geo = (await browserLocation()) || (await geocode("Warszawa"));
