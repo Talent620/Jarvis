@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { isOpenNow, openLabel, callNowList, followUpsDue, followUpMessage, markContacted, pipelineForecast, leadsToCsv, searchLeads, wasLeadEmailed } from "../src/lib/salesEngine";
+import { isOpenNow, openLabel, callNowList, followUpsDue, followUpMessage, markContacted, scheduleFollowUp, snoozeFollowUp, followUpDueAt, pipelineForecast, leadsToCsv, searchLeads, wasLeadEmailed } from "../src/lib/salesEngine";
 import type { SentMail } from "../src/types";
 import { rankRawLeads } from "../src/lib/leads";
 import { store, uid } from "../src/lib/store";
@@ -140,6 +140,41 @@ describe("silnik follow-upów", () => {
     markContacted("L1", true);
     l = store.data.leads[0];
     expect(l.followUpCount).toBe(1);
+  });
+
+  it("markContacted AUTOMATYCZNIE planuje następny follow-up (kadencja z ustawień)", () => {
+    store.setSettings({ followUpDays: 5 });
+    store.setData((d) => { d.leads = [lead({ id: "L1", status: "new" })]; });
+    const before = Date.now();
+    markContacted("L1");
+    const l = store.data.leads[0];
+    expect(l.nextFollowUpAt).toBeGreaterThanOrEqual(before + 5 * 86400000 - 1000);
+    store.setSettings({ followUpDays: 3 }); // przywróć domyślną kadencję
+  });
+
+  it("nextFollowUpAt ma pierwszeństwo nad regułą co-N-dni", () => {
+    const now = Date.UTC(2026, 5, 15, 10, 0, 0);
+    store.setData((d) => {
+      d.leads = [
+        lead({ id: "S", company: "Zaplanowany na jutro", status: "contacted", lastContactedAt: now - 9 * 86400000, nextFollowUpAt: now + 86400000 }), // mimo starego kontaktu — jeszcze nie czas
+        lead({ id: "D", company: "Zaplanowany na wczoraj", status: "offer", lastContactedAt: now, nextFollowUpAt: now - 86400000 }), // termin minął → due
+      ];
+    });
+    const due = followUpsDue(store.data.leads, now);
+    expect(due.map((l) => l.company)).toEqual(["Zaplanowany na wczoraj"]);
+  });
+
+  it("scheduleFollowUp i snoozeFollowUp ustawiają termin", () => {
+    store.setData((d) => { d.leads = [lead({ id: "L1", status: "contacted" })]; });
+    scheduleFollowUp("L1", 123456);
+    expect(store.data.leads[0].nextFollowUpAt).toBe(123456);
+    snoozeFollowUp("L1", 2, 1000);
+    expect(store.data.leads[0].nextFollowUpAt).toBe(1000 + 2 * 86400000);
+  });
+
+  it("followUpDueAt: zaplanowany termin albo kontakt + N dni", () => {
+    expect(followUpDueAt(lead({ nextFollowUpAt: 999 }), 3)).toBe(999);
+    expect(followUpDueAt(lead({ lastContactedAt: 0 }), 3)).toBe(3 * 86400000);
   });
 });
 

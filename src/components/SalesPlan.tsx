@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useStore } from "../hooks/useStore";
-import { callNowList, followUpsDue, followUpMessage, markContacted, pipelineForecast, openLabel } from "../lib/salesEngine";
+import { callNowList, followUpsDue, followUpMessage, markContacted, snoozeFollowUp, pipelineForecast, openLabel } from "../lib/salesEngine";
 import { syncSalesTasks, autoPlanSummary } from "../lib/autoPlan";
 import { smsUrl, gmailComposeUrl, appendSignature } from "../lib/glinks";
 import { store } from "../lib/store";
@@ -129,6 +129,7 @@ export default function SalesPlan({ onClose, onLead }: { onClose: () => void; on
                   {email(l) && <button className="chip" onClick={() => sendFollowUp(l, "gmail")}>✉ Gmail</button>}
                   <button className="chip" onClick={() => copyFollowUp(l)}>📋 Kopiuj</button>
                   <button className="chip" onClick={() => sendFollowUp(l, "done")}>✅ Wysłane</button>
+                  <button className="chip" onClick={() => { snoozeFollowUp(l.id, 3); toast("⏰ Przełożone o 3 dni."); }} title="Przełóż follow-up o 3 dni">⏰ Przełóż</button>
                 </div>
               </div>
             ))

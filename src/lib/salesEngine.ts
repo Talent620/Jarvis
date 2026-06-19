@@ -123,19 +123,46 @@ export function wasLeadEmailed(lead: Lead, sent: SentMail[]): boolean {
 
 // --- 3. Follow-upy — ponaglenia, które domykają sprzedaż ---
 const DAY_MS = 24 * 60 * 60 * 1000;
-const FOLLOWUP_AFTER_DAYS = 3; // odstęp między kontaktami
+const FOLLOWUP_AFTER_DAYS = 3; // domyślny odstęp między kontaktami (gdy brak ustawienia)
 const MAX_FOLLOWUPS = 4;       // po tylu odpuszczamy (nie nękamy)
+
+/** Kadencja follow-upów z ustawień (dni). Domyślnie 3. */
+function followUpDays(): number {
+  const d = Number(store.settings.followUpDays);
+  return d > 0 ? d : FOLLOWUP_AFTER_DAYS;
+}
+
+/** Efektywny termin następnego follow-upu: zaplanowany (`nextFollowUpAt`) albo „kontakt + N dni". Czysta. */
+export function followUpDueAt(lead: Lead, days = followUpDays()): number {
+  if (typeof lead.nextFollowUpAt === "number") return lead.nextFollowUpAt;
+  return (lead.lastContactedAt ?? lead.updatedAt) + days * DAY_MS;
+}
 
 /** Leady, które dziś wymagają ponaglenia (zaczepione, brak odpowiedzi, nie za często). */
 export function followUpsDue(leads: Lead[], now = Date.now()): Lead[] {
+  const days = followUpDays();
   return leads
     .filter((l) => {
       if (l.status !== "contacted" && l.status !== "offer") return false;
       if ((l.followUpCount ?? 0) >= MAX_FOLLOWUPS) return false;
-      const since = l.lastContactedAt ?? l.updatedAt;
-      return now - since >= FOLLOWUP_AFTER_DAYS * DAY_MS;
+      return now >= followUpDueAt(l, days);
     })
-    .sort((a, b) => (a.lastContactedAt ?? a.updatedAt) - (b.lastContactedAt ?? b.updatedAt));
+    .sort((a, b) => followUpDueAt(a, days) - followUpDueAt(b, days));
+}
+
+/** Zaplanuj następny follow-up na konkretny moment (autonomia: JARVIS sam planuje kadencję). */
+export function scheduleFollowUp(leadId: string, whenMs: number): void {
+  store.setData((d) => {
+    const l = d.leads.find((x) => x.id === leadId);
+    if (!l) return;
+    l.nextFollowUpAt = whenMs;
+    l.updatedAt = Date.now();
+  });
+}
+
+/** Przełóż follow-up o N dni od teraz (drzemka „nie dziś"). */
+export function snoozeFollowUp(leadId: string, days = followUpDays(), now = Date.now()): void {
+  scheduleFollowUp(leadId, now + days * DAY_MS);
 }
 
 /** Treść kolejnego follow-upu (eskaluje delikatnie, nigdy nachalnie). Czysta funkcja. */
@@ -152,13 +179,17 @@ export function followUpMessage(lead: Lead, attempt: number): string {
 
 /** Oznacz lead jako zaczepiony (po wysłaniu maila/SMS/telefonie) — napędza follow-upy. */
 export function markContacted(leadId: string, isFollowUp = false): void {
+  const now = Date.now();
+  const days = followUpDays();
   store.setData((d) => {
     const l = d.leads.find((x) => x.id === leadId);
     if (!l) return;
-    l.lastContactedAt = Date.now();
+    l.lastContactedAt = now;
     if (isFollowUp) l.followUpCount = (l.followUpCount ?? 0) + 1;
     if (l.status === "new") l.status = "contacted";
-    l.updatedAt = Date.now();
+    // Autonomia: każdy kontakt automatycznie planuje następny follow-up wg kadencji.
+    l.nextFollowUpAt = now + days * DAY_MS;
+    l.updatedAt = now;
   });
 }
 

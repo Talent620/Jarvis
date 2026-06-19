@@ -1512,6 +1512,20 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <input value={s.prospectNiche} placeholder="Nisza (np. fryzjer)" onChange={(e) => set({ prospectNiche: e.target.value })} style={{ flex: 1 }} />
                 <input value={s.prospectLocation} placeholder="Miasto" onChange={(e) => set({ prospectLocation: e.target.value })} style={{ flex: 1 }} />
               </div>
+              <div className="field">
+                <label>Kadencja follow-upów: co {s.followUpDays} dni</label>
+                <input
+                  type="range"
+                  min={1}
+                  max={14}
+                  step={1}
+                  value={s.followUpDays}
+                  onChange={(e) => { const v = Number(e.target.value); set({ followUpDays: v }); store.setSettings({ followUpDays: v }); }}
+                />
+                <span className="muted" style={{ fontSize: 12 }}>
+                  Po każdym kontakcie JARVIS sam planuje następne ponaglenie za tyle dni. Niżej = częściej (ostrożnie, by nie nękać).
+                </span>
+              </div>
               <button
                 className="btn"
                 onClick={async () => {

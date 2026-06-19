@@ -277,6 +277,8 @@ export interface Lead {
   lastContactedAt?: number;
   /** Ile follow-upów (ponagleń) już wysłano. */
   followUpCount?: number;
+  /** Zaplanowany termin następnego follow-upu (ms). Gdy ustawiony, ma pierwszeństwo nad regułą „co N dni". */
+  nextFollowUpAt?: number;
   /** Skąd lead pochodzi (np. „salesos" = zsynchronizowany z AI Sales OS). */
   origin?: "salesos";
   /** Identyfikator leada w AI Sales OS (gdy origin = salesos) — do dwukierunkowej synchronizacji. */
@@ -468,6 +470,8 @@ export interface Settings {
   prospectLocation: string;
   /** Auto-pisanie szkiców ofert dla nowych leadów (czekają w Pulpicie). */
   autoDraftOffers: boolean;
+  /** Co ile dni planować kolejny follow-up po kontakcie (kadencja). Domyślnie 3. */
+  followUpDays: number;
   /** Natywny nasłuch słowa "Jarvis" w tle (uruchamia apkę głosem). */
   backgroundWake: boolean;
   /** Opcjonalny klucz ElevenLabs dla premium głosu JARVIS. */
