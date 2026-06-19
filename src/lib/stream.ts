@@ -1,8 +1,6 @@
 // Strumieniowanie odpowiedzi (SSE) dla API zgodnego z OpenAI. Akumulator składa fragmenty
 // treści i wywołań narzędzi przychodzące w deltach — testowalny niezależnie od sieci.
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 export interface StreamToolCall {
   id: string;
   name: string;

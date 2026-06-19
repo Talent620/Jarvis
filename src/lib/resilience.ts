@@ -32,7 +32,6 @@ export async function withBackoff<T>(fn: () => Promise<T>, opts: BackoffOpts = {
   const { retries = 2, baseMs = 400, factor = 2, maxMs = 5000, jitter = true, shouldRetry = () => true, sleepFn = defaultSleep } = opts;
   let attempt = 0;
   let lastErr: unknown;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
       return await fn();

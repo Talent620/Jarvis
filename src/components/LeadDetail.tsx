@@ -30,6 +30,9 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
   const lead = data.leads.find((l) => l.id === leadId);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  // Hooki MUSZĄ być przed wczesnym returnem (stała liczba/kolejność hooków co render).
+  const [sending, setSending] = useState(false);
+  const [osSending, setOsSending] = useState(false);
 
   if (!lead) return null;
   const intel = lead.intel;
@@ -61,7 +64,6 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
   };
 
   // Prawdziwa wysyłka jednym potwierdzeniem: desktop → SMTP, telefon → Gmail (backend).
-  const [sending, setSending] = useState(false);
   const sendNow = async () => {
     if (!email) { toast("Brak adresu e-mail firmy — użyj Gmaila i wpisz adres ręcznie."); return; }
     setSending(true);
@@ -85,7 +87,6 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
   };
 
   // Zleć AI Sales OS-owi napisanie i wysyłkę maila (treść + wysyłka po stronie CRM-u).
-  const [osSending, setOsSending] = useState(false);
   const sendViaSalesOs = async () => {
     if (!email) { toast("Brak adresu e-mail firmy — uzupełnij, by wysłać przez Sales OS."); return; }
     setOsSending(true);

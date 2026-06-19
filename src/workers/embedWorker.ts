@@ -11,8 +11,6 @@
 //   { type: "result", id, vectors }               → wektory (number[][])
 //   { type: "error", id?, message }               → błąd (caller spada do chmury)
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // Transformers.js ładowany z CDN (ESM) zamiast z bundla: biblioteka używa literałów BigInt,
 // których niski target buildu (es2019/safari13, dla zgodności starych WebView) nie skompiluje.
 // CDN serwuje nowoczesny build; wagi modelu i tak pochodzą z huba i są cache'owane w przeglądarce.

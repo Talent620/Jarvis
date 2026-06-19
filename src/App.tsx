@@ -296,7 +296,7 @@ export default function App() {
     const first = setTimeout(tick, 12_000);          // pierwszy szturchaniec ~12 s po starcie
     const iv = setInterval(tick, 90_000);            // potem co 90 s (silnik i tak ma anty-spam)
     return () => { clearTimeout(first); clearInterval(iv); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const attachImage = async () => {

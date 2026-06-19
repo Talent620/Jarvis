@@ -10,8 +10,6 @@
 //   { type: "result", id, text }      → odpowiedź
 //   { type: "error", id?, message }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 const WEBLLM_CDN = "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm";
 
 let enginePromise: Promise<any> | null = null;

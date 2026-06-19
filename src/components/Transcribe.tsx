@@ -62,7 +62,7 @@ export default function Transcribe({ onClose }: { onClose: () => void }) {
       stop();
       toast("Osiągnięto limit nagrania (10 min) — przetwarzam, co mam.");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [secs, phase]);
 
   const finish = async () => {

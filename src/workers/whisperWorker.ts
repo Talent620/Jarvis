@@ -5,8 +5,6 @@
 // Protokół: { type:"stt", id, audio:Float32Array, lang, model, device } → { type:"result", id, text }
 //           { type:"progress", pct } | { type:"ready" } | { type:"error", id?, message }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 const TRANSFORMERS_CDN = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1";
 
 let asrPromise: Promise<any> | null = null;

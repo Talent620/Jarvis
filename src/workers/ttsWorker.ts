@@ -4,8 +4,6 @@
 // Protokół: { type:"tts", id, text, voice, model, device } → { type:"result", id, wav:ArrayBuffer }
 //           { type:"progress", pct } | { type:"ready" } | { type:"error", id?, message }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 const KOKORO_CDN = "https://cdn.jsdelivr.net/npm/kokoro-js@1.2.0/+esm";
 
 let ttsPromise: Promise<any> | null = null;

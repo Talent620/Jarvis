@@ -7,7 +7,7 @@ export interface ExtractedDoc {
 // Ładuj pdf.js dopiero przy pierwszym dokumencie (code-splitting — lekki start).
 async function loadPdfjs() {
   const pdfjs = await import("pdfjs-dist");
-  // @ts-ignore — Vite zwróci URL workera jako string
+  // @ts-expect-error — Vite zwróci URL workera jako string
   const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default as string;
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
   return pdfjs;

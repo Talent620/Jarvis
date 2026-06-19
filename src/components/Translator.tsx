@@ -111,7 +111,7 @@ export default function Translator({ onClose }: { onClose: () => void }) {
     setListening(side);
   };
 
-  const tap = (side: "A" | "B") => { listening === side ? stop() : listen(side); };
+  const tap = (side: "A" | "B") => { if (listening === side) stop(); else listen(side); };
   const swap = () => { setA(b); setB(a); };
 
   const Picker = ({ val, set }: { val: string; set: (v: string) => void }) => (

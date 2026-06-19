@@ -544,7 +544,7 @@ function Recorder() {
     setSaved("Zapisano jako notatkę. Poproś JARVIS-a, by streścił ostatnią notatkę.");
   };
 
-  useEffect(() => () => stop(), []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => stop(), []);  
 
   if (!supported) return <p className="muted" style={{ paddingTop: 16 }}>Rozpoznawanie mowy niedostępne na tym urządzeniu.</p>;
 
@@ -795,7 +795,7 @@ function HeartRate() {
     }
   };
 
-  useEffect(() => () => stop(), []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => stop(), []);  
 
   // Mini-wykres sygnału (PPG) — pokazuje, że bije.
   const wavePath = (() => {

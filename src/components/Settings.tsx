@@ -170,7 +170,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
 
   const save = () => {
     // Jeśli zmieniono dostawcę, a model nie pasuje — zresetuj na domyślny.
-    let next = { ...s };
+    const next = { ...s };
     if (next.provider !== "auto") {
       const meta = PROVIDERS[next.provider as ProviderId];
       if (meta && next.model !== "auto" && !meta.models.some((m) => m.id === next.model)) {
