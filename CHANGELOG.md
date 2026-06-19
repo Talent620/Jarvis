@@ -14,6 +14,9 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
   lokalny model streamuje draft (widać tekst od razu), równolegle Kora weryfikuje. Zgodne (niska
   rozbieżność, Jaccard z lekkim stemmingiem PL) → tani lokalny draft; rozbieżne → korekta Kory.
   Padnie Kora → draft finalny (graceful). Orkiestracja z wstrzykiwalnymi runnerami (testowalna).
+- **Z10 — Konsylium Hybrydowe (`councilIncludeLocal`):** lokalny model (Ollama) dołącza jako DODATKOWY
+  głos w naradzie (na końcu listy — sędzia zostaje najlepszą Korą). `askMember` obsługuje keyless
+  (Ollama/WebLLM = „local"). Bez chmury + sam lokalny → narada degraduje do single (działa offline).
 
 ### „Refleks i Kora" — Część I (Fundament, Zadania 1–7)
 Dwuprędkościowy mózg: model lokalny (Refleks) staje się pełnym poziomem, nie tylko awaryjnym ogonem.

@@ -28,12 +28,19 @@ export interface CouncilReply extends JarvisReply {
   };
 }
 
-/** Do konsylium bierzemy do 3 RÓŻNYCH dostawców z kluczem, najwyżej ocenianych. */
+/** Do konsylium bierzemy do `max` RÓŻNYCH dostawców z kluczem, najwyżej ocenianych. */
 export function councilMembers(max = 3): CouncilMember[] {
-  return PROVIDER_LIST.filter((p) => p.id !== "ollama" && orderedKeys(p.id).length > 0)
+  const members = PROVIDER_LIST.filter((p) => p.id !== "ollama" && orderedKeys(p.id).length > 0)
     .sort((a, b) => b.rank - a.rank)
     .slice(0, max)
-    .map((p) => ({ provider: p.id, model: p.defaultModel, label: p.label.split(" (")[0] }));
+    .map((p) => ({ provider: p.id as ProviderId, model: p.defaultModel, label: p.label.split(" (")[0] }));
+  // Konsylium Hybrydowe (Z10): lokalny ekspert (darmowy, prywatny, działa offline) jako DODATKOWY
+  // głos na końcu listy. Dokłada różnorodność i kotwiczy naradę nawet bez sieci. Sędzia (members[0])
+  // zostaje najlepszą Korą, bo lokalnego dokładamy na koniec.
+  if (store.settings.councilIncludeLocal && store.settings.ollamaUrl?.trim()) {
+    members.push({ provider: "ollama", model: PROVIDERS.ollama.defaultModel, label: "Lokalny (prywatny)" });
+  }
+  return members;
 }
 
 const MEMBER_SYSTEM = (userName: string, facts: string): string =>
@@ -56,7 +63,8 @@ function withTimeout<T>(p: Promise<T>): Promise<T> {
 
 /** Zapytaj jednego członka konsylium (bez narzędzi — czyste rozumowanie). */
 async function askMember(m: CouncilMember, system: string, history: Msg[]): Promise<string | null> {
-  const apiKey = orderedKeys(m.provider)[0];
+  // Lokalni członkowie (Ollama/WebLLM) nie mają klucza — autoryzują się adresem serwera/WebGPU.
+  const apiKey = m.provider === "ollama" || m.provider === "webllm" ? "local" : orderedKeys(m.provider)[0];
   if (!apiKey) return null;
   try {
     const r = await withTimeout(

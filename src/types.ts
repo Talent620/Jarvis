@@ -371,6 +371,8 @@ export interface Settings {
   confidenceThreshold: number;
   /** Spekulacja: dla zadań complex lokalny draft + równoległa weryfikacja Korą (draft-then-verify). */
   speculativeMode: boolean;
+  /** Konsylium Hybrydowe: dołącz lokalny model (Ollama) jako dodatkowy głos w naradzie. */
+  councilIncludeLocal: boolean;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */
