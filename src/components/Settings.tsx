@@ -20,6 +20,7 @@ import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode, detectOllama } from "../lib/privateMode";
 import { pullOllamaModel } from "../lib/ollamaPull";
 import { applyPremiumSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
+import { detectSd } from "../lib/localImage";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
 import { clearRouteLog } from "../lib/modelRouter";
 import { toast } from "../lib/toast";
@@ -198,6 +199,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   // Tryb premium lokalny „pod klucz" — dobór modeli + auto-pobranie + inteligentny routing.
   const [maestroBusy, setMaestroBusy] = useState(false);
   const [maestroMsg, setMaestroMsg] = useState("");
+  const [sdChecking, setSdChecking] = useState(false);
+  const [sdMsg, setSdMsg] = useState("");
   const runMaestro = async (uncensored: boolean) => {
     if (maestroBusy) return;
     if (!store.settings.ollamaUrl?.trim()) { toast("Najpierw wpisz adres Ollamy (pole niżej)."); return; }
@@ -901,6 +904,24 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   podaj jego adres tutaj i w Studiu wybierz „Lokalny (Stable Diffusion)". Tworzenie obrazów dzieje się
                   wtedy na Twoim komputerze — za darmo, offline; zdalnie przez tę samą sieć lub Tailscale.
                 </p>
+                {s.sdUrl?.trim() && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                    <button
+                      className="btn"
+                      style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }}
+                      disabled={sdChecking}
+                      onClick={async () => {
+                        setSdChecking(true); setSdMsg("Sprawdzam serwer SD…");
+                        const r = await detectSd(s.sdUrl);
+                        setSdChecking(false);
+                        setSdMsg(r.ok ? `✅ Połączono. Modele: ${r.models.length ? r.models.join(", ") : "(brak checkpointów — dodaj model do models/Stable-diffusion)"}` : `❌ ${r.error}`);
+                      }}
+                    >
+                      {sdChecking ? "⏳ Sprawdzam…" : "🔌 Sprawdź połączenie SD"}
+                    </button>
+                  </div>
+                )}
+                {sdMsg && <p className="muted" style={{ fontSize: 12, marginTop: 4, whiteSpace: "pre-line" }}>{sdMsg}</p>}
               </div>
 
               <details className="journal-card" style={{ margin: "10px 0", padding: "10px 12px" }}>

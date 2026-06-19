@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { sdTxt2ImgBody, sdImg2ImgBody, parseSdImage, diagnoseSdError, localSdGenerate } from "../src/lib/localImage";
+import { sdTxt2ImgBody, sdImg2ImgBody, parseSdImage, diagnoseSdError, localSdGenerate, parseSdModels, detectSd } from "../src/lib/localImage";
 import { store } from "../src/lib/store";
 
 beforeEach(() => {
@@ -84,5 +84,27 @@ describe("localImage — localSdGenerate", () => {
     vi.stubGlobal("fetch", async () => new Response("nope", { status: 500 }));
     const r = await localSdGenerate("x");
     expect("error" in r && r.error).toMatch(/500|--api/);
+  });
+});
+
+describe("localImage — detectSd + parseSdModels", () => {
+  it("parseSdModels bierze model_name lub title", () => {
+    expect(parseSdModels([{ model_name: "sd_xl_base" }, { title: "flux1-dev.safetensors" }, {}])).toEqual(["sd_xl_base", "flux1-dev.safetensors"]);
+    expect(parseSdModels(null)).toEqual([]);
+  });
+  it("brak adresu → ok:false bez fetch", async () => {
+    store.setSettings({ sdUrl: "" });
+    const f = vi.fn();
+    vi.stubGlobal("fetch", f);
+    const r = await detectSd();
+    expect(r.ok).toBe(false);
+    expect(f).not.toHaveBeenCalled();
+  });
+  it("połączenie OK → lista modeli", async () => {
+    store.setSettings({ sdUrl: "http://localhost:7860" });
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify([{ model_name: "sdxl" }]), { status: 200 }));
+    const r = await detectSd();
+    expect(r.ok).toBe(true);
+    expect(r.models).toEqual(["sdxl"]);
   });
 });

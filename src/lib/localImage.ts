@@ -66,6 +66,31 @@ export function diagnoseSdError(url: string, err: unknown, pageHttps: boolean): 
   return msg || "Nieznany błąd serwera SD.";
 }
 
+export interface SdStatus { ok: boolean; models: string[]; error?: string }
+
+/** Wyłuskaj nazwy checkpointów z /sdapi/v1/sd-models. Czysta. */
+export function parseSdModels(json: unknown): string[] {
+  if (!Array.isArray(json)) return [];
+  return (json as Array<{ model_name?: string; title?: string }>)
+    .map((m) => m.model_name || m.title || "")
+    .filter(Boolean);
+}
+
+/** Sprawdź połączenie z serwerem SD i pobierz listę modeli (checkpointów). */
+export async function detectSd(rawUrl?: string): Promise<SdStatus> {
+  const base = (rawUrl ?? store.settings.sdUrl ?? "").trim().replace(/\/+$/, "");
+  if (!base) return { ok: false, models: [], error: "Brak adresu serwera SD — wpisz go w ⚙ → AI." };
+  try {
+    const res = await fetchTimeout(`${base}/sdapi/v1/sd-models`, {}, 8000);
+    if (!res.ok) return { ok: false, models: [], error: `Serwer SD odpowiedział ${res.status} (uruchom z --api).` };
+    const d = await res.json().catch(() => null);
+    return { ok: true, models: parseSdModels(d) };
+  } catch (e) {
+    const pageHttps = typeof location !== "undefined" && location.protocol === "https:";
+    return { ok: false, models: [], error: diagnoseSdError(base, e, pageHttps) };
+  }
+}
+
 /** Wygeneruj/edytuj obraz na lokalnym serwerze SD. Bez zdjęcia → txt2img; ze zdjęciem → img2img. */
 export async function localSdGenerate(prompt: string, inputs: GenImage[] = [], opts: SdOpts = {}): Promise<Result> {
   const base = (store.settings.sdUrl || "").trim().replace(/\/+$/, "");
