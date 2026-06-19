@@ -47,14 +47,49 @@ Start-Sleep -Seconds 2
 Start-Process -WindowStyle Hidden ollama "serve"
 Start-Sleep -Seconds 3
 
-# 5) Pobierz model, jeśli go nie ma.
-$have = (& ollama list 2>$null) -join "`n"
-if ($have -notmatch [regex]::Escape($model.Split(":")[0])) {
-  Write-Host "Pobieram model '$model' (jednorazowo, może chwilę potrwać)..." -ForegroundColor Green
-  & ollama pull $model
-} else {
-  Write-Host "Model '$model' jest już pobrany." -ForegroundColor Gray
+# 5) Modele — pokaż zainstalowane i pozwól DOWYBRAĆ/POBRAĆ z popularnej listy.
+#    Dzięki temu masz na PC kilka modeli, a na telefonie w JARVIS-ie wybierasz, którego użyć.
+function Show-Installed {
+  $list = (& ollama list 2>$null | Select-Object -Skip 1 | ForEach-Object { ($_ -split '\s+')[0] }) | Where-Object { $_ }
+  if ($list) { Write-Host "  Zainstalowane: $($list -join ', ')" -ForegroundColor Gray } else { Write-Host "  (brak modeli)" -ForegroundColor Gray }
+  return $list
 }
+
+$CATALOG = @(
+  @{ id = "llama3.2";            desc = "Llama 3.2 3B — szybki, uniwersalny (~2 GB)" },
+  @{ id = "qwen2.5";             desc = "Qwen2.5 7B — mocny wielojęzyczny, dobry PL (~4.7 GB)" },
+  @{ id = "qwen2.5:3b";          desc = "Qwen2.5 3B — lekki wielojęzyczny (~2 GB)" },
+  @{ id = "llama3.1";            desc = "Llama 3.1 8B — solidny ogólny (~4.7 GB)" },
+  @{ id = "mistral";             desc = "Mistral 7B — szybki, dobry do zadań (~4.1 GB)" },
+  @{ id = "gemma2";              desc = "Gemma 2 9B — Google, jakość (~5.4 GB)" },
+  @{ id = "phi3";                desc = "Phi-3 mini — mały, bystry (~2.3 GB)" },
+  @{ id = "dolphin-mistral";     desc = "Dolphin Mistral — bez cenzury (~4.1 GB)" },
+  @{ id = "qwen2.5-coder";       desc = "Qwen2.5 Coder 7B — do kodu (~4.7 GB)" },
+  @{ id = "llava";               desc = "LLaVA — widzi obrazy (wizja) (~4.7 GB)" }
+)
+
+Write-Host ""
+Write-Host "  Twoje modele:" -ForegroundColor Cyan
+$installed = Show-Installed
+Write-Host ""
+Write-Host "  Chcesz dobrać model(e)? Wpisz numery po przecinku (np. 1,2), Enter = pomiń:" -ForegroundColor Cyan
+for ($i = 0; $i -lt $CATALOG.Count; $i++) { Write-Host ("    {0}) {1}" -f ($i + 1), $CATALOG[$i].desc) -ForegroundColor Gray }
+$pick = Read-Host "  Wybór"
+$chosen = @()
+if ($pick -and $pick.Trim()) {
+  foreach ($tok in ($pick -split '[,; ]+')) {
+    $n = 0; if ([int]::TryParse($tok.Trim(), [ref]$n) -and $n -ge 1 -and $n -le $CATALOG.Count) { $chosen += $CATALOG[$n - 1].id }
+  }
+}
+# Jeśli nic nie wybrano i nie ma ŻADNEGO modelu — pobierz domyślny, by JARVIS miał czym mówić.
+if ($chosen.Count -eq 0 -and -not $installed) { $chosen += $model }
+foreach ($m in ($chosen | Select-Object -Unique)) {
+  Write-Host "Pobieram model '$m' (jednorazowo, może chwilę potrwać)..." -ForegroundColor Green
+  & ollama pull $m
+}
+Write-Host ""
+Write-Host "  Dostępne teraz:" -ForegroundColor Cyan
+Show-Installed | Out-Null
 
 # 6) Wykryj adres IP w sieci LAN (interfejs z bramą domyślną).
 $ip = (Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq "Up" } |
@@ -77,8 +112,10 @@ Write-Host ""
 Write-Host "        $url" -ForegroundColor White
 Write-Host ""
 Write-Host "  (skopiowano do schowka)" -ForegroundColor DarkGray
-Write-Host "  W aplikacji: Ustawienia (zebatka) -> AI ->" -ForegroundColor Gray
-Write-Host "  'Lokalny model - adres Ollama' -> wklej -> gotowe." -ForegroundColor Gray
+Write-Host "  W aplikacji: Ustawienia (zebatka) -> AI:" -ForegroundColor Gray
+Write-Host "   1) 'Lokalny model - adres Ollama' -> wklej adres." -ForegroundColor Gray
+Write-Host "   2) Dostawca -> 'Lokalny model (Ollama)', potem 'Odswiez modele z Ollamy'" -ForegroundColor Gray
+Write-Host "      i WYBIERZ z listy ten, ktory chcesz (te pobrane wyzej)." -ForegroundColor Gray
 Line Green
 Write-Host ""
 Write-Host "  Wskazowki:" -ForegroundColor Cyan

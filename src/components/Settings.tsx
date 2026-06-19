@@ -17,7 +17,8 @@ import { systemCheck } from "../lib/diagnostics";
 import { runHealthCheck, statusIcon, type HealthItem } from "../lib/healthCheck";
 import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
-import { enablePrivateMode } from "../lib/privateMode";
+import { enablePrivateMode, detectOllama } from "../lib/privateMode";
+import { toast } from "../lib/toast";
 import { runProspecting } from "../lib/prospect";
 import { verifyMailConnection, sendTestEmail, mailReadiness } from "../lib/mailer";
 import { enrollVoice } from "../lib/voiceEnroll";
@@ -161,10 +162,31 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   };
 
   // Lista modeli dla wybranego dostawcy (lub info o auto).
+  // Modele realnie zainstalowane na Twojej Ollamie (z /api/tags) — żebyś wybierał z tego,
+  // co masz pobrane na PC, a nie ze sztywnej listy.
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [ollamaLoading, setOllamaLoading] = useState(false);
+  const loadOllamaModels = async () => {
+    setOllamaLoading(true);
+    try {
+      const r = await detectOllama(store.settings.ollamaUrl);
+      setOllamaModels(r.ok ? r.models : []);
+      if (!r.ok) toast(r.error ? `Ollama: ${r.error}` : "Nie połączono z Ollamą — sprawdź adres.");
+    } finally {
+      setOllamaLoading(false);
+    }
+  };
+  // Auto-pobierz listę, gdy wybierzesz dostawcę Ollama (i masz adres).
+  useEffect(() => {
+    if (s.provider === "ollama" && store.settings.ollamaUrl?.trim()) void loadOllamaModels();
+  }, [s.provider]);
+
   const modelOptions = useMemo(() => {
     if (s.provider === "auto") return [];
+    // Ollama: pokaż REALNE modele z serwera (gdy wykryte), inaczej lista podpowiedzi.
+    if (s.provider === "ollama" && ollamaModels.length) return ollamaModels.map((m) => ({ id: m, label: m }));
     return PROVIDERS[s.provider as ProviderId]?.models ?? [];
-  }, [s.provider]);
+  }, [s.provider, ollamaModels]);
 
   const autoTarget = useMemo(() => (s.provider === "auto" ? autoPick(s.keys) : null), [s.provider, s.keys]);
 
@@ -333,6 +355,16 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                       </option>
                     ))}
                   </select>
+                  {s.provider === "ollama" && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                      <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }} disabled={ollamaLoading} onClick={() => void loadOllamaModels()}>
+                        {ollamaLoading ? "⏳ Sprawdzam…" : "🔄 Odśwież modele z Ollamy"}
+                      </button>
+                      <span className="muted" style={{ fontSize: 12 }}>
+                        {ollamaModels.length ? `Znaleziono ${ollamaModels.length} — wybierz z listy.` : "Podaj adres Ollamy niżej i odśwież."}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
 

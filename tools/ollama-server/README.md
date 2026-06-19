@@ -10,10 +10,13 @@ do wklejenia w JARVIS (⚙ → AI → „Lokalny model — adres Ollama").
 Dwuklik → skrypt sam:
 1. ustawia Ollamę na nasłuch w sieci LAN (`OLLAMA_HOST=0.0.0.0`) + CORS (`OLLAMA_ORIGINS=*`),
 2. otwiera port 11434 w zaporze (jeśli uruchomisz „jako administrator"),
-3. startuje serwer i pobiera model (domyślnie `llama3.2`),
+3. startuje serwer i **pyta, które modele pobrać** (menu popularnych: Llama 3.2/3.1, Qwen2.5,
+   Mistral, Gemma 2, Phi-3, Coder, LLaVA-wizja, Dolphin…) — możesz pobrać kilka naraz,
 4. **pokazuje i kopiuje do schowka adres** typu `http://192.168.0.10:11434`.
 
-Wklej ten adres w JARVIS na telefonie (APK). **Zostaw okno otwarte** — zamknięcie zatrzymuje serwer.
+Na telefonie w **JARVIS → ⚙ → AI**: wklej adres, ustaw dostawcę „Lokalny model (Ollama)",
+kliknij **„🔄 Odśwież modele z Ollamy"** i **wybierz z listy** ten, którego chcesz użyć
+(widać dokładnie to, co pobrałeś na PC). **Zostaw okno serwera otwarte** — zamknięcie zatrzymuje serwer.
 
 > SmartScreen/antywirus może ostrzec (EXE jest niepodpisany, jak `JARVIS.exe`) — „Więcej informacji → Uruchom mimo to".
 > Alternatywa bez EXE: pobierz repo i odpal `JARVIS-Ollama-Server.bat` (robi to samo przez PowerShell).
