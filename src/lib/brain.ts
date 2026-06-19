@@ -17,6 +17,7 @@ import { estimateConfidence, isLowConfidence } from "./confidence";
 import { speculativeAnswer } from "./speculative";
 import { localRefine, critiqueInstruction } from "./localRefine";
 import { localSelfConsistency } from "./localConsensus";
+import { conversationStyleDirectives } from "./conversationStyle";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
 import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
@@ -45,6 +46,10 @@ const PERSONAS: Record<string, string> = {
   concise: "maksymalnie zwięzły — odpowiadasz w 1–2 zdaniach, bez ozdobników i powtórzeń.",
   warm: "ciepły, wspierający i empatyczny — dbasz o samopoczucie użytkownika, zachowując kompetencję.",
   witty: "błyskotliwy, z suchym brytyjskim humorem i lekkim sarkazmem, ale zawsze pomocny i rzeczowy.",
+  natural:
+    "naturalny rozmówca — mówisz jak mądry, życzliwy znajomy: pełnymi zdaniami zamiast suchych list, " +
+    "ciepło, ale rzeczowo. Pamiętasz, o czym przed chwilą rozmawialiście, i nawiązujesz do tego. Nie forsujesz " +
+    "akcji, gdy ktoś chce po prostu pogadać; nie udajesz pewności. Brzmisz po ludzku, nie jak formularz.",
   operator:
     "elitarny asystent operacyjny. Spokojny, opanowany, precyzyjny — bez zbędnej uprzejmości i gadania. " +
     "Interpretujesz intencję ponad dosłowność i działasz zamiast pytać. Komunikujesz się minimalnie: każde zdanie coś wnosi. " +
@@ -267,6 +272,7 @@ export function systemPrompt(ctx: PromptContext = {}): string {
     `- Rozumiej polską odmianę przez przypadki (np. „szparagi", „szparagów", „szparagami" to ta sama rzecz). Dodawaj pozycje na listy i zadania od razu, bez zbędnego dopytywania.`,
     `- Proaktywnie zapamiętuj trwałe preferencje narzędziem remember_fact.`,
     `- Odpowiedzi trzymaj zwięzłe i naturalne — będą czytane na głos.`,
+    ...conversationStyleDirectives(s),
     `- Po wykonaniu akcji potwierdź ją krótko.`,
     `- Interpretuj INTENCJĘ, nie tylko dosłowne słowa. Jeśli możesz wykonać — wykonaj, nie pytaj. Pytaj tylko, gdy to absolutnie konieczne, i wtedy jedno pytanie.`,
     `- DOMYKAJ zadania: kończ decyzją, gotowym wynikiem albo jednym konkretnym następnym krokiem. Bez otwartych pętli.`,

@@ -389,6 +389,10 @@ export interface Settings {
   localRefine: boolean;
   /** Self-consistency: dla trudnych pytań model lokalny próbuje kilka razy, wybieramy najspójniejszą. */
   localConsensus: boolean;
+  /** Styl rozmowy — długość odpowiedzi (niezależnie od persony). „balanced" = bez zmian. */
+  responseLength: "concise" | "balanced" | "detailed";
+  /** Styl rozmowy — ciepło/serdeczność 0..1 (0.5 = neutralnie, bez zmian). */
+  warmth: number;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

@@ -77,6 +77,8 @@ const defaultSettings: Settings = {
   prewarmLocal: false,
   localRefine: false,
   localConsensus: false,
+  responseLength: "balanced",
+  warmth: 0.5,
   ollamaUrl: "",
   sdUrl: "",
   unfilteredLocal: false,

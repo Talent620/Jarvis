@@ -1615,11 +1615,25 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <label>Charakter JARVIS-a</label>
                 <select value={s.persona} onChange={(e) => set({ persona: e.target.value })}>
                   <option value="operator">Operacyjny — elitarny, precyzyjny, działa zamiast pytać</option>
+                  <option value="natural">Naturalny — rozmowa jak z mądrym znajomym</option>
                   <option value="classic">Klasyczny — elegancki majordomus</option>
                   <option value="concise">Zwięzły — krótko i na temat</option>
                   <option value="warm">Ciepły — wspierający i empatyczny</option>
                   <option value="witty">Błyskotliwy — suchy brytyjski humor</option>
                 </select>
+              </div>
+              <div className="field">
+                <label>Długość odpowiedzi</label>
+                <select value={s.responseLength} onChange={(e) => set({ responseLength: e.target.value as Settings["responseLength"] })}>
+                  <option value="concise">Krótko — 1–3 zdania</option>
+                  <option value="balanced">Zrównoważona (domyślnie)</option>
+                  <option value="detailed">Szczegółowo — z przykładami</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>Ciepło rozmowy: {Math.round((s.warmth ?? 0.5) * 100)}% <span className="muted">(50% = neutralnie)</span></label>
+                <input type="range" min={0} max={1} step={0.1} value={s.warmth ?? 0.5} onChange={(e) => set({ warmth: Number(e.target.value) })} />
+                <span className="muted" style={{ fontSize: 12 }}>Wyżej = cieplej i bardziej po ludzku; niżej = rzeczowo i formalnie. Działa razem z charakterem.</span>
               </div>
               <div className="field">
                 <label>Własne wytyczne osobowości (opcjonalnie)</label>
