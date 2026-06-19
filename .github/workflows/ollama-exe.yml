@@ -37,9 +37,18 @@ jobs:
             -company    "JARVIS" `
             -noConfigFile
 
+      - name: Stage launcher + source next to the EXE
+        shell: powershell
+        run: |
+          Copy-Item tools/ollama-server/JARVIS-Serwer.cmd .
+          Copy-Item tools/ollama-server/jarvis-ollama-server.ps1 .
+
       - name: Publish to GitHub Releases (rolling 'latest')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          files: JARVIS-Ollama-Server.exe
+          files: |
+            JARVIS-Ollama-Server.exe
+            JARVIS-Serwer.cmd
+            jarvis-ollama-server.ps1
           make_latest: true
