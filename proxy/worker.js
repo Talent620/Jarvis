@@ -20,11 +20,16 @@
 
 const ALLOWED_OPENAI_HOSTS = ["api.groq.com", "openrouter.ai", "integrate.api.nvidia.com", "models.github.ai"];
 
+// Ścisłe dopasowanie hosta do białej listy: dokładny host LUB jego subdomena. Świadomie
+// NIE `includes` — to przepuszczałoby np. api.groq.com.attacker.tld i wyciekłby klucz Bearer.
+export const openaiHostAllowed = (hostname) =>
+  ALLOWED_OPENAI_HOSTS.some((h) => hostname === h || hostname.endsWith(`.${h}`));
+
 // Base64 dla UTF-8 (MIME-word). Moduł-globalne, bo używane też poza smtpRelay (np. /v1/gmail/send).
 const b64 = (s) => btoa(unescape(encodeURIComponent(String(s))));
 
 // Usuń CR/LF z wartości trafiających do linii protokołu/nagłówków (anty-injection SMTP/MIME).
-const noCRLF = (s) => String(s ?? "").replace(/[\r\n]+/g, " ").trim();
+export const noCRLF = (s) => String(s ?? "").replace(/[\r\n]+/g, " ").trim();
 
 // fetch z twardym limitem czasu — wiszący upstream nie blokuje invocation workera.
 const fetchT = (url, opts = {}, ms = 20000) => fetch(url, { ...opts, signal: AbortSignal.timeout(ms) });
@@ -47,7 +52,7 @@ export const appTokenBad = (req, env) => {
 // Blokada SSRF do metadanych chmury: link-local 169.254.x (AWS/GCP/Azure 169.254.169.254),
 // metadata.google.internal, Alibaba 100.100.100.200. NIE blokujemy LAN (192.168/10/172.16),
 // bo passthrough obsługuje Home Assistant w sieci lokalnej.
-function blocksCloudMetadata(rawUrl) {
+export function blocksCloudMetadata(rawUrl) {
   try {
     const host = new URL(rawUrl).hostname.toLowerCase();
     return (
@@ -138,7 +143,7 @@ const CORS = {
 const json = (status, body) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...CORS } });
 
-function envKeyForHost(host, env) {
+export function envKeyForHost(host, env) {
   if (host.includes("groq.com")) return env.GROQ_API_KEY;
   if (host.includes("openrouter.ai")) return env.OPENROUTER_API_KEY;
   if (host.includes("nvidia.com")) return env.NVIDIA_API_KEY;
@@ -709,9 +714,7 @@ export default {
         if (!u) return json(400, { error: "Brak parametru u." });
         const host = new URL(u).host;
         const hostname = new URL(u).hostname.toLowerCase();
-        // Ścisłe dopasowanie: dokładny host lub jego subdomena. `includes` przepuszczał
-        // np. api.groq.com.attacker.tld i wyciekłby klucz Bearer dostawcy.
-        if (!ALLOWED_OPENAI_HOSTS.some((h) => hostname === h || hostname.endsWith(`.${h}`))) return json(403, { error: `Host niedozwolony: ${host}` });
+        if (!openaiHostAllowed(hostname)) return json(403, { error: `Host niedozwolony: ${host}` });
         const key = envKeyForHost(host, env) || (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
         return relay(u, req, { "content-type": "application/json", authorization: `Bearer ${key}` });
       }
