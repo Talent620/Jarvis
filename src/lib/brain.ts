@@ -11,7 +11,8 @@ import { shouldFallback, isNetworkError, isKeyError, humanize, isComplex, PERSON
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
 import { classifyTask, logRouteDecision, GROQ_SCOUT, GROQ_KIMI } from "./modelRouter";
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
-import { recordEpisode } from "./episodicMemory";
+import { recordEpisode, loadEpisodes } from "./episodicMemory";
+import { buildFusionBlock } from "./contextFusion";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
 import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
@@ -134,10 +135,12 @@ export interface PromptContext {
   journalRank?: string[] | null;
   /** Trafne wspomnienia z pamięci długoterminowej (Mem0) — Faza 1. */
   mem0Block?: string;
+  /** Szósty Zmysł: świadomość sytuacyjna (otwarte wątki) złożona z danych systemu. */
+  fusionBlock?: string;
 }
 
 export function systemPrompt(ctx: PromptContext = {}): string {
-  const { deepAnalysis = "", currentKnowledge = "", journalRank = null, mem0Block = "" } = ctx;
+  const { deepAnalysis = "", currentKnowledge = "", journalRank = null, mem0Block = "", fusionBlock = "" } = ctx;
   const s = store.settings;
   const userName = s.userName;
   const pid = s.activeProjectId;
@@ -246,6 +249,7 @@ export function systemPrompt(ctx: PromptContext = {}): string {
     deepAnalysis ? `\nTwoja wewnętrzna analiza tego zapytania (wykorzystaj ją, nie cytuj wprost):\n${deepAnalysis}` : "",
     profile,
     facts,
+    fusionBlock,
     projectCtx,
     journalCtx,
   ].join("\n");
@@ -484,8 +488,16 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
     }
   }
 
+  // Szósty Zmysł: świadomość sytuacyjna (otwarte wątki) z DANYCH systemu — synchronicznie,
+  // bez sieci. Model dostaje ją i wplata najwyżej jedno trafne „połączenie" naturalnie.
+  const d = store.data;
+  const fusionBlock = buildFusionBlock(
+    { tasks: d.tasks, reminders: d.reminders, projects: d.projects, leads: d.leads, events: d.calendar, episodes: loadEpisodes() },
+    lastUser?.content || "",
+  );
+
   const baseCtx = {
-    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block }),
+    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock }),
     // Tryb on-device wyłącza web-search (zero egres do sieci — pełna prywatność/offline).
     webSearch: store.settings.onDeviceOnly ? false : store.settings.webSearch,
     tools: toolDefs,
