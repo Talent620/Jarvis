@@ -18,17 +18,41 @@ export interface OllamaStatus {
   error?: string;
 }
 
+/**
+ * Zamień surowy błąd fetch („Failed to fetch") na DZIAŁAJĄCĄ diagnozę: nazwij prawdopodobną
+ * przyczynę (mixed-content / timeout / CORS-lub-nieosiągalny) i podaj konkretną naprawę. Czysta.
+ */
+export function diagnoseOllamaError(url: string, err: unknown, pageHttps: boolean): string {
+  const name = err instanceof Error ? err.name : "";
+  const msg = err instanceof Error ? err.message : String(err);
+  const isHttpUrl = /^http:\/\//i.test(url);
+  if (pageHttps && isHttpUrl) {
+    return "Mieszana zawartość: aplikacja działa po HTTPS, a adres Ollamy jest http:// — przeglądarka to blokuje. Użyj APK (dopuszcza http do sieci lokalnej) albo wystaw Ollamę po HTTPS: `tailscale serve https / 11434`.";
+  }
+  if (name === "AbortError" || /abort|timeout|timed out/i.test(msg)) {
+    return "Serwer Ollama nie odpowiedział w czasie. Sprawdź, czy działa, czy adres jest poprawny i czy PC oraz telefon są w tej samej sieci (lub przez Tailscale).";
+  }
+  if (/failed to fetch|load failed|networkerror|fetch|connection/i.test(msg)) {
+    return "Nie udało się połączyć z Ollamą (\"failed to fetch\"). Najczęstsze przyczyny: (1) CORS — ustaw OLLAMA_ORIGINS=* i OLLAMA_HOST=0.0.0.0 i zrestartuj Ollamę; (2) zły adres lub inna sieć; (3) serwer nie działa. Najprościej: uruchom na PC plik JARVIS-Ollama-Server.exe — ustawia to wszystko sam.";
+  }
+  return msg || "Nieznany błąd połączenia z Ollamą.";
+}
+
 /** Sprawdza, czy lokalny serwer Ollama działa i jakie modele są pobrane. */
 export async function detectOllama(rawUrl?: string): Promise<OllamaStatus> {
   const url = (rawUrl || store.settings.ollamaUrl || DEFAULT_OLLAMA).replace(/\/$/, "");
   try {
     const res = await fetchTimeout(`${url}/api/tags`, { method: "GET" }, 8000);
-    if (!res.ok) return { ok: false, url, models: [], error: `Serwer odpowiedział ${res.status}.` };
+    if (!res.ok) {
+      const hint = res.status === 403 ? " (prawdopodobnie CORS — ustaw OLLAMA_ORIGINS=*)" : "";
+      return { ok: false, url, models: [], error: `Serwer odpowiedział ${res.status}${hint}.` };
+    }
     const d = await res.json();
     const models = (d?.models || []).map((m: any) => String(m.name || m.model)).filter(Boolean);
     return { ok: true, url, models };
   } catch (e) {
-    return { ok: false, url, models: [], error: e instanceof Error ? e.message : String(e) };
+    const pageHttps = typeof location !== "undefined" && location.protocol === "https:";
+    return { ok: false, url, models: [], error: diagnoseOllamaError(url, e, pageHttps) };
   }
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pickLocalModel } from "../src/lib/privateMode";
+import { pickLocalModel, diagnoseOllamaError } from "../src/lib/privateMode";
 
 describe("Tryb Prywatny — wybór modelu lokalnego", () => {
   it("preferuje model bez cenzury (dolphin), gdy dostępny", () => {
@@ -10,5 +10,25 @@ describe("Tryb Prywatny — wybór modelu lokalnego", () => {
   });
   it("zwraca null, gdy brak modeli", () => {
     expect(pickLocalModel([])).toBeNull();
+  });
+});
+
+describe("diagnoseOllamaError — czytelna diagnoza zamiast 'failed to fetch'", () => {
+  it("strona HTTPS + adres http:// → mixed-content z konkretną radą", () => {
+    const m = diagnoseOllamaError("http://192.168.0.10:11434", new TypeError("Failed to fetch"), true);
+    expect(m).toMatch(/Mieszana zawartość|HTTPS/i);
+    expect(m).toMatch(/APK|tailscale/i);
+  });
+  it("timeout/abort → komunikat o braku odpowiedzi i sieci", () => {
+    const e = new Error("The operation was aborted"); e.name = "AbortError";
+    expect(diagnoseOllamaError("http://localhost:11434", e, false)).toMatch(/nie odpowiedział|sieci/i);
+  });
+  it("zwykły failed to fetch (http) → wskazuje CORS / adres / serwer + .exe", () => {
+    const m = diagnoseOllamaError("http://localhost:11434", new TypeError("Failed to fetch"), false);
+    expect(m).toMatch(/CORS|OLLAMA_ORIGINS/);
+    expect(m).toMatch(/JARVIS-Ollama-Server\.exe/);
+  });
+  it("nieznany błąd → przekazuje treść", () => {
+    expect(diagnoseOllamaError("http://x:11434", new Error("coś dziwnego"), false)).toBe("coś dziwnego");
   });
 });
