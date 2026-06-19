@@ -20,6 +20,7 @@ import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode, detectOllama, findOllamaServer } from "../lib/privateMode";
 import { pullOllamaModel } from "../lib/ollamaPull";
 import { warmNow } from "../lib/prewarm";
+import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkOllama";
 import { applyPremiumSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
 import { detectSd } from "../lib/localImage";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
@@ -204,6 +205,22 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [sdMsg, setSdMsg] = useState("");
   const [findingServer, setFindingServer] = useState(false);
   const [findMsg, setFindMsg] = useState("");
+  // Benchmark szybkości modeli na sprzęcie użytkownika.
+  const [benchBusy, setBenchBusy] = useState(false);
+  const [benchMsg, setBenchMsg] = useState("");
+  const [benchResults, setBenchResults] = useState<BenchResult[]>([]);
+  const runBench = async () => {
+    if (benchBusy) return;
+    if (!store.settings.ollamaUrl?.trim()) { toast("Najpierw podaj adres Ollamy."); return; }
+    const models = ollamaModels.length ? ollamaModels : [];
+    if (!models.length) { setBenchMsg("Brak wykrytych modeli — kliknij „🔄 Odśwież modele z Ollamy" wyżej."); return; }
+    setBenchBusy(true); setBenchResults([]); setBenchMsg("Mierzę (pierwszy bieg ładuje model — chwilę to trwa)…");
+    const res = await benchmarkModels(models, (m) => setBenchMsg(m));
+    setBenchResults(res);
+    setBenchBusy(false);
+    const best = res.find((r) => r.ok && r.tokPerSec > 0);
+    setBenchMsg(best ? `Najszybszy: ${best.model} (${best.tokPerSec} tok/s).` : "Nie udało się zmierzyć — sprawdź serwer.");
+  };
   const runMaestro = async (uncensored: boolean) => {
     if (maestroBusy) return;
     if (!store.settings.ollamaUrl?.trim()) { toast("Najpierw wpisz adres Ollamy (pole niżej)."); return; }
@@ -1009,6 +1026,39 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                       })}
                     </div>
                   </details>
+
+                  <div style={{ marginTop: 8 }}>
+                    <button
+                      className="btn"
+                      style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }}
+                      disabled={benchBusy}
+                      onClick={() => void runBench()}
+                    >
+                      {benchBusy ? "⏳ Mierzę…" : "🏎 Zmierz szybkość modeli (na Twoim sprzęcie)"}
+                    </button>
+                    {benchMsg && <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>{benchMsg}</p>}
+                    {benchResults.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 4 }}>
+                        {benchResults.map((r) => (
+                          <div key={r.model} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <b>{r.model}</b>{" "}
+                              {r.ok ? <span className="muted">· {r.tokPerSec} tok/s · {speedLabel(r.tokPerSec)}</span> : <span style={{ color: "var(--gold)" }}>· nie zmierzono</span>}
+                            </span>
+                            {r.ok && r.tokPerSec > 0 && (
+                              <button
+                                className="btn"
+                                style={{ width: "auto", marginTop: 0, padding: "2px 8px", fontSize: 11, flex: "0 0 auto" }}
+                                onClick={() => { set({ ollamaModelSimple: r.model }); toast(`⚡ ${r.model} ustawiony jako szybki (Refleks).`); }}
+                              >
+                                ⚡ jako szybki
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="row">
