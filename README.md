@@ -92,6 +92,10 @@ Po pierwszym uruchomieniu wejdź w **⚙ Ustawienia**, wybierz **dostawcę** (lu
 Klucze są przechowywane **lokalnie na urządzeniu** (localStorage). Tryb „auto"
 wybiera dostawcę z najwyższym priorytetem, dla którego podano klucz.
 
+> 🧠 **Tryb lokalny (prywatny)?** JARVIS umie myśleć dwiema prędkościami — szybki model
+> lokalny (**Refleks**, Ollama) na co dzień i chmura (**Kora**) tylko przy trudnych zadaniach.
+> Konfiguracja i wszystkie przełączniki: **[docs/REFLEKS_KORA.md](docs/REFLEKS_KORA.md)**.
+
 > ⚠️ **Bezpieczeństwo:** w wersji bez backendu klucze żyją w aplikacji klienckiej.
 > To wygodne do użytku osobistego. Do dystrybucji użyj **backend-proxy** (katalog
 > `proxy/`) — przejmuje też ruch dla dostawców blokujących CORS (NVIDIA, GitHub Models)
