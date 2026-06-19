@@ -353,6 +353,10 @@ export interface Settings {
   webllmEnabled: boolean;
   /** Wybrany model WebLLM (pusty = domyślny z katalogu). */
   webllmModel: string;
+  /** Rozpoznawanie mowy on-device (Whisper/Transformers.js) zamiast chmury. Fallback do chmury. */
+  localStt: boolean;
+  /** Synteza mowy on-device (Kokoro) zamiast chmury/systemu. Fallback do dotychczasowych głosów. */
+  localTts: boolean;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

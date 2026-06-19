@@ -60,6 +60,8 @@ const defaultSettings: Settings = {
   localEmbeddings: false,
   webllmEnabled: false,
   webllmModel: "",
+  localStt: false,
+  localTts: false,
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,

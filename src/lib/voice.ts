@@ -4,6 +4,7 @@ import { setLevel } from "./audioLevel";
 import { primaryKey } from "./keys";
 import { fetchTimeout } from "./http";
 import { WhisperListener } from "./whisperListener";
+import { synthLocal, localTtsUsable } from "./localTts";
 
 // Natywny silnik mowy Androida (pewniejszy niż Web Speech w WebView).
 interface NativeTtsPlugin {
@@ -126,6 +127,12 @@ async function playFromResponse(res: Response): Promise<boolean> {
 // Token przerwania — stopSpeaking() go zwiększa, więc trwające czytanie
 // (potokowe, po kawałkach) wie, że ma się zatrzymać.
 let speakToken = 0;
+// Czy JARVIS aktualnie mówi (odtwarza TTS). Nasłuch mowy (whisperListener) wycisza wtedy
+// wejście, by nie rozpoznawać własnego głosu (koniec echa/samowyzwalania — dług z AUDIT.md).
+let speakingDepth = 0;
+export function isSpeaking(): boolean {
+  return speakingDepth > 0;
+}
 // Jawne przerwanie bieżącego odtwarzania (ustawiane przez playUrlEnded).
 // Pewniejsze niż zdarzenie „pause", które bywa odpalane także przy końcu utworu.
 let interruptPlayback: (() => void) | null = null;
@@ -307,6 +314,18 @@ export async function speak(text: string, settings: Settings): Promise<void> {
   if (!settings.speak || !text.trim()) return;
   stopSpeaking();
   const myToken = speakToken; // bieżąca „tura mówienia"; nowszy speak()/stop unieważni
+  speakingDepth++;
+  try {
+  // Głos on-device (Kokoro) — prywatnie, bez chmury. Opcja; przy niepowodzeniu fallback niżej.
+  if (settings.localTts && localTtsUsable()) {
+    try {
+      const blob = await synthLocal(text);
+      if (myToken !== speakToken) return; // nowsza tura przejęła w czasie syntezy
+      if (blob) { await playUrlWithLevel(URL.createObjectURL(blob)); return; }
+    } catch {
+      /* fallback do głosów chmurowych/systemowych niżej */
+    }
+  }
 
   // Premium głos przez Fish Audio (tani, topowy klon), jeśli podano klucz.
   if (settings.fishAudioApiKey && settings.fishAudioVoiceId) {
@@ -385,10 +404,14 @@ export async function speak(text: string, settings: Settings): Promise<void> {
     /* ignore */
   }
   synth.speak(u);
+  } finally {
+    speakingDepth = Math.max(0, speakingDepth - 1);
+  }
 }
 
 export function stopSpeaking(): void {
   speakToken++; // przerwij trwające potokowe czytanie (Gemini, po kawałkach)
+  speakingDepth = 0; // już nie mówimy — odblokuj nasłuch
   interruptPlayback?.(); // natychmiast rozwiąż bieżące odtwarzanie kawałka
   try {
     window.speechSynthesis?.cancel();

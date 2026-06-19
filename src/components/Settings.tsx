@@ -750,6 +750,28 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <Toggle on={s.localEmbeddings} onClick={() => set({ localEmbeddings: !s.localEmbeddings })} />
               </div>
               <WebllmPanel s={s} set={set} />
+              <div className="row">
+                <span>
+                  🎙 Rozpoznawanie mowy on-device (Whisper)
+                  <br />
+                  <span className="muted">
+                    Transkrypcja głosu liczona <b>na urządzeniu</b> (Whisper/Transformers.js) zamiast w chmurze —
+                    prywatnie i bez limitu. Pierwsze użycie pobiera model (~145 MB, cache). Bez wsparcia → wraca do Groq.
+                  </span>
+                </span>
+                <Toggle on={s.localStt} onClick={() => set({ localStt: !s.localStt })} />
+              </div>
+              <div className="row">
+                <span>
+                  🔊 Synteza mowy on-device (Kokoro)
+                  <br />
+                  <span className="muted">
+                    Głos generowany <b>lokalnie</b> (Kokoro) — bez chmury. Najlepszy dla angielskiego; dla polskiego
+                    jakość bywa ograniczona, dlatego to opcja z fallbackiem do dotychczasowych głosów.
+                  </span>
+                </span>
+                <Toggle on={s.localTts} onClick={() => set({ localTts: !s.localTts })} />
+              </div>
               <div className="field">
                 <button
                   className="btn"

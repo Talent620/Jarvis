@@ -60,9 +60,10 @@
 - **`useStore` re-render całego App + `upsertChat` serializacja na każdą wiadomość** (`useStore.ts`, `App.tsx:312`) — perf na długich czatach. [M·M] (selektory + debounce).
 
 ### Głos
-- **WhisperListener bez wyciszenia na czas TTS** (`whisperListener.ts:99-127`) — echo/samowyzwalanie na desktopie. [M·M].
+- ~~**WhisperListener bez wyciszenia na czas TTS** (`whisperListener.ts:99-127`) — echo/samowyzwalanie na desktopie. [M·M].~~ ✅ **ZAMKNIĘTE (Faza D)**: `voice.ts` eksponuje `isSpeaking()`; `whisperListener.tick()` wycisza wejście na czas mówienia JARVIS-a (koniec echa/samowyzwalania).
+- **`ScriptProcessorNode` always-on send** (`liveVoice.ts:166-178`) — stały uplink bez VAD. [M·M]. → **ODŁOŻONE świadomie (Faza D)**: Gemini Live opiera endpointing/barge-in na CIĄGŁYM strumieniu — VAD-bramkowanie lub wymiana węzła „w ciemno" grozi zerwaniem działającego rozpoznawania końca tury; brak możliwości testu audio w tym środowisku. Zostawione do ręcznej weryfikacji na żywym kluczu.
 - **`LiveSession` błąd nie sprząta WS/mic** (`liveVoice.ts:81-111`) — przy retry stackują się konteksty. [M·M].
-- **`ScriptProcessorNode` always-on send** (`liveVoice.ts:166-178`) — stały uplink bez VAD, bateria/CPU. [M·M].
+- **`ScriptProcessorNode` always-on send** (`liveVoice.ts:166-178`) — stały uplink bez VAD, bateria/CPU. [M·M]. (patrz wyżej — odłożone w Fazie D jako ryzyko dla działającego Gemini Live)
 - **Web Speech restart-storm** (`voice.ts:525-541`) — `onend→start()` bez backoffu, pętli przy utracie mic/sieci; `onerror` no-op. [M·L] ✅ do naprawy.
 - **`headset.ts` cichy no-op** (labels wymagają zgody mic) + brak debounce `devicechange`. [M·L] ✅.
 

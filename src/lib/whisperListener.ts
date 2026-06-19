@@ -1,4 +1,5 @@
 import type { ListenCallbacks, VoiceListener } from "./voice";
+import { isSpeaking } from "./voice";
 import { transcribeAudio } from "./transcribe";
 import { primaryKey } from "./keys";
 import { setLevel } from "./audioLevel";
@@ -104,6 +105,13 @@ export class WhisperListener implements VoiceListener {
     for (let i = 0; i < this.td.length; i++) sum += this.td[i] * this.td[i];
     const rms = this.td.length ? Math.sqrt(sum / this.td.length) : 0;
     setLevel(Math.min(1, rms * 12)); // orb pulsuje poziomem (Whisper nie daje tekstu „na żywo")
+
+    // Wyciszenie na czas mówienia JARVIS-a: nie nasłuchujemy własnego głosu (echo/samowyzwalanie).
+    // Jeśli akurat trwało nagranie, domknij je (wynik dojdzie), ale nie zaczynaj nowego.
+    if (isSpeaking()) {
+      if (this.recording) { this.silenceMs += FRAME_MS; if (this.silenceMs >= SILENCE_MS) this.endSegment(); }
+      return;
+    }
 
     const threshold = Math.max(0.006, this.noiseFloor * 2.4);
     const voiced = rms > threshold;
