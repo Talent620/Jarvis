@@ -1,5 +1,6 @@
 import { store } from "./store";
 import { fetchTimeout } from "./http";
+import { webllmSupported, WEBLLM_DEFAULT_MODEL } from "./webllm";
 
 // Tryb Prywatny — JARVIS działa w 100% lokalnie (Ollama na Twoim sprzęcie):
 // żadne dane nie wychodzą do chmury, brak polityki dostawcy. To autentyczny,
@@ -53,10 +54,24 @@ export interface PrivateResult {
 export async function enablePrivateMode(rawUrl?: string): Promise<PrivateResult> {
   const status = await detectOllama(rawUrl);
   if (!status.ok) {
+    // PWA/APK bez Ollamy: jeśli przeglądarka ma WebGPU, włącz mózg on-device (WebLLM) —
+    // model działa w przeglądarce, bez serwera. To rozszerza Tryb Prywatny poza desktop.
+    if (webllmSupported()) {
+      const model = store.settings.webllmModel?.trim() || WEBLLM_DEFAULT_MODEL;
+      store.setSettings({ provider: "webllm", model, webllmEnabled: true });
+      return {
+        enabled: true,
+        message:
+          `🛡 Tryb Prywatny aktywny (on-device, WebLLM). Model „${model}" działa w Twojej przeglądarce na WebGPU — rozmowy z AI nie idą do zewnętrznego dostawcy. ` +
+          "Pierwsze użycie pobiera wagi modelu (jednorazowo, potem cache). Dla twardej blokady chmury włącz dodatkowo Tryb on-device w ⚙ → AI.",
+      };
+    }
     return {
       enabled: false,
       message:
-        "Tryb Prywatny wymaga lokalnego serwera Ollama. Zainstaluj go z ollama.com, pobierz model bez cenzury komendą  ollama pull dolphin-mistral, i upewnij się, że działa (domyślnie http://localhost:11434). Adres ustawisz w ⚙ → AI.",
+        "Tryb Prywatny wymaga lokalnego serwera Ollama LUB przeglądarki z WebGPU (mózg on-device WebLLM). " +
+        "Na desktopie: zainstaluj Ollamę z ollama.com, pobierz model komendą  ollama pull dolphin-mistral  (domyślnie http://localhost:11434, adres w ⚙ → AI). " +
+        "Na telefonie/PWA: użyj przeglądarki ze wsparciem WebGPU.",
     };
   }
   if (!status.models.length) {

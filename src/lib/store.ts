@@ -58,6 +58,8 @@ const defaultSettings: Settings = {
   secretsAtRest: false,
   openrouterLowBalanceUsd: 0,
   localEmbeddings: false,
+  webllmEnabled: false,
+  webllmModel: "",
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,

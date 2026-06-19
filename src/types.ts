@@ -349,6 +349,10 @@ export interface Settings {
   openrouterLowBalanceUsd: number;
   /** Embeddingi pamięci liczone on-device (Transformers.js/WebGPU) zamiast w chmurze. Fallback do chmury. */
   localEmbeddings: boolean;
+  /** Mózg on-device (WebLLM/WebGPU) jako lokalny model w przeglądarce/APK. Fallback do chmury. */
+  webllmEnabled: boolean;
+  /** Wybrany model WebLLM (pusty = domyślny z katalogu). */
+  webllmModel: string;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

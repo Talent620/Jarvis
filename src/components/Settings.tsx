@@ -23,6 +23,7 @@ import { verifyMailConnection, sendTestEmail } from "../lib/mailer";
 import { enrollVoice } from "../lib/voiceEnroll";
 import { listMics, ensureMicPermission } from "../lib/mic";
 import FitnessPanel from "./FitnessPanel";
+import WebllmPanel from "./WebllmPanel";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 import { useEscape } from "../hooks/useEscape";
@@ -748,6 +749,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </span>
                 <Toggle on={s.localEmbeddings} onClick={() => set({ localEmbeddings: !s.localEmbeddings })} />
               </div>
+              <WebllmPanel s={s} set={set} />
               <div className="field">
                 <button
                   className="btn"

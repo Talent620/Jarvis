@@ -1,6 +1,6 @@
 import type { ToolDef } from "../tools";
 
-export type ProviderId = "anthropic" | "gemini" | "groq" | "cerebras" | "mistral" | "openrouter" | "nvidia" | "github" | "ollama";
+export type ProviderId = "anthropic" | "gemini" | "groq" | "cerebras" | "mistral" | "openrouter" | "nvidia" | "github" | "ollama" | "webllm";
 
 export interface Msg {
   role: "user" | "assistant";

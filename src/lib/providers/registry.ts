@@ -1,6 +1,8 @@
 import { askAnthropic } from "./anthropic";
 import { makeOpenAICompatible } from "./openai";
 import { askGemini } from "./gemini";
+import { askWebllm } from "./webllm";
+import { WEBLLM_MODELS, WEBLLM_DEFAULT_MODEL } from "../webllm";
 import { store } from "../store";
 import type { AskCtx, ProviderId, ProviderMeta } from "./types";
 
@@ -153,6 +155,17 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
       { id: "mistral-ai/Mistral-Large-2411", label: "Mistral Large" },
     ],
   },
+  // Mózg on-device (WebLLM/MLC) — działa w przeglądarce/APK na WebGPU, bez serwera i bez klucza.
+  // Najniższa ranga: tryb „auto" sięga po niego tylko jako lokalny ogon/awaryjnie (i w trybie prywatnym).
+  webllm: {
+    id: "webllm",
+    label: "On-device (WebLLM — przeglądarka, WebGPU)",
+    rank: 20,
+    keysUrl: "https://webllm.mlc.ai",
+    defaultModel: WEBLLM_DEFAULT_MODEL,
+    impl: askWebllm,
+    models: WEBLLM_MODELS,
+  },
 };
 
 export const PROVIDER_LIST: ProviderMeta[] = Object.values(PROVIDERS);
@@ -170,6 +183,7 @@ export const emptyKeys: ProviderKeys = {
   nvidia: "",
   github: "",
   ollama: "",
+  webllm: "",
 };
 
 /**

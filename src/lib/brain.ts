@@ -12,6 +12,7 @@ import { orderedKeys, primaryKey, coolDownKey } from "./keys";
 import { classifyTask, logRouteDecision, GROQ_SCOUT, GROQ_KIMI } from "./modelRouter";
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
 import { recordEpisode } from "./episodicMemory";
+import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
 import type { JarvisReply, Msg, ProviderId } from "./providers/types";
 
 // Jednorazowy retry przy chwilowym błędzie sieci.
@@ -56,7 +57,11 @@ const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision:
   nvidia: { simple: "meta/llama-3.3-70b-instruct", complex: "meta/llama-3.1-405b-instruct", vision: "meta/llama-3.3-70b-instruct" },
   github: { simple: "openai/gpt-4o-mini", complex: "openai/gpt-4o", vision: "openai/gpt-4o" },
   ollama: { simple: "llama3.2", complex: "llama3.1", vision: "llama3.2" },
+  webllm: { simple: WEBLLM_DEFAULT_MODEL, complex: WEBLLM_DEFAULT_MODEL, vision: WEBLLM_DEFAULT_MODEL },
 };
+
+// Dostawcy bez klucza (lokalni): autoryzacja przez adres serwera (Ollama) lub WebGPU (WebLLM).
+const isKeyless = (p: ProviderId): boolean => p === "ollama" || p === "webllm";
 
 function modelFor(p: ProviderId, complex: boolean, vision: boolean): string {
   const m = TASK_MODELS[p];
@@ -70,12 +75,16 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
   const hasImage = !!last?.image;
   const complex = isComplex(last?.content || "");
 
-  // Local-first fallback: skonfigurowana Ollama zawsze domyka łańcuch — gdy
-  // padnie sieć/chmura, JARVIS płynnie przechodzi na model lokalny z PEŁNYM
-  // kontekstem rozmowy (historia i pamięć idą w zapytaniu jak zwykle).
-  const localTail: { provider: ProviderId; model: string }[] = s.ollamaUrl?.trim()
-    ? [{ provider: "ollama", model: s.model && s.provider === "ollama" && s.model !== "auto" ? s.model : TASK_MODELS.ollama.simple }]
-    : [];
+  // Local-first fallback: model lokalny zawsze domyka łańcuch — gdy padnie sieć/chmura,
+  // JARVIS płynnie przechodzi na on-device z PEŁNYM kontekstem rozmowy.
+  // Dwa tory lokalne: WebLLM (przeglądarka/APK, WebGPU — bez serwera) i Ollama (desktop+serwer).
+  const localTail: { provider: ProviderId; model: string }[] = [];
+  if (s.webllmEnabled && webllmSupported() && !hasImage) {
+    localTail.push({ provider: "webllm", model: s.webllmModel?.trim() || TASK_MODELS.webllm.simple });
+  }
+  if (s.ollamaUrl?.trim()) {
+    localTail.push({ provider: "ollama", model: s.model && s.provider === "ollama" && s.model !== "auto" ? s.model : TASK_MODELS.ollama.simple });
+  }
 
   // Tryb on-device (Faza 8): TYLKO model lokalny — żadna chmura, nic nie opuszcza urządzenia.
   // Brak skonfigurowanej Ollamy → pusty łańcuch (caller pokaże instrukcję konfiguracji).
@@ -249,8 +258,9 @@ export function resolveProvider(): { provider: ProviderId; model: string; apiKey
   const meta = PROVIDERS[provider];
   if (!meta) return null;
   const model = s.model && s.model !== "auto" ? s.model : meta.defaultModel;
-  // Lokalny model (Ollama) nie używa klucza — poświadczeniem jest adres serwera.
-  const apiKey = provider === "ollama" ? (s.ollamaUrl?.trim() ? "local" : "") : primaryKey(provider);
+  // Modele lokalne nie używają klucza: Ollama → adres serwera, WebLLM → WebGPU w przeglądarce.
+  const apiKey =
+    provider === "ollama" ? (s.ollamaUrl?.trim() ? "local" : "") : provider === "webllm" ? "local" : primaryKey(provider);
   return { provider, model, apiKey };
 }
 
@@ -388,7 +398,7 @@ export async function askModel(params: {
     const { provider, model } = order[i];
     // Dla zadań „heavy" (jakość) bierzemy mocniejszy model dostawcy zamiast szybkiego.
     const useModel = params.heavy ? TASK_MODELS[provider]?.complex || model : model;
-    const keys = provider === "ollama" ? ["local"] : orderedKeys(provider);
+    const keys = isKeyless(provider) ? ["local"] : orderedKeys(provider);
     if (!keys.length) continue;
     let providerErr: unknown;
     for (let j = 0; j < keys.length; j++) {
@@ -400,7 +410,7 @@ export async function askModel(params: {
         providerErr = e;
         lastErr = e;
         const msg = e instanceof Error ? e.message : String(e);
-        if (provider !== "ollama" && isKeyError(msg)) {
+        if (!isKeyless(provider) && isKeyError(msg)) {
           coolDownKey(provider, apiKey);
           if (j < keys.length - 1) continue;
         }
@@ -482,7 +492,7 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   if (!order.length) {
     if (store.settings.onDeviceOnly) {
       throw new Error(
-        "Tryb on-device jest włączony, ale brak modelu lokalnego. Uruchom Ollamę i podaj jej adres w ⚙ → AI (np. http://localhost:11434), albo wyłącz tryb on-device.",
+        "Tryb on-device jest włączony, ale brak modelu lokalnego. Włącz Mózg on-device (WebLLM) w ⚙ → AI (wymaga przeglądarki z WebGPU) albo uruchom Ollamę i podaj jej adres (np. http://localhost:11434). Możesz też wyłączyć tryb on-device.",
       );
     }
     throw new Error("Żaden dostawca AI nie ma wpisanego klucza. Wejdź w ⚙ → AI i wklej dowolny klucz (Szybki start).");
@@ -494,7 +504,7 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
   for (let i = 0; i < order.length; i++) {
     const { provider, model } = order[i];
     // Ollama autoryzuje się adresem serwera, nie kluczem; pozostali — listą kluczy.
-    const keys = provider === "ollama" ? ["local"] : orderedKeys(provider);
+    const keys = isKeyless(provider) ? ["local"] : orderedKeys(provider);
     if (!keys.length) continue;
 
     let providerErr: unknown;
@@ -538,7 +548,7 @@ export async function askJarvis(history: Msg[]): Promise<JarvisReply> {
         const msg = e instanceof Error ? e.message : String(e);
         // Błąd klucza (limit/autoryzacja): odłóż go i spróbuj NASTĘPNEGO klucza tego
         // samego dostawcy, zanim zejdziemy do kolejnego dostawcy.
-        if (provider !== "ollama" && isKeyError(msg)) {
+        if (!isKeyless(provider) && isKeyError(msg)) {
           coolDownKey(provider, apiKey);
           if (j < keys.length - 1) continue;
         }
