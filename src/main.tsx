@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -6,6 +6,13 @@ import { toast } from "./lib/toast";
 import "./styles/index.css";
 import { initPlugins } from "./plugins";
 import { installSecretsVault } from "./lib/secretsVault";
+
+// Opcjonalny, OPT-IN podgląd „Neural Interface" pod hash-route `#neural` — ładowany leniwie,
+// więc framer-motion/Tailwind nie wchodzą do głównego bundla zwykłych użytkowników.
+// Domyślnie (bez hasha) renderujemy klasyczny <App/> — zero zmian w produkcyjnym przepływie.
+const NeuralInterface = React.lazy(() => import("./components/jarvis-ui/NeuralInterface"));
+const isNeural = typeof location !== "undefined" && location.hash.replace(/^#\/?/, "") === "neural";
+window.addEventListener("hashchange", () => location.reload()); // przełączanie #neural ⇄ klasyczny
 
 installSecretsVault(); // szyfrowanie kluczy w spoczynku (no-op, gdy wyłączone)
 initPlugins();
@@ -34,7 +41,13 @@ window.addEventListener("error", (e) => {
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ErrorBoundary label="g\u0142\u00f3wnego interfejsu">
-      <App />
+      {isNeural ? (
+        <Suspense fallback={null}>
+          <NeuralInterface />
+        </Suspense>
+      ) : (
+        <App />
+      )}
     </ErrorBoundary>
   </React.StrictMode>,
 );
