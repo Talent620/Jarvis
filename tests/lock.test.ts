@@ -22,9 +22,17 @@ describe("Blokada PIN — skrót + sól", () => {
   it("PIN nie jest trzymany jawnie (tylko hash+sól)", async () => {
     await setPin("4321");
     const raw = localStorage.getItem("jarvis.lock.v1") || "";
-    expect(raw).not.toContain("4321");
-    expect(JSON.parse(raw)).toHaveProperty("salt");
-    expect(JSON.parse(raw)).toHaveProperty("hash");
+    const rec = JSON.parse(raw) as Record<string, unknown>;
+    expect(rec).toHaveProperty("salt");
+    expect(rec).toHaveProperty("hash");
+    expect(rec).toHaveProperty("iter");
+    // Skrót i sól to czysty hex, iter to liczba — PIN nie może być przechowany jawnie.
+    // (Uwaga: NIE testujemy `raw.not.toContain("4321")` — losowy hash hex potrafi przypadkiem
+    //  zawierać dowolne 4 cyfry, co czyniło ten test niestabilnym.)
+    expect(String(rec.hash)).toMatch(/^[0-9a-f]{64}$/);
+    expect(String(rec.salt)).toMatch(/^[0-9a-f]+$/);
+    expect(typeof rec.iter).toBe("number");
+    expect(Object.values(rec)).not.toContain("4321"); // żadne POLE nie jest jawnym PIN-em
   });
 
   it("clearPin usuwa blokadę", async () => {
