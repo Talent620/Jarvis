@@ -21,6 +21,14 @@ Cel: szybkość i prywatność na co dzień, moc chmury tylko wtedy, gdy realnie
 Katalog modeli pod małe karty (2026): `qwen3.5:4b` (domyślny), `phi4-mini`, `gemma3:4b-it-qat`
 (wizja), `llama3.2:3b`, `qwen3:1.7b`, `gemma2:2b`, `deepseek-r1:1.5b`, `qwen2.5-coder:3b`.
 
+**Pobieranie modeli bez terminala:** w **⚙ → AI** (dostawca = Ollama) wpisz nazwę modelu (np.
+`qwen3.5:4b`) i kliknij **⬇ Pobierz** — JARVIS ściągnie go wprost na Twój serwer Ollama, pokazując
+postęp. Po pobraniu model pojawi się na liście wyboru.
+
+**Model per typ zadania (opcjonalnie):** w sekcji „Refleks i Kora" możesz wskazać osobny model
+lokalny dla pytań **prostych** (szybki), **złożonych** (mocniejszy) i **obrazów** (wizja). Puste =
+katalog domyślny. Jawny wybór modelu na górze ekranu nadal ma pierwszeństwo.
+
 ## Przełączniki (⚙ → AI → „🧠 Refleks i Kora")
 Wszystkie domyślnie **wyłączone**; wymagają skonfigurowanej Ollamy.
 
@@ -51,3 +59,6 @@ mediana latencji per typ/warstwa) zobaczysz też w **🩺 Stan systemu**.
 - `server/ollama/` — postawienie serwera Ollama (PC) + dostęp z telefonu (Tailscale).
 - `server/lora/` — szkielet fine-tuningu LoRA „Twój głos lokalnie" (po stronie serwera z GPU;
   anonimizacja PII, eksport adaptera do Ollamy). To plan pod upgrade sprzętu, nie wymóg.
+  - **Dane treningowe budujesz w aplikacji:** Pulpit Sprzedaży → **🧠 Trening** pobiera
+    `jarvis-glos-*.jsonl` z Twoich ofert (zanonimizowany, PII → tokeny). Trening robi serwer z GPU;
+    po nim wybierasz model `jarvis-glos` w aplikacji jak każdy inny.

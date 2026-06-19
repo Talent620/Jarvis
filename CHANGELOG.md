@@ -43,6 +43,25 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
   ostatnich decyzji routera — co poszło do Refleksu, co do Kory, eskalacje, latencja, pewność. Liczone
   i trzymane wyłącznie lokalnie. Zwijany podgląd w Ustawieniach (odśwież/wyczyść). +12 testów.
 
+#### Ollama + leady (fokus operacyjny)
+- **Hardening BFF — testy bezpieczeństwa (`tests/workerSecurity.test.ts`):** zamknięto regresjami
+  krytyczne funkcje proxy: `blocksCloudMetadata` (anty-SSRF: IMDS/metadata chmury), `openaiHostAllowed`
+  (ścisła biała lista — odrzuca podszywanie sufiksem typu `api.groq.com.attacker.tld`), `noCRLF`,
+  `envKeyForHost`. Handler `/openai` używa wyodrębnionej funkcji — zachowanie identyczne. +12 testów.
+- **Ollama — pobieranie modeli z aplikacji (`ollamaPull.ts`):** `POST /api/pull` ze strumieniem NDJSON
+  postępu; w Ustawieniach pole + „⬇ Pobierz" (status/%, po sukcesie odświeża listę). Koniec z terminalem
+  do `ollama pull`. +10 testów (w tym strumieniowe).
+- **Ollama — model per typ zadania:** `ollamaModelSimple/Complex/Vision` (opcjonalne) — `pickOllamaModel`
+  dobiera model wg klasyfikacji (jawny wybór > nadpisanie per-kind > katalog). Offline złożone → mocniejszy
+  model, obraz → model wizji (zamiast zawsze `.simple`). UI: trzy pola w sekcji Refleks i Kora. +6 testów.
+- **Leady — dedup odporny na warianty nazwy:** `saveLeads` dopasowuje teraz nazwa + telefon (ostatnie 9
+  cyfr) + e-mail (czyste `normName/normPhone/normEmail/leadKeys`) — kolejne wyszukiwania nie dublują tych
+  samych firm; dedup także w obrębie partii. +12 testów.
+- **Leady → Ollama — eksport korpusu LoRA „Twój głos" (`loraExport.ts`):** buduje zanonimizowane pary
+  instrukcja→odpowiedź z Twoich ofert (PII → `<KLIENT>/<MIASTO>/<EMAIL>/<TELEFON>/<WWW>`, dopasowanie
+  rdzenia na polską odmianę). Przycisk „🧠 Trening" w Pulpicie Sprzedaży pobiera `*.jsonl` zgodny z
+  `server/lora`. Trening dalej server-only (GPU). +8 testów.
+
 ### „Refleks i Kora" — Część I (Fundament, Zadania 1–7)
 Dwuprędkościowy mózg: model lokalny (Refleks) staje się pełnym poziomem, nie tylko awaryjnym ogonem.
 - **Z1 — katalog Ollamy pod ~4 GB VRAM (2026):** `qwen3.5:4b` (domyślny), `phi4-mini`, `gemma3:4b-it-qat`
