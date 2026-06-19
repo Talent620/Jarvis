@@ -57,11 +57,19 @@ function pickVoice(settings: Settings): SpeechSynthesisVoice | undefined {
     const exact = voices.find((v) => v.name === settings.voiceName);
     if (exact) return exact;
   }
+  // Odpowiedzi są PO POLSKU — domyślnie wybierz najlepszy POLSKI głos, by czytał poprawnie
+  // (angielski głos mówiący po polsku brzmi fatalnie). Najlepszy głos JARVIS-a = naturalny PL.
+  const pl = voices.filter((v) => v.lang.toLowerCase().startsWith("pl"));
+  if (pl.length) {
+    const PL_PREF = ["zofia", "marek", "krzysztof", "adam", "paulina", "google", "microsoft", "natural"];
+    for (const h of PL_PREF) { const v = pl.find((x) => x.name.toLowerCase().includes(h)); if (v) return v; }
+    return pl[0];
+  }
+  // Brak polskiego głosu w systemie → klasyczny głos JARVIS-a (angielski) jako fallback.
   for (const hint of JARVIS_HINTS) {
     const v = voices.find((x) => x.name.toLowerCase().includes(hint));
     if (v) return v;
   }
-  // Preferuj angielski (brzmi bardziej jak oryginał), inaczej pierwszy dostępny.
   return voices.find((v) => v.lang.toLowerCase().startsWith("en")) || voices[0];
 }
 
