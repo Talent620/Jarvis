@@ -369,6 +369,8 @@ export interface Settings {
   confidenceGate: boolean;
   /** Próg pewności (0..1) poniżej którego następuje eskalacja. Domyślnie 0.55. */
   confidenceThreshold: number;
+  /** Spekulacja: dla zadań complex lokalny draft + równoległa weryfikacja Korą (draft-then-verify). */
+  speculativeMode: boolean;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
   salesOsAutoSync: number;
   /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */

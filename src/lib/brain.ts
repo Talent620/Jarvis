@@ -14,6 +14,7 @@ import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTel
 import { recordEpisode, loadEpisodes } from "./episodicMemory";
 import { buildFusionBlock } from "./contextFusion";
 import { estimateConfidence, isLowConfidence } from "./confidence";
+import { speculativeAnswer } from "./speculative";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
 import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
@@ -540,6 +541,44 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   }
 
   resetCitations();
+
+  // Zadanie 9 — Spekulacja (draft-then-verify): dla zadań complex, gdy włączona i Ollama dostępna
+  // oraz jest sieć — lokalny draft (streaming) + równoległa weryfikacja Korą. Zgodne → tani draft;
+  // rozbieżne → korekta Kory. Padnie cała spekulacja → spadamy do zwykłej pętli niżej.
+  const clsTop = classifyTask(lastUser?.content || "", !!lastUser?.image);
+  if (store.settings.speculativeMode && clsTop.kind === "complex" && store.settings.ollamaUrl?.trim() && (typeof navigator === "undefined" || navigator.onLine !== false)) {
+    const cortex = order.find((o) => !isKeyless(o.provider) && orderedKeys(o.provider).length > 0);
+    if (cortex) {
+      try {
+        const localModel = order.find((o) => o.provider === "ollama")?.model || TASK_MODELS.ollama.complex;
+        const cortexKey = orderedKeys(cortex.provider)[0];
+        const res = await speculativeAnswer({
+          runLocal: (ot) => withRetry(() => PROVIDERS.ollama.impl({ ...baseCtx, apiKey: "local", model: localModel, onToken: ot })),
+          runCortex: () => withRetry(() => PROVIDERS[cortex.provider].impl({ ...baseCtx, apiKey: cortexKey, model: cortex.model })),
+          onToken,
+          threshold: 0.5,
+        });
+        logRouteDecision({
+          provider: res.reply.via || cortex.provider, model: res.corrected ? cortex.model : localModel, kind: "complex",
+          reason: res.corrected ? "spekulacja: korekta korą" : res.usedCortex ? "spekulacja: draft potwierdzony" : "spekulacja: draft (kora padła)",
+          fellBack: res.corrected,
+        });
+        if (lastUser?.content) recordEpisode("chat", lastUser.content);
+        void learnFromExchange(lastUser?.content || "", res.reply.text);
+        if (memoryServiceAvailable() && lastUser?.content && res.reply.text) {
+          void addMemory([{ role: "user", content: lastUser.content }, { role: "assistant", content: res.reply.text }], memNamespace).catch(() => {});
+        }
+        if (res.reply.usage && (res.reply.usage.inputTokens || res.reply.usage.outputTokens)) {
+          const price = priceFor(res.corrected ? cortex.model : localModel, parsePricingOverrides(store.settings.aiPricingOverrides));
+          recordUsage({ at: Date.now(), provider: res.reply.via || cortex.provider, model: res.corrected ? cortex.model : localModel, inputTokens: res.reply.usage.inputTokens, outputTokens: res.reply.usage.outputTokens, costUsd: costOf(res.reply.usage, price) });
+        }
+        return res.reply;
+      } catch {
+        /* spekulacja padła całkowicie — przejdź do zwykłej pętli failoveru */
+      }
+    }
+  }
+
   const primary = order[0].provider; // główny mózg — jeśli odpowie inny, to był failover
   let lastErr: unknown;
   // Brama Pewności (Zadanie 8): jeśli refleks lokalny był niepewny i eskalujemy, trzymamy

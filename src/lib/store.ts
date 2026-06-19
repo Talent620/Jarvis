@@ -67,6 +67,7 @@ const defaultSettings: Settings = {
   ollamaNumGpu: -1,
   confidenceGate: false,
   confidenceThreshold: 0.55,
+  speculativeMode: false,
   ollamaUrl: "",
   unfilteredLocal: false,
   deepThink: false,

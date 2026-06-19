@@ -10,6 +10,10 @@ Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
   (wahanie/odmowa/pustka/degeneracja/za-krótko-vs-złożoność). Gdy refleks lokalny niepewny
   (`< confidenceThreshold`, domyślnie 0.55) i jest sieć → tura eskaluje do silniejszego dostawcy
   (Kory); lokalna odpowiedź trzymana jako deska ratunku, gdyby Kora padła. Decyzja w `logRouteDecision`.
+- **Z9 — Spekulacja (`speculativeMode`, draft-then-verify):** `speculative.ts` — dla zadań `complex`
+  lokalny model streamuje draft (widać tekst od razu), równolegle Kora weryfikuje. Zgodne (niska
+  rozbieżność, Jaccard z lekkim stemmingiem PL) → tani lokalny draft; rozbieżne → korekta Kory.
+  Padnie Kora → draft finalny (graceful). Orkiestracja z wstrzykiwalnymi runnerami (testowalna).
 
 ### „Refleks i Kora" — Część I (Fundament, Zadania 1–7)
 Dwuprędkościowy mózg: model lokalny (Refleks) staje się pełnym poziomem, nie tylko awaryjnym ogonem.
