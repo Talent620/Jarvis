@@ -8,6 +8,7 @@ import { findLeads } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { leadsToCsv, followUpsDue, callNowList, searchLeads, wasLeadEmailed } from "../lib/salesEngine";
 import { importLeads } from "../lib/leadImport";
+import { buildLoraCorpus, corpusToJsonl } from "../lib/loraExport";
 import { openSalesOs, syncFromSalesOs, pushLeadsToSalesOs, flushSalesOsOutreach, getLastSnapshot, metricsToText } from "../lib/salesOs";
 import { copyWithToast, toast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
@@ -90,6 +91,20 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast(`Wyeksportowano ${leads.length} leadów ✓`);
+  };
+
+  // Eksport ZANONIMIZOWANEGO korpusu treningowego LoRA „Twój głos" (z Twoich ofert).
+  // Trening robi serwer z GPU (server/lora); klient tylko buduje dane bez PII.
+  const exportLora = () => {
+    const corpus = buildLoraCorpus(leads);
+    if (!corpus.length) { toast("Brak ofert do eksportu — najpierw napisz kilka cold-maili do leadów."); return; }
+    const url = URL.createObjectURL(new Blob([corpusToJsonl(corpus)], { type: "application/jsonl;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `jarvis-glos-${new Date().toISOString().slice(0, 10)}.jsonl`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast(`Korpus LoRA: ${corpus.length} przykładów (zanonimizowane) ✓`);
   };
 
   // Teczki dla wszystkich NOWYCH leadów naraz: audyt + analiza + e-mail + skrypt.
@@ -342,6 +357,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
             </button>
             <button className="btn" onClick={() => setShowImport((v) => !v)} title="Wklej listę firm">📥 Import</button>
             <button className="btn" onClick={exportCsv} title="Eksport do Excela/Arkuszy">📤 CSV</button>
+            <button className="btn" onClick={exportLora} title="Dane treningowe LoRA Twój głos (zanonimizowane)">🧠 Trening</button>
           </div>
           {(store.settings.salesOsUrl || "").trim() && (
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
