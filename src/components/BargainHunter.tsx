@@ -198,7 +198,7 @@ export default function BargainHunter({ onClose }: { onClose: () => void }) {
               {res.note === "no-ai"
                 ? "💡 Bez klucza AI pokazuję gotowe linki „od najtańszych” poniżej. Dodaj klucz w ⚙ → AI, by JARVIS sam zebrał i porównał oferty."
                 : res.note === "no-search"
-                ? "💡 Włącz realne wyszukiwanie, by JARVIS znajdował konkretne oferty z prawdziwymi linkami: dodaj klucz Tavily (⚙ → Research) albo użyj modelu Claude. Na razie skorzystaj z linków poniżej."
+                ? "💡 Włącz realne wyszukiwanie, by JARVIS znajdował konkretne oferty z prawdziwymi linkami: dodaj klucz Tavily (⚙ → AI → „Research z cytatami”) albo użyj modelu Claude. Na razie skorzystaj z linków poniżej."
                 : "Nie udało się zebrać konkretnych ofert — skorzystaj z linków poniżej (każdy posortowany od najtańszych)."}
             </p>
           )}
