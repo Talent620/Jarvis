@@ -103,6 +103,12 @@ describe("narzędzia lokalne — wykonanie end-to-end (runTool)", () => {
     expect(await runTool("set_mode", { mode: "xyz" })).toMatch(/Dostępne tryby/);
   });
 
+  it("system_health zwraca kondycję JARVISA (wynik + agenci)", async () => {
+    const r = await runTool("system_health", {});
+    expect(r).toMatch(/Kondycja JARVISA: \d+\/100/);
+    expect(r).toMatch(/Inteligencja \(AI\)|Głos|Wydajność/);
+  });
+
   it("set_voice zmienia barwę, charakter, tempo i mówienie", async () => {
     const r = await runTool("set_voice", { voice: "Charon", persona: "operator", speed: "slower", speak: false });
     expect(r).toMatch(/✅/);

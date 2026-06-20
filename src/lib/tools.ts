@@ -1068,6 +1068,25 @@ const tools: Tool[] = [
   },
   {
     def: {
+      name: "system_health",
+      description:
+        "Sprawdź KONDYCJĘ JARVISA (Strażnik): mózg/AI, serwery lokalne, głos, szybkość, integracje. Użyj, gdy ktoś pyta „jak się czujesz”, „sprawdź stan systemu”, „czy wszystko działa”, „diagnoza”, „co u ciebie”.",
+      input_schema: obj({}, []),
+    },
+    run: async () => {
+      // Dynamiczny import — unika cyklu modułów (tools ↔ brain ↔ guardianAgents).
+      const { guardianScan } = await import("./guardianAgents");
+      const scan = await guardianScan({ checkUpdate: false });
+      const dot = (st: string) => (st === "ok" ? "🟢" : st === "warn" ? "🟡" : st === "problem" ? "🔴" : "⚪");
+      const lines = [`🛡 Kondycja JARVISA: ${scan.health.score}/100 (${scan.health.label}).`];
+      for (const a of scan.reports) lines.push(`${dot(a.state)} ${a.name}: ${a.summary}`);
+      const top = scan.recs.find((r) => r.problem);
+      if (top) lines.push(`Zalecenie: ${top.label}${top.problem ? ` — ${top.problem}` : ""}`);
+      return lines.join("\n");
+    },
+  },
+  {
+    def: {
       name: "set_preference",
       description:
         "Zmień osobiste preferencje JARVIS-a na żądanie: jak ma się do Ciebie zwracać (imię), wyszukiwanie w sieci on/off, adaptacyjny układ menu on/off. Np. „mów do mnie Szefie”, „wyłącz wyszukiwanie w sieci”, „nie układaj menu pod moje nawyki”.",
