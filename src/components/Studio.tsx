@@ -76,7 +76,15 @@ export default function Studio({ onClose }: { onClose: () => void }) {
 
   const attach = async () => {
     const img = await capturePhoto();
-    if (img) { setInputs((p) => [...p, img].slice(0, 4)); }
+    if (img) {
+      setInputs((p) => [...p, img].slice(0, 4));
+      // Dołączasz zdjęcie = chcesz EDYCJĘ. Pollinations tworzy obraz z opisu i NIE edytuje —
+      // jeśli jest skonfigurowany edytor (Gemini/SD), przeskocz na niego, by wynik pasował.
+      if (model === "pollinations") {
+        const edit = bestImageModel();
+        if (edit !== "pollinations") setModel(edit);
+      }
+    }
   };
 
   const run = async (text: string, ins: Img[]) => {

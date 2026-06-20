@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { speedSummary, voiceSummary, guardianAdvicePrompt, isOutgoingCommand, healthScore, recommendActions, type GuardianStatus } from "../src/lib/guardian";
+import { speedSummary, voiceSummary, guardianAdvicePrompt, guardianChatSystem, isOutgoingCommand, healthScore, recommendActions, type GuardianStatus } from "../src/lib/guardian";
 import { findSdServer } from "../src/lib/localImage";
 import { store } from "../src/lib/store";
 
@@ -40,6 +40,21 @@ describe("guardian — guardianAdvicePrompt", () => {
     expect(p).toMatch(/jak przyspieszyć/);
     expect(p).toMatch(/lokalny \(Ollama\)/);
     expect(p).toMatch(/Brak modelu SD/);
+  });
+});
+
+describe("guardian — guardianChatSystem (rozmowa wielotura)", () => {
+  it("zawiera zasadę najpierw-dopytaj, stan i język polski", () => {
+    const st: GuardianStatus = { brain: "chmura (auto)", ollama: "off", ollamaModels: 0, sd: "off", voiceLabel: "🇵🇱 polski", speedLabel: "⚡ szybki", issues: ["Serwer Ollama nieosiągalny"] };
+    const sys = guardianChatSystem(st);
+    expect(sys).toMatch(/po polsku/i);
+    expect(sys).toMatch(/ROZMOWA|dopyta/i); // ma prowadzić rozmowę, nie jeden prompt
+    expect(sys).toMatch(/chmura \(auto\)/); // stan wpleciony
+    expect(sys).toMatch(/Serwer Ollama nieosiągalny/); // problemy widoczne dla doradcy
+  });
+  it("bez problemów → informuje, że brak wykrytych problemów", () => {
+    const st: GuardianStatus = { brain: "lokalny (Ollama)", ollama: "ok", ollamaModels: 2, sd: "ok", voiceLabel: "🇵🇱", speedLabel: "⚡", issues: [] };
+    expect(guardianChatSystem(st)).toMatch(/Brak wykrytych problemów/);
   });
 });
 

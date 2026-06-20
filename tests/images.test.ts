@@ -57,6 +57,21 @@ describe("Studio — modele edycji", () => {
     expect("error" in r).toBe(true);
     if ("error" in r) expect(r.error).toMatch(/zdjęcie/i);
   });
+
+  it("Pollinations + dołączone zdjęcie → NIE zmyśla edycji, kieruje do edytora (bramka)", async () => {
+    // Regresja: darmowy generator ignorował zdjęcie i tworzył losowy, niepasujący obraz.
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => { calls.push(String(url)); return new Response(new Blob([], { type: "image/jpeg" }), { status: 200 }); }));
+    const img = { data: "AAAA", mediaType: "image/png" };
+    const r = await generateImage("wyczyść, usuń rysy jakby był nowy", img, "pollinations");
+    expect("error" in r).toBe(true);
+    if ("error" in r) {
+      expect(r.error).toMatch(/Gemini|edyt|przerobi/i);
+      expect(r.error).toMatch(/NIE przerobi|nowy obraz/i);
+    }
+    expect(calls.length).toBe(0); // nie wysłał żadnego żądania generowania
+    vi.unstubAllGlobals();
+  });
 });
 
 describe("humanizeImageError — czytelne komunikaty", () => {

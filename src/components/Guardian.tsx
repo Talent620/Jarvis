@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
-import { guardian, guardianAdvise, guardianExecute, guardianPlan, isOutgoingCommand, GUARDIAN_CAPABILITIES, type GuardianActionResult, type GuardianActionKey } from "../lib/guardian";
+import { guardian, guardianAdvise, guardianChat, guardianExecute, guardianPlan, isOutgoingCommand, GUARDIAN_CAPABILITIES, type GuardianActionResult, type GuardianActionKey, type GuardianChatMsg } from "../lib/guardian";
 import { guardianScan, formatScanReport, type GuardianScan, type AgentReport, type AgentState } from "../lib/guardianAgents";
 import { recordGuardianEvent, getGuardianHistory, clearGuardianHistory, topFixes, recurringHint, type GuardianEvent } from "../lib/guardianHistory";
 import { checkForUpdate, applyUpdate } from "../lib/updater";
@@ -27,6 +27,11 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
   const [proactive, setProactive] = useState(store.settings.guardianProactive);
   const [autopilot, setAutopilot] = useState(store.settings.guardianAutopilot);
   const [history, setHistory] = useState<GuardianEvent[]>(() => getGuardianHistory());
+  // 💬 Osobna, WIELOTUROWA rozmowa ze Strażnikiem — buduje kontekst, może dopytać, zanim doradzi.
+  const [chat, setChat] = useState<GuardianChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const refresh = async () => {
     setBusy(true); setMsg("Skanuję ekosystem JARVISA…");
@@ -88,6 +93,24 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
     catch { setAdvice("Nie udało się uzyskać porady — sprawdź, czy mózg AI odpowiada."); }
     finally { setBusy(false); }
   };
+
+  // 💬 Wyślij turę rozmowy — cała historia trafia do Strażnika, więc pamięta kontekst i może dopytać.
+  const sendChat = async () => {
+    const text = chatInput.trim();
+    if (chatBusy || !text) return;
+    const next: GuardianChatMsg[] = [...chat, { role: "user", content: text }];
+    setChat(next); setChatInput(""); setChatBusy(true);
+    try {
+      const reply = await guardianChat(next);
+      setChat((c) => [...c, { role: "assistant", content: reply }]);
+    } catch {
+      setChat((c) => [...c, { role: "assistant", content: "Nie udało się odpowiedzieć — sprawdź, czy mózg AI odpowiada (Napraw wszystko)." }]);
+    } finally {
+      setChatBusy(false);
+    }
+  };
+  // Autoprzewijanie do najnowszej wiadomości w rozmowie.
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [chat, chatBusy]);
 
   // Realne wykonanie: pełny mózg JARVISA + narzędzia (zadania, e-mail, kalendarz, smart home, web, PC…).
   const realExecute = async (cmd: string) => {
@@ -284,6 +307,59 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
             </div>
           )}
           {advice && <p className="muted" style={{ fontSize: 13, whiteSpace: "pre-wrap", marginTop: 8 }}>{advice}</p>}
+
+          {/* 💬 Osobna ROZMOWA ze Strażnikiem (wielotura) — ma czas zrozumieć problem i dopytać, zanim doradzi */}
+          <h3 style={{ marginTop: 16 }}>🗣 Porozmawiaj ze Strażnikiem</h3>
+          <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>
+            Osobna rozmowa „na spokojnie": Strażnik pamięta kontekst, może dopytać i prowadzić Cię krok po kroku — nie opiera się na jednym pytaniu.
+          </p>
+          <div className="journal-card" style={{ padding: "10px 12px", marginTop: 6 }}>
+            {/* Dymek powitalny — Strażnik zagaja rozmowę */}
+            {chat.length === 0 && (
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span style={{ fontSize: 20, lineHeight: 1.2 }}>🛡</span>
+                <div style={{ background: "var(--surface-2, rgba(255,255,255,.05))", borderRadius: "12px 12px 12px 4px", padding: "8px 12px", fontSize: 13, lineHeight: 1.5, maxWidth: "85%" }}>
+                  Cześć! Opisz, co Cię trapi w JARVISIE — wolno działa, nie gada, nie łączy się z serwerem? Dopytam i doradzę krok po kroku.
+                </div>
+              </div>
+            )}
+            {/* Dymki rozmowy */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 280, overflowY: "auto" }}>
+              {chat.map((m, i) => (
+                m.role === "assistant" ? (
+                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 20, lineHeight: 1.2 }}>🛡</span>
+                    <div style={{ background: "var(--surface-2, rgba(255,255,255,.05))", borderRadius: "12px 12px 12px 4px", padding: "8px 12px", fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", maxWidth: "85%" }}>{m.content}</div>
+                  </div>
+                ) : (
+                  <div key={i} style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <div style={{ background: "var(--cyan-dim, rgba(108,231,255,.16))", borderRadius: "12px 12px 4px 12px", padding: "8px 12px", fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", maxWidth: "85%" }}>{m.content}</div>
+                  </div>
+                )
+              ))}
+              {chatBusy && (
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <span style={{ fontSize: 20 }}>🛡</span>
+                  <span className="muted" style={{ fontSize: 13 }}>Strażnik myśli…</span>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="chips" style={{ marginTop: 10 }}>
+              <input
+                value={chatInput}
+                placeholder="Napisz do Strażnika…"
+                disabled={chatBusy}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void sendChat(); }}
+                style={{ flex: 1 }}
+              />
+              <button className="btn primary" style={{ marginTop: 0, padding: "8px 16px" }} disabled={chatBusy || !chatInput.trim()} onClick={() => void sendChat()}>➤</button>
+            </div>
+            {chat.length > 0 && (
+              <button className="btn" style={{ marginTop: 8, padding: "5px 12px", fontSize: 12, width: "auto" }} onClick={() => { setChat([]); setChatInput(""); }}>🗑 Nowa rozmowa</button>
+            )}
+          </div>
 
           {/* 🗂 Pamięć Strażnika (opiekun) — co robił + najczęstsze naprawy */}
           {history.length > 0 && (

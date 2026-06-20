@@ -148,7 +148,11 @@ export function pollinationsUrl(prompt: string, opts?: SdOpts, seed = 0): string
   return `${POLLINATIONS}${p}?width=${w}&height=${h}&seed=${seed}&model=flux&nologo=true`;
 }
 
-async function pollinationsGenerate(prompt: string, opts?: SdOpts): Promise<Result> {
+async function pollinationsGenerate(prompt: string, inputs: Img[], opts?: SdOpts): Promise<Result> {
+  // STRAŻNIK EDYCJI: darmowy generator robi text-to-image i NIE przerobi dołączonego zdjęcia.
+  // Bez tej bramki tworzył z opisu zupełnie niepasujący obraz (np. „wyczyść" → losowy obraz),
+  // udając edycję. Lepiej jasno pokierować niż oddać zmyślony wynik.
+  if (inputs.length) return { error: "Darmowy generator bez klucza tworzy NOWY obraz z opisu i NIE przerobi dołączonego zdjęcia — dlatego wynik nie pasuje do oryginału. Aby PRZEROBIĆ to zdjęcie: dodaj darmowy klucz Gemini (🔑 w Studiu lub ⚙ → AI) i wybierz model „Gemini Nano Banana”, albo użyj lokalnego Stable Diffusion lub modelu premium (fal.ai)." };
   if (!prompt.trim()) return { error: "Podaj opis obrazu." };
   const seed = Math.floor(Math.random() * 1_000_000_000);
   try {
@@ -178,7 +182,7 @@ export function bestImageModel(): ImageModelId {
  */
 export async function generateImage(prompt: string, input?: Img | Img[], model: ImageModelId = "gemini", sdOpts?: SdOpts, onSdProgress?: (pct: number) => void): Promise<Result> {
   const inputs = input ? (Array.isArray(input) ? input : [input]) : [];
-  if (model === "pollinations") return pollinationsGenerate(prompt, sdOpts);
+  if (model === "pollinations") return pollinationsGenerate(prompt, inputs, sdOpts);
   if (model === "gemini") return geminiEdit(prompt, inputs);
   if (model === "local-sd") return localSdGenerate(prompt, inputs, sdOpts, onSdProgress);
   return falEdit(model, prompt, inputs);

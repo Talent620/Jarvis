@@ -229,6 +229,37 @@ export async function guardianAdvise(question: string): Promise<string> {
   return reply.text;
 }
 
+// === 💬 Rozmowa ze Strażnikiem (wielotura) ===
+// Zwykły „Doradź" to JEDEN prompt — Strażnik nie ma szansy dopytać ani zrozumieć kontekstu.
+// Tu prowadzimy PRAWDZIWĄ rozmowę: cała historia trafia do modelu, więc Strażnik buduje na
+// poprzednich turach, może dopytać, zanim doradzi, i prowadzić użytkownika krok po kroku.
+export interface GuardianChatMsg { role: "user" | "assistant"; content: string }
+
+/** Pure: system rozmowy doradczej Strażnika (zawiera aktualny stan + zasadę „najpierw zrozum"). */
+export function guardianChatSystem(status: GuardianStatus): string {
+  return [
+    "Jesteś Strażnikiem JARVISA — spokojnym, doświadczonym doradcą tego asystenta AI.",
+    "To ROZMOWA (wiele tur), więc się nie spiesz. Gdy problem jest niejasny lub brakuje Ci informacji,",
+    "NAJPIERW zadaj JEDNO krótkie pytanie doprecyzowujące — a dopiero gdy rozumiesz sytuację, doradź.",
+    "Odpowiadaj po polsku, krótko i konkretnie. Buduj na poprzednich turach — nie powtarzaj się.",
+    "Gdy masz dość informacji, podaj 2–4 kroki i które przyciski Strażnika kliknąć",
+    "(Napraw wszystko / Szybciej / Mądrzej / Bez cenzury / Połącz serwery / Napraw głos / Auto-konfiguracja / Aktualizuj).",
+    "Aktualny stan systemu:",
+    `- Mózg: ${status.brain}`,
+    `- Ollama: ${status.ollama} (${status.ollamaModels} model(i))`,
+    `- Serwer obrazów: ${status.sd}`,
+    `- Głos: ${status.voiceLabel}`,
+    `- Szybkość: ${status.speedLabel}`,
+    status.issues.length ? `- Problemy: ${status.issues.join("; ")}` : "- Brak wykrytych problemów.",
+  ].join("\n");
+}
+
+/** Rozmowny doradca Strażnika: cała historia → odpowiedź (kontekst zachowany między turami). */
+export async function guardianChat(history: GuardianChatMsg[]): Promise<string> {
+  const status = await guardianDiagnose();
+  return askModel({ system: guardianChatSystem(status), history });
+}
+
 /**
  * WYKONAJ polecenie pełnym mózgiem JARVISA z narzędziami (zadania, e-mail, kalendarz, smart home,
  * web, sterowanie PC, leady…). Akcje ryzykowne i tak przechodzą przez zgody aplikacji. Zwraca wynik.
