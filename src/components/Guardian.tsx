@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
-import { guardian, guardianDiagnose, guardianAdvise, guardianExecute, guardianPlan, isOutgoingCommand, GUARDIAN_CAPABILITIES, type GuardianStatus, type GuardianActionResult } from "../lib/guardian";
+import { guardian, guardianDiagnose, guardianAdvise, guardianExecute, guardianPlan, isOutgoingCommand, healthScore, recommendActions, GUARDIAN_CAPABILITIES, type GuardianStatus, type GuardianActionResult, type GuardianActionKey } from "../lib/guardian";
 import { checkForUpdate, applyUpdate } from "../lib/updater";
 
 // 🛡 Strażnik JARVISA — autonomiczny pomocnik z głównego menu: diagnozuje, naprawia,
@@ -18,6 +18,7 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
   // Podgląd „co zaraz zrobię" + polecenie czekające na potwierdzenie (działania wychodzące).
   const [preview, setPreview] = useState<{ cmd: string; plan: string } | null>(null);
   const [proactive, setProactive] = useState(store.settings.guardianProactive);
+  const [autopilot, setAutopilot] = useState(store.settings.guardianAutopilot);
 
   const refresh = async () => {
     setBusy(true); setMsg("Sprawdzam stan JARVISA…");
@@ -55,6 +56,16 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  // Dyrygent: jedno kliknięcie zalecenia → odpowiednia, sprawdzona akcja Strażnika.
+  const runRec = (key: GuardianActionKey) => {
+    if (key === "fixAll") return void run(() => guardian.fixAll((m) => setMsg(`🩹 ${m}`)));
+    if (key === "connectServers") return void run(() => guardian.connectServers((m) => setMsg(`🔗 ${m}`)));
+    if (key === "smarter") return void run(() => guardian.smarter((m) => setMsg(`🧠 ${m}`)));
+    if (key === "faster") return void run(() => guardian.faster());
+    if (key === "fixVoice") return void run(() => guardian.fixVoice());
+    if (key === "update") return void doUpdate();
   };
 
   const ask = async () => {
@@ -96,6 +107,34 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             Autonomiczny opiekun płynności i działania. Naprawia, przyspiesza, ulepsza, łączy serwery i doradza.
           </p>
+
+          {/* Kondycja JARVISA — jedna liczba (dyrygent na pierwszy rzut oka) */}
+          {status && (() => {
+            const h = healthScore(status);
+            const col = h.grade === "A" ? "#39d98a" : h.grade === "B" ? "#7ec8ff" : h.grade === "C" ? "var(--gold)" : "#ff6b6b";
+            return (
+              <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ fontSize: 30, fontWeight: 800, color: col, lineHeight: 1, minWidth: 54, textAlign: "center" }}>{h.score}</div>
+                <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+                  <b>Kondycja JARVISA: {h.label}</b> (ocena {h.grade})<br />
+                  <span className="muted" style={{ fontSize: 12 }}>Strażnik czuwa i dyryguje działaniem.</span>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Zalecenia dyrygenta — priorytetowe akcje jednym kliknięciem */}
+          {status && recommendActions(status).length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>🧭 Zalecane przez Strażnika</div>
+              {recommendActions(status).map((r) => (
+                <button key={r.key} className="btn" style={{ width: "100%", textAlign: "left", marginTop: 6, padding: "8px 12px" }} disabled={busy} onClick={() => runRec(r.key)}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{r.label}</div>
+                  <div className="muted" style={{ fontSize: 12, fontWeight: 400 }}>{r.why}</div>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Status */}
           {status && (
@@ -142,6 +181,17 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
               onChange={(e) => { setProactive(e.target.checked); store.setSettings({ guardianProactive: e.target.checked }); }}
             />
             🔔 Tryb proaktywny — Strażnik sam co jakiś czas sprawdza i podpowiada „Napraw", gdy coś nie gra.
+          </label>
+
+          {/* Autopilot — dyrygent sam naprawia (tylko bezpieczne, odwracalne akcje) */}
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 6, cursor: proactive ? "pointer" : "not-allowed", opacity: proactive ? 1 : 0.5 }}>
+            <input
+              type="checkbox"
+              checked={autopilot}
+              disabled={!proactive}
+              onChange={(e) => { setAutopilot(e.target.checked); store.setSettings({ guardianAutopilot: e.target.checked }); }}
+            />
+            🤖 Autopilot — sam naprawia bezpieczne rzeczy (łączy serwery, wybiera mózg, poprawia ustawienia). Nigdy nie wysyła nic na zewnątrz.
           </label>
 
           {/* Doradca + Wykonanie — Strażnik od wszystkiego */}

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { speedSummary, voiceSummary, guardianAdvicePrompt, isOutgoingCommand, type GuardianStatus } from "../src/lib/guardian";
+import { speedSummary, voiceSummary, guardianAdvicePrompt, isOutgoingCommand, healthScore, recommendActions, type GuardianStatus } from "../src/lib/guardian";
 import { findSdServer } from "../src/lib/localImage";
 import { store } from "../src/lib/store";
 
@@ -40,6 +40,42 @@ describe("guardian — guardianAdvicePrompt", () => {
     expect(p).toMatch(/jak przyspieszyć/);
     expect(p).toMatch(/lokalny \(Ollama\)/);
     expect(p).toMatch(/Brak modelu SD/);
+  });
+});
+
+const HEALTHY: GuardianStatus = { brain: "lokalny (Ollama)", ollama: "ok", ollamaModels: 3, sd: "ok", voiceLabel: "🇵🇱 polski systemowy", speedLabel: "⚡ szybki (od ręki)", issues: [] };
+
+describe("guardian — healthScore", () => {
+  it("zdrowy stan → wysoki wynik, ocena A", () => {
+    const h = healthScore(HEALTHY);
+    expect(h.score).toBeGreaterThanOrEqual(85);
+    expect(h.grade).toBe("A");
+  });
+  it("brak mózgu → krytycznie (ocena D)", () => {
+    const h = healthScore({ ...HEALTHY, brain: "BRAK", ollama: "off", issues: ["Żaden mózg nie odpowie"] });
+    expect(h.score).toBeLessThan(40);
+    expect(h.grade).toBe("D");
+  });
+  it("wynik zawsze w zakresie 0–100", () => {
+    const h = healthScore({ ...HEALTHY, brain: "BRAK", ollama: "empty", sd: "empty", voiceLabel: "🔇 wyłączony", issues: ["a", "b", "c", "d", "e"] });
+    expect(h.score).toBeGreaterThanOrEqual(0);
+    expect(h.score).toBeLessThanOrEqual(100);
+  });
+});
+
+describe("guardian — recommendActions", () => {
+  it("brak mózgu → najwyższy priorytet: Napraw wszystko", () => {
+    const recs = recommendActions({ ...HEALTHY, brain: "BRAK", ollama: "off", issues: ["brak"] });
+    expect(recs[0].key).toBe("fixAll");
+  });
+  it("Ollama bez modeli → zaleca tryb mądry (pobranie modeli)", () => {
+    const recs = recommendActions({ ...HEALTHY, ollama: "empty" });
+    expect(recs.some((r) => r.key === "smarter")).toBe(true);
+  });
+  it("zdrowo, ale wolno → zaleca Szybciej", () => {
+    store.setSettings({ speak: true, voiceSystemPl: true });
+    const recs = recommendActions({ ...HEALTHY, speedLabel: "🧠 mądry (myślenie — wolniej)" });
+    expect(recs.some((r) => r.key === "faster")).toBe(true);
   });
 });
 

@@ -85,6 +85,7 @@ const defaultSettings: Settings = {
   sdUrl: "",
   sdModel: "",
   guardianProactive: false,
+  guardianAutopilot: false,
   unfilteredLocal: false,
   deepThink: false,
   expertKnowledge: true,

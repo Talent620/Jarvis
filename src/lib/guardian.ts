@@ -78,6 +78,39 @@ export async function guardianDiagnose(): Promise<GuardianStatus> {
   };
 }
 
+// === 🎚 Kondycja JARVISA: jedna liczba (0–100) + ocena. Czysta — łatwa do testu. ===
+export interface GuardianHealth { score: number; grade: "A" | "B" | "C" | "D"; label: string }
+
+/** Pure: policz kondycję z diagnozy. Mózg waży najwięcej; serwery/głos/szybkość/problemy dokładają. */
+export function healthScore(st: GuardianStatus): GuardianHealth {
+  let s = 100;
+  if (st.brain === "BRAK") s -= 60; // bez mózgu JARVIS nie odpowie — krytyczne
+  if (st.ollama === "off") s -= 6; else if (st.ollama === "empty") s -= 14;
+  if (st.sd === "empty") s -= 6; // SD bez modelu — drobne
+  s -= Math.min(24, st.issues.length * 8); // każdy wykryty problem boli
+  if (/wyłączony/.test(st.voiceLabel)) s -= 4;
+  s = Math.max(0, Math.min(100, s));
+  const grade: GuardianHealth["grade"] = s >= 85 ? "A" : s >= 65 ? "B" : s >= 40 ? "C" : "D";
+  const label = s >= 85 ? "świetnie" : s >= 65 ? "dobrze" : s >= 40 ? "wymaga uwagi" : "krytycznie";
+  return { score: s, grade, label };
+}
+
+// === 🧭 Dyrygent: zalecane działania „jednym kliknięciem" wg stanu. Pure — testowalne. ===
+export type GuardianActionKey = "fixAll" | "connectServers" | "smarter" | "faster" | "fixVoice" | "update";
+export interface GuardianRec { key: GuardianActionKey; label: string; why: string; priority: number }
+
+/** Pure: na podstawie diagnozy ułóż priorytetową listę zaleceń (kierownik decyduje, co zrobić). */
+export function recommendActions(st: GuardianStatus, s = store.settings): GuardianRec[] {
+  const recs: GuardianRec[] = [];
+  if (st.brain === "BRAK") recs.push({ key: "fixAll", label: "🩹 Napraw wszystko", why: "Żaden mózg nie odpowie — to naprawi połączenie i wybierze działający model.", priority: 100 });
+  // Serwer lokalny wykryty „w pobliżu", ale adres pusty → połącz.
+  if ((st.ollama === "off" && !s.ollamaUrl?.trim()) || st.sd === "off") recs.push({ key: "connectServers", label: "🔗 Połącz serwery", why: "Wygląda na to, że lokalne serwery nie są podłączone — spróbuję je znaleźć.", priority: 70 });
+  if (st.ollama === "empty") recs.push({ key: "smarter", label: "🧠 Mądrzej (pobierz modele)", why: "Ollama działa, ale nie ma modelu — tryb mądry pobierze komplet.", priority: 65 });
+  if (/wyłączony/.test(st.voiceLabel) || (s.speak && s.voiceSystemPl === false)) recs.push({ key: "fixVoice", label: "🇵🇱 Napraw głos", why: "Głos nie jest ustawiony na spójny polski systemowy.", priority: 40 });
+  if (!st.issues.length && st.brain !== "BRAK" && !/szybki/.test(st.speedLabel)) recs.push({ key: "faster", label: "⚡ Szybciej", why: "Wszystko działa — można przyspieszyć odpowiedzi (tryb od ręki).", priority: 20 });
+  return recs.sort((a, b) => b.priority - a.priority);
+}
+
 export interface GuardianActionResult { ok: boolean; message: string }
 
 /** Akcje Strażnika „jednym ruchem". Każda reużywa sprawdzonych funkcji. */
@@ -126,6 +159,19 @@ export const guardian = {
     return { ok: parts.length > 0, message: parts.length ? `🔗 Połączono — ${parts.join(" · ")}.` : "Nie znalazłem serwerów lokalnych (uruchom JARVIS-Ollama-Server.exe / Forge)." };
   },
 };
+
+/**
+ * AUTOPILOT: cichy auto-serwis. Diagnozuje i — gdy coś nie gra — sam stosuje WYŁĄCZNIE bezpieczne,
+ * odwracalne naprawy (wykrycie serwerów, wybór działającego mózgu, korekta ustawień). Nigdy nie
+ * wykonuje działań wychodzących. Zwraca krótkie podsumowanie albo null (gdy nic nie trzeba było robić).
+ */
+export async function guardianAutoHeal(): Promise<string | null> {
+  const st = await guardianDiagnose();
+  const health = healthScore(st);
+  if (st.brain !== "BRAK" && !st.issues.length && health.score >= 85) return null; // zdrowo — nie ruszaj
+  const r = await runAndFix();
+  return r.ok ? `🛡 Autopilot naprawił: ${r.summary}` : `🛡 Autopilot próbował naprawić, ale: ${r.summary}`;
+}
 
 /** Zbuduj prompt doradczy dla Strażnika (po polsku, konkretnie). Czysta. */
 export function guardianAdvicePrompt(status: GuardianStatus, question: string): string {

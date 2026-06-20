@@ -407,6 +407,8 @@ export interface Settings {
   sdModel: string;
   /** Strażnik proaktywny: co jakiś czas sprawdza stan i podpowiada „kliknij Napraw", gdy coś nie gra. */
   guardianProactive: boolean;
+  /** Autopilot Strażnika: sam (cicho) stosuje bezpieczne, odwracalne naprawy, gdy wykryje problem. */
+  guardianAutopilot: boolean;
   /** Tryb nieocenzurowany — działa realnie tylko z modelem lokalnym (Ollama):
    *  JARVIS nie dokłada własnych zastrzeżeń/moralizowania i odpowiada wprost. */
   unfilteredLocal: boolean;

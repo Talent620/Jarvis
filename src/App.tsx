@@ -68,7 +68,7 @@ import { buildContext } from "./lib/context";
 import { isUncensored, PROVIDERS } from "./lib/providers/registry";
 import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import Guardian from "./components/Guardian";
-import { guardianDiagnose } from "./lib/guardian";
+import { guardianDiagnose, guardianAutoHeal } from "./lib/guardian";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
 import { currentBrainMode } from "./lib/brainMode";
@@ -779,7 +779,13 @@ export default function App() {
       try {
         const st = await guardianDiagnose();
         if (st.brain === "BRAK" || st.issues.length) {
-          toast("🛡 Strażnik: coś wymaga uwagi — otwórz 🛡 i kliknij „Napraw wszystko”.");
+          // Autopilot: dyrygent sam stosuje bezpieczne naprawy; inaczej tylko podpowiada.
+          if (store.settings.guardianAutopilot) {
+            const did = await guardianAutoHeal();
+            if (did) toast(did);
+          } else {
+            toast("🛡 Strażnik: coś wymaga uwagi — otwórz 🛡 i kliknij „Napraw wszystko”.");
+          }
         }
       } catch { /* sieć — pomiń */ }
     }, 60000);
