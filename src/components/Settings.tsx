@@ -1975,7 +1975,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
 
           {tab === "integrations" && (
             <>
-              <h3>Pamięć długoterminowa (Mem0 + Qdrant)</h3>
+              <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🧠 Pamięć długoterminowa (Mem0 + Qdrant)</summary>
               <p className="muted">
                 JARVIS pamięta fakty o Tobie i ustalenia między sesjami. Postaw serwer raz
                 (katalog <code>server/</code>: <code>docker compose up -d</code>) i podaj adres.
@@ -2016,7 +2017,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </button>
               {memMsg && <p className="muted">{memMsg}</p>}
 
-              <h3>Serwery MCP (narzędzia)</h3>
+              </details>
+              <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🔌 Serwery MCP (narzędzia)</summary>
               <p className="muted">
                 Podłącz narzędzia przez standard MCP. Tylko hosty z allowlisty (domyślnie localhost +
                 mcp.googleapis.com). Niedostępny serwer jest pomijany — JARVIS działa dalej.
@@ -2060,7 +2063,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </ul>
               )}
 
-              <h3>AI Sales OS (osobne narzędzie)</h3>
+              </details>
+              <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>📈 AI Sales OS (osobne narzędzie)</summary>
               <p className="muted">
                 AI Sales OS to <b>osobna aplikacja</b> (katalog <code>sales-os/</code>), z której korzystasz
                 w przeglądarce. JARVIS jej nie wchłania — ma do niej <b>wgląd</b>: jednym kliknięciem ją
@@ -2158,7 +2163,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
               {salesOsMsg && <p className="muted">{salesOsMsg}</p>}
 
-              <h3>Synchronizacja (chmura)</h3>
+              </details>
+              <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>☁ Synchronizacja (chmura)</summary>
               <p className="muted">
                 Współdziel pamięć, projekty i dane między urządzeniami przez własny backend
                 (katalog <code>proxy/</code>). Token to Twoja prywatna nazwa przestrzeni danych.
@@ -2204,7 +2211,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
               {syncMsg && <p className="muted">{syncMsg}</p>}
 
-              <h3>Integracje Google (Gmail + Kalendarz)</h3>
+              </details>
+              <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>📧 Integracje Google (Gmail + Kalendarz)</summary>
               <p className="muted">
                 Wymaga wdrożonego backendu (powyżej) z kluczami Google OAuth. Po połączeniu JARVIS
                 może czytać/wysyłać maile i zarządzać Kalendarzem Google. Instrukcja: <code>proxy/README</code>.
@@ -2284,7 +2293,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </>
               )}
 
-              <h3>Smart home (Home Assistant)</h3>
+              </details>
+              <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🏠 Smart home (Home Assistant)</summary>
               <div className="field">
                 <label>Adres Home Assistant</label>
                 <input
@@ -2303,7 +2314,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 />
               </div>
 
-              <h3>⚙ n8n — warstwa wykonawcza (automatyzacje)</h3>
+              </details>
+              <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>⚙ n8n — automatyzacje</summary>
               <p className="muted">
                 JARVIS faktycznie WYKONUJE zadania przez Twój n8n: outreach, deployment, research,
                 integracje (WHOOP, finanse, CRM). Utwórz w n8n workflow z węzłem <b>Webhook</b> i wklej
@@ -2327,6 +2340,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 />
               </div>
 
+              </details>
               <h3>🧩 Wtyczki</h3>
               <p className="muted">
                 JARVIS to platforma: wtyczki dokładają własne narzędzia i ustawienia.
