@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "../types";
 import TypeText from "./TypeText";
 import { speak } from "../lib/voice";
@@ -76,6 +76,61 @@ function CouncilPanel({ council }: { council: NonNullable<ChatMessage["council"]
   );
 }
 
+// Pojedynczy bąbel — zmemoizowany: podczas streamingu zmienia się TYLKO ostatnia wiadomość
+// (nowy obiekt), reszta zachowuje referencję `m` → memo pomija ich re-render. Komparator ignoruje
+// tożsamość `onRetry` (zachowanie „ponów ostatnią" jest stałe), by memo realnie działało.
+const MessageBubble = memo(
+  function MessageBubble({ m, isLive, isLastAssistant, onRetry }: {
+    m: ChatMessage;
+    isLive: boolean;
+    isLastAssistant: boolean;
+    onRetry?: () => void;
+  }) {
+    return (
+      <div className={`bubble ${m.role}`}>
+        {m.image && (
+          <img
+            className="bubble-img"
+            src={`data:${m.image.mediaType || "image/png"};base64,${m.image.data}`}
+            alt="załączone zdjęcie"
+          />
+        )}
+        {m.role === "assistant" ? <TypeText text={m.text} animate={isLive && !m.streamed} /> : m.text}
+        {m.tools && m.tools.length > 0 && (
+          <div className="tools">
+            {m.tools.map((t) => (
+              <span className="tag" key={t}>{t}</span>
+            ))}
+          </div>
+        )}
+        {m.council && m.council.members.length > 1 && <CouncilPanel council={m.council} />}
+        {m.role === "assistant" && m.text?.startsWith("⚠") && onRetry && (
+          <button className="btn" style={{ marginTop: 8, padding: "6px 12px", fontSize: 13, width: "auto" }} onClick={onRetry}>
+            🔄 Ponów
+          </button>
+        )}
+        {m.role === "assistant" && m.text && (
+          <MsgActions
+            text={m.text}
+            onRegenerate={isLastAssistant && !m.text.startsWith("⚠") && onRetry ? onRetry : undefined}
+          />
+        )}
+        {m.citations && m.citations.length > 0 && (
+          <div className="citations">
+            <div className="cit-head">Źródła</div>
+            {m.citations.map((c, i) => (
+              <a key={c.url} className="cit" href={c.url} target="_blank" rel="noopener">
+                [{i + 1}] {c.title}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  },
+  (a, b) => a.m === b.m && a.isLive === b.isLive && a.isLastAssistant === b.isLastAssistant,
+);
+
 export default function Conversation({
   messages,
   interim,
@@ -127,48 +182,13 @@ export default function Conversation({
   return (
     <div className="convo">
       {messages.map((m) => (
-        <div key={m.id} className={`bubble ${m.role}`}>
-          {m.image && (
-            <img
-              className="bubble-img"
-              src={`data:${m.image.mediaType || "image/png"};base64,${m.image.data}`}
-              alt="załączone zdjęcie"
-            />
-          )}
-          {m.role === "assistant" ? <TypeText text={m.text} animate={m.id === liveId && !m.streamed} /> : m.text}
-          {m.tools && m.tools.length > 0 && (
-            <div className="tools">
-              {m.tools.map((t) => (
-                <span className="tag" key={t}>
-                  {t}
-                </span>
-              ))}
-            </div>
-          )}
-          {m.council && m.council.members.length > 1 && <CouncilPanel council={m.council} />}
-          {/* Błąd odpowiedzi → jeden tap, by ponowić bez przepisywania polecenia. */}
-          {m.role === "assistant" && m.text?.startsWith("⚠") && onRetry && (
-            <button className="btn" style={{ marginTop: 8, padding: "6px 12px", fontSize: 13, width: "auto" }} onClick={onRetry}>
-              🔄 Ponów
-            </button>
-          )}
-          {m.role === "assistant" && m.text && (
-            <MsgActions
-              text={m.text}
-              onRegenerate={m.id === lastAssistantId && !m.text.startsWith("⚠") && onRetry ? onRetry : undefined}
-            />
-          )}
-          {m.citations && m.citations.length > 0 && (
-            <div className="citations">
-              <div className="cit-head">Źródła</div>
-              {m.citations.map((c, i) => (
-                <a key={c.url} className="cit" href={c.url} target="_blank" rel="noopener">
-                  [{i + 1}] {c.title}
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
+        <MessageBubble
+          key={m.id}
+          m={m}
+          isLive={m.id === liveId}
+          isLastAssistant={m.id === lastAssistantId}
+          onRetry={onRetry}
+        />
       ))}
       {interim && <div className="bubble user">{interim}</div>}
       {thinking && !interim && (
