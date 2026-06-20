@@ -1563,9 +1563,20 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <h3>Brzmienie głosu</h3>
               <div className="row">
                 <span>
+                  🇵🇱 Prosty polski głos (systemowy)
+                  <br />
+                  <span className="muted">
+                    Spójny polski głos z systemu — pomija głosy chmurowe (Gemini/ElevenLabs), które bywają
+                    z angielskim akcentem i się „zmieniają". Zalecane, gdy chcesz po prostu poprawny polski.
+                  </span>
+                </span>
+                <Toggle on={s.voiceSystemPl} onClick={() => set({ voiceSystemPl: !s.voiceSystemPl })} />
+              </div>
+              <div className="row">
+                <span>
                   🎙 Darmowy głos premium (Gemini TTS)
                   <br />
-                  <span className="muted">wysoka jakość, naturalny — wymaga klucza Gemini (darmowy)</span>
+                  <span className="muted">wysoka jakość, naturalny — wymaga klucza Gemini (darmowy). Działa, gdy „prosty polski głos" wyłączony.</span>
                 </span>
                 <Toggle on={s.geminiTts} onClick={() => set({ geminiTts: !s.geminiTts })} />
               </div>

@@ -354,8 +354,12 @@ export async function speak(text: string, settings: Settings): Promise<void> {
     }
   }
 
+  // Prosty polski głos systemowy: pomiń chmurowe TTS (ElevenLabs/Gemini), które bywają z angielskim
+  // akcentem i „zmieniają się" — idź prosto do natywnego/przeglądarkowego głosu PL (spójnie, offline).
+  const basicPl = settings.voiceSystemPl !== false;
+
   // Premium głos przez ElevenLabs (najbliżej oryginalnego JARVIS-a), jeśli podano klucz.
-  if (settings.elevenLabsApiKey && settings.elevenLabsVoiceId) {
+  if (!basicPl && settings.elevenLabsApiKey && settings.elevenLabsVoiceId) {
     try {
       const res = await fetchTimeout(
         `https://api.elevenlabs.io/v1/text-to-speech/${settings.elevenLabsVoiceId}`,
@@ -381,8 +385,8 @@ export async function speak(text: string, settings: Settings): Promise<void> {
     }
   }
 
-  // Darmowy, wysokiej jakości głos przez Gemini TTS (najlepszy darmowy wybór).
-  if (settings.geminiTts !== false && primaryKey("gemini")) {
+  // Darmowy, wysokiej jakości głos przez Gemini TTS (najlepszy darmowy wybór) — chyba że prosty PL.
+  if (!basicPl && settings.geminiTts !== false && primaryKey("gemini")) {
     if (await geminiTts(text, settings)) return;
   }
 

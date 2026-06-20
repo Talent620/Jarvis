@@ -443,6 +443,8 @@ export interface Settings {
   n8nToken: string;
   /** Czy mówić odpowiedzi na głos. */
   speak: boolean;
+  /** Prosty polski głos systemowy: pomija chmurowe TTS (Gemini/ElevenLabs) — spójny polski, offline. Domyślnie TAK. */
+  voiceSystemPl: boolean;
   /** Używaj darmowego głosu Gemini TTS (wysoka jakość, wymaga klucza Gemini). */
   geminiTts: boolean;
   /** Nazwa głosu Gemini TTS (np. Charon, Orus, Puck). */
