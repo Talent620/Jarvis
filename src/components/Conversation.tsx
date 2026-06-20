@@ -4,6 +4,7 @@ import TypeText from "./TypeText";
 import { speak } from "../lib/voice";
 import { store } from "../lib/store";
 import { isDesktop } from "../lib/desktop";
+import { isNearBottom, starterSuggestions } from "../lib/chatUx";
 
 // Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓).
 function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {
@@ -33,22 +34,6 @@ function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () =>
     </div>
   );
 }
-
-const SUGGESTIONS = isDesktop()
-  ? [
-      "Przedstaw raport poranny",
-      "Co mam na ekranie?",
-      "Otwórz notatnik",
-      "Co mam dziś do zrobienia?",
-      "Co nowego w wiadomościach?",
-    ]
-  : [
-      "Przedstaw raport poranny",
-      "Jaka jest pogoda?",
-      "Co mam dziś do zrobienia?",
-      "Włącz Spotify",
-      "Co nowego w wiadomościach?",
-    ];
 
 const CONSENSUS: Record<string, { icon: string; label: string }> = {
   full: { icon: "✅", label: "Pełna zgoda modeli" },
@@ -138,6 +123,9 @@ export default function Conversation({
   onSuggest,
   onRetry,
   thinking,
+  needsSetup,
+  onOpenKeys,
+  tasksToday,
 }: {
   messages: ChatMessage[];
   interim: string;
@@ -145,29 +133,53 @@ export default function Conversation({
   onSuggest: (text: string) => void;
   onRetry?: () => void;
   thinking?: boolean;
+  needsSetup?: boolean;
+  onOpenKeys?: () => void;
+  tasksToday?: number;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const atBottomRef = useRef(true); // czy użytkownik jest na dole (czytalny bez re-renderu)
+  const [showJump, setShowJump] = useState(false); // przycisk „↓ nowe", gdy przewinął w górę
   // Ostatnia odpowiedź asystenta — przy niej pokażemy „Regeneruj".
   const lastAssistantId = [...messages].reverse().find((m) => m.role === "assistant")?.id;
 
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const near = isNearBottom(el);
+    atBottomRef.current = near;
+    setShowJump(!near);
+  };
+  const jumpToLatest = () => { atBottomRef.current = true; setShowJump(false); endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); };
+
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Auto-przewijaj TYLKO, gdy użytkownik jest na dole — nie wyrywaj go z czytania historii.
+    if (atBottomRef.current) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, interim, liveId, thinking]);
 
   if (!messages.length && !interim) {
+    const suggestions = starterSuggestions(new Date(), { tasksToday, desktop: isDesktop() });
     return (
       <div className="convo">
         <div className="empty">
           Witaj. Jestem <b>JARVIS</b>.
           <br />
           Powiedz „<b>Jarvis</b>" lub napisz polecenie.
-          <div className="chips" style={{ justifyContent: "center", flexWrap: "wrap", marginTop: 16 }}>
-            {SUGGESTIONS.map((s) => (
-              <button key={s} className="chip" onClick={() => onSuggest(s)}>
-                {s}
-              </button>
-            ))}
-          </div>
+          {needsSetup ? (
+            <div style={{ marginTop: 16 }}>
+              <p className="notice" style={{ marginBottom: 10 }}>⚠ Aby zacząć, dodaj <b>darmowy</b> klucz API (bez karty) albo podłącz lokalny model.</p>
+              <button className="btn primary" style={{ width: "auto" }} onClick={() => onOpenKeys?.()}>🔑 Dodaj darmowy klucz</button>
+            </div>
+          ) : (
+            <div className="chips" style={{ justifyContent: "center", flexWrap: "wrap", marginTop: 16 }}>
+              {suggestions.map((sg) => (
+                <button key={sg} className="chip" onClick={() => onSuggest(sg)}>
+                  {sg}
+                </button>
+              ))}
+            </div>
+          )}
           <p className="muted" style={{ marginTop: 18, fontSize: 13, lineHeight: 1.6 }}>
             <b>☎</b> rozmowa na żywo · <b>＋</b> nowa rozmowa · <b>⋯</b> menu:
             <br />
@@ -180,7 +192,7 @@ export default function Conversation({
   }
 
   return (
-    <div className="convo">
+    <div className="convo" ref={scrollRef} onScroll={onScroll}>
       {messages.map((m) => (
         <MessageBubble
           key={m.id}
@@ -197,6 +209,16 @@ export default function Conversation({
         </div>
       )}
       <div ref={endRef} />
+      {showJump && (
+        <button
+          className="btn"
+          onClick={jumpToLatest}
+          style={{ position: "sticky", bottom: 8, alignSelf: "center", width: "auto", padding: "6px 14px", fontSize: 13, borderRadius: 999, boxShadow: "0 2px 10px rgba(0,0,0,.3)" }}
+          aria-label="Przewiń do najnowszej wiadomości"
+        >
+          ↓ Najnowsze
+        </button>
+      )}
     </div>
   );
 }

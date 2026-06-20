@@ -1,7 +1,18 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { store } from "../src/lib/store";
-import { keyList, keyCount, primaryKey, orderedKeys, coolDownKey, isCoolingDown } from "../src/lib/keys";
+import { keyList, keyCount, primaryKey, orderedKeys, coolDownKey, isCoolingDown, isTavilyKey } from "../src/lib/keys";
 import { isKeyError } from "../src/lib/aiHelpers";
+
+describe("isTavilyKey — rozpoznanie klucza research", () => {
+  it("klucz Tavily (tvly-) → true; inne → false", () => {
+    expect(isTavilyKey("tvly-abc123")).toBe(true);
+    expect(isTavilyKey("TVLY-XYZ")).toBe(true);
+    expect(isTavilyKey("  tvly-pad ")).toBe(true);
+    expect(isTavilyKey("sk-ant-123")).toBe(false);
+    expect(isTavilyKey("AIzaSyXXX")).toBe(false);
+    expect(isTavilyKey("")).toBe(false);
+  });
+});
 
 describe("keyList — wiele kluczy na dostawcę", () => {
   beforeEach(() => {

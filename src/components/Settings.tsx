@@ -12,7 +12,7 @@ import { googleStartUrl, gmailSearch, connectDesktopGoogle } from "../lib/google
 import { testApi, testProvider, resolveProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
 import { exportData, exportFull, exportFullEncrypted, importData } from "../lib/backup";
-import { keyList, keyCount } from "../lib/keys";
+import { keyList, keyCount, isTavilyKey } from "../lib/keys";
 import { systemCheck } from "../lib/diagnostics";
 import { runHealthCheck, statusIcon, type HealthItem } from "../lib/healthCheck";
 import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
@@ -188,6 +188,13 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   // „Wklej dowolny klucz" — rozpoznaj dostawcę, zapisz i od razu przetestuj.
   const addQuickKey = async (raw?: string) => {
     const key = (raw ?? quickKey).trim();
+    // Klucz Tavily (research) ma pewny prefiks — zapisz go do slotu research jednym wklejeniem.
+    if (isTavilyKey(key)) {
+      const next = { ...s, tavilyApiKey: key, webSearch: true };
+      setS(next); store.setSettings(next); setQuickKey("");
+      setQuickMsg("✓ Rozpoznano klucz Tavily (research) — zapisany i włączono wyszukiwanie w sieci.");
+      return;
+    }
     const prov = detectProvider(key);
     if (!prov) {
       setQuickMsg("Nie rozpoznałem dostawcy po formacie klucza — wklej go w odpowiednie pole niżej.");
@@ -564,7 +571,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </p>
               <div className="field">
                 <label>Dostawca</label>
-                <select value={s.provider} onChange={(e) => set({ provider: e.target.value, model: "auto" })}>
+                <select value={s.provider} onChange={(e) => { set({ provider: e.target.value, model: "auto" }); if (e.target.value === "ollama") void warmNow(); /* rozgrzej model lokalny — pierwsza odpowiedź od ręki */ }}>
                   <option value="auto">⚡ Auto — najlepszy dostępny (zalecane)</option>
                   {PROVIDER_LIST.map((p) => (
                     <option key={p.id} value={p.id}>

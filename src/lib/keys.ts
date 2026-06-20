@@ -22,6 +22,11 @@ export function parseKeys(raw: string): string[] {
   return out;
 }
 
+/** Pure: czy to klucz Tavily (research). Mają stały prefiks `tvly-` — pewne rozpoznanie. */
+export function isTavilyKey(key: string): boolean {
+  return /^tvly-/i.test((key || "").trim());
+}
+
 /** Lista kluczy danego dostawcy (rozdziel nową linią lub przecinkiem, bez duplikatów). */
 export function keyList(provider: ProviderId): string[] {
   return parseKeys(store.settings.keys[provider] || "");

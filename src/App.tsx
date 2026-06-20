@@ -1076,6 +1076,9 @@ export default function App() {
         onSuggest={handleSend}
         onRetry={() => { if (retryTextRef.current && !busy) handleSend(retryTextRef.current); }}
         thinking={busy}
+        needsSetup={!hasUsableBrain()}
+        onOpenKeys={() => setShowSettings(true)}
+        tasksToday={(store.data.tasks || []).filter((t) => !t.done && (t.due || "").slice(0, 10) === new Date().toISOString().slice(0, 10)).length}
       />
 
       <Composer
