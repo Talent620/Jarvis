@@ -1149,6 +1149,24 @@ const tools: Tool[] = [
   },
   {
     def: {
+      name: "self_check",
+      description:
+        "Samoocena JARVIS-a (pętla samodoskonalenia): jak mi idzie i co poprawić — z REALNEJ telemetrii (fallback, latencja, eskalacje refleksu, błędy dostawców). Użyj, gdy ktoś pyta „jak ci idzie”, „oceń się”, „co możesz w sobie poprawić”, „czy działasz optymalnie”.",
+      input_schema: obj({}, []),
+    },
+    run: async () => {
+      const { getRouteLog } = await import("./modelRouter");
+      const { reliabilityStats } = await import("./errorLog");
+      const { analyzePerformance, assessmentSummary } = await import("./selfImprove");
+      const a = analyzePerformance(getRouteLog(), reliabilityStats().byScope, Date.now(), { ollamaReady: !!store.settings.ollamaUrl?.trim() });
+      let out = "🧪 Samoocena:\n" + assessmentSummary(a);
+      const fixable = a.insights.filter((i) => i.action);
+      if (fixable.length) out += `\n\nMożna poprawić: ${fixable.map((i) => i.title).join("; ")} — otwórz 🛡 Strażnika, by zastosować jednym kliknięciem.`;
+      return out;
+    },
+  },
+  {
+    def: {
       name: "set_preference",
       description:
         "Zmień osobiste preferencje JARVIS-a na żądanie: jak ma się do Ciebie zwracać (imię), wyszukiwanie w sieci on/off, adaptacyjny układ menu on/off. Np. „mów do mnie Szefie”, „wyłącz wyszukiwanie w sieci”, „nie układaj menu pod moje nawyki”.",
