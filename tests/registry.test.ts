@@ -1,5 +1,30 @@
 import { describe, it, expect } from "vitest";
-import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED, injectNoThink } from "../src/lib/providers/registry";
+import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED, injectNoThink, modelBadges, PROVIDERS } from "../src/lib/providers/registry";
+
+describe("modelBadges — czytelne ikonki cech modelu z opisu", () => {
+  it("darmowy → 🆓; najszybszy → ⚡; mocny → 🧠", () => {
+    expect(modelBadges("Llama 3.3 70B — darmowy")).toContain("🆓");
+    expect(modelBadges("Haiku 4.5 — najszybszy")).toContain("⚡");
+    expect(modelBadges("Opus 4.8 — maksymalna inteligencja")).toContain("🧠");
+  });
+  it("wizja → 👁; bez cenzury → 🔓", () => {
+    expect(modelBadges("Pixtral 12B — wizja")).toContain("👁");
+    expect(modelBadges("Dolphin 3.0 — bez cenzury (free)")).toContain("🔓");
+  });
+  it("łączy kilka cech (darmowy + szybki) i nie dubluje", () => {
+    const b = modelBadges("Gemini 2.5 Flash-Lite — najszybszy, darmowy");
+    expect(b).toContain("🆓");
+    expect(b).toContain("⚡");
+    expect(b.match(/⚡/g)?.length).toBe(1); // tylko jedna ikona szybkości
+  });
+  it("neutralny opis bez cech → pusty (brak śmieci)", () => {
+    expect(modelBadges("Gemini 2.0 Flash")).toBe("");
+    expect(modelBadges("")).toBe("");
+  });
+  it("każdy model w katalogu daje string (bez wyjątków)", () => {
+    for (const p of Object.values(PROVIDERS)) for (const m of p.models) expect(typeof modelBadges(m.label)).toBe("string");
+  });
+});
 
 describe("injectNoThink — /no_think tylko dla modeli rozumujących", () => {
   const h = [{ role: "user" as const, content: "cześć" }];

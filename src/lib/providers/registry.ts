@@ -245,6 +245,23 @@ export const UNCENSORED_MODELS = new Set<string>([
 /** Czy dany model jest nieocenzurowany (chmurowy free lub lokalny). */
 export const isUncensored = (model: string): boolean => UNCENSORED_MODELS.has(model);
 
+/**
+ * Pure: zwięzłe ikony cech modelu wyłuskane z jego opisu — do CZYTELNEJ listy wyboru
+ * (🆓 darmowy · ⚡ szybki · 🧠 mocny · 👁 wizja · 🔓 bez cenzury). Kolejność stała, max kilka.
+ * Działa na kuratorowanych etykietach z katalogu (PROVIDERS[...].models[].label).
+ */
+export function modelBadges(label: string): string {
+  const l = (label || "").toLowerCase();
+  const b: string[] = [];
+  if (/darmow|free/.test(l)) b.push("🆓");
+  if (/bez cenzury|uncensored|dolphin/.test(l)) b.push("🔓");
+  if (/wizja|vision|pixtral|multimodaln/.test(l)) b.push("👁");
+  if (/najszybsz|b[łl]yskaw|instant|\blite\b|najszyb/.test(l)) b.push("⚡");
+  else if (/szybk/.test(l)) b.push("⚡");
+  if (/maksymaln|najmocniejsz|najmocn|inteligencj|\bpro\b|\blarge\b|120b|70b|72b|mocne rozumowanie|bystry/.test(l)) b.push("🧠");
+  return b.join("");
+}
+
 /** Domyślny darmowy model bez cenzury w chmurze (OpenRouter). */
 export const FREE_UNCENSORED = {
   provider: "openrouter" as ProviderId,

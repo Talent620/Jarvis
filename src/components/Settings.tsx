@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
 import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, resolveVoiceMode, type NativeVoiceInfo, type VoiceMode } from "../lib/voice";
-import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED } from "../lib/providers/registry";
+import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED, modelBadges } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
@@ -578,7 +578,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               {s.provider === "auto" ? (
                 <p className="muted">
                   {autoTarget
-                    ? `▶ Teraz zadziała: ${PROVIDERS[autoTarget.provider].label} · ${modelLabel(autoTarget.provider, autoTarget.model)}. Im wyżej klucz na liście, tym wyższy priorytet.`
+                    ? `▶ Teraz zadziała: ${PROVIDERS[autoTarget.provider].label} · ${[modelBadges(modelLabel(autoTarget.provider, autoTarget.model)), modelLabel(autoTarget.provider, autoTarget.model)].filter(Boolean).join(" ")}. Im wyżej klucz na liście, tym wyższy priorytet.`
                     : "⚠ Brak kluczy — dodaj przynajmniej jeden w „🔑 Klucze API” niżej (albo użyj lokalnej Ollamy)."}
                 </p>
               ) : (
@@ -586,12 +586,16 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   <label>Model</label>
                   <select value={s.model} onChange={(e) => set({ model: e.target.value })}>
                     <option value="auto">🔵 Auto — domyślny dostawcy{PROVIDERS[s.provider as ProviderId]?.defaultModel ? ` (${modelLabel(s.provider as ProviderId, PROVIDERS[s.provider as ProviderId].defaultModel)})` : ""}</option>
-                    {modelOptions.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}
-                      </option>
-                    ))}
+                    {modelOptions.map((m) => {
+                      const bdg = modelBadges(m.label);
+                      return (
+                        <option key={m.id} value={m.id}>
+                          {bdg ? `${bdg} ` : ""}{m.label}
+                        </option>
+                      );
+                    })}
                   </select>
+                  <span className="muted" style={{ fontSize: 12 }}>🆓 darmowy · ⚡ szybki · 🧠 mocny · 👁 wizja · 🔓 bez cenzury</span>
                   {!providerReady(s.provider as ProviderId) && (
                     <span className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>
                       ⚠ Ten dostawca nie ma jeszcze {s.provider === "ollama" ? "adresu serwera" : "klucza"} — {s.provider === "ollama" ? "podaj adres Ollamy niżej" : "dodaj go w „🔑 Klucze API” niżej"}, inaczej nie odpowie.
