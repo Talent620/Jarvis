@@ -13,6 +13,7 @@ import { classifyTask, needsDeepThink, logRouteDecision, adaptiveConfidenceThres
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
 import { recordEpisode, loadEpisodes } from "./episodicMemory";
 import { buildFusionBlock } from "./contextFusion";
+import { recordWorld, worldContextBlock } from "./worldModel";
 import { estimateConfidence, isLowConfidence } from "./confidence";
 import { speculativeAnswer } from "./speculative";
 import { localRefine, critiqueInstruction } from "./localRefine";
@@ -179,10 +180,12 @@ export interface PromptContext {
   mem0Block?: string;
   /** Szósty Zmysł: świadomość sytuacyjna (otwarte wątki) złożona z danych systemu. */
   fusionBlock?: string;
+  /** World Model: encje (osoby/projekty/firmy) i powiązania, których dotyczy pytanie. */
+  worldBlock?: string;
 }
 
 export function systemPrompt(ctx: PromptContext = {}): string {
-  const { deepAnalysis = "", currentKnowledge = "", journalRank = null, mem0Block = "", fusionBlock = "" } = ctx;
+  const { deepAnalysis = "", currentKnowledge = "", journalRank = null, mem0Block = "", fusionBlock = "", worldBlock = "" } = ctx;
   const s = store.settings;
   const userName = s.userName;
   const pid = s.activeProjectId;
@@ -294,6 +297,7 @@ export function systemPrompt(ctx: PromptContext = {}): string {
     profile,
     facts,
     fusionBlock,
+    worldBlock,
     projectCtx,
     journalCtx,
   ].join("\n");
@@ -552,12 +556,14 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
     { tasks: d.tasks, reminders: d.reminders, projects: d.projects, leads: d.leads, events: d.calendar, episodes: loadEpisodes() },
     lastUser?.content || "",
   );
+  // World Model: gdy pytanie dotyczy znanej osoby/projektu/firmy, dołącz jej kontekst i powiązania.
+  const worldBlock = worldContextBlock(lastUser?.content || "");
 
   // Z11 — RAG dla modelu lokalnego: `baseCtx.system` (pamięć: fakty + profil + Mem0 + Szósty Zmysł)
   // jest TEN SAM dla WSZYSTKICH dostawców, w tym Ollamy/WebLLM. Mały model lokalny odpowiada z
   // Twoim kontekstem; bez Mem0 degraduje do lokalnego profilu/faktów (zero zależności sieciowych).
   const baseCtx = {
-    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock }),
+    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock }),
     // Tryb on-device wyłącza web-search (zero egres do sieci — pełna prywatność/offline).
     webSearch: store.settings.onDeviceOnly ? false : store.settings.webSearch,
     tools: toolDefs,
@@ -599,7 +605,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
           reason: res.corrected ? "spekulacja: korekta korą" : res.usedCortex ? "spekulacja: draft potwierdzony" : "spekulacja: draft (kora padła)",
           fellBack: res.corrected,
         });
-        if (lastUser?.content) recordEpisode("chat", lastUser.content);
+        if (lastUser?.content) { recordEpisode("chat", lastUser.content); recordWorld(lastUser.content); }
         void learnFromExchange(lastUser?.content || "", res.reply.text);
         if (memoryServiceAvailable() && lastUser?.content && res.reply.text) {
           void addMemory([{ role: "user", content: lastUser.content }, { role: "assistant", content: res.reply.text }], memNamespace).catch(() => {});
@@ -729,7 +735,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         // Ucz się w tle: wyłuskaj trwałe fakty z wymiany (nie blokuje odpowiedzi).
         void learnFromExchange(lastUser?.content || "", reply.text);
         // Pamięć epizodyczna (Faza 7): zapisz temat wymiany — z tego wyłaniamy wzorce/proaktywność.
-        if (lastUser?.content) recordEpisode("chat", lastUser.content);
+        if (lastUser?.content) { recordEpisode("chat", lastUser.content); recordWorld(lastUser.content); }
         // Pamięć długoterminowa (Mem0, Faza 1): add PO odpowiedzi (w tle, graceful).
         if (memoryServiceAvailable() && lastUser?.content && reply.text) {
           void addMemory(

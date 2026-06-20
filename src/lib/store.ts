@@ -30,6 +30,7 @@ const emptyData: AppData = {
   bargainWatch: [],
   sentMail: [],
   contentPosts: [],
+  world: { entities: [], relations: [] },
 };
 
 const defaultSettings: Settings = {

@@ -23,6 +23,7 @@ import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
 import { primaryKey } from "./keys";
 import { exportData } from "./backup";
 import { applyBrainMode, BRAIN_MODES, type BrainModeId } from "./brainModes";
+import { recallEntities, worldSummary, getWorld } from "./worldModel";
 import type { ProviderId } from "./providers/types";
 import type { Citation, Settings, LeadStatus } from "../types";
 
@@ -1087,6 +1088,31 @@ const tools: Tool[] = [
       const top = scan.recs.find((r) => r.problem);
       if (top) lines.push(`Zalecenie: ${top.label}${top.problem ? ` — ${top.problem}` : ""}`);
       return lines.join("\n");
+    },
+  },
+  {
+    def: {
+      name: "world_recall",
+      description:
+        "Sprawdź, co JARVIS wie o osobie/projekcie/firmie z MODELU ŚWIATA (osoby, projekty, firmy + powiązania i pewność, budowane z rozmów). Użyj, gdy ktoś pyta „co wiesz o X”, „kogo/co znasz”, „z kim/czym wiąże się Y”.",
+      input_schema: obj({ query: str("Nazwa osoby/projektu/firmy (puste = przegląd najważniejszych)") }, []),
+    },
+    run: ({ query }) => {
+      const q = String(query || "").trim();
+      if (!q) {
+        const s = worldSummary(12);
+        return s ? `🌍 Znam (z rozmów): ${s}` : "Mój model świata jest jeszcze pusty — pozna osoby, projekty i firmy w miarę rozmów.";
+      }
+      const hits = recallEntities(q, 8);
+      if (!hits.length) return `Nie mam jeszcze w modelu świata nic o „${q}”.`;
+      const w = getWorld();
+      const KL: Record<string, string> = { person: "osoba", project: "projekt", company: "firma", task: "zadanie", topic: "temat" };
+      const lines = hits.map((e) => {
+        const rels = w.relations.filter((r) => r.from === e.id || r.to === e.id);
+        const linked = [...new Set(rels.map((r) => w.entities.find((x) => x.id === (r.from === e.id ? r.to : r.from))?.name).filter(Boolean))];
+        return `• ${e.name} (${KL[e.kind] || e.kind}, pewność ${Math.round(e.confidence * 100)}%, wzmianek ${e.mentions})${linked.length ? ` — powiązani: ${linked.slice(0, 5).join(", ")}` : ""}`;
+      });
+      return `🌍 Co wiem o „${q}”:\n${lines.join("\n")}`;
     },
   },
   {

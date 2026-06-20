@@ -185,6 +185,37 @@ export interface AppData {
   sentMail: SentMail[];
   /** Historia postów z Maszynki do kontentu. */
   contentPosts: ContentPost[];
+  /** World Model — graf encji (ludzie/projekty/firmy/zadania) i relacji z pewnością. */
+  world?: WorldGraph;
+}
+
+export type EntityKind = "person" | "project" | "company" | "task" | "topic";
+
+export interface WorldEntity {
+  id: string;
+  kind: EntityKind;
+  name: string;
+  aliases?: string[];
+  confidence: number; // 0..1 — rośnie z liczbą wzmianek
+  mentions: number;
+  firstSeen: number;
+  lastSeen: number;
+  attrs?: Record<string, string>;
+}
+
+export interface WorldRelation {
+  id: string;
+  from: string; // entity id
+  to: string;   // entity id
+  type: string; // np. „powiązany", „pracuje_w", „dotyczy"
+  confidence: number;
+  mentions: number;
+  lastSeen: number;
+}
+
+export interface WorldGraph {
+  entities: WorldEntity[];
+  relations: WorldRelation[];
 }
 
 /** Zapisany post z Maszynki do kontentu. */
