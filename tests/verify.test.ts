@@ -30,6 +30,11 @@ describe("verify — verifyVerdict", () => {
     const fixed = "Poprawny wynik to 4, nie 5: 2+2=4.";
     expect(verifyVerdict(fixed, "Wynik to 5.")).toEqual({ corrected: true, text: fixed });
   });
+  it("regresja: potwierdzenie ze slowem nie NIE jest korekta", () => {
+    expect(verifyVerdict("Wszystko poprawne, nic nie trzeba zmieniać.", original).corrected).toBe(false);
+    expect(verifyVerdict("Nie ma błędu, odpowiedź jest dobra.", original).corrected).toBe(false);
+    expect(verifyVerdict("Wszystko dobrze, nie zmieniam.", original).corrected).toBe(false);
+  });
   it("pusty / niepewny werdykt nie zastępuje sensownej odpowiedzi", () => {
     expect(verifyVerdict("", original).corrected).toBe(false);
     const longOrig = "Szczegółowa, poprawna odpowiedź na pytanie o całki i ich własności w analizie.";

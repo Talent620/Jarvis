@@ -229,9 +229,10 @@ export default function App() {
         if (!inited && !store.settings.voiceName?.trim()) {
           const { listSpeechVoices, bestPlVoiceName } = await import("./lib/voice");
           const best = bestPlVoiceName(await listSpeechVoices());
-          localStorage.setItem("jarvis.voice.init", "1");
-          if (best) store.setSettings({ voiceName: best, voicePinned: true, voiceSystemPl: true });
-          return; // świeżo ustawiony — nie ma czego sprawdzać
+          // Flagę „zrobione" zapisz TYLKO, gdy realnie przypięliśmy głos. Gdy lista głosów jest
+          // jeszcze pusta (zimny start), spróbuj ponownie przy następnym uruchomieniu.
+          if (best) { localStorage.setItem("jarvis.voice.init", "1"); store.setSettings({ voiceName: best, voicePinned: true, voiceSystemPl: true }); }
+          return; // pierwszy start — nie ma czego sprawdzać (przypiętego głosu)
         }
         const r = await checkPinnedVoice();
         if (r.changed && r.to) { store.setSettings({ voiceName: r.to }); toast(`🎤 Głos „${r.from}" zniknął — przełączono na ${r.to}.`); }
@@ -821,14 +822,14 @@ export default function App() {
     if (Date.now() - last < 24 * 60 * 60 * 1000) return;
     const t = setTimeout(() => {
       try {
+        // Zapisz znacznik niezależnie od wyniku — inaczej (gdy brak pilnych) liczylibyśmy predykcje
+        // przy KAŻDYM starcie zamiast raz dziennie.
+        localStorage.setItem("jarvis.predict.ts", String(Date.now()));
         const d = store.data;
         const people = (d.world?.entities || []).filter((e) => e.kind === "person");
         const top = topPredictions({ tasks: d.tasks, reminders: d.reminders, calendar: d.calendar, leads: d.leads, people }, Date.now(), 3);
         const urgent = top.filter((p) => p.urgency === "high");
-        if (urgent.length) {
-          localStorage.setItem("jarvis.predict.ts", String(Date.now()));
-          toast(`🔮 ${urgent.map((p) => p.title).join(" · ")}`);
-        }
+        if (urgent.length) toast(`🔮 ${urgent.map((p) => p.title).join(" · ")}`);
       } catch { /* pomiń */ }
     }, 12000);
     return () => clearTimeout(t);

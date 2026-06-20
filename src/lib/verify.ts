@@ -17,17 +17,19 @@ export function buildVerifyUser(question: string, answer: string): string {
 }
 
 // Krótkie potwierdzenie poprawności (model nie zwrócił dosłownie „OK").
-const CONFIRM = /^(ok\b|poprawn|zgadza|wszystko si[ęe] zgadza|brak b[łl][ęe]d|bez b[łl][ęe]d|jest (ok|dobr|poprawn)|prawid[łl]ow|tak,? (poprawn|dobrze|zgadza))/i;
+const CONFIRM = /^(ok\b|poprawn|zgadza|wszystko si[ęe] zgadza|wszystko (ok|dobrze|poprawn)|brak b[łl][ęe]d|bez b[łl][ęe]d|nie ma b[łl][ęe]d|jest (ok|dobr|poprawn)|prawid[łl]ow|tak,? (poprawn|dobrze|zgadza))/i;
 // Sygnały, że to jednak KOREKTA (a nie potwierdzenie zaczynające się od „poprawny…").
-const CORRECTION_SIGNAL = /\d|\bnie\b|powinno|zamiast|b[łl][ąa]d|w rzeczywisto|jednak|poprawny wynik/i;
+// Uwaga: świadomie bez gołego „nie"/„błąd" — występują też w potwierdzeniach („nic nie trzeba",
+// „nie ma błędu") i powodowały fałszywą podmianę dobrej odpowiedzi.
+const CORRECTION_SIGNAL = /\bzamiast\b|powinno|w rzeczywisto|poprawny wynik|popraw(iam|ka|iona)|b[łl][ęe]dn|w istocie|jednak (jest|powinno|wynik)/i;
 
 /** Pure: zinterpretuj werdykt weryfikatora. „OK"/potwierdzenie → bez zmian; inaczej → poprawiona treść. */
 export function verifyVerdict(raw: string, original: string): { corrected: boolean; text: string } {
   const t = (raw || "").trim();
   if (!t) return { corrected: false, text: original };
   if (/^ok\b/i.test(t)) return { corrected: false, text: original };
-  // Krótkie potwierdzenie BEZ sygnałów korekty → odpowiedź była dobra (zostaje oryginał).
-  if (t.length <= 60 && CONFIRM.test(t) && !CORRECTION_SIGNAL.test(t)) return { corrected: false, text: original };
+  // Potwierdzenie poprawności (krótkie, z frazą aprobującą, BEZ sygnału realnej korekty) → bez zmian.
+  if (t.length <= 80 && CONFIRM.test(t) && !CORRECTION_SIGNAL.test(t)) return { corrected: false, text: original };
   // Zbyt krótki/niepewny werdykt nie zastępuje sensownej odpowiedzi (ochrona przed regresją).
   if (t.length < 8) return { corrected: false, text: original };
   if (original.trim().length > 40 && t.length < 0.3 * original.trim().length && /nie wiem|trudno|brak danych/i.test(t)) {
