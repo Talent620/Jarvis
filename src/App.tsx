@@ -798,8 +798,11 @@ export default function App() {
     const t = setTimeout(async () => {
       try {
         const r = await checkForUpdate();
-        if ("error" in r || !r.newer) return;
+        if ("error" in r) return; // błąd sieci — spróbujemy znów przy następnym starcie
+        // Zapisz znacznik PO udanym sprawdzeniu (też gdy brak nowości) — inaczej throttle 24h
+        // nie zadziała i sprawdzalibyśmy przy każdym starcie.
         localStorage.setItem("jarvis.update.lastCheck", String(Date.now()));
+        if (!r.newer) return;
         toast(`🎉 Jest nowsza wersja JARVISA (${r.latest})`, { label: r.platform === "web" ? "Odśwież" : "Pobierz", onClick: () => void applyUpdate(r) });
       } catch { /* sieć — pomiń */ }
     }, 8000); // po starcie, nie blokuj pierwszego renderu
