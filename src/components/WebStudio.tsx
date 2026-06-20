@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { generateSite, type SiteKind } from "../lib/webgen";
+import { generateSite, buildClientBrief, clientHandoverMessage, type SiteKind, type SiteStyle, type ClientBrief } from "../lib/webgen";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast } from "../lib/toast";
 import Guide from "./Guide";
@@ -10,6 +10,19 @@ const KINDS: { id: SiteKind; label: string }[] = [
   { id: "landing", label: "🚀 Landing" },
   { id: "firma", label: "🏢 Firma" },
   { id: "portfolio", label: "🎨 Portfolio" },
+];
+
+// Niesztampowe style — żeby strona nie wyglądała jak „kolejny szablon".
+const STYLES: { id: SiteStyle; label: string }[] = [
+  { id: "auto", label: "✨ Auto" },
+  { id: "editorial", label: "📰 Edytorial" },
+  { id: "brutalist", label: "🧱 Brutalizm" },
+  { id: "glass", label: "🫧 Glass" },
+  { id: "neon", label: "🌃 Neon" },
+  { id: "retro", label: "📼 Retro Y2K" },
+  { id: "organic", label: "🌿 Organiczny" },
+  { id: "swiss", label: "🔲 Swiss" },
+  { id: "luxury", label: "👑 Luxury" },
 ];
 
 const IDEAS: Record<string, string[]> = {
@@ -30,17 +43,25 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
   const [prompt, setPrompt] = useState("");
   const [kind, setKind] = useState<SiteKind>("auto");
+  const [style, setStyle] = useState<SiteStyle>("auto");
   const [html, setHtml] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [view, setView] = useState<"preview" | "code">("preview");
+  const [showBrief, setShowBrief] = useState(false);
+  const [brief, setBrief] = useState<ClientBrief>({});
+
+  const briefText = buildClientBrief(brief);
+  const canBuild = !!(prompt.trim() || briefText);
 
   const run = async (edit: boolean) => {
-    if (!prompt.trim()) return;
+    // Edycja wymaga polecenia; budowa od zera może wyjść z briefu i/lub opisu.
+    if (edit ? !prompt.trim() : !canBuild) return;
     setBusy(true);
     setErr("");
     try {
-      const r = await generateSite(prompt, edit && html ? html : undefined, kind);
+      const desc = edit ? prompt : [briefText, prompt].filter((s) => s.trim()).join("\n\n");
+      const r = await generateSite(desc, edit && html ? html : undefined, kind, style);
       if ("error" in r) setErr(r.error);
       else {
         setHtml(r.html);
@@ -53,6 +74,7 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
       setBusy(false); // zawsze odblokuj przycisk, nawet przy nieoczekiwanym błędzie
     }
   };
+  const setBriefField = (k: keyof ClientBrief, v: string) => setBrief((b) => ({ ...b, [k]: v }));
 
   const download = () => {
     const blob = new Blob([html], { type: "text/html" });
@@ -84,6 +106,7 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
               </p>
 
               {/* Wybór typu */}
+              <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Typ strony</div>
               <div className="chips" style={{ marginBottom: 8 }}>
                 {KINDS.map((k) => (
                   <button key={k.id} className={`chip ${kind === k.id ? "on" : ""}`} onClick={() => setKind(k.id)} disabled={busy}>
@@ -91,6 +114,30 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
                   </button>
                 ))}
               </div>
+
+              {/* Styl wizualny — niesztampowy charakter */}
+              <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Styl (nadaje charakter — nie „kolejny szablon”)</div>
+              <div className="chips" style={{ flexWrap: "wrap", marginBottom: 8 }}>
+                {STYLES.map((st) => (
+                  <button key={st.id} className={`chip ${style === st.id ? "on" : ""}`} onClick={() => setStyle(st.id)} disabled={busy}>
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Pełen proces pod klienta — strukturalny brief */}
+              <details open={showBrief} onToggle={(e) => setShowBrief((e.target as HTMLDetailsElement).open)} style={{ marginBottom: 8 }}>
+                <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 13 }}>🧾 Brief klienta (opcjonalnie — pełny proces pod klienta)</summary>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+                  <input placeholder="Firma / marka" value={brief.business || ""} onChange={(e) => setBriefField("business", e.target.value)} />
+                  <input placeholder="Branża" value={brief.industry || ""} onChange={(e) => setBriefField("industry", e.target.value)} />
+                  <input placeholder="Cel strony (np. pozyskać klientów)" value={brief.goal || ""} onChange={(e) => setBriefField("goal", e.target.value)} />
+                  <input placeholder="Grupa docelowa" value={brief.audience || ""} onChange={(e) => setBriefField("audience", e.target.value)} />
+                  <input placeholder="Kolory / branding" value={brief.colors || ""} onChange={(e) => setBriefField("colors", e.target.value)} />
+                  <input placeholder="Kontakt (tel, e-mail)" value={brief.contact || ""} onChange={(e) => setBriefField("contact", e.target.value)} />
+                  <input style={{ gridColumn: "1 / -1" }} placeholder="Wymagane sekcje (np. cennik, opinie, FAQ)" value={brief.sections || ""} onChange={(e) => setBriefField("sections", e.target.value)} />
+                </div>
+              </details>
 
               {/* Pomysły dopasowane do typu */}
               <div className="chips" style={{ flexWrap: "wrap", marginBottom: 8 }}>
@@ -144,7 +191,7 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
             />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn primary" style={{ flex: 1 }} onClick={() => run(!!html)} disabled={busy || !prompt.trim()}>
+            <button className="btn primary" style={{ flex: 1 }} onClick={() => run(!!html)} disabled={busy || (html ? !prompt.trim() : !canBuild)}>
               {busy ? "Buduję…" : html ? "✏ Zastosuj zmianę" : kind === "sklep" ? "🛒 Zbuduj sklep" : "✨ Zbuduj stronę"}
             </button>
             {html && (
@@ -152,9 +199,14 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
             )}
           </div>
           {html && (
-            <button className="btn" style={{ marginTop: 8 }} onClick={() => copyWithToast(html, "Kod skopiowany ✓")}>
-              📋 Kopiuj kod HTML
-            </button>
+            <div className="chips" style={{ marginTop: 8 }}>
+              <button className="btn" style={{ flex: 1, marginTop: 0 }} onClick={() => copyWithToast(html, "Kod skopiowany ✓")}>
+                📋 Kopiuj kod
+              </button>
+              <button className="btn" style={{ flex: 1, marginTop: 0 }} onClick={() => copyWithToast(clientHandoverMessage(brief.business), "Wiadomość do klienta skopiowana ✓")}>
+                📨 Wiadomość do klienta
+              </button>
+            </div>
           )}
           {err && <p className="muted">{err}</p>}
         </div>
