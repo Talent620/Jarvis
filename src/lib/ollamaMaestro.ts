@@ -154,6 +154,28 @@ export async function applyAutoFromInstalled(): Promise<{ ok: boolean; overrides
   return { ok: true, overrides: o };
 }
 
+/**
+ * Tryb SZYBKI „od ręki": najmniejszy/najszybszy model, BEZ myślenia i dodatkowych tur, krótsze
+ * odpowiedzi, gorący model. Przeciwieństwo premium — priorytet: czas reakcji. Zapis ustawień.
+ */
+export function applyFastSetup(): { model: string; enabled: string[] } {
+  const o = recommendedOverrides();
+  store.setSettings({
+    provider: "ollama",
+    ollamaModelSimple: o.simple, // najszybszy mały model (Refleks)
+    localFirstSimple: true,
+    confidenceGate: false, // bez eskalacji (opóźnienia)
+    localRefine: false, // bez 2. tury
+    localConsensus: false, // bez wielu prób
+    speculativeMode: false,
+    prewarmLocal: true, // model gorący → pierwsza odpowiedź od ręki
+    ollamaNoThink: true, // bez długiego „myślenia"
+    ollamaNumPredict: 512, // krótsze = szybsze
+    deepThink: false,
+  });
+  return { model: o.simple, enabled: ["lokalnie-najpierw", "bez myślenia", "krótkie odpowiedzi", "prewarm"] };
+}
+
 export interface EnsureResult {
   ok: boolean;
   installed: string[];

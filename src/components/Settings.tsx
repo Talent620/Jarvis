@@ -21,7 +21,7 @@ import { enablePrivateMode, detectOllama, findOllamaServer } from "../lib/privat
 import { pullOllamaModel } from "../lib/ollamaPull";
 import { warmNow } from "../lib/prewarm";
 import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkOllama";
-import { applyPremiumSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
+import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
 import { detectSd } from "../lib/localImage";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
 import { clearRouteLog } from "../lib/modelRouter";
@@ -991,10 +991,20 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     <button className="btn" style={{ width: "auto", marginTop: 0 }} disabled={maestroBusy} onClick={() => void runAutoFromInstalled()} title="Skonfiguruj z modeli, które już masz — bez pobierania">
                       ⚙ Dobierz z moich modeli
                     </button>
+                    <button
+                      className="btn"
+                      style={{ width: "auto", marginTop: 0 }}
+                      disabled={maestroBusy}
+                      title="Najszybsze odpowiedzi: bez myślenia i dodatkowych tur"
+                      onClick={() => { const r = applyFastSetup(); setS((p) => ({ ...p, ...store.settings })); setMaestroMsg(`⚡ Tryb szybki: ${r.model} · ${r.enabled.join(", ")}. Odpowiada od ręki.`); void warmNow(); toast("⚡ Tryb szybki włączony."); }}
+                    >
+                      ⚡ Szybki (od ręki)
+                    </button>
                   </div>
                   <span className="muted" style={{ fontSize: 12 }}>
-                    „🚀 Premium" dobiera najlepsze modele, <b>pobiera brakujące na Twój PC</b> i włącza inteligentny routing.
-                    „⚙ Dobierz z moich modeli" — to samo, ale tylko z tego, co już masz (bez pobierania). Wymaga adresu Ollamy poniżej.
+                    Wybierz priorytet: <b>⚡ Szybki</b> = odpowiada od ręki (bez myślenia i dodatkowych tur).
+                    <b> 🚀 Premium</b> = mądrzej, trochę wolniej (dobiera i pobiera najlepsze modele + inteligentny routing).
+                    „⚙ Dobierz z moich modeli" — premium tylko z tego, co już masz. Wymaga adresu Ollamy poniżej.
                   </span>
                   {maestroMsg && <p className="muted" style={{ fontSize: 12, whiteSpace: "pre-line", marginTop: 2 }}>{maestroMsg}</p>}
 
@@ -1059,6 +1069,30 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                       </div>
                     )}
                   </div>
+                </div>
+
+                <div className="row">
+                  <span>
+                    🧠 Pozwól modelowi „myśleć" (wolniej, mądrzej)
+                    <br />
+                    <span className="muted">
+                      Modele rozumujące (qwen3, deepseek‑r1) potrafią długo „myśleć" przed odpowiedzią — to bywa wolne
+                      (nawet kilka minut). <b>Domyślnie wyłączone = odpowiedź od ręki.</b> Włącz tylko do naprawdę trudnych zagadek.
+                    </span>
+                  </span>
+                  <Toggle on={!s.ollamaNoThink} onClick={() => set({ ollamaNoThink: !s.ollamaNoThink })} />
+                </div>
+                <div className="field">
+                  <label>Limit długości odpowiedzi (Ollama): {s.ollamaNumPredict ? `${s.ollamaNumPredict} tokenów` : "bez limitu"}</label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={2048}
+                    step={128}
+                    value={s.ollamaNumPredict ?? 0}
+                    onChange={(e) => set({ ollamaNumPredict: Number(e.target.value) })}
+                  />
+                  <span className="muted" style={{ fontSize: 12 }}>Krótsze odpowiedzi = szybciej. 0 = bez limitu (model sam decyduje).</span>
                 </div>
 
                 <div className="row">

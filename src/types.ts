@@ -367,6 +367,10 @@ export interface Settings {
   ollamaNumCtx: number;
   /** Ollama: liczba warstw na GPU (num_gpu). -1 = pełny offload na GPU. */
   ollamaNumGpu: number;
+  /** Ollama: wyłącz „myślenie" modeli rozumujących (qwen3/deepseek) — dużo szybsze odpowiedzi. Domyślnie TAK. */
+  ollamaNoThink: boolean;
+  /** Ollama: limit długości odpowiedzi (num_predict). 0 = bez limitu. Niżej = szybciej. */
+  ollamaNumPredict: number;
   /** Ollama: nadpisanie modelu lokalnego per typ zadania (puste = katalog domyślny). */
   ollamaModelSimple: string;
   ollamaModelComplex: string;

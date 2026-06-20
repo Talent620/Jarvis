@@ -12,12 +12,21 @@ import type { AskCtx, ProviderId, ProviderMeta } from "./types";
 function askOllama(ctx: AskCtx) {
   const s = store.settings;
   const base = (s.ollamaUrl || "http://localhost:11434").replace(/\/$/, "");
+  const options: Record<string, number> = { num_ctx: s.ollamaNumCtx ?? 4096, num_gpu: s.ollamaNumGpu ?? -1 };
+  if (s.ollamaNumPredict && s.ollamaNumPredict > 0) options.num_predict = s.ollamaNumPredict; // krótsza odpowiedź = szybsza
+  // Tryb szybki: dopnij „/no_think" do ostatniej wiadomości użytkownika — modele rozumujące
+  // (qwen3, deepseek-r1) pomijają wtedy długie „myślenie" i odpowiadają od razu.
+  let useCtx = ctx;
+  if (s.ollamaNoThink) {
+    const h = ctx.history.slice();
+    for (let i = h.length - 1; i >= 0; i--) {
+      if (h[i].role === "user") { h[i] = { ...h[i], content: `${h[i].content} /no_think` }; break; }
+    }
+    useCtx = { ...ctx, history: h };
+  }
   return makeOpenAICompatible(`${base}/v1/chat/completions`, {
-    extraBody: {
-      keep_alive: "30m",
-      options: { num_ctx: s.ollamaNumCtx ?? 4096, num_gpu: s.ollamaNumGpu ?? -1 },
-    },
-  })(ctx);
+    extraBody: { keep_alive: "30m", options },
+  })(useCtx);
 }
 
 // Katalog dostawców i darmowych/mocnych modeli. „rank" steruje trybem auto.

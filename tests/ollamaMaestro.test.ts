@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 vi.mock("../src/lib/privateMode", () => ({ detectOllama: vi.fn() }));
 vi.mock("../src/lib/ollamaPull", () => ({ pullOllamaModel: vi.fn() }));
 
-import { recommendedOverrides, requiredModels, missingModels, applyPremiumSetup, ensurePremiumModels, PREMIUM_CATALOG, paramB, autoAssignRoles, applyAutoFromInstalled, ADDABLE_MODELS } from "../src/lib/ollamaMaestro";
+import { recommendedOverrides, requiredModels, missingModels, applyPremiumSetup, applyFastSetup, ensurePremiumModels, PREMIUM_CATALOG, paramB, autoAssignRoles, applyAutoFromInstalled, ADDABLE_MODELS } from "../src/lib/ollamaMaestro";
 import { detectOllama } from "../src/lib/privateMode";
 import { pullOllamaModel } from "../src/lib/ollamaPull";
 import { store } from "../src/lib/store";
@@ -66,6 +66,17 @@ describe("ollamaMaestro — applyPremiumSetup (zapis ustawień)", () => {
     applyPremiumSetup({ uncensored: true });
     expect(store.settings.unfilteredLocal).toBe(true);
     expect(store.settings.ollamaModelUncensored).toBe("dolphin-mistral");
+  });
+
+  it("applyFastSetup: szybko = bez myślenia i bez dodatkowych tur", () => {
+    applyPremiumSetup(); // najpierw włącz „wolne" rzeczy
+    applyFastSetup();
+    expect(store.settings.ollamaNoThink).toBe(true);
+    expect(store.settings.localRefine).toBe(false);
+    expect(store.settings.localConsensus).toBe(false);
+    expect(store.settings.confidenceGate).toBe(false);
+    expect(store.settings.ollamaNumPredict).toBe(512);
+    expect(store.settings.prewarmLocal).toBe(true);
   });
 });
 

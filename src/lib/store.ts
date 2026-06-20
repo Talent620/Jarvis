@@ -65,6 +65,8 @@ const defaultSettings: Settings = {
   localFirstSimple: false,
   ollamaNumCtx: 4096,
   ollamaNumGpu: -1,
+  ollamaNoThink: true,
+  ollamaNumPredict: 0,
   ollamaModelSimple: "",
   ollamaModelComplex: "",
   ollamaModelVision: "",
