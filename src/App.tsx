@@ -821,8 +821,11 @@ export default function App() {
         // (to robi dzienny check przy starcie) — oszczędza zapytania do GitHub i limity.
         const scan = await guardianScan({ checkUpdate: false });
         const topRec = scan.recs.find((r) => r.problem);
-        const hasProblem = scan.reports.some((a) => a.state === "problem" || a.state === "warn");
-        if (hasProblem || scan.health.score < 85) {
+        // Proaktywnie zaczepiamy TYLKO przy realnym problemie (czerwony) albo wyraźnie niskiej
+        // kondycji — żeby nie męczyć ostrzeżeniami o rzeczach opcjonalnych (np. brak Ollamy u
+        // użytkownika korzystającego tylko z chmury).
+        const hasProblem = scan.reports.some((a) => a.state === "problem");
+        if (hasProblem || scan.health.score < 60) {
           // Autopilot: dyrygent sam stosuje bezpieczne naprawy; inaczej podpowiada KONKRET.
           if (store.settings.guardianAutopilot) {
             const did = await guardianAutoHeal();
