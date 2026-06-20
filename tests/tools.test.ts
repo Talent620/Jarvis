@@ -90,6 +90,19 @@ describe("narzędzia lokalne — wykonanie end-to-end (runTool)", () => {
     expect(store.settings.theme).toBe("retro");
   });
 
+  it("set_mode przełącza tryb pracy (offline/online/lokalny/auto) i odrzuca nieznany", async () => {
+    await runTool("set_mode", { mode: "offline" });
+    expect(store.settings.onDeviceOnly).toBe(true);
+    await runTool("set_mode", { mode: "chmura" });
+    expect(store.settings.onDeviceOnly).toBe(false);
+    expect(store.settings.provider).toBe("auto");
+    await runTool("set_mode", { mode: "lokalny" });
+    expect(store.settings.provider).toBe("ollama");
+    await runTool("set_mode", { mode: "auto" });
+    expect(store.settings.localFirstSimple).toBe(true);
+    expect(await runTool("set_mode", { mode: "xyz" })).toMatch(/Dostępne tryby/);
+  });
+
   it("set_voice zmienia barwę, charakter, tempo i mówienie", async () => {
     const r = await runTool("set_voice", { voice: "Charon", persona: "operator", speed: "slower", speak: false });
     expect(r).toMatch(/✅/);

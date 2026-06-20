@@ -22,6 +22,7 @@ import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, hotkey as de
 import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
 import { primaryKey } from "./keys";
 import { exportData } from "./backup";
+import { applyBrainMode, BRAIN_MODES, type BrainModeId } from "./brainModes";
 import type { ProviderId } from "./providers/types";
 import type { Citation, Settings, LeadStatus } from "../types";
 
@@ -1036,6 +1037,27 @@ const tools: Tool[] = [
       if (!t) return "Dostępne motywy: cyan, złoty, bursztyn, zielony, ocean, czerwony, róż, fiolet, matrix, nord, sunset, retro, xp.";
       store.setSettings({ theme: t });
       return `✅ Motyw interfejsu zmieniony na ${theme}.`;
+    },
+  },
+  {
+    def: {
+      name: "set_mode",
+      description:
+        "Zmień tryb pracy JARVISA (skąd biorą się odpowiedzi): auto (zalecane — lokalnie gdy można, chmura gdy trzeba), online (zawsze chmura), offline (tylko urządzenie, prywatnie, bez sieci), lokalny/ollama (Ollama sama dobiera model). Np. „przełącz na tryb offline”, „używaj chmury”, „działaj lokalnie”.",
+      input_schema: obj({ mode: str("auto, online/chmura, offline/prywatnie, lokalny/ollama") }, ["mode"]),
+    },
+    run: ({ mode }) => {
+      const map: Record<string, BrainModeId> = {
+        auto: "auto", automatyczny: "auto", hybryda: "auto", hybrydowy: "auto", zalecany: "auto",
+        online: "online", chmura: "online", chmurowy: "online", "w chmurze": "online", siec: "online", sieć: "online",
+        offline: "offline", prywatny: "offline", prywatnie: "offline", "na urzadzeniu": "offline", "na urządzeniu": "offline", "on-device": "offline", ondevice: "offline",
+        ollama: "ollama", lokalny: "ollama", lokalnie: "ollama", local: "ollama",
+      };
+      const m = map[String(mode || "").trim().toLowerCase()];
+      if (!m) return "Dostępne tryby: auto, online (chmura), offline (prywatnie), lokalny (Ollama).";
+      applyBrainMode(m, []);
+      const preset = BRAIN_MODES.find((b) => b.id === m);
+      return `✅ Tryb pracy: ${preset?.title || m}. ${preset?.does || ""}`;
     },
   },
   {
