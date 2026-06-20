@@ -1013,20 +1013,27 @@ const tools: Tool[] = [
     def: {
       name: "set_theme",
       description:
-        "Zmień motyw kolorystyczny interfejsu (HUD) na żądanie: cyan (domyślny), złoty, zielony, czerwony, fiolet lub Matrix. Np. „włącz motyw Matrix”, „zmień na złoty”.",
-      input_schema: obj({ theme: str("cyan, złoty/gold, zielony/green, czerwony/red, fiolet/purple, matrix") }, ["theme"]),
+        "Zmień motyw kolorystyczny interfejsu (HUD): cyan (domyślny), złoty, bursztyn, zielony, ocean, czerwony, róż, fiolet, Matrix, Nord, Sunset, Retro 95, XP. Np. „włącz motyw XP”, „zmień na Nord”.",
+      input_schema: obj({ theme: str("cyan, gold/złoty, amber/bursztyn, green/zielony, ocean, red/czerwony, rose/róż, purple/fiolet, matrix, nord, sunset, retro, xp") }, ["theme"]),
     },
     run: ({ theme }) => {
       const map: Record<string, string> = {
-        cyan: "default", default: "default", domyslny: "default", niebieski: "default",
+        cyan: "default", default: "default", domyslny: "default", domyślny: "default", niebieski: "default",
         zloty: "gold", złoty: "gold", gold: "gold",
+        bursztyn: "amber", bursztynowy: "amber", amber: "amber",
         zielony: "green", green: "green",
+        ocean: "ocean", morski: "ocean",
         czerwony: "red", red: "red",
+        roz: "rose", róż: "rose", rozowy: "rose", różowy: "rose", rose: "rose",
         fiolet: "purple", fioletowy: "purple", purple: "purple",
         matrix: "matrix",
+        nord: "nord",
+        sunset: "sunset", zachod: "sunset", zachód: "sunset",
+        retro: "retro", "retro 95": "retro", win95: "retro", windows95: "retro",
+        xp: "xp", "xp luna": "xp", luna: "xp", windowsxp: "xp", "windows xp": "xp",
       };
       const t = map[String(theme || "").trim().toLowerCase()];
-      if (!t) return "Dostępne motywy: cyan, złoty, zielony, czerwony, fiolet, matrix.";
+      if (!t) return "Dostępne motywy: cyan, złoty, bursztyn, zielony, ocean, czerwony, róż, fiolet, matrix, nord, sunset, retro, xp.";
       store.setSettings({ theme: t });
       return `✅ Motyw interfejsu zmieniony na ${theme}.`;
     },

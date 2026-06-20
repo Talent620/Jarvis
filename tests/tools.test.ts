@@ -79,6 +79,15 @@ describe("narzędzia lokalne — wykonanie end-to-end (runTool)", () => {
     expect(await runTool("set_theme", { theme: "zloty" })).toMatch(/złoty|zloty|gold|✅/i);
     expect(store.settings.theme).toBe("gold");
     expect(await runTool("set_theme", { theme: "tęcza" })).toMatch(/Dostępne motywy/);
+    // Nowe motywy rozpoznawane po nazwie (też potocznej).
+    await runTool("set_theme", { theme: "XP" });
+    expect(store.settings.theme).toBe("xp");
+    await runTool("set_theme", { theme: "nord" });
+    expect(store.settings.theme).toBe("nord");
+    await runTool("set_theme", { theme: "zachód" });
+    expect(store.settings.theme).toBe("sunset");
+    await runTool("set_theme", { theme: "win95" });
+    expect(store.settings.theme).toBe("retro");
   });
 
   it("set_voice zmienia barwę, charakter, tempo i mówienie", async () => {
