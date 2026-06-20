@@ -68,6 +68,7 @@ import { buildContext } from "./lib/context";
 import { isUncensored, PROVIDERS } from "./lib/providers/registry";
 import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import Guardian from "./components/Guardian";
+import Mind from "./components/Mind";
 import { guardianAutoHeal } from "./lib/guardian";
 import { guardianScan } from "./lib/guardianAgents";
 import { checkForUpdate, applyUpdate } from "./lib/updater";
@@ -171,6 +172,7 @@ export default function App() {
   const [step, setStep] = useState<string | null>(null);
   const [councilStep, setCouncilStep] = useState<string | null>(null);
   const [showGuardian, setShowGuardian] = useState(false);
+  const [showMind, setShowMind] = useState(false);
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [locked, setLocked] = useState(lockIsSet());
   const [onboarding, setOnboarding] = useState(needsOnboarding());
@@ -1186,6 +1188,7 @@ export default function App() {
           onHud={() => setShowHud(true)}
           onStudio={() => setShowStudio(true)}
           onGuardian={() => setShowGuardian(true)}
+          onMind={() => setShowMind(true)}
           onWeb={() => setShowWeb(true)}
           onScreen={isDesktop() ? lookAtScreen : undefined}
           onHelp={() => setShowHelp(true)}
@@ -1259,6 +1262,11 @@ export default function App() {
       {showGuardian && (
         <ScreenBoundary>
           <Guardian onClose={() => setShowGuardian(false)} />
+        </ScreenBoundary>
+      )}
+      {showMind && (
+        <ScreenBoundary>
+          <Mind onClose={() => setShowMind(false)} />
         </ScreenBoundary>
       )}
       {showWeb && (

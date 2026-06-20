@@ -14,6 +14,7 @@ export default function More({
   onGadgets,
   onHud,
   onGuardian,
+  onMind,
   onStudio,
   onWeb,
   onScreen,
@@ -48,6 +49,7 @@ export default function More({
   onGadgets: () => void;
   onHud: () => void;
   onGuardian: () => void;
+  onMind: () => void;
   onStudio: () => void;
   onWeb: () => void;
   onScreen?: () => void;
@@ -76,6 +78,7 @@ export default function More({
   useEscape(onClose);
   const items = [
     { id: "guardian", icon: "🛡", label: "Strażnik JARVISA — napraw, przyspiesz, ulepsz, doradź", fn: onGuardian },
+    { id: "mind", icon: "🧠", label: "Umysł JARVISA — odprawa, Twój świat, wzorce, samoocena", fn: onMind },
     { id: "notifications", icon: "🔔", label: "Powiadomienia — co wymaga uwagi", fn: onNotifications },
     { id: "status", icon: "🩺", label: "Stan systemu — co działa (zielone/czerwone)", fn: onStatus },
     { id: "profile", icon: "👤", label: "Mój profil — kim jestem (pamięć)", fn: onProfile },
@@ -115,7 +118,7 @@ export default function More({
     { title: "✅ Praca i organizacja", ids: ["tasks", "dayplan", "projects", "journal", "cards"] },
     { title: "🛒 Zakupy i okazje", ids: ["bargain", "wheretobuy", "shoppinglist"] },
     { title: "🎙 Narzędzia AI", ids: ["translator", "transcribe", "hud", "screen", "studio"] },
-    { title: "🧠 Ja i pamięć", ids: ["profile", "memory"] },
+    { title: "🧠 Ja i pamięć", ids: ["mind", "profile", "memory"] },
     { title: "⚙️ System i pomoc", ids: ["notifications", "status", "history", "data", "audit", "gadgets", "faq", "help", "admin"] },
   ];
 
