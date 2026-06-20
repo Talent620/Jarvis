@@ -9,7 +9,7 @@ import { runAndFix } from "./selfHeal";
 import { applyFastSetup, applyPremiumSetup, ensurePremiumModels } from "./ollamaMaestro";
 import { warmNow } from "./prewarm";
 import { PROVIDER_LIST } from "./providers/registry";
-import { askJarvis } from "./brain";
+import { askJarvis, askModel } from "./brain";
 
 export interface GuardianStatus {
   brain: string; // czym JARVIS odpowie
@@ -158,6 +158,32 @@ export async function guardianAdvise(question: string): Promise<string> {
 export async function guardianExecute(command: string): Promise<{ text: string; tools: string[] }> {
   const reply = await askJarvis([{ role: "user", content: command }]);
   return { text: reply.text, tools: (reply as { tools?: string[] }).tools || [] };
+}
+
+// Sygnały DZIAŁAŃ WYCHODZĄCYCH / nieodwracalnych — przy nich Strażnik najpierw pokaże podgląd
+// „co zaraz zrobię" i poprosi o potwierdzenie (mail, SMS, telefon, pieniądze, smart home, zasilanie,
+// masowa wysyłka, publikacja). Czysta lista — łatwa do testu i rozbudowy.
+const OUTGOING_CUES =
+  /(wyśl|wysł|wyslij|wyślij|\be-?mail|maila|mailem|\bsms|zadzwoń|zadzwon|\bdzwoń|\bdzwon|telefon|przelew|przele|zapła|zapla|płatnoś|platnos|\bofert|\blead|wyłącz komputer|wylacz komputer|uśpij|uspij|restart|wyłącz światł|swiatł|swiatl|termostat|\bzamek\b|\bdrzwi\b|smart|publikuj|opublikuj|\bpost\b|usuń|usun|skasuj|skasować)/i;
+
+/** Pure: czy polecenie może wywołać działanie WYCHODZĄCE/nieodwracalne (→ wymaga potwierdzenia). */
+export function isOutgoingCommand(command: string): boolean {
+  return OUTGOING_CUES.test(command || "");
+}
+
+/**
+ * PODGLĄD „co zaraz zrobię" — model opisuje plan działań BEZ narzędzi (nic nie wykonuje).
+ * Wyraźnie oznacza kroki wychodzące/nieodwracalne, by użytkownik świadomie potwierdził.
+ */
+export async function guardianPlan(command: string): Promise<string> {
+  const system = [
+    "Jesteś Strażnikiem JARVISA. Użytkownik za chwilę KAŻE Ci wykonać poniższe polecenie z narzędziami.",
+    "Zanim cokolwiek zrobisz, opisz KRÓTKO po polsku (1–4 punkty) CO DOKŁADNIE zamierzasz zrobić.",
+    "Wyraźnie oznacz działania WYCHODZĄCE/nieodwracalne (wysłanie e-maila/SMS, telefon, smart home, zasilanie, pieniądze).",
+    "Jeśli pojawia się przelew/płatność: zaznacz, że danych nie wyślesz sam — przygotujesz je i otworzysz bankowość.",
+    "TERAZ NIC NIE WYKONUJ — podaj wyłącznie samą listę kroków, bez wstępu i bez potwierdzeń.",
+  ].join("\n");
+  return askModel({ system, history: [{ role: "user", content: command }] });
 }
 
 /** Katalog możliwości Strażnika/JARVISA — do pokazania użytkownikowi (świadomość pełni mocy). */

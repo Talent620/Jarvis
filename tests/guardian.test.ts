@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { speedSummary, voiceSummary, guardianAdvicePrompt, type GuardianStatus } from "../src/lib/guardian";
+import { speedSummary, voiceSummary, guardianAdvicePrompt, isOutgoingCommand, type GuardianStatus } from "../src/lib/guardian";
 import { findSdServer } from "../src/lib/localImage";
 import { store } from "../src/lib/store";
 
@@ -40,6 +40,24 @@ describe("guardian — guardianAdvicePrompt", () => {
     expect(p).toMatch(/jak przyspieszyć/);
     expect(p).toMatch(/lokalny \(Ollama\)/);
     expect(p).toMatch(/Brak modelu SD/);
+  });
+});
+
+describe("guardian — isOutgoingCommand", () => {
+  it("działania wychodzące/nieodwracalne wymagają potwierdzenia", () => {
+    expect(isOutgoingCommand("napisz i wyślij maila do Jana")).toBe(true);
+    expect(isOutgoingCommand("zadzwoń do mamy")).toBe(true);
+    expect(isOutgoingCommand("wyślij SMS do szefa")).toBe(true);
+    expect(isOutgoingCommand("zrób przelew 200 zł")).toBe(true);
+    expect(isOutgoingCommand("wyłącz światło w salonie")).toBe(true);
+    expect(isOutgoingCommand("usuń to zadanie")).toBe(true);
+    expect(isOutgoingCommand("wyślij oferty do leadów")).toBe(true);
+  });
+  it("bezpieczne polecenia idą od ręki (bez potwierdzenia)", () => {
+    expect(isOutgoingCommand("dodaj zadanie na jutro")).toBe(false);
+    expect(isOutgoingCommand("jaka jest pogoda")).toBe(false);
+    expect(isOutgoingCommand("ile mam dziś spotkań")).toBe(false);
+    expect(isOutgoingCommand("")).toBe(false);
   });
 });
 

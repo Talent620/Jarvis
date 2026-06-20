@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
-import { guardian, guardianDiagnose, guardianAdvise, guardianExecute, GUARDIAN_CAPABILITIES, type GuardianStatus, type GuardianActionResult } from "../lib/guardian";
+import { guardian, guardianDiagnose, guardianAdvise, guardianExecute, guardianPlan, isOutgoingCommand, GUARDIAN_CAPABILITIES, type GuardianStatus, type GuardianActionResult } from "../lib/guardian";
 import { checkForUpdate, applyUpdate } from "../lib/updater";
 
 // 🛡 Strażnik JARVISA — autonomiczny pomocnik z głównego menu: diagnozuje, naprawia,
@@ -15,6 +15,8 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
   const [q, setQ] = useState("");
   const [advice, setAdvice] = useState("");
   const [exec, setExec] = useState<{ text: string; tools: string[] } | null>(null);
+  // Podgląd „co zaraz zrobię" + polecenie czekające na potwierdzenie (działania wychodzące).
+  const [preview, setPreview] = useState<{ cmd: string; plan: string } | null>(null);
   const [proactive, setProactive] = useState(store.settings.guardianProactive);
 
   const refresh = async () => {
@@ -57,19 +59,30 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
 
   const ask = async () => {
     if (busy || !q.trim()) return;
-    setBusy(true); setExec(null); setAdvice("⏳ Strażnik analizuje…");
+    setBusy(true); setExec(null); setPreview(null); setAdvice("⏳ Strażnik analizuje…");
     try { setAdvice(await guardianAdvise(q.trim())); }
     catch { setAdvice("Nie udało się uzyskać porady — sprawdź, czy mózg AI odpowiada."); }
     finally { setBusy(false); }
   };
 
-  // WYKONAJ: pełny mózg JARVISA + narzędzia (zadania, e-mail, kalendarz, smart home, web, PC…).
-  // Akcje ryzykowne i tak przechodzą przez zgody aplikacji; przelewów Strażnik sam nie zrobi.
+  // Realne wykonanie: pełny mózg JARVISA + narzędzia (zadania, e-mail, kalendarz, smart home, web, PC…).
+  const realExecute = async (cmd: string) => {
+    setBusy(true); setAdvice(""); setExec(null); setPreview(null); setMsg("⚙ Wykonuję polecenie…");
+    try { setExec(await guardianExecute(cmd)); setMsg(""); }
+    catch { setMsg("⚠ Nie udało się wykonać — sprawdź, czy mózg AI odpowiada."); }
+    finally { setBusy(false); }
+  };
+
+  // WYKONAJ z bramką bezpieczeństwa: polecenia WYCHODZĄCE/nieodwracalne (mail, SMS, telefon,
+  // pieniądze, smart home…) najpierw pokazują podgląd „co zaraz zrobię" i czekają na potwierdzenie.
+  // Bezpieczne (np. dodanie zadania) lecą od ręki.
   const doExecute = async () => {
     if (busy || !q.trim()) return;
-    setBusy(true); setAdvice(""); setExec(null); setMsg("⚙ Wykonuję polecenie…");
-    try { setExec(await guardianExecute(q.trim())); setMsg(""); }
-    catch { setMsg("⚠ Nie udało się wykonać — sprawdź, czy mózg AI odpowiada."); }
+    const cmd = q.trim();
+    if (!isOutgoingCommand(cmd)) { await realExecute(cmd); return; }
+    setBusy(true); setAdvice(""); setExec(null); setPreview(null); setMsg("🔎 Przygotowuję podgląd działania…");
+    try { setPreview({ cmd, plan: await guardianPlan(cmd) }); setMsg(""); }
+    catch { setPreview({ cmd, plan: "(Nie udało się przygotować podglądu — potwierdź, jeśli na pewno chcesz wykonać.)" }); setMsg(""); }
     finally { setBusy(false); }
   };
 
@@ -145,6 +158,17 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
             <button className="btn primary" style={{ flex: 1, marginTop: 0 }} disabled={busy || !q.trim()} onClick={() => void doExecute()}>⚡ Wykonaj</button>
             <button className="btn" style={{ flex: 1, marginTop: 0 }} disabled={busy || !q.trim()} onClick={() => void ask()}>💡 Doradź</button>
           </div>
+          {/* Podgląd „co zaraz zrobię" — potwierdzenie przed działaniem wychodzącym */}
+          {preview && (
+            <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8, border: "1px solid var(--gold)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>👁 Zanim wykonam — co zaraz zrobię:</div>
+              <div style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>{preview.plan}</div>
+              <div className="chips" style={{ marginTop: 10 }}>
+                <button className="btn primary" style={{ flex: 1, marginTop: 0 }} disabled={busy} onClick={() => void realExecute(preview.cmd)}>✅ Potwierdź i wykonaj</button>
+                <button className="btn" style={{ flex: 1, marginTop: 0 }} disabled={busy} onClick={() => { setPreview(null); setMsg("Anulowano — nic nie wykonano."); }}>✖ Anuluj</button>
+              </div>
+            </div>
+          )}
           {exec && (
             <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8 }}>
               <div style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>{exec.text}</div>
