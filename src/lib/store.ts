@@ -87,6 +87,7 @@ const defaultSettings: Settings = {
   sdModel: "",
   guardianProactive: false,
   guardianAutopilot: false,
+  requireConsentAlways: false,
   unfilteredLocal: false,
   deepThink: false,
   verifyHard: false,

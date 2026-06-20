@@ -1412,6 +1412,17 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
               <div className="row">
                 <span>
+                  🔒 Zawsze potwierdzaj akcje wychodzące
+                  <br />
+                  <span className="muted">
+                    Wyższe bezpieczeństwo: e-mail/SMS/telefon/smart-home wymagają potwierdzenia ZAWSZE —
+                    także w trybie głośnomówiącym (bez ekranu zgody akcja jest blokowana, nie wykonywana po cichu).
+                  </span>
+                </span>
+                <Toggle on={s.requireConsentAlways} onClick={() => set({ requireConsentAlways: !s.requireConsentAlways })} />
+              </div>
+              <div className="row">
+                <span>
                   🧠 Pamięć on-device (embeddingi lokalnie)
                   <br />
                   <span className="muted">

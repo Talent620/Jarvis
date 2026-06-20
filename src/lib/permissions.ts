@@ -108,7 +108,7 @@ export async function requestConsent(tool: string, input: unknown): Promise<bool
   if (risk !== "outbound") return true;
   const consents = loadConsents();
   if (consents[tool] === "allow") return true;
-  if (!consentHandler) return true; // brak UI (np. tryb live) — nie blokuj
+  if (!consentHandler) return !store.settings.requireConsentAlways; // brak UI (np. tryb live): domyślnie nie blokuj (zgodność wstecz); opt-in fail-closed
   const { allow, remember } = await consentHandler({ tool, input, risk });
   if (allow && remember) { consents[tool] = "allow"; saveConsents(consents); }
   return allow;

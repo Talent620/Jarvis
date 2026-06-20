@@ -444,6 +444,9 @@ export interface Settings {
   guardianProactive: boolean;
   /** Autopilot Strażnika: sam (cicho) stosuje bezpieczne, odwracalne naprawy, gdy wykryje problem. */
   guardianAutopilot: boolean;
+  /** Bezpieczeństwo: wymagaj potwierdzenia akcji wychodzących ZAWSZE — także bez UI (tryb live):
+   *  gdy brak ekranu zgody, akcja zewnętrzna jest BLOKOWANA zamiast wykonywana po cichu (fail-closed). */
+  requireConsentAlways: boolean;
   /** Tryb nieocenzurowany — działa realnie tylko z modelem lokalnym (Ollama):
    *  JARVIS nie dokłada własnych zastrzeżeń/moralizowania i odpowiada wprost. */
   unfilteredLocal: boolean;
