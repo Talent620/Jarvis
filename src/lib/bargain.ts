@@ -5,8 +5,9 @@
 //      + strażnik oszustw).
 // Czyste funkcje (parsowanie/ranking/linki) — w pełni testowalne.
 
-import { resolveProvider, askModel } from "./brain";
+import { resolveProvider, askModel, hasUsableBrain } from "./brain";
 import { getCitations, resetCitations } from "./tools";
+import { tavilySearch, hasWebSearch, groundingBlock } from "./research";
 
 export type Condition = "new" | "used";
 export type DealFlag = "scam" | "deal" | "fair" | "high";
@@ -88,7 +89,8 @@ export function buildBargainPrompt(region = "Polska"): string {
   return [
     `Jesteś łowcą okazji. Użytkownik podaje przedmiot (nazwę, model lub numer części). Znajdź NAJTAŃSZE realne oferty — osobno NOWE i UŻYWANE — w regionie: ${region}.`,
     "ZASADY:",
-    "- Użyj wyszukiwarki internetowej. Sprawdź popularne serwisy: Allegro, OLX, Vinted, eBay, Amazon, Ceneo, Google Zakupy.",
+    "- Jeśli poniżej podano REALNE WYNIKI WYSZUKIWANIA, opieraj się WYŁĄCZNIE na nich: bierz ceny i URL-e stamtąd, nie wymyślaj.",
+    "- Bez podanych wyników użyj wyszukiwarki internetowej. Sprawdź popularne serwisy: Allegro, OLX, Vinted, eBay, Amazon, Ceneo, Google Zakupy.",
     "- Gdy to część samochodowa (np. „lampa do Golfa”), sprawdź też Otomoto Części, iParts i motoryzacyjne kategorie Allegro/OLX.",
     "- Rozważ oferty zagraniczne (eBay.de, Amazon.de), jeśli realnie wychodzą taniej z wysyłką do Polski — zaznacz to w „note”.",
     "- Bierz realne, aktualne oferty z ceną i bezpośrednim linkiem.",
@@ -203,24 +205,42 @@ export function rankOffers(offers: Offer[]): Ranked {
   return { sorted, cheapestNew, cheapestUsed, median: median(sorted.map((o) => o.price)) };
 }
 
+/** Pure: zapytanie wyszukiwarki zakupowej dla przedmiotu (po polsku, z popularnymi serwisami). */
+export function shoppingSearchQuery(item: string): string {
+  return `${item.trim()} cena oferta kup Allegro OLX Ceneo eBay Amazon`;
+}
+
 /**
- * Znajdź najtańsze oferty dla zapytania. Zawsze zwraca deep-linki; gdy jest klucz
- * AI z wyszukiwaniem w sieci, dokłada zagregowaną, posortowaną listę ofert.
+ * Znajdź najtańsze oferty dla zapytania. Zawsze zwraca deep-linki. Gdy jest mózg AI:
+ *  - z kluczem Tavily → GRUNTUJE oferty na PRAWDZIWYCH wynikach wyszukiwania (realne linki/ceny),
+ *  - bez Tavily → korzysta z natywnego wyszukiwania dostawcy (Claude/OpenAI), inaczej model
+ *    może mieć ograniczone dane (stąd dawne „nie znajduje jak trzeba").
  */
 export async function findBargains(query: string, region = "Polska"): Promise<BargainResult> {
   const clean = query.trim();
   const links = marketLinks(clean);
   if (!clean) return { query: "", currency: "PLN", offers: [], links, tips: [] };
 
-  const r = resolveProvider();
-  if (!r || !r.apiKey?.trim()) {
+  // Szersza bramka niż resolveProvider: tryb lokalny (Ollama) też ma mózg.
+  if (!hasUsableBrain()) {
     return { query: clean, currency: "PLN", offers: [], links, tips: [], note: "no-ai" };
   }
 
   resetCitations();
   try {
-    const text = await askModel({ system: buildBargainPrompt(region), history: [{ role: "user", content: `Znajdź najtaniej: ${clean}` }], webSearch: true });
+    // 1) Realne wyszukiwanie (Tavily) — grunt pod oferty z PRAWDZIWYMI linkami/cenami.
+    const hits = hasWebSearch() ? await tavilySearch(shoppingSearchQuery(clean), { maxResults: 10 }) : [];
+    const grounded = groundingBlock(hits);
+    // 2) Model wyłuskuje/sortuje oferty. Mocniejszy model (heavy) lepiej ekstrahuje z surowych wyników.
+    const text = await askModel({
+      system: buildBargainPrompt(region),
+      history: [{ role: "user", content: `Znajdź najtaniej: ${clean}${grounded}` }],
+      webSearch: hits.length === 0, // gdy mamy grunt z Tavily, nie potrzebujemy natywnego wyszukiwania
+      heavy: true,
+    });
     const parsed = parseBargain(text);
+    // Cytaty: realne trafienia z Tavily mają pierwszeństwo (pewne źródła), inaczej z modelu.
+    const citations = hits.length ? hits.map((h) => ({ title: h.title, url: h.url })) : getCitations();
     return {
       query: clean,
       normalized: parsed?.normalized,
@@ -228,9 +248,17 @@ export async function findBargains(query: string, region = "Polska"): Promise<Ba
       offers: parsed?.offers ?? [],
       links,
       tips: parsed?.tips ?? [],
-      citations: getCitations(),
+      citations,
+      // Podpowiedź dla UI: brak realnego wyszukiwania → wyniki słabsze, zachęć do Tavily/Claude.
+      note: !hits.length && !providerHasNativeSearch() ? "no-search" : undefined,
     };
   } catch (e) {
     return { query: clean, currency: "PLN", offers: [], links, tips: [], error: e instanceof Error ? e.message : String(e) };
   }
+}
+
+/** Czy aktywny dostawca ma własne wyszukiwanie w sieci (Claude / OpenAI-GitHub)? */
+function providerHasNativeSearch(): boolean {
+  const r = resolveProvider();
+  return !!r && (r.provider === "anthropic" || r.provider === "github");
 }

@@ -8,8 +8,18 @@ import {
   dealFlag,
   rankOffers,
   buildBargainPrompt,
+  shoppingSearchQuery,
   type Offer,
 } from "../src/lib/bargain";
+
+describe("shoppingSearchQuery", () => {
+  it("buduje zapytanie zakupowe z przedmiotem i serwisami", () => {
+    const q = shoppingSearchQuery("  lampa do golfa  ");
+    expect(q).toMatch(/^lampa do golfa/);
+    expect(q).toMatch(/Allegro/);
+    expect(q).toMatch(/OLX/);
+  });
+});
 
 describe("marketLinks", () => {
   it("zwraca komplet serwisów posortowanych od najtańszych", () => {
