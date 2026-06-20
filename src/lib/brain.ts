@@ -517,37 +517,35 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
     i === history.length - 1 ? { ...m, content: capTxt(m.content) } : { role: m.role, content: capTxt(m.content) },
   );
 
-  // Pamięć autonomiczna: dobierz fakty trafne do bieżącego zapytania (przed promptem).
+  // Pamięć autonomiczna + długoterminowa + dziennik + (opcjonalnie) głęboka analiza.
+  // PŁYNNOŚĆ: te przygotowania są NIEZALEŻNE i każde trafia do promptu, więc puszczamy je
+  // RÓWNOLEGLE — opóźnienie przed pierwszym tokenem to max(...) zamiast sumy (było sekwencyjnie).
   const lastUser = [...trimmed].reverse().find((m) => m.role === "user");
-  await prepareMemoryContext(lastUser?.content || "");
-  // Pamięć długoterminowa (Mem0, Faza 1): search PRZED modelem; namespace wg aktywnego projektu.
-  // Graceful: gdy serwis niedostępny → pusty blok, JARVIS działa dalej.
+  const lastUserContent = lastUser?.content || "";
+  // Pamięć długoterminowa (Mem0): namespace wg aktywnego projektu. Graceful: błąd → pusty blok.
   const memNamespace = resolveNamespace(store.settings.activeProjectId);
-  const mem0Block = await memoryContextBlock(lastUser?.content || "", memNamespace).catch(() => "");
-  // Pamięć ewoluująca: ułóż udostępnione wpisy dziennika według trafności.
-  const journalRank = await rankJournal(lastUser?.content || "").catch(() => null);
+  // Głębokie myślenie (opt-in): wewnętrzna analiza złożonych pytań — też niezależna, więc nakłada się
+  // na pobieranie pamięci, zamiast dokładać swój czas na początku tury.
+  const deepThinkWanted = store.settings.deepThink && !store.settings.interpreterMode && needsDeepThink(lastUserContent);
+  const [, mem0Block, journalRank, deepAnalysis] = await Promise.all([
+    prepareMemoryContext(lastUserContent),
+    memoryContextBlock(lastUserContent, memNamespace).catch(() => ""),
+    rankJournal(lastUserContent).catch(() => null),
+    deepThinkWanted
+      ? PROVIDERS[resolved.provider].impl({
+          system: REASONING_SYSTEM,
+          webSearch: false,
+          tools: [],
+          history: [{ role: "user", content: lastUserContent.slice(0, 2000) }],
+          apiKey: resolved.apiKey,
+          model: TASK_MODELS[resolved.provider]?.complex || resolved.model,
+          proxyUrl: store.settings.proxyUrl?.trim() || undefined,
+        }).then((a) => (a.text || "").slice(0, 1500)).catch(() => "")
+      : Promise.resolve(""),
+  ]);
 
   // Wszczepiona wiedza ekspercka: dobierz pasujące modele mentalne (offline, za darmo).
-  const currentKnowledge = store.settings.expertKnowledge !== false ? retrieveKnowledge(lastUser?.content || "") : "";
-
-  // Głębokie myślenie: przy złożonych pytaniach najpierw wewnętrzna analiza.
-  let deepAnalysis = "";
-  if (store.settings.deepThink && !store.settings.interpreterMode && needsDeepThink(lastUser?.content || "")) {
-    try {
-      const a = await PROVIDERS[resolved.provider].impl({
-        system: REASONING_SYSTEM,
-        webSearch: false,
-        tools: [],
-        history: [{ role: "user", content: (lastUser?.content || "").slice(0, 2000) }],
-        apiKey: resolved.apiKey,
-        model: TASK_MODELS[resolved.provider]?.complex || resolved.model,
-        proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-      });
-      deepAnalysis = (a.text || "").slice(0, 1500);
-    } catch {
-      /* analiza opcjonalna — pomijamy przy błędzie */
-    }
-  }
+  const currentKnowledge = store.settings.expertKnowledge !== false ? retrieveKnowledge(lastUserContent) : "";
 
   // Szósty Zmysł: świadomość sytuacyjna (otwarte wątki) z DANYCH systemu — synchronicznie,
   // bez sieci. Model dostaje ją i wplata najwyżej jedno trafne „połączenie" naturalnie.
