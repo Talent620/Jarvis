@@ -127,7 +127,9 @@ export class AnthStreamAccumulator {
     }
     if (t === "message_delta") {
       if (obj.delta?.stop_reason) this.stopReason = obj.delta.stop_reason;
-      this.usage.outputTokens += obj.usage?.output_tokens || 0;
+      // `message_delta.usage.output_tokens` to BIEŻĄCA SUMA (kumulatyw), nie przyrost — przy wielu
+      // zdarzeniach delta `+=` zawyżałoby koszt. Przypisujemy najnowszą wartość (jak akumulator OpenAI).
+      if (typeof obj.usage?.output_tokens === "number") this.usage.outputTokens = obj.usage.output_tokens;
       return "";
     }
     return "";

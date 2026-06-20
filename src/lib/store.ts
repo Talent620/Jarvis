@@ -316,12 +316,15 @@ class Store {
         this.idbReady = true;
         this.persistData(); // odchudź blob localStorage (duże kolekcje są już w IDB)
       } else {
-        this.idbReady = true;
+        // WAŻNE: nie ustawiaj idbReady=true PRZED hydratacją. Inaczej setData w trakcie `await idbGet`
+        // poszedłby ścieżką „slim" i zapisałby PUSTE tablice z RAM do IDB, kasując zapisane dane.
+        // W trakcie hydratacji zapisy idą do localStorage (pełne) — IDB pozostaje nietknięte.
         for (const c of IDB_COLLECTIONS) {
           const arr = await idbGet<unknown[]>(c as string);
           // Nie nadpisuj świeżych zapisów, gdyby setData wyprzedził hydratację.
           if (Array.isArray(arr) && !rec[c as string]?.length) rec[c as string] = arr;
         }
+        this.idbReady = true; // dopiero teraz — hydratacja zakończona, można odchudzać do IDB
         this.emit();
       }
     } catch {

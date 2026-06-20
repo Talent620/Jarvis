@@ -64,6 +64,15 @@ describe("stream — AnthStreamAccumulator (Claude)", () => {
     expect(acc.stopReason).toBe("end_turn");
   });
 
+  it("wiele message_delta: output_tokens to SUMA bieżąca, nie przyrost (brak zawyżania)", () => {
+    const acc = new AnthStreamAccumulator();
+    acc.push({ type: "message_start", message: { usage: { input_tokens: 10 } } });
+    // Anthropic wysyła kumulatyw: 50, potem 120 — wynik ma być 120, nie 170.
+    acc.push({ type: "message_delta", delta: {}, usage: { output_tokens: 50 } });
+    acc.push({ type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 120 } });
+    expect(acc.usage).toEqual({ inputTokens: 10, outputTokens: 120 });
+  });
+
   it("składa tool_use z input_json_delta", () => {
     const acc = new AnthStreamAccumulator();
     acc.push({ type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "t1", name: "add_task" } });
