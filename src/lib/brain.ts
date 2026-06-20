@@ -317,6 +317,19 @@ export function resolveProvider(): { provider: ProviderId; model: string; apiKey
   return { provider, model, apiKey };
 }
 
+/**
+ * Czy JARVIS ma JAKIKOLWIEK osiągalny mózg? Szersze niż resolveProvider: tryb „auto" z samą Ollamą
+ * (bez kluczy chmury) daje resolveProvider=null, ale lokalny model i tak odpowie. Używać do decyzji
+ * „czy wymusić konfigurację", by nie otwierać Ustawień użytkownikom korzystającym tylko z Ollamy/WebLLM.
+ */
+export function hasUsableBrain(s = store.settings): boolean {
+  if (resolveProvider()) return true; // wybrany dostawca z kluczem / auto z kluczem
+  if (s.ollamaUrl?.trim()) return true; // lokalny serwer (Ollama) — odpowie nawet w trybie auto
+  if (PROVIDER_LIST.some((p) => p.id !== "ollama" && s.keys[p.id]?.trim())) return true; // klucz chmury
+  if (s.webllmEnabled && webllmSupported()) return true; // mózg on-device (WebGPU)
+  return false;
+}
+
 /** Test konkretnego dostawcy + klucza (używane przy „wklej dowolny klucz"). */
 export async function testProvider(provider: ProviderId, apiKey: string, model?: string): Promise<string> {
   if (!apiKey?.trim()) return `❌ Brak klucza dla ${PROVIDERS[provider].label}.`;

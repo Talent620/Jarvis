@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { askJarvis, routeOrder } from "../src/lib/brain";
+import { askJarvis, routeOrder, hasUsableBrain } from "../src/lib/brain";
 import { PROVIDERS } from "../src/lib/providers/registry";
 import type { ProviderId } from "../src/lib/providers/types";
 import { store } from "../src/lib/store";
@@ -87,5 +87,21 @@ describe("routeOrder — łańcuch dostawców", () => {
     const order = routeOrder([{ role: "user", content: "x" }]);
     expect(Array.isArray(order)).toBe(true);
     expect(order.some((o) => o.provider === "groq")).toBe(true);
+  });
+});
+
+describe("hasUsableBrain — czy jest jakikolwiek mózg", () => {
+  beforeEach(() => store.setSettings({ provider: "auto", model: "auto", keys: { ...noKeys }, ollamaUrl: "", webllmEnabled: false }));
+
+  it("brak kluczy i Ollamy → false (wymusza konfigurację)", () => {
+    expect(hasUsableBrain()).toBe(false);
+  });
+  it("tryb auto + sama Ollama (bez kluczy) → true (nie nękaj konfiguracją)", () => {
+    store.setSettings({ provider: "auto", ollamaUrl: "http://localhost:11434" });
+    expect(hasUsableBrain()).toBe(true);
+  });
+  it("klucz chmury → true", () => {
+    store.setSettings({ keys: { ...noKeys, gemini: "g" } });
+    expect(hasUsableBrain()).toBe(true);
   });
 });

@@ -59,7 +59,7 @@ import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 
 type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
-import { askJarvis, resolveProvider } from "./lib/brain";
+import { askJarvis, resolveProvider, hasUsableBrain } from "./lib/brain";
 import { askCouncil, councilMembers, type CouncilReply } from "./lib/council";
 import { isComplex, isActionRequest } from "./lib/aiHelpers";
 import { dueCount } from "./lib/cards";
@@ -243,7 +243,9 @@ export default function App() {
       StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
       StatusBar.setBackgroundColor({ color: "#04070f" }).catch(() => {});
     }
-    if (!resolveProvider()) setShowSettings(true);
+    // Wymuś konfigurację TYLKO gdy brak JAKIEGOKOLWIEK mózgu — nie nękaj użytkowników
+    // korzystających tylko z Ollamy (tryb auto + lokalny serwer daje resolveProvider=null).
+    if (!hasUsableBrain()) setShowSettings(true);
     // Skróty / udostępnienia → polecenie; jarvis://wake (nasłuch w tle) → start słuchania.
     const dispose = registerIntents(
       (text) => sendRef.current(text),
