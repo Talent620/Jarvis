@@ -627,13 +627,16 @@ const tools: Tool[] = [
           location: str("Miasto (opcjonalnie), np. Kraków"),
           count: { type: "number", description: "Ile leadów (3–50, domyślnie z ustawień — 15)" },
           only_without_website: { type: "boolean", description: "Tylko firmy BEZ strony www (idealne dla agencji stron)" },
+          only_with_email: { type: "boolean", description: "Tylko firmy z e-mailem (pod cold-mailing)" },
+          only_with_phone: { type: "boolean", description: "Tylko firmy z telefonem (pod cold-calling)" },
+          use_web: { type: "boolean", description: "Wzbogać o wyniki z sieci (Tavily) — łapie firmy spoza OpenStreetMap. Wymaga klucza Tavily." },
           with_dossiers: { type: "boolean", description: "Po znalezieniu od razu przygotuj TECZKI dla 3 najgorętszych (audyt + słabe punkty + plan rozmowy + e-mail + skrypt). Włącz, gdy użytkownik chce być gotowy do kontaktu." },
         },
         [],
       ),
     },
-    run: async ({ niche, location, count, only_without_website, with_dossiers }) => {
-      const r = await findLeads({ niche, location, count: Number(count) || undefined, onlyNoWebsite: !!only_without_website });
+    run: async ({ niche, location, count, only_without_website, only_with_email, only_with_phone, use_web, with_dossiers }) => {
+      const r = await findLeads({ niche, location, count: Number(count) || undefined, onlyNoWebsite: !!only_without_website, onlyWithEmail: !!only_with_email, onlyWithPhone: !!only_with_phone, useWeb: !!use_web });
       if (r.error) return r.error;
       const lines = r.sample.map((l) => `• ${l.company}${l.phone ? ` — ☎ ${l.phone}` : ""}${l.hasWebsite ? "" : " (BEZ strony — idealny lead)"}`);
       let out = `Znalazłem ${r.found} firm w „${r.city}"${niche ? ` (${niche})` : ""} i zapisałem ${r.added} nowych do Pulpitu Sprzedaży (⋯ → 📈).\n\nPrzykłady:\n${lines.join("\n")}`;

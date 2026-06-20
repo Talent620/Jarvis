@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { parseElement, nicheToOverpass, toOverpassBbox, buildOverpassQuery, saveLeads, resolveLeadCount } from "../src/lib/leads";
+import { parseElement, nicheToOverpass, toOverpassBbox, buildOverpassQuery, saveLeads, resolveLeadCount, passesFilters, scoreLead, parseWebLead, mergeRawLeads, type RawLead } from "../src/lib/leads";
 import { store } from "../src/lib/store";
 
 describe("silnik leadów (OSM) — czyste funkcje", () => {
@@ -71,6 +71,47 @@ describe("silnik leadów (OSM) — czyste funkcje", () => {
     expect(resolveLeadCount(undefined, undefined)).toBe(15); // domyślnie
     expect(resolveLeadCount(999, 0)).toBe(50);        // górny limit
     expect(resolveLeadCount(1, 0)).toBe(3);           // dolny limit
+  });
+});
+
+describe("leady — filtry kanałowe i scoring", () => {
+  const mk = (o: Partial<RawLead>): RawLead => ({ company: o.company || "X", hasWebsite: !!o.website, ...o } as RawLead);
+
+  it("passesFilters: e-mail/telefon/bez-strony", () => {
+    expect(passesFilters(mk({ email: "a@b.pl" }), { onlyWithEmail: true })).toBe(true);
+    expect(passesFilters(mk({ phone: "600" }), { onlyWithEmail: true })).toBe(false);
+    expect(passesFilters(mk({ phone: "600" }), { onlyWithPhone: true })).toBe(true);
+    expect(passesFilters(mk({ website: "https://x.pl" }), { onlyNoWebsite: true })).toBe(false);
+    expect(passesFilters(mk({}), {})).toBe(true);
+  });
+  it("scoreLead: bez strony + e-mail > z telefonem > ze stroną", () => {
+    const a = scoreLead(mk({ email: "a@b.pl", address: "ul. X" }));      // bez strony + email + adres
+    const b = scoreLead(mk({ phone: "600" }));                            // bez strony + telefon
+    const c = scoreLead(mk({ website: "https://x.pl", phone: "600" }));   // ze stroną
+    expect(a).toBeGreaterThan(b);
+    expect(b).toBeGreaterThan(c);
+  });
+});
+
+describe("leady — wzbogacanie z sieci (Tavily)", () => {
+  it("parseWebLead: firma z tytułu, e-mail/telefon z treści, katalog → bez 'ma stronę'", () => {
+    const lead = parseWebLead({ title: "Salon Anna — Kraków | Panorama Firm", url: "https://panoramafirm.pl/x", content: "tel 600 100 200, kontakt anna@salon.pl" }, "fryzjer", "Kraków")!;
+    expect(lead.company).toBe("Salon Anna");
+    expect(lead.email).toBe("anna@salon.pl");
+    expect(lead.phone).toMatch(/600/);
+    expect(lead.hasWebsite).toBe(false); // panoramafirm to katalog, nie strona firmy
+  });
+  it("parseWebLead: własna domena → traktowana jako strona; brak kontaktu → null", () => {
+    const a = parseWebLead({ title: "Pizzeria Roma", url: "https://pizzeria-roma.pl", content: "najlepsza pizza" }, undefined, "Kraków")!;
+    expect(a.hasWebsite).toBe(true);
+    expect(parseWebLead({ title: "Nic", url: "https://panoramafirm.pl/y", content: "brak danych" })).toBeNull();
+  });
+  it("mergeRawLeads: dedup OSM+web po nazwie/telefonie, sort wg jakości", () => {
+    const osm: RawLead[] = [{ company: "Roma", phone: "600100200", hasWebsite: false } as RawLead];
+    const web: RawLead[] = [{ company: "Roma", phone: "600 100 200", hasWebsite: false } as RawLead, { company: "Nova", email: "n@x.pl", hasWebsite: false } as RawLead];
+    const merged = mergeRawLeads(osm, web, 10);
+    expect(merged).toHaveLength(2); // Roma zdublowana po telefonie
+    expect(merged[0].company).toBe("Nova"); // e-mail → wyższy score
   });
 });
 

@@ -57,7 +57,8 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const [city, setCity] = useState(store.settings.prospectLocation || "");
   const [count, setCount] = useState(store.settings.prospectCount || 15);
   const [locating, setLocating] = useState(false);
-  const [noWeb, setNoWeb] = useState(false);
+  const [huntFilter, setHuntFilter] = useState<"all" | "noweb" | "email" | "phone">("all");
+  const [useWeb, setUseWeb] = useState(false);
   const [openLead, setOpenLead] = useState<string | null>(null);
   const [showPlan, setShowPlan] = useState(false);
   const [bulkMsg, setBulkMsg] = useState("");
@@ -157,8 +158,17 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
     const n = Math.min(50, Math.max(3, count || 15));
     store.setSettings({ prospectNiche: niche.trim(), prospectCount: n, ...(city.trim() ? { prospectLocation: city.trim() } : {}) });
     setHunting(true);
-    setHuntMsg(noWeb ? `🔎 Szukam ${n} firm BEZ strony (idealni klienci)…` : `🔎 Szukam ${n} firm w okolicy…`);
-    const r = await findLeads({ niche: niche.trim() || undefined, location: city.trim() || undefined, count: n, onlyNoWebsite: noWeb });
+    const fLabel = { all: "firm w okolicy", noweb: "firm BEZ strony", email: "firm z e-mailem", phone: "firm z telefonem" }[huntFilter];
+    setHuntMsg(`🔎 Szukam ${n} ${fLabel}${useWeb ? " (+ sieć)" : ""}…`);
+    const r = await findLeads({
+      niche: niche.trim() || undefined,
+      location: city.trim() || undefined,
+      count: n,
+      onlyNoWebsite: huntFilter === "noweb",
+      onlyWithEmail: huntFilter === "email",
+      onlyWithPhone: huntFilter === "phone",
+      useWeb,
+    });
     setHunting(false);
     if (r.error) {
       setHuntMsg(`⚙ ${r.error}`);
@@ -342,9 +352,20 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
             <span style={{ fontSize: 13, whiteSpace: "nowrap" }}>🔢 Ile na raz: <b>{count}</b></span>
             <input type="range" min={3} max={50} step={1} value={count} onChange={(e) => setCount(Number(e.target.value))} style={{ flex: 1 }} />
           </div>
+          {/* Filtr kanałowy — pod sposób kontaktu (skuteczność kampanii) */}
+          <div className="chips" style={{ flexWrap: "wrap", marginBottom: 6 }}>
+            {([
+              { id: "all", l: "Wszystkie" },
+              { id: "noweb", l: "🌐 Bez strony" },
+              { id: "email", l: "✉ Z e-mailem" },
+              { id: "phone", l: "☎ Z telefonem" },
+            ] as const).map((f) => (
+              <button key={f.id} className={`chip ${huntFilter === f.id ? "on" : ""}`} onClick={() => setHuntFilter(f.id)} disabled={hunting}>{f.l}</button>
+            ))}
+          </div>
           <label className="row" style={{ cursor: "pointer", marginBottom: 8 }}>
-            <span style={{ fontSize: 13 }}>🌐 Tylko firmy <b>bez strony www</b> (idealni klienci dla agencji stron)</span>
-            <input type="checkbox" checked={noWeb} onChange={(e) => setNoWeb(e.target.checked)} />
+            <span style={{ fontSize: 13 }}>🔎 Wzbogać o wyniki z <b>sieci</b> (łapie firmy spoza map; wymaga klucza Tavily)</span>
+            <input type="checkbox" checked={useWeb} onChange={(e) => setUseWeb(e.target.checked)} />
           </label>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn primary" style={{ flex: 1 }} onClick={hunt} disabled={hunting}>

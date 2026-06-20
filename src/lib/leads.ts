@@ -1,5 +1,6 @@
 import { fetchTimeout } from "./http";
 import { store, uid } from "./store";
+import { tavilySearch, hasWebSearch, type SearchHit } from "./research";
 import type { Lead } from "../types";
 
 // === Silnik wyszukiwania leadów (darmowy, bez kluczy) ===
@@ -181,34 +182,119 @@ async function overpassQuery(query: string): Promise<any[] | null> {
   return null;
 }
 
-/** Posortuj i odsiej duplikaty surowych leadów (czysta, testowalna). */
-export function rankRawLeads(els: any[], count: number, onlyNoWebsite: boolean): RawLead[] {
+/** Filtry kanałowe — dopasuj leady do sposobu kontaktu (skuteczność kampanii). */
+export interface LeadFilters {
+  onlyNoWebsite?: boolean; // tylko bez strony www (idealni dla agencji stron)
+  onlyWithEmail?: boolean; // tylko z e-mailem (cold-mailing)
+  onlyWithPhone?: boolean; // tylko z telefonem (cold-calling)
+}
+
+/** Pure: czy lead przechodzi filtry kanałowe. */
+export function passesFilters(l: RawLead, f: LeadFilters): boolean {
+  if (f.onlyNoWebsite && l.hasWebsite) return false;
+  if (f.onlyWithEmail && !l.email) return false;
+  if (f.onlyWithPhone && !l.phone) return false;
+  return true;
+}
+
+/**
+ * Pure: ocena „atrakcyjności" leada (0–10). Dla agencji stron najcenniejsi to firmy
+ * BEZ strony, z kontaktem (e-mail > telefon) i kompletnymi danymi (adres/godziny).
+ */
+export function scoreLead(l: RawLead): number {
+  let s = 0;
+  if (!l.hasWebsite) s += 4;       // brak strony = realny powód do oferty
+  if (l.email) s += 3;             // e-mail = wysyłka jednym kliknięciem
+  else if (l.phone) s += 2;        // telefon = cold-call
+  if (l.address) s += 1;           // pełniejsze dane = lepszy lead w CRM
+  if (l.hours) s += 0.5;
+  return Math.round(s * 2) / 2;
+}
+
+/** Posortuj i odsiej duplikaty surowych leadów wg jakości i filtrów (czysta, testowalna). */
+export function rankRawLeads(els: any[], count: number, filters: LeadFilters | boolean = {}): RawLead[] {
+  // Wstecznie zgodne: boolean = stary onlyNoWebsite.
+  const f: LeadFilters = typeof filters === "boolean" ? { onlyNoWebsite: filters } : filters;
   const seen = new Set<string>();
   const out: RawLead[] = [];
   for (const el of els) {
     const lead = parseElement(el);
     if (!lead) continue;
-    if (onlyNoWebsite && lead.hasWebsite) continue;
+    if (!passesFilters(lead, f)) continue;
     const key = lead.company.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(lead);
     if (out.length >= count * 3) break;
   }
-  // Najlepsze leady dla agencji stron na górę: bez strony + z telefonem,
-  // potem bez strony, potem z telefonem. Stabilny scoring „atrakcyjności".
-  const rank = (l: RawLead) => (l.hasWebsite ? 0 : 2) + (l.phone ? 1 : 0);
-  out.sort((a, b) => rank(b) - rank(a));
+  // Najlepsze leady na górę wg scoreLead (bez strony + kontakt + komplet danych).
+  out.sort((a, b) => scoreLead(b) - scoreLead(a));
   return out.slice(0, count);
 }
 
-/** Wyszukaj firmy w OSM. `onlyNoWebsite` → tylko bez strony (idealni dla agencji). */
-export async function searchOSM(niche: string | undefined, city: string, count = 12, onlyNoWebsite = false): Promise<RawLead[]> {
+/** Wyszukaj firmy w OSM z filtrami kanałowymi. */
+export async function searchOSM(niche: string | undefined, city: string, count = 12, filters: LeadFilters | boolean = {}): Promise<RawLead[]> {
   const geo = await geocode(city);
   if (!geo) return [];
   const els = await overpassQuery(buildOverpassQuery(geo.bbox, niche));
   if (!els) return [];
-  return rankRawLeads(els, count, onlyNoWebsite);
+  return rankRawLeads(els, count, filters);
+}
+
+// === Wzbogacanie z sieci (Tavily) — łapie firmy, których nie ma w OpenStreetMap ===
+
+// Katalogi/agregatory — to NIE są strony firm; nie traktuj ich jako „ma stronę".
+const DIRECTORY_HOSTS = /(panoramafirm|aleo\.com|pkt\.pl|firmy\.net|gowork|biznesfinder|facebook|instagram|google\.|maps\.|booksy|znanylekarz|oferia|fixly|olx\.|allegro|yelp|tripadvisor|foursquare)/i;
+
+/** Pure: wyłuskaj lead z wyniku wyszukiwania (firma z tytułu, telefon/e-mail z treści, strona z URL). */
+export function parseWebLead(hit: SearchHit, niche?: string, city?: string): RawLead | null {
+  const title = (hit.title || "").trim();
+  if (!title) return null;
+  // Nazwa firmy: utnij ogony typu „ - Kraków | Panorama Firm".
+  const company = title.split(/[|–—\-–—·:]/)[0].trim().slice(0, 80);
+  if (company.length < 2) return null;
+  const blob = `${hit.content || ""} ${hit.url || ""}`;
+  const email = (blob.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i)?.[0] || "").slice(0, 120) || undefined;
+  const phoneRaw = blob.match(/(?:\+48\s?)?(?:\d[\s-]?){9}/)?.[0];
+  const phone = phoneRaw && phoneRaw.replace(/\D/g, "").length >= 9 ? phoneRaw.trim().slice(0, 40) : undefined;
+  const isDirectory = DIRECTORY_HOSTS.test(hit.url || "");
+  const website = !isDirectory ? hit.url : undefined;
+  // Bez żadnego kontaktu i bez własnej strony lead jest bezużyteczny — odrzuć.
+  if (!email && !phone && !website) return null;
+  return { company, phone, email, website, address: city, hours: undefined, kind: niche?.trim() || undefined, hasWebsite: !!website };
+}
+
+/** Wzbogać wyszukiwanie o wyniki z sieci (Tavily). Pusta lista bez klucza/wyników. */
+export async function searchWebLeads(niche: string | undefined, city: string, count = 12): Promise<RawLead[]> {
+  if (!hasWebSearch()) return [];
+  const q = `${niche?.trim() || "firmy"} ${city} kontakt telefon`;
+  const hits = await tavilySearch(q, { maxResults: Math.min(15, count + 5) });
+  const out: RawLead[] = [];
+  const seen = new Set<string>();
+  for (const h of hits) {
+    const lead = parseWebLead(h, niche, city);
+    if (!lead) continue;
+    const key = lead.company.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(lead);
+  }
+  return out;
+}
+
+/** Pure: scal leady z OSM i z sieci, usuwając duplikaty (nazwa/telefon/e-mail). OSM ma pierwszeństwo. */
+export function mergeRawLeads(osm: RawLead[], web: RawLead[], count: number): RawLead[] {
+  const keysOf = (l: RawLead) => leadKeys({ company: l.company, phone: l.phone, email: l.email });
+  const seen = new Set<string>();
+  const out: RawLead[] = [];
+  for (const l of [...osm, ...web]) {
+    const ks = keysOf(l);
+    if (ks.some((k) => seen.has(k))) continue;
+    for (const k of ks) seen.add(k);
+    out.push(l);
+  }
+  out.sort((a, b) => scoreLead(b) - scoreLead(a));
+  return out.slice(0, count);
 }
 
 /** Reverse-geocode współrzędnych → miasto (gdy użytkownik nie poda lokalizacji). */
@@ -320,9 +406,14 @@ export function resolveLeadCount(optCount?: number, settingCount?: number): numb
   return Math.min(50, Math.max(3, optCount || settingCount || 15));
 }
 
-export async function findLeads(opts: { niche?: string; location?: string; count?: number; onlyNoWebsite?: boolean }): Promise<FindResult> {
+export async function findLeads(opts: {
+  niche?: string; location?: string; count?: number;
+  onlyNoWebsite?: boolean; onlyWithEmail?: boolean; onlyWithPhone?: boolean;
+  useWeb?: boolean; // wzbogać o wyniki z sieci (Tavily), gdy jest klucz
+}): Promise<FindResult> {
   const s = store.settings;
   const count = resolveLeadCount(opts.count, s.prospectCount);
+  const filters: LeadFilters = { onlyNoWebsite: opts.onlyNoWebsite, onlyWithEmail: opts.onlyWithEmail, onlyWithPhone: opts.onlyWithPhone };
   // AUTONOMIA: nisza opcjonalna — podana → zapisana w ustawieniach → pusta (OSM szuka szeroko
   // wszystkich lokalnych firm). Bez niszy NIE blokujemy wyszukiwania.
   const niche = opts.niche?.trim() || s.prospectNiche?.trim() || undefined;
@@ -339,9 +430,16 @@ export async function findLeads(opts: { niche?: string; location?: string; count
         "Nie wiem jeszcze, gdzie szukać. Podaj miasto raz (np. „znajdź leady w Krakowie”) albo zezwól na lokalizację — zapamiętam je i od następnego razu znajdę leady sam, bez pytania.",
     };
 
-  const raws = await searchOSM(niche, city, count, !!opts.onlyNoWebsite);
+  const osm = await searchOSM(niche, city, count, filters);
+  // Wzbogacenie z sieci (opcjonalne) — łapie firmy spoza OSM. Filtry stosujemy też do nich.
+  let raws = osm;
+  if (opts.useWeb) {
+    const web = (await searchWebLeads(niche, city, count)).filter((l) => passesFilters(l, filters));
+    raws = mergeRawLeads(osm, web, count);
+  }
   if (!raws.length) {
-    return { added: 0, found: 0, city, sample: [], addedLeads: [], error: `Nie znalazłem firm dla „${niche || "lokalne firmy"}" w „${city}". Spróbuj inną niszę lub miasto.` };
+    const hint = opts.onlyWithEmail ? " (filtr: tylko z e-mailem — spróbuj bez niego)" : opts.onlyNoWebsite ? " (filtr: tylko bez strony)" : "";
+    return { added: 0, found: 0, city, sample: [], addedLeads: [], error: `Nie znalazłem firm dla „${niche || "lokalne firmy"}" w „${city}"${hint}. Spróbuj inną niszę, miasto lub poluzuj filtry.` };
   }
   // Zapamiętaj miasto, by kolejne wyszukiwania działały autonomicznie (bez podawania lokalizacji).
   if (city && city !== s.prospectLocation) store.setSettings({ prospectLocation: city });
