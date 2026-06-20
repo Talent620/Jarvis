@@ -692,7 +692,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </button>
               {apiMsg && <p className="muted" style={{ whiteSpace: "pre-line" }}>{apiMsg}</p>}
 
-              <h3>🩺 Centrum sprawdzania — czy wszystko działa</h3>
+              <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🩺 Centrum sprawdzania — czy wszystko działa (pełna diagnoza i naprawa: 🛡 Strażnik)</summary>
               <p className="muted">
                 Jeden przycisk sprawdza wszystkie funkcje (mózg AI, Claude, mikrofon, głos, leady,
                 pocztę…), tłumaczy po ludzku co i dlaczego, a drobne problemy <b>naprawia sam</b>.
@@ -747,6 +748,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </div>
               )}
 
+              </details>
               <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
               <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>📦 Więcej funkcji — poczta · research · studio premium · konsylium</summary>
               <h3>📨 Poczta — wysyłka e-maili z aplikacji</h3>
