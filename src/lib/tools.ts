@@ -25,6 +25,7 @@ import { exportData } from "./backup";
 import { applyBrainMode, BRAIN_MODES, type BrainModeId } from "./brainModes";
 import { recallEntities, worldSummary, getWorld } from "./worldModel";
 import { topPredictions } from "./predict";
+import { buildChiefBriefing, formatBriefing } from "./chiefOfStaff";
 import type { ProviderId } from "./providers/types";
 import type { Citation, Settings, LeadStatus } from "../types";
 
@@ -1129,6 +1130,21 @@ const tools: Tool[] = [
       const top = topPredictions({ tasks: d.tasks, reminders: d.reminders, calendar: d.calendar, leads: d.leads, people }, Date.now(), 8);
       if (!top.length) return "✅ Na horyzoncie czysto — żadne terminy ani follow-upy nie wymagają teraz uwagi.";
       return "🔮 Co przed Tobą:\n" + top.map((p) => `• ${p.title}${p.detail ? ` — ${p.detail}` : ""}`).join("\n");
+    },
+  },
+  {
+    def: {
+      name: "chief_of_staff",
+      description:
+        "ODPRAWA jak od szefa sztabu: priorytety, terminy, blokery, follow-upy z leadami, szanse, zaniedbane relacje + rekomendowane następne kroki — spięte z zadań, kalendarza, leadów i modelu świata. Użyj, gdy ktoś prosi „odprawa”, „status dnia”, „co dziś”, „raport poranny”, „zorganizuj mi dzień”, „od czego zacząć”.",
+      input_schema: obj({}, []),
+    },
+    run: async () => {
+      const d = store.data;
+      const people = (d.world?.entities || []).filter((e) => e.kind === "person");
+      const weather = await getWeather().catch(() => "");
+      const briefing = buildChiefBriefing({ tasks: d.tasks, reminders: d.reminders, calendar: d.calendar, leads: d.leads, people }, Date.now(), weather && !/niedost/i.test(weather) ? weather : undefined);
+      return formatBriefing(briefing);
     },
   },
   {
