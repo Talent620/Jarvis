@@ -150,3 +150,20 @@ export async function guardianAdvise(question: string): Promise<string> {
   const reply = await askJarvis([{ role: "user", content: guardianAdvicePrompt(status, question) }]);
   return reply.text;
 }
+
+/**
+ * WYKONAJ polecenie pełnym mózgiem JARVISA z narzędziami (zadania, e-mail, kalendarz, smart home,
+ * web, sterowanie PC, leady…). Akcje ryzykowne i tak przechodzą przez zgody aplikacji. Zwraca wynik.
+ */
+export async function guardianExecute(command: string): Promise<{ text: string; tools: string[] }> {
+  const reply = await askJarvis([{ role: "user", content: command }]);
+  return { text: reply.text, tools: (reply as { tools?: string[] }).tools || [] };
+}
+
+/** Katalog możliwości Strażnika/JARVISA — do pokazania użytkownikowi (świadomość pełni mocy). */
+export const GUARDIAN_CAPABILITIES: { group: string; items: string[] }[] = [
+  { group: "🛠 Naprawa i wydajność", items: ["Napraw wszystko (mózg/serwery/ustawienia)", "Szybciej / Mądrzej / Bez cenzury", "Połącz lokalne serwery (Ollama, obrazy)", "Napraw głos (polski)", "Aktualizuj JARVISA"] },
+  { group: "🧠 Rozmowa i wiedza", items: ["Odpowiedzi po polsku, lokalnie lub z chmury", "Web-research z cytatami", "Pamięć długoterminowa, dziennik, profil"] },
+  { group: "⚙ Działania (narzędzia)", items: ["Zadania, notatki, przypomnienia, kalendarz", "E-mail (pisanie i wysyłka), leady i oferty", "Smart home, nawigacja, dzwonienie/SMS", "Sterowanie komputerem (Windows)", "Generowanie i edycja obrazów"] },
+  { group: "💸 Pieniądze / sprawy nieodwracalne", items: ["Mogę przypomnieć o przelewie, przygotować dane i OTWORZYĆ bankowość", "…ale przelewu NIE wykonam sam — to wymaga Twojego potwierdzenia (bezpieczeństwo). Brak integracji z bankiem."] },
+];
