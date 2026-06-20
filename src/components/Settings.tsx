@@ -521,8 +521,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </div>
               )}
 
-              <h3>Klucze API (lokalnie na urządzeniu)</h3>
-              <p className="muted" style={{ marginTop: -4 }}>
+              <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🔑 Klucze API (chmura) — kliknij, by rozwinąć</summary>
+              <p className="muted" style={{ marginTop: 6 }}>
                 💡 Możesz wpisać <b>kilka kluczy jednego dostawcy</b> — każdy w nowej linii. Gdy
                 jeden wyczerpie limit dzienny, JARVIS automatycznie przełączy się na kolejny, żeby
                 rozmowa nie wywaliła się błędem.
@@ -556,6 +557,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   </div>
                 );
               })}
+              </details>
 
               <div style={{ display: "flex", gap: 8 }}>
                 <button
@@ -740,6 +742,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </div>
               )}
 
+              <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>📦 Więcej funkcji — poczta · research · studio premium · konsylium</summary>
               <h3>📨 Poczta — wysyłka e-maili z aplikacji</h3>
               {(() => {
                 // Diagnostyka „dlaczego nie idzie" — jeden czytelny powód (reaguje na zmiany w `s`).
@@ -899,8 +903,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </span>
                 <Toggle on={s.councilMode} onClick={() => set({ councilMode: !s.councilMode })} />
               </div>
+              </details>
 
-              <h3>Zaawansowane</h3>
+              <h3>🖥 Lokalny model / serwery (Ollama, obrazy)</h3>
               <div className="field">
                 <label>Lokalny model — adres Ollama (prywatny, offline)</label>
                 <input
