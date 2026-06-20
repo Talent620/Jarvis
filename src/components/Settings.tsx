@@ -22,6 +22,7 @@ import { pullOllamaModel } from "../lib/ollamaPull";
 import { warmNow } from "../lib/prewarm";
 import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkOllama";
 import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
+import { BRAIN_MODES, applyBrainMode, detectBrainMode } from "../lib/brainModes";
 import { detectSd } from "../lib/localImage";
 import { checkForUpdate, applyUpdate, type UpdateInfo } from "../lib/updater";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
@@ -355,6 +356,30 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           {/* ============ 🤖 AI ============ */}
           {tab === "ai" && (
             <>
+              {/* 🎛 Tryb pracy — jasny wybór zamiast dziesiątek przełączników */}
+              <h3>🎛 Tryb pracy JARVISA</h3>
+              <p className="muted">Wybierz jeden — JARVIS sam ustawi resztę. Pod każdym widać, co się włączy i czego wymaga.</p>
+              {(() => { const activeMode = detectBrainMode(s); return BRAIN_MODES.map((m) => {
+                const on = activeMode === m.id;
+                return (
+                  <div
+                    key={m.id}
+                    className="journal-card"
+                    style={{ padding: "10px 12px", marginBottom: 8, cursor: "pointer", border: on ? "1px solid var(--gold)" : undefined }}
+                    onClick={() => { applyBrainMode(m.id, ollamaModels); setS((p) => ({ ...p, ...store.settings })); toast(`${m.icon} Tryb: ${m.title}`); }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 20 }}>{m.icon}</span>
+                      <b style={{ flex: 1, fontSize: 14 }}>{m.title}</b>
+                      {on && <span style={{ fontSize: 12, color: "var(--gold)", fontWeight: 700 }}>✓ aktywny</span>}
+                    </div>
+                    <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{m.tagline}</div>
+                    <div style={{ fontSize: 12, marginTop: 4 }}>{m.does}</div>
+                    <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>⚙ Ustawi: {m.happens}<br />📋 Wymaga: {m.needs}</div>
+                  </div>
+                );
+              }); })()}
+
               <h3>🩺 Diagnostyka startowa</h3>
               <p className="muted">
                 Jedno kliknięcie sprawdza wszystko: internet, każdy klucz AI, research, głos,
