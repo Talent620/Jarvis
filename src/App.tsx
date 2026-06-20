@@ -71,6 +71,7 @@ import Guardian from "./components/Guardian";
 import { guardianAutoHeal } from "./lib/guardian";
 import { guardianScan } from "./lib/guardianAgents";
 import { checkForUpdate, applyUpdate } from "./lib/updater";
+import { topPredictions } from "./lib/predict";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
 import { currentBrainMode } from "./lib/brainMode";
@@ -808,6 +809,26 @@ export default function App() {
         toast(`🎉 Jest nowsza wersja JARVISA (${r.latest})`, { label: r.platform === "web" ? "Odśwież" : "Pobierz", onClick: () => void applyUpdate(r) });
       } catch { /* sieć — pomiń */ }
     }, 8000); // po starcie, nie blokuj pierwszego renderu
+    return () => clearTimeout(t);
+  }, []);
+
+  // Silnik predykcyjny: po starcie (≤1×/dzień) wysuń PILNE przewidywania — JARVIS działa, zanim
+  // zapytasz (zaległe zadania, terminy, follow-upy). Tylko gdy realnie jest coś pilnego.
+  useEffect(() => {
+    const last = Number(localStorage.getItem("jarvis.predict.ts") || 0);
+    if (Date.now() - last < 24 * 60 * 60 * 1000) return;
+    const t = setTimeout(() => {
+      try {
+        const d = store.data;
+        const people = (d.world?.entities || []).filter((e) => e.kind === "person");
+        const top = topPredictions({ tasks: d.tasks, reminders: d.reminders, calendar: d.calendar, leads: d.leads, people }, Date.now(), 3);
+        const urgent = top.filter((p) => p.urgency === "high");
+        if (urgent.length) {
+          localStorage.setItem("jarvis.predict.ts", String(Date.now()));
+          toast(`🔮 ${urgent.map((p) => p.title).join(" · ")}`);
+        }
+      } catch { /* pomiń */ }
+    }, 12000);
     return () => clearTimeout(t);
   }, []);
 

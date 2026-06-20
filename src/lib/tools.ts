@@ -24,6 +24,7 @@ import { primaryKey } from "./keys";
 import { exportData } from "./backup";
 import { applyBrainMode, BRAIN_MODES, type BrainModeId } from "./brainModes";
 import { recallEntities, worldSummary, getWorld } from "./worldModel";
+import { topPredictions } from "./predict";
 import type { ProviderId } from "./providers/types";
 import type { Citation, Settings, LeadStatus } from "../types";
 
@@ -1113,6 +1114,21 @@ const tools: Tool[] = [
         return `• ${e.name} (${KL[e.kind] || e.kind}, pewność ${Math.round(e.confidence * 100)}%, wzmianek ${e.mentions})${linked.length ? ` — powiązani: ${linked.slice(0, 5).join(", ")}` : ""}`;
       });
       return `🌍 Co wiem o „${q}”:\n${lines.join("\n")}`;
+    },
+  },
+  {
+    def: {
+      name: "predictions",
+      description:
+        "Co przed Tobą i na co zwrócić uwagę — PROAKTYWNE przewidywania: terminy, zaległe zadania, follow-upy z leadami, szanse sprzedażowe, zaniedbane kontakty. Użyj, gdy ktoś pyta „co mnie czeka”, „na co uważać”, „co przewidujesz”, „co dziś ważne”, „co powinienem zrobić”.",
+      input_schema: obj({}, []),
+    },
+    run: () => {
+      const d = store.data;
+      const people = (d.world?.entities || []).filter((e) => e.kind === "person");
+      const top = topPredictions({ tasks: d.tasks, reminders: d.reminders, calendar: d.calendar, leads: d.leads, people }, Date.now(), 8);
+      if (!top.length) return "✅ Na horyzoncie czysto — żadne terminy ani follow-upy nie wymagają teraz uwagi.";
+      return "🔮 Co przed Tobą:\n" + top.map((p) => `• ${p.title}${p.detail ? ` — ${p.detail}` : ""}`).join("\n");
     },
   },
   {
