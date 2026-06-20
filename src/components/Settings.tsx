@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
-import { loadVoices, speak } from "../lib/voice";
+import { listSpeechVoices, bestPlVoiceName, speak, type NativeVoiceInfo } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
@@ -80,7 +80,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
   const [s, setS] = useState<Settings>(() => ({ ...store.settings, keys: { ...store.settings.keys } }));
   const [tab, setTab] = useState<Tab>("ai");
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [voices, setVoices] = useState<NativeVoiceInfo[]>([]);
   const [syncMsg, setSyncMsg] = useState("");
   const [salesOsMsg, setSalesOsMsg] = useState("");
   const [salesOsBusy, setSalesOsBusy] = useState(false);
@@ -119,7 +119,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const desktopGoogle = typeof window !== "undefined" && !!(window as { jarvisDesktop?: { googleConnect?: unknown } }).jarvisDesktop?.googleConnect;
 
   useEffect(() => {
-    loadVoices().then(setVoices);
+    listSpeechVoices().then(setVoices);
     // Wstępna lista mikrofonów (etykiety bywają puste do czasu zgody — wtedy przycisk niżej).
     listMics().then(setMics);
   }, []);
@@ -1630,15 +1630,35 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </div>
               )}
               <div className="field">
-                <label>Głos systemowy (zapasowy)</label>
+                <label>🎚 Stały głos urządzenia (wybierz jeden — nie będzie się zmieniał)</label>
                 <select value={s.voiceName} onChange={(e) => set({ voiceName: e.target.value })}>
-                  <option value="">Auto (najbardziej „JARVIS-owy")</option>
+                  <option value="">Auto (systemowy domyślny — może się zmieniać)</option>
                   {voices.map((v) => (
                     <option key={v.name} value={v.name}>
-                      {v.name} ({v.lang})
+                      {v.name}{v.lang ? ` (${v.lang})` : ""}{v.network ? " · sieciowy" : ""}
                     </option>
                   ))}
                 </select>
+                <div className="row" style={{ gap: 8, marginTop: 6 }}>
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      const best = bestPlVoiceName(voices);
+                      if (best) { set({ voiceName: best, voiceSystemPl: true, speak: true }); }
+                      else { void listSpeechVoices().then((vs) => { setVoices(vs); const b = bestPlVoiceName(vs); if (b) set({ voiceName: b, voiceSystemPl: true, speak: true }); }); }
+                    }}
+                  >
+                    🇵🇱 Ustaw najlepszy polski głos
+                  </button>
+                  <button className="btn" onClick={() => speak("Dzień dobry. Tu JARVIS. Tak będę teraz brzmiał.", { ...s, speak: true })}>
+                    ▶ Posłuchaj
+                  </button>
+                </div>
+                <p className="muted" style={{ marginTop: 4 }}>
+                  Telefon: lista pochodzi z silnika mowy Androida — wybrany głos jest <b>zablokowany</b>
+                  {" "}i nie „przeskakuje" już na translatorowy. Brak polskich głosów? Zainstaluj/„Mowa Google"
+                  w Ustawieniach Androida → Język i wprowadzanie → Zamiana tekstu na mowę.
+                </p>
               </div>
               <button
                 className="btn"

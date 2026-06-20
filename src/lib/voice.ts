@@ -7,11 +7,41 @@ import { WhisperListener } from "./whisperListener";
 import { synthLocal, localTtsUsable } from "./localTts";
 
 // Natywny silnik mowy Androida (pewniejszy niż Web Speech w WebView).
+export interface NativeVoiceInfo { name: string; lang: string; quality?: number; network?: boolean }
 interface NativeTtsPlugin {
-  speak(o: { text: string; pitch: number; rate: number; lang: string }): Promise<void>;
+  speak(o: { text: string; pitch: number; rate: number; lang: string; voice?: string }): Promise<void>;
+  listVoices(): Promise<{ voices: NativeVoiceInfo[] }>;
   stop(): Promise<void>;
 }
 const NativeTTS = registerPlugin<NativeTtsPlugin>("NativeTTS");
+
+/** Lista dostępnych głosów do wyboru w ustawieniach — natywne (Android) albo przeglądarkowe.
+ *  Dzięki temu na telefonie WIDAĆ realne głosy silnika i można zablokować jeden, stały. */
+export async function listSpeechVoices(): Promise<NativeVoiceInfo[]> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const r = await NativeTTS.listVoices();
+      return (r?.voices || []).filter((v) => v.name);
+    } catch {
+      return [];
+    }
+  }
+  const voices = cachedVoices.length ? cachedVoices : await loadVoices();
+  return voices.map((v) => ({ name: v.name, lang: v.lang }));
+}
+
+/** Pure: wskaż „najlepszy" polski głos z listy (najwyższa jakość; preferuj sieciowy/Google).
+ *  Zwraca nazwę głosu albo "" gdy brak polskich. */
+export function bestPlVoiceName(voices: NativeVoiceInfo[]): string {
+  const pl = voices.filter((v) => /^pl/i.test(v.lang || ""));
+  if (!pl.length) return "";
+  const score = (v: NativeVoiceInfo) =>
+    (v.quality || 0) +
+    (v.network ? 50 : 0) + // głosy sieciowe Google brzmią naturalniej
+    (/google/i.test(v.name) ? 30 : 0) +
+    (/-x-|local/i.test(v.name) ? 5 : 0);
+  return [...pl].sort((a, b) => score(b) - score(a))[0].name;
+}
 
 // --- Synteza mowy (TTS) ---
 
@@ -391,9 +421,11 @@ export async function speak(text: string, settings: Settings): Promise<void> {
   }
 
   // Na urządzeniu używaj natywnego TTS (WebView często nie ma Web Speech).
+  // Przekaż WYBRANY głos (voiceName) — bez tego silnik bierze domyślny, „translatorowy",
+  // który potrafi się zmieniać. Pusty = systemowy domyślny.
   if (Capacitor.isNativePlatform()) {
     try {
-      await NativeTTS.speak({ text, pitch: settings.voicePitch, rate: settings.voiceRate, lang: "pl-PL" });
+      await NativeTTS.speak({ text, pitch: settings.voicePitch, rate: settings.voiceRate, lang: "pl-PL", voice: settings.voiceName?.trim() || "" });
       return;
     } catch {
       /* fallback do Web Speech */
