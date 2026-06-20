@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { BRAIN_MODES, applyBrainMode, detectBrainMode } from "../src/lib/brainModes";
+import { BRAIN_MODES, applyBrainMode, detectBrainMode, recommendBrainMode } from "../src/lib/brainModes";
 import { store } from "../src/lib/store";
 
 beforeEach(() => store.setSettings({ provider: "auto", model: "auto", onDeviceOnly: false, localFirstSimple: false }));
@@ -35,6 +35,23 @@ describe("brainModes — applyBrainMode", () => {
     applyBrainMode("auto");
     expect(store.settings.provider).toBe("auto");
     expect(store.settings.localFirstSimple).toBe(true);
+  });
+});
+
+describe("brainModes — recommendBrainMode (auto-konfiguracja)", () => {
+  it("Ollama z modelami + klucze chmury → Auto (balans)", () => {
+    expect(recommendBrainMode({ ollamaOk: true, ollamaModels: 3, cloudKeys: 2 }).mode).toBe("auto");
+  });
+  it("Ollama z modelami, brak kluczy → Ollama lokalnie", () => {
+    expect(recommendBrainMode({ ollamaOk: true, ollamaModels: 3, cloudKeys: 0 }).mode).toBe("ollama");
+  });
+  it("klucze chmury, brak lokalnego → Online", () => {
+    expect(recommendBrainMode({ ollamaOk: false, ollamaModels: 0, cloudKeys: 1 }).mode).toBe("online");
+  });
+  it("nic skonfigurowane → Auto + porada", () => {
+    const r = recommendBrainMode({ ollamaOk: false, ollamaModels: 0, cloudKeys: 0 });
+    expect(r.mode).toBe("auto");
+    expect(r.reason).toMatch(/klucz|Ollam/i);
   });
 });
 

@@ -157,6 +157,18 @@ export const guardian = {
       ? { ok: true, message: `🏠 Tryb lokalny: Ollama sama dobiera model (${d.models.length} dostępnych). Bez limitów chmury.` }
       : { ok: true, message: "🏠 Ustawiono tryb lokalny (Ollama). Uruchom serwer i pobierz model, jeśli jeszcze go nie ma." };
   },
+  /** Auto-konfiguracja: dobierz najlepszy tryb pracy do realnego sprzętu (Ollama + klucze) i zastosuj. */
+  async autoConfig(): Promise<GuardianActionResult> {
+    const { recommendBrainMode, applyBrainMode, BRAIN_MODES } = await import("./brainModes");
+    const s = store.settings;
+    const d = s.ollamaUrl?.trim() ? await detectOllama(s.ollamaUrl) : { ok: false, models: [] as string[] };
+    const cloudKeys = PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim()).length;
+    const rec = recommendBrainMode({ ollamaOk: d.ok, ollamaModels: d.models.length, cloudKeys });
+    applyBrainMode(rec.mode, d.ok ? d.models : []);
+    void warmNow();
+    const title = BRAIN_MODES.find((m) => m.id === rec.mode)?.title || rec.mode;
+    return { ok: true, message: `🎚 Dobrałem tryb: ${title}. ${rec.reason}` };
+  },
   /** Voice Guardian: przypnij najlepszy polski głos na stałe (i włącz blokadę podmian). */
   async pinVoice(): Promise<GuardianActionResult> {
     const { listSpeechVoices, bestPlVoiceName } = await import("./voice");

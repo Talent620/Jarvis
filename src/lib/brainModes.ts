@@ -55,6 +55,16 @@ export function detectBrainMode(s = store.settings): BrainModeId {
   return "online";
 }
 
+export interface ModeRecommendation { mode: BrainModeId; reason: string }
+/** Pure: dobierz najlepszy tryb do realnego stanu (Ollama + klucze chmury). Testowalne. */
+export function recommendBrainMode(ctx: { ollamaOk: boolean; ollamaModels: number; cloudKeys: number }): ModeRecommendation {
+  const localOk = ctx.ollamaOk && ctx.ollamaModels > 0;
+  if (localOk && ctx.cloudKeys > 0) return { mode: "auto", reason: "Masz i lokalną Ollamę z modelami, i klucze chmury — najlepszy balans: lokalnie szybko/prywatnie, chmura do trudnych pytań." };
+  if (localOk) return { mode: "ollama", reason: "Masz działającą Ollamę z modelami, ale brak kluczy chmury — pełnia możliwości lokalnie, Ollama sama dobiera model." };
+  if (ctx.cloudKeys > 0) return { mode: "online", reason: "Masz klucze chmury, ale brak lokalnego modelu — najlepsze, najszybsze modele z chmury." };
+  return { mode: "auto", reason: "Brak lokalnego modelu i kluczy API — ustawiam Auto; dodaj klucz API (⚙ → AI) albo uruchom Ollamę." };
+}
+
 /** Zastosuj tryb pracy. `installed` = zainstalowane modele Ollamy (do auto-przydziału ról). */
 export function applyBrainMode(id: BrainModeId, installed: string[] = []): void {
   if (id === "auto") {

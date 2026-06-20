@@ -163,6 +163,11 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
             🩹 Napraw wszystko (wykryj serwery i wybierz działający mózg)
           </button>
 
+          {/* 🎚 Auto-konfiguracja — dobierz tryb pracy do realnego sprzętu */}
+          <button className="btn" style={{ width: "100%", marginBottom: 8 }} disabled={busy} onClick={() => void run(() => guardian.autoConfig())}>
+            🎚 Auto-konfiguracja (dobierz najlepszy tryb do mojego sprzętu)
+          </button>
+
           {/* 🧭 Najważniejsze rekomendacje — format premium: Problem → Przyczyna → Wpływ → Naprawa → Przycisk */}
           {scan && scan.recs.length > 0 && (
             <div style={{ marginBottom: 10 }}>
