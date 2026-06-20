@@ -427,7 +427,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             <>
               {/* 🎛 Tryb pracy — jasny wybór zamiast dziesiątek przełączników */}
               <h3 id="set-mode">🎛 Tryb pracy JARVISA</h3>
-              <p className="muted">Wybierz jeden — JARVIS sam ustawi resztę. Pod każdym widać, co się włączy i czego wymaga.</p>
+              <p className="muted">Najprościej: wybierz <b>jeden</b> tryb — JARVIS ustawi za Ciebie dostawcę, model i szybkość. Chcesz sam? Niżej: <b>🤖 Dostawca i model</b>.</p>
               {(() => { const activeMode = detectBrainMode(s); return BRAIN_MODES.map((m) => {
                 const on = activeMode === m.id;
                 return (
@@ -560,7 +560,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
 
               <h3 id="set-provider">🤖 Dostawca i model AI</h3>
               <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-                Większość zostawia <b>Auto</b> — JARVIS sam dobiera najlepszy dostępny model. Niżej możesz wybrać ręcznie.
+                Ręczna kontrola. Nie chcesz wybierać? Użyj <b>🎛 Trybu pracy</b> wyżej — ustawi to za Ciebie. Większość zostawia <b>Auto</b>.
               </p>
               <div className="field">
                 <label>Dostawca</label>
