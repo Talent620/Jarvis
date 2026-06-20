@@ -275,7 +275,7 @@ export default function App() {
     // Proaktywne powitanie + opcjonalny auto-nasłuch po otwarciu.
     const t = setTimeout(() => {
       const st = store.settings;
-      const ready = !!resolveProvider();
+      const ready = hasUsableBrain(); // też tryb lokalny (Ollama/WebLLM), nie tylko klucz chmury
       if (st.proactiveOnOpen && messagesRef.current.length === 0 && ready) {
         cue("wake"); // sygnał „systemy online"
         const text = buildGreeting();
@@ -310,7 +310,7 @@ export default function App() {
   useEffect(() => {
     const tick = () => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-      if (busyRef.current || !resolveProvider()) return; // nie przerywaj pracy / brak mózgu
+      if (busyRef.current || !hasUsableBrain()) return; // nie przerywaj pracy / brak mózgu (też lokalny)
       const n = nextNudge();
       if (!n) return;
       markShown(n.kind);
@@ -925,7 +925,7 @@ export default function App() {
         <div className="brand">
           {brand()}
           <small>
-            {(resolveProvider()?.model || "BRAK API").toUpperCase()}
+            {(resolveProvider()?.model || (hasUsableBrain() ? "LOKALNY" : "BRAK API")).toUpperCase()}
             {(() => {
               const p = store.data.projects.find((x) => x.id === settings.activeProjectId);
               return p ? ` · ${p.name.toUpperCase()}` : "";
