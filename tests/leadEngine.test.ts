@@ -43,6 +43,27 @@ describe("silnik leadów (OSM) — czyste funkcje", () => {
     expect(broad).toContain('["craft"]');
     expect(broad).toContain('["office"]');
   });
+
+  it("szerokie szukanie obejmuje też gastronomię/zdrowie/turystykę (nie tylko sklepy)", () => {
+    const broad = buildOverpassQuery([50, 19, 51, 20]);
+    expect(broad).toMatch(/restaurant|cafe|fast_food/);
+    expect(broad).toContain('["healthcare"]');
+    expect(broad).toMatch(/tourism.*hotel/);
+    expect(broad).toMatch(/leisure.*fitness/);
+  });
+
+  it("nieznana nisza → szukanie po NAZWIE w kategoriach biznesowych", () => {
+    const q = buildOverpassQuery([50, 19, 51, 20], "solarium");
+    expect(q).toMatch(/\["name"~"solarium",i\]/);
+    expect(q).toContain('["shop"]');
+  });
+
+  it("nowe nisze mapują się na tagi (lodziarnia, pralnia, krawiec, szewc)", () => {
+    expect(nicheToOverpass("lodziarnia")).toContain("ice_cream");
+    expect(nicheToOverpass("pralnia")).toContain("laundry");
+    expect(nicheToOverpass("krawiec")).toContain("tailor");
+    expect(nicheToOverpass("szewc")).toContain("shoemaker");
+  });
 });
 
 describe("zapis leadów", () => {

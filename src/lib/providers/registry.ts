@@ -4,7 +4,20 @@ import { askGemini } from "./gemini";
 import { askWebllm } from "./webllm";
 import { WEBLLM_MODELS, WEBLLM_DEFAULT_MODEL } from "../webllm";
 import { store } from "../store";
-import type { AskCtx, ProviderId, ProviderMeta } from "./types";
+import type { AskCtx, Msg, ProviderId, ProviderMeta } from "./types";
+
+// Tylko modele „rozumujące" rozumieją dyrektywę /no_think — dla gemma/llama to zbędny token.
+const REASONING_LOCAL = /qwen3|deepseek|qwq|-r1|reason|think|marco|phi-?4/i;
+
+/** Pure: dopnij „/no_think" do ostatniej wiadomości użytkownika, ale TYLKO dla modeli rozumujących. */
+export function injectNoThink(history: Msg[], model: string): Msg[] {
+  if (!REASONING_LOCAL.test(model || "")) return history;
+  const h = history.slice();
+  for (let i = h.length - 1; i >= 0; i--) {
+    if (h[i].role === "user") { h[i] = { ...h[i], content: `${h[i].content} /no_think` }; break; }
+  }
+  return h;
+}
 
 // Lokalny model (Ollama) — endpoint z ustawień, bez klucza, pełna prywatność.
 // Tuning pod ~4 GB VRAM (Zadanie 4): keep_alive trzyma model w VRAM między turami (mniej
@@ -15,14 +28,12 @@ function askOllama(ctx: AskCtx) {
   const options: Record<string, number> = { num_ctx: s.ollamaNumCtx ?? 4096, num_gpu: s.ollamaNumGpu ?? -1 };
   if (s.ollamaNumPredict && s.ollamaNumPredict > 0) options.num_predict = s.ollamaNumPredict; // krótsza odpowiedź = szybsza
   // Tryb szybki: dopnij „/no_think" do ostatniej wiadomości użytkownika — modele rozumujące
-  // (qwen3, deepseek-r1) pomijają wtedy długie „myślenie" i odpowiadają od razu.
+  // (qwen3, deepseek-r1) pomijają wtedy długie „myślenie" i odpowiadają od razu. Dla modeli
+  // bez rozumowania (gemma/llama) nie dokładamy zbędnego tokenu.
   let useCtx = ctx;
   if (s.ollamaNoThink) {
-    const h = ctx.history.slice();
-    for (let i = h.length - 1; i >= 0; i--) {
-      if (h[i].role === "user") { h[i] = { ...h[i], content: `${h[i].content} /no_think` }; break; }
-    }
-    useCtx = { ...ctx, history: h };
+    const h = injectNoThink(ctx.history, ctx.model);
+    if (h !== ctx.history) useCtx = { ...ctx, history: h };
   }
   return makeOpenAICompatible(`${base}/v1/chat/completions`, {
     extraBody: { keep_alive: "30m", options },

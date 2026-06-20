@@ -1,5 +1,27 @@
 import { describe, it, expect } from "vitest";
-import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED } from "../src/lib/providers/registry";
+import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED, injectNoThink } from "../src/lib/providers/registry";
+
+describe("injectNoThink — /no_think tylko dla modeli rozumujących", () => {
+  const h = [{ role: "user" as const, content: "cześć" }];
+  it("qwen3 / deepseek → dopina /no_think do ostatniej wiadomości użytkownika", () => {
+    expect(injectNoThink(h, "qwen3:4b")[0].content).toMatch(/\/no_think$/);
+    expect(injectNoThink(h, "deepseek-r1:7b")[0].content).toMatch(/\/no_think$/);
+  });
+  it("gemma / llama → bez zmian (ten sam obiekt, brak zbędnego tokenu)", () => {
+    expect(injectNoThink(h, "gemma3:4b")).toBe(h);
+    expect(injectNoThink(h, "llama3.1:8b")).toBe(h);
+  });
+  it("dopina do OSTATNIEJ wiadomości użytkownika, nie asystenta", () => {
+    const conv = [
+      { role: "user" as const, content: "a" },
+      { role: "assistant" as const, content: "b" },
+      { role: "user" as const, content: "c" },
+    ];
+    const out = injectNoThink(conv, "qwen3:4b");
+    expect(out[2].content).toMatch(/\/no_think$/);
+    expect(out[0].content).toBe("a");
+  });
+});
 
 describe("detectProvider (rozpoznawanie klucza po formacie)", () => {
   it("rozpoznaje znane formaty kluczy", () => {

@@ -74,6 +74,34 @@ const NICHE_TAGS: { re: RegExp; q: string }[] = [
   { re: /ogrodnic|ogrod[óo]w/i, q: '["shop"="garden_centre"]' },
   { re: /przedszkol|[żz][łl]obek/i, q: '["amenity"="kindergarten"]' },
   { re: /ksero|drukarni|poligraf/i, q: '["shop"="copyshop"]' },
+  { re: /lodziarni|lody\b/i, q: '["amenity"="ice_cream"]' },
+  { re: /pralni/i, q: '["shop"="laundry"]' },
+  { re: /szewc|naprawa\s*obuwia/i, q: '["craft"="shoemaker"]' },
+  { re: /krawiec|krawcow|przeróbk/i, q: '["craft"="tailor"]' },
+  { re: /tapicer/i, q: '["craft"="upholsterer"]' },
+  { re: /[śs]lusarz|dorabianie\s*kluczy/i, q: '["craft"="locksmith"]' },
+  { re: /dekarz|pokrycia\s*dach/i, q: '["craft"="roofer"]' },
+  { re: /malarz|malowani/i, q: '["craft"="painter"]' },
+  { re: /spawacz|spawaln/i, q: '["craft"="welder"]' },
+  { re: /piekarz|piekarni/i, q: '["shop"="bakery"]' },
+  { re: /mi[ęe]sn|masarni|w[ęe]dlin/i, q: '["shop"="butcher"]' },
+  { re: /monastyr|sklep\s*spo[żz]yw|spo[żz]ywcz|sklep\s*ogóln/i, q: '["shop"="convenience"]' },
+  { re: /alkohol|monopolow/i, q: '["shop"="alcohol"]' },
+  { re: /zegarmistrz|zegark/i, q: '["craft"="watchmaker"]' },
+  { re: /pizzeri/i, q: '["amenity"="restaurant"]["cuisine"~"pizza"]' },
+];
+
+// Kategorie „biznesowe" do SZEROKIEGO szukania (bez niszy) — nie tylko sklepy/rzemiosło/biura,
+// ale też gastronomia, zdrowie, usługi i turystyka. To największa naprawa „nie znajduje jak trzeba".
+const BUSINESS_AMENITY = "^(restaurant|cafe|bar|pub|fast_food|dentist|doctors|clinic|pharmacy|veterinary|fuel|bank|cinema|nightclub|car_wash|driving_school|language_school|kindergarten|car_rental|ice_cream)$";
+const BROAD_SELECTORS = [
+  '["shop"]["name"]',
+  '["craft"]["name"]',
+  '["office"]["name"]',
+  `["amenity"~"${BUSINESS_AMENITY}"]["name"]`,
+  '["healthcare"]["name"]',
+  '["leisure"~"fitness_centre|sports_centre"]["name"]',
+  '["tourism"~"hotel|guest_house|hostel|apartment|motel"]["name"]',
 ];
 
 /** Dobierz filtr OSM dla niszy (lub null → szerokie wyszukiwanie wszystkich firm). */
@@ -118,13 +146,21 @@ async function geocode(city: string): Promise<{ bbox: [number, number, number, n
   }
 }
 
-/** Buduje zapytanie Overpass dla niszy w bbox (lub szerokie, gdy brak niszy). */
+/** Buduje zapytanie Overpass dla niszy w bbox. Znana nisza → tag; nieznana → szukanie po NAZWIE
+ *  w kategoriach biznesowych; brak niszy → szeroka lista lokalnych firm (gastronomia/zdrowie/usługi/turystyka). */
 export function buildOverpassQuery(bbox: [number, number, number, number], niche?: string): string {
   const b = bbox.join(",");
   const tag = nicheToOverpass(niche);
-  const sel = tag
-    ? [`nwr${tag}["name"](${b});`]
-    : ['["shop"]', '["craft"]', '["office"]'].map((s) => `nwr${s}["name"](${b});`);
+  let sel: string[];
+  if (tag) {
+    sel = [`nwr${tag}["name"](${b});`];
+  } else if (niche?.trim()) {
+    // Nieznana nisza (np. „solarium”, „lombard”) → szukaj po nazwie w kategoriach biznesowych.
+    const esc = niche.trim().replace(/[.*+?^${}()|[\]\\"\n]/g, " ").trim().slice(0, 40);
+    sel = ['["shop"]', '["craft"]', '["office"]', '["amenity"]'].map((s) => `nwr${s}["name"~"${esc}",i](${b});`);
+  } else {
+    sel = BROAD_SELECTORS.map((s) => `nwr${s}(${b});`);
+  }
   return `[out:json][timeout:25];(${sel.join("")});out center 250;`;
 }
 

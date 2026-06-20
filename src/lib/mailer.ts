@@ -331,7 +331,9 @@ export async function sendAllOffers(max = 25, onProgress?: (done: number, total:
     return sentBox.some((m) => (!!comp && (m.company || "").trim().toLowerCase() === comp) || (!!em && (m.to || "").trim().toLowerCase() === em));
   };
   // Najpierw policz dokładnie (cała lista), potem wyślij tylko do uprawnionych (limit).
-  const withEmail = leads.filter((l) => leadEmailOf(l));
+  // Wymagamy POPRAWNEGO adresu — inaczej marnowalibyśmy wywołanie AI na napisanie oferty,
+  // którą i tak odrzuci walidacja przy wysyłce (np. „biuro(małpa)x”).
+  const withEmail = leads.filter((l) => isValidEmail(leadEmailOf(l)));
   const noEmail = leads.length - withEmail.length;
   const targets = withEmail.filter((l) => !wasEmailed(l));
   const alreadyEmailed = withEmail.length - targets.length;
