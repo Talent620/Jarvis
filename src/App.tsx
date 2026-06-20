@@ -817,8 +817,9 @@ export default function App() {
       if (Date.now() - last < 20 * 60 * 1000) return;
       localStorage.setItem("jarvis.guardian.ts", String(Date.now()));
       try {
-        // Pełny skan agentowy: konkretny problem zamiast ogólnika.
-        const scan = await guardianScan({ checkUpdate: true });
+        // Pełny skan agentowy: konkretny problem zamiast ogólnika. Bez sprawdzania aktualizacji
+        // (to robi dzienny check przy starcie) — oszczędza zapytania do GitHub i limity.
+        const scan = await guardianScan({ checkUpdate: false });
         const topRec = scan.recs.find((r) => r.problem);
         const hasProblem = scan.reports.some((a) => a.state === "problem" || a.state === "warn");
         if (hasProblem || scan.health.score < 85) {
@@ -827,7 +828,12 @@ export default function App() {
             const did = await guardianAutoHeal();
             if (did) { toast(did); const { recordGuardianEvent } = await import("./lib/guardianHistory"); recordGuardianEvent("fix", did); }
           } else {
-            toast(topRec?.problem ? `🛡 Strażnik: ${topRec.problem} Otwórz 🛡, by naprawić.` : "🛡 Strażnik: coś wymaga uwagi — otwórz 🛡.");
+            // Opiekun: jeśli problem nawraca, dołóż trwałą radę proaktywnie.
+            const { getGuardianHistory, recurringHint } = await import("./lib/guardianHistory");
+            const hint = recurringHint(getGuardianHistory());
+            toast(topRec?.problem
+              ? `🛡 Strażnik: ${topRec.problem}${hint ? ` 🧠 ${hint.advice}` : " Otwórz 🛡, by naprawić."}`
+              : "🛡 Strażnik: coś wymaga uwagi — otwórz 🛡.");
           }
         }
       } catch { /* sieć — pomiń */ }
