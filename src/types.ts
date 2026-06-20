@@ -451,6 +451,9 @@ export interface Settings {
   speak: boolean;
   /** Prosty polski głos systemowy: pomija chmurowe TTS (Gemini/ElevenLabs) — spójny polski, offline. Domyślnie TAK. */
   voiceSystemPl: boolean;
+  /** Voice Guardian: „Używaj głosu JARVISA" — przypina jeden, stały głos (voiceName) i wyłącza
+   *  wszelkie automatyczne podmiany (chmurowe TTS). Gwarantuje, że zawsze brzmi tak samo. */
+  voicePinned: boolean;
   /** Używaj darmowego głosu Gemini TTS (wysoka jakość, wymaga klucza Gemini). */
   geminiTts: boolean;
   /** Nazwa głosu Gemini TTS (np. Charon, Orus, Puck). */

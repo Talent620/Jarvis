@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { geminiSpeak, TTS_VOICES, bestPlVoiceName } from "../src/lib/voice";
+import { geminiSpeak, TTS_VOICES, bestPlVoiceName, voiceQualityScore, checkPinnedVoice } from "../src/lib/voice";
 import { store } from "../src/lib/store";
 
 describe("głos premium tłumacza", () => {
@@ -30,5 +30,18 @@ describe("bestPlVoiceName — stały, najlepszy polski głos", () => {
   it("brak polskich głosów → pusty wybór (zostaje domyślny)", () => {
     expect(bestPlVoiceName([{ name: "en-US-Daniel", lang: "en-US", quality: 500 }])).toBe("");
     expect(bestPlVoiceName([])).toBe("");
+  });
+  it("voiceQualityScore premiuje sieciowy/Google/jakość", () => {
+    const net = voiceQualityScore({ name: "pl-pl-x-oda-network", lang: "pl-PL", quality: 400, network: true });
+    const loc = voiceQualityScore({ name: "pl-pl-x-oda-local", lang: "pl-PL", quality: 300, network: false });
+    expect(net).toBeGreaterThan(loc);
+  });
+});
+
+describe("checkPinnedVoice — Voice Guardian na starcie", () => {
+  it("brak przypiętego głosu → nic nie zmienia", async () => {
+    store.setSettings({ voiceName: "" });
+    const r = await checkPinnedVoice();
+    expect(r.changed).toBe(false);
   });
 });

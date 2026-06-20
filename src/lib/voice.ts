@@ -5,6 +5,7 @@ import { primaryKey } from "./keys";
 import { fetchTimeout } from "./http";
 import { WhisperListener } from "./whisperListener";
 import { synthLocal, localTtsUsable } from "./localTts";
+import { logError } from "./errorLog";
 
 // Natywny silnik mowy Androida (pewniejszy niż Web Speech w WebView).
 export interface NativeVoiceInfo { name: string; lang: string; quality?: number; network?: boolean }
@@ -30,17 +31,38 @@ export async function listSpeechVoices(): Promise<NativeVoiceInfo[]> {
   return voices.map((v) => ({ name: v.name, lang: v.lang }));
 }
 
-/** Pure: wskaż „najlepszy" polski głos z listy (najwyższa jakość; preferuj sieciowy/Google).
- *  Zwraca nazwę głosu albo "" gdy brak polskich. */
-export function bestPlVoiceName(voices: NativeVoiceInfo[]): string {
-  const pl = voices.filter((v) => /^pl/i.test(v.lang || ""));
-  if (!pl.length) return "";
-  const score = (v: NativeVoiceInfo) =>
+/** Pure: ocena jakości głosu (im wyżej, tym lepiej). Preferuje wysoką jakość, sieciowy/Google. */
+export function voiceQualityScore(v: NativeVoiceInfo): number {
+  return (
     (v.quality || 0) +
     (v.network ? 50 : 0) + // głosy sieciowe Google brzmią naturalniej
     (/google/i.test(v.name) ? 30 : 0) +
-    (/-x-|local/i.test(v.name) ? 5 : 0);
-  return [...pl].sort((a, b) => score(b) - score(a))[0].name;
+    (/-x-|local/i.test(v.name) ? 5 : 0)
+  );
+}
+
+/** Pure: wskaż „najlepszy" polski głos z listy (najwyższa jakość). Zwraca nazwę albo "" gdy brak PL. */
+export function bestPlVoiceName(voices: NativeVoiceInfo[]): string {
+  const pl = voices.filter((v) => /^pl/i.test(v.lang || ""));
+  if (!pl.length) return "";
+  return [...pl].sort((a, b) => voiceQualityScore(b) - voiceQualityScore(a))[0].name;
+}
+
+export interface VoiceGuardResult { changed: boolean; from: string; to: string; reason: "ok" | "missing" | "none" }
+/**
+ * Voice Guardian (start aplikacji): sprawdź, czy PRZYPIĘTY głos (voiceName) nadal istnieje
+ * w silniku. Jeśli zniknął (aktualizacja systemu, usunięcie pakietu) — wybierz najlepszy
+ * polski zamiennik i zapisz go. Czysty wynik (decyzję o zapisie podejmuje caller).
+ */
+export async function checkPinnedVoice(): Promise<VoiceGuardResult> {
+  const { store } = await import("./store");
+  const pinned = store.settings.voiceName?.trim();
+  if (!pinned) return { changed: false, from: "", to: "", reason: "ok" };
+  const voices = await listSpeechVoices();
+  if (!voices.length) return { changed: false, from: pinned, to: pinned, reason: "ok" }; // lista pusta — nie ruszaj
+  if (voices.some((v) => v.name === pinned)) return { changed: false, from: pinned, to: pinned, reason: "ok" };
+  const replacement = bestPlVoiceName(voices);
+  return { changed: !!replacement, from: pinned, to: replacement, reason: replacement ? "missing" : "none" };
 }
 
 // --- Synteza mowy (TTS) ---
@@ -386,7 +408,8 @@ export async function speak(text: string, settings: Settings): Promise<void> {
 
   // Prosty polski głos systemowy: pomiń chmurowe TTS (ElevenLabs/Gemini), które bywają z angielskim
   // akcentem i „zmieniają się" — idź prosto do natywnego/przeglądarkowego głosu PL (spójnie, offline).
-  const basicPl = settings.voiceSystemPl !== false;
+  // Voice Guardian (voicePinned): „Używaj głosu JARVISA" wymusza ten tor i wyłącza WSZELKIE podmiany.
+  const basicPl = settings.voicePinned || settings.voiceSystemPl !== false;
 
   // Premium głos przez ElevenLabs (najbliżej oryginalnego JARVIS-a), jeśli podano klucz.
   if (!basicPl && settings.elevenLabsApiKey && settings.elevenLabsVoiceId) {
@@ -427,7 +450,8 @@ export async function speak(text: string, settings: Settings): Promise<void> {
     try {
       await NativeTTS.speak({ text, pitch: settings.voicePitch, rate: settings.voiceRate, lang: "pl-PL", voice: settings.voiceName?.trim() || "" });
       return;
-    } catch {
+    } catch (e) {
+      logError("tts", e, "native"); // zarejestruj błąd TTS — Voice Agent go pokaże
       /* fallback do Web Speech */
     }
   }

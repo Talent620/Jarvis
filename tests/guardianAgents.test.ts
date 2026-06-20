@@ -14,6 +14,9 @@ function ctx(over: Partial<ScanContext> = {}): ScanContext {
     reliability: { total: 0, errors: 0, warns: 0, byScope: {}, ...(over.reliability || {}) },
     update: over.update ?? null,
     cloudProviders: over.cloudProviders ?? ["gemini"],
+    voices: over.voices ?? [{ name: "pl-pl-x-oda-network", lang: "pl-PL", quality: 400, network: true }],
+    voicePinnedExists: over.voicePinnedExists ?? true,
+    ttsErrors: over.ttsErrors ?? 0,
   };
 }
 
@@ -35,14 +38,28 @@ describe("AI Agent", () => {
   });
 });
 
-describe("Voice Agent", () => {
+describe("Voice Agent — Voice Guardian", () => {
   it("mowa wyłączona → ostrzeżenie + Napraw głos", () => {
     const r = voiceAgent(ctx({ s: { speak: false } as never }));
     expect(r.recs.some((x) => x.key === "fixVoice")).toBe(true);
   });
-  it("mowa + polski systemowy → ok", () => {
-    const r = voiceAgent(ctx({ s: { speak: true, voiceSystemPl: true, voiceName: "pl-pl-x-oda-network" } as never }));
+  it("stały głos (voicePinned) z istniejącym głosem → ok", () => {
+    const r = voiceAgent(ctx({ s: { speak: true, voiceSystemPl: true, voicePinned: true, voiceName: "pl-pl-x-oda-network" } as never }));
     expect(r.state).toBe("ok");
+    expect(r.summary).toMatch(/Stały głos/);
+  });
+  it("przypięty głos zniknął → problem + rekomendacja przypnij najlepszy", () => {
+    const r = voiceAgent(ctx({ s: { speak: true, voiceName: "pl-pl-x-stary" } as never, voicePinnedExists: false }));
+    expect(r.state).toBe("problem");
+    expect(r.recs.some((x) => x.key === "pinVoice")).toBe(true);
+  });
+  it("głos nieprzypięty (Auto) → ostrzeżenie + zaproponuj przypięcie", () => {
+    const r = voiceAgent(ctx({ s: { speak: true, voiceName: "", voiceSystemPl: true } as never }));
+    expect(r.recs.some((x) => x.key === "pinVoice")).toBe(true);
+  });
+  it("błędy TTS w sesji są raportowane", () => {
+    const r = voiceAgent(ctx({ s: { speak: true, voiceName: "pl-pl-x-oda-network" } as never, ttsErrors: 4 }));
+    expect(r.findings.some((f) => /błędy/i.test(f.text))).toBe(true);
   });
 });
 

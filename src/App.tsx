@@ -72,7 +72,7 @@ import { guardianDiagnose, guardianAutoHeal } from "./lib/guardian";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
 import { currentBrainMode } from "./lib/brainMode";
-import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, type VoiceListener } from "./lib/voice";
+import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, checkPinnedVoice, type VoiceListener } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
 import ScreenBoundary from "./components/ScreenBoundary";
@@ -214,6 +214,11 @@ export default function App() {
 
   useEffect(() => {
     loadVoices();
+    // Voice Guardian: po starcie sprawdź, czy przypięty głos JARVISA wciąż istnieje;
+    // jeśli zniknął (aktualizacja systemu) — przełącz na najlepszy dostępny zamiennik.
+    void checkPinnedVoice().then((r) => {
+      if (r.changed && r.to) { store.setSettings({ voiceName: r.to }); toast(`🎤 Głos „${r.from}" zniknął — przełączono na ${r.to}.`); }
+    }).catch(() => {});
     ensureNotifPerms();
     // Okno na telefonie (nie „strona w przeglądarce"): pasek stanu jako lity ciemny
     // pasek, a treść RENDEROWANA PONIŻEJ niego (overlay:false) — system sam pilnuje

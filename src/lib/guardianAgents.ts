@@ -10,6 +10,7 @@ import { PROVIDER_LIST } from "./providers/registry";
 import { reliabilityStats, type ReliabilityStats } from "./errorLog";
 import { checkForUpdate } from "./updater";
 import { googleBackendReady } from "./google";
+import { listSpeechVoices, type NativeVoiceInfo } from "./voice";
 import { speedSummary, voiceSummary, type GuardianActionKey } from "./guardian";
 
 export type AgentId = "performance" | "voice" | "ai" | "image" | "integration" | "update";
@@ -36,6 +37,9 @@ export interface ScanContext {
   reliability: ReliabilityStats;
   update: { current: string; latest: string; newer: boolean; error?: string } | null;
   cloudProviders: string[]; // dostawcy chmurowi z wpisanym kluczem
+  voices: NativeVoiceInfo[]; // głosy wykryte w silniku (Voice Guardian)
+  voicePinnedExists: boolean; // czy przypięty głos (voiceName) nadal istnieje
+  ttsErrors: number; // błędy TTS w bieżącej sesji
 }
 
 /** Guardian Core: zbierz pełny stan systemu (jedno przejście). */
@@ -44,22 +48,29 @@ export async function gatherContext(opts: { checkUpdate?: boolean } = {}): Promi
   const ollamaConfigured = !!s.ollamaUrl?.trim();
   const sdConfigured = !!s.sdUrl?.trim();
 
-  const [oll, sd, upd] = await Promise.all([
+  const [oll, sd, upd, voices] = await Promise.all([
     ollamaConfigured ? detectOllama(s.ollamaUrl).catch(() => ({ ok: false, models: [] as string[], error: "błąd" })) : Promise.resolve({ ok: false, models: [] as string[] }),
     sdConfigured ? detectSd(s.sdUrl).catch(() => ({ ok: false, models: [] as string[], error: "błąd" })) : Promise.resolve({ ok: false, models: [] as string[] }),
     opts.checkUpdate ? checkForUpdate().catch(() => null) : Promise.resolve(null),
+    listSpeechVoices().catch(() => [] as NativeVoiceInfo[]),
   ]);
 
   const cloudProviders = PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim()).map((p) => p.id);
   const update = upd && !("error" in upd) ? { current: upd.current, latest: upd.latest, newer: upd.newer } : upd && "error" in upd ? { current: "?", latest: "?", newer: false, error: upd.error } : null;
+  const pinned = s.voiceName?.trim();
+  const rel = reliabilityStats();
 
   return {
     s,
     ollama: { configured: ollamaConfigured, ok: oll.ok, models: oll.models || [], error: (oll as { error?: string }).error },
     sd: { configured: sdConfigured, ok: sd.ok, models: sd.models || [], error: (sd as { error?: string }).error },
-    reliability: reliabilityStats(),
+    reliability: rel,
     update,
     cloudProviders,
+    voices,
+    // „Istnieje", gdy nieprzypięty (brak czego pilnować) lub lista pusta (nie wnioskuj) lub realnie obecny.
+    voicePinnedExists: !pinned || !voices.length || voices.some((v) => v.name === pinned),
+    ttsErrors: rel.byScope["tts"] || 0,
   };
 }
 
@@ -102,30 +113,61 @@ export function performanceAgent(ctx: ScanContext): AgentReport {
   return { id: "performance", name: "Wydajność", icon: "⚡", state: worst(findings), score: clamp(score), summary: slow ? "Można przyspieszyć" : "Reaguje od ręki", findings, recs };
 }
 
-// === 🎤 Voice Agent — TTS/STT, język, jakość ===
+// === 🎤 Voice Agent — pełny Voice Guardian: aktualny głos, podmiany, jakość, błędy TTS ===
 export function voiceAgent(ctx: ScanContext): AgentReport {
   const s = ctx.s;
   const findings: AgentFinding[] = [];
   const recs: AgentRec[] = [];
   let score = 100;
+  const pinned = s.voiceName?.trim();
+  const premium = !!(s.elevenLabsApiKey && s.elevenLabsVoiceId) || !!(s.fishAudioApiKey && s.fishAudioVoiceId);
 
   if (!s.speak) {
     findings.push({ level: "warn", text: "Mowa wyłączona — JARVIS nie czyta odpowiedzi." });
     score -= 25;
     recs.push({ key: "fixVoice", label: "🇵🇱 Napraw głos", why: "Włącz mowę i ustaw spójny polski głos." });
-  } else {
-    findings.push({ level: "ok", text: `Głos: ${voiceSummary(s)}` });
+    return { id: "voice", name: "Głos", icon: "🎤", state: worst(findings), score: clamp(score), summary: "Mowa wyłączona", findings, recs };
   }
-  if (s.speak && s.voiceSystemPl === false && !(s.elevenLabsApiKey && s.elevenLabsVoiceId) && !s.geminiTts) {
-    findings.push({ level: "warn", text: "Głosy chmurowe wyłączone, a polski systemowy też — głos może być angielski." });
+
+  // Aktualny głos + tryb (systemowy / premium / chmurowy).
+  if (s.voicePinned) findings.push({ level: "ok", text: `Tryb: 🚀 stały głos JARVISA (blokada podmian) — ${pinned || "polski systemowy"}.` });
+  else findings.push({ level: "ok", text: `Głos: ${voiceSummary(s)}` });
+
+  // Przypięty głos zniknął z silnika (np. po aktualizacji systemu) → zaproponuj zamiennik.
+  if (pinned && !ctx.voicePinnedExists) {
+    findings.push({ level: "problem", text: `Przypięty głos „${pinned}" zniknął z silnika — trzeba wybrać zamiennik.` });
+    score -= 30;
+    recs.push({ key: "pinVoice", label: "🚀 Przypnij najlepszy głos", why: "Wybiorę najlepszy dostępny polski głos i przypnę go na stałe." });
+  } else if (pinned) {
+    findings.push({ level: "ok", text: `Przypięty głos działa: ${pinned}.` });
+  }
+
+  // Głos nie przypięty → może się „zmieniać" (problem z briefu użytkownika).
+  if (!pinned && !premium) {
+    findings.push({ level: "warn", text: "Głos nie jest przypięty (Auto) — system może go zmieniać (czasem translatorowy)." });
+    score -= 12;
+    recs.push({ key: "pinVoice", label: "🚀 Używaj głosu JARVISA", why: "Przypnę jeden, najlepszy polski głos na stałe." });
+  }
+
+  // Tor głosu: systemowy vs premium vs ryzyko angielskiego akcentu.
+  if (premium && !s.voicePinned && s.voiceSystemPl === false) findings.push({ level: "ok", text: "Głos premium (ElevenLabs/Fish) aktywny." });
+  if (s.voiceSystemPl === false && !s.voicePinned && !premium && !s.geminiTts) {
+    findings.push({ level: "warn", text: "Głosy chmurowe i polski systemowy wyłączone — głos może być angielski." });
     score -= 15;
     recs.push({ key: "fixVoice", label: "🇵🇱 Napraw głos", why: "Przełącz na spójny polski głos systemowy." });
   }
-  if (s.speak && !s.voiceName?.trim() && s.voiceSystemPl !== false) {
-    findings.push({ level: "warn", text: "Głos nie jest zablokowany (Auto) — może się zmieniać. Wybierz jeden w ⚙ → Głos." });
-    score -= 8;
+
+  // Błędy TTS w sesji.
+  if (ctx.ttsErrors > 0) {
+    findings.push({ level: ctx.ttsErrors > 2 ? "warn" : "ok", text: `Błędy odtwarzania głosu w sesji: ${ctx.ttsErrors}.` });
+    if (ctx.ttsErrors > 2) { score -= 8; recs.push({ key: "fixVoice", label: "🇵🇱 Napraw głos", why: "Przełącz na pewny polski głos systemowy." }); }
   }
-  return { id: "voice", name: "Głos", icon: "🎤", state: worst(findings), score: clamp(score), summary: s.speak ? "Mowa aktywna" : "Mowa wyłączona", findings, recs };
+
+  // Ile polskich głosów wykryto (świadomość możliwości wyboru).
+  const plCount = ctx.voices.filter((v) => /^pl/i.test(v.lang || "")).length;
+  if (ctx.voices.length) findings.push({ level: plCount ? "ok" : "warn", text: `Wykryto ${ctx.voices.length} głos(ów), w tym ${plCount} polski(ch).` });
+
+  return { id: "voice", name: "Głos", icon: "🎤", state: worst(findings), score: clamp(score), summary: s.voicePinned ? "Stały głos JARVISA" : pinned ? "Przypięty" : "Mowa aktywna", findings, recs };
 }
 
 // === 🧠 AI Agent — modele, dostawcy, routing, reasoning ===

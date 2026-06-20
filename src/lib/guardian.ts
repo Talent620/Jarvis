@@ -96,7 +96,7 @@ export function healthScore(st: GuardianStatus): GuardianHealth {
 }
 
 // === 🧭 Dyrygent: zalecane działania „jednym kliknięciem" wg stanu. Pure — testowalne. ===
-export type GuardianActionKey = "fixAll" | "connectServers" | "smarter" | "faster" | "fixVoice" | "update";
+export type GuardianActionKey = "fixAll" | "connectServers" | "smarter" | "faster" | "fixVoice" | "update" | "pinVoice";
 export interface GuardianRec { key: GuardianActionKey; label: string; why: string; priority: number }
 
 /** Pure: na podstawie diagnozy ułóż priorytetową listę zaleceń (kierownik decyduje, co zrobić). */
@@ -146,6 +146,16 @@ export const guardian = {
   fixVoice(): GuardianActionResult {
     store.setSettings({ voiceSystemPl: true, speak: true });
     return { ok: true, message: "🇵🇱 Głos ustawiony na prosty polski systemowy (spójny, po polsku)." };
+  },
+  /** Voice Guardian: przypnij najlepszy polski głos na stałe (i włącz blokadę podmian). */
+  async pinVoice(): Promise<GuardianActionResult> {
+    const { listSpeechVoices, bestPlVoiceName } = await import("./voice");
+    const voices = await listSpeechVoices();
+    const best = bestPlVoiceName(voices);
+    store.setSettings({ speak: true, voiceSystemPl: true, voicePinned: true, voiceName: best, voicePitch: 0.9, voiceRate: 1.0 });
+    return best
+      ? { ok: true, message: `🚀 Głos JARVISA przypięty na stałe: ${best} (blokada podmian włączona).` }
+      : { ok: true, message: "🚀 Włączono stały głos JARVISA (polski systemowy). Brak osobnych głosów PL — zainstaluj silnik Mowa Google." };
   },
   /** Połącz serwery: znajdź Ollamę i serwer obrazów (localhost), ustaw adresy. */
   async connectServers(onStep?: (m: string) => void): Promise<GuardianActionResult> {

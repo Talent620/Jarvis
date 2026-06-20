@@ -1585,6 +1585,38 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </p>
 
               <h3>Brzmienie głosu</h3>
+              {/* Jeden przycisk: włącz ładny głos JARVISA i ZABLOKUJ go — koniec „translatorowego"
+                  skakania. Wybiera najlepszy polski głos urządzenia i wymusza spójny tor systemowy. */}
+              <button
+                className="btn primary"
+                style={{ width: "100%" }}
+                onClick={async () => {
+                  let list = voices;
+                  if (!list.length) { list = await listSpeechVoices(); setVoices(list); }
+                  const best = bestPlVoiceName(list);
+                  set({ speak: true, voiceSystemPl: true, voicePinned: true, voiceName: best, voicePitch: 0.9, voiceRate: 1.0 });
+                  toast(best ? `🚀 Głos JARVISA włączony i przypięty na stałe: ${best}` : "🚀 Głos JARVISA włączony (polski systemowy). Brak osobnych głosów PL — zainstaluj silnik Mowa Google.");
+                  setTimeout(() => speak("Dzień dobry. Tu JARVIS. Tak będę teraz brzmiał — stale.", { ...store.settings, speak: true, voiceSystemPl: true, voicePinned: true, voiceName: best, voicePitch: 0.9, voiceRate: 1.0 }), 120);
+                }}
+              >
+                🚀 Używaj głosu JARVISA (stały, ładny — bez translatora)
+              </button>
+              <p className="muted" style={{ marginTop: 4 }}>
+                Włącza mowę, wybiera najlepszy polski głos urządzenia i <b>przypina go na stałe</b> —
+                JARVIS nie przełączy się już na zmienny, „translatorowy" głos. Voice Guardian pilnuje wyboru
+                i przy starcie sprawdza, czy głos nadal istnieje.
+              </p>
+              <div className="row">
+                <span>
+                  🔒 Trzymaj jeden głos (Voice Guardian)
+                  <br />
+                  <span className="muted">
+                    Blokuje automatyczne podmiany — wszystkie odpowiedzi używają przypiętego głosu.
+                    Wyłącz, jeśli chcesz pozwolić na głosy chmurowe (Gemini/ElevenLabs).
+                  </span>
+                </span>
+                <Toggle on={s.voicePinned} onClick={() => set({ voicePinned: !s.voicePinned })} />
+              </div>
               <div className="row">
                 <span>
                   🇵🇱 Prosty polski głos (systemowy)
@@ -1639,7 +1671,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     </option>
                   ))}
                 </select>
-                <div className="row" style={{ gap: 8, marginTop: 6 }}>
+                <div className="chips" style={{ gap: 8, marginTop: 6 }}>
                   <button
                     className="btn"
                     onClick={() => {
@@ -1648,10 +1680,16 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                       else { void listSpeechVoices().then((vs) => { setVoices(vs); const b = bestPlVoiceName(vs); if (b) set({ voiceName: b, voiceSystemPl: true, speak: true }); }); }
                     }}
                   >
-                    🇵🇱 Ustaw najlepszy polski głos
+                    🇵🇱 Najlepszy polski
                   </button>
-                  <button className="btn" onClick={() => speak("Dzień dobry. Tu JARVIS. Tak będę teraz brzmiał.", { ...s, speak: true })}>
-                    ▶ Posłuchaj
+                  <button
+                    className="btn"
+                    onClick={() => { set({ voicePinned: true, voiceSystemPl: true, speak: true }); toast(s.voiceName ? `⭐ Ustawiono jako główny głos: ${s.voiceName}` : "⭐ Ustawiono polski systemowy jako główny głos (przypięty)."); }}
+                  >
+                    ⭐ Ustaw jako główny głos
+                  </button>
+                  <button className="btn" onClick={() => speak("Dzień dobry. Tu JARVIS. Tak właśnie brzmię.", { ...store.settings, ...s, speak: true })}>
+                    🧪 Odsłuch
                   </button>
                 </div>
                 <p className="muted" style={{ marginTop: 4 }}>

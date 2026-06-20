@@ -106,6 +106,7 @@ const defaultSettings: Settings = {
   n8nToken: "",
   speak: true,
   voiceSystemPl: true,
+  voicePinned: false,
   geminiTts: true,
   geminiVoice: "Charon",
   voiceConfirm: true,

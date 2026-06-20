@@ -71,6 +71,7 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
     if (key === "smarter") return void run(() => guardian.smarter((m) => setMsg(`🧠 ${m}`)));
     if (key === "faster") return void run(() => guardian.faster());
     if (key === "fixVoice") return void run(() => guardian.fixVoice());
+    if (key === "pinVoice") return void run(() => guardian.pinVoice());
     if (key === "update") return void doUpdate();
   };
 
