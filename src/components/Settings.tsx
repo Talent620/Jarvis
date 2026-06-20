@@ -1884,10 +1884,14 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 {[
                   { id: "default", l: "Cyan" },
                   { id: "gold", l: "Złoty" },
+                  { id: "amber", l: "Bursztyn" },
                   { id: "green", l: "Zielony" },
+                  { id: "ocean", l: "Ocean" },
                   { id: "red", l: "Czerwony" },
+                  { id: "rose", l: "Róż" },
                   { id: "purple", l: "Fiolet" },
                   { id: "matrix", l: "Matrix 🟢" },
+                  { id: "retro", l: "Retro 95/XP 🖥" },
                 ].map((t) => (
                   <button
                     key={t.id}

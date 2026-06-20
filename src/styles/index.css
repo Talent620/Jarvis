@@ -6,8 +6,8 @@
   --gold: #ffce6b;
   --line: rgba(108, 231, 255, 0.18);
   --line-strong: rgba(108, 231, 255, 0.4);
-  --text: #cfeefb;
-  --text-dim: #7fa6bd;
+  --text: #dcf1fb;
+  --text-dim: #9cc2d6;
   --danger: #ff6b6b;
   --ok: #62e6a8;
   /* Powierzchnie, promienie i cienie — wspólna, nowoczesna baza dla wszystkich ekranów */
@@ -97,6 +97,55 @@ body.theme-matrix::before {
 }
 /* Treść nad deszczem */
 body.theme-matrix #root { position: relative; z-index: 1; }
+
+/* Dodatkowe motywy kolorystyczne */
+body.theme-amber { --cyan: #ffb84d; --cyan-dim: #cc8a1f; --line: rgba(255,184,77,.18); --line-strong: rgba(255,184,77,.4); }
+body.theme-ocean { --cyan: #4db8ff; --cyan-dim: #1f7fcc; --line: rgba(77,184,255,.18); --line-strong: rgba(77,184,255,.4); }
+body.theme-rose  { --cyan: #ff8fb3; --cyan-dim: #d65f86; --line: rgba(255,143,179,.18); --line-strong: rgba(255,143,179,.4); }
+
+/* ============ Motyw RETRO — Windows 95/XP (stary, czytelny look; nowoczesne funkcje) ============ */
+body.theme-retro {
+  --bg: #008080; --bg-2: #c0c0c0; --bg-3: #c0c0c0;
+  --cyan: #000080; --cyan-dim: #000080; --gold: #000080;
+  --text: #000000; --text-dim: #303030;
+  --line: #808080; --line-strong: #000000;
+  --surface: #c0c0c0; --surface-2: #d4d0c8;
+  --radius: 0px; --radius-lg: 0px; --shadow-1: none; --shadow-2: none;
+  --accent-grad: linear-gradient(90deg, #000080, #1084d0);
+  font-family: "Tahoma", "MS Sans Serif", Geneva, system-ui, sans-serif;
+  background: #008080 !important; color: #000;
+}
+/* Okna/karty: szare z bevelem (outset). */
+body.theme-retro .panel, body.theme-retro .journal-card, body.theme-retro .card,
+body.theme-retro .status-row, body.theme-retro .bubble {
+  background: #c0c0c0 !important; color: #000 !important;
+  border: 2px solid !important; border-color: #dfdfdf #404040 #404040 #dfdfdf !important;
+  border-radius: 0 !important; box-shadow: 1px 1px 0 #fff inset, -1px -1px 0 #808080 inset !important;
+}
+/* Przyciski 3D. */
+body.theme-retro .btn, body.theme-retro .chip, body.theme-retro .icon-btn {
+  background: #c0c0c0 !important; color: #000 !important;
+  border: 2px solid !important; border-color: #dfdfdf #404040 #404040 #dfdfdf !important;
+  border-radius: 0 !important; box-shadow: 1px 1px 0 #fff inset, -1px -1px 0 #808080 inset !important;
+  text-shadow: none !important;
+}
+body.theme-retro .btn:active, body.theme-retro .chip:active, body.theme-retro .icon-btn:active {
+  border-color: #404040 #dfdfdf #dfdfdf #404040 !important; box-shadow: none !important;
+}
+body.theme-retro .btn.primary, body.theme-retro .chip.on { background: #000080 !important; color: #fff !important; }
+/* Pola: białe, inset. */
+body.theme-retro input, body.theme-retro textarea, body.theme-retro select {
+  background: #fff !important; color: #000 !important;
+  border: 2px solid !important; border-color: #404040 #dfdfdf #dfdfdf #404040 !important; border-radius: 0 !important;
+}
+/* Paski tytułu jak w Win95: granat + biały. */
+body.theme-retro h2, body.theme-retro .panel-head h2 {
+  background: linear-gradient(90deg, #000080, #1084d0) !important; color: #fff !important;
+  padding: 3px 8px !important; border-radius: 0 !important;
+}
+body.theme-retro h3 { color: #000080 !important; }
+body.theme-retro .muted, body.theme-retro .status-detail { color: #303030 !important; }
+body.theme-retro .topbar { background: #c0c0c0 !important; border-bottom: 2px solid #404040 !important; }
 
 /* Bezpieczne marginesy okna (paski stanu/nawigacji). Fallback do env() działa na
    iOS/web; na Androidzie MainActivity nadpisuje --sat/--sar/--sab/--sal realnymi px,
