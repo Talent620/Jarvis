@@ -297,6 +297,85 @@ export function mergeRawLeads(osm: RawLead[], web: RawLead[], count: number): Ra
   return out.slice(0, count);
 }
 
+// === Wyłuskiwanie e-maila ze strony firmy (gdy lead ma www, ale brak maila) ===
+
+const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+// Adresy-śmieci: pliki, biblioteki, przykłady, usługi techniczne — to NIE są kontakty firmy.
+const JUNK_EMAIL = /(sentry|wix|wixpress|squarespace|godaddy|cloudflare|example\.|your-?email|domain\.(com|pl)|@2x|\.(png|jpe?g|webp|gif|svg|css|js)$|schema\.org|w3\.org|googleapis|gstatic|protonmail\.com\/|name@|email@|user@)/i;
+// Preferowane prefiksy kontaktowe (wyżej w rankingu).
+const CONTACT_PREFIX = /^(kontakt|biuro|info|office|sekretariat|sklep|sprzeda|hello|contact|recepcja|zamowienia|zamówienia)/i;
+
+/** Pure: wyłuskaj e-maile z HTML (mailto + tekst + prosta deobfuskacja), odsiej śmieci, uszereguj. */
+export function extractEmails(html: string, siteDomain?: string): string[] {
+  if (!html) return [];
+  const t = html
+    .replace(/&#0*64;/g, "@").replace(/&#0*46;/g, ".")
+    .replace(/\s*[[({]\s*(at|małpa|malpa)\s*[\])}]\s*/gi, "@")
+    .replace(/\s*[[({]\s*(dot|kropka)\s*[\])}]\s*/gi, ".");
+  const found = new Map<string, number>(); // email → priorytet (większy = lepszy)
+  for (const m of t.matchAll(EMAIL_RE)) {
+    const e = m[0].toLowerCase().replace(/\.$/, "");
+    if (JUNK_EMAIL.test(e) || e.length > 120) continue;
+    const domain = e.split("@")[1] || "";
+    let prio = 0;
+    if (siteDomain && domain.includes(siteDomain.replace(/^www\./, ""))) prio += 4; // własna domena
+    if (CONTACT_PREFIX.test(e.split("@")[0])) prio += 2; // kontakt/biuro/info…
+    found.set(e, Math.max(found.get(e) ?? 0, prio));
+  }
+  return [...found.entries()].sort((a, b) => b[1] - a[1]).map(([e]) => e);
+}
+
+/** Host (domena) z URL, bez www. */
+function hostOf(url: string): string {
+  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
+}
+
+/** Znormalizuj URL (dodaj https://). Null gdy bez sensu. */
+function normalizeSiteUrl(url?: string): string | null {
+  const u = (url || "").trim();
+  if (!u) return null;
+  const full = /^https?:\/\//i.test(u) ? u : `https://${u}`;
+  try { return new URL(full).toString(); } catch { return null; }
+}
+
+/** Pobierz stronę firmy i znajdź e-mail kontaktowy (strona główna + /kontakt + /contact). Null, gdy się nie da. */
+export async function findEmailOnSite(url: string): Promise<string | null> {
+  const base = normalizeSiteUrl(url);
+  if (!base) return null;
+  const domain = hostOf(base);
+  const root = base.replace(/\/+$/, "");
+  const pages = [base, `${root}/kontakt`, `${root}/contact`];
+  for (const p of pages) {
+    try {
+      const res = await fetchTimeout(p, {}, 6000);
+      if (!res.ok) continue;
+      const html = (await res.text()).slice(0, 250000);
+      const emails = extractEmails(html, domain);
+      if (emails.length) return emails[0];
+    } catch {
+      /* CORS/sieć — spróbuj kolejną podstronę albo poddaj się */
+    }
+  }
+  return null;
+}
+
+/**
+ * Wzbogać leady o e-mail ze strony firmy (dla tych z www, ale bez maila). Ogranicza liczbę i
+ * idzie partiami (po 4 równolegle), by nie wisieć zbyt długo. Zwraca leady z dołożonymi e-mailami.
+ */
+export async function enrichLeadsEmails(leads: RawLead[], max = 12): Promise<RawLead[]> {
+  const targets = leads.filter((l) => l.website && !l.email).slice(0, max);
+  if (!targets.length) return leads;
+  const found = new Map<string, string>(); // company.toLowerCase() → email
+  for (let i = 0; i < targets.length; i += 4) {
+    const chunk = targets.slice(i, i + 4);
+    const res = await Promise.all(chunk.map(async (l) => [l.company.toLowerCase(), await findEmailOnSite(l.website!).catch(() => null)] as const));
+    for (const [key, email] of res) if (email) found.set(key, email);
+  }
+  if (!found.size) return leads;
+  return leads.map((l) => { const e = found.get(l.company.toLowerCase()); return e && !l.email ? { ...l, email: e } : l; });
+}
+
 /** Reverse-geocode współrzędnych → miasto (gdy użytkownik nie poda lokalizacji). */
 export async function cityFromCoords(lat: number, lon: number): Promise<string | null> {
   try {
@@ -409,11 +488,16 @@ export function resolveLeadCount(optCount?: number, settingCount?: number): numb
 export async function findLeads(opts: {
   niche?: string; location?: string; count?: number;
   onlyNoWebsite?: boolean; onlyWithEmail?: boolean; onlyWithPhone?: boolean;
-  useWeb?: boolean; // wzbogać o wyniki z sieci (Tavily), gdy jest klucz
+  useWeb?: boolean;      // wzbogać o wyniki z sieci (Tavily), gdy jest klucz
+  enrichEmail?: boolean; // wejdź na strony firm i wyłuskaj e-mail (gdy mają www, ale brak maila)
 }): Promise<FindResult> {
   const s = store.settings;
   const count = resolveLeadCount(opts.count, s.prospectCount);
-  const filters: LeadFilters = { onlyNoWebsite: opts.onlyNoWebsite, onlyWithEmail: opts.onlyWithEmail, onlyWithPhone: opts.onlyWithPhone };
+  // Filtr „z e-mailem" stosujemy DOPIERO po wzbogaceniu (inaczej odrzucilibyśmy firmy ze stroną,
+  // którym właśnie chcemy domyślić e-mail). Tu zostają tylko filtry niewymagające wzbogacania.
+  const enrichEmail = !!(opts.enrichEmail || opts.onlyWithEmail);
+  const baseFilters: LeadFilters = { onlyNoWebsite: opts.onlyNoWebsite, onlyWithPhone: opts.onlyWithPhone };
+  const filters: LeadFilters = { ...baseFilters, onlyWithEmail: opts.onlyWithEmail };
   // AUTONOMIA: nisza opcjonalna — podana → zapisana w ustawieniach → pusta (OSM szuka szeroko
   // wszystkich lokalnych firm). Bez niszy NIE blokujemy wyszukiwania.
   const niche = opts.niche?.trim() || s.prospectNiche?.trim() || undefined;
@@ -430,12 +514,22 @@ export async function findLeads(opts: {
         "Nie wiem jeszcze, gdzie szukać. Podaj miasto raz (np. „znajdź leady w Krakowie”) albo zezwól na lokalizację — zapamiętam je i od następnego razu znajdę leady sam, bez pytania.",
     };
 
-  const osm = await searchOSM(niche, city, count, filters);
-  // Wzbogacenie z sieci (opcjonalne) — łapie firmy spoza OSM. Filtry stosujemy też do nich.
+  // Gdy będziemy wyłuskiwać e-mail ze stron, pobierz większą pulę (bez filtra e-mail) — bo część
+  // dostanie e-mail dopiero po wejściu na stronę, a filtr odsiałby ją przedwcześnie.
+  const fetchN = enrichEmail ? Math.min(50, count * 2) : count;
+  const osmFilters = enrichEmail ? baseFilters : filters;
+  const osm = await searchOSM(niche, city, fetchN, osmFilters);
+  // Wzbogacenie z sieci (opcjonalne) — łapie firmy spoza OSM.
   let raws = osm;
   if (opts.useWeb) {
-    const web = (await searchWebLeads(niche, city, count)).filter((l) => passesFilters(l, filters));
-    raws = mergeRawLeads(osm, web, count);
+    const web = (await searchWebLeads(niche, city, fetchN)).filter((l) => passesFilters(l, osmFilters));
+    raws = mergeRawLeads(osm, web, fetchN);
+  }
+  // Wyłuskaj e-mail ze strony firmy (dla tych z www, bez maila), potem zastosuj filtr „z e-mailem".
+  if (enrichEmail) {
+    raws = await enrichLeadsEmails(raws, Math.min(20, fetchN));
+    if (opts.onlyWithEmail) raws = raws.filter((l) => l.email);
+    raws = raws.slice(0, count);
   }
   if (!raws.length) {
     const hint = opts.onlyWithEmail ? " (filtr: tylko z e-mailem — spróbuj bez niego)" : opts.onlyNoWebsite ? " (filtr: tylko bez strony)" : "";

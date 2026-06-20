@@ -59,6 +59,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const [locating, setLocating] = useState(false);
   const [huntFilter, setHuntFilter] = useState<"all" | "noweb" | "email" | "phone">("all");
   const [useWeb, setUseWeb] = useState(false);
+  const [enrichEmail, setEnrichEmail] = useState(false);
   const [openLead, setOpenLead] = useState<string | null>(null);
   const [showPlan, setShowPlan] = useState(false);
   const [bulkMsg, setBulkMsg] = useState("");
@@ -159,7 +160,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
     store.setSettings({ prospectNiche: niche.trim(), prospectCount: n, ...(city.trim() ? { prospectLocation: city.trim() } : {}) });
     setHunting(true);
     const fLabel = { all: "firm w okolicy", noweb: "firm BEZ strony", email: "firm z e-mailem", phone: "firm z telefonem" }[huntFilter];
-    setHuntMsg(`🔎 Szukam ${n} ${fLabel}${useWeb ? " (+ sieć)" : ""}…`);
+    setHuntMsg(`🔎 Szukam ${n} ${fLabel}${useWeb ? " (+ sieć)" : ""}${enrichEmail ? " (+ e-maile ze stron)" : ""}…`);
     const r = await findLeads({
       niche: niche.trim() || undefined,
       location: city.trim() || undefined,
@@ -168,6 +169,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
       onlyWithEmail: huntFilter === "email",
       onlyWithPhone: huntFilter === "phone",
       useWeb,
+      enrichEmail,
     });
     setHunting(false);
     if (r.error) {
@@ -363,9 +365,13 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
               <button key={f.id} className={`chip ${huntFilter === f.id ? "on" : ""}`} onClick={() => setHuntFilter(f.id)} disabled={hunting}>{f.l}</button>
             ))}
           </div>
-          <label className="row" style={{ cursor: "pointer", marginBottom: 8 }}>
+          <label className="row" style={{ cursor: "pointer", marginBottom: 6 }}>
             <span style={{ fontSize: 13 }}>🔎 Wzbogać o wyniki z <b>sieci</b> (łapie firmy spoza map; wymaga klucza Tavily)</span>
             <input type="checkbox" checked={useWeb} onChange={(e) => setUseWeb(e.target.checked)} />
+          </label>
+          <label className="row" style={{ cursor: "pointer", marginBottom: 8 }}>
+            <span style={{ fontSize: 13 }}>✉ Wyłuskaj <b>e-mail ze strony</b> firmy (gdy ma www, brak maila) — pod cold-mailing</span>
+            <input type="checkbox" checked={enrichEmail} onChange={(e) => setEnrichEmail(e.target.checked)} />
           </label>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn primary" style={{ flex: 1 }} onClick={hunt} disabled={hunting}>

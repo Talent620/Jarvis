@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { parseElement, nicheToOverpass, toOverpassBbox, buildOverpassQuery, saveLeads, resolveLeadCount, passesFilters, scoreLead, parseWebLead, mergeRawLeads, type RawLead } from "../src/lib/leads";
+import { parseElement, nicheToOverpass, toOverpassBbox, buildOverpassQuery, saveLeads, resolveLeadCount, passesFilters, scoreLead, parseWebLead, mergeRawLeads, extractEmails, enrichLeadsEmails, type RawLead } from "../src/lib/leads";
+import { vi } from "vitest";
 import { store } from "../src/lib/store";
 
 describe("silnik leadów (OSM) — czyste funkcje", () => {
@@ -112,6 +113,31 @@ describe("leady — wzbogacanie z sieci (Tavily)", () => {
     const merged = mergeRawLeads(osm, web, 10);
     expect(merged).toHaveLength(2); // Roma zdublowana po telefonie
     expect(merged[0].company).toBe("Nova"); // e-mail → wyższy score
+  });
+});
+
+describe("leady — wyłuskiwanie e-maila ze strony", () => {
+  it("extractEmails: mailto/tekst, deobfuskacja, preferuje domenę i kontakt", () => {
+    const html = `<a href="mailto:biuro@salonola.pl">napisz</a> reklama: ad@googleapis.com, info [małpa] salonola [kropka] pl`;
+    const out = extractEmails(html, "salonola.pl");
+    expect(out[0]).toBe("biuro@salonola.pl");      // własna domena + prefiks kontaktowy na górze
+    expect(out).toContain("info@salonola.pl");      // deobfuskacja [małpa]/[kropka]
+    expect(out).not.toContain("ad@googleapis.com"); // śmieci odsiane
+  });
+  it("extractEmails: odrzuca pliki i przykłady", () => {
+    expect(extractEmails("logo@2x.png your-email@example.com name@domain.com")).toEqual([]);
+  });
+
+  it("enrichLeadsEmails: dokłada e-mail ze strony leadom z www bez maila (fetch mock)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('<a href="mailto:kontakt@firma.pl">x</a>', { status: 200 })));
+    const leads: RawLead[] = [
+      { company: "Firma", website: "https://firma.pl", hasWebsite: true } as RawLead,
+      { company: "MaMail", email: "x@x.pl", website: "https://x.pl", hasWebsite: true } as RawLead,
+    ];
+    const out = await enrichLeadsEmails(leads, 5);
+    expect(out[0].email).toBe("kontakt@firma.pl"); // dołożony
+    expect(out[1].email).toBe("x@x.pl");            // istniejący nietknięty
+    vi.unstubAllGlobals();
   });
 });
 
