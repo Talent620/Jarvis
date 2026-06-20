@@ -1,7 +1,26 @@
 import { describe, it, expect } from "vitest";
 import { appendSignature, splitOffer } from "../src/lib/glinks";
+import { DEFAULT_EMAIL_SIGNATURE } from "../src/lib/store";
 
 const SIG = "—\ntel. +48 500 390 009\nwww.v-ai.pl";
+
+describe("DEFAULT_EMAIL_SIGNATURE — wizytówkowa stopka (nazwisko + telefon + strona)", () => {
+  it("zawiera nazwisko, telefon i stronę w ładnym układzie", () => {
+    expect(DEFAULT_EMAIL_SIGNATURE).toContain("Marcin Kubicki");
+    expect(DEFAULT_EMAIL_SIGNATURE).toContain("+48 500 390 009");
+    expect(DEFAULT_EMAIL_SIGNATURE).toContain("www.v-ai.pl");
+    // Każdy element w osobnej linii (czysto, jak wizytówka).
+    const lines = DEFAULT_EMAIL_SIGNATURE.split("\n");
+    expect(lines.length).toBeGreaterThanOrEqual(4);
+    expect(lines[0]).toBe("—"); // delikatny separator na górze
+  });
+  it("doklejona do oferty kończy treść elegancko, bez dublowania", () => {
+    const draft = appendSignature("Dzień dobry, mam dla Państwa propozycję strony.", DEFAULT_EMAIL_SIGNATURE);
+    expect(draft.endsWith("www.v-ai.pl")).toBe(true);
+    expect(draft).toContain("Marcin Kubicki");
+    expect(appendSignature(draft, DEFAULT_EMAIL_SIGNATURE)).toBe(draft); // idempotentne
+  });
+});
 
 describe("appendSignature — automatyczna stopka", () => {
   it("dopisuje podpis na końcu treści", () => {

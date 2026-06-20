@@ -371,6 +371,21 @@ async function geminiTts(text: string, settings: Settings): Promise<boolean> {
   return geminiSpeak(text, settings.geminiVoice?.trim() || "Charon");
 }
 
+/**
+ * Pure: czytelna etykieta AKTYWNEGO głosu — dokładnie wg tej samej kolejności, którą stosuje
+ * speak() (lokalny → Fish → [gdy nie „prosty PL"] ElevenLabs → Gemini → systemowy). Dzięki
+ * temu w Ustawieniach widać JEDNYM rzutem oka, co naprawdę zabrzmi (koniec zgadywania).
+ */
+export function activeVoiceLabel(s: Settings): string {
+  if (!s.speak) return "🔇 wyłączony";
+  if (s.localTts) return "🧠 lokalny (offline)";
+  if (s.fishAudioApiKey && s.fishAudioVoiceId) return "🐟 Fish Audio (premium)";
+  const basicPl = s.voicePinned || s.voiceSystemPl !== false;
+  if (!basicPl && s.elevenLabsApiKey && s.elevenLabsVoiceId) return "🎙 ElevenLabs (premium)";
+  if (!basicPl && s.geminiTts && s.keys?.gemini?.trim()) return `🎙 Gemini TTS (${s.geminiVoice || "Charon"})`;
+  return s.voiceName?.trim() ? `🇵🇱 ${s.voiceName}${s.voicePinned ? " · przypięty" : ""}` : "🇵🇱 polski systemowy (auto)";
+}
+
 export async function speak(text: string, settings: Settings): Promise<void> {
   if (!settings.speak || !text.trim()) return;
   stopSpeaking();

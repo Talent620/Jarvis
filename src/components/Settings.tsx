@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
-import { listSpeechVoices, bestPlVoiceName, speak, type NativeVoiceInfo } from "../lib/voice";
+import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, type NativeVoiceInfo } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
@@ -142,6 +142,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   };
 
   const set = (patch: Partial<Settings>) => setS((prev) => ({ ...prev, ...patch }));
+  // GŁOS: zmiany obowiązują OD RAZU i nie giną po zamknięciu bez „Zapisz" —
+  // (to było źródło „głos się nie zmienia": wybór ginął, bo nie był utrwalany).
+  const setVoice = (patch: Partial<Settings>) => { setS((prev) => ({ ...prev, ...patch })); store.setSettings(patch); };
   // Klucze zapisują się NATYCHMIAST do magazynu — nigdy nie giną po wyjściu bez „Zapisz".
   const setKey = (id: ProviderId, val: string) => {
     const keys = { ...s.keys, [id]: val };
@@ -1642,6 +1645,16 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </p>
 
               <h3>Brzmienie głosu</h3>
+              {/* 🔊 Co naprawdę zabrzmi — jasny status + obietnica „działa od ręki" (koniec chaosu). */}
+              <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 10 }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>🔊 Aktualny głos: {activeVoiceLabel(s)}</div>
+                <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
+                  Zmiany głosu poniżej obowiązują <b>od razu</b> — bez „Zapisz". Wybierz głos z listy, by usłyszeć próbkę.
+                </div>
+                <button className="btn" style={{ marginTop: 8, padding: "5px 14px", width: "auto" }} onClick={() => speak("Dzień dobry. Tu JARVIS — tak właśnie brzmię.", { ...store.settings, ...s, speak: true })}>
+                  ▶ Posłuchaj
+                </button>
+              </div>
               {/* Jeden przycisk: włącz ładny głos JARVISA i ZABLOKUJ go — koniec „translatorowego"
                   skakania. Wybiera najlepszy polski głos urządzenia i wymusza spójny tor systemowy. */}
               <button
@@ -1651,7 +1664,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   let list = voices;
                   if (!list.length) { list = await listSpeechVoices(); setVoices(list); }
                   const best = bestPlVoiceName(list);
-                  set({ speak: true, voiceSystemPl: true, voicePinned: true, voiceName: best, voicePitch: 0.9, voiceRate: 1.0 });
+                  setVoice({ speak: true, voiceSystemPl: true, voicePinned: true, voiceName: best, voicePitch: 0.9, voiceRate: 1.0 });
                   toast(best ? `🚀 Głos JARVISA włączony i przypięty na stałe: ${best}` : "🚀 Głos JARVISA włączony (polski systemowy). Brak osobnych głosów PL — zainstaluj silnik Mowa Google.");
                   setTimeout(() => speak("Dzień dobry. Tu JARVIS. Tak będę teraz brzmiał — stale.", { ...store.settings, speak: true, voiceSystemPl: true, voicePinned: true, voiceName: best, voicePitch: 0.9, voiceRate: 1.0 }), 120);
                 }}
@@ -1672,7 +1685,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     Wyłącz, jeśli chcesz pozwolić na głosy chmurowe (Gemini/ElevenLabs).
                   </span>
                 </span>
-                <Toggle on={s.voicePinned} onClick={() => set({ voicePinned: !s.voicePinned })} />
+                <Toggle on={s.voicePinned} onClick={() => setVoice({ voicePinned: !s.voicePinned })} />
               </div>
               <div className="row">
                 <span>
@@ -1683,7 +1696,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     z angielskim akcentem i się „zmieniają". Zalecane, gdy chcesz po prostu poprawny polski.
                   </span>
                 </span>
-                <Toggle on={s.voiceSystemPl} onClick={() => set({ voiceSystemPl: !s.voiceSystemPl })} />
+                <Toggle on={s.voiceSystemPl} onClick={() => setVoice({ voiceSystemPl: !s.voiceSystemPl })} />
               </div>
               <div className="row">
                 <span>
@@ -1691,12 +1704,12 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   <br />
                   <span className="muted">wysoka jakość, naturalny — wymaga klucza Gemini (darmowy). Działa, gdy „prosty polski głos" wyłączony.</span>
                 </span>
-                <Toggle on={s.geminiTts} onClick={() => set({ geminiTts: !s.geminiTts })} />
+                <Toggle on={s.geminiTts} onClick={() => setVoice({ geminiTts: !s.geminiTts })} />
               </div>
               {s.geminiTts && (
                 <div className="field">
                   <label>Głos Gemini</label>
-                  <select value={s.geminiVoice} onChange={(e) => set({ geminiVoice: e.target.value })}>
+                  <select value={s.geminiVoice} onChange={(e) => setVoice({ geminiVoice: e.target.value })}>
                     {[
                       ["Charon", "Charon — głęboki, spokojny (JARVIS)"],
                       ["Orus", "Orus — stanowczy, męski"],
@@ -1724,9 +1737,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   value={s.voiceName}
                   onChange={(e) => {
                     const name = e.target.value;
-                    set({ voiceName: name });
+                    setVoice({ voiceName: name, speak: true });
                     // Natychmiastowy odsłuch wybranego głosu — słychać każdy od razu po wskazaniu.
-                    speak("Tu JARVIS. Tak właśnie brzmię.", { ...store.settings, voiceName: name, speak: true, voiceSystemPl: true });
+                    speak("Tu JARVIS. Tak właśnie brzmię.", { ...store.settings, ...s, voiceName: name, speak: true });
                   }}
                 >
                   <option value="">Auto (systemowy domyślny — może się zmieniać)</option>
@@ -1741,15 +1754,15 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     className="btn"
                     onClick={() => {
                       const best = bestPlVoiceName(voices);
-                      if (best) { set({ voiceName: best, voiceSystemPl: true, speak: true }); }
-                      else { void listSpeechVoices().then((vs) => { setVoices(vs); const b = bestPlVoiceName(vs); if (b) set({ voiceName: b, voiceSystemPl: true, speak: true }); }); }
+                      if (best) { setVoice({ voiceName: best, voiceSystemPl: true, speak: true }); }
+                      else { void listSpeechVoices().then((vs) => { setVoices(vs); const b = bestPlVoiceName(vs); if (b) setVoice({ voiceName: b, voiceSystemPl: true, speak: true }); }); }
                     }}
                   >
                     🇵🇱 Najlepszy polski
                   </button>
                   <button
                     className="btn"
-                    onClick={() => { set({ voicePinned: true, voiceSystemPl: true, speak: true }); toast(s.voiceName ? `⭐ Ustawiono jako główny głos: ${s.voiceName}` : "⭐ Ustawiono polski systemowy jako główny głos (przypięty)."); }}
+                    onClick={() => { setVoice({ voicePinned: true, voiceSystemPl: true, speak: true }); toast(s.voiceName ? `⭐ Ustawiono jako główny głos: ${s.voiceName}` : "⭐ Ustawiono polski systemowy jako główny głos (przypięty)."); }}
                   >
                     ⭐ Ustaw jako główny głos
                   </button>
@@ -1767,7 +1780,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <button
                 className="btn"
                 onClick={() =>
-                  set({
+                  setVoice({
                     speak: true,
                     voicePitch: 0.85,
                     voiceRate: 0.98,
@@ -1790,7 +1803,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   { l: "Neutralny", p: 1.0, r: 1.0 },
                   { l: "Energiczny", p: 1.1, r: 1.15 },
                 ].map((v) => (
-                  <button key={v.l} className="chip" onClick={() => set({ voicePitch: v.p, voiceRate: v.r })}>
+                  <button key={v.l} className="chip" onClick={() => setVoice({ voicePitch: v.p, voiceRate: v.r })}>
                     {v.l}
                   </button>
                 ))}
@@ -1803,7 +1816,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   max="2"
                   step="0.1"
                   value={s.voicePitch}
-                  onChange={(e) => set({ voicePitch: Number(e.target.value) })}
+                  onChange={(e) => setVoice({ voicePitch: Number(e.target.value) })}
                 />
               </div>
               <div className="field">
@@ -1814,7 +1827,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   max="1.8"
                   step="0.1"
                   value={s.voiceRate}
-                  onChange={(e) => set({ voiceRate: Number(e.target.value) })}
+                  onChange={(e) => setVoice({ voiceRate: Number(e.target.value) })}
                 />
               </div>
               <button className="btn" onClick={() => speak("Dzień dobry. Systemy w pełni sprawne.", s)}>
@@ -1828,7 +1841,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   type="password"
                   value={s.elevenLabsApiKey}
                   placeholder="(opcjonalnie)"
-                  onChange={(e) => set({ elevenLabsApiKey: e.target.value })}
+                  onChange={(e) => setVoice({ elevenLabsApiKey: e.target.value })}
                 />
               </div>
               <div className="field">
@@ -1836,7 +1849,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <input
                   value={s.elevenLabsVoiceId}
                   placeholder="np. JBFqnCBsd6RMkjVDRZzb"
-                  onChange={(e) => set({ elevenLabsVoiceId: e.target.value })}
+                  onChange={(e) => setVoice({ elevenLabsVoiceId: e.target.value })}
                 />
               </div>
               <p className="muted">
@@ -1849,7 +1862,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   type="password"
                   value={s.fishAudioApiKey}
                   placeholder="(opcjonalnie)"
-                  onChange={(e) => set({ fishAudioApiKey: e.target.value })}
+                  onChange={(e) => setVoice({ fishAudioApiKey: e.target.value })}
                 />
               </div>
               <div className="field">
@@ -1857,7 +1870,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <input
                   value={s.fishAudioVoiceId}
                   placeholder="np. 7f92f8afb8ec43bf81429cc1c9199cb1"
-                  onChange={(e) => set({ fishAudioVoiceId: e.target.value })}
+                  onChange={(e) => setVoice({ fishAudioVoiceId: e.target.value })}
                 />
               </div>
             </>

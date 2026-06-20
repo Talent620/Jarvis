@@ -1,7 +1,30 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { geminiSpeak, TTS_VOICES, bestPlVoiceName, voiceQualityScore, checkPinnedVoice } from "../src/lib/voice";
+import { geminiSpeak, TTS_VOICES, bestPlVoiceName, voiceQualityScore, checkPinnedVoice, activeVoiceLabel } from "../src/lib/voice";
 import { store } from "../src/lib/store";
+import type { Settings } from "../src/types";
+
+const baseVoice = () => ({ ...store.settings, speak: true, localTts: false, fishAudioApiKey: "", fishAudioVoiceId: "", elevenLabsApiKey: "", elevenLabsVoiceId: "", geminiTts: false, voicePinned: false, voiceSystemPl: true, voiceName: "", keys: { ...store.settings.keys, gemini: "" } }) as Settings;
+
+describe("activeVoiceLabel — jasny status aktywnego głosu (koniec chaosu)", () => {
+  it("mowa wyłączona → 🔇", () => {
+    expect(activeVoiceLabel({ ...baseVoice(), speak: false })).toMatch(/wyłączony/);
+  });
+  it("prosty polski + wybrany głos → pokazuje nazwę głosu", () => {
+    expect(activeVoiceLabel({ ...baseVoice(), voiceName: "Zofia" })).toMatch(/Zofia/);
+  });
+  it("przypięty głos → dopisek „przypięty”", () => {
+    expect(activeVoiceLabel({ ...baseVoice(), voiceName: "Marek", voicePinned: true })).toMatch(/przypięty/);
+  });
+  it("ElevenLabs liczy się TYLKO gdy nie wymuszamy prostego PL (priorytety jak w speak)", () => {
+    const withKey = { ...baseVoice(), elevenLabsApiKey: "K", elevenLabsVoiceId: "V" };
+    expect(activeVoiceLabel({ ...withKey, voiceSystemPl: true })).not.toMatch(/ElevenLabs/); // prosty PL wygrywa
+    expect(activeVoiceLabel({ ...withKey, voiceSystemPl: false })).toMatch(/ElevenLabs/);
+  });
+  it("Fish Audio ma priorytet nad torem systemowym (jak w speak)", () => {
+    expect(activeVoiceLabel({ ...baseVoice(), fishAudioApiKey: "K", fishAudioVoiceId: "V" })).toMatch(/Fish/);
+  });
+});
 
 describe("głos premium tłumacza", () => {
   beforeEach(() => store.setSettings({ keys: { ...store.settings.keys, gemini: "" } }));

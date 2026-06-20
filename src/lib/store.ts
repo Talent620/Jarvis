@@ -33,6 +33,12 @@ const emptyData: AppData = {
   world: { entities: [], relations: [] },
 };
 
+// Domyślna stopka e-mail (czysta, „wizytówkowa"): nazwisko, telefon, strona.
+// Eksportowana, by migracja i testy korzystały z jednego źródła prawdy.
+export const DEFAULT_EMAIL_SIGNATURE = "—\nMarcin Kubicki\ntel. +48 500 390 009\nwww.v-ai.pl";
+// Dawne domyślne stopki (bez nazwiska) — gdy użytkownik nigdy nie zmieniał, podnosimy do nowej.
+const LEGACY_EMAIL_SIGNATURES = ["—\ntel. +48 500 390 009\nwww.v-ai.pl"];
+
 const defaultSettings: Settings = {
   provider: "auto",
   keys: { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", openrouter: "", nvidia: "", github: "" },
@@ -42,7 +48,7 @@ const defaultSettings: Settings = {
   smtpPass: "",
   smtpHost: "smtp.gmail.com",
   smtpPort: 465,
-  emailSignature: "—\ntel. +48 500 390 009\nwww.v-ai.pl",
+  emailSignature: DEFAULT_EMAIL_SIGNATURE,
   syncUrl: "",
   syncToken: "",
   salesOsUrl: "",
@@ -236,6 +242,9 @@ function normalizeSettings(s: Settings & { anthropicApiKey?: string }): Settings
     /* brak import.meta.env (środowisko nie-Vite) — pomiń */
   }
   s.profile = { ...emptyProfile, ...(s.profile || {}) };
+  // Stopka e-mail: gdy użytkownik nigdy jej nie zmieniał (stara domyślna), podnieś do nowej
+  // z nazwiskiem. Własne, ręcznie ustawione stopki zostają nietknięte.
+  if (LEGACY_EMAIL_SIGNATURES.includes(s.emailSignature)) s.emailSignature = DEFAULT_EMAIL_SIGNATURE;
   return s;
 }
 
