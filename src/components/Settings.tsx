@@ -2506,6 +2506,21 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   {updInfo.platform === "web" ? "↻ Odśwież do najnowszej" : "⬇ Pobierz i zainstaluj najnowszą"}
                 </button>
               )}
+              <details style={{ marginTop: 8 }}>
+                <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Jak działa aktualizacja (i czemu antywirus ostrzega)</summary>
+                <p className="muted" style={{ fontSize: 12, marginTop: 6, lineHeight: 1.6 }}>
+                  • <b>Przeglądarka/PWA</b>: aktualizacja jest <b>płynna i automatyczna</b> — JARVIS czyści cache
+                  i przeładowuje się w miejscu, bez zamykania.<br />
+                  • <b>Telefon (APK)</b> i <b>Windows (EXE)</b>: system bezpieczeństwa nie pozwala aplikacji
+                  zainstalować się <i>sama po cichu</i> — zawsze potwierdzasz instalację jednym kliknięciem (to
+                  celowa ochrona Androida/Windows).<br />
+                  • <b>Ostrzeżenie antywirusa/SmartScreen</b> pojawia się, bo plik nie jest podpisany certyfikatem
+                  wydawcy. Pobranie idzie z oficjalnego <b>GitHub po HTTPS</b> — jest bezpieczne. Na Windows: „Więcej
+                  informacji → Uruchom mimo to". Trwałe usunięcie ostrzeżeń wymaga płatnego podpisu kodu
+                  (do rozważenia osobno).<br />
+                  • JARVIS <b>sam sprawdza</b> aktualizacje przy starcie (raz dziennie) i proponuje je jednym kliknięciem.
+                </p>
+              </details>
 
               <h3>Kopia danych</h3>
               <p className="muted">
