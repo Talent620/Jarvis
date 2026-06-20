@@ -204,6 +204,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [maestroMsg, setMaestroMsg] = useState("");
   const [sdChecking, setSdChecking] = useState(false);
   const [sdMsg, setSdMsg] = useState("");
+  const [sdModels, setSdModels] = useState<string[]>([]);
   const [findingServer, setFindingServer] = useState(false);
   const [findMsg, setFindMsg] = useState("");
   const [updBusy, setUpdBusy] = useState(false);
@@ -970,7 +971,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                         setSdChecking(true); setSdMsg("Sprawdzam serwer SD…");
                         const r = await detectSd(s.sdUrl);
                         setSdChecking(false);
-                        setSdMsg(r.ok ? `✅ Połączono. Modele: ${r.models.length ? r.models.join(", ") : "(brak checkpointów — dodaj model do models/Stable-diffusion)"}` : `❌ ${r.error}`);
+                        setSdModels(r.ok ? r.models : []);
+                        setSdMsg(r.ok ? `✅ Połączono. Modele: ${r.models.length ? r.models.length : "(brak checkpointów — dodaj model do models/Stable-diffusion)"}` : `❌ ${r.error}`);
                       }}
                     >
                       {sdChecking ? "⏳ Sprawdzam…" : "🔌 Sprawdź połączenie SD"}
@@ -978,6 +980,17 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   </div>
                 )}
                 {sdMsg && <p className="muted" style={{ fontSize: 12, marginTop: 4, whiteSpace: "pre-line" }}>{sdMsg}</p>}
+                {sdModels.length > 0 && (
+                  <div className="field" style={{ marginTop: 6 }}>
+                    <label>Model obrazu (checkpoint) — wybierz z serwera</label>
+                    <select value={s.sdModel} onChange={(e) => set({ sdModel: e.target.value })}>
+                      <option value="">Domyślny serwera</option>
+                      {sdModels.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <details className="journal-card" style={{ margin: "10px 0", padding: "10px 12px" }}>

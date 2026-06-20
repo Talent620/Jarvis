@@ -68,6 +68,7 @@ import { buildContext } from "./lib/context";
 import { isUncensored, PROVIDERS } from "./lib/providers/registry";
 import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import Guardian from "./components/Guardian";
+import { guardianDiagnose } from "./lib/guardian";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
 import { currentBrainMode } from "./lib/brainMode";
@@ -766,6 +767,23 @@ export default function App() {
         void warmNow(); // rozgrzej model, by pierwsza odpowiedź była natychmiastowa
       }
     });
+  }, []);
+
+  // Strażnik proaktywny: co jakiś czas (≤1×/20 min) sprawdza stan i podpowiada „Napraw", gdy coś nie gra.
+  useEffect(() => {
+    const tick = setInterval(async () => {
+      if (!store.settings.guardianProactive) return;
+      const last = Number(localStorage.getItem("jarvis.guardian.ts") || 0);
+      if (Date.now() - last < 20 * 60 * 1000) return;
+      localStorage.setItem("jarvis.guardian.ts", String(Date.now()));
+      try {
+        const st = await guardianDiagnose();
+        if (st.brain === "BRAK" || st.issues.length) {
+          toast("🛡 Strażnik: coś wymaga uwagi — otwórz 🛡 i kliknij „Napraw wszystko”.");
+        }
+      } catch { /* sieć — pomiń */ }
+    }, 60000);
+    return () => clearInterval(tick);
   }, []);
 
   // Status sieci dla wskaźnika HUD.

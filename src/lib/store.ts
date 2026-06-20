@@ -83,6 +83,8 @@ const defaultSettings: Settings = {
   warmth: 0.5,
   ollamaUrl: "",
   sdUrl: "",
+  sdModel: "",
+  guardianProactive: false,
   unfilteredLocal: false,
   deepThink: false,
   expertKnowledge: true,

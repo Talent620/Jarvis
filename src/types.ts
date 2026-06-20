@@ -403,6 +403,10 @@ export interface Settings {
   ollamaUrl: string;
   /** Adres lokalnego generatora obrazów Stable Diffusion (A1111/Forge, np. http://192.168.0.10:7860). */
   sdUrl: string;
+  /** Wybrany checkpoint/model SD (z listy serwera). Puste = model domyślny serwera. */
+  sdModel: string;
+  /** Strażnik proaktywny: co jakiś czas sprawdza stan i podpowiada „kliknij Napraw", gdy coś nie gra. */
+  guardianProactive: boolean;
   /** Tryb nieocenzurowany — działa realnie tylko z modelem lokalnym (Ollama):
    *  JARVIS nie dokłada własnych zastrzeżeń/moralizowania i odpowiada wprost. */
   unfilteredLocal: boolean;

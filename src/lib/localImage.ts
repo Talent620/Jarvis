@@ -130,6 +130,9 @@ export async function localSdGenerate(prompt: string, inputs: GenImage[] = [], o
   const hasImg = inputs.length > 0;
   const path = hasImg ? "/sdapi/v1/img2img" : "/sdapi/v1/txt2img";
   const body = hasImg ? sdImg2ImgBody(prompt, inputs[0].data, opts) : sdTxt2ImgBody(prompt, opts);
+  // Wybrany checkpoint (z listy serwera) — A1111 przyjmuje go per-żądanie przez override_settings.
+  const sdModel = store.settings.sdModel?.trim();
+  if (sdModel) (body as Record<string, unknown>).override_settings = { sd_model_checkpoint: sdModel };
   try {
     const genP = fetchTimeout(`${base}${path}`, {
       method: "POST",

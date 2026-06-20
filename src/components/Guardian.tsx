@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { toast } from "../lib/toast";
+import { store } from "../lib/store";
 import { guardian, guardianDiagnose, guardianAdvise, type GuardianStatus, type GuardianActionResult } from "../lib/guardian";
 
 // 🛡 Strażnik JARVISA — autonomiczny pomocnik z głównego menu: diagnozuje, naprawia,
@@ -12,6 +13,7 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
   const [msg, setMsg] = useState("");
   const [q, setQ] = useState("");
   const [advice, setAdvice] = useState("");
+  const [proactive, setProactive] = useState(store.settings.guardianProactive);
 
   const refresh = async () => {
     setBusy(true); setMsg("Sprawdzam stan JARVISA…");
@@ -89,6 +91,16 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
           </div>
 
           {msg && <p className="muted" style={{ fontSize: 12, whiteSpace: "pre-line" }}>{msg}</p>}
+
+          {/* Tryb proaktywny */}
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 8, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={proactive}
+              onChange={(e) => { setProactive(e.target.checked); store.setSettings({ guardianProactive: e.target.checked }); }}
+            />
+            🔔 Tryb proaktywny — Strażnik sam co jakiś czas sprawdza i podpowiada „Napraw", gdy coś nie gra.
+          </label>
 
           {/* Doradca AI */}
           <h3 style={{ marginTop: 14 }}>💬 Zapytaj Strażnika</h3>
