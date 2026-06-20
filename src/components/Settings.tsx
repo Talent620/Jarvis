@@ -1663,7 +1663,15 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               )}
               <div className="field">
                 <label>🎚 Stały głos urządzenia (wybierz jeden — nie będzie się zmieniał)</label>
-                <select value={s.voiceName} onChange={(e) => set({ voiceName: e.target.value })}>
+                <select
+                  value={s.voiceName}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    set({ voiceName: name });
+                    // Natychmiastowy odsłuch wybranego głosu — słychać każdy od razu po wskazaniu.
+                    speak("Tu JARVIS. Tak właśnie brzmię.", { ...store.settings, voiceName: name, speak: true, voiceSystemPl: true });
+                  }}
+                >
                   <option value="">Auto (systemowy domyślny — może się zmieniać)</option>
                   {voices.map((v) => (
                     <option key={v.name} value={v.name}>
@@ -1693,9 +1701,10 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   </button>
                 </div>
                 <p className="muted" style={{ marginTop: 4 }}>
-                  Telefon: lista pochodzi z silnika mowy Androida — wybrany głos jest <b>zablokowany</b>
-                  {" "}i nie „przeskakuje" już na translatorowy. Brak polskich głosów? Zainstaluj/„Mowa Google"
-                  w Ustawieniach Androida → Język i wprowadzanie → Zamiana tekstu na mowę.
+                  Wybór z listy <b>od razu odtwarza próbkę</b> — przeklikaj głosy i zostaw ten, który brzmi
+                  najlepiej. Telefon: lista pochodzi z silnika mowy Androida, a wybrany głos jest
+                  {" "}<b>zablokowany</b> i nie „przeskakuje" już na translatorowy. Brak polskich głosów?
+                  Zainstaluj silnik Mowa Google w Ustawieniach Androida → Język i wprowadzanie → Zamiana tekstu na mowę.
                 </p>
               </div>
               <button
