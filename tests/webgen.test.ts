@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges } from "../src/lib/webgen";
+import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages } from "../src/lib/webgen";
 import { store } from "../src/lib/store";
 
 const noKeys = { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", openrouter: "", nvidia: "", github: "" };
@@ -75,6 +75,29 @@ describe("Kreator stron — wycena (pure, rynek PL)", () => {
     expect(txt).toMatch(/Bud-Mar/);
     expect(txt).toMatch(/RAZEM \(jednorazowo\)/);
     expect(txt).toMatch(/rynkowo w Polsce/i);
+    expect(txt).toMatch(/zł/);
+  });
+});
+
+describe("Kreator stron — pakiety Start/Pro/Premium (pure)", () => {
+  it("trzy pakiety, rosnąca cena, Pro zalecany", () => {
+    const p = quotePackages("firma");
+    expect(p.map((x) => x.id)).toEqual(["start", "pro", "premium"]);
+    expect(p[0].price).toBeLessThan(p[1].price);
+    expect(p[1].price).toBeLessThan(p[2].price);
+    expect(p.find((x) => x.recommended)?.id).toBe("pro");
+  });
+  it("sklep: Premium ma integrację płatności; ceny zaokrąglone do 50", () => {
+    const p = quotePackages("sklep");
+    expect(p[2].features.some((f) => /płatnoś/i.test(f))).toBe(true);
+    for (const x of p) expect(x.price % 50).toBe(0);
+  });
+  it("formatPackages: nazwy, ceny i zalecany w tekście dla klienta", () => {
+    const txt = formatPackages(quotePackages("landing"), { business: "Nova" });
+    expect(txt).toMatch(/Nova/);
+    expect(txt).toMatch(/Start/);
+    expect(txt).toMatch(/Pro \(zalecany\)/);
+    expect(txt).toMatch(/Premium/);
     expect(txt).toMatch(/zł/);
   });
 });

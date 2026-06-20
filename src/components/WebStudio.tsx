@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, type SiteKind, type SiteStyle, type ClientBrief, type Quote } from "../lib/webgen";
+import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast } from "../lib/toast";
 import Guide from "./Guide";
@@ -51,6 +51,7 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
   const [showBrief, setShowBrief] = useState(false);
   const [brief, setBrief] = useState<ClientBrief>({});
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [packages, setPackages] = useState<QuotePackage[] | null>(null);
   const zl = (n: number) => `${Math.round(n).toLocaleString("pl-PL")} zł`;
 
   const briefText = buildClientBrief(brief);
@@ -254,6 +255,29 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
                 📄 Kopiuj ofertę cenową
               </button>
             </div>
+          )}
+
+          {/* 📦 Pakiety Start/Pro/Premium — ułatwiają klientowi decyzję */}
+          <button className="btn" style={{ marginTop: 8, width: "100%" }} disabled={busy} onClick={() => setPackages(quotePackages(kind, brief))}>
+            📦 Pakiety (Start / Pro / Premium)
+          </button>
+          {packages && (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 8 }}>
+                {packages.map((p) => (
+                  <div key={p.id} className="journal-card" style={{ padding: "8px 10px", border: p.recommended ? "1px solid var(--gold)" : undefined }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>{p.name}{p.recommended ? " ⭐" : ""}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "var(--cyan)", margin: "2px 0 6px" }}>{zl(p.price)}</div>
+                    <ul style={{ margin: 0, paddingLeft: 14, fontSize: 11, lineHeight: 1.5 }}>
+                      {p.features.map((f) => (<li key={f}>{f}</li>))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+              <button className="btn" style={{ marginTop: 8, width: "auto", padding: "5px 12px", fontSize: 12 }} onClick={() => copyWithToast(formatPackages(packages, brief), "Pakiety skopiowane ✓")}>
+                📄 Kopiuj pakiety dla klienta
+              </button>
+            </>
           )}
           {err && <p className="muted">{err}</p>}
         </div>

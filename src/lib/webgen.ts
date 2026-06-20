@@ -214,3 +214,57 @@ export function formatQuote(q: Quote, brief: ClientBrief = {}): string {
   ];
   return lines.join("\n");
 }
+
+// === Pakiety do wyboru (Start / Pro / Premium) — jak w agencjach, ułatwiają decyzję ===
+
+export type PackageId = "start" | "pro" | "premium";
+export interface QuotePackage { id: PackageId; name: string; price: number; recommended?: boolean; features: string[] }
+
+const round50 = (n: number) => Math.round(n / 50) * 50;
+
+/** Pure: trzy pakiety wg typu i briefu — rosnąca cena i zakres, Pro zalecany. */
+export function quotePackages(kind: SiteKind, brief: ClientBrief = {}): QuotePackage[] {
+  const m = MARKET[kind] || MARKET.auto;
+  const bump = (brief.sections || "").split(/[,;]/).filter((x) => x.trim()).length > 4 ? 1.15 : 1;
+  const isShop = kind === "sklep";
+  const start = round50(m.min * bump);
+  const pro = round50(((m.min + m.max) / 2) * 1.1 * bump);
+  const premium = round50(m.max * 1.4 * bump);
+  return [
+    { id: "start", name: "Start", price: start, features: [
+      `${isShop ? "Sklep" : "Strona"} wg projektu (w pełni responsywna)`,
+      "Podstawowe sekcje i treści startowe",
+      "Publikacja online",
+      "1 runda poprawek",
+    ] },
+    { id: "pro", name: "Pro", price: pro, recommended: true, features: [
+      "Wszystko ze Start",
+      "Copywriting — treści pod SEO",
+      "SEO podstawowe (meta, szybkość, mobilność)",
+      isShop ? "Koszyk + karty produktów" : "Formularz kontaktowy + animacje wejścia",
+      "2 rundy poprawek",
+    ] },
+    { id: "premium", name: "Premium", price: premium, features: [
+      "Wszystko z Pro",
+      isShop ? "Integracja płatności (Przelewy24/Stripe) + wysyłka" : "Integracje (newsletter / CRM)",
+      "SEO zaawansowane + analityka (GA4)",
+      "Grafiki i animacje premium",
+      "1 miesiąc opieki gratis",
+    ] },
+  ];
+}
+
+/** Pure: pakiety jako gotowy tekst oferty do wysłania klientowi. */
+export function formatPackages(pkgs: QuotePackage[], brief: ClientBrief = {}): string {
+  const who = brief.business?.trim() ? ` dla ${brief.business.trim()}` : "";
+  const blocks = pkgs.map((p) =>
+    [`${p.name}${p.recommended ? " (zalecany)" : ""} — ${zl(p.price)}`, ...p.features.map((f) => `  • ${f}`)].join("\n"),
+  );
+  return [
+    `Pakiety — strona internetowa${who}`,
+    ``,
+    ...blocks.flatMap((b) => [b, ""]),
+    `Ceny jednorazowe (wykonanie). Domena + hosting ~120–350 zł/rok, opcjonalna opieka ~80–300 zł/mc.`,
+    `Termin: zwykle 3–10 dni roboczych. Chętnie doprecyzuję zakres pod Państwa potrzeby.`,
+  ].join("\n");
+}
