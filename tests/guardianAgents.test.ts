@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import {
   aiAgent, voiceAgent, imageAgent, performanceAgent, updateAgent, integrationAgent,
-  runAgents, aggregateHealth, collectRecs, type ScanContext,
+  runAgents, aggregateHealth, collectRecs, formatScanReport, type ScanContext,
 } from "../src/lib/guardianAgents";
 import { store } from "../src/lib/store";
 
@@ -131,5 +131,13 @@ describe("Guardian Core — agregacja", () => {
     const keys = recs.map((r) => r.key);
     expect(new Set(keys).size).toBe(keys.filter(Boolean).length); // bez duplikatów kluczy
     expect(recs[0].key).toBe("fixAll"); // problem AI najwyżej
+  });
+  it("formatScanReport zawiera wynik, agentów i zalecenia", () => {
+    const reports = runAgents(ctx({ ollama: { configured: false, ok: false, models: [] }, cloudProviders: [], s: { provider: "auto" } as never }));
+    const txt = formatScanReport({ reports, health: aggregateHealth(reports), recs: collectRecs(reports) });
+    expect(txt).toMatch(/Raport Strażnika/);
+    expect(txt).toMatch(/Stan ogólny: \d+\/100/);
+    expect(txt).toMatch(/Inteligencja \(AI\)/);
+    expect(txt).toMatch(/Zalecenia:/);
   });
 });

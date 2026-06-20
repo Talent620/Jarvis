@@ -822,7 +822,7 @@ export default function App() {
           // Autopilot: dyrygent sam stosuje bezpieczne naprawy; inaczej podpowiada KONKRET.
           if (store.settings.guardianAutopilot) {
             const did = await guardianAutoHeal();
-            if (did) toast(did);
+            if (did) { toast(did); const { recordGuardianEvent } = await import("./lib/guardianHistory"); recordGuardianEvent("fix", did); }
           } else {
             toast(topRec?.problem ? `🛡 Strażnik: ${topRec.problem} Otwórz 🛡, by naprawić.` : "🛡 Strażnik: coś wymaga uwagi — otwórz 🛡.");
           }

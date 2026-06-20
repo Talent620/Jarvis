@@ -3,7 +3,7 @@ import { useEscape } from "../hooks/useEscape";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
 import { guardian, guardianAdvise, guardianExecute, guardianPlan, isOutgoingCommand, GUARDIAN_CAPABILITIES, type GuardianActionResult, type GuardianActionKey } from "../lib/guardian";
-import { guardianScan, type GuardianScan, type AgentReport, type AgentState } from "../lib/guardianAgents";
+import { guardianScan, formatScanReport, type GuardianScan, type AgentReport, type AgentState } from "../lib/guardianAgents";
 import { recordGuardianEvent, getGuardianHistory, clearGuardianHistory, topFixes, type GuardianEvent } from "../lib/guardianHistory";
 import { checkForUpdate, applyUpdate } from "../lib/updater";
 
@@ -313,7 +313,15 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
           </details>
         </div>
         <div className="panel-foot" style={{ display: "flex", gap: 8 }}>
-          <button className="btn" style={{ flex: 1 }} disabled={busy} onClick={refresh}>{busy ? "Pracuję…" : "🔄 Skanuj ponownie"}</button>
+          <button className="btn" style={{ flex: 1 }} disabled={busy} onClick={refresh}>{busy ? "Pracuję…" : "🔄 Skanuj"}</button>
+          <button
+            className="btn"
+            style={{ flex: 1 }}
+            disabled={busy || !scan}
+            onClick={async () => { if (!scan) return; try { await navigator.clipboard?.writeText(formatScanReport(scan)); toast("📋 Raport skopiowany do schowka."); } catch { setMsg(formatScanReport(scan)); } }}
+          >
+            📋 Raport
+          </button>
           <button className="btn primary" style={{ flex: 1 }} onClick={onClose}>Zamknij</button>
         </div>
       </div>

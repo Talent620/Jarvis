@@ -341,6 +341,25 @@ export interface GuardianScan {
   recs: AgentRec[]; // zdeduplikowane, najważniejsze najpierw
 }
 
+/** Pure: złóż czytelny RAPORT diagnostyczny (do skopiowania/wsparcia). Bez danych wrażliwych. */
+export function formatScanReport(scan: GuardianScan): string {
+  const dot = (st: AgentState) => (st === "ok" ? "🟢" : st === "warn" ? "🟡" : st === "problem" ? "🔴" : "⚪");
+  const lines: string[] = [
+    `🛡 Raport Strażnika JARVISA — ${new Date().toLocaleString("pl-PL")}`,
+    `Stan ogólny: ${scan.health.score}/100 (ocena ${scan.health.grade} — ${scan.health.label})`,
+    "",
+  ];
+  for (const a of scan.reports) {
+    lines.push(`${dot(a.state)} ${a.icon} ${a.name} — ${a.score}/100 (${a.summary})`);
+    for (const f of a.findings) lines.push(`   ${f.level === "problem" ? "🔴" : f.level === "warn" ? "⚠" : "•"} ${f.text}`);
+  }
+  if (scan.recs.length) {
+    lines.push("", "Zalecenia:");
+    for (const r of scan.recs.slice(0, 6)) lines.push(`   → ${r.label}${r.problem ? ` (${r.problem})` : ""}`);
+  }
+  return lines.join("\n");
+}
+
 /** Uruchom wszystkich agentów nad kontekstem (pure). */
 export function runAgents(ctx: ScanContext): AgentReport[] {
   return [aiAgent(ctx), performanceAgent(ctx), voiceAgent(ctx), imageAgent(ctx), integrationAgent(ctx), updateAgent(ctx)];
