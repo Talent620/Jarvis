@@ -2,6 +2,7 @@ import { store, uid } from "./store";
 import { primaryKey } from "./keys";
 import { fetchTimeout, appTokenHeader } from "./http";
 import { embedLocal, localEmbedUsable, LOCAL_EMBED_TAG } from "./localEmbed";
+import { durability, memoryScore } from "./memoryScore";
 import type { MemoryFact } from "../types";
 
 // Tag modelu embeddingów — porównujemy tylko wektory z tego samego modelu (różne wymiary).
@@ -168,15 +169,19 @@ export function rememberFact(key: string, value: string, projectId?: string): vo
         existing.embedding = undefined; // treść się zmieniła — przelicz wektor
         existing.embModel = undefined;
       }
+      // Wzmocnienie: ponowne wspomnienie tego samego faktu czyni go trwalszym.
+      existing.useCount = (existing.useCount || 0) + 1;
+      existing.lastUsedAt = Date.now();
     } else {
-      d.memory.unshift({ id: uid(), key, value, projectId, createdAt: Date.now() });
+      d.memory.unshift({ id: uid(), key, value, projectId, createdAt: Date.now(), useCount: 1, lastUsedAt: Date.now() });
     }
-    // Twardy limit: usuń najstarsze, nieprzypięte fakty ponad próg.
+    // Twardy limit: usuń wspomnienia o NAJNIŻSZEJ trwałości (decay × reinforcement), nie po prostu
+    // najstarsze — często wracające, ważne fakty przetrwają mimo wieku (pamięć ludzka).
     if (d.memory.length > MAX_STORED) {
       const keep = d.memory.filter((m) => m.pinned);
       const rest = d.memory
         .filter((m) => !m.pinned)
-        .sort((a, b) => b.createdAt - a.createdAt)
+        .sort((a, b) => durability(b) - durability(a))
         .slice(0, Math.max(0, MAX_STORED - keep.length));
       d.memory = [...keep, ...rest].sort((a, b) => b.createdAt - a.createdAt);
     }
@@ -209,7 +214,10 @@ async function retrieve(query: string, pid: string): Promise<MemoryFact[]> {
   const pinned = all.filter((m) => m.pinned);
   const indexed = all.filter((m) => !m.pinned && m.embedding?.length && m.embModel === q.tag);
   const unindexed = all.filter((m) => !m.pinned && !(m.embedding?.length && m.embModel === q.tag));
-  indexed.sort((a, b) => cosine(qv, b.embedding!) - cosine(qv, a.embedding!));
+  // Ranking hybrydowy: trafność semantyczna SPLECIONA z trwałością (świeżość + wzmocnienie),
+  // by ważne, często wracające fakty nie wypadały przez sam dystans wektorowy.
+  const now = Date.now();
+  indexed.sort((a, b) => memoryScore(b, cosine(qv, b.embedding!), now) - memoryScore(a, cosine(qv, a.embedding!), now));
 
   const result: MemoryFact[] = [...pinned];
   for (const m of indexed) {
@@ -220,7 +228,19 @@ async function retrieve(query: string, pid: string): Promise<MemoryFact[]> {
     if (result.length >= MAX_FACTS) break;
     result.push(m);
   }
-  return result.slice(0, MAX_FACTS);
+  const chosen = result.slice(0, MAX_FACTS);
+  reinforceUsed(chosen); // przypomnienie = wzmocnienie (pamięć ludzka)
+  return chosen;
+}
+
+/** Wzmocnij wspomnienia faktycznie przypomniane (bump useCount/lastUsedAt) — jeden zapis. */
+function reinforceUsed(facts: MemoryFact[]): void {
+  if (!facts.length) return;
+  const ids = new Set(facts.map((f) => f.id));
+  const now = Date.now();
+  store.setData((d) => {
+    for (const m of d.memory) if (ids.has(m.id)) { m.useCount = (m.useCount || 0) + 1; m.lastUsedAt = now; }
+  });
 }
 
 // --- Most do promptu (synchronicznego systemPrompt) ---

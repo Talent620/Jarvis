@@ -110,6 +110,10 @@ export interface MemoryFact {
    *  Porównujemy tylko wektory z tego samego modelu — inaczej wymiary się nie zgadzają. */
   embModel?: string;
   createdAt: number;
+  /** Pamięć ludzka: ostatnie przypomnienie/użycie (wzmacnia trwałość). */
+  lastUsedAt?: number;
+  /** Ile razy wspomnienie zostało wzmocnione (przypomniane/powtórzone). */
+  useCount?: number;
 }
 
 export interface Project {
