@@ -489,6 +489,10 @@ export interface Settings {
   n8nToken: string;
   /** Czy mówić odpowiedzi na głos. */
   speak: boolean;
+  /** JEDEN, jednoznaczny wybór silnika głosu — źródło prawdy dla speak() (koniec walki flag).
+   *  "system" = polski głos urządzenia (voiceName); "gemini"/"eleven"/"fish" = chmurowe premium;
+   *  "local" = offline na urządzeniu. Pusty = wywnioskuj ze starych ustawień (zgodność wstecz). */
+  voiceMode?: "system" | "gemini" | "eleven" | "fish" | "local";
   /** Prosty polski głos systemowy: pomija chmurowe TTS (Gemini/ElevenLabs) — spójny polski, offline. Domyślnie TAK. */
   voiceSystemPl: boolean;
   /** Voice Guardian: „Używaj głosu JARVISA" — przypina jeden, stały głos (voiceName) i wyłącza

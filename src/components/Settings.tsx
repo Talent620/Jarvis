@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
-import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, type NativeVoiceInfo } from "../lib/voice";
+import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, resolveVoiceMode, type NativeVoiceInfo, type VoiceMode } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED } from "../lib/providers/registry";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
@@ -145,6 +145,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   // GŁOS: zmiany obowiązują OD RAZU i nie giną po zamknięciu bez „Zapisz" —
   // (to było źródło „głos się nie zmienia": wybór ginął, bo nie był utrwalany).
   const setVoice = (patch: Partial<Settings>) => { setS((prev) => ({ ...prev, ...patch })); store.setSettings(patch); };
+  // JEDEN wybór silnika głosu (źródło prawdy) — steruje, co pokazujemy i co naprawdę zabrzmi.
+  const voiceMode = resolveVoiceMode(s);
   // Klucze zapisują się NATYCHMIAST do magazynu — nigdy nie giną po wyjściu bez „Zapisz".
   const setKey = (id: ProviderId, val: string) => {
     const keys = { ...s.keys, [id]: val };
@@ -1532,7 +1534,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <h3>Mowa i nasłuch</h3>
               <div className="row">
                 <span>Czytaj odpowiedzi na głos</span>
-                <Toggle on={s.speak} onClick={() => set({ speak: !s.speak })} />
+                <Toggle on={s.speak} onClick={() => setVoice({ speak: !s.speak })} />
               </div>
               <div className="row">
                 <span>Ciągłe nasłuchiwanie słowa „Jarvis"</span>
@@ -1655,8 +1657,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   ▶ Posłuchaj
                 </button>
               </div>
-              {/* Jeden przycisk: włącz ładny głos JARVISA i ZABLOKUJ go — koniec „translatorowego"
-                  skakania. Wybiera najlepszy polski głos urządzenia i wymusza spójny tor systemowy. */}
+              {/* 🚀 Jeden klik dla 99% ludzi: dobierz i przypnij najlepszy polski głos. */}
               <button
                 className="btn primary"
                 style={{ width: "100%" }}
@@ -1664,215 +1665,102 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   let list = voices;
                   if (!list.length) { list = await listSpeechVoices(); setVoices(list); }
                   const best = bestPlVoiceName(list);
-                  setVoice({ speak: true, voiceSystemPl: true, voicePinned: true, voiceName: best, voicePitch: 0.9, voiceRate: 1.0 });
-                  toast(best ? `🚀 Głos JARVISA włączony i przypięty na stałe: ${best}` : "🚀 Głos JARVISA włączony (polski systemowy). Brak osobnych głosów PL — zainstaluj silnik Mowa Google.");
-                  setTimeout(() => speak("Dzień dobry. Tu JARVIS. Tak będę teraz brzmiał — stale.", { ...store.settings, speak: true, voiceSystemPl: true, voicePinned: true, voiceName: best, voicePitch: 0.9, voiceRate: 1.0 }), 120);
+                  setVoice({ speak: true, voiceMode: "system", voiceSystemPl: true, voicePinned: true, geminiTts: false, localTts: false, voiceName: best, voicePitch: 0.9, voiceRate: 1.0 });
+                  toast(best ? `🚀 Włączono polski głos JARVISA: ${best}` : "🚀 Włączono polski głos systemowy. Brak osobnych głosów PL — zainstaluj „Mowa Google”.");
+                  setTimeout(() => speak("Dzień dobry. Tu JARVIS. Tak będę teraz brzmiał.", { ...store.settings, speak: true, voiceMode: "system", voiceName: best, voicePitch: 0.9, voiceRate: 1.0 }), 120);
                 }}
               >
-                🚀 Używaj głosu JARVISA (stały, ładny — bez translatora)
+                🚀 Najlepszy polski głos JARVISA (jeden klik)
               </button>
-              <p className="muted" style={{ marginTop: 4 }}>
-                Włącza mowę, wybiera najlepszy polski głos urządzenia i <b>przypina go na stałe</b> —
-                JARVIS nie przełączy się już na zmienny, „translatorowy" głos. Voice Guardian pilnuje wyboru
-                i przy starcie sprawdza, czy głos nadal istnieje.
-              </p>
-              <div className="row">
-                <span>
-                  🔒 Trzymaj jeden głos (Voice Guardian)
-                  <br />
-                  <span className="muted">
-                    Blokuje automatyczne podmiany — wszystkie odpowiedzi używają przypiętego głosu.
-                    Wyłącz, jeśli chcesz pozwolić na głosy chmurowe (Gemini/ElevenLabs).
-                  </span>
-                </span>
-                <Toggle on={s.voicePinned} onClick={() => setVoice({ voicePinned: !s.voicePinned })} />
+              <p className="muted" style={{ marginTop: 4 }}>Nie chcesz nic ustawiać? Kliknij to — dobierzemy i przypniemy ładny polski głos.</p>
+
+              {/* 🎙 JEDEN wybór silnika — to ON decyduje, jak brzmi JARVIS (koniec walki przełączników). */}
+              <div className="field" style={{ marginTop: 12 }}>
+                <label>🎙 Silnik głosu — wybierz jeden</label>
+                <select
+                  value={voiceMode}
+                  onChange={(e) => {
+                    const m = e.target.value as VoiceMode;
+                    // Ustaw JEDNO źródło prawdy + zsynchronizuj stare flagi, by reszta apki była spójna.
+                    setVoice({ voiceMode: m, speak: true, voiceSystemPl: m === "system", geminiTts: m === "gemini", localTts: m === "local" });
+                    setTimeout(() => speak("Tak właśnie teraz brzmię.", { ...store.settings, ...s, voiceMode: m, speak: true }), 120);
+                  }}
+                >
+                  <option value="system">🇵🇱 Polski systemowy — zalecane (offline, spójny)</option>
+                  <option value="gemini">🎙 Gemini TTS — darmowy premium (klucz Gemini)</option>
+                  <option value="eleven">⭐ ElevenLabs — premium (klucz)</option>
+                  <option value="fish">🐟 Fish Audio — premium (klucz)</option>
+                  <option value="local">🧠 Lokalny offline (Kokoro)</option>
+                </select>
               </div>
-              <div className="row">
-                <span>
-                  🇵🇱 Prosty polski głos (systemowy)
-                  <br />
-                  <span className="muted">
-                    Spójny polski głos z systemu — pomija głosy chmurowe (Gemini/ElevenLabs), które bywają
-                    z angielskim akcentem i się „zmieniają". Zalecane, gdy chcesz po prostu poprawny polski.
-                  </span>
-                </span>
-                <Toggle on={s.voiceSystemPl} onClick={() => setVoice({ voiceSystemPl: !s.voiceSystemPl })} />
-              </div>
-              <div className="row">
-                <span>
-                  🎙 Darmowy głos premium (Gemini TTS)
-                  <br />
-                  <span className="muted">wysoka jakość, naturalny — wymaga klucza Gemini (darmowy). Działa, gdy „prosty polski głos" wyłączony.</span>
-                </span>
-                <Toggle on={s.geminiTts} onClick={() => setVoice({ geminiTts: !s.geminiTts })} />
-              </div>
-              {s.geminiTts && (
+
+              {/* Pokazujemy TYLKO opcje wybranego silnika — koniec przewijania przez wszystko naraz. */}
+              {voiceMode === "system" && (
+                <>
+                  <div className="field">
+                    <label>🎚 Głos urządzenia (kliknij, by usłyszeć)</label>
+                    <select
+                      value={s.voiceName}
+                      onChange={(e) => { const name = e.target.value; setVoice({ voiceName: name, speak: true }); speak("Tu JARVIS. Tak właśnie brzmię.", { ...store.settings, ...s, voiceName: name, speak: true }); }}
+                    >
+                      <option value="">Auto (systemowy domyślny)</option>
+                      {voices.map((v) => (
+                        <option key={v.name} value={v.name}>{v.name}{v.lang ? ` (${v.lang})` : ""}{v.network ? " · sieciowy" : ""}</option>
+                      ))}
+                    </select>
+                    <div className="chips" style={{ gap: 8, marginTop: 6 }}>
+                      <button className="btn" onClick={() => { const best = bestPlVoiceName(voices); if (best) { setVoice({ voiceName: best, speak: true }); } else { void listSpeechVoices().then((vs) => { setVoices(vs); const b = bestPlVoiceName(vs); if (b) setVoice({ voiceName: b, speak: true }); }); } }}>🇵🇱 Najlepszy polski</button>
+                      <button className="btn" onClick={() => speak("Dzień dobry. Tu JARVIS. Tak właśnie brzmię.", { ...store.settings, ...s, speak: true })}>🧪 Odsłuch</button>
+                    </div>
+                    <p className="muted" style={{ marginTop: 4 }}>
+                      Brak polskich głosów na liście? Telefon: zainstaluj „Mowa Google” (Ustawienia Androida → Język → Zamiana tekstu na mowę). Komputer: dodaj polski głos w ustawieniach systemu (Windows: Ustawienia → Czas i język → Mowa).
+                    </p>
+                  </div>
+                  <label style={{ fontSize: 13, fontWeight: 600 }}>Ton i tempo</label>
+                  <div className="chips" style={{ margin: "4px 0 8px" }}>
+                    {[{ l: "JARVIS", p: 0.9, r: 1.0 }, { l: "Głęboki", p: 0.7, r: 0.95 }, { l: "Neutralny", p: 1.0, r: 1.0 }, { l: "Energiczny", p: 1.1, r: 1.15 }].map((v) => (
+                      <button key={v.l} className="chip" onClick={() => setVoice({ voicePitch: v.p, voiceRate: v.r })}>{v.l}</button>
+                    ))}
+                  </div>
+                  <div className="field"><label>Wysokość głosu: {s.voicePitch.toFixed(1)}</label><input type="range" min="0.1" max="2" step="0.1" value={s.voicePitch} onChange={(e) => setVoice({ voicePitch: Number(e.target.value) })} /></div>
+                  <div className="field"><label>Tempo mowy: {s.voiceRate.toFixed(1)}</label><input type="range" min="0.5" max="1.8" step="0.1" value={s.voiceRate} onChange={(e) => setVoice({ voiceRate: Number(e.target.value) })} /></div>
+                </>
+              )}
+
+              {voiceMode === "gemini" && (
                 <div className="field">
                   <label>Głos Gemini</label>
                   <select value={s.geminiVoice} onChange={(e) => setVoice({ geminiVoice: e.target.value })}>
-                    {[
-                      ["Charon", "Charon — głęboki, spokojny (JARVIS)"],
-                      ["Orus", "Orus — stanowczy, męski"],
-                      ["Fenrir", "Fenrir — energiczny, męski"],
-                      ["Puck", "Puck — żywy"],
-                      ["Kore", "Kore — wyrazisty"],
-                      ["Zephyr", "Zephyr — jasny"],
-                      ["Aoede", "Aoede — ciepły"],
-                      ["Leda", "Leda — młodzieńczy"],
-                    ].map(([id, label]) => (
-                      <option key={id} value={id}>
-                        {label}
-                      </option>
+                    {[["Charon", "Charon — głęboki, spokojny (JARVIS)"], ["Orus", "Orus — stanowczy, męski"], ["Fenrir", "Fenrir — energiczny, męski"], ["Puck", "Puck — żywy"], ["Kore", "Kore — wyrazisty"], ["Zephyr", "Zephyr — jasny"], ["Aoede", "Aoede — ciepły"], ["Leda", "Leda — młodzieńczy"]].map(([id, label]) => (
+                      <option key={id} value={id}>{label}</option>
                     ))}
                   </select>
-                  <p className="muted" style={{ marginTop: 4 }}>
-                    Najlepszy darmowy głos. Działa też w „Przetestuj głos" niżej. Gdy wpiszesz
-                    klucz ElevenLabs/Fish, mają one priorytet.
-                  </p>
+                  {!s.keys.gemini?.trim()
+                    ? <p className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>⚠ Wymaga klucza Gemini (zakładka „AI”). Bez niego zabrzmi głos systemowy.</p>
+                    : <p className="muted" style={{ fontSize: 12 }}>Najlepszy darmowy głos, naturalny. Kliknij „▶ Posłuchaj” u góry, by sprawdzić.</p>}
                 </div>
               )}
-              <div className="field">
-                <label>🎚 Stały głos urządzenia (wybierz jeden — nie będzie się zmieniał)</label>
-                <select
-                  value={s.voiceName}
-                  onChange={(e) => {
-                    const name = e.target.value;
-                    setVoice({ voiceName: name, speak: true });
-                    // Natychmiastowy odsłuch wybranego głosu — słychać każdy od razu po wskazaniu.
-                    speak("Tu JARVIS. Tak właśnie brzmię.", { ...store.settings, ...s, voiceName: name, speak: true });
-                  }}
-                >
-                  <option value="">Auto (systemowy domyślny — może się zmieniać)</option>
-                  {voices.map((v) => (
-                    <option key={v.name} value={v.name}>
-                      {v.name}{v.lang ? ` (${v.lang})` : ""}{v.network ? " · sieciowy" : ""}
-                    </option>
-                  ))}
-                </select>
-                <div className="chips" style={{ gap: 8, marginTop: 6 }}>
-                  <button
-                    className="btn"
-                    onClick={() => {
-                      const best = bestPlVoiceName(voices);
-                      if (best) { setVoice({ voiceName: best, voiceSystemPl: true, speak: true }); }
-                      else { void listSpeechVoices().then((vs) => { setVoices(vs); const b = bestPlVoiceName(vs); if (b) setVoice({ voiceName: b, voiceSystemPl: true, speak: true }); }); }
-                    }}
-                  >
-                    🇵🇱 Najlepszy polski
-                  </button>
-                  <button
-                    className="btn"
-                    onClick={() => { setVoice({ voicePinned: true, voiceSystemPl: true, speak: true }); toast(s.voiceName ? `⭐ Ustawiono jako główny głos: ${s.voiceName}` : "⭐ Ustawiono polski systemowy jako główny głos (przypięty)."); }}
-                  >
-                    ⭐ Ustaw jako główny głos
-                  </button>
-                  <button className="btn" onClick={() => speak("Dzień dobry. Tu JARVIS. Tak właśnie brzmię.", { ...store.settings, ...s, speak: true })}>
-                    🧪 Odsłuch
-                  </button>
-                </div>
-                <p className="muted" style={{ marginTop: 4 }}>
-                  Wybór z listy <b>od razu odtwarza próbkę</b> — przeklikaj głosy i zostaw ten, który brzmi
-                  najlepiej. Telefon: lista pochodzi z silnika mowy Androida, a wybrany głos jest
-                  {" "}<b>zablokowany</b> i nie „przeskakuje" już na translatorowy. Brak polskich głosów?
-                  Zainstaluj silnik Mowa Google w Ustawieniach Androida → Język i wprowadzanie → Zamiana tekstu na mowę.
-                </p>
-              </div>
-              <button
-                className="btn"
-                onClick={() =>
-                  setVoice({
-                    speak: true,
-                    voicePitch: 0.85,
-                    voiceRate: 0.98,
-                    elevenLabsVoiceId:
-                      s.elevenLabsVoiceId || (s.elevenLabsApiKey ? "onwK4e9ZLuTAKqWW03F9" : ""),
-                  })
-                }
-              >
-                🎩 Ustaw głos JARVIS (Iron Man)
-              </button>
-              <p className="muted">
-                Najbliższy legalny odpowiednik filmowego JARVIS-a: niski, brytyjski męski głos.
-                Z kluczem ElevenLabs użyje stockowego głosu „Daniel"; bez niego — najlepszego
-                głosu systemowego z dostrojonym tonem.
-              </p>
-              <div className="chips" style={{ marginBottom: 8 }}>
-                {[
-                  { l: "JARVIS", p: 0.9, r: 1.0 },
-                  { l: "Głęboki", p: 0.7, r: 0.95 },
-                  { l: "Neutralny", p: 1.0, r: 1.0 },
-                  { l: "Energiczny", p: 1.1, r: 1.15 },
-                ].map((v) => (
-                  <button key={v.l} className="chip" onClick={() => setVoice({ voicePitch: v.p, voiceRate: v.r })}>
-                    {v.l}
-                  </button>
-                ))}
-              </div>
-              <div className="field">
-                <label>Wysokość głosu: {s.voicePitch.toFixed(1)}</label>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="2"
-                  step="0.1"
-                  value={s.voicePitch}
-                  onChange={(e) => setVoice({ voicePitch: Number(e.target.value) })}
-                />
-              </div>
-              <div className="field">
-                <label>Tempo mowy: {s.voiceRate.toFixed(1)}</label>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="1.8"
-                  step="0.1"
-                  value={s.voiceRate}
-                  onChange={(e) => setVoice({ voiceRate: Number(e.target.value) })}
-                />
-              </div>
-              <button className="btn" onClick={() => speak("Dzień dobry. Systemy w pełni sprawne.", s)}>
-                ▶ Przetestuj głos
-              </button>
 
-              <h3>Premium głos (opcjonalnie)</h3>
-              <div className="field">
-                <label>Klucz API ElevenLabs</label>
-                <input
-                  type="password"
-                  value={s.elevenLabsApiKey}
-                  placeholder="(opcjonalnie)"
-                  onChange={(e) => setVoice({ elevenLabsApiKey: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>ID głosu ElevenLabs</label>
-                <input
-                  value={s.elevenLabsVoiceId}
-                  placeholder="np. JBFqnCBsd6RMkjVDRZzb"
-                  onChange={(e) => setVoice({ elevenLabsVoiceId: e.target.value })}
-                />
-              </div>
-              <p className="muted">
-                Fish Audio — jakość zbliżona do ElevenLabs, taniej; sklonuj głos z 10–15 s próbki.
-                Ma priorytet nad ElevenLabs, gdy uzupełniony.
-              </p>
-              <div className="field">
-                <label>Klucz API Fish Audio</label>
-                <input
-                  type="password"
-                  value={s.fishAudioApiKey}
-                  placeholder="(opcjonalnie)"
-                  onChange={(e) => setVoice({ fishAudioApiKey: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>reference_id głosu Fish Audio</label>
-                <input
-                  value={s.fishAudioVoiceId}
-                  placeholder="np. 7f92f8afb8ec43bf81429cc1c9199cb1"
-                  onChange={(e) => setVoice({ fishAudioVoiceId: e.target.value })}
-                />
-              </div>
+              {voiceMode === "eleven" && (
+                <>
+                  <div className="field"><label>Klucz API ElevenLabs</label><input type="password" value={s.elevenLabsApiKey} placeholder="(wymagany)" onChange={(e) => setVoice({ elevenLabsApiKey: e.target.value })} /></div>
+                  <div className="field"><label>ID głosu ElevenLabs</label><input value={s.elevenLabsVoiceId} placeholder="np. JBFqnCBsd6RMkjVDRZzb" onChange={(e) => setVoice({ elevenLabsVoiceId: e.target.value })} /></div>
+                  <button className="btn" onClick={() => setVoice({ speak: true, voicePitch: 0.85, voiceRate: 0.98, elevenLabsVoiceId: s.elevenLabsVoiceId || (s.elevenLabsApiKey ? "onwK4e9ZLuTAKqWW03F9" : "") })}>🎩 Ustaw głos JARVIS (Iron Man)</button>
+                  <p className="muted">Najbliższy legalny odpowiednik filmowego JARVIS-a: niski, brytyjski męski głos „Daniel”.</p>
+                </>
+              )}
+
+              {voiceMode === "fish" && (
+                <>
+                  <p className="muted">Fish Audio — jakość zbliżona do ElevenLabs, taniej; możesz sklonować głos z 10–15 s próbki.</p>
+                  <div className="field"><label>Klucz API Fish Audio</label><input type="password" value={s.fishAudioApiKey} placeholder="(wymagany)" onChange={(e) => setVoice({ fishAudioApiKey: e.target.value })} /></div>
+                  <div className="field"><label>reference_id głosu Fish Audio</label><input value={s.fishAudioVoiceId} placeholder="np. 7f92f8afb8ec43bf81429cc1c9199cb1" onChange={(e) => setVoice({ fishAudioVoiceId: e.target.value })} /></div>
+                </>
+              )}
+
+              {voiceMode === "local" && (
+                <p className="muted">🧠 Głos w pełni offline na Twoim urządzeniu (model Kokoro). Pierwsze użycie pobiera model; potem działa bez internetu i nic nie wychodzi do chmury.</p>
+              )}
             </>
           )}
 

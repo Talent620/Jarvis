@@ -371,18 +371,34 @@ async function geminiTts(text: string, settings: Settings): Promise<boolean> {
   return geminiSpeak(text, settings.geminiVoice?.trim() || "Charon");
 }
 
+export type VoiceMode = "system" | "gemini" | "eleven" | "fish" | "local";
+
 /**
- * Pure: czytelna etykieta AKTYWNEGO głosu — dokładnie wg tej samej kolejności, którą stosuje
- * speak() (lokalny → Fish → [gdy nie „prosty PL"] ElevenLabs → Gemini → systemowy). Dzięki
- * temu w Ustawieniach widać JEDNYM rzutem oka, co naprawdę zabrzmi (koniec zgadywania).
+ * Pure: rozstrzygnij JEDNOZNACZNIE, którego silnika głosu użyć. Najpierw jawny wybór użytkownika
+ * (voiceMode — źródło prawdy). Gdy go brak (stary profil), wywnioskuj ze starych flag — zgodność wstecz.
+ */
+export function resolveVoiceMode(s: Settings): VoiceMode {
+  if (s.voiceMode) return s.voiceMode;
+  if (s.localTts) return "local";
+  if (s.fishAudioApiKey && s.fishAudioVoiceId) return "fish";
+  const basicPl = s.voicePinned || s.voiceSystemPl !== false;
+  if (!basicPl && s.elevenLabsApiKey && s.elevenLabsVoiceId) return "eleven";
+  if (!basicPl && s.geminiTts && s.keys?.gemini?.trim()) return "gemini";
+  return "system";
+}
+
+/**
+ * Pure: czytelna etykieta tego, co NAPRAWDĘ zabrzmi (uwzględnia brak klucza → spadek do systemowego).
+ * Dzięki temu w Ustawieniach widać jednym rzutem oka aktualny głos — koniec zgadywania.
  */
 export function activeVoiceLabel(s: Settings): string {
   if (!s.speak) return "🔇 wyłączony";
-  if (s.localTts) return "🧠 lokalny (offline)";
-  if (s.fishAudioApiKey && s.fishAudioVoiceId) return "🐟 Fish Audio (premium)";
-  const basicPl = s.voicePinned || s.voiceSystemPl !== false;
-  if (!basicPl && s.elevenLabsApiKey && s.elevenLabsVoiceId) return "🎙 ElevenLabs (premium)";
-  if (!basicPl && s.geminiTts && s.keys?.gemini?.trim()) return `🎙 Gemini TTS (${s.geminiVoice || "Charon"})`;
+  const mode = resolveVoiceMode(s);
+  if (mode === "local") return "🧠 lokalny (offline)";
+  if (mode === "fish" && s.fishAudioApiKey && s.fishAudioVoiceId) return "🐟 Fish Audio (premium)";
+  if (mode === "eleven" && s.elevenLabsApiKey && s.elevenLabsVoiceId) return "🎙 ElevenLabs (premium)";
+  if (mode === "gemini" && s.keys?.gemini?.trim()) return `🎙 Gemini TTS (${s.geminiVoice || "Charon"})`;
+  // system albo premium bez klucza → realnie zabrzmi głos systemowy (PL).
   return s.voiceName?.trim() ? `🇵🇱 ${s.voiceName}${s.voicePinned ? " · przypięty" : ""}` : "🇵🇱 polski systemowy (auto)";
 }
 
@@ -392,8 +408,11 @@ export async function speak(text: string, settings: Settings): Promise<void> {
   const myToken = speakToken; // bieżąca „tura mówienia"; nowszy speak()/stop unieważni
   speakingDepth++;
   try {
+  // JEDEN jednoznaczny wybór silnika (voiceMode) — koniec „walki flag". Każdy premium tor
+  // przy braku klucza/niepowodzeniu spada bezpiecznie do głosu systemowego (PL) niżej.
+  const mode = resolveVoiceMode(settings);
   // Głos on-device (Kokoro) — prywatnie, bez chmury. Opcja; przy niepowodzeniu fallback niżej.
-  if (settings.localTts && localTtsUsable()) {
+  if (mode === "local" && localTtsUsable()) {
     try {
       const blob = await synthLocal(text);
       if (myToken !== speakToken) return; // nowsza tura przejęła w czasie syntezy
@@ -403,8 +422,8 @@ export async function speak(text: string, settings: Settings): Promise<void> {
     }
   }
 
-  // Premium głos przez Fish Audio (tani, topowy klon), jeśli podano klucz.
-  if (settings.fishAudioApiKey && settings.fishAudioVoiceId) {
+  // Premium głos przez Fish Audio (tani, topowy klon), jeśli wybrany i z kluczem.
+  if (mode === "fish" && settings.fishAudioApiKey && settings.fishAudioVoiceId) {
     try {
       const res = await fetchTimeout("https://api.fish.audio/v1/tts", {
         method: "POST",
@@ -422,13 +441,8 @@ export async function speak(text: string, settings: Settings): Promise<void> {
     }
   }
 
-  // Prosty polski głos systemowy: pomiń chmurowe TTS (ElevenLabs/Gemini), które bywają z angielskim
-  // akcentem i „zmieniają się" — idź prosto do natywnego/przeglądarkowego głosu PL (spójnie, offline).
-  // Voice Guardian (voicePinned): „Używaj głosu JARVISA" wymusza ten tor i wyłącza WSZELKIE podmiany.
-  const basicPl = settings.voicePinned || settings.voiceSystemPl !== false;
-
-  // Premium głos przez ElevenLabs (najbliżej oryginalnego JARVIS-a), jeśli podano klucz.
-  if (!basicPl && settings.elevenLabsApiKey && settings.elevenLabsVoiceId) {
+  // Premium głos przez ElevenLabs (najbliżej oryginalnego JARVIS-a), jeśli wybrany i z kluczem.
+  if (mode === "eleven" && settings.elevenLabsApiKey && settings.elevenLabsVoiceId) {
     try {
       const res = await fetchTimeout(
         `https://api.elevenlabs.io/v1/text-to-speech/${settings.elevenLabsVoiceId}`,
@@ -454,8 +468,8 @@ export async function speak(text: string, settings: Settings): Promise<void> {
     }
   }
 
-  // Darmowy, wysokiej jakości głos przez Gemini TTS (najlepszy darmowy wybór) — chyba że prosty PL.
-  if (!basicPl && settings.geminiTts !== false && primaryKey("gemini")) {
+  // Darmowy, wysokiej jakości głos przez Gemini TTS (gdy wybrany i jest klucz).
+  if (mode === "gemini" && primaryKey("gemini")) {
     if (await geminiTts(text, settings)) return;
   }
 

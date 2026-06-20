@@ -1,12 +1,28 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { geminiSpeak, TTS_VOICES, bestPlVoiceName, voiceQualityScore, checkPinnedVoice, activeVoiceLabel } from "../src/lib/voice";
+import { geminiSpeak, TTS_VOICES, bestPlVoiceName, voiceQualityScore, checkPinnedVoice, activeVoiceLabel, resolveVoiceMode } from "../src/lib/voice";
 import { store } from "../src/lib/store";
 import type { Settings } from "../src/types";
 
 const baseVoice = () => ({ ...store.settings, speak: true, localTts: false, fishAudioApiKey: "", fishAudioVoiceId: "", elevenLabsApiKey: "", elevenLabsVoiceId: "", geminiTts: false, voicePinned: false, voiceSystemPl: true, voiceName: "", keys: { ...store.settings.keys, gemini: "" } }) as Settings;
 
+describe("resolveVoiceMode — JEDNO źródło prawdy o silniku głosu", () => {
+  it("jawny wybór (voiceMode) wygrywa nad starymi flagami", () => {
+    expect(resolveVoiceMode({ ...baseVoice(), voiceMode: "gemini", voiceSystemPl: true })).toBe("gemini");
+    expect(resolveVoiceMode({ ...baseVoice(), voiceMode: "system", geminiTts: true, fishAudioApiKey: "K", fishAudioVoiceId: "V" })).toBe("system");
+  });
+  it("bez jawnego wyboru → wnioskuje ze starych ustawień (domyślnie systemowy)", () => {
+    expect(resolveVoiceMode(baseVoice())).toBe("system");
+    expect(resolveVoiceMode({ ...baseVoice(), fishAudioApiKey: "K", fishAudioVoiceId: "V" })).toBe("fish");
+    expect(resolveVoiceMode({ ...baseVoice(), voiceSystemPl: false, elevenLabsApiKey: "K", elevenLabsVoiceId: "V" })).toBe("eleven");
+  });
+});
+
 describe("activeVoiceLabel — jasny status aktywnego głosu (koniec chaosu)", () => {
+  it("jawny Gemini z kluczem → etykieta Gemini; bez klucza → spada do systemowego", () => {
+    expect(activeVoiceLabel({ ...baseVoice(), voiceMode: "gemini", keys: { ...baseVoice().keys, gemini: "K" } })).toMatch(/Gemini/);
+    expect(activeVoiceLabel({ ...baseVoice(), voiceMode: "gemini", voiceName: "Zofia" })).toMatch(/Zofia/); // brak klucza → systemowy
+  });
   it("mowa wyłączona → 🔇", () => {
     expect(activeVoiceLabel({ ...baseVoice(), speak: false })).toMatch(/wyłączony/);
   });
