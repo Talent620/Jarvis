@@ -12,6 +12,8 @@ export const COGNITIVE_CORE = [
   "- Używaj liczb i base rate; szacuj rzędy wielkości, gdy się da.",
   "- Steelman: rozważ najmocniejszą wersję przeciwnego poglądu.",
   "- Brzytwa Ockhama: najprostsze wyjaśnienie pasujące do faktów.",
+  "- Przy obliczeniach licz KROK PO KROKU i sprawdź wynik ponownie; nie zgaduj liczb.",
+  "- Wychwyć fałszywe lub podchwytliwe założenie w pytaniu i nazwij je, zamiast brnąć.",
   "- Oddziel: co wiesz / co zakładasz / czego nie wiesz — i podaj poziom pewności.",
   "- Wybierz opcję o najwyższej wartości oczekiwanej i podaj następny krok.",
 ].join("\n");

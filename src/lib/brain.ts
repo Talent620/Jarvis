@@ -9,7 +9,7 @@ import { buildProfileBlock } from "./profile";
 import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, isKeyError, humanize, isComplex, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
-import { classifyTask, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
+import { classifyTask, needsDeepThink, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
 import { recordEpisode, loadEpisodes } from "./episodicMemory";
 import { buildFusionBlock } from "./contextFusion";
@@ -527,7 +527,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
 
   // Głębokie myślenie: przy złożonych pytaniach najpierw wewnętrzna analiza.
   let deepAnalysis = "";
-  if (store.settings.deepThink && !store.settings.interpreterMode && isComplex(lastUser?.content || "")) {
+  if (store.settings.deepThink && !store.settings.interpreterMode && needsDeepThink(lastUser?.content || "")) {
     try {
       const a = await PROVIDERS[resolved.provider].impl({
         system: REASONING_SYSTEM,

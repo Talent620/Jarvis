@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   classifyTask,
+  needsDeepThink,
   groqModelFor,
   GROQ_SCOUT,
   GROQ_KIMI,
@@ -22,6 +23,33 @@ describe("modelRouter — klasyfikacja zadania", () => {
   });
   it("bardzo długie zapytanie → complex", () => {
     expect(classifyTask("a".repeat(700), false).kind).toBe("complex");
+  });
+  it("zadanie matematyczne/ilościowe → complex (liczenie)", () => {
+    expect(classifyTask("ile wynosi 17% z 240", false).kind).toBe("complex");
+    expect(classifyTask("oblicz 128 * 47", false).kind).toBe("complex");
+    expect(classifyTask("12 + 30 = ?", false).kind).toBe("complex");
+  });
+  it("logika/wnioskowanie → complex", () => {
+    expect(classifyTask("rozwiąż ten sylogizm logiczny", false).kind).toBe("complex");
+  });
+});
+
+describe("modelRouter — needsDeepThink (kiedy myśleć głęboko)", () => {
+  it("matematyka / kod / analiza / logika → tak", () => {
+    expect(needsDeepThink("oblicz 17% z 240")).toBe(true);
+    expect(needsDeepThink("zoptymalizuj ten algorytm")).toBe(true);
+    expect(needsDeepThink("przeanalizuj i porównaj dwie strategie")).toBe(true);
+    expect(needsDeepThink("udowodnij, że √2 jest niewymierne")).toBe(true);
+  });
+  it("zwykłe generowanie treści (mail/post/życzenia) → NIE (bez spowalniania)", () => {
+    expect(needsDeepThink("napisz maila do Jana z podziękowaniem")).toBe(false);
+    expect(needsDeepThink("ułóż życzenia urodzinowe")).toBe(false);
+    expect(needsDeepThink("stwórz opis produktu")).toBe(false);
+  });
+  it("krótkie/proste → NIE; bardzo długie → tak", () => {
+    expect(needsDeepThink("która godzina?")).toBe(false);
+    expect(needsDeepThink("a".repeat(600))).toBe(true);
+    expect(needsDeepThink("")).toBe(false);
   });
 });
 

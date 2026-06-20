@@ -15,25 +15,50 @@ import { idbGet, idbSet } from "./db";
 
 export type TaskKind = "simple" | "complex" | "vision";
 
-// Sygnały zadania wymagającego mocnego rozumowania (kod, analiza, wieloetapowość).
+// Sygnały zadania wymagającego mocnego rozumowania (kod, analiza, logika, wieloetapowość).
 const REASONING_CUES =
-  /\b(dlaczego|przeanalizuj|analiz|udowodnij|zaprojektuj|napisz kod|kod\b|debug|porównaj|porownaj|strateg|algorytm|wyprowadź|krok po kroku|zoptymalizuj|optymaliz|refaktor|architekt|zaplanuj)\b/i;
+  /\b(dlaczego|przeanalizuj|analiz|udowodnij|zaprojektuj|napisz kod|kod\b|debug|debuguj|stack ?trace|błąd w kodzie|porównaj|porownaj|strateg|algorytm|wyprowadź|krok po kroku|zoptymalizuj|optymaliz|refaktor|architekt|zaplanuj|sylogizm|paradoks|logiczn|wytłumacz dlaczego|wnioskuj|implikacj)\b/i;
+
+// Sygnały MATEMATYCZNE/ILOŚCIOWE (oblicz, równanie, działanie, procenty) — wymagają liczenia.
+const MATH_CUES =
+  /\b(oblicz|policz|ile (wynosi|to (będzie|jest)|kosztuj|wyjdzie)|równani|rownani|pierwiastek|całk|pochodn|procent|odsetek|silni)\b|\d+\s*[+\-x*/^%]\s*\d+|=\s*\?/i;
 
 /** Sklasyfikuj zadanie na podstawie ostatniej wiadomości użytkownika. Czysta funkcja. */
 export function classifyTask(text: string, hasImage: boolean): { kind: TaskKind; reason: string } {
   if (hasImage) return { kind: "vision", reason: "wiadomość zawiera obraz → model z wizją" };
   const t = text || "";
   const long = t.length > 600;
-  const reasoning = REASONING_CUES.test(t);
+  const math = MATH_CUES.test(t);
+  const reasoning = REASONING_CUES.test(t) || math;
   if (isComplex(t) || reasoning || long) {
-    const reason = reasoning
-      ? "zadanie wymaga rozumowania (kod/analiza)"
-      : long
-        ? "długie/złożone zapytanie"
-        : "klasyfikacja: złożone";
+    const reason = math
+      ? "zadanie ilościowe/matematyczne → liczenie krok po kroku"
+      : reasoning
+        ? "zadanie wymaga rozumowania (kod/analiza/logika)"
+        : long
+          ? "długie/złożone zapytanie"
+          : "klasyfikacja: złożone";
     return { kind: "complex", reason };
   }
   return { kind: "simple", reason: "krótkie/proste zapytanie → szybki model" };
+}
+
+// Czysta treść do wygenerowania (mail/post/życzenia/opis) — NIE wymaga głębokiej analizy,
+// nawet jeśli zawiera „napisz". Deep-think rezerwujemy na realne rozumowanie/matematykę.
+const PLAIN_WRITING =
+  /\b(napisz|napisać|stwórz|stworz|ułóż|uloz|sformułuj|sformuluj|wymyśl|wymysl)\b[^]{0,40}\b(mail|maila|e-?mail|wiadomo|post|ogłoszeni|ogloszeni|życzeni|zyczeni|tweet|opis|tekst|pozdrowieni|podziękowani|podziekowani|zaproszeni|wpis|nagłówek|naglowek|slogan|hasło|haslo)/i;
+
+/**
+ * Pure: czy zapytanie ZASŁUGUJE na głębokie myślenie (dwuetapową analizę)? Stricter niż isComplex —
+ * tylko realne rozumowanie/matematyka/kod/planowanie/porównanie, NIE zwykłe generowanie treści.
+ * Dzięki temu deep-think nie spowalnia prostego „napisz maila", a włącza się tam, gdzie podnosi jakość.
+ */
+export function needsDeepThink(text: string): boolean {
+  const t = text || "";
+  if (!t.trim()) return false;
+  if (PLAIN_WRITING.test(t)) return false;
+  if (MATH_CUES.test(t) || REASONING_CUES.test(t)) return true;
+  return t.length > 500;
 }
 
 // --- Groq: Llama 4 Scout vs Kimi K2 ---
