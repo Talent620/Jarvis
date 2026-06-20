@@ -23,6 +23,7 @@ import { warmNow } from "../lib/prewarm";
 import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkOllama";
 import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
 import { detectSd } from "../lib/localImage";
+import { checkForUpdate, applyUpdate, type UpdateInfo } from "../lib/updater";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
 import { clearRouteLog } from "../lib/modelRouter";
 import { toast } from "../lib/toast";
@@ -205,6 +206,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [sdMsg, setSdMsg] = useState("");
   const [findingServer, setFindingServer] = useState(false);
   const [findMsg, setFindMsg] = useState("");
+  const [updBusy, setUpdBusy] = useState(false);
+  const [updMsg, setUpdMsg] = useState("");
+  const [updInfo, setUpdInfo] = useState<UpdateInfo | null>(null);
   // Benchmark szybkości modeli na sprzęcie użytkownika.
   const [benchBusy, setBenchBusy] = useState(false);
   const [benchMsg, setBenchMsg] = useState("");
@@ -2339,6 +2343,39 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>
                 🧩 Wersja (build): <b>{typeof __APP_BUILD__ !== "undefined" ? __APP_BUILD__ : "dev"}</b> UTC — podaj ją, gdy zgłaszasz problem.
               </p>
+
+              <h3>⬆ Aktualizacja JARVISA</h3>
+              <p className="muted" style={{ marginTop: -4 }}>
+                Sprawdź i pobierz najnowszą wersję z GitHub. Na telefonie/PC: 1 klik → instalacja najnowszej.
+                W przeglądarce: odświeży do najnowszej od ręki.
+              </p>
+              <button
+                className="btn primary"
+                disabled={updBusy}
+                onClick={async () => {
+                  setUpdBusy(true); setUpdMsg("Sprawdzam najnowszą wersję…");
+                  const r = await checkForUpdate();
+                  setUpdBusy(false);
+                  if ("error" in r) { setUpdMsg(`❌ ${r.error}`); return; }
+                  setUpdInfo(r);
+                  setUpdMsg(r.newer
+                    ? `🎉 Jest nowsza wersja (${r.latest}). Twoja: ${r.current}.`
+                    : `✅ Masz najnowszą wersję (${r.current}).`);
+                }}
+              >
+                {updBusy ? "⏳ Sprawdzam…" : "🔎 Sprawdź aktualizacje"}
+              </button>
+              {updMsg && <p className="muted" style={{ fontSize: 12, marginTop: 6, whiteSpace: "pre-line" }}>{updMsg}</p>}
+              {updInfo?.newer && (
+                <button
+                  className="btn"
+                  style={{ marginTop: 6 }}
+                  onClick={() => { void applyUpdate(updInfo); toast(updInfo.platform === "web" ? "↻ Odświeżam do najnowszej…" : "⬇ Pobieram najnowszą — kliknij plik, by zainstalować."); }}
+                >
+                  {updInfo.platform === "web" ? "↻ Odśwież do najnowszej" : "⬇ Pobierz i zainstaluj najnowszą"}
+                </button>
+              )}
+
               <h3>Kopia danych</h3>
               <p className="muted">
                 Zapisz wszystkie swoje dane (zadania, notatki, pamięć, dziennik, projekty, targ…)
