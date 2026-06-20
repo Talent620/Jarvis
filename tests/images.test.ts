@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { generateImage, humanizeImageError, IMAGE_MODELS_LIST, pollinationsUrl, bestImageModel } from "../src/lib/images";
+import { generateImage, humanizeImageError, IMAGE_MODELS_LIST, pollinationsUrl, bestImageModel, geminiEditPrompt } from "../src/lib/images";
 import { store } from "../src/lib/store";
 
 const noKeys = { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", openrouter: "", nvidia: "", github: "" };
@@ -56,6 +56,27 @@ describe("Studio — modele edycji", () => {
     const r = await generateImage("zrób packshot", undefined, "fal-nano-banana");
     expect("error" in r).toBe(true);
     if ("error" in r) expect(r.error).toMatch(/zdjęcie/i);
+  });
+
+  it("geminiEditPrompt: bez zdjęcia → prompt bez zmian; ze zdjęciem → kotwica edycji", () => {
+    expect(geminiEditPrompt("kot w kapeluszu", false)).toBe("kot w kapeluszu");
+    const anchored = geminiEditPrompt("wyczyść, usuń rysy", true);
+    expect(anchored).toMatch(/DOŁĄCZONE zdjęcie/);
+    expect(anchored).toMatch(/Nie twórz nowej/i);
+    expect(anchored).toMatch(/wyczyść, usuń rysy$/); // oryginalne polecenie na końcu
+  });
+
+  it("Gemini + zdjęcie → żądanie niesie kotwicę edycji ORAZ bajty zdjęcia (inlineData)", async () => {
+    store.setSettings({ keys: { ...noKeys, gemini: "K" } });
+    let body: any = null;
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: any) => { body = JSON.parse(init.body); return imgResp(); }));
+    const img = { data: "PHOTO64", mediaType: "image/jpeg" };
+    const r = await generateImage("usuń rysy", img, "gemini");
+    expect("error" in r).toBe(false);
+    const parts = body.contents[0].parts;
+    expect(parts[0].text).toMatch(/DOŁĄCZONE zdjęcie/); // kotwica edycji
+    expect(parts.some((p: any) => p.inlineData?.data === "PHOTO64")).toBe(true); // zdjęcie wysłane
+    vi.unstubAllGlobals();
   });
 
   it("Pollinations + dołączone zdjęcie → NIE zmyśla edycji, kieruje do edytora (bramka)", async () => {

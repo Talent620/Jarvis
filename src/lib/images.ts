@@ -63,11 +63,20 @@ const isQuota = (m: string) => /quota|exceeded|rate.?limit|resource exhausted|to
 // Brak/niewłaściwy model → próbujemy kolejnej nazwy modelu (ten sam klucz).
 const isModelMiss = (m: string) => /not found|not supported|unknown|404|invalid model|permission|unavailable/i.test(m);
 
+// Kotwica edycji: terse polecenia („wyczyść", „usuń rysy") potrafią zepchnąć Nano Banana
+// w stronę tworzenia NOWEGO obrazu zamiast wiernej edycji. Gdy jest zdjęcie wejściowe,
+// wyraźnie zakotwiczamy je jako materiał do PRZERÓBKI (zachowaj kadr i resztę bez zmian).
+/** Pure: zbuduj prompt dla Gemini — z kotwicą edycji, gdy dołączono zdjęcie. */
+export function geminiEditPrompt(prompt: string, hasInput: boolean): string {
+  if (!hasInput) return prompt;
+  return `Przerób DOŁĄCZONE zdjęcie według polecenia. Zachowaj ten sam przedmiot, kadr i kompozycję — zmień TYLKO to, o co proszę, fotorealistycznie, bez śladu edycji. Nie twórz nowej, niepowiązanej sceny. Polecenie: ${prompt}`;
+}
+
 async function geminiEdit(prompt: string, inputs: Img[]): Promise<Result> {
   // Studio ma WŁASNĄ pulę kluczy (studioKeys). Gdy pusta — używa zwykłych kluczy Gemini.
   const keys = studioKeyList().length ? studioKeyList() : orderedKeys("gemini");
   if (!keys.length) return { error: "Dodaj darmowy klucz Gemini (w Studiu: 🔑 albo ⚙ → AI) — edytor obrazów korzysta z Gemini (Nano Banana)." };
-  const parts: any[] = [{ text: prompt }];
+  const parts: any[] = [{ text: geminiEditPrompt(prompt, inputs.length > 0) }];
   for (const im of inputs) parts.push({ inlineData: { mimeType: im.mediaType, data: im.data } });
   let lastErr = "Nie udało się wygenerować obrazu.";
   for (const key of keys) {
