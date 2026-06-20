@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { generateSite, buildClientBrief, clientHandoverMessage, type SiteKind, type SiteStyle, type ClientBrief } from "../lib/webgen";
+import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, type SiteKind, type SiteStyle, type ClientBrief, type Quote } from "../lib/webgen";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast } from "../lib/toast";
 import Guide from "./Guide";
@@ -50,6 +50,8 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
   const [view, setView] = useState<"preview" | "code">("preview");
   const [showBrief, setShowBrief] = useState(false);
   const [brief, setBrief] = useState<ClientBrief>({});
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const zl = (n: number) => `${Math.round(n).toLocaleString("pl-PL")} zł`;
 
   const briefText = buildClientBrief(brief);
   const canBuild = !!(prompt.trim() || briefText);
@@ -139,6 +141,24 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
                 </div>
               </details>
 
+              {/* Cennik rynkowy w Polsce — „ile to kosztuje" */}
+              <details style={{ marginBottom: 8 }}>
+                <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 13 }}>💸 Ile takie strony kosztują w Polsce</summary>
+                <div style={{ marginTop: 8 }}>
+                  {marketRanges().map((r) => (
+                    <div key={r.kind} style={{ fontSize: 12, display: "flex", justifyContent: "space-between", gap: 8, lineHeight: 1.7 }}>
+                      <span>{r.label}</span>
+                      <span className="muted" style={{ whiteSpace: "nowrap" }}>{zl(r.min)}–{zl(r.max)}</span>
+                    </div>
+                  ))}
+                  <p className="muted" style={{ fontSize: 11, marginTop: 6 }}>
+                    Widełki rynkowe (freelancer → mała agencja) za samo wykonanie. Doliczane bywają treści,
+                    integracja płatności (sklep), domena + hosting (~120–350 zł/rok) i opieka (~80–300 zł/mc).
+                    Użyj „💰 Wyceń”, by policzyć pełny pakiet pod ten projekt.
+                  </p>
+                </div>
+              </details>
+
               {/* Pomysły dopasowane do typu */}
               <div className="chips" style={{ flexWrap: "wrap", marginBottom: 8 }}>
                 {ideas.map((i) => (
@@ -205,6 +225,33 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
               </button>
               <button className="btn" style={{ flex: 1, marginTop: 0 }} onClick={() => copyWithToast(clientHandoverMessage(brief.business), "Wiadomość do klienta skopiowana ✓")}>
                 📨 Wiadomość do klienta
+              </button>
+            </div>
+          )}
+
+          {/* 💰 Automatyczna wycena — realne widełki rynku PL */}
+          <button className="btn" style={{ marginTop: 8, width: "100%" }} disabled={busy} onClick={() => setQuote(estimateQuote(kind, brief))}>
+            💰 Wyceń (rynek PL) — {zl(estimateQuote(kind, brief).totalMin)}–{zl(estimateQuote(kind, brief).totalMax)}
+          </button>
+          {quote && (
+            <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>💰 Wycena (orientacyjna)</div>
+              {quote.oneTime.map((l) => (
+                <div key={l.label} style={{ fontSize: 12, display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <span>{l.label}</span><span className="muted" style={{ whiteSpace: "nowrap" }}>{zl(l.min)}–{zl(l.max)}</span>
+                </div>
+              ))}
+              <div style={{ fontSize: 13, fontWeight: 700, display: "flex", justifyContent: "space-between", marginTop: 4, borderTop: "1px solid var(--line)", paddingTop: 4 }}>
+                <span>Razem (jednorazowo)</span><span>{zl(quote.totalMin)}–{zl(quote.totalMax)}</span>
+              </div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
+                Cyklicznie: {quote.recurring.map((l) => `${l.label} ${zl(l.min)}–${zl(l.max)}/${l.per}`).join(" · ")}
+              </div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                Rynkowo w PL: {zl(quote.marketMin)}–{zl(quote.marketMax)} za samą stronę tego typu.
+              </div>
+              <button className="btn" style={{ marginTop: 8, width: "auto", padding: "5px 12px", fontSize: 12 }} onClick={() => copyWithToast(formatQuote(quote, brief), "Oferta cenowa skopiowana ✓")}>
+                📄 Kopiuj ofertę cenową
               </button>
             </div>
           )}

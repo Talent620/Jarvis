@@ -145,3 +145,72 @@ export function clientHandoverMessage(business?: string): string {
     `Proszę o słowo, co zmienić — nanoszę poprawki od ręki. Pozdrawiam.`,
   ].join("\n");
 }
+
+// === Automatyczna wycena (realny rynek PL, 2025/2026) ===
+
+export interface QuoteLine { label: string; min: number; max: number; per?: "mc" | "rok" }
+export interface Quote {
+  kind: SiteKind;
+  oneTime: QuoteLine[];   // koszt jednorazowy (wykonanie)
+  recurring: QuoteLine[]; // koszty cykliczne (utrzymanie)
+  totalMin: number;       // suma jednorazowa min
+  totalMax: number;       // suma jednorazowa max
+  marketMin: number;      // rynkowy zakres dla typu (sama strona)
+  marketMax: number;
+}
+
+// Rynkowe widełki w Polsce za SAMO wykonanie strony (freelancer → mała agencja), w zł.
+const MARKET: Record<SiteKind, { min: number; max: number; label: string }> = {
+  landing:   { min: 900,  max: 3000,  label: "Landing page (one-page)" },
+  portfolio: { min: 900,  max: 3000,  label: "Portfolio" },
+  firma:     { min: 2000, max: 6000,  label: "Strona firmowa (kilka sekcji)" },
+  sklep:     { min: 3500, max: 15000, label: "Sklep internetowy (e-commerce)" },
+  auto:      { min: 1500, max: 5000,  label: "Strona www" },
+};
+
+/** Pure: rynkowe widełki cen w Polsce dla wszystkich typów (do pokazania „ile to kosztuje"). */
+export function marketRanges(): { kind: SiteKind; label: string; min: number; max: number }[] {
+  return (Object.keys(MARKET) as SiteKind[]).filter((k) => k !== "auto").map((k) => ({ kind: k, ...MARKET[k] }));
+}
+
+/** Pure: automatyczna wycena pakietu „pod klienta" wg typu i briefu (jednorazowo + cyklicznie). */
+export function estimateQuote(kind: SiteKind, brief: ClientBrief = {}): Quote {
+  const m = MARKET[kind] || MARKET.auto;
+  // Więcej wymaganych sekcji = większa złożoność → podnieś górną granicę wykonania.
+  const sectionCount = (brief.sections || "").split(/[,;]/).map((s) => s.trim()).filter(Boolean).length;
+  const complexityMax = sectionCount > 4 ? Math.round(m.max * 0.2) : 0;
+  const oneTime: QuoteLine[] = [{ label: `Projekt i wykonanie — ${m.label}`, min: m.min, max: m.max + complexityMax }];
+  // Treści/copywriting — pełen pakiet, gdy klient nie dostarcza gotowych tekstów.
+  oneTime.push({ label: "Treści i copywriting (PL)", min: 300, max: 1500 });
+  if (kind === "sklep") oneTime.push({ label: "Integracja płatności (Przelewy24/PayU/Stripe)", min: 500, max: 2000 });
+  oneTime.push({ label: "Publikacja online + konfiguracja domeny", min: 150, max: 500 });
+  const recurring: QuoteLine[] = [
+    { label: "Domena + hosting", min: 120, max: 350, per: "rok" },
+    { label: "Opieka i drobne zmiany", min: 80, max: 300, per: "mc" },
+  ];
+  const totalMin = oneTime.reduce((s, l) => s + l.min, 0);
+  const totalMax = oneTime.reduce((s, l) => s + l.max, 0);
+  return { kind, oneTime, recurring, totalMin, totalMax, marketMin: m.min, marketMax: m.max };
+}
+
+const zl = (n: number) => `${Math.round(n).toLocaleString("pl-PL")} zł`;
+
+/** Pure: czytelna oferta cenowa do wysłania klientowi (PL, z kontekstem rynkowym). */
+export function formatQuote(q: Quote, brief: ClientBrief = {}): string {
+  const who = brief.business?.trim() ? ` dla ${brief.business.trim()}` : "";
+  const lines = [
+    `Oferta — strona internetowa${who}`,
+    ``,
+    `Zakres jednorazowy (wykonanie):`,
+    ...q.oneTime.map((l) => `  • ${l.label}: ${zl(l.min)}–${zl(l.max)}`),
+    ``,
+    `RAZEM (jednorazowo): ${zl(q.totalMin)}–${zl(q.totalMax)}`,
+    ``,
+    `Koszty cykliczne (utrzymanie):`,
+    ...q.recurring.map((l) => `  • ${l.label}: ${zl(l.min)}–${zl(l.max)}/${l.per}`),
+    ``,
+    `Dla porównania — rynkowo w Polsce taka strona kosztuje zwykle ${zl(q.marketMin)}–${zl(q.marketMax)}.`,
+    `Wycena orientacyjna; ostateczna zależy od zakresu i liczby poprawek. Termin: zwykle 3–10 dni roboczych.`,
+  ];
+  return lines.join("\n");
+}

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { generateSite, buildClientBrief, clientHandoverMessage } from "../src/lib/webgen";
+import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges } from "../src/lib/webgen";
 import { store } from "../src/lib/store";
 
 const noKeys = { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", openrouter: "", nvidia: "", github: "" };
@@ -44,5 +44,37 @@ describe("Kreator stron — brief klienta (pure)", () => {
     const m = clientHandoverMessage("Kawa Nova");
     expect(m).toMatch(/Kawa Nova/);
     expect(m).toMatch(/publikacja online|domen/i);
+  });
+});
+
+describe("Kreator stron — wycena (pure, rynek PL)", () => {
+  it("estimateQuote: suma jednorazowa = suma pozycji, sklep ma płatności", () => {
+    const q = estimateQuote("sklep", { business: "Sklep X" });
+    const sumMin = q.oneTime.reduce((s, l) => s + l.min, 0);
+    const sumMax = q.oneTime.reduce((s, l) => s + l.max, 0);
+    expect(q.totalMin).toBe(sumMin);
+    expect(q.totalMax).toBe(sumMax);
+    expect(q.oneTime.some((l) => /płatnoś/i.test(l.label))).toBe(true);
+    expect(q.totalMin).toBeLessThan(q.totalMax);
+    expect(q.recurring.length).toBeGreaterThan(0);
+  });
+  it("landing tańszy od sklepu (rynkowo)", () => {
+    expect(estimateQuote("landing").marketMax).toBeLessThan(estimateQuote("sklep").marketMax);
+  });
+  it("strona firmowa bez integracji płatności", () => {
+    expect(estimateQuote("firma").oneTime.some((l) => /płatnoś/i.test(l.label))).toBe(false);
+  });
+  it("marketRanges zwraca typy bez 'auto', rosnące widełki", () => {
+    const r = marketRanges();
+    expect(r.find((x) => x.kind === "auto")).toBeUndefined();
+    for (const x of r) expect(x.min).toBeLessThan(x.max);
+  });
+  it("formatQuote zawiera sumę, koszty cykliczne i kontekst rynkowy PL (zł)", () => {
+    const q = estimateQuote("firma", { business: "Bud-Mar" });
+    const txt = formatQuote(q, { business: "Bud-Mar" });
+    expect(txt).toMatch(/Bud-Mar/);
+    expect(txt).toMatch(/RAZEM \(jednorazowo\)/);
+    expect(txt).toMatch(/rynkowo w Polsce/i);
+    expect(txt).toMatch(/zł/);
   });
 });
