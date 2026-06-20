@@ -29,6 +29,7 @@ Dla 99% ludzi wystarczą **dwa–trzy** klucze — JARVIS rotuje je i dobiera au
 | **Cerebras** | ✓ | nie | tak | 30 RPM / 14 400 RPD / 60k TPM | Llama 3.3 70B, Qwen3 235B |
 | **Groq** | ✓ | nie | tak | 30 RPM / ~1000 RPD | Llama 4 Scout, Kimi K2, Llama 3.3 70B |
 | **Mistral** | ✓ | nie | tak | 1 req/s / 1 mld tokenów/mies. | Mistral Large/Small, Pixtral (wizja) |
+| **Cohere** | ✓ | nie | tak\* | 20 RPM / 1000 zapytań/mies. | Command A / R+ / R / R7B (function calling) |
 | **OpenRouter** | ✓ | nie | tak | 20 RPM / ~200 RPD | DeepSeek R1/V3, Dolphin (bez cenzury), Llama 70B |
 | **NVIDIA NIM** | ✓ | nie* | tak | ~40 RPM (kredyty) | DeepSeek R1/V3, Llama 3.3 70B |
 | **GitHub Models** | ✓ | nie* | tak | 10–15 RPM / 50–150 RPD | GPT-4o/4.1, DeepSeek-R1, Llama 70B |
@@ -38,8 +39,9 @@ Dla 99% ludzi wystarczą **dwa–trzy** klucze — JARVIS rotuje je i dobiera au
 
 ## 🧩 Warte rozważenia (opcjonalne, marginalne)
 
-- **Cohere** — `dashboard.cohere.com` · 20 RPM / 1000 zapytań/mies., modele Command A/R+. Tylko
-  częściowa zgodność OpenAI; **niedodane**, bo JARVIS ma już lepsze pokrycie. Dodam na życzenie.
+- **Cohere** — ✓ **dodane** (`dashboard.cohere.com/api-keys`). 20 RPM / 1000 zapytań/mies., modele
+  Command A / R+ / R / R7B, function calling. Wybierz „Cohere Command" w ⚙ → AI lub zostaw Auto.
+  Idzie przez proxy/desktop (Cohere bez CORS dla przeglądarki).
 - **Cloudflare Workers AI** — 10 000 „neuronów"/dzień; wymaga `account_id` w adresie (nie pasuje do
   prostego wzorca klucza), więc poza zakresem.
 - **Hugging Face Serverless** — tylko ~$0.10 kredytów/mies.; za mało do realnego użytku.

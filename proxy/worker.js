@@ -18,7 +18,7 @@
 //   GROQ_API_KEY, OPENROUTER_API_KEY, NVIDIA_API_KEY, GITHUB_MODELS_TOKEN, TAVILY_API_KEY
 // Binding KV: JARVIS_KV (patrz wrangler.toml).
 
-const ALLOWED_OPENAI_HOSTS = ["api.groq.com", "openrouter.ai", "integrate.api.nvidia.com", "models.github.ai"];
+const ALLOWED_OPENAI_HOSTS = ["api.groq.com", "openrouter.ai", "integrate.api.nvidia.com", "models.github.ai", "api.cohere.ai"];
 
 // Ścisłe dopasowanie hosta do białej listy: dokładny host LUB jego subdomena. Świadomie
 // NIE `includes` — to przepuszczałoby np. api.groq.com.attacker.tld i wyciekłby klucz Bearer.

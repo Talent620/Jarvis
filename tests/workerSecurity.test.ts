@@ -42,6 +42,7 @@ describe("worker openaiHostAllowed — ścisła biała lista hostów", () => {
     expect(openaiHostAllowed("openrouter.ai")).toBe(true);
     expect(openaiHostAllowed("integrate.api.nvidia.com")).toBe(true);
     expect(openaiHostAllowed("models.github.ai")).toBe(true);
+    expect(openaiHostAllowed("api.cohere.ai")).toBe(true); // nowy dostawca Cohere przez proxy
   });
   it("przepuszcza subdomeny dozwolonych hostów", () => {
     expect(openaiHostAllowed("eu.api.groq.com")).toBe(true);

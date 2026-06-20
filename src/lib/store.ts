@@ -41,7 +41,7 @@ const LEGACY_EMAIL_SIGNATURES = ["—\ntel. +48 500 390 009\nwww.v-ai.pl"];
 
 const defaultSettings: Settings = {
   provider: "auto",
-  keys: { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", openrouter: "", nvidia: "", github: "" },
+  keys: { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", cohere: "", openrouter: "", nvidia: "", github: "" },
   model: "auto",
   proxyUrl: "",
   smtpUser: "",

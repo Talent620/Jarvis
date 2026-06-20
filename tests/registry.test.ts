@@ -1,6 +1,25 @@
 import { describe, it, expect } from "vitest";
 import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED, injectNoThink, modelBadges, PROVIDERS } from "../src/lib/providers/registry";
 
+describe("Cohere — nowy darmowy dostawca", () => {
+  it("jest w katalogu z modelami Command i sensownym domyślnym", () => {
+    const c = PROVIDERS.cohere;
+    expect(c).toBeTruthy();
+    expect(c.defaultModel).toBe("command-a-03-2025");
+    expect(c.models.some((m) => m.id === "command-r7b-12-2024")).toBe(true);
+    expect(c.keysUrl).toMatch(/cohere\.com/);
+  });
+  it("auto wybiera Cohere, gdy to jedyny wpisany klucz", () => {
+    const r = autoPick({ cohere: "ABC123" });
+    expect(r?.provider).toBe("cohere");
+    expect(r?.model).toBe("command-a-03-2025");
+  });
+  it("dostawcy z wyższą rangą wygrywają nad Cohere w auto", () => {
+    const r = autoPick({ cohere: "x", gemini: "y" });
+    expect(r?.provider).toBe("gemini"); // gemini (80) > cohere (45)
+  });
+});
+
 describe("modelBadges — czytelne ikonki cech modelu z opisu", () => {
   it("darmowy → 🆓; najszybszy → ⚡; mocny → 🧠", () => {
     expect(modelBadges("Llama 3.3 70B — darmowy")).toContain("🆓");

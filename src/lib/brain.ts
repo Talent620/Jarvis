@@ -67,6 +67,7 @@ const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision:
   groq: { simple: GROQ_SCOUT, complex: GROQ_KIMI, vision: GROQ_SCOUT },
   cerebras: { simple: "llama3.1-8b", complex: "llama-3.3-70b", vision: "llama-3.3-70b" },
   mistral: { simple: "mistral-small-latest", complex: "mistral-large-latest", vision: "pixtral-12b-2409" },
+  cohere: { simple: "command-r7b-12-2024", complex: "command-a-03-2025", vision: "command-a-03-2025" },
   openrouter: {
     simple: "meta-llama/llama-3.3-70b-instruct:free",
     complex: "meta-llama/llama-3.1-405b-instruct",

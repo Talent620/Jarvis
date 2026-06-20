@@ -113,6 +113,22 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
       { id: "pixtral-12b-2409", label: "Pixtral 12B — wizja" },
     ],
   },
+  cohere: {
+    id: "cohere",
+    label: "Cohere Command (darmowy tier)",
+    rank: 45,
+    keysUrl: "https://dashboard.cohere.com/api-keys",
+    defaultModel: "command-a-03-2025",
+    // API zgodne z OpenAI (endpoint „compatibility"). Wspiera narzędzia (function calling).
+    impl: makeOpenAICompatible("https://api.cohere.ai/compatibility/v1/chat/completions"),
+    needsProxy: true, // Cohere zwykle nie wystawia CORS dla przeglądarki — kieruj przez proxy/desktop.
+    models: [
+      { id: "command-a-03-2025", label: "Command A — najmocniejszy" },
+      { id: "command-r-plus-08-2024", label: "Command R+ — mocny" },
+      { id: "command-r-08-2024", label: "Command R — zrównoważony" },
+      { id: "command-r7b-12-2024", label: "Command R7B — najszybszy" },
+    ],
+  },
   openrouter: {
     id: "openrouter",
     label: "OpenRouter (35+ modeli)",
@@ -213,6 +229,7 @@ export const emptyKeys: ProviderKeys = {
   groq: "",
   cerebras: "",
   mistral: "",
+  cohere: "",
   openrouter: "",
   nvidia: "",
   github: "",
