@@ -2,14 +2,19 @@ import { useEffect, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
-import { guardian, guardianDiagnose, guardianAdvise, guardianExecute, guardianPlan, isOutgoingCommand, healthScore, recommendActions, GUARDIAN_CAPABILITIES, type GuardianStatus, type GuardianActionResult, type GuardianActionKey } from "../lib/guardian";
+import { guardian, guardianAdvise, guardianExecute, guardianPlan, isOutgoingCommand, GUARDIAN_CAPABILITIES, type GuardianActionResult, type GuardianActionKey } from "../lib/guardian";
+import { guardianScan, type GuardianScan, type AgentReport, type AgentState } from "../lib/guardianAgents";
 import { checkForUpdate, applyUpdate } from "../lib/updater";
 
-// 🛡 Strażnik JARVISA — autonomiczny pomocnik z głównego menu: diagnozuje, naprawia,
-// przyspiesza/ulepsza/odcenzurowuje, łączy serwery i doradza po polsku. Jeden ekran „od wszystkiego".
+// 🛡 Strażnik JARVISA — centralny panel dowodzenia. Guardian Core skanuje cały ekosystem przez
+// podagentów (AI, wydajność, głos, obrazy, integracje, aktualizacje), wystawia ocenę zdrowia 0–100,
+// rekomendacje „jednym kliknięciem", tryb doradcy/wykonawcy i autopilota. Jeden ekran „od wszystkiego".
+const STATE_DOT: Record<AgentState, string> = { ok: "🟢", warn: "🟡", problem: "🔴", off: "⚪" };
+const FIND_COL: Record<"ok" | "warn" | "problem", string> = { ok: "var(--text-dim)", warn: "var(--gold)", problem: "#ff6b6b" };
+
 export default function Guardian({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
-  const [status, setStatus] = useState<GuardianStatus | null>(null);
+  const [scan, setScan] = useState<GuardianScan | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [q, setQ] = useState("");
@@ -17,12 +22,13 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
   const [exec, setExec] = useState<{ text: string; tools: string[] } | null>(null);
   // Podgląd „co zaraz zrobię" + polecenie czekające na potwierdzenie (działania wychodzące).
   const [preview, setPreview] = useState<{ cmd: string; plan: string } | null>(null);
+  const [open, setOpen] = useState<Record<string, boolean>>({});
   const [proactive, setProactive] = useState(store.settings.guardianProactive);
   const [autopilot, setAutopilot] = useState(store.settings.guardianAutopilot);
 
   const refresh = async () => {
-    setBusy(true); setMsg("Sprawdzam stan JARVISA…");
-    try { setStatus(await guardianDiagnose()); setMsg(""); }
+    setBusy(true); setMsg("Skanuję ekosystem JARVISA…");
+    try { setScan(await guardianScan({ checkUpdate: true })); setMsg(""); }
     catch { setMsg("Nie udało się odczytać stanu."); }
     finally { setBusy(false); }
   };
@@ -59,7 +65,7 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
   };
 
   // Dyrygent: jedno kliknięcie zalecenia → odpowiednia, sprawdzona akcja Strażnika.
-  const runRec = (key: GuardianActionKey) => {
+  const runRec = (key?: GuardianActionKey) => {
     if (key === "fixAll") return void run(() => guardian.fixAll((m) => setMsg(`🩹 ${m}`)));
     if (key === "connectServers") return void run(() => guardian.connectServers((m) => setMsg(`🔗 ${m}`)));
     if (key === "smarter") return void run(() => guardian.smarter((m) => setMsg(`🧠 ${m}`)));
@@ -86,7 +92,6 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
 
   // WYKONAJ z bramką bezpieczeństwa: polecenia WYCHODZĄCE/nieodwracalne (mail, SMS, telefon,
   // pieniądze, smart home…) najpierw pokazują podgląd „co zaraz zrobię" i czekają na potwierdzenie.
-  // Bezpieczne (np. dodanie zadania) lecą od ręki.
   const doExecute = async () => {
     if (busy || !q.trim()) return;
     const cmd = q.trim();
@@ -97,7 +102,39 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
     finally { setBusy(false); }
   };
 
-  const dot = (s: "ok" | "off" | "empty") => (s === "ok" ? "🟢" : s === "empty" ? "🟡" : "🔴");
+  const healthCol = (g: string) => (g === "A" ? "#39d98a" : g === "B" ? "#7ec8ff" : g === "C" ? "var(--gold)" : "#ff6b6b");
+
+  // Karta podagenta: stan, wynik, rozwijane ustalenia + rekomendacje.
+  const AgentCard = (a: AgentReport) => {
+    const isOpen = open[a.id] ?? a.state !== "ok"; // problemy rozwinięte domyślnie
+    return (
+      <div key={a.id} className="journal-card" style={{ padding: "8px 10px", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => setOpen((o) => ({ ...o, [a.id]: !isOpen }))}>
+          <span>{STATE_DOT[a.state]}</span>
+          <span style={{ fontSize: 18 }}>{a.icon}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{a.name}</span>
+          <span className="muted" style={{ fontSize: 12 }}>{a.summary}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: healthCol(a.score >= 85 ? "A" : a.score >= 65 ? "B" : a.score >= 40 ? "C" : "D"), minWidth: 30, textAlign: "right" }}>{a.score}</span>
+        </div>
+        {isOpen && (
+          <div style={{ marginTop: 6 }}>
+            {a.findings.map((f, i) => (
+              <div key={i} style={{ fontSize: 12, color: FIND_COL[f.level], lineHeight: 1.6 }}>
+                {f.level === "problem" ? "🔴" : f.level === "warn" ? "⚠" : "•"} {f.text}
+              </div>
+            ))}
+            {a.recs.length > 0 && (
+              <div className="chips" style={{ flexWrap: "wrap", marginTop: 6 }}>
+                {a.recs.map((r, i) => r.key
+                  ? <button key={i} className="chip" disabled={busy} title={r.why} onClick={() => runRec(r.key)}>{r.label}</button>
+                  : <span key={i} className="muted" style={{ fontSize: 11 }}>💡 {r.why}</span>)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="sheet" onClick={onClose}>
@@ -105,30 +142,31 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
         <div className="panel-head"><div className="grabber" /><h2>🛡 Strażnik JARVISA</h2></div>
         <div className="panel-body">
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-            Autonomiczny opiekun płynności i działania. Naprawia, przyspiesza, ulepsza, łączy serwery i doradza.
+            Centralny panel dowodzenia: administrator, architekt AI, opiekun, diagnostyka i automatyzacja w jednym.
           </p>
 
-          {/* Kondycja JARVISA — jedna liczba (dyrygent na pierwszy rzut oka) */}
-          {status && (() => {
-            const h = healthScore(status);
-            const col = h.grade === "A" ? "#39d98a" : h.grade === "B" ? "#7ec8ff" : h.grade === "C" ? "var(--gold)" : "#ff6b6b";
-            return (
-              <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ fontSize: 30, fontWeight: 800, color: col, lineHeight: 1, minWidth: 54, textAlign: "center" }}>{h.score}</div>
-                <div style={{ fontSize: 13, lineHeight: 1.5 }}>
-                  <b>Kondycja JARVISA: {h.label}</b> (ocena {h.grade})<br />
-                  <span className="muted" style={{ fontSize: 12 }}>Strażnik czuwa i dyryguje działaniem.</span>
-                </div>
+          {/* 📊 Health Agent — ocena zdrowia całego systemu (0–100) */}
+          {scan && (
+            <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ fontSize: 32, fontWeight: 800, color: healthCol(scan.health.grade), lineHeight: 1, minWidth: 58, textAlign: "center" }}>{scan.health.score}</div>
+              <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+                <b>Stan JARVISA: {scan.health.label}</b> (ocena {scan.health.grade})<br />
+                <span className="muted" style={{ fontSize: 12 }}>Guardian Core dyryguje {scan.reports.length} agentami i czuwa nad całością.</span>
               </div>
-            );
-          })()}
+            </div>
+          )}
 
-          {/* Zalecenia dyrygenta — priorytetowe akcje jednym kliknięciem */}
-          {status && recommendActions(status).length > 0 && (
+          {/* 🩹 Napraw wszystko — główna akcja naprawcza */}
+          <button className="btn primary" style={{ width: "100%", marginBottom: 8 }} disabled={busy} onClick={() => void run(() => guardian.fixAll((m) => setMsg(`🩹 ${m}`)))}>
+            🩹 Napraw wszystko (wykryj serwery i wybierz działający mózg)
+          </button>
+
+          {/* 🧭 Najważniejsze rekomendacje (zagregowane przez Guardian Core) */}
+          {scan && scan.recs.length > 0 && (
             <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>🧭 Zalecane przez Strażnika</div>
-              {recommendActions(status).map((r) => (
-                <button key={r.key} className="btn" style={{ width: "100%", textAlign: "left", marginTop: 6, padding: "8px 12px" }} disabled={busy} onClick={() => runRec(r.key)}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>🧭 Rekomendacje Strażnika</div>
+              {scan.recs.slice(0, 4).map((r, i) => (
+                <button key={i} className="btn" style={{ width: "100%", textAlign: "left", marginTop: 6, padding: "8px 12px", opacity: r.key ? 1 : 0.85 }} disabled={busy || !r.key} onClick={() => runRec(r.key)}>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{r.label}</div>
                   <div className="muted" style={{ fontSize: 12, fontWeight: 400 }}>{r.why}</div>
                 </button>
@@ -136,40 +174,26 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* Status */}
-          {status && (
-            <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 10 }}>
-              <div style={{ fontSize: 13, lineHeight: 1.8 }}>
-                🧠 Mózg: <b>{status.brain}</b><br />
-                {dot(status.ollama)} Serwer Ollama {status.ollama === "ok" ? `(${status.ollamaModels} model(i))` : status.ollama === "empty" ? "(bez modeli)" : "(brak)"}<br />
-                {dot(status.sd)} Serwer obrazów (SD)<br />
-                ⚡ Szybkość: {status.speedLabel}<br />
-                🔊 Głos: {status.voiceLabel}
-              </div>
-              {status.issues.length > 0 && (
-                <div style={{ marginTop: 8 }}>
-                  {status.issues.map((it, i) => (
-                    <div key={i} style={{ fontSize: 12, color: "var(--gold)" }}>⚠ {it}</div>
-                  ))}
-                </div>
-              )}
+          {/* 🛰 Panel agentów — stan każdej domeny */}
+          {scan && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>🛰 Agenci systemu</div>
+              {scan.reports.map((a) => AgentCard(a))}
             </div>
           )}
 
-          {/* Główna akcja */}
-          <button className="btn primary" style={{ width: "100%", marginBottom: 8 }} disabled={busy} onClick={() => void run(() => guardian.fixAll((m) => setMsg(`🩹 ${m}`)))}>
-            🩹 Napraw wszystko (i wybierz działający mózg)
-          </button>
-
-          {/* Szybkie tryby */}
-          <div className="chips" style={{ flexWrap: "wrap", marginBottom: 8 }}>
-            <button className="chip" disabled={busy} onClick={() => void run(() => guardian.faster())}>⚡ Szybciej</button>
-            <button className="chip" disabled={busy} onClick={() => void run(() => guardian.smarter((m) => setMsg(`🧠 ${m}`)))}>🧠 Mądrzej</button>
-            <button className="chip" disabled={busy} onClick={() => void run(() => guardian.uncensored((m) => setMsg(`🔓 ${m}`)))}>🔓 Bez cenzury</button>
-            <button className="chip" disabled={busy} onClick={() => void run(() => guardian.connectServers((m) => setMsg(`🔗 ${m}`)))}>🔗 Połącz serwery</button>
-            <button className="chip" disabled={busy} onClick={() => void run(() => guardian.fixVoice())}>🇵🇱 Napraw głos</button>
-            <button className="chip" disabled={busy} onClick={() => void doUpdate()}>⬆ Aktualizuj</button>
-          </div>
+          {/* Szybkie tryby (ręcznie) */}
+          <details style={{ marginBottom: 8 }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 13 }}>⚙ Tryby ręczne</summary>
+            <div className="chips" style={{ flexWrap: "wrap", marginTop: 8 }}>
+              <button className="chip" disabled={busy} onClick={() => void run(() => guardian.faster())}>⚡ Szybciej</button>
+              <button className="chip" disabled={busy} onClick={() => void run(() => guardian.smarter((m) => setMsg(`🧠 ${m}`)))}>🧠 Mądrzej</button>
+              <button className="chip" disabled={busy} onClick={() => void run(() => guardian.uncensored((m) => setMsg(`🔓 ${m}`)))}>🔓 Bez cenzury</button>
+              <button className="chip" disabled={busy} onClick={() => void run(() => guardian.connectServers((m) => setMsg(`🔗 ${m}`)))}>🔗 Połącz serwery</button>
+              <button className="chip" disabled={busy} onClick={() => void run(() => guardian.fixVoice())}>🇵🇱 Napraw głos</button>
+              <button className="chip" disabled={busy} onClick={() => void doUpdate()}>⬆ Aktualizuj</button>
+            </div>
+          </details>
 
           {msg && <p className="muted" style={{ fontSize: 12, whiteSpace: "pre-line" }}>{msg}</p>}
 
@@ -198,7 +222,7 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
           <h3 style={{ marginTop: 14 }}>💬 Zapytaj lub zleć Strażnikowi</h3>
           <input
             value={q}
-            placeholder="np. dodaj zadanie na jutro, napisz maila do Jana, jaka pogoda, włącz światło…"
+            placeholder="np. jak przyspieszyć JARVISA, jaki model wybrać, dodaj zadanie, napisz maila…"
             disabled={busy}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void doExecute(); }}
@@ -247,7 +271,7 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
           </details>
         </div>
         <div className="panel-foot" style={{ display: "flex", gap: 8 }}>
-          <button className="btn" style={{ flex: 1 }} disabled={busy} onClick={refresh}>{busy ? "Pracuję…" : "🔄 Odśwież"}</button>
+          <button className="btn" style={{ flex: 1 }} disabled={busy} onClick={refresh}>{busy ? "Pracuję…" : "🔄 Skanuj ponownie"}</button>
           <button className="btn primary" style={{ flex: 1 }} onClick={onClose}>Zamknij</button>
         </div>
       </div>
