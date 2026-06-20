@@ -81,3 +81,14 @@ export function applyBrainMode(id: BrainModeId, installed: string[] = []): void 
     });
   }
 }
+
+/** Pure: ostrzeżenie, gdy wybrany tryb nie ma spełnionego wymagania (inaczej JARVIS nie odpowie). */
+export function modeReadinessWarning(mode: BrainModeId, ctx: { ollamaConfigured: boolean; cloudKeys: number }): string {
+  if ((mode === "offline" || mode === "ollama") && !ctx.ollamaConfigured)
+    return "wymaga Ollamy — uruchom serwer i podaj adres (⚙ → AI), inaczej JARVIS nie odpowie.";
+  if (mode === "online" && ctx.cloudKeys === 0)
+    return "wymaga klucza API — dodaj klucz (⚙ → AI), inaczej JARVIS nie odpowie.";
+  if (mode === "auto" && !ctx.ollamaConfigured && ctx.cloudKeys === 0)
+    return "brak klucza API i Ollamy — dodaj jedno z nich, by JARVIS mógł odpowiadać.";
+  return "";
+}

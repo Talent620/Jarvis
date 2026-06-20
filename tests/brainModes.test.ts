@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { BRAIN_MODES, applyBrainMode, detectBrainMode, recommendBrainMode } from "../src/lib/brainModes";
+import { BRAIN_MODES, applyBrainMode, detectBrainMode, recommendBrainMode, modeReadinessWarning } from "../src/lib/brainModes";
 import { store } from "../src/lib/store";
 
 beforeEach(() => store.setSettings({ provider: "auto", model: "auto", onDeviceOnly: false, localFirstSimple: false }));
@@ -52,6 +52,23 @@ describe("brainModes — recommendBrainMode (auto-konfiguracja)", () => {
     const r = recommendBrainMode({ ollamaOk: false, ollamaModels: 0, cloudKeys: 0 });
     expect(r.mode).toBe("auto");
     expect(r.reason).toMatch(/klucz|Ollam/i);
+  });
+});
+
+describe("brainModes — modeReadinessWarning", () => {
+  it("offline/ollama bez Ollamy → ostrzeżenie", () => {
+    expect(modeReadinessWarning("offline", { ollamaConfigured: false, cloudKeys: 2 })).toMatch(/Ollam/);
+    expect(modeReadinessWarning("ollama", { ollamaConfigured: false, cloudKeys: 0 })).toMatch(/Ollam/);
+  });
+  it("online bez kluczy → ostrzeżenie", () => {
+    expect(modeReadinessWarning("online", { ollamaConfigured: true, cloudKeys: 0 })).toMatch(/klucz/i);
+  });
+  it("auto bez niczego → ostrzeżenie", () => {
+    expect(modeReadinessWarning("auto", { ollamaConfigured: false, cloudKeys: 0 })).toMatch(/klucz|Ollam/i);
+  });
+  it("spełnione wymagania → brak ostrzeżenia", () => {
+    expect(modeReadinessWarning("offline", { ollamaConfigured: true, cloudKeys: 0 })).toBe("");
+    expect(modeReadinessWarning("online", { ollamaConfigured: false, cloudKeys: 1 })).toBe("");
   });
 });
 

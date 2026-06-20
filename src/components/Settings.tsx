@@ -22,7 +22,7 @@ import { pullOllamaModel } from "../lib/ollamaPull";
 import { warmNow } from "../lib/prewarm";
 import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkOllama";
 import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
-import { BRAIN_MODES, applyBrainMode, detectBrainMode } from "../lib/brainModes";
+import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
 import { detectSd } from "../lib/localImage";
 import { checkForUpdate, applyUpdate, type UpdateInfo } from "../lib/updater";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
@@ -373,7 +373,13 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     key={m.id}
                     className="journal-card"
                     style={{ padding: "10px 12px", marginBottom: 8, cursor: "pointer", border: on ? "1px solid var(--gold)" : undefined }}
-                    onClick={() => { applyBrainMode(m.id, ollamaModels); setS((p) => ({ ...p, ...store.settings })); toast(`${m.icon} Tryb: ${m.title}`); }}
+                    onClick={() => {
+                      applyBrainMode(m.id, ollamaModels);
+                      setS((p) => ({ ...p, ...store.settings }));
+                      const cloudKeys = PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim()).length;
+                      const warn = modeReadinessWarning(m.id, { ollamaConfigured: !!s.ollamaUrl?.trim(), cloudKeys });
+                      toast(`${m.icon} Tryb: ${m.title}${warn ? ` — ⚠ ${warn}` : ""}`);
+                    }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 20 }}>{m.icon}</span>
