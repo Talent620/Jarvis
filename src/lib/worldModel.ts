@@ -35,20 +35,20 @@ export function extractEntities(text: string): Extracted[] {
     out.push({ kind, name });
   };
 
-  // Firmy ze skrótem prawnym.
-  for (const m of t.matchAll(/\b([A-ZŁŚŻŹĆŃÓĄĘ][\wąćęłńóśżź&.-]+(?:\s+[A-ZŁŚŻŹĆŃÓĄĘ][\wąćęłńóśżź&.-]+){0,3})\s+(?:sp\.?\s*z\s*o\.?\s*o\.?|s\.?\s*a\.?)\b/gi)) {
+  // Firmy ze skrótem prawnym (nazwa z WIELKIEJ litery; sam skrót dowolną wielkością liter).
+  for (const m of t.matchAll(/\b([A-ZŁŚŻŹĆŃÓĄĘ][\wąćęłńóśżź&.-]+(?:\s+[A-ZŁŚŻŹĆŃÓĄĘ][\wąćęłńóśżź&.-]+){0,3})\s+(?:[Ss][Pp]\.?\s*[Zz]\s*[Oo]\.?\s*[Oo]\.?|[Ss]\.?\s*[Aa]\.?)\b/g)) {
     push("company", m[1]);
   }
-  // „firma/firmą/firmy X".
-  for (const m of t.matchAll(/\bfirm[aęy]\s+„?([A-ZŁŚŻŹĆŃÓĄĘ][\wąćęłńóśżź&.-]+(?:\s+[A-ZŁŚŻŹĆŃÓĄĘ][\wąćęłńóśżź&.-]+){0,2})/g)) {
+  // „firma/firmą/firmy/firmie X" (też przypadek narzędnikowy „firmą").
+  for (const m of t.matchAll(/\bfirm[aąęy]\w{0,3}\s+„?([A-ZŁŚŻŹĆŃÓĄĘ][\wąćęłńóśżź&.-]+(?:\s+[A-ZŁŚŻŹĆŃÓĄĘ][\wąćęłńóśżź&.-]+){0,2})/g)) {
     push("company", m[1]);
   }
-  // Projekt.
-  for (const m of t.matchAll(/\bprojekt(?:cie|u|em|ach|y|ów)?\s+„?([A-ZŁŚŻŹĆŃÓĄĘ0-9][\wąćęłńóśżź -]{1,40}?)(?=["”.,!?]|\s+(?:dla|w|na|z|i|oraz)\b|$)/gi)) {
+  // Projekt („projekt"/„Projekt"; nazwa z wielkiej litery/cyfry).
+  for (const m of t.matchAll(/\b[Pp]rojekt(?:cie|u|em|ach|y|ów)?\s+„?([A-ZŁŚŻŹĆŃÓĄĘ0-9][\wąćęłńóśżź -]{1,40}?)(?=["”.,!?]|\s+(?:dla|w|na|z|i|oraz)\b|$)/g)) {
     push("project", m[1]);
   }
-  // Osoba po sygnale relacyjnym.
-  for (const m of t.matchAll(/\b(?:spotkani[ae]|rozmow[aęy]|telefon|mail|wiadomo[śs][ćc])\s+(?:z|do)\s+(?:pan[aią]?\s+|pani[ąa]?\s+)?([A-ZŁŚŻŹĆŃÓĄĘ][a-ząćęłńóśżź]{2,}(?:\s+[A-ZŁŚŻŹĆŃÓĄĘ][a-ząćęłńóśżź]{2,})?)/gi)) {
+  // Osoba po sygnale relacyjnym (sygnał dowolną wielkością; IMIĘ z wielkiej litery).
+  for (const m of t.matchAll(/\b(?:[Ss]potkani[ae]|[Rr]ozmow[aęy]|[Tt]elefon|[Mm]ail|[Ww]iadomo[śs][ćc])\s+(?:z|do)\s+(?:[Pp]an[aią]?\s+|[Pp]ani[ąa]?\s+)?([A-ZŁŚŻŹĆŃÓĄĘ][a-ząćęłńóśżź]{2,}(?:\s+[A-ZŁŚŻŹĆŃÓĄĘ][a-ząćęłńóśżź]{2,})?)/g)) {
     push("person", m[1]);
   }
   // „pan/pani X" (bez sygnału relacyjnego).

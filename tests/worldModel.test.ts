@@ -25,6 +25,17 @@ describe("worldModel — ekstrakcja encji (pure)", () => {
   it("nie wymyśla encji z prostego tekstu bez sygnałów", () => {
     expect(extractEntities("która godzina i jaka pogoda")).toEqual([]);
   });
+  it("NIE łapie małych liter jako encji (regresja: flaga i)", () => {
+    // „projekt na jutro" nie jest projektem „na jutro"; „spotkanie z marcinem" (mała litera) nie jest osobą
+    expect(extractEntities("projekt na jutro").some((e) => e.kind === "project")).toBe(false);
+    expect(extractEntities("to była sa decyzja").some((e) => e.kind === "company")).toBe(false);
+    expect(extractEntities("spotkanie z marcinem jutro").some((e) => e.kind === "person")).toBe(false);
+  });
+  it("nadal łapie poprawne, pisane wielką literą (Projekt na początku zdania)", () => {
+    expect(extractEntities("Projekt Apollo rusza").some((e) => e.kind === "project" && /apollo/i.test(e.name))).toBe(true);
+    expect(extractEntities("Spotkanie z Anną o 14").some((e) => e.kind === "person" && /Ann/i.test(e.name))).toBe(true);
+    expect(extractEntities("podpisaliśmy z Acme sp. z o.o.").some((e) => e.kind === "company")).toBe(true);
+  });
 });
 
 describe("worldModel — upsert i pewność", () => {

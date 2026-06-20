@@ -3,6 +3,15 @@
 > Senior-architect review całego projektu. Read-only ustalenia. Sortowane wg realnego wpływu (impact ÷ ryzyko naprawy).
 > Status: 4 z 6 klastrów ukończone; 2 (sales/leads, native+build/CI) w toku — sekcje uzupełniane na bieżąco.
 > Legenda: **Impact** H/M/L · **Risk-of-fix** H/M/L.
+>
+> **AKTUALIZACJA (hardening):** większość pozycji „✅ do naprawy" jest już naprawiona w kodzie
+> (CRLF/MIME injection, klucz Gemini w nagłówku, SSRF-blok metadanych chmury, walidacja importu
+> kopii, capy quota + głośny toast, wyciek węzłów audio, batch w pętli przypomnień). Trzy z czterech
+> pozycji „DO DECYZJI" mają teraz tryb **opt-in fail-closed** (Zero-Trust BFF: `REQUIRE_APP_TOKEN`;
+> zgody: `requireConsentAlways`). Pełny status i instrukcja włączenia: **`docs/SECURITY.md`**.
+> Ryzyka rezydualne: `admin.ts` (hasło=nr telefonu → PBKDF2+sól, wymaga migracji) oraz pełna
+> allowlista hostów `/passthrough` (wymaga konfiguracji pod wdrożenie).
+
 
 ## 1. Mapa projektu (skrót)
 - **Klient** (Vite + React + TS): `src/App.tsx` (orkiestracja, pętle `setInterval`), `src/lib/brain.ts` (mózg + failover providerów), `src/lib/tools.ts` (narzędzia + bramka zgód `permissions.ts`), `src/lib/store.ts` (reaktywny store na localStorage).
