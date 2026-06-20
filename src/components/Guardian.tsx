@@ -227,10 +227,14 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* 🛰 Panel agentów — stan każdej domeny */}
+          {/* 🛰 Panel agentów — stan każdej domeny + szybkie zwiń/rozwiń wszystko (czytelność) */}
           {scan && (
             <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>🛰 Agenci systemu</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>🛰 Agenci systemu</div>
+                <button className="chip" onClick={() => setOpen(Object.fromEntries(scan.reports.map((a) => [a.id, false])))}>⏶ Zwiń</button>
+                <button className="chip" onClick={() => setOpen(Object.fromEntries(scan.reports.map((a) => [a.id, true])))}>⏷ Rozwiń</button>
+              </div>
               {scan.reports.map((a) => AgentCard(a))}
             </div>
           )}
@@ -273,6 +277,9 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
 
           {/* Doradca + Wykonanie — Strażnik od wszystkiego */}
           <h3 style={{ marginTop: 14 }}>💬 Zapytaj lub zleć Strażnikowi</h3>
+          <p className="muted" style={{ marginTop: 0, fontSize: 12 }}>
+            Jedno pytanie lub polecenie (szybko). Potrzebujesz dłuższej rozmowy z kontekstem? Użyj „🗣 Porozmawiaj ze Strażnikiem” niżej.
+          </p>
           <input
             value={q}
             placeholder="np. jak przyspieszyć JARVISA, jaki model wybrać, dodaj zadanie, napisz maila…"

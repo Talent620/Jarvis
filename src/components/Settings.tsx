@@ -68,13 +68,32 @@ function UsageChart() {
 }
 
 type Tab = "ai" | "voice" | "behavior" | "interface" | "integrations" | "data";
-const TABS: { id: Tab; label: string }[] = [
-  { id: "ai", label: "🤖 AI" },
-  { id: "voice", label: "🗣 Głos" },
-  { id: "behavior", label: "✨ Zachowanie" },
-  { id: "interface", label: "🎨 Interfejs" },
-  { id: "integrations", label: "🔗 Integracje" },
-  { id: "data", label: "🗄 Dane i aktualizacje" },
+const TABS: { id: Tab; label: string; summary: string }[] = [
+  { id: "ai", label: "🤖 AI", summary: "Tryb pracy, dostawca, klucze API, poczta, lokalny model" },
+  { id: "voice", label: "🗣 Głos", summary: "Silnik głosu, mikrofon i nasłuch, Tryb Słuchawki" },
+  { id: "behavior", label: "✨ Zachowanie", summary: "Osobowość, proaktywność, automat sprzedaży" },
+  { id: "interface", label: "🎨 Interfejs", summary: "Motyw, układ, tłumacz na żywo, przewodnik" },
+  { id: "integrations", label: "🔗 Integracje", summary: "Google, kalendarz, MCP, SalesOS, pamięć" },
+  { id: "data", label: "🗄 Dane", summary: "Aktualizacja, kopia danych, blokada PIN, prywatność" },
+];
+
+// 🔎 „Skocz do ustawienia": wpisz, czego szukasz → klik przenosi do właściwej zakładki i przewija
+// do sekcji (koniec przewijania i szukania). anchor = id nagłówka <h3>/sekcji niżej.
+const SETTINGS_INDEX: { label: string; tab: Tab; anchor?: string; keys: string }[] = [
+  { label: "🎛 Tryb pracy JARVISA", tab: "ai", anchor: "set-mode", keys: "tryb szybki madry lokalny praca" },
+  { label: "🔑 Klucze API (Gemini/Claude/OpenAI…)", tab: "ai", anchor: "set-keys", keys: "klucz api gemini openai claude anthropic groq dostawca model" },
+  { label: "📨 Poczta — wysyłka e-maili", tab: "ai", anchor: "set-email", keys: "mail email smtp poczta wysylka gmail haslo" },
+  { label: "🖥 Lokalny model (Ollama, obrazy)", tab: "ai", anchor: "set-ollama", keys: "ollama lokalny serwer stable diffusion obrazy sd model" },
+  { label: "🗣 Głos JARVISA (silnik, próbka)", tab: "voice", anchor: "set-voice", keys: "glos voice mowa silnik gemini eleven fish czyta brzmienie ton" },
+  { label: "🎤 Mikrofon i nasłuch", tab: "voice", anchor: "set-listen", keys: "mikrofon nasluch sluchanie wake slowo jarvis" },
+  { label: "🎭 Osobowość / charakter", tab: "behavior", anchor: "set-persona", keys: "osobowosc charakter persona ton imie zwracanie" },
+  { label: "💸 Automat sprzedaży / leady", tab: "behavior", anchor: "set-sales", keys: "sprzedaz leady prospekting oferty firmy" },
+  { label: "🎨 Motyw / wygląd", tab: "interface", anchor: "set-theme", keys: "motyw kolor wyglad interfejs hud theme" },
+  { label: "🔗 Integracje (Google, MCP…)", tab: "integrations", keys: "integracje google kalendarz mcp salesos pamiec sync" },
+  { label: "⬆ Aktualizacja JARVISA", tab: "data", anchor: "set-update", keys: "aktualizacja update wersja nowa" },
+  { label: "🗄 Kopia danych (backup/eksport)", tab: "data", anchor: "set-backup", keys: "kopia backup eksport import dane zapis przywroc" },
+  { label: "🔒 Blokada aplikacji (PIN)", tab: "data", anchor: "set-lock", keys: "blokada pin haslo lock zabezpieczenie" },
+  { label: "🛡 Prywatność i zgody", tab: "data", anchor: "set-privacy", keys: "prywatnosc zgody consent uprawnienia" },
 ];
 
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
@@ -147,6 +166,15 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const setVoice = (patch: Partial<Settings>) => { setS((prev) => ({ ...prev, ...patch })); store.setSettings(patch); };
   // JEDEN wybór silnika głosu (źródło prawdy) — steruje, co pokazujemy i co naprawdę zabrzmi.
   const voiceMode = resolveVoiceMode(s);
+  // 🔎 „Skocz do ustawienia" — koniec przewijania w poszukiwaniu opcji.
+  const [find, setFind] = useState("");
+  const findResults = find.trim()
+    ? SETTINGS_INDEX.filter((x) => `${x.label} ${x.keys}`.toLowerCase().includes(find.trim().toLowerCase())).slice(0, 6)
+    : [];
+  const jumpTo = (r: (typeof SETTINGS_INDEX)[number]) => {
+    setTab(r.tab); setFind("");
+    if (r.anchor) setTimeout(() => document.getElementById(r.anchor as string)?.scrollIntoView({ behavior: "smooth", block: "start" }), 90);
+  };
   // Klucze zapisują się NATYCHMIAST do magazynu — nigdy nie giną po wyjściu bez „Zapisz".
   const setKey = (id: ProviderId, val: string) => {
     const keys = { ...s.keys, [id]: val };
@@ -354,6 +382,26 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
         <div className="panel-head">
           <div className="grabber" />
           <h2>⚙ Ustawienia</h2>
+          {/* 🔎 Wpisz, czego szukasz — przeniesiemy Cię prosto do sekcji (bez przewijania). */}
+          <div style={{ position: "relative", marginTop: 8 }}>
+            <input
+              value={find}
+              placeholder="🔎 Szukaj ustawienia… (np. klucz, głos, kopia, PIN)"
+              onChange={(e) => setFind(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && findResults[0]) jumpTo(findResults[0]); if (e.key === "Escape") setFind(""); }}
+              style={{ width: "100%" }}
+            />
+            {findResults.length > 0 && (
+              <div className="journal-card" style={{ position: "absolute", left: 0, right: 0, top: "calc(100% + 4px)", zIndex: 20, padding: 4, maxHeight: 240, overflowY: "auto" }}>
+                {findResults.map((r) => (
+                  <button key={r.label} className="btn" style={{ width: "100%", textAlign: "left", padding: "8px 10px", marginTop: 2 }} onClick={() => jumpTo(r)}>
+                    <span style={{ fontSize: 13 }}>{r.label}</span>
+                    <span className="muted" style={{ fontSize: 11, display: "block" }}>{TABS.find((t) => t.id === r.tab)?.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="chips" style={{ marginTop: 10 }}>
             {TABS.map((t) => (
               <button key={t.id} className={`chip ${tab === t.id ? "on" : ""}`} onClick={() => setTab(t.id)}>
@@ -361,6 +409,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
+          {/* Jednolinijkowy spis, co jest w aktywnej zakładce — wiadomo gdzie szukać bez klikania. */}
+          <p className="muted" style={{ margin: "8px 2px 0", fontSize: 12 }}>{TABS.find((t) => t.id === tab)?.summary}</p>
         </div>
         <div className="panel-body">
           {/* Wskaźnik sprawności — zawsze widoczny u góry, niezależnie od zakładki. */}
@@ -369,7 +419,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           {tab === "ai" && (
             <>
               {/* 🎛 Tryb pracy — jasny wybór zamiast dziesiątek przełączników */}
-              <h3>🎛 Tryb pracy JARVISA</h3>
+              <h3 id="set-mode">🎛 Tryb pracy JARVISA</h3>
               <p className="muted">Wybierz jeden — JARVIS sam ustawi resztę. Pod każdym widać, co się włączy i czego wymaga.</p>
               {(() => { const activeMode = detectBrainMode(s); return BRAIN_MODES.map((m) => {
                 const on = activeMode === m.id;
@@ -570,7 +620,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               )}
 
               <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
-              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🔑 Klucze API (chmura) — kliknij, by rozwinąć</summary>
+              <summary id="set-keys" style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🔑 Klucze API (chmura) — kliknij, by rozwinąć</summary>
               <p className="muted" style={{ marginTop: 6 }}>
                 💡 Możesz wpisać <b>kilka kluczy jednego dostawcy</b> — każdy w nowej linii. Gdy
                 jeden wyczerpie limit dzienny, JARVIS automatycznie przełączy się na kolejny, żeby
@@ -794,7 +844,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </details>
               <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
               <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>📦 Więcej funkcji — poczta · research · studio premium · konsylium</summary>
-              <h3>📨 Poczta — wysyłka e-maili z aplikacji</h3>
+              <h3 id="set-email">📨 Poczta — wysyłka e-maili z aplikacji</h3>
               {(() => {
                 // Diagnostyka „dlaczego nie idzie" — jeden czytelny powód (reaguje na zmiany w `s`).
                 const rd = mailReadiness();
@@ -955,7 +1005,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
               </details>
 
-              <h3>🖥 Lokalny model / serwery (Ollama, obrazy)</h3>
+              <h3 id="set-ollama">🖥 Lokalny model / serwery (Ollama, obrazy)</h3>
               <div className="field">
                 <label>Lokalny model — adres Ollama (prywatny, offline)</label>
                 <input
@@ -1531,7 +1581,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           {/* ============ 🗣 GŁOS ============ */}
           {tab === "voice" && (
             <>
-              <h3>Mowa i nasłuch</h3>
+              <h3 id="set-listen">Mowa i nasłuch</h3>
               <div className="row">
                 <span>Czytaj odpowiedzi na głos</span>
                 <Toggle on={s.speak} onClick={() => setVoice({ speak: !s.speak })} />
@@ -1646,7 +1696,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 otwórz Jarvis" — aplikacja otworzy się (z auto-nasłuchem) nawet z zablokowanego ekranu.
               </p>
 
-              <h3>Brzmienie głosu</h3>
+              <h3 id="set-voice">Brzmienie głosu</h3>
               {/* 🔊 Co naprawdę zabrzmi — jasny status + obietnica „działa od ręki" (koniec chaosu). */}
               <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 10 }}>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>🔊 Aktualny głos: {activeVoiceLabel(s)}</div>
@@ -1767,7 +1817,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           {/* ============ ✨ ZACHOWANIE ============ */}
           {tab === "behavior" && (
             <>
-              <h3>Osobowość</h3>
+              <h3 id="set-persona">Osobowość</h3>
               <div className="field">
                 <label>Jak JARVIS ma się do Ciebie zwracać</label>
                 <input value={s.userName} onChange={(e) => set({ userName: e.target.value })} />
@@ -1845,7 +1895,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   <input type="time" value={s.briefingTime} onChange={(e) => set({ briefingTime: e.target.value })} />
                 </div>
               )}
-              <h3>💸 Automat sprzedaży (auto-prospekting)</h3>
+              <h3 id="set-sales">💸 Automat sprzedaży (auto-prospekting)</h3>
               <p className="muted">
                 JARVIS sam, kilka razy dziennie (gdy apka otwarta), szuka nowych firm w Twojej niszy
                 i dopisuje je do Pulpitu Sprzedaży. Darmowe (OpenStreetMap) — z telefonami firm, bez klucza.
@@ -1927,7 +1977,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           {/* ============ 🎨 INTERFEJS ============ */}
           {tab === "interface" && (
             <>
-              <h3>Motyw HUD</h3>
+              <h3 id="set-theme">Motyw HUD</h3>
               <p className="muted">Kolor akcentów całego interfejsu.</p>
               <div className="chips" style={{ marginBottom: 8 }}>
                 {[
@@ -2401,7 +2451,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 🧩 Wersja (build): <b>{typeof __APP_BUILD__ !== "undefined" ? __APP_BUILD__ : "dev"}</b> UTC — podaj ją, gdy zgłaszasz problem.
               </p>
 
-              <h3>⬆ Aktualizacja JARVISA</h3>
+              <h3 id="set-update">⬆ Aktualizacja JARVISA</h3>
               <p className="muted" style={{ marginTop: -4 }}>
                 Sprawdź i pobierz najnowszą wersję z GitHub. Na telefonie/PC: 1 klik → instalacja najnowszej.
                 W przeglądarce: odświeży do najnowszej od ręki.
@@ -2451,7 +2501,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </p>
               </details>
 
-              <h3>Kopia danych</h3>
+              <h3 id="set-backup">Kopia danych</h3>
               <p className="muted">
                 Zapisz wszystkie swoje dane (zadania, notatki, pamięć, dziennik, projekty, targ…)
                 do pliku i przywróć je po reinstalacji lub na innym urządzeniu. Ten plik
@@ -2505,7 +2555,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </p>
               {backupMsg && <p className="muted">{backupMsg}</p>}
 
-              <h3>🔒 Blokada aplikacji (PIN)</h3>
+              <h3 id="set-lock">🔒 Blokada aplikacji (PIN)</h3>
               <p className="muted">
                 Zabezpiecz JARVIS-a PIN-em — bez niego apka jest bezużyteczna dla niepowołanych
                 osób (sejf haseł, dane, sterowanie). PIN trzymany tylko jako skrót, lokalnie.
@@ -2543,7 +2593,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               )}
               {pinMsg && <p className="muted">{pinMsg}</p>}
 
-              <h3>Prywatność i zgody</h3>
+              <h3 id="set-privacy">Prywatność i zgody</h3>
               <p className="muted">
                 Akcje (dzwonienie, SMS, smart home, zapisy) wymagają Twojej zgody. Możesz wyczyścić
                 zapamiętane zgody, by JARVIS znów pytał za każdym razem.
