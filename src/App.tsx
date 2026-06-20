@@ -2,22 +2,22 @@ import { useEffect, useRef, useState } from "react";
 import Orb, { type OrbState } from "./components/Orb";
 import Conversation from "./components/Conversation";
 import Composer from "./components/Composer";
-import SettingsPanel from "./components/Settings";
-import Panels from "./components/Panels";
+const SettingsPanel = lazy(() => import("./components/Settings"));
+const Panels = lazy(() => import("./components/Panels"));
 import LiveOverlay from "./components/LiveOverlay";
-import ChatHistory from "./components/ChatHistory";
-import Projects from "./components/Projects";
-import Journal from "./components/Journal";
-import SalesDashboard from "./components/SalesDashboard";
+const ChatHistory = lazy(() => import("./components/ChatHistory"));
+const Projects = lazy(() => import("./components/Projects"));
+const Journal = lazy(() => import("./components/Journal"));
+const SalesDashboard = lazy(() => import("./components/SalesDashboard"));
 const MoneyHub = lazy(() => import("./components/MoneyHub"));
-import Help from "./components/Help";
-import More from "./components/More";
+const Help = lazy(() => import("./components/Help"));
+const More = lazy(() => import("./components/More"));
 import Boot from "./components/Boot";
 import LockScreen from "./components/LockScreen";
 import Onboarding, { needsOnboarding } from "./components/Onboarding";
 import LicenseGate from "./components/LicenseGate";
 import { checkActivation, licenseRequired } from "./lib/license";
-import HeadsetMode from "./components/HeadsetMode";
+const HeadsetMode = lazy(() => import("./components/HeadsetMode"));
 import { watchHeadset } from "./lib/headset";
 import { toast } from "./lib/toast";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
@@ -1094,7 +1094,7 @@ export default function App() {
         councilAvailable={councilMembers(3).length >= 2}
       />
 
-      {showVoice && <HeadsetMode onClose={() => setShowVoice(false)} />}
+      {showVoice && (<ScreenBoundary><HeadsetMode onClose={() => setShowVoice(false)} /></ScreenBoundary>)}
       {showAdmin && (
         <ScreenBoundary>
           <AdminPanel onClose={() => setShowAdmin(false)} />
@@ -1155,20 +1155,22 @@ export default function App() {
           />
         </ScreenBoundary>
       )}
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
-      {showPanels && <Panels onClose={() => setShowPanels(false)} />}
+      {showSettings && (<ScreenBoundary><SettingsPanel onClose={() => setShowSettings(false)} /></ScreenBoundary>)}
+      {showPanels && (<ScreenBoundary><Panels onClose={() => setShowPanels(false)} /></ScreenBoundary>)}
       {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}
       {showHistory && (
-        <ChatHistory activeId={activeId} onOpen={openChat} onClose={() => setShowHistory(false)} />
+        <ScreenBoundary><ChatHistory activeId={activeId} onOpen={openChat} onClose={() => setShowHistory(false)} /></ScreenBoundary>
       )}
-      {showProjects && <Projects onClose={() => setShowProjects(false)} />}
-      {showJournal && <Journal onClose={() => setShowJournal(false)} />}
+      {showProjects && (<ScreenBoundary><Projects onClose={() => setShowProjects(false)} /></ScreenBoundary>)}
+      {showJournal && (<ScreenBoundary><Journal onClose={() => setShowJournal(false)} /></ScreenBoundary>)}
       {showSales && (
+        <ScreenBoundary>
         <SalesDashboard
           onClose={() => setShowSales(false)}
           onWeb={() => { setShowSales(false); setShowWeb(true); }}
           onMoney={() => { setShowSales(false); setShowMoney(true); }}
         />
+        </ScreenBoundary>
       )}
       {showMoney && (
         <ScreenBoundary>
@@ -1179,8 +1181,9 @@ export default function App() {
           />
         </ScreenBoundary>
       )}
-      {showHelp && <Help onClose={() => setShowHelp(false)} />}
+      {showHelp && (<ScreenBoundary><Help onClose={() => setShowHelp(false)} /></ScreenBoundary>)}
       {showMore && (
+        <ScreenBoundary>
         <More
           onProjects={() => setShowProjects(true)}
           onJournal={() => setShowJournal(true)}
@@ -1217,6 +1220,7 @@ export default function App() {
           onFaq={() => setShowFaq(true)}
           onClose={() => setShowMore(false)}
         />
+        </ScreenBoundary>
       )}
       {showStatus && (
         <ScreenBoundary>
