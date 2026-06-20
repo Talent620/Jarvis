@@ -4,6 +4,7 @@ import { toast } from "../lib/toast";
 import { store } from "../lib/store";
 import { guardian, guardianAdvise, guardianExecute, guardianPlan, isOutgoingCommand, GUARDIAN_CAPABILITIES, type GuardianActionResult, type GuardianActionKey } from "../lib/guardian";
 import { guardianScan, type GuardianScan, type AgentReport, type AgentState } from "../lib/guardianAgents";
+import { recordGuardianEvent, getGuardianHistory, clearGuardianHistory, topFixes, type GuardianEvent } from "../lib/guardianHistory";
 import { checkForUpdate, applyUpdate } from "../lib/updater";
 
 // 🛡 Strażnik JARVISA — centralny panel dowodzenia. Guardian Core skanuje cały ekosystem przez
@@ -25,6 +26,7 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [proactive, setProactive] = useState(store.settings.guardianProactive);
   const [autopilot, setAutopilot] = useState(store.settings.guardianAutopilot);
+  const [history, setHistory] = useState<GuardianEvent[]>(() => getGuardianHistory());
 
   const refresh = async () => {
     setBusy(true); setMsg("Skanuję ekosystem JARVISA…");
@@ -41,6 +43,9 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
       const r = await fn();
       setMsg(r.message);
       toast(r.message);
+      // Opiekun: zapamiętaj wykonaną naprawę (do historii i statystyk).
+      recordGuardianEvent("fix", r.message);
+      setHistory(getGuardianHistory());
       await refresh();
     } catch {
       setMsg("⚠ Coś poszło nie tak — spróbuj ponownie.");
@@ -271,6 +276,26 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
             </div>
           )}
           {advice && <p className="muted" style={{ fontSize: 13, whiteSpace: "pre-wrap", marginTop: 8 }}>{advice}</p>}
+
+          {/* 🗂 Pamięć Strażnika (opiekun) — co robił + najczęstsze naprawy */}
+          {history.length > 0 && (
+            <details style={{ marginTop: 14 }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600 }}>🗂 Pamięć Strażnika ({history.length})</summary>
+              {(() => { const top = topFixes(history); return top.length > 1 ? (
+                <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                  Najczęściej naprawiane: {top.map((t) => `${t.message.replace(/^[^\s]+\s/, "").slice(0, 28)}… ×${t.count}`).join(" · ")}
+                </div>
+              ) : null; })()}
+              <div style={{ marginTop: 6 }}>
+                {history.slice(0, 10).map((e, i) => (
+                  <div key={i} style={{ fontSize: 12, lineHeight: 1.6 }}>
+                    <span className="muted">{new Date(e.at).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span> — {e.message}
+                  </div>
+                ))}
+              </div>
+              <button className="btn" style={{ marginTop: 8, width: "auto", padding: "5px 12px", fontSize: 12 }} onClick={() => { clearGuardianHistory(); setHistory([]); }}>🗑 Wyczyść historię</button>
+            </details>
+          )}
 
           {/* Katalog możliwości — pełnia mocy (z jasną granicą przy pieniądzach) */}
           <details style={{ marginTop: 14 }}>

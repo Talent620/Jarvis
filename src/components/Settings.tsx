@@ -74,7 +74,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "behavior", label: "✨ Zachowanie" },
   { id: "interface", label: "🎨 Interfejs" },
   { id: "integrations", label: "🔗 Integracje" },
-  { id: "data", label: "🗄 Dane" },
+  { id: "data", label: "🗄 Dane i aktualizacje" },
 ];
 
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
