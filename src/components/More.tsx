@@ -13,6 +13,7 @@ export default function More({
   onData,
   onGadgets,
   onHud,
+  onGuardian,
   onStudio,
   onWeb,
   onScreen,
@@ -46,6 +47,7 @@ export default function More({
   onData: () => void;
   onGadgets: () => void;
   onHud: () => void;
+  onGuardian: () => void;
   onStudio: () => void;
   onWeb: () => void;
   onScreen?: () => void;
@@ -73,6 +75,7 @@ export default function More({
 }) {
   useEscape(onClose);
   const items = [
+    { id: "guardian", icon: "🛡", label: "Strażnik JARVISA — napraw, przyspiesz, ulepsz, doradź", fn: onGuardian },
     { id: "notifications", icon: "🔔", label: "Powiadomienia — co wymaga uwagi", fn: onNotifications },
     { id: "status", icon: "🩺", label: "Stan systemu — co działa (zielone/czerwone)", fn: onStatus },
     { id: "profile", icon: "👤", label: "Mój profil — kim jestem (pamięć)", fn: onProfile },

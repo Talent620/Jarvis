@@ -4,6 +4,7 @@
 import { store } from "./store";
 import { settingsFixes } from "./healthCheck";
 import { detectOllama, findOllamaServer } from "./privateMode";
+import { findSdServer } from "./localImage";
 import { warmNow } from "./prewarm";
 import { isDesktop } from "./desktop";
 import { PROVIDER_LIST } from "./providers/registry";
@@ -83,6 +84,12 @@ export async function runAndFix(onStep?: (msg: string) => void): Promise<HealRes
   if (pick && (pick.provider !== store.settings.provider || pick.model !== store.settings.model)) {
     store.setSettings({ provider: pick.provider, model: pick.model });
     note(`✓ Ustawiłem mózg: ${pick.provider} / ${pick.model}`);
+  }
+
+  // 3b) Serwer obrazów (Stable Diffusion): na desktopie bez adresu — spróbuj znaleźć (localhost:7860).
+  if (!store.settings.sdUrl?.trim() && isDesktop()) {
+    const sd = await findSdServer(["http://localhost:7860", "http://127.0.0.1:7860"]);
+    if (sd.ok) { store.setSettings({ sdUrl: sd.url }); note(`✓ Znaleziono serwer obrazów (${sd.url})`); }
   }
 
   // 4) Rozgrzej model lokalny — pierwsza odpowiedź od ręki.

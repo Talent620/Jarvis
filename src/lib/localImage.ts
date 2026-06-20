@@ -89,6 +89,23 @@ export function parseSdModels(json: unknown): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Auto-znajdź działający serwer Stable Diffusion: próbuje kolejno (obecny, localhost:7860,
+ * 127.0.0.1:7860) i zwraca pierwszy, który odpowiada — żeby JARVIS sam się połączył z obrazami.
+ */
+export async function findSdServer(candidates?: string[]): Promise<{ ok: boolean; url: string; models: string[]; error?: string; tried: string[] }> {
+  const cur = store.settings.sdUrl?.trim();
+  const raw = candidates ?? [cur, "http://localhost:7860", "http://127.0.0.1:7860"];
+  const list = Array.from(new Set(raw.filter((u): u is string => !!u && !!u.trim()).map((u) => u.trim())));
+  const tried: string[] = [];
+  for (const url of list) {
+    tried.push(url);
+    const r = await detectSd(url);
+    if (r.ok) return { ok: true, url, models: r.models, tried };
+  }
+  return { ok: false, url: list[0] || "", models: [], error: "Nie znalazłem serwera Stable Diffusion (localhost:7860). Uruchom Forge/A1111 z flagą --api.", tried };
+}
+
 /** Sprawdź połączenie z serwerem SD i pobierz listę modeli (checkpointów). */
 export async function detectSd(rawUrl?: string): Promise<SdStatus> {
   const base = (rawUrl ?? store.settings.sdUrl ?? "").trim().replace(/\/+$/, "");
