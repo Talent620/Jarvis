@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { parseElement, nicheToOverpass, toOverpassBbox, buildOverpassQuery, saveLeads } from "../src/lib/leads";
+import { parseElement, nicheToOverpass, toOverpassBbox, buildOverpassQuery, saveLeads, resolveLeadCount } from "../src/lib/leads";
 import { store } from "../src/lib/store";
 
 describe("silnik leadów (OSM) — czyste funkcje", () => {
@@ -63,6 +63,14 @@ describe("silnik leadów (OSM) — czyste funkcje", () => {
     expect(nicheToOverpass("pralnia")).toContain("laundry");
     expect(nicheToOverpass("krawiec")).toContain("tailor");
     expect(nicheToOverpass("szewc")).toContain("shoemaker");
+  });
+
+  it("resolveLeadCount: opcja > ustawienie > 15, ograniczone do 3–50", () => {
+    expect(resolveLeadCount(25, 15)).toBe(25);       // opcja wygrywa
+    expect(resolveLeadCount(undefined, 30)).toBe(30); // ustawienie
+    expect(resolveLeadCount(undefined, undefined)).toBe(15); // domyślnie
+    expect(resolveLeadCount(999, 0)).toBe(50);        // górny limit
+    expect(resolveLeadCount(1, 0)).toBe(3);           // dolny limit
   });
 });
 

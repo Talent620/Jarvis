@@ -4,7 +4,7 @@ import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
 import { splitOffer } from "../lib/glinks";
 import { canSendDirect, draftAndSendOffer, sentTodayCount, sendAllOffers } from "../lib/mailer";
-import { findLeads } from "../lib/leads";
+import { findLeads, browserCity } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { leadsToCsv, followUpsDue, callNowList, searchLeads, wasLeadEmailed } from "../lib/salesEngine";
 import { importLeads } from "../lib/leadImport";
@@ -55,6 +55,8 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const [huntMsg, setHuntMsg] = useState("");
   const [niche, setNiche] = useState(store.settings.prospectNiche || "");
   const [city, setCity] = useState(store.settings.prospectLocation || "");
+  const [count, setCount] = useState(store.settings.prospectCount || 15);
+  const [locating, setLocating] = useState(false);
   const [noWeb, setNoWeb] = useState(false);
   const [openLead, setOpenLead] = useState<string | null>(null);
   const [showPlan, setShowPlan] = useState(false);
@@ -141,11 +143,22 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
 
   // „Znajdź leady" — od ręki, prosto z pulpitu. Darmowe (OpenStreetMap), z
   // telefonami. Nisza i miasto są OPCJONALNE (bez miasta użyje lokalizacji).
+  // 📍 Wykryj miasto z lokalizacji — żeby szukać bez wpisywania nazwy miejscowości.
+  const locate = async () => {
+    setLocating(true);
+    setHuntMsg("📍 Ustalam lokalizację…");
+    const found = await browserCity().catch(() => null);
+    setLocating(false);
+    if (found) { setCity(found); store.setSettings({ prospectLocation: found }); setHuntMsg(`📍 Wykryto: ${found}. Klik „Znajdź leady”.`); }
+    else setHuntMsg("Nie udało się ustalić lokalizacji — wpisz miasto albo zezwól na lokalizację w przeglądarce.");
+  };
+
   const hunt = async () => {
-    if (city.trim()) store.setSettings({ prospectNiche: niche.trim(), prospectLocation: city.trim() });
+    const n = Math.min(50, Math.max(3, count || 15));
+    store.setSettings({ prospectNiche: niche.trim(), prospectCount: n, ...(city.trim() ? { prospectLocation: city.trim() } : {}) });
     setHunting(true);
-    setHuntMsg(noWeb ? "🔎 Szukam firm BEZ strony (idealni klienci)…" : "🔎 Szukam firm w okolicy…");
-    const r = await findLeads({ niche: niche.trim() || undefined, location: city.trim() || undefined, count: 15, onlyNoWebsite: noWeb });
+    setHuntMsg(noWeb ? `🔎 Szukam ${n} firm BEZ strony (idealni klienci)…` : `🔎 Szukam ${n} firm w okolicy…`);
+    const r = await findLeads({ niche: niche.trim() || undefined, location: city.trim() || undefined, count: n, onlyNoWebsite: noWeb });
     setHunting(false);
     if (r.error) {
       setHuntMsg(`⚙ ${r.error}`);
@@ -320,7 +333,14 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
           {/* Szukanie leadów — wszystko z pulpitu, bez wchodzenia do ustawień */}
           <div className="field" style={{ display: "flex", gap: 8, marginBottom: 8 }}>
             <input value={niche} placeholder="Nisza — opcjonalnie (np. fryzjer)" onChange={(e) => setNiche(e.target.value)} style={{ flex: 1 }} />
-            <input value={city} placeholder="Miasto — opcjonalnie (np. Kraków)" onChange={(e) => setCity(e.target.value)} style={{ flex: 1 }} />
+            <input value={city} placeholder="Miasto — opcjonalnie (📍 lub auto)" onChange={(e) => setCity(e.target.value)} style={{ flex: 1 }} />
+            <button className="btn" style={{ width: "auto", marginTop: 0, padding: "0 12px" }} onClick={locate} disabled={locating} title="Użyj mojej lokalizacji">
+              {locating ? "📍…" : "📍"}
+            </button>
+          </div>
+          <div className="row" style={{ marginBottom: 8, gap: 8 }}>
+            <span style={{ fontSize: 13, whiteSpace: "nowrap" }}>🔢 Ile na raz: <b>{count}</b></span>
+            <input type="range" min={3} max={50} step={1} value={count} onChange={(e) => setCount(Number(e.target.value))} style={{ flex: 1 }} />
           </div>
           <label className="row" style={{ cursor: "pointer", marginBottom: 8 }}>
             <span style={{ fontSize: 13 }}>🌐 Tylko firmy <b>bez strony www</b> (idealni klienci dla agencji stron)</span>

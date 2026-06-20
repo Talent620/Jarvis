@@ -495,6 +495,8 @@ export interface Settings {
   prospectNiche: string;
   /** Lokalizacja do auto-prospektingu (np. „Kraków"). */
   prospectLocation: string;
+  /** Ile leadów szukać na raz (3–50, domyślnie 15). */
+  prospectCount: number;
   /** Auto-pisanie szkiców ofert dla nowych leadów (czekają w Pulpicie). */
   autoDraftOffers: boolean;
   /** Co ile dni planować kolejny follow-up po kontakcie (kadencja). Domyślnie 3. */

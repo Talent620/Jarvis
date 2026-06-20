@@ -15,7 +15,7 @@ export async function runProspecting(): Promise<{ added: number; error?: string 
   const r = await findLeads({
     niche: s.prospectNiche?.trim() || undefined,
     location: s.prospectLocation.trim(),
-    count: 15,
+    count: s.prospectCount || 15,
   });
   if (r.error) return { added: 0, error: r.error };
 

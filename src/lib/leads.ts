@@ -289,7 +289,7 @@ export function saveLeads(raws: RawLead[], niche: string | undefined, city: stri
 }
 
 /** Miasto z geolokalizacji przeglądarki (gdy użytkownik nie poda lokalizacji). */
-function browserCity(): Promise<string | null> {
+export function browserCity(): Promise<string | null> {
   return new Promise((resolve) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(
@@ -315,9 +315,14 @@ export interface FindResult {
  *  - brak niszy → szuka wszystkich lokalnych firm (priorytet: bez strony www).
  * Znalezione leady od razu zapisuje do Pulpitu Sprzedaży.
  */
+/** Pure: ile leadów szukać — z opcji, potem ustawień, potem 15; ogranicz do 3–50. */
+export function resolveLeadCount(optCount?: number, settingCount?: number): number {
+  return Math.min(50, Math.max(3, optCount || settingCount || 15));
+}
+
 export async function findLeads(opts: { niche?: string; location?: string; count?: number; onlyNoWebsite?: boolean }): Promise<FindResult> {
-  const count = Math.min(30, Math.max(3, opts.count || 12));
   const s = store.settings;
+  const count = resolveLeadCount(opts.count, s.prospectCount);
   // AUTONOMIA: nisza opcjonalna — podana → zapisana w ustawieniach → pusta (OSM szuka szeroko
   // wszystkich lokalnych firm). Bez niszy NIE blokujemy wyszukiwania.
   const niche = opts.niche?.trim() || s.prospectNiche?.trim() || undefined;

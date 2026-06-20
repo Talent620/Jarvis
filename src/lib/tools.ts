@@ -625,7 +625,7 @@ const tools: Tool[] = [
         {
           niche: str("Nisza/branża (opcjonalnie), np. fryzjer, restauracja, warsztat"),
           location: str("Miasto (opcjonalnie), np. Kraków"),
-          count: { type: "number", description: "Ile leadów (3–30, domyślnie 12)" },
+          count: { type: "number", description: "Ile leadów (3–50, domyślnie z ustawień — 15)" },
           only_without_website: { type: "boolean", description: "Tylko firmy BEZ strony www (idealne dla agencji stron)" },
           with_dossiers: { type: "boolean", description: "Po znalezieniu od razu przygotuj TECZKI dla 3 najgorętszych (audyt + słabe punkty + plan rozmowy + e-mail + skrypt). Włącz, gdy użytkownik chce być gotowy do kontaktu." },
         },

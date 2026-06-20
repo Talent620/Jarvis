@@ -126,6 +126,7 @@ const defaultSettings: Settings = {
   translatorVoice: "Aoede",
   prospectNiche: "",
   prospectLocation: "",
+  prospectCount: 15,
   autoDraftOffers: false,
   followUpDays: 3,
   backgroundWake: false,
