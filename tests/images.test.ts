@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { generateImage, humanizeImageError, IMAGE_MODELS_LIST } from "../src/lib/images";
+import { generateImage, humanizeImageError, IMAGE_MODELS_LIST, pollinationsUrl, bestImageModel } from "../src/lib/images";
 import { store } from "../src/lib/store";
 
 const noKeys = { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", openrouter: "", nvidia: "", github: "" };
@@ -13,6 +13,29 @@ describe("Studio — modele edycji", () => {
     expect(IMAGE_MODELS_LIST.some((m) => m.tier === "free")).toBe(true);
     expect(IMAGE_MODELS_LIST.some((m) => m.tier === "premium")).toBe(true);
     expect(IMAGE_MODELS_LIST.find((m) => m.id === "gemini")?.tier).toBe("free");
+  });
+
+  it("Pollinations to darmowy generator BEZ klucza", () => {
+    expect(IMAGE_MODELS_LIST.find((m) => m.id === "pollinations")?.tier).toBe("free");
+  });
+
+  it("pollinationsUrl: koduje opis, rozmiar i seed", () => {
+    const u = pollinationsUrl("kot w kapeluszu", { width: 768, height: 512 }, 42);
+    expect(u).toMatch(/image\.pollinations\.ai\/prompt\/kot%20w%20kapeluszu/);
+    expect(u).toMatch(/width=768/);
+    expect(u).toMatch(/height=512/);
+    expect(u).toMatch(/seed=42/);
+    expect(u).toMatch(/model=flux/);
+  });
+
+  it("bestImageModel: SD > Gemini > darmowy bez klucza", () => {
+    store.setSettings({ keys: { ...noKeys }, studioKeys: "", sdUrl: "" });
+    expect(bestImageModel()).toBe("pollinations"); // nic nie skonfigurowane
+    store.setSettings({ keys: { ...noKeys, gemini: "K" } });
+    expect(bestImageModel()).toBe("gemini");
+    store.setSettings({ sdUrl: "http://localhost:7860" });
+    expect(bestImageModel()).toBe("local-sd");
+    store.setSettings({ sdUrl: "" });
   });
 
   it("darmowy bez klucza Gemini → czytelny błąd", async () => {

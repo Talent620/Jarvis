@@ -16,7 +16,7 @@ type Img = { data: string; mediaType: string };
 // Gemini z darmowym tierem). Premium: FLUX.1 Kontext / Nano Banana Pro przez fal.ai
 // (płatne, ~$0.03–0.08 za obraz, wymaga klucza fal.ai) — najmocniejsza spójność
 // detali przy wielokrotnej edycji.
-export type ImageModelId = "gemini" | "fal-flux-kontext" | "fal-nano-banana" | "local-sd";
+export type ImageModelId = "pollinations" | "gemini" | "fal-flux-kontext" | "fal-nano-banana" | "local-sd";
 
 export interface ImageModelMeta {
   id: ImageModelId;
@@ -26,6 +26,7 @@ export interface ImageModelMeta {
 }
 
 export const IMAGE_MODELS_LIST: ImageModelMeta[] = [
+  { id: "pollinations", label: "Pollinations (darmowy, bez klucza)", tier: "free", note: "W pełni za darmo — bez klucza i bez logowania. Tworzy obraz z opisu (FLUX). Nie edytuje istniejących zdjęć." },
   { id: "gemini", label: "Gemini Nano Banana", tier: "free", note: "Darmowy (klucz Gemini). Topowy edytor opisem — czołówka 2026." },
   { id: "fal-flux-kontext", label: "FLUX.1 Kontext Pro", tier: "premium", note: "Najlepsza spójność detali przy wielu edycjach. fal.ai, płatny (~$0.04/obraz)." },
   { id: "fal-nano-banana", label: "Nano Banana Pro", tier: "premium", note: "Najmocniejszy edytor Google przez fal.ai. Płatny (~$0.08/obraz)." },
@@ -136,12 +137,48 @@ async function falEdit(modelId: ImageModelId, prompt: string, inputs: Img[]): Pr
   }
 }
 
+// --- Pollinations.ai (darmowy, BEZ klucza) — generowanie z opisu (text-to-image, FLUX) ---
+const POLLINATIONS = "https://image.pollinations.ai/prompt/";
+
+/** Pure: zbuduj URL Pollinations (do testów i podglądu). */
+export function pollinationsUrl(prompt: string, opts?: SdOpts, seed = 0): string {
+  const w = opts?.width || 1024;
+  const h = opts?.height || 1024;
+  const p = encodeURIComponent((prompt || "").slice(0, 1500));
+  return `${POLLINATIONS}${p}?width=${w}&height=${h}&seed=${seed}&model=flux&nologo=true`;
+}
+
+async function pollinationsGenerate(prompt: string, opts?: SdOpts): Promise<Result> {
+  if (!prompt.trim()) return { error: "Podaj opis obrazu." };
+  const seed = Math.floor(Math.random() * 1_000_000_000);
+  try {
+    const res = await fetchTimeout(viaProxy(pollinationsUrl(prompt, opts, seed)), {}, 120000);
+    if (!res.ok) return { error: `Darmowy generator zwrócił błąd (${res.status}). Spróbuj ponownie za chwilę.` };
+    const blob = await res.blob();
+    if (!blob.size || !/^image\//i.test(blob.type || "")) {
+      return { error: "Darmowy generator nie zwrócił obrazu — spróbuj ponownie albo zmień opis." };
+    }
+    return { data: await blobToBase64(blob), mediaType: blob.type || "image/jpeg" };
+  } catch (e) {
+    return { error: `Błąd połączenia z darmowym generatorem: ${e instanceof Error ? e.message : e}` };
+  }
+}
+
+/** Pure: dobierz najlepszy DOSTĘPNY model wg konfiguracji (SD > Gemini > darmowy bez klucza). */
+export function bestImageModel(): ImageModelId {
+  const s = store.settings;
+  if (s.sdUrl?.trim()) return "local-sd"; // własny serwer — najlepsza jakość, bez limitów
+  if (studioKeyList().length || orderedKeys("gemini").length) return "gemini"; // darmowy z kluczem, edytuje zdjęcia
+  return "pollinations"; // zawsze działa, bez klucza
+}
+
 /**
- * Generowanie / precyzyjna edycja obrazu. Domyślnie darmowy Gemini (Nano Banana);
- * można wybrać model premium (fal.ai). Obsługuje wiele zdjęć wejściowych.
+ * Generowanie / precyzyjna edycja obrazu. Darmowo bez klucza (Pollinations), z kluczem Gemini
+ * (Nano Banana — edycja zdjęć), lokalnie (SD) albo premium (fal.ai). Obsługuje wiele zdjęć wejściowych.
  */
 export async function generateImage(prompt: string, input?: Img | Img[], model: ImageModelId = "gemini", sdOpts?: SdOpts, onSdProgress?: (pct: number) => void): Promise<Result> {
   const inputs = input ? (Array.isArray(input) ? input : [input]) : [];
+  if (model === "pollinations") return pollinationsGenerate(prompt, sdOpts);
   if (model === "gemini") return geminiEdit(prompt, inputs);
   if (model === "local-sd") return localSdGenerate(prompt, inputs, sdOpts, onSdProgress);
   return falEdit(model, prompt, inputs);

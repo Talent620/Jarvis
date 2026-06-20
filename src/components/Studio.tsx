@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { generateImage, humanizeImageError, IMAGE_MODELS_LIST, type ImageModelId } from "../lib/images";
+import { generateImage, humanizeImageError, bestImageModel, IMAGE_MODELS_LIST, type ImageModelId } from "../lib/images";
 import { capturePhoto } from "../lib/camera";
 import { useEscape } from "../hooks/useEscape";
 import { store } from "../lib/store";
@@ -50,8 +50,9 @@ const PRESETS: { label: string; prompt: string }[] = [
 
 export default function Studio({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
-  // Domyślnie wybierz lokalny generator, gdy serwer SD jest skonfigurowany (prywatnie, za darmo).
-  const [model, setModel] = useState<ImageModelId>(store.settings.sdUrl?.trim() ? "local-sd" : "gemini");
+  // Domyślnie najlepszy DOSTĘPNY generator: serwer SD > Gemini (klucz) > darmowy bez klucza.
+  // Dzięki temu Studio działa od razu, nawet bez żadnej konfiguracji (Pollinations).
+  const [model, setModel] = useState<ImageModelId>(bestImageModel());
   const [prompt, setPrompt] = useState("");
   const [inputs, setInputs] = useState<Img[]>([]);
   const [history, setHistory] = useState<Img[]>([]); // wersje wyników (ostatnia = bieżąca)
@@ -82,7 +83,10 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     if (!text.trim()) return;
     setBusy(true);
     setErr("");
-    const sdOpts = model === "local-sd" ? { steps: sdSteps, width: sdSize, height: sdSize, denoising: sdDenoise } : undefined;
+    const sdOpts =
+      model === "local-sd" ? { steps: sdSteps, width: sdSize, height: sdSize, denoising: sdDenoise }
+      : model === "pollinations" ? { width: sdSize, height: sdSize }
+      : undefined;
     if (model === "local-sd") setSdProgress(0);
     // Strażnik odmontowania: jeśli użytkownik zamknie Studio w trakcie, nie ruszamy stanu.
     const onProg = model === "local-sd" ? (p: number) => { if (mounted.current) setSdProgress(p); } : undefined;
@@ -133,8 +137,17 @@ export default function Studio({ onClose }: { onClose: () => void }) {
             ))}
           </div>
           <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>{IMAGE_MODELS_LIST.find((m) => m.id === model)?.note}</p>
-          {model !== "gemini" && model !== "local-sd" && !store.settings.falApiKey?.trim() && (
+          {(model === "fal-flux-kontext" || model === "fal-nano-banana") && !store.settings.falApiKey?.trim() && (
             <p className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>⭐ Model premium — dodaj klucz fal.ai w ⚙ → AI, aby go użyć.</p>
+          )}
+          {model === "pollinations" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, margin: "4px 0 8px" }}>
+              {inputs.length > 0 && (
+                <p className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>ℹ Darmowy generator tworzy NOWY obraz z opisu (nie edytuje dołączonego zdjęcia). Do edycji zdjęć użyj Gemini lub modelu premium.</p>
+              )}
+              <label style={{ fontSize: 12 }}>Rozmiar: {sdSize}×{sdSize} px</label>
+              <input type="range" min={512} max={1536} step={128} value={sdSize} onChange={(e) => setSdSize(Number(e.target.value))} disabled={busy} />
+            </div>
           )}
           {model === "local-sd" && !store.settings.sdUrl?.trim() && (
             <p className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>🖥 Lokalny generator — uruchom Stable Diffusion (A1111/Forge) na PC i wpisz jego adres w ⚙ → AI (np. http://192.168.0.10:7860).</p>
