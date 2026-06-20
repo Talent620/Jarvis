@@ -81,7 +81,8 @@ const TABS: { id: Tab; label: string; summary: string }[] = [
 // do sekcji (koniec przewijania i szukania). anchor = id nagłówka <h3>/sekcji niżej.
 const SETTINGS_INDEX: { label: string; tab: Tab; anchor?: string; keys: string }[] = [
   { label: "🎛 Tryb pracy JARVISA", tab: "ai", anchor: "set-mode", keys: "tryb szybki madry lokalny praca" },
-  { label: "🔑 Klucze API (Gemini/Claude/OpenAI…)", tab: "ai", anchor: "set-keys", keys: "klucz api gemini openai claude anthropic groq dostawca model" },
+  { label: "🤖 Dostawca i model AI", tab: "ai", anchor: "set-provider", keys: "dostawca model provider claude gemini groq mistral auto wybor modelu" },
+  { label: "🔑 Klucze API (Gemini/Claude/OpenAI…)", tab: "ai", anchor: "set-keys", keys: "klucz api gemini openai claude anthropic groq" },
   { label: "📨 Poczta — wysyłka e-maili", tab: "ai", anchor: "set-email", keys: "mail email smtp poczta wysylka gmail haslo" },
   { label: "🔎 Research z cytatami (Tavily)", tab: "ai", anchor: "set-research", keys: "research tavily wyszukiwanie zrodla cytaty web search" },
   { label: "🎨 Studio premium (edycja zdjęć)", tab: "ai", anchor: "set-studio", keys: "studio obraz zdjecie edycja fal flux gemini premium" },
@@ -364,6 +365,10 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   }, [s.provider, ollamaModels]);
 
   const autoTarget = useMemo(() => (s.provider === "auto" ? autoPick(s.keys) : null), [s.provider, s.keys]);
+  // Czytelny opis modelu (z katalogu) — żeby w „auto" i przy „domyślnym" widać było, CO realnie zadziała.
+  const modelLabel = (prov: ProviderId, id: string) => PROVIDERS[prov]?.models.find((m) => m.id === id)?.label || id;
+  // Czy dla danego dostawcy jest gotowy klucz/adres (Ollama łączy się adresem, nie kluczem).
+  const providerReady = (id: ProviderId) => (id === "ollama" ? !!s.ollamaUrl?.trim() : !!s.keys[id as keyof typeof s.keys]?.trim());
 
   const save = () => {
     // Jeśli zmieniono dostawcę, a model nie pasuje — zresetuj na domyślny.
@@ -553,36 +558,45 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </p>
               </div>
 
-              <h3>Dostawca AI</h3>
+              <h3 id="set-provider">🤖 Dostawca i model AI</h3>
+              <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+                Większość zostawia <b>Auto</b> — JARVIS sam dobiera najlepszy dostępny model. Niżej możesz wybrać ręcznie.
+              </p>
               <div className="field">
                 <label>Dostawca</label>
                 <select value={s.provider} onChange={(e) => set({ provider: e.target.value, model: "auto" })}>
-                  <option value="auto">⚡ Auto — wybierz najlepszy dostępny</option>
+                  <option value="auto">⚡ Auto — najlepszy dostępny (zalecane)</option>
                   {PROVIDER_LIST.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.label}
+                      {providerReady(p.id) ? "✓ " : "🔑 "}{p.label}{providerReady(p.id) ? "" : " — brak klucza"}
                     </option>
                   ))}
                 </select>
+                <span className="muted" style={{ fontSize: 12 }}>✓ = gotowy (masz klucz/adres) · 🔑 = dodaj klucz w „🔑 Klucze API" niżej</span>
               </div>
 
               {s.provider === "auto" ? (
                 <p className="muted">
                   {autoTarget
-                    ? `Tryb auto użyje: ${PROVIDERS[autoTarget.provider].label} · ${autoTarget.model}. Wpisz klucze poniżej — im wyżej na liście, tym wyższy priorytet.`
-                    : "Brak kluczy. Wprowadź przynajmniej jeden klucz API poniżej."}
+                    ? `▶ Teraz zadziała: ${PROVIDERS[autoTarget.provider].label} · ${modelLabel(autoTarget.provider, autoTarget.model)}. Im wyżej klucz na liście, tym wyższy priorytet.`
+                    : "⚠ Brak kluczy — dodaj przynajmniej jeden w „🔑 Klucze API” niżej (albo użyj lokalnej Ollamy)."}
                 </p>
               ) : (
                 <div className="field">
                   <label>Model</label>
                   <select value={s.model} onChange={(e) => set({ model: e.target.value })}>
-                    <option value="auto">Domyślny modelu dostawcy</option>
+                    <option value="auto">🔵 Auto — domyślny dostawcy{PROVIDERS[s.provider as ProviderId]?.defaultModel ? ` (${modelLabel(s.provider as ProviderId, PROVIDERS[s.provider as ProviderId].defaultModel)})` : ""}</option>
                     {modelOptions.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.label}
                       </option>
                     ))}
                   </select>
+                  {!providerReady(s.provider as ProviderId) && (
+                    <span className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>
+                      ⚠ Ten dostawca nie ma jeszcze {s.provider === "ollama" ? "adresu serwera" : "klucza"} — {s.provider === "ollama" ? "podaj adres Ollamy niżej" : "dodaj go w „🔑 Klucze API” niżej"}, inaczej nie odpowie.
+                    </span>
+                  )}
                   {s.provider === "ollama" && (
                     <>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
