@@ -96,7 +96,7 @@ export function healthScore(st: GuardianStatus): GuardianHealth {
 }
 
 // === 🧭 Dyrygent: zalecane działania „jednym kliknięciem" wg stanu. Pure — testowalne. ===
-export type GuardianActionKey = "fixAll" | "connectServers" | "smarter" | "faster" | "fixVoice" | "update" | "pinVoice";
+export type GuardianActionKey = "fixAll" | "connectServers" | "smarter" | "faster" | "fixVoice" | "update" | "pinVoice" | "goLocal";
 export interface GuardianRec { key: GuardianActionKey; label: string; why: string; priority: number }
 
 /** Pure: na podstawie diagnozy ułóż priorytetową listę zaleceń (kierownik decyduje, co zrobić). */
@@ -146,6 +146,16 @@ export const guardian = {
   fixVoice(): GuardianActionResult {
     store.setSettings({ voiceSystemPl: true, speak: true });
     return { ok: true, message: "🇵🇱 Głos ustawiony na prosty polski systemowy (spójny, po polsku)." };
+  },
+  /** Przełącz na lokalny model (Ollama) — obejście limitów/kosztów chmury; chmura zostaje awaryjnie. */
+  async goLocal(): Promise<GuardianActionResult> {
+    const { applyBrainMode } = await import("./brainModes");
+    const d = await detectOllama(store.settings.ollamaUrl);
+    applyBrainMode("ollama", d.ok ? d.models : []);
+    void warmNow();
+    return d.ok && d.models.length
+      ? { ok: true, message: `🏠 Tryb lokalny: Ollama sama dobiera model (${d.models.length} dostępnych). Bez limitów chmury.` }
+      : { ok: true, message: "🏠 Ustawiono tryb lokalny (Ollama). Uruchom serwer i pobierz model, jeśli jeszcze go nie ma." };
   },
   /** Voice Guardian: przypnij najlepszy polski głos na stałe (i włącz blokadę podmian). */
   async pinVoice(): Promise<GuardianActionResult> {

@@ -2014,7 +2014,10 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   { id: "rose", l: "Róż" },
                   { id: "purple", l: "Fiolet" },
                   { id: "matrix", l: "Matrix 🟢" },
-                  { id: "retro", l: "Retro 95/XP 🖥" },
+                  { id: "nord", l: "Nord ❄" },
+                  { id: "sunset", l: "Sunset 🌅" },
+                  { id: "retro", l: "Retro 95 🖥" },
+                  { id: "xp", l: "XP Luna 🪟" },
                 ].map((t) => (
                   <button
                     key={t.id}

@@ -70,6 +70,7 @@ import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import Guardian from "./components/Guardian";
 import { guardianAutoHeal } from "./lib/guardian";
 import { guardianScan } from "./lib/guardianAgents";
+import { checkForUpdate, applyUpdate } from "./lib/updater";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
 import { currentBrainMode } from "./lib/brainMode";
@@ -215,11 +216,24 @@ export default function App() {
 
   useEffect(() => {
     loadVoices();
-    // Voice Guardian: po starcie sprawdź, czy przypięty głos JARVISA wciąż istnieje;
-    // jeśli zniknął (aktualizacja systemu) — przełącz na najlepszy dostępny zamiennik.
-    void checkPinnedVoice().then((r) => {
-      if (r.changed && r.to) { store.setSettings({ voiceName: r.to }); toast(`🎤 Głos „${r.from}" zniknął — przełączono na ${r.to}.`); }
-    }).catch(() => {});
+    // Voice Guardian — start aplikacji:
+    // 1) Pierwsze uruchomienie bez wybranego głosu → przypnij na sztywno najlepszy polski
+    //    „domyślny głos JARVISA" (jednorazowo), żeby od razu brzmiał spójnie i nie skakał.
+    // 2) Później: sprawdź, czy przypięty głos wciąż istnieje; jeśli zniknął — najlepszy zamiennik.
+    void (async () => {
+      try {
+        const inited = localStorage.getItem("jarvis.voice.init");
+        if (!inited && !store.settings.voiceName?.trim()) {
+          const { listSpeechVoices, bestPlVoiceName } = await import("./lib/voice");
+          const best = bestPlVoiceName(await listSpeechVoices());
+          localStorage.setItem("jarvis.voice.init", "1");
+          if (best) store.setSettings({ voiceName: best, voicePinned: true, voiceSystemPl: true });
+          return; // świeżo ustawiony — nie ma czego sprawdzać
+        }
+        const r = await checkPinnedVoice();
+        if (r.changed && r.to) { store.setSettings({ voiceName: r.to }); toast(`🎤 Głos „${r.from}" zniknął — przełączono na ${r.to}.`); }
+      } catch { /* brak głosów — zostaje systemowy */ }
+    })();
     ensureNotifPerms();
     // Okno na telefonie (nie „strona w przeglądarce"): pasek stanu jako lity ciemny
     // pasek, a treść RENDEROWANA PONIŻEJ niego (overlay:false) — system sam pilnuje
@@ -318,7 +332,7 @@ export default function App() {
   // Motyw HUD.
   useEffect(() => {
     const b = document.body;
-    ["theme-gold", "theme-green", "theme-red", "theme-purple", "theme-matrix", "theme-amber", "theme-ocean", "theme-rose", "theme-retro"].forEach((c) => b.classList.remove(c));
+    ["theme-gold", "theme-green", "theme-red", "theme-purple", "theme-matrix", "theme-amber", "theme-ocean", "theme-rose", "theme-retro", "theme-xp", "theme-nord", "theme-sunset"].forEach((c) => b.classList.remove(c));
     if (settings.theme && settings.theme !== "default") b.classList.add(`theme-${settings.theme}`);
   }, [settings.theme]);
 
@@ -773,6 +787,23 @@ export default function App() {
         void warmNow(); // rozgrzej model, by pierwsza odpowiedź była natychmiastowa
       }
     });
+  }, []);
+
+  // Auto-sprawdzanie aktualizacji przy starcie (≤1×/dzień): gdy jest nowsza wersja, pokaż
+  // nienachalny toast z przyciskiem „Zaktualizuj". W przeglądarce aktualizacja jest płynna
+  // (czyści cache i przeładowuje — bez zamykania aplikacji); na telefonie/PC otwiera pobranie.
+  useEffect(() => {
+    const last = Number(localStorage.getItem("jarvis.update.lastCheck") || 0);
+    if (Date.now() - last < 24 * 60 * 60 * 1000) return;
+    const t = setTimeout(async () => {
+      try {
+        const r = await checkForUpdate();
+        if ("error" in r || !r.newer) return;
+        localStorage.setItem("jarvis.update.lastCheck", String(Date.now()));
+        toast(`🎉 Jest nowsza wersja JARVISA (${r.latest})`, { label: r.platform === "web" ? "Odśwież" : "Pobierz", onClick: () => void applyUpdate(r) });
+      } catch { /* sieć — pomiń */ }
+    }, 8000); // po starcie, nie blokuj pierwszego renderu
+    return () => clearTimeout(t);
   }, []);
 
   // Strażnik proaktywny: co jakiś czas (≤1×/20 min) sprawdza stan i podpowiada „Napraw", gdy coś nie gra.

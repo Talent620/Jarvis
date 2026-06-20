@@ -49,6 +49,7 @@ export interface ScanContext {
   voices: NativeVoiceInfo[]; // głosy wykryte w silniku (Voice Guardian)
   voicePinnedExists: boolean; // czy przypięty głos (voiceName) nadal istnieje
   ttsErrors: number; // błędy TTS w bieżącej sesji
+  providerErrors: number; // błędy dostawców chmury (limity/klucze) w sesji
 }
 
 /** Guardian Core: zbierz pełny stan systemu (jedno przejście). */
@@ -68,6 +69,10 @@ export async function gatherContext(opts: { checkUpdate?: boolean } = {}): Promi
   const update = upd && !("error" in upd) ? { current: upd.current, latest: upd.latest, newer: upd.newer } : upd && "error" in upd ? { current: "?", latest: "?", newer: false, error: upd.error } : null;
   const pinned = s.voiceName?.trim();
   const rel = reliabilityStats();
+  // Błędy dostawców chmury (proxy „limitów API"): sumuj scope „provider:*" poza lokalnymi.
+  const providerErrors = Object.entries(rel.byScope)
+    .filter(([k]) => k.startsWith("provider:") && !/ollama|webllm/.test(k))
+    .reduce((n, [, v]) => n + v, 0);
 
   return {
     s,
@@ -80,6 +85,7 @@ export async function gatherContext(opts: { checkUpdate?: boolean } = {}): Promi
     // „Istnieje", gdy nieprzypięty (brak czego pilnować) lub lista pusta (nie wnioskuj) lub realnie obecny.
     voicePinnedExists: !pinned || !voices.length || voices.some((v) => v.name === pinned),
     ttsErrors: rel.byScope["tts"] || 0,
+    providerErrors,
   };
 }
 
@@ -239,6 +245,23 @@ export function aiAgent(ctx: ScanContext): AgentReport {
   } else {
     findings.push({ level: "warn", text: "Lokalny serwer (Ollama) nieskonfigurowany — brak prywatnego AI offline." });
     recs.push({ key: "connectServers", label: "🔗 Połącz serwery", why: "Znajdę lokalną Ollamę, jeśli działa." });
+  }
+
+  // Limity API: chmura sypie błędami (429/limit/klucz). Jeśli jest lokalny model — przełącz na niego.
+  if (ctx.providerErrors >= 3) {
+    findings.push({ level: "warn", text: `Dostawcy chmury zgłosili ${ctx.providerErrors} błędów (możliwe limity/klucze).` });
+    score -= 10;
+    if (localOk) {
+      recs.push({
+        key: "goLocal", label: "🏠 Przełącz na lokalny model",
+        problem: "Chmura odrzuca zapytania (limity/klucze API).",
+        cause: "Wyczerpany limit, brak środków lub niewłaściwy klucz u dostawcy.",
+        impact: "Odpowiedzi z chmury bywają wolne lub zawodzą.",
+        why: "Ustawię tryb lokalny (Ollama) — bez limitów i kosztów; chmura zostanie awaryjnie.",
+      });
+    } else {
+      recs.push({ label: "🔑 Sprawdź klucze / limity", why: "Dodaj drugi klucz API albo uruchom lokalną Ollamę, by ominąć limity chmury." });
+    }
   }
 
   return { id: "ai", name: "Inteligencja (AI)", icon: "🧠", state: worst(findings), score: clamp(score), summary: hasBrain ? (localOk ? "Lokalny + chmura" : "Gotowy") : "Brak mózgu!", findings, recs };

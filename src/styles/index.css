@@ -147,6 +147,60 @@ body.theme-retro h3 { color: #000080 !important; }
 body.theme-retro .muted, body.theme-retro .status-detail { color: #303030 !important; }
 body.theme-retro .topbar { background: #c0c0c0 !important; border-bottom: 2px solid #404040 !important; }
 
+/* ============ Motyw XP (Windows XP „Luna") — dopracowany, zaokrąglony, niebieski ============ */
+body.theme-xp {
+  --bg: #5a7edc; --bg-2: #ece9d8; --bg-3: #ece9d8;
+  --cyan: #0a5bd3; --cyan-dim: #0a3f96; --gold: #f08a00;
+  --text: #0a1a33; --text-dim: #44506b;
+  --line: #aeb6c8; --line-strong: #7b88a8;
+  --surface: #f3f1e7; --surface-2: #ffffff;
+  --radius: 7px; --radius-lg: 10px;
+  --shadow-1: 0 1px 2px rgba(10,30,70,.18); --shadow-2: 0 6px 18px rgba(10,40,110,.22);
+  --accent-grad: linear-gradient(180deg, #3f8cf3, #0a5bd3);
+  font-family: "Tahoma", "Segoe UI", Geneva, system-ui, sans-serif;
+  background: linear-gradient(180deg, #7ba7f0 0%, #5a7edc 45%, #6f9b54 100%) !important; color: var(--text);
+}
+body.theme-xp .panel, body.theme-xp .journal-card, body.theme-xp .card, body.theme-xp .status-row {
+  background: var(--surface) !important; color: var(--text) !important;
+  border: 1px solid #c9c3a8 !important; border-radius: var(--radius) !important; box-shadow: var(--shadow-1) !important;
+}
+body.theme-xp .btn, body.theme-xp .chip, body.theme-xp .icon-btn {
+  background: linear-gradient(180deg, #fdfdfd, #dfe3ea) !important; color: #16233f !important;
+  border: 1px solid #7b88a8 !important; border-radius: 6px !important; box-shadow: 0 1px 1px rgba(255,255,255,.7) inset !important; text-shadow: none !important;
+}
+body.theme-xp .btn:active, body.theme-xp .chip:active { background: linear-gradient(180deg, #cfd5df, #e8ebf0) !important; }
+/* Główny przycisk = zielony „Start" XP. */
+body.theme-xp .btn.primary, body.theme-xp .chip.on {
+  background: linear-gradient(180deg, #8ed46a, #5a9c3a) !important; color: #fff !important; border-color: #3f7a26 !important;
+}
+body.theme-xp input, body.theme-xp textarea, body.theme-xp select {
+  background: #fff !important; color: #16233f !important; border: 1px solid #7b88a8 !important; border-radius: 4px !important;
+}
+/* Paski tytułu jak Luna: gradient niebieski, biały tekst, zaokrąglone górne rogi. */
+body.theme-xp h2, body.theme-xp .panel-head h2 {
+  background: linear-gradient(180deg, #3f8cf3, #0a5bd3) !important; color: #fff !important;
+  padding: 5px 12px !important; border-radius: 8px 8px 0 0 !important; text-shadow: 0 1px 1px rgba(0,0,0,.3) !important;
+}
+body.theme-xp h3 { color: #0a5bd3 !important; }
+body.theme-xp .topbar { background: linear-gradient(180deg, #3f8cf3, #0a5bd3) !important; border-bottom: 1px solid #0a3f96 !important; }
+
+/* ============ Motyw NORD — chłodny, stonowany (czytelny, nowoczesny) ============ */
+body.theme-nord {
+  --bg: #2e3440; --bg-2: #3b4252; --bg-3: #434c5e;
+  --cyan: #88c0d0; --cyan-dim: #5e81ac; --gold: #ebcb8b;
+  --text: #eceff4; --text-dim: #aab1c0;
+  --line: rgba(136,192,208,.18); --line-strong: rgba(136,192,208,.42);
+  --accent-grad: linear-gradient(90deg, #5e81ac, #88c0d0);
+}
+/* ============ Motyw SUNSET — ciepły gradient (energia, łagodny kontrast) ============ */
+body.theme-sunset {
+  --bg: #2a1530; --bg-2: #3a1d3e; --bg-3: #4a2540;
+  --cyan: #ff8a5c; --cyan-dim: #e85d75; --gold: #ffd16b;
+  --text: #fff0ea; --text-dim: #e0b8c0;
+  --line: rgba(255,138,92,.2); --line-strong: rgba(255,138,92,.45);
+  --accent-grad: linear-gradient(90deg, #e85d75, #ff8a5c);
+}
+
 /* Bezpieczne marginesy okna (paski stanu/nawigacji). Fallback do env() działa na
    iOS/web; na Androidzie MainActivity nadpisuje --sat/--sar/--sab/--sal realnymi px,
    bo tam env(safe-area-inset-*) nie obejmuje pasków systemowych. */

@@ -17,6 +17,7 @@ function ctx(over: Partial<ScanContext> = {}): ScanContext {
     voices: over.voices ?? [{ name: "pl-pl-x-oda-network", lang: "pl-PL", quality: 400, network: true }],
     voicePinnedExists: over.voicePinnedExists ?? true,
     ttsErrors: over.ttsErrors ?? 0,
+    providerErrors: over.providerErrors ?? 0,
   };
 }
 
@@ -35,6 +36,14 @@ describe("AI Agent", () => {
   it("Ollama z qwen3 (reasoning) → brak ostrzeżenia o reasoning", () => {
     const r = aiAgent(ctx({ ollama: { configured: true, ok: true, models: ["qwen3:4b"] } }));
     expect(r.findings.some((f) => /reasoning/i.test(f.text))).toBe(false);
+  });
+  it("limity API + dostępny model lokalny → rekomendacja przełączenia na lokalny", () => {
+    const r = aiAgent(ctx({ providerErrors: 5, ollama: { configured: true, ok: true, models: ["qwen3:4b"] } }));
+    expect(r.recs.some((x) => x.key === "goLocal")).toBe(true);
+  });
+  it("limity API bez modelu lokalnego → porada o kluczach/Ollamie (bez auto-akcji)", () => {
+    const r = aiAgent(ctx({ providerErrors: 5, ollama: { configured: false, ok: false, models: [] } }));
+    expect(r.recs.some((x) => /klucze|limity/i.test(x.label))).toBe(true);
   });
 });
 

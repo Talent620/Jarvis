@@ -72,6 +72,7 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
     if (key === "faster") return void run(() => guardian.faster());
     if (key === "fixVoice") return void run(() => guardian.fixVoice());
     if (key === "pinVoice") return void run(() => guardian.pinVoice());
+    if (key === "goLocal") return void run(() => guardian.goLocal());
     if (key === "update") return void doUpdate();
   };
 
