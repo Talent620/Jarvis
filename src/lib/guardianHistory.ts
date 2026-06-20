@@ -26,6 +26,21 @@ export function topFixes(list: GuardianEvent[], n = 3): { message: string; count
   return [...counts.entries()].map(([message, count]) => ({ message, count })).sort((a, b) => b.count - a.count).slice(0, n);
 }
 
+export interface RecurringHint { count: number; problem: string; advice: string }
+/** Pure: jeśli ta sama naprawa powtarza się ≥ `min` razy, zaproponuj TRWAŁE rozwiązanie. */
+export function recurringHint(list: GuardianEvent[], min = 3): RecurringHint | null {
+  const top = topFixes(list, 1)[0];
+  if (!top || top.count < min) return null;
+  const m = top.message.toLowerCase();
+  let advice: string;
+  if (/ollama|serwer|połącz|polacz|lokaln/.test(m)) advice = "Włącz autostart serwera Ollama przy starcie Windows (JARVIS-Ollama-Server) — przestaniesz łączyć ręcznie.";
+  else if (/głos|glos|voice/.test(m)) advice = "Przypnij głos na stałe (🚀 Używaj głosu JARVISA), żeby nie wracał do systemowego.";
+  else if (/szybk|od ręki|od reki/.test(m)) advice = "Ustaw tryb szybki jako domyślny w ⚙ → AI, żeby nie włączać go za każdym razem.";
+  else if (/model|mądr|madr|pobra/.test(m)) advice = "Trzymaj komplet modeli lokalnych zainstalowany na stałe (tryb Mądrzej raz, potem zostają).";
+  else advice = "Ten problem wraca — rozważ trwałe rozwiązanie zamiast powtarzać naprawę.";
+  return { count: top.count, problem: top.message, advice };
+}
+
 function read(): GuardianEvent[] {
   try {
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;

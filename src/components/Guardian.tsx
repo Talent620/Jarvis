@@ -4,7 +4,7 @@ import { toast } from "../lib/toast";
 import { store } from "../lib/store";
 import { guardian, guardianAdvise, guardianExecute, guardianPlan, isOutgoingCommand, GUARDIAN_CAPABILITIES, type GuardianActionResult, type GuardianActionKey } from "../lib/guardian";
 import { guardianScan, formatScanReport, type GuardianScan, type AgentReport, type AgentState } from "../lib/guardianAgents";
-import { recordGuardianEvent, getGuardianHistory, clearGuardianHistory, topFixes, type GuardianEvent } from "../lib/guardianHistory";
+import { recordGuardianEvent, getGuardianHistory, clearGuardianHistory, topFixes, recurringHint, type GuardianEvent } from "../lib/guardianHistory";
 import { checkForUpdate, applyUpdate } from "../lib/updater";
 
 // 🛡 Strażnik JARVISA — centralny panel dowodzenia. Guardian Core skanuje cały ekosystem przez
@@ -162,6 +162,14 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           )}
+
+          {/* 🧠 Opiekun: nawracający problem → trwała rada */}
+          {(() => { const h = recurringHint(history); return h ? (
+            <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 8, borderLeft: "3px solid var(--gold)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>🧠 Zauważyłem wzorzec ({h.count}×)</div>
+              <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>{h.advice}</div>
+            </div>
+          ) : null; })()}
 
           {/* 🩹 Napraw wszystko — główna akcja naprawcza */}
           <button className="btn primary" style={{ width: "100%", marginBottom: 8 }} disabled={busy} onClick={() => void run(() => guardian.fixAll((m) => setMsg(`🩹 ${m}`)))}>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { appendEvent, topFixes, type GuardianEvent } from "../src/lib/guardianHistory";
+import { appendEvent, topFixes, recurringHint, type GuardianEvent } from "../src/lib/guardianHistory";
 
 const ev = (message: string, kind: GuardianEvent["kind"] = "fix", at = Date.now()): GuardianEvent => ({ at, kind, message });
 
@@ -30,5 +30,21 @@ describe("guardianHistory — topFixes", () => {
     const top = topFixes(list, 3);
     expect(top[0]).toEqual({ message: "A", count: 3 });
     expect(top.find((t) => t.message === "C")).toBeUndefined(); // tylko kind=fix
+  });
+});
+
+describe("guardianHistory — recurringHint", () => {
+  it("naprawa < min razy → brak podpowiedzi", () => {
+    expect(recurringHint([ev("🔗 Połącz serwery"), ev("🔗 Połącz serwery")], 3)).toBeNull();
+  });
+  it("nawracająca naprawa serwera → trwała rada o autostarcie Ollamy", () => {
+    const list = [ev("🔗 Połączono Ollama"), ev("🔗 Połączono Ollama"), ev("🔗 Połączono Ollama")];
+    const h = recurringHint(list, 3);
+    expect(h?.count).toBe(3);
+    expect(h?.advice).toMatch(/autostart|Ollama/i);
+  });
+  it("nawracający głos → rada o przypięciu głosu", () => {
+    const list = [ev("🇵🇱 Naprawiono głos"), ev("🇵🇱 Naprawiono głos"), ev("🇵🇱 Naprawiono głos")];
+    expect(recurringHint(list, 3)?.advice).toMatch(/przypnij|głos/i);
   });
 });
