@@ -1182,6 +1182,22 @@ const tools: Tool[] = [
   },
   {
     def: {
+      name: "reflect",
+      description:
+        "Refleksja o użytkowniku (pamięć refleksyjna): jakie WZORCE JARVIS zauważył — powracające tematy, dominujące osoby/projekty, dyscyplina w zadaniach, rytm dnia. Spojrzenie wstecz. Użyj, gdy ktoś pyta „co o mnie zauważyłeś”, „jakie widzisz wzorce”, „podsumuj mnie”, „co o mnie wiesz”.",
+      input_schema: obj({}, []),
+    },
+    run: async () => {
+      const { reflectionSummary } = await import("./reflection");
+      const { loadEpisodes } = await import("./episodicMemory");
+      const d = store.data;
+      const people = (d.world?.entities || []);
+      const s = reflectionSummary({ episodes: loadEpisodes(), people, tasks: d.tasks }, Date.now());
+      return s ? `🪞 Co o Tobie zauważyłem:\n${s}` : "Za mało jeszcze danych, by wyciągać wnioski o wzorcach — porozmawiajmy więcej, a zacznę zauważać.";
+    },
+  },
+  {
+    def: {
       name: "set_preference",
       description:
         "Zmień osobiste preferencje JARVIS-a na żądanie: jak ma się do Ciebie zwracać (imię), wyszukiwanie w sieci on/off, adaptacyjny układ menu on/off. Np. „mów do mnie Szefie”, „wyłącz wyszukiwanie w sieci”, „nie układaj menu pod moje nawyki”.",
