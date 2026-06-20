@@ -68,7 +68,8 @@ import { buildContext } from "./lib/context";
 import { isUncensored, PROVIDERS } from "./lib/providers/registry";
 import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import Guardian from "./components/Guardian";
-import { guardianDiagnose, guardianAutoHeal } from "./lib/guardian";
+import { guardianAutoHeal } from "./lib/guardian";
+import { guardianScan } from "./lib/guardianAgents";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
 import { currentBrainMode } from "./lib/brainMode";
@@ -782,14 +783,17 @@ export default function App() {
       if (Date.now() - last < 20 * 60 * 1000) return;
       localStorage.setItem("jarvis.guardian.ts", String(Date.now()));
       try {
-        const st = await guardianDiagnose();
-        if (st.brain === "BRAK" || st.issues.length) {
-          // Autopilot: dyrygent sam stosuje bezpieczne naprawy; inaczej tylko podpowiada.
+        // Pełny skan agentowy: konkretny problem zamiast ogólnika.
+        const scan = await guardianScan({ checkUpdate: true });
+        const topRec = scan.recs.find((r) => r.problem);
+        const hasProblem = scan.reports.some((a) => a.state === "problem" || a.state === "warn");
+        if (hasProblem || scan.health.score < 85) {
+          // Autopilot: dyrygent sam stosuje bezpieczne naprawy; inaczej podpowiada KONKRET.
           if (store.settings.guardianAutopilot) {
             const did = await guardianAutoHeal();
             if (did) toast(did);
           } else {
-            toast("🛡 Strażnik: coś wymaga uwagi — otwórz 🛡 i kliknij „Napraw wszystko”.");
+            toast(topRec?.problem ? `🛡 Strażnik: ${topRec.problem} Otwórz 🛡, by naprawić.` : "🛡 Strażnik: coś wymaga uwagi — otwórz 🛡.");
           }
         }
       } catch { /* sieć — pomiń */ }

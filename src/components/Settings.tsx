@@ -189,6 +189,13 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (s.provider === "ollama" && store.settings.ollamaUrl?.trim()) void loadOllamaModels();
   }, [s.provider]);
+  // Auto-wykryj checkpointy SD, gdy wchodzisz w AI z ustawionym adresem serwera obrazów —
+  // lista modeli pojawia się sama, bez szukania przycisku „Sprawdź".
+  useEffect(() => {
+    if (tab !== "ai" || !s.sdUrl?.trim() || sdModels.length) return;
+    void detectSd(s.sdUrl).then((r) => { if (r.ok && r.models.length) setSdModels(r.models); }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
   // Debounce: po wpisaniu/zmianie adresu Ollamy (~600 ms) wykryj modele z serwera.
   useEffect(() => {
     if (!s.ollamaUrl?.trim()) return;
