@@ -414,6 +414,8 @@ export interface Settings {
   unfilteredLocal: boolean;
   /** Głębokie myślenie — przy złożonych pytaniach robi wewnętrzną analizę przed odpowiedzią. */
   deepThink: boolean;
+  /** Auto-weryfikacja — przy trudnych pytaniach model sam sprawdza i poprawia swój wynik. */
+  verifyHard: boolean;
   /** Wszczepiona wiedza ekspercka — dobiera modele mentalne do pytania (offline, za darmo). */
   expertKnowledge: boolean;
   /** Aktywny projekt/workspace ("" = ogólny). */

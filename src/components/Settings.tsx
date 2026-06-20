@@ -1476,6 +1476,14 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
               <div className="row">
                 <span>
+                  🔍 Auto-weryfikacja trudnych odpowiedzi
+                  <br />
+                  <span className="muted">przy zadaniach z liczeniem/logiką model sam sprawdza i poprawia swój wynik (wolniej, pewniej)</span>
+                </span>
+                <Toggle on={s.verifyHard} onClick={() => set({ verifyHard: !s.verifyHard })} />
+              </div>
+              <div className="row">
+                <span>
                   📚 Wiedza ekspercka (wszczepiona)
                   <br />
                   <span className="muted">dobiera modele mentalne i heurystyki do pytania — offline, za darmo</span>

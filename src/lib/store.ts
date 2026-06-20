@@ -88,6 +88,7 @@ const defaultSettings: Settings = {
   guardianAutopilot: false,
   unfilteredLocal: false,
   deepThink: false,
+  verifyHard: false,
   expertKnowledge: true,
   activeProjectId: "",
   theme: "default",

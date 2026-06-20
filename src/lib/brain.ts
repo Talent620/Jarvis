@@ -16,6 +16,7 @@ import { buildFusionBlock } from "./contextFusion";
 import { estimateConfidence, isLowConfidence } from "./confidence";
 import { speculativeAnswer } from "./speculative";
 import { localRefine, critiqueInstruction } from "./localRefine";
+import { VERIFY_SYSTEM, buildVerifyUser, verifyVerdict } from "./verify";
 import { localSelfConsistency } from "./localConsensus";
 import { conversationStyleDirectives } from "./conversationStyle";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
@@ -695,6 +696,33 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
               logRouteDecision({ provider, model, kind: "complex", reason: "Drabina Mądrości: lokalna samokorekta", fellBack: provider !== primary, tier: "reflex" });
             }
           } catch { /* graceful — zostaje pierwsza odpowiedź lokalna */ } finally { onStatus?.(null); }
+        }
+
+        // Auto-weryfikacja trudnych odpowiedzi (opt-in): model sam sprawdza swój wynik drugim,
+        // krótkim przebiegiem (liczenie/logika) i poprawia, jeśli znajdzie błąd. Działa z każdym
+        // dostawcą; tylko dla zadań rozumowych, online, gdy jest sensowna odpowiedź.
+        if (
+          store.settings.verifyHard && !store.settings.interpreterMode &&
+          needsDeepThink(lastUser?.content || "") && reply.text && reply.text.trim().length > 2 &&
+          !reply.text.startsWith("⚠") && (typeof navigator === "undefined" || navigator.onLine !== false)
+        ) {
+          try {
+            onStatus?.("⟳ Sprawdzam odpowiedź…");
+            const v = await PROVIDERS[provider].impl({
+              system: VERIFY_SYSTEM,
+              webSearch: false,
+              tools: [],
+              history: [{ role: "user", content: buildVerifyUser(lastUser?.content || "", reply.text) }],
+              apiKey,
+              model: TASK_MODELS[provider]?.complex || model,
+              proxyUrl: store.settings.proxyUrl?.trim() || undefined,
+            });
+            const verdict = verifyVerdict(v.text || "", reply.text);
+            if (verdict.corrected) {
+              reply = { ...reply, text: verdict.text };
+              logRouteDecision({ provider, model, kind: clsTop.kind, reason: "auto-weryfikacja: korekta odpowiedzi", fellBack: provider !== primary });
+            }
+          } catch { /* graceful — zostaje pierwsza odpowiedź */ } finally { onStatus?.(null); }
         }
 
         const citations = getCitations();
