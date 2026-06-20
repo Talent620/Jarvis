@@ -111,7 +111,7 @@ async function relaySend(to: string, subject: string, body: string): Promise<{ o
     host: s.smtpHost?.trim() || "smtp.gmail.com",
     port: Number(s.smtpPort) || 465,
     user: s.smtpUser.trim(),
-    pass: s.smtpPass,
+    pass: s.smtpPass.trim(),
     to: to.trim(),
     subject,
     body,
@@ -131,7 +131,7 @@ export async function verifyMailConnection(): Promise<{ ok: boolean; message: st
       host: s.smtpHost?.trim() || "smtp.gmail.com",
       port: Number(s.smtpPort) || 465,
       user: s.smtpUser.trim(),
-      pass: s.smtpPass,
+      pass: s.smtpPass.trim(),
     });
     if (r === "ok") return { ok: true, message: `✅ Poczta połączona poprawnie (${s.smtpUser.trim()}) — można wysyłać.` };
     const msg = typeof r === "string" ? r.replace(/^err:/, "") : "Nie udało się połączyć — sprawdź dane poczty.";
@@ -146,7 +146,7 @@ export async function verifyMailConnection(): Promise<{ ok: boolean; message: st
       host: s.smtpHost?.trim() || "smtp.gmail.com",
       port: Number(s.smtpPort) || 465,
       user: s.smtpUser.trim(),
-      pass: s.smtpPass,
+      pass: s.smtpPass.trim(),
     });
     return r.ok
       ? { ok: true, message: `✅ Poczta połączona poprawnie (${s.smtpUser.trim()}) — telefon wysyła w tle.` }
@@ -165,7 +165,7 @@ export async function sendMailNow(to: string, subject: string, body: string): Pr
     host: s.smtpHost?.trim() || "smtp.gmail.com",
     port: Number(s.smtpPort) || 465,
     user: s.smtpUser.trim(),
-    pass: s.smtpPass,
+    pass: s.smtpPass.trim(),
     to: to.trim(),
     subject,
     body,
