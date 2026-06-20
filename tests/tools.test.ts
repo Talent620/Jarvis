@@ -111,6 +111,11 @@ describe("narzędzia lokalne — wykonanie end-to-end (runTool)", () => {
     expect(store.settings.voiceRate).toBeCloseTo(0.85);
     expect(store.settings.speak).toBe(false);
     expect(await runTool("set_voice", {})).toMatch(/Podaj, co zmienić/);
+    // Przypięcie stałego głosu JARVISA (Voice Guardian) komendą.
+    await runTool("set_voice", { pin: true });
+    expect(store.settings.voicePinned).toBe(true);
+    expect(store.settings.voiceSystemPl).toBe(true);
+    expect(store.settings.speak).toBe(true);
   });
 
   it("set_preference zmienia imię, wyszukiwanie i adaptacyjne menu", async () => {

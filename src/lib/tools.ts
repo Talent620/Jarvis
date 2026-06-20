@@ -958,18 +958,24 @@ const tools: Tool[] = [
           persona: { type: "string", enum: ["classic", "concise", "warm", "witty", "operator"], description: "Charakter: classic (majordomus), concise (zwięzły), warm (ciepły), witty (dowcipny), operator (operacyjny). Opcjonalnie." },
           speed: { type: "string", enum: ["slower", "normal", "faster"], description: "Tempo mówienia (opcjonalnie)." },
           speak: { type: "boolean", description: "true = mów na głos, false = wycisz (opcjonalnie)." },
+          pin: { type: "boolean", description: "true = przypnij STAŁY polski głos JARVISA (bez automatycznych podmian, zawsze ten sam). Użyj, gdy ktoś prosi „ustaw stały głos”, „nie zmieniaj głosu”." },
         },
         [],
       ),
     },
-    run: ({ voice, persona, speed, speak }) => {
+    run: ({ voice, persona, speed, speak, pin }) => {
       const patch: Partial<Settings> = {};
       const changed: string[] = [];
       if (voice) { patch.geminiVoice = String(voice); changed.push(`barwa: ${voice}`); }
       if (persona) { patch.persona = String(persona); changed.push(`charakter: ${persona}`); }
       if (speed) { patch.voiceRate = speed === "slower" ? 0.85 : speed === "faster" ? 1.15 : 1; changed.push(`tempo: ${speed === "slower" ? "wolniej" : speed === "faster" ? "szybciej" : "normalne"}`); }
       if (typeof speak === "boolean") { patch.speak = speak; changed.push(speak ? "głos włączony" : "głos wyciszony"); }
-      if (!changed.length) return "Podaj, co zmienić w głosie: barwa (np. Charon), charakter (np. operator), tempo (slower/faster) albo speak true/false.";
+      if (typeof pin === "boolean") {
+        patch.voicePinned = pin;
+        if (pin) { patch.voiceSystemPl = true; patch.speak = true; }
+        changed.push(pin ? "stały głos JARVISA przypięty (bez podmian)" : "stały głos odpięty");
+      }
+      if (!changed.length) return "Podaj, co zmienić w głosie: barwa (np. Charon), charakter (np. operator), tempo (slower/faster), speak true/false albo pin true (stały głos).";
       store.setSettings(patch);
       return `✅ Ustawienia głosu zmienione — ${changed.join(", ")}.`;
     },
