@@ -23,4 +23,8 @@ describe("updater — downloadUrl", () => {
     expect(downloadUrl("android")).toMatch(/releases\/download\/latest\/jarvis\.apk$/);
     expect(downloadUrl("windows")).toMatch(/JARVIS\.exe$/);
   });
+  it("iOS → strona wydań (brak instalowalnego pliku, instalacja przez App Store/sideload)", () => {
+    expect(downloadUrl("ios")).toMatch(/releases\/latest$/);
+    expect(downloadUrl("ios")).not.toMatch(/\.ipa/);
+  });
 });

@@ -7,12 +7,14 @@ import { isDesktop } from "./desktop";
 import { openUrl } from "./deviceControl";
 
 const REPO = "Talent620/Jarvis";
-export type Plat = "android" | "windows" | "web";
+export type Plat = "android" | "ios" | "windows" | "web";
 
-const ASSET: Record<Plat, string> = { android: "jarvis.apk", windows: "JARVIS.exe", web: "jarvis.apk" };
+const ASSET: Record<Plat, string> = { android: "jarvis.apk", ios: "jarvis.ipa", windows: "JARVIS.exe", web: "jarvis.apk" };
 
 export function platform(): Plat {
-  if (Capacitor.isNativePlatform?.()) return "android";
+  const p = Capacitor.getPlatform?.();
+  if (p === "ios") return "ios";
+  if (p === "android" || Capacitor.isNativePlatform?.()) return "android";
   if (isDesktop()) return "windows";
   return "web";
 }
@@ -22,6 +24,9 @@ export function currentBuild(): string {
 }
 
 export function downloadUrl(p: Plat = platform()): string {
+  // iOS nie ma instalowalnego pliku w wydaniach (instalacja przez App Store / sideload) —
+  // kierujemy do strony wydań z instrukcją zamiast do nieistniejącego .ipa.
+  if (p === "ios") return `https://github.com/${REPO}/releases/latest`;
   return `https://github.com/${REPO}/releases/download/latest/${ASSET[p]}`;
 }
 

@@ -17,14 +17,15 @@ interface NativeTtsPlugin {
 const NativeTTS = registerPlugin<NativeTtsPlugin>("NativeTTS");
 
 /** Lista dostępnych głosów do wyboru w ustawieniach — natywne (Android) albo przeglądarkowe.
- *  Dzięki temu na telefonie WIDAĆ realne głosy silnika i można zablokować jeden, stały. */
+ *  Android ma własny silnik (NativeTTS); iOS i web używają Web Speech (WKWebView/przeglądarka). */
 export async function listSpeechVoices(): Promise<NativeVoiceInfo[]> {
-  if (Capacitor.isNativePlatform()) {
+  if (Capacitor.getPlatform?.() === "android") {
     try {
       const r = await NativeTTS.listVoices();
-      return (r?.voices || []).filter((v) => v.name);
+      const list = (r?.voices || []).filter((v) => v.name);
+      if (list.length) return list;
     } catch {
-      return [];
+      /* spadnij do Web Speech */
     }
   }
   const voices = cachedVoices.length ? cachedVoices : await loadVoices();
@@ -443,10 +444,10 @@ export async function speak(text: string, settings: Settings): Promise<void> {
     if (await geminiTts(text, settings)) return;
   }
 
-  // Na urządzeniu używaj natywnego TTS (WebView często nie ma Web Speech).
-  // Przekaż WYBRANY głos (voiceName) — bez tego silnik bierze domyślny, „translatorowy",
-  // który potrafi się zmieniać. Pusty = systemowy domyślny.
-  if (Capacitor.isNativePlatform()) {
+  // Android: natywny silnik TTS (WebView Androida często nie ma Web Speech) + WYBRANY głos
+  // (bez tego silnik bierze domyślny „translatorowy", który się zmienia). iOS i web mają
+  // sprawne Web Speech (WKWebView/przeglądarka) — używają pickVoice niżej.
+  if (Capacitor.getPlatform?.() === "android") {
     try {
       await NativeTTS.speak({ text, pitch: settings.voicePitch, rate: settings.voiceRate, lang: "pl-PL", voice: settings.voiceName?.trim() || "" });
       return;
@@ -508,7 +509,7 @@ export async function speakLang(text: string, ttsLang: string, opts?: { voice?: 
   if (opts?.premium !== false && primaryKey("gemini")) {
     if (await geminiSpeak(text, opts?.voice)) return;
   }
-  if (Capacitor.isNativePlatform()) {
+  if (Capacitor.getPlatform?.() === "android") {
     try {
       await NativeTTS.speak({ text, pitch: 1, rate: 1, lang: ttsLang });
       return;

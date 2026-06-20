@@ -16,6 +16,20 @@ Plik: **`jarvis.apk`**
 2. Jeśli Android zapyta — zezwól na „instalację z nieznanych źródeł".
 3. Otwórz JARVIS. W **⚙ → Dane** sprawdź datę build (powinna być dzisiejsza).
 
+## 1b) 🍏 iPhone (iOS)
+Na iOS nie ma instalowalnego pliku z internetu (zasada Apple). Trzy realne drogi:
+
+1. **Najprościej — PWA (zalecane, bez konta):** otwórz adres aplikacji w **Safari** →
+   przycisk **Udostępnij** (kwadrat ze strzałką) → **„Do ekranu początkowego"**. JARVIS
+   pojawi się jako ikona i działa jak aplikacja (pełny ekran, sam się odświeża do najnowszej).
+2. **Pełna aplikacja natywna (sideload):** zbuduj na Macu (Xcode) i wgraj na telefon przez
+   **AltStore/Sideloadly** z darmowym Apple ID (ważność 7 dni) — projekt iOS jest w repo (`ios/`).
+3. **App Store:** wymaga konta **Apple Developer** (99 USD/rok) i podpisu — wtedy pełne,
+   automatyczne aktualizacje.
+
+> Głos i większość funkcji działają na iOS przez Safari/WKWebView. Mikrofon (rozpoznawanie
+> mowy na żywo) bywa ograniczony w PWA — wtedy używaj pola tekstowego.
+
 ## 2) 💻 Komputer (Windows) — aplikacja na pulpit (opcjonalnie)
 Plik: **`JARVIS.exe`**
 👉 https://github.com/Talent620/Jarvis/releases/download/latest/JARVIS.exe

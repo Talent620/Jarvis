@@ -2520,6 +2520,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   • <b>Telefon (APK)</b> i <b>Windows (EXE)</b>: system bezpieczeństwa nie pozwala aplikacji
                   zainstalować się <i>sama po cichu</i> — zawsze potwierdzasz instalację jednym kliknięciem (to
                   celowa ochrona Androida/Windows).<br />
+                  • <b>iPhone (iOS)</b>: najprościej dodać JARVISA do ekranu początkowego z Safari (Udostępnij →
+                  „Do ekranu początkowego") — działa jak aplikacja i sam się odświeża. Pełna aplikacja iOS wymaga
+                  konta Apple Developer (App Store) albo sideloadu (AltStore/Sideloadly).<br />
                   • <b>Ostrzeżenie antywirusa/SmartScreen</b> pojawia się, bo plik nie jest podpisany certyfikatem
                   wydawcy. Pobranie idzie z oficjalnego <b>GitHub po HTTPS</b> — jest bezpieczne. Na Windows: „Więcej
                   informacji → Uruchom mimo to". Trwałe usunięcie ostrzeżeń wymaga płatnego podpisu kodu
