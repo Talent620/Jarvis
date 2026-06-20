@@ -1167,6 +1167,21 @@ const tools: Tool[] = [
   },
   {
     def: {
+      name: "deep_solve",
+      description:
+        "Rozłóż ZŁOŻONY cel/problem na podzadania, rozwiąż je (równolegle wg zależności, z wynikami wcześniejszych kroków) i połącz w jedną spójną odpowiedź. Użyj do trudnych, wieloetapowych zadań: „zaplanuj kampanię marketingową”, „przeanalizuj X i zaproponuj strategię”, „rozłóż i rozwiąż złożony problem”. Wolniejsze (kilka kroków), ale dokładniejsze.",
+      input_schema: obj({ goal: str("Cel/problem do rozłożenia i rozwiązania") }, ["goal"]),
+    },
+    run: async ({ goal }) => {
+      const { runGoal } = await import("./goalPlanner");
+      const r = await runGoal(String(goal || ""));
+      if (!r.answer) return "Podaj cel/problem do rozłożenia i rozwiązania.";
+      const plan = r.steps.length >= 2 ? `\n\n(Rozłożono na ${r.steps.length} kroków${r.skipped.length ? `, ${r.skipped.length} pominięto` : ""}.)` : "";
+      return r.answer + plan;
+    },
+  },
+  {
+    def: {
       name: "set_preference",
       description:
         "Zmień osobiste preferencje JARVIS-a na żądanie: jak ma się do Ciebie zwracać (imię), wyszukiwanie w sieci on/off, adaptacyjny układ menu on/off. Np. „mów do mnie Szefie”, „wyłącz wyszukiwanie w sieci”, „nie układaj menu pod moje nawyki”.",
