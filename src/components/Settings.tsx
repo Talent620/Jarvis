@@ -83,6 +83,8 @@ const SETTINGS_INDEX: { label: string; tab: Tab; anchor?: string; keys: string }
   { label: "🎛 Tryb pracy JARVISA", tab: "ai", anchor: "set-mode", keys: "tryb szybki madry lokalny praca" },
   { label: "🔑 Klucze API (Gemini/Claude/OpenAI…)", tab: "ai", anchor: "set-keys", keys: "klucz api gemini openai claude anthropic groq dostawca model" },
   { label: "📨 Poczta — wysyłka e-maili", tab: "ai", anchor: "set-email", keys: "mail email smtp poczta wysylka gmail haslo" },
+  { label: "🔎 Research z cytatami (Tavily)", tab: "ai", anchor: "set-research", keys: "research tavily wyszukiwanie zrodla cytaty web search" },
+  { label: "🎨 Studio premium (edycja zdjęć)", tab: "ai", anchor: "set-studio", keys: "studio obraz zdjecie edycja fal flux gemini premium" },
   { label: "🖥 Lokalny model (Ollama, obrazy)", tab: "ai", anchor: "set-ollama", keys: "ollama lokalny serwer stable diffusion obrazy sd model" },
   { label: "🗣 Głos JARVISA (silnik, próbka)", tab: "voice", anchor: "set-voice", keys: "glos voice mowa silnik gemini eleven fish czyta brzmienie ton" },
   { label: "🎤 Mikrofon i nasłuch", tab: "voice", anchor: "set-listen", keys: "mikrofon nasluch sluchanie wake slowo jarvis" },
@@ -448,10 +450,10 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 );
               }); })()}
 
-              <h3>🩺 Diagnostyka startowa</h3>
+              <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🩺 Diagnostyka startowa — sprawdź wszystko jednym kliknięciem</summary>
               <p className="muted">
-                Jedno kliknięcie sprawdza wszystko: internet, każdy klucz AI, research, głos,
-                mikrofon, backend i smart home — z podpowiedzią, jak naprawić braki.
+                Sprawdza internet, każdy klucz AI, research, głos, mikrofon, backend i smart home — z podpowiedzią, jak naprawić braki.
               </p>
               <button
                 className="btn"
@@ -472,6 +474,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               {diag.length > 0 && (
                 <p className="muted" style={{ whiteSpace: "pre-line", marginTop: 8 }}>{diag.join("\n")}</p>
               )}
+              </details>
 
               <h3>🚀 Szybki start</h3>
               <p className="muted">
@@ -843,8 +846,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
 
               </details>
               <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
-              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>📦 Więcej funkcji — poczta · research · studio premium · konsylium</summary>
-              <h3 id="set-email">📨 Poczta — wysyłka e-maili z aplikacji</h3>
+              <summary id="set-email" style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>📨 Poczta — wysyłka e-maili z aplikacji</summary>
               {(() => {
                 // Diagnostyka „dlaczego nie idzie" — jeden czytelny powód (reaguje na zmiany w `s`).
                 const rd = mailReadiness();
@@ -950,7 +952,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 {mailCheck && <p className="muted" style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>{mailCheck}</p>}
               </div>
 
-              <h3>Research z cytatami (Tavily)</h3>
+              </details>
+              <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
+              <summary id="set-research" style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🔎 Research z cytatami (Tavily)</summary>
               <p className="muted">
                 Daje wyszukiwanie ze źródłami dla każdego dostawcy (nie tylko Claude). Darmowe
                 1000 zapytań/mies. —{" "}
@@ -973,7 +977,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <Toggle on={s.webSearch} onClick={() => set({ webSearch: !s.webSearch })} />
               </div>
 
-              <h3>🎨 Studio premium (edycja zdjęć)</h3>
+              </details>
+              <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
+              <summary id="set-studio" style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🎨 Studio premium (edycja zdjęć)</summary>
               <p className="muted">
                 Darmowa edycja działa na kluczu Gemini (Nano Banana). Modele <b>premium</b>
                 {" "}(FLUX.1 Kontext, Nano Banana Pro) idą przez{" "}
@@ -990,7 +996,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 />
               </div>
 
-              <h3>⚖ Tryb Konsylium</h3>
+              </details>
+              <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>⚖ Tryb Konsylium (kilka modeli na raz)</summary>
               <div className="row">
                 <span>
                   Ważne pytania konsultuj z kilkoma modelami
