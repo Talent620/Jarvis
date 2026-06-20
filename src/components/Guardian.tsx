@@ -3,6 +3,7 @@ import { useEscape } from "../hooks/useEscape";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
 import { guardian, guardianDiagnose, guardianAdvise, type GuardianStatus, type GuardianActionResult } from "../lib/guardian";
+import { checkForUpdate, applyUpdate } from "../lib/updater";
 
 // 🛡 Strażnik JARVISA — autonomiczny pomocnik z głównego menu: diagnozuje, naprawia,
 // przyspiesza/ulepsza/odcenzurowuje, łączy serwery i doradza po polsku. Jeden ekran „od wszystkiego".
@@ -33,6 +34,22 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
       await refresh();
     } catch {
       setMsg("⚠ Coś poszło nie tak — spróbuj ponownie.");
+      setBusy(false);
+    }
+  };
+
+  const doUpdate = async () => {
+    if (busy) return;
+    setBusy(true); setAdvice(""); setMsg("Sprawdzam aktualizacje JARVISA…");
+    try {
+      const r = await checkForUpdate();
+      if ("error" in r) { setMsg(`❌ ${r.error}`); return; }
+      if (!r.newer) { setMsg(`✅ Masz najnowszą wersję (${r.current}).`); return; }
+      setMsg(`🎉 Jest nowsza wersja (${r.latest}) — ${r.platform === "web" ? "odświeżam…" : "pobieram, kliknij plik, by zainstalować."}`);
+      await applyUpdate(r);
+    } catch {
+      setMsg("⚠ Nie udało się sprawdzić aktualizacji.");
+    } finally {
       setBusy(false);
     }
   };
@@ -88,6 +105,7 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
             <button className="chip" disabled={busy} onClick={() => void run(() => guardian.uncensored((m) => setMsg(`🔓 ${m}`)))}>🔓 Bez cenzury</button>
             <button className="chip" disabled={busy} onClick={() => void run(() => guardian.connectServers((m) => setMsg(`🔗 ${m}`)))}>🔗 Połącz serwery</button>
             <button className="chip" disabled={busy} onClick={() => void run(() => guardian.fixVoice())}>🇵🇱 Napraw głos</button>
+            <button className="chip" disabled={busy} onClick={() => void doUpdate()}>⬆ Aktualizuj</button>
           </div>
 
           {msg && <p className="muted" style={{ fontSize: 12, whiteSpace: "pre-line" }}>{msg}</p>}
