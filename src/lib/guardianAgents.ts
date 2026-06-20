@@ -16,8 +16,17 @@ import { speedSummary, voiceSummary, type GuardianActionKey } from "./guardian";
 export type AgentId = "performance" | "voice" | "ai" | "image" | "integration" | "update";
 export type AgentState = "ok" | "warn" | "problem" | "off";
 export interface AgentFinding { level: "ok" | "warn" | "problem"; text: string }
-/** Rekomendacja agenta: z `key` → przycisk „jednym kliknięciem"; bez → wskazówka tekstowa. */
-export interface AgentRec { label: string; why: string; key?: GuardianActionKey }
+/** Rekomendacja agenta w formacie premium: Problem → Przyczyna → Wpływ → Naprawa → Przycisk.
+ *  `key` → przycisk „jednym kliknięciem"; bez → wskazówka tekstowa. Pola problem/cause/impact
+ *  opcjonalne (gdy ustawione, UI pokazuje pełną, czytelną kartę rekomendacji). */
+export interface AgentRec {
+  label: string;        // tekst przycisku / nazwa naprawy
+  why: string;          // sugerowana naprawa (co zrobi)
+  key?: GuardianActionKey;
+  problem?: string;     // co jest nie tak
+  cause?: string;       // dlaczego
+  impact?: string;      // jak to wpływa na JARVISA
+}
 export interface AgentReport {
   id: AgentId;
   name: string;
@@ -92,9 +101,31 @@ export function performanceAgent(ctx: ScanContext): AgentReport {
   const recs: AgentRec[] = [];
   let score = 100;
 
-  const slow = !ctx.s.ollamaNoThink || ctx.s.localRefine || ctx.s.localConsensus;
-  findings.push({ level: slow ? "warn" : "ok", text: `Tryb: ${speedSummary(ctx.s)}` });
-  if (slow) { score -= 12; recs.push({ key: "faster", label: "⚡ Szybciej", why: "Wyłącz myślenie/dodatkowe tury — odpowiedzi od ręki." }); }
+  const s = ctx.s;
+  const slow = !s.ollamaNoThink || s.localRefine || s.localConsensus;
+  findings.push({ level: slow ? "warn" : "ok", text: `Tryb: ${speedSummary(s)}` });
+  if (slow) {
+    score -= 12;
+    recs.push({
+      key: "faster", label: "⚡ Przyspiesz odpowiedzi",
+      problem: "Odpowiedzi są wolniejsze niż mogłyby być.",
+      cause: `Włączone: ${[!s.ollamaNoThink ? "myślenie modelu" : "", s.localRefine ? "samokorekta" : "", s.localConsensus ? "wielokrotne sprawdzanie" : ""].filter(Boolean).join(", ")}.`,
+      impact: "Każda odpowiedź trwa dłużej (czasem wielokrotnie).",
+      why: "Wyłączę myślenie i dodatkowe tury — odpowiedzi od ręki.",
+    });
+  }
+  // 🧠 Jakość — gdy szybko, ale brak modelu rozumującego do trudnych pytań.
+  if (!slow && ctx.ollama.ok && ctx.ollama.models.length && !ctx.ollama.models.some((m) => REASONING.test(m))) {
+    recs.push({ label: "🧠 Zwiększ jakość trudnych pytań", why: "Dograj model rozumujący trybem Mądrzej — lepsze odpowiedzi na złożone tematy." });
+  }
+  // 🔓 Swobodne odpowiedzi — gdy lokalnie i bez trybu nieocenzurowanego.
+  if (ctx.ollama.ok && !s.unfilteredLocal) {
+    recs.push({ label: "🔓 Bardziej swobodne odpowiedzi", why: "W trybach ręcznych włącz Bez cenzury (model lokalny dolphin-mistral) — bez moralizowania." });
+  }
+  // 💾 Zasoby — dodatkowe tury lokalne obciążają CPU/GPU.
+  if (s.localRefine || s.localConsensus) {
+    recs.push({ label: "💾 Zmniejsz zużycie zasobów", why: "Wyłącz samokorektę/wielokrotne sprawdzanie — mniej obciąża komputer." });
+  }
 
   if (typeof r.successRate === "number") {
     const pct = Math.round(r.successRate * 100);
@@ -108,7 +139,7 @@ export function performanceAgent(ctx: ScanContext): AgentReport {
     if (slowNet) score -= 10;
   }
   if (r.errors > 0) findings.push({ level: r.errors > 5 ? "warn" : "ok", text: `Błędy w sesji: ${r.errors}` });
-  if (!findings.length) findings.push({ level: "ok", text: "Brak danych o opóźnieniach — wszystko świeże." });
+  if (findings.length === 1) findings.push({ level: "ok", text: "Brak danych o opóźnieniach — wszystko świeże." });
 
   return { id: "performance", name: "Wydajność", icon: "⚡", state: worst(findings), score: clamp(score), summary: slow ? "Można przyspieszyć" : "Reaguje od ręki", findings, recs };
 }
@@ -137,7 +168,7 @@ export function voiceAgent(ctx: ScanContext): AgentReport {
   if (pinned && !ctx.voicePinnedExists) {
     findings.push({ level: "problem", text: `Przypięty głos „${pinned}" zniknął z silnika — trzeba wybrać zamiennik.` });
     score -= 30;
-    recs.push({ key: "pinVoice", label: "🚀 Przypnij najlepszy głos", why: "Wybiorę najlepszy dostępny polski głos i przypnę go na stałe." });
+    recs.push({ key: "pinVoice", label: "🚀 Przypnij najlepszy głos", problem: `Wybrany głos „${pinned}" zniknął z silnika mowy.`, cause: "Aktualizacja systemu lub usunięcie pakietu głosowego.", impact: "JARVIS odezwie się innym, przypadkowym głosem.", why: "Wybiorę najlepszy dostępny polski głos i przypnę go na stałe." });
   } else if (pinned) {
     findings.push({ level: "ok", text: `Przypięty głos działa: ${pinned}.` });
   }
@@ -183,14 +214,20 @@ export function aiAgent(ctx: ScanContext): AgentReport {
   if (!hasBrain) {
     findings.push({ level: "problem", text: "Żaden mózg nie odpowie — brak modelu lokalnego i kluczy chmurowych." });
     score -= 60;
-    recs.push({ key: "fixAll", label: "🩹 Napraw wszystko", why: "Wykryje serwery i wybierze działający mózg." });
+    recs.push({
+      key: "fixAll", label: "🩹 Napraw wszystko",
+      problem: "JARVIS nie ma czym odpowiadać.",
+      cause: "Brak skonfigurowanego klucza API i niedostępna Ollama.",
+      impact: "Czat i polecenia w ogóle nie zadziałają.",
+      why: "Wykryję lokalne serwery i wybiorę działający mózg; jeśli się nie da — poprowadzę po konfiguracji klucza.",
+    });
   }
   if (ctx.cloudProviders.length) findings.push({ level: "ok", text: `Chmura: ${ctx.cloudProviders.length} dostawc(ów) z kluczem (${ctx.cloudProviders.join(", ")}).` });
   else findings.push({ level: "warn", text: "Brak kluczy chmurowych — pełna sprawność wymaga Ollamy albo klucza API." });
 
   if (ctx.ollama.configured) {
-    if (!ctx.ollama.ok) { findings.push({ level: "warn", text: `Ollama nieosiągalna${ctx.ollama.error ? ` (${ctx.ollama.error})` : ""}.` }); score -= 14; recs.push({ key: "connectServers", label: "🔗 Połącz serwery", why: "Spróbuję znaleźć i podłączyć lokalny serwer." }); }
-    else if (!ctx.ollama.models.length) { findings.push({ level: "warn", text: "Ollama działa, ale nie ma żadnego modelu." }); score -= 12; recs.push({ key: "smarter", label: "🧠 Mądrzej", why: "Pobiorę komplet modeli (w tym rozumujący)." }); }
+    if (!ctx.ollama.ok) { findings.push({ level: "warn", text: `Ollama nieosiągalna${ctx.ollama.error ? ` (${ctx.ollama.error})` : ""}.` }); score -= 14; recs.push({ key: "connectServers", label: "🔗 Połącz serwery", problem: "Lokalny serwer Ollama nie odpowiada.", cause: ctx.ollama.error || "Serwer wyłączony lub zmienił adres.", impact: "Brak prywatnego AI offline — JARVIS musi polegać na chmurze.", why: "Poszukam Ollamy na typowych adresach i podłączę ją." }); }
+    else if (!ctx.ollama.models.length) { findings.push({ level: "warn", text: "Ollama działa, ale nie ma żadnego modelu." }); score -= 12; recs.push({ key: "smarter", label: "🧠 Mądrzej (pobierz modele)", problem: "Ollama działa, ale nie ma żadnego modelu.", cause: "Nie pobrano jeszcze żadnego modelu do serwera.", impact: "Lokalny mózg nie odpowie, mimo że serwer działa.", why: "Pobiorę komplet modeli (w tym rozumujący)." }); }
     else {
       findings.push({ level: "ok", text: `Ollama: ${ctx.ollama.models.length} model(i) — ${ctx.ollama.models.slice(0, 3).join(", ")}${ctx.ollama.models.length > 3 ? "…" : ""}.` });
       if (!ctx.ollama.models.some((m) => REASONING.test(m))) {
@@ -216,8 +253,8 @@ export function imageAgent(ctx: ScanContext): AgentReport {
   if (!ctx.sd.configured) {
     return { id: "image", name: "Obrazy (SD)", icon: "🖼", state: "off", score: 100, summary: "Nieskonfigurowane (opcjonalne)", findings: [{ level: "ok", text: "Serwer obrazów nie jest ustawiony — generowanie lokalne wyłączone (opcjonalne)." }], recs: [{ key: "connectServers", label: "🔗 Połącz serwery", why: "Jeśli masz Forge/A1111 z --api, podłączę go." }] };
   }
-  if (!ctx.sd.ok) { findings.push({ level: "warn", text: `Serwer obrazów nieosiągalny — uruchom Forge/A1111 z flagą --api.` }); score -= 30; recs.push({ key: "connectServers", label: "🔗 Połącz serwery", why: "Spróbuję znaleźć serwer obrazów na localhost." }); }
-  else if (!ctx.sd.models.length) { findings.push({ level: "warn", text: "SD działa, ale brak checkpointu — dodaj plik do models/Stable-diffusion." }); score -= 18; }
+  if (!ctx.sd.ok) { findings.push({ level: "warn", text: `Serwer obrazów nieosiągalny — uruchom Forge/A1111 z flagą --api.` }); score -= 30; recs.push({ key: "connectServers", label: "🔗 Połącz serwery", problem: "Serwer obrazów (SD) nie odpowiada.", cause: "Forge/A1111 nie jest uruchomiony albo brak flagi --api.", impact: "Generowanie i edycja obrazów nie zadziała.", why: "Poszukam serwera obrazów na localhost i podłączę go." }); }
+  else if (!ctx.sd.models.length) { findings.push({ level: "warn", text: "SD działa, ale brak checkpointu — dodaj plik do models/Stable-diffusion." }); score -= 18; recs.push({ label: "🖼 Dodaj checkpoint", problem: "SD działa, ale nie ma żadnego modelu (checkpointu).", cause: "Folder models/Stable-diffusion jest pusty.", impact: "Nie da się wygenerować obrazu.", why: "Dodaj plik modelu do models/Stable-diffusion i odśwież listę w ⚙ → Obrazy." }); }
   else findings.push({ level: "ok", text: `SD: ${ctx.sd.models.length} checkpoint(ów) — ${ctx.sd.models.slice(0, 2).join(", ")}${ctx.sd.models.length > 2 ? "…" : ""}.` });
 
   return { id: "image", name: "Obrazy (SD)", icon: "🖼", state: worst(findings), score: clamp(score), summary: ctx.sd.ok && ctx.sd.models.length ? "Gotowe" : "Wymaga uwagi", findings, recs };
@@ -254,7 +291,7 @@ export function updateAgent(ctx: ScanContext): AgentReport {
   }
   if (ctx.update.newer) {
     findings.push({ level: "warn", text: `Dostępna nowsza wersja: ${ctx.update.latest} (masz ${ctx.update.current}).` });
-    recs.push({ key: "update", label: "⬆ Aktualizuj", why: "Pobierz najnowszą wersję JARVISA." });
+    recs.push({ key: "update", label: "⬆ Aktualizuj", problem: `Jest nowsza wersja JARVISA (${ctx.update.latest}).`, cause: `Zainstalowana wersja: ${ctx.update.current}.`, impact: "Pomijasz najnowsze funkcje i poprawki.", why: "Pobiorę aktualizację (w przeglądarce odświeżę, na telefonie/PC pobiorę plik instalatora)." });
     return { id: "update", name: "Aktualizacje", icon: "⬆", state: "warn", score: 80, summary: "Jest aktualizacja", findings, recs };
   }
   findings.push({ level: "ok", text: `Masz najnowszą wersję (${ctx.update.current}).` });

@@ -162,15 +162,25 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
             🩹 Napraw wszystko (wykryj serwery i wybierz działający mózg)
           </button>
 
-          {/* 🧭 Najważniejsze rekomendacje (zagregowane przez Guardian Core) */}
+          {/* 🧭 Najważniejsze rekomendacje — format premium: Problem → Przyczyna → Wpływ → Naprawa → Przycisk */}
           {scan && scan.recs.length > 0 && (
             <div style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>🧭 Rekomendacje Strażnika</div>
               {scan.recs.slice(0, 4).map((r, i) => (
-                <button key={i} className="btn" style={{ width: "100%", textAlign: "left", marginTop: 6, padding: "8px 12px", opacity: r.key ? 1 : 0.85 }} disabled={busy || !r.key} onClick={() => runRec(r.key)}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{r.label}</div>
-                  <div className="muted" style={{ fontSize: 12, fontWeight: 400 }}>{r.why}</div>
-                </button>
+                r.problem ? (
+                  <div key={i} className="journal-card" style={{ padding: "10px 12px", marginTop: 6 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>⚠ {r.problem}</div>
+                    {r.cause && <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>Przyczyna: {r.cause}</div>}
+                    {r.impact && <div className="muted" style={{ fontSize: 12 }}>Wpływ: {r.impact}</div>}
+                    <div style={{ fontSize: 12, marginTop: 3 }}>Naprawa: {r.why}</div>
+                    {r.key && <button className="btn primary" style={{ width: "100%", marginTop: 8 }} disabled={busy} onClick={() => runRec(r.key)}>{r.label}</button>}
+                  </div>
+                ) : (
+                  <button key={i} className="btn" style={{ width: "100%", textAlign: "left", marginTop: 6, padding: "8px 12px", opacity: r.key ? 1 : 0.85 }} disabled={busy || !r.key} onClick={() => runRec(r.key)}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{r.label}</div>
+                    <div className="muted" style={{ fontSize: 12, fontWeight: 400 }}>{r.why}</div>
+                  </button>
+                )
               ))}
             </div>
           )}

@@ -76,9 +76,16 @@ describe("Image Agent", () => {
 });
 
 describe("Performance Agent", () => {
-  it("tryb mądry (wolny) → rekomendacja Szybciej", () => {
+  it("tryb mądry (wolny) → rekomendacja Szybciej z pełnym opisem (problem/przyczyna/wpływ)", () => {
     const r = performanceAgent(ctx({ s: { ollamaNoThink: false } as never }));
-    expect(r.recs.some((x) => x.key === "faster")).toBe(true);
+    const fast = r.recs.find((x) => x.key === "faster");
+    expect(fast).toBeTruthy();
+    expect(fast!.problem && fast!.cause && fast!.impact).toBeTruthy();
+  });
+  it("daje rekomendacje jakości/swobody/zasobów wg stanu", () => {
+    const r = performanceAgent(ctx({ s: { ollamaNoThink: true, unfilteredLocal: false, localRefine: true } as never, ollama: { configured: true, ok: true, models: ["gemma3:4b"] } }));
+    const labels = r.recs.map((x) => x.label).join(" ");
+    expect(labels).toMatch(/swobodne|zasoby|jakość/i);
   });
   it("niska skuteczność operacji obniża wynik", () => {
     const r = performanceAgent(ctx({ reliability: { total: 10, errors: 4, warns: 0, byScope: {}, successRate: 0.5, latencyP50: 400, latencyP95: 1200 } }));
