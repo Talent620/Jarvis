@@ -87,8 +87,11 @@ function pcm16ToBase64(pcm: Int16Array): string {
 
 function base64ToPcm16(b64: string): Int16Array {
   const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  // PCM16 = 2 bajty na próbkę. Nieparzysta długość (ucięty/uszkodzony fragment) wywaliłaby
+  // konstruktor Int16Array (RangeError) — utnij do parzystej, by nie zgubić całej tury audio.
+  const len = bin.length - (bin.length % 2);
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
   return new Int16Array(bytes.buffer);
 }
 

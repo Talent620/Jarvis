@@ -55,6 +55,7 @@ export class SmartConversation {
   }
 
   async start(): Promise<void> {
+    if (this.tickTimer) return; // już wystartowane — bez podwójnego interwału/strumienia mikrofonu
     this.closed = false;
     // Równoległy strumień audio (VAD + mówca + barge-in). Best-effort.
     this.capOn = await this.cap.start({

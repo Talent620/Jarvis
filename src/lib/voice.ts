@@ -474,7 +474,10 @@ export async function speak(text: string, settings: Settings): Promise<void> {
   }
   synth.speak(u);
   } finally {
-    speakingDepth = Math.max(0, speakingDepth - 1);
+    // Zmniejsz licznik mówienia TYLKO, jeśli ta tura wciąż „posiada" mówienie (myToken aktualny).
+    // Inaczej, przy nakładających się speak(), starsza tura wyzerowałaby licznik należący do nowszej
+    // → isSpeaking()=false mimo grającego TTS → nasłuch łapałby własny głos JARVISA (echo/self-trigger).
+    if (myToken === speakToken) speakingDepth = Math.max(0, speakingDepth - 1);
   }
 }
 
