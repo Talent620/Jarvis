@@ -185,6 +185,10 @@ export default function Conversation({
           <p className="muted" style={{ marginTop: 18, fontSize: 13, lineHeight: 1.6 }}>
             {t("empty.hint", lang)}
           </p>
+          {/* Przewagi nad ChatGPT/Gemini — widoczne od pierwszej sekundy (research: ludzie nie wiedzą, że to mają). */}
+          <p style={{ marginTop: 14, fontSize: 12, letterSpacing: 0.3, color: "var(--cyan-dim)", opacity: 0.85 }}>
+            {t("edge.badges", lang)}
+          </p>
         </div>
         <div ref={endRef} />
       </div>
