@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
-import { createRecognition, speak, stopSpeaking } from "../lib/voice";
+import { createListener, isSpeechSupported, speak, stopSpeaking, type VoiceListener } from "../lib/voice";
 import { guardian, guardianAdvise, guardianChat, guardianExecute, guardianPlan, isOutgoingCommand, GUARDIAN_CAPABILITIES, type GuardianActionResult, type GuardianActionKey, type GuardianChatMsg } from "../lib/guardian";
 import { guardianScan, formatScanReport, type GuardianScan, type AgentReport, type AgentState } from "../lib/guardianAgents";
 import { recordGuardianEvent, getGuardianHistory, clearGuardianHistory, topFixes, recurringHint, type GuardianEvent } from "../lib/guardianHistory";
@@ -34,7 +34,8 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
   const [chatBusy, setChatBusy] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [listening, setListening] = useState(false);
-  const recRef = useRef<ReturnType<typeof createRecognition>>(null);
+  const recRef = useRef<VoiceListener | null>(null);
+  const voiceOk = isSpeechSupported();
 
   const refresh = async () => {
     setBusy(true); setMsg("Skanuję ekosystem JARVISA…");
@@ -115,27 +116,22 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
     }
   };
 
-  // 🎤 Mów do Strażnika: jednorazowe rozpoznanie mowy → auto-wysyłka → odczyt odpowiedzi (hands-free).
+  // 🎤 Mów do Strażnika: nasłuch (Web Speech / Whisper — wspólny tor apki) → auto-wysyłka →
+  // odczyt odpowiedzi na głos (hands-free). Gdy sprzęt nie wspiera — kieruj do trybów natywnych.
   const toggleVoice = () => {
     if (listening) { try { recRef.current?.stop(); } catch { /* ignore */ } setListening(false); return; }
-    const rec = createRecognition();
-    if (!rec) { toast("To urządzenie nie wspiera rozpoznawania mowy — pisz albo użyj trybu głosowego apki."); return; }
-    recRef.current = rec;
-    rec.lang = store.settings.voiceName?.includes("en") ? "en-US" : "pl-PL";
-    rec.continuous = false;
-    rec.interimResults = false;
-    rec.onresult = (e: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => {
-      const t = e.results?.[0]?.[0]?.transcript?.trim();
-      setListening(false);
-      if (t) void sendChat(t, true);
-    };
-    rec.onerror = () => setListening(false);
-    rec.onend = () => setListening(false);
+    if (!voiceOk) { toast("Na tym urządzeniu mowa w czacie jest niedostępna — użyj 🎙 Trybu Słuchawki albo ☎ rozmowy na żywo."); return; }
     stopSpeaking(); // nie nakładaj na własną mowę
-    try { rec.start(); setListening(true); } catch { setListening(false); }
+    const listener = createListener({
+      onFinal: (t) => { setListening(false); const s = (t || "").trim(); if (s) void sendChat(s, true); },
+      onEnd: () => setListening(false),
+      onError: () => setListening(false),
+    });
+    recRef.current = listener;
+    try { listener.start(store.settings.voiceName?.includes("en") ? "en-US" : "pl-PL"); setListening(true); } catch { setListening(false); }
   };
   // Sprzątanie: zatrzymaj nasłuch/mowę przy zamknięciu panelu.
-  useEffect(() => () => { try { recRef.current?.abort?.(); } catch { /* ignore */ } stopSpeaking(); }, []);
+  useEffect(() => () => { try { recRef.current?.stop(); } catch { /* ignore */ } stopSpeaking(); }, []);
   // Autoprzewijanie do najnowszej wiadomości w rozmowie.
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [chat, chatBusy]);
 
@@ -388,16 +384,18 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
                 onKeyDown={(e) => { if (e.key === "Enter") void sendChat(); }}
                 style={{ flex: 1 }}
               />
-              <button
-                className={`btn ${listening ? "primary" : ""}`}
-                style={{ marginTop: 0, padding: "8px 14px" }}
-                disabled={chatBusy}
-                onClick={toggleVoice}
-                title={listening ? "Słucham… (kliknij, by przerwać)" : "Mów do Strażnika (głosem)"}
-                aria-label="Mów do Strażnika"
-              >
-                {listening ? "🔴" : "🎤"}
-              </button>
+              {voiceOk && (
+                <button
+                  className={`btn ${listening ? "primary" : ""}`}
+                  style={{ marginTop: 0, padding: "8px 14px" }}
+                  disabled={chatBusy}
+                  onClick={toggleVoice}
+                  title={listening ? "Słucham… (kliknij, by przerwać)" : "Mów do Strażnika (głosem)"}
+                  aria-label="Mów do Strażnika"
+                >
+                  {listening ? "🔴" : "🎤"}
+                </button>
+              )}
               <button className="btn primary" style={{ marginTop: 0, padding: "8px 16px" }} disabled={chatBusy || !chatInput.trim()} onClick={() => void sendChat()}>➤</button>
             </div>
             {listening && <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>🎙 Mów teraz — wyślę i odczytam odpowiedź na głos.</p>}
