@@ -14,19 +14,22 @@ export function isNearBottom(box: ScrollBox, threshold = 120): boolean {
 }
 
 /**
- * Pure: podpowiedzi startowe zależne od pory dnia i kontekstu — bardziej „żywe" niż stała lista.
- * Rano proponuje raport, wieczorem podsumowanie; gdy są zadania na dziś, podbija je na górę.
+ * Pure: podpowiedzi startowe zależne od pory dnia, kontekstu i JĘZYKA — bardziej „żywe" niż
+ * stała lista. Rano proponuje raport, wieczorem podsumowanie; zadania na dziś na górze.
  */
-export function starterSuggestions(now: Date, opts: { tasksToday?: number; desktop?: boolean } = {}): string[] {
+export function starterSuggestions(now: Date, opts: { tasksToday?: number; desktop?: boolean; lang?: "pl" | "en" } = {}): string[] {
   const h = now.getHours();
+  const en = opts.lang === "en";
   const out: string[] = [];
   if (opts.tasksToday && opts.tasksToday > 0) {
-    out.push(opts.tasksToday === 1 ? "Co mam dziś do zrobienia?" : `Pokaż moje ${opts.tasksToday} zadania na dziś`);
+    out.push(en
+      ? (opts.tasksToday === 1 ? "What do I have to do today?" : `Show my ${opts.tasksToday} tasks for today`)
+      : (opts.tasksToday === 1 ? "Co mam dziś do zrobienia?" : `Pokaż moje ${opts.tasksToday} zadania na dziś`));
   }
-  if (h < 11) out.push("Przedstaw raport poranny", "Co dziś w kalendarzu?");
-  else if (h < 17) out.push("Co mam dziś do zrobienia?", "Co nowego w wiadomościach?");
-  else out.push("Podsumuj mój dzień", "Co zaplanować na jutro?");
-  out.push(opts.desktop ? "Co mam na ekranie?" : "Jaka jest pogoda?");
+  if (h < 11) out.push(...(en ? ["Give me the morning report", "What's on my calendar today?"] : ["Przedstaw raport poranny", "Co dziś w kalendarzu?"]));
+  else if (h < 17) out.push(...(en ? ["What do I have to do today?", "What's new in the news?"] : ["Co mam dziś do zrobienia?", "Co nowego w wiadomościach?"]));
+  else out.push(...(en ? ["Summarize my day", "What should I plan for tomorrow?"] : ["Podsumuj mój dzień", "Co zaplanować na jutro?"]));
+  out.push(opts.desktop ? (en ? "What's on my screen?" : "Co mam na ekranie?") : (en ? "What's the weather?" : "Jaka jest pogoda?"));
   // Unikaj duplikatów (gdy zadania pokryły się z porą dnia) i ogranicz do 5.
   return [...new Set(out)].slice(0, 5);
 }

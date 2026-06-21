@@ -5,6 +5,7 @@ import { speak } from "../lib/voice";
 import { store } from "../lib/store";
 import { isDesktop } from "../lib/desktop";
 import { isNearBottom, starterSuggestions } from "../lib/chatUx";
+import { detectLang, t } from "../lib/i18n";
 
 // Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓).
 function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {
@@ -159,17 +160,18 @@ export default function Conversation({
   }, [messages.length, interim, liveId, thinking]);
 
   if (!messages.length && !interim) {
-    const suggestions = starterSuggestions(new Date(), { tasksToday, desktop: isDesktop() });
+    const lang = detectLang(store.settings.lang, typeof navigator !== "undefined" ? navigator.language : undefined);
+    const suggestions = starterSuggestions(new Date(), { tasksToday, desktop: isDesktop(), lang });
     return (
       <div className="convo">
         <div className="empty">
-          Witaj. Jestem <b>JARVIS</b>.
+          {t("empty.greeting", lang)}
           <br />
-          Powiedz „<b>Jarvis</b>" lub napisz polecenie.
+          {t("empty.prompt", lang)}
           {needsSetup ? (
             <div style={{ marginTop: 16 }}>
-              <p className="notice" style={{ marginBottom: 10 }}>⚠ Aby zacząć, dodaj <b>darmowy</b> klucz API (bez karty) albo podłącz lokalny model.</p>
-              <button className="btn primary" style={{ width: "auto" }} onClick={() => onOpenKeys?.()}>🔑 Dodaj darmowy klucz</button>
+              <p className="notice" style={{ marginBottom: 10 }}>{t("empty.needsSetup", lang)}</p>
+              <button className="btn primary" style={{ width: "auto" }} onClick={() => onOpenKeys?.()}>{t("empty.addKey", lang)}</button>
             </div>
           ) : (
             <div className="chips" style={{ justifyContent: "center", flexWrap: "wrap", marginTop: 16 }}>
@@ -181,9 +183,7 @@ export default function Conversation({
             </div>
           )}
           <p className="muted" style={{ marginTop: 18, fontSize: 13, lineHeight: 1.6 }}>
-            <b>☎</b> rozmowa na żywo · <b>＋</b> nowa rozmowa · <b>⋯</b> menu:
-            <br />
-            👁 kamera (wizja) · 🎨 studio obrazów · 📔 dziennik · 🗝 sejf · 🧰 gadżety
+            {t("empty.hint", lang)}
           </p>
         </div>
         <div ref={endRef} />

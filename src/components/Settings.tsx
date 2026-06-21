@@ -13,6 +13,7 @@ import { testApi, testProvider, resolveProvider } from "../lib/brain";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
 import { exportData, exportFull, exportFullEncrypted, importData } from "../lib/backup";
 import { keyList, keyCount, isTavilyKey } from "../lib/keys";
+import { detectLang, t } from "../lib/i18n";
 import { systemCheck } from "../lib/diagnostics";
 import { runHealthCheck, statusIcon, type HealthItem } from "../lib/healthCheck";
 import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
@@ -91,6 +92,7 @@ const SETTINGS_INDEX: { label: string; tab: Tab; anchor?: string; keys: string }
   { label: "🎤 Mikrofon i nasłuch", tab: "voice", anchor: "set-listen", keys: "mikrofon nasluch sluchanie wake slowo jarvis" },
   { label: "🎭 Osobowość / charakter", tab: "behavior", anchor: "set-persona", keys: "osobowosc charakter persona ton imie zwracanie" },
   { label: "💸 Automat sprzedaży / leady", tab: "behavior", anchor: "set-sales", keys: "sprzedaz leady prospekting oferty firmy" },
+  { label: "🌍 Język interfejsu (PL/EN)", tab: "interface", anchor: "set-language", keys: "jezyk language english polski angielski lang i18n" },
   { label: "🎨 Motyw / wygląd", tab: "interface", anchor: "set-theme", keys: "motyw kolor wyglad interfejs hud theme" },
   { label: "🔗 Integracje (Google, MCP…)", tab: "integrations", keys: "integracje google kalendarz mcp salesos pamiec sync" },
   { label: "⬆ Aktualizacja JARVISA", tab: "data", anchor: "set-update", keys: "aktualizacja update wersja nowa" },
@@ -169,6 +171,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const setVoice = (patch: Partial<Settings>) => { setS((prev) => ({ ...prev, ...patch })); store.setSettings(patch); };
   // JEDEN wybór silnika głosu (źródło prawdy) — steruje, co pokazujemy i co naprawdę zabrzmi.
   const voiceMode = resolveVoiceMode(s);
+  // Język interfejsu (do etykiet i18n w Ustawieniach).
+  const uiLang = detectLang(s.lang, typeof navigator !== "undefined" ? navigator.language : undefined);
   // 🔎 „Skocz do ustawienia" — koniec przewijania w poszukiwaniu opcji.
   const [find, setFind] = useState("");
   const findResults = find.trim()
@@ -2010,6 +2014,18 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           {/* ============ 🎨 INTERFEJS ============ */}
           {tab === "interface" && (
             <>
+              <h3 id="set-language">🌍 {t("settings.language", uiLang)}</h3>
+              <div className="chips" style={{ marginBottom: 10 }}>
+                {(["pl", "en"] as const).map((lg) => (
+                  <button
+                    key={lg}
+                    className={`chip ${uiLang === lg ? "on" : ""}`}
+                    onClick={() => { setS((p) => ({ ...p, lang: lg })); store.setSettings({ lang: lg }); }}
+                  >
+                    {lg === "pl" ? "🇵🇱 Polski" : "🇬🇧 English"}
+                  </button>
+                ))}
+              </div>
               <h3 id="set-theme">Motyw HUD</h3>
               <p className="muted">Kolor akcentów całego interfejsu.</p>
               <div className="chips" style={{ marginBottom: 8 }}>

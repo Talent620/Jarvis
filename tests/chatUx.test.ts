@@ -32,4 +32,9 @@ describe("starterSuggestions — podpowiedzi zależne od pory i kontekstu", () =
     expect(s.length).toBeLessThanOrEqual(5);
     expect(new Set(s).size).toBe(s.length);
   });
+  it("lang=en → podpowiedzi po angielsku", () => {
+    const s = starterSuggestions(new Date("2026-06-20T08:00:00"), { lang: "en" });
+    expect(s.some((x) => /morning report/i.test(x))).toBe(true);
+    expect(s.every((x) => !/raport|pogoda/i.test(x))).toBe(true);
+  });
 });

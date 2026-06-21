@@ -460,6 +460,8 @@ export interface Settings {
   activeProjectId: string;
   /** Motyw HUD: default | gold | green | red | purple. */
   theme: string;
+  /** Język interfejsu (pl|en). Pusty = autodetekcja z przeglądarki. */
+  lang?: "pl" | "en";
   /** Imię użytkownika, którym zwraca się JARVIS. */
   userName: string;
   /** Stały profil użytkownika (zainteresowania, cele…) — wbudowana pamięć o nim. */
