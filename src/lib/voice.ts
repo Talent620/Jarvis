@@ -590,18 +590,40 @@ export type { SpeechRecognitionLike };
 export const isDesktop = (): boolean =>
   typeof window !== "undefined" && !!(window as any).jarvisDesktop;
 
-// Czy da się nagrywać audio (potrzebne dla silnika Whisper na desktopie).
+// Czy działamy w natywnej powłoce Capacitora (Android/iOS APK). W tamtejszym WebView
+// webkitSpeechRecognition zwykle ISTNIEJE, ale NIE transkrybuje (brak serwerów mowy
+// Google'a — dokładnie jak w Electronie) → mikrofon „słucha" w nieskończoność. Dlatego
+// na natywnym traktujemy nasłuch jak na desktopie: nagrywamy i transkrybujemy Whisperem.
+export const isNativeApp = (): boolean => {
+  try { return Capacitor.isNativePlatform(); } catch { return false; }
+};
+
+// Czy da się nagrywać audio (potrzebne dla silnika Whisper na desktopie/Androidzie).
 const canRecordAudio = (): boolean =>
   typeof navigator !== "undefined" &&
   !!navigator.mediaDevices?.getUserMedia &&
   typeof (window as any).MediaRecorder !== "undefined";
 
-// Na desktopie „obsługa mowy" = możliwość nagrywania (resztę robi Whisper/Groq).
-// W przeglądarce/telefonie = natywne Web Speech.
+const webSpeechExists = (): boolean =>
+  Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+/**
+ * Czy nasłuch powinien iść torem nagrywanym (Whisper/Groq) zamiast Web Speech:
+ *  - desktop (Electron) → ZAWSZE (Web Speech tam jest martwe),
+ *  - natywny Android/iOS → gdy mamy klucz Groq (wtedy mowa działa pewnie; bez klucza
+ *    spadamy do Web Speech, bo nic lepszego nie mamy i nie chcemy psuć tym, komu działa).
+ */
+export const usesRecordedStt = (): boolean =>
+  canRecordAudio() && (isDesktop() || (isNativeApp() && !!primaryKey("groq")));
+
+// „Obsługa mowy": desktop = nagrywanie; natywny = nagrywanie LUB Web Speech;
+// przeglądarka/telefon-web = natywne Web Speech.
 export const isSpeechSupported = (): boolean =>
   isDesktop()
     ? canRecordAudio()
-    : Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    : isNativeApp()
+      ? canRecordAudio() || webSpeechExists()
+      : webSpeechExists();
 
 export interface ListenCallbacks {
   onInterim?: (text: string) => void;
@@ -610,6 +632,9 @@ export interface ListenCallbacks {
   onEnd?: () => void;
   onError?: (msg: string) => void;
   wakeWord?: boolean;
+  // Tryb ciągły (hands-free): po każdej wypowiedzi NIE kończ nasłuchu — słuchaj dalej.
+  // Dotyczy toru nagrywanego (Whisper) bez słowa-klucza, np. „Ciągła" w Słuchawkach.
+  continuous?: boolean;
 }
 
 // Wspólny interfejs nasłuchu — Web Speech (Listener) i Whisper (WhisperListener)
@@ -726,11 +751,12 @@ export class Listener {
 
 /**
  * Tworzy nasłuch dopasowany do platformy:
- *  - desktop (Electron/.exe) → WhisperListener (Groq Whisper), bo Web Speech tam nie działa,
- *  - telefon/przeglądarka → Listener (natywne Web Speech).
- * Dzięki temu mikrofon na Windowsie wreszcie działa (nie gaśnie po sekundzie).
+ *  - desktop (Electron/.exe) oraz natywny Android/iOS z kluczem Groq → WhisperListener
+ *    (Groq Whisper), bo Web Speech w tych WebView nie transkrybuje,
+ *  - przeglądarka/telefon-web (i natywny bez Groq) → Listener (natywne Web Speech).
+ * Dzięki temu mikrofon na Windowsie i w APK wreszcie działa (nie wisi „Słucham…").
  */
 export function createListener(cb: ListenCallbacks): VoiceListener {
-  if (isDesktop() && canRecordAudio()) return new WhisperListener(cb);
+  if (usesRecordedStt()) return new WhisperListener(cb);
   return new Listener(cb);
 }

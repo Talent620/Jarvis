@@ -1,4 +1,6 @@
-import { createRecognition } from "./voice";
+import { createRecognition, usesRecordedStt, isNativeApp } from "./voice";
+import { WhisperListener } from "./whisperListener";
+import { primaryKey } from "./keys";
 import { VoiceCapture } from "./voiceCapture";
 import { matchScore } from "./voiceprint";
 import { shouldFinalize, type EndpointConfig } from "./endpoint";
@@ -10,9 +12,10 @@ import { shouldFinalize, type EndpointConfig } from "./endpoint";
 //  2) ODCISK GŁOSU — reaguje tylko na Twój głos, odsiewa innych ludzi/TV
 //     (voiceprint.ts + voiceCapture.ts), gdy włączysz blokadę głosu.
 //  3) BARGE-IN — gdy zaczynasz mówić w trakcie odpowiedzi, natychmiast milknie.
-// Rozpoznawanie słów: Web Speech (ciągłe). Analiza głosu: równoległy strumień
-// audio. Gdy równoległego strumienia nie da się otworzyć (część Androida) —
-// degraduje się do samego semantycznego endpointingu (blokada głosu off).
+// Rozpoznawanie słów: Web Speech (ciągłe) w przeglądarce; na desktopie i natywnym
+// Androidzie/iOS (z kluczem Groq) — tor nagrywany Whisper (WhisperListener), bo Web
+// Speech w tych WebView nie transkrybuje. Analiza głosu: równoległy strumień audio.
+// Gdy równoległego strumienia nie da się otworzyć — degraduje do samego endpointingu.
 
 export type SmartState = "idle" | "listening" | "capturing" | "thinking" | "speaking" | "error";
 
@@ -49,14 +52,22 @@ export class SmartConversation {
   private lastWordAt = 0;
   private tickTimer: number | null = null;
   private restartTimer: number | null = null;
+  private whisper: WhisperListener | null = null; // tor nagrywany (desktop/Android)
+  private gotResult = false; // czy Web Speech kiedykolwiek coś usłyszał (watchdog)
+  private watchdog: number | null = null;
 
   constructor(private cfg: SmartConfig, private h: SmartHandlers) {
     this.armed = !cfg.wakeWord;
   }
 
   async start(): Promise<void> {
-    if (this.tickTimer) return; // już wystartowane — bez podwójnego interwału/strumienia mikrofonu
+    if (this.tickTimer || this.whisper) return; // już wystartowane — bez podwójnego mikrofonu
     this.closed = false;
+
+    // Tor nagrywany (Whisper/Groq) — desktop oraz natywny Android/iOS z kluczem Groq.
+    // Web Speech w tych WebView nie transkrybuje, więc tu jest jedyna pewna ścieżka.
+    if (usesRecordedStt()) { this.startRecorded(); return; }
+
     // Równoległy strumień audio (VAD + mówca + barge-in). Best-effort.
     this.capOn = await this.cap.start({
       onLevel: (l) => this.h.onLevel?.(l),
@@ -68,6 +79,35 @@ export class SmartConversation {
     this.startRecognition();
     this.h.onState(this.armed ? "listening" : "idle"); // idle = czekam na słowo „Jarvis"
     this.tickTimer = window.setInterval(() => this.tick(), 140);
+
+    // Watchdog: na natywnym (APK) bez klucza Groq Web Speech bywa martwe i nasłuch
+    // wisi w nieskończoność. Jeśli po 7 s nic nie usłyszeliśmy — powiedz, jak to naprawić.
+    if (isNativeApp() && !primaryKey("groq")) {
+      this.watchdog = window.setTimeout(() => {
+        if (!this.closed && !this.gotResult) {
+          this.h.onInfo?.("Nie słyszę nic — na tym telefonie rozpoznawanie mowy działa pewnie dopiero z kluczem Groq (darmowy): ⚙ → AI.");
+        }
+      }, 7000);
+    }
+  }
+
+  // Tor nagrywany: WhisperListener robi VAD + endpointing + słowo „Jarvis"; my tylko
+  // przekazujemy gotowe wypowiedzi dalej. Wyciszanie własnego TTS jest w środku (isSpeaking()).
+  private startRecorded(): void {
+    if (this.cfg.voiceLock) {
+      this.h.onInfo?.("Blokada głosu działa w trybie Web Speech — tutaj słucham normalnie.");
+    }
+    this.whisper = new WhisperListener({
+      wakeWord: this.cfg.wakeWord,
+      continuous: true, // hands-free: po wypowiedzi słuchaj dalej
+      onWake: () => { if (!this.closed) this.h.onState("capturing"); },
+      onInterim: (t) => { if (!this.closed && t) this.h.onPartial(t); },
+      onFinal: (t) => { if (this.closed) return; this.gotResult = true; this.h.onState("thinking"); this.h.onUtterance(t); },
+      onError: (m) => this.h.onInfo?.(m),
+      onEnd: () => { /* w trybie ciągłym nie kończymy z własnej woli */ },
+    });
+    this.h.onState(this.armed ? "listening" : "idle");
+    this.whisper.start(this.cfg.lang || "pl-PL");
   }
 
   /** Poinformuj silnik, że JARVIS mówi (włącza wykrywanie barge-in). */
@@ -88,6 +128,7 @@ export class SmartConversation {
         if (r.isFinal) finalAdd += r[0].transcript;
         else interim += r[0].transcript;
       }
+      this.gotResult = true; // Web Speech żyje — watchdog się nie odpali
       if (finalAdd) this.finalText += (this.finalText ? " " : "") + finalAdd.trim();
       this.interimText = interim;
       this.lastWordAt = Date.now();
@@ -163,8 +204,10 @@ export class SmartConversation {
 
   stop(): void {
     this.closed = true;
-    if (this.tickTimer) clearInterval(this.tickTimer);
+    if (this.tickTimer) { clearInterval(this.tickTimer); this.tickTimer = null; }
     if (this.restartTimer) clearTimeout(this.restartTimer);
+    if (this.watchdog) { clearTimeout(this.watchdog); this.watchdog = null; }
+    if (this.whisper) { try { this.whisper.stop(); } catch { /* ignore */ } this.whisper = null; }
     try { this.rec?.abort(); } catch { /* ignore */ }
     this.cap.stop();
   }

@@ -190,11 +190,12 @@ export class WhisperListener implements VoiceListener {
     this.cb.onFinal(command);
     if (this.cb.wakeWord) {
       this.armed = false; // wróć do nasłuchu słowa-klucza
-    } else {
+    } else if (!this.cb.continuous) {
       // Pojedyncza wypowiedź — kończymy nasłuch (jak Web Speech bez wakeWord).
       this.stop();
       this.cb.onEnd?.();
     }
+    // Tryb ciągły (Słuchawki) — zostajemy uzbrojeni i słuchamy dalej.
   }
 
   stop(): void {
