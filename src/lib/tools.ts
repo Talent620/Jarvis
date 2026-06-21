@@ -41,7 +41,7 @@ export interface ToolDef {
   input_schema: Record<string, unknown>;
 }
 
-type Executor = (input: any) => Promise<string> | string;
+export type Executor = (input: any) => Promise<string> | string;
 
 const obj = (properties: Record<string, unknown>, required: string[] = []) => ({
   type: "object",
@@ -1384,15 +1384,36 @@ export const toolDefs: ToolDef[] = tools.map((t) => t.def);
 const executors: Record<string, Executor> = Object.fromEntries(tools.map((t) => [t.def.name, t.run]));
 
 /**
- * Dynamiczna rejestracja narzędzia (Plugin API). Wtyczki dokładają własne
- * narzędzia do TEJ SAMEJ tablicy, którą mózg wysyła modelowi — model widzi je
- * natychmiast, a runTool wykonuje przez wspólną bramkę zgód i audyt.
+ * Dynamiczna rejestracja narzędzia (Plugin API). Wtyczki/„umiejętności" dokładają własne
+ * narzędzia do TEJ SAMEJ tablicy, którą mózg wysyła modelowi — model widzi je natychmiast,
+ * a runTool wykonuje przez wspólną bramkę zgód i audyt.
+ * `replace` dotyczy WYŁĄCZNIE narzędzi dynamicznych (idempotentny hot-reload skilla);
+ * narzędzia WBUDOWANE są chronione — nie da się ich nadpisać ani usunąć.
  */
-export function registerTool(def: ToolDef, run: Executor): void {
+const dynamicTools = new Set<string>();
+export function registerTool(def: ToolDef, run: Executor, opts: { replace?: boolean } = {}): void {
   if (!/^[a-z0-9_]+$/.test(def.name)) throw new Error(`Nieprawidłowa nazwa narzędzia: ${def.name}`);
-  if (executors[def.name]) throw new Error(`Narzędzie „${def.name}" już istnieje.`);
+  if (executors[def.name]) {
+    const isDynamic = dynamicTools.has(def.name);
+    if (!opts.replace || !isDynamic) throw new Error(`Narzędzie „${def.name}" już istnieje${isDynamic ? "" : " (wbudowane — chronione)"}.`);
+    const idx = toolDefs.findIndex((d) => d.name === def.name);
+    if (idx >= 0) toolDefs[idx] = def; else toolDefs.push(def);
+    executors[def.name] = run;
+    return;
+  }
   toolDefs.push(def);
   executors[def.name] = run;
+  dynamicTools.add(def.name);
+}
+
+/** Wyrejestruj narzędzie dynamiczne. Wbudowanych NIE rusza (zwraca false). */
+export function unregisterTool(name: string): boolean {
+  if (!dynamicTools.has(name)) return false;
+  delete executors[name];
+  const idx = toolDefs.findIndex((d) => d.name === name);
+  if (idx >= 0) toolDefs.splice(idx, 1);
+  dynamicTools.delete(name);
+  return true;
 }
 
 export async function runTool(name: string, input: unknown): Promise<string> {
