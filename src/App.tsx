@@ -75,6 +75,7 @@ import Guardian from "./components/Guardian";
 import Mind from "./components/Mind";
 const GoalRunner = lazy(() => import("./components/GoalRunner"));
 const CommandPalette = lazy(() => import("./components/CommandPalette"));
+const Recall = lazy(() => import("./components/Recall"));
 import { guardianAutoHeal } from "./lib/guardian";
 import { guardianScan } from "./lib/guardianAgents";
 import { checkForUpdate, applyUpdate } from "./lib/updater";
@@ -181,6 +182,7 @@ export default function App() {
   const [showMind, setShowMind] = useState(false);
   const [showGoal, setShowGoal] = useState(false);
   const [showCmd, setShowCmd] = useState(false);
+  const [showRecall, setShowRecall] = useState(false);
   const [tip, setTip] = useState<Tip | null>(null);
   const tipCountRef = useRef(0);
   // ⌘K — referencja na świeże akcje (rejestr poleceń budowany NIŻEJ, po deklaracji wszystkich stanów,
@@ -246,6 +248,7 @@ export default function App() {
       open("ads", "Generator reklam", setShowAds, "📢", "reklamy google facebook ads"),
       open("hud", "Wizja (kamera)", setShowHud, "👁", "kamera widzisz obraz wizja"),
       open("status", "Stan systemu", setShowStatus, "🩺", "diagnostyka co dziala"),
+      open("recall", "🔎 Recall — znajdź wszystko", setShowRecall, "🔎", "szukaj znajdz historia czat dziennik pamiec notatki recall"),
       open("data", "Dane i kopia", setShowPanels, "🗄", "backup eksport dane kopia"),
       act("voicemode", "Tryb Słuchawki (rozmowa)", "🎧", "glos hands-free rozmowa"),
       act("live", "Rozmowa na żywo", "☎", "live glos telefon"),
@@ -1296,6 +1299,7 @@ export default function App() {
           onHud={() => setShowHud(true)}
           onStudio={() => setShowStudio(true)}
           onGuardian={() => setShowGuardian(true)}
+          onRecall={() => setShowRecall(true)}
           onMind={() => setShowMind(true)}
           onGoal={() => setShowGoal(true)}
           onCommand={() => setShowCmd(true)}
@@ -1388,6 +1392,14 @@ export default function App() {
       {showCmd && (
         <ScreenBoundary>
           <CommandPalette commands={commands} onClose={() => setShowCmd(false)} />
+        </ScreenBoundary>
+      )}
+      {showRecall && (
+        <ScreenBoundary>
+          <Recall
+            onClose={() => setShowRecall(false)}
+            onOpenChat={(id) => { const s = loadChats().find((c) => c.id === id); if (s) openChat(s); }}
+          />
         </ScreenBoundary>
       )}
       {showWeb && (
