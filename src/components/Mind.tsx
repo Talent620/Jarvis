@@ -7,7 +7,7 @@ import { reflect } from "../lib/reflection";
 import { loadEpisodes } from "../lib/episodicMemory";
 import { analyzePerformance, assessmentSummary } from "../lib/selfImprove";
 import { getRouteLog } from "../lib/modelRouter";
-import { reliabilityStats } from "../lib/errorLog";
+import { reliabilityStats, reliabilityVerdict } from "../lib/errorLog";
 import type { EntityKind } from "../types";
 
 // 🧠 Umysł JARVISA — jedno okno pokazujące „co JARVIS myśli": odprawa dnia (Chief of Staff),
@@ -25,11 +25,13 @@ export default function Mind({ onClose }: { onClose: () => void }) {
     const world = getWorld();
     const topEntities = [...world.entities].sort((a, b) => b.confidence - a.confidence).slice(0, 12);
     const reflections = reflect({ episodes: loadEpisodes(), people, tasks: d.tasks }, Date.now());
-    const assess = analyzePerformance(getRouteLog(), reliabilityStats().byScope, Date.now(), { ollamaReady: !!store.settings.ollamaUrl?.trim() });
-    return { brief, topEntities, world, reflections, assess };
+    const stats = reliabilityStats();
+    const assess = analyzePerformance(getRouteLog(), stats.byScope, Date.now(), { ollamaReady: !!store.settings.ollamaUrl?.trim() });
+    return { brief, topEntities, world, reflections, assess, verdict: reliabilityVerdict(stats) };
   }, []);
 
-  const { brief, topEntities, world, reflections, assess } = data;
+  const { brief, topEntities, world, reflections, assess, verdict } = data;
+  const vColor = verdict.level === "ok" ? "var(--ok,#62e6a8)" : verdict.level === "bad" ? "var(--danger,#ff7a7a)" : "var(--gold)";
 
   return (
     <div className="sheet" onClick={onClose}>
@@ -37,6 +39,11 @@ export default function Mind({ onClose }: { onClose: () => void }) {
         <div className="panel-head"><div className="grabber" /><h2>🧠 Umysł JARVISA</h2></div>
         <div className="panel-body">
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>Co JARVIS wie i myśli — odprawa, Twój świat, wzorce i samoocena. Wszystko liczone lokalnie.</p>
+
+          {/* 🩺 Werdykt niezawodności — czytelny sygnał z telemetrii (zero cichych awarii) */}
+          <div className="journal-card" style={{ padding: "8px 10px", marginBottom: 10, borderLeft: `3px solid ${vColor}` }}>
+            <div style={{ fontSize: 13 }}><b>🩺 Niezawodność:</b> {verdict.text}</div>
+          </div>
 
           {/* 🧭 Odprawa (Chief of Staff) */}
           <h3 style={{ marginBottom: 4 }}>🧭 Odprawa — {brief.heading}</h3>

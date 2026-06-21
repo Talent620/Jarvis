@@ -1,7 +1,30 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { logError, recordLatency, getEvents, reliabilityStats, clearEvents, subscribeLog, type LogEvent } from "../src/lib/errorLog";
+import { logError, recordLatency, getEvents, reliabilityStats, reliabilityVerdict, clearEvents, subscribeLog, type LogEvent } from "../src/lib/errorLog";
 
 beforeEach(() => clearEvents());
+
+describe("errorLog — reliabilityVerdict (czytelny werdykt zdrowia)", () => {
+  it("brak błędów + dobra skuteczność → ok", () => {
+    const v = reliabilityVerdict({ total: 3, errors: 0, warns: 0, byScope: {}, successRate: 1 });
+    expect(v.level).toBe("ok");
+    expect(v.text).toMatch(/Stabilnie/);
+  });
+  it("brak błędów ale niska skuteczność → warn", () => {
+    const v = reliabilityVerdict({ total: 10, errors: 0, warns: 2, byScope: {}, successRate: 0.7 });
+    expect(v.level).toBe("warn");
+    expect(v.text).toMatch(/70%/);
+  });
+  it("kilka błędów → warn z najgorętszym obszarem", () => {
+    const v = reliabilityVerdict({ total: 5, errors: 2, warns: 0, byScope: { "provider:groq": 2 } });
+    expect(v.level).toBe("warn");
+    expect(v.text).toMatch(/provider:groq ×2/);
+  });
+  it("dużo błędów (≥5) → bad z radą o Strażniku", () => {
+    const v = reliabilityVerdict({ total: 9, errors: 6, warns: 0, byScope: { tts: 6 } });
+    expect(v.level).toBe("bad");
+    expect(v.text).toMatch(/Strażnik/);
+  });
+});
 
 describe("errorLog — pierścień zdarzeń", () => {
   it("logError dodaje zdarzenie (najświeższe pierwsze)", () => {

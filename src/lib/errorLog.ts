@@ -93,3 +93,21 @@ export function reliabilityStats(): ReliabilityStats {
 export function clearEvents(): void {
   ring.length = 0;
 }
+
+export interface ReliabilityVerdict { level: "ok" | "warn" | "bad"; text: string }
+
+/** Pure: zamień surowe metryki na CZYTELNY werdykt zdrowia (do wyeksponowania użytkownikowi). */
+export function reliabilityVerdict(s: ReliabilityStats): ReliabilityVerdict {
+  const top = Object.entries(s.byScope).sort((a, b) => b[1] - a[1])[0];
+  const where = top ? ` (najwięcej: ${top[0]} ×${top[1]})` : "";
+  if (s.errors === 0) {
+    if (typeof s.successRate === "number" && s.successRate < 0.9) {
+      return { level: "warn", text: `⚠ Skuteczność operacji ${Math.round(s.successRate * 100)}% — coś bywa wolne/zawodne.` };
+    }
+    return { level: "ok", text: "✅ Stabilnie — brak błędów w tej sesji." };
+  }
+  if (s.errors >= 5) {
+    return { level: "bad", text: `🔴 ${s.errors} błędów w tej sesji${where}. Sprawdź klucze/ustawienia albo użyj Strażnika.` };
+  }
+  return { level: "warn", text: `⚠ ${s.errors} ${s.errors === 1 ? "błąd" : "błędy"} w tej sesji${where}.` };
+}
