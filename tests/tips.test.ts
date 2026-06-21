@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TIPS, eligibleTips, pickTip, type TipCtx } from "../src/lib/tips";
+import { TIPS, eligibleTips, pickTip, contextualTip, dailyDigestTip, type TipCtx } from "../src/lib/tips";
 
 const ctx = (over: Partial<TipCtx> = {}): TipCtx => ({ hasBrain: true, messages: 0, desktop: false, ...over });
 
@@ -31,5 +31,33 @@ describe("tips — pickTip (rotacja + warunki)", () => {
   });
   it("każda porada z akcją wskazuje istniejące id polecenia i ma etykietę", () => {
     for (const t of TIPS) if (t.actionId) expect(t.actionLabel && t.actionLabel.length > 0).toBe(true);
+  });
+});
+
+describe("tips — contextualTip (mądrzejsze: dopasowane do treści)", () => {
+  it("zaplanuj → Zleć cel; przerób zdjęcie → Studio; zapamiętaj → memory; najtaniej → bargain", () => {
+    expect(contextualTip("zaplanuj mi wejście na rynek", [])?.id).toBe("goal");
+    expect(contextualTip("przerób to zdjęcie i usuń tło", [])?.id).toBe("studio");
+    expect(contextualTip("zapamiętaj, że mam spotkanie", [])?.id).toBe("memory");
+    expect(contextualTip("gdzie kupię najtaniej wiertarkę", [])?.id).toBe("bargain");
+  });
+  it("brak trafienia / zbyt krótkie → null", () => {
+    expect(contextualTip("dzień dobry jak leci", [])).toBeNull();
+    expect(contextualTip("hej", [])).toBeNull();
+  });
+  it("nie powtarza już pokazanej porady", () => {
+    expect(contextualTip("zaplanuj projekt", ["goal"])).toBeNull();
+  });
+});
+
+describe("tips — dailyDigestTip (Dziś możesz: …)", () => {
+  it("składa 2–3 funkcje z etykietami akcji", () => {
+    const d = dailyDigestTip({ hasBrain: true, messages: 0, desktop: false }, []);
+    expect(d?.id).toBe("digest");
+    expect(d?.text).toMatch(/Dziś możesz:/);
+    expect((d?.text.match(/·/g) || []).length).toBeGreaterThanOrEqual(1); // ≥2 pozycje
+  });
+  it("bez mózgu → null", () => {
+    expect(dailyDigestTip({ hasBrain: false, messages: 0, desktop: false }, [])).toBeNull();
   });
 });

@@ -27,7 +27,7 @@ import { startGeneration, cancelGeneration, isCurrent } from "./lib/generation";
 import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
 import { runProactiveNotifications } from "./lib/proactiveNotify";
 import { recordActiveDay } from "./lib/habit";
-import { nextTip, recordTipShown, type Tip } from "./lib/tips";
+import { nextTip, recordTipShown, contextualTipNow, dailyDigestNow, recordDigestShown, type Tip } from "./lib/tips";
 import TipBubble from "./components/TipBubble";
 import PermissionDialog from "./components/PermissionDialog";
 import { lockIsSet } from "./lib/lock";
@@ -262,8 +262,10 @@ export default function App() {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       setTip((cur) => {
         if (cur) return cur; // już wisi jeden
-        const t = nextTip({ hasBrain: true, messages: messagesRef.current.length, desktop: isDesktop() });
-        if (t) { recordTipShown(t.id); tipCountRef.current += 1; }
+        const ctx = { hasBrain: true, messages: messagesRef.current.length, desktop: isDesktop() };
+        // Pierwsza porada sesji: dzienny digest „Dziś możesz: …" (raz dziennie); potem pojedyncze.
+        const t = (tipCountRef.current === 0 ? dailyDigestNow(ctx) : null) ?? nextTip(ctx);
+        if (t) { if (t.id === "digest") recordDigestShown(); else recordTipShown(t.id); tipCountRef.current += 1; }
         return t;
       });
     };
@@ -437,6 +439,13 @@ export default function App() {
     setInterim("");
     stopSpeaking();
     buzz(14); // subtelna haptyka przy wysłaniu
+
+    // 💡 Kontekstowa porada „w samą porę": gdy treść pasuje do funkcji (np. „zaplanuj…" → Zleć cel),
+    // podpowiedz ją. Nienachalnie: respektuje ustawienie i limit sesji, raz na funkcję.
+    if (store.settings.tips !== false && tipCountRef.current < 4) {
+      const ct = contextualTipNow(text);
+      if (ct) { recordTipShown(ct.id); tipCountRef.current += 1; setTip(ct); }
+    }
 
     // Komenda: Tryb Prywatny (w 100% lokalnie, offline).
     const lcp = text.toLowerCase();

@@ -38,6 +38,44 @@ export function eligibleTips(ctx: TipCtx, shown: Iterable<string>): Tip[] {
   return TIPS.filter((t) => (!t.cond || t.cond(ctx)) && !seen.has(t.id));
 }
 
+// Wyzwalacze KONTEKSTOWE: gdy treść użytkownika pasuje do funkcji, podpowiadamy ją „w samą porę".
+const TRIGGERS: Record<string, RegExp> = {
+  goal: /zaplanuj|\bplan\b|strategi|rozpisz|krok po kroku|wieloetapow|\bprojekt/i,
+  studio: /zdj[ęe]ci|\bobraz|\bfoto|przer[óo]b|edytuj zdj|usu[ńn] (t[łl]o|obiekt)/i,
+  memory: /zapami[ęe]taj|zapomnij|pami[ęe][ćc]/i,
+  bargain: /najtaniej|\btanio\b|okazj|gdzie kupi[ęe]|przecen/i,
+  research: /[źz]r[óo]d[łl]|research|sprawd[źz] w sieci|cytat|aktualne (ceny|dane|info)/i,
+  sales: /\blead|\bklient|\boferta|sprzeda|\bcrm\b/i,
+};
+
+/** Pure: porada DOPASOWANA do treści użytkownika (gdy nie była jeszcze pokazana). null = brak trafienia. */
+export function contextualTip(text: string, shown: Iterable<string>): Tip | null {
+  const t = (text || "").toLowerCase();
+  if (t.length < 8) return null;
+  const seen = new Set(shown);
+  for (const tip of TIPS) {
+    const re = TRIGGERS[tip.id];
+    if (re && re.test(t) && !seen.has(tip.id)) return tip;
+  }
+  return null;
+}
+
+/** Pure: dzienny digest „💡 Dziś możesz: A · B · C" z 2–3 nieobejrzanych funkcji z akcją. */
+export function dailyDigestTip(ctx: TipCtx, shown: Iterable<string>): Tip | null {
+  if (!ctx.hasBrain) return null;
+  const withAction = (arr: Tip[]) => arr.filter((t) => t.actionLabel);
+  let pool = withAction(eligibleTips(ctx, shown));
+  if (pool.length < 2) pool = withAction(TIPS.filter((t) => !t.cond || t.cond(ctx)));
+  const picks = pool.slice(0, 3);
+  if (picks.length < 2) return null;
+  return {
+    id: "digest",
+    text: `💡 Dziś możesz: ${picks.map((t) => t.actionLabel).join(" · ")}.`,
+    actionId: picks[0].actionId,
+    actionLabel: picks[0].actionLabel,
+  };
+}
+
 /**
  * Pure: następna porada do pokazania. Najpierw nieobejrzane (wg kuratorowanej ważności); gdy
  * wszystkie pasujące już pokazane — rotuj od nowa (najstarsza pierwsza). null gdy brak mózgu
@@ -65,4 +103,22 @@ export function recordTipShown(id: string): void {
 /** Wybierz następną poradę z bieżącego stanu (obejrzane z localStorage). */
 export function nextTip(ctx: TipCtx): Tip | null {
   return pickTip(ctx, loadShownTips());
+}
+
+const tipDayKey = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+
+/** Porada dopasowana do treści (z localStorage). */
+export function contextualTipNow(text: string): Tip | null {
+  return contextualTip(text, loadShownTips());
+}
+
+/** Dzienny digest — RAZ dziennie (null gdy już dziś pokazany). */
+export function dailyDigestNow(ctx: TipCtx): Tip | null {
+  if (loadShownTips().includes(`digest:${tipDayKey()}`)) return null;
+  return dailyDigestTip(ctx, loadShownTips());
+}
+
+/** Zaznacz, że dzienny digest pokazano (dedup na dziś). */
+export function recordDigestShown(): void {
+  recordTipShown(`digest:${tipDayKey()}`);
 }
