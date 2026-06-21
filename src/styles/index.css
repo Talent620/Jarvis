@@ -246,11 +246,17 @@ textarea,
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* fallback dla starszych WebView (np. Galaxy S9+ bez aktualizacji Chrome) */
-  height: 100dvh; /* nowsze: dynamiczna wysokość (bez paska adresu) — nadpisuje powyższe */
+  height: 100vh; /* baza: pewna na każdym WebView (np. Galaxy S9+ bez aktualizacji Chrome) */
   max-width: 760px;
   margin: 0 auto;
   padding: max(var(--sat), 6px) max(var(--sar), 14px) max(var(--sab), 8px) max(var(--sal), 14px);
+}
+/* dvh tylko gdy WebView NAPRAWDĘ je wspiera. Surowy override `height:100dvh` bywał zgubny
+   na starym WebView (S9+): potrafił „pół-sparsować" dvh do ~0, zwijając .app i zabijając
+   przewijanie czatu. @supports to twarda bramka — stare WebView zostają na 100vh. */
+@supports (height: 100dvh) {
+  .app { height: 100dvh; }
+  .panel { max-height: calc(100dvh - var(--sat) - 6px); }
 }
 
 /* Gdy trwa rozmowa: orb się zmniejsza (zostaje widoczny i pulsuje), a czat
@@ -745,8 +751,7 @@ button:disabled {
 .panel {
   width: 100%;
   max-width: 560px;
-  max-height: calc(100vh - var(--sat) - 6px); /* fallback dla starszych WebView */
-  max-height: calc(100dvh - var(--sat) - 6px);
+  max-height: calc(100vh - var(--sat) - 6px); /* baza pewna na każdym WebView */
   display: flex;
   flex-direction: column;
   overflow: hidden;
