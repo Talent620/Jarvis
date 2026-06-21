@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LiveSession, liveToolDeclarations, type LiveState } from "../lib/liveVoice";
+import { LiveSession, liveToolDeclarations, LIVE_VOICE_STYLE, type LiveState } from "../lib/liveVoice";
 import { toolDefs, runTool } from "../lib/tools";
 import { riskOf } from "../lib/permissions";
 import { ConversationLoop, type LoopState } from "../lib/voiceLoop";
@@ -33,6 +33,9 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
   const [camOn, setCamOn] = useState(false);
   const liveRef = useRef<LiveSession | null>(null);
   const loopRef = useRef<ConversationLoop | null>(null);
+  // Głosowe potwierdzenie akcji nieodwracalnych: pierwsze wywołanie outbound NIGDY się nie
+  // wykonuje — prosi o „tak"; identyczne wywołanie w ciągu 60 s (po potwierdzeniu) wykonuje.
+  const pendingConfirm = useRef<{ sig: string; at: number } | null>(null);
   const coreRef = useRef<HTMLDivElement>(null);
   // Token startu: unieważnia asynchroniczne budowanie sesji, gdy w międzyczasie
   // doszło do przełączenia silnika lub zamknięcia (zapobiega „wskrzeszeniu" sesji).
@@ -98,18 +101,26 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
           /* brak pamięci → czysty prompt */
         }
         if (genRef.current !== myGen) return; // przełączono silnik / zamknięto w międzyczasie
-        // Narzędzia (Faza 2 MCP + odczyt/zapis lokalny) — bezpieczny podzbiór dla głosu.
-        const liveTools = liveToolDeclarations(toolDefs, riskOf);
+        // Pełny dostęp w głosie (telefon, SMS, nawigacja, aplikacje) — bezpieczeństwo przez
+        // GŁOSOWE potwierdzenie: pierwsze wywołanie outbound prosi o „tak", drugie wykonuje.
+        const liveTools = liveToolDeclarations(toolDefs, riskOf, true);
         const liveRunTool = async (name: string, args: unknown) => {
-          // Defensywnie: outbound (poza MCP) nigdy nie wykonuje się w trybie live (brak zgody).
-          if (!name.startsWith("mcp_") && riskOf(name) === "outbound") {
-            return "Ta akcja wymaga potwierdzenia — wykonaj ją w czacie tekstowym lub trybie rozmowy.";
+          const outbound = !name.startsWith("mcp_") && riskOf(name) === "outbound";
+          if (outbound) {
+            const sig = `${name}:${JSON.stringify(args ?? {})}`;
+            const now = Date.now();
+            const prev = pendingConfirm.current;
+            if (!prev || prev.sig !== sig || now - prev.at > 60_000) {
+              pendingConfirm.current = { sig, at: now };
+              return "WYMAGA POTWIERDZENIA GŁOSOWEGO: nic jeszcze nie zrobiono. Zapytaj użytkownika na głos, czy mam to wykonać, i wywołaj to samo narzędzie PONOWNIE dopiero po wyraźnym „tak”.";
+            }
+            pendingConfirm.current = null; // potwierdzone — wykonaj
           }
           return runTool(name, args);
         };
         const session = new LiveSession(
           geminiKey,
-          systemPrompt({ mem0Block }),
+          `${systemPrompt({ mem0Block })}\n\n${LIVE_VOICE_STYLE}`,
           (s, d) => {
             setState(s);
             if (d) setDetail(d);
@@ -117,6 +128,7 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
           (t) => setCaption((c) => (c + t).slice(-300)),
           liveTools,
           liveRunTool,
+          store.settings.geminiVoice?.trim() || "Charon",
         );
         liveRef.current = session;
         session.start().catch(() => {

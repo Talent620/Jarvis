@@ -26,6 +26,13 @@ describe("liveToolDeclarations (bezpieczny podzbiór narzędzi w głosie)", () =
   it("przepuszcza narzędzia MCP nawet bez znanego ryzyka", () => {
     expect(liveToolDeclarations(defs, risk).map((d) => d.name)).toContain("mcp_gcal_addevent");
   });
+
+  it("allowOutbound=true wystawia także outbound (pełny dostęp + potwierdzenie głosem)", () => {
+    const names = liveToolDeclarations(defs, risk, true).map((d) => d.name);
+    expect(names).toContain("gmail_send");
+    expect(names).toContain("list_tasks");
+    expect(names).toContain("add_task");
+  });
 });
 
 describe("closeReason (diagnostyka rozmowy na żywo)", () => {

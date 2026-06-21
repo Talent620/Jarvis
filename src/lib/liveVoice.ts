@@ -54,16 +54,35 @@ interface ToolDefLike {
   input_schema: Record<string, unknown>;
 }
 
-/** Wybierz narzędzia bezpieczne dla głosu live i zmapuj do deklaracji funkcji Gemini.
- *  `riskOf` wstrzykiwane (z permissions.ts), by funkcja pozostała czysta/testowalna. */
+/** Wybierz narzędzia dla głosu live i zmapuj do deklaracji funkcji Gemini.
+ *  `riskOf` wstrzykiwane (z permissions.ts), by funkcja pozostała czysta/testowalna.
+ *  Domyślnie POMIJA `outbound` (telefon, SMS, wysyłka) — chyba że `allowOutbound`,
+ *  wtedy wystawia wszystko, a bezpieczeństwo zapewnia głosowe potwierdzenie w runTool. */
 export function liveToolDeclarations(
   defs: ToolDefLike[],
   riskOf: (name: string) => "read" | "write" | "outbound",
+  allowOutbound = false,
 ): LiveToolDecl[] {
   return defs
-    .filter((d) => d.name.startsWith("mcp_") || riskOf(d.name) !== "outbound")
+    .filter((d) => allowOutbound || d.name.startsWith("mcp_") || riskOf(d.name) !== "outbound")
     .map((d) => ({ name: d.name, description: d.description, parameters: d.input_schema }));
 }
+
+// Styl mówiony (flagowy) — żeby rozmowa na żywo brzmiała jak człowiek, nie jak czytany
+// dokument. Doklejany do systemPrompt tylko w trybie głosowym (LiveOverlay).
+export const LIVE_VOICE_STYLE = [
+  "ROZMAWIASZ GŁOSEM, NA ŻYWO. Mów jak człowiek, nie jak czytana instrukcja:",
+  "• krótko i naturalnie (zwykle 1–3 zdania), ciepło i swobodnie; bez list, bez markdownu, bez emoji,",
+  "• nie wyrzucaj wszystkiego naraz — zostaw przestrzeń, dopytaj, reaguj na to, co słyszysz,",
+  "• mów po polsku, potocznie, ale rzeczowo; imienia używaj z umiarem (nie w każdym zdaniu),",
+  "• jak czegoś nie wiesz, powiedz wprost i zaproponuj następny krok zamiast lać wodę.",
+  "",
+  "DZIAŁANIA (telefon, SMS, nawigacja, otwieranie aplikacji/stron oraz inne nieodwracalne):",
+  "masz do nich dostęp. ALE zanim wykonasz taką akcję, NAJPIERW potwierdź na głos — powiedz krótko,",
+  "co zamierzasz (np. „Mam zadzwonić do Marka?”) i POCZEKAJ, aż użytkownik powie „tak”. Dopiero",
+  "po wyraźnym „tak” wywołaj to samo narzędzie ponownie. Odczyt i drobne lokalne zapisy (notatka,",
+  "zadanie, przypomnienie) rób od ręki, bez pytania.",
+].join("\n");
 
 // --- Pomocnicze: konwersje audio ---
 
@@ -119,6 +138,8 @@ export class LiveSession {
     // Narzędzia (function calling) — bezpieczny podzbiór; `runTool` wykonuje wywołanie.
     private tools: LiveToolDecl[] = [],
     private runTool?: (name: string, args: unknown) => Promise<string>,
+    // Głos modelu (prebuilt Gemini) — domyślnie ten z ustawień (geminiVoice).
+    private voice = "Charon",
   ) {}
 
   async start(): Promise<void> {
@@ -132,7 +153,14 @@ export class LiveSession {
         JSON.stringify({
           setup: {
             model: LIVE_MODEL,
-            generationConfig: { responseModalities: ["AUDIO"] },
+            generationConfig: {
+              responseModalities: ["AUDIO"],
+              // Polski głos + bardziej żywy ton (mniej „drętwo"). Głos z ustawień.
+              speechConfig: {
+                languageCode: "pl-PL",
+                voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voice } },
+              },
+            },
             systemInstruction: { parts: [{ text: this.system }] },
             // Transkrypcja audio → napisy w czasie rzeczywistym (co mówi JARVIS).
             outputAudioTranscription: {},
