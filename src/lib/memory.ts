@@ -3,7 +3,7 @@ import { primaryKey } from "./keys";
 import { fetchTimeout, appTokenHeader } from "./http";
 import { embedLocal, localEmbedUsable, LOCAL_EMBED_TAG } from "./localEmbed";
 import { durability, memoryScore } from "./memoryScore";
-import { mmrSelect } from "./rag";
+import { mmrSelect, reciprocalRankFusion, keywordScore } from "./rag";
 import type { MemoryFact } from "../types";
 
 // Tag modelu embeddingów — porównujemy tylko wektory z tego samego modelu (różne wymiary).
@@ -218,11 +218,22 @@ async function retrieve(query: string, pid: string): Promise<MemoryFact[]> {
   // Ranking hybrydowy: trafność semantyczna SPLECIONA z trwałością (świeżość + wzmocnienie),
   // by ważne, często wracające fakty nie wypadały przez sam dystans wektorowy.
   const now = Date.now();
-  // Reranking MMR: zamiast czystego top-K (które wpuszcza bliskie DUPLIKATY i marnuje budżet
-  // kontekstu), wybierz fakty balansujące trafność z RÓŻNORODNOŚCIĄ — więcej odrębnych informacji.
   const slots = Math.max(0, MAX_FACTS - pinned.length);
+  // WYSZUKIWANIE HYBRYDOWE (nowoczesny RAG): dwie listy rankingowe —
+  //  • semantyczna: trafność wektorowa spleciona z trwałością (memoryScore),
+  //  • leksykalna: dokładne dopasowania słów kluczowych (embeddingi to gubią: nazwy, numery, skróty).
+  // Łączymy je RRF (Reciprocal Rank Fusion — bez strojenia wag), a potem MMR dla RÓŻNORODNOŚCI
+  // (koniec duplikatów marnujących budżet kontekstu). Pełny potok: hybryda → fuzja → dywersyfikacja.
+  const byId = new Map(indexed.map((m) => [m.id, m]));
+  const semIds = [...indexed]
+    .sort((a, b) => memoryScore(b, cosine(qv, b.embedding!), now) - memoryScore(a, cosine(qv, a.embedding!), now))
+    .map((m) => m.id);
+  const lexIds = [...indexed]
+    .sort((a, b) => keywordScore(query, `${b.key} ${b.value}`) - keywordScore(query, `${a.key} ${a.value}`))
+    .map((m) => m.id);
+  const fused = reciprocalRankFusion([semIds, lexIds]);
   const reranked = mmrSelect(
-    indexed.map((m) => ({ id: m.id, relevance: memoryScore(m, cosine(qv, m.embedding!), now), vector: m.embedding, fact: m })),
+    fused.map((f) => { const m = byId.get(f.id)!; return { id: f.id, relevance: f.score, vector: m.embedding, fact: m }; }),
     slots,
     0.7,
   ).map((x) => x.fact);

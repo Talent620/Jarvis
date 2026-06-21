@@ -14,14 +14,32 @@ export function cosineSim(a?: number[], b?: number[]): number {
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
 }
 
+/** Tokenizacja Unicode (litery/cyfry, ≥3 znaki) — wspólna dla miar leksykalnych. */
+function tokenize(s: string): string[] {
+  return (s.toLowerCase().match(/[\p{L}\p{N}]+/gu) || []).filter((t) => t.length > 2);
+}
+
 /** Leksykalne podobieństwo (Jaccard po tokenach) — tani fallback, gdy brak wektorów. */
 export function jaccardSim(a: string, b: string): number {
-  const toks = (s: string) => new Set((s.toLowerCase().match(/[\p{L}\p{N}]+/gu) || []).filter((t) => t.length > 2));
-  const A = toks(a), B = toks(b);
+  const A = new Set(tokenize(a)), B = new Set(tokenize(b));
   if (!A.size || !B.size) return 0;
   let inter = 0;
   for (const t of A) if (B.has(t)) inter++;
   return inter / (A.size + B.size - inter);
+}
+
+/**
+ * Pure: leksykalna trafność dokumentu do zapytania = ułamek RÓŻNYCH słów zapytania obecnych w tekście.
+ * Łapie dokładne dopasowania słów kluczowych, które czysto semantyczne (embeddingowe) wyszukiwanie
+ * gubi (np. nazwy własne, numery, skróty). 0..1.
+ */
+export function keywordScore(query: string, text: string): number {
+  const q = [...new Set(tokenize(query))];
+  if (!q.length) return 0;
+  const inText = new Set(tokenize(text));
+  let hit = 0;
+  for (const t of q) if (inText.has(t)) hit++;
+  return hit / q.length;
 }
 
 export interface MmrItem { id: string; relevance: number; vector?: number[]; text?: string }

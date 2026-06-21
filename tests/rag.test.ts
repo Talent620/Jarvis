@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cosineSim, jaccardSim, mmrSelect, reciprocalRankFusion } from "../src/lib/rag";
+import { cosineSim, jaccardSim, keywordScore, mmrSelect, reciprocalRankFusion } from "../src/lib/rag";
 
 describe("rag — cosineSim", () => {
   it("identyczne wektory → 1; ortogonalne → 0; różne wymiary/puste → 0", () => {
@@ -14,6 +14,20 @@ describe("rag — jaccardSim (fallback leksykalny)", () => {
   it("identyczny tekst → 1; rozłączny → 0", () => {
     expect(jaccardSim("kot pies dom", "kot pies dom")).toBeCloseTo(1);
     expect(jaccardSim("kot pies", "samolot rower")).toBe(0);
+  });
+});
+
+describe("rag — keywordScore (leksykalna trafność, łapie dokładne słowa)", () => {
+  it("ułamek różnych słów zapytania obecnych w tekście", () => {
+    // "faktura"≠"fakturę" w DOKŁADNYM dopasowaniu (fleksja PL — stąd też mamy semantyczne); NIP+1234 trafiają.
+    expect(keywordScore("faktura NIP 1234", "wystawiłem fakturę z numerem NIP 1234 wczoraj")).toBeCloseTo(2 / 3, 2);
+    expect(keywordScore("NIP 1234", "numer NIP to 1234")).toBe(1);
+    expect(keywordScore("kot pies", "tu jest kot")).toBeCloseTo(0.5);
+    expect(keywordScore("samolot", "kompletnie inny tekst")).toBe(0);
+  });
+  it("puste zapytanie → 0; ignoruje krótkie tokeny (<3)", () => {
+    expect(keywordScore("", "cokolwiek")).toBe(0);
+    expect(keywordScore("a b", "a b c")).toBe(0); // 1-znakowe pomijane → brak tokenów
   });
 });
 
