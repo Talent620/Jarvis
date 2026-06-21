@@ -55,3 +55,25 @@ describe("proactiveNotify — dueNotifications (anty-spam)", () => {
     expect(dayKey(at8)).toBe(dayKey(new Date("2026-06-20T23:30:00").getTime()));
   });
 });
+
+describe("proactiveNotify — tygodniowy recap (re-engage)", () => {
+  const sundayEve = new Date("2026-06-21T19:00:00").getTime(); // niedziela 19:00
+  const sundayNoon = new Date("2026-06-21T12:00:00").getTime(); // niedziela 12:00 (przed 18:00)
+  const recap = base({ dailyBriefing: false, predictions: [], weeklyRecapLine: "📈 Ten tydzień: 12 nowych rzeczy o Tobie." });
+
+  it("niedziela po 18:00 → wysyła recap", () => {
+    const out = dueNotifications(recap, sundayEve, new Set());
+    expect(out).toHaveLength(1);
+    expect(out[0].title).toMatch(/tydzień/i);
+    expect(out[0].key).toMatch(/^recap:2026-06-21$/);
+  });
+  it("niedziela przed 18:00 → nie wysyła", () => {
+    expect(dueNotifications(recap, sundayNoon, new Set())).toEqual([]);
+  });
+  it("dedup: ten sam tydzień już wysłany → nic", () => {
+    expect(dueNotifications(recap, sundayEve, new Set(["recap:2026-06-21"]))).toEqual([]);
+  });
+  it("pusty recap → nic", () => {
+    expect(dueNotifications(base({ dailyBriefing: false, weeklyRecapLine: "" }), sundayEve, new Set())).toEqual([]);
+  });
+});

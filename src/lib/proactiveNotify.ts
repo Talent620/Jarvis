@@ -6,6 +6,7 @@ import { predict } from "./predict";
 import { buildChiefBriefing, briefingOneLiner } from "./chiefOfStaff";
 import { notify } from "./notifications";
 import { store } from "./store";
+import { currentRecap } from "./habit";
 
 export interface NotifyDecision { key: string; title: string; body: string }
 
@@ -15,6 +16,7 @@ export interface NotifyInput {
   briefingTime: string;   // "HH:MM"
   briefingLine: string;   // briefingOneLiner(...) — może być "" (nic pilnego)
   predictions: Prediction[];
+  weeklyRecapLine?: string; // podsumowanie tygodnia (habit) — push re-engage w niedzielę wieczór
 }
 
 /** Pure: minuty od północy z "HH:MM" (null gdy format zły lub poza zakresem). */
@@ -62,6 +64,18 @@ export function dueNotifications(input: NotifyInput, now: number, sent: Set<stri
     out.push({ key, title: "🔔 JARVIS", body: `${p.title}${p.detail ? ` — ${p.detail}` : ""}` });
     if (out.length >= 4) break; // nie zalewaj powiadomieniami
   }
+
+  // 3) Tygodniowy recap — re-engage RAZ na tydzień, od niedzieli 18:00 (dowód, że inwestycja procentuje).
+  if (input.weeklyRecapLine) {
+    const sunday = new Date(now);
+    sunday.setHours(0, 0, 0, 0);
+    sunday.setDate(sunday.getDate() - sunday.getDay()); // cofnij do niedzieli tego tygodnia
+    const release = sunday.getTime() + 18 * 60 * 60 * 1000; // niedziela 18:00
+    const wkey = `recap:${dayKey(sunday.getTime())}`;
+    if (now >= release && !sent.has(wkey)) {
+      out.push({ key: wkey, title: "📈 Twój tydzień z JARVISEM", body: input.weeklyRecapLine });
+    }
+  }
   return out;
 }
 
@@ -90,6 +104,7 @@ export async function runProactiveNotifications(now = Date.now()): Promise<numbe
       briefingTime: s.briefingTime || "08:00",
       briefingLine: briefingOneLiner(buildChiefBriefing(input, now)),
       predictions: predict(input, now),
+      weeklyRecapLine: currentRecap(now).line,
     },
     now,
     sent,
