@@ -1,6 +1,20 @@
 import { describe, it, expect, vi } from "vitest";
 vi.mock("cloudflare:sockets", () => ({ connect: () => ({}) }));
-import { blocksCloudMetadata, noCRLF, openaiHostAllowed, envKeyForHost } from "../proxy/worker.js";
+import { blocksCloudMetadata, noCRLF, openaiHostAllowed, envKeyForHost, passthroughAllowed } from "../proxy/worker.js";
+
+describe("worker passthroughAllowed — opt-in allowlista (zgodność wstecz)", () => {
+  it("brak konfiguracji (puste) → wpuszcza wszystko (jak dotąd)", () => {
+    expect(passthroughAllowed("home.local", "")).toBe(true);
+    expect(passthroughAllowed("api.example.com", undefined)).toBe(true);
+  });
+  it("ustawione PASSTHROUGH_HOSTS → tylko host lub subdomena z listy", () => {
+    const env = "home.local, fal.media";
+    expect(passthroughAllowed("home.local", env)).toBe(true);
+    expect(passthroughAllowed("cdn.fal.media", env)).toBe(true); // subdomena
+    expect(passthroughAllowed("evil.com", env)).toBe(false);
+    expect(passthroughAllowed("fal.media.evil.com", env)).toBe(false); // anty-podszywanie
+  });
+});
 
 describe("worker blocksCloudMetadata — anty-SSRF (metadane chmury)", () => {
   it("blokuje link-local 169.254.x (AWS/GCP/Azure IMDS)", () => {

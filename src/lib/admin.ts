@@ -8,17 +8,34 @@ import { fetchTimeout } from "./http";
 //
 // Numer właściciela trzymamy wyłącznie jako skrót SHA-256 (nie jawnie).
 
-const OWNER_PHONE_HASH = "017d1b198653988ddff2923e1ee9b383cd4a7190b1708ab50fad1fcbb3488bfb";
+// NIE goły SHA-256: numer telefonu ma niską entropię (9 cyfr ⇒ ~10^9), a goły hash łamie się
+// natychmiast. Używamy PBKDF2-HMAC-SHA256 z solą i 210k iteracjami — brute-force ~210k× droższy.
+const OWNER_PHONE_HASH = "4358c62d5a9e039ef23c66e810cd5aaef35d68bd0ab0c45b72153d9201f0b54e";
+const OWNER_SALT = "jarvis.owner.salt.v2";
+const OWNER_ITER = 210000;
 const CFG_KEY = "jarvis.admin.cfg.v1";
 
-async function sha256hex(s: string): Promise<string> {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+/** PBKDF2-HMAC-SHA256 → hex (Web Crypto; wynik identyczny z Node dla tych samych parametrów). */
+async function pbkdf2hex(s: string, salt: string, iterations: number, len = 32): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(s), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: enc.encode(salt), iterations, hash: "SHA-256" }, key, len * 8);
+  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Stałoczasowe porównanie hexów (anty-timing). */
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 /** Weryfikacja właściciela numerem telefonu (dostęp awaryjny do panelu). */
 export async function verifyOwnerPhone(phone: string): Promise<boolean> {
-  return (await sha256hex((phone || "").replace(/\s|-/g, "").trim())) === OWNER_PHONE_HASH;
+  const norm = (phone || "").replace(/\s|-/g, "").trim();
+  if (!norm) return false;
+  return timingSafeEqualHex(await pbkdf2hex(norm, OWNER_SALT, OWNER_ITER), OWNER_PHONE_HASH);
 }
 
 export interface AdminConfig {

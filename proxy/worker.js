@@ -25,6 +25,16 @@ const ALLOWED_OPENAI_HOSTS = ["api.groq.com", "openrouter.ai", "integrate.api.nv
 export const openaiHostAllowed = (hostname) =>
   ALLOWED_OPENAI_HOSTS.some((h) => hostname === h || hostname.endsWith(`.${h}`));
 
+// Opt-in allowlista /passthrough: gdy PASSTHROUGH_HOSTS ustawione (CSV), wpuszczaj TYLKO te hosty
+// (dokładny host lub subdomena). Puste = zgodność wstecz (dowolny host; wciąż blokada metadanych
+// chmury niżej). Pozwala właścicielowi zacieśnić bez psucia istniejących integracji (HA, obrazy…).
+export const passthroughAllowed = (hostname, allowEnv) => {
+  const list = String(allowEnv || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  if (!list.length) return true;
+  const h = String(hostname || "").toLowerCase();
+  return list.some((a) => h === a || h.endsWith(`.${a}`));
+};
+
 // Base64 dla UTF-8 (MIME-word). Moduł-globalne, bo używane też poza smtpRelay (np. /v1/gmail/send).
 const b64 = (s) => btoa(unescape(encodeURIComponent(String(s))));
 
@@ -722,6 +732,7 @@ export default {
         const u = url.searchParams.get("u");
         if (!u) return json(400, { error: "Brak parametru u." });
         if (blocksCloudMetadata(u)) return json(403, { error: "Adres niedozwolony." }); // anty-SSRF (metadane chmury)
+        if (!passthroughAllowed(new URL(u).hostname, env.PASSTHROUGH_HOSTS)) return json(403, { error: `Host niedozwolony: ${new URL(u).host}` });
         const h = { "content-type": "application/json" };
         const auth = req.headers.get("authorization");
         if (auth) h.authorization = auth;
