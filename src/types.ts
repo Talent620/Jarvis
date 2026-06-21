@@ -528,6 +528,8 @@ export interface Settings {
   /** Proaktywny Agent: JARVIS sam odzywa się w trakcie pracy (przypomnienia po
    *  terminie, zadania na dziś, follow-upy, wydarzenia za chwilę). Domyślnie wł. */
   proactiveAgent?: boolean;
+  /** Dymki-porady (coaching/feature-discovery) co jakiś czas. Domyślnie wł. */
+  tips?: boolean;
   /** Codzienny poranny briefing (pogoda + kalendarz + zadania) o ustalonej porze. */
   dailyBriefing: boolean;
   /** Godzina porannego briefingu w formacie HH:MM. */

@@ -27,6 +27,8 @@ import { startGeneration, cancelGeneration, isCurrent } from "./lib/generation";
 import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
 import { runProactiveNotifications } from "./lib/proactiveNotify";
 import { recordActiveDay } from "./lib/habit";
+import { nextTip, recordTipShown, type Tip } from "./lib/tips";
+import TipBubble from "./components/TipBubble";
 import PermissionDialog from "./components/PermissionDialog";
 import { lockIsSet } from "./lib/lock";
 
@@ -179,6 +181,8 @@ export default function App() {
   const [showMind, setShowMind] = useState(false);
   const [showGoal, setShowGoal] = useState(false);
   const [showCmd, setShowCmd] = useState(false);
+  const [tip, setTip] = useState<Tip | null>(null);
+  const tipCountRef = useRef(0);
   // ⌘K — referencja na świeże akcje (rejestr poleceń budowany NIŻEJ, po deklaracji wszystkich stanów,
   // by uniknąć TDZ na setterach useState).
   const actionsRef = useRef<Record<string, () => void>>({});
@@ -250,6 +254,25 @@ export default function App() {
       act("mic", "Mikrofon (przełącz)", "🎤", "sluchaj mow mikrofon"),
     ];
   }, []);
+  // 💡 Dymki-porady (coaching): nienachalnie, po chwili i co kilka minut, gdy nie pracujesz; maks 4/sesję.
+  useEffect(() => {
+    if (store.settings.tips === false) return;
+    const maybeShow = () => {
+      if (tipCountRef.current >= 4 || busyRef.current || !hasUsableBrain()) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      setTip((cur) => {
+        if (cur) return cur; // już wisi jeden
+        const t = nextTip({ hasBrain: true, messages: messagesRef.current.length, desktop: isDesktop() });
+        if (t) { recordTipShown(t.id); tipCountRef.current += 1; }
+        return t;
+      });
+    };
+    const first = setTimeout(maybeShow, 35_000);
+    const iv = setInterval(maybeShow, 4 * 60_000);
+    return () => { clearTimeout(first); clearInterval(iv); };
+
+  }, []);
+  const onTipAction = (actionId: string) => { setTip(null); commands.find((c) => c.id === actionId)?.run(); };
   const [showFaq, setShowFaq] = useState(false);
   const [booting, setBooting] = useState(true); // ładne „włączanie" przy starcie
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
@@ -1147,6 +1170,9 @@ export default function App() {
         tasksToday={(store.data.tasks || []).filter((t) => !t.done && (t.due || "").slice(0, 10) === new Date().toISOString().slice(0, 10)).length}
       />
 
+      {tip && store.settings.tips !== false && (
+        <TipBubble tip={tip} onAction={onTipAction} onDismiss={() => setTip(null)} />
+      )}
       <Composer
         onSend={handleSend}
         onStop={stopGeneration}

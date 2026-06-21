@@ -1920,6 +1920,14 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
               <div className="row">
                 <span>
+                  💡 Dymki-porady (coaching)
+                  <br />
+                  <span className="muted">nienachalne podpowiedzi, co JARVIS potrafi — co jakiś czas, maks kilka na sesję</span>
+                </span>
+                <Toggle on={s.tips !== false} onClick={() => set({ tips: s.tips === false })} />
+              </div>
+              <div className="row">
+                <span>
                   Poranny briefing o ustalonej porze
                   <br />
                   <span className="muted">pogoda + kalendarz + zadania, czytany głosem (gdy apka otwarta)</span>
