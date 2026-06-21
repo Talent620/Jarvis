@@ -1634,7 +1634,20 @@ input:focus, textarea:focus, select:focus {
     var(--bg);
   animation: boot-in 0.4s ease;
   transition: opacity 0.4s ease;
+  overflow: hidden;
 }
+/* Holograficzna siatka skanująca — tło „uruchamiania systemu". */
+.boot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(108, 231, 255, 0.045) 0 1px, transparent 1px 3px);
+  -webkit-mask: radial-gradient(720px 520px at 50% 40%, #000, transparent 75%);
+  mask: radial-gradient(720px 520px at 50% 40%, #000, transparent 75%);
+  animation: bootScan 5s linear infinite;
+}
+@keyframes bootScan { from { background-position: 0 0; } to { background-position: 0 48px; } }
 .boot-out { opacity: 0; pointer-events: none; }
 @keyframes boot-in { from { opacity: 0; } to { opacity: 1; } }
 .boot-brand {
@@ -1645,6 +1658,18 @@ input:focus, textarea:focus, select:focus {
   color: var(--cyan);
   text-shadow: 0 0 26px rgba(108, 231, 255, 0.6);
   padding-left: 10px;
+  position: relative;
+  z-index: 1;
+  /* Kinowe wejście: litery rozsuwają się i wskakują z poświatą, potem oddychają. */
+  animation: bootBrand 0.95s cubic-bezier(0.22, 1, 0.36, 1) both, bootGlow 2.6s ease-in-out 0.95s infinite;
+}
+@keyframes bootBrand {
+  from { letter-spacing: 30px; opacity: 0; filter: blur(7px); }
+  to { letter-spacing: 10px; opacity: 1; filter: blur(0); }
+}
+@keyframes bootGlow {
+  0%, 100% { text-shadow: 0 0 26px rgba(108, 231, 255, 0.6); }
+  50% { text-shadow: 0 0 42px rgba(108, 231, 255, 0.95), 0 0 8px rgba(255, 255, 255, 0.8); }
 }
 .boot-step {
   font-family: "Share Tech Mono", monospace;
