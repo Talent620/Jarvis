@@ -3,6 +3,7 @@ import { primaryKey } from "./keys";
 import { fetchTimeout, appTokenHeader } from "./http";
 import { embedLocal, localEmbedUsable, LOCAL_EMBED_TAG } from "./localEmbed";
 import { durability, memoryScore } from "./memoryScore";
+import { mmrSelect } from "./rag";
 import type { MemoryFact } from "../types";
 
 // Tag modelu embeddingów — porównujemy tylko wektory z tego samego modelu (różne wymiary).
@@ -217,13 +218,16 @@ async function retrieve(query: string, pid: string): Promise<MemoryFact[]> {
   // Ranking hybrydowy: trafność semantyczna SPLECIONA z trwałością (świeżość + wzmocnienie),
   // by ważne, często wracające fakty nie wypadały przez sam dystans wektorowy.
   const now = Date.now();
-  indexed.sort((a, b) => memoryScore(b, cosine(qv, b.embedding!), now) - memoryScore(a, cosine(qv, a.embedding!), now));
+  // Reranking MMR: zamiast czystego top-K (które wpuszcza bliskie DUPLIKATY i marnuje budżet
+  // kontekstu), wybierz fakty balansujące trafność z RÓŻNORODNOŚCIĄ — więcej odrębnych informacji.
+  const slots = Math.max(0, MAX_FACTS - pinned.length);
+  const reranked = mmrSelect(
+    indexed.map((m) => ({ id: m.id, relevance: memoryScore(m, cosine(qv, m.embedding!), now), vector: m.embedding, fact: m })),
+    slots,
+    0.7,
+  ).map((x) => x.fact);
 
-  const result: MemoryFact[] = [...pinned];
-  for (const m of indexed) {
-    if (result.length >= MAX_FACTS) break;
-    result.push(m);
-  }
+  const result: MemoryFact[] = [...pinned, ...reranked];
   for (const m of sortByFreshness(unindexed)) {
     if (result.length >= MAX_FACTS) break;
     result.push(m);
