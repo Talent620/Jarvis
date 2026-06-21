@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, useEffect, useMemo, useRef, useState } from "react";
 import type { CommandItem } from "./lib/commandPalette";
 import Orb, { type OrbState } from "./components/Orb";
 import Conversation from "./components/Conversation";
@@ -29,7 +29,6 @@ import { runProactiveNotifications } from "./lib/proactiveNotify";
 import { recordActiveDay } from "./lib/habit";
 import PermissionDialog from "./components/PermissionDialog";
 import { lockIsSet } from "./lib/lock";
-import { lazy } from "react";
 
 const Gadgets = lazy(() => import("./components/Gadgets"));
 const HudVision = lazy(() => import("./components/HudVision"));
