@@ -183,6 +183,7 @@ export default function App() {
   const [showGoal, setShowGoal] = useState(false);
   const [showCmd, setShowCmd] = useState(false);
   const [showRecall, setShowRecall] = useState(false);
+  const [recallSeed, setRecallSeed] = useState("");
   const [tip, setTip] = useState<Tip | null>(null);
   const tipCountRef = useRef(0);
   // ⌘K — referencja na świeże akcje (rejestr poleceń budowany NIŻEJ, po deklaracji wszystkich stanów,
@@ -1189,6 +1190,7 @@ export default function App() {
         onSend={handleSend}
         onStop={stopGeneration}
         onMic={toggleMic}
+        onRecall={(q) => { setRecallSeed(q); setShowRecall(true); }}
         onAttach={attachImage}
         onRemoveImage={() => setPendingImage(null)}
         imagePreview={pendingImage ? `data:${pendingImage.mediaType};base64,${pendingImage.data}` : null}
@@ -1397,7 +1399,8 @@ export default function App() {
       {showRecall && (
         <ScreenBoundary>
           <Recall
-            onClose={() => setShowRecall(false)}
+            seed={recallSeed}
+            onClose={() => { setShowRecall(false); setRecallSeed(""); }}
             onOpenChat={(id) => { const s = loadChats().find((c) => c.id === id); if (s) openChat(s); }}
           />
         </ScreenBoundary>

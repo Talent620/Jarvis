@@ -54,3 +54,20 @@ export function gatherRecallItems(): RecallItem[] {
 export function recallEverything(query: string, limit = 40): RecallHit[] {
   return recallSearch(query, gatherRecallItems(), Date.now(), limit);
 }
+
+/**
+ * 🧲 Anticipatory recall — „masz to już u siebie". Gdy to, co właśnie piszesz, MOCNO
+ * pokrywa się z czymś z Twojej historii, zwróć to jedno trafienie (inaczej null).
+ * Wymóg mocnego dopasowania (≥60% słów zapytania i ≥2 dłuższe słowa) trzyma to cicho:
+ * nie wyskakuje na powitaniach ani luźnych pytaniach, tylko gdy naprawdę coś masz.
+ * Pure: można podać własną pulę elementów (np. w testach).
+ */
+export function anticipate(query: string, items?: RecallItem[], now = Date.now()): RecallHit | null {
+  const meaningful = query.trim().split(/\s+/).filter((w) => w.length >= 4);
+  if (meaningful.length < 2) return null;
+  const hits = recallSearch(query, items ?? gatherRecallItems(), now, 3);
+  if (!hits.length) return null;
+  const top = hits[0];
+  const rel = keywordScore(query, `${top.title} ${top.text}`);
+  return rel >= 0.6 ? top : null;
+}

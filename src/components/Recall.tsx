@@ -20,9 +20,9 @@ function when(at?: number): string {
   catch { return new Date(at).toLocaleDateString(); }
 }
 
-export default function Recall({ onClose, onOpenChat }: { onClose: () => void; onOpenChat?: (id: string) => void }) {
+export default function Recall({ onClose, onOpenChat, seed = "" }: { onClose: () => void; onOpenChat?: (id: string) => void; seed?: string }) {
   useEscape(onClose);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(seed);
   const [filter, setFilter] = useState<(RecallType | "Wszystko")>("Wszystko");
 
   // Indeks budujemy raz na otwarcie panelu; ranking liczymy na żywo przy wpisywaniu.

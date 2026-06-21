@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { recallSearch, type RecallItem } from "../src/lib/recall";
+import { recallSearch, anticipate, type RecallItem } from "../src/lib/recall";
 
 const NOW = 1_700_000_000_000;
 const day = (n: number) => NOW - n * 86_400_000;
@@ -48,5 +48,23 @@ describe("recallSearch — ranking hybrydowy (leksyka + świeżość)", () => {
       expect(h.type).toBeTruthy();
       expect(h.title).toBeTruthy();
     }
+  });
+});
+
+describe("anticipate — 🧲 „masz to już u siebie” (cicho, tylko mocne trafienia)", () => {
+  it("mocne pokrycie słów → zwraca trafienie", () => {
+    const h = anticipate("budżet reklamowy", items, NOW);
+    expect(h).not.toBeNull();
+    expect(["1", "3"]).toContain(h!.id);
+  });
+
+  it("za krótkie / za mało dłuższych słów → null (nie wyskakuje na powitaniach)", () => {
+    expect(anticipate("hej", items, NOW)).toBeNull();
+    expect(anticipate("co tam", items, NOW)).toBeNull();
+    expect(anticipate("budżet", items, NOW)).toBeNull(); // jedno słowo = za mało pewności
+  });
+
+  it("słaba zbieżność (tylko część słów) → null", () => {
+    expect(anticipate("zupełnie inny temat kompletnie", items, NOW)).toBeNull();
   });
 });

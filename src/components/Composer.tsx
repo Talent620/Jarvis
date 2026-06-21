@@ -1,4 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { anticipate, type RecallHit } from "../lib/recall";
+import { store } from "../lib/store";
 
 export default function Composer({
   onSend,
@@ -6,6 +8,7 @@ export default function Composer({
   onMic,
   onAttach,
   onRemoveImage,
+  onRecall,
   imagePreview,
   micOn,
   busy,
@@ -17,6 +20,7 @@ export default function Composer({
   onMic: () => void;
   onAttach: () => void;
   onRemoveImage: () => void;
+  onRecall?: (query: string) => void;
   imagePreview: string | null;
   micOn: boolean;
   busy: boolean;
@@ -26,7 +30,24 @@ export default function Composer({
   const [text, setText] = useState("");
   const [council, setCouncil] = useState(false);
   const [research, setResearch] = useState(false);
+  const [hint, setHint] = useState<RecallHit | null>(null); // 🧲 anticipatory recall
+  const dismissed = useRef<string>(""); // id trafienia odrzuconego przez użytkownika
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // 🧲 Anticipatory recall: gdy to, co piszesz, mocno pokrywa się z czymś z Twojej
+  // historii — pokaż cichy dymek „masz to już u siebie". Debounce, tylko gdy włączone
+  // coachingowe podpowiedzi (settings.tips) i jest dokąd otworzyć (onRecall).
+  useEffect(() => {
+    if (!onRecall || store.settings.tips === false) { setHint(null); return; }
+    const q = text.trim();
+    if (q.length < 6) { setHint(null); return; }
+    const id = window.setTimeout(() => {
+      let h: RecallHit | null = null;
+      try { h = anticipate(q); } catch { h = null; }
+      setHint(h && h.id !== dismissed.current ? h : null);
+    }, 450);
+    return () => clearTimeout(id);
+  }, [text, onRecall]);
 
   // Auto-wysokość: pole rośnie z treścią (do ~5 linijek), potem przewija.
   const autoGrow = () => {
@@ -42,6 +63,7 @@ export default function Composer({
     onSend(t, { council: council && !imagePreview, research: research && !imagePreview });
     setText("");
     setResearch(false);
+    setHint(null);
     if (taRef.current) taRef.current.style.height = "auto";
   };
 
@@ -53,6 +75,18 @@ export default function Composer({
           <button className="img-x" onClick={onRemoveImage} title="Usuń zdjęcie">
             ✕
           </button>
+        </div>
+      )}
+      {hint && onRecall && (
+        <div
+          className="journal-card"
+          style={{ padding: "6px 10px", margin: "0 4px 6px", display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}
+        >
+          <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            🧲 Masz to już u siebie: <b>{hint.title || hint.type}</b>
+          </span>
+          <button className="chip" onClick={() => { onRecall(text.trim()); setHint(null); }}>Pokaż</button>
+          <button className="chip" onClick={() => { dismissed.current = hint.id; setHint(null); }} title="Ukryj">✕</button>
         </div>
       )}
       <div className="composer-tools">
