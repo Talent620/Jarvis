@@ -71,6 +71,7 @@ import { isUncensored, PROVIDERS } from "./lib/providers/registry";
 import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import Guardian from "./components/Guardian";
 import Mind from "./components/Mind";
+const GoalRunner = lazy(() => import("./components/GoalRunner"));
 import { guardianAutoHeal } from "./lib/guardian";
 import { guardianScan } from "./lib/guardianAgents";
 import { checkForUpdate, applyUpdate } from "./lib/updater";
@@ -175,6 +176,7 @@ export default function App() {
   const [councilStep, setCouncilStep] = useState<string | null>(null);
   const [showGuardian, setShowGuardian] = useState(false);
   const [showMind, setShowMind] = useState(false);
+  const [showGoal, setShowGoal] = useState(false);
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [locked, setLocked] = useState(lockIsSet());
   const [onboarding, setOnboarding] = useState(needsOnboarding());
@@ -1202,6 +1204,7 @@ export default function App() {
           onStudio={() => setShowStudio(true)}
           onGuardian={() => setShowGuardian(true)}
           onMind={() => setShowMind(true)}
+          onGoal={() => setShowGoal(true)}
           onWeb={() => setShowWeb(true)}
           onScreen={isDesktop() ? lookAtScreen : undefined}
           onHelp={() => setShowHelp(true)}
@@ -1281,6 +1284,11 @@ export default function App() {
       {showMind && (
         <ScreenBoundary>
           <Mind onClose={() => setShowMind(false)} />
+        </ScreenBoundary>
+      )}
+      {showGoal && (
+        <ScreenBoundary>
+          <GoalRunner onClose={() => setShowGoal(false)} />
         </ScreenBoundary>
       )}
       {showWeb && (

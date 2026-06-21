@@ -15,6 +15,7 @@ export default function More({
   onHud,
   onGuardian,
   onMind,
+  onGoal,
   onStudio,
   onWeb,
   onScreen,
@@ -50,6 +51,7 @@ export default function More({
   onHud: () => void;
   onGuardian: () => void;
   onMind: () => void;
+  onGoal: () => void;
   onStudio: () => void;
   onWeb: () => void;
   onScreen?: () => void;
@@ -79,6 +81,7 @@ export default function More({
   const items = [
     { id: "guardian", icon: "🛡", label: "Strażnik JARVISA — napraw, przyspiesz, ulepsz, doradź", fn: onGuardian },
     { id: "mind", icon: "🧠", label: "Umysł JARVISA — odprawa, Twój świat, wzorce, samoocena", fn: onMind },
+    { id: "goal", icon: "🎯", label: "Zleć cel — rozłóż na kroki i zrób za mnie (do-for-me)", fn: onGoal },
     { id: "notifications", icon: "🔔", label: "Powiadomienia — co wymaga uwagi", fn: onNotifications },
     { id: "status", icon: "🩺", label: "Stan systemu — co działa (zielone/czerwone)", fn: onStatus },
     { id: "profile", icon: "👤", label: "Mój profil — kim jestem (pamięć)", fn: onProfile },

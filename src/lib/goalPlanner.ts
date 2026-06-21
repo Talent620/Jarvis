@@ -63,7 +63,7 @@ export interface GoalRun { answer: string; steps: GoalStep[]; trace: Record<stri
  * Rozłóż cel, rozwiąż podzadania (równolegle wg zależności, z wynikami rodziców w kontekście)
  * i zsyntetyzuj spójną odpowiedź. Wykonanie używa `askModel` (rozumowanie, bez akcji — bezpieczne).
  */
-export async function runGoal(goal: string, opts: { onEvent?: (e: { type: string; id: string }) => void } = {}): Promise<GoalRun> {
+export async function runGoal(goal: string, opts: { onEvent?: (e: { type: string; id: string }) => void; onPlan?: (steps: GoalStep[]) => void } = {}): Promise<GoalRun> {
   const g = (goal || "").trim();
   if (!g) return { answer: "", steps: [], trace: {}, skipped: [] };
 
@@ -73,6 +73,7 @@ export async function runGoal(goal: string, opts: { onEvent?: (e: { type: string
     const raw = await askModel({ system: "Planujesz rozwiązanie złożonego celu.", history: [{ role: "user", content: goalDecompositionPrompt(g) }] });
     plan = parseGoalPlan(raw);
   } catch { /* brak planu → odpowiedz wprost */ }
+  if (plan.length >= 2) opts.onPlan?.(plan); // pokaż plan na żywo (UI) zanim ruszy wykonanie
 
   // Fallback: bez sensownego planu odpowiadamy bezpośrednio (jeden krok).
   if (plan.length < 2) {
