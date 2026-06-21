@@ -21,6 +21,8 @@ import { checkActivation, licenseRequired } from "./lib/license";
 const HeadsetMode = lazy(() => import("./components/HeadsetMode"));
 import { watchHeadset } from "./lib/headset";
 import { toast } from "./lib/toast";
+import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } from "./lib/decisions";
+import { rememberFact } from "./lib/memory";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
 import { notifySummary } from "./lib/notifyCenter";
 import { startGeneration, cancelGeneration, isCurrent } from "./lib/generation";
@@ -185,6 +187,7 @@ export default function App() {
   const [showRecall, setShowRecall] = useState(false);
   const [recallSeed, setRecallSeed] = useState("");
   const [tip, setTip] = useState<Tip | null>(null);
+  const [decision, setDecision] = useState<DecisionCandidate | null>(null); // 🧠 auto-capture
   const tipCountRef = useRef(0);
   // ⌘K — referencja na świeże akcje (rejestr poleceń budowany NIŻEJ, po deklaracji wszystkich stanów,
   // by uniknąć TDZ na setterach useState).
@@ -449,6 +452,13 @@ export default function App() {
     if (store.settings.tips !== false && tipCountRef.current < 4) {
       const ct = contextualTipNow(text);
       if (ct) { recordTipShown(ct.id); tipCountRef.current += 1; setTip(ct); }
+    }
+
+    // 🧠 Auto-capture decisions: jeśli padła decyzja/zobowiązanie, zaproponuj zapis do pamięci
+    // (lokalnie, natychmiast). Nienachalnie — jedna karta, można odrzucić.
+    if (store.settings.tips !== false) {
+      const d = detectDecision(text);
+      if (d) setDecision(d);
     }
 
     // Komenda: Tryb Prywatny (w 100% lokalnie, offline).
@@ -1185,6 +1195,23 @@ export default function App() {
 
       {tip && store.settings.tips !== false && (
         <TipBubble tip={tip} onAction={onTipAction} onDismiss={() => setTip(null)} />
+      )}
+      {decision && (
+        <div
+          className="journal-card"
+          style={{ margin: "0 8px 8px", padding: "8px 10px", display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}
+        >
+          <span style={{ flex: 1, minWidth: 0 }}>
+            🧠 Zauważyłem decyzję: <b>{decision.statement}</b>{decision.due ? ` — termin: ${decision.due}` : ""}. Zapisać w pamięci?
+          </span>
+          <button
+            className="chip on"
+            onClick={() => { rememberFact(decisionKey(decision), decisionValue(decision)); toast("Zapisałem decyzję w pamięci ✓"); setDecision(null); }}
+          >
+            Zapisz
+          </button>
+          <button className="chip" onClick={() => setDecision(null)} title="Pomiń">✕</button>
+        </div>
       )}
       <Composer
         onSend={handleSend}
