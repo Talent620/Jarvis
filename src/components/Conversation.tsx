@@ -7,6 +7,7 @@ import { isDesktop } from "../lib/desktop";
 import { isNearBottom, starterSuggestions } from "../lib/chatUx";
 import { detectLang, t } from "../lib/i18n";
 import { buildChiefBriefing, briefingOneLiner } from "../lib/chiefOfStaff";
+import { currentStreak, currentRecap } from "../lib/habit";
 
 // Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓).
 function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {
@@ -166,6 +167,9 @@ export default function Conversation({
     // Proaktywny one-liner — JARVIS odzywa się pierwszy (gdy jest mózg i coś istotnego na dziś).
     const d = store.data;
     const proactive = needsSetup ? "" : briefingOneLiner(buildChiefBriefing({ tasks: d.tasks, reminders: d.reminders, calendar: d.calendar, leads: d.leads, people: d.world?.entities || [] }, Date.now()));
+    // Nawyk: seria dni + tygodniowy recap (nagroda + widoczna inwestycja). Tylko, gdy jest co pokazać.
+    const streak = needsSetup ? 0 : currentStreak();
+    const recap = needsSetup ? "" : currentRecap().line;
     return (
       <div className="convo">
         <div className="empty">
@@ -194,6 +198,14 @@ export default function Conversation({
           <p className="muted" style={{ marginTop: 18, fontSize: 13, lineHeight: 1.6 }}>
             {t("empty.hint", lang)}
           </p>
+          {/* Nawyk: seria dni + dowód, że inwestycja procentuje. */}
+          {(streak >= 2 || recap) && (
+            <p style={{ marginTop: 14, fontSize: 12.5, color: "var(--text-dim)" }}>
+              {streak >= 2 && <b style={{ color: "var(--gold)" }}>🔥 {streak} dni z rzędu</b>}
+              {streak >= 2 && recap ? " · " : ""}
+              {recap}
+            </p>
+          )}
           {/* Przewagi nad ChatGPT/Gemini — widoczne od pierwszej sekundy (research: ludzie nie wiedzą, że to mają). */}
           <p style={{ marginTop: 14, fontSize: 12, letterSpacing: 0.3, color: "var(--cyan-dim)", opacity: 0.85 }}>
             {t("edge.badges", lang)}

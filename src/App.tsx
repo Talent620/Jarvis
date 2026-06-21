@@ -25,6 +25,7 @@ import { notifySummary } from "./lib/notifyCenter";
 import { startGeneration, cancelGeneration, isCurrent } from "./lib/generation";
 import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
 import { runProactiveNotifications } from "./lib/proactiveNotify";
+import { recordActiveDay } from "./lib/habit";
 import PermissionDialog from "./components/PermissionDialog";
 import { lockIsSet } from "./lib/lock";
 import { lazy } from "react";
@@ -313,6 +314,7 @@ export default function App() {
     else setShowPanels(true);
   };
   useEffect(() => {
+    recordActiveDay(); // licznik serii dni (nawyk) — raz dziennie
     const tick = () => {
       void runProactiveNotifications().catch(() => {}); // push systemowy — trigger nawyku (działa też, gdy karta schowana; dedup pilnuje spamu)
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
