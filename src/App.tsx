@@ -180,8 +180,43 @@ export default function App() {
   const [showMind, setShowMind] = useState(false);
   const [showGoal, setShowGoal] = useState(false);
   const [showCmd, setShowCmd] = useState(false);
-  // ⌘K — rejestr poleceń (stabilny). Akcje z domknięciami wołane przez actionsRef (zawsze świeże).
+  // ⌘K — referencja na świeże akcje (rejestr poleceń budowany NIŻEJ, po deklaracji wszystkich stanów,
+  // by uniknąć TDZ na setterach useState).
   const actionsRef = useRef<Record<string, () => void>>({});
+  // Skrót ⌘K / Ctrl+K — globalny.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) { e.preventDefault(); setShowCmd((v) => !v); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
+  const [locked, setLocked] = useState(lockIsSet());
+  const [onboarding, setOnboarding] = useState(needsOnboarding());
+  const [keysLocked, setKeysLocked] = useState(keysAreLocked());
+  const [clipSuggest, setClipSuggest] = useState<string>("");
+  const [showVoice, setShowVoice] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [showCards, setShowCards] = useState(false);
+  const [showTranscribe, setShowTranscribe] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showDayPlan, setShowDayPlan] = useState(false);
+  const [showTasks, setShowTasks] = useState(false);
+  const [showTranslator, setShowTranslator] = useState(false);
+  const [showBargain, setShowBargain] = useState(false);
+  const [showWhereToBuy, setShowWhereToBuy] = useState(false);
+  const [showShoppingList, setShowShoppingList] = useState(false);
+  const [showNotifs, setShowNotifs] = useState(false);
+  const [showStatus, setShowStatus] = useState(false);
+  const [showCosts, setShowCosts] = useState(false);
+  const [showMemory, setShowMemory] = useState(false);
+  const [showAudit, setShowAudit] = useState(false);
+  const [showSent, setShowSent] = useState(false);
+  const [showContent, setShowContent] = useState(false);
+  const [showAds, setShowAds] = useState(false);
+  // ⌘K — rejestr poleceń. MUSI być po WSZYSTKICH useState (referuje settery), inaczej TDZ na pierwszym
+  // renderze (fabryka useMemo wykonuje się od razu). Stabilny (deps []); akcje przez actionsRef.
   const commands = useMemo<CommandItem[]>(() => {
     const open = (id: string, title: string, set: (v: boolean) => void, icon: string, keywords = ""): CommandItem =>
       ({ id, title, icon, keywords, group: "Otwórz", run: () => set(true) });
@@ -216,38 +251,6 @@ export default function App() {
       act("mic", "Mikrofon (przełącz)", "🎤", "sluchaj mow mikrofon"),
     ];
   }, []);
-  // Skrót ⌘K / Ctrl+K — globalny.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) { e.preventDefault(); setShowCmd((v) => !v); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-  const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
-  const [locked, setLocked] = useState(lockIsSet());
-  const [onboarding, setOnboarding] = useState(needsOnboarding());
-  const [keysLocked, setKeysLocked] = useState(keysAreLocked());
-  const [clipSuggest, setClipSuggest] = useState<string>("");
-  const [showVoice, setShowVoice] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [showCards, setShowCards] = useState(false);
-  const [showTranscribe, setShowTranscribe] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [showDayPlan, setShowDayPlan] = useState(false);
-  const [showTasks, setShowTasks] = useState(false);
-  const [showTranslator, setShowTranslator] = useState(false);
-  const [showBargain, setShowBargain] = useState(false);
-  const [showWhereToBuy, setShowWhereToBuy] = useState(false);
-  const [showShoppingList, setShowShoppingList] = useState(false);
-  const [showNotifs, setShowNotifs] = useState(false);
-  const [showStatus, setShowStatus] = useState(false);
-  const [showCosts, setShowCosts] = useState(false);
-  const [showMemory, setShowMemory] = useState(false);
-  const [showAudit, setShowAudit] = useState(false);
-  const [showSent, setShowSent] = useState(false);
-  const [showContent, setShowContent] = useState(false);
-  const [showAds, setShowAds] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
   const [booting, setBooting] = useState(true); // ładne „włączanie" przy starcie
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
