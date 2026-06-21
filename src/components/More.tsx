@@ -185,6 +185,9 @@ export default function More({
             </div>
           ))}
         </div>
+        <div className="panel-foot">
+          <button className="btn" onClick={onClose}>Zamknij</button>
+        </div>
       </div>
     </div>
   );

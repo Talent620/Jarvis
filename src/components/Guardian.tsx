@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
+import { createRecognition, speak, stopSpeaking } from "../lib/voice";
 import { guardian, guardianAdvise, guardianChat, guardianExecute, guardianPlan, isOutgoingCommand, GUARDIAN_CAPABILITIES, type GuardianActionResult, type GuardianActionKey, type GuardianChatMsg } from "../lib/guardian";
 import { guardianScan, formatScanReport, type GuardianScan, type AgentReport, type AgentState } from "../lib/guardianAgents";
 import { recordGuardianEvent, getGuardianHistory, clearGuardianHistory, topFixes, recurringHint, type GuardianEvent } from "../lib/guardianHistory";
@@ -32,6 +33,8 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
   const [chatInput, setChatInput] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [listening, setListening] = useState(false);
+  const recRef = useRef<ReturnType<typeof createRecognition>>(null);
 
   const refresh = async () => {
     setBusy(true); setMsg("Skanuję ekosystem JARVISA…");
@@ -95,20 +98,44 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
   };
 
   // 💬 Wyślij turę rozmowy — cała historia trafia do Strażnika, więc pamięta kontekst i może dopytać.
-  const sendChat = async () => {
-    const text = chatInput.trim();
+  // `viaVoice` = mówiłeś do niego → odpowiedź ZOSTANIE ODCZYTANA na głos (rozmowa hands-free).
+  const sendChat = async (textArg?: string, viaVoice = false) => {
+    const text = (textArg ?? chatInput).trim();
     if (chatBusy || !text) return;
     const next: GuardianChatMsg[] = [...chat, { role: "user", content: text }];
     setChat(next); setChatInput(""); setChatBusy(true);
     try {
       const reply = await guardianChat(next);
       setChat((c) => [...c, { role: "assistant", content: reply }]);
+      if (viaVoice && store.settings.speak) void speak(reply, { ...store.settings, speak: true }).catch(() => {});
     } catch {
       setChat((c) => [...c, { role: "assistant", content: "Nie udało się odpowiedzieć — sprawdź, czy mózg AI odpowiada (Napraw wszystko)." }]);
     } finally {
       setChatBusy(false);
     }
   };
+
+  // 🎤 Mów do Strażnika: jednorazowe rozpoznanie mowy → auto-wysyłka → odczyt odpowiedzi (hands-free).
+  const toggleVoice = () => {
+    if (listening) { try { recRef.current?.stop(); } catch { /* ignore */ } setListening(false); return; }
+    const rec = createRecognition();
+    if (!rec) { toast("To urządzenie nie wspiera rozpoznawania mowy — pisz albo użyj trybu głosowego apki."); return; }
+    recRef.current = rec;
+    rec.lang = store.settings.voiceName?.includes("en") ? "en-US" : "pl-PL";
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.onresult = (e: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => {
+      const t = e.results?.[0]?.[0]?.transcript?.trim();
+      setListening(false);
+      if (t) void sendChat(t, true);
+    };
+    rec.onerror = () => setListening(false);
+    rec.onend = () => setListening(false);
+    stopSpeaking(); // nie nakładaj na własną mowę
+    try { rec.start(); setListening(true); } catch { setListening(false); }
+  };
+  // Sprzątanie: zatrzymaj nasłuch/mowę przy zamknięciu panelu.
+  useEffect(() => () => { try { recRef.current?.abort?.(); } catch { /* ignore */ } stopSpeaking(); }, []);
   // Autoprzewijanie do najnowszej wiadomości w rozmowie.
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [chat, chatBusy]);
 
@@ -361,8 +388,19 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
                 onKeyDown={(e) => { if (e.key === "Enter") void sendChat(); }}
                 style={{ flex: 1 }}
               />
+              <button
+                className={`btn ${listening ? "primary" : ""}`}
+                style={{ marginTop: 0, padding: "8px 14px" }}
+                disabled={chatBusy}
+                onClick={toggleVoice}
+                title={listening ? "Słucham… (kliknij, by przerwać)" : "Mów do Strażnika (głosem)"}
+                aria-label="Mów do Strażnika"
+              >
+                {listening ? "🔴" : "🎤"}
+              </button>
               <button className="btn primary" style={{ marginTop: 0, padding: "8px 16px" }} disabled={chatBusy || !chatInput.trim()} onClick={() => void sendChat()}>➤</button>
             </div>
+            {listening && <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>🎙 Mów teraz — wyślę i odczytam odpowiedź na głos.</p>}
             {chat.length > 0 && (
               <button className="btn" style={{ marginTop: 8, padding: "5px 12px", fontSize: 12, width: "auto" }} onClick={() => { setChat([]); setChatInput(""); }}>🗑 Nowa rozmowa</button>
             )}
