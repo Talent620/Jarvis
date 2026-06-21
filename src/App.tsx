@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { CommandItem } from "./lib/commandPalette";
 import Orb, { type OrbState } from "./components/Orb";
 import Conversation from "./components/Conversation";
 import Composer from "./components/Composer";
@@ -72,6 +73,7 @@ import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import Guardian from "./components/Guardian";
 import Mind from "./components/Mind";
 const GoalRunner = lazy(() => import("./components/GoalRunner"));
+const CommandPalette = lazy(() => import("./components/CommandPalette"));
 import { guardianAutoHeal } from "./lib/guardian";
 import { guardianScan } from "./lib/guardianAgents";
 import { checkForUpdate, applyUpdate } from "./lib/updater";
@@ -177,6 +179,51 @@ export default function App() {
   const [showGuardian, setShowGuardian] = useState(false);
   const [showMind, setShowMind] = useState(false);
   const [showGoal, setShowGoal] = useState(false);
+  const [showCmd, setShowCmd] = useState(false);
+  // ⌘K — rejestr poleceń (stabilny). Akcje z domknięciami wołane przez actionsRef (zawsze świeże).
+  const actionsRef = useRef<Record<string, () => void>>({});
+  const commands = useMemo<CommandItem[]>(() => {
+    const open = (id: string, title: string, set: (v: boolean) => void, icon: string, keywords = ""): CommandItem =>
+      ({ id, title, icon, keywords, group: "Otwórz", run: () => set(true) });
+    const act = (id: string, title: string, icon: string, keywords = ""): CommandItem =>
+      ({ id, title, icon, keywords, group: "Akcja", run: () => actionsRef.current[id]?.() });
+    return [
+      open("settings", "Ustawienia", setShowSettings, "⚙", "klucze model glos motyw konto api"),
+      open("sales", "Pulpit Sprzedaży", setShowSales, "📈", "leady crm oferty klienci sprzedaz"),
+      open("goal", "🎯 Zleć cel", setShowGoal, "🎯", "do-for-me projekt plan wieloetapowe cel"),
+      open("studio", "Studio Obrazów", setShowStudio, "🎨", "zdjecia edycja generuj obraz foto"),
+      open("guardian", "Strażnik", setShowGuardian, "🛡", "napraw przyspiesz pomoc diagnoza"),
+      open("mind", "Umysł JARVISA", setShowMind, "🧠", "odprawa pamiec swiat wzorce samoocena"),
+      open("memory", "Co JARVIS o mnie wie", setShowMemory, "🧠", "pamiec fakty edytuj usun wiedza"),
+      open("profile", "Mój profil", setShowProfile, "👤", "kim jestem profil"),
+      open("tasks", "Zadania", setShowTasks, "✅", "gtd projekty priorytety todo"),
+      open("journal", "Dziennik", setShowJournal, "📔", "przemyslenia notatki"),
+      open("web", "Kreator stron", setShowWeb, "🌐", "strona witryna www"),
+      open("money", "Zarabianie", setShowMoney, "💰", "dochod autopilot pieniadze"),
+      open("bargain", "Łowca Okazji", setShowBargain, "🏷", "tanio kup okazja cena"),
+      open("translator", "Tłumacz na żywo", setShowTranslator, "🌍", "tlumacz jezyk rozmowa"),
+      open("transcribe", "Transkrypcja", setShowTranscribe, "🎙", "spotkanie mowa tekst"),
+      open("cards", "Kapsuły Wiedzy", setShowCards, "🃏", "ucz fiszki nauka"),
+      open("content", "Maszynka do kontentu", setShowContent, "📱", "posty social media"),
+      open("ads", "Generator reklam", setShowAds, "📢", "reklamy google facebook ads"),
+      open("hud", "Wizja (kamera)", setShowHud, "👁", "kamera widzisz obraz wizja"),
+      open("status", "Stan systemu", setShowStatus, "🩺", "diagnostyka co dziala"),
+      open("data", "Dane i kopia", setShowPanels, "🗄", "backup eksport dane kopia"),
+      act("voicemode", "Tryb Słuchawki (rozmowa)", "🎧", "glos hands-free rozmowa"),
+      act("live", "Rozmowa na żywo", "☎", "live glos telefon"),
+      act("newchat", "Nowa rozmowa", "＋", "wyczysc reset czat"),
+      act("private", "Czat prywatny (przełącz)", "🕶", "prywatny incognito"),
+      act("mic", "Mikrofon (przełącz)", "🎤", "sluchaj mow mikrofon"),
+    ];
+  }, []);
+  // Skrót ⌘K / Ctrl+K — globalny.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) { e.preventDefault(); setShowCmd((v) => !v); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [locked, setLocked] = useState(lockIsSet());
   const [onboarding, setOnboarding] = useState(needsOnboarding());
@@ -924,6 +971,15 @@ export default function App() {
       />
     );
 
+  // Świeże domknięcia dla akcji ⌘K (po zdefiniowaniu handlerów).
+  actionsRef.current = {
+    voicemode: () => { stopSpeaking(); listenerRef.current?.stop(); setShowVoice(true); },
+    live: () => { stopSpeaking(); listenerRef.current?.stop(); setShowLive(true); },
+    newchat: newChat,
+    private: togglePrivateChat,
+    mic: toggleMic,
+  };
+
   return (
     <div className={`app${messages.length ? " chatting" : ""}`}>
       {booting && <Boot onDone={() => setBooting(false)} />}
@@ -1205,6 +1261,7 @@ export default function App() {
           onGuardian={() => setShowGuardian(true)}
           onMind={() => setShowMind(true)}
           onGoal={() => setShowGoal(true)}
+          onCommand={() => setShowCmd(true)}
           onWeb={() => setShowWeb(true)}
           onScreen={isDesktop() ? lookAtScreen : undefined}
           onHelp={() => setShowHelp(true)}
@@ -1289,6 +1346,11 @@ export default function App() {
       {showGoal && (
         <ScreenBoundary>
           <GoalRunner onClose={() => setShowGoal(false)} />
+        </ScreenBoundary>
+      )}
+      {showCmd && (
+        <ScreenBoundary>
+          <CommandPalette commands={commands} onClose={() => setShowCmd(false)} />
         </ScreenBoundary>
       )}
       {showWeb && (
