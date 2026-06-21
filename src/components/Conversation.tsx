@@ -8,6 +8,7 @@ import { isNearBottom, starterSuggestions } from "../lib/chatUx";
 import { detectLang, t } from "../lib/i18n";
 import { buildChiefBriefing, briefingOneLiner } from "../lib/chiefOfStaff";
 import { currentStreak, currentRecap } from "../lib/habit";
+import { providerShortName } from "../lib/providers/registry";
 
 // Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓).
 function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {
@@ -102,6 +103,12 @@ const MessageBubble = memo(
             text={m.text}
             onRegenerate={isLastAssistant && !m.text.startsWith("⚠") && onRetry ? onRetry : undefined}
           />
+        )}
+        {/* Transparentność: który dostawca odpowiedział (multi-provider — czego ChatGPT/Gemini nie pokażą). */}
+        {m.role === "assistant" && m.via && (
+          <div className="msg-via" style={{ fontSize: 10.5, color: "var(--text-dim)", opacity: 0.7, marginTop: 2, letterSpacing: 0.2 }}>
+            via {providerShortName(m.via)}{m.fellBack ? " · zapasowy" : ""}
+          </div>
         )}
         {m.citations && m.citations.length > 0 && (
           <div className="citations">

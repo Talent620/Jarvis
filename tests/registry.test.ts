@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED, injectNoThink, modelBadges, PROVIDERS } from "../src/lib/providers/registry";
+import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED, injectNoThink, modelBadges, PROVIDERS, providerShortName } from "../src/lib/providers/registry";
 
 describe("Cohere — nowy darmowy dostawca", () => {
   it("jest w katalogu z modelami Command i sensownym domyślnym", () => {
@@ -17,6 +17,17 @@ describe("Cohere — nowy darmowy dostawca", () => {
   it("dostawcy z wyższą rangą wygrywają nad Cohere w auto", () => {
     const r = autoPick({ cohere: "x", gemini: "y" });
     expect(r?.provider).toBe("gemini"); // gemini (80) > cohere (45)
+  });
+});
+
+describe("providerShortName — etykieta via … pod odpowiedzią", () => {
+  it("krótkie, ludzkie nazwy; lokalne wyróżnione; pusty → ''", () => {
+    expect(providerShortName("gemini")).toBe("Gemini");
+    expect(providerShortName("anthropic")).toBe("Claude");
+    expect(providerShortName("cohere")).toBe("Cohere");
+    expect(providerShortName("ollama")).toMatch(/lokalny/);
+    expect(providerShortName(undefined)).toBe("");
+    expect(providerShortName("")).toBe("");
   });
 });
 

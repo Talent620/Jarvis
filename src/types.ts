@@ -23,6 +23,9 @@ export interface ChatMessage {
   council?: { members: { label: string; text: string }[]; consensus: string; note: string };
   /** Wiadomość pojawiła się strumieniowo (słowo-po-słowie) — nie animuj jej ponownie maszyną do pisania. */
   streamed?: boolean;
+  /** Który dostawca faktycznie odpowiedział (transparentność multi-providera) + czy zapasowy. */
+  via?: string;
+  fellBack?: boolean;
   createdAt: number;
 }
 

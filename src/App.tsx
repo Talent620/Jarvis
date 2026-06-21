@@ -490,7 +490,7 @@ export default function App() {
         const finalText = reply.text && reply.text.trim() && reply.text !== "…" ? reply.text : (pendingText || reply.text);
         setMessages((m) =>
           m.map((x) =>
-            x.id === sid ? { ...x, text: finalText, tools: reply.tools, citations: reply.citations } : x,
+            x.id === sid ? { ...x, text: finalText, tools: reply.tools, citations: reply.citations, via: reply.via, fellBack: reply.fellBack } : x,
           ),
         );
       } else {
@@ -502,6 +502,8 @@ export default function App() {
           tools: reply.tools,
           citations: reply.citations,
           council: (reply as Partial<CouncilReply>).council,
+          via: reply.via,
+          fellBack: reply.fellBack,
           createdAt: Date.now(),
         };
         setLiveId(aiMsg.id);
