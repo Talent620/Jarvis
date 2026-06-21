@@ -32,6 +32,8 @@ export default function Orb({ state, label }: { state: OrbState; label?: string 
   return (
     <div className="orb-wrap">
       <div className={`orb ${state}`}>
+        <div className="halo" />
+        <div className="sweep" />
         <div className="ring r1" />
         <div className="ring r2" />
         <div className="ring r3" />
