@@ -8,7 +8,7 @@ import { isNearBottom, starterSuggestions } from "../lib/chatUx";
 import { detectLang, t } from "../lib/i18n";
 import { buildChiefBriefing, briefingOneLiner } from "../lib/chiefOfStaff";
 import { currentStreak, currentRecap } from "../lib/habit";
-import { providerShortName } from "../lib/providers/registry";
+import { providerShortName } from "../lib/providerNames";
 
 // Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓).
 function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {

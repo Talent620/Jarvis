@@ -279,17 +279,9 @@ export function modelBadges(label: string): string {
   return b.join("");
 }
 
-// Krótkie, ludzkie nazwy dostawców — do etykiety „odpowiedział: …" pod wiadomością (transparentność
-// multi-providera; czego ChatGPT/Gemini nie pokażą). Lokalne wyróżnione (prywatność).
-const PROVIDER_SHORT: Record<string, string> = {
-  anthropic: "Claude", gemini: "Gemini", groq: "Groq", cerebras: "Cerebras", mistral: "Mistral",
-  cohere: "Cohere", openrouter: "OpenRouter", nvidia: "NVIDIA", github: "GitHub Models",
-  ollama: "lokalny (Ollama)", webllm: "lokalny (przeglądarka)",
-};
-/** Pure: krótka nazwa dostawcy (do etykiety pod odpowiedzią). Pusty wkład → "". */
-export function providerShortName(id?: string): string {
-  return id ? (PROVIDER_SHORT[id] || id) : "";
-}
+// Krótkie nazwy dostawców — przeniesione do osobnego, bezzależnościowego modułu (unikamy TDZ z cyklu
+// providers↔tools↔brain w rdzeniowych komponentach). Re-eksport dla zgodności importów.
+export { providerShortName } from "../providerNames";
 
 /** Domyślny darmowy model bez cenzury w chmurze (OpenRouter). */
 export const FREE_UNCENSORED = {
