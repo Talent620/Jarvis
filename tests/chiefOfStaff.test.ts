@@ -1,5 +1,21 @@
 import { describe, it, expect } from "vitest";
-import { buildChiefBriefing, formatBriefing, type ChiefInput } from "../src/lib/chiefOfStaff";
+import { buildChiefBriefing, formatBriefing, briefingOneLiner, type ChiefInput, type Briefing } from "../src/lib/chiefOfStaff";
+
+describe("chiefOfStaff — briefingOneLiner (proaktywny dzień dobry)", () => {
+  it("nic pilnego → pusty (bez nagabywania)", () => {
+    expect(briefingOneLiner({ heading: "Ranek · x", sections: [], actions: [] })).toBe("");
+  });
+  it("ranek + akcja → „Dzień dobry. <akcja>”", () => {
+    const b: Briefing = { heading: "Ranek · poniedziałek", sections: [{ title: "🎯", items: ["x"] }], actions: ["Zacznij od priorytetu: Raport."] };
+    expect(briefingOneLiner(b)).toBe("Dzień dobry. Zacznij od priorytetu: Raport.");
+  });
+  it("wieczór → „Dobry wieczór”", () => {
+    expect(briefingOneLiner({ heading: "Wieczór · x", sections: [], actions: ["Domknij zaległe."] })).toMatch(/^Dobry wieczór\./);
+  });
+  it("brak akcji, ale jest sygnał → pierwszy element sekcji", () => {
+    expect(briefingOneLiner({ heading: "Popołudnie · x", sections: [{ title: "⏳", items: ["Deadline jutro"] }], actions: [] })).toBe("Cześć. Deadline jutro");
+  });
+});
 
 const DAY = 86_400_000;
 const now = new Date("2026-06-20T09:00:00Z").getTime();

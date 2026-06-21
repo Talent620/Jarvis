@@ -68,6 +68,16 @@ export function buildChiefBriefing(input: ChiefInput, now = Date.now(), weather?
   return { heading, sections, actions: [...new Set(actions)].slice(0, 5) };
 }
 
+/** Pure: PROAKTYWNY one-liner — JARVIS odzywa się pierwszy (czego ChatGPT/Gemini nie robią).
+ *  Zwięzłe powitanie wg pory dnia + najważniejszy sygnał. Pusty string, gdy nic pilnego (bez nagabywania). */
+export function briefingOneLiner(b: Briefing): string {
+  if (!b.actions.length && !b.sections.length) return "";
+  const greet = b.heading.startsWith("Ranek") ? "Dzień dobry" : b.heading.startsWith("Wieczór") ? "Dobry wieczór" : "Cześć";
+  if (b.actions.length) return `${greet}. ${b.actions[0]}`;
+  const first = b.sections[0]?.items[0];
+  return first ? `${greet}. ${first}` : "";
+}
+
 /** Pure: odprawa jako gotowy tekst (do referowania / toastu / kopiowania). */
 export function formatBriefing(b: Briefing): string {
   const parts = [`🧭 Odprawa — ${b.heading}`, ""];

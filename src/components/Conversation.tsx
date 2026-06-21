@@ -6,6 +6,7 @@ import { store } from "../lib/store";
 import { isDesktop } from "../lib/desktop";
 import { isNearBottom, starterSuggestions } from "../lib/chatUx";
 import { detectLang, t } from "../lib/i18n";
+import { buildChiefBriefing, briefingOneLiner } from "../lib/chiefOfStaff";
 
 // Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓).
 function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {
@@ -162,12 +163,20 @@ export default function Conversation({
   if (!messages.length && !interim) {
     const lang = detectLang(store.settings.lang, typeof navigator !== "undefined" ? navigator.language : undefined);
     const suggestions = starterSuggestions(new Date(), { tasksToday, desktop: isDesktop(), lang });
+    // Proaktywny one-liner — JARVIS odzywa się pierwszy (gdy jest mózg i coś istotnego na dziś).
+    const d = store.data;
+    const proactive = needsSetup ? "" : briefingOneLiner(buildChiefBriefing({ tasks: d.tasks, reminders: d.reminders, calendar: d.calendar, leads: d.leads, people: d.world?.entities || [] }, Date.now()));
     return (
       <div className="convo">
         <div className="empty">
           {t("empty.greeting", lang)}
           <br />
           {t("empty.prompt", lang)}
+          {proactive && (
+            <div className="journal-card" style={{ marginTop: 14, padding: "10px 12px", textAlign: "left", borderLeft: "3px solid var(--cyan)" }}>
+              <span style={{ fontSize: 13.5, lineHeight: 1.5 }}>🧭 {proactive}</span>
+            </div>
+          )}
           {needsSetup ? (
             <div style={{ marginTop: 16 }}>
               <p className="notice" style={{ marginBottom: 10 }}>{t("empty.needsSetup", lang)}</p>
