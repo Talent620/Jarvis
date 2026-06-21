@@ -40,7 +40,7 @@ window.addEventListener("error", (e) => {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ErrorBoundary label="g\u0142\u00f3wnego interfejsu">
+    <ErrorBoundary label="głównego interfejsu">
       {isNeural ? (
         <Suspense fallback={null}>
           <NeuralInterface />

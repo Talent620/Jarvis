@@ -171,12 +171,15 @@ export default function Conversation({
   if (!messages.length && !interim) {
     const lang = detectLang(store.settings.lang, typeof navigator !== "undefined" ? navigator.language : undefined);
     const suggestions = starterSuggestions(new Date(), { tasksToday, desktop: isDesktop(), lang });
-    // Proaktywny one-liner — JARVIS odzywa się pierwszy (gdy jest mózg i coś istotnego na dziś).
+    // Proaktywny one-liner + nawyk (streak/recap). Liczone DEFENSYWNIE: ekran startowy jest w rdzeniu
+    // (poza ScreenBoundary), więc dowolny wyjątek tutaj wywaliłby CAŁĄ apkę — degradujemy do cichego ⌀.
     const d = store.data;
-    const proactive = needsSetup ? "" : briefingOneLiner(buildChiefBriefing({ tasks: d.tasks, reminders: d.reminders, calendar: d.calendar, leads: d.leads, people: d.world?.entities || [] }, Date.now()));
-    // Nawyk: seria dni + tygodniowy recap (nagroda + widoczna inwestycja). Tylko, gdy jest co pokazać.
-    const streak = needsSetup ? 0 : currentStreak();
-    const recap = needsSetup ? "" : currentRecap().line;
+    let proactive = "", streak = 0, recap = "";
+    if (!needsSetup) {
+      try { proactive = briefingOneLiner(buildChiefBriefing({ tasks: d.tasks || [], reminders: d.reminders || [], calendar: d.calendar || [], leads: d.leads || [], people: d.world?.entities || [] }, Date.now())); } catch { /* ignore */ }
+      try { streak = currentStreak(); } catch { /* ignore */ }
+      try { recap = currentRecap().line; } catch { /* ignore */ }
+    }
     return (
       <div className="convo">
         <div className="empty">
