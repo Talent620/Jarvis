@@ -47,20 +47,43 @@ export interface UpdateInfo {
   platform: Plat;
 }
 
+/** Pure: zamień surowy błąd sieci/abortu na zrozumiały komunikat. */
+export function humanizeUpdateError(msg: string): string {
+  const m = (msg || "").toLowerCase();
+  if (/abort|signal|timeout|timed out/.test(m)) return "GitHub nie odpowiedział na czas — sprawdź internet i spróbuj ponownie.";
+  if (/failed to fetch|networkerror|network error|load failed|cors|ssl|dns/.test(m)) return "Brak internetu lub GitHub chwilowo niedostępny — spróbuj później.";
+  return `Nie udało się sprawdzić aktualizacji: ${msg}`;
+}
+
 /** Sprawdź wydanie „latest" na GitHub i porównaj z bieżącym buildem. */
 export async function checkForUpdate(): Promise<UpdateInfo | { error: string }> {
   const p = platform();
+  const url = `https://api.github.com/repos/${REPO}/releases/tags/latest`;
+  // Jedna ponowna próba — na telefonie pierwszy strzał bywa ucinany (wolna sieć/abort).
+  let res: Response | null = null;
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      res = await fetchTimeout(url, { headers: { accept: "application/vnd.github+json" } }, 15000);
+      break;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  if (!res) return { error: humanizeUpdateError(lastErr instanceof Error ? lastErr.message : String(lastErr)) };
   try {
-    const res = await fetchTimeout(`https://api.github.com/repos/${REPO}/releases/tags/latest`, { headers: { accept: "application/vnd.github+json" } }, 10000);
     const d = await res.json().catch(() => null);
-    if (!res.ok || !d) return { error: `Nie udało się sprawdzić aktualizacji (HTTP ${res.status}).` };
+    if (!res.ok || !d) {
+      if (res.status === 404) return { error: "Brak opublikowanego wydania „latest” — najnowsza wersja jeszcze się buduje. Spróbuj później." };
+      return { error: `Nie udało się sprawdzić aktualizacji (HTTP ${res.status}).` };
+    }
     const asset = Array.isArray(d.assets) ? d.assets.find((a: { name?: string }) => a.name === ASSET[p]) : null;
     const latestISO: string = asset?.updated_at || d.published_at || "";
     const cur = currentBuild();
     const newer = p === "web" ? true : isNewer(cur, latestISO); // w przeglądarce zawsze można odświeżyć
     return { current: cur || "?", latest: latestISO ? latestISO.slice(0, 16).replace("T", " ") : "?", newer, url: downloadUrl(p), platform: p };
   } catch (e) {
-    return { error: `Brak połączenia z GitHub: ${e instanceof Error ? e.message : String(e)}` };
+    return { error: humanizeUpdateError(e instanceof Error ? e.message : String(e)) };
   }
 }
 

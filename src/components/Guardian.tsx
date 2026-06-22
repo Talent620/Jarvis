@@ -192,7 +192,7 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
   return (
     <div className="sheet" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head"><div className="grabber" /><h2>🛡 Strażnik JARVISA</h2></div>
+        <div className="panel-head"><div className="grabber" /><h2>🩺 Diagnoza i naprawa</h2></div>
         <div className="panel-body">
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             Centralny panel dowodzenia: administrator, architekt AI, opiekun, diagnostyka i automatyzacja w jednym.

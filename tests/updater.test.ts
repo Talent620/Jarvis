@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isNewer, downloadUrl } from "../src/lib/updater";
+import { isNewer, downloadUrl, humanizeUpdateError } from "../src/lib/updater";
 
 describe("updater — isNewer", () => {
   it("wydanie nowsze o >1 min → true", () => {
@@ -26,5 +26,19 @@ describe("updater — downloadUrl", () => {
   it("iOS → strona wydań (brak instalowalnego pliku, instalacja przez App Store/sideload)", () => {
     expect(downloadUrl("ios")).toMatch(/releases\/latest$/);
     expect(downloadUrl("ios")).not.toMatch(/\.ipa/);
+  });
+});
+
+describe("updater — humanizeUpdateError", () => {
+  it("abort/timeout → czytelny komunikat o czasie odpowiedzi", () => {
+    expect(humanizeUpdateError("signal is aborted without reason")).toMatch(/nie odpowiedział na czas/i);
+    expect(humanizeUpdateError("The operation timed out")).toMatch(/nie odpowiedział na czas/i);
+  });
+  it("brak sieci → komunikat o internecie", () => {
+    expect(humanizeUpdateError("Failed to fetch")).toMatch(/internet|niedostępny/i);
+    expect(humanizeUpdateError("NetworkError when attempting to fetch")).toMatch(/internet|niedostępny/i);
+  });
+  it("inny błąd → zachowuje treść", () => {
+    expect(humanizeUpdateError("coś dziwnego")).toMatch(/coś dziwnego/);
   });
 });
