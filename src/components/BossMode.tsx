@@ -88,7 +88,7 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
       ROBOT_VOICE,
       persona,
       prefer,
-      { verify: true, captureDecisions: true, stallMs: 9000 },
+      { verify: true, captureDecisions: true, stallMs: 9000, insight: true },
     );
     loopRef.current = loop;
     void (async () => {
