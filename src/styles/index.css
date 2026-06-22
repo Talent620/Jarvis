@@ -98,6 +98,93 @@ body.theme-matrix::before {
 /* Treść nad deszczem */
 body.theme-matrix #root { position: relative; z-index: 1; }
 
+/* ============================================================
+   ✨ AURORA — pionierski motyw „żywego światła" (zorza + szkło)
+   Wolno przesuwająca się zorza za treścią + mrożone, świetliste
+   tafle paneli (glassmorphism). Niespodzianka klasy premium.
+   ============================================================ */
+body.theme-aurora {
+  --cyan: #3fe0c5;
+  --cyan-dim: #1fae9a;
+  --gold: #aa9bff;
+  --bg: #060912;
+  --bg-2: rgba(18, 27, 50, 0.62);
+  --bg-3: rgba(30, 42, 72, 0.66);
+  --line: rgba(99, 230, 210, 0.16);
+  --line-strong: rgba(128, 165, 255, 0.42);
+  --text: #e9f1ff;
+  --text-dim: #93a4c8;
+  background:
+    radial-gradient(1200px 820px at 50% -12%, #0c1531 0%, transparent 60%),
+    #050810;
+}
+/* Żywa zorza — kilka świetlistych plam dryfujących w nieskończoność, za treścią. */
+body.theme-aurora::before {
+  content: "";
+  position: fixed;
+  inset: -25%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background:
+    radial-gradient(40% 32% at 22% 28%, rgba(63, 224, 197, 0.42), transparent 70%),
+    radial-gradient(38% 30% at 78% 26%, rgba(139, 123, 255, 0.40), transparent 70%),
+    radial-gradient(46% 34% at 60% 80%, rgba(255, 110, 199, 0.26), transparent 72%),
+    radial-gradient(52% 42% at 28% 82%, rgba(63, 150, 224, 0.32), transparent 72%);
+  filter: blur(40px) saturate(1.18);
+  animation: aurora-drift 26s ease-in-out infinite alternate;
+}
+/* Cienka, ruchoma smuga światła u góry — „brzask" zorzy. */
+body.theme-aurora::after {
+  content: "";
+  position: fixed;
+  left: 0; right: 0; top: 0; height: 38vh;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background: linear-gradient(180deg, rgba(63, 224, 197, 0.16), rgba(139, 123, 255, 0.08) 40%, transparent 80%);
+  -webkit-mask-image: radial-gradient(120% 100% at 50% 0%, #000 40%, transparent 75%);
+  mask-image: radial-gradient(120% 100% at 50% 0%, #000 40%, transparent 75%);
+  animation: aurora-shimmer 14s ease-in-out infinite alternate;
+}
+body.theme-aurora #root { position: relative; z-index: 1; }
+@keyframes aurora-drift {
+  0%   { transform: translate3d(-3%, -2%, 0) scale(1.05) rotate(0deg); }
+  50%  { transform: translate3d(3%, 2%, 0) scale(1.12) rotate(4deg); }
+  100% { transform: translate3d(-2%, 3%, 0) scale(1.08) rotate(-3deg); }
+}
+@keyframes aurora-shimmer {
+  0%   { opacity: 0.35; transform: translateX(-4%); }
+  100% { opacity: 0.6; transform: translateX(4%); }
+}
+/* Szkło: panele i karty stają się mrożoną taflą z poświatą krawędzi. */
+body.theme-aurora .panel,
+body.theme-aurora .journal-card,
+body.theme-aurora .value-card,
+body.theme-aurora .bubble.assistant {
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+}
+body.theme-aurora .panel {
+  background: linear-gradient(180deg, rgba(32, 44, 78, 0.74), rgba(16, 24, 46, 0.66));
+  border-color: rgba(128, 165, 255, 0.28);
+  box-shadow: 0 22px 64px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(99, 230, 210, 0.12), inset 0 0 44px rgba(63, 224, 197, 0.08);
+}
+body.theme-aurora .bubble.assistant {
+  background: linear-gradient(180deg, rgba(42, 56, 96, 0.6), rgba(24, 34, 62, 0.5));
+  border: 1px solid rgba(128, 165, 255, 0.22);
+}
+body.theme-aurora .bubble.user {
+  background: linear-gradient(180deg, rgba(63, 224, 197, 0.16), rgba(63, 150, 224, 0.12));
+  border: 1px solid rgba(63, 224, 197, 0.3);
+}
+/* Orb dostaje zorzową, dwukolorową poświatę. */
+body.theme-aurora .orb .core {
+  box-shadow: 0 0 52px rgba(63, 224, 197, 0.5), 0 0 96px rgba(139, 123, 255, 0.34);
+}
+body.theme-aurora .icon-btn,
+body.theme-aurora .chip { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
 /* Dodatkowe motywy kolorystyczne */
 body.theme-amber { --cyan: #ffb84d; --cyan-dim: #cc8a1f; --line: rgba(255,184,77,.18); --line-strong: rgba(255,184,77,.4); }
 body.theme-ocean { --cyan: #4db8ff; --cyan-dim: #1f7fcc; --line: rgba(77,184,255,.18); --line-strong: rgba(77,184,255,.4); }
@@ -1884,7 +1971,8 @@ input:focus, textarea:focus, select:focus {
 /* Szacunek dla ustawień dostępności — wyłącz ruch, gdy użytkownik tak woli */
 @media (prefers-reduced-motion: reduce) {
   .sheet, .panel, .bubble, .notif-badge, .boot, .boot-bar span { animation: none !important; }
-  body.theme-matrix::before, .bossmode::before { animation: none !important; }
+  body.theme-matrix::before, .bossmode::before,
+  body.theme-aurora::before, body.theme-aurora::after { animation: none !important; }
   .bossmode-core { transition: none !important; }
   * { scroll-behavior: auto !important; }
 }

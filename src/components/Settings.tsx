@@ -2269,6 +2269,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <p className="muted">Kolor akcentów całego interfejsu.</p>
               <div className="chips" style={{ marginBottom: 8 }}>
                 {[
+                  { id: "aurora", l: "Aurora ✨" },
                   { id: "default", l: "Cyan" },
                   { id: "gold", l: "Złoty" },
                   { id: "amber", l: "Bursztyn" },

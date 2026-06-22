@@ -20,7 +20,8 @@ import LicenseGate from "./components/LicenseGate";
 import { checkActivation, licenseRequired } from "./lib/license";
 const HeadsetMode = lazy(() => import("./components/HeadsetMode"));
 import { watchHeadset } from "./lib/headset";
-import { toast } from "./lib/toast";
+import { toast, copyWithToast } from "./lib/toast";
+import { conversationToMarkdown } from "./lib/exportChat";
 import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } from "./lib/decisions";
 import { isBossSummon } from "./lib/boss";
 import { completionReport } from "./lib/completion";
@@ -294,6 +295,7 @@ export default function App() {
       act("live", "Rozmowa na żywo", "☎", "live glos telefon"),
       act("newchat", "Nowa rozmowa", "＋", "wyczysc reset czat"),
       act("private", "Czat prywatny (przełącz)", "🕶", "prywatny incognito"),
+      act("exportmd", "📤 Eksportuj rozmowę (Markdown)", "📤", "eksport zapisz markdown kopiuj rozmowa udostepnij"),
       act("mic", "Mikrofon (przełącz)", "🎤", "sluchaj mow mikrofon"),
     ];
   }, []);
@@ -462,7 +464,7 @@ export default function App() {
   // Motyw HUD.
   useEffect(() => {
     const b = document.body;
-    ["theme-gold", "theme-green", "theme-red", "theme-purple", "theme-matrix", "theme-amber", "theme-ocean", "theme-rose", "theme-retro", "theme-xp", "theme-nord", "theme-sunset"].forEach((c) => b.classList.remove(c));
+    ["theme-gold", "theme-green", "theme-red", "theme-purple", "theme-matrix", "theme-amber", "theme-ocean", "theme-rose", "theme-retro", "theme-xp", "theme-nord", "theme-sunset", "theme-aurora"].forEach((c) => b.classList.remove(c));
     if (settings.theme && settings.theme !== "default") b.classList.add(`theme-${settings.theme}`);
   }, [settings.theme]);
 
@@ -1062,6 +1064,11 @@ export default function App() {
   // Świeże domknięcia dla akcji ⌘K (po zdefiniowaniu handlerów).
   actionsRef.current = {
     boss: () => { stopSpeaking(); listenerRef.current?.stop(); setShowBoss(true); },
+    exportmd: () => {
+      const msgs = messagesRef.current;
+      if (!msgs.length) { toast("Brak rozmowy do eksportu"); return; }
+      copyWithToast(conversationToMarkdown(msgs.map((m) => ({ role: m.role, text: m.text }))), "Rozmowa skopiowana (Markdown) ✓");
+    },
     voicemode: () => { stopSpeaking(); listenerRef.current?.stop(); setShowVoice(true); },
     live: () => { stopSpeaking(); listenerRef.current?.stop(); setShowLive(true); },
     newchat: newChat,
