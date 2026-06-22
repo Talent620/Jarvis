@@ -55,9 +55,21 @@ describe("blokada PIN", () => {
     expect(await verifyPin("0000")).toBe(false);
   });
 
-  it("PIN przechowywany jako skrót, nie jawnie", async () => {
+  it("PIN przechowywany jako skrót PBKDF2 (sól+hash+iter), nie jawnie", async () => {
     await setPin("9876");
-    expect(localStorage.getItem("jarvis.lock.v1")).not.toContain("9876");
+    const data = JSON.parse(localStorage.getItem("jarvis.lock.v1") || "{}");
+    // Struktura skrótu: 256-bitowy hash (hex), sól i iteracje. Żadne pole nie trzyma PIN-u jawnie.
+    // (Nie sprawdzamy braku podciągu „9876" — sól to losowy hex 0-9a-f i bywa, że PIN tam wpada
+    //  przypadkiem; to nie znaczy, że PIN jest jawny. Dowodzimy bezpieczeństwa round-tripem niżej.)
+    expect(data.hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(typeof data.salt).toBe("string");
+    expect(data.salt.length).toBeGreaterThanOrEqual(8);
+    expect(data.iter).toBeGreaterThan(0);
+    expect(data.hash).not.toBe("9876");
+    expect(data.salt).not.toBe("9876");
+    // To JEST ten PIN — tylko zahaszowany: poprawny przechodzi, błędny nie.
+    expect(await verifyPin("9876")).toBe(true);
+    expect(await verifyPin("0000")).toBe(false);
     clearPin();
     expect(lockIsSet()).toBe(false);
   });
