@@ -22,6 +22,8 @@ const HeadsetMode = lazy(() => import("./components/HeadsetMode"));
 import { watchHeadset } from "./lib/headset";
 import { toast, copyWithToast } from "./lib/toast";
 import { conversationToMarkdown } from "./lib/exportChat";
+import { followUps } from "./lib/followups";
+import { PRESETS } from "./lib/prompts";
 import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } from "./lib/decisions";
 import { isBossSummon } from "./lib/boss";
 import { completionReport } from "./lib/completion";
@@ -297,6 +299,8 @@ export default function App() {
       act("private", "Czat prywatny (przełącz)", "🕶", "prywatny incognito"),
       act("exportmd", "📤 Eksportuj rozmowę (Markdown)", "📤", "eksport zapisz markdown kopiuj rozmowa udostepnij"),
       act("mic", "Mikrofon (przełącz)", "🎤", "sluchaj mow mikrofon"),
+      // ⚡ Szybkie startery (biblioteka promptów) — od razu ruszają z robotą.
+      ...PRESETS.map((p): CommandItem => ({ id: p.id, title: p.title, icon: p.icon, keywords: p.kw, group: "⚡ Startery", run: () => actionsRef.current[p.id]?.() })),
     ];
   }, []);
   // 💡 Dymki-porady (coaching): nienachalnie, po chwili i co kilka minut, gdy nie pracujesz; maks 4/sesję.
@@ -1074,6 +1078,7 @@ export default function App() {
     newchat: newChat,
     private: togglePrivateChat,
     mic: toggleMic,
+    ...Object.fromEntries(PRESETS.map((p) => [p.id, () => { setShowCmd(false); sendRef.current(p.text); }])),
   };
 
   return (
@@ -1308,6 +1313,23 @@ export default function App() {
             </span>
             <button className="chip on" onClick={apply}>{step.patch ? "Zrób" : "Otwórz"}</button>
             <button className="chip" onClick={() => setCompletionHidden(true)} title="Później">✕</button>
+          </div>
+        );
+      })()}
+
+      {/* 💬 Sugestie dalszych pytań (Perplexity-style) — po odpowiedzi, gdy nie pracujesz. */}
+      {(() => {
+        if (busy || store.settings.tips === false || messages.length === 0) return null;
+        const last = messages[messages.length - 1];
+        if (last.role !== "assistant" || !last.text) return null;
+        const lastUser = [...messages].reverse().find((m) => m.role === "user")?.text || "";
+        const sugg = followUps(lastUser, last.text);
+        if (!sugg.length) return null;
+        return (
+          <div className="followups">
+            {sugg.map((s, i) => (
+              <button key={i} className="chip" onClick={() => handleSend(s)} title="Zapytaj dalej">💬 {s}</button>
+            ))}
           </div>
         );
       })()}
