@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
 import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, resolveVoiceMode, type NativeVoiceInfo, type VoiceMode } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED, modelBadges } from "../lib/providers/registry";
+import { intelForModel, intelColor } from "../lib/modelIntel";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
@@ -650,6 +651,34 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   )}
                 </div>
               )}
+
+              {/* Poziom inteligencji aktualnie używanego modelu — zielony dymek z % (0–100,
+                  100% = najlepszy znany agent/API), opis oficjalny + potoczny. Ramka zielona,
+                  gdy API „pasuje" (jest klucz/połączenie). */}
+              {(() => {
+                const effProvider: ProviderId | null = s.provider === "auto" ? (autoTarget?.provider ?? null) : (s.provider as ProviderId);
+                const effModel = s.provider === "auto"
+                  ? (autoTarget?.model ?? "")
+                  : (s.model === "auto" ? (PROVIDERS[s.provider as ProviderId]?.defaultModel ?? "") : s.model);
+                if (!effModel) return null;
+                const intel = intelForModel(effModel);
+                if (intel.iq <= 0) return null;
+                const ready = effProvider ? providerReady(effProvider) : false;
+                const name = effProvider ? modelLabel(effProvider, effModel) : effModel;
+                return (
+                  <div className="journal-card" style={{ margin: "8px 0", padding: "10px 12px", display: "flex", gap: 10, alignItems: "flex-start", borderLeft: `3px solid ${ready ? "#2fbf71" : "var(--line)"}` }}>
+                    <span style={{ background: intelColor(intel.iq), color: "#04130c", fontWeight: 800, borderRadius: 999, padding: "4px 10px", fontSize: 14, whiteSpace: "nowrap" }} title="0–100, gdzie 100% = najlepszy znany dziś agent/API">
+                      🧠 {intel.iq}%
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13 }}><b>{name}</b> {ready ? "· 🟢 połączono" : "· ⚪ brak klucza"}</div>
+                      <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{intel.official}</div>
+                      <div style={{ fontSize: 12, marginTop: 2 }}>💬 {intel.casual}</div>
+                      <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>100% = najlepszy znany dziś agent/API. Ocena orientacyjna (wiedza do 2026).</div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
               <summary id="set-keys" style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🔑 Klucze API (chmura) — kliknij, by rozwinąć</summary>
