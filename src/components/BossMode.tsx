@@ -8,6 +8,7 @@ import { setAutoConsent } from "../lib/permissions";
 import { useEscape } from "../hooks/useEscape";
 import { ROBOT_VOICE, BOSS_GREETING, bossSystem } from "../lib/boss";
 import { jarvisBriefing } from "../lib/capabilities";
+import { bossMemoryDigest } from "../lib/bossMemory";
 import { hasUsableBrain } from "../lib/brain";
 import { parsePlan, currentStep } from "../lib/agentPlan";
 import { bestBrain, bestFreeBrain } from "../lib/league";
@@ -59,7 +60,7 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
     let cancelled = false;
     // PEŁNY DOSTĘP tylko przez czas otwartego Trybu Szefa — zdejmujemy przy zamknięciu.
     if (fullAccess) setAutoConsent(true);
-    const persona = `${bossSystem(fullAccess, store.settings.userName)}\n\n${jarvisBriefing()}`;
+    const persona = [bossSystem(fullAccess, store.settings.userName), jarvisBriefing(), bossMemoryDigest()].filter(Boolean).join("\n\n");
     const prefer = brain ? { provider: brain.provider as ProviderId, model: brain.model } : undefined;
     const loop = new ConversationLoop(
       (s, d) => {
@@ -87,6 +88,7 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
       ROBOT_VOICE,
       persona,
       prefer,
+      { verify: true, captureDecisions: true, stallMs: 9000 },
     );
     loopRef.current = loop;
     void (async () => {

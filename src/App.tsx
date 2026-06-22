@@ -25,6 +25,7 @@ import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } fr
 import { isBossSummon } from "./lib/boss";
 import { completionReport } from "./lib/completion";
 import { healthIssues, topIssue, newIssues, alertText } from "./lib/watchdog";
+import { valueToday, prettyMinutes } from "./lib/valueLog";
 import { rememberFact } from "./lib/memory";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
 import { notifySummary } from "./lib/notifyCenter";
@@ -1289,6 +1290,17 @@ export default function App() {
             </span>
             <button className="chip on" onClick={apply}>{step.patch ? "Zrób" : "Otwórz"}</button>
             <button className="chip" onClick={() => setCompletionHidden(true)} title="Później">✕</button>
+          </div>
+        );
+      })()}
+
+      {/* ✨ Wartość dnia — co JARVIS realnie zrobił za Ciebie (z audytu). Etyczny haczyk. */}
+      {(() => {
+        const v = valueToday(store.data.audit || []);
+        if (v.actions < 1) return null;
+        return (
+          <div className="value-card" onClick={() => setShowAudit(true)} title="Zobacz, co JARVIS zrobił (dziennik działań)">
+            ✨ Dziś JARVIS zrobił za Ciebie <b>{v.actions}</b> {v.actions === 1 ? "rzecz" : v.actions < 5 ? "rzeczy" : "rzeczy"} — oszczędził Ci {prettyMinutes(v.minutes)}.
           </div>
         );
       })()}

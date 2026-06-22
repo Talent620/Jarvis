@@ -1,6 +1,9 @@
 import { createListener, speak, stopSpeaking, isSpeechSupported, type VoiceListener } from "./voice";
 import { askJarvis } from "./brain";
 import { store } from "./store";
+import { needsVerification, verifyAndCorrect } from "./selfVerify";
+import { detectDecision } from "./decisions";
+import { recordBossDecision } from "./bossMemory";
 import type { Msg, ProviderId } from "./providers/types";
 import type { Settings } from "../types";
 
@@ -25,6 +28,8 @@ export class ConversationLoop {
     private systemSuffix?: string,
     // Preferowany („najmocniejszy zmierzony") mózg — auto-router Szefa.
     private prefer?: { provider: ProviderId; model: string },
+    // Opcje Szefa: samoweryfikacja trudnych zadań, pamięć decyzji, watchdog czasu.
+    private opts: { verify?: boolean; captureDecisions?: boolean; stallMs?: number } = {},
   ) {}
 
   static supported(): boolean {
@@ -79,13 +84,36 @@ export class ConversationLoop {
     this.onCaption("🗣 " + text);
     this.onState("thinking");
     this.history.push({ role: "user", content: text });
+    // Pamięć decyzji: jeśli padło ustalenie/zobowiązanie — zapamiętaj na przyszłe sesje.
+    if (this.opts.captureDecisions) {
+      const d = detectDecision(text);
+      if (d) recordBossDecision(d.due ? `${d.statement} (termin: ${d.due})` : d.statement);
+    }
+    // Watchdog czasu: gdy myślenie się przeciąga, Szef zapewnia, że pracuje (nie znika w ciszy).
+    let stalled = false;
+    const stall = window.setTimeout(() => {
+      if (this.closed) return;
+      stalled = true;
+      const m = "Pracuję nad tym dłużej niż zwykle — już wracam z wynikiem.";
+      this.onCaption("⏳ " + m);
+      void speak(m, { ...store.settings, speak: true, ...this.voiceTune }).catch(() => {});
+    }, this.opts.stallMs && this.opts.stallMs > 0 ? this.opts.stallMs : 9000);
     try {
-      const reply = await askJarvis(this.history.slice(-12), undefined, undefined, this.systemSuffix, this.prefer);
+      let reply = await askJarvis(this.history.slice(-12), undefined, undefined, this.systemSuffix, this.prefer);
+      // Samoweryfikacja + eskalacja: trudne zadanie sprawdza drugi, mocniejszy przebieg.
+      if (this.opts.verify && needsVerification(text)) {
+        this.onCaption("🔎 Sprawdzam wynik…");
+        const v = await verifyAndCorrect(text, reply.text);
+        if (v.corrected) reply = { ...reply, text: v.text };
+      }
+      window.clearTimeout(stall);
       this.history.push({ role: "assistant", content: reply.text });
       this.onCaption(reply.text);
       this.onState("speaking");
+      if (stalled) stopSpeaking(); // ucisz „jeszcze pracuję", zanim podasz wynik
       await speak(reply.text, { ...store.settings, speak: true, ...this.voiceTune });
     } catch (e) {
+      window.clearTimeout(stall);
       this.history.pop(); // zdejmij nieodpowiedzianą wiadomość użytkownika — historia musi zostać sparowana
       this.onState("error", e instanceof Error ? e.message : String(e));
     } finally {
