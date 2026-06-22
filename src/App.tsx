@@ -22,6 +22,7 @@ const HeadsetMode = lazy(() => import("./components/HeadsetMode"));
 import { watchHeadset } from "./lib/headset";
 import { toast } from "./lib/toast";
 import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } from "./lib/decisions";
+import { isBossSummon } from "./lib/boss";
 import { rememberFact } from "./lib/memory";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
 import { notifySummary } from "./lib/notifyCenter";
@@ -78,6 +79,7 @@ import Mind from "./components/Mind";
 const GoalRunner = lazy(() => import("./components/GoalRunner"));
 const CommandPalette = lazy(() => import("./components/CommandPalette"));
 const Recall = lazy(() => import("./components/Recall"));
+const BossMode = lazy(() => import("./components/BossMode"));
 import { guardianAutoHeal } from "./lib/guardian";
 import { guardianScan } from "./lib/guardianAgents";
 import { checkForUpdate, applyUpdate } from "./lib/updater";
@@ -186,6 +188,7 @@ export default function App() {
   const [showCmd, setShowCmd] = useState(false);
   const [showRecall, setShowRecall] = useState(false);
   const [recallSeed, setRecallSeed] = useState("");
+  const [showBoss, setShowBoss] = useState(false);
   const [tip, setTip] = useState<Tip | null>(null);
   const [decision, setDecision] = useState<DecisionCandidate | null>(null); // 🧠 auto-capture
   const tipCountRef = useRef(0);
@@ -254,6 +257,7 @@ export default function App() {
       open("status", "Stan systemu", setShowStatus, "🩺", "diagnostyka co dziala"),
       open("recall", "🔎 Recall — znajdź wszystko", setShowRecall, "🔎", "szukaj znajdz historia czat dziennik pamiec notatki recall"),
       open("data", "Dane i kopia", setShowPanels, "🗄", "backup eksport dane kopia"),
+      act("boss", "⬢ Tryb Szefa — agent głosowy (Matrix)", "⬢", "szef boss matrix agent glos rozkaz wykonaj strażnik"),
       act("voicemode", "Tryb Słuchawki (rozmowa)", "🎧", "glos hands-free rozmowa"),
       act("live", "Rozmowa na żywo", "☎", "live glos telefon"),
       act("newchat", "Nowa rozmowa", "＋", "wyczysc reset czat"),
@@ -446,6 +450,9 @@ export default function App() {
     setInterim("");
     stopSpeaking();
     buzz(14); // subtelna haptyka przy wysłaniu
+
+    // ⬢ „Szef" (wpisane lub wypowiedziane) → przywołaj pełnoekranowego agenta głosowego.
+    if (isBossSummon(text)) { setShowBoss(true); return; }
 
     // 💡 Kontekstowa porada „w samą porę": gdy treść pasuje do funkcji (np. „zaplanuj…" → Zleć cel),
     // podpowiedz ją. Nienachalnie: respektuje ustawienie i limit sesji, raz na funkcję.
@@ -1021,6 +1028,7 @@ export default function App() {
 
   // Świeże domknięcia dla akcji ⌘K (po zdefiniowaniu handlerów).
   actionsRef.current = {
+    boss: () => { stopSpeaking(); listenerRef.current?.stop(); setShowBoss(true); },
     voicemode: () => { stopSpeaking(); listenerRef.current?.stop(); setShowVoice(true); },
     live: () => { stopSpeaking(); listenerRef.current?.stop(); setShowLive(true); },
     newchat: newChat,
@@ -1430,6 +1438,11 @@ export default function App() {
             onClose={() => { setShowRecall(false); setRecallSeed(""); }}
             onOpenChat={(id) => { const s = loadChats().find((c) => c.id === id); if (s) openChat(s); }}
           />
+        </ScreenBoundary>
+      )}
+      {showBoss && (
+        <ScreenBoundary>
+          <BossMode onClose={() => setShowBoss(false)} />
         </ScreenBoundary>
       )}
       {showWeb && (

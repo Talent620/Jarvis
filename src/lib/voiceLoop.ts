@@ -2,6 +2,7 @@ import { createListener, speak, stopSpeaking, isSpeechSupported, type VoiceListe
 import { askJarvis } from "./brain";
 import { store } from "./store";
 import type { Msg } from "./providers/types";
+import type { Settings } from "../types";
 
 export type LoopState = "listening" | "thinking" | "speaking" | "error" | "closed";
 
@@ -17,6 +18,8 @@ export class ConversationLoop {
   constructor(
     private onState: (s: LoopState, detail?: string) => void,
     private onCaption: (text: string) => void,
+    // Dostrojenie głosu (np. „robot" w Trybie Szefa): nadpisuje pola ustawień przy TTS.
+    private voiceTune?: Partial<Settings>,
   ) {}
 
   static supported(): boolean {
@@ -65,7 +68,7 @@ export class ConversationLoop {
       this.history.push({ role: "assistant", content: reply.text });
       this.onCaption(reply.text);
       this.onState("speaking");
-      await speak(reply.text, { ...store.settings, speak: true });
+      await speak(reply.text, { ...store.settings, speak: true, ...this.voiceTune });
     } catch (e) {
       this.history.pop(); // zdejmij nieodpowiedzianą wiadomość użytkownika — historia musi zostać sparowana
       this.onState("error", e instanceof Error ? e.message : String(e));

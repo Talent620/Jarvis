@@ -1,0 +1,29 @@
+import { describe, it, expect } from "vitest";
+import { isBossSummon, ROBOT_VOICE, BOSS_GREETING } from "../src/lib/boss";
+
+describe("isBossSummon — przywołanie Trybu Szefa", () => {
+  it("łapie jasne wezwania", () => {
+    for (const t of ["szef", "Szefie", "hej szef", "OK szef", "tryb szefa", "przywołaj szefa", "wezwij szefa", "szef!", "Szefie."]) {
+      expect(isBossSummon(t)).toBe(true);
+    }
+  });
+
+  it("NIE łapie zdań, w których „szef” znaczy co innego", () => {
+    for (const t of ["mój szef dzwonił", "powiedz szefowi że jadę", "co u szefa", "szefkuchnia przepis", "jestem szefem firmy"]) {
+      expect(isBossSummon(t)).toBe(false);
+    }
+  });
+
+  it("puste / śmieci → false", () => {
+    expect(isBossSummon("")).toBe(false);
+    expect(isBossSummon("   ")).toBe(false);
+  });
+});
+
+describe("profil głosu robota", () => {
+  it("wymusza systemowy silnik i niski ton (pitch), by brzmiał maszynowo", () => {
+    expect(ROBOT_VOICE.voiceMode).toBe("system");
+    expect(ROBOT_VOICE.voicePitch).toBeLessThan(1);
+    expect(BOSS_GREETING.length).toBeGreaterThan(0);
+  });
+});
