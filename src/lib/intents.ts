@@ -17,29 +17,24 @@ function parseRunUrl(url: string): string | null {
 }
 
 const isWake = (url?: string) => !!url && url.replace(/\/$/, "") === "jarvis://wake";
+const isBoss = (url?: string) => !!url && url.replace(/\/$/, "") === "jarvis://boss";
 
-export function registerIntents(onCommand: (text: string) => void, onWake?: () => void): () => void {
+export function registerIntents(onCommand: (text: string) => void, onWake?: () => void, onBoss?: () => void): () => void {
   let disposed = false;
+
+  const route = (url?: string) => {
+    if (isBoss(url)) { onBoss?.(); return; }
+    if (isWake(url)) { onWake?.(); return; }
+    const cmd = url ? parseRunUrl(url) : null;
+    if (cmd) onCommand(cmd);
+  };
 
   // Skróty / deep-linki przy uruchomieniu.
   App.getLaunchUrl()
-    .then((res) => {
-      if (disposed) return;
-      if (isWake(res?.url)) onWake?.();
-      else {
-        const cmd = res?.url ? parseRunUrl(res.url) : null;
-        if (cmd) onCommand(cmd);
-      }
-    })
+    .then((res) => { if (!disposed) route(res?.url); })
     .catch(() => {});
 
-  const sub = App.addListener("appUrlOpen", (data) => {
-    if (isWake(data.url)) onWake?.();
-    else {
-      const cmd = parseRunUrl(data.url);
-      if (cmd) onCommand(cmd);
-    }
-  });
+  const sub = App.addListener("appUrlOpen", (data) => route(data.url));
 
   // Udostępnienia (Android Share → JARVIS).
   const checkShare = () => {

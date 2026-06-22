@@ -5,6 +5,7 @@ import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED, mo
 import { intelForModel, intelColor } from "../lib/modelIntel";
 import { runIqProbe, verdict, loadIqResult, loadIqResults, saveIqResult } from "../lib/iqProbe";
 import { leagueRanking } from "../lib/league";
+import { systemActionsAvailable, saOpenAccessibility } from "../lib/systemActions";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
@@ -1707,6 +1708,21 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </span>
                 <Toggle on={!!s.bossFullAccess} onClick={() => set({ bossFullAccess: !s.bossFullAccess })} />
               </div>
+              {systemActionsAvailable() && (
+                <div className="row">
+                  <span>
+                    📱 Sterowanie telefonem (pisz/klikaj w aplikacjach)
+                    <br />
+                    <span className="muted">
+                      Żeby Szef mógł realnie <b>wpisywać i klikać</b> w innych aplikacjach (np. wypełnić
+                      rejestrację), włącz RAZ usługę <b>Dostępności „JARVIS — sterowanie”</b>.
+                    </span>
+                  </span>
+                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }} onClick={() => void saOpenAccessibility()}>
+                    Włącz
+                  </button>
+                </div>
+              )}
               <div className="row">
                 <span>
                   🧠 Pamięć on-device (embeddingi lokalnie)

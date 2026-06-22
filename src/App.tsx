@@ -352,6 +352,7 @@ export default function App() {
         if (store.settings.speak) void speak(text, store.settings).catch(() => {});
         if (micSupported) startListening(false);
       },
+      () => { stopSpeaking(); listenerRef.current?.stop(); setShowBoss(true); }, // jarvis://boss (hotword „szef”)
     );
     if (store.settings.backgroundWake) startBackgroundWake();
     // Bramka zgód i podgląd kroków agenta.

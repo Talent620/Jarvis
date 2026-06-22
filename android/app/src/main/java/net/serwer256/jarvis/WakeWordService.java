@@ -58,7 +58,7 @@ public class WakeWordService extends Service {
         }
         Notification n = new NotificationCompat.Builder(this, CHANNEL)
                 .setContentTitle("JARVIS nasłuchuje")
-                .setContentText("Powiedz \"Jarvis\", aby uruchomić.")
+                .setContentText("Powiedz \"Szef\" (agent) lub \"Jarvis\", aby uruchomić.")
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -119,10 +119,21 @@ public class WakeWordService extends Service {
         ArrayList<String> list = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         if (list == null) return;
         for (String s : list) {
-            if (s != null && s.toLowerCase().contains("jarvis")) {
+            if (s == null) continue;
+            String t = s.toLowerCase();
+            // „szef" → otwórz Tryb Szefa (centralny agent); „jarvis" → zwykły nasłuch.
+            if (t.contains("szef")) {
                 if (!triggered) {
                     triggered = true;
-                    launchApp();
+                    launchApp("jarvis://boss");
+                    handler.postDelayed(() -> triggered = false, 4000);
+                }
+                return;
+            }
+            if (t.contains("jarvis")) {
+                if (!triggered) {
+                    triggered = true;
+                    launchApp("jarvis://wake");
                     handler.postDelayed(() -> triggered = false, 4000);
                 }
                 return;
@@ -130,9 +141,9 @@ public class WakeWordService extends Service {
         }
     }
 
-    private void launchApp() {
+    private void launchApp(String uri) {
         try {
-            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("jarvis://wake"));
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
             i.setPackage(getPackageName());
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             startActivity(i);

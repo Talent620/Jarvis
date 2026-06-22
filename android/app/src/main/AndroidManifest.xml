@@ -46,12 +46,26 @@
 
         </activity>
 
-        <!-- Nasłuch słowa-klucza "Jarvis" w tle -->
+        <!-- Nasłuch słowa-klucza "Jarvis"/"Szef" w tle -->
         <service
             android:name=".WakeWordService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+
+        <!-- Usługa Dostępności — pełne sterowanie telefonem (pisz/dotknij/akcje) dla Szefa.
+             Użytkownik włącza ją RAZ w Ustawieniach → Dostępność. -->
+        <service
+            android:name=".JarvisAccessibilityService"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -77,6 +91,8 @@
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- Otwieranie dowolnej zainstalowanej aplikacji po nazwie (Szef) -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
     <!-- Otwieranie aplikacji zewnętrznych / dzwonienie (AppLauncher) -->
     <queries>

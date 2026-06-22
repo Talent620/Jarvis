@@ -4,6 +4,7 @@
     <string name="title_activity_main">JARVIS</string>
     <string name="package_name">net.serwer256.jarvis</string>
     <string name="custom_url_scheme">net.serwer256.jarvis</string>
+    <string name="accessibility_desc">Pozwala Szefowi JARVIS-a wpisywać tekst, dotykać ekranu i wykonywać akcje (wstecz, ekran główny) w Twoim imieniu — gdy o to poprosisz głosem.</string>
     <string name="sc_briefing_short">Raport</string>
     <string name="sc_briefing_long">Raport poranny</string>
     <string name="sc_weather_short">Pogoda</string>

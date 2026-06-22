@@ -18,6 +18,7 @@ export function capabilitiesDigest(): string {
     "• Pamięć: profil użytkownika, pamięć długoterminowa (fakty + Mem0), Umysł JARVISA, World Model, 🔎 Recall (przeszukaj wszystko lokalnie).",
     "• System: Stan systemu (zielone/czerwone), Koszty AI, Dziennik działań (audyt + cofanie), Strażnik (diagnoza/naprawa), ⌘K (szybkie polecenia), Gadżety, Admin/licencje.",
     "• Działania (narzędzia agenta): zadania, notatki, przypomnienia, kalendarz, lista zakupów, pamięć, leady, research w sieci, Gmail (szukaj/wyślij), telefon/SMS, otwieranie stron/aplikacji, nawigacja, smart-home, sterowanie pulpitem (Windows).",
+    "• PEŁNE sterowanie telefonem (Android): android_open_app (otwórz aplikację), android_open_settings (ekran ustawień), android_type (wpisz w aktywne pole), android_tap (dotknij x,y), android_global (wstecz/ekran główny/ostatnie/powiadomienia). Używaj ich, by realnie klikać i pisać w telefonie — zawsze z potwierdzeniem.",
     "Gdy użytkownik chce coś zrobić — użyj właściwego narzędzia albo otwórz właściwy ekran; nie zmyślaj funkcji, których nie ma.",
   ].join("\n");
 }

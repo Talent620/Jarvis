@@ -1,6 +1,7 @@
 import { store, uid } from "./store";
 import { fetchTimeout } from "./http";
 import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
+import { saType, saTap, saGlobal, saOpenApp, saOpenSettings } from "./systemActions";
 import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
 import { getWeather } from "./weather";
 import { scheduleReminder, scheduleTimer } from "./notifications";
@@ -51,6 +52,7 @@ const obj = (properties: Record<string, unknown>, required: string[] = []) => ({
 });
 
 const str = (description: string) => ({ type: "string", description });
+const num = (description: string) => ({ type: "number", description });
 
 // --- Rejestr narzędzi: definicja + wykonawca w jednym miejscu ---
 
@@ -1376,6 +1378,47 @@ const tools: Tool[] = [
       const r = await pushLeadStatusToSalesOs({ ...lead, status: st }, st);
       return r ? r.message : `✅ Status „${lead.company}" → ${st}.`;
     },
+  },
+  // === Pełne sterowanie telefonem (Android, przez usługę Dostępności) — moc Szefa ===
+  {
+    def: {
+      name: "android_type",
+      description: "Wpisz tekst w aktualnie aktywne pole na ekranie telefonu (Android). Najpierw upewnij się, że kursor jest w polu.",
+      input_schema: obj({ text: str("Tekst do wpisania") }, ["text"]),
+    },
+    run: ({ text }) => saType(String(text ?? "")),
+  },
+  {
+    def: {
+      name: "android_tap",
+      description: "Dotknij ekranu telefonu w punkcie (współrzędne w pikselach od lewego-górnego rogu).",
+      input_schema: obj({ x: num("Współrzędna X (px)"), y: num("Współrzędna Y (px)") }, ["x", "y"]),
+    },
+    run: ({ x, y }) => saTap(Number(x), Number(y)),
+  },
+  {
+    def: {
+      name: "android_global",
+      description: "Akcja globalna telefonu: back (wstecz), home (ekran główny), recents (ostatnie), notifications (powiadomienia).",
+      input_schema: obj({ action: str("back | home | recents | notifications") }, ["action"]),
+    },
+    run: ({ action }) => saGlobal(String(action ?? "")),
+  },
+  {
+    def: {
+      name: "android_open_app",
+      description: "Otwórz aplikację na telefonie po nazwie (np. WhatsApp, Gmail, Ustawienia, Chrome).",
+      input_schema: obj({ name: str("Nazwa aplikacji") }, ["name"]),
+    },
+    run: ({ name }) => saOpenApp(String(name ?? "")),
+  },
+  {
+    def: {
+      name: "android_open_settings",
+      description: "Otwórz Ustawienia systemu Androida; opcjonalnie sekcja: wifi, bluetooth, sound, display, location, battery, apps.",
+      input_schema: obj({ section: str("Sekcja ustawień (opcjonalnie)") }),
+    },
+    run: ({ section }) => saOpenSettings(section ? String(section) : undefined),
   },
 ];
 

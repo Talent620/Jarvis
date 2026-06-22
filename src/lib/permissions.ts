@@ -30,6 +30,9 @@ const RISK: Record<string, Risk> = {
   // sterowanie komputerem (Windows) — wymaga zgody
   desktop_launch_app: "outbound", desktop_open: "outbound", desktop_power: "outbound",
   desktop_volume: "outbound", desktop_media: "outbound", desktop_type: "outbound", desktop_hotkey: "outbound",
+  // pełne sterowanie telefonem (Android, usługa Dostępności) — wymaga zgody
+  android_type: "outbound", android_tap: "outbound", android_global: "outbound",
+  android_open_app: "outbound", android_open_settings: "outbound",
 };
 
 export function riskOf(tool: string): Risk {

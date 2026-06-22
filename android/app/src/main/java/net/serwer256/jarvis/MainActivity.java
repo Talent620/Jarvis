@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(WakeWordPlugin.class);
         registerPlugin(NativeTtsPlugin.class);
+        registerPlugin(SystemActionsPlugin.class);
         super.onCreate(savedInstanceState);
         // Okno na telefonie: domyślny układ Androida (fitsSystemWindows) sprawia, że
         // WebView jest renderowany PONIŻEJ paska stanu i NAD paskiem nawigacji —
