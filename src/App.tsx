@@ -1258,6 +1258,9 @@ export default function App() {
         thinking={busy}
         needsSetup={!hasUsableBrain()}
         onOpenKeys={() => setShowSettings(true)}
+        onBoss={() => setShowBoss(true)}
+        onMemory={() => setShowMemory(true)}
+        onVoice={() => setShowVoice(true)}
         tasksToday={(store.data.tasks || []).filter((t) => !t.done && (t.due || "").slice(0, 10) === new Date().toISOString().slice(0, 10)).length}
       />
 

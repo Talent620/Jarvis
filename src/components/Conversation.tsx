@@ -135,6 +135,9 @@ export default function Conversation({
   thinking,
   needsSetup,
   onOpenKeys,
+  onMemory,
+  onBoss,
+  onVoice,
   tasksToday,
 }: {
   messages: ChatMessage[];
@@ -145,6 +148,9 @@ export default function Conversation({
   thinking?: boolean;
   needsSetup?: boolean;
   onOpenKeys?: () => void;
+  onMemory?: () => void;
+  onBoss?: () => void;
+  onVoice?: () => void;
   tasksToday?: number;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
@@ -189,6 +195,29 @@ export default function Conversation({
           {proactive && (
             <div className="journal-card" style={{ marginTop: 14, padding: "10px 12px", textAlign: "left", borderLeft: "3px solid var(--cyan)" }}>
               <span style={{ fontSize: 13.5, lineHeight: 1.5 }}>🧭 {proactive}</span>
+            </div>
+          )}
+          {/* Pozycjonowanie: JEDNA idea — AI, które Cię zna, pamięta i działa. Trzy filary. */}
+          {!needsSetup && (onMemory || onBoss || onVoice) && (
+            <div className="pillars">
+              <div className="pillars-tag">Jedno AI, które Cię zna, pamięta Twoje życie i działa za Ciebie.</div>
+              <div className="pillars-row">
+                {onBoss && (
+                  <button className="pillar" onClick={onBoss}>
+                    <span className="pillar-ico">⬢</span><b>Działa</b><small>agent: zrób za mnie</small>
+                  </button>
+                )}
+                {onMemory && (
+                  <button className="pillar" onClick={onMemory}>
+                    <span className="pillar-ico">🧠</span><b>Pamięta</b><small>zna Twoje życie</small>
+                  </button>
+                )}
+                {onVoice && (
+                  <button className="pillar" onClick={onVoice}>
+                    <span className="pillar-ico">🎙</span><b>Rozmawia</b><small>naturalnie, głosem</small>
+                  </button>
+                )}
+              </div>
             </div>
           )}
           {needsSetup ? (

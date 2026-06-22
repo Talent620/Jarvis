@@ -1875,6 +1875,31 @@ input:focus, textarea:focus, select:focus {
 }
 .value-card b { color: #2fbf71; }
 
+/* 🎯 Trzy filary — pozycjonowanie „jedno AI: zna, pamięta, działa" w empty state. */
+.pillars { margin: 18px 0 6px; }
+.pillars-tag { font-size: 13.5px; color: var(--text); opacity: 0.92; margin-bottom: 12px; line-height: 1.5; }
+.pillars-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pillar {
+  flex: 1 1 110px;
+  max-width: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--line-strong);
+  background: rgba(108, 231, 255, 0.05);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.2s, background 0.2s;
+}
+.pillar:hover { transform: translateY(-2px); background: rgba(108, 231, 255, 0.1); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+.pillar:active { transform: scale(0.97); }
+.pillar-ico { font-size: 22px; line-height: 1.1; color: var(--cyan); }
+.pillar b { font-size: 14px; }
+.pillar small { font-size: 11px; color: var(--text-dim); }
+
 /* 💬 Sugestie dalszych pytań — chipy „zapytaj dalej" nad polem czatu. */
 .followups {
   display: flex;
