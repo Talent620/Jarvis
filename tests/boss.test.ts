@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isBossSummon, ROBOT_VOICE, BOSS_GREETING, bossSystem } from "../src/lib/boss";
+import { isBossSummon, ROBOT_VOICE, BOSS_GREETING, bossSystem, BOSS_DOCTRINE } from "../src/lib/boss";
 
 describe("isBossSummon — przywołanie Trybu Szefa", () => {
   it("łapie jasne wezwania", () => {
@@ -38,6 +38,14 @@ describe("bossSystem — persona „przewiduj i potwierdzaj”", () => {
   it("pełny dostęp → wprost pozwala wykonywać; bez niego → ostrożnie", () => {
     expect(bossSystem(true, "Artur")).toMatch(/PEŁNY DOSTĘP/);
     expect(bossSystem(false, "Artur")).toMatch(/tylko po wyraźnym/i);
+  });
+
+  it("zawiera DOKTRYNĘ (przelaną metodę): sprawdzaj-nie-zgaduj, działaj, uczciwość", () => {
+    const p = bossSystem(true, "Artur");
+    expect(p).toContain("DOKTRYNA");
+    expect(BOSS_DOCTRINE).toMatch(/NIE ZGADUJ/);
+    expect(BOSS_DOCTRINE).toMatch(/UCZCIWOŚĆ/);
+    expect(BOSS_DOCTRINE).toMatch(/DZIAŁAJ/);
   });
 });
 

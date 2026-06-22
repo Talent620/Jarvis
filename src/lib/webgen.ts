@@ -32,6 +32,21 @@ const BASE = [
   "- REALNA treść po polsku dopasowana do tematu (nie lorem ipsum): chwytliwe nagłówki, konkretne opisy, sensowne CTA.",
 ].join("\n");
 
+// Warstwa „klasa światowa / pionierska" — techniki i bogactwo, które oddzielają stronę
+// nagradzaną od przeciętnej. Doklejana zawsze; podnosi pułap bez psucia niezawodności.
+const PREMIUM = [
+  "POZIOM PIONIERSKI (to ma robić wrażenie „jak to zrobione?!” — a działać bezbłędnie offline z jednego pliku):",
+  "- INTRO/PRELOADER: krótka, elegancka animacja wejścia (np. odsłonięcie nazwy/logo, 0.8–1.2 s), potem płynne ujawnienie strony. Z poszanowaniem prefers-reduced-motion.",
+  "- BOGACTWO SEKCJI: dla pełnych witryn 8–12 zróżnicowanych sekcji o różnym rytmie (pełnoekranowe vs gęste, jasne vs ciemne), nie monotonna lista kart.",
+  "- RUCH KLASY AWWWARDS: parallax na transform, sticky scroll storytelling, liczniki „od zera” (count-up) przy wejściu, sekwencyjne reveal z opóźnieniami, magnetyczne/animowane przyciski, animowany podpis SVG (stroke-dashoffset).",
+  "- TŁO Z CHARAKTEREM: gradient-mesh/aurora, subtelny szum (SVG feTurbulence jako tekstura), świetliste plamy podążające delikatnie kursorem, albo animowana siatka — jeden spójny motyw, nie wszystko naraz.",
+  "- DETALE PRO: spójny system w :root (skala typografii, odstępy, promienie, cienie, easingi), stany focus widoczne i estetyczne, idealny kontrast (WCAG AA), :focus-visible, aria-labels, alt-y.",
+  "- WYDAJNOŚĆ: obrazy z loading=lazy i sensownymi wymiarami, animacje na transform/opacity (nie layout), will-change oszczędnie, IntersectionObserver zamiast nasłuchu scroll.",
+  "- KROPKA NAD i: dopracowana stopka, micro-copy z osobowością, spójne ikony inline SVG, zero martwych linków (kotwice działają), płynne przejścia między sekcjami.",
+  "- Jeśli pasuje do tematu: tryb jasny/ciemny wg prefers-color-scheme, przełącznik motywu w czystym JS, zapamiętany w localStorage.",
+  "Cel: gość ma pomyśleć „to najlepsza strona w tej branży, jaką widziałem”. Ambitnie, ale ZAWSZE kompletnie i bez błędów w jednym pliku.",
+].join("\n");
+
 // Niesztampowe kierunki artystyczne — wymuszają wyrazisty, rozpoznawalny charakter (nie „kolejny szablon”).
 const STYLE_HINTS: Record<SiteStyle, string> = {
   auto: "KIERUNEK: dobierz oryginalny, niesztampowy styl najlepiej pasujący do branży — i konsekwentnie go pogłęb.",
@@ -85,7 +100,7 @@ export async function generateSite(
   kind: SiteKind = "auto",
   style: SiteStyle = "auto",
 ): Promise<{ html: string } | { error: string }> {
-  const system = `${BASE}\n\n${KIND_HINTS[kind] || KIND_HINTS.auto}\n\n${STYLE_HINTS[style] || STYLE_HINTS.auto}`;
+  const system = `${BASE}\n\n${PREMIUM}\n\n${KIND_HINTS[kind] || KIND_HINTS.auto}\n\n${STYLE_HINTS[style] || STYLE_HINTS.auto}`;
   const userMsg = current
     ? `Oto obecny kod strony:\n\n${current.slice(0, 14000)}\n\nWprowadź zmianę: ${prompt}\nZwróć PEŁNY, zaktualizowany plik HTML (od <!DOCTYPE html>), zachowując wysoki poziom wizualny i spójny styl.`
     : `Zbuduj stronę według opisu: ${prompt}`;
