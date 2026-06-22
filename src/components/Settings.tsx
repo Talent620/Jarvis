@@ -6,6 +6,7 @@ import { intelForModel, intelColor } from "../lib/modelIntel";
 import { runIqProbe, verdict, loadIqResult, loadIqResults, saveIqResult } from "../lib/iqProbe";
 import { leagueRanking } from "../lib/league";
 import { systemActionsAvailable, saOpenAccessibility } from "../lib/systemActions";
+import { FREE_STACK } from "../lib/freeMode";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
@@ -660,6 +661,26 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <span style={{ color: API_GREEN, fontWeight: 700 }}>🟢 API gotowe</span>
                 <span className="muted"> = klucz działa</span>
               </p>
+
+              {/* 🆓 Tryb darmowy — bez płatnego Claude'a, na najmocniejszych darmowych mózgach. */}
+              <div className="row" style={{ borderLeft: `3px solid ${API_GREEN}`, paddingLeft: 10 }}>
+                <span>
+                  🆓 <b style={{ color: API_GREEN }}>Tryb darmowy</b> — bez płatnego API (0 zł)
+                  <br />
+                  <span className="muted">
+                    Mózg działa wyłącznie na <b>darmowych</b> dostawcach (Gemini, Groq/Kimi, DeepSeek V3
+                    przez OpenRouter, Cerebras, Mistral) i lokalnie — <b>pomija płatnego Claude'a</b>.
+                    Auto-router i tak bierze najmocniejszy dostępny darmowy model. Jakość zostaje wysoka;
+                    na najtrudniejszych zadaniach Claude bywa lepszy, ale na co dzień różnica jest mała.
+                    {!FREE_STACK.some((f) => providerReady(f.provider)) && (
+                      <b style={{ color: "var(--gold)", display: "block", marginTop: 4 }}>
+                        Dodaj choć jeden darmowy klucz (np. Gemini — aistudio.google.com), inaczej nie będzie czym myśleć.
+                      </b>
+                    )}
+                  </span>
+                </span>
+                <Toggle on={!!s.freeMode} onClick={() => set({ freeMode: !s.freeMode })} />
+              </div>
               <div className="field">
                 <label>Dostawca</label>
                 <select value={s.provider} onChange={(e) => { set({ provider: e.target.value, model: "auto" }); if (e.target.value === "ollama") void warmNow(); /* rozgrzej model lokalny — pierwsza odpowiedź od ręki */ }}>

@@ -9,7 +9,7 @@ import { useEscape } from "../hooks/useEscape";
 import { ROBOT_VOICE, BOSS_GREETING, bossSystem } from "../lib/boss";
 import { jarvisBriefing } from "../lib/capabilities";
 import { parsePlan, currentStep } from "../lib/agentPlan";
-import { bestBrain } from "../lib/league";
+import { bestBrain, bestFreeBrain } from "../lib/league";
 import { loadIqResults } from "../lib/iqProbe";
 import { PROVIDER_LIST, PROVIDERS } from "../lib/providers/registry";
 import type { ProviderId } from "../lib/providers/types";
@@ -47,7 +47,7 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
   const brain = (() => {
     const ready = (id: ProviderId) => (id === "ollama" ? !!store.settings.ollamaUrl?.trim() : !!store.settings.keys[id]?.trim());
     const inputs = PROVIDER_LIST.filter((p) => p.id !== "ollama").map((p) => ({ provider: p.id, model: p.defaultModel, label: p.label, ready: ready(p.id) }));
-    return bestBrain(inputs, loadIqResults());
+    return store.settings.freeMode ? bestFreeBrain(inputs, loadIqResults()) : bestBrain(inputs, loadIqResults());
   })();
   const brainLabel = brain ? `${PROVIDERS[brain.provider as ProviderId]?.label || brain.provider}` : "auto";
 

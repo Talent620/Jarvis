@@ -453,6 +453,9 @@ export interface Settings {
   /** Tryb Szefa — PEŁNY DOSTĘP: agent głosowy może użyć WSZYSTKICH narzędzi/akcji bez ekranów
    *  zgody (sam przewiduje i potwierdza głosem). Działa tylko, gdy Tryb Szefa jest otwarty. */
   bossFullAccess?: boolean;
+  /** 🆓 Tryb darmowy — mózg działa wyłącznie na darmowych/lokalnych dostawcach (pomija płatnego
+   *  Claude'a). Auto-router i tak wybiera najmocniejszy dostępny darmowy model. */
+  freeMode?: boolean;
   /** Tryb nieocenzurowany — działa realnie tylko z modelem lokalnym (Ollama):
    *  JARVIS nie dokłada własnych zastrzeżeń/moralizowania i odpowiada wprost. */
   unfilteredLocal: boolean;

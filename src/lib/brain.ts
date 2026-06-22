@@ -18,6 +18,7 @@ import { estimateConfidence, isLowConfidence } from "./confidence";
 import { speculativeAnswer } from "./speculative";
 import { localRefine, critiqueInstruction } from "./localRefine";
 import { VERIFY_SYSTEM, buildVerifyUser, verifyVerdict } from "./verify";
+import { freeOnly } from "./freeMode";
 import { localSelfConsistency } from "./localConsensus";
 import { conversationStyleDirectives } from "./conversationStyle";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
@@ -168,7 +169,15 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
 
   // Refleks na początek + usuń duplikaty dostawcy (pierwsze wystąpienie wygrywa).
   const seen = new Set<ProviderId>();
-  return [...localHead, ...base].filter((o) => (seen.has(o.provider) ? false : (seen.add(o.provider), true)));
+  const out = [...localHead, ...base].filter((o) => (seen.has(o.provider) ? false : (seen.add(o.provider), true)));
+  // 🆓 Tryb darmowy: odetnij płatnego Claude'a — zostają same darmowe/lokalne mózgi.
+  // Zabezpieczenie: gdyby to opróżniło łańcuch (brak darmowego klucza), zostaw oryginał,
+  // żeby JARVIS w ogóle odpowiedział (UI i tak namawia do dodania darmowego klucza).
+  if (s.freeMode) {
+    const free = freeOnly(out);
+    if (free.length) return free;
+  }
+  return out;
 }
 
 /** Kontekst per-żądanie (zamiast globali modułu — bez przecieku między równoległymi askJarvis

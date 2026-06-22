@@ -2,7 +2,9 @@
 // Łączy orientacyjny poziom (modelIntel) z wynikiem zmierzonym u Ciebie (iqProbe) i wskazuje
 // najmocniejszy gotowy model. „Auto-router" może z tego skorzystać do trudnych rozkazów.
 import { intelForModel } from "./modelIntel";
+import { isFreeProvider } from "./freeMode";
 import type { IqResult } from "./iqProbe";
+import type { ProviderId } from "./providers/types";
 
 export interface LeagueEntry {
   provider: string;
@@ -44,4 +46,10 @@ export function leagueRanking(inputs: LeagueInput[], results: Record<string, IqR
 export function bestBrain(inputs: LeagueInput[], results: Record<string, IqResult>): LeagueEntry | null {
   const ranked = leagueRanking(inputs, results).filter((r) => r.ready);
   return ranked[0] ?? null;
+}
+
+/** Najmocniejszy GOTOWY DARMOWY mózg (do Trybu darmowego / auto-routera bez opłat). */
+export function bestFreeBrain(inputs: LeagueInput[], results: Record<string, IqResult>): LeagueEntry | null {
+  const free = inputs.filter((i) => isFreeProvider(i.provider as ProviderId));
+  return bestBrain(free, results);
 }

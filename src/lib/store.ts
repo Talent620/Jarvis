@@ -95,6 +95,7 @@ const defaultSettings: Settings = {
   guardianAutopilot: false,
   requireConsentAlways: false,
   bossFullAccess: false,
+  freeMode: false,
   unfilteredLocal: false,
   deepThink: false,
   verifyHard: false,
