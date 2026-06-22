@@ -14,6 +14,7 @@ export class ConversationLoop {
   private history: Msg[] = [];
   private closed = false;
   private processing = false;
+  private wantListen = false; // czy wznawiać nasłuch (tryb głosowy); w trybie tekstowym false
 
   constructor(
     private onState: (s: LoopState, detail?: string) => void,
@@ -32,10 +33,21 @@ export class ConversationLoop {
 
   start(): void {
     if (!ConversationLoop.supported()) {
-      this.onState("error", "To urządzenie nie wspiera rozpoznawania mowy w przeglądarce. Użyj trybu Gemini Live (z kluczem Gemini).");
+      // Niezawodność: brak STT NIE wyłącza Szefa — zostaje tor tekstowy (say()).
+      this.onState("error", "Mowa niedostępna na tym urządzeniu — wpisz polecenie poniżej (Szef i tak wykona).");
       return;
     }
+    this.wantListen = true;
     this.listenOnce();
+  }
+
+  /** Tor tekstowy (fallback): wpisane polecenie idzie tą samą drogą co usłyszane. */
+  say(text: string): void {
+    const t = (text || "").trim();
+    if (this.closed || this.processing || !t) return;
+    this.processing = true;
+    this.listener?.stop();
+    void this.handle(t);
   }
 
   private listenOnce(): void {
@@ -78,7 +90,8 @@ export class ConversationLoop {
       this.onState("error", e instanceof Error ? e.message : String(e));
     } finally {
       this.processing = false;
-      if (!this.closed) this.listenOnce();
+      // Wznów nasłuch tylko w trybie głosowym; w trybie tekstowym czekamy na kolejne say().
+      if (!this.closed && this.wantListen) this.listenOnce();
     }
   }
 

@@ -8,6 +8,7 @@ import { setAutoConsent } from "../lib/permissions";
 import { useEscape } from "../hooks/useEscape";
 import { ROBOT_VOICE, BOSS_GREETING, bossSystem } from "../lib/boss";
 import { jarvisBriefing } from "../lib/capabilities";
+import { hasUsableBrain } from "../lib/brain";
 import { parsePlan, currentStep } from "../lib/agentPlan";
 import { bestBrain, bestFreeBrain } from "../lib/league";
 import { loadIqResults } from "../lib/iqProbe";
@@ -34,7 +35,10 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
   const [detail, setDetail] = useState("");
   const [plan, setPlan] = useState<string[]>([]); // tryb agenta wielokrokowego
   const [step, setStep] = useState(0); // który krok trwa (1-indeks)
+  const [input, setInput] = useState(""); // tor tekstowy (fallback, gdy mowa zawiedzie)
   const coreRef = useRef<HTMLDivElement>(null);
+  const loopRef = useRef<ConversationLoop | null>(null);
+  const lastErrRef = useRef(""); // nie powtarzaj w kółko tego samego błędu głosem
 
   // Rdzeń pulsuje w rytm głosu.
   useEffect(() => subscribeLevel((v) => {
@@ -58,7 +62,17 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
     const persona = `${bossSystem(fullAccess, store.settings.userName)}\n\n${jarvisBriefing()}`;
     const prefer = brain ? { provider: brain.provider as ProviderId, model: brain.model } : undefined;
     const loop = new ConversationLoop(
-      (s, d) => { if (!cancelled) { setState(s); if (d) setDetail(d); } },
+      (s, d) => {
+        if (cancelled) return;
+        setState(s);
+        if (d) setDetail(d);
+        // Niezawodność: błąd ZAWSZE wypowiedz (Szef hands-free nie może milczeć), ale raz.
+        if (s !== "error") { lastErrRef.current = ""; return; }
+        if (d && d !== lastErrRef.current) {
+          lastErrRef.current = d;
+          void speak(d, { ...store.settings, speak: true, ...ROBOT_VOICE }).catch(() => {});
+        }
+      },
       (t) => {
         if (cancelled) return;
         setCaption(t);
@@ -74,12 +88,20 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
       persona,
       prefer,
     );
+    loopRef.current = loop;
     void (async () => {
       await keepAwake().catch(() => {});
+      // Niezawodność: bez mózgu nie udawaj, że działasz — powiedz wprost i pokieruj.
+      if (!hasUsableBrain()) {
+        const m = "Nie mam jeszcze mózgu. Dodaj darmowy klucz w ustawieniach, w sekcji AI — np. Gemini. Możesz też włączyć Tryb darmowy.";
+        if (!cancelled) { setState("error"); setCaption(m); setDetail("⚙ → AI: wklej darmowy klucz (Gemini/Groq) albo włącz 🆓 Tryb darmowy."); }
+        try { await speak(m, { ...store.settings, speak: true, ...ROBOT_VOICE }); } catch { /* brak głosu */ }
+        return;
+      }
       try { await speak(BOSS_GREETING, { ...store.settings, speak: true, ...ROBOT_VOICE }); } catch { /* brak głosu — trudno */ }
       if (!cancelled) loop.start();
     })();
-    return () => { cancelled = true; loop.stop(); stopSpeaking(); releaseAwake(); setAutoConsent(false); };
+    return () => { cancelled = true; loop.stop(); stopSpeaking(); releaseAwake(); setAutoConsent(false); loopRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -110,7 +132,20 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
         )}
         <div className="bossmode-caption" aria-live="polite">{caption}</div>
         <div className="bossmode-hint">Mów wprost: „dodaj zadanie…”, „wyślij maila do…”, „znajdź…”, „zaplanuj…”. Akcje nieodwracalne potwierdzę głosem.</div>
-        <button className="btn" style={{ maxWidth: 220, marginTop: 22 }} onClick={onClose}>■ Zakończ</button>
+
+        {/* Tor tekstowy — niezawodny fallback, gdy mowa zawiedzie albo wolisz pisać. */}
+        <div className="bossmode-type">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { const t = input.trim(); if (t) { setInput(""); loopRef.current?.say(t); } } }}
+            placeholder="…albo wpisz rozkaz i Enter"
+            aria-label="Wpisz rozkaz dla Szefa"
+          />
+          <button className="chip" onClick={() => { const t = input.trim(); if (t) { setInput(""); loopRef.current?.say(t); } }}>Wyślij</button>
+        </div>
+
+        <button className="btn" style={{ maxWidth: 220, marginTop: 18 }} onClick={onClose}>■ Zakończ</button>
       </div>
     </div>
   );
