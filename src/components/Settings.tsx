@@ -390,6 +390,11 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     : (s.model === "auto" ? (PROVIDERS[s.provider as ProviderId]?.defaultModel ?? "") : s.model);
   const iqKey = effProvider && effModel ? `${effProvider}:${effModel}` : "";
 
+  // Spójny system kolorów ustawień AI: 🔵 niebieski = GŁÓWNY MÓZG (co teraz myśli za Ciebie),
+  // 🟢 zielony = API/klucze gotowe do pracy. Używane konsekwentnie w tej sekcji.
+  const BRAIN_BLUE = "#5b8cff";
+  const API_GREEN = "#2fbf71";
+
   // 🔬 Zmierz bystrość modelu na własnym kluczu (krótki, samosprawdzalny test).
   const [iqBusy, setIqBusy] = useState(false);
   const [iqProg, setIqProg] = useState("");
@@ -617,25 +622,31 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
                 Ręczna kontrola. Nie chcesz wybierać? Użyj <b>🎛 Trybu pracy</b> wyżej — ustawi to za Ciebie. Większość zostawia <b>Auto</b>.
               </p>
+              <p style={{ marginTop: 0, fontSize: 12 }}>
+                <span style={{ color: BRAIN_BLUE, fontWeight: 700 }}>🔵 Główny mózg</span>
+                <span className="muted"> = co teraz myśli za Ciebie · </span>
+                <span style={{ color: API_GREEN, fontWeight: 700 }}>🟢 API gotowe</span>
+                <span className="muted"> = klucz działa</span>
+              </p>
               <div className="field">
                 <label>Dostawca</label>
                 <select value={s.provider} onChange={(e) => { set({ provider: e.target.value, model: "auto" }); if (e.target.value === "ollama") void warmNow(); /* rozgrzej model lokalny — pierwsza odpowiedź od ręki */ }}>
                   <option value="auto">⚡ Auto — najlepszy dostępny (zalecane)</option>
                   {PROVIDER_LIST.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {providerReady(p.id) ? "✓ " : "🔑 "}{p.label}{providerReady(p.id) ? "" : " — brak klucza"}
+                      {providerReady(p.id) ? "🟢 " : "🔑 "}{p.label}{providerReady(p.id) ? "" : " — brak klucza"}
                     </option>
                   ))}
                 </select>
-                <span className="muted" style={{ fontSize: 12 }}>✓ = gotowy (masz klucz/adres) · 🔑 = dodaj klucz w „🔑 Klucze API" niżej</span>
+                <span className="muted" style={{ fontSize: 12 }}>🟢 = gotowy (masz klucz/adres) · 🔑 = dodaj klucz w „🟢 Klucze API" niżej</span>
               </div>
 
               {s.provider === "auto" ? (
-                <p className="muted">
-                  {autoTarget
-                    ? `▶ Teraz zadziała: ${PROVIDERS[autoTarget.provider].label} · ${[modelBadges(modelLabel(autoTarget.provider, autoTarget.model)), modelLabel(autoTarget.provider, autoTarget.model)].filter(Boolean).join(" ")}. Im wyżej klucz na liście, tym wyższy priorytet.`
-                    : "⚠ Brak kluczy — dodaj przynajmniej jeden w „🔑 Klucze API” niżej (albo użyj lokalnej Ollamy)."}
-                </p>
+                !autoTarget && (
+                  <p className="muted" style={{ color: "var(--gold)" }}>
+                    ⚠ Brak kluczy — dodaj przynajmniej jeden w „🔑 Klucze API” niżej (albo użyj lokalnej Ollamy). Im wyżej klucz na liście, tym wyższy priorytet.
+                  </p>
+                )
               ) : (
                 <div className="field">
                   <label>Model</label>
@@ -695,9 +706,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </div>
               )}
 
-              {/* Poziom inteligencji aktualnie używanego modelu — zielony dymek z % (0–100,
-                  100% = najlepszy znany agent/API), opis oficjalny + potoczny. Ramka zielona,
-                  gdy API „pasuje" (jest klucz/połączenie). */}
+              {/* 🔵 GŁÓWNY MÓZG — co teraz realnie odpowiada (niebieski). W środku: dymek
+                  inteligencji 🧠 % (orientacyjny), status 🟢 połączono (zielony) i pomiar 🔬. */}
               {(() => {
                 if (!effModel) return null;
                 const intel = intelForModel(effModel);
@@ -708,13 +718,21 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 const measured = iqKey ? loadIqResult(iqKey) : null;
                 const canMeasure = !!effProvider && effProvider !== "ollama";
                 return (
-                  <div className="journal-card" style={{ margin: "8px 0", padding: "10px 12px", borderLeft: `3px solid ${ready ? "#2fbf71" : "var(--line)"}` }}>
+                  <div className="journal-card" style={{ margin: "8px 0", padding: "10px 12px", borderLeft: `4px solid ${BRAIN_BLUE}`, background: "rgba(91,140,255,0.06)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: BRAIN_BLUE, marginBottom: 6 }}>
+                      🧠 GŁÓWNY MÓZG {s.provider === "auto" ? "· auto" : ""}
+                    </div>
                     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                       <span style={{ background: intelColor(intel.iq), color: "#04130c", fontWeight: 800, borderRadius: 999, padding: "4px 10px", fontSize: 14, whiteSpace: "nowrap" }} title="0–100, gdzie 100% = najlepszy znany dziś agent/API">
                         🧠 {intel.iq}%
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13 }}><b>{name}</b> {ready ? "· 🟢 połączono" : "· ⚪ brak klucza"}</div>
+                        <div style={{ fontSize: 13 }}>
+                          <b>{name}</b>{" "}
+                          {ready
+                            ? <span style={{ color: API_GREEN, fontWeight: 700 }}>· 🟢 połączono</span>
+                            : <span style={{ color: "var(--gold)" }}>· ⚪ brak klucza</span>}
+                        </div>
                         <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{intel.official}</div>
                         <div style={{ fontSize: 12, marginTop: 2 }}>💬 {intel.casual}</div>
                         <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>100% = najlepszy znany dziś agent/API. Ocena orientacyjna (wiedza do 2026).</div>
@@ -752,8 +770,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 );
               })()}
 
-              <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
-              <summary id="set-keys" style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🔑 Klucze API (chmura) — kliknij, by rozwinąć</summary>
+              <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px", borderLeft: `4px solid ${API_GREEN}` }}>
+              <summary id="set-keys" style={{ cursor: "pointer", fontWeight: 600, color: API_GREEN }}>🟢 Klucze API (chmura) — kliknij, by rozwinąć</summary>
               <p className="muted" style={{ marginTop: 6 }}>
                 💡 Możesz wpisać <b>kilka kluczy jednego dostawcy</b> — każdy w nowej linii. Gdy
                 jeden wyczerpie limit dzienny, JARVIS automatycznie przełączy się na kolejny, żeby
@@ -765,8 +783,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 return (
                   <div className="field" key={p.id}>
                     <label>
-                      {st && <span title={st.detail}>{stateDot(st.state)} </span>}
-                      {p.label}
+                      {st ? <span title={st.detail}>{stateDot(st.state)} </span> : providerReady(p.id) ? <span title="Masz klucz — gotowe" style={{ color: API_GREEN }}>🟢 </span> : <span title="Brak klucza">⚪ </span>}
+                      <span style={providerReady(p.id) ? { color: API_GREEN } : undefined}>{p.label}</span>
                       {st?.usedPct !== undefined && (
                         <span style={{ color: st.usedPct >= 85 ? "var(--gold)" : "var(--ok, #58e08a)" }}> · zużyte {st.usedPct}%</span>
                       )}
