@@ -3,7 +3,8 @@ import { store } from "../lib/store";
 import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, resolveVoiceMode, type NativeVoiceInfo, type VoiceMode } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED, modelBadges } from "../lib/providers/registry";
 import { intelForModel, intelColor } from "../lib/modelIntel";
-import { runIqProbe, verdict, loadIqResult, saveIqResult } from "../lib/iqProbe";
+import { runIqProbe, verdict, loadIqResult, loadIqResults, saveIqResult } from "../lib/iqProbe";
+import { leagueRanking } from "../lib/league";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
@@ -430,6 +431,36 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
+  // 🏆 Liga modeli — zmierz wszystkie gotowe API (model domyślny każdego) i ułóż ranking.
+  const [leagueBusy, setLeagueBusy] = useState(false);
+  const [leagueProg, setLeagueProg] = useState("");
+  const [leagueVer, setLeagueVer] = useState(0);
+  const runLeague = async () => {
+    if (leagueBusy) return;
+    const provs = PROVIDER_LIST.filter((p) => p.id !== "ollama" && providerReady(p.id));
+    if (!provs.length) { setLeagueProg("Brak gotowych API — dodaj klucz."); return; }
+    setLeagueBusy(true);
+    try {
+      for (let i = 0; i < provs.length; i++) {
+        const p = provs[i];
+        const key = (s.keys[p.id] || "").trim().split("\n")[0];
+        const model = p.defaultModel;
+        setLeagueProg(`(${i + 1}/${provs.length}) ${p.label}…`);
+        const callModel = async (prompt: string): Promise<string> => {
+          const r = await PROVIDERS[p.id].impl({
+            system: "Odpowiadaj zwięźle i dokładnie po polsku. Trzymaj się ściśle polecenia.",
+            webSearch: false, tools: [], history: [{ role: "user", content: prompt }],
+            apiKey: key, model, proxyUrl: s.proxyUrl?.trim() || undefined, fast: true,
+          });
+          return r.text || "";
+        };
+        try { saveIqResult(`${p.id}:${model}`, await runIqProbe(callModel)); setLeagueVer((v) => v + 1); }
+        catch { /* pomiń tego dostawcę */ }
+      }
+      setLeagueProg("Gotowe — ranking niżej.");
+    } finally { setLeagueBusy(false); }
+  };
+
   const save = () => {
     // Jeśli zmieniono dostawcę, a model nie pasuje — zresetuj na domyślny.
     const next = { ...s };
@@ -806,6 +837,36 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   </div>
                 );
               })}
+              </details>
+
+              <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px", borderLeft: `4px solid ${BRAIN_BLUE}` }}>
+                <summary style={{ cursor: "pointer", fontWeight: 600, color: BRAIN_BLUE }}>🏆 Liga modeli — który Twój mózg jest najlepszy</summary>
+                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                  Zmierzy bystrość WSZYSTKICH Twoich gotowych API (model domyślny każdego) krótkim
+                  testem i ułoży ranking — zobaczysz, co realnie wypada u Ciebie najlepiej. Zużywa trochę limitu.
+                </p>
+                <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }} disabled={leagueBusy} onClick={() => void runLeague()}>
+                  {leagueBusy ? "⏳ Mierzę…" : "🏆 Zmierz Ligę"}
+                </button>
+                {leagueProg && <span className="muted" style={{ fontSize: 12, marginLeft: 8 }}>{leagueProg}</span>}
+                {(() => {
+                  void leagueVer;
+                  const inputs = PROVIDER_LIST.filter((p) => p.id !== "ollama").map((p) => ({ provider: p.id, model: p.defaultModel, label: p.label, ready: providerReady(p.id) }));
+                  const ranking = leagueRanking(inputs, loadIqResults());
+                  return (
+                    <div style={{ marginTop: 8 }}>
+                      {ranking.map((r, i) => {
+                        const medal = r.ready ? (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "•") : "🔑";
+                        return (
+                          <div key={r.provider} className="row" style={{ fontSize: 13, opacity: r.ready ? 1 : 0.5 }}>
+                            <span>{medal} {r.label} <span className="muted">· {modelLabel(r.provider as ProviderId, r.model)}</span></span>
+                            <span style={{ whiteSpace: "nowrap" }}>{r.measured !== undefined ? `🔬 ${r.measured}%` : `🧠 ${r.iq}%`}{r.ms ? ` · ${(r.ms / 1000).toFixed(1)}s` : ""}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </details>
 
               <div style={{ display: "flex", gap: 8 }}>
