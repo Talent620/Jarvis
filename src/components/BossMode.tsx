@@ -7,6 +7,7 @@ import { subscribeLevel } from "../lib/audioLevel";
 import { setAutoConsent } from "../lib/permissions";
 import { useEscape } from "../hooks/useEscape";
 import { ROBOT_VOICE, BOSS_GREETING, bossSystem } from "../lib/boss";
+import { jarvisBriefing } from "../lib/capabilities";
 
 const LABEL: Record<LoopState, string> = {
   listening: "NASŁUCH…",
@@ -40,7 +41,7 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
     let cancelled = false;
     // PEŁNY DOSTĘP tylko przez czas otwartego Trybu Szefa — zdejmujemy przy zamknięciu.
     if (fullAccess) setAutoConsent(true);
-    const persona = bossSystem(fullAccess, store.settings.userName);
+    const persona = `${bossSystem(fullAccess, store.settings.userName)}\n\n${jarvisBriefing()}`;
     const loop = new ConversationLoop(
       (s, d) => { if (!cancelled) { setState(s); if (d) setDetail(d); } },
       (t) => { if (!cancelled) setCaption(t); },
