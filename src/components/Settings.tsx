@@ -3,6 +3,7 @@ import { store } from "../lib/store";
 import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, resolveVoiceMode, type NativeVoiceInfo, type VoiceMode } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED, modelBadges } from "../lib/providers/registry";
 import { intelForModel, intelColor } from "../lib/modelIntel";
+import { runIqProbe, verdict, loadIqResult, saveIqResult } from "../lib/iqProbe";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
@@ -382,6 +383,48 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   // Czy dla danego dostawcy jest gotowy klucz/adres (Ollama łączy się adresem, nie kluczem).
   const providerReady = (id: ProviderId) => (id === "ollama" ? !!s.ollamaUrl?.trim() : !!s.keys[id as keyof typeof s.keys]?.trim());
 
+  // Model, który REALNIE zadziała (auto → wybrany; „domyślny" → defaultModel; inaczej s.model).
+  const effProvider: ProviderId | null = s.provider === "auto" ? (autoTarget?.provider ?? null) : (s.provider as ProviderId);
+  const effModel = s.provider === "auto"
+    ? (autoTarget?.model ?? "")
+    : (s.model === "auto" ? (PROVIDERS[s.provider as ProviderId]?.defaultModel ?? "") : s.model);
+  const iqKey = effProvider && effModel ? `${effProvider}:${effModel}` : "";
+
+  // 🔬 Zmierz bystrość modelu na własnym kluczu (krótki, samosprawdzalny test).
+  const [iqBusy, setIqBusy] = useState(false);
+  const [iqProg, setIqProg] = useState("");
+  const [iqVer, setIqVer] = useState(0); // bump → odśwież odczyt zapisanego wyniku
+  const runIq = async () => {
+    if (!effProvider || effProvider === "ollama" || !effModel || iqBusy) return;
+    const key = (s.keys[effProvider as keyof typeof s.keys] || "").trim().split("\n")[0];
+    if (!key) { setIqProg("Brak klucza dla tego dostawcy."); return; }
+    setIqBusy(true);
+    setIqProg("Zaczynam test…");
+    try {
+      const callModel = async (prompt: string): Promise<string> => {
+        const r = await PROVIDERS[effProvider].impl({
+          system: "Odpowiadaj zwięźle i dokładnie po polsku. Trzymaj się ściśle polecenia.",
+          webSearch: false,
+          tools: [],
+          history: [{ role: "user", content: prompt }],
+          apiKey: key,
+          model: effModel,
+          proxyUrl: s.proxyUrl?.trim() || undefined,
+          fast: true,
+        });
+        return r.text || "";
+      };
+      const res = await runIqProbe(callModel, (d, t) => setIqProg(`Pytanie ${d}/${t}…`));
+      saveIqResult(iqKey, res);
+      setIqVer((v) => v + 1);
+      setIqProg(`Gotowe: ${res.correct}/${res.total} (${res.pct}%).`);
+    } catch {
+      setIqProg("Nie udało się zmierzyć — sprawdź klucz i sieć.");
+    } finally {
+      setIqBusy(false);
+    }
+  };
+
   const save = () => {
     // Jeśli zmieniono dostawcę, a model nie pasuje — zresetuj na domyślny.
     const next = { ...s };
@@ -656,26 +699,55 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   100% = najlepszy znany agent/API), opis oficjalny + potoczny. Ramka zielona,
                   gdy API „pasuje" (jest klucz/połączenie). */}
               {(() => {
-                const effProvider: ProviderId | null = s.provider === "auto" ? (autoTarget?.provider ?? null) : (s.provider as ProviderId);
-                const effModel = s.provider === "auto"
-                  ? (autoTarget?.model ?? "")
-                  : (s.model === "auto" ? (PROVIDERS[s.provider as ProviderId]?.defaultModel ?? "") : s.model);
                 if (!effModel) return null;
                 const intel = intelForModel(effModel);
                 if (intel.iq <= 0) return null;
                 const ready = effProvider ? providerReady(effProvider) : false;
                 const name = effProvider ? modelLabel(effProvider, effModel) : effModel;
+                void iqVer; // odczyt zapisanego wyniku zależy od bumpa po pomiarze
+                const measured = iqKey ? loadIqResult(iqKey) : null;
+                const canMeasure = !!effProvider && effProvider !== "ollama";
                 return (
-                  <div className="journal-card" style={{ margin: "8px 0", padding: "10px 12px", display: "flex", gap: 10, alignItems: "flex-start", borderLeft: `3px solid ${ready ? "#2fbf71" : "var(--line)"}` }}>
-                    <span style={{ background: intelColor(intel.iq), color: "#04130c", fontWeight: 800, borderRadius: 999, padding: "4px 10px", fontSize: 14, whiteSpace: "nowrap" }} title="0–100, gdzie 100% = najlepszy znany dziś agent/API">
-                      🧠 {intel.iq}%
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13 }}><b>{name}</b> {ready ? "· 🟢 połączono" : "· ⚪ brak klucza"}</div>
-                      <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{intel.official}</div>
-                      <div style={{ fontSize: 12, marginTop: 2 }}>💬 {intel.casual}</div>
-                      <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>100% = najlepszy znany dziś agent/API. Ocena orientacyjna (wiedza do 2026).</div>
+                  <div className="journal-card" style={{ margin: "8px 0", padding: "10px 12px", borderLeft: `3px solid ${ready ? "#2fbf71" : "var(--line)"}` }}>
+                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <span style={{ background: intelColor(intel.iq), color: "#04130c", fontWeight: 800, borderRadius: 999, padding: "4px 10px", fontSize: 14, whiteSpace: "nowrap" }} title="0–100, gdzie 100% = najlepszy znany dziś agent/API">
+                        🧠 {intel.iq}%
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13 }}><b>{name}</b> {ready ? "· 🟢 połączono" : "· ⚪ brak klucza"}</div>
+                        <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{intel.official}</div>
+                        <div style={{ fontSize: 12, marginTop: 2 }}>💬 {intel.casual}</div>
+                        <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>100% = najlepszy znany dziś agent/API. Ocena orientacyjna (wiedza do 2026).</div>
+                      </div>
                     </div>
+
+                    {/* Dowód zamiast opinii: zmierz bystrość na własnym kluczu. */}
+                    {canMeasure && (
+                      <div style={{ marginTop: 10, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+                        {measured && (
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 6 }}>
+                            <span style={{ background: intelColor(measured.pct), color: "#04130c", fontWeight: 800, borderRadius: 999, padding: "3px 9px", fontSize: 13, whiteSpace: "nowrap" }}>
+                              🔬 {measured.pct}%
+                            </span>
+                            <span style={{ fontSize: 12 }}>
+                              Zmierzone u Ciebie: <b>{measured.correct}/{measured.total}</b> · ~{(measured.ms / 1000).toFixed(1)}s/odp.
+                            </span>
+                            <span className="muted" style={{ fontSize: 12, flexBasis: "100%" }}>💬 {verdict(measured.pct, measured.ms)}</span>
+                          </div>
+                        )}
+                        <button
+                          className="btn"
+                          style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }}
+                          disabled={iqBusy || !ready}
+                          onClick={() => void runIq()}
+                          title="Krótki, samosprawdzalny test (6 pytań) — zużywa odrobinę limitu API"
+                        >
+                          {iqBusy ? "⏳ Mierzę…" : measured ? "🔬 Zmierz ponownie" : "🔬 Zmierz inteligencję (test 6 pytań)"}
+                        </button>
+                        {iqProg && <span className="muted" style={{ fontSize: 12, marginLeft: 8 }}>{iqProg}</span>}
+                        {!ready && <span className="muted" style={{ fontSize: 12, display: "block", marginTop: 4, color: "var(--gold)" }}>Najpierw dodaj klucz tego dostawcy, by zmierzyć.</span>}
+                      </div>
+                    )}
                   </div>
                 );
               })()}
