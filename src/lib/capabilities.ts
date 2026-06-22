@@ -54,7 +54,33 @@ export function completionDigest(): string {
   ].join("\n");
 }
 
-/** Pełen blok wiedzy + stanu + droga do 100%, doklejany do promptu Szefa. */
+/** Żywy podgląd stanu: co JARVIS ma teraz „pod ręką" — by Szef widział sytuację, nie zgadywał. */
+export function liveStateDigest(): string {
+  try {
+    const d = store.data;
+    const today = new Date().toISOString().slice(0, 10);
+    const tasksOpen = (d.tasks || []).filter((t) => !t.done).length;
+    const tasksToday = (d.tasks || []).filter((t) => !t.done && (t.due || "").slice(0, 10) === today).length;
+    const reminders = (d.reminders || []).filter((r) => !r.fired).length;
+    const leads = (d.leads || []).length;
+    const journal = (d.journal || []).length;
+    const memory = (d.memory || []).length;
+    const projects = (d.projects || []).length;
+    const parts = [
+      `zadania otwarte: ${tasksOpen} (na dziś/zaległe: ${tasksToday})`,
+      `przypomnienia aktywne: ${reminders}`,
+      `leady: ${leads}`,
+      `wpisy dziennika: ${journal}`,
+      `fakty w pamięci: ${memory}`,
+      `projekty: ${projects}`,
+    ];
+    return `PODGLĄD NA ŻYWO (stan użytkownika — odwołuj się do niego, nie zgaduj):\n• ${parts.join(" · ")}.`;
+  } catch {
+    return "";
+  }
+}
+
+/** Pełen blok wiedzy + stanu + droga do 100% + żywy podgląd, doklejany do promptu Szefa. */
 export function jarvisBriefing(): string {
-  return `${capabilitiesDigest()}\n\n${selfCheckDigest()}\n\n${completionDigest()}`;
+  return [capabilitiesDigest(), liveStateDigest(), selfCheckDigest(), completionDigest()].filter(Boolean).join("\n\n");
 }

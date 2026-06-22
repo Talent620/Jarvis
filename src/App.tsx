@@ -24,6 +24,7 @@ import { toast } from "./lib/toast";
 import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } from "./lib/decisions";
 import { isBossSummon } from "./lib/boss";
 import { completionReport } from "./lib/completion";
+import { healthIssues, topIssue, newIssues, alertText } from "./lib/watchdog";
 import { rememberFact } from "./lib/memory";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
 import { notifySummary } from "./lib/notifyCenter";
@@ -191,6 +192,7 @@ export default function App() {
   const [recallSeed, setRecallSeed] = useState("");
   const [showBoss, setShowBoss] = useState(false);
   const [completionHidden, setCompletionHidden] = useState(false);
+  const alertedRef = useRef<Set<string>>(new Set()); // 🩺 watchdog: nie alarmuj dwa razy o tym samym
   const [tip, setTip] = useState<Tip | null>(null);
   const [decision, setDecision] = useState<DecisionCandidate | null>(null); // 🧠 auto-capture
   const tipCountRef = useRef(0);
@@ -204,6 +206,22 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  // 🩺 Watchdog Szefa: sprawdź stan po starcie i co ~6 min; alarmuj TYLKO o nowych problemach.
+  useEffect(() => {
+    const alerted = alertedRef.current;
+    const check = () => {
+      const fresh = newIssues(alerted, healthIssues());
+      if (!fresh.length) return;
+      fresh.forEach((i) => alerted.add(i.id));
+      const top = topIssue(fresh);
+      if (!top) return;
+      if (top.severity === "warn" && store.settings.tips === false) return; // szanuj wyciszenie (błędy zawsze)
+      toast(alertText(top), { label: "Sprawdź", onClick: () => setShowGuardian(true) });
+    };
+    const first = setTimeout(check, 4500);
+    const iv = setInterval(check, 6 * 60_000);
+    return () => { clearTimeout(first); clearInterval(iv); };
   }, []);
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [locked, setLocked] = useState(lockIsSet());
@@ -1088,6 +1106,21 @@ export default function App() {
             })()}
           </small>
         </div>
+        {(() => {
+          const lvl = completionReport(store.settings).percent;
+          const col = lvl >= 90 ? "#2fbf71" : lvl >= 60 ? "#28c0c8" : "var(--gold)";
+          return (
+            <button
+              className="level-badge"
+              style={{ borderColor: col, color: col }}
+              onClick={() => setShowSettings(true)}
+              title={`Poziom JARVISA: ${lvl}% gotowości. Kliknij, by dokończyć konfigurację.`}
+              aria-label={`Poziom JARVISA ${lvl} procent`}
+            >
+              ⬢ {lvl}%
+            </button>
+          );
+        })()}
         <div className="spacer" />
         <button
           className="icon-btn"

@@ -297,6 +297,20 @@ textarea,
   gap: 7px;
   padding: 8px 2px 6px;
 }
+/* Poziom JARVISA — kompaktowy wskaźnik gotowości na głównym ekranie. */
+.level-badge {
+  flex: 0 0 auto;
+  background: rgba(108, 231, 255, 0.06);
+  border: 1px solid var(--cyan);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.level-badge:active { transform: scale(0.96); }
 .brand {
   font-family: "Orbitron", sans-serif;
   font-weight: 800;
@@ -752,6 +766,7 @@ button:disabled {
   width: 100%;
   max-width: 560px;
   max-height: calc(100vh - var(--sat) - 6px); /* baza pewna na każdym WebView */
+  position: relative; /* dla znaku wodnego ⬢ JARVIS */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -764,6 +779,20 @@ button:disabled {
   .panel {
     border-radius: var(--radius-lg);
   }
+}
+/* Dyskretny znak wodny ⬢ JARVIS w każdym oknie-panelu (nie przeszkadza, nie klikalny). */
+.panel::after {
+  content: "⬢ JARVIS";
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--cyan);
+  opacity: 0.16;
+  pointer-events: none;
+  z-index: 2;
 }
 .panel-head {
   flex: 0 0 auto;
