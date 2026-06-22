@@ -9,3 +9,5 @@ declare const __LICENSE_URL__: string;
 declare const __LICENSE_STRICT__: boolean;
 // Data/godzina zbudowania (UTC) — pokazywana w ⚙ → Dane, by jednoznacznie poznać wersję.
 declare const __APP_BUILD__: string;
+// Metryki kodu liczone przy budowie — do wyceny projektu (panel admina).
+declare const __PROJECT_STATS__: { modules: number; components: number; tests: number; files: number; loc: number };

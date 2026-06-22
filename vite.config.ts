@@ -1,5 +1,31 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
+
+// Realne metryki kodu (do wyceny w panelu admina) — liczone PRZY BUDOWANIU, nie w runtime
+// (zbudowany bundel nie ma dostępu do źródeł). Best-effort: błąd nie wywala builda.
+function projectStats() {
+  const out = { modules: 0, components: 0, tests: 0, files: 0, loc: 0 };
+  const walk = (dir: string) => {
+    let entries: string[];
+    try { entries = readdirSync(dir); } catch { return; }
+    for (const e of entries) {
+      const p = join(dir, e);
+      let st;
+      try { st = statSync(p); } catch { continue; }
+      if (st.isDirectory()) { walk(p); continue; }
+      if (!/\.(ts|tsx)$/.test(e)) continue;
+      out.files++;
+      if (/\.test\.tsx?$/.test(e)) out.tests++;
+      else if (e.endsWith(".tsx")) out.components++;
+      else out.modules++;
+      try { out.loc += readFileSync(p, "utf8").split("\n").length; } catch { /* pomiń */ }
+    }
+  };
+  try { walk("src"); walk("tests"); } catch { /* fallback: zera */ }
+  return out;
+}
 
 // JARVIS web app — bundled by Vite, wrapped into Android by Capacitor.
 // BEZPIECZEŃSTWO: do bundla klienta NIE trafiają żadne klucze API. Wbudowane (darmowe)
@@ -31,6 +57,8 @@ export default defineConfig({
     __LICENSE_STRICT__: JSON.stringify(env.JARVIS_LICENSE_STRICT === "true"),
     // Data/godzina builda (UTC) — widoczna w ⚙ → Dane; jednoznacznie mówi, którą wersję masz.
     __APP_BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace("T", " ")),
+    // Metryki kodu (moduły/komponenty/testy/LOC) — do wyceny projektu w panelu admina.
+    __PROJECT_STATS__: JSON.stringify(projectStats()),
   },
   plugins: [react()],
   // Workery (np. embeddingi on-device) dynamicznie importują ciężkie biblioteki —

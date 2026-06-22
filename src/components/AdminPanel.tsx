@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast, toast } from "../lib/toast";
+import { dailyValuation, plnRange } from "../lib/projectValue";
 import Guide from "./Guide";
 import {
   verifyOwnerPhone,
@@ -21,7 +22,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
   const [phone, setPhone] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [cfg, setCfg] = useState<AdminConfig>({ workerUrl: "", adminToken: "" });
-  const [tab, setTab] = useState<"licenses" | "keys">("licenses");
+  const [tab, setTab] = useState<"licenses" | "keys" | "value">("licenses");
   const [rows, setRows] = useState<LicenseRow[] | null>(null);
   const [msg, setMsg] = useState("");
   const [form, setForm] = useState({ name: "", days: "", limit: "1" });
@@ -116,6 +117,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
           <div className="chips" style={{ marginTop: 10 }}>
             <button className={`chip ${tab === "licenses" ? "on" : ""}`} onClick={() => setTab("licenses")}>📋 Licencje</button>
             <button className={`chip ${tab === "keys" ? "on" : ""}`} onClick={() => setTab("keys")}>🗝 Moje klucze</button>
+            <button className={`chip ${tab === "value" ? "on" : ""}`} onClick={() => setTab("value")}>💎 Wycena</button>
           </div>
         </div>
         <div className="panel-body">
@@ -143,6 +145,36 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
               {msg && <p className="muted" style={{ marginTop: 8 }}>{msg}</p>}
             </>
           )}
+
+          {tab === "value" && (() => {
+            const v = dailyValuation();
+            const row = (label: string, val: string, hint?: string) => (
+              <div className="status-row" style={{ alignItems: "flex-start" }}>
+                <div className="status-main">
+                  <div className="status-title">{label}</div>
+                  {hint && <div className="status-detail">{hint}</div>}
+                </div>
+                <strong style={{ fontSize: 14, whiteSpace: "nowrap", textAlign: "right" }}>{val}</strong>
+              </div>
+            );
+            return (
+              <>
+                <h3 style={{ marginTop: 0 }}>💎 Wycena JARVISA</h3>
+                <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>
+                  Liczona z realnych metryk kodu. Odświeża się <b>raz dziennie</b> (dziś: {v.day}).
+                </p>
+                {row("Rozmiar kodu", `${v.loc.toLocaleString("pl-PL")} linii`, `${v.modules} modułów · ${v.components} ekranów · ${v.tests} plików testów`)}
+                {row("Czas budowy (1 osoba)", `~${v.months} mies.`, `≈ ${v.hours.toLocaleString("pl-PL")} godzin pracy`)}
+                {row("Koszt odtworzenia", plnRange(v.replMinPln, v.replMaxPln), "ile kosztowałoby zbudowanie tego od zera (stawki PL)")}
+                {row("💰 Realnie jutro (jak jest)", plnRange(v.quickLowPln, v.quickHighPln), "szybka sprzedaż kodu bez użytkowników/marki")}
+                {row("Trudność", `${v.difficulty}/10`, v.difficultyLabel)}
+                <p className="muted" style={{ fontSize: 11, marginTop: 8 }}>
+                  Uwaga: realna wartość rośnie z <b>użytkownikami i dystrybucją</b>, nie z samym kodem. Z płacącymi
+                  klientami / abonamentem wycena bywa wielokrotnie wyższa niż „jak jest".
+                </p>
+              </>
+            );
+          })()}
 
           {tab === "licenses" && (
             <>
