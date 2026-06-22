@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isBossSummon, ROBOT_VOICE, BOSS_GREETING } from "../src/lib/boss";
+import { isBossSummon, ROBOT_VOICE, BOSS_GREETING, bossSystem } from "../src/lib/boss";
 
 describe("isBossSummon — przywołanie Trybu Szefa", () => {
   it("łapie jasne wezwania", () => {
@@ -17,6 +17,27 @@ describe("isBossSummon — przywołanie Trybu Szefa", () => {
   it("puste / śmieci → false", () => {
     expect(isBossSummon("")).toBe(false);
     expect(isBossSummon("   ")).toBe(false);
+  });
+});
+
+describe("bossSystem — persona „przewiduj i potwierdzaj”", () => {
+  it("zawsze: krok po kroku + powtórz i potwierdź", () => {
+    const p = bossSystem(false);
+    expect(p).toMatch(/KROK PO KROKU/);
+    expect(p).toMatch(/dobrze usłyszałem/i);
+    expect(p).toMatch(/PRZEWIDUJESZ i POTWIERDZASZ/);
+  });
+
+  it("z imieniem proponuje konkretną wartość (np. „Wpisać: Artur?”)", () => {
+    const p = bossSystem(true, "Artur");
+    expect(p).toMatch(/Artur/);
+    expect(p).toMatch(/Wpisać: Artur/);
+    expect(p).toMatch(/Imię użytkownika: Artur/);
+  });
+
+  it("pełny dostęp → wprost pozwala wykonywać; bez niego → ostrożnie", () => {
+    expect(bossSystem(true, "Artur")).toMatch(/PEŁNY DOSTĘP/);
+    expect(bossSystem(false, "Artur")).toMatch(/tylko po wyraźnym/i);
   });
 });
 

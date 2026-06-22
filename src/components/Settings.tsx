@@ -1632,6 +1632,20 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </span>
                 <Toggle on={s.requireConsentAlways} onClick={() => set({ requireConsentAlways: !s.requireConsentAlways })} />
               </div>
+              <div className="row" style={{ borderLeft: "3px solid #2bff88", paddingLeft: 10 }}>
+                <span>
+                  ⬢ Tryb Szefa — <b style={{ color: "#2bff88" }}>PEŁNY DOSTĘP</b> do wszystkiego
+                  <br />
+                  <span className="muted">
+                    Pozwala agentowi głosowemu „Szef” używać <b>wszystkich</b> narzędzi i akcji (telefon,
+                    SMS, e-mail, otwieranie stron/aplikacji, kalendarz, zakupy…) <b>bez ekranów zgody</b> —
+                    bo Szef sam <b>przewiduje i potwierdza głosem</b> przed każdą nieodwracalną akcją
+                    („Wpisać: Artur?”, „dobrze usłyszałem?”). Działa <b>tylko</b> przy otwartym Trybie Szefa.
+                    Zostaw wyłączone, jeśli wolisz potwierdzać dotykiem.
+                  </span>
+                </span>
+                <Toggle on={!!s.bossFullAccess} onClick={() => set({ bossFullAccess: !s.bossFullAccess })} />
+              </div>
               <div className="row">
                 <span>
                   🧠 Pamięć on-device (embeddingi lokalnie)

@@ -63,6 +63,12 @@ export interface ConsentRequest { tool: string; input: unknown; risk: Risk; }
 let consentHandler: ((req: ConsentRequest) => Promise<{ allow: boolean; remember: boolean }>) | null = null;
 export function setConsentHandler(fn: typeof consentHandler) { consentHandler = fn; }
 
+// Auto-zgoda: gdy WŁĄCZONA (tylko w otwartym Trybie Szefa z „pełnym dostępem"), akcje
+// wychodzące przechodzą bez ekranu zgody — bramką jest głosowe „przewiduj i potwierdź".
+let autoConsent = false;
+export function setAutoConsent(on: boolean) { autoConsent = on; }
+export function isAutoConsent(): boolean { return autoConsent; }
+
 type StepListener = (tool: string | null) => void;
 let stepListener: StepListener | null = null;
 export function setStepListener(fn: StepListener) { stepListener = fn; }
@@ -106,6 +112,8 @@ export async function requestConsent(tool: string, input: unknown): Promise<bool
   const risk = riskOf(tool);
   // Pytamy tylko o akcje zewnętrzne/nieodwracalne; lokalne zapisy idą automatycznie.
   if (risk !== "outbound") return true;
+  // Tryb Szefa „pełny dostęp": użytkownik dał globalną zgodę, a agent potwierdza głosem.
+  if (autoConsent) return true;
   const consents = loadConsents();
   if (consents[tool] === "allow") return true;
   if (!consentHandler) return !store.settings.requireConsentAlways; // brak UI (np. tryb live): domyślnie nie blokuj (zgodność wstecz); opt-in fail-closed

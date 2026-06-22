@@ -4,8 +4,9 @@ import { speak, stopSpeaking } from "../lib/voice";
 import { store } from "../lib/store";
 import { keepAwake, releaseAwake } from "../lib/wakeLock";
 import { subscribeLevel } from "../lib/audioLevel";
+import { setAutoConsent } from "../lib/permissions";
 import { useEscape } from "../hooks/useEscape";
-import { ROBOT_VOICE, BOSS_GREETING } from "../lib/boss";
+import { ROBOT_VOICE, BOSS_GREETING, bossSystem } from "../lib/boss";
 
 const LABEL: Record<LoopState, string> = {
   listening: "NASŁUCH…",
@@ -33,19 +34,26 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
     if (el) el.style.transform = `scale(${(1 + v * 0.6).toFixed(3)})`;
   }), []);
 
+  const fullAccess = !!store.settings.bossFullAccess;
+
   useEffect(() => {
     let cancelled = false;
+    // PEŁNY DOSTĘP tylko przez czas otwartego Trybu Szefa — zdejmujemy przy zamknięciu.
+    if (fullAccess) setAutoConsent(true);
+    const persona = bossSystem(fullAccess, store.settings.userName);
     const loop = new ConversationLoop(
       (s, d) => { if (!cancelled) { setState(s); if (d) setDetail(d); } },
       (t) => { if (!cancelled) setCaption(t); },
       ROBOT_VOICE,
+      persona,
     );
     void (async () => {
       await keepAwake().catch(() => {});
       try { await speak(BOSS_GREETING, { ...store.settings, speak: true, ...ROBOT_VOICE }); } catch { /* brak głosu — trudno */ }
       if (!cancelled) loop.start();
     })();
-    return () => { cancelled = true; loop.stop(); stopSpeaking(); releaseAwake(); };
+    return () => { cancelled = true; loop.stop(); stopSpeaking(); releaseAwake(); setAutoConsent(false); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -53,6 +61,9 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
       <div className="bossmode-inner">
         <div className="bossmode-title">⬢ TRYB SZEFA</div>
         <div className="bossmode-sub">AGENT GŁOSOWY · ROZUMIEM I WYKONUJĘ ROZKAZY</div>
+        <div className="bossmode-access" data-full={fullAccess}>
+          {fullAccess ? "🟢 PEŁNY DOSTĘP — przewiduję i potwierdzam głosem" : "🔒 Tryb bezpieczny — pełny dostęp w ⚙ → Tryb Szefa"}
+        </div>
         <div className="bossmode-core" ref={coreRef} data-state={state} />
         <div className="bossmode-state">{LABEL[state] || state}</div>
         {detail && <div style={{ fontSize: 12, color: "#6bff9e", maxWidth: 360 }}>{detail}</div>}

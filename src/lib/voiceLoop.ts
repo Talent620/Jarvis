@@ -20,6 +20,8 @@ export class ConversationLoop {
     private onCaption: (text: string) => void,
     // Dostrojenie głosu (np. „robot" w Trybie Szefa): nadpisuje pola ustawień przy TTS.
     private voiceTune?: Partial<Settings>,
+    // Dodatkowa instrukcja systemowa (persona) doklejana do promptu agenta.
+    private systemSuffix?: string,
   ) {}
 
   static supported(): boolean {
@@ -64,7 +66,7 @@ export class ConversationLoop {
     this.onState("thinking");
     this.history.push({ role: "user", content: text });
     try {
-      const reply = await askJarvis(this.history.slice(-12));
+      const reply = await askJarvis(this.history.slice(-12), undefined, undefined, this.systemSuffix);
       this.history.push({ role: "assistant", content: reply.text });
       this.onCaption(reply.text);
       this.onState("speaking");

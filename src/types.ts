@@ -450,6 +450,9 @@ export interface Settings {
   /** Bezpieczeństwo: wymagaj potwierdzenia akcji wychodzących ZAWSZE — także bez UI (tryb live):
    *  gdy brak ekranu zgody, akcja zewnętrzna jest BLOKOWANA zamiast wykonywana po cichu (fail-closed). */
   requireConsentAlways: boolean;
+  /** Tryb Szefa — PEŁNY DOSTĘP: agent głosowy może użyć WSZYSTKICH narzędzi/akcji bez ekranów
+   *  zgody (sam przewiduje i potwierdza głosem). Działa tylko, gdy Tryb Szefa jest otwarty. */
+  bossFullAccess?: boolean;
   /** Tryb nieocenzurowany — działa realnie tylko z modelem lokalnym (Ollama):
    *  JARVIS nie dokłada własnych zastrzeżeń/moralizowania i odpowiada wprost. */
   unfilteredLocal: boolean;

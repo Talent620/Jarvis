@@ -1779,6 +1779,8 @@ input:focus, textarea:focus, select:focus {
 }
 .bossmode-title { font-size: 26px; letter-spacing: 6px; color: #2bff88; text-shadow: 0 0 14px rgba(43, 255, 136, 0.6); }
 .bossmode-sub { font-size: 11px; letter-spacing: 3px; color: #5fae7f; margin-top: 4px; }
+.bossmode-access { font-size: 11px; margin-top: 8px; padding: 3px 10px; border-radius: 999px; border: 1px solid #2bff88; color: #2bff88; }
+.bossmode-access[data-full="false"] { border-color: #6bff9e55; color: #5fae7f; }
 .bossmode-core {
   width: 150px;
   height: 150px;
