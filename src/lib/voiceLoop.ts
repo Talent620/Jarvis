@@ -1,7 +1,7 @@
 import { createListener, speak, stopSpeaking, isSpeechSupported, type VoiceListener } from "./voice";
 import { askJarvis } from "./brain";
 import { store } from "./store";
-import type { Msg } from "./providers/types";
+import type { Msg, ProviderId } from "./providers/types";
 import type { Settings } from "../types";
 
 export type LoopState = "listening" | "thinking" | "speaking" | "error" | "closed";
@@ -22,6 +22,8 @@ export class ConversationLoop {
     private voiceTune?: Partial<Settings>,
     // Dodatkowa instrukcja systemowa (persona) doklejana do promptu agenta.
     private systemSuffix?: string,
+    // Preferowany („najmocniejszy zmierzony") mózg — auto-router Szefa.
+    private prefer?: { provider: ProviderId; model: string },
   ) {}
 
   static supported(): boolean {
@@ -66,7 +68,7 @@ export class ConversationLoop {
     this.onState("thinking");
     this.history.push({ role: "user", content: text });
     try {
-      const reply = await askJarvis(this.history.slice(-12), undefined, undefined, this.systemSuffix);
+      const reply = await askJarvis(this.history.slice(-12), undefined, undefined, this.systemSuffix, this.prefer);
       this.history.push({ role: "assistant", content: reply.text });
       this.onCaption(reply.text);
       this.onState("speaking");

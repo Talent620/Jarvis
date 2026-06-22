@@ -1235,6 +1235,9 @@ export default function App() {
         councilAvailable={councilMembers(3).length >= 2}
       />
 
+      {/* ⬢ Szef zawsze w zasięgu — centralny agent głosowy, jedno tknięcie z każdego ekranu. */}
+      <button className="boss-fab" onClick={() => setShowBoss(true)} title="Tryb Szefa — agent głosowy (powiedz „szef”)" aria-label="Tryb Szefa">⬢</button>
+
       {showVoice && (<ScreenBoundary><HeadsetMode onClose={() => setShowVoice(false)} /></ScreenBoundary>)}
       {showAdmin && (
         <ScreenBoundary>

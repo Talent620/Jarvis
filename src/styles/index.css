@@ -1746,6 +1746,28 @@ input:focus, textarea:focus, select:focus {
 .status-title { font-weight: 700; font-size: 14.5px; }
 .status-detail { color: var(--text-dim); font-size: 13px; line-height: 1.4; margin-top: 2px; }
 
+/* ⬢ Stały przycisk Szefa — zawsze w zasięgu (nad polem czatu, prawy dół). */
+.boss-fab {
+  position: fixed;
+  right: 14px;
+  bottom: 92px;
+  z-index: 40;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid #2bff88;
+  background: radial-gradient(circle at 50% 40%, #0a3a22, #04130c);
+  color: #2bff88;
+  font-size: 22px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 18px rgba(43, 255, 136, 0.35);
+  transition: transform 0.12s, box-shadow 0.2s;
+}
+.boss-fab:hover { transform: scale(1.08); box-shadow: 0 0 26px rgba(43, 255, 136, 0.6); }
+.boss-fab:active { transform: scale(0.96); }
+
 /* === ⬢ Tryb Szefa — pełnoekranowy agent głosowy (Matrix + głos robota) === */
 .bossmode {
   background:

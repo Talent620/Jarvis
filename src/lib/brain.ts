@@ -496,7 +496,7 @@ export async function askModel(params: {
   throw new Error(humanize(lastErr instanceof Error ? lastErr.message : String(lastErr)));
 }
 
-export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string): Promise<JarvisReply> {
+export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }): Promise<JarvisReply> {
   const resolved = resolveProvider();
   if (!resolved) {
     throw new Error(
@@ -571,7 +571,12 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   };
 
   // Router dobiera dostawcę+model do zadania (prostota/złożoność/obraz) + fallback.
-  const order = routeOrder(trimmed);
+  let order = routeOrder(trimmed);
+  // Auto-router Szefa: jeśli wskazano najmocniejszy zmierzony mózg i ma klucz — na CZOŁO
+  // łańcucha (reszta zostaje jako failover). Tak Szef zawsze rusza najlepszym dostępnym.
+  if (prefer && (prefer.provider === "ollama" ? !!store.settings.ollamaUrl?.trim() : !!store.settings.keys[prefer.provider]?.trim())) {
+    order = [prefer, ...order.filter((o) => !(o.provider === prefer.provider && o.model === prefer.model))];
+  }
   if (!order.length) {
     if (store.settings.onDeviceOnly) {
       throw new Error(
