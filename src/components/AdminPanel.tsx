@@ -165,6 +165,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 </p>
                 {row("Rozmiar kodu", `${v.loc.toLocaleString("pl-PL")} linii`, `${v.modules} modułów · ${v.components} ekranów · ${v.tests} plików testów`)}
                 {row("Czas budowy (1 osoba)", `~${v.months} mies.`, `≈ ${v.hours.toLocaleString("pl-PL")} godzin pracy`)}
+                {row("Ile zajęłoby innym", `${v.hoursSenior.toLocaleString("pl-PL")}–${v.hoursMid.toLocaleString("pl-PL")} h`, `senior (zna stack) → mid (z nauką) · zespół 3 os.: ~${v.teamMonths} mies.`)}
                 {row("Koszt odtworzenia", plnRange(v.replMinPln, v.replMaxPln), "ile kosztowałoby zbudowanie tego od zera (stawki PL)")}
                 {row("💰 Realnie jutro (jak jest)", plnRange(v.quickLowPln, v.quickHighPln), "szybka sprzedaż kodu bez użytkowników/marki")}
                 {row("Trudność", `${v.difficulty}/10`, v.difficultyLabel)}

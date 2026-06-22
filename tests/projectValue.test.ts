@@ -18,6 +18,13 @@ describe("valuate — wycena z metryk kodu", () => {
     expect(big.months).toBeGreaterThan(small.months);
   });
 
+  it("senior szybszy od zrównoważonego, a ten od mida", () => {
+    const v = valuate(stats());
+    expect(v.hoursSenior).toBeLessThan(v.hours);
+    expect(v.hours).toBeLessThan(v.hoursMid);
+    expect(v.teamMonths).toBeGreaterThan(0);
+  });
+
   it("trudność mieści się w 1–10 i rośnie z rozmiarem", () => {
     const v = valuate(stats());
     expect(v.difficulty).toBeGreaterThanOrEqual(1);

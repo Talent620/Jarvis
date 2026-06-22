@@ -7,7 +7,10 @@ export interface CodeStats { modules: number; components: number; tests: number;
 
 export interface Valuation {
   loc: number; modules: number; components: number; tests: number;
-  hours: number;            // szacowana praca (godziny)
+  hours: number;            // szacowana praca (godziny) — zrównoważona
+  hoursSenior: number;      // doświadczony senior, zna stack
+  hoursMid: number;         // mid-level, z nauką po drodze
+  teamMonths: number;       // mały zespół (3 os.) — czas kalendarzowy
   months: number;          // w przeliczeniu na 1 osobę na pełny etat
   replMinPln: number;       // koszt ODTWORZENIA (dolna)
   replMaxPln: number;       // koszt odtworzenia (górna)
@@ -23,9 +26,14 @@ const round = (n: number, step: number) => Math.round(n / step) * step;
 /** Pure: pełna wycena z metryk kodu. */
 export function valuate(s: CodeStats): Valuation {
   const loc = Math.max(0, s.loc || 0);
-  // ~20 linii dobrej produkcyjnej TS/h (z myśleniem, testami, debugiem).
+  // Wydajność (linie/h) realnej, produkcyjnej TS — z projektem, testami i debugiem.
+  // Senior znający stack ~28; zrównoważona ~20; mid z nauką ~14.
   const hours = Math.round(loc / 20);
+  const hoursSenior = Math.round(loc / 28);
+  const hoursMid = Math.round(loc / 14);
   const months = +(hours / 160).toFixed(1); // 160 h = miesiąc pełnego etatu
+  // Zespół 3 os.: szybciej kalendarzowo, ale „podatek koordynacji" (~30% narzutu).
+  const teamMonths = +((hours * 1.3) / (3 * 160)).toFixed(1);
   // Koszt odtworzenia: stawka mid–senior PL (120–180 zł/h).
   const replMinPln = round(hours * 120, 1000);
   const replMaxPln = round(hours * 180, 1000);
@@ -39,7 +47,7 @@ export function valuate(s: CodeStats): Valuation {
     difficulty >= 9 ? "ekstremalnie trudny (poziom zespołu/agencji)" :
     difficulty >= 7 ? "bardzo trudny (senior + dużo czasu)" :
     difficulty >= 5 ? "trudny (doświadczony programista)" : "średni";
-  return { loc, modules: s.modules || 0, components: s.components || 0, tests: s.tests || 0, hours, months, replMinPln, replMaxPln, quickLowPln, quickHighPln, difficulty, difficultyLabel };
+  return { loc, modules: s.modules || 0, components: s.components || 0, tests: s.tests || 0, hours, hoursSenior, hoursMid, teamMonths, months, replMinPln, replMaxPln, quickLowPln, quickHighPln, difficulty, difficultyLabel };
 }
 
 /** Metryki z builda (lub zera w dev). */
