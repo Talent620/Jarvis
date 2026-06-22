@@ -8,6 +8,7 @@ import { setAutoConsent } from "../lib/permissions";
 import { useEscape } from "../hooks/useEscape";
 import { ROBOT_VOICE, BOSS_GREETING, bossSystem } from "../lib/boss";
 import { jarvisBriefing } from "../lib/capabilities";
+import { parsePlan, currentStep } from "../lib/agentPlan";
 
 const LABEL: Record<LoopState, string> = {
   listening: "NASŁUCH…",
@@ -27,6 +28,8 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
   const [state, setState] = useState<LoopState>("listening");
   const [caption, setCaption] = useState("Tryb Szefa online. Wydaj rozkaz głosem.");
   const [detail, setDetail] = useState("");
+  const [plan, setPlan] = useState<string[]>([]); // tryb agenta wielokrokowego
+  const [step, setStep] = useState(0); // który krok trwa (1-indeks)
   const coreRef = useRef<HTMLDivElement>(null);
 
   // Rdzeń pulsuje w rytm głosu.
@@ -44,7 +47,17 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
     const persona = `${bossSystem(fullAccess, store.settings.userName)}\n\n${jarvisBriefing()}`;
     const loop = new ConversationLoop(
       (s, d) => { if (!cancelled) { setState(s); if (d) setDetail(d); } },
-      (t) => { if (!cancelled) setCaption(t); },
+      (t) => {
+        if (cancelled) return;
+        setCaption(t);
+        // Plan tylko z wypowiedzi Szefa (nie z „🗣 …" użytkownika). Odhaczanie wg „Krok N".
+        if (!t.startsWith("🗣")) {
+          const p = parsePlan(t);
+          if (p.length >= 2) { setPlan(p); setStep(0); }
+          const cs = currentStep(t);
+          if (cs) setStep(cs);
+        }
+      },
       ROBOT_VOICE,
       persona,
     );
@@ -68,6 +81,19 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
         <div className="bossmode-core" ref={coreRef} data-state={state} />
         <div className="bossmode-state">{LABEL[state] || state}</div>
         {detail && <div style={{ fontSize: 12, color: "#6bff9e", maxWidth: 360 }}>{detail}</div>}
+        {plan.length > 0 && (
+          <div className="bossmode-plan">
+            {plan.map((s, i) => {
+              const done = step > 0 && i + 1 < step;
+              const active = step > 0 && i + 1 === step;
+              return (
+                <div key={i} className="bossmode-step" data-active={active} data-done={done}>
+                  <span style={{ width: 18, display: "inline-block" }}>{done ? "✅" : active ? "▶" : "▢"}</span> {s}
+                </div>
+              );
+            })}
+          </div>
+        )}
         <div className="bossmode-caption" aria-live="polite">{caption}</div>
         <div className="bossmode-hint">Mów wprost: „dodaj zadanie…”, „wyślij maila do…”, „znajdź…”, „zaplanuj…”. Akcje nieodwracalne potwierdzę głosem.</div>
         <button className="btn" style={{ maxWidth: 220, marginTop: 22 }} onClick={onClose}>■ Zakończ</button>

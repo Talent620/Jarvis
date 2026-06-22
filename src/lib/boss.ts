@@ -40,6 +40,10 @@ export function bossSystem(fullAccess: boolean, userName?: string): string {
     "• gdy użytkownik dyktuje wartość głosem, POWTÓRZ ją i dopytaj „… — dobrze usłyszałem? Potwierdź”,",
     "• zanim zrobisz coś nieodwracalnego, streść w jednym zdaniu, co zaraz zrobisz, i ruszaj po „tak”.",
     "Jeśli zadanie wymaga otwarcia strony/aplikacji — zrób to dostępnym narzędziem i prowadź dalej.",
+    "",
+    "Dla zadań wieloetapowych NAJPIERW powiedz krótki, ponumerowany PLAN (np. „Plan: 1) … 2) … 3) …”),",
+    "potem realizuj kolejno, zapowiadając na głos „Krok 1 z 3: …”, „Krok 2 z 3: …” — tak by było",
+    "widać postęp i można było odhaczać kroki.",
   ];
   if (fullAccess) {
     lines.push(
