@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LiveSession, liveToolDeclarations, LIVE_VOICE_STYLE, type LiveState } from "../lib/liveVoice";
+import { LiveSession, liveToolDeclarations, LIVE_VOICE_STYLE, LIVE_MODEL_NATIVE, LIVE_MODEL_STABLE, type LiveState } from "../lib/liveVoice";
 import { toolDefs, runTool } from "../lib/tools";
 import { riskOf } from "../lib/permissions";
 import { ConversationLoop, type LoopState } from "../lib/voiceLoop";
@@ -36,6 +36,9 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
   // Głosowe potwierdzenie akcji nieodwracalnych: pierwsze wywołanie outbound NIGDY się nie
   // wykonuje — prosi o „tak"; identyczne wywołanie w ciągu 60 s (po potwierdzeniu) wykonuje.
   const pendingConfirm = useRef<{ sig: string; at: number } | null>(null);
+  // Native audio (emocje) próbujemy najpierw; gdy klucz go nie ma — cicho spadamy na stabilny.
+  const reachedLive = useRef(false); // czy bieżąca próba w ogóle się połączyła
+  const nativeFailed = useRef(false); // czy native audio już raz nie wstał (nie próbuj w kółko)
   const coreRef = useRef<HTMLDivElement>(null);
   // Token startu: unieważnia asynchroniczne budowanie sesji, gdy w międzyczasie
   // doszło do przełączenia silnika lub zamknięcia (zapobiega „wskrzeszeniu" sesji).
@@ -118,10 +121,21 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
           }
           return runTool(name, args);
         };
+        // Najpierw native audio (emocje); jeśli ten klucz go nie obsłuży — cicho stabilny.
+        const useNative = !nativeFailed.current;
+        reachedLive.current = false;
         const session = new LiveSession(
           geminiKey,
           `${systemPrompt({ mem0Block })}\n\n${LIVE_VOICE_STYLE}`,
           (s, d) => {
+            if (genRef.current !== myGen) return; // przestarzała sesja
+            if (s === "listening") reachedLive.current = true;
+            // Native nie wstał (błąd PRZED połączeniem) → przełącz na stabilny bez alarmowania.
+            if (s === "error" && useNative && !reachedLive.current && !nativeFailed.current) {
+              nativeFailed.current = true;
+              startEngine("gemini");
+              return;
+            }
             setState(s);
             if (d) setDetail(d);
           },
@@ -129,6 +143,8 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
           liveTools,
           liveRunTool,
           store.settings.geminiVoice?.trim() || "Charon",
+          useNative ? LIVE_MODEL_NATIVE : LIVE_MODEL_STABLE,
+          useNative, // affective dialog + proactive audio tylko na native
         );
         liveRef.current = session;
         session.start().catch(() => {

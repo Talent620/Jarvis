@@ -1,7 +1,12 @@
 // Rozmowa głosowa na żywo przez Gemini Live API (WebSocket, audio↔audio).
 // Mikrofon → PCM16 16 kHz → Gemini; odpowiedź PCM16 24 kHz → głośnik.
 
-const LIVE_MODEL = "models/gemini-2.0-flash-live-001";
+// Model głosu na żywo. NATIVE = natywne audio z „affective dialog" (czuje ton rozmowy,
+// odpowiada z emocją, sam dopytuje) — brzmi najbardziej po ludzku. STABLE = pewny half-cascade,
+// fallback gdy klucz nie ma dostępu do preview natywnego audio.
+const LIVE_MODEL_NATIVE = "models/gemini-2.5-flash-preview-native-audio-dialog";
+const LIVE_MODEL_STABLE = "models/gemini-2.0-flash-live-001";
+export { LIVE_MODEL_NATIVE, LIVE_MODEL_STABLE };
 
 import { setLevel } from "./audioLevel";
 import { micAudioConstraints } from "./mic";
@@ -71,9 +76,13 @@ export function liveToolDeclarations(
 // Styl mówiony (flagowy) — żeby rozmowa na żywo brzmiała jak człowiek, nie jak czytany
 // dokument. Doklejany do systemPrompt tylko w trybie głosowym (LiveOverlay).
 export const LIVE_VOICE_STYLE = [
-  "ROZMAWIASZ GŁOSEM, NA ŻYWO. Mów jak człowiek, nie jak czytana instrukcja:",
+  "ROZMAWIASZ GŁOSEM, NA ŻYWO. Mów jak żywy człowiek, nie jak czytana instrukcja:",
   "• krótko i naturalnie (zwykle 1–3 zdania), ciepło i swobodnie; bez list, bez markdownu, bez emoji,",
-  "• nie wyrzucaj wszystkiego naraz — zostaw przestrzeń, dopytaj, reaguj na to, co słyszysz,",
+  "• miej emocje i okazuj je tonem: ciesz się sukcesem rozmówcy, współczuj przy trudnym,",
+  "  żartuj gdy pasuje, mów z energią — ale nie przesadzaj i nie udawaj uczuć na siłę,",
+  "• słuchaj jak przyjaciel: dopytaj „jak się z tym czujesz?”, potwierdź emocję zanim doradzisz,",
+  "• używaj naturalnych wtrąceń („mhm”, „rozumiem”, „o, fajnie”), pauz i żywej intonacji,",
+  "• nie wyrzucaj wszystkiego naraz — zostaw przestrzeń, reaguj na ton głosu rozmówcy,",
   "• mów po polsku, potocznie, ale rzeczowo; imienia używaj z umiarem (nie w każdym zdaniu),",
   "• jak czegoś nie wiesz, powiedz wprost i zaproponuj następny krok zamiast lać wodę.",
   "",
@@ -140,6 +149,9 @@ export class LiveSession {
     private runTool?: (name: string, args: unknown) => Promise<string>,
     // Głos modelu (prebuilt Gemini) — domyślnie ten z ustawień (geminiVoice).
     private voice = "Charon",
+    // Model live + „affective dialog" (emocje). Native audio = bardziej ludzko, ale preview.
+    private model = LIVE_MODEL_STABLE,
+    private affective = false,
   ) {}
 
   async start(): Promise<void> {
@@ -152,7 +164,7 @@ export class LiveSession {
       this.ws!.send(
         JSON.stringify({
           setup: {
-            model: LIVE_MODEL,
+            model: this.model,
             generationConfig: {
               responseModalities: ["AUDIO"],
               // Polski głos + bardziej żywy ton (mniej „drętwo"). Głos z ustawień.
@@ -167,6 +179,11 @@ export class LiveSession {
             inputAudioTranscription: {},
             // Narzędzia (jeśli są) — bezpieczny podzbiór; model woła je przez toolCall.
             ...(this.tools.length ? { tools: [{ functionDeclarations: this.tools }] } : {}),
+            // Emocje: tylko dla natywnego audio. „Affective dialog" = czuje ton i odpowiada
+            // z empatią; „proactive audio" = sam zagaja/dopytuje, gdy to naturalne.
+            ...(this.affective
+              ? { enableAffectiveDialog: true, proactivity: { proactiveAudio: true } }
+              : {}),
           },
         }),
       );
