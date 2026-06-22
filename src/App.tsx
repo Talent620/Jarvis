@@ -23,6 +23,7 @@ import { watchHeadset } from "./lib/headset";
 import { toast } from "./lib/toast";
 import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } from "./lib/decisions";
 import { isBossSummon } from "./lib/boss";
+import { completionReport } from "./lib/completion";
 import { rememberFact } from "./lib/memory";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
 import { notifySummary } from "./lib/notifyCenter";
@@ -189,6 +190,7 @@ export default function App() {
   const [showRecall, setShowRecall] = useState(false);
   const [recallSeed, setRecallSeed] = useState("");
   const [showBoss, setShowBoss] = useState(false);
+  const [completionHidden, setCompletionHidden] = useState(false);
   const [tip, setTip] = useState<Tip | null>(null);
   const [decision, setDecision] = useState<DecisionCandidate | null>(null); // 🧠 auto-capture
   const tipCountRef = useRef(0);
@@ -239,7 +241,7 @@ export default function App() {
       open("sales", "Pulpit Sprzedaży", setShowSales, "📈", "leady crm oferty klienci sprzedaz"),
       open("goal", "🎯 Zleć cel", setShowGoal, "🎯", "do-for-me projekt plan wieloetapowe cel"),
       open("studio", "Studio Obrazów", setShowStudio, "🎨", "zdjecia edycja generuj obraz foto"),
-      open("guardian", "Strażnik", setShowGuardian, "🛡", "napraw przyspiesz pomoc diagnoza"),
+      open("guardian", "Diagnoza i naprawa (dawny Strażnik)", setShowGuardian, "🩺", "napraw przyspiesz pomoc diagnoza strażnik"),
       open("mind", "Umysł JARVISA", setShowMind, "🧠", "odprawa pamiec swiat wzorce samoocena"),
       open("memory", "Co JARVIS o mnie wie", setShowMemory, "🧠", "pamiec fakty edytuj usun wiedza"),
       open("profile", "Mój profil", setShowProfile, "👤", "kim jestem profil"),
@@ -1236,6 +1238,28 @@ export default function App() {
         councilAvailable={councilMembers(3).length >= 2}
       />
 
+      {/* 🚀 Droga do 100% — Szef proponuje następny krok; auto-kroki robi po „Zrób". */}
+      {(() => {
+        if (completionHidden) return null;
+        const r = completionReport(store.settings);
+        if (!r.next || r.percent >= 100) return null;
+        const step = r.next;
+        const apply = () => {
+          if (step.patch) { store.setSettings(step.patch); toast(`Zrobione: ${step.title} ✓`); }
+          else if (step.openScreen === "profile") setShowProfile(true);
+          else setShowSettings(true);
+        };
+        return (
+          <div className="journal-card" style={{ margin: "0 8px 8px", padding: "8px 10px", display: "flex", gap: 8, alignItems: "center", fontSize: 13, borderLeft: "3px solid #2bff88" }}>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              🚀 JARVIS w <b>{r.percent}%</b> — następny krok: <b>{step.title}</b>{step.patch ? " — Szef zrobi to sam" : ""}.
+            </span>
+            <button className="chip on" onClick={apply}>{step.patch ? "Zrób" : "Otwórz"}</button>
+            <button className="chip" onClick={() => setCompletionHidden(true)} title="Później">✕</button>
+          </div>
+        );
+      })()}
+
       {/* ⬢ Szef zawsze w zasięgu — centralny agent głosowy, jedno tknięcie z każdego ekranu. */}
       <button className="boss-fab" onClick={() => setShowBoss(true)} title="Tryb Szefa — agent głosowy (powiedz „szef”)" aria-label="Tryb Szefa">⬢</button>
 
@@ -1340,6 +1364,7 @@ export default function App() {
           onHud={() => setShowHud(true)}
           onStudio={() => setShowStudio(true)}
           onGuardian={() => setShowGuardian(true)}
+          onBoss={() => setShowBoss(true)}
           onRecall={() => setShowRecall(true)}
           onMind={() => setShowMind(true)}
           onGoal={() => setShowGoal(true)}

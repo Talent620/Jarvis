@@ -14,6 +14,7 @@ export default function More({
   onGadgets,
   onHud,
   onGuardian,
+  onBoss,
   onRecall,
   onMind,
   onGoal,
@@ -52,6 +53,7 @@ export default function More({
   onGadgets: () => void;
   onHud: () => void;
   onGuardian: () => void;
+  onBoss: () => void;
   onRecall: () => void;
   onMind: () => void;
   onGoal: () => void;
@@ -83,9 +85,10 @@ export default function More({
 }) {
   useEscape(onClose);
   const items = [
+    { id: "boss", icon: "⬢", label: "⬢ Szef — agent głosowy: zrób za mnie, napraw, doradź", fn: onBoss },
     { id: "command", icon: "⌘", label: "Szybkie polecenia — znajdź/otwórz wszystko (⌘K)", fn: onCommand },
     { id: "recall", icon: "🔎", label: "Recall — znajdź wszystko u siebie (czaty, dziennik, pamięć…)", fn: onRecall },
-    { id: "guardian", icon: "🛡", label: "Strażnik JARVISA — napraw, przyspiesz, ulepsz, doradź", fn: onGuardian },
+    { id: "guardian", icon: "🩺", label: "Diagnoza i naprawa (dawny Strażnik)", fn: onGuardian },
     { id: "mind", icon: "🧠", label: "Umysł JARVISA — odprawa, Twój świat, wzorce, samoocena", fn: onMind },
     { id: "goal", icon: "🎯", label: "Zleć cel — rozłóż na kroki i zrób za mnie (do-for-me)", fn: onGoal },
     { id: "notifications", icon: "🔔", label: "Powiadomienia — co wymaga uwagi", fn: onNotifications },
@@ -128,7 +131,8 @@ export default function More({
     { title: "🛒 Zakupy i okazje", ids: ["bargain", "wheretobuy", "shoppinglist"] },
     { title: "🎙 Narzędzia AI", ids: ["translator", "transcribe", "hud", "screen", "studio"] },
     { title: "🧠 Ja i pamięć", ids: ["mind", "profile", "memory"] },
-    { title: "⚙️ System i pomoc", ids: ["command", "recall", "notifications", "status", "history", "data", "audit", "gadgets", "faq", "help", "admin"] },
+    { title: "⬢ Szef i sterowanie", ids: ["boss", "command", "recall", "goal"] },
+    { title: "⚙️ System i pomoc", ids: ["notifications", "status", "guardian", "history", "data", "audit", "gadgets", "faq", "help", "admin"] },
   ];
 
   type Item = (typeof items)[number];

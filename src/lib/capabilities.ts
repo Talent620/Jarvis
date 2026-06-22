@@ -3,6 +3,8 @@
 // użyć — oraz co AKTUALNIE wymaga poprawki (z realnych testów ustawień/funkcji). Dzięki temu
 // Szef ma „znakomity kontakt": wie wszystko o aplikacji i mówi wprost, co nie gra.
 import { settingsFixes, featureChecks } from "./healthCheck";
+import { completionReport } from "./completion";
+import { store } from "./store";
 
 // Skondensowana mapa możliwości (utrzymywana ręcznie — krótka, ale pełna). Pogrupowana, by
 // model szybko trafiał do właściwej funkcji/narzędzia zamiast zgadywać.
@@ -40,7 +42,19 @@ export function selfCheckDigest(): string {
   ].join("\n");
 }
 
-/** Pełen blok wiedzy + stanu, doklejany do promptu Szefa. */
+/** Droga do 100%: proaktywnie proponuj kroki; auto-kroki rób po potwierdzeniu. */
+export function completionDigest(): string {
+  let r;
+  try { r = completionReport(store.settings); } catch { return ""; }
+  if (r.percent >= 100) return "DROGA DO 100%: osiągnięte — JARVIS w pełni uzbrojony.";
+  const steps = r.remaining.slice(0, 5).map((s) => `• ${s.title}${s.patch ? " (możesz zrobić od ręki po „tak”)" : " (trzeba danych użytkownika — pokieruj do ekranu)"}`);
+  return [
+    `DROGA DO 100% (teraz ${r.percent}%). Co jakiś czas, gdy pasuje, proponuj kolejny krok ku pełnej sprawności i — jeśli „możesz zrobić od ręki" — zaproponuj wykonanie po potwierdzeniu:`,
+    ...steps,
+  ].join("\n");
+}
+
+/** Pełen blok wiedzy + stanu + droga do 100%, doklejany do promptu Szefa. */
 export function jarvisBriefing(): string {
-  return `${capabilitiesDigest()}\n\n${selfCheckDigest()}`;
+  return `${capabilitiesDigest()}\n\n${selfCheckDigest()}\n\n${completionDigest()}`;
 }
