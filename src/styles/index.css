@@ -1809,6 +1809,11 @@ input:focus, textarea:focus, select:focus {
 }
 .boss-fab:hover { transform: scale(1.08); box-shadow: 0 0 26px rgba(43, 255, 136, 0.6); }
 .boss-fab:active { transform: scale(0.96); }
+/* Desktop/EXE: treść jest wyśrodkowaną kolumną (≤760 px) — przyklej ⬢ do JEJ prawej
+   krawędzi, nie do dalekiego rogu okna, żeby nie „odpływał" na szerokim ekranie. */
+@media (min-width: 800px) {
+  .boss-fab { right: max(14px, calc(50vw - 372px)); bottom: 100px; }
+}
 
 /* === ⬢ Tryb Szefa — pełnoekranowy agent głosowy (Matrix + głos robota) === */
 .bossmode {
