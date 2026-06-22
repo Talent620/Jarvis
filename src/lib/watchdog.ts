@@ -1,7 +1,7 @@
 // === 🩺 Watchdog Szefa — pilnuje, czy wszystko działa (start + co jakiś czas) ===
 // Składa realne, lokalne kontrole (ustawienia + funkcje) w listę problemów i pomaga
 // alarmować TYLKO o nowych sprawach (bez nękania w kółko). Pure tam, gdzie się da.
-import { settingsFixes, featureChecks } from "./healthCheck";
+import { settingsFixes, featureChecks, type HealthItem } from "./healthCheck";
 
 export interface WatchIssue { id: string; title: string; detail: string; severity: "warn" | "err" }
 
@@ -29,4 +29,26 @@ export function newIssues(alerted: Set<string> | string[], curr: WatchIssue[]): 
 /** Krótki komunikat alertu (1 linia) dla toasta/głosu. Pure. */
 export function alertText(issue: WatchIssue): string {
   return `${issue.severity === "err" ? "⛔" : "⚠"} ${issue.title}`;
+}
+
+// === 🛠 Auto-naprawa (self-heal) — JARVIS sam koryguje bezpieczne usterki ustawień ===
+// settingsFixes są zaprojektowane jako „JARVIS sam ustawia poprawną wartość" — można je
+// zastosować automatycznie (np. zły dostawca bez klucza → przełącz na auto).
+
+/** Usterki, które JARVIS umie naprawić sam (mają gotowy fix). */
+export function autoFixable(): HealthItem[] {
+  try {
+    return settingsFixes().filter((i) => (i.status === "err" || i.status === "warn") && !!i.fix);
+  } catch {
+    return [];
+  }
+}
+
+/** Zastosuj bezpieczne auto-naprawy. Zwraca tytuły naprawionych rzeczy (do komunikatu). */
+export function applyAutoFixes(): string[] {
+  const done: string[] = [];
+  for (const it of autoFixable()) {
+    try { it.fix!.apply(); done.push(it.title); } catch { /* pojedyncza naprawa best-effort */ }
+  }
+  return done;
 }

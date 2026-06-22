@@ -172,6 +172,20 @@ export default function CostPanel({ onClose }: { onClose: () => void }) {
                 />
                 <button className="btn" style={{ maxWidth: 120 }} onClick={saveBudget}>Zapisz</button>
               </div>
+              {/* 🧠 Rezerwa dla mózgu — zawsze X% budżetu zostaje dla czatu/Szefa. */}
+              <div style={{ display: "flex", gap: 8, margin: "4px 0 6px", alignItems: "center" }}>
+                <span style={{ fontSize: 13, flex: 1 }}>🧠 Rezerwa dla mózgu: <b>{store.settings.brainReservePct ?? 35}%</b></span>
+                <input
+                  type="range" min={0} max={70} step={5}
+                  value={store.settings.brainReservePct ?? 35}
+                  onChange={(e) => { store.setSettings({ brainReservePct: Number(e.target.value) }); setTick((t) => t + 1); }}
+                  style={{ flex: 1 }}
+                  aria-label="Rezerwa budżetu dla mózgu (procent)"
+                />
+              </div>
+              <p className="muted" style={{ fontSize: 11, margin: "0 0 6px" }}>
+                Gdy zużycie wejdzie w rezerwę, pomocnicze AI (generatory, weryfikacja) przechodzi na <b>darmowe</b> modele — płatny limit zostaje dla mózgu. {store.settings.aiMonthlyBudgetUsd > 0 ? "" : "Najpierw ustaw budżet wyżej."}
+              </p>
               {credits && (
                 <div style={{ display: "flex", gap: 8, margin: "4px 0", alignItems: "center" }}>
                   <input

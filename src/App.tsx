@@ -24,7 +24,7 @@ import { toast } from "./lib/toast";
 import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } from "./lib/decisions";
 import { isBossSummon } from "./lib/boss";
 import { completionReport } from "./lib/completion";
-import { healthIssues, topIssue, newIssues, alertText } from "./lib/watchdog";
+import { healthIssues, topIssue, newIssues, alertText, applyAutoFixes } from "./lib/watchdog";
 import { valueToday, prettyMinutes } from "./lib/valueLog";
 import { rememberFact } from "./lib/memory";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
@@ -211,7 +211,16 @@ export default function App() {
   // 🩺 Watchdog Szefa: sprawdź stan po starcie i co ~6 min; alarmuj TYLKO o nowych problemach.
   useEffect(() => {
     const alerted = alertedRef.current;
+    const visibleVoice = () => store.settings.speak && (typeof document === "undefined" || document.visibilityState !== "hidden");
     const check = () => {
+      // 1) 🛠 SELF-HEAL: sam napraw bezpieczne usterki ustawień i powiedz o tym.
+      const fixed = applyAutoFixes();
+      if (fixed.length) {
+        const m = `Naprawiłem: ${fixed[0]}${fixed.length > 1 ? ` i ${fixed.length - 1} więcej` : ""}.`;
+        toast("🛠 " + m);
+        if (visibleVoice()) void speak("Sam naprawiłem: " + fixed[0] + ".", store.settings).catch(() => {});
+      }
+      // 2) 🔔 ALERT o nowych problemach, których nie da się naprawić automatycznie.
       const fresh = newIssues(alerted, healthIssues());
       if (!fresh.length) return;
       fresh.forEach((i) => alerted.add(i.id));
@@ -219,6 +228,8 @@ export default function App() {
       if (!top) return;
       if (top.severity === "warn" && store.settings.tips === false) return; // szanuj wyciszenie (błędy zawsze)
       toast(alertText(top), { label: "Sprawdź", onClick: () => setShowGuardian(true) });
+      // Głosowy alert Szefa — błędy mówi na głos i kieruje do naprawy.
+      if (top.severity === "err" && visibleVoice()) void speak(`Uwaga: ${top.title}. Wejdź w diagnozę, żeby to naprawić.`, store.settings).catch(() => {});
     };
     const first = setTimeout(check, 4500);
     const iv = setInterval(check, 6 * 60_000);

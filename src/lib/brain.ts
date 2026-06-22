@@ -19,6 +19,7 @@ import { speculativeAnswer } from "./speculative";
 import { localRefine, critiqueInstruction } from "./localRefine";
 import { VERIFY_SYSTEM, buildVerifyUser, verifyVerdict } from "./verify";
 import { freeOnly } from "./freeMode";
+import { inReserveZone } from "./brainReserve";
 import { localSelfConsistency } from "./localConsensus";
 import { conversationStyleDirectives } from "./conversationStyle";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
@@ -470,7 +471,14 @@ export async function askModel(params: {
     history: params.history,
     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
   };
-  const order = routeOrder(params.history);
+  let order = routeOrder(params.history);
+  // 🧠 Rezerwa dla mózgu: gdy zużycie weszło w strefę rezerwy, pomocnicze AI (generatory,
+  // weryfikacja) schodzi na DARMOWE modele — płatny limit zostaje dla czatu/Szefa. Mózg
+  // (askJarvis) ma własny tor i nie jest tym ruszany.
+  if (inReserveZone()) {
+    const free = freeOnly(order);
+    if (free.length) order = free; // są darmowe → użyj ich; brak → leć dalej (komunikat budżetu pokaże panel)
+  }
   if (!order.length) {
     throw new Error("Żaden dostawca AI nie ma wpisanego klucza — ⚙ → AI (Szybki start).");
   }

@@ -456,6 +456,9 @@ export interface Settings {
   /** 🆓 Tryb darmowy — mózg działa wyłącznie na darmowych/lokalnych dostawcach (pomija płatnego
    *  Claude'a). Auto-router i tak wybiera najmocniejszy dostępny darmowy model. */
   freeMode?: boolean;
+  /** 🧠 Rezerwa głównego API dla mózgu (% miesięcznego budżetu). Gdy zużycie wejdzie w rezerwę,
+   *  pomocnicze wywołania AI (generatory, weryfikacja) przechodzą na darmowe. Domyślnie 35%. */
+  brainReservePct?: number;
   /** Tryb nieocenzurowany — działa realnie tylko z modelem lokalnym (Ollama):
    *  JARVIS nie dokłada własnych zastrzeżeń/moralizowania i odpowiada wprost. */
   unfilteredLocal: boolean;

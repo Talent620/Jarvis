@@ -96,6 +96,7 @@ const defaultSettings: Settings = {
   requireConsentAlways: false,
   bossFullAccess: false,
   freeMode: false,
+  brainReservePct: 35,
   unfilteredLocal: false,
   deepThink: false,
   verifyHard: false,
