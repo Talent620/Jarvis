@@ -608,13 +608,15 @@ const webSpeechExists = (): boolean =>
   Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
 /**
- * Czy nasłuch powinien iść torem nagrywanym (Whisper/Groq) zamiast Web Speech:
+ * Czy nasłuch powinien iść torem nagrywanym (Whisper/Groq albo lokalny Whisper) zamiast Web Speech:
  *  - desktop (Electron) → ZAWSZE (Web Speech tam jest martwe),
- *  - natywny Android/iOS → gdy mamy klucz Groq (wtedy mowa działa pewnie; bez klucza
- *    spadamy do Web Speech, bo nic lepszego nie mamy i nie chcemy psuć tym, komu działa).
+ *  - natywny Android/iOS → ZAWSZE (Web Speech NIE działa w WebView APK — wcześniej bez klucza
+ *    Groq spadaliśmy do Web Speech, które milczy → Tryb Słuchawki „nie działał". Teraz zawsze
+ *    nagrywamy, a warstwa transkrypcji wybiera: lokalny Whisper → Groq → czytelny błąd-podpowiedź).
+ *  - przeglądarka/web → Web Speech (tam realnie działa).
  */
 export const usesRecordedStt = (): boolean =>
-  canRecordAudio() && (isDesktop() || (isNativeApp() && !!primaryKey("groq")));
+  canRecordAudio() && (isDesktop() || isNativeApp());
 
 // „Obsługa mowy": desktop = nagrywanie; natywny = nagrywanie LUB Web Speech;
 // przeglądarka/telefon-web = natywne Web Speech.

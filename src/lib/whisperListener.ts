@@ -2,6 +2,7 @@ import type { ListenCallbacks, VoiceListener } from "./voice";
 import { isSpeaking } from "./voice";
 import { transcribeAudio } from "./transcribe";
 import { primaryKey } from "./keys";
+import { store } from "./store";
 import { setLevel } from "./audioLevel";
 import { micAudioConstraints } from "./mic";
 
@@ -59,8 +60,11 @@ export class WhisperListener implements VoiceListener {
   start(lang = "pl-PL"): void {
     if (this.active) return;
     this.lang = lang.slice(0, 2) || "pl";
-    if (!primaryKey("groq")) {
-      this.cb.onError?.("Rozpoznawanie mowy na komputerze używa Groq (darmowy) — dodaj klucz Groq w ⚙ → AI.");
+    // Tor nagrywany działa, gdy mamy CZYM transkrybować: lokalny Whisper (on-device, za darmo,
+    // offline) ALBO klucz Groq (darmowy Whisper w chmurze). Bez żadnego — jasna podpowiedź,
+    // a nie ciche milczenie (to był powód „Tryb Słuchawki nie działa" na Androidzie bez Groq).
+    if (!primaryKey("groq") && !store.settings.localStt) {
+      this.cb.onError?.("Mowa wymaga rozpoznawania: dodaj DARMOWY klucz Groq w ⚙ → AI (najprościej) albo włącz lokalny Whisper w ⚙ → Głos → „rozpoznawanie na urządzeniu”.");
       this.cb.onEnd?.();
       return;
     }

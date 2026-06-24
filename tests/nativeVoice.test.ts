@@ -12,7 +12,7 @@ vi.mock("@capacitor/core", () => ({
 let groq = "";
 vi.mock("../src/lib/keys", () => ({ primaryKey: (p: string) => (p === "groq" ? groq : "") }));
 
-import { isSpeechSupported, createListener, Listener, usesRecordedStt } from "../src/lib/voice";
+import { isSpeechSupported, createListener, usesRecordedStt } from "../src/lib/voice";
 import { WhisperListener } from "../src/lib/whisperListener";
 
 afterEach(() => {
@@ -35,12 +35,12 @@ describe("nasłuch na natywnym Androidzie/iOS (APK)", () => {
     expect(createListener({ onFinal: () => {} })).toBeInstanceOf(WhisperListener);
   });
 
-  it("bez klucza Groq → spada do Web Speech (Listener), żeby nie psuć tym, komu działa", () => {
+  it("bez klucza Groq → DALEJ tor nagrywany (Web Speech nie działa w WebView APK; transkrypcja wybierze lokalny Whisper/Groq lub poda czytelny błąd)", () => {
     fakeMediaRecorder();
-    (window as any).webkitSpeechRecognition = function () {};
+    (window as any).webkitSpeechRecognition = function () {}; // nawet gdyby „istniał", w APK i tak nie transkrybuje
     groq = "";
-    expect(usesRecordedStt()).toBe(false);
-    expect(createListener({ onFinal: () => {} })).toBeInstanceOf(Listener);
+    expect(usesRecordedStt()).toBe(true);
+    expect(createListener({ onFinal: () => {} })).toBeInstanceOf(WhisperListener);
   });
 
   it("obsługa mowy jest dostępna, gdy można nagrywać (Whisper) albo jest Web Speech", () => {
