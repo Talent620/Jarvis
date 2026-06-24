@@ -213,8 +213,11 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
     let offer = l.offer;
     if (!offer) {
       setDrafting(l.id);
-      offer = await draftOffer(l);
-      setDrafting("");
+      try {
+        offer = await draftOffer(l);
+      } finally {
+        setDrafting(""); // zawsze odblokuj, nawet gdy draftOffer rzuci wyjątek
+      }
       if (offer) store.setData((d) => { const x = d.leads.find((y) => y.id === l.id); if (x) { x.offer = offer; if (x.status === "new") x.status = "offer"; x.updatedAt = Date.now(); } });
     }
     const { subject, body } = splitOffer(offer || "", `Oferta dla ${l.company}`, store.settings.emailSignature);
