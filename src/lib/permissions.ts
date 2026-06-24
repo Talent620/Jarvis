@@ -77,10 +77,17 @@ let consentHandler: ((req: ConsentRequest) => Promise<{ allow: boolean; remember
 export function setConsentHandler(fn: typeof consentHandler) { consentHandler = fn; }
 
 // Auto-zgoda: gdy WŁĄCZONA (tylko w otwartym Trybie Szefa z „pełnym dostępem"), akcje
-// wychodzące przechodzą bez ekranu zgody — bramką jest głosowe „przewiduj i potwierdź".
-let autoConsent = false;
-export function setAutoConsent(on: boolean) { autoConsent = on; }
-export function isAutoConsent(): boolean { return autoConsent; }
+// WYCHODZĄCE przechodzą bez ekranu zgody — bramką jest głosowe „przewiduj i potwierdź".
+// Zakres: tylko outbound (read/write i tak przechodzą wcześniej). Bezpiecznik: auto-wygasa
+// po AUTO_CONSENT_MS, żeby nie zostać „otwarte" na stałe (np. gdy ekran nie zdejmie flagi).
+const AUTO_CONSENT_MS = 15 * 60_000;
+let autoConsentUntil = 0;
+export function setAutoConsent(on: boolean, ttlMs = AUTO_CONSENT_MS) {
+  autoConsentUntil = on ? Date.now() + Math.max(0, ttlMs) : 0;
+}
+export function isAutoConsent(): boolean {
+  return autoConsentUntil > 0 && Date.now() < autoConsentUntil;
+}
 
 type StepListener = (tool: string | null) => void;
 let stepListener: StepListener | null = null;
@@ -125,8 +132,8 @@ export async function requestConsent(tool: string, input: unknown): Promise<bool
   const risk = riskOf(tool);
   // Pytamy tylko o akcje zewnętrzne/nieodwracalne; lokalne zapisy idą automatycznie.
   if (risk !== "outbound") return true;
-  // Tryb Szefa „pełny dostęp": użytkownik dał globalną zgodę, a agent potwierdza głosem.
-  if (autoConsent) return true;
+  // Tryb Szefa „pełny dostęp": globalna zgoda na outbound, z auto-wygaśnięciem.
+  if (isAutoConsent()) return true;
   const consents = loadConsents();
   if (consents[tool] === "allow") return true;
   if (!consentHandler) return !store.settings.requireConsentAlways; // brak UI (np. tryb live): domyślnie nie blokuj (zgodność wstecz); opt-in fail-closed
