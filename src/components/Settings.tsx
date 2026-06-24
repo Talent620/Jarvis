@@ -1998,9 +1998,12 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   setTimeout(() => speak("Dzień dobry. Tu JARVIS. Tak będę teraz brzmiał.", { ...store.settings, speak: true, voiceMode: "system", voiceName: best, voicePitch: 0.9, voiceRate: 1.0 }), 120);
                 }}
               >
-                🚀 Najlepszy polski głos JARVISA (jeden klik)
+                ↺ Domyślny STAŁY głos JARVISA (zawsze ten sam)
               </button>
-              <p className="muted" style={{ marginTop: 4 }}>Nie chcesz nic ustawiać? Kliknij to — dobierzemy i przypniemy ładny polski głos.</p>
+              <p className="muted" style={{ marginTop: 4 }}>
+                To Twój <b>stały głos</b> — raz ustawiony NIE zmienia się sam (polski systemowy, przypięty).
+                Zmieniłeś silnik niżej i wolisz wrócić? Kliknij tu — jednym guzikiem przywraca domyślny głos.
+              </p>
 
               {/* 🎙 JEDEN wybór silnika — to ON decyduje, jak brzmi JARVIS (koniec walki przełączników). */}
               <div className="field" style={{ marginTop: 12 }}>
