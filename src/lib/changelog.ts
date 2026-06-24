@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "⚡ Aktualizacje błyskawiczne (OTA): apka pobiera sam web-bundle (~1–2 MB) zamiast całego APK i podmienia go bez instalatora; zła paczka sama się cofa.",
       "🎧 Tryb Słuchawki działa na Androidzie — koniec cichego milczenia bez klucza Groq (Web Speech nie działa w aplikacji; teraz zawsze nagrywamy, a transkrypcję robi lokalny Whisper lub darmowy Groq).",
       "🗣 Wyraźny domyślny STAŁY głos jednym guzikiem — głos nie zmienia się już sam.",
       "🧠 Mądrzejszy dobór modelu: pytania wyjaśniające (jak działa…, na czym polega…) idą na mocniejszy model.",

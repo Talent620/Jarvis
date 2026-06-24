@@ -30,8 +30,9 @@ import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkO
 import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
 import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
 import { detectSd } from "../lib/localImage";
-import { checkForUpdate, applyUpdate, type UpdateInfo } from "../lib/updater";
+import { checkForUpdate, applyUpdate, currentBuild, type UpdateInfo } from "../lib/updater";
 import { CHANGELOG } from "../lib/changelog";
+import { liveUpdateSupported, checkLiveUpdate, applyLiveUpdate } from "../lib/liveUpdate";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
 import { clearRouteLog } from "../lib/modelRouter";
 import { toast } from "../lib/toast";
@@ -2785,6 +2786,34 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   {updInfo.platform === "web" ? "↻ Odśwież do najnowszej" : "⬇ Pobierz i zainstaluj najnowszą"}
                 </button>
               )}
+              {liveUpdateSupported() && (
+                <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8, border: "1px solid var(--gold)" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>⚡ Aktualizacja błyskawiczna (OTA)</div>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
+                    Pobiera tylko zmianę (sam web-bundle, ~1–2 MB) zamiast całego APK — i podmienia ją od
+                    razu, bez instalatora. Zła paczka sama się cofa.
+                  </div>
+                  <button
+                    className="btn primary"
+                    style={{ marginTop: 8 }}
+                    disabled={updBusy}
+                    onClick={async () => {
+                      setUpdBusy(true); setUpdMsg("⚡ Sprawdzam aktualizację błyskawiczną…");
+                      const c = await checkLiveUpdate();
+                      if (c.error) { setUpdBusy(false); setUpdMsg(`❌ ${c.error}`); return; }
+                      if (!c.available) { setUpdBusy(false); setUpdMsg(`✅ Masz najnowszą wersję (${currentBuild()}).`); return; }
+                      setUpdMsg(`⬇ Pobieram zmianę (${c.version})…`);
+                      const r = await applyLiveUpdate(c.manifest!);
+                      setUpdBusy(false);
+                      if (r.ok) { toast("⚡ Zaktualizowano — przeładowuję…"); }
+                      else { setUpdMsg(`❌ ${r.error}`); }
+                    }}
+                  >
+                    {updBusy ? "⏳ Pracuję…" : "⚡ Zaktualizuj błyskawicznie"}
+                  </button>
+                </div>
+              )}
+
               <details style={{ marginTop: 8 }} open>
                 <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>📜 Co nowego / historia zmian</summary>
                 {CHANGELOG.map((c) => (

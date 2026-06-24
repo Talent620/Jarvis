@@ -48,6 +48,16 @@ jobs:
           npm run build
           npx cap sync android
 
+      # OTA: spakuj sam web-bundle (~1–2 MB) + manifest, by aplikacja pobierała samą ZMIANĘ,
+      # nie cały APK. Czas buildu (iso) służy do wykrycia „jest nowsza wersja".
+      - name: Pakuj web-bundle (OTA) + manifest
+        run: |
+          ( cd dist && zip -qr ../web-bundle.zip . )
+          BUILD="$(date -u +'%Y-%m-%d %H:%M')"
+          ISO="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          printf '{"version":"%s","iso":"%s","url":"https://github.com/Talent620/Jarvis/releases/download/latest/web-bundle.zip"}\n' "$BUILD" "$ISO" > bundle.json
+          ls -lh web-bundle.zip bundle.json
+
       - name: Build signed release APK
         working-directory: android
         run: |
@@ -71,5 +81,8 @@ jobs:
             🧠 **Serwer Ollama na PC (mózg dla telefonu):** `JARVIS-Ollama-Server.exe` — dwuklik, zostaw okno otwarte,
             wklej pokazany adres w aplikacji (⚙ → AI). `.ps1` NIE odpala się dwuklikiem — użyj `.exe` lub `JARVIS-Serwer.cmd`.
             🖼 **Obrazy lokalnie (Studio):** uruchom Stable Diffusion (A1111/Forge) — patrz docs/INSTALACJA.md.
-          files: jarvis.apk
+          files: |
+            jarvis.apk
+            web-bundle.zip
+            bundle.json
           make_latest: true

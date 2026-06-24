@@ -17,6 +17,9 @@ window.addEventListener("hashchange", () => location.reload()); // przełączani
 installSecretsVault(); // szyfrowanie kluczy w spoczynku (no-op, gdy wyłączone)
 initPlugins();
 
+// Aktualizacje OTA: potwierdź wtyczce, że ta paczka DZIAŁA (inaczej cofnęłaby ją). No-op na web.
+void import("./lib/liveUpdate").then((m) => m.notifyLiveUpdateReady()).catch(() => {});
+
 // Self-healing: b\u0142\u0119dy poza Reactem (asynchroniczne, sieciowe) nie gin\u0105 w konsoli \u2014
 // JARVIS m\u00f3wi o nich po ludzku. Throttling chroni przed lawin\u0105 toast\u00f3w.
 let lastGlobalToast = 0;
