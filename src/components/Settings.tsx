@@ -31,6 +31,7 @@ import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromIn
 import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
 import { detectSd } from "../lib/localImage";
 import { checkForUpdate, applyUpdate, type UpdateInfo } from "../lib/updater";
+import { CHANGELOG } from "../lib/changelog";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
 import { clearRouteLog } from "../lib/modelRouter";
 import { toast } from "../lib/toast";
@@ -2784,6 +2785,21 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   {updInfo.platform === "web" ? "↻ Odśwież do najnowszej" : "⬇ Pobierz i zainstaluj najnowszą"}
                 </button>
               )}
+              <details style={{ marginTop: 8 }} open>
+                <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>📜 Co nowego / historia zmian</summary>
+                {CHANGELOG.map((c) => (
+                  <div key={c.version} style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--gold)" }}>
+                      {c.version} <span className="muted" style={{ fontWeight: 400, fontSize: 11 }}>· {c.date}</span>
+                    </div>
+                    <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+                      {c.items.map((it, i) => (
+                        <li key={i} style={{ fontSize: 12.5, lineHeight: 1.55, marginBottom: 3 }}>{it}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </details>
               <details style={{ marginTop: 8 }}>
                 <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Jak działa aktualizacja (i czemu antywirus ostrzega)</summary>
                 <p className="muted" style={{ fontSize: 12, marginTop: 6, lineHeight: 1.6 }}>
