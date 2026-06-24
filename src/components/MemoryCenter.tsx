@@ -2,13 +2,12 @@ import { useState } from "react";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { rememberFact, deleteFact, setFactPinned, editFact } from "../lib/memory";
-import { useEscape } from "../hooks/useEscape";
+import Modal from "./Modal";
 import { toast } from "../lib/toast";
 
 // Centrum Pamięci — „co JARVIS o mnie wie", z pełną kontrolą: przeglądaj, edytuj,
 // przypinaj i usuwaj fakty. Top-asystenty dają użytkownikowi władzę nad pamięcią.
 export default function MemoryCenter({ onClose }: { onClose: () => void }) {
-  useEscape(onClose);
   useStore(); // odśwież po zmianach w store
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
@@ -28,13 +27,11 @@ export default function MemoryCenter({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>🧠 Co JARVIS o mnie wie</h2>
-        </div>
-        <div className="panel-body">
+    <Modal
+      title="🧠 Co JARVIS o mnie wie"
+      onClose={onClose}
+      foot={<button className="btn primary" onClick={onClose}>Zamknij</button>}
+    >
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             Pełna kontrola nad pamięcią. {facts.length} {facts.length === 1 ? "fakt" : "faktów"}. Przypięte (📌) nigdy nie znikają.
           </p>
@@ -74,11 +71,6 @@ export default function MemoryCenter({ onClose }: { onClose: () => void }) {
               )}
             </div>
           ))}
-        </div>
-        <div className="panel-foot">
-          <button className="btn primary" onClick={onClose}>Zamknij</button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

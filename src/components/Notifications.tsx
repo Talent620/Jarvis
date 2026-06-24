@@ -1,7 +1,7 @@
 import { useStore } from "../hooks/useStore";
 import { dueReminders, soonReminders, notifySummary, dismissReminder } from "../lib/notifyCenter";
 import { proactiveSuggestions } from "../lib/proactivity";
-import { useEscape } from "../hooks/useEscape";
+import Modal from "./Modal";
 
 // Centrum powiadomień — jedno miejsce z tym, co wymaga uwagi: przypomnienia
 // po czasie, zaplanowane na dziś, oraz skróty do zadań, follow-upów i fiszek.
@@ -13,7 +13,6 @@ export default function Notifications({
   onSales?: () => void;
   onCards?: () => void;
 }) {
-  useEscape(onClose);
   useStore(); // odśwież po odhaczeniu
   const now = Date.now();
   const due = dueReminders(now);
@@ -30,13 +29,11 @@ export default function Notifications({
   ];
 
   return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>🔔 Powiadomienia</h2>
-        </div>
-        <div className="panel-body">
+    <Modal
+      title="🔔 Powiadomienia"
+      onClose={onClose}
+      foot={<button className="btn" onClick={onClose}>Zamknij</button>}
+    >
           {/* Proaktywne propozycje JARVIS-a (Faza 7) */}
           {suggestions.length > 0 && (
             <>
@@ -96,11 +93,6 @@ export default function Notifications({
               Czysto! Nic nie wymaga teraz Twojej uwagi. ✨
             </p>
           )}
-        </div>
-        <div className="panel-foot">
-          <button className="btn" onClick={onClose}>Zamknij</button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

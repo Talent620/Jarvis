@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { runGoal, type GoalStep } from "../lib/goalPlanner";
-import { useEscape } from "../hooks/useEscape";
+import Modal from "./Modal";
 
 // „Zleć cel" — do-for-me: złożony cel → JARVIS rozkłada na kroki, wykonuje równolegle wg zależności
 // i syntetyzuje spójną odpowiedź. Wykonanie używa rozumowania modelu (bez akcji wychodzących).
@@ -13,7 +13,6 @@ const EXAMPLES = [
 ];
 
 export default function GoalRunner({ onClose }: { onClose: () => void }) {
-  useEscape(onClose);
   const [goal, setGoal] = useState("");
   const [busy, setBusy] = useState(false);
   const [steps, setSteps] = useState<GoalStep[]>([]);
@@ -41,10 +40,11 @@ export default function GoalRunner({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head"><div className="grabber" /><h2>🎯 Zleć cel</h2></div>
-        <div className="panel-body">
+    <Modal
+      title="🎯 Zleć cel"
+      onClose={onClose}
+      foot={<button className="btn" onClick={onClose}>Zamknij</button>}
+    >
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             Podaj złożony cel — JARVIS sam <b>rozłoży go na kroki</b>, wykona je równolegle (wg
             zależności) i <b>zsyntetyzuje jedną spójną odpowiedź</b>. „Zrób za mnie", nie tylko „odpowiedz".
@@ -90,9 +90,6 @@ export default function GoalRunner({ onClose }: { onClose: () => void }) {
               <div className="journal-card" style={{ padding: "10px 12px", whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.6 }}>{answer}</div>
             </div>
           )}
-        </div>
-        <div className="panel-foot"><button className="btn" onClick={onClose}>Zamknij</button></div>
-      </div>
-    </div>
+    </Modal>
   );
 }
