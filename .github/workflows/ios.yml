@@ -1,9 +1,12 @@
-name: Build iOS (verify)
+name: Build iOS (.ipa)
 
-# Buduje aplikację iOS na runnerze macOS, aby potwierdzić, że projekt się kompiluje.
-# UWAGA: instalowalny plik .ipa na iPhone wymaga PODPISU certyfikatem Apple
-# (płatne konto Apple Developer, 99 USD/rok) — patrz README, sekcja iOS.
-# Ten workflow buduje wersję pod symulator (bez podpisu) tylko do weryfikacji.
+# Buduje aplikację iOS na runnerze macOS i publikuje NIEPODPISANY plik .ipa w GitHub Releases
+# (tag "latest", obok jarvis.apk / JARVIS.exe):
+#   https://github.com/<owner>/<repo>/releases/download/latest/JARVIS.ipa
+#
+# WAŻNE (ograniczenie Apple, nie nasze): plik .ipa jest NIEPODPISANY. Na iPhone instaluje się go
+# przez AltStore / Sideloadly TWOIM Apple ID (za darmo, odświeżanie co 7 dni) — patrz docs/IOS.md.
+# Pełny podpis (TestFlight/App Store) wymaga konta Apple Developer (99 USD/rok) i certyfikatów w sekretach.
 
 on:
   workflow_dispatch:
@@ -12,7 +15,11 @@ on:
     paths:
       - "ios/**"
       - "src/**"
+      - "capacitor.config.ts"
       - ".github/workflows/ios.yml"
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -29,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Klucze NIE trafiają do bundla (BYOK + BFF). Usunięto martwe env JARVIS_*_KEY.
+      # Klucze NIE trafiają do bundla (BYOK + BFF) — nic do wstrzykiwania.
       - name: Build web + sync Capacitor (iOS)
         run: |
           npm run build
@@ -39,13 +46,39 @@ jobs:
         working-directory: ios/App
         run: pod install
 
-      - name: Build app (simulator, unsigned)
+      - name: Build unsigned device app
         run: |
           xcodebuild \
             -workspace ios/App/App.xcworkspace \
             -scheme App \
-            -configuration Debug \
-            -sdk iphonesimulator \
+            -configuration Release \
+            -sdk iphoneos \
             -derivedDataPath ios/build \
             CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
             build
+
+      - name: Package unsigned .ipa
+        run: |
+          APP="ios/build/Build/Products/Release-iphoneos/App.app"
+          if [ ! -d "$APP" ]; then echo "::error::App.app nie powstała — sprawdź log budowy."; exit 1; fi
+          rm -rf Payload JARVIS.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qr JARVIS.ipa Payload
+          ls -lh JARVIS.ipa
+
+      # Artefakt do pobrania z zakładki Actions (gdyby ktoś nie chciał z Releases).
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JARVIS-ios-ipa
+          path: JARVIS.ipa
+
+      - name: Publish to GitHub Releases (rolling 'latest')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          files: JARVIS.ipa
+          make_latest: true
