@@ -32,6 +32,13 @@ const REASONING_CUES =
 const MATH_CUES =
   /\b(oblicz|policz|ile (wynosi|to (będzie|jest)|kosztuj|wyjdzie)|równani|rownani|pierwiastek|całk|pochodn|procent|odsetek|silni)\b|\d+\s*[+\-x*/^%]\s*\d+|=\s*\?/i;
 
+// Pytania WYJAŚNIAJĄCE/KONCEPCYJNE — „jak działa…", „na czym polega…", „czym się różni…",
+// „co powoduje…". Często nie zawierają słów-kluczy rozumowania, a i tak zasługują na MOCNIEJSZY
+// model (płytka odpowiedź szybkiego modelu psuje jakość). Kierujemy je na „complex", ale NIE na
+// dwuetapowy deep-think (nie spowalniamy zwykłego „wytłumacz, jak coś działa").
+const EXPLAIN_CUES =
+  /\b(jak (to )?(działa|dziala|funkcjonuje|powstaj|przebiega|wygląda)|na czym polega|czym (się |sie )?różni|czym (się |sie )?rozni|jaka jest różnica|jaka jest roznica|co (powoduje|sprawia|oznacza|to znaczy)|skąd (się |sie )?bierze|skad (się |sie )?bierze|w jaki sposób|w jaki sposob|jak rozumieć|jak rozumiec|wyjaśnij|wyjasnij|wytłumacz|wytlumacz)\b/i;
+
 /** Sklasyfikuj zadanie na podstawie ostatniej wiadomości użytkownika. Czysta funkcja. */
 export function classifyTask(text: string, hasImage: boolean): { kind: TaskKind; reason: string } {
   if (hasImage) return { kind: "vision", reason: "wiadomość zawiera obraz → model z wizją" };
@@ -39,14 +46,17 @@ export function classifyTask(text: string, hasImage: boolean): { kind: TaskKind;
   const long = t.length > 600;
   const math = MATH_CUES.test(t);
   const reasoning = REASONING_CUES.test(t) || math;
-  if (isComplex(t) || reasoning || long) {
+  const explain = EXPLAIN_CUES.test(t);
+  if (isComplex(t) || reasoning || explain || long) {
     const reason = math
       ? "zadanie ilościowe/matematyczne → liczenie krok po kroku"
       : reasoning
         ? "zadanie wymaga rozumowania (kod/analiza/logika)"
-        : long
-          ? "długie/złożone zapytanie"
-          : "klasyfikacja: złożone";
+        : explain
+          ? "pytanie wyjaśniające/koncepcyjne → mocniejszy model dla głębi"
+          : long
+            ? "długie/złożone zapytanie"
+            : "klasyfikacja: złożone";
     return { kind: "complex", reason };
   }
   return { kind: "simple", reason: "krótkie/proste zapytanie → szybki model" };

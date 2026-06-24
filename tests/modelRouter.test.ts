@@ -32,6 +32,18 @@ describe("modelRouter — klasyfikacja zadania", () => {
   it("logika/wnioskowanie → complex", () => {
     expect(classifyTask("rozwiąż ten sylogizm logiczny", false).kind).toBe("complex");
   });
+  it("pytania WYJAŚNIAJĄCE/koncepcyjne → complex (mocniejszy model dla głębi)", () => {
+    expect(classifyTask("jak działa fotosynteza?", false).kind).toBe("complex");
+    expect(classifyTask("na czym polega teoria względności", false).kind).toBe("complex");
+    expect(classifyTask("czym się różni HTTP od HTTPS", false).kind).toBe("complex");
+    expect(classifyTask("w jaki sposób powstają czarne dziury", false).kind).toBe("complex");
+    expect(classifyTask("co powoduje inflację", false).kind).toBe("complex");
+  });
+  it("krótkie pytania faktyczne dalej → simple (bez nadmiarowego routingu)", () => {
+    expect(classifyTask("która godzina?", false).kind).toBe("simple");
+    expect(classifyTask("jaka jest stolica Polski?", false).kind).toBe("simple");
+    expect(classifyTask("jak masz na imię?", false).kind).toBe("simple");
+  });
 });
 
 describe("modelRouter — needsDeepThink (kiedy myśleć głęboko)", () => {
