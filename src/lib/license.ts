@@ -9,7 +9,9 @@
 
 import { fetchTimeout } from "./http";
 
-const PUBLIC_JWK: JsonWebKey = {
+// Eksportowany, bo offline-generator (licenseSign.ts) porównuje z nim wklejony klucz
+// prywatny — inaczej podpisane nim licencje nie aktywują się w tej wersji aplikacji.
+export const PUBLIC_JWK: JsonWebKey = {
   kty: "EC",
   crv: "P-256",
   x: "yVt6bj1aOh50oDQOH8oKKEVJ2ETteQF9-N0UbSsiUFo",

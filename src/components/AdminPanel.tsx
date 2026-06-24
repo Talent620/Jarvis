@@ -14,6 +14,16 @@ import {
   type AdminConfig,
   type LicenseRow,
 } from "../lib/admin";
+import {
+  parsePrivateJwk,
+  privateMatchesApp,
+  issueLocalLicense,
+  extendLocalLicense,
+  listLocalLicenses,
+  removeLocalLicense,
+  licenseStatus,
+  type LicenseRecord,
+} from "../lib/licenseSign";
 
 // Panel administratora w wersji premium — wewnątrz JARVIS-a. Odblokowanie
 // numerem właściciela (dostęp awaryjny), sekrety szyfrowane lokalnie.
@@ -22,11 +32,15 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
   const [phone, setPhone] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [cfg, setCfg] = useState<AdminConfig>({ workerUrl: "", adminToken: "" });
-  const [tab, setTab] = useState<"licenses" | "keys" | "value">("licenses");
+  const [tab, setTab] = useState<"licenses" | "offline" | "keys" | "value">("licenses");
   const [rows, setRows] = useState<LicenseRow[] | null>(null);
   const [msg, setMsg] = useState("");
   const [form, setForm] = useState({ name: "", days: "", limit: "1" });
   const [newKey, setNewKey] = useState("");
+  // Offline-generator (podpis lokalny własnym kluczem prywatnym):
+  const [priv, setPriv] = useState("");
+  const [offForm, setOffForm] = useState({ owner: "", days: "30" });
+  const [localRows, setLocalRows] = useState<LicenseRecord[]>(() => listLocalLicenses());
 
   const unlock = async () => {
     if (!(await verifyOwnerPhone(phone))) {
@@ -35,9 +49,28 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     }
     const c = await loadAdminConfig(phone);
     setCfg(c || { workerUrl: "", adminToken: "" });
+    setPriv(c?.signerPriv || "");
     setUnlocked(true);
     setMsg("");
     if (c?.adminToken) void refresh(c);
+  };
+
+  // --- Offline-generator: podpis lokalny własnym kluczem prywatnym ---
+  const genOffline = async () => {
+    const jwk = parsePrivateJwk(priv);
+    if (!jwk) { toast("Najpierw wklej poprawny klucz prywatny (EC P-256)."); return; }
+    if (!offForm.owner.trim()) { toast('Podaj właściciela klucza (np. „tester młody”).'); return; }
+    const rec = await issueLocalLicense(jwk, offForm.owner.trim(), offForm.days ? Number(offForm.days) : 0);
+    setLocalRows(listLocalLicenses());
+    setOffForm({ owner: "", days: "30" });
+    copyWithToast(rec.token, "Podpisano i skopiowano ✓");
+  };
+  const extendOff = async (r: LicenseRecord, days: number) => {
+    const jwk = parsePrivateJwk(priv);
+    if (!jwk) { toast("Wklej klucz prywatny, by przedłużać."); return; }
+    const up = await extendLocalLicense(jwk, r, days);
+    setLocalRows(listLocalLicenses());
+    copyWithToast(up.token, `Przedłużono (${days ? days + " dni" : "bezterminowo"}) i skopiowano ✓`);
   };
 
   const persist = async (next: AdminConfig) => {
@@ -116,6 +149,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
           <h2>🔐 Panel administratora</h2>
           <div className="chips" style={{ marginTop: 10 }}>
             <button className={`chip ${tab === "licenses" ? "on" : ""}`} onClick={() => setTab("licenses")}>📋 Licencje</button>
+            <button className={`chip ${tab === "offline" ? "on" : ""}`} onClick={() => setTab("offline")}>🔏 Offline</button>
             <button className={`chip ${tab === "keys" ? "on" : ""}`} onClick={() => setTab("keys")}>🗝 Moje klucze</button>
             <button className={`chip ${tab === "value" ? "on" : ""}`} onClick={() => setTab("value")}>💎 Wycena</button>
           </div>
@@ -145,6 +179,69 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
               {msg && <p className="muted" style={{ marginTop: 8 }}>{msg}</p>}
             </>
           )}
+
+          {tab === "offline" && (() => {
+            const jwk = priv.trim() ? parsePrivateJwk(priv) : null;
+            return (
+              <>
+                <Guide title="ℹ Jak to działa (offline — Twój własny klucz)" open>
+                  <p>Wklej swój <b>klucz prywatny</b> (zawartość pliku <i>license-private.json</i>). Zostaje <b>tylko u Ciebie</b>, zaszyfrowany Twoim numerem — nigdzie go nie wysyłamy. Podpisuje klucze <b>lokalnie</b>, bez serwera.</p>
+                  <p>Klucz musi pasować do <b>klucza publicznego tej wersji aplikacji</b> — inaczej wydane licencje się nie aktywują (każdy „szef" z własnym kluczem potrzebuje wersji z jego kluczem publicznym).</p>
+                  <p>⚠ Offline nie śledzi użycia (ile urządzeń) — to widać tylko dla kluczy z serwera (zakładka „📋 Licencje"). Tu pokazujemy właściciela, termin i status.</p>
+                </Guide>
+
+                <div className="field">
+                  <label>Twój klucz prywatny (zawartość license-private.json)</label>
+                  <textarea className="ta" value={priv} placeholder='{"kty":"EC","crv":"P-256","d":"…","x":"…","y":"…"}' onChange={(e) => setPriv(e.target.value)} style={{ minHeight: 70, fontFamily: "monospace", fontSize: 11 }} />
+                </div>
+                {priv.trim() && (
+                  !jwk ? (
+                    <p className="muted" style={{ color: "#ff8585", fontSize: 13 }}>⚠ To nie jest poprawny klucz prywatny EC P-256.</p>
+                  ) : privateMatchesApp(jwk) ? (
+                    <p className="muted" style={{ color: "var(--ok, #58e08a)", fontSize: 13 }}>✅ Pasuje do tej aplikacji — wydane klucze będą się aktywować.</p>
+                  ) : (
+                    <p className="muted" style={{ color: "var(--gold)", fontSize: 13 }}>⚠ Ten klucz NIE pasuje do klucza publicznego tej wersji — wydane nim licencje się tu nie aktywują.</p>
+                  )
+                )}
+                <button className="btn" onClick={async () => { await persist({ ...cfg, signerPriv: priv }); toast("Klucz prywatny zapisany (zaszyfrowany) ✓"); }}>💾 Zapamiętaj klucz prywatny</button>
+
+                <h3 style={{ marginTop: 16 }}>➕ Podpisz klucz dla kogoś</h3>
+                <div className="field" style={{ display: "flex", gap: 8 }}>
+                  <input value={offForm.owner} placeholder='Właściciel (np. „tester młody", „szef — ja")' onChange={(e) => setOffForm({ ...offForm, owner: e.target.value })} style={{ flex: 2 }} />
+                  <input type="number" value={offForm.days} placeholder="Dni (∞)" onChange={(e) => setOffForm({ ...offForm, days: e.target.value })} style={{ flex: 1 }} />
+                </div>
+                <button className="btn primary" onClick={genOffline}>🔏 Podpisz i skopiuj</button>
+
+                <h3 style={{ marginTop: 16 }}>📋 Wydane klucze (kto · na ile · status)</h3>
+                {localRows.length === 0 ? (
+                  <p className="muted" style={{ fontSize: 13 }}>Brak. Podpisz pierwszy klucz powyżej — każdy ma właściciela.</p>
+                ) : (
+                  localRows.map((r) => {
+                    const st = licenseStatus(r.exp);
+                    const tone = st.tone === "err" ? "#ff8585" : st.tone === "warn" ? "var(--gold)" : "var(--ok, #58e08a)";
+                    return (
+                      <div key={r.id} className="journal-card">
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                          <b>{r.owner}</b>
+                          <span className="chip" style={{ color: tone }}>{st.label}</span>
+                        </div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          {r.type === "perpetual" ? "bezterminowy" : `do ${r.exp ? new Date(r.exp).toLocaleDateString("pl-PL") : "—"}`} · wydany {new Date(r.iat).toLocaleDateString("pl-PL")}
+                        </div>
+                        <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                          <button className="chip" onClick={() => copyWithToast(r.token, "Klucz skopiowany ✓")}>📋 Kopiuj</button>
+                          <button className="chip" onClick={() => extendOff(r, 30)}>⏳ +30 dni</button>
+                          <button className="chip" onClick={() => extendOff(r, 365)}>+365</button>
+                          <button className="chip" onClick={() => extendOff(r, 0)}>∞ bezterminowo</button>
+                          <button className="chip" onClick={() => { if (confirm(`Usunąć z rejestru klucz „${r.owner}"? (sam token u właściciela nadal działa do wygaśnięcia)`)) { removeLocalLicense(r.id); setLocalRows(listLocalLicenses()); } }}>🗑</button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </>
+            );
+          })()}
 
           {tab === "value" && (() => {
             const v = dailyValuation();

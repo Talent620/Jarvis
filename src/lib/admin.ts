@@ -42,6 +42,7 @@ export interface AdminConfig {
   workerUrl: string;
   adminToken: string;
   notes?: string;
+  signerPriv?: string; // klucz prywatny do offline-generatora (zawartość license-private.json), zaszyfrowany numerem właściciela
 }
 
 /** Zapisz sekrety panelu (zaszyfrowane numerem właściciela). */
