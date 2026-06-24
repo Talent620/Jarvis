@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { runHealthCheck, type HealthItem } from "../lib/healthCheck";
-import { useEscape } from "../hooks/useEscape";
+import Modal from "./Modal";
 import { toast } from "../lib/toast";
 
 // Ekran „Stan systemu": przy każdej funkcji widać wprost — 🟢 działa, 🟡 do
 // skonfigurowania / nieaktywne tu, 🔴 nie działa. Gdy JARVIS umie naprawić sam,
 // pokazuje przycisk „Napraw". Reużywa runHealthCheck (ta sama logika co w ⚙).
 export default function SystemStatus({ onClose }: { onClose: () => void }) {
-  useEscape(onClose);
   const [items, setItems] = useState<HealthItem[]>([]);
   const [busy, setBusy] = useState(true);
 
@@ -26,13 +25,17 @@ export default function SystemStatus({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>🩺 Stan systemu</h2>
-        </div>
-        <div className="panel-body">
+    <Modal
+      title="🩺 Stan systemu"
+      onClose={onClose}
+      footStyle={{ display: "flex", gap: 8 }}
+      foot={
+        <>
+          <button className="btn" style={{ flex: 1 }} onClick={scan} disabled={busy}>{busy ? "Sprawdzam…" : "🔄 Sprawdź ponownie"}</button>
+          <button className="btn primary" style={{ flex: 1 }} onClick={onClose}>Zamknij</button>
+        </>
+      }
+    >
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             🟢 {counts.ok} działa · 🟡 {counts.warn} do ustawienia · 🔴 {counts.err} nie działa
             {busy ? " · sprawdzam…" : ""}
@@ -56,12 +59,6 @@ export default function SystemStatus({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           ))}
-        </div>
-        <div className="panel-foot" style={{ display: "flex", gap: 8 }}>
-          <button className="btn" style={{ flex: 1 }} onClick={scan} disabled={busy}>{busy ? "Sprawdzam…" : "🔄 Sprawdź ponownie"}</button>
-          <button className="btn primary" style={{ flex: 1 }} onClick={onClose}>Zamknij</button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

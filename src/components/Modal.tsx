@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useEscape } from "../hooks/useEscape";
 
 // Wspólny „arkusz" (modal/panel) — jedno miejsce dla powtarzanej w ~37 ekranach struktury
@@ -10,6 +10,7 @@ export default function Modal({
   onClose,
   children,
   foot,
+  footStyle,
   className,
   ariaLabel,
 }: {
@@ -17,6 +18,7 @@ export default function Modal({
   onClose: () => void;
   children: ReactNode;
   foot?: ReactNode; // stopka (np. przyciski) — renderowana tylko gdy podana
+  footStyle?: CSSProperties; // styl .panel-foot (np. flex/gap), gdy stopka ma kilka przycisków
   className?: string; // dodatkowa klasa na .panel
   ariaLabel?: string; // gdy title nie jest tekstem — nazwa dla czytników ekranu
 }): React.ReactElement {
@@ -38,7 +40,7 @@ export default function Modal({
           </div>
         )}
         <div className="panel-body">{children}</div>
-        {foot != null && <div className="panel-foot">{foot}</div>}
+        {foot != null && <div className="panel-foot" style={footStyle}>{foot}</div>}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useEscape } from "../hooks/useEscape";
+import Modal from "./Modal";
 import { store } from "../lib/store";
 import { emptyProfile, type UserProfile } from "../lib/profile";
 import { toast } from "../lib/toast";
@@ -15,7 +15,6 @@ const FIELDS: { key: keyof UserProfile; label: string; placeholder: string; rows
 // Mój profil — stała pamięć JARVIS-a o Tobie. To, co tu wpiszesz, jest w KAŻDEJ
 // rozmowie (obok pamięci semantycznej i kontekstu sesji). Lokalnie, prywatnie.
 export default function Profile({ onClose }: { onClose: () => void }) {
-  useEscape(onClose);
   const [p, setP] = useState<UserProfile>({ ...emptyProfile, ...store.settings.profile });
   const [name, setName] = useState(store.settings.userName === "Sir" ? "" : store.settings.userName);
 
@@ -26,13 +25,11 @@ export default function Profile({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>👤 Mój profil</h2>
-        </div>
-        <div className="panel-body">
+    <Modal
+      title="👤 Mój profil"
+      onClose={onClose}
+      foot={<button className="btn" onClick={onClose}>Zamknij</button>}
+    >
           <p className="muted">
             To stała pamięć JARVIS-a o Tobie — uwzględnia ją w <b>każdej</b> rozmowie, żeby odpowiadał
             pod Ciebie. Wszystko lokalnie i prywatnie; wchodzi też do kopii zapasowej.
@@ -61,11 +58,6 @@ export default function Profile({ onClose }: { onClose: () => void }) {
             Wskazówka: możesz też po prostu powiedzieć JARVIS-owi „zapamiętaj, że…" — trafne fakty
             zapisze sam. Profil jest do rzeczy, które chcesz mieć <b>na stałe</b>.
           </p>
-        </div>
-        <div className="panel-foot">
-          <button className="btn" onClick={onClose}>Zamknij</button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
