@@ -4,6 +4,7 @@ import { capturePhoto } from "../lib/camera";
 import { useEscape } from "../hooks/useEscape";
 import { store } from "../lib/store";
 import { parseKeys } from "../lib/keys";
+import { refineEdit, type EditPlan } from "../lib/editAssistant";
 import Guide from "./Guide";
 
 type Img = { data: string; mediaType: string };
@@ -111,7 +112,35 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     setBusy(false);
   };
 
-  const gen = () => run(prompt, inputs);
+  // 💬 Asystent edycji: zanim wydamy kasę na (płatną) generację, darmowy mózg rozumie polecenie
+  // i dopytuje, jeśli coś niejasne. Domyślnie włączony — chroni przed marnowaniem prób.
+  const [assist, setAssist] = useState(true);
+  const [plan, setPlan] = useState<(EditPlan & { instruction?: string }) | null>(null);
+  const [assistBusy, setAssistBusy] = useState(false);
+  const [clarifyAns, setClarifyAns] = useState("");
+
+  const startAssist = async (instruction: string) => {
+    if (!instruction.trim()) return;
+    setAssistBusy(true); setErr(""); setPlan(null);
+    const p = await refineEdit(instruction.trim(), inputs.length > 0);
+    if (!mounted.current) return;
+    setAssistBusy(false);
+    setPlan({ ...p, instruction: instruction.trim() });
+  };
+  const answerClarify = () => {
+    if (!clarifyAns.trim() || !plan?.instruction) return;
+    const merged = `${plan.instruction}\nDoprecyzowanie: ${clarifyAns.trim()}`;
+    setClarifyAns("");
+    void startAssist(merged);
+  };
+  const confirmGen = () => {
+    const p = plan?.prompt;
+    setPlan(null);
+    if (p) void run(p, inputs);
+  };
+
+  // „Przerób": z asystentem najpierw zrozum/dopytaj; bez asystenta — generuj wprost.
+  const gen = () => { if (assist) void startAssist(prompt); else void run(prompt, inputs); };
   const applyPreset = (p: string) => { setPrompt(p); if (inputs.length) void run(p, inputs); };
 
   // Edytuj dalej: wynik staje się nowym wejściem (łańcuch edycji, jak FLUX Kontext).
@@ -217,10 +246,15 @@ export default function Studio({ onClose }: { onClose: () => void }) {
             ))}
           </div>
 
+          {/* 💬 Asystent edycji — rozumie polecenie i dopyta, zanim wyda kasę na generację. */}
+          <button className={`chip ${assist ? "on" : ""}`} style={{ marginBottom: 6 }} onClick={() => setAssist((a) => !a)} disabled={busy || assistBusy} title="Mózg najpierw zrozumie i dopyta, jeśli coś niejasne — nie marnujesz płatnych prób">
+            {assist ? "💬 Asystent: dopytuje przed generacją ✓" : "💬 Asystent: wyłączony"}
+          </button>
+
           <div className="field">
             <textarea
               value={prompt}
-              placeholder="Opisz dokładnie, co zmienić — np. zmień kolor blatu na grafitowy, usuń naklejki, nóżki na czarne metalowe…"
+              placeholder="Powiedz po ludzku, co zmienić — np. „wysuń 2 papierosy i zamień napis »palenie niszczy« na www.v-ai.pl Marcin Kubicki”."
               onChange={(e) => setPrompt(e.target.value)}
               className="ta"
             />
@@ -236,6 +270,43 @@ export default function Studio({ onClose }: { onClose: () => void }) {
               <div style={{ height: "100%", width: `${Math.round(sdProgress * 100)}%`, background: "var(--cyan)", transition: "width .3s" }} />
             </div>
           )}
+          {assistBusy && <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>🤖 Rozumiem Twoje polecenie…</p>}
+
+          {/* 🤖 Asystent: pytanie doprecyzowujące ALBO potwierdzenie „tak zrozumiałem" + Generuj */}
+          {plan && !assistBusy && (
+            <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8, border: "1px solid var(--cyan)" }}>
+              {plan.ready ? (
+                <>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>🤖 Zrozumiałem tak:</div>
+                  <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>{plan.summary || plan.prompt}</p>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                    <button className="btn primary" style={{ flex: 1 }} onClick={confirmGen} disabled={busy}>
+                      ✅ Generuj{model === "fal-flux-kontext" || model === "fal-nano-banana" ? " (płatne ~$0.04–0.08)" : ""}
+                    </button>
+                    <button className="btn" onClick={() => setPlan(null)}>✏ Popraw opis</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>🤖 Dopytam, żeby nie zmarnować generacji:</div>
+                  <p style={{ fontSize: 13, marginTop: 4 }}>{plan.question}</p>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <input
+                      className="ta"
+                      style={{ flex: 1, minHeight: 0, padding: "8px 10px" }}
+                      value={clarifyAns}
+                      placeholder="Twoja odpowiedź…"
+                      autoFocus
+                      onChange={(e) => setClarifyAns(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && answerClarify()}
+                    />
+                    <button className="btn primary" style={{ width: "auto" }} onClick={answerClarify} disabled={!clarifyAns.trim()}>➤</button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {err && <p className="notice">⚠ {err}</p>}
 
           {/* Wynik + porównanie przed/po */}
