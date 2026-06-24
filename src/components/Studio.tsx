@@ -4,6 +4,7 @@ import { capturePhoto } from "../lib/camera";
 import { useEscape } from "../hooks/useEscape";
 import { store } from "../lib/store";
 import { parseKeys } from "../lib/keys";
+import { toast } from "../lib/toast";
 import { refineEdit, type EditPlan } from "../lib/editAssistant";
 import { loadUsage } from "../lib/usageTelemetry";
 import Guide from "./Guide";
@@ -107,8 +108,30 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     const r = await generateImage(text, ins.length ? ins : undefined, model, sdOpts, onProg);
     if (!mounted.current) return;
     setSdProgress(0);
-    if ("error" in r) setErr(humanizeImageError(r.error, model));
-    else {
+    if ("error" in r) {
+      // 🛟 Auto-fallback: płatny fal.ai padł na braku środków/autoryzacji → dokończ DARMOWYM Gemini,
+      // żebyś DOSTAŁ wynik zamiast samego błędu. Tylko gdy jest klucz Gemini i mamy zdjęcie do edycji.
+      const falDown = (model === "fal-nano-banana" || model === "fal-flux-kontext")
+        && /środków|limit|fund|credit|billing|auth|forbidden|\b(401|402|403)\b/i.test(r.error);
+      const geminiReady = !!store.settings.keys?.gemini?.trim() || !!store.settings.studioKeys?.trim();
+      if (falDown && geminiReady && ins.length) {
+        const r2 = await generateImage(text, ins, "gemini");
+        if (!mounted.current) return;
+        if (!("error" in r2)) {
+          setModel("gemini");
+          setHistory((h) => [...h, r2]);
+          setView("compare");
+          toast("⚠ fal.ai niedostępny (brak środków) — zrobiłem DARMOWYM Gemini ✓");
+          setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+          setBusy(false);
+          return;
+        }
+        setErr(humanizeImageError(r2.error, "gemini"));
+        setBusy(false);
+        return;
+      }
+      setErr(humanizeImageError(r.error, model));
+    } else {
       setHistory((h) => [...h, r]);
       setView("compare");
       // Pokaż użytkownikowi gdzie jest wynik — przewiń do niego po wygenerowaniu.
@@ -144,6 +167,15 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     if (p) void run(p, inputs);
   };
 
+  // ✅ Przejrzystość: czy dany model JEST GOTOWY (ma klucz/serwer), zanim go wybierzesz.
+  const modelReady = (id: ImageModelId): boolean => {
+    const s = store.settings;
+    if (id === "pollinations") return true; // darmowy, bez klucza
+    if (id === "gemini") return !!s.keys?.gemini?.trim() || !!s.studioKeys?.trim();
+    if (id === "local-sd") return !!s.sdUrl?.trim();
+    return !!s.falApiKey?.trim(); // fal-flux-kontext / fal-nano-banana
+  };
+
   // „Przerób": z asystentem najpierw zrozum/dopytaj; bez asystenta — generuj wprost.
   const gen = () => { if (assist) void startAssist(prompt); else void run(prompt, inputs); };
   const applyPreset = (p: string) => { setPrompt(p); if (inputs.length) void run(p, inputs); };
@@ -171,13 +203,14 @@ export default function Studio({ onClose }: { onClose: () => void }) {
         </div>
         <div className="panel-body">
           {/* Wybór modelu */}
-          <div className="chips" style={{ flexWrap: "wrap", marginBottom: 6 }}>
+          <div className="chips" style={{ flexWrap: "wrap", marginBottom: 4 }}>
             {IMAGE_MODELS_LIST.map((m) => (
-              <button key={m.id} className={`chip ${model === m.id ? "on" : ""}`} onClick={() => setModel(m.id)} disabled={busy}>
-                {m.tier === "free" ? "🆓 " : "⭐ "}{m.label}
+              <button key={m.id} className={`chip ${model === m.id ? "on" : ""}`} onClick={() => setModel(m.id)} disabled={busy} title={modelReady(m.id) ? "Gotowy — masz klucz/serwer" : "Wymaga konfiguracji (klucz/serwer)"}>
+                {m.tier === "free" ? "🆓 " : "⭐ "}{m.label} {modelReady(m.id) ? "✅" : "⚙"}
               </button>
             ))}
           </div>
+          <p className="muted" style={{ fontSize: 11, marginTop: 0, marginBottom: 6 }}>✅ gotowe · ⚙ wymaga klucza/serwera (kliknij, by zobaczyć jak)</p>
           <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>{IMAGE_MODELS_LIST.find((m) => m.id === model)?.note}</p>
           {imgSpend > 0 && (
             <p className="muted" style={{ fontSize: 12, marginTop: 0, color: "var(--gold)" }}>

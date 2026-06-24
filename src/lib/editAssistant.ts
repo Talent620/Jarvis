@@ -31,10 +31,15 @@ function extractJson(s: string): Record<string, unknown> | null {
 export async function refineEdit(instruction: string, hasImage: boolean): Promise<EditPlan> {
   const sys = [
     `Jesteś asystentem EDYCJI ZDJĘĆ. Użytkownik chce edytować ${hasImage ? "DOŁĄCZONE zdjęcie" : "obraz z opisu"}.`,
-    `Twoje zadanie: zamień jego polecenie (po polsku, potoczne) na DOBRY prompt dla modelu edycji obrazu PO ANGIELSKU — precyzyjny, z prośbą o realizm: dopasowanie światła, cieni, faktury, perspektywy; "seamless, photorealistic, no visible editing". Zachowaj resztę zdjęcia bez zmian.`,
-    `Jeśli polecenie jest NIEJASNE i bez doprecyzowania wynik byłby losowy (np. nie wiadomo: jaki kolor, jaką dokładnie treść tekstu wpisać, którego z kilku elementów dotyczy, ile sztuk) — zadaj JEDNO krótkie pytanie po polsku zamiast zgadywać. NIE pytaj o rzeczy oczywiste z polecenia.`,
-    `Odpowiedz WYŁĄCZNIE JSON-em, bez żadnego tekstu wokół:`,
-    `• gdy jasne: {"ready":true,"prompt":"<angielski prompt edycji>","summary":"<jedno zdanie po polsku: co zrobię>"}`,
+    `Zamień jego polecenie (po polsku, potoczne) na DOBRY prompt dla modelu edycji obrazu PO ANGIELSKU.`,
+    `Stosuj zasady (z oficjalnych wytycznych edytorów typu Nano Banana / FLUX Kontext):`,
+    `1) ZACHOWANIE: nie opisuj sceny od nowa — wyraźnie napisz, co ZOSTAWIĆ bez zmian ("keep everything else unchanged"), a tylko opisz ZMIANĘ.`,
+    `2) REALIZM: poproś o dopasowanie światła, cieni, faktury, perspektywy; "photorealistic, seamless, no visible editing".`,
+    `3) TEKST: jeśli zmiana dotyczy napisu, podaj DOKŁADNĄ nową treść w cudzysłowie i poproś o tę samą czcionkę, rozmiar, kolor, pochylenie i perspektywę co oryginał.`,
+    `4) JEDNA RZECZ: jeśli użytkownik prosi o KILKA zmian naraz (np. „wysuń papierosy ORAZ zamień napis"), wykonaj prompt na PIERWSZĄ, a w "summary" zaznacz po polsku, że resztę najlepiej zrobić osobno przez „Edytuj dalej".`,
+    `Jeśli polecenie jest NIEJASNE i bez doprecyzowania wynik byłby losowy (np. nie wiadomo: jaki kolor, jaka dokładnie treść tekstu, którego z elementów dotyczy, ile sztuk) — zadaj JEDNO krótkie pytanie po polsku zamiast zgadywać.`,
+    `Odpowiedz WYŁĄCZNIE JSON-em, bez tekstu wokół:`,
+    `• gdy jasne: {"ready":true,"prompt":"<angielski prompt edycji>","summary":"<jedno zdanie po polsku: co zrobię (i ew. że resztę zrób osobno)>"}`,
     `• gdy niejasne: {"ready":false,"question":"<jedno pytanie po polsku>"}`,
   ].join("\n");
   try {
