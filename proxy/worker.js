@@ -384,6 +384,7 @@ export default {
       // --- RESEARCH (Tavily) ---
       if (path === "/v1/search" && req.method === "POST") {
         if (appTokenBad(req, env)) return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });
+        if (await rateLimited(req, env)) return json(429, { error: "Za dużo zapytań — spróbuj za chwilę." });
         if (!env.TAVILY_API_KEY) return json(500, { error: "Brak TAVILY_API_KEY." });
         const { query, max_results = 5 } = await req.json();
         const r = await fetchT("https://api.tavily.com/search", {
@@ -459,6 +460,7 @@ export default {
       // --- EMBEDDINGS (Gemini) ---
       if (path === "/v1/embed" && req.method === "POST") {
         if (appTokenBad(req, env)) return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });
+        if (await rateLimited(req, env)) return json(429, { error: "Za dużo zapytań — spróbuj za chwilę." });
         if (!env.GEMINI_API_KEY) return json(500, { error: "Brak GEMINI_API_KEY." });
         const { texts } = await req.json();
         const list = Array.isArray(texts) ? texts.slice(0, 64) : []; // cap fan-out (koszt/CPU)
@@ -606,6 +608,7 @@ export default {
         const sTo = noCRLF(to), sSubject = noCRLF(subject); // anty-injection nagłówków MIME
         // Temat z polskimi znakami musi być zakodowany jako MIME-word (=?UTF-8?B?…?=),
         // inaczej w skrzynce odbiorcy bywa krzaczasty.
+        // eslint-disable-next-line no-control-regex -- celowy zakres ASCII do detekcji znaków nie-ASCII
         const subjHeader = /[^\x00-\x7F]/.test(sSubject)
           ? `=?UTF-8?B?${b64(sSubject)}?=`
           : sSubject;

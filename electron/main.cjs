@@ -204,7 +204,7 @@ function sendKeys(sk, win) {
 // Tekst → łańcuch SendKeys (escape znaków specjalnych, Enter/Tab).
 function escapeSendKeys(s) {
   return String(s)
-    .replace(/[+^%~(){}\[\]]/g, "{$&}")
+    .replace(/[+^%~(){}[\]]/g, "{$&}")
     .replace(/\r\n|\r|\n/g, "{ENTER}")
     .replace(/\t/g, "{TAB}");
 }

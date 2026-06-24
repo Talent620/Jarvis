@@ -21,7 +21,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "salesos": "bash sales-os/start.sh",
-    "lint": "eslint src"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",

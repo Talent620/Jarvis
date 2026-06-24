@@ -3,7 +3,10 @@
 // menu układa się według częstości użycia w BIEŻĄCEJ porze dnia (rano/dzień/
 // wieczór) — produkt uczy się użytkownika, nie odwrotnie. Wszystko offline.
 
-const KEY = "jarvis.usage.v1";
+// UWAGA: klucz MUSI być inny niż telemetria kosztów (`usageTelemetry.ts` → "jarvis.usage.v1").
+// Wcześniej oba moduły dzieliły ten sam klucz z niekompatybilnymi schematami ({id,t} vs
+// {at,provider,model,...}) → wzajemna korupcja danych i `resetAdaptive()` kasujące koszty.
+const KEY = "jarvis.uiusage.v1";
 const ORDER_KEY = "jarvis.usage.order.v1";
 const TOASTED_KEY = "jarvis.usage.toasted.v1";
 const MAX_AGE_MS = 30 * 24 * 3600 * 1000;
@@ -20,7 +23,10 @@ export interface UsageEvent {
 function load(): UsageEvent[] {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) || "[]");
-    return Array.isArray(raw) ? raw : [];
+    if (!Array.isArray(raw)) return [];
+    // Filtr kształtu: odporność na dane zapisane pod starym, współdzielonym kluczem
+    // (wpisy telemetrii kosztów nie mają `id`+numerycznego `t`).
+    return raw.filter((e): e is UsageEvent => !!e && typeof e.id === "string" && typeof e.t === "number");
   } catch {
     return [];
   }

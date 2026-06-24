@@ -11,6 +11,13 @@ const RISK: Record<string, Risk> = {
   gmail_search: "read", gcal_list: "read", tally_report: "read", calculate: "read", find_leads: "read",
   list_leads: "read", get_news: "read", get_markets: "read",
   salesos_sync: "read", salesos_stats: "read",
+  // read — tylko czytają/analizują (bez efektów ubocznych)
+  gcal_day: "read", gmail_read: "read", chief_of_staff: "read", deep_solve: "read",
+  predictions: "read", reflect: "read", sales_plan: "read", self_check: "read",
+  system_health: "read", world_recall: "read",
+  // write — lokalne, odwracalne ustawienia/zapisy
+  set_mode: "write", set_preference: "write", set_theme: "write", set_voice: "write",
+  switch_ai: "write", sales_autopilot: "write", backup_data: "write",
   // write
   forget_fact: "write", save_lead: "write",
   // write — lokalny zapis (wymaga zgody, można zapamiętać)
@@ -19,7 +26,7 @@ const RISK: Record<string, Risk> = {
   create_scene: "write", set_timer: "write", add_tally_item: "write", add_journal_entry: "write",
   create_flashcards: "write",
   // outbound — zewnętrzne lub nieodwracalne (wymaga zgody)
-  gmail_send: "outbound", gcal_add: "outbound", clear_tally: "outbound", run_automation: "outbound",
+  gmail_send: "outbound", gmail_reply: "outbound", gcal_add: "outbound", clear_tally: "outbound", run_automation: "outbound",
   send_test_email: "outbound", send_offers_all: "outbound",
   salesos_open: "outbound", salesos_push: "outbound",
   salesos_email: "outbound", salesos_flush_emails: "outbound", salesos_set_status: "outbound",
@@ -36,7 +43,10 @@ const RISK: Record<string, Risk> = {
 };
 
 export function riskOf(tool: string): Risk {
-  return RISK[tool] ?? "write";
+  // Fail-safe: nieznane narzędzia (MCP / pluginy / skille / przyszłe) traktujemy jako
+  // `outbound` → wymagają zgody. Wszystkie wbudowane narzędzia są jawnie sklasyfikowane wyżej,
+  // więc ta gałąź dotyczy tylko zewnętrznych/dynamicznie rejestrowanych narzędzi.
+  return RISK[tool] ?? "outbound";
 }
 
 // Kolekcje store, do których trafiają dodania narzędzi (cofalne).

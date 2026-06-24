@@ -5,7 +5,7 @@
 
 const http = require("http");
 const https = require("https");
-const { URL, URLSearchParams } = require("url");
+// URL / URLSearchParams są globalne w Node ≥10 — bez ponownego require (no-redeclare).
 
 const SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",

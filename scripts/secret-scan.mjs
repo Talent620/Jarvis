@@ -21,7 +21,7 @@ const PATTERNS = [
 const SKIP = [/scripts\/secret-scan\.mjs$/, /tests\//, /SECURITY\.md$/, /\.githooks\//];
 
 const all = process.argv.includes("--all");
-let lines = [];
+const lines = [];
 try {
   if (all) {
     const files = execSync("git ls-files", { encoding: "utf8" }).split("\n").filter(Boolean);
