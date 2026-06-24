@@ -2,6 +2,7 @@
 // Rdzeń CZYSTY i testowalny: pula porad + wybór następnej (rotacja bez powtórek, z warunkami
 // kontekstu). KIEDY pokazać decyduje UI (App) — tu tylko CO. Każda porada może mieć akcję
 // (id polecenia z ⌘K), więc dymek jest klikalny i od razu otwiera funkcję.
+import { loadJson, saveJson } from "./lsJson";
 
 export interface TipCtx {
   hasBrain: boolean;   // jest skonfigurowany model (klucz/lokalny) — bez tego nie kuś funkcjami
@@ -92,13 +93,13 @@ export function pickTip(ctx: TipCtx, shown: Iterable<string>): Tip | null {
 // --- Trwałość obejrzanych porad (rotacja między sesjami) ---
 const SHOWN_KEY = "jarvis.tips.shown.v1";
 function loadShownTips(): string[] {
-  try { return JSON.parse(localStorage.getItem(SHOWN_KEY) || "[]") as string[]; } catch { return []; }
+  return loadJson<string[]>(SHOWN_KEY, []);
 }
 /** Zapisz, że porada została pokazana (rotacja). Trzyma ostatnie ~30. */
 export function recordTipShown(id: string): void {
   const arr = loadShownTips().filter((x) => x !== id);
   arr.push(id);
-  try { localStorage.setItem(SHOWN_KEY, JSON.stringify(arr.slice(-30))); } catch { /* quota — pomiń */ }
+  saveJson(SHOWN_KEY, arr.slice(-30));
 }
 /** Wybierz następną poradę z bieżącego stanu (obejrzane z localStorage). */
 export function nextTip(ctx: TipCtx): Tip | null {

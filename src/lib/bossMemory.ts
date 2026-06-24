@@ -2,26 +2,24 @@
 // Co ustaliliście z Szefem (decyzje/zobowiązania) zostaje zapisane lokalnie i wraca do jego
 // briefingu w kolejnych sesjach — dzięki temu nie zaczynacie od zera i Szef pamięta ustalenia.
 
+import { loadJson, saveJson } from "./lsJson";
+
 export interface BossDecision { text: string; at: number }
 
 const KEY = "jarvis.boss.decisions.v1";
 const MAX = 40;
 
 export function loadBossDecisions(): BossDecision[] {
-  try { return JSON.parse(localStorage.getItem(KEY) || "[]") as BossDecision[]; } catch { return []; }
+  return loadJson<BossDecision[]>(KEY, []);
 }
 
 /** Zapisz decyzję (dedup po treści, najnowsze na górze, limit). */
 export function recordBossDecision(text: string, at = Date.now()): void {
   const t = (text || "").trim();
   if (t.length < 4) return;
-  try {
-    const list = loadBossDecisions().filter((d) => d.text.toLowerCase() !== t.toLowerCase());
-    list.unshift({ text: t.slice(0, 200), at });
-    localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAX)));
-  } catch {
-    /* brak miejsca / prywatny tryb — pomiń */
-  }
+  const list = loadBossDecisions().filter((d) => d.text.toLowerCase() !== t.toLowerCase());
+  list.unshift({ text: t.slice(0, 200), at });
+  saveJson(KEY, list.slice(0, MAX));
 }
 
 export function recentBossDecisions(n = 6): BossDecision[] {

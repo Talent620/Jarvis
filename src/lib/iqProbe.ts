@@ -4,6 +4,8 @@
 // się polecenia, fakty) i sam je ocenia. Wynik („zmierzone u Ciebie") jest dowodem, a nie
 // opinią — i uwzględnia Twoje opóźnienia. Czyste funkcje + wstrzykiwany „caller" (testowalne).
 
+import { loadJson, saveJson } from "./lsJson";
+
 export interface Probe {
   id: string;
   prompt: string;
@@ -97,21 +99,13 @@ export function verdict(pct: number, ms: number): string {
 const LS_KEY = "jarvis.iqResults";
 
 export function loadIqResults(): Record<string, IqResult> {
-  try {
-    return JSON.parse(localStorage.getItem(LS_KEY) || "{}") as Record<string, IqResult>;
-  } catch {
-    return {};
-  }
+  return loadJson<Record<string, IqResult>>(LS_KEY, {});
 }
 export function loadIqResult(key: string): IqResult | null {
   return loadIqResults()[key] ?? null;
 }
 export function saveIqResult(key: string, r: IqResult): void {
-  try {
-    const all = loadIqResults();
-    all[key] = r;
-    localStorage.setItem(LS_KEY, JSON.stringify(all));
-  } catch {
-    /* brak miejsca / prywatny tryb — pomiń */
-  }
+  const all = loadIqResults();
+  all[key] = r;
+  saveJson(LS_KEY, all);
 }

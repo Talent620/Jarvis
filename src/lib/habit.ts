@@ -2,6 +2,7 @@
 // Research: ludzie zostają, gdy widzą, że inwestycja procentuje, i gdy mają „serię". Rdzeń czysty
 // i testowalny; cienkie wrappery czytają store i zapisują dni aktywności.
 import { store } from "./store";
+import { loadJson, saveJson } from "./lsJson";
 
 const DAY = 86_400_000;
 
@@ -60,7 +61,7 @@ export function weeklyRecap(input: RecapInput): Recap {
 // --- Wrappery (store + trwała lista dni aktywności) ---
 const DAYS_KEY = "jarvis.habit.days.v1";
 function loadDays(): string[] {
-  try { return JSON.parse(localStorage.getItem(DAYS_KEY) || "[]") as string[]; } catch { return []; }
+  return loadJson<string[]>(DAYS_KEY, []);
 }
 
 /** Zapisz dzisiejszy dzień jako aktywny (wywołać przy starcie). Trzyma ostatnie ~90 dni. */
@@ -69,7 +70,7 @@ export function recordActiveDay(now = Date.now()): void {
   const k = dayKey(now);
   if (set.has(k)) return;
   set.add(k);
-  try { localStorage.setItem(DAYS_KEY, JSON.stringify([...set].slice(-90))); } catch { /* quota — pomiń */ }
+  saveJson(DAYS_KEY, [...set].slice(-90));
 }
 
 /** Aktualna seria dni (do plakietki „🔥 N dni z rzędu"). */

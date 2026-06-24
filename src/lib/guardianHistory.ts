@@ -3,6 +3,8 @@
 // historię. Trzymany w localStorage jako pierścień (ostatnie N). Czysta logika dodawania/cappowania
 // jest testowalna; I/O cienkie.
 
+import { loadJson, saveJson } from "./lsJson";
+
 export interface GuardianEvent {
   at: number;            // timestamp
   kind: "fix" | "recommend" | "scan";
@@ -42,23 +44,13 @@ export function recurringHint(list: GuardianEvent[], min = 3): RecurringHint | n
 }
 
 function read(): GuardianEvent[] {
-  try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
+  const arr = loadJson<GuardianEvent[]>(KEY, []);
+  return Array.isArray(arr) ? arr : [];
 }
 
 /** Zapisz zdarzenie Strażnika do historii (best-effort). */
 export function recordGuardianEvent(kind: GuardianEvent["kind"], message: string): void {
-  try {
-    const next = appendEvent(read(), { at: Date.now(), kind, message });
-    if (typeof localStorage !== "undefined") localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    /* brak localStorage — pomijamy */
-  }
+  saveJson(KEY, appendEvent(read(), { at: Date.now(), kind, message }));
 }
 
 /** Odczytaj historię Strażnika (najnowsze pierwsze). */
