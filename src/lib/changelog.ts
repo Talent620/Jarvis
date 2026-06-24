@@ -14,7 +14,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-06-24",
     items: [
       "🎨 Studio Obrazów — przejrzystość i pewność: przy każdym modelu plakietka ✅ gotowy / ⚙ wymaga klucza; auto-fallback (gdy płatny fal.ai padnie na braku środków, dokańczamy DARMOWYM Gemini); asystent pisze lepsze prompty (zostaw resztę bez zmian + jedna zmiana na raz — wg oficjalnych wytycznych Nano Banana).",
-      "🐛 Koniec powielania nudge'a „Masz X zadań" przy każdym otwarciu oraz ucinania górnego paska na wąskich telefonach.",
+      "🐛 Koniec powielania szturchańca o zadaniach przy każdym otwarciu oraz ucinania górnego paska na wąskich telefonach.",
       "💬 Studio Obrazów: asystent edycji — rozumie polecenie po ludzku i DOPYTUJE, jeśli coś niejasne, ZANIM wyda kasę na płatną generację (mniej zmarnowanych prób).",
       "⚡ Aktualizacje błyskawiczne (OTA): apka pobiera sam web-bundle (~1–2 MB) zamiast całego APK i podmienia go bez instalatora; zła paczka sama się cofa.",
       "🎧 Tryb Słuchawki działa na Androidzie — koniec cichego milczenia bez klucza Groq (Web Speech nie działa w aplikacji; teraz zawsze nagrywamy, a transkrypcję robi lokalny Whisper lub darmowy Groq).",
