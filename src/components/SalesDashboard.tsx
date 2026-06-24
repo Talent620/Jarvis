@@ -501,7 +501,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
           </div>
 
           {shown.length === 0 ? (
-            <p className="muted" style={{ textAlign: "center", padding: "16px 0" }}>Brak leadów. Poproś JARVIS-a, by je znalazł i zapisał.</p>
+            <p className="muted" style={{ textAlign: "center", padding: "16px 0" }}>Brak leadów do pokazania. Zmień filtr powyżej albo kliknij „🔎 Znajdź leady”, aby dodać firmy (za darmo, z OpenStreetMap).</p>
           ) : (
             shown.map((l) => (
               <div key={l.id} className="journal-card">

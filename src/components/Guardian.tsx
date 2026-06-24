@@ -331,7 +331,7 @@ export default function Guardian({ onClose, onRun }: { onClose: () => void; onRu
           </p>
           <input
             value={q}
-            placeholder="np. jak przyspieszyć JARVISA, jaki model wybrać, dodaj zadanie, napisz maila…"
+            placeholder="np. jak przyspieszyć JARVISA, jaki model wybrać, dodaj zadanie… (Enter wysyła)"
             disabled={busy}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void doExecute(); }}
@@ -404,7 +404,7 @@ export default function Guardian({ onClose, onRun }: { onClose: () => void; onRu
             <div className="chips" style={{ marginTop: 10 }}>
               <input
                 value={chatInput}
-                placeholder="Napisz do Strażnika…"
+                placeholder="Napisz do Strażnika… (Enter wysyła)"
                 disabled={chatBusy}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") void sendChat(); }}
