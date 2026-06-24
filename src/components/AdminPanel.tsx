@@ -208,7 +208,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 <h3 style={{ marginTop: 16 }}>➕ Podpisz klucz dla kogoś</h3>
                 <div className="field" style={{ display: "flex", gap: 8 }}>
                   <input value={offForm.owner} placeholder='Właściciel (np. „tester młody", „szef — ja")' onChange={(e) => setOffForm({ ...offForm, owner: e.target.value })} style={{ flex: 2 }} />
-                  <input type="number" value={offForm.days} placeholder="Dni (∞)" onChange={(e) => setOffForm({ ...offForm, days: e.target.value })} style={{ flex: 1 }} />
+                  <input type="number" min="0" value={offForm.days} placeholder="Dni (∞)" onChange={(e) => setOffForm({ ...offForm, days: e.target.value })} style={{ flex: 1 }} />
                 </div>
                 <button className="btn primary" onClick={genOffline}>🔏 Podpisz i skopiuj</button>
 
@@ -279,8 +279,8 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
               <h3>➕ Wydaj klucz licencyjny</h3>
               <div className="field" style={{ display: "flex", gap: 8 }}>
                 <input value={form.name} placeholder="Imię / firma klienta" onChange={(e) => setForm({ ...form, name: e.target.value })} style={{ flex: 2 }} />
-                <input type="number" value={form.days} placeholder="Dni (∞)" onChange={(e) => setForm({ ...form, days: e.target.value })} style={{ flex: 1 }} />
-                <input type="number" value={form.limit} placeholder="Urz." onChange={(e) => setForm({ ...form, limit: e.target.value })} style={{ width: 70 }} />
+                <input type="number" min="0" value={form.days} placeholder="Dni (∞)" onChange={(e) => setForm({ ...form, days: e.target.value })} style={{ flex: 1 }} />
+                <input type="number" min="1" value={form.limit} placeholder="Urz." onChange={(e) => setForm({ ...form, limit: e.target.value })} style={{ width: 70 }} />
               </div>
               <button className="btn primary" onClick={issue}>🔑 Wygeneruj klucz</button>
               {newKey && (
