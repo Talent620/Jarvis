@@ -198,10 +198,12 @@ export function passesFilters(l: RawLead, f: LeadFilters): boolean {
 }
 
 /**
- * Pure: ocena „atrakcyjności" leada (0–10). Dla agencji stron najcenniejsi to firmy
- * BEZ strony, z kontaktem (e-mail > telefon) i kompletnymi danymi (adres/godziny).
+ * Pure: ocena „atrakcyjności" SUROWEGO leada z mapy (skala 0–10) — używana do sortowania
+ * świeżych wyników z OSM. UWAGA: to NIE to samo co scoreLead() z leadIntel.ts (skala 0–100,
+ * po audycie strony) — stąd osobna nazwa, by nie mylić dwóch różnych skal. Dla agencji stron
+ * najcenniejsi to firmy BEZ strony, z kontaktem (e-mail > telefon) i kompletnymi danymi.
  */
-export function scoreLead(l: RawLead): number {
+export function scoreRawLead(l: RawLead): number {
   let s = 0;
   if (!l.hasWebsite) s += 4;       // brak strony = realny powód do oferty
   if (l.email) s += 3;             // e-mail = wysyłka jednym kliknięciem
@@ -227,8 +229,8 @@ export function rankRawLeads(els: any[], count: number, filters: LeadFilters | b
     out.push(lead);
     if (out.length >= count * 3) break;
   }
-  // Najlepsze leady na górę wg scoreLead (bez strony + kontakt + komplet danych).
-  out.sort((a, b) => scoreLead(b) - scoreLead(a));
+  // Najlepsze leady na górę wg scoreRawLead (bez strony + kontakt + komplet danych).
+  out.sort((a, b) => scoreRawLead(b) - scoreRawLead(a));
   return out.slice(0, count);
 }
 
@@ -293,7 +295,7 @@ export function mergeRawLeads(osm: RawLead[], web: RawLead[], count: number): Ra
     for (const k of ks) seen.add(k);
     out.push(l);
   }
-  out.sort((a, b) => scoreLead(b) - scoreLead(a));
+  out.sort((a, b) => scoreRawLead(b) - scoreRawLead(a));
   return out.slice(0, count);
 }
 

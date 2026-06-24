@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { parseElement, nicheToOverpass, toOverpassBbox, buildOverpassQuery, saveLeads, resolveLeadCount, passesFilters, scoreLead, parseWebLead, mergeRawLeads, extractEmails, enrichLeadsEmails, type RawLead } from "../src/lib/leads";
+import { parseElement, nicheToOverpass, toOverpassBbox, buildOverpassQuery, saveLeads, resolveLeadCount, passesFilters, scoreRawLead, parseWebLead, mergeRawLeads, extractEmails, enrichLeadsEmails, type RawLead } from "../src/lib/leads";
 import { vi } from "vitest";
 import { store } from "../src/lib/store";
 
@@ -85,10 +85,10 @@ describe("leady — filtry kanałowe i scoring", () => {
     expect(passesFilters(mk({ website: "https://x.pl" }), { onlyNoWebsite: true })).toBe(false);
     expect(passesFilters(mk({}), {})).toBe(true);
   });
-  it("scoreLead: bez strony + e-mail > z telefonem > ze stroną", () => {
-    const a = scoreLead(mk({ email: "a@b.pl", address: "ul. X" }));      // bez strony + email + adres
-    const b = scoreLead(mk({ phone: "600" }));                            // bez strony + telefon
-    const c = scoreLead(mk({ website: "https://x.pl", phone: "600" }));   // ze stroną
+  it("scoreRawLead: bez strony + e-mail > z telefonem > ze stroną", () => {
+    const a = scoreRawLead(mk({ email: "a@b.pl", address: "ul. X" }));      // bez strony + email + adres
+    const b = scoreRawLead(mk({ phone: "600" }));                            // bez strony + telefon
+    const c = scoreRawLead(mk({ website: "https://x.pl", phone: "600" }));   // ze stroną
     expect(a).toBeGreaterThan(b);
     expect(b).toBeGreaterThan(c);
   });
