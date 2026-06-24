@@ -28,7 +28,7 @@ import { PRESETS } from "./lib/prompts";
 import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } from "./lib/decisions";
 import { isBossSummon } from "./lib/boss";
 import { completionReport } from "./lib/completion";
-import { healthIssues, topIssue, newIssues, alertText, applyAutoFixes } from "./lib/watchdog";
+import { useWatchdog } from "./hooks/useWatchdog";
 import { valueToday, prettyMinutes } from "./lib/valueLog";
 import { rememberFact } from "./lib/memory";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
@@ -196,7 +196,6 @@ export default function App() {
   const [recallSeed, setRecallSeed] = useState("");
   const [showBoss, setShowBoss] = useState(false);
   const [completionHidden, setCompletionHidden] = useState(false);
-  const alertedRef = useRef<Set<string>>(new Set()); // 🩺 watchdog: nie alarmuj dwa razy o tym samym
   const [tip, setTip] = useState<Tip | null>(null);
   const [decision, setDecision] = useState<DecisionCandidate | null>(null); // 🧠 auto-capture
   const tipCountRef = useRef(0);
@@ -211,33 +210,8 @@ export default function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  // 🩺 Watchdog Szefa: sprawdź stan po starcie i co ~6 min; alarmuj TYLKO o nowych problemach.
-  useEffect(() => {
-    const alerted = alertedRef.current;
-    const visibleVoice = () => store.settings.speak && (typeof document === "undefined" || document.visibilityState !== "hidden");
-    const check = () => {
-      // 1) 🛠 SELF-HEAL: sam napraw bezpieczne usterki ustawień i powiedz o tym.
-      const fixed = applyAutoFixes();
-      if (fixed.length) {
-        const m = `Naprawiłem: ${fixed[0]}${fixed.length > 1 ? ` i ${fixed.length - 1} więcej` : ""}.`;
-        toast("🛠 " + m);
-        if (visibleVoice()) void speak("Sam naprawiłem: " + fixed[0] + ".", store.settings).catch(() => {});
-      }
-      // 2) 🔔 ALERT o nowych problemach, których nie da się naprawić automatycznie.
-      const fresh = newIssues(alerted, healthIssues());
-      if (!fresh.length) return;
-      fresh.forEach((i) => alerted.add(i.id));
-      const top = topIssue(fresh);
-      if (!top) return;
-      if (top.severity === "warn" && store.settings.tips === false) return; // szanuj wyciszenie (błędy zawsze)
-      toast(alertText(top), { label: "Sprawdź", onClick: () => setShowGuardian(true) });
-      // Głosowy alert Szefa — błędy mówi na głos i kieruje do naprawy.
-      if (top.severity === "err" && visibleVoice()) void speak(`Uwaga: ${top.title}. Wejdź w diagnozę, żeby to naprawić.`, store.settings).catch(() => {});
-    };
-    const first = setTimeout(check, 4500);
-    const iv = setInterval(check, 6 * 60_000);
-    return () => { clearTimeout(first); clearInterval(iv); };
-  }, []);
+  // 🩺 Watchdog Szefa (self-heal + alerty) — logika w useWatchdog (wydzielona z App.tsx).
+  useWatchdog(() => setShowGuardian(true));
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [locked, setLocked] = useState(lockIsSet());
   const [onboarding, setOnboarding] = useState(needsOnboarding());
