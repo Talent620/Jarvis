@@ -76,6 +76,24 @@ export function blocksCloudMetadata(rawUrl) {
   }
 }
 
+// Ściślejsza blokada SSRF dla endpointów pobierających DOWOLNY publiczny URL od klienta
+// (audyt strony / PageSpeed): odrzucamy localhost i prywatne zakresy IP, żeby nie dało się
+// przez BFF sięgnąć do usług wewnętrznych. (Tu — w przeciwieństwie do passthrough — LAN jest
+// niedozwolony, bo audytujemy wyłącznie publiczne witryny.)
+export function isPrivateHost(rawUrl) {
+  try {
+    const h = new URL(rawUrl).hostname.toLowerCase().replace(/^\[|\]$/g, "");
+    if (h === "localhost" || h.endsWith(".localhost") || h === "::1" || h === "0.0.0.0") return true;
+    if (/^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h)) return true;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true;
+    if (/^169\.254\./.test(h) || /^100\.(6[4-9]|[7-9]\d|1[0-1]\d|12[0-7])\./.test(h)) return true; // link-local + CGNAT 100.64/10
+    if (/^(fe80:|fc|fd)/.test(h) || h === "::1") return true; // IPv6 link-local / unique-local
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 
 
 // Przekaźnik SMTP (telefon wysyła „w tle" hasłem aplikacji, bez Google OAuth).
@@ -376,6 +394,66 @@ export default {
         const data = await r.json();
         const citations = (data.results || []).map((x) => ({ title: x.title || x.url, url: x.url }));
         return json(r.ok ? 200 : 502, { answer: data.answer, results: data.results, citations });
+      }
+
+      // --- AUDYT STRONY LEADA (omija CORS na telefonie; SSRF-safe) ---
+      if (path === "/v1/site-audit" && req.method === "POST") {
+        if (appTokenBad(req, env)) return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });
+        let body;
+        try { body = await req.json(); } catch { return json(400, { error: "Zły JSON." }); }
+        let u = typeof body?.url === "string" ? body.url.trim() : "";
+        if (!u) return json(400, { error: "Brak url." });
+        if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+        let parsed;
+        try { parsed = new URL(u); } catch { return json(400, { error: "Zły URL." }); }
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return json(400, { error: "Tylko http/https." });
+        if (blocksCloudMetadata(u) || isPrivateHost(u)) return json(403, { error: "Adres niedozwolony." });
+        try {
+          const r = await fetchT(u, { method: "GET", redirect: "follow", headers: { "user-agent": "JARVIS-SiteAudit/1.0 (+sprzedaz)", accept: "text/html,application/xhtml+xml,*/*" } }, 12000);
+          // Po przekierowaniach też pilnujemy SSRF (otwarte przekierowanie do LAN/metadanych).
+          if (r.url && (blocksCloudMetadata(r.url) || isPrivateHost(r.url))) return json(403, { error: "Przekierowanie na niedozwolony adres." });
+          const buf = await r.arrayBuffer();
+          const html = new TextDecoder("utf-8", { fatal: false }).decode(buf.slice(0, 400_000)); // wystarczy <head>+
+          return json(200, { ok: r.ok, status: r.status, finalUrl: r.url || u, contentType: r.headers.get("content-type") || "", bytes: buf.byteLength, html });
+        } catch (e) {
+          return json(200, { ok: false, error: String((e && e.message) || e) });
+        }
+      }
+
+      // --- AUDYT WYDAJNOŚCI (Google PageSpeed Insights → znormalizowane metryki) ---
+      if (path === "/v1/pagespeed" && req.method === "POST") {
+        if (appTokenBad(req, env)) return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });
+        let body;
+        try { body = await req.json(); } catch { return json(400, { error: "Zły JSON." }); }
+        let u = typeof body?.url === "string" ? body.url.trim() : "";
+        if (!u) return json(400, { error: "Brak url." });
+        if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+        if (blocksCloudMetadata(u) || isPrivateHost(u)) return json(403, { error: "Adres niedozwolony." });
+        const strat = body?.strategy === "desktop" ? "desktop" : "mobile";
+        const api = new URL("https://www.googleapis.com/pagespeedonline/v5/runPagespeed");
+        api.searchParams.set("url", u);
+        api.searchParams.set("strategy", strat);
+        for (const c of ["performance", "accessibility", "seo", "best-practices"]) api.searchParams.append("category", c);
+        if (env.PAGESPEED_API_KEY) api.searchParams.set("key", env.PAGESPEED_API_KEY);
+        try {
+          const r = await fetchT(api.toString(), {}, 30000);
+          const data = await r.json();
+          if (!r.ok) return json(502, { ok: false, error: data?.error?.message || `PageSpeed HTTP ${r.status}` });
+          const lr = data.lighthouseResult || {};
+          const cats = lr.categories || {};
+          const au = lr.audits || {};
+          const num = (id) => (typeof au[id]?.numericValue === "number" ? au[id].numericValue : null);
+          const pct = (c) => (typeof cats[c]?.score === "number" ? Math.round(cats[c].score * 100) : null);
+          const field = data.loadingExperience?.metrics || {};
+          return json(200, {
+            ok: true, strategy: strat, finalUrl: data.id || u,
+            scores: { performance: pct("performance"), accessibility: pct("accessibility"), seo: pct("seo"), bestPractices: pct("best-practices") },
+            lab: { lcpMs: num("largest-contentful-paint"), cls: num("cumulative-layout-shift"), tbtMs: num("total-blocking-time"), fcpMs: num("first-contentful-paint"), ttfbMs: num("server-response-time"), speedIndexMs: num("speed-index") },
+            field: { lcpMs: field.LARGEST_CONTENTFUL_PAINT_MS?.percentile ?? null, cls: field.CUMULATIVE_LAYOUT_SHIFT_SCORE?.percentile ?? null, inpMs: field.INTERACTION_TO_NEXT_PAINT?.percentile ?? null },
+          });
+        } catch (e) {
+          return json(502, { ok: false, error: String((e && e.message) || e) });
+        }
       }
 
       // --- EMBEDDINGS (Gemini) ---

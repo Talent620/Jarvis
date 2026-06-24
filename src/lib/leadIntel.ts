@@ -1,6 +1,6 @@
-import { fetchTimeout } from "./http";
 import { resolveProvider, askModel } from "./brain";
 import { store } from "./store";
+import { fetchSiteHtml } from "./sales/siteAuditClient";
 import type { Lead, LeadIntel, SiteAudit } from "../types";
 
 // === Teczka klienta (wywiad sprzedażowy) ===
@@ -36,19 +36,21 @@ export function parseSiteHtml(html: string, url: string): SiteAudit {
   };
 }
 
-/** Pobierz i zaudytuj stronę leada. Na telefonie CORS może blokować — wtedy
- *  audyt wraca z `ok:false` i analiza opiera się na danych z mapy. */
+/** Pobierz i zaudytuj stronę leada. Pobranie idzie przez BFF (działa na telefonie, omija CORS);
+ *  na desktopie/web bez proxy — bezpośrednio. Gdy się nie uda, audyt wraca `ok:false` i analiza
+ *  opiera się na danych z mapy. */
 export async function auditSite(rawUrl: string): Promise<SiteAudit> {
-  let url = rawUrl.trim();
-  if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
-  try {
-    const res = await fetchTimeout(url, { redirect: "follow" }, 12000);
-    if (!res.ok) return { ok: false, https: url.startsWith("https://"), error: `Strona odpowiada błędem ${res.status}.` };
-    const html = await res.text();
-    return parseSiteHtml(html, res.url || url);
-  } catch {
-    return { ok: false, error: "Nie udało się pobrać strony (blokada/offline) — analiza na danych z mapy." };
+  const r = await fetchSiteHtml(rawUrl);
+  const https = (r.finalUrl || rawUrl || "").startsWith("https://");
+  if (!r.ok || !r.html) {
+    return { ok: false, https, error: r.error ? `Nie udało się pobrać strony: ${r.error}` : "Nie udało się pobrać strony — analiza na danych z mapy." };
   }
+  return parseSiteHtml(r.html, r.finalUrl || normalizeAuditUrl(rawUrl));
+}
+
+function normalizeAuditUrl(u: string): string {
+  const s = (u || "").trim();
+  return /^https?:\/\//i.test(s) ? s : `https://${s}`;
 }
 
 /** Audyt → lista słabych punktów po polsku (twarde fakty do rozmowy). */
