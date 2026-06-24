@@ -229,6 +229,12 @@ export default function Studio({ onClose }: { onClose: () => void }) {
                     placeholder={"Wklej 1+ kluczy Gemini — każdy w nowej linii.\nUżywane TYLKO w Studiu. JARVIS rotuje je, gdy limit się wyczerpie."}
                     onChange={(e) => { setStudioKeys(e.target.value); store.setSettings({ studioKeys: e.target.value }); }}
                   />
+                  {studioKeys.trim() && !/AIza/i.test(studioKeys) && studioKeys.includes(":") && (
+                    <p className="muted" style={{ fontSize: 12, color: "#ff8585" }}>
+                      ⚠ To wygląda na klucz <b>fal.ai</b> (z dwukropkiem), a tu wpisuje się klucze <b>Gemini</b> (zaczynają się od „AIza…”).
+                      Klucz fal.ai wklej w <b>⚙ → AI → Studio premium</b>, a tu wstaw klucz Gemini z aistudio.google.com/apikey.
+                    </p>
+                  )}
                   <p className="muted" style={{ fontSize: 12 }}>
                     Darmowe klucze: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: "var(--cyan)" }}>aistudio.google.com/apikey</a> (bez karty). Każde konto Google = osobny dzienny limit obrazów. Puste pole = Studio użyje klucza z czatu.
                   </p>
