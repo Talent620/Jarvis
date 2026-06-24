@@ -1265,8 +1265,11 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }}
                     disabled={findingServer}
                     onClick={async () => {
-                      setFindingServer(true); setFindMsg("Szukam serwera (localhost)…");
-                      const r = await findOllamaServer();
+                      // Testuj NAJPIERW adres wpisany w polu (np. Tailscale 100.x) — nie tylko localhost.
+                      // Pole trzyma się w lokalnym buforze do „Zapisz", więc bierzemy go stąd wprost.
+                      const typed = s.ollamaUrl?.trim();
+                      setFindingServer(true); setFindMsg(typed ? `Sprawdzam ${typed}…` : "Szukam serwera (localhost)…");
+                      const r = await findOllamaServer(typed ? [typed, "http://localhost:11434", "http://127.0.0.1:11434"] : undefined);
                       setFindingServer(false);
                       if (r.ok) {
                         set({ ollamaUrl: r.url, provider: "ollama" });

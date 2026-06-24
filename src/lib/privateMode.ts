@@ -75,7 +75,7 @@ export async function findOllamaServer(candidates?: string[]): Promise<OllamaSta
     ok: false,
     url: list[0] || "",
     models: [],
-    error: "Nie znalazłem serwera Ollama (próbowałem localhost). Uruchom na PC JARVIS-Ollama-Server.exe albo wpisz adres ręcznie (telefon: adres PC, nie localhost).",
+    error: `Nie znalazłem serwera Ollama (próbowałem: ${tried.join(", ") || "localhost"}). Na PC uruchom JARVIS-Ollama-Server.exe; na telefonie włącz Tailscale (to samo konto) i podaj adres PC, NIE localhost.`,
     tried,
   };
 }
