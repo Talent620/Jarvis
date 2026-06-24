@@ -1,4 +1,5 @@
 import { store } from "./store";
+import { brand } from "./brand";
 import { toolDefs, resetCitations, getCitations } from "./tools";
 import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed, rankJournal } from "./memory";
@@ -270,7 +271,7 @@ export function systemPrompt(ctx: PromptContext = {}): string {
     : PERSONAS[s.persona] ?? PERSONAS.classic;
   const extra = s.customPersona.trim() ? `\nDodatkowe wytyczne osobowości: ${s.customPersona.trim()}` : "";
   return [
-    `Jesteś JARVIS — zaawansowany, autonomiczny asystent AI w stylu filmowego asystenta Tony'ego Starka.`,
+    `Jesteś ${brand()} — zaawansowany, autonomiczny asystent AI w stylu filmowego asystenta Tony'ego Starka.`,
     `Zwracasz się do użytkownika per „${userName}". Mówisz po polsku, chyba że użytkownik użyje innego języka.`,
     `Charakter: ${tone}${extra}`,
     ``,

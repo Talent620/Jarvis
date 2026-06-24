@@ -170,7 +170,17 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     store.setSettings({ micDeviceId: id }); // od razu obowiązuje — bez czekania na „Zapisz"
   };
 
-  const set = (patch: Partial<Settings>) => setS((prev) => ({ ...prev, ...patch }));
+  // Każda zmiana ustawienia utrwala się OD RAZU (koniec gubienia zmian po zamknięciu bez „Zapisz").
+  // Zachowujemy normalizację dostawca/model (gdy model nie pasuje do dostawcy → domyślny).
+  const set = (patch: Partial<Settings>) => {
+    const merged = { ...s, ...patch };
+    if (merged.provider !== "auto") {
+      const meta = PROVIDERS[merged.provider as ProviderId];
+      if (meta && merged.model !== "auto" && !meta.models.some((m) => m.id === merged.model)) merged.model = meta.defaultModel;
+    }
+    setS(merged);
+    store.setSettings(merged);
+  };
   // GŁOS: zmiany obowiązują OD RAZU i nie giną po zamknięciu bez „Zapisz" —
   // (to było źródło „głos się nie zmienia": wybór ginął, bo nie był utrwalany).
   const setVoice = (patch: Partial<Settings>) => { setS((prev) => ({ ...prev, ...patch })); store.setSettings(patch); };
