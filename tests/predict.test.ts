@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { predict, topPredictions, predictionsSummary, type PredictInput } from "../src/lib/predict";
+import { predict, topPredictions, type PredictInput } from "../src/lib/predict";
 
 const DAY = 86_400_000;
 const now = 1_000 * DAY;
@@ -64,10 +64,5 @@ describe("predict — ranking i podsumowanie", () => {
     const top = topPredictions(input, now, 1);
     expect(top).toHaveLength(1);
     expect(top[0].urgency).toBe("high"); // overdue pierwsze
-  });
-  it("predictionsSummary: pusto → '', z danymi → tekst", () => {
-    expect(predictionsSummary(base, now)).toBe("");
-    const s = predictionsSummary({ ...base, tasks: [{ id: "1", title: "X", done: false, due: iso(now - DAY) }] }, now);
-    expect(s.length).toBeGreaterThan(0);
   });
 });

@@ -95,10 +95,3 @@ export function topPredictions(input: PredictInput, now = Date.now(), max = 6): 
     .sort((a, b) => URG[b.urgency] - URG[a.urgency] || (a.at || Infinity) - (b.at || Infinity))
     .slice(0, max);
 }
-
-/** Pure: jednoliniowe podsumowanie (do proaktywnego sygnału). Pusto, gdy nic nie wymaga uwagi. */
-export function predictionsSummary(input: PredictInput, now = Date.now(), max = 4): string {
-  const top = topPredictions(input, now, max);
-  if (!top.length) return "";
-  return top.map((p) => p.title).join(" · ");
-}
