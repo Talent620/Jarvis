@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
-import { useEscape } from "../hooks/useEscape";
+import Modal from "./Modal";
 import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
 import { generatePost, saveContentPost, PLATFORMS, TONES, type Platform, type Tone } from "../lib/contentStudio";
 
 // 📱 Maszynka do kontentu — JARVIS pisze gotowy post na social media. Kopiujesz
 // albo udostępniasz jednym tapnięciem do dowolnej apki (IG/FB/TikTok/LinkedIn).
 export default function ContentStudio({ onClose }: { onClose: () => void }) {
-  useEscape(onClose);
   useStore();
   const [platform, setPlatform] = useState<Platform>("instagram");
   const [topic, setTopic] = useState("");
@@ -32,13 +31,11 @@ export default function ContentStudio({ onClose }: { onClose: () => void }) {
   const share = () => shareOrCopy(out);
 
   return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>📱 Maszynka do kontentu</h2>
-        </div>
-        <div className="panel-body">
+    <Modal
+      title="📱 Maszynka do kontentu"
+      onClose={onClose}
+      foot={<button className="btn primary" style={{ width: "100%" }} onClick={onClose}>Zamknij</button>}
+    >
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             Podaj temat — JARVIS napisze gotowy post. Potem skopiuj albo udostępnij do dowolnej apki.
           </p>
@@ -100,11 +97,6 @@ export default function ContentStudio({ onClose }: { onClose: () => void }) {
               ))}
             </>
           )}
-        </div>
-        <div className="panel-foot">
-          <button className="btn primary" style={{ width: "100%" }} onClick={onClose}>Zamknij</button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

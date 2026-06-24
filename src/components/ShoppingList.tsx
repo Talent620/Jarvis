@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useEscape } from "../hooks/useEscape";
+import Modal from "./Modal";
 import { copyWithToast } from "../lib/toast";
 import { resolveProvider } from "../lib/brain";
 import { parseItems, basketSummary, findBasket, type BasketLine } from "../lib/basket";
@@ -8,7 +8,6 @@ import { parseItems, basketSummary, findBasket, type BasketLine } from "../lib/b
 // i liczy łączną sumę koszyka. Każda pozycja korzysta z Łowcy Okazji.
 
 export default function ShoppingList({ onClose }: { onClose: () => void }) {
-  useEscape(onClose);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number; label: string } | null>(null);
@@ -38,13 +37,11 @@ export default function ShoppingList({ onClose }: { onClose: () => void }) {
   const money = (n: number, c: string) => `${n.toLocaleString("pl-PL")} ${c}`;
 
   return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>🛒 Lista zakupów — kup wszystko najtaniej</h2>
-        </div>
-        <div className="panel-body">
+    <Modal
+      title="🛒 Lista zakupów — kup wszystko najtaniej"
+      onClose={onClose}
+      foot={<button className="btn" onClick={onClose}>Zamknij</button>}
+    >
           <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
             Wpisz kilka rzeczy (każda w nowej linii lub po przecinku). JARVIS znajdzie każdą najtaniej i policzy sumę.
           </p>
@@ -112,11 +109,6 @@ export default function ShoppingList({ onClose }: { onClose: () => void }) {
           )}
 
           {!ready && <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>💡 Lista zakupów używa mózgu AI z wyszukiwaniem w sieci — wklej klucz w ⚙ → AI (np. Claude lub Gemini).</p>}
-        </div>
-        <div className="panel-foot">
-          <button className="btn" onClick={onClose}>Zamknij</button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

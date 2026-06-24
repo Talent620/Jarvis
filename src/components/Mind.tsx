@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useEscape } from "../hooks/useEscape";
+import Modal from "./Modal";
 import { store } from "../lib/store";
 import { buildChiefBriefing } from "../lib/chiefOfStaff";
 import { getWorld } from "../lib/worldModel";
@@ -16,7 +16,6 @@ import type { EntityKind } from "../types";
 const KIND_ICON: Record<EntityKind, string> = { person: "👤", project: "📁", company: "🏢", task: "✅", topic: "💡" };
 
 export default function Mind({ onClose }: { onClose: () => void }) {
-  useEscape(onClose);
 
   const data = useMemo(() => {
     const d = store.data;
@@ -34,10 +33,11 @@ export default function Mind({ onClose }: { onClose: () => void }) {
   const vColor = verdict.level === "ok" ? "var(--ok,#62e6a8)" : verdict.level === "bad" ? "var(--danger,#ff7a7a)" : "var(--gold)";
 
   return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head"><div className="grabber" /><h2>🧠 Umysł JARVISA</h2></div>
-        <div className="panel-body">
+    <Modal
+      title="🧠 Umysł JARVISA"
+      onClose={onClose}
+      foot={<button className="btn primary" style={{ width: "100%" }} onClick={onClose}>Zamknij</button>}
+    >
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>Co JARVIS wie i myśli — odprawa, Twój świat, wzorce i samoocena. Wszystko liczone lokalnie.</p>
 
           {/* 🩺 Werdykt niezawodności — czytelny sygnał z telemetrii (zero cichych awarii) */}
@@ -93,11 +93,6 @@ export default function Mind({ onClose }: { onClose: () => void }) {
               <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>Poprawki jednym kliknięciem znajdziesz w 🛡 Strażniku.</div>
             )}
           </div>
-        </div>
-        <div className="panel-foot">
-          <button className="btn primary" style={{ width: "100%" }} onClick={onClose}>Zamknij</button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
