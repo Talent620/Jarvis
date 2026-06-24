@@ -34,15 +34,6 @@ export function humanize(msg: string): string {
   return msg;
 }
 
-// Heurystyka złożoności zapytania — steruje doborem modelu (prosty/mocny).
-export function isComplex(text: string): boolean {
-  const t = text || "";
-  return (
-    t.length > 260 ||
-    /(zaplanuj|research|analiz|porówn|napisz|\bkod\b|program|wyjaśnij|strategi|raport|e-?mail|mail do|przeanalizuj|podsumuj|stre[śs]|przet[łl]umacz)/i.test(t)
-  );
-}
-
 // Żądania-AKCJE — wymagają NARZĘDZI (leady, e-mail, kalendarz, dom, przypomnienia, zakupy…).
 // Tryb konsylium nie ma narzędzi (tylko deliberacja), więc takie prośby MUSZĄ iść ścieżką
 // jednego mózgu z toolami — inaczej JARVIS „odmawia", twierdząc że nie potrafi.

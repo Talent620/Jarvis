@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { shouldFallback, isNetworkError, isKeyError, humanize, isComplex, isActionRequest, PERSONAL_CUES } from "../src/lib/aiHelpers";
+import { shouldFallback, isNetworkError, isKeyError, humanize, isActionRequest, PERSONAL_CUES } from "../src/lib/aiHelpers";
+import { isComplex } from "../src/lib/modelRouter"; // isComplex skonsolidowane w modelRouter (jedno źródło detekcji złożoności)
 
 describe("shouldFallback", () => {
   it("wykrywa brak środków/limit/kody statusu", () => {

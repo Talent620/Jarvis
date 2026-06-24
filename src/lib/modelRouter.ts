@@ -10,10 +10,19 @@
 // Osobowość/zachowanie JARVIS-a pozostają bez zmian (router dotyka tylko WYBORU modelu).
 
 import type { ProviderId } from "./providers/types";
-import { isComplex } from "./aiHelpers";
 import { idbGet, idbSet } from "./db";
 
 export type TaskKind = "simple" | "complex" | "vision";
+
+// Heurystyka złożoności zapytania — steruje doborem modelu (prosty/mocny).
+// Tu mieszka cała detekcja złożoności (isComplex + classifyTask + needsDeepThink), jedno miejsce.
+export function isComplex(text: string): boolean {
+  const t = text || "";
+  return (
+    t.length > 260 ||
+    /(zaplanuj|research|analiz|porówn|napisz|\bkod\b|program|wyjaśnij|strategi|raport|e-?mail|mail do|przeanalizuj|podsumuj|stre[śs]|przet[łl]umacz)/i.test(t)
+  );
+}
 
 // Sygnały zadania wymagającego mocnego rozumowania (kod, analiza, logika, wieloetapowość).
 const REASONING_CUES =
