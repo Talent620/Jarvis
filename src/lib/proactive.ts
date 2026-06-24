@@ -1,4 +1,5 @@
 import { store } from "./store";
+import { loadJson, saveJson } from "./lsJson";
 import { dueReminders } from "./notifyCenter";
 import { followUpsDue } from "./salesEngine";
 import { dueCount } from "./cards";
@@ -30,7 +31,12 @@ const COOLDOWN: Record<NudgeKind, number> = {
   cards: 6 * 60 * 60_000,       // 6 h
 };
 
-const lastShown = new Map<NudgeKind, number>();
+// TRWAŁY stan „kiedy pokazano dany szturchaniec" — kluczowe: wcześniej był w PAMIĘCI, więc po
+// każdym otwarciu aplikacji cooldown się zerował i ten sam nudge („Masz 35 zadań") dosypywał się
+// do zapisanej rozmowy raz za razem. Teraz trzymamy go w localStorage → cooldown przeżywa restart.
+const SHOWN_KEY = "jarvis.proactive.shown.v1";
+const lastShown = new Map<NudgeKind, number>(loadJson<[NudgeKind, number][]>(SHOWN_KEY, []));
+function persistShown(): void { saveJson(SHOWN_KEY, [...lastShown.entries()]); }
 
 export function recentlyShown(kind: NudgeKind, now = Date.now()): boolean {
   const t = lastShown.get(kind);
@@ -38,6 +44,7 @@ export function recentlyShown(kind: NudgeKind, now = Date.now()): boolean {
 }
 export function markShown(kind: NudgeKind, now = Date.now()): void {
   lastShown.set(kind, now);
+  persistShown();
 }
 /** Wyłącz dany rodzaj na jego pełny cooldown (np. po „Później"). */
 export function snooze(kind: NudgeKind, now = Date.now()): void {
@@ -46,6 +53,7 @@ export function snooze(kind: NudgeKind, now = Date.now()): void {
 /** Reset (do testów i po wyczyszczeniu sesji). */
 export function resetProactive(): void {
   lastShown.clear();
+  persistShown();
 }
 
 const todayISO = (now: number) => new Date(now).toISOString().slice(0, 10);

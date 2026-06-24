@@ -2067,12 +2067,19 @@ body {
     letter-spacing: 3px;
   }
   .icon-btn {
-    width: 34px;
-    height: 34px;
-    font-size: 15px;
+    width: 31px;
+    height: 31px;
+    font-size: 14px;
   }
   .topbar {
-    gap: 5px;
+    gap: 3px;
+  }
+  /* Wąskie telefony (np. S9 ~360px): mniejszy „poziom" i ciaśniejszy pasek, by WSZYSTKIE
+     ikony zmieściły się bez ucinania prawej krawędzi. */
+  .level-badge {
+    padding: 3px 6px;
+    font-size: 10px;
+    letter-spacing: 0;
   }
 }
 
