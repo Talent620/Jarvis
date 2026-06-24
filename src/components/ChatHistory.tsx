@@ -86,7 +86,7 @@ export default function ChatHistory({
           {chats.length > 0 && (
             <div className="field" style={{ display: "flex", gap: 8 }}>
               <input value={q} placeholder="🔎 Szukaj w rozmowach…" onChange={(e) => setQ(e.target.value)} style={{ flex: 1 }} />
-              {q && <button className="chip" onClick={() => setQ("")}>✕</button>}
+              {q && <button className="chip" aria-label="Wyczyść wyszukiwanie" title="Wyczyść wyszukiwanie" onClick={() => setQ("")}>✕</button>}
             </div>
           )}
 
@@ -104,16 +104,16 @@ export default function ChatHistory({
                       <div style={{ display: "flex", gap: 6 }}>
                         <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} autoFocus
                           onKeyDown={(e) => e.key === "Enter" && saveRename(c.id)} style={{ flex: 1 }} />
-                        <button className="chip" onClick={() => saveRename(c.id)}>✓</button>
-                        <button className="chip" onClick={() => setEditing("")}>✕</button>
+                        <button className="chip" aria-label="Zapisz nazwę" title="Zapisz nazwę" onClick={() => saveRename(c.id)}>✓</button>
+                        <button className="chip" aria-label="Anuluj zmianę nazwy" title="Anuluj" onClick={() => setEditing("")}>✕</button>
                       </div>
                     ) : (
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
                         <b style={{ cursor: "pointer", flex: 1, minWidth: 0 }} onClick={() => onOpen(c)}>
                           💬 {c.title}{c.id === activeId ? " · aktywna" : ""}
                         </b>
-                        <span className="chip" onClick={() => { setEditing(c.id); setEditTitle(c.title); }}>✏</span>
-                        <span className="x" style={{ cursor: "pointer" }} onClick={() => remove(c.id)}>✕</span>
+                        <button type="button" className="chip" aria-label="Zmień nazwę rozmowy" title="Zmień nazwę" onClick={() => { setEditing(c.id); setEditTitle(c.title); }}>✏</button>
+                        <button type="button" className="x" aria-label="Usuń rozmowę" title="Usuń rozmowę" style={{ cursor: "pointer" }} onClick={() => remove(c.id)}>✕</button>
                       </div>
                     )}
                     <div className="muted" style={{ fontSize: 12, cursor: "pointer" }} onClick={() => onOpen(c)}>{lastSnippet(c)}</div>

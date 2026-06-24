@@ -1026,6 +1026,16 @@ button:disabled {
   border-bottom: 1px solid var(--line);
   font-size: 15px;
 }
+/* „X" usuwania może być teraz <button> (dostępność: klawiatura + czytnik ekranu) —
+   ten reset zdejmuje domyślną ramkę/tło przycisku, więc wygląda identycznie jak dawny <span>. */
+.x {
+  background: none;
+  border: 0;
+  font: inherit;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 2px 8px;
+}
 .list-item .x {
   margin-left: auto;
   color: var(--text-dim);

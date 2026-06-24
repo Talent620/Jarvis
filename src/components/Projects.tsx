@@ -82,9 +82,9 @@ export default function Projects({ onClose }: { onClose: () => void }) {
                 📂 {p.name}
                 {p.id === activeId ? " · aktywny" : ""}
               </span>
-              <span className="x" onClick={() => del(p.id)}>
+              <button type="button" className="x" aria-label="Usuń projekt" title="Usuń projekt" onClick={() => del(p.id)}>
                 ✕
-              </span>
+              </button>
             </div>
           ))}
 

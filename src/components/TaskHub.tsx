@@ -115,7 +115,7 @@ export default function TaskHub({ onClose }: { onClose: () => void }) {
           {t.due && (
             <button className="chip" title="Do Kalendarza Google" onClick={() => window.open(gcalEventUrl(t.title, t.owner ? `Odpowiada: ${t.owner}` : "", t.due), "_blank", "noopener")}>📅</button>
           )}
-          <span className="x" style={{ cursor: "pointer" }} onClick={() => del(t.id)}>✕</span>
+          <button type="button" className="x" aria-label="Usuń zadanie" title="Usuń zadanie" style={{ cursor: "pointer" }} onClick={() => del(t.id)}>✕</button>
         </div>
         {editing === t.id && (
           <div style={{ marginTop: 8, display: "grid", gap: 6 }}>

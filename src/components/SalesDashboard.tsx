@@ -515,7 +515,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
                       <span className="chip" style={{ marginLeft: 6, fontSize: 11, color: "var(--ok, #58e08a)", padding: "1px 8px" }}>✉ wysłano</span>
                     )}
                   </b>
-                  <span className="x" style={{ cursor: "pointer" }} onClick={() => del(l.id)}>✕</span>
+                  <button type="button" className="x" aria-label="Usuń leada" title="Usuń leada" style={{ cursor: "pointer" }} onClick={() => del(l.id)}>✕</button>
                 </div>
                 {(l.niche || l.location) && <div className="muted" style={{ fontSize: 12 }}>{[l.niche, l.location].filter(Boolean).join(" · ")}{l.intel ? ` · szansa ${l.intel.score}/100` : ""}</div>}
                 {l.note && <p className="muted" style={{ fontSize: 13, margin: "4px 0 0" }}>{l.note}</p>}

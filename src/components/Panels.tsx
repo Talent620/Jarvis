@@ -66,9 +66,9 @@ export default function Panels({ onClose }: { onClose: () => void }) {
                   {t.title}
                   {t.due ? `  ·  ${new Date(t.due).toLocaleString("pl-PL")}` : ""}
                 </span>
-                <span className="x" onClick={() => remove("tasks", t.id)}>
+                <button type="button" className="x" aria-label="Usuń zadanie" title="Usuń zadanie" onClick={() => remove("tasks", t.id)}>
                   ✕
-                </span>
+                </button>
               </div>
             ))
           ) : (
@@ -80,9 +80,9 @@ export default function Panels({ onClose }: { onClose: () => void }) {
             data.notes.map((n) => (
               <div key={n.id} className="list-item">
                 <span>📝 {n.text}</span>
-                <span className="x" onClick={() => remove("notes", n.id)}>
+                <button type="button" className="x" aria-label="Usuń notatkę" title="Usuń notatkę" onClick={() => remove("notes", n.id)}>
                   ✕
-                </span>
+                </button>
               </div>
             ))
           ) : (
@@ -96,9 +96,9 @@ export default function Panels({ onClose }: { onClose: () => void }) {
                 <span>
                   ⏰ {r.text} · {new Date(r.at).toLocaleString("pl-PL")}
                 </span>
-                <span className="x" onClick={() => remove("reminders", r.id)}>
+                <button type="button" className="x" aria-label="Usuń przypomnienie" title="Usuń przypomnienie" onClick={() => remove("reminders", r.id)}>
                   ✕
-                </span>
+                </button>
               </div>
             ))
           ) : (
@@ -122,9 +122,9 @@ export default function Panels({ onClose }: { onClose: () => void }) {
                   {s.qty ? `${s.qty} ` : ""}
                   {s.name}
                 </span>
-                <span className="x" onClick={() => remove("shopping", s.id)}>
+                <button type="button" className="x" aria-label="Usuń pozycję" title="Usuń pozycję" onClick={() => remove("shopping", s.id)}>
                   ✕
-                </span>
+                </button>
               </div>
             ))
           ) : (
@@ -141,9 +141,9 @@ export default function Panels({ onClose }: { onClose: () => void }) {
                       🧾 {t.qty}× {t.name} po {t.unitPrice.toFixed(2)}{" "}
                       <b style={{ color: "var(--gold)" }}>= {(t.qty * t.unitPrice).toFixed(2)}</b>
                     </span>
-                    <span className="x" onClick={() => remove("tally", t.id)}>
+                    <button type="button" className="x" aria-label="Usuń wpis" title="Usuń wpis" onClick={() => remove("tally", t.id)}>
                       ✕
-                    </span>
+                    </button>
                   </div>
                 ))}
                 <div className="list-item" style={{ borderTop: "1px solid var(--line-strong)" }}>
@@ -178,9 +178,9 @@ export default function Panels({ onClose }: { onClose: () => void }) {
                     📅 {new Date(e.start).toLocaleString("pl-PL")} · {e.title}
                     {e.location ? ` @ ${e.location}` : ""}
                   </span>
-                  <span className="x" onClick={() => remove("calendar", e.id)}>
+                  <button type="button" className="x" aria-label="Usuń wydarzenie" title="Usuń wydarzenie" onClick={() => remove("calendar", e.id)}>
                     ✕
-                  </span>
+                  </button>
                 </div>
               ))
           ) : (
@@ -206,9 +206,9 @@ export default function Panels({ onClose }: { onClose: () => void }) {
                 <span>
                   {s.name} <span className="muted">({s.actions.length} akcji)</span>
                 </span>
-                <span className="x" onClick={() => remove("scenes", s.id)}>
+                <button type="button" className="x" aria-label="Usuń scenę" title="Usuń scenę" onClick={() => remove("scenes", s.id)}>
                   ✕
-                </span>
+                </button>
               </div>
             ))
           ) : (
@@ -236,9 +236,9 @@ export default function Panels({ onClose }: { onClose: () => void }) {
                 <span>
                   <b>{m.key}</b>: {m.value}
                 </span>
-                <span className="x" onClick={() => remove("memory", m.id)}>
+                <button type="button" className="x" aria-label="Usuń fakt" title="Usuń fakt" onClick={() => remove("memory", m.id)}>
                   ✕
-                </span>
+                </button>
               </div>
             ))
           ) : (

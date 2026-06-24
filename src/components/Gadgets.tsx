@@ -938,7 +938,7 @@ function Vault() {
         <div key={c.id} className="journal-card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <b>{c.name}</b>
-            <span className="x" style={{ cursor: "pointer" }} onClick={async () => { await removeCred(c.id); refresh(); }}>✕</span>
+            <button type="button" className="x" aria-label="Usuń wpis" title="Usuń wpis" style={{ cursor: "pointer" }} onClick={async () => { await removeCred(c.id); refresh(); }}>✕</button>
           </div>
           {c.login && <div className="muted" style={{ fontSize: 13 }}>{c.login}</div>}
           <div className="muted" style={{ fontSize: 13, fontFamily: "Share Tech Mono" }}>

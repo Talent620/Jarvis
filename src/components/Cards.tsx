@@ -126,7 +126,7 @@ export default function Cards({ onClose }: { onClose: () => void }) {
                     <div key={c.id} className="journal-card">
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                         <b style={{ fontSize: 14 }}>{c.front}</b>
-                        <span className="x" style={{ cursor: "pointer" }} onClick={() => removeCard(c.id)}>✕</span>
+                        <button type="button" className="x" aria-label="Usuń fiszkę" title="Usuń fiszkę" style={{ cursor: "pointer" }} onClick={() => removeCard(c.id)}>✕</button>
                       </div>
                       <div className="muted" style={{ fontSize: 13 }}>{c.back}</div>
                     </div>
