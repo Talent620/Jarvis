@@ -14,6 +14,7 @@ const MoneyHub = lazy(() => import("./components/MoneyHub"));
 const Help = lazy(() => import("./components/Help"));
 const More = lazy(() => import("./components/More"));
 import Boot from "./components/Boot";
+import BossFab from "./components/BossFab";
 import LockScreen from "./components/LockScreen";
 import Onboarding, { needsOnboarding } from "./components/Onboarding";
 import LicenseGate from "./components/LicenseGate";
@@ -1346,8 +1347,9 @@ export default function App() {
         );
       })()}
 
-      {/* ⬢ Szef zawsze w zasięgu — centralny agent głosowy, jedno tknięcie z każdego ekranu. */}
-      <button className="boss-fab" onClick={() => setShowBoss(true)} title="Tryb Szefa — agent głosowy (powiedz „szef”)" aria-label="Tryb Szefa">⬢</button>
+      {/* ⬢ Szef zawsze w zasięgu — centralny agent głosowy, jedno tknięcie z każdego ekranu.
+          Ikonę można przeciągać (drag) — pozycja jest zapamiętywana. */}
+      <BossFab onOpen={() => setShowBoss(true)} />
 
       {showVoice && (<ScreenBoundary><HeadsetMode onClose={() => setShowVoice(false)} /></ScreenBoundary>)}
       {showAdmin && (
