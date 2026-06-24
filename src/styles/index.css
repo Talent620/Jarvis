@@ -893,6 +893,14 @@ button:disabled {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   padding: 12px 18px;
+  overflow-wrap: anywhere; /* długie URL-y/słowa zawijają się zamiast wychodzić poza ekran (S9 itp.) */
+}
+/* Inline-kod (np. „ollama pull …", „--api --listen --cors-allow-origins=*") ma się ZAWIJAĆ,
+   a nie rozpychać panelu — bez tego treść uciekała poza prawą krawędź na wąskich ekranach. */
+.panel-body code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 .panel-foot {
   flex: 0 0 auto;

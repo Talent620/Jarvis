@@ -729,7 +729,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   )}
                   {s.provider === "ollama" && (
                     <>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
                         <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }} disabled={ollamaLoading} onClick={() => void loadOllamaModels()}>
                           {ollamaLoading ? "⏳ Sprawdzam…" : "🔄 Odśwież modele z Ollamy"}
                         </button>
@@ -737,7 +737,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                           {ollamaModels.length ? `Znaleziono ${ollamaModels.length} — wybierz z listy.` : "Podaj adres Ollamy niżej i odśwież."}
                         </span>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
                         <input
                           value={pullName}
                           placeholder="np. qwen3.5:4b — pobierz nowy model"
@@ -1259,7 +1259,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   placeholder="http://192.168.0.10:11434"
                   onChange={(e) => set({ ollamaUrl: e.target.value })}
                 />
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
                   <button
                     className="btn"
                     style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }}
