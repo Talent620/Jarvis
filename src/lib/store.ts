@@ -197,6 +197,15 @@ function write(key: string, value: unknown): void {
         lastQuotaWarn = now;
         toast("⚠ Brak miejsca w pamięci — zrób kopię (⚙ → Dane) i wyczyść stare czaty/leady. Nowe zmiany NIE zapisują się!");
       }
+    } else {
+      // localStorage całkowicie niedostępny (tryb prywatny / wyłączony w przeglądarce) — zapis
+      // cicho przepada, a WSZYSTKIE dane znikną po odświeżeniu. Wcześniej połykaliśmy ten błąd
+      // bez słowa; teraz ostrzegamy (z tym samym throttlingiem), zamiast udawać, że zapisano.
+      const now = Date.now();
+      if (now - lastQuotaWarn > 300_000) {
+        lastQuotaWarn = now;
+        toast("⚠ Pamięć przeglądarki niedostępna (tryb prywatny?) — zmiany NIE zapisują się i znikną po odświeżeniu. Zrób kopię w ⚙ → Dane.");
+      }
     }
   }
 }
