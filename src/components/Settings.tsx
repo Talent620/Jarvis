@@ -45,10 +45,7 @@ import type { Settings } from "../types";
 import { useEscape } from "../hooks/useEscape";
 import { listPlugins } from "../plugins/PluginRegistry";
 import { hourlyActivity, resetAdaptive } from "../lib/usage";
-
-function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
-  return <div className={`switch ${on ? "on" : ""}`} onClick={onClick} />;
-}
+import Toggle from "./Toggle";
 
 // Mini-wykres aktywności: słupki per godzina z ostatnich 7 dni (Adaptive UI).
 function UsageChart() {

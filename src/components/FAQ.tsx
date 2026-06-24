@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEscape } from "../hooks/useEscape";
+import Modal from "./Modal";
 import Guide from "./Guide";
 
 // FAQ — „do czego służy każda funkcja", napisane ciekawie, ale zgodnie ze stanem
@@ -9,15 +9,12 @@ function Q({ q, children }: { q: string; children: ReactNode }) {
 }
 
 export default function FAQ({ onClose }: { onClose: () => void }) {
-  useEscape(onClose);
   return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>❓ FAQ — co potrafi każda funkcja</h2>
-        </div>
-        <div className="panel-body">
+    <Modal
+      title="❓ FAQ — co potrafi każda funkcja"
+      onClose={onClose}
+      foot={<button className="btn primary" style={{ width: "100%" }} onClick={onClose}>Zamknij</button>}
+    >
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             Krótko i konkretnie: do czego służy każda część JARVIS-a. Dotknij pytania, by rozwinąć.
           </p>
@@ -133,11 +130,6 @@ export default function FAQ({ onClose }: { onClose: () => void }) {
             W wersji na komputer JARVIS otwiera aplikacje, reguluje głośność, steruje multimediami i pisze za Ciebie —
             przydatne jako asystent „bez rąk" przy biurku.
           </Q>
-        </div>
-        <div className="panel-foot">
-          <button className="btn primary" style={{ width: "100%" }} onClick={onClose}>Zamknij</button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

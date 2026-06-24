@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useEscape } from "../hooks/useEscape";
+import Modal from "./Modal";
 import { recallEverything, type RecallType, type RecallHit } from "../lib/recall";
 import { toastOk } from "../lib/toast";
 
@@ -21,7 +21,6 @@ function when(at?: number): string {
 }
 
 export default function Recall({ onClose, onOpenChat, seed = "" }: { onClose: () => void; onOpenChat?: (id: string) => void; seed?: string }) {
-  useEscape(onClose);
   const [q, setQ] = useState(seed);
   const [filter, setFilter] = useState<(RecallType | "Wszystko")>("Wszystko");
 
@@ -35,13 +34,11 @@ export default function Recall({ onClose, onOpenChat, seed = "" }: { onClose: ()
   };
 
   return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>🔎 Recall — znajdź wszystko u siebie</h2>
-        </div>
-        <div className="panel-body">
+    <Modal
+      title="🔎 Recall — znajdź wszystko u siebie"
+      onClose={onClose}
+      foot={<button className="btn" onClick={onClose}>Zamknij</button>}
+    >
           <input
             className="input"
             autoFocus
@@ -88,11 +85,6 @@ export default function Recall({ onClose, onOpenChat, seed = "" }: { onClose: ()
               ))}
             </>
           )}
-        </div>
-        <div className="panel-foot">
-          <button className="btn" onClick={onClose}>Zamknij</button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
