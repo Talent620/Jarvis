@@ -134,7 +134,15 @@ async function falEdit(modelId: ImageModelId, prompt: string, inputs: Img[]): Pr
       body: JSON.stringify(body),
     }, 120000);
     const d = await res.json().catch(() => null);
-    if (!res.ok || !d) return { error: d?.detail?.[0]?.msg || d?.detail || d?.error || `Błąd fal.ai (${res.status}).` };
+    if (!res.ok || !d) {
+      const raw = d?.detail?.[0]?.msg || d?.detail || d?.error || `Błąd fal.ai (${res.status}).`;
+      const auth = res.status === 401 || res.status === 403 || /auth|access|unauthor/i.test(String(raw));
+      return {
+        error: auth
+          ? `${raw}\n\nNano Banana Pro / FLUX to modele PŁATNE (fal.ai) — wymagają WAŻNEGO klucza fal.ai z włączonym billingiem. Do DARMOWEJ edycji zdjęć wybierz „🆓 Gemini Nano Banana” w wyborze modelu wyżej.`
+          : raw,
+      };
+    }
     const imgUrl = d.images?.[0]?.url || d.image?.url;
     if (!imgUrl) return { error: "fal.ai nie zwrócił obrazu." };
     const ir = await fetchTimeout(viaProxy(imgUrl), {}, 60000);
