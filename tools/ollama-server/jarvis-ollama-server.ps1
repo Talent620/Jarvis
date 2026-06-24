@@ -76,13 +76,14 @@ if (Test-Path $ollamaApp) {
 }
 Start-Sleep -Seconds 3
 
-# 4b) Sprawdz, czy serwer faktycznie odpowiada (czesta przyczyna „nic nie dziala").
+# 4b) Sprawdz, czy serwer faktycznie odpowiada. Pierwszy „zimny" start Ollamy potrafi potrwac
+#     kilkadziesiat sekund — dlatego czekamy cierpliwie (do ~40 s), zanim cokolwiek zglosimy.
 $alive = $false
-for ($i = 0; $i -lt 10; $i++) {
-  try { Invoke-WebRequest "http://127.0.0.1:$port/api/tags" -UseBasicParsing -TimeoutSec 2 | Out-Null; $alive = $true; break } catch { Start-Sleep -Seconds 1 }
+for ($i = 0; $i -lt 30; $i++) {
+  try { Invoke-WebRequest "http://127.0.0.1:$port/api/tags" -UseBasicParsing -TimeoutSec 2 | Out-Null; $alive = $true; break } catch { Start-Sleep -Milliseconds 1300 }
 }
 if ($alive) { Write-Host "    Serwer odpowiada." -ForegroundColor Green }
-else { Write-Host "    Serwer jeszcze nie odpowiada — pobieranie modeli i tak ruszy, daj mu chwile." -ForegroundColor Yellow }
+else { Write-Host "    Serwer wciaz sie rozgrzewa (to normalne przy pierwszym starcie) — ide dalej, zaraz wstanie." -ForegroundColor Yellow }
 
 # 4c) PILNOWANIE 24/7 — „zeby link sie nie rozlaczal".
 #     Rejestrujemy Zadanie Harmonogramu (przy KAZDYM logowaniu), ktore odpala maly skrypt-petle.
