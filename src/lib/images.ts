@@ -3,6 +3,11 @@ import { store } from "./store";
 import { humanize } from "./aiHelpers";
 import { fetchTimeout } from "./http";
 import { localSdGenerate, type SdOpts } from "./localImage";
+import { recordUsage } from "./usageTelemetry";
+import type { ProviderId } from "./providers/types";
+
+// Szacowany koszt za jeden obraz (USD) — do licznika wydatków. fal.ai liczy za sztukę.
+const FAL_COST: Record<string, number> = { "fal-flux-kontext": 0.04, "fal-nano-banana": 0.08 };
 
 export interface GenImage {
   data: string; // base64
@@ -119,7 +124,9 @@ function viaProxy(url: string): string {
 }
 
 async function falEdit(modelId: ImageModelId, prompt: string, inputs: Img[]): Promise<Result> {
-  const key = store.settings.falApiKey?.trim();
+  // Oczyść klucz z UKRYTYCH znaków nie-ASCII (zero-width, BOM, miękki łącznik) — przy kopiowaniu
+  // z czatu/zrzutu wkradają się i wywalają budowę nagłówka HTTP („non ISO-8859-1 code point").
+  const key = (store.settings.falApiKey || "").replace(/[^\x20-\x7E]/g, "").trim();
   if (!key) return { error: "Model premium wymaga klucza fal.ai — dodaj go w ⚙ → AI (Studio premium)." };
   if (!inputs.length) return { error: "Modele premium edytują istniejące zdjęcie — najpierw dołącz zdjęcie." };
   const endpoint = FAL_ENDPOINT[modelId];
@@ -148,6 +155,9 @@ async function falEdit(modelId: ImageModelId, prompt: string, inputs: Img[]): Pr
     const ir = await fetchTimeout(viaProxy(imgUrl), {}, 60000);
     if (!ir.ok) return { error: "Nie udało się pobrać wyniku z fal.ai." };
     const blob = await ir.blob();
+    // Zalicz koszt do licznika wydatków (fal.ai = za obraz). Liczba obrazów: tyle, ile zwrócił.
+    const n = Array.isArray(d.images) ? d.images.length : 1;
+    recordUsage({ at: Date.now(), provider: "fal" as ProviderId, model: FAL_ENDPOINT[modelId] || modelId, inputTokens: 0, outputTokens: 0, costUsd: (FAL_COST[modelId] || 0) * n });
     return { data: await blobToBase64(blob), mediaType: blob.type || "image/png" };
   } catch (e) {
     return { error: `Błąd fal.ai: ${e instanceof Error ? e.message : e}` };

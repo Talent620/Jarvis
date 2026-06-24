@@ -5,6 +5,7 @@ import { useEscape } from "../hooks/useEscape";
 import { store } from "../lib/store";
 import { parseKeys } from "../lib/keys";
 import { refineEdit, type EditPlan } from "../lib/editAssistant";
+import { loadUsage } from "../lib/usageTelemetry";
 import Guide from "./Guide";
 
 type Img = { data: string; mediaType: string };
@@ -74,6 +75,10 @@ export default function Studio({ onClose }: { onClose: () => void }) {
 
   const result = history[history.length - 1] || null;
   const before = inputs[0] || null; // zdjęcie wejściowe do porównania
+  // 💸 Licznik wydatków na płatne obrazy (fal.ai) — recompute na każdy render (po każdej generacji
+   // history się zmienia → odświeża). Pełne statystyki: Więcej → Koszty AI.
+  void history.length;
+  const imgSpend = loadUsage().filter((u) => u.provider === ("fal" as never)).reduce((s, u) => s + (u.costUsd || 0), 0);
 
   const attach = async () => {
     const img = await capturePhoto();
@@ -174,6 +179,11 @@ export default function Studio({ onClose }: { onClose: () => void }) {
             ))}
           </div>
           <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>{IMAGE_MODELS_LIST.find((m) => m.id === model)?.note}</p>
+          {imgSpend > 0 && (
+            <p className="muted" style={{ fontSize: 12, marginTop: 0, color: "var(--gold)" }}>
+              💸 Wydano na obrazy (fal.ai): ${imgSpend.toFixed(2)} · pełne statystyki: ⋯ Więcej → „Koszty AI"
+            </p>
+          )}
           {(model === "fal-flux-kontext" || model === "fal-nano-banana") && !store.settings.falApiKey?.trim() && (
             <p className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>⭐ Model premium — dodaj klucz fal.ai w ⚙ → AI, aby go użyć.</p>
           )}

@@ -155,7 +155,8 @@ function save(entries: UsageEntry[]): void {
 
 /** Dopisz wpis zużycia (najnowsze pierwsze, z capem). Pomija puste (0/0) wywołania. */
 export function recordUsage(entry: UsageEntry): void {
-  if (!entry.inputTokens && !entry.outputTokens) return;
+  // Zapisuj też wpisy bez tokenów, ale z KOSZTEM (np. generacja obrazu fal.ai liczona za sztukę).
+  if (!entry.inputTokens && !entry.outputTokens && !entry.costUsd) return;
   const all = loadUsage();
   all.unshift(entry);
   save(all);
