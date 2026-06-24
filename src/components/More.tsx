@@ -27,7 +27,6 @@ export default function More({
   onCards,
   onTranscribe,
   onProfile,
-  onDayPlan,
   onTasks,
   onTranslator,
   onBargain,
@@ -66,7 +65,6 @@ export default function More({
   onCards: () => void;
   onTranscribe: () => void;
   onProfile: () => void;
-  onDayPlan: () => void;
   onTasks: () => void;
   onTranslator: () => void;
   onBargain: () => void;
@@ -98,7 +96,6 @@ export default function More({
     { id: "audit", icon: "📜", label: "Dziennik działań — co przeszło przez program", fn: onAudit },
     { id: "costs", icon: "💸", label: "Koszty AI — zużycie, prognoza, budżet", fn: onCosts },
     { id: "tasks", icon: "✅", label: "Zadania Pro — projekty, priorytety (GTD)", fn: onTasks },
-    { id: "dayplan", icon: "🗓", label: "Plan Dnia — zadania i notatnik", fn: onDayPlan },
     { id: "bargain", icon: "🏷", label: "Łowca Okazji — znajdź najtaniej (nowe/używane)", fn: onBargain },
     { id: "wheretobuy", icon: "📍", label: "Gdzie kupię w pobliżu (najbliżej / taniej dalej)", fn: onWhereToBuy },
     { id: "shoppinglist", icon: "🛒", label: "Lista zakupów — kup wszystko najtaniej", fn: onShoppingList },
@@ -127,7 +124,7 @@ export default function More({
   // Funkcje pogrupowane w czytelne sekcje — łatwiej znaleźć, mniej przewijania.
   const GROUPS: { title: string; ids: string[] }[] = [
     { title: "📈 Sprzedaż i biznes", ids: ["sales", "sent", "content", "ads", "web", "money"] },
-    { title: "✅ Praca i organizacja", ids: ["tasks", "dayplan", "projects", "journal", "cards"] },
+    { title: "✅ Praca i organizacja", ids: ["tasks", "projects", "journal", "cards"] },
     { title: "🛒 Zakupy i okazje", ids: ["bargain", "wheretobuy", "shoppinglist"] },
     { title: "🎙 Narzędzia AI", ids: ["translator", "transcribe", "hud", "screen", "studio"] },
     { title: "🧠 Ja i pamięć", ids: ["mind", "profile", "memory"] },

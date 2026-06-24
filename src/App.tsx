@@ -57,7 +57,6 @@ const AdminPanel = lazy(() => import("./components/AdminPanel"));
 const Cards = lazy(() => import("./components/Cards"));
 const Transcribe = lazy(() => import("./components/Transcribe"));
 const Profile = lazy(() => import("./components/Profile"));
-const DayPlan = lazy(() => import("./components/DayPlan"));
 const TaskHub = lazy(() => import("./components/TaskHub"));
 const Translator = lazy(() => import("./components/Translator"));
 const BargainHunter = lazy(() => import("./components/BargainHunter"));
@@ -247,7 +246,6 @@ export default function App() {
   const [showCards, setShowCards] = useState(false);
   const [showTranscribe, setShowTranscribe] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showDayPlan, setShowDayPlan] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
   const [showTranslator, setShowTranslator] = useState(false);
   const [showBargain, setShowBargain] = useState(false);
@@ -1371,11 +1369,6 @@ export default function App() {
           <Profile onClose={() => setShowProfile(false)} />
         </ScreenBoundary>
       )}
-      {showDayPlan && (
-        <ScreenBoundary>
-          <DayPlan onClose={() => setShowDayPlan(false)} onSales={() => { setShowDayPlan(false); setShowSales(true); }} />
-        </ScreenBoundary>
-      )}
       {showTasks && (
         <ScreenBoundary>
           <TaskHub onClose={() => setShowTasks(false)} />
@@ -1463,7 +1456,6 @@ export default function App() {
           onCards={() => setShowCards(true)}
           onTranscribe={() => setShowTranscribe(true)}
           onProfile={() => setShowProfile(true)}
-          onDayPlan={() => setShowDayPlan(true)}
           onTasks={() => setShowTasks(true)}
           onTranslator={() => setShowTranslator(true)}
           onBargain={() => setShowBargain(true)}
