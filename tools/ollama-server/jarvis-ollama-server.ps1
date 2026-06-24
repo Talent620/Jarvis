@@ -84,8 +84,41 @@ for ($i = 0; $i -lt 10; $i++) {
 if ($alive) { Write-Host "    Serwer odpowiada." -ForegroundColor Green }
 else { Write-Host "    Serwer jeszcze nie odpowiada — pobieranie modeli i tak ruszy, daj mu chwile." -ForegroundColor Yellow }
 
+# 4c) PILNOWANIE 24/7 — „zeby link sie nie rozlaczal".
+#     Rejestrujemy Zadanie Harmonogramu (przy KAZDYM logowaniu), ktore odpala maly skrypt-petle.
+#     Petla co 30 s sprawdza, czy serwer zyje, a jesli nie — natychmiast go wstaje. Efekt: serwer
+#     wraca SAM po restarcie PC ORAZ po ewentualnej awarii Ollamy. Brak uprawnien -> pomijamy bez bledu.
+Step 4 "Wlaczam pilnowanie serwera (auto-restart + auto-start po restarcie PC)..."
+try {
+  $jdir = Join-Path $env:LOCALAPPDATA "JARVIS"
+  New-Item -ItemType Directory -Force -Path $jdir | Out-Null
+  $wd = Join-Path $jdir "ollama-watchdog.ps1"
+  $watch = @'
+$port = 11434
+$app = Join-Path $env:LOCALAPPDATA "Programs\Ollama\ollama app.exe"
+while ($true) {
+  $ok = $false
+  try { Invoke-WebRequest "http://127.0.0.1:$port/api/tags" -UseBasicParsing -TimeoutSec 3 | Out-Null; $ok = $true } catch {}
+  if (-not $ok) {
+    if (Test-Path $app) { Start-Process $app } else { Start-Process ollama -ArgumentList "serve" -WindowStyle Hidden }
+    Start-Sleep -Seconds 8
+  }
+  Start-Sleep -Seconds 30
+}
+'@
+  $watch | Out-File -FilePath $wd -Encoding utf8
+  $act = New-ScheduledTaskAction -Execute "powershell.exe" -Argument ('-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}"' -f $wd)
+  $trg = New-ScheduledTaskTrigger -AtLogOn
+  $set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)
+  Register-ScheduledTask -TaskName "JARVIS Ollama Watchdog" -Action $act -Trigger $trg -Settings $set -Force -ErrorAction Stop | Out-Null
+  Start-ScheduledTask -TaskName "JARVIS Ollama Watchdog" -ErrorAction SilentlyContinue
+  Write-Host "    OK — serwer sam wstanie po restarcie PC i po awarii (link nie rozlaczy sie)." -ForegroundColor Green
+} catch {
+  Write-Host "    (Nie udalo sie wlaczyc pilnowania — serwer i tak dziala teraz; mozesz odpalic plik ponownie.)" -ForegroundColor Yellow
+}
+
 # 5) Pobierz komplet modeli premium (auto). Dobrane pod ~4 GB VRAM: szybki/madry/wizja.
-Step 4 "Pobieram modele (premium) — jednorazowo, moze potrwac..."
+Step 5 "Pobieram modele (premium) — jednorazowo, moze potrwac..."
 $PREMIUM = @("qwen3:1.7b", "qwen3.5:4b", "gemma3:4b-it-qat")
 $have = (& ollama list 2>$null | Select-Object -Skip 1 | ForEach-Object { ($_ -split '\s+')[0] }) | Where-Object { $_ }
 foreach ($m in $PREMIUM) {
@@ -97,7 +130,7 @@ $unc = Read-Host "    Dodac model BEZ CENZURY (dolphin-mistral, ~4 GB)? [t/N]"
 if ($unc -match '^(t|y|tak|yes)$') { Pull-Model "dolphin-mistral" }
 
 # 6) Wykryj adres LAN (interfejs z brama domyslna) + ewentualnie Tailscale.
-Step 5 "Wykrywam adres serwera..."
+Step 6 "Wykrywam adres serwera..."
 $ip = (Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq "Up" } | Select-Object -First 1).IPv4Address.IPAddress
 if (-not $ip) { $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notmatch "^(127\.|169\.254\.)" } | Select-Object -First 1).IPAddress }
 if (-not $ip) { $ip = "127.0.0.1" }
@@ -146,10 +179,13 @@ Write-Host "  W JARVIS: Ustawienia -> AI -> wklej adres -> dostawca 'Lokalny mod
 Line Green
 Write-Host ""
 Write-Host "  - Telefon i PC w tej samej sieci Wi-Fi (uzyj APK JARVIS)." -ForegroundColor Gray
-Write-Host "  - Poza domem: zainstaluj Tailscale na PC i telefonie (adres 100.x wykryje sie sam)." -ForegroundColor Gray
+Write-Host "  - Poza domem / STABILNY adres: zainstaluj Tailscale na PC i telefonie. Adres 100.x" -ForegroundColor Gray
+Write-Host "    NIGDY sie nie zmienia (w przeciwienstwie do Wi-Fi po restarcie routera) -> link trwaly." -ForegroundColor Gray
 Write-Host ""
-Write-Host "  Serwer Ollamy dziala TERAZ W TLE (jako aplikacja Ollama) — to okno mozesz spokojnie" -ForegroundColor Green
-Write-Host "  ZAMKNAC, serwer zostaje wlaczony. Aby go zatrzymac: ikona Ollamy w zasobniku (obok zegara) -> Quit." -ForegroundColor Green
+Write-Host "  LINK SIE NIE ROZLACZY: wlaczylem pilnowanie 24/7 — serwer wstaje sam po restarcie PC" -ForegroundColor Green
+Write-Host "  i po awarii Ollamy. Dziala niezaleznie od tego okna — mozesz je ZAMKNAC." -ForegroundColor Green
+Write-Host "  Wylaczyc pilnowanie: Harmonogram zadan -> 'JARVIS Ollama Watchdog' -> Wylacz/Usun." -ForegroundColor DarkGray
+Write-Host "  Zatrzymac serwer: ikona Ollamy w zasobniku (obok zegara) -> Quit." -ForegroundColor DarkGray
 Write-Host ""
-Read-Host "Enter zamyka to okno (serwer Ollamy dziala dalej w tle)"
+Read-Host "Enter zamyka to okno (serwer i pilnowanie dzialaja dalej w tle)"
 # UWAGA: celowo NIE zatrzymujemy Ollamy — ma dzialac niezaleznie od tego okna.
