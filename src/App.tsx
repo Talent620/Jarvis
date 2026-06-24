@@ -98,7 +98,7 @@ import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
 import ScreenBoundary from "./components/ScreenBoundary";
 import { getWeather } from "./lib/weather";
-import { buildDailyBriefing, briefingToText } from "./lib/dailyBriefing";
+import { buildChiefBriefing, formatBriefing } from "./lib/chiefOfStaff";
 import { maybePrewarm, warmNow } from "./lib/prewarm";
 import { feedback, buzz, cue } from "./lib/feedback";
 import { ensureNotifPerms, notify } from "./lib/notifications";
@@ -135,14 +135,9 @@ function buildGreeting(): string {
 
 // Poranny raport: pora dnia + pogoda (best-effort) + kalendarz + zadania.
 async function buildBriefing(): Promise<string> {
-  // Chief of Staff: strukturalny przegląd z istniejących danych (zadania/zaległości/projekty/
-  // rekomendacje) — logika w testowanym `dailyBriefing.ts`. Tu tylko doklejamy pogodę.
+  // Chief of Staff: strukturalny przegląd z istniejących danych (zadania/zaległości/leady/
+  // relacje/rekomendacje) — logika w testowanym `chiefOfStaff.ts` (jedyny silnik odprawy).
   const d = store.data;
-  const b = buildDailyBriefing(
-    { tasks: d.tasks, reminders: d.reminders, projects: d.projects, events: d.calendar },
-    Date.now(),
-    store.settings.userName,
-  );
   let weather = "";
   try {
     const w = await getWeather();
@@ -150,8 +145,12 @@ async function buildBriefing(): Promise<string> {
   } catch {
     /* pomiń pogodę */
   }
-  const text = briefingToText(b);
-  return weather ? `${text}\n🌤 ${weather}` : text;
+  const b = buildChiefBriefing(
+    { tasks: d.tasks, reminders: d.reminders, calendar: d.calendar, leads: d.leads, people: d.world?.entities || [] },
+    Date.now(),
+    weather || undefined,
+  );
+  return formatBriefing(b);
 }
 
 const initialChat = (() => {

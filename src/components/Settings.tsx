@@ -19,7 +19,7 @@ import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/w
 import { exportData, exportFull, exportFullEncrypted, importData } from "../lib/backup";
 import { keyList, keyCount, isTavilyKey } from "../lib/keys";
 import { detectLang, t } from "../lib/i18n";
-import { systemCheck } from "../lib/diagnostics";
+import { systemCheck } from "../lib/healthCheck";
 import { runHealthCheck, statusIcon, type HealthItem } from "../lib/healthCheck";
 import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
