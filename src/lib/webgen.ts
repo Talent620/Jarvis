@@ -1,5 +1,6 @@
 import { askModel } from "./brain";
 import { humanize } from "./aiHelpers";
+import { zl } from "./format";
 
 // Autonomiczny generator stron i SKLEPÓW: z opisu tworzy KOMPLETNĄ, nowoczesną
 // witrynę w jednym pliku HTML (wbudowany CSS i JS) na poziomie premium. Działa
@@ -208,7 +209,6 @@ export function estimateQuote(kind: SiteKind, brief: ClientBrief = {}): Quote {
   return { kind, oneTime, recurring, totalMin, totalMax, marketMin: m.min, marketMax: m.max };
 }
 
-const zl = (n: number) => `${Math.round(n).toLocaleString("pl-PL")} zł`;
 
 /** Pure: czytelna oferta cenowa do wysłania klientowi (PL, z kontekstem rynkowym). */
 export function formatQuote(q: Quote, brief: ClientBrief = {}): string {

@@ -3,6 +3,8 @@
 // sprzedaż „jak jest", bez użytkowników/marki), czas budowy i trudność. Czyste funkcje —
 // odświeżanie „raz dziennie" robi cienki cache w localStorage.
 
+import { zl } from "./format";
+
 export interface CodeStats { modules: number; components: number; tests: number; files: number; loc: number }
 
 export interface Valuation {
@@ -73,7 +75,6 @@ export function dailyValuation(now = Date.now()): DailyValuation {
   return fresh;
 }
 
-const zl = (n: number) => `${Math.round(n).toLocaleString("pl-PL")} zł`;
 /** Pure: zakres w zł („15 000–40 000 zł"). */
 export function plnRange(min: number, max: number): string {
   return `${zl(min)}–${zl(max)}`;
