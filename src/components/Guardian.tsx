@@ -7,6 +7,7 @@ import { guardian, guardianAdvise, guardianChat, guardianExecute, guardianPlan, 
 import { guardianScan, formatScanReport, type GuardianScan, type AgentReport, type AgentState } from "../lib/guardianAgents";
 import { recordGuardianEvent, getGuardianHistory, clearGuardianHistory, topFixes, recurringHint, type GuardianEvent } from "../lib/guardianHistory";
 import { checkForUpdate, applyUpdate } from "../lib/updater";
+import ManualBook from "./ManualBook";
 
 // 🛡 Strażnik JARVISA — centralny panel dowodzenia. Guardian Core skanuje cały ekosystem przez
 // podagentów (AI, wydajność, głos, obrazy, integracje, aktualizacje), wystawia ocenę zdrowia 0–100,
@@ -197,6 +198,15 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             Centralny panel dowodzenia: administrator, architekt AI, opiekun, diagnostyka i automatyzacja w jednym.
           </p>
+
+          {/* 📖 Instrukcja obsługi / FAQ z wyszukiwarką — „jak uruchomić każdą funkcję i do czego służy”.
+              Zwinięte domyślnie, żeby nie przytłaczać diagnozy; rozwiń, by szukać. */}
+          <details className="guide" style={{ marginBottom: 10 }}>
+            <summary>📖 Instrukcja obsługi i FAQ — jak uruchomić każdą funkcję (z wyszukiwarką)</summary>
+            <div className="guide-body">
+              <ManualBook />
+            </div>
+          </details>
 
           {/* 📊 Health Agent — ocena zdrowia całego systemu (0–100) */}
           {scan && (
