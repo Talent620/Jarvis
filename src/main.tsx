@@ -18,7 +18,10 @@ installSecretsVault(); // szyfrowanie kluczy w spoczynku (no-op, gdy wyłączone
 initPlugins();
 
 // Aktualizacje OTA: potwierdź wtyczce, że ta paczka DZIAŁA (inaczej cofnęłaby ją). No-op na web.
-void import("./lib/liveUpdate").then((m) => m.notifyLiveUpdateReady()).catch(() => {});
+// Jeśli się nie uda (np. brak wtyczki w starym APK), logujemy — wtyczka i tak bezpiecznie cofnie paczkę.
+void import("./lib/liveUpdate").then((m) => m.notifyLiveUpdateReady()).catch((e) => {
+  console.warn("[JARVIS] OTA: nie potwierdziłem gotowości paczki (możliwy rollback przy następnym starcie).", e);
+});
 
 // Self-healing: b\u0142\u0119dy poza Reactem (asynchroniczne, sieciowe) nie gin\u0105 w konsoli \u2014
 // JARVIS m\u00f3wi o nich po ludzku. Throttling chroni przed lawin\u0105 toast\u00f3w.

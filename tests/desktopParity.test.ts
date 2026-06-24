@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { desktopNotify, isDesktop } from "../src/lib/desktop";
 
 // Parytet desktopu: notify() i otwieranie protokołów korzystają z mostka

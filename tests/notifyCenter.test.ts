@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
 import { dueReminders, soonReminders, notifySummary, dismissReminder } from "../src/lib/notifyCenter";
-import { store, uid } from "../src/lib/store";
+import { store } from "../src/lib/store";
 import type { Lead } from "../src/types";
 
 const NOW = new Date("2026-06-15T12:00:00").getTime();

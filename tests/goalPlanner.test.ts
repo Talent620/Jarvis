@@ -24,7 +24,6 @@ describe("goalPlanner — parseGoalPlan", () => {
   it("usuwa cykle (zrywa zależności tworzące pętlę)", () => {
     const plan = parseGoalPlan('{"steps":[{"id":"a","task":"A","deps":["b"]},{"id":"b","task":"B","deps":["a"]}]}');
     // po naprawie graf nie ma cyklu
-    const hasCycle = plan.some((s) => s.deps.includes("a")) && plan.some((s) => s.id === "a" && s.deps.length);
     expect(plan.length).toBe(2);
     // przynajmniej jedna krawędź usunięta → brak realnego cyklu (sprawdzamy, że nie obie zależności istnieją wzajemnie)
     const a = plan.find((s) => s.id === "a")!, b = plan.find((s) => s.id === "b")!;

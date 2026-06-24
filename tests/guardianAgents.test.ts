@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import {
-  aiAgent, voiceAgent, imageAgent, performanceAgent, updateAgent, integrationAgent,
+  aiAgent, voiceAgent, imageAgent, performanceAgent, updateAgent,
   runAgents, aggregateHealth, collectRecs, formatScanReport, type ScanContext,
 } from "../src/lib/guardianAgents";
 import { store } from "../src/lib/store";
