@@ -361,6 +361,8 @@ export interface Settings {
   smtpPort: number;
   /** Podpis (stopka) dopisywany automatycznie na końcu każdego maila/oferty. */
   emailSignature: string;
+  /** Dzienny limit wysyłki maili (0 = bez limitu) — chroni reputację nadawcy przed spam-flagą. */
+  mailDailyLimit?: number;
   /** Adres backendu sync (ten sam Worker). */
   syncUrl: string;
   /** Prywatny token przestrzeni danych sync. */

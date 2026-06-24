@@ -49,6 +49,7 @@ const defaultSettings: Settings = {
   smtpHost: "smtp.gmail.com",
   smtpPort: 465,
   emailSignature: DEFAULT_EMAIL_SIGNATURE,
+  mailDailyLimit: 0,
   syncUrl: "",
   syncToken: "",
   salesOsUrl: "",
