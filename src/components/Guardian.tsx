@@ -8,6 +8,9 @@ import { guardianScan, formatScanReport, type GuardianScan, type AgentReport, ty
 import { recordGuardianEvent, getGuardianHistory, clearGuardianHistory, topFixes, recurringHint, type GuardianEvent } from "../lib/guardianHistory";
 import { checkForUpdate, applyUpdate } from "../lib/updater";
 import ManualBook from "./ManualBook";
+import { hasUsableBrain } from "../lib/brain";
+import { canSendDirect, hasBackendGmail, canSendGmailNative } from "../lib/mailer";
+import type { ManualCaps } from "../lib/manual";
 
 // 🛡 Strażnik JARVISA — centralny panel dowodzenia. Guardian Core skanuje cały ekosystem przez
 // podagentów (AI, wydajność, głos, obrazy, integracje, aktualizacje), wystawia ocenę zdrowia 0–100,
@@ -15,8 +18,21 @@ import ManualBook from "./ManualBook";
 const STATE_DOT: Record<AgentState, string> = { ok: "🟢", warn: "🟡", problem: "🔴", off: "⚪" };
 const FIND_COL: Record<"ok" | "warn" | "problem", string> = { ok: "var(--text-dim)", warn: "var(--gold)", problem: "#ff6b6b" };
 
-export default function Guardian({ onClose }: { onClose: () => void }) {
+export default function Guardian({ onClose, onRun }: { onClose: () => void; onRun?: (commandId: string) => void }) {
   useEscape(onClose);
+  // Realne zdolności środowiska — sterują plakietkami „gotowe / trzeba skonfigurować" w instrukcji.
+  const s = store.settings;
+  const k = s.keys || {};
+  const manualCaps: ManualCaps = {
+    brain: hasUsableBrain(),
+    mail: canSendDirect(),
+    gemini: !!k.gemini?.trim(),
+    stt: !!k.groq?.trim() || !!s.localStt,
+    vision: ["gemini", "anthropic", "openrouter", "openai", "nvidia", "github"].some((p) => k[p]?.trim()),
+    google: hasBackendGmail() || canSendGmailNative() || !!s.googleClientId?.trim(),
+    images: !!s.sdUrl?.trim() || !!k.gemini?.trim(),
+    desktop: typeof window !== "undefined" && !!(window as unknown as { jarvisDesktop?: unknown }).jarvisDesktop,
+  };
   const [scan, setScan] = useState<GuardianScan | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -204,7 +220,7 @@ export default function Guardian({ onClose }: { onClose: () => void }) {
           <details className="guide" style={{ marginBottom: 10 }}>
             <summary>📖 Instrukcja obsługi i FAQ — jak uruchomić każdą funkcję (z wyszukiwarką)</summary>
             <div className="guide-body">
-              <ManualBook />
+              <ManualBook caps={manualCaps} onRun={onRun} />
             </div>
           </details>
 

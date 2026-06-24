@@ -101,6 +101,13 @@ export const MANUAL: ManualEntry[] = [
     keywords: "reklamy google ads meta facebook kampania nagłówki budżet",
   },
 
+  {
+    id: "mail", icon: "✉", title: "Poczta / wysyłka e-maili", category: "Sprzedaż i biznes",
+    how: "Ustawienia (⚙) → Integracje → poczta: na komputerze SMTP (hasło aplikacji), na telefonie Gmail lub backend.",
+    what: "Po jednorazowej konfiguracji JARVIS i Pulpit Sprzedaży wysyłają maile za Ciebie (oferty do leadów, odpowiedzi). Bez konfiguracji nadal otworzysz gotową wiadomość w swojej aplikacji pocztowej, a wysłane lądują w Skrzynce wysłanych.",
+    keywords: "poczta email mail smtp gmail wysyłka wyślij oferta korespondencja",
+  },
+
   // — Praca i organizacja —
   {
     id: "tasks", icon: "✅", title: "Zadania (GTD)", category: "Praca i organizacja",
@@ -274,4 +281,75 @@ export function manualCategories(entries: ManualEntry[] = MANUAL): string[] {
   const seen: string[] = [];
   for (const e of entries) if (!seen.includes(e.category)) seen.push(e.category);
   return seen;
+}
+
+// === Dostępność funkcji + „zrób za mnie" (Strażnik otwiera/konfiguruje) ===
+// Strażnik pokazuje przy każdej funkcji status (gotowe / czego brakuje) i przyciski:
+//  • „▶ Otwórz" — uruchamia funkcję (mapowanie id → komenda z palety w App.tsx),
+//  • „🛠 Skonfiguruj" — przenosi do właściwego miejsca w Ustawieniach, gdy czegoś brakuje.
+
+export type CapKey = "brain" | "mail" | "gemini" | "stt" | "vision" | "google" | "images" | "desktop";
+
+/** Realne zdolności środowiska — wyliczane przez Strażnika ze stanu (store + mailer + platforma). */
+export type ManualCaps = Record<CapKey, boolean>;
+
+// Krótka etykieta „czego brakuje" (do plakietki statusu).
+const CAP_NEED: Record<CapKey, string> = {
+  brain: "model AI (klucz API lub lokalny Ollama)",
+  mail: "konfiguracja poczty (SMTP / Gmail / backend)",
+  gemini: "klucz Google Gemini",
+  stt: "klucz Groq lub lokalny model mowy",
+  vision: "model z obsługą obrazu (np. Gemini/Claude)",
+  google: "podłączone konto Google",
+  images: "generator obrazów (lokalny SD lub Gemini)",
+  desktop: "wersja na komputer (EXE)",
+};
+
+// Wymagania per funkcja (brak wpisu = działa zawsze). Funkcje bazowe (np. szukanie leadów
+// z OSM) celowo bez wymagań — działają bez kluczy; dopiero warstwa AI potrzebuje „brain".
+const REQUIRES: Partial<Record<string, CapKey[]>> = {
+  chat: ["brain"], live: ["gemini"], voicemode: ["brain"], boss: ["brain"],
+  goal: ["brain"], web: ["brain"], content: ["brain"], ads: ["brain"], cards: ["brain"],
+  translator: ["brain"], transcribe: ["stt"], studio: ["images"], hud: ["vision"],
+  mail: ["mail"], google: ["google"], desktop: ["desktop"],
+};
+
+// Czy daną zdolność użytkownik może „dokonfigurować" (czyli ma sens przycisk Skonfiguruj).
+// desktop to platforma (EXE) — nie da się jej „włączyć" w ustawieniach.
+const FIXABLE: Record<CapKey, boolean> = {
+  brain: true, mail: true, gemini: true, stt: true, vision: true, google: true, images: true, desktop: false,
+};
+
+// Mapowanie id funkcji → id komendy z palety (App.tsx). Domyślnie id === id komendy;
+// poniżej tylko wyjątki (funkcje bez własnego ekranu albo otwierane przez inny ekran).
+const RUN_OVERRIDE: Record<string, string | null> = {
+  chat: null, // główny ekran — „Otwórz" nie ma sensu (zamknij Strażnika)
+  desktop: null, // funkcja systemowa, nic do otwarcia
+  license: "settings",
+  google: "settings",
+  mail: "settings",
+  wheretobuy: "money",
+  shopping: "money",
+};
+
+export interface ManualStatus {
+  ready: boolean;
+  missing: string[]; // krótkie etykiety „czego brakuje"
+  fixable: boolean; // czy warto pokazać „Skonfiguruj"
+}
+
+/** Status dostępności funkcji w danym środowisku (czyste, testowalne). */
+export function entryStatus(entry: ManualEntry, caps: ManualCaps): ManualStatus {
+  const req = REQUIRES[entry.id] || [];
+  const lacking = req.filter((k) => !caps[k]);
+  return {
+    ready: lacking.length === 0,
+    missing: lacking.map((k) => CAP_NEED[k]),
+    fixable: lacking.some((k) => FIXABLE[k]),
+  };
+}
+
+/** Id komendy do uruchomienia funkcji (lub null, gdy nic nie otwieramy). */
+export function runIdFor(entry: ManualEntry): string | null {
+  return entry.id in RUN_OVERRIDE ? RUN_OVERRIDE[entry.id] : entry.id;
 }

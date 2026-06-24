@@ -1524,7 +1524,16 @@ export default function App() {
       )}
       {showGuardian && (
         <ScreenBoundary>
-          <Guardian onClose={() => setShowGuardian(false)} />
+          <Guardian
+            onClose={() => setShowGuardian(false)}
+            onRun={(id) => {
+              // Strażnik „robi za mnie": zamknij Strażnika i uruchom funkcję / otwórz jej ustawienia.
+              const cmd = commands.find((c) => c.id === id);
+              if (!cmd) return;
+              setShowGuardian(false);
+              cmd.run();
+            }}
+          />
         </ScreenBoundary>
       )}
       {showMind && (
