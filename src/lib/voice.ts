@@ -16,6 +16,35 @@ interface NativeTtsPlugin {
 }
 const NativeTTS = registerPlugin<NativeTtsPlugin>("NativeTTS");
 
+/**
+ * Oczyść tekst PRZED wypowiedzeniem, żeby TTS nie czytał na głos znaczników i symboli (markdown,
+ * emoji, linki, kod) — model czasem je wstawi mimo instrukcji, a czytnik mówiłby wtedy „gwiazdka
+ * gwiazdka", literował URL-e itd. Czysta i testowalna. Świadomie BEZ flagi /u i lookbehind/lookahead
+ * astralnego — stary WebView (Samsung S9) by się wywalił; emoji zdejmujemy przez pary surogatów.
+ */
+export function cleanForSpeech(raw: string): string {
+  let t = raw || "";
+  t = t.replace(/```[\s\S]*?```/g, " "); // bloki kodu — pomiń (nieczytelne na głos)
+  t = t.replace(/`([^`]*)`/g, "$1"); // kod inline → sama treść
+  t = t.replace(/!?\[([^\]]+)\]\([^)]+\)/g, "$1"); // [tekst](url) / ![alt](url) → tekst
+  t = t.replace(/https?:\/\/\S+/gi, "link").replace(/\bwww\.\S+/gi, "link"); // URL-e → „link" (nie literujemy)
+  t = t.replace(/^\s{0,3}#{1,6}\s+/gm, ""); // nagłówki
+  t = t.replace(/^\s{0,3}>\s?/gm, ""); // cytaty
+  t = t.replace(/^\s{0,3}[-*+]\s+/gm, ""); // punktory
+  t = t.replace(/^\s{0,3}\d+[.)]\s+/gm, ""); // listy numerowane
+  t = t.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1"); // pogrubienie/kursywa
+  t = t.replace(/__([^_]+)__/g, "$1").replace(/~~([^~]+)~~/g, "$1"); // podkreślenie/przekreślenie
+  // Emoji/symbole: astralne (pary surogatów) + zakresy BMP (strzałki, dingbaty, technical, ™, FE0F).
+  // Bez flagi /u — stary WebView S9 by się wywalił. Wielokropek (…) i myślnik (—) celowo zostają.
+  t = t.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "");
+  t = t.replace(/[\u2190-\u21FF\u2300-\u27BF\u2B00-\u2BFF\u2122]/g, ""); // strzałki/symbole/dingbaty/™ (BMP)
+  t = t.replace(/\uFE0F/g, "").replace(/\u20E3/g, ""); // selektor wariantu emoji + keycap (osobno — znaki łączące)
+  // Nowe linie → naturalne pauzy: linia bez końcowej interpunkcji dostaje kropkę, reszta → spacja.
+  t = t.replace(/\s*\n+\s*/g, "\n").replace(/([^.!?…:])\n/g, "$1. ").replace(/\n/g, " ");
+  t = t.replace(/\.{3,}/g, "…").replace(/[ \t]{2,}/g, " ").replace(/\s+([.,!?…])/g, "$1");
+  return t.trim();
+}
+
 /** Lista dostępnych głosów do wyboru w ustawieniach — natywne (Android) albo przeglądarkowe.
  *  Android ma własny silnik (NativeTTS); iOS i web używają Web Speech (WKWebView/przeglądarka). */
 export async function listSpeechVoices(): Promise<NativeVoiceInfo[]> {
@@ -403,7 +432,9 @@ export function activeVoiceLabel(s: Settings): string {
 }
 
 export async function speak(text: string, settings: Settings): Promise<void> {
-  if (!settings.speak || !text.trim()) return;
+  if (!settings.speak) return;
+  text = cleanForSpeech(text); // nie czytaj na głos markdownu/emoji/linków/kodu (bezpiecznik pod personę)
+  if (!text.trim()) return;
   stopSpeaking();
   const myToken = speakToken; // bieżąca „tura mówienia"; nowszy speak()/stop unieważni
   speakingDepth++;

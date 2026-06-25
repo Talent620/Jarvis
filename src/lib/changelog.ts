@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🔊 Czystszy głos: JARVIS nie czyta już na głos znaczników, linków, emoji ani kodu — markdown znika, adresy stają się słowem link, a wypowiedź brzmi naturalnie nawet, gdy model wstawi formatowanie. Działa wszędzie, gdzie JARVIS mówi.",
       "⚡ Strumieniowy głos w rozmowie na żywo: JARVIS zaczyna mówić pierwsze zdanie, gdy reszta jeszcze się tworzy — koniec czekania na całą odpowiedź. Możesz mu wejść w słowo (barge-in) i od razu przerywa. Brzmi to jak prawdziwa, płynna rozmowa.",
       "🎙 Rozmowa na żywo jak z człowiekiem: w Trybie Słuchawki JARVIS mówi teraz krótko, naturalnie i z wyczuciem — pełnymi zdaniami do słuchania, bez czytanych na głos list i znaczników. Pamięta kontekst całej rozmowy, korzysta z pamięci o Tobie, narzędzi i dostępu do informacji, myśli o krok do przodu — i odpowiada szybciej (krótkie odpowiedzi = błyskawiczny głos).",
       "🖼 Adres serwera obrazów (Stable Diffusion) też wybacza pomyłki — tak samo jak Ollama: bez http://, ze spacjami, z ukośnikiem, bez portu (dokłada domyślny 7860). Mniej walki z konfiguracją.",
