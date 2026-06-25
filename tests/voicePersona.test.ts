@@ -14,4 +14,8 @@ describe("LIVE_VOICE_PERSONA — kontrakt rozmowy na żywo", () => {
     expect(LIVE_VOICE_PERSONA).toMatch(/naturaln/i);
     expect(LIVE_VOICE_PERSONA).toMatch(/nie udawaj pewności|szczer/i);
   });
+  it("proaktywnie wplata pamięć, ale tylko gdy prawdziwe i pasuje (bez zmyślania)", () => {
+    expect(LIVE_VOICE_PERSONA).toMatch(/PAMIĘĆ PROAKTYWNA|nawiąż do tego, co/i);
+    expect(LIVE_VOICE_PERSONA).toMatch(/nie zmyślaj|nie wciskaj na siłę/i);
+  });
 });

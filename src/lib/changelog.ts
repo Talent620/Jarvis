@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🧠 Proaktywna pamięć w rozmowie na żywo: JARVIS sam nawiązuje do tego, co o Tobie pamięta (wcześniejsze wątki, cele, decyzje) — gdy to naturalnie pasuje, jak znajomy. Bez zmyślania i bez wciskania na siłę. Uczy się lokalnie po każdej wymianie, więc z czasem zna Cię lepiej.",
       "🎭 Łatwe włączenie głosu naturalnego, z emocją: w ⚙ → Głos jest teraz krótki doradca — co daje każdy głos premium, ile kosztuje i jak go wpiąć, plus przycisk wypróbowania DARMOWEGO głosu premium (Gemini TTS) jednym dotknięciem.",
       "🗣 Naturalniejsza wymowa: JARVIS rozwija przy czytaniu skróty i symbole, które silniki głosu literują lub czytają dziwnie (np. na przykład, między innymi, około, numer, procent, stopni) — brzmi bardziej po ludzku na każdym głosie.",
       "🔊 Przycisk czytania przy polu wpisywania: gdy masz coś wpisane lub wklejone, dotknij 🔊 nad polem, a JARVIS odczyta to dosłownie na głos — bez pisania komendy i bez wysyłania do modelu.",
