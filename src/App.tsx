@@ -52,6 +52,7 @@ const AuditLog = lazy(() => import("./components/AuditLog"));
 const SentBox = lazy(() => import("./components/SentBox"));
 const ContentStudio = lazy(() => import("./components/ContentStudio"));
 const BrandKit = lazy(() => import("./components/BrandKit"));
+const MailCompose = lazy(() => import("./components/MailCompose"));
 const AdStudio = lazy(() => import("./components/AdStudio"));
 const FAQ = lazy(() => import("./components/FAQ"));
 const WebStudio = lazy(() => import("./components/WebStudio"));
@@ -237,6 +238,7 @@ export default function App() {
   const [showSent, setShowSent] = useState(false);
   const [showContent, setShowContent] = useState(false);
   const [showBrand, setShowBrand] = useState(false);
+  const [showMail, setShowMail] = useState(false);
   const [showAds, setShowAds] = useState(false);
   // ⌘K — rejestr poleceń. MUSI być po WSZYSTKICH useState (referuje settery), inaczej TDZ na pierwszym
   // renderze (fabryka useMemo wykonuje się od razu). Stabilny (deps []); akcje przez actionsRef.
@@ -1480,6 +1482,7 @@ export default function App() {
           onSent={() => setShowSent(true)}
           onContent={() => setShowContent(true)}
           onBrand={() => setShowBrand(true)}
+          onMail={() => setShowMail(true)}
           onAds={() => setShowAds(true)}
           onFaq={() => setShowFaq(true)}
           onClose={() => setShowMore(false)}
@@ -1514,6 +1517,11 @@ export default function App() {
       {showBrand && (
         <ScreenBoundary>
           <BrandKit onClose={() => setShowBrand(false)} />
+        </ScreenBoundary>
+      )}
+      {showMail && (
+        <ScreenBoundary>
+          <MailCompose onClose={() => setShowMail(false)} />
         </ScreenBoundary>
       )}
       {showContent && (

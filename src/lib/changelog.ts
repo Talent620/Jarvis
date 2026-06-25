@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "✉ Ręczna wysyłka e-maila z JARVIS-a: w Centrum (Sprzedaż i biznes) jest Wyślij e-mail — wpisujesz adres, temat i treść, podpis dokleja się sam, widzisz ryzyko spamu i masz akcje AI (skróć/przepisz/CTA…). Wysyłasz jednym przyciskiem (gdy skonfigurowana poczta) albo otwierasz w Gmailu/poczcie. Pełna kontrola, zero automatu.",
       "🖼 Studio Obrazów — fal.ai generuje też z opisu (nie tylko edytuje): masz klucz fal.ai i chcesz stworzyć obraz z samego tekstu? Teraz działa bez klucza Gemini — fal.ai robi i generowanie z opisu, i edycję zdjęć. Wybierz model fal.ai i pisz prompt.",
       "✍ Maile do leadów — akcje AI kompozytora: pod draftem maila masz przyciski Skróć, Rozwiń, Mocniejsze CTA, Formalnie, Luźniej, Personalizuj, Przepisz — jedno dotknięcie przerabia treść; przy błędzie zostaje oryginał. Obok widzisz też ryzyko spamu (dostarczalność).",
       "🎨 Dusza Marki (Brand-kit): ustaw raz tożsamość — ton głosu, paletę kolorów, typografię, słowa kluczowe — a JARVIS użyje jej automatycznie przy tworzeniu stron, treści i obrazów, dla spójnego wyglądu i języka. Znajdziesz ją w Centrum (Sprzedaż i biznes). Puste pola = generacja działa jak dotąd.",
