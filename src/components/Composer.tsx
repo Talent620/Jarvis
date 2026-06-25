@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { anticipate, type RecallHit } from "../lib/recall";
 import { store } from "../lib/store";
+import { speak } from "../lib/voice";
 
 export default function Composer({
   onSend,
@@ -109,6 +110,16 @@ export default function Composer({
             disabled={busy}
           >
             ⚖
+          </button>
+        )}
+        {text.trim() && (
+          <button
+            className="mic"
+            onClick={() => void speak(text, { ...store.settings, speak: true }).catch(() => {})}
+            title="Przeczytaj wpisany/wklejony tekst na głos (dosłownie)"
+            aria-label="Przeczytaj na głos"
+          >
+            🔊
           </button>
         )}
       </div>

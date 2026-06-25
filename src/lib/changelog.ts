@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🔊 Przycisk czytania przy polu wpisywania: gdy masz coś wpisane lub wklejone, dotknij 🔊 nad polem, a JARVIS odczyta to dosłownie na głos — bez pisania komendy i bez wysyłania do modelu.",
       "🔊 Nowa komenda czytania na głos: napisz przeczytaj na głos: a po dwukropku wklej dowolny tekst — JARVIS odczyta go DOSŁOWNIE (bez przetwarzania, bez kosztu), z czystą mową (bez znaczników i emoji).",
       "🐛 Koniec samoczynnego włączania Trybu Prywatnego: wklejenie długiego tekstu (np. promptu lub dokumentu) ze słowami offline, lokalnie czy nieocenzurowany NIE przełącza już trybu i nie przerywa odpowiedzi — komendą trybu jest tylko krótkie polecenie, a nie treść do przetworzenia.",
       "🧵 Ciągłość rozmowy na żywo: gdy wrócisz do Trybu Słuchawki w ciągu pół godziny, JARVIS pamięta, o czym była mowa, i płynnie kontynuuje wątek — zamiast zaczynać od zera. Po dłuższej przerwie startuje świeżo (a wiedza o Tobie i tak zostaje). Przyciskiem Nowa zaczniesz rozmowę od początku.",
