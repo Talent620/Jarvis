@@ -2,14 +2,18 @@ import { describe, it, expect } from "vitest";
 import { isBossSummon, ROBOT_VOICE, KAPITAN_BOMBA_VOICE, KAPITAN_PREMIUM_VOICE, bossVoiceProfile, BOSS_GREETING, bossSystem, BOSS_DOCTRINE, bossQuickActions, parseBossMeta } from "../src/lib/boss";
 
 describe("głos Szefa — Kapitan Bomba / Premium / Robot", () => {
-  it("Kapitan Bomba jest GŁĘBSZY (niższy pitch) niż robot", () => {
+  it("Kapitan Bomba ma EFEKT zniekształcenia i głęboki ton", () => {
+    expect(KAPITAN_BOMBA_VOICE.voiceFx).toBe("kapitan");
     expect(KAPITAN_BOMBA_VOICE.voicePitch ?? 1).toBeLessThanOrEqual(ROBOT_VOICE.voicePitch ?? 1);
-    expect(KAPITAN_BOMBA_VOICE.voiceMode).toBe("system");
   });
-  it("Premium używa ElevenLabs i jest dostrojony pod agresję (niska stabilność, wysoki styl)", () => {
+  it("Premium używa ElevenLabs + efekt zniekształcenia, dostrojony pod agresję", () => {
     expect(KAPITAN_PREMIUM_VOICE.voiceMode).toBe("eleven");
+    expect(KAPITAN_PREMIUM_VOICE.voiceFx).toBe("kapitan");
     expect(KAPITAN_PREMIUM_VOICE.elevenStability ?? 1).toBeLessThan(0.3);
     expect(KAPITAN_PREMIUM_VOICE.elevenStyle ?? 0).toBeGreaterThan(0.5);
+  });
+  it("Robot NIE ma efektu zniekształcenia", () => {
+    expect(ROBOT_VOICE.voiceFx).toBeUndefined();
   });
   it("bossVoiceProfile: domyślnie Kapitan Bomba; premium/robot na żądanie", () => {
     expect(bossVoiceProfile(undefined)).toBe(KAPITAN_BOMBA_VOICE);

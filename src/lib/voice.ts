@@ -184,17 +184,44 @@ let currentAudio: HTMLAudioElement | null = null;
 let levelCtx: AudioContext | null = null;
 let levelRaf = 0;
 
+/** Krzywa zniekształcenia (waveshaper) — im większy „amount", tym ostrzejszy charkot. Czyste. */
+export function makeDistortionCurve(amount: number, n = 8192): Float32Array {
+  const curve = new Float32Array(n);
+  const deg = Math.PI / 180;
+  for (let i = 0; i < n; i++) {
+    const x = (i * 2) / n - 1;
+    curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
+  }
+  return curve;
+}
+
+// Łańcuch „Kapitan Bomba": podbite niskie (klatka piersiowa), ścięte wysokie, mocne zniekształcenie
+// (charkot/agresja) + makeup gain. Wraz z niższym playbackRate daje głęboki, brutalny, zniekształcony
+// głos — najbliżej kreskówki, jak da się z TTS. Zwraca węzeł wyjściowy do podłączenia dalej.
+function kapitanFxChain(ctx: AudioContext, src: AudioNode): AudioNode {
+  const lowShelf = ctx.createBiquadFilter(); lowShelf.type = "lowshelf"; lowShelf.frequency.value = 200; lowShelf.gain.value = 9;
+  const shaper = ctx.createWaveShaper(); (shaper as { curve: Float32Array | null }).curve = makeDistortionCurve(22); shaper.oversample = "4x";
+  const lowpass = ctx.createBiquadFilter(); lowpass.type = "lowpass"; lowpass.frequency.value = 3000;
+  const out = ctx.createGain(); out.gain.value = 0.85;
+  src.connect(lowShelf); lowShelf.connect(shaper); shaper.connect(lowpass); lowpass.connect(out);
+  return out;
+}
+
 // Odtwórz URL audio i napędzaj poziom głośności (orb „mówi" w rytm dźwięku).
 // Web Audio jest opcjonalne — przy jakimkolwiek błędzie zwykłe odtwarzanie działa.
-async function playUrlWithLevel(url: string): Promise<void> {
+// fx="kapitan" → przepuść przez efekt zniekształcenia (głos Kapitana Bomby) i zaniż wysokość.
+async function playUrlWithLevel(url: string, fx?: boolean): Promise<void> {
   const audio = new Audio(url);
   currentAudio = audio;
+  if (fx) audio.playbackRate = 0.84; // głębiej i ciężej
   let srcNode: MediaElementAudioSourceNode | null = null;
   let analyserNode: AnalyserNode | null = null;
+  let fxOut: AudioNode | null = null;
   // Sprzątanie: odłącz węzły Web Audio — inaczej akumulują się na współdzielonym
   // levelCtx przy każdym premium-TTS (wyciek pamięci + CPU w wątku audio).
   const cleanup = () => {
     try { srcNode?.disconnect(); } catch { /* ignore */ }
+    try { fxOut?.disconnect(); } catch { /* ignore */ }
     try { analyserNode?.disconnect(); } catch { /* ignore */ }
     cancelAnimationFrame(levelRaf);
     setLevel(0);
@@ -209,11 +236,13 @@ async function playUrlWithLevel(url: string): Promise<void> {
     const ctx = levelCtx;
     if (ctx.state === "suspended") await ctx.resume().catch(() => {});
     srcNode = ctx.createMediaElementSource(audio);
+    const head: AudioNode = fx ? kapitanFxChain(ctx, srcNode) : srcNode; // efekt KB (lub czysto)
+    fxOut = fx ? head : null;
     const analyser = ctx.createAnalyser();
     analyserNode = analyser;
     analyser.fftSize = 256;
-    srcNode.connect(ctx.destination); // audio zawsze słychać
-    srcNode.connect(analyser); // odczep do pomiaru poziomu (bez dalszego routingu)
+    head.connect(ctx.destination); // audio zawsze słychać (przez efekt, gdy włączony)
+    head.connect(analyser); // odczep do pomiaru poziomu (bez dalszego routingu)
     const data = new Uint8Array(analyser.frequencyBinCount);
     const tick = () => {
       analyser.getByteTimeDomainData(data);
@@ -232,10 +261,10 @@ async function playUrlWithLevel(url: string): Promise<void> {
   await audio.play();
 }
 
-async function playFromResponse(res: Response): Promise<boolean> {
+async function playFromResponse(res: Response, fx?: boolean): Promise<boolean> {
   if (!res.ok) return false;
   const blob = await res.blob();
-  await playUrlWithLevel(URL.createObjectURL(blob));
+  await playUrlWithLevel(URL.createObjectURL(blob), fx);
   return true;
 }
 
@@ -463,6 +492,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
   stopSpeaking();
   const myToken = speakToken; // bieżąca „tura mówienia"; nowszy speak()/stop unieważni
   speakingDepth++;
+  const fx = settings.voiceFx === "kapitan"; // efekt zniekształcenia (głos Kapitana Bomby) na audio buforowym
   try {
   // JEDEN jednoznaczny wybór silnika (voiceMode) — koniec „walki flag". Każdy premium tor
   // przy braku klucza/niepowodzeniu spada bezpiecznie do głosu systemowego (PL) niżej.
@@ -472,7 +502,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
     try {
       const blob = await synthLocal(text);
       if (myToken !== speakToken) return; // nowsza tura przejęła w czasie syntezy
-      if (blob) { await playUrlWithLevel(URL.createObjectURL(blob)); return; }
+      if (blob) { await playUrlWithLevel(URL.createObjectURL(blob), fx); return; }
     } catch {
       /* fallback do głosów chmurowych/systemowych niżej */
     }
@@ -491,7 +521,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
         body: JSON.stringify({ text, reference_id: settings.fishAudioVoiceId, format: "mp3" }),
       }, 30000);
       if (myToken !== speakToken) return; // nowsza tura przejęła w czasie pobierania
-      if (await playFromResponse(res)) return;
+      if (await playFromResponse(res, fx)) return;
     } catch {
       /* fallback niżej */
     }
@@ -524,7 +554,7 @@ export async function speak(text: string, settings: Settings): Promise<void> {
         30000,
       );
       if (myToken !== speakToken) return; // nowsza tura przejęła w czasie pobierania
-      if (await playFromResponse(res)) return;
+      if (await playFromResponse(res, fx)) return;
     } catch {
       /* fallback do systemowego TTS */
     }

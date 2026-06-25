@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "💣 Głos Kapitana Bomby NAPRAWDĘ zniekształcony: dodałem realny efekt audio (mocny distortion + podbite niskie + ścięte wysokie + niższy ton) na głosie buforowym — premium (ElevenLabs) lub lokalnym (Kokoro). Teraz brzmi charkotliwie i brutalnie, nie tylko nisko. Uwaga: systemowy głos nadal daje tylko głęboki ton (jego sygnału nie da się przerobić), więc do pełnego charkotu wybierz Premium albo Kokoro w ⚙ → Głos.",
       "🎟 Tryb Trial (pod reklamę i sprzedaż): rozdajesz klucze próbne na X dni, a aplikacja pokazuje odbiorcy pasek z liczbą pozostałych dni trialu i delikatnie zachęca do przedłużenia; gdy licencja czasowa dobiega końca (3 dni lub mniej) — wyraźny monit. Przyciskiem przedłużenia wklejasz nowy klucz bez utraty dostępu.",
       "💣 Tryb Szefa — głos Premium (ElevenLabs): trzeci, najbardziej ludzki i ekspresyjny głos agenta, dostrojony pod agresywne, dynamiczne podanie — najbliżej klimatu Kapitana Bomby. Wymaga klucza ElevenLabs i wybranego głębokiego głosu w ⚙ → Głos. Przyciskiem 🎙 Głos krążysz: Kapitan Bomba → Premium → Robot.",
       "💣 Tryb Szefa — głos Kapitana Bomby: domyślnie agent mówi teraz bardzo niskim, twardym głosem w stylu Kapitana Bomby. Jednym przyciskiem (🎙 Głos) przełączysz na klasyczny robotyczny i z powrotem.",

@@ -10,6 +10,7 @@ import { BOSS_GREETING, bossSystem, bossQuickActions, bossVoiceProfile } from ".
 import { jarvisBriefing } from "../lib/capabilities";
 import { bossMemoryDigest } from "../lib/bossMemory";
 import { hasUsableBrain } from "../lib/brain";
+import { localTtsUsable } from "../lib/localTts";
 import { loadLiveThread, saveLiveThread, clearLiveThread, BOSS_THREAD_KEY } from "../lib/liveThread";
 import { parsePlan, currentStep } from "../lib/agentPlan";
 import { bestBrain, bestFreeBrain } from "../lib/league";
@@ -138,8 +139,15 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
             vpRef.current = bossVoiceProfile(next);
             store.setSettings({ bossVoice: next });
             loopRef.current?.setVoiceTune(vpRef.current);
-            const noKey = next === "premium" && !(store.settings.elevenLabsApiKey?.trim() && store.settings.elevenLabsVoiceId?.trim());
-            setDetail(noKey ? "ℹ Premium wymaga klucza ElevenLabs i głębokiego głosu w ⚙ → Głos (bez tego mówię systemowo)." : "");
+            const hasEleven = !!(store.settings.elevenLabsApiKey?.trim() && store.settings.elevenLabsVoiceId?.trim());
+            const fxWorks = next === "premium" ? hasEleven : next === "kapitan" ? (localTtsUsable() || hasEleven) : true;
+            setDetail(
+              next === "premium" && !hasEleven
+                ? "ℹ Premium wymaga klucza ElevenLabs i głębokiego głosu w ⚙ → Głos (bez tego mówię systemowo)."
+                : next === "kapitan" && !fxWorks
+                  ? "ℹ Pełny CHARKOT Kapitana Bomby działa z głosem lokalnym (Kokoro) lub Premium (ElevenLabs) — włącz w ⚙ → Głos. Bez nich: tylko głęboki systemowy."
+                  : "",
+            );
             stopSpeaking();
             const sample = next === "robot" ? "Tryb robota. Słucham rozkazów." : "Kapitan Bomba. Słucham rozkazów.";
             void speak(sample, { ...store.settings, speak: true, ...vpRef.current }).catch(() => {});

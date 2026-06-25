@@ -9,15 +9,14 @@ import type { Settings } from "../types";
 // zwolnione tempo → maszynowy charakter, a wciąż zrozumiały po polsku.
 export const ROBOT_VOICE: Partial<Settings> = { voiceMode: "system", voicePitch: 0.4, voiceRate: 0.96 };
 
-// „Kapitan Bomba": maksymalnie NISKI, twardy, maczo ton (systemowy silnik — pitch w dół do podłogi,
-// tempo lekko podbite dla agresji). Systemowy TTS nie odda zniekształcenia z kreskówki, ale daje
-// najgłębszy, najbardziej brutalny głos, jaki engine pozwala wycisnąć.
-export const KAPITAN_BOMBA_VOICE: Partial<Settings> = { voiceMode: "system", voicePitch: 0, voiceRate: 1.05 };
+// „Kapitan Bomba": głos buforowy z EFEKTEM ZNIEKSZTAŁCENIA (charkot/agresja) — to on daje brzmienie
+// z kreskówki, nie sam pitch. Domyślnie próbuje lokalnego Kokoro (offline, za darmo) i puszcza go
+// przez efekt; gdy Kokoro niedostępne — spada na systemowy głos (tylko głęboki, BEZ zniekształcenia).
+export const KAPITAN_BOMBA_VOICE: Partial<Settings> = { voiceMode: "local", voiceFx: "kapitan", voicePitch: 0, voiceRate: 1.0 };
 
-// „Kapitan Bomba PREMIUM" — głos neuronowy ElevenLabs (najbliżej ludzkiego), dostrojony pod AGRESJĘ:
-// niska stabilność = dynamiczne, emocjonalne podanie; wysoki styl = przerysowanie. Barwę (głębię)
-// daje wybrany przez użytkownika głos ElevenLabs — najlepiej niski, męski, ostry. Wymaga klucza.
-export const KAPITAN_PREMIUM_VOICE: Partial<Settings> = { voiceMode: "eleven", elevenStability: 0.18, elevenStyle: 0.85, voiceRate: 1.05 };
+// „Kapitan Bomba PREMIUM" — neuronowy ElevenLabs + ten sam efekt zniekształcenia: najbliżej oryginału.
+// Dostrojony pod agresję (niska stabilność, wysoki styl). Głębię barwy daje wybrany głos ElevenLabs.
+export const KAPITAN_PREMIUM_VOICE: Partial<Settings> = { voiceMode: "eleven", voiceFx: "kapitan", elevenStability: 0.18, elevenStyle: 0.85, voiceRate: 1.05 };
 
 /** Profil głosu Szefa wg ustawienia (domyślnie Kapitan Bomba systemowy). Czyste. */
 export function bossVoiceProfile(which?: "kapitan" | "premium" | "robot"): Partial<Settings> {

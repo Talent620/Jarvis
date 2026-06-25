@@ -574,6 +574,8 @@ export interface Settings {
   /** Opcjonalne dostrojenie ElevenLabs (per kontekst, np. agresywny Tryb Szefa): 0–1. */
   elevenStability?: number;
   elevenStyle?: number;
+  /** Efekt audio na głosie buforowym (premium/Kokoro): „kapitan" = zniekształcenie Kapitana Bomby. */
+  voiceFx?: "kapitan" | "none";
   /** Opcjonalny klucz Fish Audio (tani, topowy klon głosu). */
   fishAudioApiKey: string;
   /** reference_id głosu Fish Audio (np. sklonowany głos JARVIS). */

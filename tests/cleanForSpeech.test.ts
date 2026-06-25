@@ -45,3 +45,20 @@ describe("speechShape — naturalna wymowa skrótów i symboli", () => {
     expect(speechShape("Mam dla Ciebie trzy pomysły.")).toBe("Mam dla Ciebie trzy pomysły.");
   });
 });
+
+import { makeDistortionCurve } from "../src/lib/voice";
+
+describe("makeDistortionCurve — krzywa zniekształcenia (głos Kapitana Bomby)", () => {
+  it("zwraca krzywą o zadanej długości, monotoniczną i symetryczną względem 0", () => {
+    const c = makeDistortionCurve(22, 1024);
+    expect(c.length).toBe(1024);
+    expect(c[0]).toBeLessThan(0); // lewy kraniec ujemny
+    expect(c[c.length - 1]).toBeGreaterThan(0); // prawy kraniec dodatni
+    expect(Math.abs(c[512])).toBeLessThan(0.01); // środek ~0
+  });
+  it("większy amount = ostrzejsza krzywa (większe nachylenie przy krańcach)", () => {
+    const soft = makeDistortionCurve(5, 1024);
+    const hard = makeDistortionCurve(40, 1024);
+    expect(Math.abs(hard[1000])).toBeGreaterThan(Math.abs(soft[1000]));
+  });
+});
