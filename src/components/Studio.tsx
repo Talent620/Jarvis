@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { generateImage, humanizeImageError, bestImageModel, imageModelCost, IMAGE_MODELS_LIST, type ImageModelId } from "../lib/images";
 import { brandImageSuffix } from "../lib/brandKit";
+import { enhanceImagePrompt, IMAGE_STYLES, type ImageStyle } from "../lib/imagePrompt";
 import { capturePhoto } from "../lib/camera";
 import { useEscape } from "../hooks/useEscape";
 import { store } from "../lib/store";
@@ -59,6 +60,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
   const [model, setModel] = useState<ImageModelId>(bestImageModel());
   const [prompt, setPrompt] = useState("");
   const [inputs, setInputs] = useState<Img[]>([]);
+  const [imgStyle, setImgStyle] = useState<ImageStyle>("auto"); // kierunek artystyczny dla generacji z opisu
   const [history, setHistory] = useState<Img[]>([]); // wersje wyników (ostatnia = bieżąca)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -116,8 +118,8 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     if (model === "local-sd") setSdProgress(0);
     // Strażnik odmontowania: jeśli użytkownik zamknie Studio w trakcie, nie ruszamy stanu.
     const onProg = model === "local-sd" ? (p: number) => { if (mounted.current) setSdProgress(p); } : undefined;
-    // Dusza Marki — dla generacji z opisu dokleja paletę/styl marki (przy edycji zdjęcia pomijamy).
-    const promptBrand = ins.length ? text : text + brandImageSuffix();
+    // Dla generacji z OPISU: wzmocnij prompt (jakość/styl) + dolej markę. Przy edycji zdjęcia pomijamy.
+    const promptBrand = ins.length ? text : enhanceImagePrompt(text, imgStyle) + brandImageSuffix();
     const r = await generateImage(promptBrand, ins.length ? ins : undefined, model, sdOpts, onProg);
     if (!mounted.current) return;
     setSdProgress(0);
@@ -228,6 +230,17 @@ export default function Studio({ onClose }: { onClose: () => void }) {
           </div>
           <p className="muted" style={{ fontSize: 11, marginTop: 0, marginBottom: 6 }}>🆓 darmowy · ⭐ płatny (cena za obraz) · ✅ gotowe · ⚙ wymaga klucza/serwera (kliknij, by zobaczyć jak)</p>
           <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>{IMAGE_MODELS_LIST.find((m) => m.id === model)?.note}</p>
+          {/* 🎨 Kierunek artystyczny (wzmacnia prompt jakością/stylem) — tylko przy generacji z OPISU */}
+          {inputs.length === 0 && (
+            <div style={{ margin: "2px 0 4px" }}>
+              <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>🎨 Styl (wzmacnia jakość promptu)</div>
+              <div className="chips" style={{ flexWrap: "wrap", gap: 6 }}>
+                {IMAGE_STYLES.map((s) => (
+                  <button key={s.id} className={`chip ${imgStyle === s.id ? "on" : ""}`} onClick={() => setImgStyle(s.id)} disabled={busy}>{s.label}</button>
+                ))}
+              </div>
+            </div>
+          )}
           {imageModelCost(model) > 0 && (
             <p style={{ fontSize: 12.5, marginTop: 2, color: "var(--gold)", fontWeight: 600 }}>
               💳 Następna generacja: ~${imageModelCost(model).toFixed(2)} (płatne fal.ai). Darmowo? Wybierz 🆓 wyżej.
