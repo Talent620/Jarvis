@@ -22,8 +22,10 @@ import {
   listLocalLicenses,
   removeLocalLicense,
   licenseStatus,
+  decodeLicense,
   type LicenseRecord,
 } from "../lib/licenseSign";
+import { verifyLicense } from "../lib/license";
 
 // Panel administratora w wersji premium — wewnątrz JARVIS-a. Odblokowanie
 // numerem właściciela (dostęp awaryjny), sekrety szyfrowane lokalnie.
@@ -41,6 +43,22 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
   const [priv, setPriv] = useState("");
   const [offForm, setOffForm] = useState({ owner: "", days: "30" });
   const [localRows, setLocalRows] = useState<LicenseRecord[]>(() => listLocalLicenses());
+  // 🔎 Inspektor klucza — wklej dowolny klucz, sprawdź dla kogo / typ / dni / ważność podpisu.
+  const [insKey, setInsKey] = useState("");
+  const [insRes, setInsRes] = useState("");
+  const inspectKey = async () => {
+    const key = insKey.trim();
+    const p = decodeLicense(key);
+    if (!p) { setInsRes("❌ Nie mogę odczytać klucza — wklej PEŁNY ciąg (z kropką w środku)."); return; }
+    const st = licenseStatus(p.exp ?? null);
+    const v = await verifyLicense(key);
+    const verdict = v.valid
+      ? "✅ Klucz PRAWIDŁOWY i AKTYWNY"
+      : p.exp && Date.now() > p.exp
+        ? "⏳ Klucz WYGASŁ"
+        : "❌ Podpis NIEPRAWIDŁOWY (podrobiony albo do innej wersji aplikacji)";
+    setInsRes(`${verdict}\nDla: ${p.n || "(brak)"} · typ: ${p.t || "(brak)"} · ${st.label}`);
+  };
 
   const unlock = async () => {
     if (!(await verifyOwnerPhone(phone))) {
@@ -184,6 +202,13 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             const jwk = priv.trim() ? parsePrivateJwk(priv) : null;
             return (
               <>
+                {/* 🔎 Inspektor klucza — bez komputera: wklej klucz, sprawdź dni i ważność */}
+                <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>🔎 Sprawdź klucz (dla kogo · dni · ważność)</div>
+                  <textarea className="ta" value={insKey} placeholder="Wklej klucz licencyjny…" onChange={(e) => setInsKey(e.target.value)} style={{ minHeight: 56, fontFamily: "monospace", fontSize: 11 }} />
+                  <button className="btn" style={{ marginTop: 6 }} disabled={!insKey.trim()} onClick={() => void inspectKey()}>🔎 Sprawdź</button>
+                  {insRes && <pre className="notice" style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>{insRes}</pre>}
+                </div>
                 <Guide title="ℹ Jak to działa (offline — Twój własny klucz)" open>
                   <p>Wklej swój <b>klucz prywatny</b> (zawartość pliku <i>license-private.json</i>). Zostaje <b>tylko u Ciebie</b>, zaszyfrowany Twoim numerem — nigdzie go nie wysyłamy. Podpisuje klucze <b>lokalnie</b>, bez serwera.</p>
                   <p>Klucz musi pasować do <b>klucza publicznego tej wersji aplikacji</b> — inaczej wydane licencje się nie aktywują (każdy „szef" z własnym kluczem potrzebuje wersji z jego kluczem publicznym).</p>
