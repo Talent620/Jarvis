@@ -2,6 +2,7 @@ import { useState } from "react";
 import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
 import { assessSeo, seoFixInstruction } from "../lib/seoPreview";
+import { buildRobotsTxt, buildSitemapXml, extractInternalPaths, normalizeDomain } from "../lib/siteSeoFiles";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast, toast } from "../lib/toast";
 import { listSiteProjects, saveSiteProject, renameSiteProject, removeSiteProject, exportSiteProject, importSiteProject } from "../lib/siteProjects";
@@ -204,6 +205,17 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   };
+
+  // ⬇ Pobierz dowolny plik tekstowy (robots.txt / sitemap.xml).
+  const downloadText = (content: string, filename: string, mime: string) => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+  const [seoDomain, setSeoDomain] = useState("");
 
   const ideas = kind === "sklep" ? IDEAS.sklep : IDEAS.inne;
 
@@ -487,6 +499,20 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
                     </button>
                   </>
                 )}
+                {/* 🤖 robots.txt + sitemap.xml — SEO techniczne do wgrania obok strony */}
+                <div style={{ marginTop: 10, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+                  <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>🤖 Pliki dla Google (wgraj obok strony):</div>
+                  <input
+                    value={seoDomain}
+                    placeholder={`Twoja domena, np. ${normalizeDomain(m.canonical) || "v-ai.pl"}`}
+                    onChange={(e) => setSeoDomain(e.target.value)}
+                    style={{ width: "100%", marginBottom: 6 }}
+                  />
+                  <div className="chips" style={{ flexWrap: "wrap", gap: 6 }}>
+                    <button className="chip" onClick={() => downloadText(buildRobotsTxt(seoDomain || normalizeDomain(m.canonical)), "robots.txt", "text/plain")}>⬇ robots.txt</button>
+                    <button className="chip" onClick={() => downloadText(buildSitemapXml(seoDomain || normalizeDomain(m.canonical), extractInternalPaths(html)), "sitemap.xml", "application/xml")}>⬇ sitemap.xml</button>
+                  </div>
+                </div>
               </details>
             );
           })()}
