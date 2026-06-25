@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🛡 Większa niezawodność pod spodem: błędy w tle (nieobsłużone wyjątki i odrzucone obietnice) trafiają teraz do wewnętrznego monitora niezawodności — łatwiej je wychwycić i naprawić. Dodatkowo, gdy zapis do bazy na urządzeniu chwilowo zawiedzie, dane są ratowane do pamięci zapasowej, więc nic nie ginie.",
       "🤖 Kreator stron — robots.txt i sitemap.xml: w podglądzie Google podajesz domenę i jednym kliknięciem pobierasz gotowe pliki dla wyszukiwarek (sitemap zbiera podstrony z linków). Wgrywasz je obok strony i Google indeksuje ją sprawniej.",
       "🛟 Kopia zapasowa obejmuje teraz WSZYSTKO: do eksportu/kopii danych trafiają też zapisane projekty stron i historia przeróbek obrazów — przenosisz je na inne urządzenie albo odzyskujesz po reinstalacji bez utraty pracy.",
       "🔍 Kreator stron — Popraw SEO jednym kliknięciem: w podglądzie Google przycisk nanosi brakujące meta (tytuł, opis) i komplet Open Graph, nie ruszając reszty strony — wyższa klikalność w wyszukiwarce i ładny link przy udostępnianiu.",
