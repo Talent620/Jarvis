@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
+import { assessSeo } from "../lib/seoPreview";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast } from "../lib/toast";
 import Guide from "./Guide";
@@ -350,6 +351,42 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
                   </button>
                 )}
               </div>
+            );
+          })()}
+
+          {/* 🔍 Podgląd w Google + social — jak strona wygląda w wynikach i przy udostępnieniu */}
+          {html && (() => {
+            const seo = assessSeo(html);
+            const m = seo.meta;
+            const host = (m.canonical || "https://twojastrona.pl").replace(/^https?:\/\//, "").replace(/\/$/, "");
+            return (
+              <details className="journal-card" style={{ padding: "10px 12px", marginTop: 8 }}>
+                <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--cyan)" }}>
+                  🔍 Podgląd w Google + social {seo.issues.length > 0 ? `· ${seo.issues.length} do poprawy` : "· OK ✓"}
+                </summary>
+                {/* Snippet Google */}
+                <div style={{ marginTop: 10, background: "rgba(255,255,255,.04)", borderRadius: 8, padding: "8px 10px" }}>
+                  <div style={{ fontSize: 11, color: "#bdbdbd" }}>{host}</div>
+                  <div style={{ fontSize: 15, color: "#8ab4f8", lineHeight: 1.2, marginTop: 2 }}>{m.title || "(brak tytułu — Google wybierze sam)"}</div>
+                  <div style={{ fontSize: 12, color: "#cfcfcf", marginTop: 2 }}>{m.description || "(brak opisu — Google wytnie losowy fragment strony)"}</div>
+                </div>
+                {/* Karta social (OG) */}
+                <div style={{ marginTop: 8, border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
+                  <div style={{ height: 64, background: m.ogImage ? "#0c1118" : "rgba(255,107,107,.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "var(--muted)" }}>
+                    {m.ogImage ? "🖼 og:image ✓" : "⚠ brak og:image (link bez miniatury)"}
+                  </div>
+                  <div style={{ padding: "6px 10px" }}>
+                    <div style={{ fontSize: 11, color: "#bdbdbd", textTransform: "uppercase" }}>{host}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{m.ogTitle || m.title || "(brak og:title)"}</div>
+                    <div style={{ fontSize: 12, color: "var(--muted)" }}>{m.ogDescription || m.description || ""}</div>
+                  </div>
+                </div>
+                {seo.issues.length > 0 && (
+                  <ul className="muted" style={{ fontSize: 12, marginTop: 8, paddingLeft: 16 }}>
+                    {seo.issues.map((f, i) => <li key={i} style={{ marginBottom: 2 }}>{f}</li>)}
+                  </ul>
+                )}
+              </details>
             );
           })()}
 
