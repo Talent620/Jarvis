@@ -51,9 +51,10 @@ const PRESETS: { label: string; prompt: string }[] = [
   { label: "🎨 Zmień kolor", prompt: "Zmień kolor wskazanego elementu na podany (dopisz jaki). Zachowaj materiał, fakturę, odblaski i cienie — realistycznie, bez śladu edycji." },
   { label: "↻ Wyprostuj/obróć", prompt: "Ustaw przedmiot we właściwej orientacji (obróć do góry właściwą stroną / wyprostuj). Zachowaj realistyczną perspektywę, cienie i tło." },
   { label: "🦵 Wymień nogi/elementy", prompt: "Wymień nogi / wskazane elementy mebla na opisane (dopisz na jakie). Dopasuj styl, materiał, proporcje i światło — fotorealistycznie." },
-  { label: "🛍 Packshot (e-commerce)", prompt: "Profesjonalny packshot do sklepu: czyste białe tło, studyjne światło, miękkie cienie, idealna ostrość i kolory. Zachowaj przedmiot wiernie." },
-  { label: "🏠 Zmień tło/scenę", prompt: "Umieść przedmiot w eleganckiej aranżacji wnętrza. Realistyczne światło, cienie i perspektywa pasujące do nowego otoczenia." },
-  { label: "✨ Odśwież/wyczyść", prompt: "Wyczyść przedmiot: usuń kurz, zarysowania i odciski, popraw oświetlenie i ostrość. Zachowaj pełny realizm." },
+  { label: "🛍 Packshot (białe tło)", prompt: "Profesjonalny packshot e-commerce: WYTNIJ sam przedmiot z otoczenia i umieść na czystym, jednolitym BIAŁYM tle, wyśrodkowany. Zachowaj TEN SAM przedmiot — jego kształt, proporcje i perspektywę; nie zmieniaj geometrii ani nie obracaj. Jasne, równomierne studyjne światło, miękki cień pod przedmiotem, wysoka ostrość, realistyczne kolory; NIE przyciemniaj. Zachowaj oryginalne napisy i etykiety wiernie. Fotorealistycznie, bez śladu edycji, jak zdjęcie katalogowe." },
+  { label: "🆕 Odnów (jak nowy)", prompt: "Odnów przedmiot do stanu jak nowy: usuń brud, kurz, zarysowania, odciski i przebarwienia z metalu i plastiku. Zachowaj IDENTYCZNY przedmiot, kształt, kadr, kąt i perspektywę — nie przesuwaj, nie obracaj, nie zmieniaj geometrii. Jasne, równomierne światło, czyste realistyczne kolory, wysoka ostrość. Zachowaj wszystkie napisy i etykiety bez zmian. Fotorealistycznie, bez śladu edycji, nie twórz nowej sceny." },
+  { label: "🏠 Zmień tło/scenę", prompt: "Umieść przedmiot w eleganckiej aranżacji wnętrza. Zachowaj ten sam przedmiot, jego kształt i perspektywę bez zmian. Realistyczne światło, cienie i perspektywa pasujące do nowego otoczenia, fotorealistycznie." },
+  { label: "✨ Odśwież/wyczyść", prompt: "Wyczyść przedmiot: usuń kurz, zarysowania i odciski, popraw oświetlenie i ostrość. Zachowaj IDENTYCZNY przedmiot, kadr i perspektywę — nie zmieniaj geometrii. Pełny realizm, bez śladu edycji." },
 ];
 
 export default function Studio({ onClose }: { onClose: () => void }) {
