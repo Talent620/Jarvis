@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🎯 Kreator stron — Conversion AI (CRO): obok audytu jakości masz teraz osobny wynik mocy SPRZEDAŻOWEJ strony (0–100 + ocena A–D) — sprawdza nagłówek z korzyścią, CTA i ich powtórzenia, dowód społeczny, sygnały zaufania, cennik, przechwytywanie leada, język korzyści, FAQ i kontakt. Plus przycisk Podnieś konwersję, który jednym kliknięciem nanosi priorytetowe poprawki.",
       "✨ Dynamiczny follow-up AI: w Planie sprzedaży przycisk AI follow-up pisze unikalne ponaglenie z kontekstu leada (firma, branża, słabe punkty z wywiadu, poprzednia wiadomość, dni od kontaktu, numer próby) — inny kąt za każdym razem, bez szablonu; przy braku mózgu wraca do sprawdzonego szablonu.",
       "📬 Sprzedaż — agent dostarczalności: pod draftem maila do leada widzisz ryzyko spamu (0–100) i konkretne poprawki, zanim wyślesz.",
       "🍱 Kreator stron — sekcje premium na klik: gdy masz gotową stronę, jednym dotknięciem dodasz dopracowaną sekcję (bento, hero 3D/parallax, scroll-storytelling, liczby count-up, cennik, opinie, pasek zaufania, galeria, mocne CTA, kontakt) — model wstawia je spójnie ze stylem Twojej strony.",

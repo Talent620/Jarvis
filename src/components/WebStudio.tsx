@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
+import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast } from "../lib/toast";
 import Guide from "./Guide";
@@ -326,6 +327,31 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
               </button>
             </div>
           )}
+
+          {/* 🎯 Conversion AI (CRO) — osobny panel mocy sprzedażowej (nieinwazyjny dodatek) */}
+          {html && (() => {
+            const cro = conversionAudit(html);
+            return (
+              <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, minWidth: 0 }}>🎯 Konwersja (CRO)</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, flexShrink: 0, color: cro.score >= 85 ? "#39d98a" : cro.score >= 60 ? "var(--gold)" : "#ff6b6b" }}>{cro.score}/100 · {cro.grade}</span>
+                </div>
+                {cro.topFixes.length > 0 ? (
+                  <ul className="muted" style={{ fontSize: 12, marginTop: 4, paddingLeft: 16 }}>
+                    {cro.topFixes.map((f, i) => <li key={i} style={{ marginBottom: 2 }}>{f}</li>)}
+                  </ul>
+                ) : (
+                  <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Mocna strona sprzedażowa: CTA, dowód społeczny, lead capture ✓</div>
+                )}
+                {cro.topFixes.length > 0 && (
+                  <button className="btn" style={{ width: "100%", marginTop: 8 }} disabled={busy} onClick={() => run(true, conversionFixInstruction(cro))}>
+                    {busy ? "Optymalizuję…" : "🎯 Podnieś konwersję (zastosuj poprawki)"}
+                  </button>
+                )}
+              </div>
+            );
+          })()}
 
           {/* 💰 Automatyczna wycena — realne widełki rynku PL */}
           <button className="btn" style={{ marginTop: 8, width: "100%" }} disabled={busy} onClick={() => setQuote(estimateQuote(kind, brief))}>
