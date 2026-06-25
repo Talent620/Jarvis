@@ -33,8 +33,8 @@ export interface ImageModelMeta {
 export const IMAGE_MODELS_LIST: ImageModelMeta[] = [
   { id: "pollinations", label: "Pollinations (darmowy, bez klucza)", tier: "free", note: "W pełni za darmo — bez klucza i bez logowania. Tworzy obraz z opisu (FLUX). Nie edytuje istniejących zdjęć." },
   { id: "gemini", label: "Gemini Nano Banana", tier: "free", note: "Darmowy (klucz Gemini). Topowy edytor opisem — czołówka 2026." },
-  { id: "fal-flux-kontext", label: "FLUX.1 Kontext Pro", tier: "premium", note: "Najlepsza spójność detali przy wielu edycjach. fal.ai, płatny (~$0.04/obraz)." },
-  { id: "fal-nano-banana", label: "Nano Banana Pro", tier: "premium", note: "Najmocniejszy edytor Google przez fal.ai. Płatny (~$0.08/obraz)." },
+  { id: "fal-flux-kontext", label: "FLUX.1 Kontext Pro", tier: "premium", note: "Generuje z opisu ORAZ edytuje zdjęcia (FLUX). fal.ai, płatny (~$0.04/obraz). Klucz Gemini niepotrzebny." },
+  { id: "fal-nano-banana", label: "Nano Banana Pro", tier: "premium", note: "Generuje z opisu ORAZ edytuje (Nano Banana przez fal.ai). Płatny (~$0.08/obraz). Klucz Gemini niepotrzebny." },
   { id: "local-sd", label: "Lokalny (Stable Diffusion)", tier: "free", note: "Na Twoim PC (A1111/Forge) — za darmo, offline, bez limitów. Wymaga adresu serwera w ⚙ → AI." },
 ];
 
@@ -109,9 +109,15 @@ async function geminiEdit(prompt: string, inputs: Img[]): Promise<Result> {
 }
 
 // --- fal.ai (premium) ---
+// Endpointy EDYCJI (ze zdjęciem) i osobne endpointy GENEROWANIA Z OPISU (bez zdjęcia), żeby fal.ai
+// był pełnym studiem (text→image + edycja) — wtedy klucz Gemini jest niepotrzebny.
 const FAL_ENDPOINT: Record<string, string> = {
   "fal-flux-kontext": "fal-ai/flux-pro/kontext",
   "fal-nano-banana": "fal-ai/nano-banana/edit",
+};
+const FAL_TXT2IMG: Record<string, string> = {
+  "fal-flux-kontext": "fal-ai/flux/dev",
+  "fal-nano-banana": "fal-ai/nano-banana",
 };
 
 function blobToBase64(blob: Blob): Promise<string> {
@@ -133,12 +139,14 @@ async function falEdit(modelId: ImageModelId, prompt: string, inputs: Img[]): Pr
   // z czatu/zrzutu wkradają się i wywalają budowę nagłówka HTTP („non ISO-8859-1 code point").
   const key = (store.settings.falApiKey || "").replace(/[^\x20-\x7E]/g, "").trim();
   if (!key) return { error: "Model premium wymaga klucza fal.ai — dodaj go w ⚙ → AI (Studio premium)." };
-  if (!inputs.length) return { error: "Modele premium edytują istniejące zdjęcie — najpierw dołącz zdjęcie." };
-  const endpoint = FAL_ENDPOINT[modelId];
-  const imageUri = `data:${inputs[0].mediaType};base64,${inputs[0].data}`;
-  const body: any = { prompt, image_url: imageUri, num_images: 1 };
-  // FLUX Kontext przyjmuje pojedynczy obraz; Nano Banana edit — listę.
-  if (modelId === "fal-nano-banana") body.image_urls = inputs.map((i) => `data:${i.mediaType};base64,${i.data}`);
+  // Bez zdjęcia → GENEROWANIE Z OPISU (text→image) na osobnym endpoincie fal.ai; ze zdjęciem → EDYCJA.
+  const isEdit = inputs.length > 0;
+  const endpoint = isEdit ? FAL_ENDPOINT[modelId] : (FAL_TXT2IMG[modelId] || FAL_TXT2IMG["fal-flux-kontext"]);
+  const body: any = isEdit
+    ? { prompt, image_url: `data:${inputs[0].mediaType};base64,${inputs[0].data}`, num_images: 1 }
+    : { prompt, num_images: 1, image_size: "square_hd" };
+  // FLUX Kontext (edycja) przyjmuje pojedynczy obraz; Nano Banana edit — listę.
+  if (isEdit && modelId === "fal-nano-banana") body.image_urls = inputs.map((i) => `data:${i.mediaType};base64,${i.data}`);
   try {
     const res = await fetchTimeout(viaProxy(`https://fal.run/${endpoint}`), {
       method: "POST",

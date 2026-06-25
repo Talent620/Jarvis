@@ -67,11 +67,19 @@ describe("Studio — modele edycji", () => {
     if ("error" in r) expect(r.error).toMatch(/fal\.ai/i);
   });
 
-  it("premium z kluczem ale bez zdjęcia → prosi o zdjęcie", async () => {
+  it("premium z kluczem bez zdjęcia → GENERUJE z opisu (text→image), nie prosi o zdjęcie", async () => {
     store.setSettings({ falApiKey: "fal-test" });
     const r = await generateImage("zrób packshot", undefined, "fal-nano-banana");
+    // W teście fetch jest mockowany → kończy się błędem sieci/HTTP, ale NIE komunikatem o dołączeniu zdjęcia.
     expect("error" in r).toBe(true);
-    if ("error" in r) expect(r.error).toMatch(/zdjęcie/i);
+    if ("error" in r) expect(r.error).not.toMatch(/dołącz zdjęcie|najpierw dołącz/i);
+  });
+
+  it("premium bez klucza fal.ai → prosi o klucz", async () => {
+    store.setSettings({ falApiKey: "" });
+    const r = await generateImage("packshot", undefined, "fal-flux-kontext");
+    expect("error" in r).toBe(true);
+    if ("error" in r) expect(r.error).toMatch(/klucz\w* fal\.ai/i);
   });
 
   it("geminiEditPrompt: bez zdjęcia → prompt bez zmian; ze zdjęciem → kotwica edycji", () => {

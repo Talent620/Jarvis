@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🖼 Studio Obrazów — fal.ai generuje też z opisu (nie tylko edytuje): masz klucz fal.ai i chcesz stworzyć obraz z samego tekstu? Teraz działa bez klucza Gemini — fal.ai robi i generowanie z opisu, i edycję zdjęć. Wybierz model fal.ai i pisz prompt.",
       "✍ Maile do leadów — akcje AI kompozytora: pod draftem maila masz przyciski Skróć, Rozwiń, Mocniejsze CTA, Formalnie, Luźniej, Personalizuj, Przepisz — jedno dotknięcie przerabia treść; przy błędzie zostaje oryginał. Obok widzisz też ryzyko spamu (dostarczalność).",
       "🎨 Dusza Marki (Brand-kit): ustaw raz tożsamość — ton głosu, paletę kolorów, typografię, słowa kluczowe — a JARVIS użyje jej automatycznie przy tworzeniu stron, treści i obrazów, dla spójnego wyglądu i języka. Znajdziesz ją w Centrum (Sprzedaż i biznes). Puste pola = generacja działa jak dotąd.",
       "🎯 Kreator stron — Conversion AI (CRO): obok audytu jakości masz teraz osobny wynik mocy SPRZEDAŻOWEJ strony (0–100 + ocena A–D) — sprawdza nagłówek z korzyścią, CTA i ich powtórzenia, dowód społeczny, sygnały zaufania, cennik, przechwytywanie leada, język korzyści, FAQ i kontakt. Plus przycisk Podnieś konwersję, który jednym kliknięciem nanosi priorytetowe poprawki.",
