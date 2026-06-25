@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🎨 Dusza Marki (Brand-kit): ustaw raz tożsamość — ton głosu, paletę kolorów, typografię, słowa kluczowe — a JARVIS użyje jej automatycznie przy tworzeniu stron, treści i obrazów, dla spójnego wyglądu i języka. Znajdziesz ją w Centrum (Sprzedaż i biznes). Puste pola = generacja działa jak dotąd.",
       "🎯 Kreator stron — Conversion AI (CRO): obok audytu jakości masz teraz osobny wynik mocy SPRZEDAŻOWEJ strony (0–100 + ocena A–D) — sprawdza nagłówek z korzyścią, CTA i ich powtórzenia, dowód społeczny, sygnały zaufania, cennik, przechwytywanie leada, język korzyści, FAQ i kontakt. Plus przycisk Podnieś konwersję, który jednym kliknięciem nanosi priorytetowe poprawki.",
       "✨ Dynamiczny follow-up AI: w Planie sprzedaży przycisk AI follow-up pisze unikalne ponaglenie z kontekstu leada (firma, branża, słabe punkty z wywiadu, poprzednia wiadomość, dni od kontaktu, numer próby) — inny kąt za każdym razem, bez szablonu; przy braku mózgu wraca do sprawdzonego szablonu.",
       "📬 Sprzedaż — agent dostarczalności: pod draftem maila do leada widzisz ryzyko spamu (0–100) i konkretne poprawki, zanim wyślesz.",

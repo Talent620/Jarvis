@@ -342,7 +342,21 @@ export interface JournalEntry {
   updatedAt: number;
 }
 
+/** Dusza Marki — spójna tożsamość wstrzykiwana do generatorów (stron, treści, obrazów). */
+export interface BrandKit {
+  name?: string; // nazwa marki
+  tagline?: string; // hasło przewodnie
+  voice?: string; // ton głosu (np. „ekspercki, ciepły, bez żargonu")
+  audience?: string; // grupa docelowa
+  colors?: string; // paleta (np. „granat #0A2540, złoty #C8A24B")
+  fonts?: string; // typografia (np. „nagłówki Playfair, tekst Inter")
+  keywords?: string; // słowa kluczowe / styl wizualny
+  avoid?: string; // czego unikać (słowa, style)
+}
+
 export interface Settings {
+  /** Dusza Marki — opcjonalna, wstrzykiwana do generacji dla spójności (puste = bez zmian). */
+  brandKit?: BrandKit;
   /** Wybrany dostawca AI: "auto" lub konkretny (anthropic/gemini/groq/openrouter/nvidia/github). */
   provider: string;
   /** Klucze API per dostawca (przechowywane lokalnie na urządzeniu). */

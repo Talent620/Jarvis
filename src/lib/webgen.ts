@@ -1,6 +1,7 @@
 import { askModel } from "./brain";
 import { humanize } from "./aiHelpers";
 import { zl } from "./format";
+import { appendBrand } from "./brandKit";
 
 // Autonomiczny generator stron i SKLEPÓW: z opisu tworzy KOMPLETNĄ, nowoczesną
 // witrynę w jednym pliku HTML (wbudowany CSS i JS) na poziomie premium. Działa
@@ -163,7 +164,8 @@ export async function generateSite(
     : `Zbuduj stronę według opisu: ${prompt}`;
 
   try {
-    const reply = await askModel({ system, history: [{ role: "user", content: userMsg }], heavy: true });
+    // Dusza Marki — dokleja tożsamość (kolory/fonty/ton) do system-promptu; pusty kit = bez zmian.
+    const reply = await askModel({ system: appendBrand(system), history: [{ role: "user", content: userMsg }], heavy: true });
     const html = extractHtml(reply || "");
     if (!html) return { error: "Model nie zwrócił kodu HTML — spróbuj doprecyzować opis." };
     return { html };

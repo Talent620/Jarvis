@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { generateImage, humanizeImageError, bestImageModel, imageModelCost, IMAGE_MODELS_LIST, type ImageModelId } from "../lib/images";
+import { brandImageSuffix } from "../lib/brandKit";
 import { capturePhoto } from "../lib/camera";
 import { useEscape } from "../hooks/useEscape";
 import { store } from "../lib/store";
@@ -115,7 +116,9 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     if (model === "local-sd") setSdProgress(0);
     // Strażnik odmontowania: jeśli użytkownik zamknie Studio w trakcie, nie ruszamy stanu.
     const onProg = model === "local-sd" ? (p: number) => { if (mounted.current) setSdProgress(p); } : undefined;
-    const r = await generateImage(text, ins.length ? ins : undefined, model, sdOpts, onProg);
+    // Dusza Marki — dla generacji z opisu dokleja paletę/styl marki (przy edycji zdjęcia pomijamy).
+    const promptBrand = ins.length ? text : text + brandImageSuffix();
+    const r = await generateImage(promptBrand, ins.length ? ins : undefined, model, sdOpts, onProg);
     if (!mounted.current) return;
     setSdProgress(0);
     if ("error" in r) {

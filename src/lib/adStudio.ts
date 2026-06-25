@@ -1,4 +1,5 @@
 import { askModel } from "./brain";
+import { appendBrand } from "./brandKit";
 
 // Generator reklam (Faza 0 automatyzacji reklam) — JARVIS pisze gotowe zestawy reklam
 // pod Google Ads (wyszukiwarka) i Meta (FB/IG): nagłówki, opisy, słowa kluczowe, CTA,
@@ -67,7 +68,7 @@ export async function generateAds(o: AdOpts): Promise<string> {
   if (!o.product?.trim()) return "";
   try {
     // askModel: pełny failover (rotacja kluczy + przełączanie dostawców + retry) — jak czat.
-    return (await askModel({ system: adSystem(o.platform), history: [{ role: "user", content: adUserPrompt(o) }], heavy: true })).trim();
+    return (await askModel({ system: appendBrand(adSystem(o.platform)), history: [{ role: "user", content: adUserPrompt(o) }], heavy: true })).trim();
   } catch {
     return "";
   }

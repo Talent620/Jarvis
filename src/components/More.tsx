@@ -40,6 +40,7 @@ export default function More({
   onSent,
   onContent,
   onAds,
+  onBrand,
   onFaq,
   onClose,
 }: {
@@ -78,6 +79,7 @@ export default function More({
   onSent: () => void;
   onContent: () => void;
   onAds: () => void;
+  onBrand: () => void;
   onFaq: () => void;
   onClose: () => void;
 }) {
@@ -110,6 +112,7 @@ export default function More({
     { id: "sales", icon: "📈", name: "Sprzedaż", desc: "Pulpit Sprzedaży (leady, CRM)", fn: onSales },
     { id: "content", icon: "📱", name: "Kontent", desc: "Posty na social media", fn: onContent },
     { id: "ads", icon: "📢", name: "Reklamy", desc: "Google Ads / Facebook / Instagram", fn: onAds },
+    { id: "brand", icon: "🎨", name: "Dusza Marki", desc: "Ton, kolory, fonty — spójne strony, treści i obrazy", fn: onBrand },
     { id: "sent", icon: "📤", name: "Wysłane", desc: "Gdzie wysłałem maile", fn: onSent },
     { id: "web", icon: "🌐", name: "Kreator stron", desc: "Zbuduj witrynę", fn: onWeb },
     { id: "hud", icon: "👁", name: "Wizja HUD", desc: "Kamera — co widzisz?", fn: onHud },
@@ -126,7 +129,7 @@ export default function More({
 
   // Funkcje pogrupowane w czytelne sekcje — łatwiej znaleźć, mniej przewijania.
   const GROUPS: { title: string; ids: string[] }[] = [
-    { title: "📈 Sprzedaż i biznes", ids: ["sales", "sent", "content", "ads", "web", "money"] },
+    { title: "📈 Sprzedaż i biznes", ids: ["sales", "sent", "content", "ads", "brand", "web", "money"] },
     { title: "✅ Praca i organizacja", ids: ["tasks", "projects", "journal", "cards"] },
     { title: "🛒 Zakupy i okazje", ids: ["bargain", "wheretobuy", "shoppinglist"] },
     { title: "🎙 Narzędzia AI", ids: ["translator", "transcribe", "hud", "screen", "studio"] },

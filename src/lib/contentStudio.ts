@@ -1,5 +1,6 @@
 import { askModel } from "./brain";
 import { store } from "./store";
+import { appendBrand } from "./brandKit";
 
 // Maszynka do kontentu — JARVIS pisze gotowy post na social media (hook, treść,
 // hashtagi, CTA) dla wybranej platformy. Kopiujesz albo udostępniasz jednym tapnięciem
@@ -64,7 +65,7 @@ export function saveContentPost(platform: string, topic: string, text: string) {
 export async function generatePost(o: ContentOpts): Promise<string> {
   if (!o.topic?.trim()) return "";
   try {
-    return (await askModel({ system: contentSystem(o.platform), history: [{ role: "user", content: contentUserPrompt(o) }], heavy: true })).trim();
+    return (await askModel({ system: appendBrand(contentSystem(o.platform)), history: [{ role: "user", content: contentUserPrompt(o) }], heavy: true })).trim();
   } catch {
     return "";
   }
