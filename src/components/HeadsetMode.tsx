@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { speak, stopSpeaking } from "../lib/voice";
 import { askJarvis } from "../lib/brain";
+import { LIVE_VOICE_PERSONA } from "../lib/voicePersona";
 import { store } from "../lib/store";
 import { cue, buzz } from "../lib/feedback";
 import { keepAwake, releaseAwake } from "../lib/wakeLock";
@@ -79,7 +80,9 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
     cue("tap");
     history.current = [...history.current, { role: "user" as const, content: text }].slice(-16);
     try {
-      const reply = await askJarvis(history.current);
+      // Rozmowa NA ŻYWO: persona mowy (krótko, naturalnie, jak człowiek) doklejona do systemowego
+      // promptu. Pamięć/profil/narzędzia/uczenie się są już w askJarvis — tu nadajemy STYL głosu.
+      const reply = await askJarvis(history.current, undefined, undefined, LIVE_VOICE_PERSONA);
       history.current = [...history.current, { role: "assistant" as const, content: reply.text }].slice(-16);
       setCaption(reply.text);
       setPhase("speaking");
