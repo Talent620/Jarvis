@@ -24,3 +24,4 @@ license-private.json
 # Sekrety BFF (lokalny dev) — NIGDY do repo
 proxy/.dev.vars
 .dev.vars
+JARVIS_KOD_BACKUP.zip
