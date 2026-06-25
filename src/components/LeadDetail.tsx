@@ -3,6 +3,7 @@ import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { buildDossier, auditWeakPoints, scoreLabel, smsDraft } from "../lib/leadIntel";
 import { gmailComposeUrl, mailtoUrl, mapsSearchUrl, smsUrl, splitOffer, safeOpenExternal } from "../lib/glinks";
+import { scoreDeliverability, deliverabilityLabel } from "../lib/emailDeliverability";
 import { canSendDirect, sendOfferEmail } from "../lib/mailer";
 import { draftOffer } from "../lib/offer";
 import { markContacted } from "../lib/salesEngine";
@@ -260,6 +261,18 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
               <h3 style={{ marginTop: 14 }}>✉ Spersonalizowany e-mail</h3>
               <div className="journal-card">
                 <p className="muted" style={{ whiteSpace: "pre-wrap", margin: 0, fontSize: 13 }}>{intel?.email || lead.offer}</p>
+                {/* 📬 Agent dostarczalności — ryzyko spamu + szybkie poprawki (Revenue OS) */}
+                {(() => {
+                  const txt = intel?.email || lead.offer || "";
+                  const { subject, body } = splitOffer(txt, `Oferta dla ${lead.company}`, store.settings.emailSignature);
+                  const d = scoreDeliverability(subject, body);
+                  return (
+                    <div style={{ marginTop: 8, fontSize: 12 }}>
+                      <span style={{ fontWeight: 700, color: d.risk === "low" ? "#39d98a" : d.risk === "medium" ? "var(--gold)" : "#ff6b6b" }}>📬 {deliverabilityLabel(d)}</span>
+                      {d.fixes.length > 0 && <div className="muted" style={{ marginTop: 2 }}>Popraw: {d.fixes.slice(0, 2).join(" ")}</div>}
+                    </div>
+                  );
+                })()}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                   {canSendDirect() && email && (
                     <button className="chip" style={{ borderColor: "var(--ok, #58e08a)" }} onClick={sendNow} disabled={sending}>
