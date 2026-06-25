@@ -13,6 +13,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🖼 Studio Obrazów — eksport JPG/WEBP i pobranie całej galerii ZIP: pod wynikiem masz przyciski PNG / JPG / WEBP (konwersja na urządzeniu), a w historii przeróbek jeden klik pobiera wszystkie obrazy spakowane w ZIP (pełna rozdzielczość).",
+      "💾 Kreator stron — autosave projektu: gdy pracujesz na zapisanym projekcie, każda budowa/edycja zapisuje się automatycznie i dokłada wersję do historii — nic nie zginie.",
       "💾 Kreator stron — Zapisz Projekt: budowane strony nie znikają po zamknięciu. Zapisujesz projekt (HTML + opis + typ + styl + brief), wczytujesz go później, robisz zapis jako nowy, masz historię wersji z przywracaniem oraz eksport/import do pliku .json. Wiele projektów naraz, przechowywane lokalnie na urządzeniu.",
       "🧩 Kreator stron — nowe typy: SaaS i Blog: oprócz Landing, Sklep, Firma i Portfolio dobudujesz teraz stronę produktu SaaS (hero z mockupem, cennik z przełącznikiem rok/mc, social proof) oraz blog/magazyn (siatka artykułów, kategorie, newsletter) — z kompletem SEO/OG/Schema jak reszta.",
       "🔐 Panel administratora — nowe hasło i pełniejsza kontrola kluczy: dostęp do panelu odblokowujesz teraz HASŁEM administratora (osobny, mocny sekret). W panelu masz podgląd wydanych kluczy i — dla kluczy ONLINE (Worker) — natychmiastowe unieważnienie oraz podgląd, kto korzysta (urządzenia). Dla kluczy OFFLINE dodano kill-switch: w 🔎 Inspektorze kopiujesz ID blokady, a po aktualizacji aplikacji taki klucz przestaje działać u wszystkich.",

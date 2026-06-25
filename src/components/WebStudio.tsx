@@ -146,6 +146,11 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
         setAudit(auditSite(r.html)); // ETAP 6/8/9 — automatyczny audyt jakości
         setView("preview");
         if (edit && !instructionOverride) setPrompt(""); // czyść pole tylko, gdy to z pola
+        // 💾 Autosave: jeśli pracujesz na zapisanym projekcie, utrwal nową wersję automatycznie.
+        if (projId) {
+          const rec = saveSiteProject({ id: projId, name: projName, prompt: edit ? prompt : (instructionOverride ?? prompt), kind, style, html: r.html, brief });
+          setProjId(rec.id); refreshProjs();
+        }
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));

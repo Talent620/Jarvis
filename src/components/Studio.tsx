@@ -10,6 +10,7 @@ import { toast } from "../lib/toast";
 import { refineEdit, type EditPlan } from "../lib/editAssistant";
 import { loadUsage } from "../lib/usageTelemetry";
 import { saveImageEdit, listImageHistory, removeImageEdit } from "../lib/imageHistory";
+import { buildZip, base64ToBytes } from "../lib/zip";
 import type { ImageEdit } from "../types";
 import Guide from "./Guide";
 
@@ -228,12 +229,39 @@ export default function Studio({ onClose }: { onClose: () => void }) {
   };
   const delHist = (id: string) => { removeImageEdit(id); setHist(listImageHistory()); };
 
-  const download = () => {
-    if (!result) return;
+  const triggerDownload = (href: string, name: string, revoke = false) => {
     const a = document.createElement("a");
-    a.href = src(result);
-    a.download = `jarvis-edycja-${Date.now()}.png`;
+    a.href = href; a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
+    if (revoke) setTimeout(() => URL.revokeObjectURL(href), 2000);
+  };
+  const download = () => { if (result) triggerDownload(src(result), `jarvis-edycja-${Date.now()}.png`); };
+
+  // ⬇ Eksport bieżącego wyniku w wybranym formacie (konwersja przez canvas). JPG bez przezroczystości.
+  const downloadAs = (mime: "image/jpeg" | "image/webp", ext: "jpg" | "webp") => {
+    if (!result) return;
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth || 1024; c.height = img.naturalHeight || 1024;
+      const ctx = c.getContext("2d");
+      if (!ctx) { toast("Konwersja niedostępna w tym środowisku."); return; }
+      if (mime === "image/jpeg") { ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, c.width, c.height); }
+      ctx.drawImage(img, 0, 0);
+      triggerDownload(c.toDataURL(mime, 0.92), `jarvis-edycja-${Date.now()}.${ext}`);
+    };
+    img.onerror = () => toast("Nie udało się skonwertować obrazu.");
+    img.src = src(result);
+  };
+
+  // ⬇ Pobierz CAŁĄ galerię jednym plikiem ZIP (pełna rozdzielczość, oryginalne formaty).
+  const downloadZip = () => {
+    if (!hist.length) return;
+    const extOf = (m: string) => (/jpe?g/i.test(m) ? "jpg" : /webp/i.test(m) ? "webp" : "png");
+    const entries = hist.map((it, i) => ({ name: `jarvis-${String(i + 1).padStart(2, "0")}.${extOf(it.mediaType)}`, data: base64ToBytes(it.data) }));
+    const blob = new Blob([buildZip(entries) as unknown as BlobPart], { type: "application/zip" });
+    triggerDownload(URL.createObjectURL(blob), `galeria-jarvis-${Date.now()}.zip`, true);
+    toast(`📦 Spakowano ${entries.length} obraz(y) do ZIP.`);
   };
 
   return (
@@ -434,8 +462,12 @@ export default function Studio({ onClose }: { onClose: () => void }) {
               ) : (
                 <img src={src(result)} alt="wynik" style={{ width: "100%", borderRadius: 12, marginTop: 8, border: "1px solid var(--line-strong)" }} />
               )}
+              <div className="chips" style={{ marginTop: 8, flexWrap: "wrap", gap: 6 }}>
+                <button className="chip" onClick={download}>⬇ PNG</button>
+                <button className="chip" onClick={() => downloadAs("image/jpeg", "jpg")}>⬇ JPG</button>
+                <button className="chip" onClick={() => downloadAs("image/webp", "webp")}>⬇ WEBP</button>
+              </div>
               <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                <button className="btn" style={{ flex: 1 }} onClick={download}>⬇ Pobierz</button>
                 <button className="btn" style={{ flex: 1 }} onClick={editFurther}>✏ Edytuj dalej</button>
                 {history.length > 1 && <button className="btn" onClick={undo}>↩ Cofnij wersję</button>}
               </div>
@@ -446,7 +478,10 @@ export default function Studio({ onClose }: { onClose: () => void }) {
           {/* 🕘 Historia przeróbek — trwała (przeżywa zamknięcie Studia). Dotknij = weź do dalszej edycji. */}
           {hist.length > 0 && (
             <div style={{ marginTop: 14 }}>
-              <p style={{ fontWeight: 700, color: "var(--cyan)", margin: "0 0 4px", fontSize: 13 }}>🕘 Historia przeróbek ({hist.length})</p>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <p style={{ fontWeight: 700, color: "var(--cyan)", margin: "0 0 4px", fontSize: 13 }}>🕘 Historia przeróbek ({hist.length})</p>
+                <button className="chip" onClick={downloadZip}>📦 Pobierz całość (ZIP)</button>
+              </div>
               <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "4px 0", WebkitOverflowScrolling: "touch", touchAction: "pan-x" }}>
                 {hist.map((it) => (
                   <div key={it.id} className="img-preview" style={{ margin: 0, position: "relative", flex: "0 0 auto" }}>
