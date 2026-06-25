@@ -248,6 +248,23 @@ export function buildStrategySeed(desc: string, strategy: string): string {
   return `${d ? d + "\n\n" : ""}WYTYCZNE STRATEGICZNE (zastosuj w treści, strukturze i CTA):\n${s}`;
 }
 
+// === ETAP 4 — biblioteka gotowych SEKCJI PREMIUM (model wstawia je spójnie ze stylem strony) ===
+
+export interface SectionPreset { id: string; label: string; instruction: string }
+
+export const SECTION_PRESETS: SectionPreset[] = [
+  { id: "bento", label: "🍱 Bento grid", instruction: "Dodaj nowoczesną sekcję BENTO GRID: asymetryczna siatka kart różnej wielkości (styl Apple/Linear), każda z ikoną inline SVG, nagłówkiem i krótkim opisem; hover-animacje, w pełni responsywna." },
+  { id: "hero3d", label: "🌀 Hero 3D / parallax", instruction: "Przebuduj HERO na efekt 3D/parallax: warstwy poruszające się z kursorem i przewijaniem (transform), gradient-mesh/aurora w tle, mocny nagłówek clamp() i CTA. Czysty CSS/JS, bez bibliotek, z poszanowaniem prefers-reduced-motion." },
+  { id: "storytelling", label: "📜 Scroll storytelling", instruction: "Dodaj sekcję SCROLL STORYTELLING: sticky element po jednej stronie, treść odsłaniana sekwencyjnie przy przewijaniu (IntersectionObserver), narracja krok po kroku z opóźnieniami." },
+  { id: "stats", label: "📈 Liczby (count-up)", instruction: "Dodaj sekcję STATYSTYK: 3–4 duże liczby z animacją count-up od zera przy wejściu (IntersectionObserver) i podpisami; efektowna, spójna z paletą." },
+  { id: "pricing", label: "💲 Cennik", instruction: "Dodaj sekcję CENNIKA: 3 plany, środkowy wyróżniony, lista cech z checkami SVG, wyraźne CTA, przełącznik miesięcznie/rocznie w czystym JS." },
+  { id: "testimonials", label: "⭐ Opinie", instruction: "Dodaj sekcję OPINII KLIENTÓW: karty z cytatem, inicjałami w kółku, nazwiskiem i rolą, gwiazdki inline SVG; subtelne przewijanie/autoplay." },
+  { id: "logos", label: "🤝 Pasek zaufania", instruction: "Dodaj pasek ZAUFANIA pod hero: rząd logotypów (placeholdery SVG/teksty), wyszarzone z hover na kolor, nagłówek typu Zaufali nam." },
+  { id: "gallery", label: "🖼 Galeria", instruction: "Dodaj GALERIĘ w eleganckiej siatce z hover (zoom/overlay) i prostym lightboxem w czystym JS; obrazy z Unsplash dopasowane do tematu, loading=lazy." },
+  { id: "cta", label: "🎯 Mocne CTA", instruction: "Dodaj na końcu mocną sekcję CTA: duży nagłówek, jeden wyróżniony przycisk, gradient/akcent w tle, krótkie zapewnienie redukujące ryzyko." },
+  { id: "contact", label: "✉ Kontakt + formularz", instruction: "Dodaj sekcję KONTAKT: dostępny formularz (label/required/aria), walidacja w JS i komunikat sukcesu (bez backendu), dane kontaktowe i mapa-placeholder." },
+];
+
 // === Pełen proces „pod klienta”: brief → strona → wiadomość do klienta ===
 
 export interface ClientBrief {

@@ -1,6 +1,20 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, pickSiteStyle, auditSite, buildStrategySeed } from "../src/lib/webgen";
+import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, pickSiteStyle, auditSite, buildStrategySeed, SECTION_PRESETS } from "../src/lib/webgen";
+
+describe("SECTION_PRESETS — biblioteka sekcji premium", () => {
+  it("ma kluczowe sekcje, każda z niepustą instrukcją i unikalnym id", () => {
+    const ids = SECTION_PRESETS.map((s) => s.id);
+    for (const must of ["bento", "hero3d", "pricing", "testimonials", "cta", "contact"]) {
+      expect(ids).toContain(must);
+    }
+    expect(new Set(ids).size).toBe(ids.length); // unikalne id
+    for (const s of SECTION_PRESETS) {
+      expect(s.label.length).toBeGreaterThan(0);
+      expect(s.instruction.length).toBeGreaterThan(20);
+    }
+  });
+});
 
 describe("buildStrategySeed — łączy opis ze strategią dla generatora", () => {
   it("dokleja wytyczne strategiczne pod opisem", () => {

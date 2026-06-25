@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
+import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast } from "../lib/toast";
 import Guide from "./Guide";
@@ -71,21 +71,22 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
   const briefText = buildClientBrief(brief);
   const canBuild = !!(prompt.trim() || briefText);
 
-  const run = async (edit: boolean) => {
+  const run = async (edit: boolean, instructionOverride?: string) => {
+    const promptText = instructionOverride ?? prompt;
     // Edycja wymaga polecenia; budowa od zera może wyjść z briefu i/lub opisu.
-    if (edit ? !prompt.trim() : !canBuild) return;
+    if (edit ? !promptText.trim() : !canBuild) return;
     setBusy(true);
     setErr("");
     try {
       const base = [briefText, prompt].filter((s) => s.trim()).join("\n\n");
-      const desc = edit ? prompt : buildStrategySeed(base, strategy); // wlej strategię (ETAP 11), gdy jest
+      const desc = edit ? promptText : buildStrategySeed(base, strategy); // wlej strategię (ETAP 11), gdy jest
       const r = await generateSite(desc, edit && html ? html : undefined, kind, style);
       if ("error" in r) setErr(r.error);
       else {
         setHtml(r.html);
         setAudit(auditSite(r.html)); // ETAP 6/8/9 — automatyczny audyt jakości
         setView("preview");
-        if (edit) setPrompt("");
+        if (edit && !instructionOverride) setPrompt(""); // czyść pole tylko, gdy to z pola
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -291,6 +292,20 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
               <button className="btn" style={{ flex: 1, marginTop: 0 }} onClick={() => copyWithToast(clientHandoverMessage(brief.business), "Wiadomość do klienta skopiowana ✓")}>
                 📨 Wiadomość do klienta
               </button>
+            </div>
+          )}
+
+          {/* ➕ Sekcje premium (ETAP 4) — model wstawia spójnie ze stylem strony */}
+          {html && (
+            <div style={{ marginTop: 8 }}>
+              <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>➕ Dodaj sekcję premium</div>
+              <div className="chips" style={{ flexWrap: "wrap", gap: 6 }}>
+                {SECTION_PRESETS.map((s) => (
+                  <button key={s.id} className="chip" disabled={busy} title={s.instruction} onClick={() => run(true, s.instruction)}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
