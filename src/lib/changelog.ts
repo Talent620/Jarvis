@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🖼 Studio Obrazów — wierniejsza edycja premium (fal.ai): model fal.ai dostaje teraz tę samą kotwicę edycji co darmowy Gemini (zachowaj przedmiot, kadr i perspektywę, zmień tylko to, o co proszę). Koniec z rozjeżdżaniem kształtu — efekty są bliżej oryginału.",
       "💣 Mocniejszy i wyraźniejszy głos Kapitana Bomby: przebudowany tor audio (highpass na czystość, drive przed zniekształceniem dla spójnego charkotu, podbicie obecności ~1.5 kHz) — brzmi groźniej, a słowa lepiej się przebijają. Działa na głosie buforowym (Premium/Kokoro).",
       "✉ Koniec placeholdera w mailach: jeśli AI zostawiło w treści nawias typu [Twoje imię i nazwisko], [Nazwa firmy] czy [Telefon], JARVIS automatycznie go usuwa przed wysyłką (podpis z prawdziwym nazwiskiem dokleja się osobno). Dotyczy wysyłki ofert do leadów, masowej wysyłki i ręcznego maila. Dodatkowo generator ofert ma już zakaz wstawiania takich placeholderów.",
       "🛡 Większa niezawodność pod spodem: błędy w tle (nieobsłużone wyjątki i odrzucone obietnice) trafiają teraz do wewnętrznego monitora niezawodności — łatwiej je wychwycić i naprawić. Dodatkowo, gdy zapis do bazy na urządzeniu chwilowo zawiedzie, dane są ratowane do pamięci zapasowej, więc nic nie ginie.",

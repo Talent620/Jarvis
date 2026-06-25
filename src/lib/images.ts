@@ -142,8 +142,11 @@ async function falEdit(modelId: ImageModelId, prompt: string, inputs: Img[]): Pr
   // Bez zdjęcia → GENEROWANIE Z OPISU (text→image) na osobnym endpoincie fal.ai; ze zdjęciem → EDYCJA.
   const isEdit = inputs.length > 0;
   const endpoint = isEdit ? FAL_ENDPOINT[modelId] : (FAL_TXT2IMG[modelId] || FAL_TXT2IMG["fal-flux-kontext"]);
+  // Kotwica edycji — TAKA SAMA jak dla Gemini: zachowaj przedmiot/kadr/kompozycję, zmień tylko to,
+  // o co proszono. Bez tego fal.ai (premium) dostawał surowy prompt i „rozjeżdżał" geometrię/kadr.
+  const editText = geminiEditPrompt(prompt, true);
   const body: any = isEdit
-    ? { prompt, image_url: `data:${inputs[0].mediaType};base64,${inputs[0].data}`, num_images: 1 }
+    ? { prompt: editText, image_url: `data:${inputs[0].mediaType};base64,${inputs[0].data}`, num_images: 1 }
     : { prompt, num_images: 1, image_size: "square_hd" };
   // FLUX Kontext (edycja) przyjmuje pojedynczy obraz; Nano Banana edit — listę.
   if (isEdit && modelId === "fal-nano-banana") body.image_urls = inputs.map((i) => `data:${i.mediaType};base64,${i.data}`);

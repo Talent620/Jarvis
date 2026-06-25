@@ -114,6 +114,17 @@ describe("Studio — modele edycji", () => {
     vi.unstubAllGlobals();
   });
 
+  it("fal.ai + zdjęcie → żądanie EDYCJI niesie kotwicę edycji (spójnie z Gemini)", async () => {
+    store.setSettings({ falApiKey: "fal-test", proxyUrl: "" });
+    let body: any = null;
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: any) => { body = JSON.parse(init.body); return imgResp(); }));
+    const img = { data: "PHOTO64", mediaType: "image/jpeg" };
+    await generateImage("usuń naklejki", img, "fal-flux-kontext");
+    expect(body?.prompt).toMatch(/DOŁĄCZONE zdjęcie/); // kotwica edycji, nie surowy prompt
+    expect(body?.image_url).toMatch(/PHOTO64/);
+    vi.unstubAllGlobals();
+  });
+
   it("Pollinations + dołączone zdjęcie → NIE zmyśla edycji, kieruje do edytora (bramka)", async () => {
     // Regresja: darmowy generator ignorował zdjęcie i tworzył losowy, niepasujący obraz.
     const calls: string[] = [];
