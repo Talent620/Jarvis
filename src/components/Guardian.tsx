@@ -179,12 +179,12 @@ export default function Guardian({ onClose, onRun }: { onClose: () => void; onRu
     const isOpen = open[a.id] ?? a.state !== "ok"; // problemy rozwinięte domyślnie
     return (
       <div key={a.id} className="journal-card" style={{ padding: "8px 10px", marginBottom: 6 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => setOpen((o) => ({ ...o, [a.id]: !isOpen }))}>
-          <span>{STATE_DOT[a.state]}</span>
-          <span style={{ fontSize: 18 }}>{a.icon}</span>
-          <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{a.name}</span>
-          <span className="muted" style={{ fontSize: 12 }}>{a.summary}</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: healthCol(a.score >= 85 ? "A" : a.score >= 65 ? "B" : a.score >= 40 ? "C" : "D"), minWidth: 30, textAlign: "right" }}>{a.score}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, cursor: "pointer" }} onClick={() => setOpen((o) => ({ ...o, [a.id]: !isOpen }))}>
+          <span style={{ flexShrink: 0 }}>{STATE_DOT[a.state]}</span>
+          <span style={{ fontSize: 18, flexShrink: 0 }}>{a.icon}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span>
+          <span className="muted" style={{ fontSize: 12, flexShrink: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "right" }}>{a.summary}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: healthCol(a.score >= 85 ? "A" : a.score >= 65 ? "B" : a.score >= 40 ? "C" : "D"), minWidth: 30, flexShrink: 0, textAlign: "right" }}>{a.score}</span>
         </div>
         {isOpen && (
           <div style={{ marginTop: 6 }}>

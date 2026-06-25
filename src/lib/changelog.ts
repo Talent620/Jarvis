@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🐛 Strażnik (Diagnoza): koniec ucinania ocen po prawej stronie — wynik (np. 100/85) jest zawsze widoczny, a długie opisy podagentów skracają się wielokropkiem zamiast rozpychać wiersz poza ekran.",
       "🐛 Koniec wiecznego komunikatu o nowej wersji: aktualizacja porównuje teraz dokładnie ten sam znacznik buildu co zainstalowany (wcześniej czas wgrania pliku był o parę minut późniejszy niż build, więc apka po świeżej instalacji i tak ciągle widziała aktualizację).",
       "✨ Nowe Centrum (dawne menu pod ⋯): wszystkie funkcje jako nowoczesne kafelki z ikoną, krótką nazwą i opisem, pogrupowane w sekcje — plus wyszukiwarka na górze (wpisz np. zakupy albo tłumacz i od razu masz wynik; ignoruje polskie znaki i wielkość liter).",
       "🎨 Studio Obrazów — przejrzystość i pewność: przy każdym modelu plakietka ✅ gotowy / ⚙ wymaga klucza; auto-fallback (gdy płatny fal.ai padnie na braku środków, dokańczamy DARMOWYM Gemini); asystent pisze lepsze prompty (zostaw resztę bez zmian + jedna zmiana na raz — wg oficjalnych wytycznych Nano Banana).",
