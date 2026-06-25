@@ -43,6 +43,22 @@ export class ConversationLoop {
     return isSpeechSupported();
   }
 
+  /** Wstrzyknij wcześniejszą historię (ciągłość rozmowy po ponownym otwarciu). */
+  seedHistory(msgs: Msg[]): void {
+    if (Array.isArray(msgs) && msgs.length) this.history = msgs.slice(-12);
+  }
+
+  /** Bieżąca historia rozmowy (do zapisania ciągłości). */
+  getHistory(): Msg[] {
+    return this.history.slice();
+  }
+
+  /** Wyczyść historię (nowy temat). */
+  resetHistory(): void {
+    this.history = [];
+    this.lastReply = "";
+  }
+
   start(): void {
     if (!ConversationLoop.supported()) {
       // Niezawodność: brak STT NIE wyłącza Szefa — zostaje tor tekstowy (say()).

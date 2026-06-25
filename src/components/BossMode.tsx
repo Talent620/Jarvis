@@ -10,6 +10,7 @@ import { ROBOT_VOICE, BOSS_GREETING, bossSystem, bossQuickActions } from "../lib
 import { jarvisBriefing } from "../lib/capabilities";
 import { bossMemoryDigest } from "../lib/bossMemory";
 import { hasUsableBrain } from "../lib/brain";
+import { loadLiveThread, saveLiveThread, clearLiveThread, BOSS_THREAD_KEY } from "../lib/liveThread";
 import { parsePlan, currentStep } from "../lib/agentPlan";
 import { bestBrain, bestFreeBrain } from "../lib/league";
 import { loadIqResults } from "../lib/iqProbe";
@@ -82,6 +83,7 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
         // Plan tylko z wypowiedzi Szefa (nie z „🗣 …” użytkownika). Odhaczanie wg „Krok N”.
         if (!t.startsWith("🗣")) {
           lastReplyRef.current = t; setCanRepeat(true); // zapamiętaj do „🔁 Powtórz"
+          saveLiveThread(loopRef.current?.getHistory() || [], Date.now(), BOSS_THREAD_KEY); // ciągłość Szefa
           const p = parsePlan(t);
           if (p.length >= 2) { setPlan(p); setStep(0); }
           const cs = currentStep(t);
@@ -103,6 +105,9 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
         try { await speak(m, { ...store.settings, speak: true, ...ROBOT_VOICE }); } catch { /* brak głosu */ }
         return;
       }
+      // Ciągłość: jeśli zadanie/rozmowa Szefa była niedawno, wznów kontekst.
+      const prior = loadLiveThread(Date.now(), BOSS_THREAD_KEY);
+      if (prior.length) { loop.seedHistory(prior); if (!cancelled) setDetail("↩ Wznawiam — pamiętam nasze ostatnie zadanie."); }
       try { await speak(BOSS_GREETING, { ...store.settings, speak: true, ...ROBOT_VOICE }); } catch { /* brak głosu — trudno */ }
       if (!cancelled) loop.start();
     })();
@@ -171,14 +176,22 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
         </div>
 
         {canRepeat && state !== "speaking" && (
-          <button
-            className="chip"
-            style={{ marginTop: 10 }}
-            onClick={() => { stopSpeaking(); void speak(lastReplyRef.current, { ...store.settings, speak: true, ...ROBOT_VOICE }).catch(() => {}); }}
-            title="Powtórz ostatnią odpowiedź na głos"
-          >
-            🔁 Powtórz
-          </button>
+          <div className="chips" style={{ justifyContent: "center", marginTop: 10, gap: 6 }}>
+            <button
+              className="chip"
+              onClick={() => { stopSpeaking(); void speak(lastReplyRef.current, { ...store.settings, speak: true, ...ROBOT_VOICE }).catch(() => {}); }}
+              title="Powtórz ostatnią odpowiedź na głos"
+            >
+              🔁 Powtórz
+            </button>
+            <button
+              className="chip"
+              onClick={() => { loopRef.current?.resetHistory(); clearLiveThread(BOSS_THREAD_KEY); setPlan([]); setStep(0); setCanRepeat(false); setDetail(""); setCaption("Nowy temat. Słucham rozkazów."); }}
+              title="Zacznij nowy temat (wyczyść kontekst rozmowy)"
+            >
+              🆕 Nowy temat
+            </button>
+          </div>
         )}
 
         <button className="btn" style={{ maxWidth: 220, marginTop: 18 }} onClick={onClose}>■ Zakończ</button>
