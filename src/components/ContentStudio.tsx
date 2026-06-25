@@ -4,6 +4,7 @@ import { useStore } from "../hooks/useStore";
 import Modal from "./Modal";
 import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
 import { generatePost, saveContentPost, PLATFORMS, TONES, type Platform, type Tone } from "../lib/contentStudio";
+import { viralityScore } from "../lib/virality";
 
 // 📱 Maszynka do kontentu — JARVIS pisze gotowy post na social media. Kopiujesz
 // albo udostępniasz jednym tapnięciem do dowolnej apki (IG/FB/TikTok/LinkedIn).
@@ -72,6 +73,16 @@ export default function ContentStudio({ onClose }: { onClose: () => void }) {
           {out && (
             <div className="journal-card" style={{ marginTop: 10 }}>
               <p style={{ whiteSpace: "pre-wrap", margin: 0, fontSize: 14 }}>{out}</p>
+              {/* 🔥 Virality Optimizer — potencjał wiralności + wskazówki */}
+              {(() => {
+                const v = viralityScore(out);
+                return (
+                  <div style={{ marginTop: 8, fontSize: 12 }}>
+                    <span style={{ fontWeight: 700, color: v.score >= 85 ? "#39d98a" : v.score >= 60 ? "var(--gold)" : "#ff6b6b" }}>🔥 Wiralność: {v.score}/100 · {v.grade}</span>
+                    {v.tips.length > 0 && <div className="muted" style={{ marginTop: 2 }}>Wzmocnij: {v.tips.slice(0, 2).join(" ")}</div>}
+                  </div>
+                );
+              })()}
               <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
                 <button className="chip" onClick={() => copyWithToast(out, "Post skopiowany ✓")}>📋 Kopiuj</button>
                 {canShare && <button className="chip" onClick={share}>📤 Udostępnij</button>}
