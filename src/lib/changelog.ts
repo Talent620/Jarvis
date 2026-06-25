@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🖥 Czytelny komunikat, gdy lokalny model (Ollama) jest nieosiągalny: zamiast technicznego błędu Failed to connect (adres:11434) zobaczysz po ludzku, że nie ma połączenia z serwerem Ollama — z radą: sprawdź, czy PC jest włączony, Ollama działa i Tailscale połączony, albo przełącz mózg na chmurę. Dotyczy m.in. Kreatora stron.",
       "📢 Generator reklam — audyt jakości i ryzyka odrzucenia: po wygenerowaniu reklamy widzisz wynik 0–100 i konkretne poprawki, zanim wkleisz ją do Google/Meta — sprawdza limity znaków nagłówków, KAPITALIKI, nadmiar wykrzykników, ryzykowne obietnice/superlatywy, emoji w Google (niedozwolone) i obecność CTA. Mniej odrzuceń, mocniejszy przekaz.",
       "📧 Jaśniej, jak dodać e-mail: przy Integracjach Google (najtrudniejsza droga, wymaga backendu) jest teraz podpowiedź kierująca do prostszych dróg — Centrum → ✉ Wyślij e-mail → Otwórz w Gmailu (od ręki, bez kluczy) albo sekcja 📨 Poczta (hasło aplikacji). Koniec utykania na OAuth.",
       "🩺 Diagnostyka startowa sprawdza też fal.ai: gdy masz wpisany klucz fal.ai, przycisk Uruchom diagnostykę raportuje jego stan (działa / zły klucz / brak billingu) obok reszty kluczy — bez kosztu, bez generowania obrazu.",

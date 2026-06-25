@@ -56,6 +56,9 @@ describe("isNetworkError", () => {
     // Przekroczenie timeoutu (fetchTimeout → AbortController) musi liczyć się jako błąd sieci.
     expect(isNetworkError("The operation was aborted")).toBe(true);
     expect(isNetworkError("signal is aborted without reason")).toBe(true);
+    // Natywny błąd Capacitor/Android przy nieosiągalnym serwerze (Ollama/Tailscale).
+    expect(isNetworkError("Failed to connect to /100.64.33.7:11434")).toBe(true);
+    expect(isNetworkError("Connection refused")).toBe(true);
   });
   it("ignoruje błędy niesieciowe", () => {
     expect(isNetworkError("billing problem")).toBe(false);
@@ -65,6 +68,11 @@ describe("isNetworkError", () => {
 describe("humanize", () => {
   it("tłumaczy błąd sieci", () => {
     expect(humanize("Failed to fetch")).toMatch(/Brak połączenia/);
+  });
+  it("tłumaczy nieosiągalny lokalny serwer Ollama (port 11434) na konkretną radę", () => {
+    const m = humanize("Failed to connect to /100.64.33.7:11434");
+    expect(m).toMatch(/Ollama/);
+    expect(m).toMatch(/komputer|Tailscale|chmur/);
   });
   it("tłumaczy błąd autoryzacji", () => {
     expect(humanize("401 unauthorized")).toMatch(/Klucz API/);

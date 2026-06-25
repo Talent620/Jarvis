@@ -9,7 +9,7 @@ export function shouldFallback(msg: string): boolean {
 }
 
 export const isNetworkError = (msg: string): boolean =>
-  /failed to fetch|load failed|network|networkerror|timeout|abort/i.test(msg);
+  /failed to fetch|load failed|network|networkerror|timeout|abort|failed to connect|connection refused|econnrefused|err_connection|could not connect|unable to connect/i.test(msg);
 
 // Błąd „na poziomie klucza" — limit, wyczerpany kredyt lub zła autoryzacja. Przy
 // takim warto najpierw spróbować INNEGO klucza tego samego dostawcy (rotacja),
@@ -22,6 +22,10 @@ export function isKeyError(msg: string): boolean {
 
 // Przetłumacz techniczny błąd na zrozumiały komunikat.
 export function humanize(msg: string): string {
+  // Lokalny serwer modelu (Ollama, port 11434) nieosiągalny — częste przy Tailscale/wyłączonym PC.
+  // Łapiemy PRZED ogólnym błędem sieci, bo wymaga innej rady (uruchom serwer / przełącz na chmurę).
+  if ((/\b11434\b|ollama/i.test(msg)) && /failed to connect|connection refused|econnrefused|could not connect|unable to connect|failed to fetch|timeout|network/i.test(msg))
+    return "Nie mogę połączyć się z lokalnym serwerem modelu (Ollama). Sprawdź, czy komputer jest włączony, Ollama działa i jest w sieci (np. Tailscale połączony) — albo przełącz mózg na chmurę w ⚙ → AI.";
   if (isNetworkError(msg)) return "Brak połączenia z usługą AI. Sprawdź internet i klucz API (⚙ Ustawienia).";
   if (/oauth 2 access token|invalid authentication credentials|api key not valid/i.test(msg))
     return "Klucz Gemini jest pusty lub nieprawidłowy. Wklej poprawny klucz w ⚙ → AI (Szybki start) — darmowy: aistudio.google.com/apikey.";
