@@ -109,6 +109,32 @@ final class Assistant: ObservableObject {
             return "Zaplanowane: „\(body)" — \(Self.dateTimeFmt.string(from: date))."
         }
 
+        // Journal — "zapisz w dzienniku ..."
+        if let body = capture(l, after: ["zapisz w dzienniku", "wpis do dziennika", "do dziennika", "w dzienniku"]) {
+            let m = inferMood(from: body, reply: "")
+            store.addJournal(body.prefixTitle, body, mood: m)
+            return "Zapisałem w dzienniku (nastrój: \(m.label)). Dziękuję, że się dzielisz."
+        }
+
+        // Daily summary — "podsumuj dzień", "co mam dziś"
+        if matches(l, ["podsumuj dzień", "podsumuj dzien", "co mam dziś", "co mam dzis", "co dzisiaj", "plan na dziś", "plan na dzis"]) {
+            return dailySummary(store)
+        }
+
+        // Help — list of commands
+        if matches(l, ["pomoc", "lista poleceń", "lista polecen", "jak cię używać", "jak cie uzywac", "co umiesz"]) {
+            return """
+            Mogę m.in.:
+            • „dodaj zadanie …", „pokaż zadania"
+            • „zanotuj …"
+            • „przypomnij mi … jutro o 15:30"
+            • „dodaj do listy zakupów …"
+            • „dodaj wydarzenie … jutro o 10"
+            • „zapisz w dzienniku …"
+            • „podsumuj dzień", „która godzina", „ile to 12 razy 8"
+            """
+        }
+
         // Simple maths — "ile to 12 razy 3"
         if let result = Self.evaluateMath(in: l) {
             return "To \(result)."
@@ -153,6 +179,22 @@ final class Assistant: ObservableObject {
         let body = items.prefix(8).enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
         let extra = items.count > 8 ? "\n…oraz \(items.count - 8) więcej." : ""
         return "\(head)\n\(body)\(extra)"
+    }
+
+    private func dailySummary(_ store: AppStore) -> String {
+        let cal = Calendar.current
+        let openTasks = store.tasks.filter { !$0.done }.count
+        let todayEvents = store.events.filter { cal.isDateInToday($0.date) }
+        let todayReminders = store.reminders.filter { !$0.done && cal.isDateInToday($0.date) }
+        let shop = store.shopping.filter { !$0.bought }.count
+
+        var lines = ["Oto plan na dziś:"]
+        lines.append("• Zadania do zrobienia: \(openTasks)")
+        if todayEvents.isEmpty { lines.append("• Wydarzenia: brak na dziś") }
+        else { lines.append("• Wydarzenia: " + todayEvents.map { "\($0.title) (\(Self.timeFmt.string(from: $0.date)))" }.joined(separator: ", ")) }
+        if !todayReminders.isEmpty { lines.append("• Przypomnienia dziś: \(todayReminders.count)") }
+        if shop > 0 { lines.append("• Na liście zakupów: \(shop)") }
+        return lines.joined(separator: "\n")
     }
 
     private func fallback(for text: String) -> String {

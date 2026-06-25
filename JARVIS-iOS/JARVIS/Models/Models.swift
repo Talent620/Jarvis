@@ -43,6 +43,14 @@ struct ChatMessage: Identifiable, Codable, Hashable {
     enum Role: String, Codable { case user, jarvis }
 }
 
+struct JournalEntry: Identifiable, Codable, Hashable {
+    var id = UUID()
+    var title: String
+    var body: String
+    var mood: Mood
+    var createdAt: Date = Date()
+}
+
 // MARK: - Mood — drives the colour of the central core ("Rdzeń zmienia barwę wraz z nastrojem")
 
 enum Mood: String, Codable, CaseIterable {
@@ -82,6 +90,7 @@ enum Module: String, CaseIterable, Identifiable {
     case reminders // Przypomnienia
     case calendar  // Kalendarz
     case shopping  // Zakupy
+    case journal   // Dziennik
     case settings  // Ustawienia
 
     var id: String { rawValue }
@@ -94,6 +103,7 @@ enum Module: String, CaseIterable, Identifiable {
         case .reminders: return "Przypomnienia"
         case .calendar:  return "Kalendarz"
         case .shopping:  return "Zakupy"
+        case .journal:   return "Dziennik"
         case .settings:  return "Ustawienia"
         }
     }
@@ -106,6 +116,7 @@ enum Module: String, CaseIterable, Identifiable {
         case .reminders: return "bell.fill"
         case .calendar:  return "calendar"
         case .shopping:  return "cart.fill"
+        case .journal:   return "book.closed.fill"
         case .settings:  return "gearshape.fill"
         }
     }

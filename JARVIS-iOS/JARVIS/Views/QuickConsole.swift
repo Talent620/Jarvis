@@ -43,6 +43,7 @@ struct QuickConsole: View {
     private func send() {
         let text = input.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
+        Haptics.tap()
         assistant.handle(text, speak: true)
         input = ""
     }

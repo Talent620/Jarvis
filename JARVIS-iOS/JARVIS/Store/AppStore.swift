@@ -9,6 +9,7 @@ final class AppStore: ObservableObject {
     @Published var reminders: [Reminder] = []    { didSet { persist(reminders, "jarvis.reminders") } }
     @Published var shopping: [ShoppingItem] = [] { didSet { persist(shopping, "jarvis.shopping") } }
     @Published var events: [CalendarEvent] = []  { didSet { persist(events, "jarvis.events") } }
+    @Published var journal: [JournalEntry] = []  { didSet { persist(journal, "jarvis.journal") } }
     @Published var chat: [ChatMessage] = []      { didSet { persist(chat, "jarvis.chat") } }
 
     @Published var userName: String = UserDefaults.standard.string(forKey: "jarvis.userName") ?? "" {
@@ -28,11 +29,13 @@ final class AppStore: ObservableObject {
         reminders = load("jarvis.reminders", [Reminder].self) ?? []
         shopping  = load("jarvis.shopping", [ShoppingItem].self) ?? []
         events    = load("jarvis.events", [CalendarEvent].self) ?? []
+        journal   = load("jarvis.journal", [JournalEntry].self) ?? []
         chat      = load("jarvis.chat", [ChatMessage].self) ?? []
         if chat.isEmpty {
             chat = [ChatMessage(role: .jarvis, text: "Systemy online. W czym mogę pomóc?")]
         }
         loaded = true
+        NotificationManager.shared.sync(reminders)
     }
 
     // MARK: Convenience mutations used by the assistant + UI
@@ -40,14 +43,30 @@ final class AppStore: ObservableObject {
     func addTask(_ title: String)         { tasks.insert(TaskItem(title: title), at: 0) }
     func toggleTask(_ t: TaskItem)        { if let i = tasks.firstIndex(of: t) { tasks[i].done.toggle() } }
     func addNote(_ title: String, _ body: String) { notes.insert(Note(title: title, body: body), at: 0) }
-    func addReminder(_ text: String, at date: Date) { reminders.append(Reminder(text: text, date: date)); reminders.sort { $0.date < $1.date } }
+    func addReminder(_ text: String, at date: Date) {
+        let r = Reminder(text: text, date: date)
+        reminders.append(r); reminders.sort { $0.date < $1.date }
+        NotificationManager.shared.schedule(r)
+    }
+    func toggleReminder(_ r: Reminder) {
+        guard let i = reminders.firstIndex(of: r) else { return }
+        reminders[i].done.toggle()
+        if reminders[i].done { NotificationManager.shared.cancel(r.id) }
+        else { NotificationManager.shared.schedule(reminders[i]) }
+    }
+    func deleteReminder(_ r: Reminder) {
+        NotificationManager.shared.cancel(r.id)
+        reminders.removeAll { $0.id == r.id }
+    }
     func addShopping(_ name: String)      { shopping.insert(ShoppingItem(name: name), at: 0) }
     func toggleShopping(_ s: ShoppingItem){ if let i = shopping.firstIndex(of: s) { shopping[i].bought.toggle() } }
     func addEvent(_ title: String, at date: Date) { events.append(CalendarEvent(title: title, date: date)); events.sort { $0.date < $1.date } }
+    func addJournal(_ title: String, _ body: String, mood: Mood) { journal.insert(JournalEntry(title: title, body: body, mood: mood), at: 0) }
     func appendChat(_ m: ChatMessage)     { chat.append(m) }
 
     func wipeAll() {
-        tasks = []; notes = []; reminders = []; shopping = []; events = []
+        for r in reminders { NotificationManager.shared.cancel(r.id) }
+        tasks = []; notes = []; reminders = []; shopping = []; events = []; journal = []
         chat = [ChatMessage(role: .jarvis, text: "Pamięć wyczyszczona. Zaczynamy od nowa.")]
     }
 

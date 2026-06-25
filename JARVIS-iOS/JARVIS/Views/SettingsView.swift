@@ -44,6 +44,7 @@ struct SettingsView: View {
                     statRow("Przypomnienia", store.reminders.count)
                     statRow("Wydarzenia", store.events.count)
                     statRow("Zakupy", store.shopping.count)
+                    statRow("Wpisy dziennika", store.journal.count)
                 }
                 .padding(16).hudPanel()
 

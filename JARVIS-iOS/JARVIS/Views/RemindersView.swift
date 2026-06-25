@@ -26,10 +26,8 @@ struct RemindersView: View {
                     ForEach(store.reminders) { r in
                         CheckRow(text: r.text, done: r.done,
                                  detail: Assistant.dateTimeFmt.string(from: r.date),
-                                 onToggle: {
-                                     if let i = store.reminders.firstIndex(of: r) { store.reminders[i].done.toggle() }
-                                 },
-                                 onDelete: { store.reminders.removeAll { $0.id == r.id } })
+                                 onToggle: { store.toggleReminder(r) },
+                                 onDelete: { store.deleteReminder(r) })
                     }
                 }
             }

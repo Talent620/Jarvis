@@ -57,6 +57,13 @@ struct RootView: View {
             CoreView(mood: store.mood,
                      active: assistant.speech.isListening || assistant.speech.isSpeaking)
                 .padding(.top, 6)
+                .contentShape(Circle())
+                .onTapGesture {
+                    Haptics.tap()
+                    assistant.speech.toggleListening { final in
+                        assistant.handle(final, speak: true)
+                    }
+                }
 
             VStack(spacing: 4) {
                 Text(coreStatusText)
@@ -64,7 +71,8 @@ struct RootView: View {
                     .foregroundStyle(Theme.textPrimary)
                     .multilineTextAlignment(.center)
                     .animation(.easeInOut, value: coreStatusText)
-                Text("Nastrój rdzenia: \(store.mood.label)")
+                Text(assistant.speech.isListening ? "Dotknij ponownie, by zakończyć"
+                                                   : "Nastrój rdzenia: \(store.mood.label)")
                     .font(Theme.ui(12))
                     .foregroundStyle(store.mood.color.opacity(0.9))
             }
@@ -101,6 +109,7 @@ struct RootView: View {
         case .reminders: return store.reminders.filter { !$0.done }.count
         case .shopping:  return store.shopping.filter { !$0.bought }.count
         case .calendar:  return store.events.count
+        case .journal:   return store.journal.count
         default:         return 0
         }
     }
@@ -116,6 +125,7 @@ struct RootView: View {
         case .reminders: RemindersView()
         case .calendar:  CalendarModuleView()
         case .shopping:  ShoppingView()
+        case .journal:   JournalView()
         case .settings:  SettingsView()
         }
     }
@@ -128,7 +138,7 @@ struct ModuleTile: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button(action: { Haptics.select(); action() }) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Image(systemName: module.icon)
