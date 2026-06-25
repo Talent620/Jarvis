@@ -1,5 +1,23 @@
 import { describe, it, expect } from "vitest";
-import { isBossSummon, ROBOT_VOICE, BOSS_GREETING, bossSystem, BOSS_DOCTRINE, bossQuickActions } from "../src/lib/boss";
+import { isBossSummon, ROBOT_VOICE, BOSS_GREETING, bossSystem, BOSS_DOCTRINE, bossQuickActions, parseBossMeta } from "../src/lib/boss";
+
+describe("parseBossMeta — meta-rozkazy bez modelu", () => {
+  it("łapie stop/anuluj/cisza", () => {
+    for (const t of ["stop", "anuluj", "przerwij", "cisza", "wystarczy", "Stop.", "zatrzymaj się"]) {
+      expect(parseBossMeta(t)).toBe("stop");
+    }
+  });
+  it("łapie powtórz/jeszcze raz", () => {
+    for (const t of ["powtórz", "jeszcze raz", "powtórz to", "nie dosłyszałem"]) {
+      expect(parseBossMeta(t)).toBe("repeat");
+    }
+  });
+  it("NIE łapie normalnych poleceń", () => {
+    expect(parseBossMeta("dodaj zadanie kup mleko")).toBeNull();
+    expect(parseBossMeta("wyślij maila do Anny i przerwij spotkanie")).toBeNull(); // długie zdanie
+    expect(parseBossMeta("")).toBeNull();
+  });
+});
 
 describe("bossQuickActions — kontekstowe, kompletne rozkazy do jednego dotknięcia", () => {
   it("rano daje odprawę poranną, w ciągu dnia zwykłą", () => {

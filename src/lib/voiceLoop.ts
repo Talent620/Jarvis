@@ -6,6 +6,7 @@ import { detectDecision } from "./decisions";
 import { recordBossDecision } from "./bossMemory";
 import { confidencePct, confidencePreface, isRiskyCommand, isExplainRequest, explainTrace, predictNext, type BossTrace, type VerifyResult } from "./bossInsight";
 import { providerShortName } from "./providerNames";
+import { parseBossMeta } from "./boss";
 import type { Msg, ProviderId } from "./providers/types";
 import type { Settings } from "../types";
 
@@ -36,6 +37,7 @@ export class ConversationLoop {
   ) {}
 
   private lastTrace: BossTrace | null = null; // czarna skrzynka ostatniego działania
+  private lastReply = ""; // ostatnia wypowiedź Szefa — do meta-rozkazu „powtórz"
 
   static supported(): boolean {
     return isSpeechSupported();
@@ -97,6 +99,25 @@ export class ConversationLoop {
       if (!this.closed && this.wantListen) this.listenOnce();
       return;
     }
+    // ⚡ META-rozkazy bez modelu (natychmiast, pewnie): stop/anuluj, powtórz.
+    const meta = parseBossMeta(text);
+    if (meta === "stop") {
+      stopSpeaking();
+      this.onCaption("⏹ Zatrzymane. Słucham dalej.");
+      this.onState("listening");
+      this.processing = false;
+      if (!this.closed && this.wantListen) this.listenOnce();
+      return;
+    }
+    if (meta === "repeat") {
+      const r = this.lastReply.trim() || "Nie mam jeszcze nic do powtórzenia.";
+      this.onState("speaking");
+      this.onCaption(r);
+      try { await speak(r, { ...store.settings, speak: true, ...this.voiceTune }); } catch { /* brak głosu */ }
+      this.processing = false;
+      if (!this.closed && this.wantListen) this.listenOnce();
+      return;
+    }
     this.onState("thinking");
     this.history.push({ role: "user", content: text });
     // Pamięć decyzji: jeśli padło ustalenie/zobowiązanie — zapamiętaj na przyszłe sesje.
@@ -140,9 +161,10 @@ export class ConversationLoop {
         spoken = [caution, reply.text, next ? `Mogę też: ${next}. Powiedz „tak”.` : ""].filter(Boolean).join(" ");
       }
 
+      this.lastReply = spoken; // zapamiętaj do meta-rozkazu „powtórz"
       this.onCaption(spoken);
       this.onState("speaking");
-      if (stalled) stopSpeaking(); // ucisz „jeszcze pracuję", zanim podasz wynik
+      if (stalled) stopSpeaking(); // ucisz „jeszcze pracuję”, zanim podasz wynik
       await speak(spoken, { ...store.settings, speak: true, ...this.voiceTune });
     } catch (e) {
       window.clearTimeout(stall);

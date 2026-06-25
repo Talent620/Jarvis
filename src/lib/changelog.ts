@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "⬢ Tryb Szefa — meta-rozkazy głosem bez modelu: powiesz stop albo anuluj i agent natychmiast milknie; powiesz powtórz albo jeszcze raz i powtórzy ostatnią odpowiedź. Działa od ręki, pewnie i za darmo (nie idzie do AI).",
       "⬢ Tryb Szefa — 🔁 Powtórz: jeśli przegapisz odpowiedź agenta (hands-free, telefon w kieszeni), jednym dotknięciem powtórzy ostatni komunikat na głos.",
       "⬢ Tryb Szefa — szybkie rozkazy jednym dotknięciem: na ekranie agenta są teraz kontekstowe przyciski (odprawa, co mam dziś, zadania, co o mnie wiesz) — dotknięcie wykonuje rozkaz natychmiast i niezawodnie, bez ryzyka przesłyszenia głosu, i od razu widać, co można zlecić.",
       "🧠 Proaktywna pamięć w rozmowie na żywo: JARVIS sam nawiązuje do tego, co o Tobie pamięta (wcześniejsze wątki, cele, decyzje) — gdy to naturalnie pasuje, jak znajomy. Bez zmyślania i bez wciskania na siłę. Uczy się lokalnie po każdej wymianie, więc z czasem zna Cię lepiej.",

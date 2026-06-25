@@ -39,6 +39,21 @@ export function isBossSummon(text: string): boolean {
 
 export interface BossAction { icon: string; label: string; command: string }
 
+export type BossMeta = "stop" | "repeat" | null;
+
+/**
+ * Deterministyczne META-rozkazy głosowe Szefa — obsłużone BEZ modelu (natychmiast, pewnie, za darmo):
+ * „stop/anuluj/cisza" → przerwij; „powtórz/jeszcze raz" → powtórz ostatnią odpowiedź. Tylko krótkie,
+ * jednoznaczne frazy (≤35 zn.), by nie łapać normalnych poleceń. Czyste i testowalne.
+ */
+export function parseBossMeta(text: string): BossMeta {
+  const t = (text || "").trim().toLowerCase().replace(/[!.,?…]+$/u, "");
+  if (!t || t.length > 35) return null;
+  if (/^(stop|anuluj|przerwij|cisza|cicho|do[śs][ćc]|wystarczy|zatrzymaj( się)?|przesta[ńn])$/.test(t)) return "stop";
+  if (/^(powt[oó]rz( to)?|jeszcze raz|powiedz (jeszcze raz|to ponownie)|nie dos[łl]ysza[łl]em)$/.test(t)) return "repeat";
+  return null;
+}
+
 /**
  * Szybkie, KOMPLETNE rozkazy do jednego dotknięcia w Trybie Szefa. Dwie korzyści: niezawodność
  * (tor tekstowy — zero przesłyszeń STT) i odkrywalność (widać, co można powiedzieć). Kontekstowe:
