@@ -6,7 +6,7 @@ import { keepAwake, releaseAwake } from "../lib/wakeLock";
 import { subscribeLevel } from "../lib/audioLevel";
 import { setAutoConsent } from "../lib/permissions";
 import { useEscape } from "../hooks/useEscape";
-import { ROBOT_VOICE, BOSS_GREETING, bossSystem } from "../lib/boss";
+import { ROBOT_VOICE, BOSS_GREETING, bossSystem, bossQuickActions } from "../lib/boss";
 import { jarvisBriefing } from "../lib/capabilities";
 import { bossMemoryDigest } from "../lib/bossMemory";
 import { hasUsableBrain } from "../lib/brain";
@@ -134,6 +134,26 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
         )}
         <div className="bossmode-caption" aria-live="polite">{caption}</div>
         <div className="bossmode-hint">Mów wprost: „dodaj zadanie…”, „wyślij maila do…”, „znajdź…”, „zaplanuj…”. Akcje nieodwracalne potwierdzę głosem.</div>
+
+        {/* Szybkie rozkazy do jednego dotknięcia — niezawodne (zero przesłyszeń) i pokazują, co można. */}
+        {state !== "speaking" && state !== "thinking" && plan.length === 0 && (
+          <div className="chips" style={{ flexWrap: "wrap", justifyContent: "center", marginTop: 8, gap: 6 }}>
+            {bossQuickActions(new Date().getHours(), (store.data.tasks || []).filter((t) => !t.done).length).map((a) => (
+              <button
+                key={a.label}
+                className="chip"
+                onClick={() => {
+                  if (a.command.trim().endsWith(":")) { setInput(a.command); return; } // dokończ wpisanie (np. „Dodaj zadanie: ")
+                  setCaption("🗣 " + a.label);
+                  loopRef.current?.say(a.command);
+                }}
+                title={a.command}
+              >
+                {a.icon} {a.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Tor tekstowy — niezawodny fallback, gdy mowa zawiedzie albo wolisz pisać. */}
         <div className="bossmode-type">

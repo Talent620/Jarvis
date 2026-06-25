@@ -37,6 +37,28 @@ export function isBossSummon(text: string): boolean {
   return SUMMON.test(t);
 }
 
+export interface BossAction { icon: string; label: string; command: string }
+
+/**
+ * Szybkie, KOMPLETNE rozkazy do jednego dotknięcia w Trybie Szefa. Dwie korzyści: niezawodność
+ * (tor tekstowy — zero przesłyszeń STT) i odkrywalność (widać, co można powiedzieć). Kontekstowe:
+ * pora dnia + liczba otwartych zadań. Czyste i testowalne (godzinę i licznik podajemy z zewnątrz).
+ */
+export function bossQuickActions(hour: number, pendingTasks = 0): BossAction[] {
+  const morning = hour >= 4 && hour < 11;
+  const actions: BossAction[] = [
+    morning
+      ? { icon: "🌅", label: "Odprawa poranna", command: "Zrób mi krótką odprawę poranną: co dziś najważniejsze i od czego zacząć." }
+      : { icon: "📋", label: "Odprawa", command: "Zrób mi krótką odprawę: co najważniejsze teraz i co wymaga uwagi." },
+    { icon: "📅", label: "Co mam dziś?", command: "Co mam dziś do zrobienia? Wymień najważniejsze." },
+    pendingTasks > 0
+      ? { icon: "✅", label: `Zadania (${pendingTasks})`, command: "Pokaż moje otwarte zadania i doradź, od czego zacząć." }
+      : { icon: "✅", label: "Dodaj zadanie", command: "Dodaj zadanie: " },
+    { icon: "🧠", label: "Co o mnie wiesz?", command: "Co o mnie wiesz? Podsumuj krótko najważniejsze." },
+  ];
+  return actions;
+}
+
 /**
  * Persona Szefa doklejana do promptu agenta. „Przewiduj i potwierdzaj": prowadzi
  * wieloetapowe zadania (formularze, rejestracje) krok po kroku, sam proponuje wartości

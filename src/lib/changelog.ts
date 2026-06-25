@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "⬢ Tryb Szefa — szybkie rozkazy jednym dotknięciem: na ekranie agenta są teraz kontekstowe przyciski (odprawa, co mam dziś, zadania, co o mnie wiesz) — dotknięcie wykonuje rozkaz natychmiast i niezawodnie, bez ryzyka przesłyszenia głosu, i od razu widać, co można zlecić.",
       "🧠 Proaktywna pamięć w rozmowie na żywo: JARVIS sam nawiązuje do tego, co o Tobie pamięta (wcześniejsze wątki, cele, decyzje) — gdy to naturalnie pasuje, jak znajomy. Bez zmyślania i bez wciskania na siłę. Uczy się lokalnie po każdej wymianie, więc z czasem zna Cię lepiej.",
       "🎭 Łatwe włączenie głosu naturalnego, z emocją: w ⚙ → Głos jest teraz krótki doradca — co daje każdy głos premium, ile kosztuje i jak go wpiąć, plus przycisk wypróbowania DARMOWEGO głosu premium (Gemini TTS) jednym dotknięciem.",
       "🗣 Naturalniejsza wymowa: JARVIS rozwija przy czytaniu skróty i symbole, które silniki głosu literują lub czytają dziwnie (np. na przykład, między innymi, około, numer, procent, stopni) — brzmi bardziej po ludzku na każdym głosie.",

@@ -1,5 +1,22 @@
 import { describe, it, expect } from "vitest";
-import { isBossSummon, ROBOT_VOICE, BOSS_GREETING, bossSystem, BOSS_DOCTRINE } from "../src/lib/boss";
+import { isBossSummon, ROBOT_VOICE, BOSS_GREETING, bossSystem, BOSS_DOCTRINE, bossQuickActions } from "../src/lib/boss";
+
+describe("bossQuickActions — kontekstowe, kompletne rozkazy do jednego dotknięcia", () => {
+  it("rano daje odprawę poranną, w ciągu dnia zwykłą", () => {
+    expect(bossQuickActions(8)[0].label).toMatch(/poranna/i);
+    expect(bossQuickActions(15)[0].label).toBe("Odprawa");
+  });
+  it("pokazuje licznik otwartych zadań; gdy brak — proponuje dodanie", () => {
+    expect(bossQuickActions(10, 3).some((a) => /Zadania \(3\)/.test(a.label))).toBe(true);
+    expect(bossQuickActions(10, 0).some((a) => a.label === "Dodaj zadanie")).toBe(true);
+  });
+  it("każdy rozkaz ma niepustą etykietę i komendę", () => {
+    for (const a of bossQuickActions(9, 2)) {
+      expect(a.label.length).toBeGreaterThan(0);
+      expect(a.command.length).toBeGreaterThan(0);
+    }
+  });
+});
 
 describe("isBossSummon — przywołanie Trybu Szefa", () => {
   it("łapie jasne wezwania", () => {
