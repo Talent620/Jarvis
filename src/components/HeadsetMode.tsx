@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { speak, stopSpeaking } from "../lib/voice";
 import { askJarvis } from "../lib/brain";
 import { LIVE_VOICE_PERSONA } from "../lib/voicePersona";
+import { speakableChunks } from "../lib/speechStream";
 import { store } from "../lib/store";
 import { cue, buzz } from "../lib/feedback";
 import { keepAwake, releaseAwake } from "../lib/wakeLock";
@@ -43,6 +44,7 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
   const history = useRef<Msg[]>([]);
   const closed = useRef(false);
   const busy = useRef(false);
+  const speechCancel = useRef<(() => void) | null>(null); // przerwij strumieniową mowę (barge-in)
 
   const buildEngine = () => {
     const s = store.settings;
@@ -60,7 +62,7 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
         onLevel: (l) => setLevel(l),
         onInfo: (m) => setInfo(m),
         onRejected: () => setCaption("(zignorowałem — to nie Twój głos)"),
-        onBargeIn: () => { stopSpeaking(); },
+        onBargeIn: () => { stopSpeaking(); speechCancel.current?.(); },
         onUtterance: (t) => void handle(t),
       },
     );
@@ -79,22 +81,63 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
     setPhase("thinking");
     cue("tap");
     history.current = [...history.current, { role: "user" as const, content: text }].slice(-16);
+
+    // Strumieniowy głos: mów każde zdanie, gdy tylko się pojawi (nie czekaj na całą odpowiedź).
+    // Sekwencyjna kolejka, żeby zdania się nie nakładały; barge-in (speechCancel) ją przerywa.
+    let cursor = 0;
+    let lastFull = ""; // ostatni skumulowany tekst ze strumienia (do wykrycia, czy finał go zmienił)
+    let chain: Promise<void> = Promise.resolve();
+    let cancelled = false;
+    let started = false;
+    speechCancel.current = () => { cancelled = true; stopSpeaking(); };
+    const say = (chunks: string[]) => {
+      for (const c of chunks) {
+        chain = chain.then(async () => {
+          if (cancelled || closed.current) return;
+          if (!started) { started = true; setPhase("speaking"); convo.current?.setSpeaking(true); }
+          await speak(c, { ...store.settings, speak: true }).catch(() => {});
+        });
+      }
+    };
+
     try {
-      // Rozmowa NA ŻYWO: persona mowy (krótko, naturalnie, jak człowiek) doklejona do systemowego
-      // promptu. Pamięć/profil/narzędzia/uczenie się są już w askJarvis — tu nadajemy STYL głosu.
-      const reply = await askJarvis(history.current, undefined, undefined, LIVE_VOICE_PERSONA);
+      // Persona mowy (krótko, naturalnie, jak człowiek) + pamięć/profil/narzędzia/uczenie się z askJarvis.
+      const reply = await askJarvis(
+        history.current,
+        (full) => {
+          if (cancelled) return;
+          lastFull = full;
+          setCaption(full);
+          const r = speakableChunks(full, cursor, false); // tylko KOMPLETNE zdania
+          cursor = r.nextIndex;
+          if (r.chunks.length) say(r.chunks);
+        },
+        undefined,
+        LIVE_VOICE_PERSONA,
+      );
       history.current = [...history.current, { role: "assistant" as const, content: reply.text }].slice(-16);
-      setCaption(reply.text);
-      setPhase("speaking");
-      convo.current?.setSpeaking(true);
-      await speak(reply.text, { ...store.settings, speak: true });
-      cue("confirm");
+      if (!cancelled) {
+        setCaption(reply.text);
+        // Domknij resztę. Jeśli finał odpowiada strumieniowi (lub nic nie strumieniowano) — mów ogon
+        // od kursora. Jeśli finał ZMIENIŁ tekst (refine), a nic jeszcze nie wybrzmiało — mów całość.
+        // Jeśli zmienił po częściowym wypowiedzeniu — nie dubluj/garble, zostaw to, co już powiedziane.
+        if (reply.text.startsWith(lastFull.slice(0, cursor))) {
+          const tail = speakableChunks(reply.text, cursor, true);
+          if (tail.chunks.length) say(tail.chunks);
+        } else if (!started) {
+          const all = speakableChunks(reply.text, 0, true);
+          if (all.chunks.length) say(all.chunks);
+        }
+      }
+      await chain; // poczekaj, aż wszystkie zdania wybrzmią
+      if (!cancelled) cue("confirm");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setCaption("⚠ " + msg);
       cue("error");
       await speak(msg, { ...store.settings, speak: true }).catch(() => {});
     } finally {
+      speechCancel.current = null;
       convo.current?.setSpeaking(false);
       busy.current = false;
       setPhase("listening");
