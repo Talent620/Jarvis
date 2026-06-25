@@ -30,6 +30,7 @@ import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkO
 import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
 import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
 import { detectSd, normalizeSdUrl } from "../lib/localImage";
+import { checkFalKey } from "../lib/images";
 import { checkForUpdate, applyUpdate, currentBuild, type UpdateInfo } from "../lib/updater";
 import { CHANGELOG } from "../lib/changelog";
 import { liveUpdateSupported, checkLiveUpdate, applyLiveUpdate } from "../lib/liveUpdate";
@@ -274,6 +275,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [sdChecking, setSdChecking] = useState(false);
   const [sdMsg, setSdMsg] = useState("");
   const [sdModels, setSdModels] = useState<string[]>([]);
+  const [falChecking, setFalChecking] = useState(false);
+  const [falMsg, setFalMsg] = useState("");
   const [findingServer, setFindingServer] = useState(false);
   const [findMsg, setFindMsg] = useState("");
   const [updBusy, setUpdBusy] = useState(false);
@@ -1235,6 +1238,19 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   onChange={(e) => set({ falApiKey: e.target.value })}
                 />
               </div>
+              <button
+                className="btn"
+                disabled={falChecking}
+                onClick={async () => {
+                  setFalChecking(true); setFalMsg("⏳ Sprawdzam klucz fal.ai (bez kosztu)…");
+                  const r = await checkFalKey();
+                  setFalMsg(r.message);
+                  setFalChecking(false);
+                }}
+              >
+                {falChecking ? "⏳ Sprawdzam…" : "🔑 Sprawdź klucz fal.ai"}
+              </button>
+              {falMsg && <p className="muted" style={{ fontSize: 12, marginTop: 6, whiteSpace: "pre-line" }}>{falMsg}</p>}
 
               </details>
               <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>

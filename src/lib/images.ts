@@ -177,6 +177,39 @@ async function falEdit(modelId: ImageModelId, prompt: string, inputs: Img[]): Pr
   }
 }
 
+// --- Test klucza fal.ai (BEZ kosztu) ---
+// Wysyłamy celowo PUSTE body do endpointu fal.ai: walidacja schematu odrzuci je (422) ZANIM
+// cokolwiek się policzy. Po statusie poznajemy, czy klucz jest ważny i autoryzowany, bez generacji.
+
+/** Pure: zinterpretuj status HTTP z testu klucza fal.ai na czytelny werdykt. */
+export function interpretFalKeyStatus(status: number, detail?: string): { ok: boolean; message: string } {
+  const extra = detail ? ` — ${detail}` : "";
+  if (status === 401) return { ok: false, message: "❌ Klucz fal.ai nieprawidłowy (401). Sprawdź, czy skopiowałeś CAŁY klucz z fal.ai/dashboard/keys." };
+  if (status === 402 || status === 403)
+    return { ok: false, message: `❌ Klucz rozpoznany, ale brak dostępu/środków (${status})${extra}. Włącz billing i doładuj konto na fal.ai/dashboard/billing — wtedy edycja/generacja premium ruszy.` };
+  if (status === 422 || status === 400 || (status >= 200 && status < 300))
+    return { ok: true, message: "✅ Klucz fal.ai działa i ma dostęp. Modele premium (FLUX Kontext / Nano Banana Pro) są gotowe — bez klucza Gemini." };
+  return { ok: false, message: `⚠ Niejasna odpowiedź fal.ai (${status})${extra}. Spróbuj ponownie za chwilę.` };
+}
+
+/** Sprawdź klucz fal.ai bez generowania (i bez kosztu). */
+export async function checkFalKey(): Promise<{ ok: boolean; message: string }> {
+  const key = (store.settings.falApiKey || "").replace(/[^\x20-\x7E]/g, "").trim();
+  if (!key) return { ok: false, message: "Brak klucza fal.ai — wklej go w polu wyżej, potem sprawdź." };
+  try {
+    const res = await fetchTimeout(viaProxy("https://fal.run/fal-ai/flux/dev"), {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Key ${key}` },
+      body: JSON.stringify({}), // celowo puste — schemat odrzuci (422) bez naliczenia kosztu
+    }, 30000);
+    const d = await res.json().catch(() => null);
+    const detail = typeof d?.detail === "string" ? d.detail : typeof d?.error === "string" ? d.error : undefined;
+    return interpretFalKeyStatus(res.status, detail);
+  } catch (e) {
+    return { ok: false, message: `⚠ Błąd połączenia z fal.ai: ${e instanceof Error ? e.message : e}` };
+  }
+}
+
 // --- Pollinations.ai (darmowy, BEZ klucza) — generowanie z opisu (text-to-image, FLUX) ---
 const POLLINATIONS = "https://image.pollinations.ai/prompt/";
 

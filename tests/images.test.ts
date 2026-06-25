@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { generateImage, humanizeImageError, IMAGE_MODELS_LIST, pollinationsUrl, bestImageModel, imageModelCost, geminiEditPrompt } from "../src/lib/images";
+import { generateImage, humanizeImageError, IMAGE_MODELS_LIST, pollinationsUrl, bestImageModel, imageModelCost, geminiEditPrompt, interpretFalKeyStatus } from "../src/lib/images";
 import { store } from "../src/lib/store";
 
 const noKeys = { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", openrouter: "", nvidia: "", github: "" };
@@ -17,6 +17,17 @@ describe("Studio — modele edycji", () => {
 
   it("Pollinations to darmowy generator BEZ klucza", () => {
     expect(IMAGE_MODELS_LIST.find((m) => m.id === "pollinations")?.tier).toBe("free");
+  });
+
+  it("interpretFalKeyStatus: 401 zły klucz, 403 billing, 422/2xx OK", () => {
+    expect(interpretFalKeyStatus(401).ok).toBe(false);
+    expect(interpretFalKeyStatus(401).message).toMatch(/nieprawidłowy/i);
+    expect(interpretFalKeyStatus(403).ok).toBe(false);
+    expect(interpretFalKeyStatus(403).message).toMatch(/billing|środk/i);
+    expect(interpretFalKeyStatus(402).ok).toBe(false);
+    expect(interpretFalKeyStatus(422).ok).toBe(true);
+    expect(interpretFalKeyStatus(200).ok).toBe(true);
+    expect(interpretFalKeyStatus(500).ok).toBe(false);
   });
 
   it("pollinationsUrl: koduje opis, rozmiar i seed", () => {
