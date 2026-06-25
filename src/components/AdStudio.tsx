@@ -5,6 +5,7 @@ import { saveContentPost } from "../lib/contentStudio";
 import { generateAds, AD_PLATFORMS, AD_GOALS, type AdPlatform, type AdGoal } from "../lib/adStudio";
 import { AD_ANGLES, adAngleGuide } from "../lib/adAngles";
 import { scoreAdCopy, adQualityLabel } from "../lib/adQuality";
+import { buildUtmUrl, UTM_PRESETS, type UtmPreset } from "../lib/utm";
 
 // 📢 Generator reklam (Faza 0) — gotowe zestawy reklam Google/Meta do skopiowania.
 export default function AdStudio({ onClose }: { onClose: () => void }) {
@@ -17,6 +18,11 @@ export default function AdStudio({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [out, setOut] = useState("");
   const [angle, setAngle] = useState(""); // kąt emocjonalny (Ad Creative Engine)
+  // 🔗 Builder linków UTM (mierzenie ROI reklam/social).
+  const [utmUrl, setUtmUrl] = useState("");
+  const [utmPreset, setUtmPreset] = useState<UtmPreset | null>(null);
+  const [utmCampaign, setUtmCampaign] = useState("");
+  const utmLink = utmPreset ? buildUtmUrl({ url: utmUrl, source: utmPreset.source, medium: utmPreset.medium, campaign: utmCampaign }) : "";
 
   const generate = async () => {
     if (!product.trim()) { toast("Wpisz produkt/usługę."); return; }
@@ -106,6 +112,33 @@ export default function AdStudio({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           )}
+
+          {/* 🔗 Builder linków UTM — mierz, która reklama/post/link w bio daje ruch i sprzedaż */}
+          <details className="journal-card" style={{ marginTop: 12, padding: "8px 12px" }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🔗 Link z pomiarem (UTM) — reklama, post, bio</summary>
+            <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+              Wklej adres swojej strony i wybierz, skąd kierujesz ruch — JARVIS zrobi link, po którym w Google Analytics zobaczysz, co realnie sprzedaje.
+            </p>
+            <div className="field">
+              <input value={utmUrl} placeholder="Adres strony, np. www.v-ai.pl/oferta" onChange={(e) => setUtmUrl(e.target.value)} />
+            </div>
+            <div className="chips" style={{ flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+              {UTM_PRESETS.map((p) => (
+                <button key={p.id} className={`chip ${utmPreset?.id === p.id ? "on" : ""}`} onClick={() => setUtmPreset(p)}>{p.label}</button>
+              ))}
+            </div>
+            <div className="field">
+              <input value={utmCampaign} placeholder="Nazwa kampanii (opcjonalnie), np. wiosna-2026" onChange={(e) => setUtmCampaign(e.target.value)} />
+            </div>
+            {utmLink ? (
+              <div className="journal-card" style={{ padding: "8px 10px" }}>
+                <p style={{ wordBreak: "break-all", margin: 0, fontSize: 13 }}>{utmLink}</p>
+                <button className="chip" style={{ marginTop: 8 }} onClick={() => copyWithToast(utmLink, "Link skopiowany ✓")}>📋 Kopiuj link</button>
+              </div>
+            ) : (
+              <p className="muted" style={{ fontSize: 12 }}>Podaj adres i wybierz źródło, by zobaczyć gotowy link.</p>
+            )}
+          </details>
         </div>
         <div className="panel-foot">
           <button className="btn primary" style={{ width: "100%" }} onClick={onClose}>Zamknij</button>
