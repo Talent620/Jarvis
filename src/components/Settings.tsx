@@ -2029,6 +2029,27 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </select>
               </div>
 
+              {/* 🎭 Doradca głosu premium — naturalny/emocjonalny głos: co daje, ile kosztuje, jak wpiąć. */}
+              <div className="journal-card" style={{ padding: "10px 12px", margin: "10px 0" }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>🎭 Chcesz głos naturalny, z emocją?</div>
+                <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.5, marginTop: 4 }}>
+                  Głos systemowy jest spójny, ale płaski. Bardziej ludzkie brzmienie dają głosy premium:
+                  <br />• <b>Gemini TTS — DARMOWY</b>: wystarczy klucz Gemini (aistudio.google.com/apikey).
+                  <br />• <b>ElevenLabs / Fish Audio</b>: najbardziej naturalne i emocjonalne, płatne — grosze za zdanie, wymagają klucza.
+                  <br />• <b>Kokoro</b>: offline na urządzeniu, prywatnie, za darmo.
+                </div>
+                <button
+                  className="btn"
+                  style={{ marginTop: 8, padding: "6px 14px", width: "auto" }}
+                  onClick={() => {
+                    setVoice({ voiceMode: "gemini", speak: true, geminiTts: true, voiceSystemPl: false, localTts: false });
+                    setTimeout(() => speak("Tak brzmi głos premium. Naturalnie i z wyczuciem.", { ...store.settings, speak: true, voiceMode: "gemini" }), 120);
+                  }}
+                >
+                  ✨ Wypróbuj darmowy głos premium (Gemini TTS)
+                </button>
+              </div>
+
               {/* Pokazujemy TYLKO opcje wybranego silnika — koniec przewijania przez wszystko naraz. */}
               {voiceMode === "system" && (
                 <>

@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🎭 Łatwe włączenie głosu naturalnego, z emocją: w ⚙ → Głos jest teraz krótki doradca — co daje każdy głos premium, ile kosztuje i jak go wpiąć, plus przycisk wypróbowania DARMOWEGO głosu premium (Gemini TTS) jednym dotknięciem.",
       "🗣 Naturalniejsza wymowa: JARVIS rozwija przy czytaniu skróty i symbole, które silniki głosu literują lub czytają dziwnie (np. na przykład, między innymi, około, numer, procent, stopni) — brzmi bardziej po ludzku na każdym głosie.",
       "🔊 Przycisk czytania przy polu wpisywania: gdy masz coś wpisane lub wklejone, dotknij 🔊 nad polem, a JARVIS odczyta to dosłownie na głos — bez pisania komendy i bez wysyłania do modelu.",
       "🔊 Nowa komenda czytania na głos: napisz przeczytaj na głos: a po dwukropku wklej dowolny tekst — JARVIS odczyta go DOSŁOWNIE (bez przetwarzania, bez kosztu), z czystą mową (bez znaczników i emoji).",
