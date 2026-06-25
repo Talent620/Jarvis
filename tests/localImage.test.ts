@@ -1,7 +1,21 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { sdTxt2ImgBody, sdImg2ImgBody, parseSdImage, diagnoseSdError, localSdGenerate, parseSdModels, detectSd, parseSdProgress } from "../src/lib/localImage";
+import { sdTxt2ImgBody, sdImg2ImgBody, parseSdImage, diagnoseSdError, localSdGenerate, parseSdModels, detectSd, parseSdProgress, normalizeSdUrl } from "../src/lib/localImage";
 import { store } from "../src/lib/store";
+
+describe("normalizeSdUrl — adres serwera obrazów wybacza pomyłki", () => {
+  it("dokłada http:// i domyślny port 7860", () => {
+    expect(normalizeSdUrl("192.168.0.10")).toBe("http://192.168.0.10:7860");
+    expect(normalizeSdUrl("192.168.0.10:7860")).toBe("http://192.168.0.10:7860");
+  });
+  it("usuwa spacje i końcowy ukośnik, zachowuje jawny port", () => {
+    expect(normalizeSdUrl("  http://10.0.0.5:1234/ ")).toBe("http://10.0.0.5:1234");
+  });
+  it("https (Tailscale serve) bez zmiany portu; puste → puste", () => {
+    expect(normalizeSdUrl("https://pc.tailnet.ts.net")).toBe("https://pc.tailnet.ts.net");
+    expect(normalizeSdUrl("")).toBe("");
+  });
+});
 
 beforeEach(() => {
   store.setSettings({ sdUrl: "" });

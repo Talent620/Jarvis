@@ -29,7 +29,7 @@ import { warmNow } from "../lib/prewarm";
 import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkOllama";
 import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
 import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
-import { detectSd } from "../lib/localImage";
+import { detectSd, normalizeSdUrl } from "../lib/localImage";
 import { checkForUpdate, applyUpdate, currentBuild, type UpdateInfo } from "../lib/updater";
 import { CHANGELOG } from "../lib/changelog";
 import { liveUpdateSupported, checkLiveUpdate, applyLiveUpdate } from "../lib/liveUpdate";
@@ -1302,6 +1302,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   value={s.sdUrl}
                   placeholder="http://192.168.0.10:7860"
                   onChange={(e) => set({ sdUrl: e.target.value })}
+                  onBlur={(e) => { const v = e.target.value.trim(); if (v) set({ sdUrl: normalizeSdUrl(v) }); }}
                 />
                 <p className="muted" style={{ marginTop: 4 }}>
                   Uruchom Automatic1111/Forge na PC z flagami <code>--api --listen --cors-allow-origins=*</code>,
