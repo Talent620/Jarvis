@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "📐 Maszynka do kontentu — dopasowanie do platformy: obok oceny wiralności widzisz teraz długość posta i liczbę hashtagów z podpowiedzią pod wybraną platformę (Instagram, Facebook, TikTok, LinkedIn) — czy zmieści się w widocznej części przed zwinięciem, czy hashtagów jest w sam raz. Mniej zgadywania, większy zasięg.",
       "🔍 Kreator stron — podgląd w Google i social: po zbudowaniu strony widzisz, jak wygląda w wynikach Google (snippet) oraz przy udostępnieniu na FB/social (karta Open Graph) — z ostrzeżeniami, gdy tytuł/opis są za długie (Google utnie) albo brakuje miniatury og:image. Wiesz od razu, co poprawić pod klikalność.",
       "🔗 Linki z pomiarem ROI (UTM) w Generatorze reklam: wklejasz adres strony, wybierasz źródło (Google, Instagram, Facebook, TikTok, LinkedIn, newsletter) i nazwę kampanii — JARVIS robi gotowy link, po którym w Google Analytics widzisz, która reklama/post/link w bio realnie daje ruch i sprzedaż. Działa dla reklam, social i e-maili.",
       "🕘 Studio Obrazów — historia przeróbek: każdy gotowy wynik zapisuje się w historii (przeżywa zamknięcie Studia). Pod wynikiem masz pasek miniatur — dotknij, by wziąć obraz do dalszej edycji, albo usuń ✕. Trzymane ostatnie 16 (w pamięci urządzenia).",

@@ -5,6 +5,7 @@ import Modal from "./Modal";
 import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
 import { generatePost, saveContentPost, PLATFORMS, TONES, type Platform, type Tone } from "../lib/contentStudio";
 import { viralityScore } from "../lib/virality";
+import { assessSocialFit } from "../lib/socialFit";
 
 // 📱 Maszynka do kontentu — JARVIS pisze gotowy post na social media. Kopiujesz
 // albo udostępniasz jednym tapnięciem do dowolnej apki (IG/FB/TikTok/LinkedIn).
@@ -80,6 +81,16 @@ export default function ContentStudio({ onClose }: { onClose: () => void }) {
                   <div style={{ marginTop: 8, fontSize: 12 }}>
                     <span style={{ fontWeight: 700, color: v.score >= 85 ? "#39d98a" : v.score >= 60 ? "var(--gold)" : "#ff6b6b" }}>🔥 Wiralność: {v.score}/100 · {v.grade}</span>
                     {v.tips.length > 0 && <div className="muted" style={{ marginTop: 2 }}>Wzmocnij: {v.tips.slice(0, 2).join(" ")}</div>}
+                  </div>
+                );
+              })()}
+              {/* 📐 Social Fit — dopasowanie do platformy (długość, próg widoczności, liczba hashtagów) */}
+              {(() => {
+                const f = assessSocialFit(platform, out);
+                return (
+                  <div style={{ marginTop: 6, fontSize: 12 }}>
+                    <span style={{ fontWeight: 700, color: f.issues.length === 0 ? "#39d98a" : "var(--gold)" }}>📐 Dopasowanie: {f.len} zn. · {f.hashtags} #</span>
+                    {f.issues.length > 0 && <div className="muted" style={{ marginTop: 2 }}>{f.issues.slice(0, 2).join(" ")}</div>}
                   </div>
                 );
               })()}
