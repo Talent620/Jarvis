@@ -2637,6 +2637,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </details>
               <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
               <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>📧 Integracje Google (Gmail + Kalendarz)</summary>
+              <p style={{ fontSize: 12.5, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, background: "rgba(108,231,255,.06)", margin: "6px 0" }}>
+                💡 <b>To najtrudniejsza droga</b> (wymaga backendu). Nie masz backendu? <b>Najprościej:</b> Centrum (⋯ Więcej) → <b>✉ Wyślij e-mail</b> → „Otwórz w Gmailu" — działa od ręki, bez kluczy. Chcesz wysyłkę w tle hasłem aplikacji? Wpisz <b>poczta</b> w szukajce ustawień u góry → sekcja <b>📨 Poczta</b>.
+              </p>
               <p className="muted">
                 Wymaga wdrożonego backendu (powyżej) z kluczami Google OAuth. Po połączeniu JARVIS
                 może czytać/wysyłać maile i zarządzać Kalendarzem Google. Instrukcja: <code>proxy/README</code>.
