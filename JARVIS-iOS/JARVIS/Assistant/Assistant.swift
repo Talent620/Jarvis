@@ -67,7 +67,7 @@ final class Assistant: ObservableObject {
         // Tasks — "dodaj zadanie ...", "pokaż zadania"
         if let body = capture(l, after: ["dodaj zadanie", "nowe zadanie", "zadanie"]) {
             store.addTask(body.capitalizedFirst)
-            return "Dodałem zadanie: „\(body)". Załatwione."
+            return "Dodałem zadanie: „\(body)”. Załatwione."
         }
         if matches(l, ["pokaż zadania", "pokaz zadania", "lista zadań", "lista zadan", "co mam do zrobienia"]) {
             return listSummary(store.tasks.filter { !$0.done }.map(\.title), empty: "Nie masz aktywnych zadań.", head: "Oto plan na dziś:")
@@ -79,14 +79,14 @@ final class Assistant: ObservableObject {
         // Notes — "zanotuj ...", "nowa notatka ..."
         if let body = capture(l, after: ["zanotuj", "zapisz notatkę", "zapisz notatke", "notatka", "nowa notatka"]) {
             store.addNote(body.prefixTitle, body)
-            return "Notuję: „\(body)". Zapisane do modułu Notatki."
+            return "Notuję: „\(body)”. Zapisane do modułu Notatki."
         }
 
         // Reminders — "przypomnij mi ..."
         if let body = capture(l, after: ["przypomnij mi", "przypomnij", "ustaw przypomnienie"]) {
             let date = Self.parseDate(in: l) ?? Date().addingTimeInterval(3600)
             store.addReminder(body.capitalizedFirst, at: date)
-            return "Przypomnę: „\(body)" — \(Self.dateTimeFmt.string(from: date))."
+            return "Przypomnę: „\(body)” — \(Self.dateTimeFmt.string(from: date))."
         }
         if matches(l, ["pokaż przypomnienia", "pokaz przypomnienia", "moje przypomnienia"]) {
             return listSummary(store.reminders.filter { !$0.done }.map { "\($0.text) — \(Self.dateTimeFmt.string(from: $0.date))" },
@@ -96,7 +96,7 @@ final class Assistant: ObservableObject {
         // Shopping — "dodaj do listy zakupów ...", "kup ..."
         if let body = capture(l, after: ["dodaj do zakupów", "dodaj do zakupow", "dodaj do listy zakupów", "dodaj do listy zakupow", "kup", "na zakupy"]) {
             store.addShopping(body.capitalizedFirst)
-            return "Dorzucam do listy zakupów: „\(body)"."
+            return "Dorzucam do listy zakupów: „\(body)”."
         }
         if matches(l, ["pokaż zakupy", "pokaz zakupy", "lista zakupów", "lista zakupow"]) {
             return listSummary(store.shopping.filter { !$0.bought }.map(\.name), empty: "Lista zakupów jest pusta.", head: "Na liście zakupów:")
@@ -106,7 +106,7 @@ final class Assistant: ObservableObject {
         if let body = capture(l, after: ["dodaj wydarzenie", "nowe wydarzenie", "zaplanuj"]) {
             let date = Self.parseDate(in: l) ?? Date().addingTimeInterval(86400)
             store.addEvent(body.capitalizedFirst, at: date)
-            return "Zaplanowane: „\(body)" — \(Self.dateTimeFmt.string(from: date))."
+            return "Zaplanowane: „\(body)” — \(Self.dateTimeFmt.string(from: date))."
         }
 
         // Journal — "zapisz w dzienniku ..."

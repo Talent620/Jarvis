@@ -38,6 +38,14 @@ mam na imię Marcin
 - Konto deweloperskie Apple do uruchomienia na fizycznym urządzeniu
   (mikrofon i rozpoznawanie mowy działają tylko na urządzeniu / w odpowiednim symulatorze)
 
+## Instalacja na iPhone z jednego pliku (`.ipa`)
+
+Pełny przewodnik (TestFlight, sideloading AltStore/Sideloadly, ad‑hoc, TrollStore,
+darmowe vs płatne Apple ID, EU/DMA) jest w **[INSTALL.md](INSTALL.md)**.
+Każdy push buduje też appkę na macOS przez GitHub Actions
+([`.github/workflows/ios.yml`](../.github/workflows/ios.yml)) i wrzuca artefakt
+`JARVIS-unsigned.ipa` (Actions → iOS build → Artifacts).
+
 ## Uruchomienie
 
 1. Otwórz `JARVIS.xcodeproj` w Xcode.
