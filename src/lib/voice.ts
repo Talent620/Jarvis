@@ -45,6 +45,31 @@ export function cleanForSpeech(raw: string): string {
   return t.trim();
 }
 
+/**
+ * Ukształtuj tekst pod NATURALNĄ wymowę PO oczyszczeniu (cleanForSpeech). Rozwija skróty i symbole,
+ * które silniki TTS literują albo czytają dziwnie (np. „np." → „na przykład", „%" → „procent").
+ * Świadomie pomijamy skróty zależne od odmiany (godz./tys./zł), bo zła forma brzmi gorzej niż skrót.
+ * Czysta i testowalna — działa na KAŻDYM silniku (systemowym, premium), bez SSML.
+ */
+const SPEECH_ABBR: [RegExp, string][] = [
+  [/\bnp\./gi, "na przykład"],
+  [/\bitp\./gi, "i tym podobne"],
+  [/\bitd\./gi, "i tak dalej"],
+  [/\btzn\./gi, "to znaczy"],
+  [/\bm\.in\./gi, "między innymi"],
+  [/\bok\./gi, "około"],
+  [/\bnr\b/gi, "numer"],
+  [/\bul\./gi, "ulica"],
+];
+export function speechShape(raw: string): string {
+  let t = raw || "";
+  for (const [re, w] of SPEECH_ABBR) t = t.replace(re, w);
+  t = t.replace(/(\d)\s*%/g, "$1 procent").replace(/%/g, " procent"); // procenty
+  t = t.replace(/(\d)\s*°\s*C/gi, "$1 stopni"); // temperatura
+  t = t.replace(/ & /g, " i "); // ampersand
+  return t.replace(/\s{2,}/g, " ").trim();
+}
+
 /** Lista dostępnych głosów do wyboru w ustawieniach — natywne (Android) albo przeglądarkowe.
  *  Android ma własny silnik (NativeTTS); iOS i web używają Web Speech (WKWebView/przeglądarka). */
 export async function listSpeechVoices(): Promise<NativeVoiceInfo[]> {
@@ -433,7 +458,7 @@ export function activeVoiceLabel(s: Settings): string {
 
 export async function speak(text: string, settings: Settings): Promise<void> {
   if (!settings.speak) return;
-  text = cleanForSpeech(text); // nie czytaj na głos markdownu/emoji/linków/kodu (bezpiecznik pod personę)
+  text = speechShape(cleanForSpeech(text)); // czyść znaczniki + rozwiń skróty/symbole pod naturalną wymowę
   if (!text.trim()) return;
   stopSpeaking();
   const myToken = speakToken; // bieżąca „tura mówienia"; nowszy speak()/stop unieważni
