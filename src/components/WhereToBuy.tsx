@@ -50,9 +50,9 @@ export default function WhereToBuy({ onClose }: { onClose: () => void }) {
 
   const PlaceCard = ({ p, badge, color }: { p: Place; badge?: string; color?: string }) => (
     <div className="journal-card" style={{ padding: "10px 12px", borderLeft: `3px solid ${color || "var(--line)"}` }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-        <span style={{ fontWeight: 600, fontSize: 16 }}>{p.name}</span>
-        <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{[dist(p), price(p)].filter(Boolean).join(" · ")}</span>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline", minWidth: 0 }}>
+        <span style={{ fontWeight: 600, fontSize: 16, minWidth: 0 }}>{p.name}</span>
+        <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}>{[dist(p), price(p)].filter(Boolean).join(" · ")}</span>
       </div>
       {badge && <div style={{ fontSize: 12, color: color || "var(--text-dim)", marginTop: 2 }}>{badge}</div>}
       {p.address && <div style={{ fontSize: 13, marginTop: 2 }}>📍 {p.address}</div>}

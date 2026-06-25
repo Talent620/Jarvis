@@ -124,9 +124,9 @@ export default function Cards({ onClose }: { onClose: () => void }) {
                   <h3 style={{ marginTop: 14 }}>Ostatnie fiszki</h3>
                   {data.flashcards.slice(0, 8).map((c) => (
                     <div key={c.id} className="journal-card">
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                        <b style={{ fontSize: 14 }}>{c.front}</b>
-                        <button type="button" className="x" aria-label="Usuń fiszkę" title="Usuń fiszkę" style={{ cursor: "pointer" }} onClick={() => removeCard(c.id)}>✕</button>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, minWidth: 0 }}>
+                        <b style={{ fontSize: 14, minWidth: 0 }}>{c.front}</b>
+                        <button type="button" className="x" aria-label="Usuń fiszkę" title="Usuń fiszkę" style={{ cursor: "pointer", flexShrink: 0 }} onClick={() => removeCard(c.id)}>✕</button>
                       </div>
                       <div className="muted" style={{ fontSize: 13 }}>{c.back}</div>
                     </div>

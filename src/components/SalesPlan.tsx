@@ -91,11 +91,11 @@ export default function SalesPlan({ onClose, onLead }: { onClose: () => void; on
               const sc = l.intel ? scoreLabel(l.intel.score) : null;
               return (
                 <div key={l.id} className="journal-card" style={{ padding: "8px 10px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-                    <b style={{ cursor: onLead ? "pointer" : "default" }} onClick={() => onLead?.(l.id)}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline", minWidth: 0 }}>
+                    <b style={{ cursor: onLead ? "pointer" : "default", minWidth: 0 }} onClick={() => onLead?.(l.id)}>
                       {sc ? `${sc.emoji} ` : ""}{l.company}
                     </b>
-                    <span style={{ fontSize: 11, color: ol.open ? "var(--ok, #58e08a)" : "var(--text-dim)" }}>{ol.open ? "🟢" : "⚪"} {ol.text}</span>
+                    <span style={{ fontSize: 11, color: ol.open ? "var(--ok, #58e08a)" : "var(--text-dim)", flexShrink: 0 }}>{ol.open ? "🟢" : "⚪"} {ol.text}</span>
                   </div>
                   <div className="muted" style={{ fontSize: 12 }}>{[phone(l), l.location].filter(Boolean).join(" · ")}{l.intel ? ` · szansa ${l.intel.score}/100` : ""}</div>
                   <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
@@ -117,9 +117,9 @@ export default function SalesPlan({ onClose, onLead }: { onClose: () => void; on
           ) : (
             followUps.map((l) => (
               <div key={l.id} className="journal-card" style={{ padding: "8px 10px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-                  <b style={{ cursor: onLead ? "pointer" : "default" }} onClick={() => onLead?.(l.id)}>{l.company}</b>
-                  <span className="muted" style={{ fontSize: 11 }}>ponaglenie #{(l.followUpCount ?? 0) + 1}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline", minWidth: 0 }}>
+                  <b style={{ cursor: onLead ? "pointer" : "default", minWidth: 0 }} onClick={() => onLead?.(l.id)}>{l.company}</b>
+                  <span className="muted" style={{ fontSize: 11, flexShrink: 0 }}>ponaglenie #{(l.followUpCount ?? 0) + 1}</span>
                 </div>
                 <p className="muted" style={{ fontSize: 12, whiteSpace: "pre-wrap", margin: "4px 0 0", maxHeight: 64, overflow: "hidden" }}>
                   {followUpMessage(l, (l.followUpCount ?? 0) + 1)}
