@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🩺 Diagnostyka startowa sprawdza też fal.ai: gdy masz wpisany klucz fal.ai, przycisk Uruchom diagnostykę raportuje jego stan (działa / zły klucz / brak billingu) obok reszty kluczy — bez kosztu, bez generowania obrazu.",
       "🔑 Test klucza fal.ai jednym kliknięciem (⚙ → AI → Studio premium): przycisk Sprawdź klucz fal.ai od razu mówi, czy klucz jest ważny, czy brakuje billingu/środków, czy działa — bez generowania obrazu i bez kosztu. Koniec zgadywania, czemu premium nie rusza.",
       "🖼 Studio Obrazów — czytelny powód, gdy płatny fal.ai odmówi: dotąd gdy fal.ai odrzucił edycję (np. brak środków/billingu na koncie fal.ai), JARVIS po cichu próbował darmowym Gemini i — gdy ten też miał wyczerpany limit — pokazywał mylący komunikat o limicie Gemini (każąc wybrać fal.ai, który już był wybrany). Teraz widzisz OBA powody, najpierw realny problem fal.ai, z podpowiedzią, że trzeba sprawdzić ważność klucza i billing fal.ai.",
       "✍ Wiele podpisów e-mail z wyborem przed wysyłką: w Wyślij e-mail zapisujesz kilka podpisów (np. Firmowy, Prywatny), nadajesz im nazwy i jednym dotknięciem wybierasz aktywny tuż przed wysłaniem — dokleja się do treści automatycznie. Dodawanie, usuwanie i przełączanie na miejscu; Twój dotychczasowy podpis trafia do biblioteki sam, więc działa jak dotąd.",

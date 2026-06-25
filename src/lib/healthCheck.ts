@@ -9,6 +9,7 @@ import { wakeSupported } from "./wakeword";
 import { canSendMail, canRelaySmtp, hasBackendGmail } from "./mailer";
 import { getRouterStats } from "./modelRouter";
 import { testBackend } from "./sync";
+import { checkFalKey } from "./images";
 
 // === Centrum Sprawdzania ===
 // Przegląd WSZYSTKICH kluczowych funkcji JARVIS-a: co działa, co nie i DLACZEGO —
@@ -389,6 +390,19 @@ export async function systemCheck(onStep?: (lines: string[]) => void): Promise<s
       ? "✅ Gemini — rozmowa na żywo ☎, Studio obrazów 🎨 i pamięć semantyczna 🧠 dostępne."
       : "➖ Gemini — brak klucza: rozmowa na żywo, Studio obrazów i pamięć semantyczna nieaktywne (klucz darmowy: aistudio.google.com/apikey).",
   );
+
+  // 5b) Studio premium (fal.ai) — test klucza BEZ kosztu, gdy wpisany.
+  if (s.falApiKey?.trim()) {
+    push("⏳ Studio premium (fal.ai) — sprawdzam klucz…");
+    const fr = await checkFalKey();
+    // checkFalKey zwraca ✅/❌/⚠ w treści; znormalizuj do prefiksu diagnostyki.
+    lines[lines.length - 1] = fr.ok
+      ? "✅ Studio premium (fal.ai) — klucz działa, modele premium gotowe (bez Gemini)."
+      : `❌ Studio premium (fal.ai) — ${fr.message.replace(/^[❌⚠✅]\s*/, "")}`;
+    onStep?.([...lines]);
+  } else {
+    push("➖ Studio premium (fal.ai) — brak klucza (opcjonalne; darmowa edycja działa na Gemini).");
+  }
 
   // 6) Głos (synteza + mikrofon). Na urządzeniu działa natywny TTS; z kluczem
   // Gemini dostępny jest też darmowy głos premium (Gemini TTS).
