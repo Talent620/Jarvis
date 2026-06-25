@@ -199,11 +199,19 @@ export function makeDistortionCurve(amount: number, n = 8192): Float32Array {
 // (charkot/agresja) + makeup gain. Wraz z niższym playbackRate daje głęboki, brutalny, zniekształcony
 // głos — najbliżej kreskówki, jak da się z TTS. Zwraca węzeł wyjściowy do podłączenia dalej.
 function kapitanFxChain(ctx: AudioContext, src: AudioNode): AudioNode {
-  const lowShelf = ctx.createBiquadFilter(); lowShelf.type = "lowshelf"; lowShelf.frequency.value = 200; lowShelf.gain.value = 9;
-  const shaper = ctx.createWaveShaper(); (shaper as { curve: Float32Array | null }).curve = makeDistortionCurve(22); shaper.oversample = "4x";
-  const lowpass = ctx.createBiquadFilter(); lowpass.type = "lowpass"; lowpass.frequency.value = 3000;
-  const out = ctx.createGain(); out.gain.value = 0.85;
-  src.connect(lowShelf); lowShelf.connect(shaper); shaper.connect(lowpass); lowpass.connect(out);
+  // 1) Highpass — utnij dudnienie/rumble, żeby zniekształcenie nie zamieniło się w błotnistą breję.
+  const highPass = ctx.createBiquadFilter(); highPass.type = "highpass"; highPass.frequency.value = 90;
+  // 2) Lowshelf — klatka piersiowa (groźny, niski fundament).
+  const lowShelf = ctx.createBiquadFilter(); lowShelf.type = "lowshelf"; lowShelf.frequency.value = 180; lowShelf.gain.value = 8;
+  // 3) Drive — napędź waveshaper mocniej, by charkot był SPÓJNY niezależnie od głośności wejścia.
+  const drive = ctx.createGain(); drive.gain.value = 1.7;
+  const shaper = ctx.createWaveShaper(); (shaper as { curve: Float32Array | null }).curve = makeDistortionCurve(20); shaper.oversample = "4x";
+  // 4) Presence peak ~1.5 kHz — słowa PRZEBIJAJĄ się przez zniekształcenie (wyraźniej, nie tylko głośniej).
+  const presence = ctx.createBiquadFilter(); presence.type = "peaking"; presence.frequency.value = 1500; presence.Q.value = 1; presence.gain.value = 6;
+  // 5) Lowpass — zostaw bite, ale bez piszczących wysokich.
+  const lowpass = ctx.createBiquadFilter(); lowpass.type = "lowpass"; lowpass.frequency.value = 3400;
+  const out = ctx.createGain(); out.gain.value = 0.82; // makeup + zapas na clipping
+  src.connect(highPass); highPass.connect(lowShelf); lowShelf.connect(drive); drive.connect(shaper); shaper.connect(presence); presence.connect(lowpass); lowpass.connect(out);
   return out;
 }
 
