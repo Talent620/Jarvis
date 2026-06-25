@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🖼 Studio Obrazów — Asystent nie zawiesi generacji, gdy mózg offline: jeśli tekstowy mózg nie odpowiada (np. lokalna Ollama nieosiągalna), krok rozumienia polecenia nie czeka już w nieskończoność — po 15 s przechodzi wprost do generacji (fal.ai i tak działa), z podpowiedzią, że Asystenta możesz wyłączyć przyciskiem 💬.",
       "🖥 Czytelny komunikat, gdy lokalny model (Ollama) jest nieosiągalny: zamiast technicznego błędu Failed to connect (adres:11434) zobaczysz po ludzku, że nie ma połączenia z serwerem Ollama — z radą: sprawdź, czy PC jest włączony, Ollama działa i Tailscale połączony, albo przełącz mózg na chmurę. Dotyczy m.in. Kreatora stron.",
       "📢 Generator reklam — audyt jakości i ryzyka odrzucenia: po wygenerowaniu reklamy widzisz wynik 0–100 i konkretne poprawki, zanim wkleisz ją do Google/Meta — sprawdza limity znaków nagłówków, KAPITALIKI, nadmiar wykrzykników, ryzykowne obietnice/superlatywy, emoji w Google (niedozwolone) i obecność CTA. Mniej odrzuceń, mocniejszy przekaz.",
       "📧 Jaśniej, jak dodać e-mail: przy Integracjach Google (najtrudniejsza droga, wymaga backendu) jest teraz podpowiedź kierująca do prostszych dróg — Centrum → ✉ Wyślij e-mail → Otwórz w Gmailu (od ręki, bez kluczy) albo sekcja 📨 Poczta (hasło aplikacji). Koniec utykania na OAuth.",

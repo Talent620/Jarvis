@@ -168,10 +168,19 @@ export default function Studio({ onClose }: { onClose: () => void }) {
   const startAssist = async (instruction: string) => {
     if (!instruction.trim()) return;
     setAssistBusy(true); setErr(""); setPlan(null);
-    const p = await refineEdit(instruction.trim(), inputs.length > 0);
+    // Asystent korzysta z TEKSTOWEGO mózgu. Gdy mózg jest offline/wolny (np. lokalna Ollama
+    // nieosiągalna — „Failed to connect"), nie każ czekać na pełny timeout sieci (do 120 s):
+    // po 15 s przejdź wprost do generacji z surowym poleceniem (i tak potwierdzasz przyciskiem).
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const fallback = new Promise<EditPlan & { _skipped?: true }>((resolve) => {
+      timer = setTimeout(() => resolve({ ready: true, prompt: instruction.trim(), _skipped: true }), 15000);
+    });
+    const p = await Promise.race([refineEdit(instruction.trim(), inputs.length > 0), fallback]);
+    if (timer) clearTimeout(timer);
     if (!mounted.current) return;
     setAssistBusy(false);
-    setPlan({ ...p, instruction: instruction.trim() });
+    if ((p as { _skipped?: true })._skipped) toast("Asystent nie odpowiada (mózg offline?) — generuję wprost. Możesz go wyłączyć przyciskiem 💬.");
+    setPlan({ ready: p.ready, prompt: p.prompt, summary: p.summary, question: p.question, instruction: instruction.trim() });
   };
   const answerClarify = () => {
     if (!clarifyAns.trim() || !plan?.instruction) return;
