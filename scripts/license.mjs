@@ -38,8 +38,40 @@ async function sign(name, days, trial) {
   console.log(data + "." + b64url(sig));
 }
 
+// Sprawdź, co jest w kluczu (dla kogo, typ, kiedy wydany, kiedy wygasa, ile dni zostało, czy podpis OK).
+function fmtDate(ms) {
+  return new Date(ms).toISOString().slice(0, 16).replace("T", " ") + " UTC";
+}
+async function inspect(token) {
+  const [data, sig] = (token || "").trim().split(".");
+  if (!data) return console.error("Podaj klucz: node scripts/license.mjs inspect <KLUCZ>");
+  let p;
+  try { p = JSON.parse(Buffer.from(data, "base64url").toString("utf8")); }
+  catch { return console.error("Nie mogę odczytać klucza — wklej PEŁNY ciąg (z kropką w środku)."); }
+  const now = Date.now();
+  console.log("Dla:        ", p.n || "(brak)");
+  console.log("Typ:        ", p.t || "(brak)");
+  console.log("Wydany:     ", p.iat ? fmtDate(p.iat) : "(brak)");
+  if (p.exp) {
+    const left = Math.ceil((p.exp - now) / 86400_000);
+    console.log("Wygasa:     ", fmtDate(p.exp), left > 0 ? `(za ${left} dni)` : `(WYGASŁ ${-left} dni temu)`);
+  } else {
+    console.log("Wygasa:      nigdy (bezterminowy)");
+  }
+  if (sig && existsSync(PRIV)) {
+    try {
+      const prv = JSON.parse(readFileSync(PRIV, "utf8"));
+      const pub = await c.subtle.importKey("jwk", { kty: prv.kty, crv: prv.crv, x: prv.x, y: prv.y }, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+      const ok = await c.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, pub, Buffer.from(sig, "base64url"), Buffer.from(data));
+      console.log("Podpis:     ", ok ? "PRAWIDŁOWY ✓" : "NIEPRAWIDŁOWY ✗");
+    } catch { console.log("Podpis:      (nie udało się zweryfikować)"); }
+  }
+  console.log("Status:     ", !p.exp || p.exp > now ? "WAŻNY ✓" : "WYGASŁY ✗");
+}
+
 const [cmd, name, days] = process.argv.slice(2);
 if (cmd === "genkey") await genkey();
 else if (cmd === "sign" && name) await sign(name, days, false);
 else if (cmd === "trial" && name) await sign(name, days || 14, true); // domyślnie 14 dni trialu
-else console.log("Użycie: genkey | sign \"Imię\" [dni] | trial \"Imię\" [dni=14]");
+else if (cmd === "inspect" && name) await inspect(name);
+else console.log("Użycie: genkey | sign \"Imię\" [dni] | trial \"Imię\" [dni=14] | inspect <KLUCZ>");
