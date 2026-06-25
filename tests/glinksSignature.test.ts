@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { appendSignature, splitOffer } from "../src/lib/glinks";
+import { appendSignature, splitOffer, stripPlaceholders } from "../src/lib/glinks";
 import { DEFAULT_EMAIL_SIGNATURE } from "../src/lib/store";
 
 const SIG = "—\ntel. +48 500 390 009\nwww.v-ai.pl";
@@ -39,6 +39,26 @@ describe("appendSignature — automatyczna stopka", () => {
 
   it("pusta treść = sam podpis", () => {
     expect(appendSignature("", SIG)).toBe(SIG);
+  });
+});
+
+describe("stripPlaceholders — czyści nieuzupełnione nawiasy", () => {
+  it("usuwa [Twoje imię i nazwisko] i podobne placeholdery", () => {
+    expect(stripPlaceholders("Pozdrawiam,\n[Twoje imię i nazwisko]")).toBe("Pozdrawiam,");
+    expect(stripPlaceholders("Oferta dla [Nazwa firmy] — tel. [Telefon]")).toBe("Oferta dla  — tel.");
+  });
+  it("nie rusza treści bez nawiasów", () => {
+    expect(stripPlaceholders("Dzień dobry, mam ofertę.")).toBe("Dzień dobry, mam ofertę.");
+  });
+});
+
+describe("appendSignature — usuwa placeholder przed doklejeniem podpisu", () => {
+  it("placeholder z modelu znika, zostaje czysty podpis", () => {
+    const body = "Czy mogę przedstawić propozycję?\n\nPozdrawiam,\n[Twoje imię i nazwisko]";
+    const out = appendSignature(body, SIG);
+    expect(out).not.toContain("[Twoje imię i nazwisko]");
+    expect(out).toContain("Pozdrawiam,");
+    expect(out.endsWith(SIG)).toBe(true);
   });
 });
 

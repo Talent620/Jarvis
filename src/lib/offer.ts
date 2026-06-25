@@ -11,6 +11,7 @@ const SYSTEM = [
   "- Personalizuj: nazwa firmy, branża, lokalizacja, zauważony problem.",
   "- Struktura: zaczep (zauważyłem…) → realna wartość dla nich → dowód (mam już gotowe demo do pokazania) → jedno proste pytanie-CTA.",
   "- Ton: uprzejmy, profesjonalny, ludzki. Bez obietnic bez pokrycia.",
+  "- NIE dodawaj podpisu ani placeholderów w nawiasach (np. [Twoje imię i nazwisko], [Nazwa firmy], [Telefon]) — podpis (imię, telefon, strona) dokleimy automatycznie. Zakończ na pytaniu-CTA lub krótkim zwrocie grzecznościowym (np. Pozdrawiam) BEZ nazwiska.",
   "- Zwróć WYŁĄCZNIE treść wiadomości. Pierwsza linia: „Temat: …”.",
 ].join("\n");
 

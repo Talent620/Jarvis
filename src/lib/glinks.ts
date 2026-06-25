@@ -54,11 +54,25 @@ export function mapsSearchUrl(query: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
-/** Dopisuje podpis (stopkę: telefon, strona) na końcu treści — bez dublowania. */
+/**
+ * Usuwa placeholdery, które model bywa dopisuje na końcu maila (np. „[Twoje imię i nazwisko]",
+ * „[Nazwa firmy]", „[Telefon]"). Bez tego do klienta szedł nieuzupełniony nawias, mimo że podpis
+ * z prawdziwym nazwiskiem dokleja się osobno. W cold-mailu nawiasy kwadratowe to praktycznie zawsze
+ * placeholder, więc bezpiecznie je czyścimy i sprzątamy puste linie. S9-safe (bez /u).
+ */
+export function stripPlaceholders(text: string): string {
+  return (text || "")
+    .replace(/\[[^\]\n]{1,60}\]/g, "") // [Twoje imię i nazwisko], [Nazwa firmy], [Telefon]…
+    .replace(/[ \t]+\n/g, "\n") // spacje na końcu linii (po usunięciu nawiasu)
+    .replace(/\n{3,}/g, "\n\n") // bez wielkich dziur
+    .trim();
+}
+
+/** Dopisuje podpis (stopkę: telefon, strona) na końcu treści — bez dublowania, bez placeholderów. */
 export function appendSignature(body: string, signature?: string): string {
   const sig = (signature || "").trim();
-  if (!sig) return body.trimEnd();
-  const b = body.trimEnd();
+  const b = stripPlaceholders(body);
+  if (!sig) return b;
   if (!b) return sig;
   if (b.includes(sig)) return b; // już dopisany (np. ręcznie) — nie dubluj
   return `${b}\n\n${sig}`;
