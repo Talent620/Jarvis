@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useStore } from "../hooks/useStore";
 import { callNowList, followUpsDue, followUpMessage, markContacted, snoozeFollowUp, pipelineForecast, openLabel } from "../lib/salesEngine";
+import { draftFollowUpAI } from "../lib/followUpAI";
 import { syncSalesTasks, autoPlanSummary } from "../lib/autoPlan";
 import { smsUrl, gmailComposeUrl, appendSignature } from "../lib/glinks";
 import { store } from "../lib/store";
@@ -46,6 +47,13 @@ export default function SalesPlan({ onClose, onLead }: { onClose: () => void; on
   };
 
   const copyFollowUp = (l: Lead) => copyWithToast(followUpMessage(l, (l.followUpCount ?? 0) + 1), "Treść skopiowana ✓");
+
+  // ✨ Dynamiczny follow-up AI — unikalny, z kontekstu leada (Revenue OS #1).
+  const copyAiFollowUp = async (l: Lead) => {
+    toast("✨ Piszę dynamiczny follow-up…");
+    const msg = await draftFollowUpAI(l, (l.followUpCount ?? 0) + 1);
+    copyWithToast(msg, "✨ Follow-up AI skopiowany ✓");
+  };
 
   const dateLabel = now.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" });
 
@@ -128,6 +136,7 @@ export default function SalesPlan({ onClose, onLead }: { onClose: () => void; on
                   {phone(l) && <button className="chip" onClick={() => sendFollowUp(l, "sms")}>📱 SMS</button>}
                   {email(l) && <button className="chip" onClick={() => sendFollowUp(l, "gmail")}>✉ Gmail</button>}
                   <button className="chip" onClick={() => copyFollowUp(l)}>📋 Kopiuj</button>
+                  <button className="chip" style={{ borderColor: "var(--gold)" }} onClick={() => void copyAiFollowUp(l)} title="Napisz unikalny follow-up AI z kontekstu leada">✨ AI follow-up</button>
                   <button className="chip" onClick={() => sendFollowUp(l, "done")}>✅ Wysłane</button>
                   <button className="chip" onClick={() => { snoozeFollowUp(l.id, 3); toast("⏰ Przełożone o 3 dni."); }} title="Przełóż follow-up o 3 dni">⏰ Przełóż</button>
                 </div>

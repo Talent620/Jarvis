@@ -13,6 +13,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "✨ Dynamiczny follow-up AI: w Planie sprzedaży przycisk AI follow-up pisze unikalne ponaglenie z kontekstu leada (firma, branża, słabe punkty z wywiadu, poprzednia wiadomość, dni od kontaktu, numer próby) — inny kąt za każdym razem, bez szablonu; przy braku mózgu wraca do sprawdzonego szablonu.",
+      "📬 Sprzedaż — agent dostarczalności: pod draftem maila do leada widzisz ryzyko spamu (0–100) i konkretne poprawki, zanim wyślesz.",
       "🍱 Kreator stron — sekcje premium na klik: gdy masz gotową stronę, jednym dotknięciem dodasz dopracowaną sekcję (bento, hero 3D/parallax, scroll-storytelling, liczby count-up, cennik, opinie, pasek zaufania, galeria, mocne CTA, kontakt) — model wstawia je spójnie ze stylem Twojej strony.",
       "🧭 Kreator stron — Analityk biznesowy: przed budową jednym kliknięciem dostajesz strategię (branża, grupa docelowa, USP, oferta, kluczowe sekcje, ton), którą możesz podredagować — a generator buduje stronę wprost z niej, więc jest realnie trafiona pod sprzedaż.",
       "🌐 Kreator stron — wielki skok: 11 światowych systemów projektowych (Apple, Stripe, Linear, Notion, Tesla, Airbnb, OpenAI, SaaS, Enterprise, Cyberpunk, Minimal), AUTOMATYCZNY dobór stylu z opisu, pełna autonomiczna specyfikacja (SEO, schema.org, Open Graph, Twitter Cards, FAQ, formularz, cookie banner RODO, polityka prywatności — bez dopytywania), audyt jakości 0–100 (SEO/dostępność/UX) po każdej generacji oraz przycisk samodoskonalenia (krytyka i przebudowa na wyższy poziom jednym kliknięciem).",
