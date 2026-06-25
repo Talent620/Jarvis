@@ -40,6 +40,8 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
   const coreRef = useRef<HTMLDivElement>(null);
   const loopRef = useRef<ConversationLoop | null>(null);
   const lastErrRef = useRef(""); // nie powtarzaj w kółko tego samego błędu głosem
+  const lastReplyRef = useRef(""); // ostatnia odpowiedź Szefa — do „🔁 Powtórz" (hands-free)
+  const [canRepeat, setCanRepeat] = useState(false);
 
   // Rdzeń pulsuje w rytm głosu.
   useEffect(() => subscribeLevel((v) => {
@@ -77,8 +79,9 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
       (t) => {
         if (cancelled) return;
         setCaption(t);
-        // Plan tylko z wypowiedzi Szefa (nie z „🗣 …" użytkownika). Odhaczanie wg „Krok N".
+        // Plan tylko z wypowiedzi Szefa (nie z „🗣 …” użytkownika). Odhaczanie wg „Krok N”.
         if (!t.startsWith("🗣")) {
+          lastReplyRef.current = t; setCanRepeat(true); // zapamiętaj do „🔁 Powtórz"
           const p = parsePlan(t);
           if (p.length >= 2) { setPlan(p); setStep(0); }
           const cs = currentStep(t);
@@ -166,6 +169,17 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
           />
           <button className="chip" onClick={() => { const t = input.trim(); if (t) { setInput(""); loopRef.current?.say(t); } }}>Wyślij</button>
         </div>
+
+        {canRepeat && state !== "speaking" && (
+          <button
+            className="chip"
+            style={{ marginTop: 10 }}
+            onClick={() => { stopSpeaking(); void speak(lastReplyRef.current, { ...store.settings, speak: true, ...ROBOT_VOICE }).catch(() => {}); }}
+            title="Powtórz ostatnią odpowiedź na głos"
+          >
+            🔁 Powtórz
+          </button>
+        )}
 
         <button className="btn" style={{ maxWidth: 220, marginTop: 18 }} onClick={onClose}>■ Zakończ</button>
       </div>
