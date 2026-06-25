@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "📢 Generator reklam — audyt jakości i ryzyka odrzucenia: po wygenerowaniu reklamy widzisz wynik 0–100 i konkretne poprawki, zanim wkleisz ją do Google/Meta — sprawdza limity znaków nagłówków, KAPITALIKI, nadmiar wykrzykników, ryzykowne obietnice/superlatywy, emoji w Google (niedozwolone) i obecność CTA. Mniej odrzuceń, mocniejszy przekaz.",
       "📧 Jaśniej, jak dodać e-mail: przy Integracjach Google (najtrudniejsza droga, wymaga backendu) jest teraz podpowiedź kierująca do prostszych dróg — Centrum → ✉ Wyślij e-mail → Otwórz w Gmailu (od ręki, bez kluczy) albo sekcja 📨 Poczta (hasło aplikacji). Koniec utykania na OAuth.",
       "🩺 Diagnostyka startowa sprawdza też fal.ai: gdy masz wpisany klucz fal.ai, przycisk Uruchom diagnostykę raportuje jego stan (działa / zły klucz / brak billingu) obok reszty kluczy — bez kosztu, bez generowania obrazu.",
       "🔑 Test klucza fal.ai jednym kliknięciem (⚙ → AI → Studio premium): przycisk Sprawdź klucz fal.ai od razu mówi, czy klucz jest ważny, czy brakuje billingu/środków, czy działa — bez generowania obrazu i bez kosztu. Koniec zgadywania, czemu premium nie rusza.",

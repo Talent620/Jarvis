@@ -4,6 +4,7 @@ import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
 import { saveContentPost } from "../lib/contentStudio";
 import { generateAds, AD_PLATFORMS, AD_GOALS, type AdPlatform, type AdGoal } from "../lib/adStudio";
 import { AD_ANGLES, adAngleGuide } from "../lib/adAngles";
+import { scoreAdCopy, adQualityLabel } from "../lib/adQuality";
 
 // 📢 Generator reklam (Faza 0) — gotowe zestawy reklam Google/Meta do skopiowania.
 export default function AdStudio({ onClose }: { onClose: () => void }) {
@@ -81,6 +82,19 @@ export default function AdStudio({ onClose }: { onClose: () => void }) {
           <button className="btn primary" style={{ width: "100%" }} onClick={generate} disabled={busy}>
             {busy ? "✍ Tworzę reklamy…" : "✨ Wygeneruj reklamy"}
           </button>
+
+          {out && (() => {
+            // 📋 Audyt jakości/zgodności reklamy — ryzyko odrzucenia przez Google/Meta (czysto, lokalnie).
+            const q = scoreAdCopy(platform, out);
+            const color = q.risk === "low" ? "#39d98a" : q.risk === "medium" ? "var(--gold)" : "#ff6b6b";
+            return (
+              <div style={{ marginTop: 10, fontSize: 12.5 }}>
+                <span style={{ fontWeight: 700, color }}>📋 {adQualityLabel(q)}</span>
+                {q.issues.length > 0 && <div className="muted" style={{ marginTop: 3 }}>Popraw: {q.issues.slice(0, 3).join(" ")}</div>}
+                {q.issues.length === 0 && q.wins.length > 0 && <div className="muted" style={{ marginTop: 3 }}>✓ {q.wins.join(" ")}</div>}
+              </div>
+            );
+          })()}
 
           {out && (
             <div className="journal-card" style={{ marginTop: 10 }}>
