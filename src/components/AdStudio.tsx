@@ -3,6 +3,7 @@ import { useEscape } from "../hooks/useEscape";
 import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
 import { saveContentPost } from "../lib/contentStudio";
 import { generateAds, AD_PLATFORMS, AD_GOALS, type AdPlatform, type AdGoal } from "../lib/adStudio";
+import { AD_ANGLES, adAngleGuide } from "../lib/adAngles";
 
 // 📢 Generator reklam (Faza 0) — gotowe zestawy reklam Google/Meta do skopiowania.
 export default function AdStudio({ onClose }: { onClose: () => void }) {
@@ -14,12 +15,13 @@ export default function AdStudio({ onClose }: { onClose: () => void }) {
   const [budget, setBudget] = useState("");
   const [busy, setBusy] = useState(false);
   const [out, setOut] = useState("");
+  const [angle, setAngle] = useState(""); // kąt emocjonalny (Ad Creative Engine)
 
   const generate = async () => {
     if (!product.trim()) { toast("Wpisz produkt/usługę."); return; }
     setBusy(true);
     setOut("");
-    const r = await generateAds({ platform, product, audience: audience || undefined, goal, budget: budget || undefined });
+    const r = await generateAds({ platform, product, audience: audience || undefined, goal, budget: budget || undefined, angle: adAngleGuide(angle) || undefined });
     setBusy(false);
     if (!r) { toast("Nie udało się wygenerować — sprawdź klucz AI (⚙ → Mózg)."); return; }
     setOut(r);
@@ -66,6 +68,14 @@ export default function AdStudio({ onClose }: { onClose: () => void }) {
               {AD_GOALS.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
             <input value={budget} placeholder="Budżet (opcj.) np. 30 zł/dzień" onChange={(e) => setBudget(e.target.value)} style={{ flex: 1 }} />
+          </div>
+
+          {/* 🎯 Kąt emocjonalny (Ad Creative Engine) — opcjonalny hook przekazu */}
+          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>🎯 Kąt przekazu (opcjonalnie)</div>
+          <div className="chips" style={{ flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+            {AD_ANGLES.map((a) => (
+              <button key={a.id} className={`chip ${angle === a.id ? "on" : ""}`} title={a.guide} onClick={() => setAngle(angle === a.id ? "" : a.id)} disabled={busy}>{a.label}</button>
+            ))}
           </div>
 
           <button className="btn primary" style={{ width: "100%" }} onClick={generate} disabled={busy}>

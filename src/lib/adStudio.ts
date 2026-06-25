@@ -21,6 +21,7 @@ export interface AdOpts {
   audience?: string;
   goal?: AdGoal;
   budget?: string;
+  angle?: string; // opcjonalny kąt emocjonalny (wytyczna z adAngles)
 }
 
 const RULES: Record<AdPlatform, string> = {
@@ -60,6 +61,7 @@ export function adUserPrompt(o: AdOpts): string {
   if (o.audience?.trim()) lines.push(`Grupa docelowa: ${o.audience.trim().slice(0, 500)}`);
   if (o.goal) lines.push(`Cel kampanii: ${o.goal}`);
   if (o.budget?.trim()) lines.push(`Budżet (orientacyjnie): ${o.budget.trim().slice(0, 100)}`);
+  if (o.angle?.trim()) lines.push(`Kąt przekazu (zastosuj go w nagłówkach i opisach): ${o.angle.trim()}`);
   return lines.join("\n");
 }
 
