@@ -1,29 +1,38 @@
-name: iOS build
+name: iOS (Capacitor) — build .ipa
 
-# Builds the JARVIS iOS app on a macOS runner.
-#  1. Verifies it compiles for the iOS Simulator  ("does it actually build?")
-#  2. Produces an UNSIGNED .ipa and uploads it as a single downloadable artifact.
+# Buduje iOS-ową powłokę Capacitor wokół istniejącego frontendu JARVIS (dist/)
+# i tworzy POBIERALNY plik JARVIS-unsigned.ipa jako artefakt.
 #
-# An unsigned .ipa is NOT installable on a stock device directly — it is meant to be
-# re-signed by a sideloading tool (AltStore / Sideloadly) or installed via TrollStore.
-# See JARVIS-iOS/INSTALL.md for how to turn this into something you can install.
+# Nie ma lokalnego macOS — cała kompilacja iOS dzieje się tutaj, na runnerze macOS.
+# Artefakt jest NIESYGNOWANY: instaluje się go przez Sideloadly/AltStore (które go
+# podpiszą Twoim Apple ID) albo przez TrollStore. Szczegóły: INSTALL.md.
 
 on:
   push:
     branches: [ "claude/ios-app-creation-but55f", main ]
-    paths: [ "JARVIS-iOS/**", ".github/workflows/ios.yml" ]
+    paths:
+      - "*.apk"
+      - "package.json"
+      - "capacitor.config.json"
+      - "ios/**"
+      - "scripts/**"
+      - ".github/workflows/ios.yml"
   pull_request:
-    paths: [ "JARVIS-iOS/**", ".github/workflows/ios.yml" ]
+    paths:
+      - "*.apk"
+      - "package.json"
+      - "capacitor.config.json"
+      - "ios/**"
+      - ".github/workflows/ios.yml"
   workflow_dispatch:
 
-defaults:
-  run:
-    working-directory: JARVIS-iOS
-
 jobs:
-  build:
-    runs-on: macos-15
-    timeout-minutes: 30
+  build-ipa:
+    runs-on: macos-latest
+    timeout-minutes: 35
+    env:
+      MIC_DESC: "JARVIS wymaga dostępu do mikrofonu, aby słuchać Twoich poleceń."
+      SPEECH_DESC: "JARVIS używa rozpoznawania mowy, aby zamieniać Twoje słowa na tekst."
     steps:
       - uses: actions/checkout@v4
 
@@ -32,37 +41,56 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Show toolchain
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Toolchain info
         run: |
+          node --version
           xcodebuild -version
-          swift --version
+          pod --version || sudo gem install cocoapods
 
-      - name: Compile for iOS Simulator (build check)
+      # 1) Zależności + "build" frontendu.
+      #    `npm run build` odtwarza dist/ z pakietu APK (nie trzymamy dist/ w gicie,
+      #    bo skompilowany bundle zawiera zaszyty klucz API — patrz README).
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build web layer (materializes dist/ from APK)
+        run: npm run build
+
+      # 2) Platforma iOS: dodaj jeśli brak, potem zsynchronizuj (kopiuje dist/ + pod install)
+      - name: Add iOS platform (if missing)
+        run: |
+          if [ ! -d "ios/App/App.xcworkspace" ]; then
+            npx cap add ios
+          fi
+
+      - name: Sync iOS (web assets + pods)
+        run: npx cap sync ios
+
+      # 3) Uprawnienia prywatności w Info.plist (idempotentnie, na wszelki wypadek)
+      - name: Ensure privacy usage descriptions
+        run: |
+          PLIST="ios/App/App/Info.plist"
+          set_key () {
+            /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$PLIST" 2>/dev/null \
+              || /usr/libexec/PlistBuddy -c "Set :$1 $2" "$PLIST"
+          }
+          set_key "NSMicrophoneUsageDescription" "$MIC_DESC"
+          set_key "NSSpeechRecognitionUsageDescription" "$SPEECH_DESC"
+          echo "----- Info.plist (privacy keys) -----"
+          /usr/libexec/PlistBuddy -c "Print :NSMicrophoneUsageDescription" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSSpeechRecognitionUsageDescription" "$PLIST"
+
+      # 4) Archiwum niesygnowane (bez konta Apple) + eksport do .ipa
+      - name: Archive (unsigned)
         run: |
           set -o pipefail
           xcodebuild \
-            -project JARVIS.xcodeproj \
-            -scheme JARVIS \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            clean build \
-            CODE_SIGNING_ALLOWED=NO | xcpretty || \
-          xcodebuild \
-            -project JARVIS.xcodeproj \
-            -scheme JARVIS \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            clean build \
-            CODE_SIGNING_ALLOWED=NO
-
-      - name: Archive for device (unsigned)
-        run: |
-          set -o pipefail
-          xcodebuild \
-            -project JARVIS.xcodeproj \
-            -scheme JARVIS \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
             -configuration Release \
             -sdk iphoneos \
             -archivePath "$RUNNER_TEMP/JARVIS.xcarchive" \
@@ -70,10 +98,10 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM="" | xcpretty || \
+            DEVELOPMENT_TEAM="" | xcbeautify || \
           xcodebuild \
-            -project JARVIS.xcodeproj \
-            -scheme JARVIS \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
             -configuration Release \
             -sdk iphoneos \
             -archivePath "$RUNNER_TEMP/JARVIS.xcarchive" \
@@ -85,9 +113,9 @@ jobs:
 
       - name: Package unsigned .ipa
         run: |
-          APP_PATH="$RUNNER_TEMP/JARVIS.xcarchive/Products/Applications/JARVIS.app"
+          APP_PATH="$RUNNER_TEMP/JARVIS.xcarchive/Products/Applications/App.app"
           if [ ! -d "$APP_PATH" ]; then
-            echo "::error::JARVIS.app not found in archive"; exit 1
+            echo "::error::App.app not found in archive"; ls -R "$RUNNER_TEMP/JARVIS.xcarchive/Products" || true; exit 1
           fi
           WORK="$RUNNER_TEMP/ipa"
           rm -rf "$WORK"; mkdir -p "$WORK/Payload"
