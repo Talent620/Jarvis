@@ -41,6 +41,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # JEDEN znacznik buildu (minuta, UTC) dla CAŁEGO wydania: trafia i do __APP_BUILD__
+      # (przez env APP_BUILD czytane w vite.config), i do bundle.json. Dzięki temu OTA NIE
+      # raportuje „nowszej wersji" dla identycznego buildu (wcześniej iso ZIP-a było parę minut
+      # późniejsze niż __APP_BUILD__ → apka wiecznie widziała aktualizację).
+      - name: Ustal znacznik buildu
+        run: echo "APP_BUILD=$(date -u +'%Y-%m-%d %H:%M')" >> "$GITHUB_ENV"
+
       # Klucze NIE trafiają do APK (BYOK + BFF). Usunięto martwe, mylące env JARVIS_*_KEY —
       # vite.config.ts ich nie czyta (__DEFAULT_KEYS__ jest puste).
       - name: Build web + sync Capacitor
@@ -49,14 +56,14 @@ jobs:
           npx cap sync android
 
       # OTA: spakuj sam web-bundle (~1–2 MB) + manifest, by aplikacja pobierała samą ZMIANĘ,
-      # nie cały APK. Czas buildu (iso) służy do wykrycia „jest nowsza wersja".
+      # nie cały APK. version/iso pochodzą z TEGO SAMEGO APP_BUILD co __APP_BUILD__ (ta sama minuta).
       - name: Pakuj web-bundle (OTA) + manifest
         run: |
           ( cd dist && zip -qr ../web-bundle.zip . )
-          BUILD="$(date -u +'%Y-%m-%d %H:%M')"
-          ISO="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          printf '{"version":"%s","iso":"%s","url":"https://github.com/Talent620/Jarvis/releases/download/latest/web-bundle.zip"}\n' "$BUILD" "$ISO" > bundle.json
+          ISO="$(printf '%sT%s:00Z' "${APP_BUILD% *}" "${APP_BUILD#* }")"
+          printf '{"version":"%s","iso":"%s","url":"https://github.com/Talent620/Jarvis/releases/download/latest/web-bundle.zip"}\n' "$APP_BUILD" "$ISO" > bundle.json
           ls -lh web-bundle.zip bundle.json
+          cat bundle.json
 
       - name: Build signed release APK
         working-directory: android

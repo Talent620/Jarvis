@@ -56,7 +56,9 @@ export default defineConfig({
     // Tryb rygorystyczny: wymaga udanej aktywacji online (limit urządzeń, zdalne unieważnienie).
     __LICENSE_STRICT__: JSON.stringify(env.JARVIS_LICENSE_STRICT === "true"),
     // Data/godzina builda (UTC) — widoczna w ⚙ → Dane; jednoznacznie mówi, którą wersję masz.
-    __APP_BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace("T", " ")),
+    // W CI bierzemy z env APP_BUILD (TEN SAM znacznik trafia do bundle.json), by aktualizacja OTA
+    // nie raportowała „nowszej wersji" dla identycznego buildu. Lokalnie fallback na bieżący czas.
+    __APP_BUILD__: JSON.stringify(env.APP_BUILD || new Date().toISOString().slice(0, 16).replace("T", " ")),
     // Metryki kodu (moduły/komponenty/testy/LOC) — do wyceny projektu w panelu admina.
     __PROJECT_STATS__: JSON.stringify(projectStats()),
   },

@@ -77,8 +77,26 @@ export async function checkForUpdate(): Promise<UpdateInfo | { error: string }> 
       if (res.status === 404) return { error: "Brak opublikowanego wydania „latest” — najnowsza wersja jeszcze się buduje. Spróbuj później." };
       return { error: `Nie udało się sprawdzić aktualizacji (HTTP ${res.status}).` };
     }
-    const asset = Array.isArray(d.assets) ? d.assets.find((a: { name?: string }) => a.name === ASSET[p]) : null;
-    const latestISO: string = asset?.updated_at || d.published_at || "";
+    // Porównujemy z KANONICZNYM znacznikiem buildu z bundle.json (== __APP_BUILD__), a NIE z czasem
+    // WGRANIA pliku na release. Czas wgrania jest zawsze parę minut po buildzie → ten sam build był
+    // wiecznie widziany jako „nowsza wersja". bundle.json.iso to dokładnie ta sama minuta co build.
+    const assets: { name?: string; updated_at?: string; browser_download_url?: string }[] = Array.isArray(d.assets) ? d.assets : [];
+    let latestISO = "";
+    const manifest = assets.find((a) => a.name === "bundle.json");
+    if (manifest?.browser_download_url) {
+      try {
+        const mr = await fetchTimeout(manifest.browser_download_url, { headers: { accept: "application/json" } }, 15000);
+        const mj = (await mr.json().catch(() => null)) as { iso?: string } | null;
+        if (mj?.iso) latestISO = mj.iso;
+      } catch {
+        /* brak/nieczytelny manifest → fallback poniżej */
+      }
+    }
+    // Fallback dla starych wydań bez bundle.json: czas wgrania pliku platformy.
+    if (!latestISO) {
+      const asset = assets.find((a) => a.name === ASSET[p]);
+      latestISO = asset?.updated_at || d.published_at || "";
+    }
     const cur = currentBuild();
     const newer = p === "web" ? true : isNewer(cur, latestISO); // w przeglądarce zawsze można odświeżyć
     return { current: cur || "?", latest: latestISO ? latestISO.slice(0, 16).replace("T", " ") : "?", newer, url: downloadUrl(p), platform: p };
