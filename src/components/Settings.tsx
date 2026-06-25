@@ -23,7 +23,7 @@ import { systemCheck } from "../lib/healthCheck";
 import { runHealthCheck, statusIcon, type HealthItem } from "../lib/healthCheck";
 import { checkAllApis, stateDot, type ApiStatus } from "../lib/apiStatus";
 import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
-import { enablePrivateMode, detectOllama, findOllamaServer } from "../lib/privateMode";
+import { enablePrivateMode, detectOllama, findOllamaServer, normalizeOllamaUrl } from "../lib/privateMode";
 import { pullOllamaModel } from "../lib/ollamaPull";
 import { warmNow } from "../lib/prewarm";
 import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkOllama";
@@ -1260,6 +1260,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   value={s.ollamaUrl}
                   placeholder="http://192.168.0.10:11434"
                   onChange={(e) => set({ ollamaUrl: e.target.value })}
+                  onBlur={(e) => { const v = e.target.value.trim(); if (v) set({ ollamaUrl: normalizeOllamaUrl(v) }); }}
                 />
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
                   <button

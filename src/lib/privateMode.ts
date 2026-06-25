@@ -9,6 +9,30 @@ import { webllmSupported, WEBLLM_DEFAULT_MODEL } from "./webllm";
 
 const DEFAULT_OLLAMA = "http://localhost:11434";
 
+/**
+ * Doprowadź adres Ollamy wpisany przez użytkownika do działającej formy. Czysta (testowalna).
+ * Obsługuje typowe pomyłki: brak schematu („100.64.33.7:11434" → „http://…"), wklejone spacje,
+ * końcowy ukośnik, a przy gołym adresie http bez portu dokłada domyślny port Ollamy 11434
+ * („http://100.64.33.7" → „…:11434"). Dla https (np. Tailscale serve) NIE rusza portu.
+ */
+export function normalizeOllamaUrl(raw?: string): string {
+  let u = (raw || "").replace(/\s+/g, "");
+  if (!u) return DEFAULT_OLLAMA;
+  if (!/^https?:\/\//i.test(u)) u = "http://" + u; // brak schematu → lokalny serwer po http
+  u = u.replace(/\/+$/, ""); // bez końcowych ukośników
+  try {
+    const p = new URL(u);
+    const noPath = p.pathname.replace(/^\/+/, "") === "";
+    if (p.protocol === "http:" && !p.port && noPath && !p.hostname.includes(":")) {
+      p.port = "11434"; // typowy adres Ollamy bez portu → domyślny 11434
+      u = p.toString().replace(/\/+$/, "");
+    }
+  } catch {
+    /* niepoprawny URL — zostaw po prostej normalizacji, detekcja i tak zwróci czytelny błąd */
+  }
+  return u;
+}
+
 // Modele bez cenzury preferowane przy autostarcie (jeśli pobrane lokalnie).
 const PREFERRED = ["dolphin-mistral", "dolphin3", "dolphin-llama3", "llama2-uncensored", "wizard-vicuna-uncensored"];
 
@@ -44,7 +68,7 @@ export function diagnoseOllamaError(url: string, err: unknown, pageHttps: boolea
 
 /** Sprawdza, czy lokalny serwer Ollama działa i jakie modele są pobrane. */
 export async function detectOllama(rawUrl?: string): Promise<OllamaStatus> {
-  const url = (rawUrl || store.settings.ollamaUrl || DEFAULT_OLLAMA).replace(/\/$/, "");
+  const url = normalizeOllamaUrl(rawUrl || store.settings.ollamaUrl);
   try {
     const res = await fetchTimeout(`${url}/api/tags`, { method: "GET" }, 8000);
     if (!res.ok) {
@@ -70,7 +94,7 @@ export async function detectOllama(rawUrl?: string): Promise<OllamaStatus> {
 export async function findOllamaServer(candidates?: string[]): Promise<OllamaStatus & { tried: string[] }> {
   const cur = store.settings.ollamaUrl?.trim();
   const raw = candidates ?? [cur, "http://localhost:11434", "http://127.0.0.1:11434"];
-  const list = Array.from(new Set(raw.filter((u): u is string => !!u && !!u.trim()).map((u) => u.trim())));
+  const list = Array.from(new Set(raw.filter((u): u is string => !!u && !!u.trim()).map((u) => normalizeOllamaUrl(u))));
   const tried: string[] = [];
   for (const url of list) {
     tried.push(url);

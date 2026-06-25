@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🖥 Adres serwera Ollama wybacza pomyłki: wpiszesz w dowolnej formie (bez http://, z wklejonymi spacjami, z końcowym ukośnikiem, nawet bez portu) — JARVIS sam doprowadzi go do działającej postaci (np. 100.64.33.7 → http://100.64.33.7:11434). Dla adresów https (Tailscale serve) portu nie rusza.",
       "🩺 Trafniejsza diagnoza serwera AI w aplikacji: w APK nie pokazujemy już mylącej rady o mixed-content (HTTP zablokowany) — tam HTTP do sieci domowej i Tailscale działa, więc gdy coś nie gra, podpowiadamy realną przyczynę (serwer, adres, CORS). Komunikat o mixed-content zostaje tylko w przeglądarce, gdzie faktycznie obowiązuje.",
       "🖥 Serwer Ollama przez Tailscale działa na Androidzie: koniec błędu o blokadzie nieszyfrowanego HTTP (Cleartext not permitted) dla adresów 100.64.x.x — apka dopuszcza teraz HTTP do Twoich lokalnych serwerów AI (sieć domowa i Tailscale), a ruch do chmury dalej idzie po HTTPS.",
       "💳 Studio Obrazów — jasne koszty: każdy model pokazuje cenę na przycisku (🆓 darmowy / ⭐ ~$0.04–0.08 za obraz) oraz status klucza (✅ gotowe / ⚙ wymaga klucza), a przy płatnym modelu widać wprost koszt następnej generacji — żadnej niespodzianki z kasą.",

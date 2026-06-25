@@ -1,7 +1,30 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { pickLocalModel, diagnoseOllamaError, findOllamaServer } from "../src/lib/privateMode";
+import { pickLocalModel, diagnoseOllamaError, findOllamaServer, normalizeOllamaUrl } from "../src/lib/privateMode";
 import { store } from "../src/lib/store";
+
+describe("normalizeOllamaUrl — wpisany w dowolnej formie ma działać", () => {
+  it("dokłada schemat http:// gdy go brak", () => {
+    expect(normalizeOllamaUrl("100.64.33.7:11434")).toBe("http://100.64.33.7:11434");
+  });
+  it("dokłada domyślny port 11434 gdy brak (goły http)", () => {
+    expect(normalizeOllamaUrl("100.64.33.7")).toBe("http://100.64.33.7:11434");
+    expect(normalizeOllamaUrl("http://192.168.0.10")).toBe("http://192.168.0.10:11434");
+  });
+  it("usuwa wklejone spacje i końcowy ukośnik", () => {
+    expect(normalizeOllamaUrl("  http://100.64.33.7:11434/  ")).toBe("http://100.64.33.7:11434");
+  });
+  it("zachowuje jawny port", () => {
+    expect(normalizeOllamaUrl("http://10.0.0.5:1234")).toBe("http://10.0.0.5:1234");
+  });
+  it("NIE rusza portu dla https (np. Tailscale serve)", () => {
+    expect(normalizeOllamaUrl("https://pc.tailnet.ts.net")).toBe("https://pc.tailnet.ts.net");
+  });
+  it("puste → domyślny localhost", () => {
+    expect(normalizeOllamaUrl("")).toBe("http://localhost:11434");
+    expect(normalizeOllamaUrl(undefined)).toBe("http://localhost:11434");
+  });
+});
 
 describe("Tryb Prywatny — wybór modelu lokalnego", () => {
   it("preferuje model bez cenzury (dolphin), gdy dostępny", () => {
