@@ -141,7 +141,10 @@ export default function Studio({ onClose }: { onClose: () => void }) {
           setBusy(false);
           return;
         }
-        setErr(humanizeImageError(r2.error, "gemini"));
+        // Awaryjny Gemini też padł — pokaż OBA powody, NAJPIERW płatny fal.ai (to wybrany model),
+        // żeby nie zwalać winy na „limit Gemini", gdy realnie odmówił fal.ai (np. brak billingu/środków
+        // na koncie fal.ai). Inaczej komunikat myli: każe wybrać fal.ai, który już jest wybrany.
+        setErr(`Płatny fal.ai odmówił, więc spróbowałem awaryjnie darmowym Gemini — ale i on nie dał rady.\n• fal.ai: ${humanizeImageError(r.error, model)}\n• Gemini (awaryjnie): ${humanizeImageError(r2.error, "gemini")}\n\nSprawdź na fal.ai, czy klucz jest ważny i masz włączony billing/środki — wtedy edycja pójdzie płatnym fal.ai bez Gemini.`);
         setBusy(false);
         return;
       }

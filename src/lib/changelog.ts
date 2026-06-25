@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🖼 Studio Obrazów — czytelny powód, gdy płatny fal.ai odmówi: dotąd gdy fal.ai odrzucił edycję (np. brak środków/billingu na koncie fal.ai), JARVIS po cichu próbował darmowym Gemini i — gdy ten też miał wyczerpany limit — pokazywał mylący komunikat o limicie Gemini (każąc wybrać fal.ai, który już był wybrany). Teraz widzisz OBA powody, najpierw realny problem fal.ai, z podpowiedzią, że trzeba sprawdzić ważność klucza i billing fal.ai.",
       "✍ Wiele podpisów e-mail z wyborem przed wysyłką: w Wyślij e-mail zapisujesz kilka podpisów (np. Firmowy, Prywatny), nadajesz im nazwy i jednym dotknięciem wybierasz aktywny tuż przed wysłaniem — dokleja się do treści automatycznie. Dodawanie, usuwanie i przełączanie na miejscu; Twój dotychczasowy podpis trafia do biblioteki sam, więc działa jak dotąd.",
       "✉ Ręczna wysyłka e-maila z JARVIS-a: w Centrum (Sprzedaż i biznes) jest Wyślij e-mail — wpisujesz adres, temat i treść, podpis dokleja się sam, widzisz ryzyko spamu i masz akcje AI (skróć/przepisz/CTA…). Wysyłasz jednym przyciskiem (gdy skonfigurowana poczta) albo otwierasz w Gmailu/poczcie. Pełna kontrola, zero automatu.",
       "🖼 Studio Obrazów — fal.ai generuje też z opisu (nie tylko edytuje): masz klucz fal.ai i chcesz stworzyć obraz z samego tekstu? Teraz działa bez klucza Gemini — fal.ai robi i generowanie z opisu, i edycję zdjęć. Wybierz model fal.ai i pisz prompt.",
