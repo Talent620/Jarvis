@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { generateImage, humanizeImageError, bestImageModel, IMAGE_MODELS_LIST, type ImageModelId } from "../lib/images";
+import { generateImage, humanizeImageError, bestImageModel, imageModelCost, IMAGE_MODELS_LIST, type ImageModelId } from "../lib/images";
 import { capturePhoto } from "../lib/camera";
 import { useEscape } from "../hooks/useEscape";
 import { store } from "../lib/store";
@@ -214,14 +214,22 @@ export default function Studio({ onClose }: { onClose: () => void }) {
         <div className="panel-body">
           {/* Wybór modelu */}
           <div className="chips" style={{ flexWrap: "wrap", marginBottom: 4 }}>
-            {IMAGE_MODELS_LIST.map((m) => (
-              <button key={m.id} className={`chip ${model === m.id ? "on" : ""}`} onClick={() => setModel(m.id)} disabled={busy} title={modelReady(m.id) ? "Gotowy — masz klucz/serwer" : "Wymaga konfiguracji (klucz/serwer)"}>
-                {m.tier === "free" ? "🆓 " : "⭐ "}{m.label} {modelReady(m.id) ? "✅" : "⚙"}
-              </button>
-            ))}
+            {IMAGE_MODELS_LIST.map((m) => {
+              const cost = imageModelCost(m.id);
+              return (
+                <button key={m.id} className={`chip ${model === m.id ? "on" : ""}`} onClick={() => setModel(m.id)} disabled={busy} title={modelReady(m.id) ? "Gotowy — masz klucz/serwer" : "Wymaga konfiguracji (klucz/serwer)"}>
+                  {m.tier === "free" ? "🆓 " : "⭐ "}{m.label}{cost ? ` · ~$${cost.toFixed(2)}` : ""} {modelReady(m.id) ? "✅" : "⚙"}
+                </button>
+              );
+            })}
           </div>
-          <p className="muted" style={{ fontSize: 11, marginTop: 0, marginBottom: 6 }}>✅ gotowe · ⚙ wymaga klucza/serwera (kliknij, by zobaczyć jak)</p>
+          <p className="muted" style={{ fontSize: 11, marginTop: 0, marginBottom: 6 }}>🆓 darmowy · ⭐ płatny (cena za obraz) · ✅ gotowe · ⚙ wymaga klucza/serwera (kliknij, by zobaczyć jak)</p>
           <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>{IMAGE_MODELS_LIST.find((m) => m.id === model)?.note}</p>
+          {imageModelCost(model) > 0 && (
+            <p style={{ fontSize: 12.5, marginTop: 2, color: "var(--gold)", fontWeight: 600 }}>
+              💳 Następna generacja: ~${imageModelCost(model).toFixed(2)} (płatne fal.ai). Darmowo? Wybierz 🆓 wyżej.
+            </p>
+          )}
           {imgSpend > 0 && (
             <p className="muted" style={{ fontSize: 12, marginTop: 0, color: "var(--gold)" }}>
               💸 Wydano na obrazy (fal.ai): ${imgSpend.toFixed(2)} · pełne statystyki: ⋯ Więcej → „Koszty AI"

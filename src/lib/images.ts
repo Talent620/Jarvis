@@ -38,6 +38,11 @@ export const IMAGE_MODELS_LIST: ImageModelMeta[] = [
   { id: "local-sd", label: "Lokalny (Stable Diffusion)", tier: "free", note: "Na Twoim PC (A1111/Forge) — za darmo, offline, bez limitów. Wymaga adresu serwera w ⚙ → AI." },
 ];
 
+/** Koszt jednego obrazu w USD dla danego modelu (0 = darmowy). Do jednoznacznego pokazania ceny w UI. */
+export function imageModelCost(id: ImageModelId): number {
+  return FAL_COST[id] || 0;
+}
+
 // Gemini „Nano Banana" — różne klucze mają dostęp do różnych nazw; próbujemy po kolei.
 const GEMINI_MODELS = [
   "gemini-2.5-flash-image",

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { generateImage, humanizeImageError, IMAGE_MODELS_LIST, pollinationsUrl, bestImageModel, geminiEditPrompt } from "../src/lib/images";
+import { generateImage, humanizeImageError, IMAGE_MODELS_LIST, pollinationsUrl, bestImageModel, imageModelCost, geminiEditPrompt } from "../src/lib/images";
 import { store } from "../src/lib/store";
 
 const noKeys = { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", openrouter: "", nvidia: "", github: "" };
@@ -36,6 +36,14 @@ describe("Studio — modele edycji", () => {
     store.setSettings({ sdUrl: "http://localhost:7860" });
     expect(bestImageModel()).toBe("local-sd");
     store.setSettings({ sdUrl: "" });
+  });
+
+  it("imageModelCost: darmowe = 0, fal = cena za obraz", () => {
+    expect(imageModelCost("pollinations")).toBe(0);
+    expect(imageModelCost("gemini")).toBe(0);
+    expect(imageModelCost("local-sd")).toBe(0);
+    expect(imageModelCost("fal-flux-kontext")).toBeGreaterThan(0);
+    expect(imageModelCost("fal-nano-banana")).toBeGreaterThan(imageModelCost("fal-flux-kontext"));
   });
 
   it("bestImageModel(forEdit): z kluczem fal.ai edycja idzie na fal (płatny), generowanie zostaje darmowe", () => {
