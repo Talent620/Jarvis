@@ -35,6 +35,8 @@ function Shell() {
   // Studio jest pełnoekranowym arkuszem; onClose to no-op (to osobny program — nie zamykamy).
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-1, #04070f)" }}>
+      {/* Scoped TYLKO dla standalone: zsuń arkusz Studia pod pasek kluczy (na desktopie panel sięga góry). */}
+      <style>{`.sheet{align-items:flex-start;padding-top:52px}`}</style>
       <KeyBar />
       <Studio onClose={() => { /* osobny program — Studio zostaje otwarte */ }} />
     </div>
