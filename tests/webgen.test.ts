@@ -1,6 +1,19 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, pickSiteStyle, auditSite } from "../src/lib/webgen";
+import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, pickSiteStyle, auditSite, buildStrategySeed } from "../src/lib/webgen";
+
+describe("buildStrategySeed — łączy opis ze strategią dla generatora", () => {
+  it("dokleja wytyczne strategiczne pod opisem", () => {
+    const out = buildStrategySeed("strona dla kancelarii", "USP: szybkość");
+    expect(out).toMatch(/strona dla kancelarii/);
+    expect(out).toMatch(/WYTYCZNE STRATEGICZNE/);
+    expect(out).toMatch(/USP: szybkość/);
+  });
+  it("brak strategii → sam opis; brak opisu → sama strategia", () => {
+    expect(buildStrategySeed("opis", "")).toBe("opis");
+    expect(buildStrategySeed("", "strategia")).toMatch(/WYTYCZNE STRATEGICZNE[\s\S]*strategia/);
+  });
+});
 import { store } from "../src/lib/store";
 
 describe("pickSiteStyle — auto-dobór systemu projektowego", () => {

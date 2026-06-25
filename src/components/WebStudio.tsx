@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { generateSite, improveSite, auditSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
+import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast } from "../lib/toast";
 import Guide from "./Guide";
@@ -65,6 +65,7 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [packages, setPackages] = useState<QuotePackage[] | null>(null);
   const [audit, setAudit] = useState<SiteAudit | null>(null); // ocena jakości wygenerowanej strony
+  const [strategy, setStrategy] = useState(""); // ETAP 11 — strategia biznesowa przed budową
   const zl = (n: number) => `${Math.round(n).toLocaleString("pl-PL")} zł`;
 
   const briefText = buildClientBrief(brief);
@@ -76,7 +77,8 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setErr("");
     try {
-      const desc = edit ? prompt : [briefText, prompt].filter((s) => s.trim()).join("\n\n");
+      const base = [briefText, prompt].filter((s) => s.trim()).join("\n\n");
+      const desc = edit ? prompt : buildStrategySeed(base, strategy); // wlej strategię (ETAP 11), gdy jest
       const r = await generateSite(desc, edit && html ? html : undefined, kind, style);
       if ("error" in r) setErr(r.error);
       else {
@@ -89,6 +91,23 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false); // zawsze odblokuj przycisk, nawet przy nieoczekiwanym błędzie
+    }
+  };
+
+  // ETAP 11 — AI Business Analyst: strategia przed budową (branża, USP, sekcje, ton).
+  const analyze = async () => {
+    if (busy) return;
+    const desc = [buildClientBrief(brief), prompt].filter((s) => s.trim()).join("\n\n");
+    if (!desc.trim()) { setErr("Najpierw opisz, czego dotyczy strona."); return; }
+    setBusy(true); setErr("");
+    try {
+      const r = await analyzeBusiness(desc);
+      if ("error" in r) setErr(r.error);
+      else setStrategy(r.strategy);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -241,9 +260,24 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
               className="ta" style={{ minHeight: 64 }}
             />
           </div>
+          {/* ETAP 11 — strategia przed budową: branża, grupa docelowa, USP, sekcje, ton */}
+          {!html && (
+            <button className="btn" style={{ width: "100%", marginBottom: 8 }} disabled={busy || !canBuild} onClick={analyze}>
+              {busy ? "Analizuję…" : "🧭 Strategia (branża, USP, sekcje) — przed budową"}
+            </button>
+          )}
+          {strategy && !html && (
+            <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>🧭 Strategia (użyję jej przy budowie)</span>
+                <button className="chip" style={{ fontSize: 11, padding: "1px 8px" }} onClick={() => setStrategy("")} title="Odrzuć">✕</button>
+              </div>
+              <textarea className="ta" style={{ minHeight: 120, marginTop: 6, fontSize: 12.5 }} value={strategy} onChange={(e) => setStrategy(e.target.value)} />
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn primary" style={{ flex: 1 }} onClick={() => run(!!html)} disabled={busy || (html ? !prompt.trim() : !canBuild)}>
-              {busy ? "Buduję…" : html ? "✏ Zastosuj zmianę" : kind === "sklep" ? "🛒 Zbuduj sklep" : "✨ Zbuduj stronę"}
+              {busy ? "Buduję…" : html ? "✏ Zastosuj zmianę" : strategy ? "✨ Zbuduj wg strategii" : kind === "sklep" ? "🛒 Zbuduj sklep" : "✨ Zbuduj stronę"}
             </button>
             {html && (
               <button className="btn" style={{ flex: 1 }} onClick={download}>⬇ Pobierz .html</button>

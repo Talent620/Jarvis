@@ -213,6 +213,41 @@ export async function improveSite(html: string, kind: SiteKind = "auto", style: 
   return generateSite(instruction, html, kind, style);
 }
 
+// === ETAP 11 — AI Business Analyst: strategia przed budową (lepiej trafiona strona) ===
+
+const STRATEGY_SYSTEM = [
+  "Jesteś strategiem marek i konwersji (poziom topowej agencji). Na podstawie krótkiego opisu biznesu zaproponuj ZWIĘZŁĄ strategię strony PO POLSKU.",
+  "Odpowiedz krótko, rzeczowo, w punktach (bez markdownu, bez wstępów). Dokładnie te sekcje, każda 1–2 zdania albo lista:",
+  "BRANŻA: …",
+  "GRUPA DOCELOWA: …",
+  "USP (1–3 wyróżniki): …",
+  "OFERTA / GŁÓWNE CTA: …",
+  "KLUCZOWE SEKCJE STRONY: … (lista)",
+  "TON I STYL KOMUNIKACJI: …",
+  "Bądź konkretny i osadzony w realiach tej branży — to ma realnie pomóc sprzedawać.",
+].join("\n");
+
+/** ETAP 11: wygeneruj strategię biznesową dla strony (tekst PL do pokazania i wlania w budowę). */
+export async function analyzeBusiness(desc: string): Promise<{ strategy: string } | { error: string }> {
+  if (!desc.trim()) return { error: "Najpierw opisz, czego dotyczy strona." };
+  try {
+    const reply = await askModel({ system: STRATEGY_SYSTEM, history: [{ role: "user", content: desc }] });
+    const s = (reply || "").trim();
+    if (!s) return { error: "Nie udało się wygenerować strategii — spróbuj doprecyzować opis." };
+    return { strategy: s };
+  } catch (e) {
+    return { error: humanize(e instanceof Error ? e.message : String(e)) };
+  }
+}
+
+/** Pure: złóż opis budowy z oryginalnego opisu + strategii (strategia jako wytyczne dla generatora). */
+export function buildStrategySeed(desc: string, strategy: string): string {
+  const d = (desc || "").trim();
+  const s = (strategy || "").trim();
+  if (!s) return d;
+  return `${d ? d + "\n\n" : ""}WYTYCZNE STRATEGICZNE (zastosuj w treści, strukturze i CTA):\n${s}`;
+}
+
 // === Pełen proces „pod klienta”: brief → strona → wiadomość do klienta ===
 
 export interface ClientBrief {
