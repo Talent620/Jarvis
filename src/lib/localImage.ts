@@ -1,6 +1,7 @@
 // === Lokalny generator obrazów (Stable Diffusion) — Studio na Twoim PC, offline i za darmo ===
 // Mówi do API zgodnego z Automatic1111 / Forge / SD.Next: POST /sdapi/v1/txt2img (z opisu)
 // albo /sdapi/v1/img2img (edycja zdjęcia). Działa zdalnie z telefonu jak Ollama (LAN/Tailscale).
+import { Capacitor } from "@capacitor/core";
 import { store } from "./store";
 import { fetchTimeout } from "./http";
 
@@ -51,11 +52,12 @@ export function parseSdImage(json: unknown): Result {
 }
 
 /** Czytelna diagnoza błędu połączenia z lokalnym SD (jak przy Ollamie). Czysta. */
-export function diagnoseSdError(url: string, err: unknown, pageHttps: boolean): string {
+export function diagnoseSdError(url: string, err: unknown, pageHttps: boolean, isNative = false): string {
   const name = err instanceof Error ? err.name : "";
   const msg = err instanceof Error ? err.message : String(err);
-  if (pageHttps && /^http:\/\//i.test(url)) {
-    return "Mieszana zawartość: aplikacja po HTTPS, a adres SD jest http:// — użyj APK albo wystaw serwer po HTTPS (np. Tailscale serve).";
+  // Mixed-content blokuje TYLKO przeglądarka — w APK cleartext do sieci lokalnej i Tailscale działa.
+  if (pageHttps && /^http:\/\//i.test(url) && !isNative) {
+    return "Mieszana zawartość: w przeglądarce aplikacja działa po HTTPS, a adres SD jest http:// — zainstaluj APK (dopuszcza HTTP do sieci domowej i Tailscale) albo wystaw serwer po HTTPS.";
   }
   if (name === "AbortError" || /abort|timeout/i.test(msg)) {
     return "Serwer Stable Diffusion nie odpowiedział w czasie (generowanie bywa wolne — daj mu chwilę, sprawdź adres i sieć).";
@@ -117,7 +119,9 @@ export async function detectSd(rawUrl?: string): Promise<SdStatus> {
     return { ok: true, models: parseSdModels(d) };
   } catch (e) {
     const pageHttps = typeof location !== "undefined" && location.protocol === "https:";
-    return { ok: false, models: [], error: diagnoseSdError(base, e, pageHttps) };
+    let native = false;
+    try { native = Capacitor.isNativePlatform?.() === true; } catch { /* web */ }
+    return { ok: false, models: [], error: diagnoseSdError(base, e, pageHttps, native) };
   }
 }
 
@@ -159,6 +163,8 @@ export async function localSdGenerate(prompt: string, inputs: GenImage[] = [], o
     return parseSdImage(d);
   } catch (e) {
     const pageHttps = typeof location !== "undefined" && location.protocol === "https:";
-    return { error: diagnoseSdError(base, e, pageHttps) };
+    let native = false;
+    try { native = Capacitor.isNativePlatform?.() === true; } catch { /* web */ }
+    return { error: diagnoseSdError(base, e, pageHttps, native) };
   }
 }

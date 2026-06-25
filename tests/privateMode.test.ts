@@ -21,6 +21,11 @@ describe("diagnoseOllamaError — czytelna diagnoza zamiast 'failed to fetch'", 
     expect(m).toMatch(/Mieszana zawartość|HTTPS/i);
     expect(m).toMatch(/APK|tailscale/i);
   });
+  it("APK (natywnie) + http:// → NIE mixed-content, tylko realna diagnoza (APK dopuszcza cleartext)", () => {
+    const m = diagnoseOllamaError("http://100.64.33.7:11434", new TypeError("Failed to fetch"), true, true);
+    expect(m).not.toMatch(/Mieszana zawartość/i);
+    expect(m).toMatch(/CORS|OLLAMA_ORIGINS|JARVIS-Ollama-Server/);
+  });
   it("timeout/abort → komunikat o braku odpowiedzi i sieci", () => {
     const e = new Error("The operation was aborted"); e.name = "AbortError";
     expect(diagnoseOllamaError("http://localhost:11434", e, false)).toMatch(/nie odpowiedział|sieci/i);

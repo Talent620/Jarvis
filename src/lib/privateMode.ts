@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { store } from "./store";
 import { fetchTimeout } from "./http";
 import { webllmSupported, WEBLLM_DEFAULT_MODEL } from "./webllm";
@@ -22,12 +23,15 @@ export interface OllamaStatus {
  * Zamień surowy błąd fetch („Failed to fetch") na DZIAŁAJĄCĄ diagnozę: nazwij prawdopodobną
  * przyczynę (mixed-content / timeout / CORS-lub-nieosiągalny) i podaj konkretną naprawę. Czysta.
  */
-export function diagnoseOllamaError(url: string, err: unknown, pageHttps: boolean): string {
+export function diagnoseOllamaError(url: string, err: unknown, pageHttps: boolean, isNative = false): string {
   const name = err instanceof Error ? err.name : "";
   const msg = err instanceof Error ? err.message : String(err);
   const isHttpUrl = /^http:\/\//i.test(url);
-  if (pageHttps && isHttpUrl) {
-    return "Mieszana zawartość: aplikacja działa po HTTPS, a adres Ollamy jest http:// — przeglądarka to blokuje. Użyj APK (dopuszcza http do sieci lokalnej) albo wystaw Ollamę po HTTPS: `tailscale serve https / 11434`.";
+  // Mixed-content (HTTPS-strona ↔ HTTP-serwer) blokuje TYLKO przeglądarka. W aplikacji (APK)
+  // cleartext do sieci lokalnej i Tailscale jest dozwolony (network security config), więc tej
+  // diagnozy tam NIE pokazujemy — błąd ma inną przyczynę (serwer, adres, CORS) niżej.
+  if (pageHttps && isHttpUrl && !isNative) {
+    return "Mieszana zawartość: w przeglądarce aplikacja działa po HTTPS, a adres Ollamy jest http:// — przeglądarka to blokuje. Zainstaluj APK (dopuszcza HTTP do sieci domowej i Tailscale 100.64.x.x) albo wystaw Ollamę po HTTPS.";
   }
   if (name === "AbortError" || /abort|timeout|timed out/i.test(msg)) {
     return "Serwer Ollama nie odpowiedział w czasie. Sprawdź, czy działa, czy adres jest poprawny i czy PC oraz telefon są w tej samej sieci (lub przez Tailscale).";
@@ -52,7 +56,9 @@ export async function detectOllama(rawUrl?: string): Promise<OllamaStatus> {
     return { ok: true, url, models };
   } catch (e) {
     const pageHttps = typeof location !== "undefined" && location.protocol === "https:";
-    return { ok: false, url, models: [], error: diagnoseOllamaError(url, e, pageHttps) };
+    let native = false;
+    try { native = Capacitor.isNativePlatform?.() === true; } catch { /* web */ }
+    return { ok: false, url, models: [], error: diagnoseOllamaError(url, e, pageHttps, native) };
   }
 }
 

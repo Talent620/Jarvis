@@ -49,6 +49,11 @@ describe("localImage — diagnoseSdError", () => {
   it("failed to fetch → wskazuje flagi --api --listen --cors", () => {
     expect(diagnoseSdError("http://localhost:7860", new TypeError("Failed to fetch"), false)).toMatch(/--api|--cors-allow-origins/);
   });
+  it("APK (natywnie) + http:// → NIE mixed-content (cleartext dozwolony), tylko realna diagnoza", () => {
+    const m = diagnoseSdError("http://100.64.33.7:7860", new TypeError("Failed to fetch"), true, true);
+    expect(m).not.toMatch(/Mieszana/i);
+    expect(m).toMatch(/--api|--cors-allow-origins/);
+  });
 });
 
 describe("localImage — localSdGenerate", () => {
