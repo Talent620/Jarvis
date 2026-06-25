@@ -322,7 +322,18 @@ class Store {
 
   private async flushIdb() {
     const rec = this.data as unknown as Record<string, unknown[]>;
-    for (const c of IDB_COLLECTIONS) await idbSet(c as string, rec[c as string]);
+    let allOk = true;
+    for (const c of IDB_COLLECTIONS) {
+      const ok = await idbSet(c as string, rec[c as string]);
+      if (!ok) allOk = false;
+    }
+    // 🛟 Sieć bezpieczeństwa: gdy zapis do IndexedDB zawiódł (np. transakcja przerwana, brak
+    // miejsca), ciężkie kolekcje przepadłyby — w localStorage leży „odchudzony" blob z pustymi
+    // tablicami. Wtedy zapisujemy PEŁNY blob do localStorage, by NIC nie zginęło do następnego
+    // udanego flusha. Ścieżka sukcesu bez zmian (additive).
+    if (!allOk) {
+      try { write(DATA_KEY, this.data); } catch { /* ostatnia deska — quota itp. obsłużone w write */ }
+    }
   }
 
   // Jednorazowa migracja localStorage → IndexedDB + hydratacja przy starcie. Bezpieczne:
