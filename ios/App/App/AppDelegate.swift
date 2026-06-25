@@ -45,7 +45,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 // `npm run license:genkeys`. While it is empty, licensing is DISABLED and the app
 // runs normally — so the project keeps building before you set up keys.
 enum LicenseConfig {
-    static let publicKeyBase64 = "" // JARVIS_LICENSE_PUBLIC_KEY
+    static let publicKeyBase64 = "a9byR52vRgG40PKCX8bqEqCK32NNJiQfTtllwtHWCsM=" // JARVIS_LICENSE_PUBLIC_KEY
 }
 
 // MARK: - License manager (offline Ed25519 verification)
