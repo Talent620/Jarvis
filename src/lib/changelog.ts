@@ -13,6 +13,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🛟 Kopia zapasowa obejmuje teraz WSZYSTKO: do eksportu/kopii danych trafiają też zapisane projekty stron i historia przeróbek obrazów — przenosisz je na inne urządzenie albo odzyskujesz po reinstalacji bez utraty pracy.",
+      "🔍 Kreator stron — Popraw SEO jednym kliknięciem: w podglądzie Google przycisk nanosi brakujące meta (tytuł, opis) i komplet Open Graph, nie ruszając reszty strony — wyższa klikalność w wyszukiwarce i ładny link przy udostępnianiu.",
       "🖼 Studio Obrazów — eksport JPG/WEBP i pobranie całej galerii ZIP: pod wynikiem masz przyciski PNG / JPG / WEBP (konwersja na urządzeniu), a w historii przeróbek jeden klik pobiera wszystkie obrazy spakowane w ZIP (pełna rozdzielczość).",
       "💾 Kreator stron — autosave projektu: gdy pracujesz na zapisanym projekcie, każda budowa/edycja zapisuje się automatycznie i dokłada wersję do historii — nic nie zginie.",
       "💾 Kreator stron — Zapisz Projekt: budowane strony nie znikają po zamknięciu. Zapisujesz projekt (HTML + opis + typ + styl + brief), wczytujesz go później, robisz zapis jako nowy, masz historię wersji z przywracaniem oraz eksport/import do pliku .json. Wiele projektów naraz, przechowywane lokalnie na urządzeniu.",

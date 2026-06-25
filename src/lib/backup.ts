@@ -11,6 +11,8 @@ const COLLECTIONS: (keyof AppData)[] = [
   "tasks", "notes", "reminders", "shopping", "calendar",
   "memory", "scenes", "projects", "projectFiles", "tally", "journal", "leads", "flashcards",
   "bargainWatch", "sentMail", "contentPosts",
+  // Ciężkie kolekcje twórcze — też trafiają do kopii, by NIC nie zginęło (strony i obrazy):
+  "siteProjects", "imageHistory",
 ];
 
 export function exportData(): void {

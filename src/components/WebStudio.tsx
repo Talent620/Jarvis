@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
-import { assessSeo } from "../lib/seoPreview";
+import { assessSeo, seoFixInstruction } from "../lib/seoPreview";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast, toast } from "../lib/toast";
 import { listSiteProjects, saveSiteProject, renameSiteProject, removeSiteProject, exportSiteProject, importSiteProject } from "../lib/siteProjects";
@@ -478,9 +478,14 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
                 {seo.issues.length > 0 && (
-                  <ul className="muted" style={{ fontSize: 12, marginTop: 8, paddingLeft: 16 }}>
-                    {seo.issues.map((f, i) => <li key={i} style={{ marginBottom: 2 }}>{f}</li>)}
-                  </ul>
+                  <>
+                    <ul className="muted" style={{ fontSize: 12, marginTop: 8, paddingLeft: 16 }}>
+                      {seo.issues.map((f, i) => <li key={i} style={{ marginBottom: 2 }}>{f}</li>)}
+                    </ul>
+                    <button className="btn" style={{ width: "100%", marginTop: 6 }} disabled={busy} onClick={() => run(true, seoFixInstruction(seo))}>
+                      {busy ? "Poprawiam…" : "🔍 Popraw SEO (zastosuj meta + Open Graph)"}
+                    </button>
+                  </>
                 )}
               </details>
             );

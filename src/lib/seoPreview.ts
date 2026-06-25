@@ -64,3 +64,14 @@ export function assessSeo(html: string): SeoCheck {
 
   return { meta, issues, titleLen, descLen };
 }
+
+/** Pure: zbuduj polecenie dla AI, które naprawia wykryte braki SEO/social (do improveSite/run). */
+export function seoFixInstruction(check: SeoCheck): string {
+  if (!check.issues.length) return "";
+  return [
+    "Popraw WYŁĄCZNIE meta-dane SEO i Open Graph tej strony, NIC innego nie zmieniaj w treści ani układzie:",
+    ...check.issues.map((i) => `- ${i}`),
+    "Zadbaj o: <title> 50–60 znaków z korzyścią i miastem/branżą; meta description 140–155 znaków z CTA;",
+    "komplet Open Graph (og:title, og:description, og:image) oraz og:type i og:url; zachowaj resztę kodu bez zmian.",
+  ].join("\n");
+}

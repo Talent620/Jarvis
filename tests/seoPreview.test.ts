@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractMeta, assessSeo } from "../src/lib/seoPreview";
+import { extractMeta, assessSeo, seoFixInstruction } from "../src/lib/seoPreview";
 
 const HTML = `<!doctype html><html><head>
   <title>Strony internetowe dla firm — V-AI Kraków</title>
@@ -40,5 +40,12 @@ describe("seoPreview — assessSeo", () => {
     const r = assessSeo(long);
     expect(r.issues.some((i) => /Tytuł za długi/.test(i))).toBe(true);
     expect(r.issues.some((i) => /Opis za długi/.test(i))).toBe(true);
+  });
+
+  it("seoFixInstruction: pusto gdy brak uwag, treściwie gdy są braki", () => {
+    expect(seoFixInstruction(assessSeo(HTML))).toBe(""); // komplet → brak instrukcji
+    const ins = seoFixInstruction(assessSeo("<html><head></head><body></body></html>"));
+    expect(ins).toMatch(/Open Graph/);
+    expect(ins).toMatch(/title/i);
   });
 });
