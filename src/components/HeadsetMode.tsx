@@ -3,6 +3,7 @@ import { speak, stopSpeaking } from "../lib/voice";
 import { askJarvis } from "../lib/brain";
 import { LIVE_VOICE_PERSONA } from "../lib/voicePersona";
 import { speakableChunks } from "../lib/speechStream";
+import { loadLiveThread, saveLiveThread, clearLiveThread } from "../lib/liveThread";
 import { store } from "../lib/store";
 import { cue, buzz } from "../lib/feedback";
 import { keepAwake, releaseAwake } from "../lib/wakeLock";
@@ -116,6 +117,7 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
         LIVE_VOICE_PERSONA,
       );
       history.current = [...history.current, { role: "assistant" as const, content: reply.text }].slice(-16);
+      saveLiveThread(history.current); // ciągłość: zapamiętaj wątek na później
       if (!cancelled) {
         setCaption(reply.text);
         // Domknij resztę. Jeśli finał odpowiada strumieniowi (lub nic nie strumieniowano) — mów ogon
@@ -153,6 +155,9 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     cue("wake");
+    // Ciągłość: jeśli rozmawialiśmy niedawno, wznów wątek (JARVIS pamięta, o czym była mowa).
+    history.current = loadLiveThread();
+    if (history.current.length) setCaption("Wracam do naszej rozmowy. Słucham.");
     void keepAwake();
     void startHeadsetControls({
       onToggle: headsetTalk,
@@ -204,6 +209,9 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
         <button className={`chip ${!wakeMode ? "on" : ""}`} onClick={() => setWakeMode(false)}>💬 Ciągła</button>
         <button className={`chip ${voiceLockOn ? "on" : ""}`} onClick={() => store.setSettings({ voiceLock: !settings.voiceLock })} title="Reaguj tylko na mój głos">
           {voiceLockOn ? "🔒 Mój głos" : "🔓 Każdy głos"}
+        </button>
+        <button className="chip" onClick={() => { stopSpeaking(); speechCancel.current?.(); history.current = []; clearLiveThread(); setCaption("Nowa rozmowa. Słucham."); }} title="Zacznij rozmowę od nowa (wyczyść wątek)">
+          🆕 Nowa
         </button>
       </div>
 
