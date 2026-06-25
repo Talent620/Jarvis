@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { store } from "../lib/store";
 import { toast } from "../lib/toast";
@@ -6,6 +6,7 @@ import { sendOfferEmail, canSendDirect, isValidEmail, mailReadiness } from "../l
 import { gmailComposeUrl, mailtoUrl, appendSignature, safeOpenExternal } from "../lib/glinks";
 import { scoreDeliverability, deliverabilityLabel } from "../lib/emailDeliverability";
 import { applyComposerAction, COMPOSER_ACTIONS, type ComposerAction } from "../lib/emailComposer";
+import { listSignatures, addSignature, removeSignature, useSignature as selectSignature, seedSignatures, type Signature } from "../lib/signatures";
 
 // ✉ Ręczna wysyłka e-maila z poziomu JARVIS-a (PHASE 2/6 — Manual Send). Pełna kontrola: wpisujesz
 // adresata, temat, treść — wysyłasz jednym przyciskiem przez skonfigurowany kanał (SMTP/Gmail) albo
@@ -17,6 +18,25 @@ export default function MailCompose({ onClose, presetTo = "", presetSubject = ""
   const [body, setBody] = useState(presetBody);
   const [busy, setBusy] = useState(false);
   const [composing, setComposing] = useState<ComposerAction | "">("");
+  const [sigs, setSigs] = useState<Signature[]>([]);
+  const [activeBody, setActiveBody] = useState(store.settings.emailSignature || "");
+  const [manage, setManage] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newBody, setNewBody] = useState("");
+
+  // Zasiej istniejący podpis do listy i wczytaj bibliotekę (nieinwazyjnie).
+  useEffect(() => { seedSignatures(); setSigs(listSignatures()); setActiveBody(store.settings.emailSignature || ""); }, []);
+  const refreshSigs = () => { setSigs(listSignatures()); setActiveBody(store.settings.emailSignature || ""); };
+
+  const pickSignature = (id: string) => { selectSignature(id); refreshSigs(); };
+  const saveSignature = () => {
+    if (!newBody.trim()) { toast("Wpisz treść podpisu."); return; }
+    const s = addSignature(newName, newBody.trim());
+    selectSignature(s.id);
+    setNewName(""); setNewBody(""); setManage(false); refreshSigs();
+    toast("✅ Podpis zapisany i ustawiony jako aktywny");
+  };
+  const deleteSignature = (id: string) => { removeSignature(id); refreshSigs(); };
 
   const direct = canSendDirect();
   const finalBody = () => appendSignature(body, store.settings.emailSignature);
@@ -76,6 +96,34 @@ export default function MailCompose({ onClose, presetTo = "", presetSubject = ""
               </div>
             </>
           )}
+
+          {/* ✍ Podpisy — wybór aktywnego przed wysyłką + zarządzanie (PHASE 3) */}
+          <div style={{ marginTop: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <label style={{ fontSize: 12, fontWeight: 700 }}>✍ Podpis (aktywny dokleję do wysyłki)</label>
+              <button className="chip" onClick={() => setManage((m) => !m)}>{manage ? "Zwiń" : "➕ Nowy"}</button>
+            </div>
+            {sigs.length > 0 && (
+              <div className="chips" style={{ flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                {sigs.map((s) => {
+                  const isActive = s.body === activeBody;
+                  return (
+                    <span key={s.id} className="chip" style={{ display: "inline-flex", alignItems: "center", gap: 6, borderColor: isActive ? "var(--gold)" : undefined, color: isActive ? "var(--gold)" : undefined }}>
+                      <button style={{ all: "unset", cursor: "pointer" }} onClick={() => pickSignature(s.id)} title={s.body}>{isActive ? "✓ " : ""}{s.name}</button>
+                      <button style={{ all: "unset", cursor: "pointer", opacity: 0.6 }} onClick={() => deleteSignature(s.id)} title="Usuń">✕</button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            {manage && (
+              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                <input value={newName} placeholder="Nazwa (np. Firmowy)" onChange={(e) => setNewName(e.target.value)} />
+                <textarea className="ta" style={{ minHeight: 60 }} value={newBody} placeholder="Treść podpisu…" onChange={(e) => setNewBody(e.target.value)} />
+                <button className="btn" onClick={saveSignature}>💾 Zapisz podpis</button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="panel-foot">
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

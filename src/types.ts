@@ -354,7 +354,16 @@ export interface BrandKit {
   avoid?: string; // czego unikać (słowa, style)
 }
 
+/** Zapisany podpis e-mail (do wyboru przed wysyłką). */
+export interface Signature {
+  id: string;
+  name: string;
+  body: string;
+}
+
 export interface Settings {
+  /** Biblioteka podpisów e-mail (aktywny = emailSignature). Puste = działa jak dotąd. */
+  signatures?: Signature[];
   /** Dusza Marki — opcjonalna, wstrzykiwana do generacji dla spójności (puste = bez zmian). */
   brandKit?: BrandKit;
   /** Wybrany dostawca AI: "auto" lub konkretny (anthropic/gemini/groq/openrouter/nvidia/github). */

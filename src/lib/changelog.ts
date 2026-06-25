@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "✍ Wiele podpisów e-mail z wyborem przed wysyłką: w Wyślij e-mail zapisujesz kilka podpisów (np. Firmowy, Prywatny), nadajesz im nazwy i jednym dotknięciem wybierasz aktywny tuż przed wysłaniem — dokleja się do treści automatycznie. Dodawanie, usuwanie i przełączanie na miejscu; Twój dotychczasowy podpis trafia do biblioteki sam, więc działa jak dotąd.",
       "✉ Ręczna wysyłka e-maila z JARVIS-a: w Centrum (Sprzedaż i biznes) jest Wyślij e-mail — wpisujesz adres, temat i treść, podpis dokleja się sam, widzisz ryzyko spamu i masz akcje AI (skróć/przepisz/CTA…). Wysyłasz jednym przyciskiem (gdy skonfigurowana poczta) albo otwierasz w Gmailu/poczcie. Pełna kontrola, zero automatu.",
       "🖼 Studio Obrazów — fal.ai generuje też z opisu (nie tylko edytuje): masz klucz fal.ai i chcesz stworzyć obraz z samego tekstu? Teraz działa bez klucza Gemini — fal.ai robi i generowanie z opisu, i edycję zdjęć. Wybierz model fal.ai i pisz prompt.",
       "✍ Maile do leadów — akcje AI kompozytora: pod draftem maila masz przyciski Skróć, Rozwiń, Mocniejsze CTA, Formalnie, Luźniej, Personalizuj, Przepisz — jedno dotknięcie przerabia treść; przy błędzie zostaje oryginał. Obok widzisz też ryzyko spamu (dostarczalność).",
