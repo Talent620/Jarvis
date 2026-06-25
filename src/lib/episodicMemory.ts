@@ -34,7 +34,7 @@ export function topicOf(text: string): string {
 export function keywords(topic: string): string[] {
   return (topic || "")
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/[^a-z0-9ąćęłńóśźż\s]/g, " ") // S9-safe: bez /u i \p{L} (po toLowerCase wystarczą małe litery PL)
     .split(/\s+/)
     .filter((w) => w.length >= 4 && !STOP.has(w));
 }

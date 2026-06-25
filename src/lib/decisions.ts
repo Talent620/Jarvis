@@ -33,7 +33,9 @@ export function detectDecision(text: string): DecisionCandidate | null {
   if (/\?\s*$/.test(t) && /\b(czy|jak|kiedy|co)\b/i.test(t)) return null;
 
   // Rozbij na zdania i znajdź to z wyzwalaczem.
-  const sentences = t.split(/(?<=[.!?])\s+|\n+/).map(clean).filter(Boolean);
+  // S9-safe: bez lookbehind (?<=…) — stary WebView Galaxy S9 by się wywalił. Zamiast tego
+  // zamieniamy „koniec zdania + spację" na nową linię i dzielimy po liniach (efekt identyczny).
+  const sentences = t.replace(/([.!?])\s+/g, "$1\n").split(/\n+/).map(clean).filter(Boolean);
   const hit = sentences.find((s) => TRIGGER.test(s)) || (TRIGGER.test(t) ? t : "");
   if (!hit) return null;
 

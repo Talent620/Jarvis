@@ -9,7 +9,9 @@ const HEDGE = /(nie jestem pewien|nie jestem pewna|nie wiem|nie mam pewności|tr
 // Odmowy / asekuracja modelu.
 const REFUSE = /(nie mogę (ci )?pomóc|nie jestem w stanie|jako (model|sztuczna inteligencja|asystent ai)|nie mam dostępu do|przepraszam,? ale nie)/i;
 // Powtórzony token ≥3 razy pod rząd (pętla/degeneracja małego modelu).
-const REPEAT = /(\b[\p{L}\w]{3,}\b)(\s+\1){2,}/iu;
+// S9-safe: bez flagi /u i \p{L} (stary WebView Galaxy S9 by się wywalił) — jawny zestaw
+// liter PL + znaki słowne. Zachowanie takie samo dla typowego tekstu.
+const REPEAT = /(\b[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż0-9_]{3,}\b)(\s+\1){2,}/i;
 
 /**
  * Oszacuj pewność odpowiedzi (0..1). Im wyżej, tym bardziej można jej ufać.

@@ -14,9 +14,9 @@ export function cosineSim(a?: number[], b?: number[]): number {
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
 }
 
-/** Tokenizacja Unicode (litery/cyfry, ≥3 znaki) — wspólna dla miar leksykalnych. */
+/** Tokenizacja (litery PL/cyfry, ≥3 znaki) — wspólna dla miar leksykalnych. S9-safe: bez /u i \p{L}. */
 function tokenize(s: string): string[] {
-  return (s.toLowerCase().match(/[\p{L}\p{N}]+/gu) || []).filter((t) => t.length > 2);
+  return (s.toLowerCase().match(/[A-Za-z0-9ąćęłńóśźż]+/g) || []).filter((t) => t.length > 2);
 }
 
 /** Leksykalne podobieństwo (Jaccard po tokenach) — tani fallback, gdy brak wektorów. */

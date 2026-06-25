@@ -13,7 +13,7 @@ function tokens(s: string): Set<string> {
   return new Set(
     (s || "")
       .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .replace(/[^A-Za-z0-9ĄĆĘŁŃÓŚŹŻąćęłńóśźż\s]/g, " ") // S9-safe: bez /u i \p{L}
       .split(/\s+/)
       .filter((w) => w.length >= 3 && !STOP.has(w))
       .map((w) => w.slice(0, 6)),

@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "📱 Stabilność na starszych telefonach (Galaxy S9 i podobne): usunąłem 5 wzorców w kodzie, które na starym silniku przeglądarki potrafiły wywalić funkcję (pamięć, RAG, wykrywanie decyzji, ocena pewności, tryb spekulatywny). Teraz te moduły działają płynnie również na nieaktualizowanym WebView.",
       "🛍 Studio Obrazów — gotowce, które nie rozjeżdżają zdjęcia: presety Packshot (białe tło) i nowy Odnów (jak nowy) mają wbudowaną kotwicę (zachowaj przedmiot, kształt, kadr i perspektywę; jasne studyjne światło; nie zmieniaj geometrii). Jednym dotknięciem dostajesz wynik bliski katalogowemu, bez krzywizn — nawet bez ręcznego opisu.",
       "🖼 Studio Obrazów — wierniejsza edycja premium (fal.ai): model fal.ai dostaje teraz tę samą kotwicę edycji co darmowy Gemini (zachowaj przedmiot, kadr i perspektywę, zmień tylko to, o co proszę). Koniec z rozjeżdżaniem kształtu — efekty są bliżej oryginału.",
       "💣 Mocniejszy i wyraźniejszy głos Kapitana Bomby: przebudowany tor audio (highpass na czystość, drive przed zniekształceniem dla spójnego charkotu, podbicie obecności ~1.5 kHz) — brzmi groźniej, a słowa lepiej się przebijają. Działa na głosie buforowym (Premium/Kokoro).",
