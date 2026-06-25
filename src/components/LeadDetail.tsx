@@ -4,6 +4,7 @@ import { useStore } from "../hooks/useStore";
 import { buildDossier, auditWeakPoints, scoreLabel, smsDraft } from "../lib/leadIntel";
 import { gmailComposeUrl, mailtoUrl, mapsSearchUrl, smsUrl, splitOffer, safeOpenExternal } from "../lib/glinks";
 import { scoreDeliverability, deliverabilityLabel } from "../lib/emailDeliverability";
+import { applyComposerAction, COMPOSER_ACTIONS, type ComposerAction } from "../lib/emailComposer";
 import { canSendDirect, sendOfferEmail } from "../lib/mailer";
 import { draftOffer } from "../lib/offer";
 import { markContacted } from "../lib/salesEngine";
@@ -34,6 +35,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
   // Hooki MUSZĄ być przed wczesnym returnem (stała liczba/kolejność hooków co render).
   const [sending, setSending] = useState(false);
   const [osSending, setOsSending] = useState(false);
+  const [composing, setComposing] = useState<ComposerAction | "">(""); // która akcja kompozytora trwa
 
   if (!lead) return null;
   const intel = lead.intel;
@@ -56,6 +58,15 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
       if (l) Object.assign(l, patch, { updatedAt: Date.now() });
     });
 
+  // ✍ Akcje AI kompozytora — przerób bieżący draft maila (skróć/rozwiń/CTA/ton/przepisz).
+  const runComposer = async (action: ComposerAction) => {
+    const current = (intel?.email || lead.offer || "").trim();
+    if (!current) { toast("Najpierw wygeneruj treść maila."); return; }
+    setComposing(action);
+    const out = await applyComposerAction(current, action);
+    set({ offer: out, intel: intel ? { ...intel, email: out } : intel });
+    setComposing("");
+  };
   const sendVia = (kind: "gmail" | "mail") => {
     const text = intel?.email || lead.offer || "";
     const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`, store.settings.emailSignature);
@@ -273,6 +284,14 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
                     </div>
                   );
                 })()}
+                {/* ✍ Akcje AI kompozytora — przerób draft jednym dotknięciem (Email OS) */}
+                <div className="chips" style={{ flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                  {COMPOSER_ACTIONS.map((a) => (
+                    <button key={a.id} className="chip" disabled={composing !== ""} onClick={() => void runComposer(a.id)} title="Przerób treść maila przez AI">
+                      {composing === a.id ? "…" : a.label}
+                    </button>
+                  ))}
+                </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                   {canSendDirect() && email && (
                     <button className="chip" style={{ borderColor: "var(--ok, #58e08a)" }} onClick={sendNow} disabled={sending}>
