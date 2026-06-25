@@ -3,7 +3,9 @@ import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySee
 import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
 import { assessSeo } from "../lib/seoPreview";
 import { useEscape } from "../hooks/useEscape";
-import { copyWithToast } from "../lib/toast";
+import { copyWithToast, toast } from "../lib/toast";
+import { listSiteProjects, saveSiteProject, renameSiteProject, removeSiteProject, exportSiteProject, importSiteProject } from "../lib/siteProjects";
+import type { SiteProject } from "../types";
 import Guide from "./Guide";
 
 const KINDS: { id: SiteKind; label: string }[] = [
@@ -12,6 +14,8 @@ const KINDS: { id: SiteKind; label: string }[] = [
   { id: "landing", label: "🚀 Landing" },
   { id: "firma", label: "🏢 Firma" },
   { id: "portfolio", label: "🎨 Portfolio" },
+  { id: "saas", label: "🧩 SaaS" },
+  { id: "blog", label: "📝 Blog" },
 ];
 
 // Niesztampowe style — żeby strona nie wyglądała jak „kolejny szablon".
@@ -68,6 +72,59 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
   const [packages, setPackages] = useState<QuotePackage[] | null>(null);
   const [audit, setAudit] = useState<SiteAudit | null>(null); // ocena jakości wygenerowanej strony
   const [strategy, setStrategy] = useState(""); // ETAP 11 — strategia biznesowa przed budową
+  // 💾 Projekty stron — zapis/wczytanie/wersje
+  const [projId, setProjId] = useState<string | null>(null); // aktywny projekt (upsert)
+  const [projName, setProjName] = useState("");
+  const [projs, setProjs] = useState<SiteProject[]>(listSiteProjects());
+  const refreshProjs = () => setProjs(listSiteProjects());
+  const saveProject = () => {
+    if (!html) { toast("Najpierw zbuduj stronę."); return; }
+    const rec = saveSiteProject({ id: projId || undefined, name: projName || `Projekt ${new Date().toLocaleDateString("pl-PL")}`, prompt, kind, style, html, brief });
+    setProjId(rec.id); setProjName(rec.name); refreshProjs();
+    toast(`💾 Zapisano „${rec.name}" (wersji: ${rec.versions?.length || 1}).`);
+  };
+  const saveAsNew = () => {
+    if (!html) { toast("Najpierw zbuduj stronę."); return; }
+    const rec = saveSiteProject({ name: (projName ? `${projName} (kopia)` : "Nowy projekt"), prompt, kind, style, html, brief });
+    setProjId(rec.id); setProjName(rec.name); refreshProjs();
+    toast(`💾 Zapisano jako nowy: „${rec.name}".`);
+  };
+  const loadProject = (p: SiteProject) => {
+    setHtml(p.html); setPrompt(p.prompt || ""); setKind((p.kind as SiteKind) || "auto"); setStyle((p.style as SiteStyle) || "auto");
+    if (p.brief && typeof p.brief === "object") setBrief(p.brief as ClientBrief);
+    setProjId(p.id); setProjName(p.name); setAudit(auditSite(p.html)); setView("preview"); setErr("");
+    toast(`📂 Wczytano „${p.name}".`);
+  };
+  const restoreVersion = (p: SiteProject, idx: number) => {
+    const v = p.versions?.[idx];
+    if (!v) return;
+    setHtml(v.html); setAudit(auditSite(v.html)); setView("preview");
+    toast(`↩ Przywrócono wersję z ${new Date(v.at).toLocaleString("pl-PL")} (nie zapisano — kliknij 💾, by utrwalić).`);
+  };
+  const delProject = (id: string) => { removeSiteProject(id); if (projId === id) { setProjId(null); setProjName(""); } refreshProjs(); };
+  const renameProj = (p: SiteProject) => {
+    const n = window.prompt("Nazwa projektu:", p.name);
+    if (n && n.trim()) { renameSiteProject(p.id, n.trim()); if (projId === p.id) setProjName(n.trim()); refreshProjs(); }
+  };
+  const exportProject = (id: string) => {
+    const json = exportSiteProject(id);
+    if (!json) return;
+    const blob = new Blob([json], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `projekt-strony-${id}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+  const importProject = (file: File) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const rec = importSiteProject(String(r.result || ""));
+      if (rec) { refreshProjs(); toast(`📥 Zaimportowano „${rec.name}".`); }
+      else toast("⚠ Niepoprawny plik projektu.");
+    };
+    r.readAsText(file);
+  };
   const zl = (n: number) => `${Math.round(n).toLocaleString("pl-PL")} zł`;
 
   const briefText = buildClientBrief(brief);
@@ -296,6 +353,40 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
               </button>
             </div>
           )}
+
+          {/* 💾 Projekty stron — zapis / wczytanie / wersje / eksport / import (zawsze dostępne) */}
+          <details className="journal-card" style={{ marginTop: 10, padding: "8px 12px" }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>💾 Projekty {projs.length ? `(${projs.length})` : ""}</summary>
+            <div className="field" style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+              <input value={projName} placeholder="Nazwa projektu" onChange={(e) => setProjName(e.target.value)} style={{ flex: "1 1 140px" }} />
+              <button className="btn" style={{ width: "auto", marginTop: 0 }} disabled={!html} onClick={saveProject}>💾 Zapisz</button>
+              <button className="btn" style={{ width: "auto", marginTop: 0 }} disabled={!html} onClick={saveAsNew}>＋ Jako nowy</button>
+            </div>
+            {projId && <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>Aktywny projekt — „Zapisz" nadpisuje i dodaje wersję do historii.</p>}
+            {projs.length > 0 ? (
+              <div style={{ marginTop: 6 }}>
+                {projs.map((p) => (
+                  <div key={p.id} className="journal-card" style={{ padding: "8px 10px", marginTop: 6, border: projId === p.id ? "1px solid var(--cyan)" : undefined }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
+                    <div className="muted" style={{ fontSize: 11 }}>{p.kind} · {new Date(p.updatedAt).toLocaleString("pl-PL")} · wersji: {p.versions?.length || 1}</div>
+                    <div className="chips" style={{ marginTop: 6, flexWrap: "wrap", gap: 6 }}>
+                      <button className="chip" onClick={() => loadProject(p)}>📂 Wczytaj</button>
+                      {(p.versions?.length || 0) > 1 && <button className="chip" onClick={() => restoreVersion(p, 1)}>↩ Poprzednia wersja</button>}
+                      <button className="chip" onClick={() => renameProj(p)}>✏ Nazwa</button>
+                      <button className="chip" onClick={() => exportProject(p.id)}>⬇ Eksport</button>
+                      <button className="chip" onClick={() => delProject(p.id)}>🗑 Usuń</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>Brak zapisanych projektów. Zbuduj stronę i kliknij „Zapisz".</p>
+            )}
+            <label className="btn" style={{ display: "inline-block", marginTop: 8, cursor: "pointer" }}>
+              📥 Importuj projekt (.json)
+              <input type="file" accept="application/json,.json" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) importProject(f); e.currentTarget.value = ""; }} />
+            </label>
+          </details>
 
           {/* ➕ Sekcje premium (ETAP 4) — model wstawia spójnie ze stylem strony */}
           {html && (

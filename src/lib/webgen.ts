@@ -7,7 +7,7 @@ import { appendBrand } from "./brandKit";
 // witrynę w jednym pliku HTML (wbudowany CSS i JS) na poziomie premium. Działa
 // z dowolnym dostawcą AI.
 
-export type SiteKind = "auto" | "landing" | "sklep" | "firma" | "portfolio";
+export type SiteKind = "auto" | "landing" | "sklep" | "firma" | "portfolio" | "saas" | "blog";
 export type SiteStyle =
   | "auto" | "editorial" | "brutalist" | "glass" | "neon" | "retro" | "organic" | "swiss" | "luxury"
   // Systemy projektowe klasy światowej (ETAP 3 — AI Design Engine):
@@ -134,6 +134,17 @@ const KIND_HINTS: Record<SiteKind, string> = {
   portfolio: [
     "TYP: portfolio. Sekcje: hero z imieniem i specjalizacją, galeria prac (siatka z hover),",
     "o mnie, umiejętności, doświadczenie/oś czasu, kontakt. Estetyka minimalistyczna, mocna typografia.",
+  ].join("\n"),
+  saas: [
+    "TYP: strona produktu SaaS. Sekcje: hero z hasłem korzyści i mockupem produktu (placeholder UI w CSS),",
+    "pasek logotypów/zaufania, korzyści (siatka kart z ikonami SVG), sekcja jak to działa (kroki), funkcje z miniprzykładami,",
+    "social proof (liczby count-up, opinie), CENNIK 3 plany z wyróżnionym i przełącznikiem rok/miesiąc (JS), FAQ (rozwijane <details>),",
+    "integracje, sekcja bezpieczeństwo/zaufanie, mocne CTA z formularzem zapisu (front-end), stopka. Ton nowoczesny, konwertujący.",
+  ].join("\n"),
+  blog: [
+    "TYP: blog/magazyn. Sekcje: hero z wyróżnionym wpisem, siatka kart artykułów (miniatura, kategoria, tytuł, lead, data, czas czytania),",
+    "pasek kategorii/filtr, sekcja popularne, newsletter, sekcja o autorze, stopka. Dbaj o czytelną typografię, prześwity i skanowalność.",
+    "Dodaj realistyczne tytuły i leady dla branży z opisu. Pojedynczy artykuł może być placeholderem (kotwica).",
   ].join("\n"),
 };
 
@@ -332,6 +343,8 @@ const MARKET: Record<SiteKind, { min: number; max: number; label: string }> = {
   portfolio: { min: 900,  max: 3000,  label: "Portfolio" },
   firma:     { min: 2000, max: 6000,  label: "Strona firmowa (kilka sekcji)" },
   sklep:     { min: 3500, max: 15000, label: "Sklep internetowy (e-commerce)" },
+  saas:      { min: 3000, max: 12000, label: "Strona produktu SaaS" },
+  blog:      { min: 1500, max: 5000,  label: "Blog / magazyn" },
   auto:      { min: 1500, max: 5000,  label: "Strona www" },
 };
 

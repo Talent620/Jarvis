@@ -190,8 +190,25 @@ export interface AppData {
   contentPosts: ContentPost[];
   /** Historia przeróbek ze Studia Obrazów (ostatnie wyniki — do podglądu/pobrania/dalszej edycji). */
   imageHistory?: ImageEdit[];
+  /** Zapisane projekty stron WWW (Kreator stron — zapis/wczytanie/wersje). */
+  siteProjects?: SiteProject[];
   /** World Model — graf encji (ludzie/projekty/firmy/zadania) i relacji z pewnością. */
   world?: WorldGraph;
+}
+
+/** Zapisany projekt strony WWW (Kreator stron). Pełny stan do wznowienia pracy. */
+export interface SiteProject {
+  id: string;
+  name: string;
+  at: number; // utworzono
+  updatedAt: number;
+  prompt: string;
+  kind: string; // SiteKind
+  style: string; // SiteStyle
+  html: string;
+  brief?: unknown; // ClientBrief (luźny typ — moduł webgen jest źródłem prawdy)
+  /** Historia wersji (najnowsza pierwsza) — do przywracania. */
+  versions?: { at: number; html: string }[];
 }
 
 /** Zapisana przeróbka obrazu (Studio Obrazów). data = base64 (bez prefiksu data:). */
