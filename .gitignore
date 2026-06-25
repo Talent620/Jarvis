@@ -1,0 +1,22 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Web build output — NOT versioned: the compiled bundle contains a hardcoded
+# Groq API key (see SECURITY note in README). CI extracts it from the APK at
+# build time instead, so the plaintext secret never enters git history.
+/dist/
+
+# Capacitor Android platform (not used in this repo)
+/android/
+
+# Build artefacts
+build/
+DerivedData/
+*.ipa
+Payload/
+
+# macOS
+.DS_Store
+
+# (iOS internals are handled by ios/.gitignore)
