@@ -13,6 +13,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🕘 Studio Obrazów — historia przeróbek: każdy gotowy wynik zapisuje się w historii (przeżywa zamknięcie Studia). Pod wynikiem masz pasek miniatur — dotknij, by wziąć obraz do dalszej edycji, albo usuń ✕. Trzymane ostatnie 16 (w pamięci urządzenia).",
+      "📱 Okna mieszczą się na małych ekranach (S9): naprawiono przewijanie palcem wewnątrz okien-paneli — na starszym WebView gest pionowy bywał martwy i wyglądało, jakby okno się nie mieściło. Teraz przewija się płynnie i dosięgasz przycisków na dole.",
       "🖼 Studio Obrazów — Asystent nie zawiesi generacji, gdy mózg offline: jeśli tekstowy mózg nie odpowiada (np. lokalna Ollama nieosiągalna), krok rozumienia polecenia nie czeka już w nieskończoność — po 15 s przechodzi wprost do generacji (fal.ai i tak działa), z podpowiedzią, że Asystenta możesz wyłączyć przyciskiem 💬.",
       "🖥 Czytelny komunikat, gdy lokalny model (Ollama) jest nieosiągalny: zamiast technicznego błędu Failed to connect (adres:11434) zobaczysz po ludzku, że nie ma połączenia z serwerem Ollama — z radą: sprawdź, czy PC jest włączony, Ollama działa i Tailscale połączony, albo przełącz mózg na chmurę. Dotyczy m.in. Kreatora stron.",
       "📢 Generator reklam — audyt jakości i ryzyka odrzucenia: po wygenerowaniu reklamy widzisz wynik 0–100 i konkretne poprawki, zanim wkleisz ją do Google/Meta — sprawdza limity znaków nagłówków, KAPITALIKI, nadmiar wykrzykników, ryzykowne obietnice/superlatywy, emoji w Google (niedozwolone) i obecność CTA. Mniej odrzuceń, mocniejszy przekaz.",

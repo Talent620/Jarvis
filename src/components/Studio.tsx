@@ -9,6 +9,8 @@ import { parseKeys } from "../lib/keys";
 import { toast } from "../lib/toast";
 import { refineEdit, type EditPlan } from "../lib/editAssistant";
 import { loadUsage } from "../lib/usageTelemetry";
+import { saveImageEdit, listImageHistory, removeImageEdit } from "../lib/imageHistory";
+import type { ImageEdit } from "../types";
 import Guide from "./Guide";
 
 type Img = { data: string; mediaType: string };
@@ -62,6 +64,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
   const [inputs, setInputs] = useState<Img[]>([]);
   const [imgStyle, setImgStyle] = useState<ImageStyle>("auto"); // kierunek artystyczny dla generacji z opisu
   const [history, setHistory] = useState<Img[]>([]); // wersje wyników (ostatnia = bieżąca)
+  const [hist, setHist] = useState<ImageEdit[]>(listImageHistory()); // trwała historia przeróbek
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [view, setView] = useState<"result" | "compare">("compare");
@@ -135,6 +138,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
         if (!("error" in r2)) {
           setModel("gemini");
           setHistory((h) => [...h, r2]);
+          saveImageEdit(r2, text); setHist(listImageHistory());
           setView("compare");
           toast("⚠ fal.ai niedostępny (brak środków) — zrobiłem DARMOWYM Gemini ✓");
           setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
@@ -151,6 +155,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
       setErr(humanizeImageError(r.error, model));
     } else {
       setHistory((h) => [...h, r]);
+      saveImageEdit(r, text); setHist(listImageHistory()); // zapisz do trwałej historii przeróbek
       setView("compare");
       // Pokaż użytkownikowi gdzie jest wynik — przewiń do niego po wygenerowaniu.
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
@@ -212,6 +217,16 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     if (result) { setInputs([result]); setHistory([]); setPrompt(""); setErr(""); }
   };
   const undo = () => setHistory((h) => h.slice(0, -1));
+
+  // 🕘 Historia przeróbek: wczytaj zapisany wynik jako nowe WEJŚCIE (edytuj dalej) albo usuń.
+  const loadFromHistory = (it: ImageEdit) => {
+    setInputs([{ data: it.data, mediaType: it.mediaType }]);
+    setHistory([]); setPrompt(""); setErr(""); setView("compare");
+    const edit = bestImageModel(true);
+    if (model === "pollinations" || (model === "gemini" && edit.startsWith("fal-"))) setModel(edit);
+    toast("Wczytano z historii — opisz kolejną zmianę i Przerób.");
+  };
+  const delHist = (id: string) => { removeImageEdit(id); setHist(listImageHistory()); };
 
   const download = () => {
     if (!result) return;
@@ -425,6 +440,22 @@ export default function Studio({ onClose }: { onClose: () => void }) {
                 {history.length > 1 && <button className="btn" onClick={undo}>↩ Cofnij wersję</button>}
               </div>
               {history.length > 1 && <p className="muted" style={{ fontSize: 12 }}>Wersja {history.length} — możesz cofać i nakładać kolejne zmiany.</p>}
+            </div>
+          )}
+
+          {/* 🕘 Historia przeróbek — trwała (przeżywa zamknięcie Studia). Dotknij = weź do dalszej edycji. */}
+          {hist.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <p style={{ fontWeight: 700, color: "var(--cyan)", margin: "0 0 4px", fontSize: 13 }}>🕘 Historia przeróbek ({hist.length})</p>
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "4px 0", WebkitOverflowScrolling: "touch", touchAction: "pan-x" }}>
+                {hist.map((it) => (
+                  <div key={it.id} className="img-preview" style={{ margin: 0, position: "relative", flex: "0 0 auto" }}>
+                    <img src={`data:${it.mediaType};base64,${it.data}`} alt={it.prompt || "przeróbka"} title={it.prompt || ""} style={{ height: 76, borderRadius: 8, cursor: "pointer" }} onClick={() => loadFromHistory(it)} />
+                    <button className="img-x" onClick={() => delHist(it.id)}>✕</button>
+                  </div>
+                ))}
+              </div>
+              <p className="muted" style={{ fontSize: 11, marginTop: 2 }}>Dotknij miniaturę, by wziąć ją do dalszej edycji. Przechowywane: ostatnie 16.</p>
             </div>
           )}
 

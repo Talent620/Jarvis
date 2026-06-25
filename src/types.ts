@@ -188,8 +188,19 @@ export interface AppData {
   sentMail: SentMail[];
   /** Historia postów z Maszynki do kontentu. */
   contentPosts: ContentPost[];
+  /** Historia przeróbek ze Studia Obrazów (ostatnie wyniki — do podglądu/pobrania/dalszej edycji). */
+  imageHistory?: ImageEdit[];
   /** World Model — graf encji (ludzie/projekty/firmy/zadania) i relacji z pewnością. */
   world?: WorldGraph;
+}
+
+/** Zapisana przeróbka obrazu (Studio Obrazów). data = base64 (bez prefiksu data:). */
+export interface ImageEdit {
+  id: string;
+  at: number;
+  data: string;
+  mediaType: string;
+  prompt?: string; // polecenie/opis, z którego powstała
 }
 
 export type EntityKind = "person" | "project" | "company" | "task" | "topic";

@@ -9,7 +9,7 @@ const SETTINGS_KEY = "jarvis.settings.v2";
 // Kolekcje, które rosną (embeddingi pamięci, logi) — trzymane w IndexedDB zamiast localStorage,
 // by zdjąć sufit ~5 MB (AUDIT.md dług #1). `store.data` zostaje w RAM i synchroniczne; tu tylko
 // trwałość. Gdy IndexedDB niedostępny → wszystko wraca do localStorage (jak dotąd).
-const IDB_COLLECTIONS: (keyof AppData)[] = ["memory", "sentMail", "contentPosts"];
+const IDB_COLLECTIONS: (keyof AppData)[] = ["memory", "sentMail", "contentPosts", "imageHistory"];
 const IDB_MIGRATED_KEY = "jarvis.idb.migrated.v1";
 
 const emptyData: AppData = {
@@ -30,6 +30,7 @@ const emptyData: AppData = {
   bargainWatch: [],
   sentMail: [],
   contentPosts: [],
+  imageHistory: [],
   world: { entities: [], relations: [] },
 };
 
@@ -216,6 +217,7 @@ function write(key: string, value: unknown): void {
 const COLLECTION_CAPS: Partial<Record<keyof AppData, number>> = {
   sentMail: 500,
   contentPosts: 500,
+  imageHistory: 16, // obrazy są ciężkie (base64) — trzymaj tylko ostatnie przeróbki
 };
 function capCollections(d: AppData): void {
   const rec = d as unknown as Record<string, unknown[]>;

@@ -892,6 +892,7 @@ button:disabled {
   flex: 1 1 auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y; /* jawnie pozwól na pionowy gest — bez tego scroll bywa martwy na starym WebView (S9), okno „nie mieści się" */
   overscroll-behavior: contain;
   padding: 12px 18px;
   overflow-wrap: anywhere; /* długie URL-y/słowa zawijają się zamiast wychodzić poza ekran (S9 itp.) */
