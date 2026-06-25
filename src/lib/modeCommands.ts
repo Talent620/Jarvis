@@ -12,6 +12,21 @@ export function isPrivateModeCommand(text: string): boolean {
   return /(tryb|w[łl][aą]?cz|wlacz).{0,16}(prywatn|offline|lokaln)|w pe[łl]ni prywatn|ca[łl]kowicie prywatn/.test(text.toLowerCase());
 }
 
+/**
+ * Komenda „przeczytaj na głos: <tekst>" — wyłuskaj tekst do DOSŁOWNEGO odczytania (TTS bez mózgu).
+ * Dwie formy: z separatorem (dwukropek/myślnik) — dowolna treść; bez separatora — tylko z „na głos"
+ * i długą treścią (≥40 zn.), by nie łapać odwołań typu „przeczytaj na głos ostatnią wiadomość".
+ * Zwraca tekst do odczytania albo null. Czyste.
+ */
+export function parseReadAloud(text: string): string | null {
+  const t = (text || "").trim();
+  let m = t.match(/^(?:przeczytaj|odczytaj|czytaj)(?:\s+mi)?(?:\s+to)?(?:\s+na\s+g[łl]os)?\s*[:\-–]\s*([\s\S]+)$/i);
+  if (m && m[1].trim()) return m[1].trim();
+  m = t.match(/^(?:przeczytaj|odczytaj|czytaj)(?:\s+mi)?(?:\s+to)?\s+na\s+g[łl]os\s+([\s\S]{40,})$/i);
+  if (m && m[1].trim()) return m[1].trim();
+  return null;
+}
+
 export interface UnfilteredCmd { on: boolean; off: boolean }
 
 /** Czy wiadomość to krótka komenda włączenia/wyłączenia trybu bez ograniczeń (uncensored). */

@@ -81,7 +81,7 @@ import { statusFlags } from "./lib/status";
 import { buildContext } from "./lib/context";
 import { isUncensored, PROVIDERS } from "./lib/providers/registry";
 import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
-import { isPrivateModeCommand, matchUnfilteredCommand } from "./lib/modeCommands";
+import { isPrivateModeCommand, matchUnfilteredCommand, parseReadAloud } from "./lib/modeCommands";
 import Guardian from "./components/Guardian";
 import Mind from "./components/Mind";
 const GoalRunner = lazy(() => import("./components/GoalRunner"));
@@ -479,6 +479,15 @@ export default function App() {
     if (store.settings.tips !== false) {
       const d = detectDecision(text);
       if (d) setDecision(d);
+    }
+
+    // Komenda: „przeczytaj na głos: <tekst>" — odczytaj DOSŁOWNIE podany tekst (TTS, bez mózgu, bez kosztu).
+    const toRead = parseReadAloud(text);
+    if (toRead) {
+      const id = uid();
+      setMessages((m) => [...m, { id, role: "assistant", text: "🔊 Czytam na głos.", tools: ["tryb"], createdAt: Date.now() }]);
+      void speak(toRead, { ...store.settings, speak: true }).catch(() => {});
+      return;
     }
 
     // Komenda: Tryb Prywatny (w 100% lokalnie, offline). Tylko KRÓTKA komenda — długi wklejony
