@@ -81,6 +81,7 @@ import { statusFlags } from "./lib/status";
 import { buildContext } from "./lib/context";
 import { isUncensored, PROVIDERS } from "./lib/providers/registry";
 import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
+import { isPrivateModeCommand, matchUnfilteredCommand } from "./lib/modeCommands";
 import Guardian from "./components/Guardian";
 import Mind from "./components/Mind";
 const GoalRunner = lazy(() => import("./components/GoalRunner"));
@@ -480,9 +481,9 @@ export default function App() {
       if (d) setDecision(d);
     }
 
-    // Komenda: Tryb Prywatny (w 100% lokalnie, offline).
-    const lcp = text.toLowerCase();
-    if (/(tryb|w[łl][aą]?cz|wlacz).{0,16}(prywatn|offline|lokaln)|w pe[łl]ni prywatn|ca[łl]kowicie prywatn/.test(lcp)) {
+    // Komenda: Tryb Prywatny (w 100% lokalnie, offline). Tylko KRÓTKA komenda — długi wklejony
+    // tekst (dokument/prompt) ze słowami offline/prywatnie/lokalnie NIE przełącza trybu (był bug).
+    if (isPrivateModeCommand(text)) {
       const id0 = uid();
       setLiveId(id0);
       setMessages((m) => [...m, { id: id0, role: "assistant", text: "Szukam lokalnego modelu…", tools: ["tryb"], createdAt: Date.now() }]);
@@ -493,9 +494,7 @@ export default function App() {
     }
 
     // Komenda: przełącz tryb bez ograniczeń (działa realnie z modelem lokalnym/uncensored).
-    const lc = text.toLowerCase();
-    const wantOn = /(tryb|w[łl][aą]?cz|wlacz).{0,24}(bez cenzury|bez ogranicze|nieocenzurow|posłusze|posluszen)|zdejmij.{0,16}ogranicze|wy[łl][aą]?cz.{0,16}(cenzur|filtr|ogranicze|wszelkie)|pe[łl]ne pos[łl]usze/.test(lc);
-    const wantOff = /(przywr[oó][cć]|w[łl][aą]?cz|wlacz).{0,24}(cenzur|filtr|ogranicze)|tryb.{0,8}(normaln|standardow|bezpieczn)/.test(lc);
+    const { on: wantOn, off: wantOff } = matchUnfilteredCommand(text);
     if (wantOn || wantOff) {
       const on = wantOn && !wantOff;
       store.setSettings({ unfilteredLocal: on });
