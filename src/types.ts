@@ -455,8 +455,8 @@ export interface Settings {
   /** Tryb Szefa — PEŁNY DOSTĘP: agent głosowy może użyć WSZYSTKICH narzędzi/akcji bez ekranów
    *  zgody (sam przewiduje i potwierdza głosem). Działa tylko, gdy Tryb Szefa jest otwarty. */
   bossFullAccess?: boolean;
-  /** Głos Trybu Szefa: „kapitan" (bardzo niski, twardy — styl Kapitana Bomby) lub „robot" (klasyczny). */
-  bossVoice?: "kapitan" | "robot";
+  /** Głos Trybu Szefa: „kapitan" (niski systemowy — styl Kapitana Bomby), „premium" (ElevenLabs, ekspresyjny) lub „robot". */
+  bossVoice?: "kapitan" | "premium" | "robot";
   /** 🆓 Tryb darmowy — mózg działa wyłącznie na darmowych/lokalnych dostawcach (pomija płatnego
    *  Claude'a). Auto-router i tak wybiera najmocniejszy dostępny darmowy model. */
   freeMode?: boolean;
@@ -571,6 +571,9 @@ export interface Settings {
   elevenLabsApiKey: string;
   /** ID głosu ElevenLabs. */
   elevenLabsVoiceId: string;
+  /** Opcjonalne dostrojenie ElevenLabs (per kontekst, np. agresywny Tryb Szefa): 0–1. */
+  elevenStability?: number;
+  elevenStyle?: number;
   /** Opcjonalny klucz Fish Audio (tani, topowy klon głosu). */
   fishAudioApiKey: string;
   /** reference_id głosu Fish Audio (np. sklonowany głos JARVIS). */

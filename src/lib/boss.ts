@@ -14,9 +14,16 @@ export const ROBOT_VOICE: Partial<Settings> = { voiceMode: "system", voicePitch:
 // najgłębszy, najbardziej brutalny głos, jaki engine pozwala wycisnąć.
 export const KAPITAN_BOMBA_VOICE: Partial<Settings> = { voiceMode: "system", voicePitch: 0, voiceRate: 1.05 };
 
-/** Profil głosu Szefa wg ustawienia (domyślnie Kapitan Bomba). Czyste. */
-export function bossVoiceProfile(which?: "kapitan" | "robot"): Partial<Settings> {
-  return which === "robot" ? ROBOT_VOICE : KAPITAN_BOMBA_VOICE;
+// „Kapitan Bomba PREMIUM" — głos neuronowy ElevenLabs (najbliżej ludzkiego), dostrojony pod AGRESJĘ:
+// niska stabilność = dynamiczne, emocjonalne podanie; wysoki styl = przerysowanie. Barwę (głębię)
+// daje wybrany przez użytkownika głos ElevenLabs — najlepiej niski, męski, ostry. Wymaga klucza.
+export const KAPITAN_PREMIUM_VOICE: Partial<Settings> = { voiceMode: "eleven", elevenStability: 0.18, elevenStyle: 0.85, voiceRate: 1.05 };
+
+/** Profil głosu Szefa wg ustawienia (domyślnie Kapitan Bomba systemowy). Czyste. */
+export function bossVoiceProfile(which?: "kapitan" | "premium" | "robot"): Partial<Settings> {
+  if (which === "robot") return ROBOT_VOICE;
+  if (which === "premium") return KAPITAN_PREMIUM_VOICE;
+  return KAPITAN_BOMBA_VOICE;
 }
 
 export const BOSS_GREETING = "Tryb Szefa aktywny. Słucham rozkazów.";

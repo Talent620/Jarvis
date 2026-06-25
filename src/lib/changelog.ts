@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "💣 Tryb Szefa — głos Premium (ElevenLabs): trzeci, najbardziej ludzki i ekspresyjny głos agenta, dostrojony pod agresywne, dynamiczne podanie — najbliżej klimatu Kapitana Bomby. Wymaga klucza ElevenLabs i wybranego głębokiego głosu w ⚙ → Głos. Przyciskiem 🎙 Głos krążysz: Kapitan Bomba → Premium → Robot.",
       "💣 Tryb Szefa — głos Kapitana Bomby: domyślnie agent mówi teraz bardzo niskim, twardym głosem w stylu Kapitana Bomby. Jednym przyciskiem (🎙 Głos) przełączysz na klasyczny robotyczny i z powrotem.",
       "🩹 Tryb Szefa — okno mieści się na każdym telefonie: ekran agenta przewija się, gdy treści dużo (S9), i nie ucina już dołu (przyciski/pole zawsze dostępne).",
       "⬢ Tryb Szefa — ciągłość zadania: zamkniesz i wrócisz w ciągu pół godziny, a agent pamięta, na czym skończyliście, i kontynuuje. Przyciskiem Nowy temat zaczynasz od czysta.",

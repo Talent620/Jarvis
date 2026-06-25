@@ -512,7 +512,13 @@ export async function speak(text: string, settings: Settings): Promise<void> {
           body: JSON.stringify({
             text,
             model_id: "eleven_multilingual_v2",
-            voice_settings: { stability: 0.4, similarity_boost: 0.85 },
+            // Domyślnie naturalnie; profil może dostroić (np. agresywny Tryb Szefa: niska stabilność, wysoki styl).
+            voice_settings: {
+              stability: typeof settings.elevenStability === "number" ? settings.elevenStability : 0.4,
+              similarity_boost: 0.85,
+              style: typeof settings.elevenStyle === "number" ? settings.elevenStyle : 0,
+              use_speaker_boost: true,
+            },
           }),
         },
         30000,

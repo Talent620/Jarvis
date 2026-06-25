@@ -43,7 +43,9 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
   const lastErrRef = useRef(""); // nie powtarzaj w kółko tego samego błędu głosem
   const lastReplyRef = useRef(""); // ostatnia odpowiedź Szefa — do „🔁 Powtórz" (hands-free)
   const [canRepeat, setCanRepeat] = useState(false);
-  const [bossVoice, setBossVoice] = useState<"kapitan" | "robot">(store.settings.bossVoice === "robot" ? "robot" : "kapitan");
+  const [bossVoice, setBossVoice] = useState<"kapitan" | "premium" | "robot">(
+    store.settings.bossVoice === "robot" ? "robot" : store.settings.bossVoice === "premium" ? "premium" : "kapitan",
+  );
   const vpRef = useRef(bossVoiceProfile(store.settings.bossVoice)); // aktualny profil głosu (czytany w callbackach pętli)
 
   // Rdzeń pulsuje w rytm głosu.
@@ -130,17 +132,21 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
           className="chip"
           style={{ marginTop: 6 }}
           onClick={() => {
-            const next = bossVoice === "kapitan" ? "robot" : "kapitan";
+            const order = ["kapitan", "premium", "robot"] as const;
+            const next = order[(order.indexOf(bossVoice) + 1) % order.length];
             setBossVoice(next);
             vpRef.current = bossVoiceProfile(next);
             store.setSettings({ bossVoice: next });
             loopRef.current?.setVoiceTune(vpRef.current);
+            const noKey = next === "premium" && !(store.settings.elevenLabsApiKey?.trim() && store.settings.elevenLabsVoiceId?.trim());
+            setDetail(noKey ? "ℹ Premium wymaga klucza ElevenLabs i głębokiego głosu w ⚙ → Głos (bez tego mówię systemowo)." : "");
             stopSpeaking();
-            void speak(next === "kapitan" ? "Kapitan Bomba. Słucham rozkazów." : "Tryb robota. Słucham rozkazów.", { ...store.settings, speak: true, ...vpRef.current }).catch(() => {});
+            const sample = next === "robot" ? "Tryb robota. Słucham rozkazów." : "Kapitan Bomba. Słucham rozkazów.";
+            void speak(sample, { ...store.settings, speak: true, ...vpRef.current }).catch(() => {});
           }}
-          title="Przełącz głos Szefa (Kapitan Bomba ⇄ Robot)"
+          title="Przełącz głos Szefa: Kapitan Bomba → Premium (ElevenLabs) → Robot"
         >
-          🎙 Głos: {bossVoice === "kapitan" ? "Kapitan Bomba" : "Robot"}
+          🎙 Głos: {bossVoice === "kapitan" ? "💣 Kapitan Bomba" : bossVoice === "premium" ? "🎙 Premium" : "🤖 Robot"}
         </button>
         <div className="bossmode-core" ref={coreRef} data-state={state} />
         <div className="bossmode-state">{LABEL[state] || state}</div>
