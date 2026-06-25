@@ -245,12 +245,12 @@ export default function Journal({ onClose }: { onClose: () => void }) {
           ) : (
             filtered.map((e) => (
               <div key={e.id} className="journal-card" onClick={() => openEdit(e)} style={{ cursor: "pointer" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                  <b style={{ fontSize: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, minWidth: 0 }}>
+                  <b style={{ fontSize: 16, minWidth: 0 }}>
                     {e.pinned ? "📌 " : ""}
                     {e.title || "Bez tytułu"}
                   </b>
-                  <span style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", flexShrink: 0 }}>
                     <span
                       title={e.pinned ? "Odepnij" : "Przypnij na górze"}
                       onClick={(ev) => {

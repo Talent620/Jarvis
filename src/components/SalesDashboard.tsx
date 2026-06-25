@@ -505,8 +505,8 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
           ) : (
             shown.map((l) => (
               <div key={l.id} className="journal-card">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                  <b style={{ cursor: "pointer" }} onClick={() => setOpenLead(l.id)}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, minWidth: 0 }}>
+                  <b style={{ cursor: "pointer", minWidth: 0 }} onClick={() => setOpenLead(l.id)}>
                     {l.intel ? `${scoreLabel(l.intel.score).emoji} ` : ""}{l.company}
                     {l.origin === "salesos" && (
                       <span className="chip" style={{ marginLeft: 6, fontSize: 11, color: "var(--gold)", padding: "1px 8px" }} title="Zsynchronizowany z AI Sales OS">🔗 CRM</span>
@@ -515,7 +515,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
                       <span className="chip" style={{ marginLeft: 6, fontSize: 11, color: "var(--ok, #58e08a)", padding: "1px 8px" }}>✉ wysłano</span>
                     )}
                   </b>
-                  <button type="button" className="x" aria-label="Usuń leada" title="Usuń leada" style={{ cursor: "pointer" }} onClick={() => del(l.id)}>✕</button>
+                  <button type="button" className="x" aria-label="Usuń leada" title="Usuń leada" style={{ cursor: "pointer", flexShrink: 0 }} onClick={() => del(l.id)}>✕</button>
                 </div>
                 {(l.niche || l.location) && <div className="muted" style={{ fontSize: 12 }}>{[l.niche, l.location].filter(Boolean).join(" · ")}{l.intel ? ` · szansa ${l.intel.score}/100` : ""}</div>}
                 {l.note && <p className="muted" style={{ fontSize: 13, margin: "4px 0 0" }}>{l.note}</p>}

@@ -852,6 +852,7 @@ button:disabled {
 .panel {
   width: 100%;
   max-width: 560px;
+  min-width: 0; /* .panel jest dzieckiem flex (.sheet): bez tego min-width:auto pozwala szerokiej treści rozdąć panel poza ekran (prawa strona ucinana na S9) */
   max-height: calc(100vh - var(--sat) - 6px); /* baza pewna na każdym WebView */
   position: relative; /* dla znaku wodnego ⬢ JARVIS */
   display: flex;

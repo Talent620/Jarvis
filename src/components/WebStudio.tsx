@@ -238,8 +238,8 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
             <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>💰 Wycena (orientacyjna)</div>
               {quote.oneTime.map((l) => (
-                <div key={l.label} style={{ fontSize: 12, display: "flex", justifyContent: "space-between", gap: 8 }}>
-                  <span>{l.label}</span><span className="muted" style={{ whiteSpace: "nowrap" }}>{zl(l.min)}–{zl(l.max)}</span>
+                <div key={l.label} style={{ fontSize: 12, display: "flex", justifyContent: "space-between", gap: 8, minWidth: 0 }}>
+                  <span style={{ minWidth: 0 }}>{l.label}</span><span className="muted" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{zl(l.min)}–{zl(l.max)}</span>
                 </div>
               ))}
               <div style={{ fontSize: 13, fontWeight: 700, display: "flex", justifyContent: "space-between", marginTop: 4, borderTop: "1px solid var(--line)", paddingTop: 4 }}>

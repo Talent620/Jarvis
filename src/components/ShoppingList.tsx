@@ -73,9 +73,9 @@ export default function ShoppingList({ onClose }: { onClose: () => void }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
               {lines.map((l, i) => (
                 <div key={i} className="journal-card" style={{ padding: "10px 12px", borderLeft: `3px solid ${l.best ? "var(--ok, #58e08a)" : "var(--line)"}` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-                    <span style={{ fontWeight: 600 }}>{l.query}</span>
-                    <span style={{ fontWeight: 700, fontSize: 16, whiteSpace: "nowrap" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline", minWidth: 0 }}>
+                    <span style={{ fontWeight: 600, minWidth: 0 }}>{l.query}</span>
+                    <span style={{ fontWeight: 700, fontSize: 16, whiteSpace: "nowrap", flexShrink: 0 }}>
                       {l.best ? money(l.best.price, l.best.currency) : "—"}
                     </span>
                   </div>
