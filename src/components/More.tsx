@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { adaptiveOrder, track, shouldAnnounceAdapt } from "../lib/usage";
 import { toast } from "../lib/toast";
@@ -82,43 +82,46 @@ export default function More({
   onClose: () => void;
 }) {
   useEscape(onClose);
+  const [query, setQuery] = useState("");
+
+  // Każda funkcja: krótka NAZWA (na kafelku) + OPIS (podtytuł kafelka i pole wyszukiwania).
   const items = [
-    { id: "boss", icon: "⬢", label: "⬢ Szef — agent głosowy: zrób za mnie, napraw, doradź", fn: onBoss },
-    { id: "command", icon: "⌘", label: "Szybkie polecenia — znajdź/otwórz wszystko (⌘K)", fn: onCommand },
-    { id: "recall", icon: "🔎", label: "Recall — znajdź wszystko u siebie (czaty, dziennik, pamięć…)", fn: onRecall },
-    { id: "guardian", icon: "🩺", label: "Diagnoza i naprawa (dawny Strażnik)", fn: onGuardian },
-    { id: "mind", icon: "🧠", label: "Umysł JARVISA — odprawa, Twój świat, wzorce, samoocena", fn: onMind },
-    { id: "goal", icon: "🎯", label: "Zleć cel — rozłóż na kroki i zrób za mnie (do-for-me)", fn: onGoal },
-    { id: "notifications", icon: "🔔", label: "Powiadomienia — co wymaga uwagi", fn: onNotifications },
-    { id: "status", icon: "🩺", label: "Stan systemu — co działa (zielone/czerwone)", fn: onStatus },
-    { id: "profile", icon: "👤", label: "Mój profil — kim jestem (pamięć)", fn: onProfile },
-    { id: "memory", icon: "🧠", label: "Co JARVIS o mnie wie (pamięć — edytuj/usuń)", fn: onMemory },
-    { id: "audit", icon: "📜", label: "Dziennik działań — co przeszło przez program", fn: onAudit },
-    { id: "costs", icon: "💸", label: "Koszty AI — zużycie, prognoza, budżet", fn: onCosts },
-    { id: "tasks", icon: "✅", label: "Zadania Pro — projekty, priorytety (GTD)", fn: onTasks },
-    { id: "bargain", icon: "🏷", label: "Łowca Okazji — znajdź najtaniej (nowe/używane)", fn: onBargain },
-    { id: "wheretobuy", icon: "📍", label: "Gdzie kupię w pobliżu (najbliżej / taniej dalej)", fn: onWhereToBuy },
-    { id: "shoppinglist", icon: "🛒", label: "Lista zakupów — kup wszystko najtaniej", fn: onShoppingList },
-    { id: "money", icon: "💰", label: "Zarabianie — autopilot dochodu", fn: onMoney },
-    { id: "journal", icon: "📔", label: "Mój dziennik (przemyślenia)", fn: onJournal },
-    { id: "cards", icon: "🧠", label: "Kapsuły Wiedzy — ucz się i pamiętaj", fn: onCards },
-    { id: "translator", icon: "🌍", label: "Tłumacz na żywo (rozmowa 2 języki)", fn: onTranslator },
-    { id: "transcribe", icon: "🎙", label: "Transkrypcja spotkań (mowa→tekst)", fn: onTranscribe },
-    { id: "sales", icon: "📈", label: "Pulpit Sprzedaży (leady, CRM)", fn: onSales },
-    { id: "content", icon: "📱", label: "Maszynka do kontentu (posty na social media)", fn: onContent },
-    { id: "ads", icon: "📢", label: "Generator reklam (Google Ads / Facebook / Instagram)", fn: onAds },
-    { id: "sent", icon: "📤", label: "Skrzynka wysłanych (gdzie wysłałem maile)", fn: onSent },
-    { id: "web", icon: "🌐", label: "Kreator stron — zbuduj witrynę", fn: onWeb },
-    { id: "hud", icon: "👁", label: "Wizja HUD (kamera) — co widzisz?", fn: onHud },
-    ...(onScreen ? [{ id: "screen", icon: "🖥️", label: "Spójrz na mój ekran (analiza)", fn: onScreen }] : []),
-    { id: "studio", icon: "🎨", label: "Studio Obrazów — generuj/edytuj", fn: onStudio },
-    { id: "projects", icon: "📁", label: "Projekty / dokumenty", fn: onProjects },
-    { id: "history", icon: "🕘", label: "Historia rozmów", fn: onHistory },
-    { id: "data", icon: "▣", label: "Dane (zadania, targ, audyt…)", fn: onData },
-    { id: "gadgets", icon: "🧰", label: "Gadżety (latarka, kompas, QR…)", fn: onGadgets },
-    { id: "faq", icon: "❓", label: "FAQ — do czego służy każda funkcja", fn: onFaq },
-    { id: "help", icon: "📖", label: "Pomoc — jak korzystać (szybki start)", fn: onHelp },
-    { id: "admin", icon: "🔐", label: "Panel administratora (licencje)", fn: onAdmin },
+    { id: "boss", icon: "⬢", name: "Szef", desc: "Agent głosowy: zrób za mnie, napraw, doradź", fn: onBoss },
+    { id: "command", icon: "⌘", name: "Polecenia", desc: "Znajdź/otwórz wszystko (⌘K)", fn: onCommand },
+    { id: "recall", icon: "🔎", name: "Recall", desc: "Znajdź wszystko u siebie (czaty, dziennik, pamięć…)", fn: onRecall },
+    { id: "guardian", icon: "🩺", name: "Diagnoza", desc: "Diagnoza i naprawa (dawny Strażnik)", fn: onGuardian },
+    { id: "mind", icon: "🧠", name: "Umysł", desc: "Odprawa, Twój świat, wzorce, samoocena", fn: onMind },
+    { id: "goal", icon: "🎯", name: "Zleć cel", desc: "Rozłóż na kroki i zrób za mnie (do-for-me)", fn: onGoal },
+    { id: "notifications", icon: "🔔", name: "Powiadomienia", desc: "Co wymaga uwagi", fn: onNotifications },
+    { id: "status", icon: "🟢", name: "Stan systemu", desc: "Co działa (zielone/czerwone)", fn: onStatus },
+    { id: "profile", icon: "👤", name: "Mój profil", desc: "Kim jestem (pamięć)", fn: onProfile },
+    { id: "memory", icon: "🗃", name: "Pamięć o mnie", desc: "Co JARVIS o mnie wie (edytuj/usuń)", fn: onMemory },
+    { id: "audit", icon: "📜", name: "Dziennik działań", desc: "Co przeszło przez program", fn: onAudit },
+    { id: "costs", icon: "💸", name: "Koszty AI", desc: "Zużycie, prognoza, budżet", fn: onCosts },
+    { id: "tasks", icon: "✅", name: "Zadania Pro", desc: "Projekty, priorytety (GTD)", fn: onTasks },
+    { id: "bargain", icon: "🏷", name: "Łowca Okazji", desc: "Znajdź najtaniej (nowe/używane)", fn: onBargain },
+    { id: "wheretobuy", icon: "📍", name: "Gdzie kupię", desc: "W pobliżu — najbliżej / taniej dalej", fn: onWhereToBuy },
+    { id: "shoppinglist", icon: "🛒", name: "Lista zakupów", desc: "Kup wszystko najtaniej", fn: onShoppingList },
+    { id: "money", icon: "💰", name: "Zarabianie", desc: "Autopilot dochodu", fn: onMoney },
+    { id: "journal", icon: "📔", name: "Dziennik", desc: "Moje przemyślenia", fn: onJournal },
+    { id: "cards", icon: "🎴", name: "Kapsuły Wiedzy", desc: "Ucz się i pamiętaj", fn: onCards },
+    { id: "translator", icon: "🌍", name: "Tłumacz", desc: "Na żywo (rozmowa 2 języki)", fn: onTranslator },
+    { id: "transcribe", icon: "🎙", name: "Transkrypcja", desc: "Spotkań (mowa→tekst)", fn: onTranscribe },
+    { id: "sales", icon: "📈", name: "Sprzedaż", desc: "Pulpit Sprzedaży (leady, CRM)", fn: onSales },
+    { id: "content", icon: "📱", name: "Kontent", desc: "Posty na social media", fn: onContent },
+    { id: "ads", icon: "📢", name: "Reklamy", desc: "Google Ads / Facebook / Instagram", fn: onAds },
+    { id: "sent", icon: "📤", name: "Wysłane", desc: "Gdzie wysłałem maile", fn: onSent },
+    { id: "web", icon: "🌐", name: "Kreator stron", desc: "Zbuduj witrynę", fn: onWeb },
+    { id: "hud", icon: "👁", name: "Wizja HUD", desc: "Kamera — co widzisz?", fn: onHud },
+    ...(onScreen ? [{ id: "screen", icon: "🖥️", name: "Mój ekran", desc: "Spójrz i przeanalizuj", fn: onScreen }] : []),
+    { id: "studio", icon: "🎨", name: "Studio Obrazów", desc: "Generuj/edytuj", fn: onStudio },
+    { id: "projects", icon: "📁", name: "Projekty", desc: "Projekty / dokumenty", fn: onProjects },
+    { id: "history", icon: "🕘", name: "Historia", desc: "Historia rozmów", fn: onHistory },
+    { id: "data", icon: "▣", name: "Dane", desc: "Zadania, targ, audyt…", fn: onData },
+    { id: "gadgets", icon: "🧰", name: "Gadżety", desc: "Latarka, kompas, QR…", fn: onGadgets },
+    { id: "faq", icon: "❓", name: "FAQ", desc: "Do czego służy każda funkcja", fn: onFaq },
+    { id: "help", icon: "📖", name: "Pomoc", desc: "Jak korzystać (szybki start)", fn: onHelp },
+    { id: "admin", icon: "🔐", name: "Administrator", desc: "Panel (licencje)", fn: onAdmin },
   ];
 
   // Funkcje pogrupowane w czytelne sekcje — łatwiej znaleźć, mniej przewijania.
@@ -151,27 +154,44 @@ export default function More({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Wyszukiwarka: ignoruje wielkość liter i polskie znaki (ł→l, ż→z…), szuka w nazwie i opisie.
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "") // zdejmij znaki diakrytyczne (ą→a, ż→z…)
+      .replace(/ł/g, "l"); // ł → l (nie rozkłada się przez NFD)
+  const q = norm(query.trim());
+  const filtered = q ? items.filter((it) => norm(`${it.name} ${it.desc}`).includes(q)) : null;
+
+  // Sekcje do wyświetlenia. Przy wyszukiwaniu — jedna płaska lista wyników (bez grupowania).
   const sections: { title: string; rows: Item[] }[] = [];
-  if (shortcuts.length) sections.push({ title: "⭐ Skróty (najczęściej używane)", rows: shortcuts });
-  for (const g of GROUPS) {
-    const rows = g.ids.map((id) => byId.get(id)).filter((x): x is Item => !!x);
-    if (rows.length) sections.push({ title: g.title, rows });
+  if (filtered) {
+    if (filtered.length) sections.push({ title: `🔎 Wyniki (${filtered.length})`, rows: filtered });
+  } else {
+    if (shortcuts.length) sections.push({ title: "⭐ Skróty (najczęściej używane)", rows: shortcuts });
+    for (const g of GROUPS) {
+      const rows = g.ids.map((id) => byId.get(id)).filter((x): x is Item => !!x);
+      if (rows.length) sections.push({ title: g.title, rows });
+    }
   }
 
-  const Row = (it: Item) => (
-    <div
+  const Tile = (it: Item) => (
+    <button
       key={it.id}
-      className="list-item"
-      style={{ cursor: "pointer", fontSize: 16, padding: "13px 0" }}
+      type="button"
+      className="menu-tile"
+      title={it.desc}
       onClick={() => {
         track(it.id);
         onClose();
         it.fn();
       }}
     >
-      <span style={{ width: 28, fontSize: 18 }}>{it.icon}</span>
-      <span>{it.label}</span>
-    </div>
+      <span className="ic" aria-hidden="true">{it.icon}</span>
+      <span className="nm">{it.name}</span>
+      <span className="ds">{it.desc}</span>
+    </button>
   );
 
   return (
@@ -179,15 +199,29 @@ export default function More({
       <div className="panel" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>Menu</h2>
+          <h2>Centrum</h2>
         </div>
         <div className="panel-body">
-          {sections.map((sec) => (
-            <div key={sec.title}>
-              <h3 style={{ marginTop: sec === sections[0] ? 4 : 18 }}>{sec.title}</h3>
-              {sec.rows.map(Row)}
-            </div>
-          ))}
+          <input
+            className="menu-search"
+            type="search"
+            inputMode="search"
+            autoComplete="off"
+            placeholder="Szukaj funkcji…"
+            aria-label="Szukaj funkcji"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {filtered && filtered.length === 0 ? (
+            <div className="menu-empty">Brak funkcji dla „{query.trim()}". Spróbuj inaczej.</div>
+          ) : (
+            sections.map((sec) => (
+              <div key={sec.title}>
+                <h3 className="menu-sec">{sec.title}</h3>
+                <div className="menu-grid">{sec.rows.map(Tile)}</div>
+              </div>
+            ))
+          )}
         </div>
         <div className="panel-foot">
           <button className="btn" onClick={onClose}>Zamknij</button>

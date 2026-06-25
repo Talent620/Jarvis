@@ -1178,7 +1178,7 @@ export default function App() {
             </button>
           );
         })()}
-        <button className="icon-btn" onClick={() => setShowMore(true)} title="Menu" aria-label="Menu">
+        <button className="icon-btn" onClick={() => setShowMore(true)} title="Centrum — wszystkie funkcje" aria-label="Centrum funkcji">
           ⋯
         </button>
         <button className="icon-btn" onClick={() => setShowSettings(true)} title="Ustawienia" aria-label="Ustawienia">
