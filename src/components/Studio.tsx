@@ -96,6 +96,14 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     }
   };
 
+  // Usunięcie zdjęcia wejściowego. Gdy znika OSTATNIE, a wybrany jest model fal.ai (edytuje tylko
+  // istniejące zdjęcie) — zejdź na model do generowania z opisu, by „Generuj" nie utknął na
+  // komunikacie „najpierw dołącz zdjęcie".
+  const removeInput = (i: number) => {
+    setInputs((p) => p.filter((_, j) => j !== i));
+    if (inputs.length <= 1 && (model === "fal-flux-kontext" || model === "fal-nano-banana")) setModel(bestImageModel(false));
+  };
+
   const run = async (text: string, ins: Img[]) => {
     if (!text.trim()) return;
     setBusy(true);
@@ -284,7 +292,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
               {inputs.map((im, i) => (
                 <div key={i} className="img-preview" style={{ margin: 0 }}>
                   <img src={src(im)} alt={`wejście ${i + 1}`} style={{ height: 72 }} />
-                  <button className="img-x" onClick={() => setInputs((p) => p.filter((_, j) => j !== i))}>✕</button>
+                  <button className="img-x" onClick={() => removeInput(i)}>✕</button>
                 </div>
               ))}
             </div>
