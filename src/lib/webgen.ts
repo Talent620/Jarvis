@@ -7,7 +7,10 @@ import { zl } from "./format";
 // z dowolnym dostawcą AI.
 
 export type SiteKind = "auto" | "landing" | "sklep" | "firma" | "portfolio";
-export type SiteStyle = "auto" | "editorial" | "brutalist" | "glass" | "neon" | "retro" | "organic" | "swiss" | "luxury";
+export type SiteStyle =
+  | "auto" | "editorial" | "brutalist" | "glass" | "neon" | "retro" | "organic" | "swiss" | "luxury"
+  // Systemy projektowe klasy światowej (ETAP 3 — AI Design Engine):
+  | "apple" | "stripe" | "linear" | "notion" | "tesla" | "airbnb" | "openai" | "saas" | "enterprise" | "cyberpunk" | "minimal";
 
 const BASE = [
   "Jesteś światowej klasy front-end developerem i dyrektorem artystycznym (poziom Awwwards, nagrody „Site of the Day”). Tworzysz KOMPLETNE, nowoczesne, dopracowane strony w JEDNYM pliku HTML (wbudowany CSS i JavaScript).",
@@ -59,7 +62,54 @@ const STYLE_HINTS: Record<SiteStyle, string> = {
   organic: "KIERUNEK: organiczny — miękkie, płynne kształty (blob SVG), faliste przejścia sekcji (clip-path/SVG), naturalna paleta, łagodne animacje, ciepły, ludzki ton.",
   swiss: "KIERUNEK: szwajcarski/minimal — ścisła siatka, ogromne odstępy, jeden kolor akcentu, czcionka groteskowa, bezwzględny porządek i precyzja, zero zbędnych ozdobników.",
   luxury: "KIERUNEK: luksusowy/premium — czerń + złoto/szampan, eleganckie szeryfy, dużo przestrzeni, wyrafinowane detale i subtelne animacje, aura prestiżu i ekskluzywności.",
+  apple: "KIERUNEK: Apple — skrajny minimalizm premium, ogromne odstępy, wielkie produktowe hero na bieli/czerni, perfekcyjna typografia (Inter/Helvetica Now-like), subtelne, dopracowane animacje przewijania, jeden bohater na sekcję, idealny kontrast i detale.",
+  stripe: "KIERUNEK: Stripe — czysty, techniczny, elegancki SaaS: gradientowe kolorowe tła hero (przejścia fioletu/błękitu/zieleni), precyzyjna siatka, subtelne diagramy/ilustracje SVG, znakomita typografia, mikrointerakcje, wrażenie zaawansowania i zaufania.",
+  linear: "KIERUNEK: Linear — ciemny, ultra-nowoczesny: głębokie tła, subtelne poświaty i gradient-mesh, ostre detale, monochromia z jednym akcentem, inżynierski sznyt, perfekcyjne odstępy i typografia.",
+  notion: "KIERUNEK: Notion — przyjazny, czysty, dokumentowy: dużo bieli, miękkie ilustracje/emoji-akcenty, prosta siatka, czytelna treść, ciepły minimalizm, zero przeładowania.",
+  tesla: "KIERUNEK: Tesla — pełnoekranowe, kinowe hero z dużymi zdjęciami produktu, minimalna nawigacja, mocna typografia, czerń/biel + jeden akcent, dramatyczne sekcje na cały ekran, premium i futurystycznie.",
+  airbnb: "KIERUNEK: Airbnb — ciepły, ludzki, ufny: zaokrąglone karty, duże zdjęcia lifestyle, miękka paleta z koralowym akcentem, czytelna siatka, przyjazne mikrokopy — świetne na usługi i komercję.",
+  openai: "KIERUNEK: OpenAI — czysty, spokojny, badawczy: dużo światła, czarno-biała baza z subtelnym akcentem, prosta elegancka typografia, treściwe, minimalne sekcje, powaga i klarowność.",
+  saas: "KIERUNEK: nowoczesny SaaS — hero z mockupem produktu, korzyści z ikonami, social proof (logo, liczby), cennik z wyróżnionym planem, mocne CTA, dynamiczny i konwertujący.",
+  enterprise: "KIERUNEK: enterprise/korporacja — poważny, zaufany, profesjonalny: stonowana paleta (granat/grafit + akcent), klarowna struktura, dane i liczby, referencje, akcent na zgodność i bezpieczeństwo, czytelność ponad ozdobniki. Idealne dla kancelarii, finansów, B2B.",
+  cyberpunk: "KIERUNEK: cyberpunk — ciemne tło, neon (cyan/magenta), glow, perspektywiczne siatki, glitch-akcenty, futurystyczna typografia, mocny ruch — efektowne dla tech/gaming/krypto.",
+  minimal: "KIERUNEK: skrajny minimalizm — biel, jeden akcent, ogromne odstępy, typografia jako główny bohater, zero zbędnych elementów, perfekcyjna hierarchia i oddech.",
 };
+
+// ETAP 3 — auto-dobór systemu projektowego z opisu (deterministyczny pierwszy strzał; model dopracowuje).
+const STYLE_RULES: [Exclude<SiteStyle, "auto">, RegExp][] = [
+  ["enterprise", /kancelari|prawn|adwokat|radc|notari|ksi[eę]gow|finans|ubezpiecz|korporac|enterprise|\bb2b\b|doradztw|audyt/i],
+  ["stripe", /p[łl]atno[śs]|fintech|\bbank|invoic|rozlicze|saas finansow/i],
+  ["linear", /\bsaas\b|aplikacj|dashboard|platform|software|\bdev|api\b|narz[eę]dzi/i],
+  ["luxury", /luksus|premium|jubiler|zegark|apartament|willa|ekskluz|presti[żz]|hotel 5|moda premium|biżuteri/i],
+  ["editorial", /restauracj|kawiarni|bistro|kuchni|piekarni|cukierni|\bfood\b|menu|magazyn|blog|wydawnict/i],
+  ["organic", /fitness|si[łl]own|trener|\bjoga\b|\bsport|gabinet|\bspa\b|kosmet|uroda|wellness|zdrowi|terapi/i],
+  ["cyberpunk", /gaming|\bgr[ay]\b|esport|krypto|\bnft\b|cyber|futur|techno|web3|blockchain/i],
+  ["minimal", /portfolio|fotograf|artyst|projektant|architekt|\bdesign/i],
+  ["apple", /produkt premium|gad[żz]et|elektronik|hardware|urz[ąa]dzeni/i],
+  ["airbnb", /sklep|e-commerce|odzie[żz]|\bbuty\b|turystyk|nocleg|wynajem|us[łl]ug/i],
+];
+
+/** Pure: wybierz najlepszy system projektowy dla opisu strony. Domyślnie nowoczesny SaaS. */
+export function pickSiteStyle(desc: string): Exclude<SiteStyle, "auto"> {
+  const t = (desc || "").toLowerCase();
+  for (const [style, re] of STYLE_RULES) if (re.test(t)) return style;
+  return "saas";
+}
+
+// ETAP 2/6 — pełna, autonomiczna specyfikacja: każdą NOWĄ stronę dostarczamy kompletną, bez dopytywania.
+const FULL_SPEC = [
+  "KOMPLETNOŚĆ (zawrzyj ZAWSZE, samodzielnie, bez zadawania pytań):",
+  "- SEO: trafny <title> (do ~60 zn.), meta description (do ~155 zn.), canonical, lang=pl, semantyczne nagłówki.",
+  "- Open Graph (og:title/description/image/type) + Twitter Cards (summary_large_image).",
+  "- schema.org JSON-LD w <script type=\"application/ld+json\"> dopasowany do typu (Organization/LocalBusiness/Product/FAQPage).",
+  "- Sekcja FAQ jako <details> ORAZ powiązany FAQPage w JSON-LD.",
+  "- Dostępny formularz kontaktowy: <label> dla pól, required, aria, walidacja front-end i komunikat sukcesu (bez backendu).",
+  "- Wyraźne, powracające CTA (główne w hero + w stopce).",
+  "- Cookie banner (RODO) w czystym JS, decyzja zapamiętana w localStorage (akceptuj/odrzuć).",
+  "- Skrót Polityki prywatności na stronie (kotwica) + wzmianka o przetwarzaniu danych z formularza.",
+  "- Stopka: dane kontaktowe, prawa autorskie, nawigacja, ikony social (inline SVG).",
+  "- Dostępność (WCAG AA): dokładnie jeden <h1>, logiczna hierarchia, alt-y, kontrast, :focus-visible, nawigacja klawiaturą.",
+].join("\n");
 
 const KIND_HINTS: Record<SiteKind, string> = {
   auto: "Dobierz układ i sekcje najlepiej pasujące do opisu.",
@@ -101,7 +151,13 @@ export async function generateSite(
   kind: SiteKind = "auto",
   style: SiteStyle = "auto",
 ): Promise<{ html: string } | { error: string }> {
-  const system = `${BASE}\n\n${PREMIUM}\n\n${KIND_HINTS[kind] || KIND_HINTS.auto}\n\n${STYLE_HINTS[style] || STYLE_HINTS.auto}`;
+  // ETAP 3: gdy styl „auto" — deterministycznie dobierz system projektowy z opisu (model dopracuje).
+  const resolvedStyle: SiteStyle = style === "auto" && !current ? pickSiteStyle(prompt) : style;
+  const styleHint = STYLE_HINTS[resolvedStyle] || STYLE_HINTS.auto;
+  // FULL_SPEC tylko dla NOWEJ strony (przy edycji nie wymuszamy przebudowy całości).
+  const system = current
+    ? `${BASE}\n\n${PREMIUM}\n\n${KIND_HINTS[kind] || KIND_HINTS.auto}\n\n${styleHint}`
+    : `${BASE}\n\n${PREMIUM}\n\n${FULL_SPEC}\n\n${KIND_HINTS[kind] || KIND_HINTS.auto}\n\n${styleHint}`;
   const userMsg = current
     ? `Oto obecny kod strony:\n\n${current.slice(0, 14000)}\n\nWprowadź zmianę: ${prompt}\nZwróć PEŁNY, zaktualizowany plik HTML (od <!DOCTYPE html>), zachowując wysoki poziom wizualny i spójny styl.`
     : `Zbuduj stronę według opisu: ${prompt}`;
@@ -114,6 +170,47 @@ export async function generateSite(
   } catch (e) {
     return { error: humanize(e instanceof Error ? e.message : String(e)) };
   }
+}
+
+// === ETAP 6/8/9 — deterministyczny audyt jakości wygenerowanej strony (SEO/dostępność/UX) ===
+
+export interface SiteAuditCheck { label: string; ok: boolean }
+export interface SiteAudit { score: number; checks: SiteAuditCheck[]; missing: string[] }
+
+/** Pure: oceń wygenerowany HTML pod SEO/dostępność/UX. Zwraca wynik 0–100 i listę braków. */
+export function auditSite(html: string): SiteAudit {
+  const h = html || "";
+  const checks: SiteAuditCheck[] = [
+    { label: "Tytuł strony", ok: /<title>[^<]{3,}<\/title>/i.test(h) },
+    { label: "Meta description", ok: /<meta[^>]+name=["']description["'][^>]+content=["'][^"']{20,}/i.test(h) },
+    { label: "Open Graph", ok: /property=["']og:title["']/i.test(h) },
+    { label: "Twitter Cards", ok: /name=["']twitter:card["']/i.test(h) },
+    { label: "schema.org (JSON-LD)", ok: /application\/ld\+json/i.test(h) },
+    { label: "Dokładnie jeden H1", ok: (h.match(/<h1[\s>]/gi)?.length ?? 0) === 1 },
+    { label: "Viewport (mobile)", ok: /name=["']viewport["']/i.test(h) },
+    { label: "Język (lang)", ok: /<html[^>]+lang=/i.test(h) },
+    { label: "Sekcje semantyczne", ok: /<header\b/i.test(h) && /<main\b/i.test(h) && /<footer\b/i.test(h) },
+    { label: "Obrazy z alt", ok: !/<img(?![^>]*\balt=)[^>]*>/i.test(h) },
+    { label: "Sekcja FAQ", ok: /<details\b/i.test(h) || /\bfaq\b/i.test(h) },
+    { label: "Formularz kontaktowy", ok: /<form\b/i.test(h) },
+    { label: "Cookie banner (RODO)", ok: /cookie/i.test(h) },
+    { label: "Responsywność (media query)", ok: /@media/i.test(h) },
+    { label: "Animacje wejścia", ok: /IntersectionObserver|@keyframes|transition/i.test(h) },
+  ];
+  const ok = checks.filter((c) => c.ok).length;
+  return { score: Math.round((ok / checks.length) * 100), checks, missing: checks.filter((c) => !c.ok).map((c) => c.label) };
+}
+
+/** ETAP 10 — pętla samodoskonalenia: skrytykuj i podnieś poziom strony (jedno kliknięcie). */
+export async function improveSite(html: string, kind: SiteKind = "auto", style: SiteStyle = "auto"): Promise<{ html: string } | { error: string }> {
+  const audit = auditSite(html);
+  const fix = audit.missing.length ? ` Uzupełnij braki: ${audit.missing.join(", ")}.` : "";
+  const instruction =
+    "Wciel się w jury Awwwards oraz senior UX/SEO. Znajdź 5 NAJSŁABSZYCH punktów tej strony (design i hierarchia, " +
+    "konwersja/CTA, treść, SEO/schema, dostępność) i NAPRAW je, wyraźnie podnosząc poziom — bez obniżania niczego, co już dobre." +
+    fix +
+    " Zwróć pełną, ulepszoną wersję.";
+  return generateSite(instruction, html, kind, style);
 }
 
 // === Pełen proces „pod klienta”: brief → strona → wiadomość do klienta ===

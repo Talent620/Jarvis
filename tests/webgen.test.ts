@@ -1,7 +1,49 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages } from "../src/lib/webgen";
+import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, pickSiteStyle, auditSite } from "../src/lib/webgen";
 import { store } from "../src/lib/store";
+
+describe("pickSiteStyle — auto-dobór systemu projektowego", () => {
+  it("kancelaria/finanse → enterprise", () => {
+    expect(pickSiteStyle("Nowoczesna strona dla kancelarii prawnej")).toBe("enterprise");
+    expect(pickSiteStyle("biuro księgowe i doradztwo podatkowe")).toBe("enterprise");
+  });
+  it("SaaS/aplikacja → linear; fintech → stripe", () => {
+    expect(pickSiteStyle("platforma SaaS z dashboardem")).toBe("linear");
+    expect(pickSiteStyle("fintech do płatności online")).toBe("stripe");
+  });
+  it("luksus, gastronomia, fitness, gaming, portfolio", () => {
+    expect(pickSiteStyle("ekskluzywny jubiler, zegarki premium")).toBe("luxury");
+    expect(pickSiteStyle("przytulna restauracja i kawiarnia")).toBe("editorial");
+    expect(pickSiteStyle("siłownia i trener personalny")).toBe("organic");
+    expect(pickSiteStyle("studio gier i esport")).toBe("cyberpunk");
+    expect(pickSiteStyle("portfolio fotografa")).toBe("minimal");
+  });
+  it("nieznane → sensowny domyślny SaaS", () => {
+    expect(pickSiteStyle("xyz")).toBe("saas");
+  });
+});
+
+describe("auditSite — audyt SEO/dostępność/UX", () => {
+  it("kompletna strona → wysoki wynik", () => {
+    const good = `<!doctype html><html lang="pl"><head><title>Test ABC</title>
+      <meta name="viewport" content="width=device-width">
+      <meta name="description" content="Opis strony dłuższy niż dwadzieścia znaków na pewno">
+      <meta property="og:title" content="x"><meta name="twitter:card" content="summary_large_image">
+      <script type="application/ld+json">{}</script><style>@media(max-width:600px){a{color:red}}</style></head>
+      <body><header></header><main><h1>Tytuł</h1><img src="x" alt="opis"><details>FAQ</details>
+      <form></form></main><footer>cookie</footer><script>new IntersectionObserver(()=>{})</script></body></html>`;
+    const a = auditSite(good);
+    expect(a.score).toBeGreaterThanOrEqual(85);
+    expect(a.checks.find((c) => c.label === "schema.org (JSON-LD)")?.ok).toBe(true);
+  });
+  it("uboga strona → niski wynik i braki", () => {
+    const a = auditSite("<html><body><h1>a</h1><h1>b</h1></body></html>");
+    expect(a.score).toBeLessThan(40);
+    expect(a.missing).toContain("Meta description");
+    expect(a.checks.find((c) => c.label === "Dokładnie jeden H1")?.ok).toBe(false);
+  });
+});
 
 const noKeys = { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", openrouter: "", nvidia: "", github: "" };
 

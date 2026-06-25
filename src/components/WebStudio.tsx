@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { generateSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
+import { generateSite, improveSite, auditSite, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast } from "../lib/toast";
 import Guide from "./Guide";
@@ -23,6 +23,18 @@ const STYLES: { id: SiteStyle; label: string }[] = [
   { id: "organic", label: "🌿 Organiczny" },
   { id: "swiss", label: "🔲 Swiss" },
   { id: "luxury", label: "👑 Luxury" },
+  // Systemy projektowe klasy światowej (AI Design Engine):
+  { id: "apple", label: "🍎 Apple" },
+  { id: "stripe", label: "💳 Stripe" },
+  { id: "linear", label: "📐 Linear" },
+  { id: "notion", label: "📝 Notion" },
+  { id: "tesla", label: "🚗 Tesla" },
+  { id: "airbnb", label: "🏠 Airbnb" },
+  { id: "openai", label: "⚪ OpenAI" },
+  { id: "saas", label: "📊 SaaS" },
+  { id: "enterprise", label: "🏛 Enterprise" },
+  { id: "cyberpunk", label: "🌐 Cyberpunk" },
+  { id: "minimal", label: "⬜ Minimal" },
 ];
 
 const IDEAS: Record<string, string[]> = {
@@ -52,6 +64,7 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
   const [brief, setBrief] = useState<ClientBrief>({});
   const [quote, setQuote] = useState<Quote | null>(null);
   const [packages, setPackages] = useState<QuotePackage[] | null>(null);
+  const [audit, setAudit] = useState<SiteAudit | null>(null); // ocena jakości wygenerowanej strony
   const zl = (n: number) => `${Math.round(n).toLocaleString("pl-PL")} zł`;
 
   const briefText = buildClientBrief(brief);
@@ -68,6 +81,7 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
       if ("error" in r) setErr(r.error);
       else {
         setHtml(r.html);
+        setAudit(auditSite(r.html)); // ETAP 6/8/9 — automatyczny audyt jakości
         setView("preview");
         if (edit) setPrompt("");
       }
@@ -75,6 +89,22 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false); // zawsze odblokuj przycisk, nawet przy nieoczekiwanym błędzie
+    }
+  };
+
+  // ETAP 10 — pętla samodoskonalenia: krytyka + przebudowa na wyższy poziom (jedno kliknięcie).
+  const improve = async () => {
+    if (!html || busy) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await improveSite(html, kind, style);
+      if ("error" in r) setErr(r.error);
+      else { setHtml(r.html); setAudit(auditSite(r.html)); setView("preview"); }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
     }
   };
   const setBriefField = (k: keyof ClientBrief, v: string) => setBrief((b) => ({ ...b, [k]: v }));
@@ -226,6 +256,24 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
               </button>
               <button className="btn" style={{ flex: 1, marginTop: 0 }} onClick={() => copyWithToast(clientHandoverMessage(brief.business), "Wiadomość do klienta skopiowana ✓")}>
                 📨 Wiadomość do klienta
+              </button>
+            </div>
+          )}
+
+          {/* 🔎 Audyt jakości (SEO/dostępność/UX) + pętla samodoskonalenia */}
+          {html && audit && (
+            <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, minWidth: 0 }}>🔎 Jakość strony</span>
+                <span style={{ fontSize: 16, fontWeight: 800, flexShrink: 0, color: audit.score >= 85 ? "#39d98a" : audit.score >= 60 ? "var(--gold)" : "#ff6b6b" }}>{audit.score}/100</span>
+              </div>
+              {audit.missing.length > 0 ? (
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Do poprawy: {audit.missing.join(", ")}.</div>
+              ) : (
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Komplet: SEO, schema.org, dostępność, FAQ, formularz, RODO ✓</div>
+              )}
+              <button className="btn" style={{ width: "100%", marginTop: 8 }} disabled={busy} onClick={improve}>
+                {busy ? "Ulepszam…" : "✨ Ulepsz automatycznie (krytyka + wyższy poziom)"}
               </button>
             </div>
           )}
