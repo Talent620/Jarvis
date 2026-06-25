@@ -7,7 +7,10 @@
     "build": "node ./scripts/build-web.mjs",
     "sync": "cap sync",
     "sync:ios": "cap sync ios",
-    "add:ios": "cap add ios"
+    "add:ios": "cap add ios",
+    "license:genkeys": "node ./scripts/license.mjs genkeys",
+    "license:issue": "node ./scripts/license.mjs issue",
+    "license:verify": "node ./scripts/license.mjs verify"
   },
   "dependencies": {
     "@capacitor/app-launcher": "^6.0.0",

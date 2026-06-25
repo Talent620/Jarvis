@@ -19,4 +19,8 @@ Payload/
 # macOS
 .DS_Store
 
+# License keys — NEVER commit the private key
+license-private.pem
+license-public.txt
+
 # (iOS internals are handled by ios/.gitignore)

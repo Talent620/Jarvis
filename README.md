@@ -14,6 +14,8 @@ W repo są **dwa** niezależne podejścia do iOS — wybierz wedle potrzeb:
 
 Instrukcja instalacji `.ipa` na iPhone **bez Maca** (sideloading, EU/DMA): **[INSTALL.md](INSTALL.md)**.
 
+Klucze licencyjne (offline, Ed25519 — aktywacja aplikacji kluczem): **[LICENSING.md](LICENSING.md)**.
+
 ## Jak powstaje wersja Capacitor iOS
 
 Źródło frontendu (React/Vite) **nie znajduje się w tym repozytorium** — dostępny jest
