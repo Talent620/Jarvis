@@ -196,9 +196,12 @@ async function pollinationsGenerate(prompt: string, inputs: Img[], opts?: SdOpts
 }
 
 /** Pure: dobierz najlepszy DOSTĘPNY model wg konfiguracji (SD > Gemini > darmowy bez klucza). */
-export function bestImageModel(): ImageModelId {
+export function bestImageModel(forEdit = false): ImageModelId {
   const s = store.settings;
   if (s.sdUrl?.trim()) return "local-sd"; // własny serwer — najlepsza jakość, bez limitów
+  // Masz skonfigurowany płatny fal.ai → to Twój domyślny EDYTOR (po to dodałeś klucz + kartę).
+  // Dotyczy TYLKO edycji: fal edytuje istniejące zdjęcie; do generowania z opisu zostają darmowe modele.
+  if (forEdit && s.falApiKey?.trim()) return "fal-flux-kontext";
   if (studioKeyList().length || orderedKeys("gemini").length) return "gemini"; // darmowy z kluczem, edytuje zdjęcia
   return "pollinations"; // zawsze działa, bez klucza
 }

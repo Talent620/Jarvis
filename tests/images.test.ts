@@ -38,6 +38,14 @@ describe("Studio — modele edycji", () => {
     store.setSettings({ sdUrl: "" });
   });
 
+  it("bestImageModel(forEdit): z kluczem fal.ai edycja idzie na fal (płatny), generowanie zostaje darmowe", () => {
+    store.setSettings({ keys: { ...noKeys, gemini: "K" }, studioKeys: "", sdUrl: "", falApiKey: "fal-xxx" });
+    expect(bestImageModel(false)).toBe("gemini"); // generowanie z opisu — darmowy
+    expect(bestImageModel(true)).toBe("fal-flux-kontext"); // edycja zdjęcia — płatny fal.ai, który skonfigurowałeś
+    store.setSettings({ falApiKey: "" });
+    expect(bestImageModel(true)).toBe("gemini"); // bez klucza fal → Gemini
+  });
+
   it("darmowy bez klucza Gemini → czytelny błąd", async () => {
     const r = await generateImage("test", undefined, "gemini");
     expect("error" in r).toBe(true);

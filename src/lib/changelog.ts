@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🎨 Studio Obrazów: gdy masz klucz fal.ai i dołączasz zdjęcie do edycji — JARVIS używa teraz fal.ai (płatny, który skonfigurowałeś), zamiast pytać o pusty klucz Gemini. Generowanie z opisu zostaje darmowe; w każdej chwili przełączysz na 🆓 Gemini.",
       "🐛 Koniec ucinania prawej krawędzi okien na wąskich telefonach (S9): panel nie rozpycha się już poza ekran, a w listach (zakupy, dziennik, sprzedaż, wyceny) wartości/przyciski po prawej są zawsze widoczne — długie nazwy ustępują im miejsca, a nie odwrotnie.",
       "🐛 Strażnik (Diagnoza): koniec ucinania ocen po prawej stronie — wynik (np. 100/85) jest zawsze widoczny, a długie opisy podagentów skracają się wielokropkiem zamiast rozpychać wiersz poza ekran.",
       "🐛 Koniec wiecznego komunikatu o nowej wersji: aktualizacja porównuje teraz dokładnie ten sam znacznik buildu co zainstalowany (wcześniej czas wgrania pliku był o parę minut późniejszy niż build, więc apka po świeżej instalacji i tak ciągle widziała aktualizację).",

@@ -85,11 +85,13 @@ export default function Studio({ onClose }: { onClose: () => void }) {
     const img = await capturePhoto();
     if (img) {
       setInputs((p) => [...p, img].slice(0, 4));
-      // Dołączasz zdjęcie = chcesz EDYCJĘ. Pollinations tworzy obraz z opisu i NIE edytuje —
-      // jeśli jest skonfigurowany edytor (Gemini/SD), przeskocz na niego, by wynik pasował.
-      if (model === "pollinations") {
-        const edit = bestImageModel();
-        if (edit !== "pollinations") setModel(edit);
+      // Dołączasz zdjęcie = chcesz EDYCJĘ. Wybierz najlepszy SKONFIGUROWANY edytor: fal.ai (jeśli masz
+      // klucz) — płatny, niezawodny; inaczej Gemini/SD. Pollinations tworzy z opisu i NIE edytuje.
+      // Nie nadpisujemy świadomego wyboru płatnego/lokalnego modelu — tylko podnosimy z darmowych domyślnych.
+      const edit = bestImageModel(true);
+      if (edit !== model && (model === "pollinations" || (model === "gemini" && edit.startsWith("fal-")))) {
+        setModel(edit);
+        if (edit.startsWith("fal-")) toast("Edycja przez fal.ai (płatne ~$0.04/obraz). Wolisz za darmo? Wybierz 🆓 Gemini wyżej.");
       }
     }
   };
