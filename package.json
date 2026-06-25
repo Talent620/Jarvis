@@ -24,7 +24,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "salesos": "bash sales-os/start.sh",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "build:studio": "vite build --config vite.studio.config.ts"
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",

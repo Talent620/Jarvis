@@ -25,3 +25,5 @@ license-private.json
 proxy/.dev.vars
 .dev.vars
 JARVIS_KOD_BACKUP.zip
+dist-studio
+studio-obrazow-standalone.zip
