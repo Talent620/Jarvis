@@ -2,13 +2,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { verifyOwnerPhone, saveAdminConfig, loadAdminConfig, hasAdminConfig } from "../src/lib/admin";
 
-describe("Panel admina — weryfikacja właściciela numerem", () => {
-  it("akceptuje poprawny numer właściciela (i ignoruje spacje/myślniki)", async () => {
-    expect(await verifyOwnerPhone("537885492")).toBe(true);
-    expect(await verifyOwnerPhone("537 885 492")).toBe(true);
-    expect(await verifyOwnerPhone("537-885-492")).toBe(true);
+describe("Panel admina — weryfikacja hasła administratora", () => {
+  it("akceptuje poprawne hasło administratora", async () => {
+    expect(await verifyOwnerPhone("5498287x")).toBe(true);
   });
-  it("odrzuca błędny numer", async () => {
+  it("odrzuca błędne hasło", async () => {
+    expect(await verifyOwnerPhone("537885492")).toBe(false); // stare hasło już nie działa
     expect(await verifyOwnerPhone("123456789")).toBe(false);
     expect(await verifyOwnerPhone("")).toBe(false);
   });

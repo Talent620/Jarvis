@@ -26,6 +26,7 @@ import {
   type LicenseRecord,
 } from "../lib/licenseSign";
 import { verifyLicense } from "../lib/license";
+import { revokeId } from "../lib/revoked";
 
 // Panel administratora w wersji premium — wewnątrz JARVIS-a. Odblokowanie
 // numerem właściciela (dostęp awaryjny), sekrety szyfrowane lokalnie.
@@ -62,7 +63,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
 
   const unlock = async () => {
     if (!(await verifyOwnerPhone(phone))) {
-      setMsg("❌ Nieprawidłowy numer właściciela.");
+      setMsg("❌ Nieprawidłowe hasło administratora.");
       return;
     }
     const c = await loadAdminConfig(phone);
@@ -131,15 +132,17 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
           </div>
           <div className="panel-body">
             <p className="muted">
-              Dostęp tylko dla właściciela. Odblokuj swoim numerem telefonu (weryfikacja awaryjna).
-              Twoje sekrety są szyfrowane lokalnie (AES-256).
+              Dostęp tylko dla właściciela. Odblokuj hasłem administratora.
+              Twoje sekrety są szyfrowane lokalnie tym hasłem (AES-256).
             </p>
             <div className="field" style={{ display: "flex", gap: 8 }}>
               <input
                 type="password"
-                inputMode="numeric"
+                inputMode="text"
+                autoCapitalize="none"
+                autoCorrect="off"
                 value={phone}
-                placeholder="Numer właściciela…"
+                placeholder="Hasło administratora…"
                 onChange={(e) => setPhone(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && unlock()}
                 style={{ flex: 1 }}
@@ -208,6 +211,22 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                   <textarea className="ta" value={insKey} placeholder="Wklej klucz licencyjny…" onChange={(e) => setInsKey(e.target.value)} style={{ minHeight: 56, fontFamily: "monospace", fontSize: 11 }} />
                   <button className="btn" style={{ marginTop: 6 }} disabled={!insKey.trim()} onClick={() => void inspectKey()}>🔎 Sprawdź</button>
                   {insRes && <pre className="notice" style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>{insRes}</pre>}
+                  {/* 🚫 Kill-switch dla klucza OFFLINE — skopiuj ID blokady do listy REVOKED i wydaj aktualizację */}
+                  <button
+                    className="btn"
+                    style={{ marginTop: 6 }}
+                    disabled={!insKey.trim()}
+                    onClick={() => {
+                      const p = decodeLicense(insKey.trim());
+                      if (!p) { toast("Najpierw wklej poprawny klucz."); return; }
+                      copyWithToast(revokeId(p.n, p.iat), "Skopiowano ID blokady. Wklej je do listy REVOKED_KEYS (src/lib/revoked.ts) i wydaj aktualizację — klucz przestanie działać u wszystkich.");
+                    }}
+                  >
+                    🚫 Zablokuj ten klucz (kill-switch offline)
+                  </button>
+                  <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                    Klucze ONLINE blokujesz natychmiast w „Licencje → Unieważnij". Klucz OFFLINE ubijesz dopiero po aktualizacji aplikacji (lista REVOKED).
+                  </p>
                 </div>
                 <Guide title="ℹ Jak to działa (offline — Twój własny klucz)" open>
                   <p>Wklej swój <b>klucz prywatny</b> (zawartość pliku <i>license-private.json</i>). Zostaje <b>tylko u Ciebie</b>, zaszyfrowany Twoim numerem — nigdzie go nie wysyłamy. Podpisuje klucze <b>lokalnie</b>, bez serwera.</p>

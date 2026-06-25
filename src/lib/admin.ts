@@ -3,14 +3,15 @@ import { fetchTimeout } from "./http";
 
 // === Panel administratora (wewnątrz JARVIS-a) ===
 // Tu właściciel trzyma swoje sekrety (adres serwera licencji + token admina) i
-// zarządza licencjami klientów. Sekrety są SZYFROWANE lokalnie (AES-256) hasłem
-// = Twój numer telefonu (dostęp awaryjny). Bez numeru panel jest zaszyfrowany.
+// zarządza licencjami klientów. Sekrety są SZYFROWANE lokalnie (AES-256) HASŁEM
+// ADMINISTRATORA (dostęp awaryjny). Bez hasła panel jest zaszyfrowany.
 //
-// Numer właściciela trzymamy wyłącznie jako skrót SHA-256 (nie jawnie).
+// Hasło trzymamy wyłącznie jako skrót PBKDF2-HMAC-SHA256 (nie jawnie).
 
-// NIE goły SHA-256: numer telefonu ma niską entropię (9 cyfr ⇒ ~10^9), a goły hash łamie się
-// natychmiast. Używamy PBKDF2-HMAC-SHA256 z solą i 210k iteracjami — brute-force ~210k× droższy.
-const OWNER_PHONE_HASH = "4358c62d5a9e039ef23c66e810cd5aaef35d68bd0ab0c45b72153d9201f0b54e";
+// NIE goły SHA-256: hasło bywa krótkie, a goły hash łamie się szybko. Używamy
+// PBKDF2-HMAC-SHA256 z solą i 210k iteracjami — brute-force ~210k× droższy.
+// Skrót hasła administratora (PBKDF2 jw.). Zmiana hasła = przelicz ten skrót.
+const OWNER_PHONE_HASH = "301959580928bf02209b47e3edf70dd8e8ff10d2f1a15ebf30e10945712a40c9";
 const OWNER_SALT = "jarvis.owner.salt.v2";
 const OWNER_ITER = 210000;
 const CFG_KEY = "jarvis.admin.cfg.v1";

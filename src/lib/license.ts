@@ -8,6 +8,7 @@
 // który NIE jest w repozytorium).
 
 import { fetchTimeout } from "./http";
+import { isRevoked } from "./revoked";
 
 // Eksportowany, bo offline-generator (licenseSign.ts) porównuje z nim wklejony klucz
 // prywatny — inaczej podpisane nim licencje nie aktywują się w tej wersji aplikacji.
@@ -98,8 +99,9 @@ export async function verifyLicense(token: string): Promise<LicenseInfo> {
       bs(new TextEncoder().encode(data)),
     );
     if (!ok) return { valid: false };
-    const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(data))) as { n?: string; t?: string; exp?: number };
+    const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(data))) as { n?: string; t?: string; iat?: number; exp?: number };
     if (payload.exp && Date.now() > payload.exp) return { valid: false }; // licencja wygasła
+    if (isRevoked(payload.n, payload.iat)) return { valid: false }; // unieważniony offline (kill-switch w aktualizacji)
     return { valid: true, name: payload.n, type: payload.t, exp: payload.exp };
   } catch {
     return { valid: false };
