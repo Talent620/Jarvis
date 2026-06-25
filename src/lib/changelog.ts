@@ -13,6 +13,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "💣 Tryb Szefa — głos Kapitana Bomby: domyślnie agent mówi teraz bardzo niskim, twardym głosem w stylu Kapitana Bomby. Jednym przyciskiem (🎙 Głos) przełączysz na klasyczny robotyczny i z powrotem.",
+      "🩹 Tryb Szefa — okno mieści się na każdym telefonie: ekran agenta przewija się, gdy treści dużo (S9), i nie ucina już dołu (przyciski/pole zawsze dostępne).",
       "⬢ Tryb Szefa — ciągłość zadania: zamkniesz i wrócisz w ciągu pół godziny, a agent pamięta, na czym skończyliście, i kontynuuje. Przyciskiem Nowy temat zaczynasz od czysta.",
       "⬢ Tryb Szefa — meta-rozkazy głosem bez modelu: powiesz stop albo anuluj i agent natychmiast milknie; powiesz powtórz albo jeszcze raz i powtórzy ostatnią odpowiedź. Działa od ręki, pewnie i za darmo (nie idzie do AI).",
       "⬢ Tryb Szefa — 🔁 Powtórz: jeśli przegapisz odpowiedź agenta (hands-free, telefon w kieszeni), jednym dotknięciem powtórzy ostatni komunikat na głos.",

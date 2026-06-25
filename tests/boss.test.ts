@@ -1,5 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { isBossSummon, ROBOT_VOICE, BOSS_GREETING, bossSystem, BOSS_DOCTRINE, bossQuickActions, parseBossMeta } from "../src/lib/boss";
+import { isBossSummon, ROBOT_VOICE, KAPITAN_BOMBA_VOICE, bossVoiceProfile, BOSS_GREETING, bossSystem, BOSS_DOCTRINE, bossQuickActions, parseBossMeta } from "../src/lib/boss";
+
+describe("głos Szefa — Kapitan Bomba vs Robot", () => {
+  it("Kapitan Bomba jest GŁĘBSZY (niższy pitch) niż robot", () => {
+    expect(KAPITAN_BOMBA_VOICE.voicePitch ?? 1).toBeLessThanOrEqual(ROBOT_VOICE.voicePitch ?? 1);
+    expect(KAPITAN_BOMBA_VOICE.voiceMode).toBe("system");
+  });
+  it("bossVoiceProfile: domyślnie Kapitan Bomba, robot na żądanie", () => {
+    expect(bossVoiceProfile(undefined)).toBe(KAPITAN_BOMBA_VOICE);
+    expect(bossVoiceProfile("kapitan")).toBe(KAPITAN_BOMBA_VOICE);
+    expect(bossVoiceProfile("robot")).toBe(ROBOT_VOICE);
+  });
+});
 
 describe("parseBossMeta — meta-rozkazy bez modelu", () => {
   it("łapie stop/anuluj/cisza", () => {

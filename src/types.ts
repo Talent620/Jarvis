@@ -455,6 +455,8 @@ export interface Settings {
   /** Tryb Szefa — PEŁNY DOSTĘP: agent głosowy może użyć WSZYSTKICH narzędzi/akcji bez ekranów
    *  zgody (sam przewiduje i potwierdza głosem). Działa tylko, gdy Tryb Szefa jest otwarty. */
   bossFullAccess?: boolean;
+  /** Głos Trybu Szefa: „kapitan" (bardzo niski, twardy — styl Kapitana Bomby) lub „robot" (klasyczny). */
+  bossVoice?: "kapitan" | "robot";
   /** 🆓 Tryb darmowy — mózg działa wyłącznie na darmowych/lokalnych dostawcach (pomija płatnego
    *  Claude'a). Auto-router i tak wybiera najmocniejszy dostępny darmowy model. */
   freeMode?: boolean;

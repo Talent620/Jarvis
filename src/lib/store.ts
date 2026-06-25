@@ -96,6 +96,7 @@ const defaultSettings: Settings = {
   guardianAutopilot: false,
   requireConsentAlways: false,
   bossFullAccess: false,
+  bossVoice: "kapitan",
   freeMode: false,
   brainReservePct: 35,
   unfilteredLocal: false,

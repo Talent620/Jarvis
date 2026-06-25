@@ -6,7 +6,7 @@ import { keepAwake, releaseAwake } from "../lib/wakeLock";
 import { subscribeLevel } from "../lib/audioLevel";
 import { setAutoConsent } from "../lib/permissions";
 import { useEscape } from "../hooks/useEscape";
-import { ROBOT_VOICE, BOSS_GREETING, bossSystem, bossQuickActions } from "../lib/boss";
+import { BOSS_GREETING, bossSystem, bossQuickActions, bossVoiceProfile } from "../lib/boss";
 import { jarvisBriefing } from "../lib/capabilities";
 import { bossMemoryDigest } from "../lib/bossMemory";
 import { hasUsableBrain } from "../lib/brain";
@@ -43,6 +43,8 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
   const lastErrRef = useRef(""); // nie powtarzaj w kółko tego samego błędu głosem
   const lastReplyRef = useRef(""); // ostatnia odpowiedź Szefa — do „🔁 Powtórz" (hands-free)
   const [canRepeat, setCanRepeat] = useState(false);
+  const [bossVoice, setBossVoice] = useState<"kapitan" | "robot">(store.settings.bossVoice === "robot" ? "robot" : "kapitan");
+  const vpRef = useRef(bossVoiceProfile(store.settings.bossVoice)); // aktualny profil głosu (czytany w callbackach pętli)
 
   // Rdzeń pulsuje w rytm głosu.
   useEffect(() => subscribeLevel((v) => {
@@ -74,7 +76,7 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
         if (s !== "error") { lastErrRef.current = ""; return; }
         if (d && d !== lastErrRef.current) {
           lastErrRef.current = d;
-          void speak(d, { ...store.settings, speak: true, ...ROBOT_VOICE }).catch(() => {});
+          void speak(d, { ...store.settings, speak: true, ...vpRef.current }).catch(() => {});
         }
       },
       (t) => {
@@ -90,7 +92,7 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
           if (cs) setStep(cs);
         }
       },
-      ROBOT_VOICE,
+      vpRef.current,
       persona,
       prefer,
       { verify: true, captureDecisions: true, stallMs: 9000, insight: true },
@@ -102,13 +104,13 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
       if (!hasUsableBrain()) {
         const m = "Nie mam jeszcze mózgu. Dodaj darmowy klucz w ustawieniach, w sekcji AI — np. Gemini. Możesz też włączyć Tryb darmowy.";
         if (!cancelled) { setState("error"); setCaption(m); setDetail("⚙ → AI: wklej darmowy klucz (Gemini/Groq) albo włącz 🆓 Tryb darmowy."); }
-        try { await speak(m, { ...store.settings, speak: true, ...ROBOT_VOICE }); } catch { /* brak głosu */ }
+        try { await speak(m, { ...store.settings, speak: true, ...vpRef.current }); } catch { /* brak głosu */ }
         return;
       }
       // Ciągłość: jeśli zadanie/rozmowa Szefa była niedawno, wznów kontekst.
       const prior = loadLiveThread(Date.now(), BOSS_THREAD_KEY);
       if (prior.length) { loop.seedHistory(prior); if (!cancelled) setDetail("↩ Wznawiam — pamiętam nasze ostatnie zadanie."); }
-      try { await speak(BOSS_GREETING, { ...store.settings, speak: true, ...ROBOT_VOICE }); } catch { /* brak głosu — trudno */ }
+      try { await speak(BOSS_GREETING, { ...store.settings, speak: true, ...vpRef.current }); } catch { /* brak głosu — trudno */ }
       if (!cancelled) loop.start();
     })();
     return () => { cancelled = true; loop.stop(); stopSpeaking(); releaseAwake(); setAutoConsent(false); loopRef.current = null; };
@@ -124,6 +126,22 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
           {fullAccess ? "🟢 PEŁNY DOSTĘP — przewiduję i potwierdzam głosem" : "🔒 Tryb bezpieczny — pełny dostęp w ⚙ → Tryb Szefa"}
         </div>
         <div className="bossmode-sub" style={{ marginTop: 4 }}>🧠 MÓZG: {brainLabel}</div>
+        <button
+          className="chip"
+          style={{ marginTop: 6 }}
+          onClick={() => {
+            const next = bossVoice === "kapitan" ? "robot" : "kapitan";
+            setBossVoice(next);
+            vpRef.current = bossVoiceProfile(next);
+            store.setSettings({ bossVoice: next });
+            loopRef.current?.setVoiceTune(vpRef.current);
+            stopSpeaking();
+            void speak(next === "kapitan" ? "Kapitan Bomba. Słucham rozkazów." : "Tryb robota. Słucham rozkazów.", { ...store.settings, speak: true, ...vpRef.current }).catch(() => {});
+          }}
+          title="Przełącz głos Szefa (Kapitan Bomba ⇄ Robot)"
+        >
+          🎙 Głos: {bossVoice === "kapitan" ? "Kapitan Bomba" : "Robot"}
+        </button>
         <div className="bossmode-core" ref={coreRef} data-state={state} />
         <div className="bossmode-state">{LABEL[state] || state}</div>
         {detail && <div style={{ fontSize: 12, color: "#6bff9e", maxWidth: 360 }}>{detail}</div>}
@@ -179,7 +197,7 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
           <div className="chips" style={{ justifyContent: "center", marginTop: 10, gap: 6 }}>
             <button
               className="chip"
-              onClick={() => { stopSpeaking(); void speak(lastReplyRef.current, { ...store.settings, speak: true, ...ROBOT_VOICE }).catch(() => {}); }}
+              onClick={() => { stopSpeaking(); void speak(lastReplyRef.current, { ...store.settings, speak: true, ...vpRef.current }).catch(() => {}); }}
               title="Powtórz ostatnią odpowiedź na głos"
             >
               🔁 Powtórz

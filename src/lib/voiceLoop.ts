@@ -59,6 +59,11 @@ export class ConversationLoop {
     this.lastReply = "";
   }
 
+  /** Zmień profil głosu na żywo (np. przełączenie Kapitan Bomba ⇄ Robot). */
+  setVoiceTune(v: Partial<Settings>): void {
+    this.voiceTune = v;
+  }
+
   start(): void {
     if (!ConversationLoop.supported()) {
       // Niezawodność: brak STT NIE wyłącza Szefa — zostaje tor tekstowy (say()).
