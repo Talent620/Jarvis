@@ -3,7 +3,7 @@ import { activateLicense, saveLicense, normalizeKey } from "../lib/license";
 
 // Brama aktywacji: bez ważnego klucza licencyjnego aplikacja się nie uruchamia.
 // Klucz wydaje wyłącznie autor (Artur Józefczak). Kopia bez klucza jest bezużyteczna.
-export default function LicenseGate({ onActivated }: { onActivated: (name?: string) => void }) {
+export default function LicenseGate({ onActivated, onClose }: { onActivated: (name?: string) => void; onClose?: () => void }) {
   const [key, setKey] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,10 +41,13 @@ export default function LicenseGate({ onActivated }: { onActivated: (name?: stri
 
   return (
     <div className="onboard">
-      <div className="onboard-card enter">
+      <div className="onboard-card enter" style={onClose ? { position: "relative" } : undefined}>
         <div className="onboard-orb" />
         <h1>JARVIS</h1>
-        <p className="onboard-sub">Ten program jest licencjonowany. Wprowadź klucz dostępu, aby aktywować.</p>
+        <p className="onboard-sub">{onClose ? "Przedłuż dostęp — wklej nowy klucz licencyjny." : "Ten program jest licencjonowany. Wprowadź klucz dostępu, aby aktywować."}</p>
+        {onClose && (
+          <button className="chip" style={{ position: "absolute", top: 10, right: 10 }} onClick={onClose} aria-label="Zamknij">✕</button>
+        )}
 
         <div style={{ display: "flex", gap: 8, width: "100%" }}>
           <input

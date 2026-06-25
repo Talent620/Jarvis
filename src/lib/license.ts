@@ -44,6 +44,40 @@ export interface LicenseInfo {
   exp?: number;
 }
 
+export interface LicenseStatus {
+  kind: "perpetual" | "term" | "trial" | "open" | "none";
+  daysLeft: number | null; // dni do wygaśnięcia (null = bezterminowa/otwarta)
+  expiringSoon: boolean; // ≤ 3 dni
+  expired: boolean;
+}
+
+/** Policz stan licencji (rodzaj, ile dni zostało, czy wkrótce wygasa). Czyste i testowalne. */
+export function licenseStatus(info: LicenseInfo | null, now = Date.now()): LicenseStatus {
+  if (!info) return { kind: "none", daysLeft: null, expiringSoon: false, expired: false };
+  if (info.type === "open") return { kind: "open", daysLeft: null, expiringSoon: false, expired: false };
+  if (!info.exp) return { kind: info.type === "trial" ? "trial" : "perpetual", daysLeft: null, expiringSoon: false, expired: false };
+  const ms = info.exp - now;
+  const daysLeft = Math.max(0, Math.ceil(ms / 86_400_000));
+  const expired = ms <= 0;
+  return {
+    kind: info.type === "trial" ? "trial" : "term",
+    daysLeft,
+    expiringSoon: !expired && daysLeft <= 3,
+    expired,
+  };
+}
+
+/** Komunikat-zachęta dla użytkownika (trial: zawsze; licencja czasowa: tylko przy końcu). null = brak. */
+export function licenseExpiryNudge(st: LicenseStatus): string | null {
+  if (st.kind === "perpetual" || st.kind === "open" || st.kind === "none") return null;
+  if (st.expired) return "Dostęp wygasł — przedłuż, by korzystać dalej.";
+  const d = st.daysLeft ?? 0;
+  const left = d <= 1 ? "został ostatni dzień" : `zostało ${d} dni`;
+  if (st.kind === "trial") return `Trial — ${left}.`;
+  if (st.expiringSoon) return `Licencja — ${left}. Przedłuż, by nie stracić dostępu.`;
+  return null;
+}
+
 /**
  * Oczyść klucz z białych ORAZ niewidocznych znaków (zero-width, soft hyphen, BOM),
  * które kopiowanie z telefonu/maila potrafi wstawić — to one „psuły" poprawny klucz.

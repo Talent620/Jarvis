@@ -1,6 +1,32 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { verifyLicense, deviceId, normalizeKey } from "../src/lib/license";
+import { verifyLicense, deviceId, normalizeKey, licenseStatus, licenseExpiryNudge } from "../src/lib/license";
+
+describe("licenseStatus + licenseExpiryNudge — trial i licencja czasowa", () => {
+  const NOW = 1_800_000_000_000;
+  const days = (n: number) => NOW + n * 86_400_000;
+
+  it("bezterminowa / otwarta → brak odliczania i zachęty", () => {
+    expect(licenseStatus({ valid: true, type: "perpetual" }, NOW).kind).toBe("perpetual");
+    expect(licenseExpiryNudge(licenseStatus({ valid: true, type: "perpetual" }, NOW))).toBeNull();
+    expect(licenseExpiryNudge(licenseStatus({ valid: true, type: "open" }, NOW))).toBeNull();
+  });
+  it("trial: liczy dni i ZAWSZE pokazuje zachętę", () => {
+    const st = licenseStatus({ valid: true, type: "trial", exp: days(10) }, NOW);
+    expect(st.kind).toBe("trial");
+    expect(st.daysLeft).toBe(10);
+    expect(licenseExpiryNudge(st)).toMatch(/Trial — zostało 10 dni/);
+  });
+  it("licencja czasowa: zachęta tylko przy końcu (≤3 dni)", () => {
+    expect(licenseExpiryNudge(licenseStatus({ valid: true, type: "term", exp: days(30) }, NOW))).toBeNull();
+    expect(licenseExpiryNudge(licenseStatus({ valid: true, type: "term", exp: days(2) }, NOW))).toMatch(/Przedłuż/);
+  });
+  it("ostatni dzień / wygasło — czytelne komunikaty", () => {
+    expect(licenseExpiryNudge(licenseStatus({ valid: true, type: "trial", exp: days(1) }, NOW))).toMatch(/ostatni dzień/);
+    expect(licenseExpiryNudge(licenseStatus({ valid: true, type: "trial", exp: NOW + 3600_000 }, NOW))).toMatch(/ostatni dzień/);
+    expect(licenseExpiryNudge(licenseStatus({ valid: true, type: "trial", exp: days(-1) }, NOW))).toMatch(/wygasł/);
+  });
+});
 
 // Ważny klucz testowy (fixture) podpisany kluczem prywatnym właściciela pod kluczem
 // publicznym wbudowanym w aplikację. Klucza nie da się podrobić bez prywatnego.

@@ -18,7 +18,7 @@ import BossFab from "./components/BossFab";
 import LockScreen from "./components/LockScreen";
 import Onboarding, { needsOnboarding } from "./components/Onboarding";
 import LicenseGate from "./components/LicenseGate";
-import { checkActivation, licenseRequired } from "./lib/license";
+import { checkActivation, licenseRequired, licenseStatus, licenseExpiryNudge, type LicenseInfo } from "./lib/license";
 const HeadsetMode = lazy(() => import("./components/HeadsetMode"));
 import { watchHeadset } from "./lib/headset";
 import { toast, copyWithToast } from "./lib/toast";
@@ -302,9 +302,12 @@ export default function App() {
   const [booting, setBooting] = useState(true); // ładne „włączanie" przy starcie
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
   const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
+  const [licInfo, setLicInfo] = useState<LicenseInfo | null>(null); // do statusu trialu/wygaśnięcia
+  const [licNudgeOff, setLicNudgeOff] = useState(false); // schowano baner na tę sesję
+  const [showRelicense, setShowRelicense] = useState(false); // wpisanie nowego klucza (przedłużenie)
 
   useEffect(() => {
-    if (licenseRequired()) checkActivation().then((r) => setLicensed(r.valid));
+    if (licenseRequired()) checkActivation().then((r) => { setLicensed(r.valid); setLicInfo(r); });
   }, []);
 
   const listenerRef = useRef<VoiceListener | null>(null);
@@ -1033,7 +1036,7 @@ export default function App() {
   }, [settings.clipboardWatch]);
 
   if (licensed === null) return <div className="onboard"><div className="onboard-orb" /></div>;
-  if (!licensed) return <LicenseGate onActivated={() => setLicensed(true)} />;
+  if (!licensed) return <LicenseGate onActivated={() => { setLicensed(true); checkActivation().then((r) => setLicInfo(r)); }} />;
   if (locked) return <LockScreen onUnlock={() => setLocked(false)} />;
   if (keysLocked) return <UnlockKeys onDone={() => setKeysLocked(false)} />;
   if (onboarding)
@@ -1219,6 +1222,21 @@ export default function App() {
           <Orb state={orb} label={councilStep || (step && busy ? `⚙ ${step}…` : undefined)} />
         </div>
       )}
+
+      {(() => {
+        // Trial / licencja czasowa — pasek z liczbą dni i przyciskiem przedłużenia (monetyzacja).
+        const nudge = licNudgeOff ? null : licenseExpiryNudge(licenseStatus(licInfo));
+        if (!nudge) return null;
+        const st = licenseStatus(licInfo);
+        const urgent = st.expiringSoon || st.expired;
+        return (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "6px 12px", margin: "0 8px 4px", fontSize: 12.5, color: urgent ? "#ffcf6b" : "var(--cyan)", border: `1px solid ${urgent ? "#ffcf6b" : "var(--line-strong)"}`, borderRadius: 8, background: "rgba(0,0,0,0.15)", flexWrap: "wrap" }}>
+            ⏳ {nudge}
+            <button className="chip" style={{ fontSize: 11, padding: "1px 8px" }} onClick={() => setShowRelicense(true)}>Przedłuż</button>
+            <button className="chip" style={{ fontSize: 11, padding: "1px 8px" }} onClick={() => setLicNudgeOff(true)} title="Schowaj na teraz" aria-label="Schowaj">✕</button>
+          </div>
+        );
+      })()}
 
       {privateChat && (
         <div
@@ -1416,6 +1434,12 @@ export default function App() {
         </ScreenBoundary>
       )}
       {showHelp && (<ScreenBoundary><Help onClose={() => setShowHelp(false)} /></ScreenBoundary>)}
+      {showRelicense && (
+        <LicenseGate
+          onActivated={() => { setShowRelicense(false); checkActivation().then((r) => { setLicInfo(r); setLicensed(r.valid); setLicNudgeOff(false); }); }}
+          onClose={() => setShowRelicense(false)}
+        />
+      )}
       {showMore && (
         <ScreenBoundary>
         <More
