@@ -37,6 +37,8 @@ jobs:
         run: npm ci
 
       - name: Build web + sync Capacitor
+        env:
+          JARVIS_LICENSE_REQUIRED: "false" # wersja TESTOWA v2 — bez ekranu aktywacji/klucza
         run: |
           npm run build
           npx cap sync android
