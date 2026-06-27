@@ -1,0 +1,212 @@
+/* =============================================================================
+   JARVIS DESIGN SYSTEM — DESIGN TOKENS
+   Single source of truth. All components consume these custom properties.
+   Audited & mapped: colors · typography · spacing · radius · shadow · motion
+   ========================================================================== */
+
+:root {
+  /* ---------------------------------------------------------------------------
+     1. COLOR — RAW PALETTE (scales)
+     Brand: deep indigo (trust) + electric violet (premium accent)
+     ------------------------------------------------------------------------ */
+  --indigo-50:  #eef1ff;
+  --indigo-100: #e0e5ff;
+  --indigo-200: #c6ceff;
+  --indigo-300: #a3adff;
+  --indigo-400: #7f86fb;
+  --indigo-500: #6366f1;   /* primary */
+  --indigo-600: #4f46e5;
+  --indigo-700: #4338ca;
+  --indigo-800: #3730a3;
+  --indigo-900: #272264;
+
+  --violet-400: #a78bfa;
+  --violet-500: #8b5cf6;   /* accent */
+  --violet-600: #7c3aed;
+
+  --cyan-400:   #22d3ee;   /* secondary / highlight */
+  --cyan-500:   #06b6d4;
+
+  --slate-50:   #f8fafc;
+  --slate-100:  #f1f5f9;
+  --slate-200:  #e2e8f0;
+  --slate-300:  #cbd5e1;
+  --slate-400:  #94a3b8;
+  --slate-500:  #64748b;
+  --slate-600:  #475569;
+  --slate-700:  #334155;
+  --slate-800:  #1e293b;
+  --slate-900:  #0f172a;
+  --slate-950:  #060a18;
+
+  --white:      #ffffff;
+  --success:    #10b981;
+  --warning:    #f59e0b;
+  --danger:     #ef4444;
+
+  /* ---------------------------------------------------------------------------
+     2. COLOR — SEMANTIC TOKENS (consumed by components)
+     ------------------------------------------------------------------------ */
+  --color-primary:        var(--indigo-500);
+  --color-primary-hover:  var(--indigo-600);
+  --color-primary-active: var(--indigo-700);
+  --color-secondary:      var(--cyan-500);
+  --color-accent:         var(--violet-500);
+
+  --color-bg:             var(--white);
+  --color-bg-subtle:      var(--slate-50);
+  --color-surface:        var(--white);
+  --color-surface-alt:    var(--slate-50);
+  --color-border:         var(--slate-200);
+  --color-border-strong:  var(--slate-300);
+
+  --color-text:           var(--slate-900);
+  --color-text-muted:     var(--slate-500);
+  --color-text-subtle:    var(--slate-400);
+  --color-text-invert:    var(--white);
+
+  /* On-dark surfaces (dark sections / footer / hero) */
+  --color-dark-bg:        var(--slate-950);
+  --color-dark-surface:   rgba(255, 255, 255, 0.04);
+  --color-dark-border:    rgba(255, 255, 255, 0.10);
+  --color-dark-text:      #e8ecf6;
+  --color-dark-muted:     #9aa6c2;
+
+  /* Signature gradients */
+  --gradient-brand:   linear-gradient(135deg, var(--indigo-500) 0%, var(--violet-600) 100%);
+  --gradient-accent:  linear-gradient(135deg, var(--violet-500) 0%, var(--cyan-400) 100%);
+  --gradient-hero:    radial-gradient(120% 120% at 50% 0%, #1b1f4d 0%, var(--slate-950) 60%);
+  --gradient-text:    linear-gradient(120deg, #fff 0%, var(--violet-400) 55%, var(--cyan-400) 100%);
+  --glow-primary:     0 0 0 0 rgba(99, 102, 241, 0.6);
+
+  /* ---------------------------------------------------------------------------
+     3. TYPOGRAPHY
+     ------------------------------------------------------------------------ */
+  --font-sans: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont,
+               "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "Inter", var(--font-sans);
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+
+  /* Fluid type scale (clamp: mobile → desktop) */
+  --text-xs:   0.75rem;                                   /* 12 */
+  --text-sm:   0.875rem;                                  /* 14 */
+  --text-base: 1rem;                                      /* 16 */
+  --text-lg:   1.125rem;                                  /* 18 */
+  --text-xl:   1.25rem;                                   /* 20 */
+  --text-2xl:  clamp(1.5rem, 1.2rem + 1.2vw, 1.875rem);   /* 24→30 */
+  --text-3xl:  clamp(1.875rem, 1.4rem + 2vw, 2.5rem);     /* 30→40 */
+  --text-4xl:  clamp(2.25rem, 1.6rem + 3vw, 3.25rem);     /* 36→52 */
+  --text-5xl:  clamp(2.75rem, 1.8rem + 4.5vw, 4.5rem);    /* 44→72 */
+
+  --font-light:    300;
+  --font-normal:   400;
+  --font-medium:   500;
+  --font-semibold: 600;
+  --font-bold:     700;
+  --font-extra:    800;
+
+  --leading-tight:   1.1;
+  --leading-snug:    1.25;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.7;
+
+  --tracking-tight:  -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.04em;
+  --tracking-caps:   0.12em;
+
+  /* ---------------------------------------------------------------------------
+     4. SPACING (8px base scale) — sections, containers, grids, cards
+     ------------------------------------------------------------------------ */
+  --space-0:   0;
+  --space-1:   0.25rem;   /* 4  */
+  --space-2:   0.5rem;    /* 8  */
+  --space-3:   0.75rem;   /* 12 */
+  --space-4:   1rem;      /* 16 */
+  --space-5:   1.5rem;    /* 24 */
+  --space-6:   2rem;      /* 32 */
+  --space-7:   2.5rem;    /* 40 */
+  --space-8:   3rem;      /* 48 */
+  --space-10:  4rem;      /* 64 */
+  --space-12:  5rem;      /* 80 */
+  --space-16:  7rem;      /* 112 */
+  --space-20:  9rem;      /* 144 */
+
+  --section-py:    clamp(4rem, 2.5rem + 7vw, 8rem);   /* vertical section rhythm */
+  --container-max: 1200px;
+  --container-pad: clamp(1.25rem, 0.5rem + 3vw, 2.5rem);
+  --grid-gap:      clamp(1.25rem, 0.8rem + 1.6vw, 2rem);
+  --card-pad:      clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
+
+  /* ---------------------------------------------------------------------------
+     5. RADIUS — buttons, cards, panels
+     ------------------------------------------------------------------------ */
+  --radius-xs:   6px;
+  --radius-sm:   10px;
+  --radius-md:   14px;    /* buttons */
+  --radius-lg:   20px;    /* cards */
+  --radius-xl:   28px;    /* panels */
+  --radius-2xl:  40px;
+  --radius-pill: 999px;
+
+  /* ---------------------------------------------------------------------------
+     6. SHADOW — soft, elevated, hover
+     ------------------------------------------------------------------------ */
+  --shadow-soft:     0 1px 2px rgba(15, 23, 42, 0.04),
+                     0 4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-elevated: 0 8px 24px rgba(15, 23, 42, 0.08),
+                     0 2px 6px rgba(15, 23, 42, 0.05);
+  --shadow-hover:    0 18px 48px rgba(79, 70, 229, 0.18),
+                     0 6px 16px rgba(15, 23, 42, 0.10);
+  --shadow-glow:     0 10px 40px rgba(124, 58, 237, 0.35);
+  --shadow-inset:    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  /* ---------------------------------------------------------------------------
+     7. MOTION — fast, smooth, hover animations
+     ------------------------------------------------------------------------ */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --t-fast:   140ms;
+  --t-base:   240ms;
+  --t-smooth: 420ms;
+  --t-slow:   700ms;
+
+  --transition-fast:  all var(--t-fast)   var(--ease-out);
+  --transition-base:  all var(--t-base)   var(--ease-out);
+  --transition-hover: transform var(--t-base) var(--ease-spring),
+                      box-shadow var(--t-base) var(--ease-out);
+
+  /* ---------------------------------------------------------------------------
+     8. LAYOUT PRIMITIVES
+     ------------------------------------------------------------------------ */
+  --header-h:    72px;
+  --z-base:      1;
+  --z-sticky:    100;
+  --z-header:    1000;
+  --z-overlay:   2000;
+  --z-modal:     3000;
+
+  /* ---------------------------------------------------------------------------
+     9. RESPONSIVE BREAKPOINTS (reference — used in media queries)
+     desktop 1440 · laptop 1024 · tablet 768 · mobile 390
+     ------------------------------------------------------------------------ */
+  --bp-desktop: 1440px;
+  --bp-laptop:  1024px;
+  --bp-tablet:  768px;
+  --bp-mobile:  390px;
+}
+
+/* OPTIONAL: opt-in dark theme override for the whole page */
+[data-theme="dark"] {
+  --color-bg:            var(--slate-950);
+  --color-bg-subtle:     var(--slate-900);
+  --color-surface:       var(--color-dark-surface);
+  --color-surface-alt:   rgba(255, 255, 255, 0.06);
+  --color-border:        var(--color-dark-border);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+  --color-text:          var(--color-dark-text);
+  --color-text-muted:    var(--color-dark-muted);
+  --color-text-subtle:   #6b7693;
+}
