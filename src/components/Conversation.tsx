@@ -8,6 +8,8 @@ import { isNearBottom, starterSuggestions } from "../lib/chatUx";
 import { detectLang, t } from "../lib/i18n";
 import { buildChiefBriefing, briefingOneLiner } from "../lib/chiefOfStaff";
 import { currentStreak, currentRecap } from "../lib/habit";
+import { livingPulse } from "../lib/livingPulse";
+import { lifeEntropy } from "../lib/lifeEntropy";
 import { providerShortName } from "../lib/providerNames";
 
 // Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓).
@@ -181,11 +183,23 @@ export default function Conversation({
     // (poza ScreenBoundary), więc dowolny wyjątek tutaj wywaliłby CAŁĄ apkę — degradujemy do cichego ⌀.
     const d = store.data;
     let proactive = "", streak = 0, recap = "";
+    // 🫀 Living Pulse + 🧭 Life Entropy — żywa inteligencja na ekranie startowym (nigdy identyczna).
+    // Defensywnie (rdzeń poza ScreenBoundary): wyjątek nie może wywalić apki → ciche ⌀.
+    let pulse: ReturnType<typeof livingPulse> = null;
+    let entropy: ReturnType<typeof lifeEntropy> | null = null;
     if (!needsSetup) {
       try { proactive = briefingOneLiner(buildChiefBriefing({ tasks: d.tasks || [], reminders: d.reminders || [], calendar: d.calendar || [], leads: d.leads || [], people: d.world?.entities || [] }, Date.now())); } catch { /* ignore */ }
       try { streak = currentStreak(); } catch { /* ignore */ }
       try { recap = currentRecap().line; } catch { /* ignore */ }
+      try {
+        let last: string | undefined;
+        try { last = localStorage.getItem("jarvis.pulse.last") || undefined; } catch { /* ignore */ }
+        pulse = livingPulse(d, Date.now(), last);
+        if (pulse) { try { localStorage.setItem("jarvis.pulse.last", pulse.key); } catch { /* ignore */ } }
+      } catch { /* ignore */ }
+      try { entropy = lifeEntropy(d, Date.now()); } catch { /* ignore */ }
     }
+    const entColor = !entropy ? "var(--cyan)" : entropy.score < 20 ? "#39d98a" : entropy.score < 45 ? "var(--cyan)" : entropy.score < 70 ? "var(--gold)" : "#ff6b6b";
     return (
       <div className="convo">
         <div className="empty">
@@ -195,6 +209,24 @@ export default function Conversation({
           {proactive && (
             <div className="journal-card" style={{ marginTop: 14, padding: "10px 12px", textAlign: "left", borderLeft: "3px solid var(--cyan)" }}>
               <span style={{ fontSize: 13.5, lineHeight: 1.5 }}>🧭 {proactive}</span>
+            </div>
+          )}
+          {/* 🫀 Puls — żywa inteligencja: inny przy każdym otwarciu + poziom rozproszenia + jeden ruch */}
+          {(pulse || entropy) && (
+            <div className="journal-card" style={{ marginTop: 12, padding: "12px 14px", textAlign: "left", borderRadius: 14, border: "1px solid var(--line)", background: "linear-gradient(135deg, rgba(108,231,255,.06), transparent 70%)" }}>
+              {pulse && <div style={{ fontSize: 14, lineHeight: 1.5, fontWeight: 500 }}><span className="pulse-dot" />{pulse.text}</div>}
+              {entropy && (
+                <div style={{ marginTop: pulse ? 11 : 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12 }}>
+                    <span className="muted">🧭 Poziom rozproszenia</span>
+                    <span style={{ fontWeight: 700, color: entColor }}>{entropy.level}</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 4, background: "rgba(255,255,255,.08)", marginTop: 5, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${entropy.score}%`, background: entColor, transition: "width .6s ease" }} />
+                  </div>
+                  {entropy.score >= 20 && <div className="muted" style={{ fontSize: 12, marginTop: 7, lineHeight: 1.45 }}>💡 {entropy.topFix}</div>}
+                </div>
+              )}
             </div>
           )}
           {/* Pozycjonowanie: JEDNA idea — AI, które Cię zna, pamięta i działa. Trzy filary. */}
