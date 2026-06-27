@@ -217,7 +217,15 @@ export default function Conversation({
           {/* 🫀 Puls — żywa inteligencja: inny przy każdym otwarciu + poziom rozproszenia + jeden ruch */}
           {(pulse || entropy) && (
             <div className="journal-card" style={{ marginTop: 12, padding: "12px 14px", textAlign: "left", borderRadius: 14, border: "1px solid var(--line)", background: "linear-gradient(135deg, rgba(108,231,255,.06), transparent 70%)" }}>
-              {pulse && <div style={{ fontSize: 14, lineHeight: 1.5, fontWeight: 500 }}><span className="pulse-dot" />{pulse.text}</div>}
+              {pulse && (
+                <button
+                  onClick={() => onSuggest(pulse!.text)}
+                  style={{ all: "unset", cursor: "pointer", display: "block", fontSize: 14, lineHeight: 1.5, fontWeight: 500 }}
+                  title="Dotknij — JARVIS zajmie się tym od razu"
+                >
+                  <span className="pulse-dot" />{pulse.text}
+                </button>
+              )}
               {entropy && (
                 <div style={{ marginTop: pulse ? 11 : 0 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12 }}>
