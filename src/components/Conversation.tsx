@@ -10,6 +10,7 @@ import { buildChiefBriefing, briefingOneLiner } from "../lib/chiefOfStaff";
 import { currentStreak, currentRecap } from "../lib/habit";
 import { livingPulse } from "../lib/livingPulse";
 import { lifeEntropy } from "../lib/lifeEntropy";
+import { ideaCollider, dayNumber } from "../lib/ideaCollider";
 import { providerShortName } from "../lib/providerNames";
 
 // Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓).
@@ -187,6 +188,7 @@ export default function Conversation({
     // Defensywnie (rdzeń poza ScreenBoundary): wyjątek nie może wywalić apki → ciche ⌀.
     let pulse: ReturnType<typeof livingPulse> = null;
     let entropy: ReturnType<typeof lifeEntropy> | null = null;
+    let collision: ReturnType<typeof ideaCollider> = null;
     if (!needsSetup) {
       try { proactive = briefingOneLiner(buildChiefBriefing({ tasks: d.tasks || [], reminders: d.reminders || [], calendar: d.calendar || [], leads: d.leads || [], people: d.world?.entities || [] }, Date.now())); } catch { /* ignore */ }
       try { streak = currentStreak(); } catch { /* ignore */ }
@@ -198,6 +200,7 @@ export default function Conversation({
         if (pulse) { try { localStorage.setItem("jarvis.pulse.last", pulse.key); } catch { /* ignore */ } }
       } catch { /* ignore */ }
       try { entropy = lifeEntropy(d, Date.now()); } catch { /* ignore */ }
+      try { collision = ideaCollider(d, dayNumber(Date.now())); } catch { /* ignore */ }
     }
     const entColor = !entropy ? "var(--cyan)" : entropy.score < 20 ? "#39d98a" : entropy.score < 45 ? "var(--cyan)" : entropy.score < 70 ? "var(--gold)" : "#ff6b6b";
     return (
@@ -226,6 +229,16 @@ export default function Conversation({
                   </div>
                   {entropy.score >= 20 && <div className="muted" style={{ fontSize: 12, marginTop: 7, lineHeight: 1.45 }}>💡 {entropy.topFix}</div>}
                 </div>
+              )}
+              {/* 🌗 Zderzacz idei — twórcze połączenie dwóch Twoich wątków; tap → JARVIS rozwija pomysł */}
+              {collision && (
+                <button
+                  onClick={() => onSuggest(`Rozwiń twórczo ten pomysł: ${collision!.spark}`)}
+                  style={{ all: "unset", cursor: "pointer", display: "block", marginTop: 10, paddingTop: 9, borderTop: "1px solid var(--line)", fontSize: 12.5, lineHeight: 1.5, color: "var(--text)" }}
+                  title="Dotknij — JARVIS rozwinie ten pomysł"
+                >
+                  🌗 <b>Zderzacz idei:</b> {collision.spark}
+                </button>
               )}
             </div>
           )}
