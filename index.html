@@ -8,153 +8,138 @@
 <title>ARCHITECT.CODE — Nowoczesna architektura i budownictwo</title>
 <style>
 /* =============================================================================
-   ARCHITECT.CODE — SELF-CONTAINED LANDING PAGE
+   ARCHITECT.CODE — SELF-CONTAINED PREMIUM LANDING PAGE
    Cały CSS + JS w jednym pliku. Bez frameworków, bez build, bez bibliotek.
    Działa offline po dwukliku.
    ========================================================================== */
 
 /* ---------- 1. TOKENY ---------- */
 :root{
-  /* paleta: grafit / czerń / biel + pomarańczowy akcent */
-  --black:#08090b; --graphite-900:#0b0d10; --graphite-800:#111419; --graphite-700:#161a20;
-  --graphite-600:#1c2128; --graphite-500:#252b34; --graphite-400:#333a45;
-  --white:#ffffff; --paper:#f4f5f7; --paper-2:#e9ebef;
-  --accent:#ff6a1f; --accent-2:#ff8c42; --accent-soft:rgba(255,106,31,.14);
+  --black:#070809; --graphite-900:#0a0c0f; --graphite-800:#0f1217; --graphite-700:#151921;
+  --graphite-600:#1b212a; --graphite-500:#252c37;
+  --white:#ffffff; --paper:#f3f4f6; --paper-2:#e7e9ee;
+  --accent:#ff6a1f; --accent-2:#ffa24a; --accent-soft:rgba(255,106,31,.14);
+  --warm:#ffd9a8;
 
-  --bg:var(--graphite-900); --bg-2:var(--graphite-800);
-  --surface:rgba(255,255,255,.045); --surface-2:rgba(255,255,255,.07);
-  --border:rgba(255,255,255,.09); --border-strong:rgba(255,255,255,.16);
-  --text:#eef1f5; --muted:#9aa4b2; --subtle:#6b7585;
+  --bg:var(--graphite-900); --surface:rgba(255,255,255,.045); --surface-2:rgba(255,255,255,.08);
+  --border:rgba(255,255,255,.09); --border-strong:rgba(255,255,255,.18);
+  --text:#eef1f5; --muted:#99a3b2; --subtle:#69727f;
 
-  --gradient-accent:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
-  --gradient-glass:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.02));
-  --gradient-hero:radial-gradient(120% 100% at 70% 0%,#161b24 0%,var(--graphite-900) 55%);
-  --gradient-glow:radial-gradient(50% 50% at 50% 50%,rgba(255,106,31,.35),transparent 70%);
+  --grad-accent:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
+  --grad-head:linear-gradient(100deg,#fff 0%,#fff 35%,var(--accent-2) 60%,var(--accent) 80%,#fff 100%);
+  --grad-hero:radial-gradient(130% 100% at 72% -5%,#1a212c 0%,var(--graphite-900) 52%);
+  --grad-glow:radial-gradient(50% 50% at 50% 50%,rgba(255,106,31,.4),transparent 70%);
 
   --font:"Inter","SF Pro Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  --mono:"JetBrains Mono","SF Mono",ui-monospace,Menlo,monospace;
 
   --text-xs:.75rem; --text-sm:.875rem; --text-base:1rem; --text-lg:1.125rem; --text-xl:1.25rem;
   --text-2xl:clamp(1.5rem,1.2rem + 1.2vw,1.875rem);
-  --text-3xl:clamp(1.875rem,1.4rem + 2vw,2.5rem);
   --text-4xl:clamp(2.25rem,1.6rem + 3vw,3.25rem);
-  --text-5xl:clamp(2.75rem,1.7rem + 5vw,4.75rem);
+  --text-5xl:clamp(2.85rem,1.7rem + 5.4vw,5rem);
 
-  --space-1:.25rem; --space-2:.5rem; --space-3:.75rem; --space-4:1rem; --space-5:1.5rem;
-  --space-6:2rem; --space-7:2.5rem; --space-8:3rem; --space-10:4rem; --space-12:5rem; --space-16:7rem;
+  --space-2:.5rem; --space-3:.75rem; --space-4:1rem; --space-5:1.5rem; --space-6:2rem;
+  --space-7:2.5rem; --space-8:3rem; --space-10:4rem; --space-12:5rem;
   --section-py:clamp(4rem,2.5rem + 7vw,8rem);
   --container:1240px; --pad:clamp(1.25rem,.5rem + 3vw,2.5rem);
   --gap:clamp(1.25rem,.8rem + 1.6vw,2rem); --card-pad:clamp(1.5rem,1rem + 1.5vw,2.25rem);
 
   --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:28px; --r-2xl:40px; --r-pill:999px;
-
-  --sh-soft:0 1px 2px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.28);
-  --sh-hover:0 24px 60px rgba(0,0,0,.45),0 0 0 1px var(--border-strong);
-  --sh-accent:0 16px 44px rgba(255,106,31,.28);
+  --sh-soft:0 1px 2px rgba(0,0,0,.4),0 14px 38px rgba(0,0,0,.32);
+  --sh-hover:0 30px 70px rgba(0,0,0,.5); --sh-accent:0 16px 44px rgba(255,106,31,.3);
 
   --ease:cubic-bezier(.16,1,.3,1); --spring:cubic-bezier(.34,1.56,.64,1);
-  --t-fast:140ms; --t-base:240ms; --t-smooth:460ms;
-  --tr-fast:all var(--t-fast) var(--ease);
+  --t-fast:140ms; --t-base:240ms; --t-smooth:520ms;
   --tr-hover:transform var(--t-base) var(--spring),box-shadow var(--t-base) var(--ease),border-color var(--t-base);
-
   --header-h:74px; --z-header:1000;
 }
 
-/* ---------- 2. RESET / BAZA ---------- */
-*,*::before,*::after{box-sizing:border-box}
-*{margin:0}
+/* ---------- 2. RESET ---------- */
+*,*::before,*::after{box-sizing:border-box}*{margin:0}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:calc(var(--header-h) + 1rem)}
-@media (prefers-reduced-motion:reduce){
-  html{scroll-behavior:auto}
-  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
-}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 body{font-family:var(--font);font-size:var(--text-base);line-height:1.5;color:var(--text);background:var(--bg);
-  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;overflow-x:hidden}
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;overflow-x:hidden;position:relative}
+/* ziarno / grain */
+body::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 img,svg,video{display:block;max-width:100%;height:auto}
-input,button,textarea,select{font:inherit;color:inherit}
-button{cursor:pointer;background:none;border:none}
-a{color:var(--accent);text-decoration:none;transition:var(--tr-fast)}
-a:hover{color:var(--accent-2)}
+input,button,textarea,select{font:inherit;color:inherit}button{cursor:pointer;background:none;border:none}
+a{color:var(--accent);text-decoration:none;transition:all var(--t-fast) var(--ease)}a:hover{color:var(--accent-2)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
 ::selection{background:var(--accent);color:#fff}
 
-h1,h2,h3,h4{font-family:var(--font);font-weight:800;line-height:1.08;letter-spacing:-.02em;color:#fff;text-wrap:balance}
-h1{font-size:var(--text-5xl)}
-h2{font-size:var(--text-4xl)}
-h3{font-size:var(--text-2xl)}
-h4{font-size:var(--text-xl)}
-p{text-wrap:pretty}
+/* pasek postępu */
+.progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:1100;background:var(--grad-accent);box-shadow:0 0 12px rgba(255,106,31,.6)}
 
+h1,h2,h3,h4{font-weight:800;line-height:1.07;letter-spacing:-.025em;color:#fff;text-wrap:balance}
+h1{font-size:var(--text-5xl)}h2{font-size:var(--text-4xl)}h3{font-size:var(--text-2xl)}h4{font-size:var(--text-xl)}
+p{text-wrap:pretty}
 .eyebrow{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--text-sm);font-weight:700;
-  letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
-.eyebrow::before{content:"";width:30px;height:2px;background:var(--gradient-accent);border-radius:9px}
+  letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+.eyebrow::before{content:"";width:30px;height:2px;background:var(--grad-accent);border-radius:9px}
 .text-accent{color:var(--accent)}
-.text-gradient{background:var(--gradient-accent);-webkit-background-clip:text;background-clip:text;color:transparent}
+.text-gradient{background:var(--grad-head);background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:shine 6s linear infinite}
+@keyframes shine{to{background-position:200% center}}
 .lead{font-size:var(--text-lg);color:var(--muted);line-height:1.7;max-width:58ch}
 
-.container{width:100%;max-width:var(--container);margin-inline:auto;padding-inline:var(--pad)}
+.container{width:100%;max-width:var(--container);margin-inline:auto;padding-inline:var(--pad);position:relative;z-index:2}
 .container--narrow{max-width:820px}
-.section{padding-block:var(--section-py);position:relative}
+.section{padding-block:var(--section-py);position:relative;z-index:2}
 .section--dark{background:var(--graphite-900)}
 .section--graphite{background:var(--graphite-800)}
 .section--light{background:var(--paper);color:#10141b}
 .section--light h1,.section--light h2,.section--light h3{color:#0c0f14}
-.section--light .lead{color:#4a5360}
-.section--light .eyebrow{color:#b6450a}
+.section--light .lead{color:#4a5360}.section--light .eyebrow{color:#c2480a}
 .section-head{max-width:720px;margin:0 auto var(--space-10);text-align:center;display:grid;gap:var(--space-4);justify-items:center}
 .section-head .lead{margin-inline:auto;text-align:center}
 .grid{display:grid;gap:var(--gap)}
-.grid--2{grid-template-columns:repeat(2,1fr)}
-.grid--3{grid-template-columns:repeat(3,1fr)}
+.grid--2{grid-template-columns:repeat(2,1fr)}.grid--3{grid-template-columns:repeat(3,1fr)}
 .cluster{display:flex;flex-wrap:wrap;gap:var(--space-4);align-items:center}
 
-[data-reveal]{opacity:0;transform:translateY(30px);transition:opacity var(--t-smooth) var(--ease),transform var(--t-smooth) var(--ease);will-change:opacity,transform}
+[data-reveal]{opacity:0;transform:translateY(34px);transition:opacity var(--t-smooth) var(--ease),transform var(--t-smooth) var(--ease);will-change:opacity,transform}
 [data-reveal].is-visible{opacity:1;transform:none}
-[data-reveal][data-delay="1"]{transition-delay:90ms}
-[data-reveal][data-delay="2"]{transition-delay:180ms}
-[data-reveal][data-delay="3"]{transition-delay:270ms}
+[data-reveal][data-delay="1"]{transition-delay:90ms}[data-reveal][data-delay="2"]{transition-delay:180ms}[data-reveal][data-delay="3"]{transition-delay:270ms}
 @media (prefers-reduced-motion:reduce){[data-reveal]{opacity:1;transform:none}}
 
 /* ---------- 3. PRZYCISKI ---------- */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);padding:.9rem 1.7rem;
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);padding:.95rem 1.8rem;
   font-size:var(--text-base);font-weight:700;line-height:1;color:#fff;border:1.5px solid transparent;border-radius:var(--r-md);
-  white-space:nowrap;transition:var(--tr-hover),background var(--t-fast),color var(--t-fast)}
-.btn:hover{transform:translateY(-2px)}
-.btn:active{transform:translateY(0)}
-.btn svg{width:1.15em;height:1.15em}
-.btn--primary{background:var(--gradient-accent);color:#1a0f06;box-shadow:var(--sh-accent)}
-.btn--primary:hover{box-shadow:0 22px 56px rgba(255,106,31,.42);color:#1a0f06}
+  white-space:nowrap;overflow:hidden;transition:var(--tr-hover),background var(--t-fast),color var(--t-fast)}
+.btn::before{content:"";position:absolute;top:0;left:-120%;width:60%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-20deg);transition:left .6s var(--ease)}
+.btn:hover::before{left:140%}
+.btn:hover{transform:translateY(-2px)}.btn:active{transform:translateY(0)}
+.btn svg{width:1.15em;height:1.15em;position:relative}
+.btn--primary{background:var(--grad-accent);color:#1a0f06;box-shadow:var(--sh-accent)}
+.btn--primary:hover{box-shadow:0 22px 56px rgba(255,106,31,.45);color:#1a0f06}
 .btn--outline{background:transparent;color:#fff;border-color:var(--border-strong)}
 .btn--outline:hover{border-color:var(--accent);color:var(--accent)}
-.btn--ghost{background:transparent;color:#fff;padding-inline:1rem}
-.btn--ghost:hover{background:var(--surface);color:var(--accent)}
-.btn--light{background:#10141b;color:#fff}
-.btn--light:hover{background:#000;color:#fff}
-.btn--lg{padding:1.1rem 2.1rem;font-size:var(--text-lg)}
-.btn--sm{padding:.62rem 1.1rem;font-size:var(--text-sm)}
+.btn--ghost{background:transparent;color:#fff;padding-inline:1rem}.btn--ghost:hover{background:var(--surface);color:var(--accent)}
+.btn--ghost::before{display:none}
+.btn--lg{padding:1.15rem 2.2rem;font-size:var(--text-lg)}.btn--sm{padding:.62rem 1.1rem;font-size:var(--text-sm)}
 .btn--block{width:100%}
 
-/* ---------- 4. BADGE ---------- */
-.badge{display:inline-flex;align-items:center;gap:var(--space-2);padding:.45rem .9rem;font-size:var(--text-sm);
-  font-weight:600;border-radius:var(--r-pill);background:var(--surface);color:var(--text);border:1px solid var(--border)}
-.badge--dot::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.badge{display:inline-flex;align-items:center;gap:var(--space-2);padding:.45rem .9rem;font-size:var(--text-sm);font-weight:600;
+  border-radius:var(--r-pill);background:var(--surface);color:var(--text);border:1px solid var(--border);backdrop-filter:blur(6px)}
+.badge--dot::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);
+  animation:pulse 2.2s var(--ease) infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px var(--accent-soft)}50%{box-shadow:0 0 0 6px transparent}}
 
-/* ---------- 5. HEADER / NAV ---------- */
+/* ---------- 4. HEADER ---------- */
 .header{position:fixed;inset:0 0 auto 0;z-index:var(--z-header);height:var(--header-h);display:flex;align-items:center;
-  transition:background var(--t-base) var(--ease),box-shadow var(--t-base) var(--ease),backdrop-filter var(--t-base)}
-.header.is-scrolled{background:rgba(11,13,16,.78);backdrop-filter:saturate(160%) blur(16px);-webkit-backdrop-filter:saturate(160%) blur(16px);
-  box-shadow:0 1px 0 var(--border)}
-.header__inner{width:100%;max-width:var(--container);margin-inline:auto;padding-inline:var(--pad);
-  display:flex;align-items:center;justify-content:space-between;gap:var(--space-6)}
+  transition:background var(--t-base) var(--ease),box-shadow var(--t-base) var(--ease)}
+.header.is-scrolled{background:rgba(10,12,15,.72);backdrop-filter:saturate(160%) blur(18px);-webkit-backdrop-filter:saturate(160%) blur(18px);box-shadow:0 1px 0 var(--border)}
+.header__inner{width:100%;max-width:var(--container);margin-inline:auto;padding-inline:var(--pad);display:flex;align-items:center;justify-content:space-between;gap:var(--space-6)}
 .brand{display:inline-flex;align-items:center;gap:var(--space-3);font-weight:800;font-size:var(--text-lg);letter-spacing:-.01em;color:#fff}
-.brand__mark{width:36px;height:36px;display:grid;place-items:center;border-radius:9px;background:var(--gradient-accent);
-  color:#1a0f06;font-weight:900;box-shadow:var(--sh-accent)}
-.brand b{font-weight:800}.brand span.dim{color:var(--accent)}
+.brand__mark{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:var(--grad-accent);color:#1a0f06;font-weight:900;box-shadow:var(--sh-accent)}
+.brand .dim{color:var(--accent)}
 .nav{display:flex;align-items:center;gap:var(--space-6)}
 .nav__list{display:flex;align-items:center;gap:var(--space-6);list-style:none;padding:0}
 .nav__link{font-size:var(--text-sm);font-weight:600;color:var(--muted);position:relative}
 .nav__link:hover{color:#fff}
-.nav__link::after{content:"";position:absolute;left:0;bottom:-6px;width:0;height:2px;border-radius:2px;background:var(--gradient-accent);transition:width var(--t-base) var(--ease)}
+.nav__link::after{content:"";position:absolute;left:0;bottom:-6px;width:0;height:2px;border-radius:2px;background:var(--grad-accent);transition:width var(--t-base) var(--ease)}
 .nav__link:hover::after{width:100%}
 .header__actions{display:flex;align-items:center;gap:var(--space-3)}
 .nav-toggle{display:none;width:44px;height:44px;border-radius:var(--r-sm);flex-direction:column;gap:5px;align-items:center;justify-content:center}
@@ -163,13 +148,14 @@ p{text-wrap:pretty}
 .nav-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
 .nav-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 
-/* ---------- 6. HERO ---------- */
-.hero{position:relative;padding-top:calc(var(--header-h) + clamp(2.5rem,5vw,5rem));padding-bottom:var(--section-py);
-  background:var(--gradient-hero);overflow:hidden}
+/* ---------- 5. HERO ---------- */
+.hero{position:relative;padding-top:calc(var(--header-h) + clamp(2rem,5vw,4.5rem));padding-bottom:var(--section-py);
+  background:var(--grad-hero);overflow:hidden}
 .hero::after{content:"";position:absolute;inset:0;
-  background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
-  background-size:60px 60px;-webkit-mask-image:radial-gradient(80% 80% at 60% 30%,#000,transparent 75%);
-  mask-image:radial-gradient(80% 80% at 60% 30%,#000,transparent 75%);pointer-events:none}
+  background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+  background-size:64px 64px;-webkit-mask-image:radial-gradient(85% 80% at 60% 25%,#000,transparent 78%);mask-image:radial-gradient(85% 80% at 60% 25%,#000,transparent 78%);pointer-events:none}
+.hero__glow{position:absolute;width:520px;height:520px;border-radius:50%;background:var(--grad-glow);filter:blur(30px);
+  left:0;top:0;transform:translate(-50%,-50%);pointer-events:none;opacity:.7;transition:opacity .4s;z-index:1}
 .hero__inner{position:relative;z-index:2;display:grid;grid-template-columns:1.02fr .98fr;align-items:center;gap:clamp(2rem,4vw,4rem)}
 .hero__content{max-width:640px}
 .hero h1{margin-bottom:var(--space-5)}
@@ -178,125 +164,128 @@ p{text-wrap:pretty}
 .hero__meta{margin-top:var(--space-8);display:flex;flex-wrap:wrap;gap:var(--space-7);color:var(--muted);font-size:var(--text-sm)}
 .hero__meta strong{color:#fff;font-size:var(--text-2xl);display:block;font-weight:800}
 
-/* ----- MODEL BUDYNKU 3D (czysty CSS) ----- */
-.scene{position:relative;height:clamp(360px,42vw,560px);perspective:1400px;perspective-origin:55% 40%;display:grid;place-items:center}
-.scene::before{content:"";position:absolute;width:78%;height:60%;top:8%;left:11%;background:var(--gradient-glow);filter:blur(10px);z-index:0;
-  animation:glowPulse 6s ease-in-out infinite alternate}
-@keyframes glowPulse{0%{opacity:.55;transform:scale(.95)}100%{opacity:.9;transform:scale(1.05)}}
-.stage{position:relative;width:300px;height:420px;transform-style:preserve-3d;transform:rotateX(-16deg);z-index:1}
-.spin{position:absolute;inset:0;transform-style:preserve-3d;animation:spin 30s linear infinite}
+/* ----- PANORAMA 3D (czysty CSS) ----- */
+.scene{position:relative;height:clamp(380px,44vw,580px);perspective:1500px;perspective-origin:55% 42%;display:grid;place-items:center}
+.scene::before{content:"";position:absolute;width:78%;height:46%;top:30%;left:11%;background:var(--grad-glow);filter:blur(14px);z-index:0;animation:glowPulse 7s ease-in-out infinite alternate}
+@keyframes glowPulse{0%{opacity:.5;transform:scale(.94)}100%{opacity:.95;transform:scale(1.06)}}
+.stage{position:relative;width:340px;height:440px;transform-style:preserve-3d;transform:rotateX(-17deg);z-index:1}
+.spin{position:absolute;inset:0;transform-style:preserve-3d;animation:spin 34s linear infinite}
 @keyframes spin{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}
 .scene:hover .spin{animation-play-state:paused}
-@media (prefers-reduced-motion:reduce){.spin{animation:none;transform:rotateY(-32deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none;transform:rotateY(-34deg)}}
 
-.grp{position:absolute;left:50%;top:50%;transform-style:preserve-3d}
-.face{position:absolute;left:50%;top:50%;backface-visibility:hidden;border:1px solid rgba(255,255,255,.10)}
+.bld{position:absolute;left:50%;top:50%;transform-style:preserve-3d;animation:breathe 9s ease-in-out infinite}
+.bld.b2{animation-delay:-3s}.bld.b3{animation-delay:-6s}
+@keyframes breathe{50%{filter:brightness(1.12)}}
+.face{position:absolute;left:50%;top:50%;backface-visibility:hidden;border:1px solid rgba(255,255,255,.08)}
 
-/* fasada szklana (kurtynowa) */
-.glass{
-  background:
-    linear-gradient(155deg,rgba(255,255,255,.16),rgba(255,255,255,.02) 45%),
-    repeating-linear-gradient(0deg,rgba(0,0,0,.55) 0 1px,transparent 1px 22px),
-    repeating-linear-gradient(90deg,rgba(0,0,0,.45) 0 1px,transparent 1px 18px),
-    linear-gradient(180deg,#2b3543 0%,#141b24 60%,#0e141b 100%);
-}
+/* fasada szklana — z podświetlonymi oknami */
+.glass{background:
+  radial-gradient(circle at 22% 26%,rgba(255,180,110,.85) 0 4px,transparent 5px),
+  radial-gradient(circle at 62% 40%,rgba(255,160,90,.7) 0 4px,transparent 5px),
+  radial-gradient(circle at 82% 70%,rgba(255,200,140,.75) 0 4px,transparent 5px),
+  radial-gradient(circle at 40% 82%,rgba(255,150,80,.6) 0 4px,transparent 5px),
+  linear-gradient(155deg,rgba(255,255,255,.20),rgba(255,255,255,.02) 46%),
+  repeating-linear-gradient(0deg,rgba(0,0,0,.55) 0 1px,transparent 1px 20px),
+  repeating-linear-gradient(90deg,rgba(0,0,0,.45) 0 1px,transparent 1px 17px),
+  linear-gradient(180deg,#303b4b 0%,#161e28 60%,#0d141c 100%)}
 .glass--side{background:
-    linear-gradient(155deg,rgba(255,255,255,.08),rgba(255,255,255,.01) 45%),
-    repeating-linear-gradient(0deg,rgba(0,0,0,.6) 0 1px,transparent 1px 22px),
-    repeating-linear-gradient(90deg,rgba(0,0,0,.5) 0 1px,transparent 1px 18px),
-    linear-gradient(180deg,#222b37 0%,#0f151c 70%);}
-.roof{background:linear-gradient(135deg,#2a323d,#11161d);border-color:rgba(255,255,255,.14)}
-.roof::after{content:"";position:absolute;inset:14px;border:1px solid rgba(255,255,255,.10);
-  background:repeating-linear-gradient(45deg,rgba(0,0,0,.25) 0 6px,transparent 6px 12px)}
-.podium-face{background:linear-gradient(180deg,#1a2027,#0c1117)}
-.podium-top{background:linear-gradient(135deg,#222a33,#10151c)}
-.podium-top::after{content:"";position:absolute;inset:0;background:
-   radial-gradient(60% 60% at 30% 30%,rgba(255,106,31,.12),transparent 70%);}
+  radial-gradient(circle at 30% 50%,rgba(255,170,100,.5) 0 3px,transparent 4px),
+  radial-gradient(circle at 70% 78%,rgba(255,190,120,.5) 0 3px,transparent 4px),
+  linear-gradient(155deg,rgba(255,255,255,.10),rgba(255,255,255,.01) 46%),
+  repeating-linear-gradient(0deg,rgba(0,0,0,.6) 0 1px,transparent 1px 20px),
+  repeating-linear-gradient(90deg,rgba(0,0,0,.5) 0 1px,transparent 1px 17px),
+  linear-gradient(180deg,#222c39 0%,#0f161e 70%)}
+.roof{background:linear-gradient(135deg,#2c3543,#10161e);border-color:rgba(255,255,255,.14)}
+.roof::after{content:"";position:absolute;inset:14px;border:1px solid rgba(255,255,255,.08);
+  background:repeating-linear-gradient(45deg,rgba(0,0,0,.28) 0 5px,transparent 5px 11px)}
+.accent-band{position:absolute;left:0;right:0;height:5px;background:var(--grad-accent);box-shadow:0 0 18px rgba(255,106,31,.7)}
+.spire{position:absolute;left:50%;top:50%;width:5px;height:80px;margin-left:-2.5px;background:linear-gradient(180deg,var(--accent),transparent);box-shadow:0 0 14px rgba(255,106,31,.8)}
+.spire::after{content:"";position:absolute;left:50%;top:-6px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:var(--accent);box-shadow:0 0 18px var(--accent)}
+.ground{position:absolute;left:50%;top:50%;width:620px;height:620px;margin:-310px 0 0 -310px;transform:translateY(150px) rotateX(90deg);
+  background:radial-gradient(closest-side,rgba(255,140,70,.12),rgba(255,255,255,.04) 40%,transparent 72%);border-radius:50%}
 
-/* listwa akcentu (parter / wieńczenie) */
-.accent-band{position:absolute;left:0;right:0;height:6px;background:var(--gradient-accent);box-shadow:0 0 18px rgba(255,106,31,.6)}
-.spire{position:absolute;left:50%;top:50%;width:6px;height:90px;margin-left:-3px;
-  background:linear-gradient(180deg,var(--accent),transparent);transform:translateY(-260px);
-  box-shadow:0 0 14px rgba(255,106,31,.7)}
-.spire::after{content:"";position:absolute;left:50%;top:-7px;width:10px;height:10px;margin-left:-5px;border-radius:50%;
-  background:var(--accent);box-shadow:0 0 16px var(--accent)}
-.ground{position:absolute;left:50%;top:50%;width:560px;height:560px;margin:-280px 0 0 -280px;
-  transform:rotateX(90deg) translateZ(-180px);
-  background:radial-gradient(closest-side,rgba(255,255,255,.06),transparent 70%);border-radius:50%}
+/* unoszące się cząsteczki */
+.particles{position:absolute;inset:0;z-index:2;pointer-events:none}
+.particles i{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:.5;filter:blur(.3px);animation:floaty 9s ease-in-out infinite}
+.particles i:nth-child(1){left:12%;top:30%;animation-delay:0s}
+.particles i:nth-child(2){left:84%;top:24%;width:4px;background:#fff;animation-delay:-2s}
+.particles i:nth-child(3){left:74%;top:66%;animation-delay:-4s}
+.particles i:nth-child(4){left:24%;top:72%;width:3px;background:#fff;animation-delay:-6s}
+.particles i:nth-child(5){left:50%;top:14%;width:4px;animation-delay:-1.5s}
+@keyframes floaty{0%,100%{transform:translateY(0);opacity:.25}50%{transform:translateY(-22px);opacity:.8}}
+
+/* ---------- 6. TICKER ---------- */
+.ticker{background:var(--black);border-block:1px solid var(--border);overflow:hidden;padding-block:var(--space-5)}
+.ticker__track{display:flex;gap:var(--space-8);width:max-content;animation:marquee 26s linear infinite}
+.scene:hover ~ * .ticker__track,.ticker:hover .ticker__track{animation-play-state:paused}
+@keyframes marquee{to{transform:translateX(-50%)}}
+.ticker__track span{display:inline-flex;align-items:center;gap:var(--space-8);font-size:var(--text-xl);font-weight:800;letter-spacing:-.01em;color:#fff;opacity:.55;white-space:nowrap}
+.ticker__track span::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent)}
 
 /* ---------- 7. KARTY ---------- */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--card-pad);
-  box-shadow:var(--sh-soft);transition:var(--tr-hover);position:relative;overflow:hidden;backdrop-filter:blur(6px)}
+  box-shadow:var(--sh-soft);transition:var(--tr-hover);position:relative;overflow:hidden;backdrop-filter:blur(6px);transform-style:preserve-3d}
+.card::after{content:"";position:absolute;inset:0;border-radius:inherit;opacity:0;transition:opacity var(--t-base);pointer-events:none;
+  background:radial-gradient(140% 120% at var(--mx,50%) var(--my,0%),rgba(255,106,31,.16),transparent 55%)}
 .card:hover{transform:translateY(-6px);box-shadow:var(--sh-hover);border-color:var(--border-strong)}
+.card:hover::after{opacity:1}
 .section--light .card{background:#fff;border-color:#e3e6eb;box-shadow:0 10px 30px rgba(16,20,27,.08);color:#10141b}
-.section--light .card:hover{box-shadow:0 24px 50px rgba(16,20,27,.14);border-color:#d2d6dd}
+.section--light .card:hover{box-shadow:0 24px 50px rgba(16,20,27,.14)}
 
-.card--service .card__icon{width:54px;height:54px;display:grid;place-items:center;border-radius:var(--r-md);
-  background:var(--accent-soft);color:var(--accent);margin-bottom:var(--space-5);transition:var(--tr-fast)}
-.card--service:hover .card__icon{background:var(--gradient-accent);color:#1a0f06;transform:rotate(-6deg)}
+.card--service .card__icon{width:54px;height:54px;display:grid;place-items:center;border-radius:var(--r-md);background:var(--accent-soft);color:var(--accent);margin-bottom:var(--space-5);transition:all var(--t-base) var(--ease)}
+.card--service:hover .card__icon{background:var(--grad-accent);color:#1a0f06;transform:rotate(-6deg) scale(1.05)}
 .card--service h3{font-size:var(--text-xl);margin-bottom:var(--space-3);color:#fff}
 .section--light .card--service h3{color:#10141b}
-.card--service p{color:var(--muted)}
-.section--light .card--service p{color:#4a5360}
+.card--service p{color:var(--muted)}.section--light .card--service p{color:#4a5360}
 .card__link{margin-top:var(--space-5);display:inline-flex;align-items:center;gap:var(--space-2);font-weight:700;font-size:var(--text-sm);color:var(--accent)}
-.card__link svg{transition:transform var(--t-base) var(--ease)}
-.card:hover .card__link svg{transform:translateX(4px)}
+.card__link svg{transition:transform var(--t-base) var(--ease)}.card:hover .card__link svg{transform:translateX(4px)}
 
-/* projekty / portfolio */
 .card--project{padding:0}
-.card--project .card__media{aspect-ratio:4/3;position:relative;overflow:hidden;
-  background:linear-gradient(150deg,#222b37,#0e141b)}
-.card__viz{position:absolute;inset:0;
+.card--project .card__media{aspect-ratio:4/3;position:relative;overflow:hidden;background:linear-gradient(150deg,#26303d,#0d141c)}
+.card__viz{position:absolute;inset:0;transition:transform .7s var(--ease);
   background:
-    linear-gradient(155deg,rgba(255,255,255,.12),transparent 50%),
-    repeating-linear-gradient(0deg,rgba(0,0,0,.4) 0 1px,transparent 1px 20px),
-    repeating-linear-gradient(90deg,rgba(0,0,0,.32) 0 1px,transparent 1px 16px);}
-.card__media::after{content:"";position:absolute;left:0;bottom:0;width:100%;height:5px;background:var(--gradient-accent)}
-.card__media .tag{position:absolute;top:14px;left:14px;z-index:2;font-size:var(--text-xs);font-weight:700;text-transform:uppercase;
-  letter-spacing:.06em;color:#1a0f06;background:var(--gradient-accent);padding:.3rem .7rem;border-radius:var(--r-pill)}
+    radial-gradient(circle at 24% 70%,rgba(255,170,90,.6) 0 3px,transparent 4px),
+    radial-gradient(circle at 70% 40%,rgba(255,200,140,.6) 0 3px,transparent 4px),
+    linear-gradient(155deg,rgba(255,255,255,.14),transparent 48%),
+    repeating-linear-gradient(0deg,rgba(0,0,0,.4) 0 1px,transparent 1px 18px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.32) 0 1px,transparent 1px 15px)}
+.card--project:hover .card__viz{transform:scale(1.08)}
+.card__media::after{content:"";position:absolute;left:0;bottom:0;width:100%;height:5px;background:var(--grad-accent)}
+.card__media .tag{position:absolute;top:14px;left:14px;z-index:2;font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1a0f06;background:var(--grad-accent);padding:.3rem .7rem;border-radius:var(--r-pill)}
 .card--project .card__inner{padding:var(--card-pad)}
 .card--project h3{font-size:var(--text-lg);margin-bottom:var(--space-3);color:#fff}
 .card__specs{display:flex;gap:var(--space-5);margin-top:var(--space-4);flex-wrap:wrap}
 .card__specs div strong{display:block;font-size:var(--text-lg);color:#fff;font-weight:800}
 .card__specs div span{font-size:var(--text-xs);color:var(--muted)}
-
-/* portfolio metrics */
 .card--case .card__metric{display:flex;gap:var(--space-6);margin-top:var(--space-4)}
 .card--case .card__metric strong{display:block;font-size:var(--text-2xl);color:var(--accent);font-weight:800}
 .card--case .card__metric span{font-size:var(--text-xs);color:var(--muted)}
 
-/* opinie */
 .card--quote{display:grid;gap:var(--space-5)}
 .card--quote .stars{color:var(--accent);letter-spacing:2px}
 .card--quote blockquote{font-size:var(--text-lg);line-height:1.7;color:#fff;font-weight:500}
 .card__author{display:flex;align-items:center;gap:var(--space-3)}
-.card__avatar{width:46px;height:46px;border-radius:50%;background:var(--gradient-accent);color:#1a0f06;display:grid;place-items:center;font-weight:800;flex:none}
+.card__avatar{width:46px;height:46px;border-radius:50%;background:var(--grad-accent);color:#1a0f06;display:grid;place-items:center;font-weight:800;flex:none}
 .card__author strong{display:block;font-size:var(--text-sm);color:#fff}
 .card__author span{font-size:var(--text-xs);color:var(--muted)}
 
-/* ---------- 8. STATY / KROKI / FAQ ---------- */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap)}
-.stat{text-align:center}
-.stat__num{font-size:var(--text-4xl);font-weight:800;letter-spacing:-.02em;background:var(--gradient-accent);
-  -webkit-background-clip:text;background-clip:text;color:transparent}
-.stat__label{color:var(--muted);font-size:var(--text-sm);margin-top:var(--space-2)}
-.section--light .stat__label{color:#4a5360}
-
+/* ---------- 8. KROKI / FAQ ---------- */
 .steps{counter-reset:step;display:grid;gap:var(--space-5)}
-.step{display:grid;grid-template-columns:auto 1fr;gap:var(--space-5);align-items:start;
-  padding:var(--space-5);border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);transition:var(--tr-hover)}
+.step{display:grid;grid-template-columns:auto 1fr;gap:var(--space-5);align-items:start;padding:var(--space-5);
+  border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);transition:var(--tr-hover)}
+.section--light .step{background:#fff;border-color:#e3e6eb}
 .step:hover{border-color:var(--accent);transform:translateX(6px)}
-.step__num{counter-increment:step;width:54px;height:54px;flex:none;display:grid;place-items:center;border-radius:var(--r-md);
-  background:var(--gradient-accent);color:#1a0f06;font-weight:800;font-size:var(--text-lg);box-shadow:var(--sh-accent)}
+.step__num{counter-increment:step;width:54px;height:54px;flex:none;display:grid;place-items:center;border-radius:var(--r-md);background:var(--grad-accent);color:#1a0f06;font-weight:800;font-size:var(--text-lg);box-shadow:var(--sh-accent)}
 .step__num::before{content:counter(step,decimal-leading-zero)}
-.step h3{font-size:var(--text-lg);margin-bottom:var(--space-2);color:#fff}
-.step p{color:var(--muted)}
+.step h3{font-size:var(--text-lg);margin-bottom:var(--space-2)}
+.section--light .step h3{color:#10141b}
+.step p{color:var(--muted)}.section--light .step p{color:#4a5360}
 
 .faq{max-width:820px;margin-inline:auto;display:grid;gap:var(--space-3)}
-.faq__item{border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);overflow:hidden;transition:border-color var(--t-base),box-shadow var(--t-base)}
+.faq__item{border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);overflow:hidden;transition:border-color var(--t-base)}
 .faq__item[open]{border-color:var(--accent)}
-.faq__q{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);
-  padding:var(--space-5);font-weight:700;font-size:var(--text-lg);cursor:pointer;color:#fff}
+.faq__q{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-5);font-weight:700;font-size:var(--text-lg);cursor:pointer;color:#fff}
 .faq__q::-webkit-details-marker{display:none}
 .faq__icon{flex:none;width:26px;height:26px;position:relative}
 .faq__icon::before,.faq__icon::after{content:"";position:absolute;inset:50% 0 auto 0;height:2px;background:var(--accent);border-radius:2px;transform:translateY(-50%)}
@@ -307,13 +296,11 @@ p{text-wrap:pretty}
 /* ---------- 9. FORMULARZ / KONTAKT ---------- */
 .field{display:grid;gap:var(--space-2);margin-bottom:var(--space-5)}
 .field__label{font-size:var(--text-sm);font-weight:600;color:#fff}
-.input,.textarea{width:100%;padding:.9rem 1rem;font-size:var(--text-base);color:#fff;background:rgba(255,255,255,.03);
-  border:1.5px solid var(--border);border-radius:var(--r-md);transition:border-color var(--t-fast),box-shadow var(--t-fast)}
+.input,.textarea{width:100%;padding:.9rem 1rem;font-size:var(--text-base);color:#fff;background:rgba(255,255,255,.03);border:1.5px solid var(--border);border-radius:var(--r-md);transition:border-color var(--t-fast),box-shadow var(--t-fast)}
 .input::placeholder,.textarea::placeholder{color:var(--subtle)}
 .input:focus,.textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
 .textarea{min-height:130px;resize:vertical}
-.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);
-  padding:clamp(1.5rem,1rem + 2vw,2.75rem);box-shadow:var(--sh-soft);backdrop-filter:blur(6px)}
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:clamp(1.5rem,1rem + 2vw,2.75rem);box-shadow:var(--sh-soft);backdrop-filter:blur(6px)}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 var(--space-5)}
 .form-grid .field--full{grid-column:1/-1}
 .form-note{font-size:var(--text-xs);color:var(--muted);margin-top:var(--space-3)}
@@ -327,6 +314,14 @@ p{text-wrap:pretty}
 .feature-list li{display:flex;gap:var(--space-3);align-items:flex-start;font-size:var(--text-base);color:var(--text)}
 .feature-list svg{flex:none;width:20px;height:20px;color:var(--accent);margin-top:2px}
 
+/* CTA pasek */
+.cta{position:relative;border-radius:var(--r-2xl);padding:clamp(2.5rem,1.5rem + 5vw,4.5rem);text-align:center;overflow:hidden;
+  background:linear-gradient(135deg,#1a212c,#0d141c);border:1px solid var(--border)}
+.cta::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 90% at 50% 0%,rgba(255,106,31,.28),transparent 60%)}
+.cta>*{position:relative;z-index:1}
+.cta h2{max-width:20ch;margin-inline:auto}
+.cta p{color:var(--muted);max-width:54ch;margin:var(--space-4) auto var(--space-7)}
+
 /* ---------- 10. STOPKA ---------- */
 .footer{background:var(--black);color:var(--muted);padding-block:var(--space-12) var(--space-7)}
 .footer__grid{display:grid;grid-template-columns:1.6fr repeat(3,1fr);gap:var(--space-8);padding-bottom:var(--space-8);border-bottom:1px solid var(--border)}
@@ -334,49 +329,41 @@ p{text-wrap:pretty}
 .footer__about{max-width:36ch;font-size:var(--text-sm);line-height:1.7}
 .footer__col h4{color:#fff;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-4)}
 .footer__col ul{list-style:none;padding:0;display:grid;gap:var(--space-3)}
-.footer__col a{color:var(--muted);font-size:var(--text-sm)}
-.footer__col a:hover{color:#fff}
+.footer__col a{color:var(--muted);font-size:var(--text-sm)}.footer__col a:hover{color:#fff}
 .footer__bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4);padding-top:var(--space-6);font-size:var(--text-sm)}
 .footer__social{display:flex;gap:var(--space-3)}
-.footer__social a{width:40px;height:40px;border-radius:var(--r-sm);display:grid;place-items:center;background:var(--surface);color:var(--muted);transition:var(--tr-fast)}
-.footer__social a:hover{background:var(--gradient-accent);color:#1a0f06;transform:translateY(-2px)}
+.footer__social a{width:40px;height:40px;border-radius:var(--r-sm);display:grid;place-items:center;background:var(--surface);color:var(--muted);transition:all var(--t-fast) var(--ease)}
+.footer__social a:hover{background:var(--grad-accent);color:#1a0f06;transform:translateY(-2px)}
 
-/* ---------- 11. RESPONSYWNOŚĆ (1024 / 768 / 390) ---------- */
+/* ---------- 11. RESPONSYWNOŚĆ ---------- */
 @media (max-width:1024px){
   .grid--3{grid-template-columns:repeat(2,1fr)}
-  .stats{grid-template-columns:repeat(2,1fr)}
   .footer__grid{grid-template-columns:1fr 1fr}
   .hero__inner{grid-template-columns:1fr}
-  .scene{order:-1;height:clamp(320px,70vw,460px)}
+  .scene{order:-1;height:clamp(330px,72vw,480px)}
 }
 @media (max-width:768px){
   :root{--header-h:64px}
   .grid--2,.grid--3{grid-template-columns:1fr}
-  .nav{position:fixed;inset:var(--header-h) 0 auto 0;flex-direction:column;align-items:stretch;gap:0;
-    background:rgba(11,13,16,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
-    padding:var(--space-4) var(--pad) var(--space-6);box-shadow:var(--sh-soft);
-    transform:translateY(-12px);opacity:0;pointer-events:none;transition:transform var(--t-base) var(--ease),opacity var(--t-base)}
+  .nav{position:fixed;inset:var(--header-h) 0 auto 0;flex-direction:column;align-items:stretch;gap:0;background:rgba(10,12,15,.97);backdrop-filter:blur(18px);border-bottom:1px solid var(--border);padding:var(--space-4) var(--pad) var(--space-6);box-shadow:var(--sh-soft);transform:translateY(-12px);opacity:0;pointer-events:none;transition:transform var(--t-base) var(--ease),opacity var(--t-base)}
   .nav.is-open{transform:none;opacity:1;pointer-events:auto}
   .nav__list{flex-direction:column;align-items:stretch;gap:0;width:100%}
   .nav__link{padding:var(--space-4) 0;border-bottom:1px solid var(--border)}
   .nav__link::after{display:none}
   .nav .header__actions{flex-direction:column;align-items:stretch;margin-top:var(--space-4);width:100%}
-  .nav .btn{width:100%}
-  .nav-toggle{display:flex}
+  .nav .btn{width:100%}.nav-toggle{display:flex}
   .form-grid{grid-template-columns:1fr}
   .footer__bottom{flex-direction:column;align-items:flex-start}
 }
 @media (max-width:390px){
-  .stats,.footer__grid{grid-template-columns:1fr}
-  .btn{width:100%}
-  .hero__cta .cluster{flex-direction:column;align-items:stretch}
-  .hero__meta{gap:var(--space-5)}
+  .footer__grid{grid-template-columns:1fr}
+  .btn{width:100%}.hero__cta .cluster{flex-direction:column;align-items:stretch}.hero__meta{gap:var(--space-5)}
 }
 </style>
 </head>
 <body>
+<div class="progress" data-progress></div>
 
-<!-- ikony -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
@@ -417,6 +404,7 @@ p{text-wrap:pretty}
 
   <!-- 1. HERO -->
   <section class="hero">
+    <div class="hero__glow" data-glow></div>
     <div class="hero__inner container">
       <div class="hero__content" data-reveal>
         <span class="badge badge--dot" style="margin-bottom:var(--space-5)">Pracownia architektoniczno-budowlana · od 2009</span>
@@ -435,27 +423,35 @@ p{text-wrap:pretty}
         </div>
       </div>
 
-      <!-- model 3D -->
+      <!-- PANORAMA 3D -->
       <div class="scene" data-reveal data-delay="2" aria-hidden="true">
+        <div class="particles"><i></i><i></i><i></i><i></i><i></i></div>
         <div class="stage">
           <div class="spin">
-            <!-- iglica / akcent na szczycie -->
-            <div class="spire"></div>
-            <!-- WIEŻA: 150 x 110 x 360 -->
-            <div class="grp tower">
-              <div class="face glass"     style="width:150px;height:360px;margin:-180px 0 0 -75px;transform:translateZ(55px)"><span class="accent-band" style="bottom:40px"></span></div>
-              <div class="face glass"     style="width:150px;height:360px;margin:-180px 0 0 -75px;transform:rotateY(180deg) translateZ(55px)"><span class="accent-band" style="bottom:40px"></span></div>
-              <div class="face glass--side" style="width:110px;height:360px;margin:-180px 0 0 -55px;transform:rotateY(90deg) translateZ(75px)"><span class="accent-band" style="bottom:40px"></span></div>
-              <div class="face glass--side" style="width:110px;height:360px;margin:-180px 0 0 -55px;transform:rotateY(-90deg) translateZ(75px)"><span class="accent-band" style="bottom:40px"></span></div>
-              <div class="face roof"       style="width:150px;height:110px;margin:-55px 0 0 -75px;transform:rotateX(90deg) translateZ(180px)"></div>
+            <!-- B1: główna wieża W150 D110 H320 @ (0,-20). off=-10, roofY=-170 -->
+            <div class="bld b1" style="transform:translate3d(0,0,-20px)">
+              <div class="spire" style="transform:translateY(-210px)"></div>
+              <div class="face glass"      style="width:150px;height:320px;margin:-160px 0 0 -75px;transform:translateY(-10px) translateZ(55px)"><span class="accent-band" style="bottom:46px"></span></div>
+              <div class="face glass"      style="width:150px;height:320px;margin:-160px 0 0 -75px;transform:translateY(-10px) rotateY(180deg) translateZ(55px)"><span class="accent-band" style="bottom:46px"></span></div>
+              <div class="face glass--side" style="width:110px;height:320px;margin:-160px 0 0 -55px;transform:translateY(-10px) rotateY(90deg) translateZ(75px)"></div>
+              <div class="face glass--side" style="width:110px;height:320px;margin:-160px 0 0 -55px;transform:translateY(-10px) rotateY(-90deg) translateZ(75px)"></div>
+              <div class="face roof"       style="width:150px;height:110px;margin:-55px 0 0 -75px;transform:translateY(-170px) rotateX(90deg)"></div>
             </div>
-            <!-- PODIUM / parter: 250 x 200 x 60 -->
-            <div class="grp podium">
-              <div class="face podium-face" style="width:250px;height:60px;margin:-30px 0 0 -125px;transform:translateY(150px) translateZ(100px)"></div>
-              <div class="face podium-face" style="width:250px;height:60px;margin:-30px 0 0 -125px;transform:translateY(150px) rotateY(180deg) translateZ(100px)"></div>
-              <div class="face podium-face" style="width:200px;height:60px;margin:-30px 0 0 -100px;transform:translateY(150px) rotateY(90deg) translateZ(125px)"></div>
-              <div class="face podium-face" style="width:200px;height:60px;margin:-30px 0 0 -100px;transform:translateY(150px) rotateY(-90deg) translateZ(125px)"></div>
-              <div class="face podium-top"  style="width:250px;height:200px;margin:-100px 0 0 -125px;transform:translateY(120px) rotateX(90deg) translateZ(0)"></div>
+            <!-- B2: niższa W120 D100 H210 @ (-150,60). off=45, roofY=-60 -->
+            <div class="bld b2" style="transform:translate3d(-150px,0,60px)">
+              <div class="face glass"      style="width:120px;height:210px;margin:-105px 0 0 -60px;transform:translateY(45px) translateZ(50px)"><span class="accent-band" style="bottom:34px"></span></div>
+              <div class="face glass"      style="width:120px;height:210px;margin:-105px 0 0 -60px;transform:translateY(45px) rotateY(180deg) translateZ(50px)"></div>
+              <div class="face glass--side" style="width:100px;height:210px;margin:-105px 0 0 -50px;transform:translateY(45px) rotateY(90deg) translateZ(60px)"></div>
+              <div class="face glass--side" style="width:100px;height:210px;margin:-105px 0 0 -50px;transform:translateY(45px) rotateY(-90deg) translateZ(60px)"></div>
+              <div class="face roof"       style="width:120px;height:100px;margin:-50px 0 0 -60px;transform:translateY(-60px) rotateX(90deg)"></div>
+            </div>
+            <!-- B3: średnia W110 D95 H260 @ (150,40). off=20, roofY=-110 -->
+            <div class="bld b3" style="transform:translate3d(150px,0,40px)">
+              <div class="face glass"      style="width:110px;height:260px;margin:-130px 0 0 -55px;transform:translateY(20px) translateZ(47px)"><span class="accent-band" style="bottom:40px"></span></div>
+              <div class="face glass"      style="width:110px;height:260px;margin:-130px 0 0 -55px;transform:translateY(20px) rotateY(180deg) translateZ(47px)"></div>
+              <div class="face glass--side" style="width:95px;height:260px;margin:-130px 0 0 -47px;transform:translateY(20px) rotateY(90deg) translateZ(55px)"></div>
+              <div class="face glass--side" style="width:95px;height:260px;margin:-130px 0 0 -47px;transform:translateY(20px) rotateY(-90deg) translateZ(55px)"></div>
+              <div class="face roof"       style="width:110px;height:95px;margin:-47px 0 0 -55px;transform:translateY(-110px) rotateX(90deg)"></div>
             </div>
             <div class="ground"></div>
           </div>
@@ -463,6 +459,14 @@ p{text-wrap:pretty}
       </div>
     </div>
   </section>
+
+  <!-- TICKER -->
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker__track">
+      <span>Architektura<span></span></span><span>Beton</span><span>Szkło</span><span>Stal</span><span>Domy pod klucz</span><span>Wizualizacje 3D</span><span>Wnętrza</span><span>Energooszczędność</span>
+      <span>Architektura</span><span>Beton</span><span>Szkło</span><span>Stal</span><span>Domy pod klucz</span><span>Wizualizacje 3D</span><span>Wnętrza</span><span>Energooszczędność</span>
+    </div>
+  </div>
 
   <!-- 2. PROJEKTY -->
   <section class="section section--dark" id="projekty">
@@ -473,40 +477,25 @@ p{text-wrap:pretty}
         <p class="lead">Sprawdzone, energooszczędne projekty domów — gotowe do realizacji lub do indywidualnej adaptacji pod Twoją działkę.</p>
       </div>
       <div class="grid grid--3">
-        <article class="card card--project" data-reveal>
+        <article class="card card--project" data-reveal data-tilt>
           <div class="card__media"><span class="tag">Parterowy</span><div class="card__viz"></div></div>
-          <div class="card__inner">
-            <h3>Dom Horizon</h3>
+          <div class="card__inner"><h3>Dom Horizon</h3>
             <p class="lead" style="font-size:var(--text-sm)">Minimalistyczna bryła z dużymi przeszkleniami i płaskim dachem.</p>
-            <div class="card__specs">
-              <div><strong>142 m²</strong><span>powierzchnia</span></div>
-              <div><strong>4</strong><span>pokoje</span></div>
-              <div><strong>1</strong><span>kondygnacja</span></div>
-            </div>
+            <div class="card__specs"><div><strong>142 m²</strong><span>powierzchnia</span></div><div><strong>4</strong><span>pokoje</span></div><div><strong>1</strong><span>kondygnacja</span></div></div>
           </div>
         </article>
-        <article class="card card--project" data-reveal data-delay="1">
+        <article class="card card--project" data-reveal data-delay="1" data-tilt>
           <div class="card__media"><span class="tag">Piętrowy</span><div class="card__viz"></div></div>
-          <div class="card__inner">
-            <h3>Willa Lumen</h3>
+          <div class="card__inner"><h3>Willa Lumen</h3>
             <p class="lead" style="font-size:var(--text-sm)">Dwukondygnacyjna willa z antresolą i przeszkloną klatką schodową.</p>
-            <div class="card__specs">
-              <div><strong>218 m²</strong><span>powierzchnia</span></div>
-              <div><strong>5</strong><span>pokoi</span></div>
-              <div><strong>2</strong><span>kondygnacje</span></div>
-            </div>
+            <div class="card__specs"><div><strong>218 m²</strong><span>powierzchnia</span></div><div><strong>5</strong><span>pokoi</span></div><div><strong>2</strong><span>kondygnacje</span></div></div>
           </div>
         </article>
-        <article class="card card--project" data-reveal data-delay="2">
+        <article class="card card--project" data-reveal data-delay="2" data-tilt>
           <div class="card__media"><span class="tag">Rezydencja</span><div class="card__viz"></div></div>
-          <div class="card__inner">
-            <h3>Rezydencja Vertex</h3>
+          <div class="card__inner"><h3>Rezydencja Vertex</h3>
             <p class="lead" style="font-size:var(--text-sm)">Premium bryła z basenem, garażem na dwa auta i strefą spa.</p>
-            <div class="card__specs">
-              <div><strong>340 m²</strong><span>powierzchnia</span></div>
-              <div><strong>6</strong><span>pokoi</span></div>
-              <div><strong>2</strong><span>kondygnacje</span></div>
-            </div>
+            <div class="card__specs"><div><strong>340 m²</strong><span>powierzchnia</span></div><div><strong>6</strong><span>pokoi</span></div><div><strong>2</strong><span>kondygnacje</span></div></div>
           </div>
         </article>
       </div>
@@ -522,41 +511,29 @@ p{text-wrap:pretty}
         <p class="lead">Wszystko w jednym miejscu. Bierzemy odpowiedzialność za projekt, formalności i budowę.</p>
       </div>
       <div class="grid grid--3">
-        <article class="card card--service" data-reveal>
-          <div class="card__icon"><svg aria-hidden="true"><use href="#i-ruler"/></svg></div>
+        <article class="card card--service" data-reveal data-tilt><div class="card__icon"><svg aria-hidden="true"><use href="#i-ruler"/></svg></div>
           <h3>Projektowanie architektoniczne</h3><p>Indywidualne projekty domów i budynków dopasowane do działki, budżetu i stylu życia.</p>
-          <a href="#kontakt" class="card__link">Więcej <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        </article>
-        <article class="card card--service" data-reveal data-delay="1">
-          <div class="card__icon"><svg aria-hidden="true"><use href="#i-build"/></svg></div>
+          <a href="#kontakt" class="card__link">Więcej <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></article>
+        <article class="card card--service" data-reveal data-delay="1" data-tilt><div class="card__icon"><svg aria-hidden="true"><use href="#i-build"/></svg></div>
           <h3>Budowa pod klucz</h3><p>Realizacja stanu surowego, wykończenia i zagospodarowania terenu z jednym wykonawcą.</p>
-          <a href="#kontakt" class="card__link">Więcej <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        </article>
-        <article class="card card--service" data-reveal data-delay="2">
-          <div class="card__icon"><svg aria-hidden="true"><use href="#i-cube"/></svg></div>
+          <a href="#kontakt" class="card__link">Więcej <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></article>
+        <article class="card card--service" data-reveal data-delay="2" data-tilt><div class="card__icon"><svg aria-hidden="true"><use href="#i-cube"/></svg></div>
           <h3>Wizualizacje 3D</h3><p>Fotorealistyczne wizualizacje i spacery 3D — zobacz swój dom, zanim powstanie.</p>
-          <a href="#kontakt" class="card__link">Więcej <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        </article>
-        <article class="card card--service" data-reveal>
-          <div class="card__icon"><svg aria-hidden="true"><use href="#i-eye"/></svg></div>
+          <a href="#kontakt" class="card__link">Więcej <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></article>
+        <article class="card card--service" data-reveal data-tilt><div class="card__icon"><svg aria-hidden="true"><use href="#i-eye"/></svg></div>
           <h3>Nadzór inwestorski</h3><p>Kontrola jakości, harmonogramu i kosztów na każdym etapie budowy.</p>
-          <a href="#kontakt" class="card__link">Więcej <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        </article>
-        <article class="card card--service" data-reveal data-delay="1">
-          <div class="card__icon"><svg aria-hidden="true"><use href="#i-sofa"/></svg></div>
+          <a href="#kontakt" class="card__link">Więcej <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></article>
+        <article class="card card--service" data-reveal data-delay="1" data-tilt><div class="card__icon"><svg aria-hidden="true"><use href="#i-sofa"/></svg></div>
           <h3>Projekty wnętrz</h3><p>Spójny design wnętrz — od układu funkcjonalnego po dobór materiałów i oświetlenia.</p>
-          <a href="#kontakt" class="card__link">Więcej <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        </article>
-        <article class="card card--service" data-reveal data-delay="2">
-          <div class="card__icon"><svg aria-hidden="true"><use href="#i-doc"/></svg></div>
+          <a href="#kontakt" class="card__link">Więcej <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></article>
+        <article class="card card--service" data-reveal data-delay="2" data-tilt><div class="card__icon"><svg aria-hidden="true"><use href="#i-doc"/></svg></div>
           <h3>Pozwolenia i formalności</h3><p>Załatwiamy pozwolenie na budowę, uzgodnienia i całą dokumentację za Ciebie.</p>
-          <a href="#kontakt" class="card__link">Więcej <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        </article>
+          <a href="#kontakt" class="card__link">Więcej <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></article>
       </div>
     </div>
   </section>
 
-  <!-- 4. PROCES (jasna sekcja dla kontrastu / biel) -->
+  <!-- 4. PROCES -->
   <section class="section section--light" id="proces">
     <div class="container container--narrow">
       <div class="section-head" data-reveal>
@@ -583,26 +560,20 @@ p{text-wrap:pretty}
         <p class="lead">Wybrane realizacje, które mówią więcej niż słowa.</p>
       </div>
       <div class="grid grid--3">
-        <article class="card card--project card--case" data-reveal>
+        <article class="card card--project card--case" data-reveal data-tilt>
           <div class="card__media"><span class="tag">Osiedle</span><div class="card__viz"></div></div>
-          <div class="card__inner">
-            <h3>Osiedle Park Residence</h3>
-            <div class="card__metric"><div><strong>24</strong><span>domy</span></div><div><strong>11 mies.</strong><span>realizacja</span></div></div>
-          </div>
+          <div class="card__inner"><h3>Osiedle Park Residence</h3>
+            <div class="card__metric"><div><strong>24</strong><span>domy</span></div><div><strong>11 mies.</strong><span>realizacja</span></div></div></div>
         </article>
-        <article class="card card--project card--case" data-reveal data-delay="1">
+        <article class="card card--project card--case" data-reveal data-delay="1" data-tilt>
           <div class="card__media"><span class="tag">Biurowiec</span><div class="card__viz"></div></div>
-          <div class="card__inner">
-            <h3>Biurowiec Vertex Tower</h3>
-            <div class="card__metric"><div><strong>6 200 m²</strong><span>powierzchni</span></div><div><strong>A+</strong><span>klasa energ.</span></div></div>
-          </div>
+          <div class="card__inner"><h3>Biurowiec Vertex Tower</h3>
+            <div class="card__metric"><div><strong>6 200 m²</strong><span>powierzchni</span></div><div><strong>A+</strong><span>klasa energ.</span></div></div></div>
         </article>
-        <article class="card card--project card--case" data-reveal data-delay="2">
+        <article class="card card--project card--case" data-reveal data-delay="2" data-tilt>
           <div class="card__media"><span class="tag">Dom jednorodzinny</span><div class="card__viz"></div></div>
-          <div class="card__inner">
-            <h3>Dom nad jeziorem</h3>
-            <div class="card__metric"><div><strong>265 m²</strong><span>powierzchni</span></div><div><strong>9 mies.</strong><span>realizacja</span></div></div>
-          </div>
+          <div class="card__inner"><h3>Dom nad jeziorem</h3>
+            <div class="card__metric"><div><strong>265 m²</strong><span>powierzchni</span></div><div><strong>9 mies.</strong><span>realizacja</span></div></div></div>
         </article>
       </div>
     </div>
@@ -611,26 +582,17 @@ p{text-wrap:pretty}
   <!-- 6. OPINIE -->
   <section class="section section--graphite" id="opinie">
     <div class="container">
-      <div class="section-head" data-reveal>
-        <span class="eyebrow">Opinie</span>
-        <h2>Zaufali nam inwestorzy</h2>
-      </div>
+      <div class="section-head" data-reveal><span class="eyebrow">Opinie</span><h2>Zaufali nam inwestorzy</h2></div>
       <div class="grid grid--3">
-        <figure class="card card--quote" data-reveal>
-          <div class="stars" aria-label="5 na 5">★★★★★</div>
+        <figure class="card card--quote" data-reveal data-tilt><div class="stars" aria-label="5 na 5">★★★★★</div>
           <blockquote>„Dom dokładnie taki, jak na wizualizacjach. Terminowo, czysto i bez ukrytych kosztów.”</blockquote>
-          <figcaption class="card__author"><span class="card__avatar">AK</span><span><strong>Anna Kowalska</strong><span>Dom Horizon, Wrocław</span></span></figcaption>
-        </figure>
-        <figure class="card card--quote" data-reveal data-delay="1">
-          <div class="stars" aria-label="5 na 5">★★★★★</div>
+          <figcaption class="card__author"><span class="card__avatar">AK</span><span><strong>Anna Kowalska</strong><span>Dom Horizon, Wrocław</span></span></figcaption></figure>
+        <figure class="card card--quote" data-reveal data-delay="1" data-tilt><div class="stars" aria-label="5 na 5">★★★★★</div>
           <blockquote>„Pełen profesjonalizm od koncepcji po odbiór. Nadzór i raporty z budowy bezcenne.”</blockquote>
-          <figcaption class="card__author"><span class="card__avatar">MN</span><span><strong>Marek Nowak</strong><span>Willa Lumen, Poznań</span></span></figcaption>
-        </figure>
-        <figure class="card card--quote" data-reveal data-delay="2">
-          <div class="stars" aria-label="5 na 5">★★★★★</div>
+          <figcaption class="card__author"><span class="card__avatar">MN</span><span><strong>Marek Nowak</strong><span>Willa Lumen, Poznań</span></span></figcaption></figure>
+        <figure class="card card--quote" data-reveal data-delay="2" data-tilt><div class="stars" aria-label="5 na 5">★★★★★</div>
           <blockquote>„Świetny kontakt i pomoc we wszystkich formalnościach. Polecam całym sercem.”</blockquote>
-          <figcaption class="card__author"><span class="card__avatar">PZ</span><span><strong>Paulina Zielińska</strong><span>Dom nad jeziorem, Gdańsk</span></span></figcaption>
-        </figure>
+          <figcaption class="card__author"><span class="card__avatar">PZ</span><span><strong>Paulina Zielińska</strong><span>Dom nad jeziorem, Gdańsk</span></span></figcaption></figure>
       </div>
     </div>
   </section>
@@ -638,10 +600,7 @@ p{text-wrap:pretty}
   <!-- 7. FAQ -->
   <section class="section section--dark" id="faq">
     <div class="container">
-      <div class="section-head" data-reveal>
-        <span class="eyebrow">FAQ</span>
-        <h2>Najczęstsze pytania</h2>
-      </div>
+      <div class="section-head" data-reveal><span class="eyebrow">FAQ</span><h2>Najczęstsze pytania</h2></div>
       <div class="faq" data-faq data-reveal>
         <details class="faq__item" open><summary class="faq__q">Ile trwa budowa domu pod klucz?<span class="faq__icon"></span></summary>
           <div class="faq__a">Typowy dom jednorodzinny realizujemy w 8–12 miesięcy od rozpoczęcia prac, w zależności od metrażu, technologii i zakresu wykończenia.</div></details>
@@ -688,12 +647,17 @@ p{text-wrap:pretty}
           <p class="form-note">Wysyłając formularz akceptujesz przetwarzanie danych w celu kontaktu. Nie udostępniamy danych osobom trzecim.</p>
         </form>
       </div>
+
+      <div class="cta" data-reveal style="margin-top:var(--space-12)">
+        <h2>Zbudujmy razem Twój wymarzony dom</h2>
+        <p>Umów bezpłatną konsultację — przeanalizujemy działkę, dobierzemy projekt i przygotujemy wstępną wycenę.</p>
+        <a href="#kontakt" class="btn btn--primary btn--lg">Umów konsultację <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </div>
     </div>
   </section>
 
 </main>
 
-<!-- STOPKA -->
 <footer class="footer">
   <div class="container">
     <div class="footer__grid">
@@ -701,18 +665,13 @@ p{text-wrap:pretty}
         <a href="#top" class="brand"><span class="brand__mark">A</span><span><b>ARCHITECT</b><span class="dim">.CODE</span></span></a>
         <p class="footer__about">Pracownia architektoniczno-budowlana. Projektujemy i budujemy nowoczesne domy pod klucz — z dbałością o detal, energooszczędność i terminowość.</p>
       </div>
-      <div class="footer__col"><h4>Pracownia</h4><ul>
-        <li><a href="#portfolio">O nas</a></li><li><a href="#">Zespół</a></li><li><a href="#">Kariera</a></li><li><a href="#opinie">Opinie</a></li></ul></div>
-      <div class="footer__col"><h4>Oferta</h4><ul>
-        <li><a href="#uslugi">Projektowanie</a></li><li><a href="#uslugi">Budowa pod klucz</a></li><li><a href="#uslugi">Wizualizacje 3D</a></li><li><a href="#uslugi">Wnętrza</a></li></ul></div>
-      <div class="footer__col"><h4>Kontakt</h4><ul>
-        <li><a href="tel:+48600000000">+48 600 000 000</a></li><li><a href="mailto:biuro@architect.code">biuro@architect.code</a></li><li><a href="#kontakt">ul. Architektów 12, Wrocław</a></li></ul></div>
+      <div class="footer__col"><h4>Pracownia</h4><ul><li><a href="#portfolio">O nas</a></li><li><a href="#">Zespół</a></li><li><a href="#">Kariera</a></li><li><a href="#opinie">Opinie</a></li></ul></div>
+      <div class="footer__col"><h4>Oferta</h4><ul><li><a href="#uslugi">Projektowanie</a></li><li><a href="#uslugi">Budowa pod klucz</a></li><li><a href="#uslugi">Wizualizacje 3D</a></li><li><a href="#uslugi">Wnętrza</a></li></ul></div>
+      <div class="footer__col"><h4>Kontakt</h4><ul><li><a href="tel:+48600000000">+48 600 000 000</a></li><li><a href="mailto:biuro@architect.code">biuro@architect.code</a></li><li><a href="#kontakt">ul. Architektów 12, Wrocław</a></li></ul></div>
     </div>
     <div class="footer__bottom">
       <span>© <span data-year>2026</span> ARCHITECT.CODE. Wszelkie prawa zastrzeżone.</span>
-      <div class="footer__social">
-        <a href="#" aria-label="Instagram">IG</a><a href="#" aria-label="Facebook">FB</a><a href="#" aria-label="LinkedIn">in</a>
-      </div>
+      <div class="footer__social"><a href="#" aria-label="Instagram">IG</a><a href="#" aria-label="Facebook">FB</a><a href="#" aria-label="LinkedIn">in</a></div>
     </div>
   </div>
 </footer>
@@ -722,91 +681,91 @@ p{text-wrap:pretty}
   "use strict";
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  /* pasek postępu */
+  var bar = document.querySelector("[data-progress]");
+  if(bar){
+    var prog = function(){
+      var h = document.documentElement, max = h.scrollHeight - h.clientHeight;
+      bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+    };
+    prog(); window.addEventListener("scroll", prog, {passive:true});
+    window.addEventListener("resize", prog);
+  }
+
   /* sticky header */
   var header = document.querySelector("[data-header]");
-  if(header){
-    var onScroll = function(){ header.classList.toggle("is-scrolled", window.scrollY > 24); };
-    onScroll(); window.addEventListener("scroll", onScroll, {passive:true});
-  }
+  if(header){ var hs=function(){header.classList.toggle("is-scrolled",window.scrollY>24)}; hs(); window.addEventListener("scroll",hs,{passive:true}); }
 
   /* menu mobilne */
   var toggle = document.querySelector("[data-nav-toggle]"), nav = document.querySelector("[data-nav]");
   if(toggle && nav){
-    var close = function(){ nav.classList.remove("is-open"); toggle.setAttribute("aria-expanded","false"); };
-    toggle.addEventListener("click", function(){
-      var open = nav.classList.toggle("is-open");
-      toggle.setAttribute("aria-expanded", String(open));
+    var close=function(){nav.classList.remove("is-open");toggle.setAttribute("aria-expanded","false")};
+    toggle.addEventListener("click",function(){var o=nav.classList.toggle("is-open");toggle.setAttribute("aria-expanded",String(o))});
+    nav.querySelectorAll("a").forEach(function(a){a.addEventListener("click",close)});
+    window.addEventListener("keydown",function(e){if(e.key==="Escape")close()});
+  }
+
+  /* świetlny kursor w Hero */
+  var glow = document.querySelector("[data-glow]"), hero = document.querySelector(".hero");
+  if(glow && hero && !reduce && matchMedia("(pointer:fine)").matches){
+    hero.addEventListener("pointermove",function(e){
+      var r = hero.getBoundingClientRect();
+      glow.style.left = (e.clientX - r.left) + "px";
+      glow.style.top = (e.clientY - r.top) + "px";
+      glow.style.opacity = "1";
     });
-    nav.querySelectorAll("a").forEach(function(a){ a.addEventListener("click", close); });
-    window.addEventListener("keydown", function(e){ if(e.key === "Escape") close(); });
+    hero.addEventListener("pointerleave",function(){ glow.style.opacity=".7"; });
   }
 
   /* animacje przy przewijaniu */
   var revealEls = document.querySelectorAll("[data-reveal]");
-  if(reduce || !("IntersectionObserver" in window)){
-    revealEls.forEach(function(el){ el.classList.add("is-visible"); });
-  } else {
-    var io = new IntersectionObserver(function(entries, obs){
-      entries.forEach(function(entry){
-        if(entry.isIntersecting){ entry.target.classList.add("is-visible"); obs.unobserve(entry.target); }
-      });
-    }, {threshold:0.12, rootMargin:"0px 0px -8% 0px"});
-    revealEls.forEach(function(el){ io.observe(el); });
+  if(reduce || !("IntersectionObserver" in window)){ revealEls.forEach(function(el){el.classList.add("is-visible")}); }
+  else{
+    var io=new IntersectionObserver(function(en,obs){en.forEach(function(e){if(e.isIntersecting){e.target.classList.add("is-visible");obs.unobserve(e.target)}})},{threshold:.12,rootMargin:"0px 0px -8% 0px"});
+    revealEls.forEach(function(el){io.observe(el)});
   }
 
   /* liczniki */
   var counters = document.querySelectorAll("[data-count]");
   function animate(el){
-    var target = parseFloat(el.dataset.count), suffix = el.dataset.suffix || "";
-    var decimals = (el.dataset.count.split(".")[1] || "").length, duration = 1500, start = null;
-    function tick(ts){
-      if(!start) start = ts;
-      var p = Math.min((ts - start)/duration, 1), eased = 1 - Math.pow(1 - p, 3);
-      el.textContent = (target*eased).toFixed(decimals) + suffix;
-      if(p < 1) requestAnimationFrame(tick);
-    }
+    var t=parseFloat(el.dataset.count),suf=el.dataset.suffix||"",dec=(el.dataset.count.split(".")[1]||"").length,dur=1500,start=null;
+    function tick(ts){if(!start)start=ts;var p=Math.min((ts-start)/dur,1),e=1-Math.pow(1-p,3);el.textContent=(t*e).toFixed(dec)+suf;if(p<1)requestAnimationFrame(tick)}
     requestAnimationFrame(tick);
   }
   if(counters.length){
-    if(reduce || !("IntersectionObserver" in window)){
-      counters.forEach(function(el){ el.textContent = el.dataset.count + (el.dataset.suffix || ""); });
-    } else {
-      var co = new IntersectionObserver(function(entries, obs){
-        entries.forEach(function(entry){ if(entry.isIntersecting){ animate(entry.target); obs.unobserve(entry.target); } });
-      }, {threshold:0.6});
-      counters.forEach(function(el){ co.observe(el); });
-    }
+    if(reduce || !("IntersectionObserver" in window)){ counters.forEach(function(el){el.textContent=el.dataset.count+(el.dataset.suffix||"")}); }
+    else{ var co=new IntersectionObserver(function(en,obs){en.forEach(function(e){if(e.isIntersecting){animate(e.target);obs.unobserve(e.target)}})},{threshold:.6}); counters.forEach(function(el){co.observe(el)}); }
   }
 
-  /* FAQ: jedno pytanie otwarte naraz */
-  var faqItems = document.querySelectorAll("[data-faq] details");
-  faqItems.forEach(function(item){
-    item.addEventListener("toggle", function(){
-      if(item.open) faqItems.forEach(function(o){ if(o !== item) o.open = false; });
+  /* efekt tilt + blask na kartach */
+  if(!reduce && matchMedia("(pointer:fine)").matches){
+    document.querySelectorAll("[data-tilt]").forEach(function(card){
+      card.addEventListener("pointermove",function(e){
+        var r=card.getBoundingClientRect(), px=(e.clientX-r.left)/r.width, py=(e.clientY-r.top)/r.height;
+        card.style.transform="translateY(-6px) perspective(900px) rotateX("+((0.5-py)*6).toFixed(2)+"deg) rotateY("+((px-0.5)*7).toFixed(2)+"deg)";
+        card.style.setProperty("--mx",(px*100).toFixed(1)+"%"); card.style.setProperty("--my",(py*100).toFixed(1)+"%");
+      });
+      card.addEventListener("pointerleave",function(){ card.style.transform=""; });
     });
-  });
+  }
 
-  /* formularz kontaktowy (offline, walidacja po stronie klienta) */
-  var form = document.querySelector("[data-contact-form]");
+  /* FAQ: jedno otwarte naraz */
+  var faqItems=document.querySelectorAll("[data-faq] details");
+  faqItems.forEach(function(item){item.addEventListener("toggle",function(){if(item.open)faqItems.forEach(function(o){if(o!==item)o.open=false})})});
+
+  /* formularz kontaktowy (offline) */
+  var form=document.querySelector("[data-contact-form]");
   if(form){
-    form.addEventListener("submit", function(e){
+    form.addEventListener("submit",function(e){
       e.preventDefault();
-      var status = form.querySelector("[data-form-status]");
-      var name = form.querySelector("#f-name"), email = form.querySelector("#f-email");
-      if(!name.value.trim() || !email.checkValidity()){
-        status.style.color = "#ff6a1f";
-        status.textContent = "Podaj imię oraz poprawny adres e-mail.";
-        return;
-      }
-      status.style.color = "#2bd07a";
-      status.textContent = "Dziękujemy, " + name.value.trim().split(" ")[0] + "! Oddzwonimy w ciągu 24 godzin.";
-      form.reset();
+      var st=form.querySelector("[data-form-status]"),nm=form.querySelector("#f-name"),em=form.querySelector("#f-email");
+      if(!nm.value.trim()||!em.checkValidity()){st.style.color="#ff6a1f";st.textContent="Podaj imię oraz poprawny adres e-mail.";return;}
+      st.style.color="#2bd07a";st.textContent="Dziękujemy, "+nm.value.trim().split(" ")[0]+"! Oddzwonimy w ciągu 24 godzin.";form.reset();
     });
   }
 
-  /* rok w stopce */
-  var y = document.querySelector("[data-year]");
-  if(y) y.textContent = new Date().getFullYear();
+  /* rok */
+  var y=document.querySelector("[data-year]"); if(y)y.textContent=new Date().getFullYear();
 })();
 </script>
 </body>
