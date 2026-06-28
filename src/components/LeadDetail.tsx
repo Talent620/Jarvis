@@ -37,12 +37,27 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
   const [osSending, setOsSending] = useState(false);
   const [composing, setComposing] = useState<ComposerAction | "">(""); // która akcja kompozytora trwa
 
-  if (!lead) return null;
+  // „Teczka się nie otwiera": zamiast cicho renderować NIC (gdy lead zniknął), pokaż czytelny
+  // panel z możliwością zamknięcia — koniec wrażenia „nie działa".
+  if (!lead) {
+    return (
+      <div className="sheet" onClick={onClose}>
+        <div className="panel" onClick={(e) => e.stopPropagation()}>
+          <div className="panel-head"><div className="grabber" /><h2>🗂 Teczka klienta</h2></div>
+          <div className="panel-body"><p className="muted" style={{ padding: "8px 0" }}>Nie udało się wczytać tego leada — mógł zostać usunięty lub lista jeszcze się ładuje. Zamknij i otwórz ponownie z listy.</p></div>
+          <div className="panel-foot"><button className="btn" onClick={onClose}>Zamknij</button></div>
+        </div>
+      </div>
+    );
+  }
   const intel = lead.intel;
   const phone = lead.contact && !lead.contact.includes("@") ? lead.contact : undefined;
   const email = lead.email || (lead.contact?.includes("@") ? lead.contact : undefined);
-  const score = intel ? scoreLabel(intel.score) : null;
-  const weak = intel ? auditWeakPoints(intel.audit, !!lead.url) : [];
+  // Defensywnie: uszkodzone dane dossier (audit/score) NIE mogą zablokować otwarcia teczki.
+  let score: ReturnType<typeof scoreLabel> | null = null;
+  let weak: string[] = [];
+  try { score = intel ? scoreLabel(intel.score) : null; } catch { /* ignore */ }
+  try { weak = intel ? auditWeakPoints(intel.audit, !!lead.url) : []; } catch { weak = []; }
 
   const run = async () => {
     setBusy(true);
