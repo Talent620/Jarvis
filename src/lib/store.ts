@@ -32,6 +32,7 @@ const emptyData: AppData = {
   contentPosts: [],
   imageHistory: [],
   siteProjects: [],
+  financeProjects: [],
   world: { entities: [], relations: [] },
 };
 

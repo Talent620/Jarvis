@@ -192,6 +192,8 @@ export interface AppData {
   imageHistory?: ImageEdit[];
   /** Zapisane projekty stron WWW (Kreator stron — zapis/wczytanie/wersje). */
   siteProjects?: SiteProject[];
+  /** 💰 Financial Intelligence — projekty/zlecenia finansowe. */
+  financeProjects?: FinanceProject[];
   /** World Model — graf encji (ludzie/projekty/firmy/zadania) i relacji z pewnością. */
   world?: WorldGraph;
 }
@@ -323,6 +325,33 @@ export interface LeadIntel {
 export interface LeadNote {
   at: number;
   text: string;
+}
+
+/** 💰 Financial Intelligence — status projektu (pipeline → realizacja → płatność → koniec). */
+export type FinanceStatus =
+  | "lead" | "oferta" | "negocjacje" | "w_realizacji" | "review" | "gotowe"
+  | "oczekuje_platnosci" | "oplacone" | "zamkniete" | "anulowane";
+
+/** 💰 Projekt/zlecenie w module finansowym. Kwoty NETTO; vatRate w %. */
+export interface FinanceProject {
+  id: string;
+  name: string;
+  client?: string;
+  status: FinanceStatus;
+  amount: number; // przychód netto
+  cost?: number;
+  hours?: number;
+  paidAmount?: number;
+  vatRate?: number; // %
+  category?: string;
+  startAt?: number;
+  dueAt?: number;
+  doneAt?: number;
+  invoiceNo?: string;
+  tags?: string[];
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface Lead {
