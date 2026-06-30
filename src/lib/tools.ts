@@ -1051,7 +1051,9 @@ const tools: Tool[] = [
       if (!pick) {
         return "Aby ustawić STAŁY darmowy umysł, dodaj najpierw DARMOWY klucz Gemini z aistudio.google.com w ⚙ → AI. Wtedy włączę Gemini 2.5 Flash na stałe + premium głos JARVISA. (Działa też darmowy Groq/Cerebras/Mistral/OpenRouter, jeśli wolisz.)";
       }
-      const patch: Partial<Settings> = { provider: pick.id, model: pick.model, voicePinned: true, voiceLock: true, speak: true };
+      // UWAGA: voicePinned = stały głos JARVISA (to chcemy). voiceLock to OSOBNA funkcja
+      // (biometria „tylko mój głos", wymaga nagranego profilu) — NIE ustawiamy jej tutaj.
+      const patch: Partial<Settings> = { provider: pick.id, model: pick.model, voicePinned: true, speak: true };
       let voiceMsg: string;
       if (pick.id === "gemini") {
         patch.voiceMode = "gemini";

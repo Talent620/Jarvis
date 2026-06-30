@@ -27,7 +27,7 @@ describe("lock_assistant — stały umysł + premium głos", () => {
     expect(store.settings.model).toBe("gemini-2.5-flash");
     expect(store.settings.voiceMode).toBe("gemini");
     expect(store.settings.voicePinned).toBe(true);
-    expect(store.settings.voiceLock).toBe(true);
+    expect(store.settings.voiceLock).toBe(false); // biometria „tylko mój głos" — NIE włączamy bez profilu
     expect(store.settings.geminiVoice).toBe("Charon"); // stały, głęboki głos
     expect(r).toMatch(/STAŁY umysł/);
   });

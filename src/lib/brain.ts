@@ -699,7 +699,11 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
           ? (delta: string) => { progressed = true; streamed += delta; onToken(streamed); }
           : undefined;
         // Watchdog: jeśli dostawca się zatnie (milczy/wisi), przełącz się szybko zamiast czekać 120 s.
-        const wd = makeStallWatchdog(() => settled, () => progressed, !!onTok);
+        // Szybki cut-off „brak pierwszego tokenu" stosujemy TYLKO gdy jest dokąd się przełączyć
+        // (kolejny dostawca/klucz). Dla OSTATNIEGO w łańcuchu zostaje tylko twardy limit — żeby
+        // nie ucinać przedwcześnie wolnej, ale działającej odpowiedzi u kogoś z jednym dostawcą.
+        const hasFailover = i < order.length - 1 || j < keys.length - 1;
+        const wd = makeStallWatchdog(() => settled, () => progressed, !!onTok && hasFailover);
         const attemptP = withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model, onToken: onTok }));
         attemptP.catch(() => {}); // jeśli przegra wyścig z watchdogiem, późne odrzucenie nie może być „unhandled"
         let reply: JarvisReply;

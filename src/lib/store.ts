@@ -158,7 +158,7 @@ const defaultSettings: Settings = {
   fishAudioVoiceId: "",
   clipboardWatch: false,
   councilMode: false,
-  voiceLock: true,
+  voiceLock: false,
   voiceProfile: [],
   voiceMatch: 0.6,
   endpointShortMs: 900,
