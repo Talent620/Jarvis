@@ -11,7 +11,8 @@ import { buildProfileBlock } from "./profile";
 import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, isKeyError, humanize, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
-import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, reasoningProfileFor, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
+import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
+import { classifyCognitionLocal } from "./cognitiveController";
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
 import { recordEpisode, loadEpisodes } from "./episodicMemory";
 import { buildFusionBlock } from "./contextFusion";
@@ -616,6 +617,11 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // World Model: gdy pytanie dotyczy znanej osoby/projektu/firmy, dołącz jej kontekst i powiązania.
   const worldBlock = worldContextBlock(lastUser?.content || "");
 
+  // Kontroler poznawczy: JEDEN centralny wybór sposobu działania (rozmowa/research/analiza/akcja/
+  // cel/obraz/dopytanie) na podstawie szybkiej, LOKALNEJ klasyfikacji — zero dodatkowych wywołań API.
+  // Z niego bierzemy adaptacyjny profil rozumowania i flagi (needs*), z których korzysta runtime.
+  const cognition = classifyCognitionLocal(lastUser?.content || "", { hasImage: !!lastUser?.image });
+
   // Z11 — RAG dla modelu lokalnego: `baseCtx.system` (pamięć: fakty + profil + Mem0 + Szósty Zmysł)
   // jest TEN SAM dla WSZYSTKICH dostawców, w tym Ollamy/WebLLM. Mały model lokalny odpowiada z
   // Twoim kontekstem; bez Mem0 degraduje do lokalnego profilu/faktów (zero zależności sieciowych).
@@ -628,11 +634,8 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
     tools: selectToolsForIntent(lastUser?.content || "", toolDefs),
     history: trimmed,
     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-    // Adaptacyjne myślenie: profil rozumowania z RODZAJU zadania (trudne → głębiej, proste → szybko).
-    reasoningProfile: reasoningProfileFor(classifyTask(lastUser?.content || "", !!lastUser?.image).kind, {
-      deepThink: needsDeepThink(lastUser?.content || ""),
-      veryShort: (lastUser?.content || "").trim().split(/\s+/).filter(Boolean).length <= 3,
-    }),
+    // Adaptacyjne myślenie: profil z kontrolera poznawczego (trudne/cele → głębiej, proste → szybko).
+    reasoningProfile: cognition.reasoningProfile,
   };
 
   // Router dobiera dostawcę+model do zadania (prostota/złożoność/obraz) + fallback.
