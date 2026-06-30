@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ConsentRequest } from "../lib/permissions";
 import { createListener, isSpeechSupported, speak, stopSpeaking, type VoiceListener } from "../lib/voice";
+import { parseVoiceConsent } from "../lib/voiceConsent";
 import { feedback } from "../lib/feedback";
 import { store } from "../lib/store";
 
@@ -45,41 +46,51 @@ export default function PermissionDialog({
   const label = LABELS[req.tool] ?? req.tool;
   const summary = JSON.stringify(req.input ?? {}, null, 0).slice(0, 200);
 
-  // Potwierdzanie głosem: JARVIS pyta i nasłuchuje „tak"/„nie".
+  // Potwierdzanie głosem (half-duplex): JARVIS NAJPIERW kończy mówić, dopiero potem nasłuchuje —
+  // i akceptuje TYLKO jednoznaczne „tak"/„nie" (słowa-akcje nie zatwierdzają). Timeout → odmowa.
   useEffect(() => {
     feedback("tap");
     if (!store.settings.voiceConfirm || !isSpeechSupported()) return;
     let decided = false;
     let listener: VoiceListener | null = null;
+    let startTimer: ReturnType<typeof setTimeout> | null = null;
+    let deadline: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
     const decide = (allow: boolean) => {
       if (decided) return;
       decided = true;
+      if (deadline) clearTimeout(deadline);
       listener?.stop();
       stopSpeaking();
       finish(allow, rememberRef.current);
     };
-    speak(`${label}? Powiedz tak albo nie.`, { ...store.settings, speak: true });
-    listener = createListener({
-      wakeWord: false,
-      onError: () => {
-        // Głos niedostępny (np. brak klucza Groq na desktopie) — zostaw decyzję ręczną.
-        decided = true; // blokuje auto-restart w onEnd; przyciski wciąż działają
-        setListening(false);
-      },
-      onFinal: (t) => {
-        const v = t.toLowerCase();
-        if (/\b(tak|zezw|potwierdz|wy[śs]lij|dzwo[nń]|dawaj|okej|\bok\b|zgoda|jasne|r[oó]b|zr[oó]b|prosz[eę]|śmiało|smialo)\b/.test(v)) decide(true);
-        else if (/\b(nie|odm[oó]w|anuluj|stop|przerwij|zostaw|zaniechaj)\b/.test(v)) decide(false);
-        else listener?.start(); // niezrozumiałe — słuchaj dalej
-      },
-      onEnd: () => {
-        if (!decided) listener?.start();
-      },
-    });
-    setListening(true);
-    listener.start();
+    const beginListening = () => {
+      if (cancelled || decided) return;
+      listener = createListener({
+        wakeWord: false,
+        onError: () => { decided = true; setListening(false); },
+        onFinal: (t) => {
+          const r = parseVoiceConsent(t);
+          if (r === "yes") decide(true);
+          else if (r === "no") decide(false);
+          else listener?.start(); // niejasne — słuchaj dalej (do timeoutu)
+        },
+        onEnd: () => { if (!decided) listener?.start(); },
+      });
+      setListening(true);
+      listener.start();
+      // Bezpiecznik: brak jednoznacznej odpowiedzi w 20 s → traktuj jak odmowę (fail-safe).
+      deadline = setTimeout(() => decide(false), 20_000);
+    };
+    // Poczekaj aż TTS skończy (Promise), po czym krótki bufor ciszy, dopiero wtedy nasłuch.
+    speak(`${label}? Powiedz tak albo nie.`, { ...store.settings, speak: true })
+      .catch(() => {})
+      .then(() => { if (!cancelled && !decided) startTimer = setTimeout(beginListening, 350); });
     return () => {
+      cancelled = true;
       decided = true;
+      if (startTimer) clearTimeout(startTimer);
+      if (deadline) clearTimeout(deadline);
       listener?.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
