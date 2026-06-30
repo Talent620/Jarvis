@@ -8,6 +8,7 @@ import { applyComposerAction, COMPOSER_ACTIONS, type ComposerAction } from "../l
 import { canSendDirect, sendOfferEmail } from "../lib/mailer";
 import { draftOffer } from "../lib/offer";
 import { markContacted } from "../lib/salesEngine";
+import { leadTimeline, appendLeadNote } from "../lib/leadNotes";
 import { salesOsConfigured, outreachViaSalesOs, leadToOutreachInput, pushLeadStatusToSalesOs } from "../lib/salesOs";
 import { copyWithToast, toast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
@@ -36,6 +37,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
   const [sending, setSending] = useState(false);
   const [osSending, setOsSending] = useState(false);
   const [composing, setComposing] = useState<ComposerAction | "">(""); // która akcja kompozytora trwa
+  const [noteInput, setNoteInput] = useState(""); // dziennik kontaktu — nowa notatka po rozmowie
 
   // „Teczka się nie otwiera": zamiast cicho renderować NIC (gdy lead zniknął), pokaż czytelny
   // panel z możliwością zamknięcia — koniec wrażenia „nie działa".
@@ -209,6 +211,41 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
               wypisze słabe punkty z rozwiązaniami i przygotuje e-mail + skrypt rozmowy — pod tę konkretną firmę.
             </p>
           )}
+
+          {/* 📞 Dziennik kontaktu — zapisz, co ustaliłeś po rozmowie (CRM) */}
+          {(() => {
+            const timeline = leadTimeline(lead);
+            const saveNote = () => {
+              const t = noteInput.trim();
+              if (!t) { toast("Wpisz treść notatki."); return; }
+              set({ notes: appendLeadNote(lead.notes, t, Date.now()) });
+              setNoteInput("");
+              toast("📝 Notatka zapisana w dzienniku kontaktu.");
+            };
+            return (
+              <div className="journal-card" style={{ padding: "10px 12px", marginTop: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📞 Dziennik kontaktu</div>
+                <textarea
+                  className="ta"
+                  style={{ minHeight: 56 }}
+                  value={noteInput}
+                  placeholder="Co ustaliłeś po rozmowie? np. nie odebrał — oddzwonić jutro; albo: zamyka firmę — nie kontaktować."
+                  onChange={(e) => setNoteInput(e.target.value)}
+                />
+                <button className="btn" style={{ marginTop: 6 }} onClick={saveNote}>💾 Zapisz notatkę</button>
+                {timeline.length > 0 && (
+                  <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+                    {timeline.slice(0, 12).map((n, i) => (
+                      <div key={i} style={{ fontSize: 12.5, lineHeight: 1.45, borderLeft: "2px solid var(--line-strong)", paddingLeft: 8 }}>
+                        <span className="muted" style={{ fontSize: 11 }}>{n.at ? new Date(n.at).toLocaleString("pl-PL") : "—"}</span>
+                        <div>{n.text}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Audyt techniczny */}
           {audit && (

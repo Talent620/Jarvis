@@ -319,6 +319,12 @@ export interface LeadIntel {
   updatedAt: number;
 }
 
+/** Pojedynczy wpis w dzienniku kontaktu leada (notatka po rozmowie). */
+export interface LeadNote {
+  at: number;
+  text: string;
+}
+
 export interface Lead {
   id: string;
   company: string;
@@ -333,6 +339,8 @@ export interface Lead {
   niche?: string;
   location?: string;
   note?: string;
+  /** Dziennik kontaktu — ręczne notatki po rozmowach (oś czasu). Stare `note` migruje jako pierwszy wpis. */
+  notes?: LeadNote[];
   /** Szacowana wartość zlecenia (PLN). */
   value?: number;
   /** Gotowy szkic oferty (cold mail) napisany przez JARVIS-a. */
