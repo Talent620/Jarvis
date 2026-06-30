@@ -10,6 +10,7 @@ export default tseslint.config(
   {
     ignores: [
       "dist",
+      "dist-studio",
       "node_modules",
       "sales-os",
       "server",
