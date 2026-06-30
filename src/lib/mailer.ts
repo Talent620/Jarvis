@@ -317,6 +317,26 @@ function leadEmailOf(l: Lead): string {
   return c.includes("@") ? c : "";
 }
 
+/** Indeks wysłanych maili (firmy + adresy) — zbudowany RAZ, by sprawdzanie „już mailowany" było O(1). */
+export function buildSentIndex(sentBox: { company?: string; to?: string }[]): { companies: Set<string>; addresses: Set<string> } {
+  const companies = new Set<string>();
+  const addresses = new Set<string>();
+  for (const m of sentBox || []) {
+    const c = (m.company || "").trim().toLowerCase();
+    if (c) companies.add(c);
+    const a = (m.to || "").trim().toLowerCase();
+    if (a) addresses.add(a);
+  }
+  return { companies, addresses };
+}
+
+/** Czy lead (po firmie LUB adresie) był już mailowany — wg indeksu. O(1). Zachowuje dawne dopasowanie. */
+export function wasLeadEmailed(index: { companies: Set<string>; addresses: Set<string> }, company: string, email: string): boolean {
+  const c = (company || "").trim().toLowerCase();
+  const e = (email || "").trim().toLowerCase();
+  return (!!c && index.companies.has(c)) || (!!e && index.addresses.has(e));
+}
+
 /**
  * Masowa wysyłka ofert do leadów — z zabezpieczeniami: tylko ci z adresem e-mail,
  * pomija JUŻ mailowanych (po firmie/adresie), limit na turę (domyślnie 25 — szanuje
@@ -325,11 +345,9 @@ function leadEmailOf(l: Lead): string {
 export async function sendAllOffers(max = 25, onProgress?: (done: number, total: number) => void): Promise<BulkSendResult> {
   const leads = store.data.leads || [];
   const sentBox = store.data.sentMail || [];
-  const wasEmailed = (l: Lead): boolean => {
-    const comp = (l.company || "").trim().toLowerCase();
-    const em = leadEmailOf(l).toLowerCase();
-    return sentBox.some((m) => (!!comp && (m.company || "").trim().toLowerCase() === comp) || (!!em && (m.to || "").trim().toLowerCase() === em));
-  };
+  // Perf: indeks O(m) zamiast skanu sentBox dla KAŻDEGO leada (było O(leady × wysłane)).
+  const sentIndex = buildSentIndex(sentBox);
+  const wasEmailed = (l: Lead): boolean => wasLeadEmailed(sentIndex, l.company || "", leadEmailOf(l));
   // Najpierw policz dokładnie (cała lista), potem wyślij tylko do uprawnionych (limit).
   // Wymagamy POPRAWNEGO adresu — inaczej marnowalibyśmy wywołanie AI na napisanie oferty,
   // którą i tak odrzuci walidacja przy wysyłce (np. „biuro(małpa)x”).
