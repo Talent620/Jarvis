@@ -4,6 +4,8 @@ import { openService, call, sms, navigate, smartHome, openUrl, openCompose } fro
 import { saType, saTap, saGlobal, saOpenApp, saOpenSettings } from "./systemActions";
 import { answerProjectQuestion, type KnowledgeIndex } from "./projectKnowledge";
 import { requestScreen, resolveScreen, SCREENS } from "./navIntent";
+import { financeSummaryText, FINANCE_STATUSES } from "./finance";
+import type { FinanceProject, FinanceStatus } from "../types";
 import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
 import { getWeather } from "./weather";
 import { scheduleReminder, scheduleTimer } from "./notifications";
@@ -1451,6 +1453,55 @@ const tools: Tool[] = [
       requestScreen(s.id);
       return `✅ Otwieram: ${s.label}.`;
     },
+  },
+  // === Finanse z czatu (Jeden Jarvis) — dodaj projekt / zmień status / podsumowanie ===
+  {
+    def: {
+      name: "finance_add_project",
+      description: "Dodaj projekt/zlecenie do modułu Finanse (kwota netto, opcjonalnie klient, koszt, status). Używaj, gdy użytkownik mówi np. dodaj projekt na 8000 dla firmy X, nowe zlecenie strona za 5000.",
+      input_schema: obj({
+        name: str("Nazwa projektu/zlecenia"),
+        amount: num("Kwota netto w zł"),
+        client: str("Klient (opcjonalnie)"),
+        cost: num("Koszt w zł (opcjonalnie)"),
+        status: str("Status (opcjonalnie): lead, oferta, negocjacje, w_realizacji, review, gotowe, oczekuje_platnosci, oplacone, zamkniete, anulowane"),
+      }, ["name", "amount"]),
+    },
+    run: ({ name, amount, client, cost, status }) => {
+      const nm = String(name ?? "").trim();
+      if (!nm) return "Podaj nazwę projektu.";
+      const st = (FINANCE_STATUSES.find((s) => s.id === status)?.id || "lead") as FinanceStatus;
+      const now = Date.now();
+      const p: FinanceProject = { id: uid(), name: nm, client: client ? String(client).trim() : undefined, status: st, amount: Number(amount) || 0, cost: cost != null ? Number(cost) || undefined : undefined, createdAt: now, updatedAt: now };
+      store.setData((d) => { if (!d.financeProjects) d.financeProjects = []; d.financeProjects.unshift(p); });
+      return `✅ Dodano projekt: ${p.name}${p.client ? ` (klient ${p.client})` : ""} — ${Math.round(p.amount).toLocaleString("pl-PL")} zł, status ${st}.`;
+    },
+  },
+  {
+    def: {
+      name: "finance_set_status",
+      description: "Zmień status projektu finansowego (dopasowanie po fragmencie nazwy). Status oplacone ustawia też kwotę zapłaconą = kwota projektu.",
+      input_schema: obj({ name: str("Fragment nazwy projektu"), status: str("Nowy status, np. oplacone, w_realizacji, anulowane") }, ["name", "status"]),
+    },
+    run: ({ name, status }) => {
+      const st = FINANCE_STATUSES.find((s) => s.id === status || s.label.toLowerCase() === String(status ?? "").toLowerCase());
+      if (!st) return `Nieznany status. Dostępne: ${FINANCE_STATUSES.map((s) => s.id).join(", ")}.`;
+      const q = String(name ?? "").trim().toLowerCase();
+      let hit = "";
+      store.setData((d) => {
+        const p = (d.financeProjects || []).find((x) => x.name.toLowerCase().includes(q));
+        if (p) { p.status = st.id; p.updatedAt = Date.now(); if (st.id === "oplacone") p.paidAmount = p.amount; hit = p.name; }
+      });
+      return hit ? `✅ Projekt ${hit} → status ${st.label}.` : `Nie znalazłem projektu pasującego do "${name}".`;
+    },
+  },
+  {
+    def: {
+      name: "finance_summary",
+      description: "Podsumowanie finansów: przychód, zysk, marża, ROI, zapłacone/do zapłaty, liczba projektów i klientów, najlepszy klient. Używaj, gdy użytkownik pyta np. ile zarobiłem, jak stoją finanse, pokaż zysk.",
+      input_schema: obj({}),
+    },
+    run: () => financeSummaryText(store.data.financeProjects || []),
   },
 ];
 

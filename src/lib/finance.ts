@@ -104,6 +104,20 @@ export function monthlyRevenue(projects: FinanceProject[], now: number, months =
   return out;
 }
 
+/** Pure: zwięzłe podsumowanie finansów do odpowiedzi czatu (głos/tekst). */
+export function financeSummaryText(projects: FinanceProject[]): string {
+  if (!projects || !projects.length) return "Brak projektów finansowych. Dodaj pierwszy — np. dodaj projekt na 8000 dla firmy X.";
+  const k = financeKpis(projects);
+  const zl = (n: number) => `${Math.round(n).toLocaleString("pl-PL")} zł`;
+  const lines = [
+    `💰 Przychód ${zl(k.revenue)} · zysk ${zl(k.profit)} (marża ${k.margin}%, ROI ${k.roi}%).`,
+    `Zapłacone ${zl(k.paid)} · do zapłaty ${zl(k.unpaid)}. Projekty: ${k.total} (aktywne ${k.openCount}, zamknięte ${k.doneCount}). Klienci: ${k.clients}.`,
+  ];
+  if (k.topClient) lines.push(`Najlepszy klient: ${k.topClient.name} (${zl(k.topClient.revenue)}).`);
+  if (k.bestProject) lines.push(`Najdochodowszy projekt: ${k.bestProject.name} (${zl(k.bestProject.profit)}).`);
+  return lines.join("\n");
+}
+
 /** Pure: ranking klientów wg przychodu (malejąco). */
 export function clientRanking(projects: FinanceProject[], top = 5): { name: string; revenue: number; projects: number }[] {
   const map = new Map<string, { revenue: number; projects: number }>();
