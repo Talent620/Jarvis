@@ -269,6 +269,10 @@ export default function App() {
     return [
       open("settings", "Ustawienia", setShowSettings, "⚙", "klucze model glos motyw konto api"),
       open("sales", "Pulpit Sprzedaży", setShowSales, "📈", "leady crm oferty klienci sprzedaz"),
+      open("finance", "Finanse", setShowFinance, "💰", "finanse projekty zysk marza cash flow kpi przychod faktury"),
+      open("mail", "Wyślij e-mail", setShowMail, "✉", "mail email wyslij poczta oferta wiadomosc"),
+      open("sent", "Wysłane", setShowSent, "📤", "wyslane maile skrzynka historia poczty"),
+      open("brand", "Dusza Marki", setShowBrand, "🎨", "marka brand ton kolory fonty styl spojnosc"),
       open("goal", "🎯 Zleć cel", setShowGoal, "🎯", "do-for-me projekt plan wieloetapowe cel"),
       open("studio", "Studio Obrazów", setShowStudio, "🎨", "zdjecia edycja generuj obraz foto"),
       open("guardian", "Diagnoza i naprawa (dawny Strażnik)", setShowGuardian, "🩺", "napraw przyspiesz pomoc diagnoza strażnik"),

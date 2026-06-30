@@ -107,6 +107,24 @@ export const MANUAL: ManualEntry[] = [
     what: "Po jednorazowej konfiguracji JARVIS i Pulpit Sprzedaży wysyłają maile za Ciebie (oferty do leadów, odpowiedzi). Bez konfiguracji nadal otworzysz gotową wiadomość w swojej aplikacji pocztowej, a wysłane lądują w Skrzynce wysłanych.",
     keywords: "poczta email mail smtp gmail wysyłka wyślij oferta korespondencja",
   },
+  {
+    id: "finance", icon: "💰", title: "Finanse (Financial Intelligence)", category: "Sprzedaż i biznes",
+    how: `${PALETTE} → „Finanse”. Głosem/czatem: „dodaj projekt na 8000 dla firmy X”, „ile zarobiłem”, „oznacz projekt X jako opłacony”.`,
+    what: "Dashboard pieniędzy: dodajesz projekty (kwota, koszt, status od Lead po Opłacone), a JARVIS liczy przychód, zysk, marżę, ROI, VAT, cash flow (zapłacone/do zapłaty), top klienta i najdochodowszy projekt. Sterujesz też z czatu — bez wchodzenia w moduł.",
+    keywords: "finanse pieniądze kasa zysk marża roi vat przychód projekty faktury cash flow kpi zarobek",
+  },
+  {
+    id: "sent", icon: "📤", title: "Skrzynka wysłanych", category: "Sprzedaż i biznes",
+    how: `${PALETTE} → „Wysłane”.`,
+    what: "Lista maili realnie wysłanych z aplikacji (oferty do leadów, ręczne wiadomości) — kiedy, do kogo, czym (SMTP/Gmail). Wiesz, komu już pisałeś, żeby nie dublować kontaktu.",
+    keywords: "wysłane maile skrzynka historia poczty komu pisałem oferty",
+  },
+  {
+    id: "brand", icon: "🎨", title: "Dusza Marki (Brand Kit)", category: "Sprzedaż i biznes",
+    how: `${PALETTE} → „Dusza Marki”.`,
+    what: "Jedno źródło stylu marki: ton wypowiedzi, kolory i fonty. JARVIS wstrzykuje je do generacji stron, treści i obrazów, żeby wszystko było spójne. Trafia też do zwykłej kopii zapasowej (bez sekretów).",
+    keywords: "marka brand dusza ton kolory fonty styl spójność identyfikacja wizualna",
+  },
 
   // — Praca i organizacja —
   {

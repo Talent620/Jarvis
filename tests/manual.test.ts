@@ -119,9 +119,10 @@ describe("manual — uruchamianie (runIdFor)", () => {
   it("każdy run-id (poza null) to realna komenda z palety App.tsx", () => {
     // Lista id komend z App.tsx (grupy Otwórz/Akcja) — runIdFor nie może wskazywać poza nią.
     const PALETTE_IDS = new Set([
-      "settings", "sales", "goal", "studio", "guardian", "mind", "memory", "profile", "tasks",
-      "journal", "web", "money", "bargain", "translator", "transcribe", "cards", "content", "ads",
-      "hud", "status", "recall", "data", "boss", "voicemode", "live", "newchat", "private", "exportmd", "mic",
+      "settings", "sales", "finance", "mail", "sent", "brand", "goal", "studio", "guardian", "mind",
+      "memory", "profile", "tasks", "journal", "web", "money", "bargain", "translator", "transcribe",
+      "cards", "content", "ads", "hud", "status", "recall", "data", "boss", "voicemode", "live",
+      "newchat", "private", "exportmd", "mic",
     ]);
     for (const e of MANUAL) {
       const rid = runIdFor(e);

@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🔎 Wszystkie moduły biznesowe w palecie i instrukcji: Finanse, Wyślij e-mail, Wysłane i Dusza Marki dało się dotąd otworzyć tylko z Centrum — teraz znajdziesz je też w palecie poleceń (Ctrl/⌘+K) i w instrukcji/FAQ. Komplet 9 funkcji Sprzedaż i biznes jest w jednym miejscu, łatwy do wyszukania.",
       "📱 Twarda gwarancja zgodności z Samsung S9 (stary WebView): kompilacja celuje teraz w ES2019, a automatyczny skaner pilnuje, by do kodu nie wszedł żaden regex wywalający Chrome 79 (flaga /u, klasy \\p{...}, lookbehind). Przy okazji usunąłem 3 takie wzorce (boss, powiadomienia). Mniej niespodziewanych wywałek na starszych telefonach.",
       "🎨 Marka i podpisy w zwykłej kopii (bez sekretów): zwykła kopia zapasowa przenosi teraz Duszę Marki (ton, kolory, fonty) i bibliotekę podpisów e-mail na nowe urządzenie — bez eksportu kluczy API, haseł SMTP czy tokenów. Stare kopie wczytują się jak dawniej.",
       "🛟 Kopia zapasowa obejmuje teraz także Finanse: projekty/zlecenia (kwoty, statusy, płatności) trafiają do zwykłej, pełnej i szyfrowanej kopii oraz wracają przy imporcie. Przenosisz się na nowy telefon lub odzyskujesz po reinstalacji bez utraty kasy. Stare kopie (bez finansów) wczytują się jak dawniej i nie kasują istniejących projektów.",
