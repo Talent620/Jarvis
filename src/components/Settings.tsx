@@ -27,6 +27,7 @@ import { lockIsSet, setPin as setLockPin, clearPin } from "../lib/lock";
 import { enablePrivateMode, detectOllama, findOllamaServer, normalizeOllamaUrl } from "../lib/privateMode";
 import { pullOllamaModel } from "../lib/ollamaPull";
 import { warmNow } from "../lib/prewarm";
+import { getGeminiModels, pickGeminiModel, type IntelligenceMode } from "../lib/geminiCapabilities";
 import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkOllama";
 import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
 import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
@@ -147,6 +148,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [micMsg, setMicMsg] = useState("");
   const [gcalBusy, setGcalBusy] = useState(false);
   const [gcalMsg, setGcalMsg] = useState("");
+  // Aktywny model Gemini dla wybranego trybu inteligencji (uczciwie pokazany — bez chain-of-thought).
+  const [activeGeminiModel, setActiveGeminiModel] = useState<string | null>(null);
   const desktopGoogle = typeof window !== "undefined" && !!(window as { jarvisDesktop?: { googleConnect?: unknown } }).jarvisDesktop?.googleConnect;
 
   useEffect(() => {
@@ -265,6 +268,17 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     const t = setTimeout(() => void loadOllamaModels(), 600);
     return () => clearTimeout(t);
   }, [s.ollamaUrl]);
+  // Uczciwie pokaż, jaki model Gemini odpowiada przy wybranym trybie inteligencji.
+  // getGeminiModels ma fallback offline (FALLBACK_GEMINI_MODELS), więc działa też bez sieci/klucza.
+  useEffect(() => {
+    if (tab !== "ai") return;
+    let alive = true;
+    const mode: IntelligenceMode = s.intelligenceMode || "balanced";
+    void getGeminiModels(s.keys.gemini || "")
+      .then((models) => { if (alive) setActiveGeminiModel(pickGeminiModel(models, mode, !!s.geminiAllowPreview)); })
+      .catch(() => { if (alive) setActiveGeminiModel(null); });
+    return () => { alive = false; };
+  }, [tab, s.intelligenceMode, s.geminiAllowPreview, s.keys.gemini]);
 
   // „Mózg na żywo" — podgląd ostatnich decyzji routera (Refleks vs Kora). Tylko lokalnie.
   const [routeLines, setRouteLines] = useState<RouteLine[]>([]);
@@ -777,6 +791,57 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   )}
                 </div>
               )}
+
+              {/* 🧠 POZIOM INTELIGENCJI — jeden suwak jakość/koszt. Steruje doborem modelu Gemini
+                  (geminiCapabilities.pickGeminiModel) i głębią rozumowania. Domyślnie „Zrównoważony".
+                  Uczciwie: maksymalna = wolniej i drożej. Nie pokazujemy toku myślenia (chain-of-thought). */}
+              <h3 id="set-intelligence" style={{ marginTop: 18 }}>🧠 Poziom inteligencji</h3>
+              <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+                Jeden wybór: szybciej i taniej czy mądrzej i dokładniej. JARVIS sam dobiera model Gemini i głębię rozumowania.
+              </p>
+              <div className="field">
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {([
+                    { id: "economy", label: "⚡ Oszczędny", desc: "Najtaniej i najszybciej. Proste odpowiedzi od ręki." },
+                    { id: "balanced", label: "⚖ Zrównoważony", desc: "Domyślny. Dobry stosunek jakości do kosztu i szybkości." },
+                    { id: "maximum", label: "🧠 Maksymalna inteligencja", desc: "Najmądrzej, z dodatkową weryfikacją. Wolniej i drożej." },
+                  ] as { id: IntelligenceMode; label: string; desc: string }[]).map((m) => {
+                    const active = (s.intelligenceMode || "balanced") === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        className="btn"
+                        onClick={() => set({ intelligenceMode: m.id })}
+                        style={{
+                          width: "auto", marginTop: 0, padding: "8px 12px", fontSize: 13, flex: "1 1 auto",
+                          border: active ? `2px solid ${BRAIN_BLUE}` : "1px solid var(--line)",
+                          background: active ? "rgba(60,140,255,0.12)" : "transparent",
+                          fontWeight: active ? 700 : 500,
+                        }}
+                      >
+                        {m.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="muted" style={{ fontSize: 12, display: "block", marginTop: 6 }}>
+                  {(s.intelligenceMode || "balanced") === "economy"
+                    ? "Najtaniej i najszybciej — proste odpowiedzi od ręki, mniej dodatkowych wywołań."
+                    : (s.intelligenceMode || "balanced") === "maximum"
+                    ? "Najmądrzej — przy ważnych zadaniach dokłada krytykę/weryfikację. Uczciwie: bywa wolniej i drożej."
+                    : "Zrównoważony — sensowny domyślny balans jakości, szybkości i kosztu."}
+                </span>
+                {activeGeminiModel && (
+                  <span className="muted" style={{ fontSize: 12, display: "block", marginTop: 4 }}>
+                    Aktywny model Gemini dla tego trybu: <b style={{ color: BRAIN_BLUE }}>{activeGeminiModel}</b>
+                    <span className="muted"> · dobór automatyczny przez geminiCapabilities</span>
+                  </span>
+                )}
+                <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, fontSize: 13, cursor: "pointer" }}>
+                  <input type="checkbox" checked={!!s.geminiAllowPreview} onChange={(e) => set({ geminiAllowPreview: e.target.checked })} />
+                  Pozwól na modele podglądowe (preview) — nowsze, ale mniej stabilne
+                </label>
+              </div>
 
               {/* 🔵 GŁÓWNY MÓZG — co teraz realnie odpowiada (niebieski). W środku: dymek
                   inteligencji 🧠 % (orientacyjny), status 🟢 połączono (zielony) i pomiar 🔬. */}
