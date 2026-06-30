@@ -1,7 +1,34 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { mapOutcome, mapStage, mapLeadStatus, mapSalesOsLead, mergeSnapshotLeads, leadToPublicPayload, leadToOutreachInput, metricsToText, shouldAutoSyncSalesOs, type SalesOsLead } from "../src/lib/salesOs";
+import { mapOutcome, mapStage, mapLeadStatus, mapSalesOsLead, mergeSnapshotLeads, leadToPublicPayload, leadToOutreachInput, metricsToText, shouldAutoSyncSalesOs, outreachResultFromResponse, type SalesOsLead } from "../src/lib/salesOs";
+import { canClaimSuccess } from "../src/lib/actionOutcome";
 import type { Lead } from "../src/types";
+
+describe("Sales OS — symulacja NIGDY nie jest wysyłką (outreachResultFromResponse)", () => {
+  it("simulated:true → sent=false, stan SIMULATED, brak sukcesu", () => {
+    const r = outreachResultFromResponse({ sent: true, simulated: true, provider: "resend" }, "Firma X", 100);
+    expect(r.sent).toBe(false);
+    expect(r.simulated).toBe(true);
+    expect(r.outcome?.state).toBe("SIMULATED");
+    expect(canClaimSuccess(r.outcome)).toBe(false);
+    expect(r.message).not.toMatch(/✅/);
+  });
+
+  it("realna wysyłka (sent, bez symulacji) → CONFIRMED, sent=true", () => {
+    const r = outreachResultFromResponse({ sent: true, provider: "resend" }, "Firma X", 100);
+    expect(r.sent).toBe(true);
+    expect(r.outcome?.state).toBe("CONFIRMED");
+    expect(r.outcome?.evidence?.confirmedAt).toBe(100);
+    expect(canClaimSuccess(r.outcome)).toBe(true);
+  });
+
+  it("tylko szkic w kolejce → DRAFT, sent=false", () => {
+    const r = outreachResultFromResponse({ sent: false, drafted: true }, "Firma X", 100);
+    expect(r.sent).toBe(false);
+    expect(r.outcome?.state).toBe("DRAFT");
+    expect(canClaimSuccess(r.outcome)).toBe(false);
+  });
+});
 
 describe("Łącznik AI Sales OS — autonomiczna auto-synchronizacja (shouldAutoSyncSalesOs)", () => {
   const base = { everyMin: 30, url: "https://crm.example.com", token: "tok", lastTs: 0, now: 31 * 60_000 };

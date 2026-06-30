@@ -9,6 +9,7 @@
 import { fetchTimeout } from "./http";
 import { store, uid } from "./store";
 import { openUrl } from "./deviceControl";
+import { simulated, confirmed, draft, type ActionOutcome } from "./actionOutcome";
 import type { Lead, LeadStatus } from "../types";
 
 /**
@@ -388,6 +389,39 @@ export interface OutreachResult {
   message: string;
   sent?: boolean;
   drafted?: boolean;
+  simulated?: boolean; // odpowiedź była symulacją — NIC nie wyszło na zewnątrz
+  outcome?: ActionOutcome; // kontrakt prawdy działania (dowód skutku)
+}
+
+/**
+ * Czyste: zmapuj surową odpowiedź Sales OS na OutreachResult + ActionOutcome.
+ * KLUCZ: symulacja (simulated=true) NIGDY nie jest wysyłką — sent=false, stan SIMULATED.
+ * Realna wysyłka = sent && !simulated → CONFIRMED. Szkic w kolejce → DRAFT.
+ */
+export function outreachResultFromResponse(
+  d: { sent?: boolean; drafted?: boolean; provider?: string; simulated?: boolean },
+  who: string,
+  now: number,
+): OutreachResult {
+  if (d.simulated) {
+    return {
+      ok: true, sent: false, simulated: true, drafted: d.drafted,
+      message: `🧪 Sales OS zasymulował mail do „${who}” — NIC nie wysłano (ustaw RESEND_API_KEY, by wysyłać naprawdę).`,
+      outcome: simulated(`symulacja outreachu do ${who}`),
+    };
+  }
+  if (d.sent) {
+    return {
+      ok: true, sent: true, drafted: d.drafted,
+      message: `✅ Sales OS napisał i wysłał mail do „${who}” (${d.provider || "dostawca"}).`,
+      outcome: confirmed({ confirmedAt: now, source: d.provider || "salesos" }),
+    };
+  }
+  return {
+    ok: true, sent: false, drafted: true,
+    message: `📝 Sales OS przygotował szkic maila do „${who}” w kolejce akceptacji (nie wysłano).`,
+    outcome: draft(`szkic outreachu do ${who}`),
+  };
 }
 
 /** Lead JARVIS-a → dane wejściowe outreachu (rozdziela e-mail/telefon z `contact`). */
@@ -437,10 +471,7 @@ export async function outreachViaSalesOs(input: OutreachInput): Promise<Outreach
     }
     const d = (await res.json()) as { sent?: boolean; drafted?: boolean; provider?: string; simulated?: boolean };
     const who = input.companyName || input.name || "lead";
-    if (d.sent) {
-      return { ok: true, sent: true, drafted: d.drafted, message: `✅ Sales OS napisał i wysłał mail do „${who}”${d.simulated ? " (tryb symulacji — ustaw RESEND_API_KEY, by wysyłać naprawdę)" : ` (${d.provider})`}.` };
-    }
-    return { ok: true, sent: false, drafted: true, message: `📝 Sales OS przygotował szkic maila do „${who}” w kolejce akceptacji (nie wysłano).` };
+    return outreachResultFromResponse(d, who, Date.now());
   } catch (e) {
     return { ok: false, message: `Brak połączenia z Sales OS: ${e instanceof Error ? e.message : e}` };
   }

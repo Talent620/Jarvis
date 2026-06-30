@@ -40,9 +40,11 @@ export default function SalesPlan({ onClose, onLead }: { onClose: () => void; on
 
   const sendFollowUp = (l: Lead, kind: "sms" | "gmail" | "done") => {
     const msg = followUpMessage(l, (l.followUpCount ?? 0) + 1);
-    if (kind === "sms" && phone(l)) window.open(smsUrl(phone(l), msg), "_blank");
-    else if (kind === "gmail" && email(l)) window.open(gmailComposeUrl(email(l), `W sprawie strony dla ${l.company}`, appendSignature(msg, store.settings.emailSignature)), "_blank", "noopener");
+    if (kind === "sms" && phone(l)) { window.open(smsUrl(phone(l), msg), "_blank"); toast("Otwarto SMS — kliknij „Oznacz: wysłane” po wysłaniu."); return; }
+    if (kind === "gmail" && email(l)) { window.open(gmailComposeUrl(email(l), `W sprawie strony dla ${l.company}`, appendSignature(msg, store.settings.emailSignature)), "_blank", "noopener"); toast("Otwarto Gmaila — kliknij „Oznacz: wysłane” po wysłaniu."); return; }
+    // kind === "done": jawne, ręczne potwierdzenie użytkownika (otwarcie kompozytora ≠ wysyłka).
     markContacted(l.id, true);
+    toast("✓ Oznaczono follow-up jako wysłany (ręcznie).");
     force((x) => x + 1);
   };
 
@@ -137,7 +139,7 @@ export default function SalesPlan({ onClose, onLead }: { onClose: () => void; on
                   {email(l) && <button className="chip" onClick={() => sendFollowUp(l, "gmail")}>✉ Gmail</button>}
                   <button className="chip" onClick={() => copyFollowUp(l)}>📋 Kopiuj</button>
                   <button className="chip" style={{ borderColor: "var(--gold)" }} onClick={() => void copyAiFollowUp(l)} title="Napisz unikalny follow-up AI z kontekstu leada">✨ AI follow-up</button>
-                  <button className="chip" onClick={() => sendFollowUp(l, "done")}>✅ Wysłane</button>
+                  <button className="chip" onClick={() => sendFollowUp(l, "done")} title="Ręczne potwierdzenie, że follow-up został wysłany">✅ Oznacz: wysłane</button>
                   <button className="chip" onClick={() => { snoozeFollowUp(l.id, 3); toast("⏰ Przełożone o 3 dni."); }} title="Przełóż follow-up o 3 dni">⏰ Przełóż</button>
                 </div>
               </div>
