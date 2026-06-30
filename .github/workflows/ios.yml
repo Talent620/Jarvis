@@ -42,9 +42,20 @@ jobs:
           npm run build
           npx cap sync ios
 
-      - name: CocoaPods install
+      # CDN CocoaPods (jsDelivr/Varnish) bywa chwilowo niedostępny i zwraca 503 „No healthy
+      # backends" — to NIE błąd kodu. Retry z narastającym backoffem (do ~7,5 min) samo się leczy,
+      # zamiast czerwienić PR przy przejściowej awarii zewnętrznego CDN.
+      - name: CocoaPods install (z retry na 503 z CDN)
         working-directory: ios/App
-        run: pod install
+        run: |
+          for i in 1 2 3 4 5; do
+            echo "pod install — próba $i/5"
+            if pod install; then exit 0; fi
+            echo "pod install nie powiodło się (możliwy 503 z CDN CocoaPods) — czekam $((i*30))s i ponawiam"
+            sleep $((i * 30))
+          done
+          echo "::error::pod install nie powiodło się po 5 próbach — prawdopodobnie dłuższa awaria CDN CocoaPods (spróbuj ponownie później)."
+          exit 1
 
       - name: Build unsigned device app
         run: |
