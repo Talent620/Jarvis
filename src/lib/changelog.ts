@@ -13,6 +13,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "📱 Płynniej na słabszych telefonach (S9): na urządzeniach z małą pamięcią/liczbą rdzeni (albo przy włączonym oszczędzaniu ruchu/danych) JARVIS automatycznie wchodzi w tryb low-power — wyłącza kosztowne rozmycia tła i ciągłe pełnoekranowe animacje, a animacje pauzują się, gdy aplikacja jest schowana (mniej zużycia baterii i CPU). Na mocnych telefonach nic się nie zmienia.",
+      "🔤 Szybsze otwarcie offline: fonty ładują się nieblokująco — bez sieci aplikacja pokazuje się od razu z fontem systemowym, zamiast czekać na Google Fonts (po pobraniu i tak się podmieniają).",
       "💬 Pełna kopia obejmuje teraz także historię rozmów: wszystkie czaty trafiają do pełnej (i zaszyfrowanej) kopii i wracają przy imporcie — przesiadka na nowy telefon nie kasuje historii. Stare kopie bez rozmów wczytują się jak dawniej.",
       "🧠 Kopia obejmuje teraz też model świata (World): graf wiedzy JARVIS-a o Tobie (osoby, projekty, firmy i relacje) trafia do pełnej kopii i wraca przy imporcie — kontekst nie ginie przy przenosinach na nowy telefon. Dodatkowo wewnętrzny strażnik pilnuje, by żadna przyszła kolekcja danych nie wypadła z kopii po cichu.",
       "💸 Opłacone bez zmyślania: oznaczenie projektu jako opłacony nie wpisuje już po cichu pełnej kwoty — JARVIS pyta, ile realnie wpłacono (domyślnie reszta do zapłaty), zapisuje datę płatności i radzi sobie z wpłatą częściową (status zostaje oczekuje płatności, dopłaty się sumują). Nadpłata ponad wartość jest przycinana, błędne kwoty (puste/ujemne) nie psują danych.",

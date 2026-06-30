@@ -7,6 +7,7 @@ import { logError } from "./lib/errorLog";
 import "./styles/index.css";
 import { initPlugins } from "./plugins";
 import { installSecretsVault } from "./lib/secretsVault";
+import { applyPerformanceProfile } from "./lib/performanceProfile";
 
 // Opcjonalny, OPT-IN podgląd „Neural Interface" pod hash-route `#neural` — ładowany leniwie,
 // więc framer-motion/Tailwind nie wchodzą do głównego bundla zwykłych użytkowników.
@@ -17,6 +18,13 @@ window.addEventListener("hashchange", () => location.reload()); // przełączani
 
 installSecretsVault(); // szyfrowanie kluczy w spoczynku (no-op, gdy wyłączone)
 initPlugins();
+
+// Profil wydajności: na słabszych urządzeniach (np. S9) włącz klasę low-power (CSS zdejmuje
+// blur/ciężkie animacje). Pauzuj animacje, gdy aplikacja schowana (bateria/CPU).
+applyPerformanceProfile();
+document.addEventListener("visibilitychange", () => {
+  document.documentElement.classList.toggle("app-hidden", document.hidden);
+});
 
 // Aktualizacje OTA: potwierdź wtyczce, że ta paczka DZIAŁA (inaczej cofnęłaby ją). No-op na web.
 // Jeśli się nie uda (np. brak wtyczki w starym APK), logujemy — wtyczka i tak bezpiecznie cofnie paczkę.

@@ -2321,3 +2321,23 @@ select:focus:not(:focus-visible),
 @media (prefers-reduced-motion: reduce) {
   .pulse-dot { animation: none; }
 }
+
+/* === Profil low-power (Samsung S9 i słabsze) — zdejmij kosztowne efekty GPU ===
+   Klasa „low-power" na <html> dokładana przez performanceProfile.ts. Konserwatywnie:
+   tylko realnie słabe urządzenia (mała pamięć / mało rdzeni / reduced-motion / save-data). */
+html.low-power * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html.low-power .aurora,
+html.low-power .matrix-rain,
+html.low-power .boss-bg {
+  display: none !important; /* ciągłe pełnoekranowe animacje — największy koszt na S9 */
+}
+html.low-power * {
+  box-shadow: none !important; /* ciężkie cienie warstwowe potrafią dławić kompozytor */
+}
+/* Gdy aplikacja schowana (inna karta/ekran zgaszony) — wstrzymaj animacje (bateria/CPU). */
+html.app-hidden * {
+  animation-play-state: paused !important;
+}
