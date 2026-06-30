@@ -39,6 +39,30 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   });
 }
 
+// Watchdog „zaciętego" dostawcy: zamiast czekać do 120 s timeoutu fetcha, przełączamy się
+// na kolejny mózg, gdy dostawca MILCZY (strumień bez pierwszego tokenu) albo całość trwa za długo.
+// Dzięki temu wolny/wiszący model nie blokuje JARVIS-a — failover jest szybki.
+export const STALL_FIRST_MS = 22_000; // brak PIERWSZEGO tokenu (strumień) → uznaj za zaciętego
+export const STALL_HARD_MS = 75_000; // twardy limit całej próby (krótszy niż 120 s fetcha)
+
+/** Buduje obietnicę, która ODRZUCA, gdy dostawca się zaciął. cancel() po wygranej próbie. */
+export function makeStallWatchdog(
+  getSettled: () => boolean,
+  getProgressed: () => boolean,
+  hasStream: boolean,
+  firstMs = STALL_FIRST_MS,
+  hardMs = STALL_HARD_MS,
+): { promise: Promise<never>; cancel: () => void } {
+  const timers: ReturnType<typeof setTimeout>[] = [];
+  const promise = new Promise<never>((_resolve, reject) => {
+    timers.push(setTimeout(() => { if (!getSettled()) reject(new Error("Dostawca AI nie odpowiada — przełączam na kolejny mózg.")); }, hardMs));
+    if (hasStream) {
+      timers.push(setTimeout(() => { if (!getSettled() && !getProgressed()) reject(new Error("Dostawca AI milczy — przełączam na kolejny mózg.")); }, firstMs));
+    }
+  });
+  return { promise, cancel: () => { for (const t of timers) clearTimeout(t); } };
+}
+
 // Bezpiecznik per-dostawca: po serii awarii pomijamy padniętego dostawcę na chwilę
 // (szybszy failover), z automatycznym „half-open" po cooldownie. Żyje w pamięci sesji.
 const providerBreaker = new CircuitBreaker(4, 30_000);
@@ -669,10 +693,22 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         // Strumieniowanie: akumulator PER PRÓBA — przy failoverze tekst resetuje się czysto
         // (App pokazuje zawsze cumulatywny tekst aktualnego dostawcy, bez sklejania prób).
         let streamed = "";
+        let progressed = false;
+        let settled = false;
         const onTok = onToken
-          ? (delta: string) => { streamed += delta; onToken(streamed); }
+          ? (delta: string) => { progressed = true; streamed += delta; onToken(streamed); }
           : undefined;
-        let reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model, onToken: onTok }));
+        // Watchdog: jeśli dostawca się zatnie (milczy/wisi), przełącz się szybko zamiast czekać 120 s.
+        const wd = makeStallWatchdog(() => settled, () => progressed, !!onTok);
+        const attemptP = withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model, onToken: onTok }));
+        attemptP.catch(() => {}); // jeśli przegra wyścig z watchdogiem, późne odrzucenie nie może być „unhandled"
+        let reply: JarvisReply;
+        try {
+          reply = await Promise.race([attemptP, wd.promise]);
+        } finally {
+          settled = true;
+          wd.cancel();
+        }
         providerBreaker.onSuccess(provider); // udało się — zamknij bezpiecznik
         recordLatency("provider:" + provider, Date.now() - t0, true, model);
 

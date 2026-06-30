@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-30",
     items: [
+      "⚡ Koniec zacinania na wolnym modelu: jeśli wybrany mózg AI zamilknie albo wisi, JARVIS przełącza się na kolejny w ~20 s zamiast czekać do 2 minut. Dzięki temu nawet gdy dostawca ma chwilową awarię, odpowiedź przychodzi szybko, a nie „zawiesza się”.",
       "🎯 Domyślnie STAŁY umysł i premium głos: nowa instalacja startuje od razu z jednym, najlepszym darmowym mózgiem (Gemini 2.5 Flash) zamiast ciągłego przełączania, i ze stałym, premium głosem JARVISA — bez klikania. Bez klucza Gemini wszystko płynnie spada na dostawcę/głos, który masz. Czas aktualizacji w ⚙ → Dane pokazuje się teraz też w Twojej strefie (koniec mylenia z UTC).",
       "🧠 Stały umysł i głos jednym poleceniem: powiedz lub napisz „ustaw stały umysł i głos” — JARVIS przypnie jeden, najlepszy DARMOWY mózg (Gemini 2.5 Flash, jeśli masz darmowy klucz Gemini; inaczej Groq/Cerebras/Mistral, które też masz) i przestanie się przełączać między modelami przy każdej wiadomości. Do tego ustawia stały, premium głos JARVISA (Gemini Charon) i blokuje podmiany. Koniec z „co chwilę inny umysł i głos”.",
       "🔔 Koniec proszenia o powiadomienia na starcie: JARVIS nie wyskakuje już z prośbą o zgodę na powiadomienia zaraz po otwarciu. Pyta dopiero, gdy realnie włączysz minutnik albo ustawisz przypomnienie — czyli wtedy, gdy widzisz, po co. Mniej nachalnie, większa szansa, że się zgodzisz tam, gdzie to ma sens.",
