@@ -3,7 +3,7 @@ import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import Modal from "./Modal";
 import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
-import { generatePost, saveContentPost, PLATFORMS, TONES, type Platform, type Tone } from "../lib/contentStudio";
+import { generatePost, saveContentPost, markContentPublished, isPublished, contentStatusOf, CONTENT_STATUS_LABEL, PLATFORMS, TONES, type Platform, type Tone } from "../lib/contentStudio";
 import { viralityScore } from "../lib/virality";
 import { assessSocialFit } from "../lib/socialFit";
 
@@ -104,15 +104,17 @@ export default function ContentStudio({ onClose }: { onClose: () => void }) {
 
           {(store.data.contentPosts || []).length > 0 && (
             <>
-              <h3 style={{ marginTop: 16 }}>🕘 Ostatnie posty</h3>
+              <h3 style={{ marginTop: 16 }}>🗂 Drafty i publikacje</h3>
               {(store.data.contentPosts || []).slice(0, 10).map((p) => (
                 <div className="journal-card" key={p.id} style={{ marginTop: 6 }}>
-                  <div className="muted" style={{ fontSize: 11 }}>
-                    {PLATFORMS.find((x) => x.id === p.platform)?.emoji || "📱"} {p.topic || "post"} · {new Date(p.at).toLocaleString("pl-PL")}
+                  <div className="muted" style={{ fontSize: 11, display: "flex", justifyContent: "space-between", gap: 8 }}>
+                    <span>{PLATFORMS.find((x) => x.id === p.platform)?.emoji || "📱"} {p.topic || "post"} · {new Date(p.at).toLocaleString("pl-PL")}</span>
+                    <span style={{ fontWeight: 700, color: isPublished(p) ? "#39d98a" : "var(--gold)" }}>{isPublished(p) ? "✅ " : "✍ "}{CONTENT_STATUS_LABEL[contentStatusOf(p)]}</span>
                   </div>
                   <p style={{ whiteSpace: "pre-wrap", margin: "4px 0 0", fontSize: 13, maxHeight: 80, overflow: "hidden" }}>{p.text}</p>
                   <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
                     <button className="chip" onClick={() => copyWithToast(p.text, "Skopiowano ✓")}>📋 Kopiuj</button>
+                    {!isPublished(p) && <button className="chip" style={{ borderColor: "#39d98a" }} onClick={() => { markContentPublished(p.id); toast("✅ Oznaczono jako opublikowane"); }} title="Ręczne potwierdzenie publikacji">✅ Opublikowane</button>}
                     <button className="chip" onClick={() => { store.setData((d) => { d.contentPosts = (d.contentPosts || []).filter((x) => x.id !== p.id); }); toast("🗑 Usunięto z historii"); }}>🗑</button>
                   </div>
                 </div>

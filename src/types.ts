@@ -258,6 +258,10 @@ export interface ContentPost {
   topic: string;
   text: string;
   at: number;
+  /** Status publikacji (brak = draft). Wygenerowanie NIE jest publikacją. */
+  status?: "draft" | "ready" | "published_manual" | "published_confirmed" | "failed";
+  /** Kiedy oznaczono jako opublikowane. */
+  publishedAt?: number;
 }
 
 /** Wpis w Skrzynce wysłanych — komu, co, kiedy i jakim kanałem poszło. */

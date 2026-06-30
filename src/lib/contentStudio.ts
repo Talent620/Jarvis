@@ -52,12 +52,42 @@ export function contentUserPrompt(o: ContentOpts): string {
 }
 
 /** Zapisz wygenerowany post w historii (najnowszy na górze, limit 50). */
+export type ContentStatus = NonNullable<import("../types").ContentPost["status"]>;
+
+export const CONTENT_STATUS_LABEL: Record<ContentStatus, string> = {
+  draft: "Szkic",
+  ready: "Gotowe",
+  published_manual: "Opublikowane (ręcznie)",
+  published_confirmed: "Opublikowane",
+  failed: "Błąd publikacji",
+};
+
+/** Status posta (brak = draft — samo wygenerowanie nie jest publikacją). */
+export function contentStatusOf(p: import("../types").ContentPost): ContentStatus {
+  return p.status || "draft";
+}
+
+/** Czy post jest realnie opublikowany (ręcznie potwierdzony lub przez API)? */
+export function isPublished(p: import("../types").ContentPost): boolean {
+  const s = contentStatusOf(p);
+  return s === "published_manual" || s === "published_confirmed";
+}
+
 export function saveContentPost(platform: string, topic: string, text: string) {
   if (!text.trim()) return;
   store.setData((d) => {
     if (!d.contentPosts) d.contentPosts = [];
-    d.contentPosts.unshift({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, platform, topic, text, at: Date.now() });
+    // Nowy post = SZKIC. Publikacja wymaga osobnego, jawnego potwierdzenia.
+    d.contentPosts.unshift({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, platform, topic, text, at: Date.now(), status: "draft" });
     if (d.contentPosts.length > 50) d.contentPosts.length = 50;
+  });
+}
+
+/** Oznacz post jako opublikowany ręcznie (jawne potwierdzenie użytkownika). */
+export function markContentPublished(id: string, now = Date.now()): void {
+  store.setData((d) => {
+    const p = (d.contentPosts || []).find((x) => x.id === id);
+    if (p) { p.status = "published_manual"; p.publishedAt = now; }
   });
 }
 
