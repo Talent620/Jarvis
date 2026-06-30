@@ -163,6 +163,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
               onChange={(e) => {
                 const status = e.target.value as LeadStatus;
                 set({ status });
+                toast(`✓ Status: ${STATUS.find((s) => s.id === status)?.label || status}`); // widoczne potwierdzenie
                 // Lead z CRM-u → wypchnij zmianę z powrotem do lejka Sales OS (dwukierunkowo).
                 if (lead.origin === "salesos") void pushLeadStatusToSalesOs({ ...lead, status }, status).then((r) => r && toast(r.message));
               }}
@@ -188,8 +189,12 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
               {email && <span>✉ {email}</span>}
               {lead.url && <span>🌐 {lead.url}</span>}
               {lead.hours && <span>🕐 {lead.hours}</span>}
-              {lead.note && <span>📝 {lead.note}</span>}
             </div>
+            {!email && !phone && (
+              <div className="notice" style={{ marginTop: 8, fontSize: 12.5 }}>
+                📵 Brak danych kontaktowych (e-mail i telefon). Kliknij <b>🗺 Mapy/opinie</b>, żeby znaleźć numer w Google, albo wejdź na stronę firmy.
+              </div>
+            )}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
               {phone && <button className="chip" onClick={() => window.open(`tel:${phone.replace(/\s/g, "")}`)}>📞 Zadzwoń</button>}
               {phone && <button className="chip" onClick={sendSms}>📱 SMS z zaczepką</button>}
@@ -350,8 +355,16 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
                       {sending ? "📨 Wysyłam…" : "📨 WYŚLIJ TERAZ"}
                     </button>
                   )}
-                  <button className="chip" onClick={() => sendVia("gmail")}>✉ Otwórz w Gmailu</button>
-                  <button className="chip" onClick={() => sendVia("mail")}>📧 Otwórz w poczcie</button>
+                  {email ? (
+                    <>
+                      <button className="chip" onClick={() => sendVia("gmail")}>✉ Otwórz w Gmailu</button>
+                      <button className="chip" onClick={() => sendVia("mail")}>📧 Otwórz w poczcie</button>
+                    </>
+                  ) : (
+                    <span className="muted" style={{ fontSize: 12, alignSelf: "center" }}>
+                      Brak e-maila tego leada — wysyłka mailowa niedostępna. Zadzwoń albo znajdź adres (🗺 Mapy/opinie).
+                    </span>
+                  )}
                   {salesOsConfigured() && email && (
                     <button className="chip" style={{ borderColor: "var(--gold)" }} onClick={sendViaSalesOs} disabled={osSending} title="AI Sales OS napisze i wyśle (treść + wysyłka w CRM-ie)">
                       {osSending ? "✉ Sales OS…" : "✉ Wyślij przez Sales OS"}
