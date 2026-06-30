@@ -859,11 +859,8 @@ export default function App() {
     return () => clearInterval(tick);
   }, []);
 
-  useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission().catch(() => {});
-    }
-  }, []);
+  // Świadomie NIE prosimy o zgodę na powiadomienia przy starcie — pytamy dopiero, gdy użytkownik
+  // realnie włączy minutnik/przypomnienie (ensureNotifPerms w notifications.ts). Mniej nachalnie.
 
   // Faza 2 — załaduj narzędzia z zaufanych serwerów MCP (jeśli skonfigurowane).
   // Graceful: serwer niedostępny/poza allowlistą → pominięty, JARVIS działa dalej.

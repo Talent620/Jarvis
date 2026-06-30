@@ -24,3 +24,23 @@ describe("notifications — timerMs (bezpieczne minuty minutnika)", () => {
     expect(timerMs(1_000_000)).toBe(2_147_483_647);
   });
 });
+
+import { ensureNotifPerms } from "../src/lib/notifications";
+
+describe("notifications — zgoda leniwa na web (nie przy starcie)", () => {
+  it("ensureNotifPerms prosi o zgodę, gdy permission=default", async () => {
+    const requestPermission = vi.fn(() => Promise.resolve("granted"));
+    (globalThis as any).window = globalThis;
+    (globalThis as any).Notification = { permission: "default", requestPermission };
+    await ensureNotifPerms();
+    expect(requestPermission).toHaveBeenCalledTimes(1);
+  });
+
+  it("NIE prosi ponownie, gdy zgoda już udzielona", async () => {
+    const requestPermission = vi.fn();
+    (globalThis as any).window = globalThis;
+    (globalThis as any).Notification = { permission: "granted", requestPermission };
+    await ensureNotifPerms();
+    expect(requestPermission).not.toHaveBeenCalled();
+  });
+});

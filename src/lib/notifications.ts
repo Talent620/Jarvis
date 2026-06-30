@@ -11,10 +11,19 @@ function intId(id: string): number {
 }
 
 export async function ensureNotifPerms(): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return;
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const p = await LocalNotifications.checkPermissions();
+      if (p.display !== "granted") await LocalNotifications.requestPermissions();
+    } catch {
+      /* brak wsparcia — ignoruj */
+    }
+    return;
+  }
+  // Web: poproś o zgodę na powiadomienia DOPIERO przy świadomym włączeniu (timer/przypomnienie),
+  // nie przy starcie aplikacji — mniej nachalnie (użytkownik najpierw widzi wartość funkcji).
   try {
-    const p = await LocalNotifications.checkPermissions();
-    if (p.display !== "granted") await LocalNotifications.requestPermissions();
+    if ("Notification" in window && Notification.permission === "default") await Notification.requestPermission();
   } catch {
     /* brak wsparcia — ignoruj */
   }
@@ -53,6 +62,7 @@ export function timerMs(minutes: number): number {
 }
 
 export async function scheduleTimer(minutes: number, label?: string): Promise<void> {
+  await ensureNotifPerms(); // świadome włączenie minutnika = właściwy moment, by poprosić o zgodę
   const ms = timerMs(minutes);
   const mins = ms / 60_000;
   const at = new Date(Date.now() + ms);
@@ -80,6 +90,7 @@ export async function scheduleTimer(minutes: number, label?: string): Promise<vo
 
 // Zaplanuj natywne powiadomienie dla przypomnienia (na urządzeniu).
 export async function scheduleReminder(r: Reminder): Promise<void> {
+  await ensureNotifPerms(); // świadome ustawienie przypomnienia = moment na prośbę o zgodę (web/native)
   if (!Capacitor.isNativePlatform()) return;
   const at = new Date(r.at);
   if (isNaN(at.getTime()) || at.getTime() <= Date.now()) return;
