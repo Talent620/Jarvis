@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🎙 Koniec dwóch mikrofonów naraz: gdy po podłączeniu słuchawek włącza się Tryb Słuchawki, główny mikrofon jest teraz porządnie zatrzymywany (wcześniej mógł nasłuchiwać równolegle — gryzło się i zżerało baterię). Nowy arbiter dba, by w danej chwili głos „trzymał” tylko jeden tryb; po zamknięciu trybu mikrofon się zwalnia.",
       "✉ Ochrona niewysłanego maila: jeśli zaczniesz pisać wiadomość i przypadkiem klikniesz poza okno albo wciśniesz Escape, JARVIS zapyta, zanim ją odrzuci — koniec gubienia treści jednym przypadkowym dotknięciem. Po zamknięciu okna fokus wraca tam, gdzie był (wygodniej z klawiaturą). Mechanizm jest gotowy do włączenia także w innych formularzach.",
       "↩ Cofanie usunięcia projektu finansowego: skasowanie projektu jednym dotknięciem pokazuje teraz przycisk Cofnij — przypadkowe usunięcie odzyskujesz, a projekt wraca na swoje miejsce na liście (bez duplikatów). Pierwszy krok do bezpiecznego cofania także w innych miejscach.",
       "📱 Treści: szczera różnica między szkicem a publikacją. Wygenerowany post to teraz SZKIC, nie „opublikowane” — sekcja nazywa się Drafty i publikacje, każdy wpis ma status, a dopiero przycisk ✅ Opublikowane (Twoje ręczne potwierdzenie) oznacza realną publikację. Koniec udawania, że wygenerowanie = wrzucenie na social. Generator reklam pozostaje uczciwy (przygotowuje kampanię do skopiowania, nie uruchamia jej).",

@@ -22,6 +22,7 @@ import LicenseGate from "./components/LicenseGate";
 import { checkActivation, licenseRequired, licenseStatus, licenseExpiryNudge, type LicenseInfo } from "./lib/license";
 const HeadsetMode = lazy(() => import("./components/HeadsetMode"));
 import { watchHeadset } from "./lib/headset";
+import { acquireVoice, releaseVoice } from "./lib/voiceSession";
 import { toast, copyWithToast } from "./lib/toast";
 import { conversationToMarkdown } from "./lib/exportChat";
 import { onScreenRequest } from "./lib/navIntent";
@@ -786,6 +787,9 @@ export default function App() {
     listenerRef.current = listener;
     setMicOn(true);
     setOrb(wake ? "idle" : "listening");
+    // Główny mikrofon przejmuje arbitra; gdy ktoś inny (Słuchawki/Live/Szef) przejmie głos,
+    // ten callback zatrzyma główny listener — koniec dwóch nasłuchów naraz.
+    acquireVoice("main", () => { listenerRef.current?.stop(); listenerRef.current = null; setMicOn(false); setInterim(""); setOrb("idle"); });
   };
 
   const stopListening = () => {
@@ -794,6 +798,7 @@ export default function App() {
     setMicOn(false);
     setInterim("");
     setOrb("idle");
+    releaseVoice("main");
   };
 
   const toggleMic = () => {
@@ -1048,6 +1053,7 @@ export default function App() {
   useEffect(() => {
     const stop = watchHeadset(() => {
       toast("🎧 Słuchawki podłączone — Tryb Słuchawki gotowy");
+      acquireVoice("headset"); // przejmij głos → arbiter zatrzyma główny mikrofon (koniec dwóch nasłuchów)
       setShowVoice(true);
     });
     const offVoice = (window as any).jarvisDesktop?.onVoiceMode?.(() => setShowVoice((v: boolean) => !v));
@@ -1380,7 +1386,7 @@ export default function App() {
           Ikonę można przeciągać (drag) — pozycja jest zapamiętywana. */}
       <BossFab onOpen={() => setShowBoss(true)} />
 
-      {showVoice && (<ScreenBoundary><HeadsetMode onClose={() => setShowVoice(false)} /></ScreenBoundary>)}
+      {showVoice && (<ScreenBoundary><HeadsetMode onClose={() => { releaseVoice("headset"); setShowVoice(false); }} /></ScreenBoundary>)}
       {showAdmin && (
         <ScreenBoundary>
           <AdminPanel onClose={() => setShowAdmin(false)} />
