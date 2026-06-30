@@ -13,6 +13,8 @@ const COLLECTIONS: (keyof AppData)[] = [
   "bargainWatch", "sentMail", "contentPosts",
   // Ciężkie kolekcje twórcze — też trafiają do kopii, by NIC nie zginęło (strony i obrazy):
   "siteProjects", "imageHistory",
+  // 💰 Finanse — projekty/zlecenia muszą przeżyć eksport/import (inaczej znika cała kasa):
+  "financeProjects",
 ];
 
 export function exportData(): void {

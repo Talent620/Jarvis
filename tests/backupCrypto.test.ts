@@ -45,6 +45,30 @@ describe("zaszyfrowana pełna kopia (AES-256)", () => {
     await expect(unpackEncrypted(cipherText, "zle-haslo")).rejects.toThrow();
   });
 
+  it("kopia obejmuje projekty finansowe (round-trip, nic nie ginie)", async () => {
+    store.setData((d) => {
+      d.financeProjects = [{ id: "f1", name: "Sklep X", status: "oplacone", amount: 8000, paidAmount: 8000, createdAt: 1, updatedAt: 1 } as any];
+    });
+    const cipherText = await packEncrypted(buildFullPayload(), "h");
+    store.setData((d) => { d.financeProjects = []; });
+    await unpackEncrypted(cipherText, "h");
+    expect(store.data.financeProjects?.[0]?.name).toBe("Sklep X");
+    expect(store.data.financeProjects?.[0]?.amount).toBe(8000);
+  });
+
+  it("import starego payloadu bez financeProjects nie kasuje istniejących projektów", async () => {
+    const { sanitizeImportedSettings } = await import("../src/lib/backup");
+    void sanitizeImportedSettings; // (no-op — utrzymuje import po stronie testu)
+    store.setData((d) => {
+      d.financeProjects = [{ id: "keep", name: "Stary", status: "lead", amount: 100, createdAt: 1, updatedAt: 1 } as any];
+    });
+    // Stary payload (sprzed dodania financeProjects) — bez tego pola.
+    const oldCipher = await packEncrypted({ app: "jarvis", kind: "full", version: 1, data: { tasks: [], notes: [] }, settings: {} }, "h");
+    await unpackEncrypted(oldCipher, "h");
+    // financeProjects nieobecne w kopii → istniejące zostają nietknięte.
+    expect(store.data.financeProjects?.[0]?.id).toBe("keep");
+  });
+
   it("kopia obejmuje skrzynkę wysłanych i historię postów (nie giną przy przenosinach)", async () => {
     store.setData((d) => {
       d.sentMail = [{ id: "s1", to: "k@x.pl", subject: "Oferta", via: "SMTP", at: 1 } as any];
