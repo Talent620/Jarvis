@@ -13,6 +13,8 @@ import { shouldFallback, isNetworkError, isKeyError, humanize, PERSONAL_CUES } f
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
 import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
 import { classifyCognitionLocal } from "./cognitiveController";
+import { curateContext, contextBudgetChars } from "./contextCurator";
+import { gatherContextCandidates } from "./contextCandidates";
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
 import { recordEpisode, loadEpisodes } from "./episodicMemory";
 import { buildFusionBlock } from "./contextFusion";
@@ -235,10 +237,12 @@ export interface PromptContext {
   fusionBlock?: string;
   /** World Model: encje (osoby/projekty/firmy) i powiązania, których dotyczy pytanie. */
   worldBlock?: string;
+  /** Kurator kontekstu: najtrafniejsze fakty biznesowe wybrane pod to konkretne pytanie. */
+  curatedBlock?: string;
 }
 
 export function systemPrompt(ctx: PromptContext = {}): string {
-  const { deepAnalysis = "", currentKnowledge = "", journalRank = null, mem0Block = "", fusionBlock = "", worldBlock = "" } = ctx;
+  const { deepAnalysis = "", currentKnowledge = "", journalRank = null, mem0Block = "", fusionBlock = "", worldBlock = "", curatedBlock = "" } = ctx;
   const s = store.settings;
   const userName = s.userName;
   const pid = s.activeProjectId;
@@ -351,9 +355,44 @@ export function systemPrompt(ctx: PromptContext = {}): string {
     facts,
     fusionBlock,
     worldBlock,
+    curatedBlock,
     projectCtx,
     journalCtx,
   ].join("\n");
+}
+
+/**
+ * Kurator kontekstu w RUNTIME: z danych systemu (pamięć/leady/finanse/projekty/kalendarz/
+ * zadania/przypomnienia) wybiera NAJTRAFNIEJSZY, zdeduplikowany zestaw faktów pod KONKRETNE
+ * pytanie i składa go w blok do promptu. Sprzeczne fakty zaznacza (nie zgaduje). Pusto → "".
+ * To jest funkcja, której realnie używa askJarvis — dzięki niej odpowiedź zmienia się przez
+ * właściwy kontekst, a nie przez sam fakt istnienia contextCurator.ts.
+ */
+export function curatedContextBlock(query: string, now = Date.now()): string {
+  const d = store.data;
+  const candidates = gatherContextCandidates({
+    now,
+    memory: d.memory,
+    leads: d.leads,
+    projects: d.projects,
+    finance: d.financeProjects,
+    calendar: d.calendar,
+    tasks: d.tasks,
+    reminders: d.reminders,
+  });
+  if (!candidates.length) return "";
+  const complex = classifyTask(query, false).kind === "complex";
+  const cur = curateContext(candidates, { query, now, budgetChars: contextBudgetChars({ complex }) });
+  if (!cur.items.length) return "";
+  const lines = cur.items.map((i) => `• [${i.source}] ${i.text}`);
+  let block = `\n\nNajtrafniejszy kontekst (wybrany pod to pytanie — używaj go, nie zgaduj):\n${lines.join("\n")}`;
+  if (cur.contradictions.length) {
+    const conf = cur.contradictions
+      .map((c) => `• ${c.key}: ${c.items.map((it) => `${it.text} (${it.source})`).join(" vs ")}`)
+      .join("\n");
+    block += `\n\nUWAGA — sprzeczne informacje (NIE zgaduj; dopytaj lub zaznacz niepewność):\n${conf}`;
+  }
+  return block;
 }
 
 /** Rozstrzyga, którego dostawcę i model użyć (uwzględnia tryb auto). */
@@ -622,11 +661,16 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // Z niego bierzemy adaptacyjny profil rozumowania i flagi (needs*), z których korzysta runtime.
   const cognition = classifyCognitionLocal(lastUser?.content || "", { hasImage: !!lastUser?.image });
 
+  // Kurator kontekstu: tylko gdy decyzja poznawcza wskazuje, że pamięć/kontekst są potrzebne
+  // (analiza, akcja, cel, lub osobiste odwołanie) — wtedy wybierz NAJTRAFNIEJSZE fakty pod pytanie.
+  // Dla zwykłej pogawędki blok jest pusty (nie zaśmiecamy promptu, nie podnosimy kosztu).
+  const curatedBlock = cognition.needsMemory ? curatedContextBlock(lastUser?.content || "") : "";
+
   // Z11 — RAG dla modelu lokalnego: `baseCtx.system` (pamięć: fakty + profil + Mem0 + Szósty Zmysł)
   // jest TEN SAM dla WSZYSTKICH dostawców, w tym Ollamy/WebLLM. Mały model lokalny odpowiada z
   // Twoim kontekstem; bez Mem0 degraduje do lokalnego profilu/faktów (zero zależności sieciowych).
   const baseCtx = {
-    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock }) + (extraSystem ? `\n\n${extraSystem}` : ""),
+    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock, curatedBlock }) + (extraSystem ? `\n\n${extraSystem}` : ""),
     // Tryb on-device wyłącza web-search (zero egres do sieci — pełna prywatność/offline).
     webSearch: store.settings.onDeviceOnly ? false : store.settings.webSearch,
     // Dobór narzędzi wg intencji: mniej definicji na turę (szybciej/taniej). Bezpiecznie —
