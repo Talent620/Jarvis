@@ -1,6 +1,9 @@
 import { store } from "./store";
 import { brand } from "./brand";
-import { toolDefs, resetCitations, getCitations } from "./tools";
+import { toolDefs, resetCitations, getCitations, runTool } from "./tools";
+import { riskOf } from "./permissions";
+import { runPlan, makeDefaultExecTool, type RunResult } from "./agentRun";
+import type { AgentPlan } from "./agentPlanner";
 import { selectToolsForIntent } from "./toolSelector";
 import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed, rankJournal } from "./memory";
@@ -393,6 +396,16 @@ export function curatedContextBlock(query: string, now = Date.now()): string {
     block += `\n\nUWAGA — sprzeczne informacje (NIE zgaduj; dopytaj lub zaznacz niepewność):\n${conf}`;
   }
   return block;
+}
+
+/**
+ * RUNTIME: wykonaj zweryfikowany plan na PRAWDZIWYCH narzędziach JARVIS-a (jedna bramka zgód
+ * przez runTool, model ryzyka z permissions). To kanoniczne wejście wykonawcy — używają go cele
+ * (durable goals) i tryby głosu. Zwraca wynik per krok (ActionOutcome) + status całości.
+ */
+export function executeGoalPlan(plan: AgentPlan, onStatus?: (s: string) => void): Promise<RunResult> {
+  const toolExists = (n: string) => toolDefs.some((d) => d.name === n);
+  return runPlan(plan, { toolExists, riskOf, execTool: makeDefaultExecTool(runTool, riskOf), onStatus });
 }
 
 /** Rozstrzyga, którego dostawcę i model użyć (uwzględnia tryb auto). */
