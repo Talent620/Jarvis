@@ -10,6 +10,13 @@ const STEPS = [
   "Gotowy.",
 ];
 
+const BOOTED_KEY = "jarvis.booted";
+
+/** Pure: plan czasu splashu. Pierwsze uruchomienie = pełne premium; kolejne = skrócone. */
+export function bootPlan(hasBootedBefore: boolean): { totalMs: number; stepMs: number } {
+  return hasBootedBefore ? { totalMs: 700, stepMs: 170 } : { totalMs: 1900, stepMs: 420 };
+}
+
 export default function Boot({ onDone }: { onDone: () => void }) {
   const [fading, setFading] = useState(false);
   const [step, setStep] = useState(0);
@@ -21,8 +28,11 @@ export default function Boot({ onDone }: { onDone: () => void }) {
 
   // Splash uruchamiany raz przy montażu (timery sprzątane w cleanupie) — `finish` celowo poza deps.
   useEffect(() => {
-    const tick = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 420);
-    const done = setTimeout(finish, 1900);
+    let booted = false;
+    try { booted = localStorage.getItem(BOOTED_KEY) === "1"; localStorage.setItem(BOOTED_KEY, "1"); } catch { /* brak localStorage */ }
+    const { totalMs, stepMs } = bootPlan(booted);
+    const tick = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), stepMs);
+    const done = setTimeout(finish, totalMs);
     return () => { clearInterval(tick); clearTimeout(done); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
