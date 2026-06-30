@@ -14,7 +14,8 @@ const CORE_TOOLS = new Set<string>([
 // Grupy domenowe: nazwy narzędzi.
 const GROUP_TOOLS: Record<string, string[]> = {
   sales: ["find_leads", "list_leads", "save_lead", "lead_dossier", "lead_followup", "sales_autopilot", "sales_plan",
-    "salesos_open", "salesos_push", "salesos_email", "salesos_flush_emails", "salesos_set_status", "salesos_stats", "salesos_sync"],
+    "salesos_open", "salesos_push", "salesos_email", "salesos_flush_emails", "salesos_set_status", "salesos_stats", "salesos_sync",
+    "business_status", "business_next_step"],
   finance: ["finance_add_project", "finance_set_status", "finance_summary"],
   mail: ["gmail_search", "gmail_read", "gmail_reply", "gmail_send", "send_offers_all", "send_test_email"],
   calendar: ["gcal_list", "gcal_day", "gcal_add", "add_calendar_event", "list_calendar"],

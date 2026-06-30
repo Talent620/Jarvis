@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🧭 JARVIS wie, co dalej z każdym klientem: nowy kręgosłup procesu sam wylicza etap sprawy (lead → teczka → oferta → mail → projekt finansowy → opłacone) z danych, które już masz, i podpowiada JEDEN następny krok. Zapytaj na czacie na jakim etapie jest [firma] albo co teraz z [klient] — dostaniesz konkret i dokąd przejść. To fundament pod „jednego żywego Jarvisa”, bez drugiego CRM.",
       "🔒 Bezpieczniej z akcjami wychodzącymi: jeśli z jakiegoś powodu brakuje ekranu potwierdzenia, akcja na zewnątrz (mail, SMS, telefon, automatyzacja) jest teraz BLOKOWANA zamiast po cichu przepuszczana. Tryby bez ekranu (np. Live) dostają jawny, ograniczony i wygasający zakres zgody — nie globalną furtkę. W normalnej pracy aplikacji nic się nie zmienia (potwierdzasz jak dotąd).",
       "⏱ Szybsze codzienne wejście: pełny, efektowny ekran startowy widzisz przy pierwszym uruchomieniu; każde kolejne startuje skróconym splashem (krócej niż sekunda), żeby od razu wejść do pracy.",
       "⚡ Szybsze i trafniejsze odpowiedzi: zamiast wysyłać do modelu komplet ~88 narzędzi w każdej wiadomości, JARVIS dobiera tylko te pasujące do tematu (finanse, sprzedaż, poczta, pamięć…) plus zestaw podstawowy. Mniej zbędnego kontekstu = szybciej, taniej i mniejsze ryzyko, że model sięgnie po złe narzędzie. Gdy temat jest niejasny, dostaje pełen zestaw — nigdy nie jest gorzej niż dotąd.",

@@ -21,6 +21,7 @@ const RISK: Record<string, Risk> = {
   system_health: "read", world_recall: "read",
   // read — lokalna nawigacja / odczyt (bez efektów na zewnątrz, bez pytania o zgodę)
   open_screen: "read", project_knowledge: "read", finance_summary: "read",
+  business_status: "read", business_next_step: "read",
   // write — lokalny zapis projektów finansowych (cofalne, wymaga zgody)
   finance_add_project: "write", finance_set_status: "write",
   // write — lokalne, odwracalne ustawienia/zapisy

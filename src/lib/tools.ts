@@ -5,6 +5,7 @@ import { saType, saTap, saGlobal, saOpenApp, saOpenSettings } from "./systemActi
 import { answerProjectQuestion, type KnowledgeIndex } from "./projectKnowledge";
 import { requestScreen, resolveScreen, SCREENS } from "./navIntent";
 import { financeSummaryText, FINANCE_STATUSES } from "./finance";
+import { businessStatusText, computeJourney } from "./businessFlow";
 import type { FinanceProject, FinanceStatus } from "../types";
 import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
 import { getWeather } from "./weather";
@@ -1502,6 +1503,34 @@ const tools: Tool[] = [
       input_schema: obj({}),
     },
     run: () => financeSummaryText(store.data.financeProjects || []),
+  },
+  // === Kręgosłup procesu (lead → kasa): status i następny krok ===
+  {
+    def: {
+      name: "business_status",
+      description: "Pokaż etap procesu sprzedaży dla firmy (lead → teczka → oferta → mail → projekt finansowy → opłacone). Podaj fragment nazwy firmy. Używaj, gdy pytasz: na jakim etapie jest [firma], co dalej z [klient].",
+      input_schema: obj({ company: str("Fragment nazwy firmy/leada") }, ["company"]),
+    },
+    run: ({ company }) => {
+      const q = String(company ?? "").toLowerCase().trim();
+      const lead = (store.data.leads || []).find((l) => l.company.toLowerCase().includes(q));
+      if (!lead) return `Nie mam leada pasującego do "${company}". Użyj find_leads albo save_lead.`;
+      return businessStatusText(lead, store.data.financeProjects || [], store.data.sentMail || []);
+    },
+  },
+  {
+    def: {
+      name: "business_next_step",
+      description: "Wskaż JEDEN konkretny następny krok w procesie sprzedaży dla firmy i dokąd przejść. Podaj fragment nazwy firmy. Używaj, gdy pytasz: co teraz zrobić z [klient], jaki następny ruch.",
+      input_schema: obj({ company: str("Fragment nazwy firmy/leada") }, ["company"]),
+    },
+    run: ({ company }) => {
+      const q = String(company ?? "").toLowerCase().trim();
+      const lead = (store.data.leads || []).find((l) => l.company.toLowerCase().includes(q));
+      if (!lead) return `Nie mam leada pasującego do "${company}".`;
+      const j = computeJourney(lead, store.data.financeProjects || [], store.data.sentMail || []);
+      return `➡ ${lead.company}: ${j.label} — ${j.reason} (otwórz: ${j.screen})`;
+    },
   },
 ];
 
