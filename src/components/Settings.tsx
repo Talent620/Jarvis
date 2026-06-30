@@ -31,7 +31,7 @@ import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromIn
 import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
 import { detectSd, normalizeSdUrl } from "../lib/localImage";
 import { checkFalKey } from "../lib/images";
-import { checkForUpdate, applyUpdate, currentBuild, type UpdateInfo } from "../lib/updater";
+import { checkForUpdate, applyUpdate, currentBuild, buildLocalTime, type UpdateInfo } from "../lib/updater";
 import { CHANGELOG } from "../lib/changelog";
 import { liveUpdateSupported, checkLiveUpdate, applyLiveUpdate } from "../lib/liveUpdate";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
@@ -2794,7 +2794,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           {tab === "data" && (
             <>
               <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>
-                🧩 Wersja (build): <b>{typeof __APP_BUILD__ !== "undefined" ? __APP_BUILD__ : "dev"}</b> UTC — podaj ją, gdy zgłaszasz problem.
+                🧩 Wersja (build): <b>{typeof __APP_BUILD__ !== "undefined" ? __APP_BUILD__ : "dev"}</b> UTC
+                {(() => { const loc = buildLocalTime(currentBuild()); return loc ? <> · u Ciebie: <b>{loc}</b></> : null; })()} — podaj ją, gdy zgłaszasz problem.
               </p>
 
               <h3 id="set-update">⬆ Aktualizacja JARVISA</h3>

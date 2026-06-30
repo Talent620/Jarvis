@@ -43,9 +43,11 @@ export const DEFAULT_EMAIL_SIGNATURE = "—\nMarcin Kubicki\ntel. +48 500 390 00
 const LEGACY_EMAIL_SIGNATURES = ["—\ntel. +48 500 390 009\nwww.v-ai.pl"];
 
 const defaultSettings: Settings = {
-  provider: "auto",
+  // Domyślnie STAŁY umysł: najlepszy darmowy model (Gemini 2.5 Flash, #1 tool-calling) zamiast
+  // auto-przełączania. Bez klucza Gemini router płynnie spada na dostawcę, do którego masz klucz.
+  provider: "gemini",
   keys: { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", cohere: "", openrouter: "", nvidia: "", github: "" },
-  model: "auto",
+  model: "gemini-2.5-flash",
   proxyUrl: "",
   smtpUser: "",
   smtpPass: "",
@@ -123,7 +125,10 @@ const defaultSettings: Settings = {
   n8nToken: "",
   speak: true,
   voiceSystemPl: true,
-  voicePinned: false,
+  // Domyślnie STAŁY, premium głos JARVISA: tor Gemini (z kluczem) + przypięcie (bez podmian).
+  // Bez klucza Gemini głos płynnie spada na stały polski głos systemowy.
+  voiceMode: "gemini",
+  voicePinned: true,
   geminiTts: true,
   geminiVoice: "Charon",
   voiceConfirm: true,
@@ -153,7 +158,7 @@ const defaultSettings: Settings = {
   fishAudioVoiceId: "",
   clipboardWatch: false,
   councilMode: false,
-  voiceLock: false,
+  voiceLock: true,
   voiceProfile: [],
   voiceMatch: 0.6,
   endpointShortMs: 900,

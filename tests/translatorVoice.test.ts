@@ -4,7 +4,9 @@ import { geminiSpeak, TTS_VOICES, bestPlVoiceName, voiceQualityScore, checkPinne
 import { store } from "../src/lib/store";
 import type { Settings } from "../src/types";
 
-const baseVoice = () => ({ ...store.settings, speak: true, localTts: false, fishAudioApiKey: "", fishAudioVoiceId: "", elevenLabsApiKey: "", elevenLabsVoiceId: "", geminiTts: false, voicePinned: false, voiceSystemPl: true, voiceName: "", keys: { ...store.settings.keys, gemini: "" } }) as Settings;
+// voiceMode: undefined — TEN helper testuje ścieżkę „brak jawnego wyboru → wnioskuj ze starych flag"
+// (domyślny voiceMode aplikacji jest teraz „gemini", więc tu czyścimy go celowo).
+const baseVoice = () => ({ ...store.settings, voiceMode: undefined, speak: true, localTts: false, fishAudioApiKey: "", fishAudioVoiceId: "", elevenLabsApiKey: "", elevenLabsVoiceId: "", geminiTts: false, voicePinned: false, voiceSystemPl: true, voiceName: "", keys: { ...store.settings.keys, gemini: "" } }) as Settings;
 
 describe("resolveVoiceMode — JEDNO źródło prawdy o silniku głosu", () => {
   it("jawny wybór (voiceMode) wygrywa nad starymi flagami", () => {

@@ -23,6 +23,18 @@ export function currentBuild(): string {
   return typeof __APP_BUILD__ !== "undefined" ? __APP_BUILD__ : "";
 }
 
+/**
+ * Pure: znacznik buildu (UTC, np. "2026-06-30 13:44") → czytelny czas LOKALNY użytkownika.
+ * Dzięki temu „godzina aktualizacji" zgadza się z zegarem na telefonie (nie myli UTC z lokalnym).
+ * Zwraca "" gdy nieparsowalne. S9-safe (bez /u, bez \p, bez lookbehind).
+ */
+export function buildLocalTime(appBuild: string): string {
+  if (!appBuild || !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(appBuild)) return "";
+  const d = new Date(appBuild.slice(0, 16).replace(" ", "T") + ":00Z");
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "short" });
+}
+
 export function downloadUrl(p: Plat = platform()): string {
   // iOS nie ma instalowalnego pliku w wydaniach (instalacja przez App Store / sideload) —
   // kierujemy do strony wydań z instrukcją zamiast do nieistniejącego .ipa.
