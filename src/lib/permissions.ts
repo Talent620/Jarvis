@@ -26,7 +26,7 @@ const RISK: Record<string, Risk> = {
   finance_add_project: "write", finance_set_status: "write",
   // write — lokalne, odwracalne ustawienia/zapisy
   set_mode: "write", set_preference: "write", set_theme: "write", set_voice: "write",
-  switch_ai: "write", sales_autopilot: "write", backup_data: "write",
+  switch_ai: "write", lock_assistant: "write", sales_autopilot: "write", backup_data: "write",
   // write
   forget_fact: "write", save_lead: "write",
   // write — lokalny zapis (wymaga zgody, można zapamiętać)

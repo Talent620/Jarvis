@@ -1032,6 +1032,41 @@ const tools: Tool[] = [
   },
   {
     def: {
+      name: "lock_assistant",
+      description:
+        "Ustaw STAŁY umysł (jeden, najlepszy DARMOWY dostawca AI + konkretny model — koniec ciągłego przełączania) ORAZ stały, premium głos JARVISA. Używaj, gdy użytkownik prosi: „ustaw stały umysł i głos”, „nie zmieniaj mi mózgu/głosu”, „chcę jeden stały model”, „ustaw najlepszy darmowy AI na stałe”.",
+      input_schema: obj({}),
+    },
+    run: () => {
+      // Preferencja DARMOWYCH dostawców (od najlepszego do JARVIS-a). Gemini = darmowy + premium głos.
+      const FREE_PREF: { id: ProviderId; model: string }[] = [
+        { id: "gemini", model: "gemini-2.5-flash" },
+        { id: "cerebras", model: "llama-3.3-70b" },
+        { id: "groq", model: "meta-llama/llama-4-scout-17b-16e-instruct" },
+        { id: "mistral", model: "mistral-small-latest" },
+        { id: "openrouter", model: "meta-llama/llama-3.3-70b-instruct:free" },
+      ];
+      const pick = FREE_PREF.find((p) => primaryKey(p.id));
+      if (!pick) {
+        return "Aby ustawić STAŁY darmowy umysł, dodaj najpierw DARMOWY klucz Gemini z aistudio.google.com w ⚙ → AI. Wtedy włączę Gemini 2.5 Flash na stałe + premium głos JARVISA. (Działa też darmowy Groq/Cerebras/Mistral/OpenRouter, jeśli wolisz.)";
+      }
+      const patch: Partial<Settings> = { provider: pick.id, model: pick.model, voicePinned: true, voiceLock: true, speak: true };
+      let voiceMsg: string;
+      if (pick.id === "gemini") {
+        patch.voiceMode = "gemini";
+        if (!store.settings.geminiVoice?.trim()) patch.geminiVoice = "Charon"; // głęboki, stały głos JARVISA
+        voiceMsg = `premium głos JARVISA (Gemini${store.settings.geminiVoice?.trim() ? `, ${store.settings.geminiVoice}` : ", Charon"})`;
+      } else {
+        patch.voiceMode = "system";
+        patch.voiceSystemPl = true;
+        voiceMsg = "stały polski głos systemowy (premium wymaga klucza Gemini)";
+      }
+      store.setSettings(patch);
+      return `✅ Ustawiłem STAŁY umysł: ${PROVIDERS[pick.id].label}, model ${pick.model} — koniec przełączania, zawsze ten sam. Głos: ${voiceMsg}, przypięty na stałe. Zmienisz to w ⚙ → AI / ⚙ → Głos.`;
+    },
+  },
+  {
+    def: {
       name: "set_theme",
       description:
         "Zmień motyw kolorystyczny interfejsu (HUD): cyan (domyślny), złoty, bursztyn, zielony, ocean, czerwony, róż, fiolet, Matrix, Nord, Sunset, Retro 95, XP. Np. „włącz motyw XP”, „zmień na Nord”.",

@@ -28,7 +28,7 @@ const GROUP_TOOLS: Record<string, string[]> = {
   desktop: ["desktop_launch_app", "desktop_open", "desktop_power", "desktop_volume", "desktop_media", "desktop_type", "desktop_hotkey"],
   android: ["android_type", "android_tap", "android_global", "android_open_app", "android_open_settings"],
   info: ["get_weather", "get_news", "get_markets"],
-  system: ["set_mode", "set_preference", "set_theme", "set_voice", "switch_ai", "system_health", "self_check",
+  system: ["set_mode", "set_preference", "set_theme", "set_voice", "switch_ai", "lock_assistant", "system_health", "self_check",
     "backup_data", "predictions", "deep_solve"],
 };
 
@@ -44,7 +44,7 @@ const GROUP_KEYWORDS: Record<string, string[]> = {
   desktop: ["komputer", "pulpit windows", "desktop", "głośność", "glosnosc", "uruchom program", "wciśnij", "wcisnij"],
   android: ["telefon", "kliknij w", "wpisz na ekran", "ustawienia androida", "dostępnoś", "dostepnos"],
   info: ["pogoda", "wiadomości", "wiadomosci", "newsy", "kurs", "giełda", "gielda", "krypto", "bitcoin", "akcje"],
-  system: ["motyw", "ustaw tryb", "przełącz ai", "przelacz ai", "głos jarvisa", "glos jarvisa", "kopia", "backup", "diagnoza", "stan systemu", "preferencj"],
+  system: ["motyw", "ustaw tryb", "przełącz ai", "przelacz ai", "głos jarvisa", "glos jarvisa", "kopia", "backup", "diagnoza", "stan systemu", "preferencj", "stały umysł", "staly umysl", "stały głos", "staly glos", "nie zmieniaj głosu", "nie zmieniaj glosu", "stały model", "staly model", "zablokuj mózg", "zablokuj mozg", "stały mózg", "staly mozg"],
 };
 
 /** Pure: zbiór grup pasujących do zapytania (po słowach-wyzwalaczach). */
