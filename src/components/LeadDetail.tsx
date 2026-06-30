@@ -8,6 +8,7 @@ import { applyComposerAction, COMPOSER_ACTIONS, type ComposerAction } from "../l
 import { canSendDirect, sendOfferEmail } from "../lib/mailer";
 import { draftOffer } from "../lib/offer";
 import { markContacted } from "../lib/salesEngine";
+import { nextStatusAfterContact } from "../lib/leadContact";
 import { leadTimeline, appendLeadNote } from "../lib/leadNotes";
 import { salesOsConfigured, outreachViaSalesOs, leadToOutreachInput, pushLeadStatusToSalesOs } from "../lib/salesOs";
 import { copyWithToast, toast } from "../lib/toast";
@@ -38,6 +39,9 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
   const [osSending, setOsSending] = useState(false);
   const [composing, setComposing] = useState<ComposerAction | "">(""); // która akcja kompozytora trwa
   const [noteInput, setNoteInput] = useState(""); // dziennik kontaktu — nowa notatka po rozmowie
+  // Po otwarciu zewnętrznego kompozytora (Gmail/mailto/SMS) NIE oznaczamy kontaktu automatycznie —
+  // czekamy na jawne potwierdzenie użytkownika ("wysłałem"). To eliminuje fałszywe follow-upy.
+  const [awaitingConfirm, setAwaitingConfirm] = useState<"" | "mail" | "sms">("");
 
   // „Teczka się nie otwiera": zamiast cicho renderować NIC (gdy lead zniknął), pokaż czytelny
   // panel z możliwością zamknięcia — koniec wrażenia „nie działa".
@@ -89,7 +93,20 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
     const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`, store.settings.emailSignature);
     const url = kind === "gmail" ? gmailComposeUrl(email || "", subject, body) : mailtoUrl(email || "", subject, body);
     window.open(url, "_blank", "noopener");
+    // Otwarcie kompozytora ≠ wysyłka. Prosimy o jawne potwierdzenie zamiast zmyślać kontakt.
+    setAwaitingConfirm("mail");
+  };
+
+  // Jawne potwierdzenie użytkownika po wysłaniu z zewnętrznego kompozytora (Gmail/mailto/SMS).
+  const confirmContact = (channel: "mail" | "sms") => {
     markContacted(lead.id);
+    const label = channel === "sms" ? "SMS wysłany" : "E-mail wysłany";
+    set({
+      status: nextStatusAfterContact(lead.status),
+      notes: appendLeadNote(lead.notes, `${label} (potwierdzone ręcznie) ${new Date().toLocaleDateString("pl-PL")}`, Date.now()),
+    });
+    setAwaitingConfirm("");
+    toast("✓ Zapisano kontakt — follow-up ruszy z potwierdzonej wysyłki");
   };
 
   // Prawdziwa wysyłka jednym potwierdzeniem: desktop → SMTP, telefon → Gmail (backend).
@@ -112,7 +129,8 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
   const sendSms = () => {
     if (!phone) return;
     window.open(smsUrl(phone, smsDraft(lead, intel?.audit)), "_blank");
-    markContacted(lead.id);
+    // Otwarcie aplikacji SMS ≠ wysłany SMS. Czekamy na potwierdzenie użytkownika.
+    setAwaitingConfirm("sms");
   };
 
   // Zleć AI Sales OS-owi napisanie i wysyłkę maila (treść + wysyłka po stronie CRM-u).
@@ -380,6 +398,13 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
                   {phone && <button className="chip" onClick={sendSms}>📱 SMS</button>}
                   <button className="chip" onClick={() => copyWithToast(intel?.email || lead.offer || "")}>📋 Kopiuj</button>
                 </div>
+                {awaitingConfirm && (
+                  <div className="journal-card" style={{ marginTop: 8, padding: "8px 10px", borderLeft: "3px solid var(--gold)", display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                    <span style={{ fontSize: 13 }}>Czy {awaitingConfirm === "sms" ? "wysłałeś SMS" : "wysłałeś maila"}?</span>
+                    <button className="chip" style={{ borderColor: "var(--ok, #58e08a)" }} onClick={() => confirmContact(awaitingConfirm)}>✓ Tak, wysłane</button>
+                    <button className="chip" onClick={() => setAwaitingConfirm("")}>Jeszcze nie</button>
+                  </div>
+                )}
                 {!canSendDirect() && email && (
                   <p className="muted" style={{ fontSize: 11, marginTop: 6 }}>
                     💡 Chcesz wysyłać jednym kliknięciem, bez otwierania poczty? Na Windows: ⚙ → Poczta (adres + hasło aplikacji).
