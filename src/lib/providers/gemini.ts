@@ -2,7 +2,7 @@ import { runTool } from "../tools";
 import { fetchTimeout, appTokenHeader } from "../http";
 import { GeminiStreamAccumulator, drainSSE } from "../stream";
 import type { AskCtx, JarvisReply } from "./types";
-import { geminiThinkingConfig } from "../geminiCapabilities";
+import { geminiThinkingConfig, supportsGrounding, parseGroundingCitations } from "../geminiCapabilities";
 
 // Gemini odrzuca niektóre pola JSON Schema (np. additionalProperties) — także
 // w zagnieżdżonych obiektach/tablicach. Usuwamy je rekurencyjnie.
@@ -79,12 +79,19 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
   let inTok = 0;
   let outTok = 0;
   let guard = 0;
+  let groundCites: { title: string; url: string }[] = []; // prawdziwe źródła z grounding (gdy są)
   // Strumieniujemy tylko BEZPOŚREDNIO (proxy /gemini mapuje na generateContent, nie SSE).
   let canStream = !!ctx.onToken && !ctx.proxyUrl;
   const headers = { "content-type": "application/json", ...(ctx.proxyUrl ? appTokenHeader() : {}) };
+  // Grounding (aktualne dane ze źródłami) tylko gdy webSearch on i model to wspiera. Offline/on-device
+  // brain.ts i tak ustawia webSearch=false. Łączymy z function calling tylko po sprawdzeniu capability.
+  const useGrounding = ctx.webSearch && supportsGrounding(ctx.model);
   const buildBody = (): any => {
     const reqBody: any = { systemInstruction: { parts: [{ text: ctx.system }] }, contents };
-    if (functionDeclarations.length) reqBody.tools = [{ functionDeclarations }];
+    const reqTools: any[] = [];
+    if (functionDeclarations.length) reqTools.push({ functionDeclarations });
+    if (useGrounding) reqTools.push({ googleSearch: {} });
+    if (reqTools.length) reqBody.tools = reqTools;
     // Adaptacyjne myślenie: profil → thinkingConfig (capability gate — model bez myślenia pomija pole).
     if (ctx.reasoningProfile) {
       const tc = geminiThinkingConfig(ctx.model, ctx.reasoningProfile);
@@ -100,6 +107,8 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
     if (!res.ok) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
     // thoughtsTokenCount (tokeny myślenia) liczą się do kosztu — dolicz do output.
     if (data.usageMetadata) { inTok += data.usageMetadata.promptTokenCount || 0; outTok += (data.usageMetadata.candidatesTokenCount || 0) + (data.usageMetadata.thoughtsTokenCount || 0); }
+    // Grounding: prawdziwe źródła z metadanych (nie wymyślamy). Brak → zostaje pusto.
+    if (useGrounding) { const c = parseGroundingCitations(data); if (c.length) groundCites = c; }
     return data.candidates?.[0]?.content?.parts || [];
   };
 
@@ -179,7 +188,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
       .map((p) => p.text)
       .join("")
       .trim();
-    return { text: text || "…", tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok } };
+    return { text: text || "…", tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok }, ...(groundCites.length ? { citations: groundCites } : {}) };
   }
   return { text: "Zapętliłem się przy realizacji zadania.", tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok } };
 }

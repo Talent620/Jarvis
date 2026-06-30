@@ -46,6 +46,31 @@ export function thinkingKindFor(id: string): ThinkingKind {
   return "none";
 }
 
+/** Pure: czy model wspiera natywne Google Search grounding (aktualne dane ze źródłami)? */
+export function supportsGrounding(modelId: string): boolean {
+  return /gemini-(1\.5|2\.|2-|3)/.test(modelId) || /gemini-(flash|pro)/.test(modelId);
+}
+
+/**
+ * Pure: wyłuskaj PRAWDZIWE źródła z groundingMetadata odpowiedzi Gemini (nie wymyślamy źródeł).
+ * Zwraca [] gdy brak metadata — wtedy caller użyje zwykłego narzędzia research/web.
+ */
+export function parseGroundingCitations(data: unknown): { title: string; url: string }[] {
+  const meta = (data as any)?.candidates?.[0]?.groundingMetadata;
+  const chunks = meta?.groundingChunks;
+  if (!Array.isArray(chunks)) return [];
+  const out: { title: string; url: string }[] = [];
+  const seen = new Set<string>();
+  for (const c of chunks) {
+    const web = c?.web;
+    const url = web?.uri || web?.url;
+    if (!url || typeof url !== "string" || seen.has(url)) continue;
+    seen.add(url);
+    out.push({ title: (typeof web.title === "string" && web.title) || url, url });
+  }
+  return out;
+}
+
 /** Pure: wywnioskuj możliwości z surowego wpisu modelu z API. */
 export function inferCaps(raw: { name?: string; supportedGenerationMethods?: string[]; inputTokenLimit?: number }): GeminiModelCaps | null {
   const full = (raw?.name || "").trim();
