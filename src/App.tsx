@@ -11,6 +11,7 @@ const Projects = lazy(() => import("./components/Projects"));
 const Journal = lazy(() => import("./components/Journal"));
 const SalesDashboard = lazy(() => import("./components/SalesDashboard"));
 const MoneyHub = lazy(() => import("./components/MoneyHub"));
+const FinancialDashboard = lazy(() => import("./components/FinancialDashboard"));
 const Help = lazy(() => import("./components/Help"));
 const More = lazy(() => import("./components/More"));
 import Boot from "./components/Boot";
@@ -239,6 +240,7 @@ export default function App() {
   const [showContent, setShowContent] = useState(false);
   const [showBrand, setShowBrand] = useState(false);
   const [showMail, setShowMail] = useState(false);
+  const [showFinance, setShowFinance] = useState(false);
   const [showAds, setShowAds] = useState(false);
   // ⌘K — rejestr poleceń. MUSI być po WSZYSTKICH useState (referuje settery), inaczej TDZ na pierwszym
   // renderze (fabryka useMemo wykonuje się od razu). Stabilny (deps []); akcje przez actionsRef.
@@ -1483,6 +1485,7 @@ export default function App() {
           onContent={() => setShowContent(true)}
           onBrand={() => setShowBrand(true)}
           onMail={() => setShowMail(true)}
+          onFinance={() => setShowFinance(true)}
           onAds={() => setShowAds(true)}
           onFaq={() => setShowFaq(true)}
           onClose={() => setShowMore(false)}
@@ -1522,6 +1525,11 @@ export default function App() {
       {showMail && (
         <ScreenBoundary>
           <MailCompose onClose={() => setShowMail(false)} />
+        </ScreenBoundary>
+      )}
+      {showFinance && (
+        <ScreenBoundary>
+          <FinancialDashboard onClose={() => setShowFinance(false)} />
         </ScreenBoundary>
       )}
       {showContent && (
