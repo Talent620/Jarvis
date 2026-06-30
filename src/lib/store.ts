@@ -295,7 +295,12 @@ export function setSettingsPersistTransform(fn: (s: Settings) => Settings): void
   settingsPersistTransform = fn;
 }
 
-class Store {
+// Moduł-level uchwyt na AKTUALNIE podpiętą instancję globalnych listenerów. Gwarantuje, że nawet
+// po ponownej ewaluacji modułu (HMR) lub utworzeniu drugiej instancji Store, STARE listenery
+// zostają odpięte przed podpięciem nowych — koniec narastania (wyciek listenerów/pamięci).
+let boundStore: Store | null = null;
+
+export class Store {
   data: AppData = normalizeData(read<AppData>(DATA_KEY, emptyData)); // #1: twarda normalizacja
   settings: Settings = normalizeSettings(read<Settings>(SETTINGS_KEY, defaultSettings));
   /** Rośnie przy każdej zmianie — używane jako snapshot dla Reacta. */
@@ -305,27 +310,61 @@ class Store {
   private idbReady = false;
   private idbFlushTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // STABILNE referencje handlerów — niezbędne, by removeEventListener faktycznie je odpiął.
+  private onStorage = (e: StorageEvent) => {
+    // storage event odpala się TYLKO w INNYCH kartach (nie w tej, która zapisała) — brak pętli.
+    if (e.key === SETTINGS_KEY) {
+      this.settings = normalizeSettings(read<Settings>(SETTINGS_KEY, defaultSettings));
+      this.emit();
+    } else if (e.key === DATA_KEY) {
+      this.reloadDataFromDisk();
+    }
+  };
+  private flushOnHide = () => {
+    if (this.idbFlushTimer) { clearTimeout(this.idbFlushTimer); this.idbFlushTimer = null; void this.flushIdb(); }
+  };
+  private onVisibility = () => {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") this.flushOnHide();
+  };
+
   constructor() {
     void this.initPersistence();
-    // Audyt #2 (synchronizacja między kartami/oknami) + #4 (flush przy zamknięciu).
-    if (typeof window !== "undefined") {
-      try {
-        // storage event odpala się TYLKO w INNYCH kartach (nie w tej, która zapisała) — brak pętli.
-        window.addEventListener("storage", (e) => {
-          if (e.key === SETTINGS_KEY) {
-            this.settings = normalizeSettings(read<Settings>(SETTINGS_KEY, defaultSettings));
-            this.emit();
-          } else if (e.key === DATA_KEY) {
-            this.reloadDataFromDisk();
-          }
-        });
-        const flushOnHide = () => {
-          if (this.idbFlushTimer) { clearTimeout(this.idbFlushTimer); this.idbFlushTimer = null; void this.flushIdb(); }
-        };
-        window.addEventListener("pagehide", flushOnHide);
-        document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushOnHide(); });
-      } catch { /* środowisko bez window/document — pomiń */ }
-    }
+    this.bindGlobalListeners();
+  }
+
+  /**
+   * Idempotentnie podepnij globalne listenery (#2 sync kart, #4 flush przy zamknięciu). NAJPIERW
+   * odpina ewentualne poprzednie (HMR/druga instancja), więc listenery nie mogą narastać.
+   */
+  private bindGlobalListeners() {
+    if (typeof window === "undefined") return;
+    try {
+      boundStore?.unbindGlobalListeners(); // anty-wyciek: usuń poprzednie powiązanie
+      window.addEventListener("storage", this.onStorage);
+      window.addEventListener("pagehide", this.flushOnHide);
+      if (typeof document !== "undefined") document.addEventListener("visibilitychange", this.onVisibility);
+      boundStore = this;
+    } catch { /* środowisko bez window/document — pomiń */ }
+  }
+
+  /** Odpnij globalne listenery (te same, stabilne referencje). */
+  private unbindGlobalListeners() {
+    if (typeof window === "undefined") return;
+    try {
+      window.removeEventListener("storage", this.onStorage);
+      window.removeEventListener("pagehide", this.flushOnHide);
+      if (typeof document !== "undefined") document.removeEventListener("visibilitychange", this.onVisibility);
+    } catch { /* ignore */ }
+    if (boundStore === this) boundStore = null;
+  }
+
+  /**
+   * Sprzątanie: odpina globalne listenery i kasuje timer flush. Wołać przy zamknięciu okna
+   * Electrona / HMR / w testach. Additive — nie zmienia istniejącego API.
+   */
+  dispose(): void {
+    this.unbindGlobalListeners();
+    if (this.idbFlushTimer) { clearTimeout(this.idbFlushTimer); this.idbFlushTimer = null; }
   }
 
   subscribe(fn: Listener): () => void {
@@ -444,3 +483,9 @@ class Store {
 }
 
 export const store = new Store();
+
+// HMR (tylko dev): przy podmianie modułu odpinamy listenery starej instancji, by nie narastały.
+try {
+  const hot = (import.meta as unknown as { hot?: { dispose: (cb: () => void) => void } }).hot;
+  if (hot) hot.dispose(() => store.dispose());
+} catch { /* brak HMR (produkcja/testy) — pomiń */ }
