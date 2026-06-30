@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "📄 Ciężkie dokumenty nie wysadzają już zapisu: pliki projektów (np. duże PDF-y) trafiają teraz do pojemnej bazy na urządzeniu (IndexedDB), a nie do ciasnej pamięci współdzielonej z resztą ustawień — koniec błędów zapisu, gdy wgrasz większy dokument. Istniejące pliki przenoszą się automatycznie przy następnym uruchomieniu, bez utraty (gdy się nie uda, zostają w starym miejscu i próba ponawia się później).",
       "🎛 Centrum prowadzi do najważniejszego: na górze Centrum (⋯ Więcej) pojawia się karta ⚡ Teraz — jedna najlepsza czynność na ten moment (ta sama, co na ekranie startowym), z dotknięciem otwierającym właściwy moduł. Wszystkie dotychczasowe kafle i grupy zostają bez zmian — dochodzi tylko skrót do tego, co naprawdę się liczy.",
       "💬 Historia czatu nie znika po cichu: gdy pamięć telefonu jest pełna i JARVIS musi skrócić historię (obrazy/starsze rozmowy), powie Ci o tym wprost i podpowie, by zrobić kopię i wyczyścić stare — zamiast po cichu gubić wiadomości (błąd lądował tylko w konsoli).",
       "🗣 Bezpieczniejsze potwierdzanie głosem: pytając o zgodę, JARVIS najpierw kończy mówić, a dopiero potem słucha — nie usłyszy już własnego pytania. Zatwierdza tylko jednoznaczne tak/potwierdzam/zgoda/wykonaj; zwykłe słowa w zdaniu (wyślij, rób, proszę) niczego same nie odpalają. Brak jasnej odpowiedzi przez 20 s = odmowa (bezpiecznie).",

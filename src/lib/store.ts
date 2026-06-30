@@ -9,7 +9,7 @@ const SETTINGS_KEY = "jarvis.settings.v2";
 // Kolekcje, które rosną (embeddingi pamięci, logi) — trzymane w IndexedDB zamiast localStorage,
 // by zdjąć sufit ~5 MB (AUDIT.md dług #1). `store.data` zostaje w RAM i synchroniczne; tu tylko
 // trwałość. Gdy IndexedDB niedostępny → wszystko wraca do localStorage (jak dotąd).
-const IDB_COLLECTIONS: (keyof AppData)[] = ["memory", "sentMail", "contentPosts", "imageHistory", "siteProjects"];
+const IDB_COLLECTIONS: (keyof AppData)[] = ["memory", "sentMail", "contentPosts", "imageHistory", "siteProjects", "projectFiles"];
 const IDB_MIGRATED_KEY = "jarvis.idb.migrated.v1";
 
 const emptyData: AppData = {
@@ -478,10 +478,17 @@ export class Store {
         // WAŻNE: nie ustawiaj idbReady=true PRZED hydratacją. Inaczej setData w trakcie `await idbGet`
         // poszedłby ścieżką „slim" i zapisałby PUSTE tablice z RAM do IDB, kasując zapisane dane.
         // W trakcie hydratacji zapisy idą do localStorage (pełne) — IDB pozostaje nietknięte.
+        let lateOk = true;
         for (const c of IDB_COLLECTIONS) {
           const persisted = await idbGet<unknown[]>(c as string);
-          if (!Array.isArray(persisted)) continue;
           const ram = rec[c as string];
+          if (!Array.isArray(persisted)) {
+            // Kolekcja NIGDY nie trafiła do IDB (np. nowo dodana do listy, jak projectFiles, u
+            // wcześniej-zmigrowanego użytkownika). Zmigruj ją z RAM/localStorage do IDB TERAZ,
+            // zanim persistData odchudzi localStorage — inaczej dane by zniknęły.
+            if (Array.isArray(ram) && ram.length) lateOk = (await idbSet(c as string, ram)) && lateOk;
+            continue;
+          }
           // A1: gdy setData dopisał coś do RAM W TRAKCIE hydratacji, NIE wolno ani pominąć
           // zapisanych danych (utrata persisted), ani ich nadpisać (utrata nowych). SCAL je
           // (dedup po id, RAM nowsze wygrywa). Gdy RAM puste — po prostu wczytaj zapisane.
@@ -489,6 +496,9 @@ export class Store {
             ? (mergeById(ram as { id?: string }[], persisted as { id?: string }[]) as unknown[])
             : persisted;
         }
+        // Jeśli migracja nowej kolekcji do IDB się nie udała — NIE odchudzaj localStorage
+        // (zostań na pełnym localStorage, zero utraty). Spróbujemy ponownie przy następnym starcie.
+        if (!lateOk) return;
         this.idbReady = true; // dopiero teraz — hydratacja zakończona, można odchudzać do IDB
         this.emit();
       }

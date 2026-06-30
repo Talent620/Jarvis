@@ -76,6 +76,30 @@ describe("store ↔ IndexedDB — migracja i hydratacja", () => {
     expect(store.data.memory[0].value).toBe("Tesla");
   });
 
+  it("nowo dodana kolekcja (projectFiles) migruje do IDB u już-zmigrowanego usera, bez utraty", async () => {
+    // Stan: user zmigrowany (v1), ale projectFiles wciąż w localStorage (dodane do IDB później).
+    ls.setItem("jarvis.idb.migrated.v1", "1");
+    ls.setItem("jarvis.data.v2", JSON.stringify({
+      memory: [], sentMail: [], contentPosts: [],
+      projectFiles: [{ id: "doc1", name: "umowa.pdf", data: "JVBERi0xLjQ" }],
+    }));
+    const db = await import("../src/lib/db");
+    db.__resetDbForTests();
+
+    const { store } = await import("../src/lib/store");
+    // projectFiles zostaje w RAM...
+    await waitFor(() => store.data.projectFiles.length > 0);
+    expect(store.data.projectFiles[0].id).toBe("doc1");
+    // ...i migruje do IDB (migracja w locie u już-zmigrowanego usera). Poczekaj na zapis.
+    let inIdb: { id: string }[] | undefined;
+    const t0 = Date.now();
+    while (!inIdb?.length && Date.now() - t0 < 2000) {
+      inIdb = await db.idbGet<{ id: string }[]>("projectFiles");
+      if (!inIdb?.length) await new Promise((r) => setTimeout(r, 15));
+    }
+    expect(inIdb?.[0]?.id).toBe("doc1");
+  });
+
   it("setData zapisuje duże kolekcje do IDB (debounce)", async () => {
     ls.setItem("jarvis.idb.migrated.v1", "1");
     ls.setItem("jarvis.data.v2", JSON.stringify({ memory: [], sentMail: [], contentPosts: [] }));
