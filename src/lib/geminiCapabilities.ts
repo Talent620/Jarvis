@@ -7,6 +7,7 @@
 
 import { idbGet, idbSet, idbAvailable } from "./db";
 import { fetchTimeout } from "./http";
+import type { ReasoningProfile } from "./providers/types";
 
 export type IntelligenceMode = "economy" | "balanced" | "maximum";
 export type ThinkingKind = "none" | "budget" | "level"; // 2.5 → budget, 3 → level
@@ -112,6 +113,23 @@ export function pickGeminiModel(models: GeminiModelCaps[], mode: IntelligenceMod
     || usable.find((m) => /flash$/.test(m.id) && !/lite/.test(m.id))
     || usable.find((m) => /flash/.test(m.id) && !/lite/.test(m.id));
   return (flash || [...usable].sort((a, b) => score(b) - score(a))[0]).id;
+}
+
+/**
+ * Pure: zbuduj `thinkingConfig` Gemini z profilu rozumowania, z CAPABILITY GATE —
+ * model bez myślenia (none) dostaje null (nie wysyłamy nieobsługiwanego pola).
+ * Gemini 3 → thinkingLevel; Gemini 2.5 → thinkingBudget (tokeny; high = dynamiczny -1).
+ */
+export function geminiThinkingConfig(modelId: string, profile: ReasoningProfile): Record<string, unknown> | null {
+  const kind = thinkingKindFor(modelId);
+  if (kind === "none") return null; // capability gate
+  if (kind === "level") {
+    const level = profile === "high" ? "high" : profile === "medium" ? "medium" : "low";
+    return { thinkingLevel: level };
+  }
+  // budget (Gemini 2.5): high → dynamiczny (-1), medium → 2048, low → 512, minimal → 0.
+  const budget = profile === "high" ? -1 : profile === "medium" ? 2048 : profile === "low" ? 512 : 0;
+  return { thinkingBudget: budget };
 }
 
 /** Pobierz listę modeli z API (mockowalne przez fetchImpl). Rzuca przy 401/429/sieci. */

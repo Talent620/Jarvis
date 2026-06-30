@@ -11,7 +11,7 @@ import { buildProfileBlock } from "./profile";
 import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, isKeyError, humanize, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
-import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
+import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, reasoningProfileFor, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
 import { recordEpisode, loadEpisodes } from "./episodicMemory";
 import { buildFusionBlock } from "./contextFusion";
@@ -628,6 +628,11 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
     tools: selectToolsForIntent(lastUser?.content || "", toolDefs),
     history: trimmed,
     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
+    // Adaptacyjne myślenie: profil rozumowania z RODZAJU zadania (trudne → głębiej, proste → szybko).
+    reasoningProfile: reasoningProfileFor(classifyTask(lastUser?.content || "", !!lastUser?.image).kind, {
+      deepThink: needsDeepThink(lastUser?.content || ""),
+      veryShort: (lastUser?.content || "").trim().split(/\s+/).filter(Boolean).length <= 3,
+    }),
   };
 
   // Router dobiera dostawcę+model do zadania (prostota/złożoność/obraz) + fallback.

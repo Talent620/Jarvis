@@ -9,7 +9,7 @@
 //   • retry + fallback (już w brain.ts: withRetry + łańcuch dostawców).
 // Osobowość/zachowanie JARVIS-a pozostają bez zmian (router dotyka tylko WYBORU modelu).
 
-import type { ProviderId } from "./providers/types";
+import type { ProviderId, ReasoningProfile } from "./providers/types";
 import { idbGet, idbSet } from "./db";
 
 export type TaskKind = "simple" | "complex" | "vision";
@@ -78,6 +78,21 @@ export function needsDeepThink(text: string): boolean {
   if (PLAIN_WRITING.test(t)) return false;
   if (MATH_CUES.test(t) || REASONING_CUES.test(t)) return true;
   return t.length > 500;
+}
+
+/**
+ * Pure: profil rozumowania z RODZAJU zadania (nie z długości tekstu samej w sobie).
+ * Ryzykowne działanie zewnętrzne lub głębokie myślenie → high; analiza/strategia (complex) → high;
+ * wizja → medium; proste → low (bardzo krótkie/nawigacyjne → minimal).
+ */
+export function reasoningProfileFor(
+  kind: TaskKind,
+  opts: { deepThink?: boolean; riskyAction?: boolean; veryShort?: boolean } = {},
+): ReasoningProfile {
+  if (opts.riskyAction || opts.deepThink) return "high";
+  if (kind === "complex") return "high";
+  if (kind === "vision") return "medium";
+  return opts.veryShort ? "minimal" : "low";
 }
 
 // --- Groq: Llama 4 Scout vs Kimi K2 ---

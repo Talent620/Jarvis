@@ -2,6 +2,7 @@ import { runTool } from "../tools";
 import { fetchTimeout, appTokenHeader } from "../http";
 import { GeminiStreamAccumulator, drainSSE } from "../stream";
 import type { AskCtx, JarvisReply } from "./types";
+import { geminiThinkingConfig } from "../geminiCapabilities";
 
 // Gemini odrzuca niektóre pola JSON Schema (np. additionalProperties) — także
 // w zagnieżdżonych obiektach/tablicach. Usuwamy je rekurencyjnie.
@@ -75,6 +76,11 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
   const buildBody = (): any => {
     const reqBody: any = { systemInstruction: { parts: [{ text: ctx.system }] }, contents };
     if (functionDeclarations.length) reqBody.tools = [{ functionDeclarations }];
+    // Adaptacyjne myślenie: profil → thinkingConfig (capability gate — model bez myślenia pomija pole).
+    if (ctx.reasoningProfile) {
+      const tc = geminiThinkingConfig(ctx.model, ctx.reasoningProfile);
+      if (tc) reqBody.generationConfig = { ...(reqBody.generationConfig || {}), thinkingConfig: tc };
+    }
     return reqBody;
   };
 
@@ -83,7 +89,8 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
     const res = await fetchTimeout(base, { method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
-    if (data.usageMetadata) { inTok += data.usageMetadata.promptTokenCount || 0; outTok += data.usageMetadata.candidatesTokenCount || 0; }
+    // thoughtsTokenCount (tokeny myślenia) liczą się do kosztu — dolicz do output.
+    if (data.usageMetadata) { inTok += data.usageMetadata.promptTokenCount || 0; outTok += (data.usageMetadata.candidatesTokenCount || 0) + (data.usageMetadata.thoughtsTokenCount || 0); }
     return data.candidates?.[0]?.content?.parts || [];
   };
 

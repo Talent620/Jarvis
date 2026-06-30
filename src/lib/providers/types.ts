@@ -2,6 +2,9 @@ import type { ToolDef } from "../tools";
 
 export type ProviderId = "anthropic" | "gemini" | "groq" | "cerebras" | "mistral" | "cohere" | "openrouter" | "nvidia" | "github" | "ollama" | "webllm";
 
+/** Profil rozumowania — ile „myślenia" włożyć w odpowiedź (wg rodzaju zadania). */
+export type ReasoningProfile = "minimal" | "low" | "medium" | "high";
+
 export interface Msg {
   role: "user" | "assistant";
   content: string;
@@ -40,6 +43,9 @@ export interface AskCtx {
   /** Tryb szybki — pomija „głębokie myślenie" (niższa jakość, dużo niższe
    *  opóźnienie). Do zadań prostych/czasowo wrażliwych, np. tłumaczenia na żywo. */
   fast?: boolean;
+  /** Profil rozumowania — ile „myślenia" włożyć (wg rodzaju zadania, nie długości tekstu).
+   *  Dostawcy z myśleniem (Gemini 2.5/3) mapują go na thinkingBudget / thinkingLevel. */
+  reasoningProfile?: ReasoningProfile;
   /** Callback strumieniowania: wywoływany z każdą deltą tekstu w miarę generowania.
    *  Gdy podany, adapter streamuje odpowiedź (jeśli potrafi); inaczej zwraca całość naraz. */
   onToken?: (delta: string) => void;

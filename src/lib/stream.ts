@@ -171,7 +171,9 @@ export class GeminiStreamAccumulator {
     const u = obj?.usageMetadata;
     if (u) {
       this.usage.inputTokens = u.promptTokenCount || this.usage.inputTokens;
-      this.usage.outputTokens = u.candidatesTokenCount || this.usage.outputTokens;
+      // thoughtsTokenCount (tokeny myślenia Gemini) liczą się do kosztu — dolicz do output.
+      const out2 = (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0);
+      this.usage.outputTokens = out2 || this.usage.outputTokens;
     }
     return out;
   }
