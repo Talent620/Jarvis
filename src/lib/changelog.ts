@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🗂 Teczka Klienta = prawdziwy CRM: po telefonie zapiszesz ustalenia w 📞 Dzienniku kontaktu (oś czasu wpisów z datą), zobaczysz potwierdzenie zmiany statusu (toast), a akcje e-mail pokazują się tylko gdy lead ma adres (koniec pustego Gmaila). Lead bez kontaktu? Wyraźny baner kieruje do Map/Google. Przycisk 🚫 Zamknięte oznacza klienta jako nieaktywnego — dedupe i tak nie pokaże go ponownie w wyszukiwaniu.",
       "🌗 Zderzacz idei — codzienne twórcze połączenie: na ekranie startowym JARVIS łączy dwa pozornie niezwiązane wątki z Twoich danych (projekty, pamięć, notatki, branże leadów) w jedną iskrę. Dotknij — rozwinie pomysł. Jedno połączenie dziennie, zawsze z tego, czym realnie żyjesz.",
       "🧭 Life Entropy — wskaźnik chaosu życia (nie produktywności): z Twoich danych (zaległe zadania, leady bez kontaktu, rozproszone projekty) liczy poziom rozproszenia 0–100 i wskazuje JEDNĄ zmianę o największym wpływie — to, co najbardziej rozładuje napięcie. Silnik gotowy; wpięcie w ekran w kolejnym kroku.",
       "🫀 Living Pulse — nigdy identyczne otwarcie: nowy silnik, który z Twoich realnych danych (zaległe zadania, leady do odświeżenia, dzisiejsze wysłane maile, rytm dnia) składa przy każdym wejściu inny, trafny sygnał (puls) — przewiduje, co warto zrobić teraz, i nie powtarza poprzedniego. Fundament żywej inteligencji JARVIS-a (na razie silnik; włączenie w ekran wejścia w kolejnym kroku).",

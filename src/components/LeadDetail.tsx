@@ -178,6 +178,13 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
               onChange={(e) => set({ value: Number(e.target.value) || undefined })}
               style={{ width: 100, padding: "4px 8px", borderRadius: 8, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", fontSize: 13 }}
             />
+            {/* 🚫 Jeden ruch: zamknięte/nie kontaktować — status Odrzucony + wpis w dzienniku. Dedupe i tak nie pokaże go ponownie. */}
+            {lead.status !== "lost" && (
+              <button className="chip" title="Oznacz jako zamknięte — nie pokaże się ponownie w wyszukiwaniu" onClick={() => {
+                set({ status: "lost", notes: appendLeadNote(lead.notes, "Zamknięte — nie kontaktować.", Date.now()) });
+                toast("🚫 Oznaczono jako zamknięte — nie wróci w wynikach.");
+              }}>🚫 Zamknięte</button>
+            )}
           </div>
 
           {/* Wszystkie dane — szybkie akcje */}
