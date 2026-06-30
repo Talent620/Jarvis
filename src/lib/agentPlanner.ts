@@ -127,7 +127,7 @@ export function looksMultiStep(text: string): boolean {
   if (t.split(/\s+/).filter(Boolean).length < 4) return false;
   // łączniki sekwencji + co najmniej 2 czasowniki-akcje to sygnał planu
   const connectors = [" i ", " oraz ", " potem ", " następnie ", " a później ", ", a ", " then "];
-  const verbs = ["znajd", "przygotuj", "wyślij", "wyslij", "dodaj", "utwórz", "utworz", "stwórz", "stworz", "zaplanuj", "oceń", "ocen", "porównaj", "porownaj", "napisz", "zbuduj", "umów", "umow"];
+  const verbs = ["znajd", "przygotuj", "wyślij", "wyslij", "dodaj", "utwórz", "utworz", "stwórz", "stworz", "zaplanuj", "oceń", "ocen", "porównaj", "porownaj", "napisz", "zbuduj", "umów", "umow", "przypom", "ponagl", "oznacz", "zaktualizuj"];
   const hasConn = connectors.some((c) => t.includes(c));
   const verbCount = verbs.filter((v) => t.includes(v)).length;
   return hasConn && verbCount >= 2;
