@@ -2,6 +2,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { isAllowedHost, mcpToolName, mcpToolsToDefs, formatMcpResult, McpManager } from "../src/lib/mcp";
 import { toolDefs, runTool } from "../src/lib/tools";
+import { grantOutboundScope } from "../src/lib/permissions";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -52,6 +53,7 @@ describe("MCP — McpManager (mock JSON-RPC)", () => {
     const loaded = await mgr.loadAll([{ name: "test", url: "http://localhost:9100/mcp" }], ["localhost"]);
     expect(loaded.map((t) => t.toolName)).toContain("mcp_test_ping");
     expect(toolDefs.some((d) => d.name === "mcp_test_ping")).toBe(true); // zarejestrowane dla modelu
+    grantOutboundScope("*"); // narzędzie dynamiczne = fail-safe outbound; test bada wykonanie
     const out = await runTool("mcp_test_ping", {});
     expect(out).toBe("pong"); // wykonane przez serwer MCP
   });

@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🔒 Bezpieczniej z akcjami wychodzącymi: jeśli z jakiegoś powodu brakuje ekranu potwierdzenia, akcja na zewnątrz (mail, SMS, telefon, automatyzacja) jest teraz BLOKOWANA zamiast po cichu przepuszczana. Tryby bez ekranu (np. Live) dostają jawny, ograniczony i wygasający zakres zgody — nie globalną furtkę. W normalnej pracy aplikacji nic się nie zmienia (potwierdzasz jak dotąd).",
       "⏱ Szybsze codzienne wejście: pełny, efektowny ekran startowy widzisz przy pierwszym uruchomieniu; każde kolejne startuje skróconym splashem (krócej niż sekunda), żeby od razu wejść do pracy.",
       "⚡ Szybsze i trafniejsze odpowiedzi: zamiast wysyłać do modelu komplet ~88 narzędzi w każdej wiadomości, JARVIS dobiera tylko te pasujące do tematu (finanse, sprzedaż, poczta, pamięć…) plus zestaw podstawowy. Mniej zbędnego kontekstu = szybciej, taniej i mniejsze ryzyko, że model sięgnie po złe narzędzie. Gdy temat jest niejasny, dostaje pełen zestaw — nigdy nie jest gorzej niż dotąd.",
       "📱 Płynniej na słabszych telefonach (S9): na urządzeniach z małą pamięcią/liczbą rdzeni (albo przy włączonym oszczędzaniu ruchu/danych) JARVIS automatycznie wchodzi w tryb low-power — wyłącza kosztowne rozmycia tła i ciągłe pełnoekranowe animacje, a animacje pauzują się, gdy aplikacja jest schowana (mniej zużycia baterii i CPU). Na mocnych telefonach nic się nie zmienia.",

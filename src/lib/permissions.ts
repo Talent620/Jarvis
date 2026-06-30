@@ -102,6 +102,21 @@ export function isAutoConsent(): boolean {
   return autoConsentUntil > 0 && Date.now() < autoConsentUntil;
 }
 
+// Zakresowa zgoda sesyjna dla trybów BEZ UI (Live/headless): zamiast globalnego fail-open
+// nadajemy JAWNY, OGRANICZONY zakres — konkretne narzędzia (lub "*") na określony czas.
+// To sankcjonowana droga, gdy nie ma ekranu zgody; domyślnie outbound bez UI jest BLOKOWANY.
+let scopeTools: Set<string> | "*" | null = null;
+let scopeUntil = 0;
+export function grantOutboundScope(tools: string[] | "*", ttlMs = AUTO_CONSENT_MS): void {
+  scopeTools = tools === "*" ? "*" : new Set(tools);
+  scopeUntil = Date.now() + Math.max(0, ttlMs);
+}
+export function clearOutboundScope(): void { scopeTools = null; scopeUntil = 0; }
+export function hasOutboundScope(tool: string): boolean {
+  if (!scopeTools || Date.now() >= scopeUntil) return false;
+  return scopeTools === "*" || scopeTools.has(tool);
+}
+
 type StepListener = (tool: string | null) => void;
 let stepListener: StepListener | null = null;
 export function setStepListener(fn: StepListener) { stepListener = fn; }
@@ -147,9 +162,13 @@ export async function requestConsent(tool: string, input: unknown): Promise<bool
   if (risk !== "outbound") return true;
   // Tryb Szefa „pełny dostęp": globalna zgoda na outbound, z auto-wygaśnięciem.
   if (isAutoConsent()) return true;
+  // Jawny, ograniczony zakres sesyjny (Live/headless) — sankcjonowana droga bez UI.
+  if (hasOutboundScope(tool)) return true;
   const consents = loadConsents();
   if (consents[tool] === "allow") return true;
-  if (!consentHandler) return !store.settings.requireConsentAlways; // brak UI (np. tryb live): domyślnie nie blokuj (zgodność wstecz); opt-in fail-closed
+  // FAIL-CLOSED: brak UI zgody i brak jawnego zakresu → BLOKUJ akcję wychodzącą.
+  // (Tryby bez ekranu muszą najpierw nadać grantOutboundScope — nie ma globalnego fail-open.)
+  if (!consentHandler) return false;
   const { allow, remember } = await consentHandler({ tool, input, risk });
   if (allow && remember) { consents[tool] = "allow"; saveConsents(consents); }
   return allow;

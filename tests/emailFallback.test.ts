@@ -5,8 +5,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runTool } from "../src/lib/tools";
 import { store } from "../src/lib/store";
+import { grantOutboundScope } from "../src/lib/permissions";
 
 beforeEach(() => {
+  grantOutboundScope("*"); // test bada fallback wysyłki, nie bramkę zgód (fail-closed)
   // Brak backendu Gmail (telefon bez OAuth) — wymuszamy ścieżkę fallback.
   store.setSettings({ syncUrl: "", syncToken: "" });
   // window.open w jsdom bywa nieobsłużone — podmieniamy na bezpieczny stub.
