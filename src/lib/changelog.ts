@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "📱 Twarda gwarancja zgodności z Samsung S9 (stary WebView): kompilacja celuje teraz w ES2019, a automatyczny skaner pilnuje, by do kodu nie wszedł żaden regex wywalający Chrome 79 (flaga /u, klasy \\p{...}, lookbehind). Przy okazji usunąłem 3 takie wzorce (boss, powiadomienia). Mniej niespodziewanych wywałek na starszych telefonach.",
       "🎨 Marka i podpisy w zwykłej kopii (bez sekretów): zwykła kopia zapasowa przenosi teraz Duszę Marki (ton, kolory, fonty) i bibliotekę podpisów e-mail na nowe urządzenie — bez eksportu kluczy API, haseł SMTP czy tokenów. Stare kopie wczytują się jak dawniej.",
       "🛟 Kopia zapasowa obejmuje teraz także Finanse: projekty/zlecenia (kwoty, statusy, płatności) trafiają do zwykłej, pełnej i szyfrowanej kopii oraz wracają przy imporcie. Przenosisz się na nowy telefon lub odzyskujesz po reinstalacji bez utraty kasy. Stare kopie (bez finansów) wczytują się jak dawniej i nie kasują istniejących projektów.",
       "💸 Finanse z czatu — JARVIS sam ogarnia kasę bez wchodzenia w moduł: powiesz np. dodaj projekt na 8000 dla firmy X i projekt ląduje w Finansach; zapytasz ile zarobiłem / jak stoją finanse — od ręki dostaniesz przychód, zysk, marżę, ROI, zapłacone i do zapłaty oraz najlepszego klienta; powiesz oznacz projekt X jako opłacony — zmieni status (i zapisze wpłatę). Dashboard działa jak wcześniej; teraz po prostu sterujesz nim też głosem/czatem.",

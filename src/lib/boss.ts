@@ -48,7 +48,7 @@ export const BOSS_DOCTRINE = [
 const SUMMON = /^(hej |ok |halo |jarvis )?(szef(ie|uniu|unciu)?|tryb szefa|(przywo[łl]aj|wezwij|wo[łl]am|otw[oó]rz) (tryb )?szef[a]?)$/i;
 
 export function isBossSummon(text: string): boolean {
-  const t = (text || "").trim().replace(/[!.,?…]+$/u, "").toLowerCase();
+  const t = (text || "").trim().replace(/[!.,?…]+$/, "").toLowerCase();
   if (!t) return false;
   return SUMMON.test(t);
 }
@@ -63,7 +63,7 @@ export type BossMeta = "stop" | "repeat" | null;
  * jednoznaczne frazy (≤35 zn.), by nie łapać normalnych poleceń. Czyste i testowalne.
  */
 export function parseBossMeta(text: string): BossMeta {
-  const t = (text || "").trim().toLowerCase().replace(/[!.,?…]+$/u, "");
+  const t = (text || "").trim().toLowerCase().replace(/[!.,?…]+$/, "");
   if (!t || t.length > 35) return null;
   if (/^(stop|anuluj|przerwij|cisza|cicho|do[śs][ćc]|wystarczy|zatrzymaj( się)?|przesta[ńn])$/.test(t)) return "stop";
   if (/^(powt[oó]rz( to)?|jeszcze raz|powiedz (jeszcze raz|to ponownie)|nie dos[łl]ysza[łl]em)$/.test(t)) return "repeat";

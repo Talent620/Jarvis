@@ -15,8 +15,8 @@ export interface ToastAction {
 export function normalizeToastText(message: string): string {
   return (message || "")
     .trim()
-    .replace(/^[✓✔✅]+\s*/u, "")
-    .replace(/\s*[✓✔✅]+$/u, "")
+    .replace(/^[✓✔✅]+\s*/, "")
+    .replace(/\s*[✓✔✅]+$/, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
