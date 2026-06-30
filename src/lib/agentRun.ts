@@ -40,6 +40,8 @@ export interface RunDeps {
   /** Opcjonalny PRE-gate zgody (outbound / ryzykowny zapis). Brak → zgodę egzekwuje execTool/runTool. */
   requestConsent?: (step: PlanStep, risk: Risk) => Promise<boolean>;
   onStatus?: (msg: string) => void;
+  /** Wołane po KAŻDYM kroku (z jego wynikiem) — pozwala trwale zapisać postęp (durable goals). */
+  onStep?: (result: StepResult) => void | Promise<void>;
   now?: () => number;
   maxSteps?: number;
   maxToolCalls?: number;
@@ -108,53 +110,42 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
   const depConfirmed = (step: PlanStep): boolean =>
     (step.dependsOn || []).every((d) => results.get(d)?.outcome.state === "CONFIRMED");
 
+  // Policz jeden krok do StepResult (mutuje toolCalls/stoppedByLimit przez domknięcie).
+  const evalStep = async (step: PlanStep): Promise<StepResult> => {
+    const base = { id: step.id, intent: step.intent, tool: step.tool };
+    // Zależności muszą być POTWIERDZONE (nie FAILED/ATTEMPTED/SIMULATED/DRAFT).
+    if (!depConfirmed(step)) return { ...base, outcome: draft("zależność niepotwierdzona"), skipped: true, reason: "zależność niepotwierdzona" };
+    // Krok czysto myślowy (bez narzędzia) → uznaj za wewnętrznie wykonany.
+    if (!step.tool) return { ...base, outcome: confirmed({ source: "wewnętrzny", message: "krok analityczny" }) };
+    if (!deps.toolExists(step.tool)) return { ...base, outcome: failed(`nieznane narzędzie: ${step.tool}`), reason: "nieznane narzędzie" };
+
+    const risk = deps.riskOf(step.tool);
+    // Zgoda przed outbound / ryzykownym zapisem (jeśli podano pre-gate).
+    if (needsConsent(risk, step) && deps.requestConsent) {
+      const ok = await deps.requestConsent(step, risk);
+      if (!ok) return { ...base, outcome: draft("brak zgody użytkownika"), skipped: true, reason: "brak zgody" };
+    }
+    // Limit wywołań narzędzi (anti-loop) — reszta kroków zostaje pominięta.
+    if (toolCalls >= maxToolCalls) {
+      stoppedByLimit = true;
+      return { ...base, outcome: draft("limit wywołań narzędzi"), skipped: true, reason: "limit narzędzi" };
+    }
+    try {
+      toolCalls += 1;
+      const { outcome, output } = await deps.execTool(step.tool, step.arguments, step);
+      return { ...base, outcome, output };
+    } catch (e) {
+      return { ...base, outcome: failed(e instanceof Error ? e.message : "błąd narzędzia"), reason: "błąd narzędzia" };
+    }
+  };
+
   let pos = 0;
   for (const step of order) {
     pos += 1;
     if (deps.onStatus) deps.onStatus(`${short(step.intent)} — krok ${pos} z ${total}`);
-
-    // Zależności muszą być POTWIERDZONE (nie FAILED/ATTEMPTED/SIMULATED/DRAFT).
-    if (!depConfirmed(step)) {
-      results.set(step.id, { id: step.id, intent: step.intent, tool: step.tool, outcome: draft("zależność niepotwierdzona"), skipped: true, reason: "zależność niepotwierdzona" });
-      continue;
-    }
-
-    // Krok czysto myślowy (bez narzędzia) → uznaj za wewnętrznie wykonany.
-    if (!step.tool) {
-      results.set(step.id, { id: step.id, intent: step.intent, outcome: confirmed({ source: "wewnętrzny", message: "krok analityczny" }) });
-      continue;
-    }
-
-    if (!deps.toolExists(step.tool)) {
-      results.set(step.id, { id: step.id, intent: step.intent, tool: step.tool, outcome: failed(`nieznane narzędzie: ${step.tool}`), reason: "nieznane narzędzie" });
-      continue;
-    }
-
-    const risk = deps.riskOf(step.tool);
-
-    // Zgoda przed outbound / ryzykownym zapisem (jeśli podano pre-gate).
-    if (needsConsent(risk, step) && deps.requestConsent) {
-      const ok = await deps.requestConsent(step, risk);
-      if (!ok) {
-        results.set(step.id, { id: step.id, intent: step.intent, tool: step.tool, outcome: draft("brak zgody użytkownika"), skipped: true, reason: "brak zgody" });
-        continue;
-      }
-    }
-
-    // Limit wywołań narzędzi (anti-loop) — reszta kroków zostaje pominięta.
-    if (toolCalls >= maxToolCalls) {
-      stoppedByLimit = true;
-      results.set(step.id, { id: step.id, intent: step.intent, tool: step.tool, outcome: draft("limit wywołań narzędzi"), skipped: true, reason: "limit narzędzi" });
-      continue;
-    }
-
-    try {
-      toolCalls += 1;
-      const { outcome, output } = await deps.execTool(step.tool, step.arguments, step);
-      results.set(step.id, { id: step.id, intent: step.intent, tool: step.tool, outcome, output });
-    } catch (e) {
-      results.set(step.id, { id: step.id, intent: step.intent, tool: step.tool, outcome: failed(e instanceof Error ? e.message : "błąd narzędzia"), reason: "błąd narzędzia" });
-    }
+    const r = await evalStep(step);
+    results.set(step.id, r);
+    if (deps.onStep) await deps.onStep(r); // trwały zapis postępu (durable goals)
   }
 
   const ordered = order.map((s) => results.get(s.id)).filter(Boolean) as StepResult[];
