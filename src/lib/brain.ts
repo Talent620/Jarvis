@@ -39,6 +39,21 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   });
 }
 
+/**
+ * Pure: który dostawca jest „głównym mózgiem" (punkt odniesienia dla etykiety „zapasowy").
+ * Przypięty (provider != auto) wygrywa zawsze — jego odpowiedź NIE jest zapasowa. W auto
+ * bierzemy pierwszego UŻYWALNEGO z łańcucha (a nie order[0], który bywa pomijany bez klucza).
+ */
+export function computePrimaryProvider<T extends { provider: ProviderId }>(
+  order: T[],
+  pinned: ProviderId | null,
+  usable: (p: ProviderId) => boolean,
+): ProviderId {
+  if (pinned) return pinned;
+  const u = order.find((o) => usable(o.provider));
+  return (u || order[0]).provider;
+}
+
 // Watchdog „zaciętego" dostawcy: zamiast czekać do 120 s timeoutu fetcha, przełączamy się
 // na kolejny mózg, gdy dostawca MILCZY (strumień bez pierwszego tokenu) albo całość trwa za długo.
 // Dzięki temu wolny/wiszący model nie blokuje JARVIS-a — failover jest szybki.
@@ -670,7 +685,16 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
     }
   }
 
-  const primary = order[0].provider; // główny mózg — jeśli odpowie inny, to był failover
+  // Główny mózg = punkt odniesienia dla „zapasowy". WAŻNE: gdy użytkownik PRZYPIĄŁ dostawcę
+  // (provider != auto), to ON jest głównym — jego odpowiedź NIE jest zapasowa, choćby router
+  // wstawił przed nim coś lokalnego/„prefer". W trybie auto bierzemy pierwszego UŻYWALNEGO
+  // (z kluczem / lokalnego) — żeby pominięty bez klucza order[0] nie oznaczał wszystkiego jako zapas.
+  const pinnedProvider = store.settings.provider !== "auto" ? (store.settings.provider as ProviderId) : null;
+  const primary = computePrimaryProvider(
+    order,
+    pinnedProvider,
+    (p) => isKeyless(p) || orderedKeys(p).length > 0,
+  );
   let lastErr: unknown;
   // Brama Pewności (Zadanie 8): jeśli refleks lokalny był niepewny i eskalujemy, trzymamy
   // jego odpowiedź jako deskę ratunku — gdyby Kora też padła, nie gubimy lokalnej odpowiedzi.
