@@ -23,6 +23,28 @@ export const FREE_RANK: { id: ProviderId; model: string; label: string }[] = [
 const TOP_FREE = FREE_RANK[0]; // Gemini — najlepszy darmowy, #1 w narzędziach
 
 /**
+ * Pure: czytelna etykieta mózgu, który NAPRAWDĘ odpowie (nie tylko wybranego w UI).
+ * Gdy wybrany dostawca nie ma klucza, a inny ma — pokaż „(zapasowo)", żeby nie myliło,
+ * że niby działa Gemini, a realnie biegnie inny dostawca.
+ */
+export function activeBrainLabel(
+  provider: string,
+  model: string,
+  hasKey: (id: ProviderId) => boolean,
+  labelOf: (id: string) => string,
+): string {
+  if (provider === "auto") {
+    const any = FREE_RANK.some((p) => hasKey(p.id));
+    return any ? "Auto — sam dobieram najlepszy dostępny" : "Auto — brak klucza (⚙ → AI)";
+  }
+  if (hasKey(provider as ProviderId)) return `${labelOf(provider)} · ${model}`;
+  const fallback = FREE_RANK.find((p) => hasKey(p.id));
+  return fallback
+    ? `${fallback.label} (zapasowo — brak klucza dla ${labelOf(provider)})`
+    : `brak mózgu — dodaj klucz w ⚙ → AI`;
+}
+
+/**
  * Pure: doradź najlepszy darmowy mózg dla danego stanu ustawień.
  * @param hasKey funkcja: czy jest klucz do dostawcy
  */

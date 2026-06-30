@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-30",
     items: [
+      "🔵 Widać, który mózg NAPRAWDĘ myśli: w ⚙ → AI pojawia się linijka Teraz myśli: … — jeśli wybrałeś np. Gemini, ale nie masz jego klucza, JARVIS pokaże wprost, że działa zapasowo na dostawcy, do którego masz klucz (zamiast mylić, że niby działa Gemini). Koniec zgadywania, co realnie odpowiada.",
       "🔧 Poprawki z testów na żywo: (1) Blokada głosu (tylko mój głos) nie włącza się już sama z siebie — to osobna funkcja, wymaga nagrania Twojego głosu; wcześniej domyślnie pokazywała się jako włączona. (2) Gdy masz tylko jednego dostawcę AI, JARVIS nie przerywa już wolnej-ale-działającej odpowiedzi — szybkie przełączanie włącza się tylko, gdy faktycznie jest na co przełączyć.",
       "🧠 JARVIS doradzi, który mózg AI wybrać: zapytaj „który AI najlepszy / jak być mądrzejszy za darmo” — przeanalizuje, jakie masz klucze i powie wprost, co ustawić, żeby było najmądrzej i DARMOWO (zwykle: darmowy Gemini 2.5 Flash, #1 w obsłudze narzędzi). Jeśli masz tryb auto albo słabszy model — podpowie, jak przypiąć lepszy jednym poleceniem.",
       "⚡ Koniec zacinania na wolnym modelu: jeśli wybrany mózg AI zamilknie albo wisi, JARVIS przełącza się na kolejny w ~20 s zamiast czekać do 2 minut. Dzięki temu nawet gdy dostawca ma chwilową awarię, odpowiedź przychodzi szybko, a nie „zawiesza się”.",

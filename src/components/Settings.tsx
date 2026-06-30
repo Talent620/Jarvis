@@ -15,6 +15,7 @@ import { mcpManager } from "../lib/mcp";
 import { enableAtRest, disableAtRest } from "../lib/secretsVault";
 import { googleStartUrl, gmailSearch, connectDesktopGoogle } from "../lib/google";
 import { testApi, testProvider, resolveProvider } from "../lib/brain";
+import { activeBrainLabel } from "../lib/brainAdvisor";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
 import { exportData, exportFull, exportFullEncrypted, importData } from "../lib/backup";
 import { keyList, keyCount, isTavilyKey } from "../lib/keys";
@@ -673,6 +674,12 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <span style={{ color: API_GREEN, fontWeight: 700 }}>🟢 API gotowe</span>
                 <span className="muted"> = klucz działa</span>
               </p>
+              {/* 🔵 Realnie działający mózg — gdy wybrany dostawca nie ma klucza, pokaże „(zapasowo)". */}
+              <div className="row" style={{ borderLeft: `3px solid ${BRAIN_BLUE}`, paddingLeft: 10, marginBottom: 6 }}>
+                <span style={{ fontSize: 13 }}>
+                  🔵 <b>Teraz myśli:</b> {activeBrainLabel(s.provider, s.model, providerReady, (id) => PROVIDERS[id as ProviderId]?.label || id)}
+                </span>
+              </div>
 
               {/* 🆓 Tryb darmowy — bez płatnego Claude'a, na najmocniejszych darmowych mózgach. */}
               <div className="row" style={{ borderLeft: `3px solid ${API_GREEN}`, paddingLeft: 10 }}>

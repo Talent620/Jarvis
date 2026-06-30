@@ -1,8 +1,31 @@
 import { describe, it, expect } from "vitest";
-import { recommendBrain, FREE_RANK } from "../src/lib/brainAdvisor";
+import { recommendBrain, activeBrainLabel, FREE_RANK } from "../src/lib/brainAdvisor";
 import type { ProviderId } from "../src/lib/providers/types";
 
 const keys = (...have: ProviderId[]) => (id: ProviderId) => have.includes(id);
+const labelOf = (id: string) => ({ gemini: "Gemini", groq: "Groq", anthropic: "Claude" } as Record<string, string>)[id] || id;
+
+describe("brainAdvisor — activeBrainLabel (co NAPRAWDĘ działa)", () => {
+  it("wybrany dostawca z kluczem → pokazuje jego nazwę i model", () => {
+    expect(activeBrainLabel("gemini", "gemini-2.5-flash", keys("gemini"), labelOf)).toBe("Gemini · gemini-2.5-flash");
+  });
+
+  it("wybrany BEZ klucza, ale inny ma → pokazuje zapas z dopiskiem", () => {
+    const out = activeBrainLabel("gemini", "gemini-2.5-flash", keys("groq"), labelOf);
+    expect(out).toMatch(/zapasowo/);
+    expect(out).toMatch(/Groq/);
+    expect(out).toMatch(/Gemini/); // wyjaśnia, że brak klucza dla Gemini
+  });
+
+  it("brak jakichkolwiek kluczy → komunikat o dodaniu klucza", () => {
+    expect(activeBrainLabel("gemini", "gemini-2.5-flash", keys(), labelOf)).toMatch(/dodaj klucz/i);
+  });
+
+  it("auto z kluczem → opis auto; bez klucza → prośba o klucz", () => {
+    expect(activeBrainLabel("auto", "auto", keys("gemini"), labelOf)).toMatch(/Auto/);
+    expect(activeBrainLabel("auto", "auto", keys(), labelOf)).toMatch(/brak klucza/i);
+  });
+});
 
 describe("brainAdvisor — recommendBrain (który API najlepszy)", () => {
   it("brak kluczy → poradź dodać DARMOWY Gemini", () => {
