@@ -20,12 +20,21 @@ export const FINANCE_STATUSES: { id: FinanceStatus; label: string; group: "pipel
 
 const ACTIVE: FinanceStatus[] = ["lead", "oferta", "negocjacje", "w_realizacji", "review", "gotowe", "oczekuje_platnosci"];
 const DONE: FinanceStatus[] = ["oplacone", "zamkniete"];
+// Statusy „pipeline" (lead/oferta/negocjacje) to PROGNOZA, nie przychód — nie wolno ich
+// sumować do revenue. Wyliczamy z grup zdefiniowanych w FINANCE_STATUSES (jedno źródło prawdy).
+const PIPELINE: FinanceStatus[] = FINANCE_STATUSES.filter((s) => s.group === "pipeline").map((s) => s.id);
+const isPipeline = (s: FinanceStatus) => PIPELINE.includes(s);
+const INVOICED: FinanceStatus[] = ["oczekuje_platnosci", "oplacone"];
 
 const num = (x: number | undefined) => (typeof x === "number" && isFinite(x) ? x : 0);
 const round2 = (x: number) => Math.round(x * 100) / 100;
 
 export interface FinanceKpis {
-  revenue: number; // przychód netto (bez anulowanych)
+  revenue: number; // przychód netto ROZPOZNANY (bez anulowanych I bez pipeline — to nie prognoza)
+  pipelineValue: number; // wartość lejka (lead/oferta/negocjacje) — PROGNOZA, osobno od przychodu
+  contractedValue: number; // zakontraktowane w realizacji/płatności (nie-pipeline, nie-zamknięte)
+  invoicedValue: number; // wystawione do zapłaty + opłacone (oczekuje_platnosci + oplacone)
+  collectedValue: number; // realnie wpłacone (suma paidAmount) — = paid
   costs: number;
   profit: number;
   margin: number; // %
@@ -45,26 +54,37 @@ export interface FinanceKpis {
   bestProject: { name: string; profit: number } | null;
 }
 
-/** Pure: policz wszystkie KPI z listy projektów (anulowane wyłączone z przychodu/zysku). */
+/** Pure: policz wszystkie KPI z listy projektów (anulowane wyłączone; pipeline NIE liczy się do przychodu). */
 export function financeKpis(projects: FinanceProject[]): FinanceKpis {
   const live = (projects || []).filter((p) => p.status !== "anulowane");
-  const revenue = live.reduce((s, p) => s + num(p.amount), 0);
-  const costs = live.reduce((s, p) => s + num(p.cost), 0);
+  // PRZYCHÓD ROZPOZNANY: tylko projekty poza lejkiem (realizacja/płatność/koniec). Lejek to prognoza.
+  const recognized = live.filter((p) => !isPipeline(p.status));
+  const revenue = recognized.reduce((s, p) => s + num(p.amount), 0);
+  const costs = recognized.reduce((s, p) => s + num(p.cost), 0);
   const profit = revenue - costs;
   const paid = live.reduce((s, p) => s + num(p.paidAmount), 0);
-  const hours = live.reduce((s, p) => s + num(p.hours), 0);
-  const vat = round2(live.reduce((s, p) => s + (num(p.amount) * num(p.vatRate)) / 100, 0));
+  const hours = recognized.reduce((s, p) => s + num(p.hours), 0);
+  const vat = round2(recognized.reduce((s, p) => s + (num(p.amount) * num(p.vatRate)) / 100, 0));
+
+  // Osobne, uczciwe metryki lejka i należności — UI ma je pokazać obok przychodu.
+  const pipelineValue = live.filter((p) => isPipeline(p.status)).reduce((s, p) => s + num(p.amount), 0);
+  const contractedValue = recognized.filter((p) => !DONE.includes(p.status)).reduce((s, p) => s + num(p.amount), 0);
+  const invoicedValue = live.filter((p) => INVOICED.includes(p.status)).reduce((s, p) => s + num(p.amount), 0);
 
   const byClient = new Map<string, number>();
-  for (const p of live) { const c = (p.client || "").trim() || "—"; byClient.set(c, (byClient.get(c) || 0) + num(p.amount)); }
+  for (const p of recognized) { const c = (p.client || "").trim() || "—"; byClient.set(c, (byClient.get(c) || 0) + num(p.amount)); }
   let topClient: FinanceKpis["topClient"] = null;
   for (const [name, rev] of byClient) if (name !== "—" && (!topClient || rev > topClient.revenue)) topClient = { name, revenue: round2(rev) };
 
   let bestProject: FinanceKpis["bestProject"] = null;
-  for (const p of live) { const pr = num(p.amount) - num(p.cost); if (!bestProject || pr > bestProject.profit) bestProject = { name: p.name || "Projekt", profit: round2(pr) }; }
+  for (const p of recognized) { const pr = num(p.amount) - num(p.cost); if (!bestProject || pr > bestProject.profit) bestProject = { name: p.name || "Projekt", profit: round2(pr) }; }
 
   return {
     revenue: round2(revenue),
+    pipelineValue: round2(pipelineValue),
+    contractedValue: round2(contractedValue),
+    invoicedValue: round2(invoicedValue),
+    collectedValue: round2(paid),
     costs: round2(costs),
     profit: round2(profit),
     margin: revenue > 0 ? round2((profit / revenue) * 100) : 0,
@@ -77,8 +97,8 @@ export function financeKpis(projects: FinanceProject[]): FinanceKpis {
     openCount: live.filter((p) => ACTIVE.includes(p.status)).length,
     doneCount: live.filter((p) => DONE.includes(p.status)).length,
     cancelledCount: (projects || []).filter((p) => p.status === "anulowane").length,
-    avgValue: live.length ? round2(revenue / live.length) : 0,
-    avgHours: live.length ? round2(hours / live.length) : 0,
+    avgValue: recognized.length ? round2(revenue / recognized.length) : 0,
+    avgHours: recognized.length ? round2(hours / recognized.length) : 0,
     effectiveHourlyRate: hours > 0 ? round2(revenue / hours) : 0,
     topClient,
     bestProject,
@@ -93,7 +113,7 @@ export function monthlyRevenue(projects: FinanceProject[], now: number, months =
     const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
     const y = d.getFullYear(), m = d.getMonth();
     const rev = (projects || []).filter((p) => {
-      if (p.status === "anulowane") return false;
+      if (p.status === "anulowane" || isPipeline(p.status)) return false; // lejek to prognoza, nie przychód
       const at = p.doneAt || p.startAt || p.createdAt;
       if (!at) return false;
       const pd = new Date(at);

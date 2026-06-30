@@ -52,6 +52,7 @@ export default function FinancialDashboard({ onClose }: { onClose: () => void })
           {/* KPI */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             <KPI label="Przychód" value={zl(k.revenue)} color="var(--cyan)" />
+            <KPI label="Lejek (prognoza)" value={zl(k.pipelineValue)} color="var(--gold)" />
             <KPI label="Zysk" value={zl(k.profit)} color={k.profit >= 0 ? "#39d98a" : "#ff6b6b"} />
             <KPI label="Marża" value={`${k.margin}%`} />
             <KPI label="ROI" value={`${k.roi}%`} />

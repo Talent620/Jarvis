@@ -33,6 +33,39 @@ describe("finance — financeKpis", () => {
     expect(k.cancelledCount).toBe(1);
   });
 
+  it("LEJEK (lead/oferta/negocjacje) NIE liczy się do przychodu — osobny pipelineValue", () => {
+    const k = financeKpis([
+      P({ amount: 10000, status: "lead" }),
+      P({ amount: 20000, status: "oferta" }),
+      P({ amount: 5000, status: "negocjacje" }),
+      P({ amount: 8000, cost: 2000, status: "oplacone", paidAmount: 8000 }),
+    ]);
+    expect(k.revenue).toBe(8000); // tylko opłacony projekt
+    expect(k.pipelineValue).toBe(35000); // 10000 + 20000 + 5000
+    expect(k.profit).toBe(6000); // 8000 - 2000 (koszt lejka nie wchodzi)
+    expect(k.collectedValue).toBe(8000);
+  });
+
+  it("contractedValue i invoicedValue rozdzielają realizację od płatności", () => {
+    const k = financeKpis([
+      P({ amount: 4000, status: "w_realizacji" }),
+      P({ amount: 3000, status: "oczekuje_platnosci" }),
+      P({ amount: 2000, status: "oplacone", paidAmount: 2000 }),
+    ]);
+    expect(k.contractedValue).toBe(7000); // w_realizacji + oczekuje_platnosci (nie-zamknięte)
+    expect(k.invoicedValue).toBe(5000); // oczekuje_platnosci + oplacone
+    expect(k.revenue).toBe(9000); // wszystkie nie-pipeline
+  });
+
+  it("monthlyRevenue pomija lejek", () => {
+    const now = new Date("2026-06-15").getTime();
+    const m = monthlyRevenue([
+      P({ amount: 9999, status: "oferta", doneAt: new Date("2026-06-10").getTime() }),
+      P({ amount: 1000, status: "oplacone", doneAt: new Date("2026-06-10").getTime() }),
+    ], now, 6);
+    expect(m[m.length - 1].revenue).toBe(1000); // oferta (lejek) nie wchodzi
+  });
+
   it("pusta lista → zera, bez dzielenia przez 0", () => {
     const k = financeKpis([]);
     expect(k.revenue).toBe(0);
