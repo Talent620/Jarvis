@@ -3,6 +3,7 @@
 // najtańszą znalezioną ofertę. Czyste funkcje (parseItems, basketSummary) — testowalne.
 
 import { findBargains, rankOffers, type Offer } from "./bargain";
+import type { ShoppingItem } from "../types";
 
 export interface BasketLine {
   query: string;
@@ -30,6 +31,40 @@ export function parseItems(text: string): string[] {
     seen.add(key);
     out.push(item);
     if (out.length >= 15) break;
+  }
+  return out;
+}
+
+/** Zamień zapisaną listę zakupów na tekst do edytora (każda pozycja w nowej linii). */
+export function shoppingToText(items: ShoppingItem[] | undefined): string {
+  return (items || []).map((i) => (i.qty ? `${i.qty} ${i.name}` : i.name)).join("\n");
+}
+
+/**
+ * Czyste: zsynchronizuj kolekcję store.data.shopping z aktualnie wpisanymi nazwami.
+ * Zachowuje id / done / createdAt dla pozycji, które już istniały (dopasowanie po
+ * nazwie, bez wielkości liter), tworzy nowe dla nowych nazw, usuwa skreślone z tekstu.
+ * Kolejność = kolejność z tekstu. uid + now wstrzykiwane (testowalność, brak Date.now w środku).
+ */
+export function syncShoppingItems(
+  prev: ShoppingItem[] | undefined,
+  names: string[],
+  uid: () => string,
+  now: number,
+): ShoppingItem[] {
+  const byName = new Map<string, ShoppingItem>();
+  for (const it of prev || []) byName.set(it.name.trim().toLowerCase(), it);
+  const out: ShoppingItem[] = [];
+  const used = new Set<string>();
+  for (const raw of names) {
+    const name = raw.trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (used.has(key)) continue;
+    used.add(key);
+    const existing = byName.get(key);
+    if (existing) out.push({ ...existing, name });
+    else out.push({ id: uid(), name, done: false, createdAt: now });
   }
   return out;
 }

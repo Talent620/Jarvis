@@ -1,14 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "./Modal";
 import { copyWithToast } from "../lib/toast";
 import { resolveProvider } from "../lib/brain";
-import { parseItems, basketSummary, findBasket, type BasketLine } from "../lib/basket";
+import { store, uid } from "../lib/store";
+import { parseItems, basketSummary, findBasket, shoppingToText, syncShoppingItems, type BasketLine } from "../lib/basket";
 
 // Lista zakupów — wpisujesz kilka rzeczy naraz, JARVIS znajduje każdą najtaniej
 // i liczy łączną sumę koszyka. Każda pozycja korzysta z Łowcy Okazji.
+// Lista jest TRWAŁA: zapisuje się do store.data.shopping (przeżywa zamknięcie i restart;
+// współdzielona z narzędziami czatu add_shopping_item / list_shopping).
 
 export default function ShoppingList({ onClose }: { onClose: () => void }) {
-  const [text, setText] = useState("");
+  // Wczytaj zapisaną listę przy otwarciu (jednorazowo).
+  const [text, setText] = useState(() => shoppingToText(store.data.shopping));
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number; label: string } | null>(null);
   const [lines, setLines] = useState<BasketLine[] | null>(null);
@@ -16,6 +20,16 @@ export default function ShoppingList({ onClose }: { onClose: () => void }) {
 
   const items = useMemo(() => parseItems(text), [text]);
   const summary = useMemo(() => (lines ? basketSummary(lines) : null), [lines]);
+
+  // Trwałość: zapisuj listę do store (debounce), by przeżyła zamknięcie ekranu.
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; } // nie nadpisuj przy montażu
+    const t = setTimeout(() => {
+      store.setData((d) => { d.shopping = syncShoppingItems(d.shopping, items, uid, Date.now()); });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [items]);
 
   const run = async () => {
     if (!items.length || busy) return;
