@@ -11,6 +11,10 @@ const RISK: Record<string, Risk> = {
   gmail_search: "read", gcal_list: "read", tally_report: "read", calculate: "read", find_leads: "read",
   list_leads: "read", get_news: "read", get_markets: "read",
   salesos_sync: "read", salesos_stats: "read",
+  // read — tylko pisze gotowy szkic follow-upu (bez wysyłki, bez zapisu w store)
+  lead_followup: "read",
+  // write — zapisuje teczkę (dossier/intel) w leadzie; AI lokalnie, bez wysyłki na zewnątrz
+  lead_dossier: "write",
   // read — tylko czytają/analizują (bez efektów ubocznych)
   gcal_day: "read", gmail_read: "read", chief_of_staff: "read", deep_solve: "read",
   predictions: "read", reflect: "read", sales_plan: "read", self_check: "read",
@@ -45,6 +49,11 @@ const RISK: Record<string, Risk> = {
   android_type: "outbound", android_tap: "outbound", android_global: "outbound",
   android_open_app: "outbound", android_open_settings: "outbound",
 };
+
+/** Czy narzędzie ma JAWNĄ klasyfikację ryzyka (a nie tylko fail-safe outbound)? */
+export function isClassified(tool: string): boolean {
+  return Object.prototype.hasOwnProperty.call(RISK, tool);
+}
 
 export function riskOf(tool: string): Risk {
   // Fail-safe: nieznane narzędzia (MCP / pluginy / skille / przyszłe) traktujemy jako
