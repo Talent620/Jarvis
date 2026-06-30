@@ -242,6 +242,19 @@ const COLLECTION_CAPS: Partial<Record<keyof AppData, number>> = {
   imageHistory: 16, // obrazy są ciężkie (base64) — trzymaj tylko ostatnie przeróbki
   siteProjects: 20, // projekty stron (HTML + wersje) są ciężkie — rozsądny limit
 };
+/**
+ * Atomowość A1: scal dwie listy rekordów po `id` — `primary` (nowsze, np. RAM) wygrywa przy
+ * kolizji, a unikalne z `secondary` (np. zapisane w IDB) są dołączane. Dzięki temu zapisy, które
+ * trafiły do RAM W TRAKCIE async hydratacji, NIE kasują danych z dysku (i odwrotnie). Pure.
+ */
+export function mergeById<T extends { id?: string }>(primary: T[], secondary: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const x of primary || []) { if (x && x.id) seen.add(x.id); out.push(x); }
+  for (const x of secondary || []) { if (x && x.id && seen.has(x.id)) continue; out.push(x); }
+  return out;
+}
+
 function capCollections(d: AppData): void {
   const rec = d as unknown as Record<string, unknown[]>;
   for (const k in COLLECTION_CAPS) {
@@ -309,6 +322,10 @@ export class Store {
   /** Czy duże kolekcje są obsługiwane przez IndexedDB (po udanej migracji/hydratacji). */
   private idbReady = false;
   private idbFlushTimer: ReturnType<typeof setTimeout> | null = null;
+  // Atomowość A2: serializacja flushy IDB. `flushing` = trwa flush; `flushDirty` = dane zmieniły
+  // się w trakcie i trzeba flush ponowić z najświeższym stanem.
+  private flushing = false;
+  private flushDirty = false;
 
   // STABILNE referencje handlerów — niezbędne, by removeEventListener faktycznie je odpiął.
   private onStorage = (e: StorageEvent) => {
@@ -416,18 +433,27 @@ export class Store {
   }
 
   private async flushIdb() {
-    const rec = this.data as unknown as Record<string, unknown[]>;
-    let allOk = true;
-    for (const c of IDB_COLLECTIONS) {
-      const ok = await idbSet(c as string, rec[c as string]);
-      if (!ok) allOk = false;
-    }
-    // 🛟 Sieć bezpieczeństwa: gdy zapis do IndexedDB zawiódł (np. transakcja przerwana, brak
-    // miejsca), ciężkie kolekcje przepadłyby — w localStorage leży „odchudzony" blob z pustymi
-    // tablicami. Wtedy zapisujemy PEŁNY blob do localStorage, by NIC nie zginęło do następnego
-    // udanego flusha. Ścieżka sukcesu bez zmian (additive).
-    if (!allOk) {
-      try { write(DATA_KEY, this.data); } catch { /* ostatnia deska — quota itp. obsłużone w write */ }
+    // A2: tylko JEDEN flush naraz. Jeśli już leci — oznacz „brudne" i wróć; bieżący flush ponowi
+    // przebieg z najświeższymi danymi. Eliminuje równoległe/przeplatane zapisy i stale-overwrite.
+    if (this.flushing) { this.flushDirty = true; return; }
+    this.flushing = true;
+    try {
+      do {
+        this.flushDirty = false;
+        const rec = this.data as unknown as Record<string, unknown[]>; // ZAWSZE najświeższe this.data
+        let allOk = true;
+        for (const c of IDB_COLLECTIONS) {
+          const ok = await idbSet(c as string, rec[c as string]);
+          if (!ok) allOk = false;
+        }
+        // 🛟 Sieć bezpieczeństwa: gdy zapis do IndexedDB zawiódł (transakcja przerwana, brak miejsca),
+        // ciężkie kolekcje przepadłyby (slim blob ma puste tablice) — zapisz PEŁNY blob do localStorage.
+        if (!allOk) {
+          try { write(DATA_KEY, this.data); } catch { /* ostatnia deska — quota itp. obsłużone w write */ }
+        }
+      } while (this.flushDirty); // ktoś zmienił dane w trakcie flusha → przebieg jeszcze raz
+    } finally {
+      this.flushing = false;
     }
   }
 
@@ -453,9 +479,15 @@ export class Store {
         // poszedłby ścieżką „slim" i zapisałby PUSTE tablice z RAM do IDB, kasując zapisane dane.
         // W trakcie hydratacji zapisy idą do localStorage (pełne) — IDB pozostaje nietknięte.
         for (const c of IDB_COLLECTIONS) {
-          const arr = await idbGet<unknown[]>(c as string);
-          // Nie nadpisuj świeżych zapisów, gdyby setData wyprzedził hydratację.
-          if (Array.isArray(arr) && !rec[c as string]?.length) rec[c as string] = arr;
+          const persisted = await idbGet<unknown[]>(c as string);
+          if (!Array.isArray(persisted)) continue;
+          const ram = rec[c as string];
+          // A1: gdy setData dopisał coś do RAM W TRAKCIE hydratacji, NIE wolno ani pominąć
+          // zapisanych danych (utrata persisted), ani ich nadpisać (utrata nowych). SCAL je
+          // (dedup po id, RAM nowsze wygrywa). Gdy RAM puste — po prostu wczytaj zapisane.
+          rec[c as string] = Array.isArray(ram) && ram.length
+            ? (mergeById(ram as { id?: string }[], persisted as { id?: string }[]) as unknown[])
+            : persisted;
         }
         this.idbReady = true; // dopiero teraz — hydratacja zakończona, można odchudzać do IDB
         this.emit();
