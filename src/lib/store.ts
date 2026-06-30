@@ -93,6 +93,8 @@ const defaultSettings: Settings = {
   localRefine: false,
   localConsensus: false,
   responseLength: "balanced",
+  intelligenceMode: "balanced",
+  geminiAllowPreview: false,
   warmth: 0.5,
   ollamaUrl: "",
   sdUrl: "",

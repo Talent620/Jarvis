@@ -529,6 +529,10 @@ export interface Settings {
   localConsensus: boolean;
   /** Styl rozmowy — długość odpowiedzi (niezależnie od persony). „balanced" = bez zmian. */
   responseLength: "concise" | "balanced" | "detailed";
+  /** Tryb inteligencji: economy (szybko/tanio) · balanced (domyślny) · maximum (najmocniejszy model). */
+  intelligenceMode?: "economy" | "balanced" | "maximum";
+  /** Zezwól na modele Gemini preview/experimental (niestabilne) — domyślnie nie. */
+  geminiAllowPreview?: boolean;
   /** Styl rozmowy — ciepło/serdeczność 0..1 (0.5 = neutralnie, bez zmian). */
   warmth: number;
   /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
