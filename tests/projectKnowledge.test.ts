@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { searchKnowledge, tokenize, expandTerms, type KnowledgeIndex } from "../src/lib/projectKnowledge";
+import { searchKnowledge, tokenize, expandTerms, answerProjectQuestion, type KnowledgeIndex } from "../src/lib/projectKnowledge";
 
 const idx: KnowledgeIndex = {
   fileCount: 0,
@@ -45,5 +45,33 @@ describe("projectKnowledge — searchKnowledge (Developer Copilot)", () => {
   it("puste/nieznane pytanie → brak trafień", () => {
     expect(searchKnowledge(idx, "")).toEqual([]);
     expect(searchKnowledge(idx, "xyzqwk")).toEqual([]);
+  });
+});
+
+describe("projectKnowledge — answerProjectQuestion (Copilot + auto-doradztwo)", () => {
+  const rich: KnowledgeIndex = {
+    fileCount: 0, byKind: {},
+    files: [
+      { path: "src/lib/finance.ts", kind: "lib", loc: 119, exports: ["financeKpis"], summary: "silnik finansowy",
+        uses: ["src/types.ts"], usedBy: ["src/components/FinancialDashboard.tsx", "tests/finance.test.ts"],
+        quality: { complexity: "niska", criticality: "średni", hasTests: true, risk: "niskie", refactorPriority: "niski", fanIn: 2 } },
+    ],
+  };
+  it("daje listę modułów + doradztwo (API, ryzyko, testy)", () => {
+    const a = answerProjectQuestion(rich, "gdzie liczone są pieniądze?");
+    expect(a).toMatch(/finance\.ts/);
+    expect(a).toMatch(/Publiczne API: financeKpis/);
+    expect(a).toMatch(/Używany przez 2/);
+    expect(a).toMatch(/testy: są/);
+  });
+  it("brak trafień → prośba o doprecyzowanie", () => {
+    expect(answerProjectQuestion(rich, "zupełnie nieznane xyz")).toMatch(/Doprecyzuj/);
+  });
+});
+
+describe("projectKnowledge — narzędzie czatu zarejestrowane", () => {
+  it("project_knowledge jest w toolDefs", async () => {
+    const { toolDefs } = await import("../src/lib/tools");
+    expect(toolDefs.some((d) => d.name === "project_knowledge")).toBe(true);
   });
 });

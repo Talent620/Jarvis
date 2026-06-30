@@ -3,12 +3,23 @@
 // na pliki projektu z indeksu (audit/knowledge-index.json, generator: scripts/gen-knowledge.mjs).
 // Nie wymaga znajomości nazw plików — rozpoznaje DOMENĘ z polskich pojęć. S9-safe (bez /u).
 
+export interface FileQuality {
+  complexity: string;
+  criticality: string;
+  hasTests: boolean;
+  risk: string;
+  refactorPriority: string;
+  fanIn: number;
+}
 export interface KnowledgeFile {
   path: string;
   kind: string;
   loc: number;
   exports: string[];
   summary: string;
+  uses?: string[];
+  usedBy?: string[];
+  quality?: FileQuality;
 }
 export interface KnowledgeIndex {
   fileCount: number;
@@ -77,4 +88,31 @@ export function searchKnowledge(index: KnowledgeIndex, query: string, limit = 8)
     if (score > 0) hits.push({ path: f.path, kind: f.kind, score, summary: f.summary, why: reasons.slice(0, 3).join(", ") });
   }
   return hits.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path)).slice(0, limit);
+}
+
+/**
+ * Developer Copilot: odpowiedz na pytanie o projekt po polsku. Zwraca listę najtrafniejszych
+ * modułów + AUTO-DORADZTWO dla #1 (publiczne API, liczba zależności = ryzyko zmiany, jakość, testy).
+ * Pure — gotowy tekst do pokazania w czacie. Gdy brak trafień, prosi o doprecyzowanie.
+ */
+export function answerProjectQuestion(index: KnowledgeIndex, query: string, limit = 6): string {
+  const hits = searchKnowledge(index, query, limit);
+  if (!hits.length) {
+    return "Nie znalazłem w bazie wiedzy modułu pasującego do pytania. Doprecyzuj domenę — np. finanse, głos, leady/CRM, pamięć, obrazy, strony, e-mail, ustawienia, licencja.";
+  }
+  const lines: string[] = ["Najbardziej pasujące moduły (z bazy wiedzy projektu):"];
+  hits.forEach((h, i) => lines.push(`${i + 1}. ${h.path}${h.summary ? ` — ${h.summary}` : ""}${h.why ? `  [${h.why}]` : ""}`));
+  const top = (index.files || []).find((f) => f.path === hits[0].path);
+  if (top) {
+    const q = top.quality;
+    lines.push("", `🔎 ${top.path}`);
+    if (top.exports?.length) lines.push(`• Publiczne API: ${top.exports.slice(0, 12).join(", ")}`);
+    if (top.usedBy?.length) {
+      const risky = q && (q.criticality === "krytyczny" || q.criticality === "wysoki");
+      lines.push(`• Używany przez ${top.usedBy.length} plik(ów) → zmiana ${risky ? "RYZYKOWNA (dużo zależności — przetestuj szeroko)" : "względnie bezpieczna"}.`);
+    }
+    if (top.uses?.length) lines.push(`• Wykorzystuje: ${top.uses.slice(0, 8).map((p) => p.replace(/^src\/lib\//, "")).join(", ")}`);
+    if (q) lines.push(`• Jakość: złożoność ${q.complexity}, krytyczność ${q.criticality}, ryzyko zmian ${q.risk}, testy: ${q.hasTests ? "są ✓" : "BRAK — dodaj test przed zmianą"}.`);
+  }
+  return lines.join("\n");
 }

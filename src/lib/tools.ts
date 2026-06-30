@@ -2,6 +2,7 @@ import { store, uid } from "./store";
 import { fetchTimeout } from "./http";
 import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
 import { saType, saTap, saGlobal, saOpenApp, saOpenSettings } from "./systemActions";
+import { answerProjectQuestion, type KnowledgeIndex } from "./projectKnowledge";
 import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
 import { getWeather } from "./weather";
 import { scheduleReminder, scheduleTimer } from "./notifications";
@@ -1419,6 +1420,22 @@ const tools: Tool[] = [
       input_schema: obj({ section: str("Sekcja ustawień (opcjonalnie)") }),
     },
     run: ({ section }) => saOpenSettings(section ? String(section) : undefined),
+  },
+  // === Developer Copilot — wiedza o WŁASNYM kodzie (Project Knowledge Engine) ===
+  {
+    def: {
+      name: "project_knowledge",
+      description: "Odpowiada na pytania O TYM PROJEKCIE (kodzie aplikacji JARVIS): gdzie coś jest zaimplementowane, który moduł za co odpowiada, ryzyko zmiany, powiązania, testy. Używaj, gdy użytkownik pyta o architekturę/kod JARVIS-a (np. gdzie liczone są pieniądze, który moduł od OCR, pokaż wszystko od voice). NIE używaj do zwykłych pytań — tylko do pytań o budowę aplikacji.",
+      input_schema: obj({ query: str("Pytanie o projekt/kod, np. gdzie liczone są pieniądze") }, ["query"]),
+    },
+    run: async ({ query }) => {
+      try {
+        const idx = (await import("../generated/knowledge-index.json")).default as unknown as KnowledgeIndex;
+        return answerProjectQuestion(idx, String(query ?? ""));
+      } catch {
+        return "Baza wiedzy o projekcie jest niedostępna w tej wersji. Zregeneruj ją poleceniem: npm run knowledge.";
+      }
+    },
   },
 ];
 
