@@ -158,6 +158,24 @@ export function applyPayment(project: FinanceProject, pay: PaymentInput, now: nu
   return next;
 }
 
+/** Pure: usuń projekt po id; zwróć nową listę + usunięty rekord i jego pozycję (do cofnięcia). */
+export function removeProjectById(projects: FinanceProject[], id: string): { next: FinanceProject[]; removed: FinanceProject | null; index: number } {
+  const list = projects || [];
+  const index = list.findIndex((p) => p.id === id);
+  if (index < 0) return { next: list, removed: null, index: -1 };
+  const removed = list[index];
+  const next = [...list.slice(0, index), ...list.slice(index + 1)];
+  return { next, removed, index };
+}
+
+/** Pure: wstaw rekord z powrotem na jego pozycję (cofnięcie usunięcia, idempotentne po id). */
+export function restoreProject(projects: FinanceProject[], removed: FinanceProject, index: number): FinanceProject[] {
+  const list = projects || [];
+  if (list.some((p) => p.id === removed.id)) return list; // już jest — nie duplikuj
+  const at = Math.max(0, Math.min(index, list.length));
+  return [...list.slice(0, at), removed, ...list.slice(at)];
+}
+
 /** Pure: zwięzłe podsumowanie finansów do odpowiedzi czatu (głos/tekst). */
 export function financeSummaryText(projects: FinanceProject[]): string {
   if (!projects || !projects.length) return "Brak projektów finansowych. Dodaj pierwszy — np. dodaj projekt na 8000 dla firmy X.";

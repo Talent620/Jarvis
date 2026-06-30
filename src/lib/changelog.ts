@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "↩ Cofanie usunięcia projektu finansowego: skasowanie projektu jednym dotknięciem pokazuje teraz przycisk Cofnij — przypadkowe usunięcie odzyskujesz, a projekt wraca na swoje miejsce na liście (bez duplikatów). Pierwszy krok do bezpiecznego cofania także w innych miejscach.",
       "📱 Treści: szczera różnica między szkicem a publikacją. Wygenerowany post to teraz SZKIC, nie „opublikowane” — sekcja nazywa się Drafty i publikacje, każdy wpis ma status, a dopiero przycisk ✅ Opublikowane (Twoje ręczne potwierdzenie) oznacza realną publikację. Koniec udawania, że wygenerowanie = wrzucenie na social. Generator reklam pozostaje uczciwy (przygotowuje kampanię do skopiowania, nie uruchamia jej).",
       "♿ Przełączniki dostępne i wygodniejsze w dotyku: wszystkie suwaki włącz/wyłącz są teraz prawdziwymi przyciskami — działają z klawiatury (Tab + Enter/Spacja), mają poprawny opis dla czytników ekranu i większy obszar dotyku (łatwiej trafić na małym ekranie S9). Wygląd bez zmian.",
       "⚡ Karta TERAZ na ekranie startowym: zamiast samej liczby zadań JARVIS pokazuje jedną najlepszą czynność na teraz (ważoną pilnością i wartością biznesową) — co zrobić, dlaczego, i przyciski ▶ Zrób (otwiera właściwy ekran) oraz 💬 Powiedz jak. Np. dopilnuj płatności, odśwież leady czekające na follow-up, domknij zaległe zadanie. Nie powtarza w kółko tej samej podpowiedzi; przy pustych danych nie wymyśla zajęć.",

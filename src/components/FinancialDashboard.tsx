@@ -3,7 +3,7 @@ import { useEscape } from "../hooks/useEscape";
 import { useStore } from "../hooks/useStore";
 import { store } from "../lib/store";
 import { toast } from "../lib/toast";
-import { financeKpis, monthlyRevenue, clientRanking, FINANCE_STATUSES, applyPayment } from "../lib/finance";
+import { financeKpis, monthlyRevenue, clientRanking, FINANCE_STATUSES, applyPayment, removeProjectById, restoreProject } from "../lib/finance";
 import type { FinanceProject, FinanceStatus } from "../types";
 
 // 💰 Financial Intelligence — natywny moduł Jarvisa. Dashboard KPI + projekty + dodawanie.
@@ -52,7 +52,20 @@ export default function FinancialDashboard({ onClose }: { onClose: () => void })
     }
     store.setData((d) => { const p = (d.financeProjects || []).find((x) => x.id === id); if (p) { p.status = status; p.updatedAt = Date.now(); } });
   };
-  const remove = (id: string) => store.setData((d) => { if (d.financeProjects) d.financeProjects = d.financeProjects.filter((x) => x.id !== id); });
+  const remove = (id: string) => {
+    let removed: ReturnType<typeof removeProjectById>["removed"] = null;
+    let index = -1;
+    store.setData((d) => {
+      const r = removeProjectById(d.financeProjects || [], id);
+      d.financeProjects = r.next; removed = r.removed; index = r.index;
+    });
+    if (removed) {
+      toast("🗑 Usunięto projekt", { label: "Cofnij", onClick: () => {
+        store.setData((d) => { d.financeProjects = restoreProject(d.financeProjects || [], removed!, index); });
+        toast("↩ Przywrócono projekt");
+      } });
+    }
+  };
 
   const KPI = ({ label, value, color }: { label: string; value: string; color?: string }) => (
     <div style={{ flex: "1 1 120px", minWidth: 120, padding: "10px 12px", borderRadius: 12, border: "1px solid var(--line)", background: "linear-gradient(135deg, rgba(108,231,255,.05), transparent 70%)" }}>
