@@ -6,6 +6,7 @@ import { answerProjectQuestion, type KnowledgeIndex } from "./projectKnowledge";
 import { requestScreen, resolveScreen, SCREENS } from "./navIntent";
 import { financeSummaryText, FINANCE_STATUSES } from "./finance";
 import { businessStatusText, computeJourney } from "./businessFlow";
+import { recommendBrain } from "./brainAdvisor";
 import type { FinanceProject, FinanceStatus } from "../types";
 import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
 import { getWeather } from "./weather";
@@ -1063,6 +1064,21 @@ const tools: Tool[] = [
       }
       store.setSettings(patch);
       return `✅ Ustawiłem STAŁY umysł: ${PROVIDERS[pick.id].label}, model ${pick.model} — koniec przełączania, zawsze ten sam. Głos: ${voiceMsg}, przypięty na stałe. Zmienisz to w ⚙ → AI / ⚙ → Głos.`;
+    },
+  },
+  {
+    def: {
+      name: "suggest_ai",
+      description:
+        "Doradź, KTÓRY dostawca AI (mózg) jest najlepszy — najmądrzejszy i DARMOWY — pod aktualny stan kluczy użytkownika. Używaj, gdy pyta: „który AI najlepszy”, „co polecasz”, „jaki mózg wybrać”, „jak być mądrzejszy za darmo”.",
+      input_schema: obj({}),
+    },
+    run: () => {
+      const adv = recommendBrain((id) => !!primaryKey(id), store.settings.provider, store.settings.model);
+      const extra = adv.action === "pin" || adv.action === "switch" || adv.action === "add_key"
+        ? "\n\n💡 Premium opcja (płatna): jeśli kiedyś zechcesz maksymalną inteligencję — klucz Claude Opus 4.8 jako główny, darmowy jako zapas."
+        : "";
+      return `🧠 ${adv.message}${extra}`;
     },
   },
   {
