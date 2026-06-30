@@ -152,7 +152,7 @@ export class AnthStreamAccumulator {
 export class GeminiStreamAccumulator {
   usage = { inputTokens: 0, outputTokens: 0 };
   text = "";
-  private functionCalls: { name: string; args: unknown }[] = [];
+  private functionCalls: { name: string; args: unknown; thoughtSignature?: string; id?: string }[] = [];
 
   push(obj: any): string {
     let out = "";
@@ -164,7 +164,14 @@ export class GeminiStreamAccumulator {
           out += p.text;
         }
         if (p.functionCall?.name) {
-          this.functionCalls.push({ name: p.functionCall.name, args: p.functionCall.args ?? {} });
+          // Zachowaj podpis rozumowania (thoughtSignature) i id wywołania — Gemini potrzebuje ich,
+          // by NIE zgubić własnego planu między kolejnymi narzędziami.
+          this.functionCalls.push({
+            name: p.functionCall.name,
+            args: p.functionCall.args ?? {},
+            thoughtSignature: typeof p.thoughtSignature === "string" ? p.thoughtSignature : undefined,
+            id: typeof p.functionCall.id === "string" ? p.functionCall.id : undefined,
+          });
         }
       }
     }
@@ -178,7 +185,7 @@ export class GeminiStreamAccumulator {
     return out;
   }
 
-  calls(): { name: string; args: unknown }[] {
+  calls(): { name: string; args: unknown; thoughtSignature?: string; id?: string }[] {
     return this.functionCalls;
   }
 }

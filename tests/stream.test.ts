@@ -92,4 +92,18 @@ describe("stream — GeminiStreamAccumulator", () => {
     expect(acc.calls()).toEqual([{ name: "add_task", args: { t: "x" } }]);
     expect(acc.usage).toEqual({ inputTokens: 8, outputTokens: 3 });
   });
+
+  it("zachowuje thoughtSignature i id wywołania (pamięć planu Gemini)", () => {
+    const acc = new GeminiStreamAccumulator();
+    acc.push({ candidates: [{ content: { parts: [{ thoughtSignature: "SIG123", functionCall: { name: "find_leads", args: {}, id: "call-1" } }] } }] });
+    const c = acc.calls()[0];
+    expect(c.thoughtSignature).toBe("SIG123");
+    expect(c.id).toBe("call-1");
+  });
+
+  it("dolicza thoughtsTokenCount do output (koszt myślenia)", () => {
+    const acc = new GeminiStreamAccumulator();
+    acc.push({ candidates: [{ content: { parts: [{ text: "x" }] } }], usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 4, thoughtsTokenCount: 10 } });
+    expect(acc.usage.outputTokens).toBe(14); // 4 + 10
+  });
 });

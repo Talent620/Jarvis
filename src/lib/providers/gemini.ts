@@ -32,8 +32,17 @@ function cleanSchema(schema: Record<string, unknown>): Record<string, unknown> |
 interface Part {
   text?: string;
   inlineData?: { mimeType: string; data: string };
-  functionCall?: { name: string; args: Record<string, unknown> };
-  functionResponse?: { name: string; response: { result: string } };
+  functionCall?: { name: string; args: Record<string, unknown>; id?: string };
+  functionResponse?: { name: string; id?: string; response: { result: string } };
+  /** Podpis rozumowania Gemini (thinking) — MUSI wrócić nietknięty w kolejnych krokach. */
+  thoughtSignature?: string;
+}
+
+/** Pure: klucz tożsamości wywołania narzędzia (nazwa + argumenty) — do wykrywania pętli. */
+export function callSignature(name: string, args: unknown): string {
+  let a = "";
+  try { a = JSON.stringify(args ?? {}); } catch { a = String(args); }
+  return `${name}:${a}`;
 }
 interface Content {
   role: "user" | "model";
@@ -120,10 +129,17 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
     inTok += acc.usage.inputTokens; outTok += acc.usage.outputTokens;
     return [
       ...(acc.text ? [{ text: acc.text } as Part] : []),
-      ...acc.calls().map((c) => ({ functionCall: { name: c.name, args: (c.args as Record<string, unknown>) || {} } }) as Part),
+      ...acc.calls().map((c) => {
+        const fc: Part["functionCall"] = { name: c.name, args: (c.args as Record<string, unknown>) || {} };
+        if (c.id) fc.id = c.id;
+        const part: Part = { functionCall: fc };
+        if (c.thoughtSignature) part.thoughtSignature = c.thoughtSignature; // zachowaj plan modelu
+        return part;
+      }),
     ];
   };
 
+  const seenCalls = new Set<string>(); // tożsamości wywołań (nazwa+argumenty) — anty-zapętlenie
   while (guard++ < 8) {
     let parts: Part[];
     try {
@@ -142,9 +158,17 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
       const responseParts: Part[] = [];
       for (const c of calls) {
         const name = c.functionCall!.name;
+        const sig = callSignature(name, c.functionCall!.args);
+        // Wykryj zapętlenie: IDENTYCZNE powtórzone wywołanie (ta sama nazwa+argumenty) → przerwij czytelnie.
+        if (seenCalls.has(sig)) {
+          return { text: `Przerwałem — narzędzie „${name}" było wywoływane w kółko z tymi samymi danymi.`, tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok } };
+        }
+        seenCalls.add(sig);
         used.add(name);
         const out = await runTool(name, c.functionCall!.args || {});
-        responseParts.push({ functionResponse: { name, response: { result: out } } });
+        const rp: Part = { functionResponse: { name, response: { result: out } } };
+        if (c.functionCall!.id) rp.functionResponse!.id = c.functionCall!.id; // dopasuj odpowiedź do wywołania
+        responseParts.push(rp);
       }
       contents.push({ role: "user", parts: responseParts });
       continue;
