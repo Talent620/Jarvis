@@ -3,6 +3,8 @@ import { useEscape } from "../hooks/useEscape";
 import { adaptiveOrder, track, shouldAnnounceAdapt } from "../lib/usage";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
+import { nextBestAction } from "../lib/livingPulse";
+import { requestScreen } from "../lib/navIntent";
 
 export default function More({
   onProjects,
@@ -211,6 +213,23 @@ export default function More({
           <h2>Centrum</h2>
         </div>
         <div className="panel-body">
+          {/* ⚡ Teraz — jedna najlepsza czynność na górze Centrum (ten sam silnik co ekran startowy).
+              Tylko gdy nie szukasz; wszystkie kafle/grupy poniżej bez zmian. */}
+          {!query.trim() && (() => {
+            const a = (() => { try { return nextBestAction(store.data, Date.now()); } catch { return null; } })();
+            if (!a) return null;
+            return (
+              <button
+                className="journal-card"
+                onClick={() => { requestScreen(a.screen); onClose(); }}
+                style={{ display: "block", width: "100%", textAlign: "left", marginBottom: 10, padding: "10px 12px", borderRadius: 12, border: "1px solid var(--gold)", background: "linear-gradient(135deg, rgba(245,200,90,.08), transparent 70%)", cursor: "pointer" }}
+              >
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--gold)" }}>⚡ TERAZ</span>
+                <span style={{ display: "block", fontSize: 14, fontWeight: 700, marginTop: 2 }}>{a.what}</span>
+                <span className="muted" style={{ display: "block", fontSize: 12, marginTop: 2 }}>{a.why}</span>
+              </button>
+            );
+          })()}
           <input
             className="menu-search"
             type="search"
