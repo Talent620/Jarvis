@@ -121,6 +121,15 @@ export function validatePlan(
   return { ok: errors.length === 0, errors, question };
 }
 
+/**
+ * Pure: kroki POZOSTAŁE do zrobienia (nie ma ich w zbiorze potwierdzonych). Do napraw/replanu
+ * podajemy modelowi WYŁĄCZNIE te kroki — nie ruszamy już potwierdzonych (i nie powtarzamy ich).
+ */
+export function remainingSteps(plan: AgentPlan, confirmedIds: Iterable<string>): PlanStep[] {
+  const done = new Set(confirmedIds);
+  return (plan.steps || []).filter((s) => !done.has(s.id));
+}
+
 /** Czy polecenie jest na tyle wieloetapowe, że warto je zaplanować? (proste słowa-łączniki). */
 export function looksMultiStep(text: string): boolean {
   const t = (text || "").toLowerCase();

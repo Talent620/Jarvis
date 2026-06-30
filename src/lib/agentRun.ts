@@ -10,6 +10,7 @@ import type { AgentPlan, PlanStep } from "./agentPlanner";
 import type { ActionOutcome } from "./actionOutcome";
 import { confirmed, failed, draft, attempted } from "./actionOutcome";
 import { verifyRun, type RuntimeVerdict } from "./resultVerifier";
+import { classifyError, type RecoveryDecision } from "./recoveryPolicy";
 import type { Risk } from "./permissions";
 
 export interface StepResult {
@@ -48,6 +49,12 @@ export interface RunDeps {
   now?: () => number;
   maxSteps?: number;
   maxToolCalls?: number;
+  /** Polityka samonaprawy: gdy krok rzuci błąd, decyduje o retry/replan/abort. Bez niej brak retry. */
+  recover?: (err: unknown, risk: Risk, attempt: number) => RecoveryDecision;
+  /** Opóźnienie między próbami (wstrzykiwane — w testach natychmiastowe). */
+  sleep?: (ms: number) => Promise<void>;
+  /** Maks. prób wykonania JEDNEGO kroku (łącznie z pierwszą). Domyślnie 3. */
+  maxToolAttempts?: number;
 }
 
 const DEFAULT_MAX_STEPS = 12;
@@ -133,12 +140,30 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
       stoppedByLimit = true;
       return { ...base, outcome: draft("limit wywołań narzędzi"), skipped: true, reason: "limit narzędzi" };
     }
-    try {
-      toolCalls += 1;
-      const { outcome, output } = await deps.execTool(step.tool, step.arguments, step);
-      return { ...base, outcome, output };
-    } catch (e) {
-      return { ...base, outcome: failed(e instanceof Error ? e.message : "błąd narzędzia"), reason: "błąd narzędzia" };
+    // Wykonanie z bezpieczną samonaprawą: chwilowy błąd (nie-outbound) → retry z backoff.
+    // Outbound NIGDY nie jest ponawiany automatycznie (recoveryPolicy zwróci wtedy ask_user).
+    const maxAttempts = Math.max(1, deps.maxToolAttempts ?? 3);
+    let attempt = 0;
+    let lastReason: string | undefined;
+    for (;;) {
+      try {
+        toolCalls += 1;
+        const { outcome, output } = await deps.execTool(step.tool, step.arguments, step);
+        return { ...base, outcome, output, reason: lastReason };
+      } catch (e) {
+        if (!deps.recover) return { ...base, outcome: failed(e instanceof Error ? e.message : "błąd narzędzia"), reason: "błąd narzędzia" };
+        const decision = deps.recover(e, risk, attempt);
+        lastReason = decision.reason;
+        if (decision.action === "retry_backoff" && attempt + 1 < maxAttempts && toolCalls < maxToolCalls) {
+          attempt += 1;
+          if (decision.delayMs > 0 && deps.sleep) await deps.sleep(decision.delayMs);
+          continue; // ponów ten sam krok
+        }
+        // Brak retry (np. outbound / zły argument / trwały błąd) → zapisz wynik z czytelnym powodem.
+        const kind = classifyError(e);
+        const out = kind === "consent_denied" ? draft(decision.reason) : failed(decision.reason);
+        return { ...base, outcome: out, skipped: decision.action === "skip", reason: decision.reason };
+      }
     }
   };
 
