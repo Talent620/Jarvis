@@ -1,6 +1,7 @@
 import { store } from "./store";
 import { brand } from "./brand";
 import { toolDefs, resetCitations, getCitations } from "./tools";
+import { selectToolsForIntent } from "./toolSelector";
 import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed, rankJournal } from "./memory";
 import { memoryContextBlock, addMemory, resolveNamespace, memoryServiceAvailable } from "./memoryService";
@@ -583,7 +584,9 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
     system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock }) + (extraSystem ? `\n\n${extraSystem}` : ""),
     // Tryb on-device wyłącza web-search (zero egres do sieci — pełna prywatność/offline).
     webSearch: store.settings.onDeviceOnly ? false : store.settings.webSearch,
-    tools: toolDefs,
+    // Dobór narzędzi wg intencji: mniej definicji na turę (szybciej/taniej). Bezpiecznie —
+    // przy niejasnej intencji selectToolsForIntent zwraca pełny zestaw (nigdy nie gorzej).
+    tools: selectToolsForIntent(lastUser?.content || "", toolDefs),
     history: trimmed,
     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
   };
