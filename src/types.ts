@@ -342,6 +342,8 @@ export interface FinanceProject {
   cost?: number;
   hours?: number;
   paidAmount?: number;
+  paidAt?: number; // kiedy wpłynęła (ostatnia) płatność
+  paymentMethod?: string; // metoda płatności (przelew/gotówka/karta…)
   vatRate?: number; // %
   category?: string;
   startAt?: number;

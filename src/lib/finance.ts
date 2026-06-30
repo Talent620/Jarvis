@@ -124,6 +124,40 @@ export function monthlyRevenue(projects: FinanceProject[], now: number, months =
   return out;
 }
 
+export interface PaymentInput {
+  amount?: number; // kwota wpłaty; brak/NaN/ujemna → traktowana jak 0
+  at?: number; // data wpłaty (domyślnie now)
+  method?: string; // metoda (przelew/gotówka…)
+  note?: string; // opcjonalna notatka do dziennika projektu
+}
+
+/**
+ * Pure: zarejestruj płatność na projekcie (BEZ cichego ustawiania pełnej kwoty).
+ * Waliduje: NaN/ujemne → 0; suma wpłat nie może przekroczyć wartości projektu (clamp).
+ * Status „oplacone" tylko gdy wpłacono ≥ wartość; częściowa → „oczekuje_platnosci".
+ * Zwraca NOWY obiekt projektu (niemutujący) — łatwo testować i wpiąć w store.setData.
+ */
+export function applyPayment(project: FinanceProject, pay: PaymentInput, now: number): FinanceProject {
+  const amount = num(project.amount);
+  const already = num(project.paidAmount);
+  const add = Math.max(0, num(pay.amount));
+  const paidAmount = round2(Math.min(amount, already + add)); // bez nadpłaty ponad wartość
+  const fullyPaid = amount > 0 && paidAmount >= amount;
+  const at = pay.at || now;
+  const next: FinanceProject = {
+    ...project,
+    paidAmount,
+    paidAt: at,
+    paymentMethod: pay.method || project.paymentMethod,
+    status: fullyPaid ? "oplacone" : "oczekuje_platnosci",
+    updatedAt: now,
+  };
+  if (pay.note && pay.note.trim()) {
+    next.notes = `${project.notes ? project.notes + " · " : ""}${pay.note.trim()}`;
+  }
+  return next;
+}
+
 /** Pure: zwięzłe podsumowanie finansów do odpowiedzi czatu (głos/tekst). */
 export function financeSummaryText(projects: FinanceProject[]): string {
   if (!projects || !projects.length) return "Brak projektów finansowych. Dodaj pierwszy — np. dodaj projekt na 8000 dla firmy X.";

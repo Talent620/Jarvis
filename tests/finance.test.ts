@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { financeKpis, monthlyRevenue, clientRanking, FINANCE_STATUSES } from "../src/lib/finance";
+import { financeKpis, monthlyRevenue, clientRanking, FINANCE_STATUSES, applyPayment } from "../src/lib/finance";
 import type { FinanceProject } from "../src/types";
 
 const P = (o: Partial<FinanceProject>): FinanceProject => ({
@@ -73,6 +73,49 @@ describe("finance — financeKpis", () => {
     expect(k.roi).toBe(0);
     expect(k.effectiveHourlyRate).toBe(0);
     expect(k.topClient).toBeNull();
+  });
+});
+
+describe("finance — applyPayment (uczciwe płatności)", () => {
+  it("pełna wpłata → status oplacone, paidAmount=amount, paidAt ustawione", () => {
+    const p = applyPayment(P({ amount: 5000, status: "oczekuje_platnosci" }), { amount: 5000 }, 999);
+    expect(p.status).toBe("oplacone");
+    expect(p.paidAmount).toBe(5000);
+    expect(p.paidAt).toBe(999);
+  });
+
+  it("częściowa wpłata → oczekuje_platnosci, paidAmount częściowy", () => {
+    const p = applyPayment(P({ amount: 5000 }), { amount: 2000 }, 1);
+    expect(p.status).toBe("oczekuje_platnosci");
+    expect(p.paidAmount).toBe(2000);
+  });
+
+  it("kolejna wpłata dolicza się do poprzedniej", () => {
+    const p1 = applyPayment(P({ amount: 5000 }), { amount: 2000 }, 1);
+    const p2 = applyPayment(p1, { amount: 3000 }, 2);
+    expect(p2.paidAmount).toBe(5000);
+    expect(p2.status).toBe("oplacone");
+  });
+
+  it("nadpłata ponad wartość jest przycinana (brak fałszywej nadwyżki)", () => {
+    const p = applyPayment(P({ amount: 1000 }), { amount: 9999 }, 1);
+    expect(p.paidAmount).toBe(1000);
+    expect(p.status).toBe("oplacone");
+  });
+
+  it("NaN / ujemna kwota traktowana jak 0 (nie psuje danych)", () => {
+    const p = applyPayment(P({ amount: 1000 }), { amount: NaN }, 1);
+    expect(p.paidAmount).toBe(0);
+    const n = applyPayment(P({ amount: 1000 }), { amount: -50 }, 1);
+    expect(n.paidAmount).toBe(0);
+  });
+
+  it("nie mutuje oryginału (zwraca nowy obiekt)", () => {
+    const orig = P({ amount: 1000, status: "w_realizacji" });
+    const out = applyPayment(orig, { amount: 1000 }, 1);
+    expect(orig.status).toBe("w_realizacji");
+    expect(orig.paidAmount).toBeUndefined();
+    expect(out).not.toBe(orig);
   });
 });
 

@@ -3,7 +3,7 @@ import { useEscape } from "../hooks/useEscape";
 import { useStore } from "../hooks/useStore";
 import { store } from "../lib/store";
 import { toast } from "../lib/toast";
-import { financeKpis, monthlyRevenue, clientRanking, FINANCE_STATUSES } from "../lib/finance";
+import { financeKpis, monthlyRevenue, clientRanking, FINANCE_STATUSES, applyPayment } from "../lib/finance";
 import type { FinanceProject, FinanceStatus } from "../types";
 
 // 💰 Financial Intelligence — natywny moduł Jarvisa. Dashboard KPI + projekty + dodawanie.
@@ -33,8 +33,25 @@ export default function FinancialDashboard({ onClose }: { onClose: () => void })
     setForm({ name: "", client: "", amount: "", cost: "", status: "lead" });
     toast(`💰 Dodano projekt: ${p.name}`);
   };
-  const setStatus = (id: string, status: FinanceStatus) =>
-    store.setData((d) => { const p = (d.financeProjects || []).find((x) => x.id === id); if (p) { p.status = status; p.updatedAt = Date.now(); if (status === "oplacone") p.paidAmount = p.amount; } });
+  const setStatus = (id: string, status: FinanceStatus) => {
+    // „Opłacone" NIE ustawia po cichu pełnej wpłaty — pytamy o realnie wpłaconą kwotę (domyślnie reszta do zapłaty).
+    if (status === "oplacone") {
+      const p = (store.data.financeProjects || []).find((x) => x.id === id);
+      if (!p) return;
+      const due = Math.max(0, (Number(p.amount) || 0) - (Number(p.paidAmount) || 0));
+      const ans = window.prompt(`Ile realnie wpłacono na „${p.name}"? (zł)\nDo zapłaty pozostało: ${zl(due)}`, String(due));
+      if (ans === null) return; // anulowano — status bez zmian
+      const amount = Number(ans.replace(",", "."));
+      store.setData((d) => {
+        const idx = (d.financeProjects || []).findIndex((x) => x.id === id);
+        if (idx >= 0) d.financeProjects![idx] = applyPayment(d.financeProjects![idx], { amount, method: "ręczna" }, Date.now());
+      });
+      const p2 = (store.data.financeProjects || []).find((x) => x.id === id);
+      toast(p2?.status === "oplacone" ? "✅ Zapisano pełną wpłatę." : "💸 Zapisano częściową wpłatę.");
+      return;
+    }
+    store.setData((d) => { const p = (d.financeProjects || []).find((x) => x.id === id); if (p) { p.status = status; p.updatedAt = Date.now(); } });
+  };
   const remove = (id: string) => store.setData((d) => { if (d.financeProjects) d.financeProjects = d.financeProjects.filter((x) => x.id !== id); });
 
   const KPI = ({ label, value, color }: { label: string; value: string; color?: string }) => (
