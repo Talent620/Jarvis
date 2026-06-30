@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "💬 Pełna kopia obejmuje teraz także historię rozmów: wszystkie czaty trafiają do pełnej (i zaszyfrowanej) kopii i wracają przy imporcie — przesiadka na nowy telefon nie kasuje historii. Stare kopie bez rozmów wczytują się jak dawniej.",
       "🧠 Kopia obejmuje teraz też model świata (World): graf wiedzy JARVIS-a o Tobie (osoby, projekty, firmy i relacje) trafia do pełnej kopii i wraca przy imporcie — kontekst nie ginie przy przenosinach na nowy telefon. Dodatkowo wewnętrzny strażnik pilnuje, by żadna przyszła kolekcja danych nie wypadła z kopii po cichu.",
       "💸 Opłacone bez zmyślania: oznaczenie projektu jako opłacony nie wpisuje już po cichu pełnej kwoty — JARVIS pyta, ile realnie wpłacono (domyślnie reszta do zapłaty), zapisuje datę płatności i radzi sobie z wpłatą częściową (status zostaje oczekuje płatności, dopłaty się sumują). Nadpłata ponad wartość jest przycinana, błędne kwoty (puste/ujemne) nie psują danych.",
       "✉ Koniec fałszywego wysłano w sprzedaży: gdy Sales OS działa w trybie symulacji (bez klucza wysyłki), JARVIS nie mówi już że wysłał maila — pokazuje wprost symulacja, nic nie wysłano i NIE oznacza leada jako skontaktowanego. W Planie sprzedaży przyciski SMS/Gmail tylko otwierają wiadomość; dopiero przycisk Oznacz: wysłane (ręczne potwierdzenie) zapisuje kontakt. Żadna symulacja nie tworzy historii prawdziwej wysyłki.",

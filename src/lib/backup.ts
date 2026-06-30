@@ -1,5 +1,6 @@
 import { store } from "./store";
 import { encryptText, decryptText } from "./cipher";
+import { loadChats, saveChats, type ChatSession } from "./chats";
 import type { AppData, Settings } from "../types";
 
 // Eksport/import danych (kopia zapasowa). Trzy poziomy:
@@ -106,6 +107,8 @@ export function applyParsed(parsed: any): string {
     // World Model (graf encji/relacji) to obiekt, nie tablica — przywróć osobno, gdy jest.
     if (d.world && typeof d.world === "object" && !Array.isArray(d.world)) (s as any).world = d.world;
   });
+  // Historia rozmów (osobny magazyn) — przywróć, gdy kopia ją zawiera (pełna kopia).
+  if (Array.isArray(parsed.chats)) saveChats(parsed.chats as ChatSession[]);
   if (parsed.settings && typeof parsed.settings === "object") {
     const safe = sanitizeImportedSettings(parsed.settings, store.settings, (keys) =>
       typeof window !== "undefined" &&
@@ -188,7 +191,7 @@ function download(payload: unknown, name: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-/** Pełny ładunek kopii: dane + wszystkie ustawienia (w tym klucze). */
+/** Pełny ładunek kopii: dane + wszystkie ustawienia (w tym klucze) + historia rozmów. */
 export function buildFullPayload(): Record<string, unknown> {
   return {
     app: "jarvis",
@@ -197,6 +200,8 @@ export function buildFullPayload(): Record<string, unknown> {
     exportedAt: Date.now(),
     data: dataDump(),
     settings: store.settings,
+    // Historia rozmów trzymana osobno (localStorage) — w pełnej kopii też, by nie zginęła.
+    chats: loadChats(),
   };
 }
 

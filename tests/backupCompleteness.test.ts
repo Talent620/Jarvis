@@ -24,6 +24,18 @@ describe("backup — manifest kompletności kolekcji", () => {
   });
 });
 
+describe("backup — historia rozmów w pełnej kopii (round-trip)", () => {
+  it("czaty przeżywają eksport→import (osobny magazyn localStorage)", async () => {
+    const { loadChats, saveChats } = await import("../src/lib/chats");
+    saveChats([{ id: "c1", title: "Rozmowa", messages: [{ role: "user", text: "cześć" }], updatedAt: 1 } as any]);
+    const cipher = await packEncrypted(buildFullPayload(), "h");
+    saveChats([]); // wyczyść
+    expect(loadChats()).toHaveLength(0);
+    await unpackEncrypted(cipher, "h");
+    expect(loadChats()[0]?.title).toBe("Rozmowa");
+  });
+});
+
 describe("backup — World Model w pełnej kopii (round-trip)", () => {
   beforeEach(() => { store.setData((d) => { d.tasks = []; }); });
 
