@@ -256,6 +256,8 @@ export default function App() {
       mind: setShowMind, journal: setShowJournal, projects: setShowProjects,
       profile: setShowProfile, settings: setShowSettings, status: setShowStatus,
       gadgets: setShowGadgets, hud: setShowHud,
+      goal: setShowGoal, recall: setShowRecall, guardian: setShowGuardian,
+      data: setShowPanels, history: setShowHistory, admin: setShowAdmin,
     };
     return onScreenRequest((id) => { const fn = map[id]; if (fn) { setShowMore(false); fn(true); } });
   }, []);

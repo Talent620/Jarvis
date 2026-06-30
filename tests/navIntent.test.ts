@@ -53,3 +53,32 @@ describe("navIntent — narzędzie open_screen zarejestrowane", () => {
     expect(toolDefs.some((d) => d.name === "open_screen")).toBe(true);
   });
 });
+
+describe("navIntent — pełne pokrycie i klasyfikacja zgód", () => {
+  it("każdy z 9 modułów biznesowych rozpoznaje się po samym id", () => {
+    for (const id of ["sales", "finance", "mail", "sent", "content", "ads", "brand", "web", "money"]) {
+      expect(resolveScreen(id)?.id).toBe(id);
+    }
+  });
+
+  it("rozpoznaje nowo dodane ekrany sterowania (cel, recall, dane, historia)", () => {
+    expect(resolveScreen("zleć cel")?.id).toBe("goal");
+    expect(resolveScreen("recall")?.id).toBe("recall");
+    expect(resolveScreen("kopia zapasowa")?.id).toBe("data");
+    expect(resolveScreen("historia rozmów")?.id).toBe("history");
+  });
+
+  it("każdy ekran SCREENS ma unikalne id", () => {
+    const ids = SCREENS.map((s) => s.id);
+    expect(ids.length).toBe(new Set(ids).size);
+  });
+
+  it("open_screen jest sklasyfikowane jako read (lokalna nawigacja, bez zgody outbound)", async () => {
+    const { riskOf } = await import("../src/lib/permissions");
+    expect(riskOf("open_screen")).toBe("read");
+    expect(riskOf("finance_summary")).toBe("read");
+    expect(riskOf("project_knowledge")).toBe("read");
+    expect(riskOf("finance_add_project")).toBe("write");
+    expect(riskOf("finance_set_status")).toBe("write");
+  });
+});

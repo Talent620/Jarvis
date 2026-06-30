@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🎯 Otwieranie ekranów z czatu bez pytania o zgodę: powiedzenie otwórz Finanse czy pokaż Wysłane to teraz akcja lokalna (sklasyfikowana jako odczyt) — JARVIS przełącza ekran od razu, bez okienka zgody. Dorzuciłem też więcej modułów do sterowania głosem (Zleć cel, Recall, Diagnoza, Dane/kopia, Historia, Administrator). Sterowanie głosem obejmuje teraz prawie całe Centrum.",
       "🛒 Lista zakupów naprawdę trwała: to, co wpiszesz, zapisuje się teraz na stałe (przeżywa zamknięcie ekranu i restart aplikacji) i jest wspólne z poleceniami czatu (dodaj do listy zakupów / pokaż listę zakupów). Odhaczone pozycje nie znikają, powtórki są scalane. Wcześniej lista kasowała się po wyjściu — instrukcja obiecywała trwałość, teraz to prawda.",
       "🔎 Wszystkie moduły biznesowe w palecie i instrukcji: Finanse, Wyślij e-mail, Wysłane i Dusza Marki dało się dotąd otworzyć tylko z Centrum — teraz znajdziesz je też w palecie poleceń (Ctrl/⌘+K) i w instrukcji/FAQ. Komplet 9 funkcji Sprzedaż i biznes jest w jednym miejscu, łatwy do wyszukania.",
       "📱 Twarda gwarancja zgodności z Samsung S9 (stary WebView): kompilacja celuje teraz w ES2019, a automatyczny skaner pilnuje, by do kodu nie wszedł żaden regex wywalający Chrome 79 (flaga /u, klasy \\p{...}, lookbehind). Przy okazji usunąłem 3 takie wzorce (boss, powiadomienia). Mniej niespodziewanych wywałek na starszych telefonach.",

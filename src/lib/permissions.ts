@@ -15,6 +15,10 @@ const RISK: Record<string, Risk> = {
   gcal_day: "read", gmail_read: "read", chief_of_staff: "read", deep_solve: "read",
   predictions: "read", reflect: "read", sales_plan: "read", self_check: "read",
   system_health: "read", world_recall: "read",
+  // read — lokalna nawigacja / odczyt (bez efektów na zewnątrz, bez pytania o zgodę)
+  open_screen: "read", project_knowledge: "read", finance_summary: "read",
+  // write — lokalny zapis projektów finansowych (cofalne, wymaga zgody)
+  finance_add_project: "write", finance_set_status: "write",
   // write — lokalne, odwracalne ustawienia/zapisy
   set_mode: "write", set_preference: "write", set_theme: "write", set_voice: "write",
   switch_ai: "write", sales_autopilot: "write", backup_data: "write",

@@ -37,6 +37,12 @@ export const SCREENS: ScreenDef[] = [
   { id: "status", label: "Status systemu", aliases: ["status", "diagnostyka", "stan systemu"] },
   { id: "gadgets", label: "Gadżety", aliases: ["gadżety", "gadzety"] },
   { id: "hud", label: "HUD / Wizja", aliases: ["hud", "wizja", "kamera ai"] },
+  { id: "goal", label: "Zleć cel", aliases: ["cel", "zleć cel", "zlec cel", "do-for-me", "zrób za mnie", "zrob za mnie"] },
+  { id: "recall", label: "Recall — znajdź wszystko", aliases: ["recall", "znajdź wszystko", "znajdz wszystko", "szukaj w historii"] },
+  { id: "guardian", label: "Diagnoza i naprawa", aliases: ["diagnoza", "napraw", "strażnik", "straznik", "przyspiesz"] },
+  { id: "data", label: "Dane i kopia", aliases: ["dane", "kopia", "backup", "eksport danych", "kopia zapasowa"] },
+  { id: "history", label: "Historia rozmów", aliases: ["historia", "historia rozmów", "historia rozmow", "poprzednie czaty"] },
+  { id: "admin", label: "Administrator", aliases: ["administrator", "panel admina", "licencje"] },
 ];
 
 type Cb = (id: string) => void;
