@@ -8,7 +8,8 @@ import { isNearBottom, starterSuggestions } from "../lib/chatUx";
 import { detectLang, t } from "../lib/i18n";
 import { buildChiefBriefing, briefingOneLiner } from "../lib/chiefOfStaff";
 import { currentStreak, currentRecap } from "../lib/habit";
-import { livingPulse } from "../lib/livingPulse";
+import { livingPulse, nextBestAction } from "../lib/livingPulse";
+import { requestScreen } from "../lib/navIntent";
 import { lifeEntropy } from "../lib/lifeEntropy";
 import { ideaCollider, dayNumber } from "../lib/ideaCollider";
 import { providerShortName } from "../lib/providerNames";
@@ -189,7 +190,14 @@ export default function Conversation({
     let pulse: ReturnType<typeof livingPulse> = null;
     let entropy: ReturnType<typeof lifeEntropy> | null = null;
     let collision: ReturnType<typeof ideaCollider> = null;
+    let action: ReturnType<typeof nextBestAction> = null;
     if (!needsSetup) {
+      // ⚡ „Teraz" — jedna najlepsza czynność (pilność+wartość), anty-powtórka.
+      try {
+        let lastA: string | undefined;
+        try { lastA = localStorage.getItem("jarvis.action.last") || undefined; } catch { /* ignore */ }
+        action = nextBestAction(d, Date.now(), lastA);
+      } catch { /* ignore */ }
       try { proactive = briefingOneLiner(buildChiefBriefing({ tasks: d.tasks || [], reminders: d.reminders || [], calendar: d.calendar || [], leads: d.leads || [], people: d.world?.entities || [] }, Date.now())); } catch { /* ignore */ }
       try { streak = currentStreak(); } catch { /* ignore */ }
       try { recap = currentRecap().line; } catch { /* ignore */ }
@@ -209,6 +217,26 @@ export default function Conversation({
           {t("empty.greeting", lang)}
           <br />
           {t("empty.prompt", lang)}
+          {/* ⚡ Teraz — jedna najlepsza czynność: co, dlaczego, „Zrób" (otwórz ekran) / „Później" */}
+          {action && (
+            <div className="journal-card" style={{ marginTop: 14, padding: "12px 14px", textAlign: "left", borderRadius: 14, border: "1px solid var(--gold)", background: "linear-gradient(135deg, rgba(245,200,90,.08), transparent 70%)" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--gold)", letterSpacing: 0.5 }}>⚡ TERAZ</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginTop: 3 }}>{action.what}</div>
+              <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.45, marginTop: 3 }}>{action.why}</div>
+              <div style={{ display: "flex", gap: 8, marginTop: 9 }}>
+                <button
+                  className="chip"
+                  style={{ borderColor: "var(--gold)" }}
+                  onClick={() => { try { localStorage.setItem("jarvis.action.last", action!.id); } catch { /* ignore */ } requestScreen(action!.screen); }}
+                >▶ Zrób</button>
+                <button
+                  className="chip"
+                  onClick={() => { try { localStorage.setItem("jarvis.action.last", action!.id); } catch { /* ignore */ } onSuggest(action!.what); }}
+                  title="Zajmę się tym w rozmowie"
+                >💬 Powiedz jak</button>
+              </div>
+            </div>
+          )}
           {proactive && (
             <div className="journal-card" style={{ marginTop: 14, padding: "10px 12px", textAlign: "left", borderLeft: "3px solid var(--cyan)" }}>
               <span style={{ fontSize: 13.5, lineHeight: 1.5 }}>🧭 {proactive}</span>
