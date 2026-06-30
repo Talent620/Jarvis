@@ -17,10 +17,43 @@ const COLLECTIONS: (keyof AppData)[] = [
   "financeProjects",
 ];
 
+// Bezpieczne ustawienia biznesowe — bez sekretów (kluczy, haseł SMTP, tokenów, endpointów).
+// Przeżywają migrację urządzenia razem ze zwykłą kopią, żeby marka i podpisy nie ginęły.
+const SAFE_SETTING_KEYS = ["signatures", "emailSignature", "brandKit"] as const;
+
+/** Czyste: wybierz wyłącznie bezpieczne ustawienia biznesowe (marka + podpisy). */
+export function pickSafeSettings(s: Settings): Partial<Settings> {
+  const src = s as unknown as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const k of SAFE_SETTING_KEYS) if (src[k] !== undefined) out[k] = src[k];
+  return out as Partial<Settings>;
+}
+
+/** Czyste: z importu weź tylko bezpieczne klucze (anty-injection — sekrety odrzucone). */
+export function sanitizeSafeSettings(raw: unknown): Partial<Settings> {
+  if (!raw || typeof raw !== "object") return {};
+  const src = raw as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const k of SAFE_SETTING_KEYS) if (src[k] !== undefined) out[k] = src[k];
+  return out as Partial<Settings>;
+}
+
+/** Zwykła kopia (bez sekretów): dane + wersjonowana sekcja bezpiecznych ustawień. */
+export function buildNormalPayload(): Record<string, unknown> {
+  return {
+    app: "jarvis",
+    version: 1,
+    exportedAt: Date.now(),
+    data: dataDump(),
+    safeSettings: pickSafeSettings(store.settings),
+    safeSettingsVersion: 1,
+  };
+}
+
 export function exportData(): void {
   // Tylko realne dane użytkownika (bez kluczy, bez audytu) — bezpieczny do dzielenia.
-  const payload = { app: "jarvis", version: 1, exportedAt: Date.now(), data: dataDump() };
-  download(payload, `jarvis-backup-${new Date().toISOString().slice(0, 10)}.json`);
+  // Dokładamy wersjonowaną sekcję bezpiecznych ustawień (marka + podpisy), bez sekretów.
+  download(buildNormalPayload(), `jarvis-backup-${new Date().toISOString().slice(0, 10)}.json`);
 }
 
 // Pola, które przekierowują ruch/pocztę — wstrzyknięte ze spreparowanej kopii mogłyby
@@ -58,7 +91,7 @@ export function sanitizeImportedSettings(
 }
 
 /** Zastosuj odczytaną kopię (dane i — przy pełnej — ustawienia). Zwraca komunikat. */
-function applyParsed(parsed: any): string {
+export function applyParsed(parsed: any): string {
   // Zanim nadpiszemy dane — upewnij się, że to w ogóle kopia JARVIS-a. Inaczej wybór
   // przypadkowego pliku JSON mógłby po cichu wyczyścić/uszkodzić istniejące dane.
   const looksLikeBackup =
@@ -78,6 +111,14 @@ function applyParsed(parsed: any): string {
     );
     store.setSettings(safe);
     return "✅ Przywrócono dane i ustawienia (klucze API) z kopii.";
+  }
+  // Zwykła kopia (bez sekretów): przywróć markę i podpisy z wersjonowanej sekcji bezpiecznej.
+  if (parsed.safeSettings && typeof parsed.safeSettings === "object") {
+    const safe = sanitizeSafeSettings(parsed.safeSettings);
+    if (Object.keys(safe).length) {
+      store.setSettings(safe);
+      return "✅ Przywrócono dane, markę i podpisy z kopii.";
+    }
   }
   return "✅ Dane przywrócone z kopii.";
 }
