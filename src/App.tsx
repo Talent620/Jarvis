@@ -24,6 +24,7 @@ const HeadsetMode = lazy(() => import("./components/HeadsetMode"));
 import { watchHeadset } from "./lib/headset";
 import { toast, copyWithToast } from "./lib/toast";
 import { conversationToMarkdown } from "./lib/exportChat";
+import { onScreenRequest } from "./lib/navIntent";
 import { followUps } from "./lib/followups";
 import { PRESETS } from "./lib/prompts";
 import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } from "./lib/decisions";
@@ -242,6 +243,22 @@ export default function App() {
   const [showMail, setShowMail] = useState(false);
   const [showFinance, setShowFinance] = useState(false);
   const [showAds, setShowAds] = useState(false);
+
+  // 🎯 Jeden Jarvis: czat/głos otwiera dowolny moduł (narzędzie open_screen → navIntent). Subskrypcja
+  // raz przy montażu (settery useState są stabilne). Nieinwazyjne — nie rusza dotychczasowych ścieżek.
+  useEffect(() => {
+    const map: Record<string, (v: boolean) => void> = {
+      finance: setShowFinance, studio: setShowStudio, web: setShowWeb, mail: setShowMail,
+      sales: setShowSales, content: setShowContent, ads: setShowAds, brand: setShowBrand,
+      money: setShowMoney, sent: setShowSent, costs: setShowCosts, memory: setShowMemory,
+      tasks: setShowTasks, cards: setShowCards, translator: setShowTranslator,
+      transcribe: setShowTranscribe, bargain: setShowBargain, boss: setShowBoss,
+      mind: setShowMind, journal: setShowJournal, projects: setShowProjects,
+      profile: setShowProfile, settings: setShowSettings, status: setShowStatus,
+      gadgets: setShowGadgets, hud: setShowHud,
+    };
+    return onScreenRequest((id) => { const fn = map[id]; if (fn) { setShowMore(false); fn(true); } });
+  }, []);
   // ⌘K — rejestr poleceń. MUSI być po WSZYSTKICH useState (referuje settery), inaczej TDZ na pierwszym
   // renderze (fabryka useMemo wykonuje się od razu). Stabilny (deps []); akcje przez actionsRef.
   const commands = useMemo<CommandItem[]>(() => {

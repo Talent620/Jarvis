@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🎯 Jeden Jarvis — otwórz dowolny moduł z czatu: powiesz lub napiszesz np. otwórz Finanse, pokaż Studio, przejdź do Kreatora stron, otwórz Reklamy/Ustawienia/Pamięć — a JARVIS od razu przełączy ekran, bez szukania zakładek w Centrum. Czat staje się jednym pilotem do całej aplikacji (26 modułów). Dotychczasowe wejścia z Centrum działają bez zmian.",
       "🧠 Developer Copilot w czacie: zapytasz JARVIS-a o jego własny kod (np. gdzie liczone są pieniądze, który moduł od OCR) — odpowie z bazy wiedzy projektu: wskaże moduły, ich powiązania, ryzyko zmiany i czy mają testy. Indeks wiedzy obejmuje teraz graf zależności (kto czego używa) i oceny jakości (złożoność, krytyczność, ryzyko).",
       "🧭 Baza wiedzy o projekcie (fundament Developer Copilota): generator skanuje cały kod do indeksu (287 plików) i powstała wyszukiwarka intencji, która z pytania po polsku (np. gdzie liczone są pieniądze) wskazuje właściwe moduły — bez znajomości nazw plików. To pierwszy krok do tego, by JARVIS znał własny kod i doradzał przy rozwoju.",
       "⚡ Płynniejszy interfejs (fundament): dodano selektor stanu (useStoreSelector), dzięki któremu komponenty mogą odświeżać się tylko przy zmianie tego, co realnie wyświetlają — zamiast przy każdej zmianie danych. Mniej zbędnych przerysowań, zwłaszcza na starszych telefonach. Wdrażane stopniowo, bez zmian w działaniu.",

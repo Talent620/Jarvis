@@ -3,6 +3,7 @@ import { fetchTimeout } from "./http";
 import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
 import { saType, saTap, saGlobal, saOpenApp, saOpenSettings } from "./systemActions";
 import { answerProjectQuestion, type KnowledgeIndex } from "./projectKnowledge";
+import { requestScreen, resolveScreen, SCREENS } from "./navIntent";
 import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
 import { getWeather } from "./weather";
 import { scheduleReminder, scheduleTimer } from "./notifications";
@@ -1435,6 +1436,20 @@ const tools: Tool[] = [
       } catch {
         return "Baza wiedzy o projekcie jest niedostępna w tej wersji. Zregeneruj ją poleceniem: npm run knowledge.";
       }
+    },
+  },
+  // === Jeden Jarvis: czat jako pilot do CAŁEJ aplikacji — otwiera dowolny moduł ===
+  {
+    def: {
+      name: "open_screen",
+      description: "Otwiera ekran/moduł aplikacji JARVIS. Używaj, gdy użytkownik prosi otwórz/pokaż/przejdź do modułu — np. Finanse, Studio Obrazów, Kreator stron, Pulpit Sprzedaży, Reklamy, Kontent, Ustawienia, Pamięć, Zadania, Tłumacz, Koszty AI, Tryb Szefa. Dzięki temu nie musi szukać zakładki.",
+      input_schema: obj({ name: str("Nazwa modułu, np. Finanse, Studio, Kreator stron, Ustawienia, Reklamy") }, ["name"]),
+    },
+    run: ({ name }) => {
+      const s = resolveScreen(String(name ?? ""));
+      if (!s) return `Nie rozpoznałem modułu. Dostępne m.in.: ${SCREENS.slice(0, 12).map((x) => x.label).join(", ")}…`;
+      requestScreen(s.id);
+      return `✅ Otwieram: ${s.label}.`;
     },
   },
 ];
