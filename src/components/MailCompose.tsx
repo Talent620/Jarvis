@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useDirtyClose } from "../hooks/useDirtyClose";
 import { store } from "../lib/store";
 import { toast } from "../lib/toast";
 import { sendOfferEmail, canSendDirect, isValidEmail, mailReadiness } from "../lib/mailer";
@@ -12,10 +13,15 @@ import { listSignatures, addSignature, removeSignature, useSignature as selectSi
 // adresata, temat, treść — wysyłasz jednym przyciskiem przez skonfigurowany kanał (SMTP/Gmail) albo
 // otwierasz w Gmailu/poczcie. Z badge dostarczalności i akcjami AI kompozytora. Nieinwazyjne (nowy panel).
 export default function MailCompose({ onClose, presetTo = "", presetSubject = "", presetBody = "" }: { onClose: () => void; presetTo?: string; presetSubject?: string; presetBody?: string }) {
-  useEscape(onClose);
   const [to, setTo] = useState(presetTo);
   const [subject, setSubject] = useState(presetSubject);
   const [body, setBody] = useState(presetBody);
+  // Ochrona niezapisanego maila: zmiany względem presetów I jakaś treść = „brudny" → zamknięcie
+  // pyta. Po wysłaniu (pola czyszczone) nie jest brudny, więc nie pyta niepotrzebnie.
+  const dirty = (to !== presetTo || subject !== presetSubject || body !== presetBody) &&
+    (to.trim() !== "" || subject.trim() !== "" || body.trim() !== "");
+  const close = useDirtyClose(dirty, onClose, "Masz niewysłany e-mail. Zamknąć i odrzucić wersję roboczą?");
+  useEscape(close);
   const [busy, setBusy] = useState(false);
   const [composing, setComposing] = useState<ComposerAction | "">("");
   const [sigs, setSigs] = useState<Signature[]>([]);
@@ -63,7 +69,7 @@ export default function MailCompose({ onClose, presetTo = "", presetSubject = ""
   const openMail = () => safeOpenExternal(mailtoUrl(to.trim(), subject.trim(), finalBody()));
 
   return (
-    <div className="sheet" onClick={onClose}>
+    <div className="sheet" onClick={close}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
@@ -140,7 +146,7 @@ export default function MailCompose({ onClose, presetTo = "", presetSubject = ""
               💡 Wysyłka jednym kliknięciem (bez otwierania poczty) — {mailReadiness().reason}
             </p>
           )}
-          <button className="btn" style={{ marginTop: 8 }} onClick={onClose}>Zamknij</button>
+          <button className="btn" style={{ marginTop: 8 }} onClick={close}>Zamknij</button>
         </div>
       </div>
     </div>
