@@ -8,6 +8,7 @@ import "./styles/index.css";
 import { initPlugins } from "./plugins";
 import { installSecretsVault } from "./lib/secretsVault";
 import { applyPerformanceProfile } from "./lib/performanceProfile";
+import { setChatStorageWarner } from "./lib/chats";
 
 // Opcjonalny, OPT-IN podgląd „Neural Interface" pod hash-route `#neural` — ładowany leniwie,
 // więc framer-motion/Tailwind nie wchodzą do głównego bundla zwykłych użytkowników.
@@ -24,6 +25,18 @@ initPlugins();
 applyPerformanceProfile();
 document.addEventListener("visibilitychange", () => {
   document.documentElement.classList.toggle("app-hidden", document.hidden);
+});
+
+// Historia czatu: gdy pamięć jest pełna i trzeba było obciąć obrazy/starsze sesje, powiedz
+// to użytkownikowi (koniec cichej degradacji widocznej tylko w konsoli). Throttling 1/min.
+let lastChatWarn = 0;
+setChatStorageWarner((r) => {
+  const now = Date.now();
+  if (now - lastChatWarn < 60_000) return;
+  lastChatWarn = now;
+  softReport(r.ok
+    ? "Pamięć prawie pełna — skróciłem historię czatu (obrazy/starsze rozmowy). Zrób kopię i wyczyść stare."
+    : "Pamięć pełna — nie zapisałem historii czatu. Wyczyść stare rozmowy albo zrób kopię.");
 });
 
 // Aktualizacje OTA: potwierdź wtyczce, że ta paczka DZIAŁA (inaczej cofnęłaby ją). No-op na web.

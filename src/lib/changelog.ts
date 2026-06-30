@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "💬 Historia czatu nie znika po cichu: gdy pamięć telefonu jest pełna i JARVIS musi skrócić historię (obrazy/starsze rozmowy), powie Ci o tym wprost i podpowie, by zrobić kopię i wyczyścić stare — zamiast po cichu gubić wiadomości (błąd lądował tylko w konsoli).",
       "🗣 Bezpieczniejsze potwierdzanie głosem: pytając o zgodę, JARVIS najpierw kończy mówić, a dopiero potem słucha — nie usłyszy już własnego pytania. Zatwierdza tylko jednoznaczne tak/potwierdzam/zgoda/wykonaj; zwykłe słowa w zdaniu (wyślij, rób, proszę) niczego same nie odpalają. Brak jasnej odpowiedzi przez 20 s = odmowa (bezpiecznie).",
       "🎙 Koniec dwóch mikrofonów naraz: gdy po podłączeniu słuchawek włącza się Tryb Słuchawki, główny mikrofon jest teraz porządnie zatrzymywany (wcześniej mógł nasłuchiwać równolegle — gryzło się i zżerało baterię). Nowy arbiter dba, by w danej chwili głos „trzymał” tylko jeden tryb; po zamknięciu trybu mikrofon się zwalnia.",
       "✉ Ochrona niewysłanego maila: jeśli zaczniesz pisać wiadomość i przypadkiem klikniesz poza okno albo wciśniesz Escape, JARVIS zapyta, zanim ją odrzuci — koniec gubienia treści jednym przypadkowym dotknięciem. Po zamknięciu okna fokus wraca tam, gdzie był (wygodniej z klawiaturą). Mechanizm jest gotowy do włączenia także w innych formularzach.",
