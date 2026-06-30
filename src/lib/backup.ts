@@ -7,7 +7,7 @@ import type { AppData, Settings } from "../types";
 //  2) exportFull — dane + ustawienia z kluczami (jawny JSON, wrażliwy);
 //  3) exportFullEncrypted — pełna kopia zaszyfrowana AES-256-GCM hasłem —
 //     bezpieczna nawet, gdy plik wpadnie w niepowołane ręce.
-const COLLECTIONS: (keyof AppData)[] = [
+export const COLLECTIONS: (keyof AppData)[] = [
   "tasks", "notes", "reminders", "shopping", "calendar",
   "memory", "scenes", "projects", "projectFiles", "tally", "journal", "leads", "flashcards",
   "bargainWatch", "sentMail", "contentPosts",
@@ -103,6 +103,8 @@ export function applyParsed(parsed: any): string {
   const d = (parsed.data ?? parsed) as Record<string, unknown>;
   store.setData((s) => {
     for (const c of COLLECTIONS) if (Array.isArray(d[c])) (s as any)[c] = d[c];
+    // World Model (graf encji/relacji) to obiekt, nie tablica — przywróć osobno, gdy jest.
+    if (d.world && typeof d.world === "object" && !Array.isArray(d.world)) (s as any).world = d.world;
   });
   if (parsed.settings && typeof parsed.settings === "object") {
     const safe = sanitizeImportedSettings(parsed.settings, store.settings, (keys) =>
@@ -154,6 +156,13 @@ export function importData(): Promise<string> {
   });
 }
 
+// Klucze AppData ŚWIADOMIE pominięte w kopii (z uzasadnieniem) — pilnowane testem-manifestem.
+export const BACKUP_EXCLUDED: (keyof AppData)[] = [
+  "audit", // dziennik audytu — lokalny ślad działań, nie przywracamy go między urządzeniami
+];
+// Klucze obsługiwane specjalnie (obiekt, nie tablica) — poza pętlą COLLECTIONS.
+export const BACKUP_SPECIAL: (keyof AppData)[] = ["world"];
+
 // Zrzut danych (bez wektorów pamięci — odtworzą się po imporcie).
 function dataDump(): Record<string, unknown> {
   const data: Record<string, unknown> = {};
@@ -162,6 +171,8 @@ function dataDump(): Record<string, unknown> {
       ? (store.data.memory || []).map(({ embedding: _embedding, ...rest }) => rest)
       : store.data[c];
   }
+  // World Model (graf) — obiekt, dokładany do kopii, by kontekst nie zginął przy przenosinach.
+  if (store.data.world) data.world = store.data.world;
   return data;
 }
 
