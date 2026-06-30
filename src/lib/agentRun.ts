@@ -9,6 +9,7 @@
 import type { AgentPlan, PlanStep } from "./agentPlanner";
 import type { ActionOutcome } from "./actionOutcome";
 import { confirmed, failed, draft, attempted } from "./actionOutcome";
+import { verifyRun, type RuntimeVerdict } from "./resultVerifier";
 import type { Risk } from "./permissions";
 
 export interface StepResult {
@@ -28,8 +29,10 @@ export interface RunResult {
   status: RunStatus;
   steps: StepResult[];
   toolCalls: number;
-  /** Krótkie, jawne podsumowanie (bez chain-of-thought). */
+  /** Krótkie, jawne podsumowanie (bez chain-of-thought) — pochodzi z weryfikatora. */
   summary: string;
+  /** Uczciwy werdykt końcowy (5 stanów). canClaimSuccess=true tylko, gdy WSZYSTKO potwierdzone. */
+  verdict: RuntimeVerdict;
 }
 
 export interface RunDeps {
@@ -153,14 +156,10 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
   const anySkipped = ordered.some((r) => r.skipped);
   const status: RunStatus = stoppedByLimit ? "stopped" : anyFailed ? "failed" : anySkipped ? "blocked" : "completed";
 
-  const done = ordered.filter((r) => r.outcome.state === "CONFIRMED").length;
-  const summary =
-    status === "completed" ? `Wykonano i potwierdzono wszystkie kroki (${done}/${total}).`
-    : status === "failed" ? `Część kroków się nie powiodła — potwierdzono ${done}/${total}.`
-    : status === "stopped" ? `Zatrzymano na limicie wywołań — potwierdzono ${done}/${total}.`
-    : `Wstrzymano (zgoda/zależność) — potwierdzono ${done}/${total}.`;
+  // Werdykt końcowy ZAWSZE z weryfikatora — jedyne źródło uczciwego statusu (bez „Gotowe" bez dowodu).
+  const verdict = verifyRun({ goal: plan.goal, steps: ordered.map((r) => ({ id: r.id, intent: r.intent, outcome: r.outcome, skipped: r.skipped })) });
 
-  return { status, steps: ordered, toolCalls, summary };
+  return { status, steps: ordered, toolCalls, summary: verdict.summary, verdict };
 }
 
 /**

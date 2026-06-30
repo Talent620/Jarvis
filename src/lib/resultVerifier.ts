@@ -82,3 +82,66 @@ export function needsVerification(opts: { complex?: boolean; usedTools?: boolean
   if (opts.veryShort) return false;
   return !!(opts.riskyAction || opts.multiStep || (opts.complex && opts.usedTools) || (opts.usedTools && opts.riskyAction));
 }
+
+// — Runtime: uczciwy werdykt całości po wykonaniu planu/akcji —
+// Rozróżnia 5 stanów i NIGDY nie ogłasza „Gotowe" bez dowodu. Deterministyczny (ActionOutcome),
+// nie wykonuje narzędzi. Gemini można wpiąć tylko dla semantycznie niejasnego rezultatu (osobno).
+
+/** Końcowy, uczciwy stan działania. */
+export type FinalState = "confirmed" | "prepared" | "simulated" | "attempted" | "blocked" | "failed";
+
+export interface RuntimeVerdict {
+  state: FinalState;
+  /** TYLKO confirmed wolno przedstawić jako sukces ("zrobione/wysłano/zapisano"). */
+  canClaimSuccess: boolean;
+  confirmed: number;
+  total: number;
+  summary: string;     // uczciwe zdanie do pokazania (bez ogólnego „Gotowe")
+  details: string[];   // krótkie, jawne powody (bez chain-of-thought)
+}
+
+export interface RunStepLike {
+  id: string;
+  intent?: string;
+  successCriteria?: string;
+  outcome: ActionOutcome;
+  skipped?: boolean;
+}
+
+/**
+ * Pure: zaklasyfikuj wynik wykonania planu na JEDEN uczciwy stan końcowy.
+ * Sukces (confirmed) tylko, gdy WSZYSTKIE kroki są CONFIRMED. W innym wypadku zwracamy
+ * najbardziej informujący stan blokujący sukces: failed > attempted > simulated > blocked > prepared.
+ */
+export function verifyRun(input: { goal: string; steps: RunStepLike[] }): RuntimeVerdict {
+  const steps = input.steps || [];
+  const total = steps.length;
+  const confirmed = steps.filter((s) => s.outcome?.state === "CONFIRMED").length;
+  const has = (st: string) => steps.some((s) => s.outcome?.state === st);
+  const details: string[] = [];
+  for (const s of steps) {
+    if (s.outcome?.state !== "CONFIRMED") {
+      const why = s.skipped ? `pominięto (${s.outcome?.evidence?.message || "blokada"})` : (s.outcome?.state || "DRAFT");
+      details.push(`${s.successCriteria || s.intent || s.id}: ${why}`);
+    }
+  }
+
+  let state: FinalState;
+  if (total > 0 && confirmed === total) state = "confirmed";
+  else if (has("FAILED")) state = "failed";
+  else if (has("ATTEMPTED")) state = "attempted";
+  else if (has("SIMULATED")) state = "simulated";
+  else if (steps.some((s) => s.skipped)) state = "blocked";
+  else state = "prepared";
+
+  const SUMMARY: Record<FinalState, string> = {
+    confirmed: `Wykonano i potwierdzono wszystkie kroki (${confirmed}/${total}).`,
+    prepared: "Przygotowano (szkic) — nic nie wyszło na zewnątrz; czeka na Twoją decyzję.",
+    simulated: "Zasymulowano — NIC nie zostało wysłane ani zapisane na zewnątrz.",
+    attempted: `Rozpoczęto — czekam na potwierdzenie skutku; nie ogłaszam sukcesu (${confirmed}/${total} potwierdzonych).`,
+    blocked: `Wstrzymano — brak zgody lub niepotwierdzona zależność (${confirmed}/${total} potwierdzonych).`,
+    failed: `Nie udało się — część kroków zakończyła się błędem (${confirmed}/${total} potwierdzonych).`,
+  };
+
+  return { state, canClaimSuccess: state === "confirmed", confirmed, total, summary: SUMMARY[state], details };
+}
