@@ -180,6 +180,26 @@ function read<T>(key: string, fallback: T): T {
   }
 }
 
+/**
+ * Audyt #1: twardo znormalizuj wczytane dane — KAŻDA kolekcja MUSI być tablicą, a `world`
+ * poprawnym obiektem. Uszkodzony/częściowy localStorage (np. `tasks:null`, `world` bez
+ * `relations`) inaczej wywala apkę przy `unshift`/`find`. Idempotentne, mutuje i zwraca `d`.
+ */
+export function normalizeData(d: AppData): AppData {
+  const rec = d as unknown as Record<string, unknown>;
+  for (const k of Object.keys(emptyData) as (keyof AppData)[]) {
+    if (k === "world") continue;
+    if (!Array.isArray(rec[k as string])) rec[k as string] = [];
+  }
+  const w = d.world as { entities?: unknown; relations?: unknown } | undefined;
+  if (!w || typeof w !== "object") d.world = { entities: [], relations: [] };
+  else {
+    if (!Array.isArray(w.entities)) w.entities = [];
+    if (!Array.isArray(w.relations)) w.relations = [];
+  }
+  return d;
+}
+
 // Trwały sygnał przepełnienia pamięci (UI może pokazać baner). Nie tylko jednorazowy toast —
 // po przepełnieniu KAŻDY kolejny zapis cicho przepada, więc utrzymujemy flagę i co jakiś czas
 // ponawiamy ostrzeżenie, zamiast udawać, że dane się zapisały.
@@ -276,7 +296,7 @@ export function setSettingsPersistTransform(fn: (s: Settings) => Settings): void
 }
 
 class Store {
-  data: AppData = read<AppData>(DATA_KEY, emptyData);
+  data: AppData = normalizeData(read<AppData>(DATA_KEY, emptyData)); // #1: twarda normalizacja
   settings: Settings = normalizeSettings(read<Settings>(SETTINGS_KEY, defaultSettings));
   /** Rośnie przy każdej zmianie — używane jako snapshot dla Reacta. */
   version = 0;
@@ -287,6 +307,25 @@ class Store {
 
   constructor() {
     void this.initPersistence();
+    // Audyt #2 (synchronizacja między kartami/oknami) + #4 (flush przy zamknięciu).
+    if (typeof window !== "undefined") {
+      try {
+        // storage event odpala się TYLKO w INNYCH kartach (nie w tej, która zapisała) — brak pętli.
+        window.addEventListener("storage", (e) => {
+          if (e.key === SETTINGS_KEY) {
+            this.settings = normalizeSettings(read<Settings>(SETTINGS_KEY, defaultSettings));
+            this.emit();
+          } else if (e.key === DATA_KEY) {
+            this.reloadDataFromDisk();
+          }
+        });
+        const flushOnHide = () => {
+          if (this.idbFlushTimer) { clearTimeout(this.idbFlushTimer); this.idbFlushTimer = null; void this.flushIdb(); }
+        };
+        window.addEventListener("pagehide", flushOnHide);
+        document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushOnHide(); });
+      } catch { /* środowisko bez window/document — pomiń */ }
+    }
   }
 
   subscribe(fn: Listener): () => void {
@@ -296,7 +335,23 @@ class Store {
 
   private emit() {
     this.version++;
-    this.listeners.forEach((fn) => fn());
+    // Audyt #3: jeden wadliwy listener NIE może zablokować odświeżenia pozostałych komponentów.
+    this.listeners.forEach((fn) => { try { fn(); } catch { /* izoluj błąd listenera */ } });
+  }
+
+  // Audyt #2: przeładuj dane po zmianie w innej karcie. Kolekcje user-facing (zadania, leady,
+  // finanse…) są w blobie → adoptujemy je. Ciężkie kolekcje IDB zachowujemy z RAM (źródłem
+  // prawdy dla nich jest IDB; pojawią się po naturalnym przeładowaniu apki).
+  private reloadDataFromDisk() {
+    try {
+      const fresh = normalizeData(read<AppData>(DATA_KEY, emptyData));
+      if (this.idbReady) {
+        const cur = this.data as unknown as Record<string, unknown[]>;
+        for (const c of IDB_COLLECTIONS) (fresh as unknown as Record<string, unknown[]>)[c] = cur[c] || [];
+      }
+      this.data = fresh;
+      this.emit();
+    } catch { /* ignore — zostaje bieżący stan RAM */ }
   }
 
   // Trwałość danych: gdy IndexedDB gotowy, duże kolekcje idą do IDB, a w localStorage
@@ -372,7 +427,9 @@ class Store {
   }
 
   setData(mut: (d: AppData) => void) {
-    mut(this.data);
+    // Audyt #5: mutator rzucający w połowie NIE może wywalić apki. Łapiemy, logujemy do konsoli
+    // i kontynuujemy (zapis + emit bieżącego stanu), zamiast pozwolić wyjątkowi rozlać się po UI.
+    try { mut(this.data); } catch (e) { try { console.error("[JARVIS] setData mutator error:", e); } catch { /* ignore */ } }
     capCollections(this.data); // utnij rozrośnięte logi (sentMail/contentPosts) przed zapisem
     this.persistData();
     this.emit();
