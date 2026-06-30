@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Czerwiec 2026",
     date: "2026-06-24",
     items: [
+      "🧭 Baza wiedzy o projekcie (fundament Developer Copilota): generator skanuje cały kod do indeksu (287 plików) i powstała wyszukiwarka intencji, która z pytania po polsku (np. gdzie liczone są pieniądze) wskazuje właściwe moduły — bez znajomości nazw plików. To pierwszy krok do tego, by JARVIS znał własny kod i doradzał przy rozwoju.",
       "⚡ Płynniejszy interfejs (fundament): dodano selektor stanu (useStoreSelector), dzięki któremu komponenty mogą odświeżać się tylko przy zmianie tego, co realnie wyświetlają — zamiast przy każdej zmianie danych. Mniej zbędnych przerysowań, zwłaszcza na starszych telefonach. Wdrażane stopniowo, bez zmian w działaniu.",
       "⚡ Szybsza masowa wysyłka ofert: sprawdzanie, czy lead był już mailowany, działa teraz na indeksie (Set) zamiast skanować całą skrzynkę wysłanych dla każdego leada — z O(leady × wysłane) na O(leady + wysłane). Przy dużych listach leadów masowa wysyłka rusza zauważalnie szybciej. Zachowanie identyczne (dopasowanie po firmie lub adresie).",
       "💰 Nowy moduł: Financial Intelligence — w Centrum (Sprzedaż i biznes → Finanse) masz dashboard: dodajesz projekty (kwota, koszt, status od Lead po Opłacone), a JARVIS sam liczy przychód, zysk, marżę, ROI, VAT, cash flow (zapłacone/do zapłaty), średnią wartość, efektywną stawkę godzinową, top klienta i najdochodowszy projekt — plus trend 6 miesięcy i ranking klientów. To fundament; wykresy, Kanban, głos i eksport dochodzą stopniowo.",
