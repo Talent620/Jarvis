@@ -1011,6 +1011,17 @@ button:disabled {
   cursor: pointer;
   flex-shrink: 0;
 }
+/* Powiększ obszar dotyku do min. 44px w pionie (S9/dostępność) BEZ zmiany wyglądu toru —
+   przezroczysty pseudo-element nad/pod przełącznikiem łapie dotyk, nie rusza layoutu. */
+.switch::before {
+  content: "";
+  position: absolute;
+  inset: -10px -4px;
+}
+.switch:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
 .switch.on {
   background: var(--cyan);
 }
