@@ -1,4 +1,4 @@
-import { lazy, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { CommandItem } from "./lib/commandPalette";
 import type { GrowthContext } from "./lib/growthContext";
 import Orb, { type OrbState } from "./components/Orb";
@@ -29,6 +29,7 @@ import { acquireVoice, releaseVoice } from "./lib/voiceSession";
 import { toast, copyWithToast } from "./lib/toast";
 import { conversationToMarkdown } from "./lib/exportChat";
 import { onScreenRequest } from "./lib/navIntent";
+import { uiRouteReducer, initialRoute, canGoBack } from "./lib/uiRoute";
 import { followUps } from "./lib/followups";
 import { PRESETS } from "./lib/prompts";
 import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } from "./lib/decisions";
@@ -172,26 +173,35 @@ export default function App() {
   const { settings } = useStore();
   const [messages, setMessages] = useState<ChatMessage[]>(initialChat?.messages ?? []);
   const [activeId, setActiveId] = useState<string>(initialChat?.id ?? uid());
-  const [showHistory, setShowHistory] = useState(false);
+  // JEDNA nawigacja: wszystkie „zwykłe" ekrany mają jeden aktywny stan (route) + historię „Wstecz".
+  // Stare flagi showX/setShowX są WYPROWADZANE z routera (adapter) — kod wywołujący działa bez zmian,
+  // a otwarcie ekranu zamyka poprzedni (koniec nakładających się okien). Overlaye systemowe (zgoda,
+  // blokada, Live/Boss/HUD/⌘K/powiadomienia) mają własny stan i nie przechodzą przez router.
+  const [route, dispatch] = useReducer(uiRouteReducer, initialRoute);
+  const screenSetter = (id: string) => (v: boolean) => dispatch(v ? { type: "open", screen: id } : { type: "closeIf", screen: id });
+  // Stabilny opener (dispatch jest stały) — do hooków z [] (requestScreen, ⌘K) bez migotania zależności.
+  const openScreen = useCallback((id: string) => dispatch({ type: "open", screen: id }), []);
+  const goBack = () => dispatch({ type: "back" });
+  const showHistory = route.screen === "history"; const setShowHistory = screenSetter("history");
   // Czat prywatny/tymczasowy (jak w ChatGPT) — rozmowa NIE trafia do historii.
   const [privateChat, setPrivateChat] = useState(false);
-  const [showProjects, setShowProjects] = useState(false);
-  const [showJournal, setShowJournal] = useState(false);
-  const [showSales, setShowSales] = useState(false);
-  const [showMoney, setShowMoney] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
-  const [showMore, setShowMore] = useState(false);
-  const [showGadgets, setShowGadgets] = useState(false);
+  const showProjects = route.screen === "projects"; const setShowProjects = screenSetter("projects");
+  const showJournal = route.screen === "journal"; const setShowJournal = screenSetter("journal");
+  const showSales = route.screen === "sales"; const setShowSales = screenSetter("sales");
+  const showMoney = route.screen === "money"; const setShowMoney = screenSetter("money");
+  const showHelp = route.screen === "help"; const setShowHelp = screenSetter("help");
+  const showMore = route.screen === "more"; const setShowMore = screenSetter("more");
+  const showGadgets = route.screen === "gadgets"; const setShowGadgets = screenSetter("gadgets");
   const [showHud, setShowHud] = useState(false);
-  const [showStudio, setShowStudio] = useState(false);
-  const [showWeb, setShowWeb] = useState(false);
+  const showStudio = route.screen === "studio"; const setShowStudio = screenSetter("studio");
+  const showWeb = route.screen === "web"; const setShowWeb = screenSetter("web");
   // Most Lead → demo: gdy „Zbuduj demo" ruszy z konkretnego leada, jego kontekst zasila kreator.
   const [webContext, setWebContext] = useState<GrowthContext | null>(null);
   const [interim, setInterim] = useState("");
   const [orb, setOrb] = useState<OrbState>("idle");
   const [busy, setBusy] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showPanels, setShowPanels] = useState(false);
+  const showSettings = route.screen === "settings"; const setShowSettings = screenSetter("settings");
+  const showPanels = route.screen === "panels"; const setShowPanels = screenSetter("panels");
   const [showLive, setShowLive] = useState(false);
   const [micOn, setMicOn] = useState(false);
   const [liveId, setLiveId] = useState<string | null>(null);
@@ -199,14 +209,14 @@ export default function App() {
   const [pendingConsent, setPendingConsent] = useState<PendingConsent | null>(null);
   const [step, setStep] = useState<string | null>(null);
   const [councilStep, setCouncilStep] = useState<string | null>(null);
-  const [showGuardian, setShowGuardian] = useState(false);
-  const [showMind, setShowMind] = useState(false);
-  const [showGoal, setShowGoal] = useState(false);
-  const [showGrowthDay, setShowGrowthDay] = useState(false);
-  const [showCandidates, setShowCandidates] = useState(false);
-  const [showGoalStatus, setShowGoalStatus] = useState(false);
+  const showGuardian = route.screen === "guardian"; const setShowGuardian = screenSetter("guardian");
+  const showMind = route.screen === "mind"; const setShowMind = screenSetter("mind");
+  const showGoal = route.screen === "goal"; const setShowGoal = screenSetter("goal");
+  const showGrowthDay = route.screen === "growthDay"; const setShowGrowthDay = screenSetter("growthDay");
+  const showCandidates = route.screen === "candidates"; const setShowCandidates = screenSetter("candidates");
+  const showGoalStatus = route.screen === "goalStatus"; const setShowGoalStatus = screenSetter("goalStatus");
   const [showCmd, setShowCmd] = useState(false);
-  const [showRecall, setShowRecall] = useState(false);
+  const showRecall = route.screen === "recall"; const setShowRecall = screenSetter("recall");
   const [recallSeed, setRecallSeed] = useState("");
   const [showBoss, setShowBoss] = useState(false);
   const [completionHidden, setCompletionHidden] = useState(false);
@@ -238,81 +248,77 @@ export default function App() {
   const [keysLocked, setKeysLocked] = useState(keysAreLocked());
   const [clipSuggest, setClipSuggest] = useState<string>("");
   const [showVoice, setShowVoice] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [showCards, setShowCards] = useState(false);
-  const [showTranscribe, setShowTranscribe] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [showTasks, setShowTasks] = useState(false);
-  const [showTranslator, setShowTranslator] = useState(false);
-  const [showBargain, setShowBargain] = useState(false);
-  const [showWhereToBuy, setShowWhereToBuy] = useState(false);
-  const [showShoppingList, setShowShoppingList] = useState(false);
+  const showAdmin = route.screen === "admin"; const setShowAdmin = screenSetter("admin");
+  const showCards = route.screen === "cards"; const setShowCards = screenSetter("cards");
+  const showTranscribe = route.screen === "transcribe"; const setShowTranscribe = screenSetter("transcribe");
+  const showProfile = route.screen === "profile"; const setShowProfile = screenSetter("profile");
+  const showTasks = route.screen === "tasks"; const setShowTasks = screenSetter("tasks");
+  const showTranslator = route.screen === "translator"; const setShowTranslator = screenSetter("translator");
+  const showBargain = route.screen === "bargain"; const setShowBargain = screenSetter("bargain");
+  const showWhereToBuy = route.screen === "whereToBuy"; const setShowWhereToBuy = screenSetter("whereToBuy");
+  const showShoppingList = route.screen === "shoppingList"; const setShowShoppingList = screenSetter("shoppingList");
   const [showNotifs, setShowNotifs] = useState(false);
-  const [showStatus, setShowStatus] = useState(false);
-  const [showCosts, setShowCosts] = useState(false);
-  const [showMemory, setShowMemory] = useState(false);
-  const [showAudit, setShowAudit] = useState(false);
-  const [showSent, setShowSent] = useState(false);
-  const [showContent, setShowContent] = useState(false);
-  const [showBrand, setShowBrand] = useState(false);
-  const [showMail, setShowMail] = useState(false);
-  const [showFinance, setShowFinance] = useState(false);
-  const [showAds, setShowAds] = useState(false);
+  const showStatus = route.screen === "status"; const setShowStatus = screenSetter("status");
+  const showCosts = route.screen === "costs"; const setShowCosts = screenSetter("costs");
+  const showMemory = route.screen === "memory"; const setShowMemory = screenSetter("memory");
+  const showAudit = route.screen === "audit"; const setShowAudit = screenSetter("audit");
+  const showSent = route.screen === "sent"; const setShowSent = screenSetter("sent");
+  const showContent = route.screen === "content"; const setShowContent = screenSetter("content");
+  const showBrand = route.screen === "brand"; const setShowBrand = screenSetter("brand");
+  const showMail = route.screen === "mail"; const setShowMail = screenSetter("mail");
+  const showFinance = route.screen === "finance"; const setShowFinance = screenSetter("finance");
+  const showAds = route.screen === "ads"; const setShowAds = screenSetter("ads");
 
   // 🎯 Jeden Jarvis: czat/głos otwiera dowolny moduł (narzędzie open_screen → navIntent). Subskrypcja
   // raz przy montażu (settery useState są stabilne). Nieinwazyjne — nie rusza dotychczasowych ścieżek.
   useEffect(() => {
-    const map: Record<string, (v: boolean) => void> = {
-      finance: setShowFinance, studio: setShowStudio, web: setShowWeb, mail: setShowMail,
-      sales: setShowSales, content: setShowContent, ads: setShowAds, brand: setShowBrand,
-      money: setShowMoney, sent: setShowSent, costs: setShowCosts, memory: setShowMemory,
-      tasks: setShowTasks, cards: setShowCards, translator: setShowTranslator,
-      transcribe: setShowTranscribe, bargain: setShowBargain, boss: setShowBoss,
-      mind: setShowMind, journal: setShowJournal, projects: setShowProjects,
-      profile: setShowProfile, settings: setShowSettings, status: setShowStatus,
-      gadgets: setShowGadgets, hud: setShowHud,
-      goal: setShowGoal, recall: setShowRecall, guardian: setShowGuardian, growthDay: setShowGrowthDay, candidates: setShowCandidates, goalStatus: setShowGoalStatus,
-      data: setShowPanels, history: setShowHistory, admin: setShowAdmin,
-    };
-    return onScreenRequest((id) => { const fn = map[id]; if (fn) { setShowMore(false); fn(true); } });
-  }, []);
+    // Overlaye systemowe mają własny stan (nie router). Reszta ekranów idzie przez openScreen (router).
+    const OVERLAY: Record<string, (v: boolean) => void> = { boss: setShowBoss, hud: setShowHud };
+    const ROUTE_ALIAS: Record<string, string> = { data: "panels" }; // navIntent „data" → ekran „panels"
+    // Otwarcie przez router SAMO zamyka poprzedni ekran i odkłada go na stos „Wstecz" (np. Centrum→ekran).
+    return onScreenRequest((id) => {
+      if (OVERLAY[id]) { OVERLAY[id](true); return; }
+      openScreen(ROUTE_ALIAS[id] ?? id);
+    });
+  }, [openScreen]);
   // ⌘K — rejestr poleceń. MUSI być po WSZYSTKICH useState (referuje settery), inaczej TDZ na pierwszym
   // renderze (fabryka useMemo wykonuje się od razu). Stabilny (deps []); akcje przez actionsRef.
   const commands = useMemo<CommandItem[]>(() => {
-    const open = (id: string, title: string, set: (v: boolean) => void, icon: string, keywords = ""): CommandItem =>
-      ({ id, title, icon, keywords, group: "Otwórz", run: () => set(true) });
+    // „Otwórz" idzie przez router (openScreen) — stabilne, bez migotania zależności; overlay (HUD) osobno.
+    const open = (id: string, title: string, icon: string, keywords = ""): CommandItem =>
+      ({ id, title, icon, keywords, group: "Otwórz", run: () => openScreen(id) });
     const act = (id: string, title: string, icon: string, keywords = ""): CommandItem =>
       ({ id, title, icon, keywords, group: "Akcja", run: () => actionsRef.current[id]?.() });
     return [
-      open("settings", "Ustawienia", setShowSettings, "⚙", "klucze model glos motyw konto api"),
-      open("sales", "Pulpit Sprzedaży", setShowSales, "📈", "leady crm oferty klienci sprzedaz"),
-      open("finance", "Finanse", setShowFinance, "💰", "finanse projekty zysk marza cash flow kpi przychod faktury"),
-      open("mail", "Wyślij e-mail", setShowMail, "✉", "mail email wyslij poczta oferta wiadomosc"),
-      open("sent", "Wysłane", setShowSent, "📤", "wyslane maile skrzynka historia poczty"),
-      open("brand", "Dusza Marki", setShowBrand, "🎨", "marka brand ton kolory fonty styl spojnosc"),
-      open("goal", "🎯 Zleć cel", setShowGoal, "🎯", "do-for-me projekt plan wieloetapowe cel"),
-      open("growthDay", "📅 Plan dnia", setShowGrowthDay, "📅", "plan dnia rekomendacje roi wzrost co dzis zrobic orchestrator"),
-      open("candidates", "🧲 Kandydaci leadów", setShowCandidates, "🧲", "kandydaci leady szukaj firmy osm import bez zapisu crm"),
-      open("goalStatus", "🎯 Cele (autonomia)", setShowGoalStatus, "🎯", "cele postep autonomia zatrzymaj wznow anuluj trwaly cel status"),
-      open("studio", "Studio Obrazów", setShowStudio, "🎨", "zdjecia edycja generuj obraz foto"),
-      open("guardian", "Diagnoza i naprawa (dawny Strażnik)", setShowGuardian, "🩺", "napraw przyspiesz pomoc diagnoza strażnik"),
-      open("mind", "Umysł JARVISA", setShowMind, "🧠", "odprawa pamiec swiat wzorce samoocena"),
-      open("memory", "Co JARVIS o mnie wie", setShowMemory, "🧠", "pamiec fakty edytuj usun wiedza"),
-      open("profile", "Mój profil", setShowProfile, "👤", "kim jestem profil"),
-      open("tasks", "Zadania", setShowTasks, "✅", "gtd projekty priorytety todo"),
-      open("journal", "Dziennik", setShowJournal, "📔", "przemyslenia notatki"),
-      open("web", "Kreator stron", setShowWeb, "🌐", "strona witryna www"),
-      open("money", "Zarabianie", setShowMoney, "💰", "dochod autopilot pieniadze"),
-      open("bargain", "Łowca Okazji", setShowBargain, "🏷", "tanio kup okazja cena"),
-      open("translator", "Tłumacz na żywo", setShowTranslator, "🌍", "tlumacz jezyk rozmowa"),
-      open("transcribe", "Transkrypcja", setShowTranscribe, "🎙", "spotkanie mowa tekst"),
-      open("cards", "Kapsuły Wiedzy", setShowCards, "🃏", "ucz fiszki nauka"),
-      open("content", "Maszynka do kontentu", setShowContent, "📱", "posty social media"),
-      open("ads", "Generator reklam", setShowAds, "📢", "reklamy google facebook ads"),
-      open("hud", "Wizja (kamera)", setShowHud, "👁", "kamera widzisz obraz wizja"),
-      open("status", "Stan systemu", setShowStatus, "🩺", "diagnostyka co dziala"),
-      open("recall", "🔎 Recall — znajdź wszystko", setShowRecall, "🔎", "szukaj znajdz historia czat dziennik pamiec notatki recall"),
-      open("data", "Dane i kopia", setShowPanels, "🗄", "backup eksport dane kopia"),
+      open("settings", "Ustawienia", "⚙", "klucze model glos motyw konto api"),
+      open("sales", "Pulpit Sprzedaży", "📈", "leady crm oferty klienci sprzedaz"),
+      open("finance", "Finanse", "💰", "finanse projekty zysk marza cash flow kpi przychod faktury"),
+      open("mail", "Wyślij e-mail", "✉", "mail email wyslij poczta oferta wiadomosc"),
+      open("sent", "Wysłane", "📤", "wyslane maile skrzynka historia poczty"),
+      open("brand", "Dusza Marki", "🎨", "marka brand ton kolory fonty styl spojnosc"),
+      open("goal", "🎯 Zleć cel", "🎯", "do-for-me projekt plan wieloetapowe cel"),
+      open("growthDay", "📅 Plan dnia", "📅", "plan dnia rekomendacje roi wzrost co dzis zrobic orchestrator"),
+      open("candidates", "🧲 Kandydaci leadów", "🧲", "kandydaci leady szukaj firmy osm import bez zapisu crm"),
+      open("goalStatus", "🎯 Cele (autonomia)", "🎯", "cele postep autonomia zatrzymaj wznow anuluj trwaly cel status"),
+      open("studio", "Studio Obrazów", "🎨", "zdjecia edycja generuj obraz foto"),
+      open("guardian", "Diagnoza i naprawa (dawny Strażnik)", "🩺", "napraw przyspiesz pomoc diagnoza strażnik"),
+      open("mind", "Umysł JARVISA", "🧠", "odprawa pamiec swiat wzorce samoocena"),
+      open("memory", "Co JARVIS o mnie wie", "🧠", "pamiec fakty edytuj usun wiedza"),
+      open("profile", "Mój profil", "👤", "kim jestem profil"),
+      open("tasks", "Zadania", "✅", "gtd projekty priorytety todo"),
+      open("journal", "Dziennik", "📔", "przemyslenia notatki"),
+      open("web", "Kreator stron", "🌐", "strona witryna www"),
+      open("money", "Zarabianie", "💰", "dochod autopilot pieniadze"),
+      open("bargain", "Łowca Okazji", "🏷", "tanio kup okazja cena"),
+      open("translator", "Tłumacz na żywo", "🌍", "tlumacz jezyk rozmowa"),
+      open("transcribe", "Transkrypcja", "🎙", "spotkanie mowa tekst"),
+      open("cards", "Kapsuły Wiedzy", "🃏", "ucz fiszki nauka"),
+      open("content", "Maszynka do kontentu", "📱", "posty social media"),
+      open("ads", "Generator reklam", "📢", "reklamy google facebook ads"),
+      { id: "hud", title: "Wizja (kamera)", icon: "👁", keywords: "kamera widzisz obraz wizja", group: "Otwórz", run: () => setShowHud(true) },
+      open("status", "Stan systemu", "🩺", "diagnostyka co dziala"),
+      open("recall", "🔎 Recall — znajdź wszystko", "🔎", "szukaj znajdz historia czat dziennik pamiec notatki recall"),
+      { id: "data", title: "Dane i kopia", icon: "🗄", keywords: "backup eksport dane kopia", group: "Otwórz", run: () => openScreen("panels") },
       act("boss", "⬢ Tryb Szefa — agent głosowy (Matrix)", "⬢", "szef boss matrix agent glos rozkaz wykonaj strażnik"),
       act("voicemode", "Tryb Słuchawki (rozmowa)", "🎧", "glos hands-free rozmowa"),
       act("live", "Rozmowa na żywo", "☎", "live glos telefon"),
@@ -323,7 +329,7 @@ export default function App() {
       // ⚡ Szybkie startery (biblioteka promptów) — od razu ruszają z robotą.
       ...PRESETS.map((p): CommandItem => ({ id: p.id, title: p.title, icon: p.icon, keywords: p.kw, group: "⚡ Startery", run: () => actionsRef.current[p.id]?.() })),
     ];
-  }, []);
+  }, [openScreen]);
   // 💡 Dymki-porady (coaching): nienachalnie, po chwili i co kilka minut, gdy nie pracujesz; maks 4/sesję.
   useEffect(() => {
     if (store.settings.tips === false) return;
@@ -345,7 +351,7 @@ export default function App() {
 
   }, []);
   const onTipAction = (actionId: string) => { setTip(null); commands.find((c) => c.id === actionId)?.run(); };
-  const [showFaq, setShowFaq] = useState(false);
+  const showFaq = route.screen === "faq"; const setShowFaq = screenSetter("faq");
   const [booting, setBooting] = useState(true); // ładne „włączanie" przy starcie
   // null = sprawdzam aktywację; true/false = wynik. Brama licencji przed całą apką.
   const [licensed, setLicensed] = useState<boolean | null>(licenseRequired() ? null : true);
@@ -457,12 +463,9 @@ export default function App() {
   // Co chwilę sprawdza, czy jest coś ważnego (przypomnienie po terminie, wydarzenie
   // za moment, follow-up, zadanie na dziś, fiszka) i delikatnie to zgłasza — bubble
   // w czacie + toast z akcją „Otwórz". Nie przerywa, gdy JARVIS pracuje, i nie spamuje.
-  const openProactiveScreen = (screen?: NudgeScreen) => {
-    if (screen === "sales") setShowSales(true);
-    else if (screen === "cards") setShowCards(true);
-    else if (screen === "tasks") setShowTasks(true);
-    else setShowPanels(true);
-  };
+  const openProactiveScreen = useCallback((screen?: NudgeScreen) => {
+    openScreen(screen === "sales" ? "sales" : screen === "cards" ? "cards" : screen === "tasks" ? "tasks" : "panels");
+  }, [openScreen]);
   useEffect(() => {
     recordActiveDay(); // licznik serii dni (nawyk) — raz dziennie
     const tick = () => {
@@ -481,8 +484,7 @@ export default function App() {
     const first = setTimeout(tick, 12_000);          // pierwszy szturchaniec ~12 s po starcie
     const iv = setInterval(tick, 90_000);            // potem co 90 s (silnik i tak ma anty-spam)
     return () => { clearTimeout(first); clearInterval(iv); };
-     
-  }, []);
+  }, [openProactiveScreen]);
 
   const attachImage = async () => {
     const img = await capturePhoto();
@@ -1314,6 +1316,17 @@ export default function App() {
 
       {tip && store.settings.tips !== false && (
         <TipBubble tip={tip} onAction={onTipAction} onDismiss={() => setTip(null)} />
+      )}
+      {/* ← Wstecz — pojawia się, gdy jest dokąd wrócić (np. Centrum → ekran). Zachowuje kontekst trasy. */}
+      {canGoBack(route) && (
+        <button
+          type="button"
+          aria-label="Wstecz"
+          onClick={goBack}
+          style={{ position: "fixed", left: 12, top: "calc(env(safe-area-inset-top, 0px) + 10px)", zIndex: 120, minHeight: 44, minWidth: 44, borderRadius: 22, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--text)", fontSize: 16, cursor: "pointer" }}
+        >
+          ←
+        </button>
       )}
       {voiceIssue && (
         <div className="journal-card" style={{ position: "fixed", left: 12, right: 12, bottom: 90, zIndex: 60, borderColor: "var(--gold, #d9a400)" }}>
