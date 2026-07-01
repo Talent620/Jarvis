@@ -138,7 +138,8 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
       .map((b) => b.text)
       .join("")
       .trim();
-    return { text: text || "…", tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok } };
+    // finishReason: „max_tokens" sygnalizuje UCIĘCIE (limit) — Kreator stron użyje tego do naprawy.
+    return { text: text || "…", tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok }, finishReason: data.stop_reason };
   }
   return { text: "Zapętliłem się przy realizacji zadania.", tools: [...used], usage: { inputTokens: inTok, outputTokens: outTok } };
 }

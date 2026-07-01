@@ -62,7 +62,9 @@ export function makeOpenAICompatible(
     // z `tools` błędem 400. Trzymamy to przełączalnie i przy takim błędzie ponawiamy BEZ tools.
     let useTools = hasTools;
     const body = (): Record<string, unknown> =>
-      ({ model, messages, ...(useTools ? { tools, tool_choice: "auto" } : {}), max_tokens: 2048, ...(opts.extraBody || {}) });
+      // Budżet odpowiedzi: 8192 (a nie 2048) — pełna strona WWW nie mieści się w 2048 tokenach i była
+      // ucinana. To tylko GÓRNY limit (model stopuje sam, gdy skończy) — bez wpływu na krótkie odpowiedzi.
+      ({ model, messages, ...(useTools ? { tools, tool_choice: "auto" } : {}), max_tokens: 8192, ...(opts.extraBody || {}) });
 
     // Pełna odpowiedź (bez strumienia) — ścieżka klasyczna / fallback.
     const requestFull = async (): Promise<OAIMessage> => {

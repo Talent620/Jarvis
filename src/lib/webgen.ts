@@ -1,4 +1,4 @@
-import { askModel } from "./brain";
+import { askModel, askModelRich } from "./brain";
 import { validateBlueprint, blueprintToInstruction, fallbackBlueprint, SITE_BLUEPRINT_SCHEMA, type SiteBlueprint } from "./siteBlueprint";
 import { threeDInstruction, type Resolved3D } from "./web3dPolicy";
 import { humanize } from "./aiHelpers";
@@ -167,7 +167,7 @@ export async function generateSite(
   style: SiteStyle = "auto",
   blueprint?: SiteBlueprint,
   resolved3D?: Resolved3D,
-): Promise<{ html: string } | { error: string }> {
+): Promise<{ html: string; finishReason?: string } | { error: string }> {
   // Zatwierdzony blueprint STERUJE generowaniem: sekcje/CTA/kierunek/ruch/3D/formularz/budżet/preloader.
   // Dzięki temu zmiana planu realnie zmienia wygenerowaną stronę (nie jest tylko ozdobą UI).
   const blueprintBlock = blueprint ? `\n\n${blueprintToInstruction(blueprint)}` : "";
@@ -196,10 +196,11 @@ export async function generateSite(
 
   try {
     // Dusza Marki — dokleja tożsamość (kolory/fonty/ton) do system-promptu; pusty kit = bez zmian.
-    const reply = await askModel({ system: appendBrand(system), history: [{ role: "user", content: userMsg }], heavy: true });
-    const html = extractHtml(reply || "");
+    // askModelRich zwraca też finishReason — „max_tokens"/„length" = model UCIĄŁ pełną stronę.
+    const reply = await askModelRich({ system: appendBrand(system), history: [{ role: "user", content: userMsg }], heavy: true });
+    const html = extractHtml(reply.text || "");
     if (!html) return { error: "Model nie zwrócił kodu HTML — spróbuj doprecyzować opis." };
-    return { html };
+    return { html, finishReason: reply.finishReason };
   } catch (e) {
     return { error: humanize(e instanceof Error ? e.message : String(e)) };
   }
@@ -239,7 +240,13 @@ export async function continueSite(partialHtml: string): Promise<string> {
   });
 }
 
-export interface SiteRepairResult { html: string; validation: SiteValidation; repaired: boolean }
+/** Pure: czy finishReason dostawcy oznacza ucięcie limitem tokenów (length/max_tokens/MAX_TOKENS). */
+export function maxTokensTruncated(finishReason?: string): boolean {
+  const r = (finishReason || "").toLowerCase();
+  return r === "length" || r === "max_tokens" || r === "model_length" || r.indexOf("max_token") >= 0;
+}
+
+export interface SiteRepairResult { html: string; validation: SiteValidation; repaired: boolean; maxTokens?: boolean }
 
 /**
  * Wykryj ucięcie i wykonaj DOKŁADNIE JEDNĄ bezpieczną próbę dokończenia, po czym ponów walidację.
@@ -249,9 +256,13 @@ export interface SiteRepairResult { html: string; validation: SiteValidation; re
 export async function repairTruncatedSite(
   html: string,
   continueFn: (partialHtml: string) => Promise<string>,
+  opts: { finishReason?: string } = {},
 ): Promise<SiteRepairResult> {
   const before = validateSite(html);
-  if (!before.truncated) return { html, validation: before, repaired: false };
+  const cutByTokens = maxTokensTruncated(opts.finishReason);
+  // Doklejamy TYLKO gdy struktura jest urwana (pewny sygnał). Ucięcie limitem tokenów i tak zawsze
+  // zostawia urwaną strukturę, więc jest tu złapane; kompletnego dokumentu nie ruszamy (bez korupcji).
+  if (!before.truncated) return { html, validation: before, repaired: false, maxTokens: cutByTokens };
   let merged = html;
   try {
     const cont = await continueFn(html);
@@ -260,7 +271,7 @@ export async function repairTruncatedSite(
     /* kontynuacja padła (sieć/quota) — zostaw oryginał, walidacja i tak zablokuje pobranie */
   }
   const after = validateSite(merged);
-  return { html: merged, validation: after, repaired: before.truncated && !after.truncated };
+  return { html: merged, validation: after, repaired: before.truncated && after.safeToDownload, maxTokens: cutByTokens };
 }
 
 /**

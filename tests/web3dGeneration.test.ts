@@ -4,8 +4,12 @@
 // urządzenia (REAL: WebGL + poster + lazy + fallback) i dla S9 (CSS 2.5D, jawnie NIE realne 3D).
 import { describe, it, expect, vi } from "vitest";
 
-const { askSpy } = vi.hoisted(() => ({ askSpy: vi.fn(async () => "<!DOCTYPE html><html><head><title>x</title></head><body><h1>x</h1></body></html>") }));
-vi.mock("../src/lib/brain", async (orig) => ({ ...(await orig() as object), askModel: askSpy }));
+const { askSpy } = vi.hoisted(() => ({ askSpy: vi.fn(async () => ({ text: "<!DOCTYPE html><html><head><title>x</title></head><body><h1>x</h1></body></html>", finishReason: "stop" })) }));
+vi.mock("../src/lib/brain", async (orig) => ({
+  ...(await orig() as object),
+  askModelRich: askSpy,
+  askModel: async (...a: unknown[]) => (await (askSpy as (...x: unknown[]) => Promise<{ text: string }>)(...a)).text,
+}));
 
 import { generateSite } from "../src/lib/webgen";
 import { resolve3D, threeDInstruction, type DeviceCaps } from "../src/lib/web3dPolicy";

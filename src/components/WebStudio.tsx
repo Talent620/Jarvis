@@ -78,7 +78,7 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [packages, setPackages] = useState<QuotePackage[] | null>(null);
   const [audit, setAudit] = useState<SiteAudit | null>(null); // ocena jakości wygenerowanej strony
-  const [brokenDemo, setBrokenDemo] = useState<{ diagnostics: string[] } | null>(null); // demo ucięte i niedokończone
+  const [brokenDemo, setBrokenDemo] = useState<{ diagnostics: string[]; keptPrevious: boolean; editFlag: boolean } | null>(null); // demo ucięte i niedokończone
   const [showDiag, setShowDiag] = useState(false);
   const [strategy, setStrategy] = useState(""); // ETAP 11 — strategia biznesowa przed budową
   // Blueprint: plan strony wygenerowany przez model (structured output), edytowalny, STERUJE budową.
@@ -166,26 +166,32 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
       const resolved3D = blueprint ? resolve3D(toPolicyMode(blueprint.threeDMode), detectDeviceCaps()) : undefined;
       const r = await generateSite(desc, edit && html ? html : undefined, kind, style, blueprint ?? undefined, resolved3D);
       if ("error" in r) { setErr(r.error); return; }
-      // Auto-naprawa: jeśli odpowiedź AI jest UCIĘTA (limit tokenów) — jedna bezpieczna próba dokończenia,
-      // scalenie i ponowna walidacja. Nigdy nie zapisujemy uciętego HTML jako gotowego demo.
-      let finalHtml = r.html;
-      const rep = await repairTruncatedSite(finalHtml, continueSite);
-      finalHtml = rep.html;
+      // Auto-naprawa: jeśli odpowiedź AI jest UCIĘTA (struktura lub finishReason=MAX_TOKENS) — jedna
+      // bezpieczna próba dokończenia, scalenie i ponowna walidacja. Nigdy nie podajemy uciętego HTML.
+      const rep = await repairTruncatedSite(r.html, continueSite, { finishReason: r.finishReason });
       const v = rep.validation;
-      setHtml(finalHtml);
-      setAudit(auditSite(finalHtml));
-      setView("preview");
-      if (edit && !instructionOverride) setPrompt("");
       if (!v.safeToDownload) {
-        // Krytycznie uszkodzone (np. wciąż ucięte) — pokaż uczciwie, nie udawaj gotowego demo,
-        // nie zapisuj jako projekt i zablokuj domyślne pobranie.
-        setBrokenDemo({ diagnostics: v.issues.filter((i) => i.severity === "critical").map((i) => i.message) });
-      } else {
-        setBrokenDemo(null);
-        if (projId) {
-          const rec = saveSiteProject({ id: projId, name: projName, prompt: edit ? prompt : (instructionOverride ?? prompt), kind, style, html: finalHtml, brief });
-          setProjId(rec.id); refreshProjs();
+        const diagnostics = v.issues.filter((i) => i.severity === "critical").map((i) => i.message);
+        // Przy EDYCJI nie wolno zniszczyć dobrej strony — zachowaj ostatnią dobrą wersję (nie ustawiaj html).
+        if (edit && html) {
+          setBrokenDemo({ diagnostics, keptPrevious: true, editFlag: edit });
+          toast("Nowa wersja była uszkodzona (ucięta) — zachowałem poprzednią, dobrą stronę.");
+          return;
         }
+        // Nowa strona bez poprzedniej dobrej: pokaż podgląd, ale zablokuj pobranie i nie zapisuj projektu.
+        setHtml(rep.html); setAudit(auditSite(rep.html)); setView("preview");
+        setBrokenDemo({ diagnostics, keptPrevious: false, editFlag: edit });
+        return;
+      }
+      // OK — bezpieczna, kompletna strona.
+      setHtml(rep.html);
+      setAudit(auditSite(rep.html));
+      setView("preview");
+      setBrokenDemo(null);
+      if (edit && !instructionOverride) setPrompt("");
+      if (projId) {
+        const rec = saveSiteProject({ id: projId, name: projName, prompt: edit ? prompt : (instructionOverride ?? prompt), kind, style, html: rep.html, brief });
+        setProjId(rec.id); refreshProjs();
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -202,7 +208,7 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
       const rep = await repairTruncatedSite(html, continueSite);
       setHtml(rep.html); setAudit(auditSite(rep.html));
       if (rep.validation.safeToDownload) { setBrokenDemo(null); setShowDiag(false); toast("✅ Udało się dokończyć stronę."); }
-      else { setBrokenDemo({ diagnostics: rep.validation.issues.filter((i) => i.severity === "critical").map((i) => i.message) }); toast("Nadal nie udało się dokończyć — spróbuj przebudować od nowa."); }
+      else { setBrokenDemo({ diagnostics: rep.validation.issues.filter((i) => i.severity === "critical").map((i) => i.message), keptPrevious: false, editFlag: false }); toast("Nadal nie udało się dokończyć — spróbuj przebudować od nowa."); }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally { setBusy(false); }
@@ -485,10 +491,17 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
           {brokenDemo && (
             <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 10, border: "1px solid #ff6b6b", background: "color-mix(in srgb, #ff6b6b 8%, transparent)" }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#ff6b6b" }}>⚠ Nie udało się dokończyć strony</div>
-              <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Odpowiedź AI była ucięta, a próba dokończenia nie zamknęła dokumentu. Pobieranie zablokowane, żeby nie dać Ci uszkodzonego demo.</div>
+              <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                {brokenDemo.keptPrevious
+                  ? "Nowa wersja była ucięta — zachowałem Twoją poprzednią, dobrą stronę. Możesz ponowić."
+                  : "Odpowiedź AI była ucięta, a próba dokończenia nie zamknęła dokumentu. Pobieranie zablokowane, żeby nie dać Ci uszkodzonego demo."}
+              </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-                <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", minHeight: 40 }} disabled={busy} onClick={() => void retryRepair()}>🔧 Napraw ponownie</button>
-                <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", minHeight: 40 }} onClick={() => setShowDiag((s) => !s)}>🔎 {showDiag ? "Ukryj" : "Pokaż"} diagnostykę</button>
+                <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", minHeight: 44 }} disabled={busy} onClick={() => void run(brokenDemo.editFlag)}>🔄 Ponów</button>
+                {!brokenDemo.keptPrevious && (
+                  <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", minHeight: 44 }} disabled={busy} onClick={() => void retryRepair()}>🔧 Napraw ponownie</button>
+                )}
+                <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", minHeight: 44 }} onClick={() => setShowDiag((s) => !s)}>🔎 {showDiag ? "Ukryj" : "Pokaż"} diagnostykę</button>
               </div>
               {showDiag && (
                 <ul className="muted" style={{ fontSize: 11, margin: "8px 0 0", paddingLeft: 18 }}>

@@ -28,6 +28,8 @@ export interface JarvisReply {
   fellBack?: boolean;
   /** Zużycie tokenów zgłoszone przez API (gdy dostępne). */
   usage?: TokenUsage;
+  /** Powód zakończenia od dostawcy (gdy zwraca): np. „length"/„max_tokens"/„MAX_TOKENS" = ucięcie. */
+  finishReason?: string;
 }
 
 /** Kontekst pojedynczego zapytania przekazywany adapterowi dostawcy. */

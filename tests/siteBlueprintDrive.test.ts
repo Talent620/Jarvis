@@ -6,9 +6,13 @@ import { describe, it, expect, vi } from "vitest";
 // Mock modelu: przechwytujemy prompt przekazany do askModel; zwracamy poprawny HTML.
 // vi.hoisted — spy musi istnieć zanim zahoistowany vi.mock go użyje.
 const { askModelSpy } = vi.hoisted(() => ({
-  askModelSpy: vi.fn(async () => "<!DOCTYPE html><html><head><title>x</title></head><body><h1>x</h1></body></html>"),
+  askModelSpy: vi.fn(async () => ({ text: "<!DOCTYPE html><html><head><title>x</title></head><body><h1>x</h1></body></html>", finishReason: "stop" })),
 }));
-vi.mock("../src/lib/brain", async (orig) => ({ ...(await orig() as object), askModel: askModelSpy }));
+vi.mock("../src/lib/brain", async (orig) => ({
+  ...(await orig() as object),
+  askModelRich: askModelSpy,
+  askModel: async (...a: unknown[]) => (await (askModelSpy as (...x: unknown[]) => Promise<{ text: string }>)(...a)).text,
+}));
 
 import { generateSite, planBlueprint } from "../src/lib/webgen";
 import { blueprintToInstruction, fallbackBlueprint, validateBlueprint, type SiteBlueprint } from "../src/lib/siteBlueprint";

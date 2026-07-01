@@ -553,14 +553,14 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
  * chwilowym błędzie (429/timeout), gdy inny dostawca/klucz odpowiedziałby.
  * Zwraca tekst odpowiedzi lub RZUCA czytelny błąd, gdy żaden dostawca nie zadziałał.
  */
-export async function askModel(params: {
+async function askModelReply(params: {
   system: string;
   history: Msg[];
   webSearch?: boolean;
   tools?: typeof toolDefs;
   /** Preferuj MOCNIEJSZY model (jakość > szybkość) — oferty, strony, teczki, treści. */
   heavy?: boolean;
-}): Promise<string> {
+}): Promise<JarvisReply> {
   const resolved = resolveProvider();
   if (!resolved) {
     throw new Error("Najpierw skonfiguruj dostawcę AI w ⚙ → AI (wklej klucz: Claude, Gemini, Groq, OpenRouter…).");
@@ -595,7 +595,7 @@ export async function askModel(params: {
       const apiKey = keys[j];
       try {
         const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model: useModel }));
-        return (reply.text || "").trim();
+        return reply;
       } catch (e) {
         providerErr = e;
         lastErr = e;
@@ -612,6 +612,17 @@ export async function askModel(params: {
     throw new Error(humanize(msg));
   }
   throw new Error(humanize(lastErr instanceof Error ? lastErr.message : String(lastErr)));
+}
+
+/** Zwraca sam tekst odpowiedzi (kompatybilne z dotychczasowym API askModel). */
+export async function askModel(params: Parameters<typeof askModelReply>[0]): Promise<string> {
+  return (await askModelReply(params)).text.trim();
+}
+
+/** Zwraca tekst + finishReason (gdy dostawca go zwraca) — do wykrycia ucięcia MAX_TOKENS. */
+export async function askModelRich(params: Parameters<typeof askModelReply>[0]): Promise<{ text: string; finishReason?: string }> {
+  const r = await askModelReply(params);
+  return { text: (r.text || "").trim(), finishReason: r.finishReason };
 }
 
 export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }): Promise<JarvisReply> {
