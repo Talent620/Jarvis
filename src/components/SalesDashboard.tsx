@@ -346,11 +346,12 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
             </div>
           </div>
 
-          {/* Szukanie leadów — wszystko z pulpitu, bez wchodzenia do ustawień */}
-          <div className="field" style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <input value={niche} placeholder="Nisza — opcjonalnie (np. fryzjer)" onChange={(e) => setNiche(e.target.value)} style={{ flex: 1 }} />
-            <input value={city} placeholder="Miasto — opcjonalnie (📍 lub auto)" onChange={(e) => setCity(e.target.value)} style={{ flex: 1 }} />
-            <button className="btn" style={{ width: "auto", marginTop: 0, padding: "0 12px" }} onClick={locate} disabled={locating} title="Użyj mojej lokalizacji">
+          {/* Szukanie leadów — wszystko z pulpitu, bez wchodzenia do ustawień. Na wąskich ekranach
+              (Samsung S9) pola nisza/miasto układają się PIONOWO (klasa hunt-fields — bez poziomego ścisku). */}
+          <div className="field hunt-fields">
+            <input value={niche} placeholder="Nisza — opcjonalnie (np. fryzjer)" onChange={(e) => setNiche(e.target.value)} />
+            <input value={city} placeholder="Miasto — opcjonalnie (📍 lub auto)" onChange={(e) => setCity(e.target.value)} />
+            <button className="btn hunt-locate" style={{ width: "auto", marginTop: 0, padding: "0 12px" }} onClick={locate} disabled={locating} title="Użyj mojej lokalizacji">
               {locating ? "📍…" : "📍"}
             </button>
           </div>

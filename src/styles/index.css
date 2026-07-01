@@ -843,6 +843,17 @@ button:disabled {
   justify-content: center;
   z-index: 50;
 }
+
+/* Tryb prosty / UX S9: pola nisza+miasto nie ściskają się poziomo — zawijają, a na wąskich
+   ekranach (Samsung S9 ~360px) układają się PIONOWO. Cele dotykowe min. 44×44 px. */
+.hunt-fields { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.hunt-fields input { flex: 1 1 140px; min-width: 0; min-height: 44px; }
+.hunt-fields .hunt-locate { min-height: 44px; min-width: 44px; }
+@media (max-width: 400px) {
+  .hunt-fields { flex-direction: column; }
+  .hunt-fields input, .hunt-fields .hunt-locate { width: 100%; flex-basis: auto; }
+}
+
 @media (min-width: 600px) {
   .sheet {
     align-items: center;
