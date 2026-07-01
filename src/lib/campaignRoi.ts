@@ -16,11 +16,15 @@ import { store } from "./store";
  */
 export function eventsFromStore(campaigns: CampaignPlan[], leads: Lead[], now: number): AttributionEvent[] {
   const events: AttributionEvent[] = [];
+  const byId = new Map((campaigns || []).map((c) => [c.id, c]));
   for (const c of campaigns || []) {
     events.push({ stage: "impression", at: c.createdAt || now, link: { campaignId: c.id, utm: c.utm, landingPageId: c.landingPageId, variant: c.variant } });
   }
   for (const l of leads || []) {
-    const link = { campaignId: l.campaignId, leadId: l.id };
+    // Wzbogać zdarzenia leada o wariant/landing z POWIĄZANEJ kampanii (wspólne ID) — inaczej
+    // atrybucja per-wariant/strona byłaby ślepa. To spina lead ↔ kampania w jeden lejek.
+    const c = l.campaignId ? byId.get(l.campaignId) : undefined;
+    const link = { campaignId: l.campaignId, leadId: l.id, variant: c?.variant, landingPageId: c?.landingPageId };
     if (l.campaignId) events.push({ stage: "lead", at: l.createdAt || now, link });
     if (l.status === "won") {
       const rev = typeof l.value === "number" && l.value > 0 ? l.value : 0;

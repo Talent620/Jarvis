@@ -12,6 +12,7 @@ import { discoverCandidates } from "../lib/leads";
 import { importCandidates, type LeadCandidate } from "../lib/leadCandidates";
 import { describeLeadSources, sourceBadge } from "../lib/leadSources";
 import { scoreLead, signalsFromCandidate, type IcpScore } from "../lib/leadScoring";
+import { runGrowthFlowOnStore } from "../lib/growthFlowCoordinator";
 import { buildGrowthContext, type GrowthContext } from "../lib/growthContext";
 import type { Lead } from "../types";
 
@@ -69,6 +70,21 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
   };
 
   const reject = (c: LeadCandidate) => setCandidates((cs) => cs.filter((x) => x.id !== c.id));
+
+  // 🚀 Pełny przepływ wzrostu przez JEDEN koordynator (ten sam, który sprawdza E2E): import → scoring
+  // → kontekst → blueprint → walidacja → kampania (szkic). BEZ zgody = bez publikacji (bezpiecznie).
+  const runFlow = (c: LeadCandidate) => {
+    const raw = { company: c.company, email: c.email, phone: c.phone, website: c.url, address: c.address, hasWebsite: !!c.url };
+    const html = `<!DOCTYPE html><html><head><title>${c.company}</title></head><body><h1>${c.company}</h1></body></html>`;
+    const res = runGrowthFlowOnStore(
+      { raw, source: c.source, now: Date.now(), three: { requested: "OFF", caps: { webgl: false } }, html, offer: `Nowoczesna strona dla ${c.company}`, consent: false, makeId: (seed) => `${uid()}-${seed}` },
+      store,
+    );
+    if (res.imported) setCandidates((cs) => cs.filter((x) => x.id !== c.id));
+    toast(res.imported
+      ? `🚀 ${c.company}: ICP ${res.leadScore.score}/100 · kampania (szkic) · publikacja ${res.publish.state}`
+      : `Nie zaimportowano (${res.candidate.persistencePolicy === "no_persist" ? "dane przykładowe" : "duplikat"}).`);
+  };
 
   const buildDemo = (c: LeadCandidate) => {
     if (!onWeb) { toast("Kreator stron niedostępny w tym widoku."); return; }
@@ -156,6 +172,9 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
                 )}
                 {onWeb && (
                   <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} onClick={() => buildDemo(c)}>Zbuduj demo</button>
+                )}
+                {!c.isSample && (
+                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} title="Import + scoring + szkic kampanii (bez publikacji)" onClick={() => runFlow(c)}>🚀 Importuj + przygotuj</button>
                 )}
                 <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} onClick={() => reject(c)}>Odrzuć</button>
               </div>
