@@ -350,6 +350,9 @@ export interface FinanceProject {
   id: string;
   name: string;
   client?: string;
+  /** Wspólny identyfikator z Lead — pozwala łączyć finanse z klientem po ID, nie po nazwie firmy
+   *  (fuzzy string-match zostaje jako fallback dla starych/ręcznie tworzonych projektów). */
+  leadId?: string;
   status: FinanceStatus;
   amount: number; // przychód netto
   cost?: number;

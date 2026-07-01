@@ -79,21 +79,30 @@ export function demoProjectName(ctx: GrowthContext): string {
 
 // — Handoff Klient → Finanse (bez ręcznego przepisywania firmy; bez duplikatów) —
 
-/** Pure: czy istnieje już projekt finansowy dla firmy tego leada (dedup po nazwie klienta)? */
-export function hasProjectForClient(projects: FinanceProject[], lead: Pick<Lead, "company">): boolean {
+/**
+ * Pure: czy istnieje już projekt finansowy dla tego leada? Preferuje dopasowanie po WSPÓLNYM ID
+ * (leadId) — odporne na „Acme" vs „Acme Sp. z o.o."; string-match zostaje jako fallback dla
+ * starych/ręcznie tworzonych projektów bez leadId, żeby nie zgubić istniejącej deduplikacji.
+ */
+export function hasProjectForClient(projects: FinanceProject[], lead: Pick<Lead, "company" | "id">): boolean {
+  const list = projects || [];
+  if (lead.id && list.some((p) => p.leadId === lead.id)) return true;
+  // String-match fallback jest BEZWARUNKOWY (nie tylko dla projektów bez leadId) — nigdy nie słabszy
+  // niż stare zachowanie, więc nie traci istniejącej deduplikacji przy zduplikowanych rekordach leada.
   const c = (lead.company || "").trim().toLowerCase();
   if (!c) return false;
-  return (projects || []).some((p) => (p.client || "").trim().toLowerCase() === c);
+  return list.some((p) => (p.client || "").trim().toLowerCase() === c);
 }
 
 /**
- * Pure: SZKIC projektu finansowego z leada — nazwa, klient i wartość wypełnione automatycznie.
- * To tylko DRAFT (bez id) — utworzenie wymaga zatwierdzenia w UI. Status startowy: w realizacji.
+ * Pure: SZKIC projektu finansowego z leada — nazwa, klient, wartość I leadId (wspólne ID) wypełnione
+ * automatycznie. To tylko DRAFT (bez id) — utworzenie wymaga zatwierdzenia w UI. Status startowy: w realizacji.
  */
 export function leadToProjectDraft(lead: Lead, now: number): Omit<FinanceProject, "id"> {
   return {
     name: `Projekt — ${lead.company}`,
     client: lead.company,
+    leadId: lead.id,
     status: "w_realizacji",
     amount: typeof lead.value === "number" && lead.value > 0 ? lead.value : 0,
     startAt: now,

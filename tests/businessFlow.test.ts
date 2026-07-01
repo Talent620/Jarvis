@@ -49,6 +49,29 @@ describe("businessFlow — etap procesu (lead → kasa)", () => {
   });
 });
 
+// Wspólne ID (leadId) — digital-twin foundation: projekt łączy się z leadem po ID, odporne na
+// rozjazd nazw firmy ("Firma X" vs "Firma X Sp. z o.o."). String-match zostaje jako fallback dla
+// starych/ręcznie tworzonych projektów bez leadId.
+describe("businessFlow — powiązanie projekt↔lead po ID (nie tylko po nazwie)", () => {
+  it("projekt z leadId trafia nawet gdy nazwa klienta zupełnie inna niż firma leada", () => {
+    const j = computeJourney(lead({ id: "l1" }), [proj({ leadId: "l1", client: "Zupełnie inna nazwa Sp. z o.o.", status: "w_realizacji" })], []);
+    expect(j.reached).toBe("finance_project_created");
+  });
+
+  it("leadId ma pierwszeństwo przed przypadkowym dopasowaniem nazwy innego projektu", () => {
+    const projects = [
+      proj({ id: "p_other", leadId: "l_other", client: "Firma X", status: "oplacone", paidAmount: 1 }), // inny lead, ta sama nazwa
+      proj({ id: "p_mine", leadId: "l1", client: "Firma X", status: "w_realizacji" }),
+    ];
+    const j = computeJourney(lead({ id: "l1" }), projects, []);
+    expect(j.reached).toBe("finance_project_created"); // znajduje WŁASNY projekt po ID, nie cudzy po nazwie
+  });
+
+  it("bez leadId (stare dane) string-match nadal działa jak dawniej", () => {
+    expect(reachedStage(lead({ id: "l1" }), [proj({ client: "Firma X", status: "w_realizacji" })], [])).toBe("finance_project_created");
+  });
+});
+
 describe("businessFlow — narzędzia czatu", () => {
   it("business_status i business_next_step są w toolDefs i sklasyfikowane read", async () => {
     const { toolDefs } = await import("../src/lib/tools");

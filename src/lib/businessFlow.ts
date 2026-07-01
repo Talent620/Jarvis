@@ -39,11 +39,18 @@ export interface JourneyStep {
 
 const norm = (s: string | undefined) => (s || "").trim().toLowerCase();
 
-/** Czy istnieje projekt finansowy powiązany z firmą leada (po nazwie klienta)? */
+/**
+ * Czy istnieje projekt finansowy powiązany z tym leadem? Preferuje wspólne ID (leadId) — odporne na
+ * „Acme" vs „Acme Sp. z o.o."; string-match po nazwie klienta zostaje jako fallback dla starych/
+ * ręcznie utworzonych projektów bez leadId (bezwarunkowy — nigdy nie słabszy niż wcześniej).
+ */
 function projectForLead(lead: Lead, projects: FinanceProject[]): FinanceProject | undefined {
+  const list = projects || [];
+  const byId = list.find((p) => p.leadId === lead.id);
+  if (byId) return byId;
   const c = norm(lead.company);
   if (!c) return undefined;
-  return (projects || []).find((p) => norm(p.client) === c);
+  return list.find((p) => norm(p.client) === c);
 }
 
 /** Czy do firmy leada poszedł potwierdzony mail (skrzynka wysłanych)? */

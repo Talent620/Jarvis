@@ -22,10 +22,22 @@ describe("handoff Klient → Finanse", () => {
     expect(leadToProjectDraft(lead({}), NOW).amount).toBe(0);
   });
 
-  it("nie duplikuje: hasProjectForClient wykrywa istniejący projekt po nazwie klienta", () => {
+  it("nie duplikuje: hasProjectForClient wykrywa istniejący projekt po nazwie klienta (stare dane, brak leadId)", () => {
     const projects: FinanceProject[] = [{ id: "p", name: "X", client: "Alfa", status: "w_realizacji", amount: 100 } as FinanceProject];
     expect(hasProjectForClient(projects, lead({}))).toBe(true);
     expect(hasProjectForClient(projects, lead({ company: "Beta" }))).toBe(false);
+  });
+
+  it("draft projektu niesie leadId (wspólne ID) do dalszego łączenia — nie tylko nazwę", () => {
+    const d = leadToProjectDraft(lead({ id: "L42" }), NOW);
+    expect(d.leadId).toBe("L42");
+  });
+
+  it("hasProjectForClient wykrywa po leadId nawet gdy nazwa firmy w projekcie jest zupełnie inna", () => {
+    const projects: FinanceProject[] = [{ id: "p", name: "X", client: "Zupełnie Inna Nazwa Sp. z o.o.", leadId: "L", status: "w_realizacji", amount: 100 } as FinanceProject];
+    expect(hasProjectForClient(projects, lead({ id: "L" }))).toBe(true);
+    // Inny lead o TEJ SAMEJ nazwie firmy co powyżej nie zafałszowuje wyniku po ID.
+    expect(hasProjectForClient(projects, lead({ id: "L_other", company: "Zupełnie Inna Nazwa Sp. z o.o." }))).toBe(true); // nadal true przez string fallback — świadomie konserwatywne (nie duplikuj)
   });
 });
 

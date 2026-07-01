@@ -22,16 +22,22 @@ export default function FinancialDashboard({ onClose }: { onClose: () => void })
   const maxMonth = Math.max(1, ...months.map((m) => m.revenue));
 
   const [form, setForm] = useState({ name: "", client: "", amount: "", cost: "", status: "lead" as FinanceStatus });
+  // Kandydaci do podpowiedzi klienta (autocomplete przez natywny <datalist>, bez ciężkiej biblioteki) —
+  // firma wpisana tu, jeśli dokładnie pasuje do istniejącego leada, łączy projekt z nim po ID (leadId),
+  // zamiast zostawiać go tylko na fuzzy dopasowaniu nazwy (patrz growthContext.hasProjectForClient).
+  const leadCompanies = Array.from(new Set((data.leads || []).map((l) => l.company).filter(Boolean)));
   const add = () => {
     if (!form.name.trim()) { toast("Podaj nazwę projektu."); return; }
     const now = Date.now();
+    const clientName = form.client.trim();
+    const matchedLead = clientName ? (data.leads || []).find((l) => l.company.trim().toLowerCase() === clientName.toLowerCase()) : undefined;
     const p: FinanceProject = {
-      id: uid(), name: form.name.trim(), client: form.client.trim() || undefined, status: form.status,
+      id: uid(), name: form.name.trim(), client: clientName || undefined, leadId: matchedLead?.id, status: form.status,
       amount: Number(form.amount) || 0, cost: Number(form.cost) || undefined, createdAt: now, updatedAt: now,
     };
     store.setData((d) => { if (!d.financeProjects) d.financeProjects = []; d.financeProjects.unshift(p); });
     setForm({ name: "", client: "", amount: "", cost: "", status: "lead" });
-    toast(`💰 Dodano projekt: ${p.name}`);
+    toast(matchedLead ? `💰 Dodano projekt: ${p.name} (połączony z leadem ${matchedLead.company})` : `💰 Dodano projekt: ${p.name}`);
   };
   const setStatus = (id: string, status: FinanceStatus) => {
     // „Opłacone" NIE ustawia po cichu pełnej wpłaty — pytamy o realnie wpłaconą kwotę (domyślnie reszta do zapłaty).
@@ -132,7 +138,10 @@ export default function FinancialDashboard({ onClose }: { onClose: () => void })
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>➕ Nowy projekt</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <input value={form.name} placeholder="Nazwa projektu" onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              <input value={form.client} placeholder="Klient (opcjonalnie)" onChange={(e) => setForm({ ...form, client: e.target.value })} />
+              <input value={form.client} placeholder="Klient (opcjonalnie)" list="finance-client-suggestions" onChange={(e) => setForm({ ...form, client: e.target.value })} />
+              <datalist id="finance-client-suggestions">
+                {leadCompanies.map((c) => <option key={c} value={c} />)}
+              </datalist>
               <div style={{ display: "flex", gap: 6 }}>
                 <input type="number" value={form.amount} placeholder="Kwota netto zł" onChange={(e) => setForm({ ...form, amount: e.target.value })} style={{ flex: 1 }} />
                 <input type="number" value={form.cost} placeholder="Koszt zł" onChange={(e) => setForm({ ...form, cost: e.target.value })} style={{ flex: 1 }} />
