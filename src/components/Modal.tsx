@@ -1,7 +1,8 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { useDirtyClose } from "../hooks/useDirtyClose";
+import { FOCUSABLE_SELECTOR, nextTrapIndex } from "../lib/a11y";
 
 // Wspólny „arkusz" (modal/panel) — jedno miejsce dla powtarzanej w ~37 ekranach struktury
 // .sheet/.panel/.panel-head/.panel-body/.panel-foot. Zachowanie 1:1 z dotychczasowym (klik w tło
@@ -31,17 +32,39 @@ export default function Modal({
   const close = dirty ? guardedClose : onClose;
   useEscape(close);
   const label = ariaLabel ?? (typeof title === "string" ? title : undefined);
-  // Przywróć fokus do elementu sprzed otwarcia (po zamknięciu) — dostępność klawiatury.
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  // Przywróć fokus do elementu sprzed otwarcia (po zamknięciu) + PRZENIEŚ fokus do modala po otwarciu
+  // (pierwsze pole albo sam panel) — dostępność klawiatury i czytnika ekranu.
   const prevFocus = useRef<Element | null>(null);
   useEffect(() => {
     prevFocus.current = typeof document !== "undefined" ? document.activeElement : null;
+    const panel = panelRef.current;
+    if (panel) {
+      const first = panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      (first ?? panel).focus?.();
+    }
     return () => { try { (prevFocus.current as HTMLElement | null)?.focus?.(); } catch { /* ignore */ } };
   }, []);
+  // Pułapka fokusu: Tab/Shift+Tab zawija WEWNĄTRZ modala (nie ucieka na tło = tło niedostępne z klawiatury).
+  const onKeyDownTrap = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Tab") return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => el.offsetParent !== null || el === panel);
+    if (items.length === 0) { e.preventDefault(); return; }
+    const active = document.activeElement as HTMLElement | null;
+    const idx = active ? items.indexOf(active) : -1;
+    const next = nextTrapIndex(items.length, idx < 0 ? (e.shiftKey ? 0 : items.length - 1) : idx, e.shiftKey);
+    if (next >= 0) { e.preventDefault(); items[next]?.focus?.(); }
+  };
   return (
     <div className="sheet" onClick={close}>
       <div
+        ref={panelRef}
         className={"panel" + (className ? " " + className : "")}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={onKeyDownTrap}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={label}

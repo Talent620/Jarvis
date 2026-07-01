@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
-import { useEscape } from "../hooks/useEscape";
 import { isSameDay, sentTodayCount, sentMailToCsv } from "../lib/mailer";
 import { toast } from "../lib/toast";
+import Modal from "./Modal";
 
 // 📤 Skrzynka wysłanych — lista maili wysłanych wprost z aplikacji (komu, co, kiedy,
 // jakim kanałem). Zapis lokalny; potwierdza „że się udało" i gdzie poszło.
 export default function SentBox({ onClose }: { onClose: () => void }) {
-  useEscape(onClose);
   useStore();
   const [q, setQ] = useState("");
 
@@ -18,14 +17,42 @@ export default function SentBox({ onClose }: { onClose: () => void }) {
     ? all.filter((m) => `${m.to} ${m.subject} ${m.company || ""}`.toLowerCase().includes(ql))
     : all;
 
+  const foot = (
+    <>
+      {all.length > 0 && (
+        <button
+          className="btn"
+          onClick={() => {
+            const csv = "﻿" + sentMailToCsv(all); // BOM → polskie znaki w Excelu
+            const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `wyslane-jarvis-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          📤 CSV
+        </button>
+      )}
+      {all.length > 0 && (
+        <button
+          className="btn"
+          onClick={() => {
+            if (!window.confirm("Wyczyścić całą Skrzynkę wysłanych na tym urządzeniu? Tej operacji nie cofniesz.")) return;
+            store.setData((d) => { d.sentMail = []; });
+            toast("🗑 Skrzynka wysłanych wyczyszczona");
+          }}
+        >
+          🗑 Wyczyść
+        </button>
+      )}
+      <button className="btn primary" style={{ flex: 1 }} onClick={onClose}>Zamknij</button>
+    </>
+  );
+
   return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>📤 Skrzynka wysłanych</h2>
-        </div>
-        <div className="panel-body">
+    <Modal title="📤 Skrzynka wysłanych" onClose={onClose} foot={foot} footStyle={{ display: "flex", gap: 8 }}>
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             Maile wysłane wprost z aplikacji ({all.length}{sentTodayCount(all) ? ` · ✉ ${sentTodayCount(all)} dziś` : ""}). Potwierdzenie, że poszły — i do kogo.
           </p>
@@ -61,39 +88,6 @@ export default function SentBox({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           ))}
-        </div>
-        <div className="panel-foot" style={{ display: "flex", gap: 8 }}>
-          {all.length > 0 && (
-            <button
-              className="btn"
-              onClick={() => {
-                const csv = "﻿" + sentMailToCsv(all); // BOM → polskie znaki w Excelu
-                const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `wyslane-jarvis-${new Date().toISOString().slice(0, 10)}.csv`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-            >
-              📤 CSV
-            </button>
-          )}
-          {all.length > 0 && (
-            <button
-              className="btn"
-              onClick={() => {
-                if (!window.confirm("Wyczyścić całą Skrzynkę wysłanych na tym urządzeniu? Tej operacji nie cofniesz.")) return;
-                store.setData((d) => { d.sentMail = []; });
-                toast("🗑 Skrzynka wysłanych wyczyszczona");
-              }}
-            >
-              🗑 Wyczyść
-            </button>
-          )}
-          <button className="btn primary" style={{ flex: 1 }} onClick={onClose}>Zamknij</button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
