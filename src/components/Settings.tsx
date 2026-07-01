@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
+import { SETTINGS_TAB_META, DEFAULT_SETTINGS_GROUP, groupOfTab, GOOGLE_PLACES_KEY_WARNING, type SettingsGroup, type SettingsTab } from "../lib/settingsModel";
 import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, resolveVoiceMode, type NativeVoiceInfo, type VoiceMode } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED, modelBadges } from "../lib/providers/registry";
 import { intelForModel, intelColor } from "../lib/modelIntel";
@@ -111,7 +112,10 @@ const SETTINGS_INDEX: { label: string; tab: Tab; anchor?: string; keys: string }
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
   const [s, setS] = useState<Settings>(() => ({ ...store.settings, keys: { ...store.settings.keys } }));
-  const [tab, setTab] = useState<Tab>("ai");
+  const [tab, setTabRaw] = useState<Tab>("ai");
+  const [settingsGroup, setSettingsGroup] = useState<SettingsGroup>(DEFAULT_SETTINGS_GROUP);
+  // Przełączenie zakładki przełącza też grupę (deep-link/szukanie w „Zaawansowane" samo je odsłoni).
+  const setTab = (t: Tab) => { setTabRaw(t); setSettingsGroup(groupOfTab(t as SettingsTab)); };
   const [voices, setVoices] = useState<NativeVoiceInfo[]>([]);
   const [syncMsg, setSyncMsg] = useState("");
   const [salesOsMsg, setSalesOsMsg] = useState("");
@@ -529,10 +533,19 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
             )}
           </div>
+          {/* Podstawowe (Mózg/Głos/Połączenia/Prywatność) domyślnie; reszta pod „Zaawansowane". */}
           <div className="chips" style={{ marginTop: 10 }}>
-            {TABS.map((t) => (
-              <button key={t.id} className={`chip ${tab === t.id ? "on" : ""}`} onClick={() => setTab(t.id)}>
-                {t.label}
+            {([
+              { id: "basic", label: "⭐ Podstawowe" },
+              { id: "advanced", label: "🔧 Zaawansowane" },
+            ] as const).map((g) => (
+              <button key={g.id} type="button" className={`chip ${settingsGroup === g.id ? "on" : ""}`} aria-pressed={settingsGroup === g.id} onClick={() => setSettingsGroup(g.id)}>{g.label}</button>
+            ))}
+          </div>
+          <div className="chips" style={{ marginTop: 6 }}>
+            {TABS.filter((t) => SETTINGS_TAB_META[t.id as SettingsTab]?.group === settingsGroup).map((t) => (
+              <button key={t.id} type="button" className={`chip ${tab === t.id ? "on" : ""}`} aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>
+                {SETTINGS_TAB_META[t.id as SettingsTab]?.label ?? t.label}
               </button>
             ))}
           </div>
@@ -950,6 +963,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   <a href="https://developers.google.com/maps/documentation/places/web-service/get-api-key" target="_blank" rel="noopener" style={{ color: "var(--cyan)" }}>klucz</a>
                 </label>
                 <input
+                  type="password"
                   value={s.keys.googlePlaces || ""}
                   placeholder="Klucz Google Places (opcjonalnie)"
                   onChange={(e) => { const keys = { ...s.keys, googlePlaces: e.target.value }; setS((prev) => ({ ...prev, keys })); store.setSettings({ keys }); }}
@@ -959,6 +973,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <span className="muted" style={{ fontSize: 11 }}>
                   Gdy podasz klucz, „🧲 Kandydaci leadów” szukają też w Google Places. Zgodnie z polityką Google trwale zapisujemy tylko identyfikator miejsca (placeId).
                 </span>
+                <span style={{ fontSize: 11, color: "var(--gold, #d9a400)", display: "block", marginTop: 2 }}>⚠ {GOOGLE_PLACES_KEY_WARNING}</span>
               </div>
               </details>
 
@@ -2959,7 +2974,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               )}
 
               <details style={{ marginTop: 8 }} open>
-                <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>📜 Co nowego / historia zmian</summary>
+                <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>📜 O JARVIS / Aktualizacje (co nowego)</summary>
                 {CHANGELOG.map((c) => (
                   <div key={c.version} style={{ marginTop: 8 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "var(--gold)" }}>
