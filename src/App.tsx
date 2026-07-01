@@ -1467,7 +1467,7 @@ export default function App() {
           />
         </ScreenBoundary>
       )}
-      {showSettings && (<ScreenBoundary><SettingsPanel onClose={() => setShowSettings(false)} /></ScreenBoundary>)}
+      {showSettings && (<ScreenBoundary name="Ustawienia" onBack={() => setShowSettings(false)}><SettingsPanel onClose={() => setShowSettings(false)} /></ScreenBoundary>)}
       {showPanels && (<ScreenBoundary><Panels onClose={() => setShowPanels(false)} /></ScreenBoundary>)}
       {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}
       {showHistory && (
@@ -1476,7 +1476,7 @@ export default function App() {
       {showProjects && (<ScreenBoundary><Projects onClose={() => setShowProjects(false)} /></ScreenBoundary>)}
       {showJournal && (<ScreenBoundary><Journal onClose={() => setShowJournal(false)} /></ScreenBoundary>)}
       {showSales && (
-        <ScreenBoundary>
+        <ScreenBoundary name="Sprzedaż / CRM" onBack={() => setShowSales(false)}>
         <SalesCrm
           initialTab="actionable"
           onClose={() => setShowSales(false)}
@@ -1673,7 +1673,7 @@ export default function App() {
         </ScreenBoundary>
       )}
       {showWeb && (
-        <ScreenBoundary>
+        <ScreenBoundary name="Kreator stron" onBack={() => { setShowWeb(false); setWebContext(null); }}>
           <WebStudio onClose={() => { setShowWeb(false); setWebContext(null); }} initialContext={webContext} />
         </ScreenBoundary>
       )}

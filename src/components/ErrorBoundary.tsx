@@ -8,7 +8,7 @@ import { logError } from "../lib/errorLog";
 // z przyciskiem ponownego uruchomienia ORAZ szczegółami (diagnoza), zamiast białej strony.
 const MAX_AUTO_RESTARTS = 2;
 
-type Props = { children: ReactNode; label?: string };
+type Props = { children: ReactNode; label?: string; onBack?: () => void };
 type State = { error: Error | null; info: string; restarts: number; epoch: number };
 
 export default class ErrorBoundary extends Component<Props, State> {
@@ -50,9 +50,20 @@ export default class ErrorBoundary extends Component<Props, State> {
             Próbowałem przywrócić go automatycznie, ale problem wraca. Twoje dane są
             bezpieczne — zapisuję wszystko na bieżąco.
           </p>
-          <button className="btn primary" style={{ width: "auto" }} onClick={() => window.location.reload()}>
-            🔄 Uruchom ponownie JARVIS
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+            {/* Ponów: spróbuj ODBUDOWAĆ tylko ten ekran (remount) — bez przeładowania całej apki. */}
+            <button type="button" className="btn primary" style={{ width: "auto", minHeight: 44 }} onClick={() => { this.lastCrashAt = 0; this.setState((s) => ({ error: null, info: "", restarts: 0, epoch: s.epoch + 1 })); }}>
+              🔁 Ponów
+            </button>
+            {this.props.onBack && (
+              <button type="button" className="btn" style={{ width: "auto", minHeight: 44 }} onClick={() => this.props.onBack?.()}>
+                ← Wróć
+              </button>
+            )}
+            <button type="button" className="btn" style={{ width: "auto", minHeight: 44 }} onClick={() => window.location.reload()}>
+              🔄 Uruchom całą apkę
+            </button>
+          </div>
           <details style={{ maxWidth: 360, width: "100%", textAlign: "left", marginTop: 4 }}>
             <summary style={{ cursor: "pointer", fontSize: 12, color: "var(--text-dim)" }}>Pokaż szczegóły (dla diagnozy)</summary>
             <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: 11, marginTop: 6, color: "var(--text-dim)" }}>{details}</pre>

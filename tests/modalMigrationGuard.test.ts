@@ -7,8 +7,9 @@ import { readFileSync, readdirSync } from "node:fs";
 
 const DIR = "src/components";
 
-// Kanoniczny modal (renderuje .sheet w środku) — źródło prawdy, nie „ręczny" panel.
-const CANONICAL = new Set(["Modal.tsx"]);
+// Infrastruktura renderująca .sheet (nie „ręczny" panel do migracji): kanoniczny Modal oraz
+// lekki szkielet ładowania, który celowo naśladuje kształt arkusza.
+const CANONICAL = new Set(["Modal.tsx", "ScreenSkeleton.tsx"]);
 
 // Istniejące ręczne modale w chwili wprowadzenia strażnika (do migracji z czasem — NIE powiększać bez powodu).
 const LEGACY_MANUAL = new Set([

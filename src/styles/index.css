@@ -1231,6 +1231,26 @@ button:disabled {
 .chips::-webkit-scrollbar {
   display: none;
 }
+/* Szkielet ładowania ekranu (ScreenSkeleton) — zamiast martwej pustki. Statyczny na słabym sprzęcie. */
+.skeleton-bar {
+  border-radius: 8px;
+  background: var(--surface-2, #1a2030);
+  opacity: 0.6;
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--surface-2, #1a2030) 25%, var(--line, #26304a) 50%, var(--surface-2, #1a2030) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-slide 1.2s ease-in-out infinite;
+}
+@keyframes skeleton-slide {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+/* Uszanuj „ogranicz ruch" — bez migotania (belt-and-suspenders obok detekcji w JS). */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer { animation: none; }
+}
+
 /* Przycisk wyglądający jak zwykły tekst/wiersz (reset natywnego <button>) — do klikalnych wierszy list.
    Semantyczny (fokus z klawiatury, czytnik ekranu), a wygląd jak dawny span. */
 .linklike {
