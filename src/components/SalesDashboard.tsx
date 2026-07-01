@@ -19,6 +19,8 @@ import { useEscape } from "../hooks/useEscape";
 import LeadDetail from "./LeadDetail";
 import SalesPlan from "./SalesPlan";
 import { leadBucket, type CrmBucket } from "../lib/crmBuckets";
+import { primaryContactAction } from "../lib/salesViewModel";
+import { call as deviceCall, openCompose } from "../lib/deviceControl";
 
 const STATUS: { id: LeadStatus; label: string; color: string }[] = [
   { id: "new", label: "Nowy", color: "var(--cyan)" },
@@ -235,6 +237,14 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
     }
     const { subject, body } = splitOffer(offer || "", `Oferta dla ${l.company}`, store.settings.emailSignature);
     window.open(`mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
+  };
+
+  // GŁÓWNA akcja kontaktowa zależna od danych: telefon → dzwoń, e-mail → napisz, brak → znajdź kontakt.
+  const doPrimary = async (l: Lead) => {
+    const a = primaryContactAction(l);
+    if (a.kind === "call") { toast(await deviceCall(a.value)); }
+    else if (a.kind === "email") { toast(await openCompose(a.value, `Współpraca — ${l.company}`, "Dzień dobry,\n\n")); }
+    else { window.open(`https://www.google.com/search?q=${encodeURIComponent(`${l.company} kontakt telefon e-mail`)}`, "_blank", "noopener"); toast("🔎 Szukam kontaktu w sieci…"); }
   };
 
   const sendOffer = (l: Lead) => {
@@ -557,20 +567,24 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
               onChange={(e) => setQuery(e.target.value)}
             />
           )}
-          {/* CRM — szybkie kubełki: kto skorzystał, do kogo dzwonić, kogo mailowaliśmy, kto odrzucił */}
+          {/* CRM — szybkie kubełki (semantyczne przyciski, dostępne z klawiatury i czytnika ekranu) */}
           <div className="chips" style={{ flexWrap: "wrap", margin: "4px 0 4px" }}>
-            <span className={`chip ${filter === "all" ? "on" : ""}`} onClick={() => setFilter("all")} style={{ cursor: "pointer" }}>wszyscy ({leads.length})</span>
-            <span className={`chip ${filter === "won" ? "on" : ""}`} onClick={() => setFilter("won")} style={{ cursor: "pointer" }}>✅ Klienci ({crm.won})</span>
-            <span className={`chip ${filter === "call" ? "on" : ""}`} onClick={() => setFilter("call")} style={{ cursor: "pointer" }}>📞 Do dzwonienia ({crm.call})</span>
-            <span className={`chip ${filter === "emailed" ? "on" : ""}`} onClick={() => setFilter("emailed")} style={{ cursor: "pointer" }}>✉ Mailowani ({crm.emailed})</span>
-            <span className={`chip ${filter === "lost" ? "on" : ""}`} onClick={() => setFilter("lost")} style={{ cursor: "pointer" }}>❌ Odrzucili ({crm.lost})</span>
+            {([
+              { id: "all", label: `wszyscy (${leads.length})` },
+              { id: "won", label: `✅ Klienci (${crm.won})` },
+              { id: "call", label: `📞 Do dzwonienia (${crm.call})` },
+              { id: "emailed", label: `✉ Mailowani (${crm.emailed})` },
+              { id: "lost", label: `❌ Odrzucili (${crm.lost})` },
+            ] as const).map((f) => (
+              <button key={f.id} type="button" className={`chip ${filter === f.id ? "on" : ""}`} aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>{f.label}</button>
+            ))}
           </div>
           {/* Pełne statusy (etap lejka) */}
           <div className="chips" style={{ flexWrap: "wrap", margin: "0 0 8px" }}>
             {STATUS.map((s) => (
-              <span key={s.id} className={`chip ${filter === s.id ? "on" : ""}`} onClick={() => setFilter(s.id)} style={{ cursor: "pointer", fontSize: 12 }}>
+              <button key={s.id} type="button" className={`chip ${filter === s.id ? "on" : ""}`} aria-pressed={filter === s.id} onClick={() => setFilter(s.id)} style={{ fontSize: 12 }}>
                 {s.label} ({leads.filter((l) => l.status === s.id).length})
-              </span>
+              </button>
             ))}
           </div>
 
@@ -619,9 +633,11 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
                       {campaigns.map((c) => <option key={c.id} value={c.id}>{c.offer.slice(0, 24)}</option>)}
                     </select>
                   )}
-                  <button className="chip" onClick={() => setOpenLead(l.id)}>🗂 Teczka</button>
-                  {l.url && <button className="chip" onClick={() => openLeadUrl(l.url)}>🌐 WWW</button>}
-                  {l.contact && <button className="chip" onClick={() => copy(l.contact)}>📋 Kontakt</button>}
+                  {/* GŁÓWNA akcja kontaktowa (z danych) — wyróżniona; kopiowanie zostaje drugorzędne. */}
+                  <button type="button" className="chip" style={{ borderColor: "var(--cyan, #6ce7ff)", fontWeight: 600 }} onClick={() => void doPrimary(l)}>{primaryContactAction(l).label}</button>
+                  <button type="button" className="chip" onClick={() => setOpenLead(l.id)}>🗂 Szczegóły klienta</button>
+                  {l.url && <button type="button" className="chip" onClick={() => openLeadUrl(l.url)}>🌐 WWW</button>}
+                  {l.contact && <button type="button" className="chip" onClick={() => copy(l.contact)}>📋 Kopiuj kontakt</button>}
                   <button className="chip" onClick={() => writeOffer(l)} disabled={drafting === l.id}>
                     {drafting === l.id ? "✍ Piszę…" : l.offer ? "✍ Napisz ponownie" : "✍ Szkic oferty"}
                   </button>
