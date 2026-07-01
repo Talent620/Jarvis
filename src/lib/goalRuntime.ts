@@ -55,6 +55,42 @@ export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStora
   return { record, result };
 }
 
+/**
+ * WZNÓW I DOKOŃCZ trwały cel: dograj pozostałe kroki, POMIJAJĄC już potwierdzone (i nie ponawiając
+ * ATTEMPTED — bez podwójnych działań). Wcześniejsze wyniki idą jako seed do wykonawcy; postęp znów
+ * zapisujemy po każdym kroku. Zwraca zaktualizowany rekord + wynik.
+ */
+export async function resumeAndRunGoal(
+  record: GoalRecord,
+  opts: { now: number; onStatus?: (s: string) => void; onStep?: (r: StepResult) => void },
+  storage?: GoalStorage,
+): Promise<{ record: GoalRecord; result: RunResult }> {
+  const steps = record.plan.steps || [];
+  const seed: StepResult[] = steps
+    .filter((s) => record.results[s.id])
+    .map((s) => ({ id: s.id, intent: s.intent, tool: s.tool, outcome: record.results[s.id] }));
+
+  let rec: GoalRecord = { ...record, status: "running", updatedAt: opts.now };
+  await upsertGoal(rec, storage);
+
+  const result = await runPlan(record.plan, {
+    toolExists,
+    riskOf,
+    execTool: makeDefaultExecTool(runTool, riskOf),
+    seed,
+    onStatus: opts.onStatus,
+    onStep: async (r) => {
+      rec = recordStepOutcome(rec, r.id, r.outcome, opts.now);
+      await upsertGoal(rec, storage);
+      opts.onStep?.(r);
+    },
+  });
+
+  rec = { ...rec, status: finalStatus(result), updatedAt: opts.now };
+  await upsertGoal(rec, storage);
+  return { record: rec, result };
+}
+
 /** Wczytaj cele posortowane od najnowszych (do panelu). */
 export async function loadGoalsNewestFirst(storage?: GoalStorage): Promise<GoalRecord[]> {
   return (await loadGoals(storage)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));

@@ -5,8 +5,8 @@
 
 import { useEffect, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
-import { loadGoalsNewestFirst } from "../lib/goalRuntime";
-import { pauseGoal, resumeGoal, removeGoal, upsertGoal, describeGoal, type GoalRecord, type GoalStatus } from "../lib/goalState";
+import { loadGoalsNewestFirst, resumeAndRunGoal } from "../lib/goalRuntime";
+import { pauseGoal, removeGoal, upsertGoal, describeGoal, type GoalRecord, type GoalStatus } from "../lib/goalState";
 import { outcomeIcon } from "../lib/actionOutcome";
 import { emptyStateSuggestion } from "../lib/simpleFlow";
 
@@ -20,14 +20,26 @@ export default function GoalStatusPanel({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
   const [goals, setGoals] = useState<GoalRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [resumeMsg, setResumeMsg] = useState("");
 
   const load = () => { setLoading(true); void loadGoalsNewestFirst().then((g) => { setGoals(g); setLoading(false); }); };
   useEffect(() => { load(); }, []);
 
   const now = () => Date.now();
   const doPause = async (g: GoalRecord) => { await upsertGoal(pauseGoal(g, now())); load(); };
-  const doResume = async (g: GoalRecord) => { await upsertGoal(resumeGoal(g, now())); load(); };
   const doCancel = async (g: GoalRecord) => { await removeGoal(g.id); load(); };
+  // Wznów i DOKOŃCZ — dograj pozostałe kroki (pomijając potwierdzone, bez podwójnych działań).
+  const doResume = async (g: GoalRecord) => {
+    setBusyId(g.id); setResumeMsg("");
+    try {
+      const { result } = await resumeAndRunGoal(g, { now: now(), onStatus: (s) => setResumeMsg(s) });
+      setResumeMsg(result.verdict.summary);
+    } catch (e) {
+      setResumeMsg(e instanceof Error ? e.message : "błąd wznowienia");
+    } finally { setBusyId(null); load(); }
+  };
+  const canResume = (s: GoalStatus) => s === "paused" || s === "waiting_consent" || s === "waiting_user" || s === "failed";
 
   const empty = emptyStateSuggestion("leads");
 
@@ -82,14 +94,17 @@ export default function GoalStatusPanel({ onClose }: { onClose: () => void }) {
                   <div style={{ fontSize: 12 }}>✅ Ostatnio potwierdzone: {lastConfirmed.intent}</div>
                 )}
 
+                {busyId === g.id && resumeMsg && <div style={{ fontSize: 12 }}>⏳ {resumeMsg}</div>}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
                   {canStop(g.status) && (
-                    <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 40 }} onClick={() => void doPause(g)}>⏸ Zatrzymaj</button>
+                    <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 40 }} disabled={busyId === g.id} onClick={() => void doPause(g)}>⏸ Zatrzymaj</button>
                   )}
-                  {g.status === "paused" && (
-                    <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 40 }} onClick={() => void doResume(g)}>▶ Wznów</button>
+                  {canResume(g.status) && (
+                    <button className="btn primary" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 40 }} disabled={busyId === g.id} onClick={() => void doResume(g)}>
+                      {busyId === g.id ? "…" : "▶ Wznów i dokończ"}
+                    </button>
                   )}
-                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 40 }} onClick={() => void doCancel(g)}>🗑 Anuluj</button>
+                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 40 }} disabled={busyId === g.id} onClick={() => void doCancel(g)}>🗑 Anuluj</button>
                 </div>
               </div>
             );

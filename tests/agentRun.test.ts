@@ -5,7 +5,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { runPlan, topoOrder, makeDefaultExecTool, type RunDeps } from "../src/lib/agentRun";
 import type { AgentPlan } from "../src/lib/agentPlanner";
-import { confirmed, failed } from "../src/lib/actionOutcome";
+import { confirmed, failed, attempted } from "../src/lib/actionOutcome";
 import { runTool } from "../src/lib/tools";
 import { riskOf } from "../src/lib/permissions";
 
@@ -103,6 +103,30 @@ describe("agentRun — odporność", () => {
     expect(r.toolCalls).toBe(2);
     expect(r.status).toBe("stopped");
     expect(r.steps.find((s) => s.id === "c")?.skipped).toBe(true);
+  });
+});
+
+describe("agentRun — wznowienie (seed): potwierdzone kroki nie wykonują się ponownie", () => {
+  it("krok z seeda CONFIRMED jest pomijany; zależny dograny — bez podwójnego działania", async () => {
+    const execTool = vi.fn(async () => ({ outcome: confirmed({ source: "mock" }), output: "ok" }));
+    const plan: AgentPlan = { goal: "x", steps: [
+      { id: "a", intent: "krok a", tool: "list_tasks" },
+      { id: "b", intent: "krok b", tool: "list_leads", dependsOn: ["a"] },
+    ] };
+    const seed = [{ id: "a", intent: "krok a", tool: "list_tasks", outcome: confirmed({ message: "poprzednio" }) }];
+    const r = await runPlan(plan, baseDeps({ execTool, seed }));
+    expect(execTool).toHaveBeenCalledTimes(1); // tylko b — a NIE wykonane ponownie
+    expect(r.steps.find((s) => s.id === "a")!.outcome.evidence?.message).toBe("poprzednio"); // wynik a zachowany
+    expect(r.verdict.canClaimSuccess).toBe(true);
+  });
+
+  it("krok z seeda ATTEMPTED nie jest ponawiany (brak podwójnej wysyłki)", async () => {
+    const execTool = vi.fn(okExec);
+    const plan: AgentPlan = { goal: "wyślij", steps: [{ id: "a", intent: "mail", tool: "gmail_send", requiresConsent: true }] };
+    const seed = [{ id: "a", intent: "mail", tool: "gmail_send", outcome: attempted("gmail") }];
+    const r = await runPlan(plan, baseDeps({ riskOf: () => "outbound", execTool, seed }));
+    expect(execTool).not.toHaveBeenCalled(); // ATTEMPTED → nie ponawiamy
+    expect(r.verdict.canClaimSuccess).toBe(false);
   });
 });
 

@@ -55,6 +55,9 @@ export interface RunDeps {
   sleep?: (ms: number) => Promise<void>;
   /** Maks. prób wykonania JEDNEGO kroku (łącznie z pierwszą). Domyślnie 3. */
   maxToolAttempts?: number;
+  /** Wznowienie: wcześniejsze wyniki kroków. CONFIRMED/ATTEMPTED NIE są wykonywane ponownie
+   *  (bez podwójnych działań), ale liczą się jako spełnione/blokujące zależności. */
+  seed?: StepResult[];
 }
 
 const DEFAULT_MAX_STEPS = 12;
@@ -114,6 +117,8 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
   const order = topoOrder(steps);
   const total = order.length;
   const results = new Map<string, StepResult>();
+  // Wznowienie: zaszczep wcześniejsze wyniki (kroki już CONFIRMED/ATTEMPTED nie ruszają ponownie).
+  for (const s of deps.seed || []) results.set(s.id, s);
   let toolCalls = 0;
   let stoppedByLimit = false;
 
@@ -170,6 +175,10 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
   let pos = 0;
   for (const step of order) {
     pos += 1;
+    // Wznowienie: krok już potwierdzony lub rozpoczęty (ATTEMPTED) NIE wykonuje się ponownie —
+    // brak podwójnych działań; jego wynik z seeda zostaje i liczy się do zależności.
+    const seeded = results.get(step.id);
+    if (seeded && (seeded.outcome.state === "CONFIRMED" || seeded.outcome.state === "ATTEMPTED")) continue;
     if (deps.onStatus) deps.onStatus(`${short(step.intent)} — krok ${pos} z ${total}`);
     const r = await evalStep(step);
     results.set(step.id, r);
