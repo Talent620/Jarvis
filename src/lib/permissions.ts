@@ -30,6 +30,8 @@ const RISK: Record<string, Risk> = {
   // read — czyste symulacje „co jeśli" (businessSimulator): zero zapisu, zero efektów ubocznych;
   // wynik zawsze niesie założenia/widełki, nie jest przedstawiany jako pewny fakt.
   simulate_price_change: "read", simulate_send_offers: "read", rank_clients_by_efficiency: "read",
+  // read — odczyt Dziennika Predykcji (samoocena celności), zero zapisu
+  prediction_ledger_status: "read",
   // write — lokalny zapis projektów finansowych (cofalne, wymaga zgody)
   finance_add_project: "write", finance_set_status: "write",
   // write — lokalne, odwracalne ustawienia/zapisy

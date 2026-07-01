@@ -10,7 +10,7 @@ import { dueCount } from "./cards";
 // chwilę, follow-upy, zadania na dziś, fiszki) wybiera JEDEN najważniejszy „szturchaniec".
 // Anty-spam: każdy rodzaj pokazujemy najwyżej raz na swój „cooldown".
 
-export type NudgeKind = "reminders" | "event" | "followups" | "tasks" | "cards";
+export type NudgeKind = "reminders" | "event" | "followups" | "tasks" | "cards" | "predictions";
 export type NudgeScreen = "panels" | "sales" | "cards" | "tasks";
 
 export interface Nudge {
@@ -29,6 +29,7 @@ const COOLDOWN: Record<NudgeKind, number> = {
   followups: 4 * 60 * 60_000,   // 4 h
   tasks: 3 * 60 * 60_000,       // 3 h
   cards: 6 * 60 * 60_000,       // 6 h
+  predictions: 6 * 60 * 60_000, // 6 h — prognozy nie mogą stać się spamem
 };
 
 // TRWAŁY stan „kiedy pokazano dany szturchaniec" — kluczowe: wcześniej był w PAMIĘCI, więc po
@@ -97,6 +98,23 @@ export function nextNudge(now = Date.now()): Nudge | null {
   if (fups.length && !recentlyShown("followups", now)) {
     return { kind: "followups", screen: "sales",
       text: `🔁 ${fups.length} ${fups.length === 1 ? "klient czeka" : "klientów czeka"} na follow-up. Przygotować wiadomości?` };
+  }
+
+  // 3.5) Dziennik Predykcji: świeżo SPRAWDZONE ostrzeżenie (przerwa faktycznie się pogłębiła)
+  // albo świeża prognoza — użytkownik widzi je bez otwierania teczki klienta. Jedno naraz,
+  // twardy cooldown; jasno nazwane prognozą (nie faktem).
+  const DAY_MS = 86_400_000;
+  const preds = d.predictionLedger || [];
+  const freshCorrect = preds.find((r) => r.evidence && r.evidence.verdict === "correct" && r.evidence.disputedAt == null && now - r.evidence.observedAt <= DAY_MS);
+  const freshPending = preds.find((r) => !r.evidence && now - r.madeAt <= DAY_MS);
+  if ((freshCorrect || freshPending) && !recentlyShown("predictions", now)) {
+    if (freshCorrect) {
+      return { kind: "predictions", screen: "sales",
+        text: `🔮 Moje ostrzeżenie o „${freshCorrect.entityLabel}” się sprawdziło: ${freshCorrect.evidence!.outcome} Chcesz, żebym przygotował wiadomość?` };
+    }
+    const p = freshPending!;
+    return { kind: "predictions", screen: "sales",
+      text: `🔮 Nowa prognoza (pewność ${Math.round(p.confidence * 100)}%): ${p.claim} Sprawdzę ją ${new Date(p.checkAt).toLocaleDateString("pl-PL")} — to prognoza, nie fakt.` };
   }
 
   // 4) Zadania na dziś / zaległe.

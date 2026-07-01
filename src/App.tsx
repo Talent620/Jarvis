@@ -44,6 +44,7 @@ import { notifySummary } from "./lib/notifyCenter";
 import { startGeneration, cancelGeneration, isCurrent } from "./lib/generation";
 import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
 import { runProactiveNotifications } from "./lib/proactiveNotify";
+import { runPredictionCycleOnStore } from "./lib/predictionCycle";
 import { recordActiveDay } from "./lib/habit";
 import { nextTip, recordTipShown, contextualTipNow, dailyDigestNow, recordDigestShown, type Tip } from "./lib/tips";
 import TipBubble from "./components/TipBubble";
@@ -475,6 +476,10 @@ export default function App() {
     recordActiveDay(); // licznik serii dni (nawyk) — raz dziennie
     const tick = () => {
       void runProactiveNotifications().catch(() => {}); // push systemowy — trigger nawyku (działa też, gdy karta schowana; dedup pilnuje spamu)
+      // Dziennik Predykcji: rozstrzygnij prognozy po terminie i załóż nowe dla zaległych relacji —
+      // w CYKLU APLIKACJI (nie przy otwieraniu teczki). Idempotentne (bez zmian = bez zapisu),
+      // działa też przy schowanej karcie; pierwszy tick ~12 s po starcie = sprawdzenie startowe.
+      try { runPredictionCycleOnStore(); } catch { /* nie blokuj ticku proaktywnego */ }
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       if (busyRef.current || !hasUsableBrain()) return; // nie przerywaj pracy / brak mózgu (też lokalny)
       const n = nextNudge();

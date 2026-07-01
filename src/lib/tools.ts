@@ -7,6 +7,7 @@ import { requestScreen, resolveScreen, SCREENS } from "./navIntent";
 import { financeSummaryText, FINANCE_STATUSES, applyPayment, financeKpis } from "./finance";
 import { simulatePriceChange, simulateSendOffers, bestClientByProfitToTime } from "./businessSimulator";
 import { businessStatusText, computeJourney } from "./businessFlow";
+import { calibrationSummary, calibrationText, explainLearning } from "./predictionLedger";
 import { recommendBrain } from "./brainAdvisor";
 import type { FinanceProject, FinanceStatus } from "../types";
 import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
@@ -1774,6 +1775,37 @@ const tools: Tool[] = [
         parts.push(`Poza rankingiem (brak godzin):\n${lines.join("\n")}`);
       }
       return parts.join("\n\n");
+    },
+  },
+  {
+    def: {
+      name: "prediction_ledger_status",
+      description: "Ile razy JARVIS miał rację? Uczciwe podsumowanie celności własnych przewidywań o zaniedbanych relacjach (Dziennik Predykcji) — nie zmyślony procent, tylko realne liczby: ile ostrzeżeń się sprawdziło, ile razy zdążyłeś zareagować, ile czeka na termin. Używaj, gdy pytasz: ile razy miałeś rację, jak trafne są Twoje przewidywania, sprawdź swoją celność.",
+      input_schema: obj({ company: str("Nazwa firmy (opcjonalnie) — podsumowanie tylko dla tego klienta") }, []),
+    },
+    run: ({ company }) => {
+      const ledger = store.data.predictionLedger || [];
+      const learningEnabled = store.settings.predictionLearning !== false;
+      const name = company ? String(company).trim().toLowerCase() : "";
+      if (!name) {
+        const pendingCount = ledger.filter((r) => !r.evidence).length;
+        const extra = pendingCount > 0 ? ` Aktywnych prognoz: ${pendingCount} — pełna lista z przesłankami w 🧠 Umyśle JARVISA.` : "";
+        return `🔮 ${calibrationText(calibrationSummary(ledger))}${extra}`;
+      }
+      // Duplikaty klientów (ta sama nazwa firmy, różne rekordy CRM) — NIE zgaduj, który to.
+      // Milczące wybranie pierwszego pokazałoby celność złego klienta bez ostrzeżenia.
+      const matches = (store.data.leads || []).filter((l) => l.company.trim().toLowerCase() === name);
+      if (!matches.length) return `Nie znalazłem klienta „${company}” w CRM.`;
+      if (matches.length > 1) return `W CRM jest ${matches.length} klientów o nazwie „${company}” — otwórz konkretną teczkę klienta, żeby zobaczyć jego celność (tu nie da się jednoznacznie wybrać).`;
+      const entityId = matches[0].id;
+      const summary = calibrationSummary(ledger, entityId);
+      const active = ledger.find((r) => r.entityId === entityId && !r.evidence);
+      const parts = [
+        `🔮 ${calibrationText(summary)}`,
+        ...(active ? [`Aktywna prognoza (pewność ${Math.round(active.confidence * 100)}%, sprawdzę ${new Date(active.checkAt).toLocaleDateString("pl-PL")}): ${active.claim}`] : []),
+        explainLearning(ledger, entityId, { learningEnabled }),
+      ];
+      return parts.join("\n");
     },
   },
 ];

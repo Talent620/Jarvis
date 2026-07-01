@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { buildGrowthContext, leadToProjectDraft, hasProjectForClient, type GrowthContext } from "../lib/growthContext";
+import { verdictOf } from "../lib/predictionLedger";
 import { clientJourney } from "../lib/clientJourney";
 import { requestScreen } from "../lib/navIntent";
 import { store, uid } from "../lib/store";
@@ -186,6 +187,26 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
                     {rel.overdue ? "⚠ Follow-up zaległy od: " : "🔁 Następny follow-up: "}{fmt(rel.nextFollowUpAt)}
                   </span>
                 )}
+              </div>
+            );
+          })()}
+          {/* Dziennik Predykcji: konkretna, FALSYFIKOWALNA prognoza JARVISA o tej relacji — i uczciwe
+              rozstrzygnięcie po terminie (dowód liczony z realnego kontaktu, nie zmyślony). Teczka
+              tylko WYŚWIETLA — prognozy tworzy/rozstrzyga cykl aplikacji (predictionCycle). */}
+          {(() => {
+            const preds = (store.data.predictionLedger || []).filter((p) => p.entityId === lead.id).sort((a, b) => b.madeAt - a.madeAt);
+            const current = preds[0];
+            if (!current) return null;
+            const fmt = (ms: number) => new Date(ms).toLocaleDateString("pl-PL", { day: "numeric", month: "short" });
+            const v = verdictOf(current);
+            const line = v === "pending"
+              ? `🔮 ${current.claim} Pewność ${Math.round(current.confidence * 100)}% — to prognoza, nie fakt (sprawdzę: ${fmt(current.checkAt)}).`
+              : v === "correct" ? `📉 Prognoza się sprawdziła: ${current.evidence?.outcome}`
+              : v === "prevented" ? `✅ ${current.evidence?.outcome}`
+              : `ℹ ${current.evidence?.outcome}`;
+            return (
+              <div className="muted" style={{ fontSize: 12, marginBottom: 8 }} title={current.basis.join(" · ")}>
+                {line}{current.evidence?.disputedAt ? " (oznaczone przez Ciebie jako błędne — nie liczy się do uczenia)" : ""}
               </div>
             );
           })()}

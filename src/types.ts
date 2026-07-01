@@ -205,6 +205,75 @@ export interface AppData {
   scoringWeights?: ScoringWeights;
   /** Odrzuceni kandydaci (trwałe wykluczenia) — nie wracają przy wyszukiwaniu, da się cofnąć. */
   suppressedLeads?: SuppressedLead[];
+  /** Dziennik Predykcji — konkretne, sprawdzalne przewidywania JARVISA z terminem i realnym
+   *  rozstrzygnięciem (nie zmyślonym). Fundament uczciwej samooceny celności. */
+  predictionLedger?: PredictionRecord[];
+}
+
+export type PredictionKind = "relationship_neglect";
+/** pending = czeka na termin; correct = przewidywanie się sprawdziło; prevented = użytkownik
+ *  zareagował przed terminem (nie da się orzec przyczynowości, ale zaniedbanie nie wystąpiło);
+ *  moot = sprawa się zamknęła (lead won/lost/usunięty) zanim termin nadszedł — pytanie nieaktualne. */
+export type PredictionVerdict = "pending" | "correct" | "prevented" | "moot";
+
+/** Zamrożony stan wejściowy w chwili prognozy — audyt „na czym się oparłeś".
+ *  NIGDY nie podmieniany po utworzeniu (dowód, nie notatka robocza). */
+export interface PredictionInputState {
+  lastContactedAt?: number;
+  leadStatus?: LeadStatus;
+  /** Suma kwot projektów tego klienta czekających na płatność (Finanse) — podnosi stawkę prognozy. */
+  awaitingPaymentAmount?: number;
+}
+
+/** DOWÓD rozstrzygnięcia — celowo ODDZIELNY od treści prognozy i zapisywany dokładnie raz.
+ *  Treści/warunków prognozy nie wolno przepisywać po utworzeniu; wynik żyje tutaj. */
+export interface PredictionEvidence {
+  /** Kiedy zaobserwowano fakty rozstrzygające. */
+  observedAt: number;
+  /** Co faktycznie się stało (fakty, nie ocena). */
+  outcome: string;
+  /** Surowe fakty źródłowe użyte do werdyktu (np. daty kontaktu, status sprawy). */
+  evidence: string[];
+  verdict: Exclude<PredictionVerdict, "pending">;
+  /** Która deterministyczna reguła zdecydowała (audyt: werdykt NIE pochodzi od modelu). */
+  reason: string;
+  /** Skalibrowana pewność prognoz dla tej encji PO uwzględnieniu tego wyniku. */
+  confidenceAfterResolution: number;
+  /** Użytkownik oznaczył ten dowód jako błędny — rekord zostaje (audyt), ale werdykt
+   *  jest wykluczony z uczenia i statystyk celności. */
+  disputedAt?: number;
+}
+
+/** Jedna FALSYFIKOWALNA predykcja JARVISA — zapisana ZANIM poznamy wynik, rozstrzygana PO fakcie
+ *  deterministyczną regułą na bazie realnych danych (nie domysłu modelu). Nigdy nie usuwana ręcznie,
+ *  nawet gdy wynik nie wypadł po myśli — to jest właśnie dowód uczciwości. Brak `evidence` = pending. */
+export interface PredictionRecord {
+  id: string;
+  kind: PredictionKind;
+  /** Wersja logiki prognozującej — celność porównujemy per wersja, nie mieszamy epok. */
+  logicVersion: number;
+  /** ID encji, której dotyczy (np. lead.id) — NIE nazwa firmy (odporne na duplikaty/rozjazd nazw). */
+  entityId: string;
+  entityLabel: string;
+  madeAt: number;
+  /** Zamrożony stan wejściowy w chwili prognozy. */
+  inputState: PredictionInputState;
+  /** Konkretne, sprawdzalne twierdzenie po polsku (co dokładnie ma się wydarzyć/nie wydarzyć). */
+  claim: string;
+  /** Mierzalne kryterium sukcesu — z góry zapisane, żeby werdyktu nie dało się „dointerpretować". */
+  successCriterion: string;
+  /** Termin, do którego przewidywanie ma się sprawdzić (deadline rozstrzygnięcia). */
+  checkAt: number;
+  /** Pewność 0..1 w chwili prognozy (kalibrowana per encja z wcześniejszych rozstrzygnięć). */
+  confidence: number;
+  /** Jawne założenia prognozy. */
+  assumptions: string[];
+  /** Źródła danych (np. „CRM: lead.lastContactedAt", „Finanse: status projektu"). */
+  sources: string[];
+  /** Jawne przesłanki liczbowe, na których oparto predykcję (dane, nie odczucie). */
+  basis: string[];
+  /** Wynik — OSOBNY obiekt, wypełniany dokładnie raz przy rozstrzygnięciu. Brak = pending. */
+  evidence?: PredictionEvidence;
 }
 
 /** Zapisany projekt strony WWW (Kreator stron). Pełny stan do wznowienia pracy. */
@@ -660,6 +729,9 @@ export interface Settings {
   /** Proaktywny Agent: JARVIS sam odzywa się w trakcie pracy (przypomnienia po
    *  terminie, zadania na dziś, follow-upy, wydarzenia za chwilę). Domyślnie wł. */
   proactiveAgent?: boolean;
+  /** Uczenie Dziennika Predykcji (kalibracja okna/pewności per klient z realnych rozstrzygnięć).
+   *  Wyłączone = stałe wartości domyślne; historia zostaje. Domyślnie wł. */
+  predictionLearning?: boolean;
   /** Dymki-porady (coaching/feature-discovery) co jakiś czas. Domyślnie wł. */
   tips?: boolean;
   /** Codzienny poranny briefing (pogoda + kalendarz + zadania) o ustalonej porze. */
