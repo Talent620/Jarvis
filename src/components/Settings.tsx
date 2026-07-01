@@ -943,6 +943,23 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   </div>
                 );
               })}
+              <div className="field">
+                <label>
+                  {s.keys.googlePlaces?.trim() ? <span style={{ color: API_GREEN }}>🟢 </span> : <span>⚪ </span>}
+                  Google Places (drugie źródło leadów, obok OpenStreetMap) —{" "}
+                  <a href="https://developers.google.com/maps/documentation/places/web-service/get-api-key" target="_blank" rel="noopener" style={{ color: "var(--cyan)" }}>klucz</a>
+                </label>
+                <input
+                  value={s.keys.googlePlaces || ""}
+                  placeholder="Klucz Google Places (opcjonalnie)"
+                  onChange={(e) => { const keys = { ...s.keys, googlePlaces: e.target.value }; setS((prev) => ({ ...prev, keys })); store.setSettings({ keys }); }}
+                  spellCheck={false}
+                  style={{ fontFamily: "monospace", fontSize: 13, minHeight: 38 }}
+                />
+                <span className="muted" style={{ fontSize: 11 }}>
+                  Gdy podasz klucz, „🧲 Kandydaci leadów” szukają też w Google Places. Zgodnie z polityką Google trwale zapisujemy tylko identyfikator miejsca (placeId).
+                </span>
+              </div>
               </details>
 
               <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px", borderLeft: `4px solid ${BRAIN_BLUE}` }}>

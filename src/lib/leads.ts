@@ -2,6 +2,7 @@ import { fetchTimeout } from "./http";
 import { store, uid } from "./store";
 import { tavilySearch, hasWebSearch, type SearchHit } from "./research";
 import { discoverLeadCandidates, type LeadCandidate } from "./leadCandidates";
+import { searchGooglePlaces, googlePlacesToCandidates } from "./googlePlaces";
 import type { Lead } from "../types";
 
 // === Silnik wyszukiwania leadów (darmowy, bez kluczy) ===
@@ -566,7 +567,22 @@ export async function discoverCandidates(opts: {
     const web = (await searchWebLeads(niche, city, count)).filter((l) => passesFilters(l, filters));
     raws = mergeRawLeads(osm, web, count);
   }
-  const candidates = discoverLeadCandidates(raws, { source: "osm", now: Date.now() });
+  const now = Date.now();
+  let candidates = discoverLeadCandidates(raws, { source: "osm", now });
+
+  // Drugie źródło: Google Places (tylko gdy jest klucz). Zgodnie z polityką Google trwale zapisujemy
+  // wyłącznie placeId (leadCandidates ustawia persistencePolicy=id_only). Awaria Google nie psuje OSM.
+  const gKey = store.settings.keys?.googlePlaces?.trim();
+  if (gKey) {
+    try {
+      const places = await searchGooglePlaces(`${niche || "firmy"} ${city}`.trim(), gKey);
+      const have = new Set(candidates.map((c) => c.company.toLowerCase()));
+      const gCands = googlePlacesToCandidates(places, now).filter((c) => !have.has(c.company.toLowerCase()));
+      candidates = [...candidates, ...gCands].sort((a, b) => b.confidence - a.confidence);
+    } catch {
+      /* Google Places chwilowo niedostępne — zostają wyniki OSM (nie zmyślamy). */
+    }
+  }
   return { candidates, city };
 }
 
