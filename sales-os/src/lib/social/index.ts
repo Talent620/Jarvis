@@ -2,6 +2,7 @@ import type { ContentKind, SocialChannel, SocialPost } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/activity";
 import { generateContent, logAiDecision } from "@/lib/ai";
+import { extractHashtags, derivePublishStatus, isPublishedLike } from "./statusPolicy";
 
 // ---------------------------------------------------------------------------
 // Channel connections — live when the relevant tokens are configured,
@@ -55,7 +56,7 @@ function parseAdCopy(text: string): {
 } {
   let title: string | null = null;
   let cta: string | null = null;
-  const hashtags = Array.from(new Set(text.match(/#[\p{L}0-9_]+/gu) ?? [])).slice(0, 8);
+  const hashtags = extractHashtags(text, 8); // S9-safe (bez /u, \p{L})
 
   const lines = text.split("\n");
   const bodyLines: string[] = [];
@@ -274,8 +275,9 @@ export async function publishSocialPost(args: {
     where: { id: args.postId, companyId: args.companyId, deletedAt: null },
   });
   if (!post) throw new Error("Post not found");
-  if (post.status === "PUBLISHED") return post;
+  if (isPublishedLike(post.status)) return post; // już potwierdzone → nie publikujemy ponownie
 
+  const attemptedAt = new Date();
   let outcome: PublishOutcome;
   switch (post.channel) {
     case "FACEBOOK":
@@ -291,25 +293,35 @@ export async function publishSocialPost(args: {
       outcome = { ok: false, error: "LinkedIn publishing is export-only — copy the text", simulated: true };
   }
 
+  // UCZCIWY status: symulacja → SIMULATED (NIGDY PUBLISHED); potwierdzone (externalId) →
+  // PUBLISHED_CONFIRMED; błąd → FAILED. Nie ma ścieżki, w której symulacja wygląda jak publikacja.
+  const status = outcome.simulated
+    ? "SIMULATED"
+    : derivePublishStatus({ hasToken: true, externalId: outcome.ok ? outcome.externalId : null, error: outcome.ok ? null : outcome.error });
+  const confirmed = status === "PUBLISHED_CONFIRMED";
+
   const updated = await prisma.socialPost.update({
     where: { id: post.id },
-    data: outcome.ok
-      ? {
-          status: "PUBLISHED",
-          publishedAt: new Date(),
-          externalId: outcome.externalId,
-          error: null,
-          meta: { ...((post.meta as object) ?? {}), simulated: outcome.simulated },
-        }
-      : { status: "FAILED", error: outcome.error },
+    data: {
+      status,
+      simulated: !!outcome.simulated,
+      attemptedAt,
+      confirmedAt: confirmed ? new Date() : null,
+      publishedAt: confirmed ? new Date() : null, // tylko realnie potwierdzone
+      externalId: outcome.ok ? outcome.externalId : post.externalId,
+      error: outcome.ok ? null : outcome.error,
+      meta: { ...((post.meta as object) ?? {}), simulated: !!outcome.simulated },
+    },
   });
 
   await notify({
     companyId: args.companyId,
     type: "SYSTEM",
-    title: outcome.ok
-      ? `Post published to ${post.channel}${outcome.simulated ? " (simulated)" : ""}`
-      : `Publishing to ${post.channel} failed`,
+    title: outcome.simulated
+      ? "Symulacja zakończona — nic nie opublikowano"
+      : confirmed
+        ? `Opublikowano na ${post.channel} (potwierdzone)`
+        : `Publikacja na ${post.channel} nie powiodła się`,
     body: outcome.ok ? post.title ?? post.body.slice(0, 80) : outcome.error,
     link: "/social",
   });
@@ -334,7 +346,7 @@ export async function publishDuePosts(companyId: string): Promise<{ published: n
   for (const p of due) {
     try {
       const r = await publishSocialPost({ companyId, postId: p.id });
-      if (r.status === "PUBLISHED") published++;
+      if (isPublishedLike(r.status)) published++; // symulacje NIE liczą się jako opublikowane
       else failed++;
     } catch {
       failed++;

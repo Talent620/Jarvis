@@ -63,8 +63,12 @@ export const SOCIAL_POST_STATUS_META: Record<
   { label: string; className: string }
 > = {
   DRAFT: { label: "Draft", className: "bg-muted text-muted-foreground border-border" },
+  APPROVED: { label: "Approved", className: "bg-primary/10 text-primary border-primary/20" },
   SCHEDULED: { label: "Scheduled", className: "bg-warning/10 text-warning border-warning/20" },
+  PUBLISHING: { label: "Publishing…", className: "bg-warning/10 text-warning border-warning/20" },
   PUBLISHED: { label: "Published", className: "bg-success/10 text-success border-success/20" },
+  PUBLISHED_CONFIRMED: { label: "Published ✓", className: "bg-success/10 text-success border-success/20" },
+  SIMULATED: { label: "Simulated (not published)", className: "bg-muted text-muted-foreground border-border" },
   FAILED: { label: "Failed", className: "bg-destructive/10 text-destructive border-destructive/20" },
 };
 

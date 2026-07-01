@@ -57,8 +57,12 @@ enum SocialChannel {
 
 enum SocialPostStatus {
   DRAFT
+  APPROVED
   SCHEDULED
-  PUBLISHED
+  PUBLISHING
+  PUBLISHED             // legacy — zachowane dla starych rekordów
+  PUBLISHED_CONFIRMED   // publikacja potwierdzona przez API (externalId)
+  SIMULATED             // brak tokena/tryb demo — NIC nie opublikowano
   FAILED
 }
 
@@ -434,6 +438,9 @@ model SocialPost {
   status      SocialPostStatus @default(DRAFT)
   scheduledAt DateTime?
   publishedAt DateTime?
+  attemptedAt DateTime?         // kiedy rozpoczęto próbę publikacji
+  confirmedAt DateTime?         // kiedy API potwierdziło publikację (externalId)
+  simulated   Boolean          @default(false) // true = symulacja (brak realnej publikacji)
   externalId  String?          // platform post id (or sim_* when simulated)
   error       String?
   isAiGenerated Boolean        @default(true)
