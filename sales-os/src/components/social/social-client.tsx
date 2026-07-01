@@ -36,6 +36,7 @@ import { PageHeader } from "@/components/page-header";
 import { KpiCard } from "@/components/kpi-card";
 import { EmptyState } from "@/components/empty-state";
 import { SOCIAL_CHANNEL_LABELS, SOCIAL_POST_STATUS_META } from "@/lib/constants";
+import { isPublishedLike, isSimulated, SIMULATION_TOAST } from "@/lib/social/statusPolicy";
 import { cn } from "@/lib/utils";
 
 export interface SocialPostRow {
@@ -125,7 +126,10 @@ export function SocialClient({
       const res = await fetch(`/api/social/posts/${id}/publish`, { method: "POST" });
       const data = (await res.json()) as SocialPostRow & { error?: string };
       if (!res.ok) throw new Error();
-      if (data.status === "PUBLISHED") toast.success("Post published");
+      // Wspólna polityka statusów: sukces TYLKO dla potwierdzonej publikacji; symulacja mówi wprost,
+      // że nic nie opublikowano (nie sukces, nie błąd); reszta to błąd.
+      if (isPublishedLike(data.status)) toast.success("Post published");
+      else if (isSimulated(data.status)) toast.message(SIMULATION_TOAST);
       else toast.error(data.error ?? "Publishing failed");
       router.refresh();
     } catch {
@@ -323,7 +327,8 @@ export function SocialClient({
                       </Badge>
                       <Badge variant="outline" className={meta.className}>
                         {meta.label}
-                        {p.status === "PUBLISHED" && p.simulated ? " (simulated)" : ""}
+                        {/* Legacy: stare rekordy PUBLISHED + simulated=true (nowy status SIMULATED ma to już w etykiecie). */}
+                        {p.simulated && !isSimulated(p.status) && isPublishedLike(p.status) ? " (simulated)" : ""}
                       </Badge>
                       {p.scheduledAt && p.status === "SCHEDULED" ? (
                         <span className="text-xs text-muted-foreground">
@@ -340,7 +345,7 @@ export function SocialClient({
                       <Button variant="ghost" size="sm" onClick={() => copyText(p)} title="Copy text">
                         {copiedId === p.id ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
                       </Button>
-                      {p.status !== "PUBLISHED" ? (
+                      {!isPublishedLike(p.status) ? (
                         <>
                           <Button
                             variant="ghost"
@@ -404,11 +409,12 @@ export function SocialClient({
                         <p className="text-xs text-sky-600 dark:text-sky-400">{p.hashtags.join(" ")}</p>
                       ) : null}
                       {p.link ? <p className="truncate text-xs text-muted-foreground">{p.link}</p> : null}
-                      {p.error ? <p className="text-xs text-destructive">Error: {p.error}</p> : null}
+                      {/* Nie pokazuj błędu dla potwierdzonej publikacji (PUBLISHED_CONFIRMED czyści error). */}
+                      {p.error && !isPublishedLike(p.status) ? <p className="text-xs text-destructive">Error: {p.error}</p> : null}
                     </div>
                   )}
 
-                  {p.status !== "PUBLISHED" && !editing ? (
+                  {!isPublishedLike(p.status) && !editing ? (
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <Input
                         type="datetime-local"

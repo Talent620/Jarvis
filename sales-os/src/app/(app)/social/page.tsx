@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { getChannelStatuses } from "@/lib/social";
+import { PUBLISHED_LIKE_STATUSES } from "@/lib/social/statusPolicy";
 import { SocialClient } from "@/components/social/social-client";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,8 @@ export default async function SocialPage() {
       orderBy: { tier: "asc" },
       select: { id: true, name: true },
     }),
-    prisma.socialPost.count({ where: { companyId, deletedAt: null, status: "PUBLISHED" } }),
+    // KPI „Published": jedno źródło prawdy z polityką (PUBLISHED_LIKE_STATUSES) — SIMULATED NIE liczy.
+    prisma.socialPost.count({ where: { companyId, deletedAt: null, status: { in: [...PUBLISHED_LIKE_STATUSES] } } }),
     prisma.socialPost.count({ where: { companyId, deletedAt: null, status: "SCHEDULED" } }),
   ]);
 

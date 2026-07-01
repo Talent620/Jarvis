@@ -74,7 +74,7 @@ export function AuditCard({
             <GlobeLock className="mt-0.5 h-4 w-4 shrink-0 text-success" />
             <p className="text-sm">
               <span className="font-medium text-success">No website{hasWebsite === false ? " (verified)" : " on file"}.</span>{" "}
-              This is your strongest pitch: they're invisible to customers searching online.
+              This is your strongest pitch: they&apos;re invisible to customers searching online.
             </p>
           </div>
         ) : !audit ? (

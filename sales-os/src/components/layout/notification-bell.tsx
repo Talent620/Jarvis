@@ -87,7 +87,7 @@ export function NotificationBell() {
           {loading ? (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">Loading…</p>
           ) : items.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">You're all caught up.</p>
+            <p className="px-3 py-6 text-center text-sm text-muted-foreground">You&apos;re all caught up.</p>
           ) : (
             items.slice(0, 12).map((n) => {
               const body = (

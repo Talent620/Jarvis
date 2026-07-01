@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuth, parseBody, serverError } from "@/lib/api";
 import { socialPostUpdateSchema } from "@/lib/validations";
+import { isPublishedLike } from "@/lib/social/statusPolicy";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       where: { id: params.id, companyId: a.ctx.companyId, deletedAt: null },
     });
     if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (post.status === "PUBLISHED") {
+    // Wspólna polityka: potwierdzona publikacja (PUBLISHED_CONFIRMED albo legacy PUBLISHED) jest
+    // niezmienialna. SIMULATED/DRAFT/FAILED pozostają edytowalne.
+    if (isPublishedLike(post.status)) {
       return NextResponse.json({ error: "Published posts cannot be edited" }, { status: 409 });
     }
 

@@ -49,9 +49,14 @@ export function isSimulated(status: string): boolean {
   return status === "SIMULATED";
 }
 
+// JEDNO źródło prawdy dla „co liczy się jako opublikowane": potwierdzone + legacy PUBLISHED.
+// Używane ZARÓWNO przez licznik KPI (Prisma `in`), jak i przez predykat UI/route — dzięki temu
+// backend i interfejs interpretują statusy IDENTYCZNIE.
+export const PUBLISHED_LIKE_STATUSES = ["PUBLISHED_CONFIRMED", "PUBLISHED"] as const;
+
 /** Potwierdzona publikacja (z kompatybilnością starego „PUBLISHED"). */
 export function isPublishedLike(status: string): boolean {
-  return status === "PUBLISHED_CONFIRMED" || status === "PUBLISHED";
+  return (PUBLISHED_LIKE_STATUSES as readonly string[]).includes(status);
 }
 
 /** Pure: licznik opublikowanych — symulacje NIE są liczone. Zgodny ze starymi rekordami. */

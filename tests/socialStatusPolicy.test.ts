@@ -5,6 +5,7 @@
 import { describe, it, expect } from "vitest";
 import {
   extractHashtags, derivePublishStatus, isSimulated, isPublishedLike, countPublished, SIMULATION_TOAST,
+  PUBLISHED_LIKE_STATUSES,
 } from "../sales-os/src/lib/social/statusPolicy";
 
 describe("statusPolicy — uczciwe statusy publikacji", () => {
@@ -40,6 +41,28 @@ describe("statusPolicy — licznik opublikowanych", () => {
 
   it("komunikat symulacji jest jednoznaczny", () => {
     expect(SIMULATION_TOAST).toMatch(/nic nie opublikowano/i);
+  });
+});
+
+describe("statusPolicy — JEDNO źródło prawdy backend ↔ UI", () => {
+  it("licznik KPI (Prisma `in`) i predykat isPublishedLike używają tego samego zbioru statusów", () => {
+    // page.tsx liczy `status in PUBLISHED_LIKE_STATUSES`; UI/route bramkują `isPublishedLike`.
+    // Ten sam zbiór ⇒ backend i interfejs interpretują statusy identycznie.
+    for (const s of PUBLISHED_LIKE_STATUSES) expect(isPublishedLike(s)).toBe(true);
+    expect(PUBLISHED_LIKE_STATUSES).toContain("PUBLISHED_CONFIRMED");
+    expect(PUBLISHED_LIKE_STATUSES).toContain("PUBLISHED"); // legacy
+    expect((PUBLISHED_LIKE_STATUSES as readonly string[]).includes("SIMULATED")).toBe(false);
+  });
+
+  it("SIMULATED: nie liczone do KPI, nie published-like, edytowalne/ponowne (nie zablokowane)", () => {
+    expect(isSimulated("SIMULATED")).toBe(true);
+    expect(isPublishedLike("SIMULATED")).toBe(false); // KPI go nie liczy, przyciski akcji dostępne
+    expect(countPublished([{ status: "SIMULATED" }])).toBe(0);
+  });
+
+  it("PUBLISHED_CONFIRMED: liczone, published-like, zablokowane do edycji/ponowienia", () => {
+    expect(isPublishedLike("PUBLISHED_CONFIRMED")).toBe(true);
+    expect(countPublished([{ status: "PUBLISHED_CONFIRMED" }])).toBe(1);
   });
 });
 
