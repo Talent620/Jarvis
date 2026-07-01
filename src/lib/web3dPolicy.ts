@@ -77,6 +77,39 @@ export function resolve3D(requested: ThreeDMode, caps: DeviceCaps): Resolved3D {
   return { effective: "css", lazyLoad: false, poster: false, fallback: true, reason: "AUTO → lekkie CSS 2.5D (realne 3D tylko na życzenie)" };
 }
 
+/** Pure: zmapuj tryb z blueprintu (off/css/real/auto) na tryb polityki. */
+export function toPolicyMode(m: string): ThreeDMode {
+  const u = (m || "").toUpperCase();
+  if (u === "OFF") return "OFF";
+  if (u === "CSS" || u === "CSS_3D") return "CSS_3D";
+  if (u === "REAL" || u === "REAL_3D") return "REAL_3D";
+  return "AUTO";
+}
+
+/**
+ * Pure: DETERMINISTYCZNE dyrektywy 3D do promptu generatora — dzięki temu rozstrzygnięta polityka
+ * TRAFIA do kodu strony. REAL = realny WebGL (lazy + poster + fallback, nie blokuje LCP). CSS 2.5D
+ * jest JAWNIE oznaczone jako NIE-realne 3D (parallax/transform), więc stary hero3d/parallax nie udaje
+ * realnego 3D. OFF = bez 3D.
+ */
+export function threeDInstruction(r: Resolved3D): string {
+  if (r.effective === "off") return "3D: BEZ efektów 3D (statycznie).";
+  if (r.effective === "real") {
+    return [
+      "3D: REALNE 3D w <canvas> (lekki WebGL; zewnętrzna biblioteka tylko w przypiętej wersji z obsługą awarii).",
+      "- Ładuj LENIWIE dopiero po interakcji/scrollu (IntersectionObserver) — NIE blokuj LCP.",
+      "- Najpierw statyczny POSTER; podmień na canvas dopiero po gotowości WebGL.",
+      "- Pełny FALLBACK: brak WebGL lub błąd → zostaje poster + wersja lekka.",
+      "- Wspieraj dotyk oraz prefers-reduced-motion (wyłącz ruch).",
+    ].join("\n");
+  }
+  return [
+    "3D: LEKKIE CSS 2.5D (perspective/transform/parallax) — to NIE jest realne 3D (bez WebGL).",
+    r.poster ? "- Pokaż statyczny poster; efekt wyłącznie dekoracyjny i lekki." : "",
+    "- Nie obciążaj słabych telefonów; wspieraj dotyk i prefers-reduced-motion.",
+  ].filter(Boolean).join("\n");
+}
+
 /** Odczyt możliwości urządzenia (guarded — działa też w SSR/testach, zwracając ostrożne domyślne). */
 export function detectDeviceCaps(): DeviceCaps {
   const nav = typeof navigator !== "undefined" ? (navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } }) : undefined;

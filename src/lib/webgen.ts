@@ -1,5 +1,6 @@
 import { askModel } from "./brain";
 import { validateBlueprint, blueprintToInstruction, fallbackBlueprint, SITE_BLUEPRINT_SCHEMA, type SiteBlueprint } from "./siteBlueprint";
+import { threeDInstruction, type Resolved3D } from "./web3dPolicy";
 import { humanize } from "./aiHelpers";
 import { zl } from "./format";
 import { appendBrand } from "./brandKit";
@@ -164,10 +165,14 @@ export async function generateSite(
   kind: SiteKind = "auto",
   style: SiteStyle = "auto",
   blueprint?: SiteBlueprint,
+  resolved3D?: Resolved3D,
 ): Promise<{ html: string } | { error: string }> {
   // Zatwierdzony blueprint STERUJE generowaniem: sekcje/CTA/kierunek/ruch/3D/formularz/budżet/preloader.
   // Dzięki temu zmiana planu realnie zmienia wygenerowaną stronę (nie jest tylko ozdobą UI).
   const blueprintBlock = blueprint ? `\n\n${blueprintToInstruction(blueprint)}` : "";
+  // Rozstrzygnięta polityka 3D (device-aware) TRAFIA do kodu strony — REAL=WebGL+poster+lazy+fallback,
+  // słaby telefon/S9 → CSS 2.5D/poster (jawnie NIE realne 3D).
+  const threeDBlock = resolved3D ? `\n\n${threeDInstruction(resolved3D)}` : "";
   // ETAP 3: gdy styl „auto" — deterministycznie dobierz system projektowy z opisu (model dopracuje).
   const resolvedStyle: SiteStyle = style === "auto" && !current ? pickSiteStyle(prompt) : style;
   const styleHint = STYLE_HINTS[resolvedStyle] || STYLE_HINTS.auto;
@@ -185,8 +190,8 @@ export async function generateSite(
     };
   }
   const userMsg = current
-    ? `Oto obecny, PEŁNY kod strony:\n\n${current}\n\nWprowadź zmianę: ${prompt}\nZwróć PEŁNY, zaktualizowany plik HTML (od <!DOCTYPE html>), zachowując wysoki poziom wizualny i spójny styl. Nie skracaj i nie pomijaj żadnej istniejącej sekcji.${blueprintBlock}`
-    : `Zbuduj stronę według opisu: ${prompt}${blueprintBlock}`;
+    ? `Oto obecny, PEŁNY kod strony:\n\n${current}\n\nWprowadź zmianę: ${prompt}\nZwróć PEŁNY, zaktualizowany plik HTML (od <!DOCTYPE html>), zachowując wysoki poziom wizualny i spójny styl. Nie skracaj i nie pomijaj żadnej istniejącej sekcji.${blueprintBlock}${threeDBlock}`
+    : `Zbuduj stronę według opisu: ${prompt}${blueprintBlock}${threeDBlock}`;
 
   try {
     // Dusza Marki — dokleja tożsamość (kolory/fonty/ton) do system-promptu; pusty kit = bez zmian.

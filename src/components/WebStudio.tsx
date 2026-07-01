@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { growthContextToBrief, demoProjectName, type GrowthContext } from "../lib/growthContext";
 import { blueprintSummary, type SiteBlueprint, type MotionLevel, type ThreeDMode, type FormMode } from "../lib/siteBlueprint";
+import { resolve3D, detectDeviceCaps, toPolicyMode } from "../lib/web3dPolicy";
 import { validateSite, validationVerdict } from "../lib/siteValidator";
 import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, planBlueprint, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
@@ -158,7 +159,10 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
       const base = [briefText, prompt].filter((s) => s.trim()).join("\n\n");
       const desc = edit ? promptText : buildStrategySeed(base, strategy); // wlej strategię (ETAP 11), gdy jest
       // Zatwierdzony blueprint STERUJE budową (sekcje/CTA/ruch/3D/formularz/budżet/preloader).
-      const r = await generateSite(desc, edit && html ? html : undefined, kind, style, blueprint ?? undefined);
+      // Rozstrzygnięcie 3D jest DEVICE-AWARE: żądany tryb z planu + realne możliwości urządzenia →
+      // S9/brak WebGL dostaje CSS/poster, REAL tylko gdy urządzenie daje radę (lazy + poster + fallback).
+      const resolved3D = blueprint ? resolve3D(toPolicyMode(blueprint.threeDMode), detectDeviceCaps()) : undefined;
+      const r = await generateSite(desc, edit && html ? html : undefined, kind, style, blueprint ?? undefined, resolved3D);
       if ("error" in r) setErr(r.error);
       else {
         setHtml(r.html);
