@@ -87,7 +87,7 @@ import { isComplex } from "./lib/modelRouter";
 import { dueCount } from "./lib/cards";
 import { statusFlags } from "./lib/status";
 import { buildContext } from "./lib/context";
-import { isUncensored, PROVIDERS } from "./lib/providers/registry";
+import { isUncensored, fallbackNotice } from "./lib/providers/registry";
 import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import { isPrivateModeCommand, matchUnfilteredCommand, parseReadAloud } from "./lib/modeCommands";
 import Guardian from "./components/Guardian";
@@ -652,11 +652,8 @@ export default function App() {
       // wprost (koniec strachu „API się skończyło"). Tylko gdy faktycznie był fallback.
       // Użytkownik kliknął Stop (albo wysłał coś nowego) — porzuć spóźnioną odpowiedź.
       if (!isCurrent(genToken)) return;
-      const r = reply as Partial<{ via: string; fellBack: boolean }>;
-      if (r.fellBack && r.via) {
-        const label = PROVIDERS[r.via as keyof typeof PROVIDERS]?.label || r.via;
-        toast(`🔄 Główny mózg był zajęty — odpowiedział zapasowy: ${label}`);
-      }
+      const notice = fallbackNotice(reply);
+      if (notice) toast(notice);
       cancelStreamFlush(); // żaden spóźniony batch nie nadpisze finalnego tekstu
       if (streamId) {
         // Tekst już przyleciał strumieniowo — domknij tę samą wiadomość (narzędzia/cytaty/finalny tekst).

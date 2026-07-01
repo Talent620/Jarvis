@@ -220,6 +220,17 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
 
 export const PROVIDER_LIST: ProviderMeta[] = Object.values(PROVIDERS);
 
+/**
+ * Pure: komunikat „odpowiedział zapasowy mózg" (albo null, gdy failoveru nie było).
+ * Jedno źródło tekstu współdzielone przez czat tekstowy i wszystkie tryby głosowe —
+ * bez tego każdy ekran wymyślałby własne (i rozjeżdżające się) sformułowanie.
+ */
+export function fallbackNotice(reply: { via?: ProviderId; fellBack?: boolean }): string | null {
+  if (!reply.fellBack || !reply.via) return null;
+  const label = PROVIDERS[reply.via]?.label || reply.via;
+  return `🔄 Główny mózg był zajęty — odpowiedział zapasowy: ${label}`;
+}
+
 /** Klucze per dostawca przechowywane w ustawieniach. */
 export type ProviderKeys = Record<ProviderId, string>;
 

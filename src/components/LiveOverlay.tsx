@@ -10,6 +10,7 @@ import { primaryKey } from "../lib/keys";
 import { memoryContextBlock, resolveNamespace } from "../lib/memoryService";
 import { store } from "../lib/store";
 import { brand } from "../lib/brand";
+import { toast } from "../lib/toast";
 
 type Engine = "gemini" | "loop";
 type AnyState = LiveState | LoopState;
@@ -133,6 +134,7 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
             // Native nie wstał (błąd PRZED połączeniem) → przełącz na stabilny bez alarmowania.
             if (s === "error" && useNative && !reachedLive.current && !nativeFailed.current) {
               nativeFailed.current = true;
+              toast("🔄 Głos natywny niedostępny — przełączam na stabilny tryb Gemini Live.");
               startEngine("gemini");
               return;
             }

@@ -6,6 +6,8 @@ import { detectDecision } from "./decisions";
 import { recordBossDecision } from "./bossMemory";
 import { confidencePct, confidencePreface, isRiskyCommand, isExplainRequest, explainTrace, predictNext, type BossTrace, type VerifyResult } from "./bossInsight";
 import { providerShortName } from "./providerNames";
+import { fallbackNotice } from "./providers/registry";
+import { toast } from "./toast";
 import { parseBossMeta } from "./boss";
 import type { Msg, ProviderId } from "./providers/types";
 import type { Settings } from "../types";
@@ -168,6 +170,10 @@ export class ConversationLoop {
       }
       window.clearTimeout(stall);
       this.history.push({ role: "assistant", content: reply.text });
+      // Failover widoczny tak jak w czacie tekstowym: BossMode i LiveOverlay (silnik „loop")
+      // dzielą tę pętlę, więc jedna poprawka ujawnia zapasowy mózg w obu miejscach.
+      const notice = fallbackNotice(reply);
+      if (notice) toast(notice);
 
       // 🧭 Insight: skalibrowana pewność (mówiona, gdy istotna), predykcja kroku dalej, ślad do czarnej skrzynki.
       let spoken = reply.text;

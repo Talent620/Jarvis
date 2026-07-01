@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED, injectNoThink, modelBadges, PROVIDERS, providerShortName } from "../src/lib/providers/registry";
+import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED, injectNoThink, modelBadges, PROVIDERS, providerShortName, fallbackNotice } from "../src/lib/providers/registry";
 
 describe("Cohere — nowy darmowy dostawca", () => {
   it("jest w katalogu z modelami Command i sensownym domyślnym", () => {
@@ -121,5 +121,26 @@ describe("modele nieocenzurowane", () => {
   it("preset darmowego czatu bez cenzury wskazuje istniejący model", () => {
     expect(FREE_UNCENSORED.provider).toBe("openrouter");
     expect(isUncensored(FREE_UNCENSORED.model)).toBe(true);
+  });
+});
+
+describe("fallbackNotice — ujawnienie failover mózgu (parytet głos/tekst)", () => {
+  it("brak komunikatu, gdy nie było failoveru", () => {
+    expect(fallbackNotice({ via: "gemini", fellBack: false })).toBeNull();
+    expect(fallbackNotice({ via: "gemini" })).toBeNull();
+  });
+  it("brak komunikatu, gdy fellBack=true ale brak informacji, kto odpowiedział", () => {
+    expect(fallbackNotice({ fellBack: true })).toBeNull();
+  });
+  it("zwraca czytelny komunikat z etykietą dostawcy, gdy był failover", () => {
+    const msg = fallbackNotice({ via: "gemini", fellBack: true });
+    expect(msg).toContain(PROVIDERS.gemini.label);
+    expect(msg).toMatch(/zapasowy/);
+  });
+  it("ten sam komunikat niezależnie od dostawcy (spójność między ekranami)", () => {
+    const a = fallbackNotice({ via: "anthropic", fellBack: true });
+    const b = fallbackNotice({ via: "groq", fellBack: true });
+    expect(a).toContain(PROVIDERS.anthropic.label);
+    expect(b).toContain(PROVIDERS.groq.label);
   });
 });
