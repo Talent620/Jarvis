@@ -3,7 +3,7 @@
 // ostrzeżenia jakości, znacznik PRZYKŁAD) do zaznaczenia. Do bazy trafiają dopiero zaznaczeni
 // (Importuj). Dodatkowo per-karta: Odrzuć, Otwórz źródło, Zbuduj demo. Marcin kontroluje jakość bazy.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { store, uid } from "../lib/store";
 import { toast } from "../lib/toast";
@@ -11,8 +11,18 @@ import { safeOpenExternal } from "../lib/glinks";
 import { discoverCandidates } from "../lib/leads";
 import { importCandidates, type LeadCandidate } from "../lib/leadCandidates";
 import { describeLeadSources, sourceBadge } from "../lib/leadSources";
+import { scoreLead, signalsFromCandidate, type IcpScore } from "../lib/leadScoring";
 import { buildGrowthContext, type GrowthContext } from "../lib/growthContext";
 import type { Lead } from "../types";
+
+// Etykiety „najlepszej następnej akcji" (bestNextAction) — po polsku, pod przycisk/podpowiedź.
+const NEXT_ACTION_LABEL: Record<IcpScore["bestNextAction"], string> = {
+  research: "🔍 Dozbieraj dane",
+  call: "📞 Zadzwoń",
+  demo: "🌐 Pokaż demo",
+  offer: "✉ Wyślij ofertę",
+  reject: "🚫 Odpuść",
+};
 
 export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () => void; onWeb?: (ctx: GrowthContext) => void }) {
   useEscape(onClose);
@@ -22,6 +32,15 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
   const [msg, setMsg] = useState("");
   const [candidates, setCandidates] = useState<LeadCandidate[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // ICP score (wyjaśnialny) rządzi KOLEJNOŚCIĄ: najlepsi kandydaci na górze. Uwzględnia
+  // provenance (źródło) i politykę kontaktu; wagi douczane wyłącznie z potwierdzonych wyników.
+  const ranked = useMemo(() => {
+    const now = Date.now();
+    return candidates
+      .map((c) => ({ c, icp: scoreLead(signalsFromCandidate(c, now), store.data.scoringWeights) }))
+      .sort((a, b) => b.icp.score - a.icp.score);
+  }, [candidates]);
 
   const search = async () => {
     setBusy(true); setMsg("🔎 Szukam kandydatów (bez zapisu do CRM)…"); setCandidates([]); setSelected(new Set());
@@ -99,16 +118,30 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
             </div>
           )}
 
-          {candidates.map((c) => (
+          {ranked.map(({ c, icp }) => (
             <div key={c.id} style={{ border: "1px solid var(--line, #234)", borderRadius: 10, padding: 12, marginBottom: 10, display: "flex", flexDirection: "column", gap: 6 }}>
               <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                 <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} style={{ minWidth: 20, minHeight: 20 }} />
+                {/* ICP score — kolor sygnalizuje jakość (zielony ≥65, złoty ≥40, szary niżej). */}
+                <span title={`ICP score ${icp.score}/100 · pewność ${Math.round(icp.confidence * 100)}%`}
+                  style={{ fontFamily: "Orbitron, monospace", fontSize: 13, fontWeight: 700, minWidth: 34, textAlign: "center",
+                    color: icp.score >= 65 ? "var(--ok, #58e08a)" : icp.score >= 40 ? "var(--gold, #d9a400)" : "var(--text-dim, #8aa)" }}>
+                  {icp.score}
+                </span>
                 <strong style={{ fontSize: 14 }}>{c.company}</strong>
                 {c.isSample && <span style={{ fontSize: 11, color: "var(--gold, #d9a400)" }}>PRZYKŁAD</span>}
               </label>
               <div className="muted" style={{ fontSize: 12 }}>
                 Pewność: {Math.round(c.confidence * 100)}% · Kontakt: {c.contactability} · Źródło: {c.source}
               </div>
+              {/* Wyjaśnialny ICP: następna akcja + 3 powody + brakujące dowody — nie „czarna skrzynka". */}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                <span className="chip" style={{ fontSize: 11, borderColor: "var(--cyan, #6ce7ff)" }}>{NEXT_ACTION_LABEL[icp.bestNextAction]}</span>
+                {icp.topReasons.map((r, i) => <span key={i} className="chip" style={{ fontSize: 11 }}>✓ {r}</span>)}
+              </div>
+              {icp.missingEvidence.length > 0 && (
+                <div className="muted" style={{ fontSize: 11 }}>Brakuje: {icp.missingEvidence.join(" · ")}</div>
+              )}
               {c.evidence.length > 0 && (
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {c.evidence.map((ev, i) => <span key={i} className="chip" style={{ fontSize: 11 }}>{ev}</span>)}

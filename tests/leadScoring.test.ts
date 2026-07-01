@@ -2,8 +2,15 @@
 // Każdy wynik jest zrozumiały. Kluczowe: lead bez strony i bez kontaktu NIE wygrywa automatycznie
 // z aktywną, dobrze dopasowaną firmą. Wynik ma powody, brakujące dowody i następną akcję.
 import { describe, it, expect } from "vitest";
-import { scoreLead, signalsFromLead, adjustWeight, resetWeights, DEFAULT_WEIGHTS, type ScoringSignals } from "../src/lib/leadScoring";
+import { scoreLead, signalsFromLead, signalsFromCandidate, learnWeightsFromOutcome, adjustWeight, resetWeights, DEFAULT_WEIGHTS, type ScoringSignals } from "../src/lib/leadScoring";
 import type { Lead } from "../src/types";
+import type { LeadCandidate } from "../src/lib/leadCandidates";
+
+const candidate = (over: Partial<LeadCandidate>): LeadCandidate => ({
+  id: "C", company: "Firma", source: "osm", fetchedAt: NOW, confidence: 0.6,
+  evidence: [], persistencePolicy: "persist_ok", contactability: "none",
+  qualityWarnings: [], isSample: false, ...over,
+});
 
 const NOW = 11_000_000_000;
 const DAY = 86_400_000;
@@ -51,6 +58,43 @@ describe("leadScoring — sygnały z leada", () => {
     const s = signalsFromLead(lead({ url: "https://x.pl", email: "a@x.pl", hours: "9-17", lastContactedAt: NOW - DAY, followUpCount: 1 }), NOW);
     expect(s.contactCompleteness).toBeGreaterThan(0.5);
     expect(s.companyActivity).toBeGreaterThan(0.6);
+  });
+});
+
+describe("leadScoring — sygnały z kandydata (provenance + contact policy)", () => {
+  it("kandydat przykładowy (mock) ma wysokie ryzyko i przegrywa z realnym z e-mailem", () => {
+    const real = scoreLead(signalsFromCandidate(candidate({ source: "google_places", contactability: "email", url: "https://x.pl", niche: "fryzjer" }), NOW));
+    const sample = scoreLead(signalsFromCandidate(candidate({ source: "mock", isSample: true, contactability: "email" }), NOW));
+    expect(real.score).toBeGreaterThan(sample.score);
+    expect(signalsFromCandidate(candidate({ isSample: true }), NOW).risk).toBeGreaterThan(0.6);
+  });
+
+  it("kontaktowalność przekłada się na kompletność kontaktu; brak strony podnosi needSignal", () => {
+    expect(signalsFromCandidate(candidate({ contactability: "email" }), NOW).contactCompleteness).toBe(1);
+    expect(signalsFromCandidate(candidate({ contactability: "phone" }), NOW).contactCompleteness).toBe(0.6);
+    expect(signalsFromCandidate(candidate({ url: undefined }), NOW).needSignal).toBeGreaterThan(0.6);
+    expect(signalsFromCandidate(candidate({ url: "https://x.pl" }), NOW).needSignal).toBeLessThan(0.5);
+  });
+
+  it("provenance liczy się: Google Places wiarygodniejsze niż mock", () => {
+    expect(signalsFromCandidate(candidate({ source: "google_places" }), NOW).sourceCredibility)
+      .toBeGreaterThan(signalsFromCandidate(candidate({ source: "mock" }), NOW).sourceCredibility);
+  });
+});
+
+describe("leadScoring — uczenie tylko z potwierdzonych wyników", () => {
+  it("wygrana nudguje najmocniejsze sygnały w górę, granice bezpieczne", () => {
+    const learned = learnWeightsFromOutcome({ ...DEFAULT_WEIGHTS }, strong, true);
+    // Najmocniejszy dodatni wkład (offerFit/potentialValue) powinien urosnąć.
+    const grew = (Object.keys(DEFAULT_WEIGHTS) as (keyof typeof DEFAULT_WEIGHTS)[]).some((k) => learned[k] > DEFAULT_WEIGHTS[k]);
+    expect(grew).toBe(true);
+    expect(learned.contactCompleteness).toBeLessThanOrEqual(DEFAULT_WEIGHTS.contactCompleteness * 2);
+  });
+
+  it("przegrana obniża wagi tych samych sygnałów (bezpieczna dolna granica)", () => {
+    const learned = learnWeightsFromOutcome({ ...DEFAULT_WEIGHTS }, strong, false);
+    const shrank = (Object.keys(DEFAULT_WEIGHTS) as (keyof typeof DEFAULT_WEIGHTS)[]).some((k) => learned[k] < DEFAULT_WEIGHTS[k]);
+    expect(shrank).toBe(true);
   });
 });
 

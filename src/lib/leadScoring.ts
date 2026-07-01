@@ -6,6 +6,7 @@
 // Czyste i testowalne. S9-safe.
 
 import type { Lead } from "../types";
+import type { LeadCandidate } from "./leadCandidates";
 
 export interface ScoringSignals {
   offerFit: number;          // 0..1 dopasowanie do oferty
@@ -117,6 +118,51 @@ export function signalsFromLead(lead: Lead, now: number): ScoringSignals {
   return { offerFit, companyActivity, needSignal, potentialValue, contactCompleteness, sourceCredibility, freshness, competition: 0.4, risk };
 }
 
+// Wiarygodność źródła (provenance) — mock jest przykładem, nie prawdą.
+const SOURCE_CREDIBILITY: Record<LeadCandidate["source"], number> = {
+  google_places: 0.9,
+  ceidg: 0.9,
+  tavily: 0.7,
+  osm: 0.7,
+  mock: 0.2,
+};
+
+// Kontaktowalność (polityka kontaktu) → kompletność kontaktu.
+const CONTACT_COMPLETENESS: Record<LeadCandidate["contactability"], number> = {
+  email: 1,
+  phone: 0.6,
+  form: 0.35,
+  none: 0,
+};
+
+/**
+ * Pure: wyprowadź sygnały ICP z KANDYDATA (przed importem). Uwzględnia provenance (źródło)
+ * i politykę kontaktu (contactability). Kandydat przykładowy (mock) dostaje wysokie ryzyko —
+ * nie może wygrać z realną firmą tylko dlatego, że ładnie wygląda.
+ */
+export function signalsFromCandidate(c: LeadCandidate, now: number): ScoringSignals {
+  const contactCompleteness = CONTACT_COMPLETENESS[c.contactability] ?? 0;
+  const sourceCredibility = SOURCE_CREDIBILITY[c.source] ?? 0.5;
+  // Brak strony = wyraźny sygnał potrzeby (JEDEN sygnał, nie cała ocena).
+  const needSignal = c.url ? 0.3 : 0.7;
+  const companyActivity = clamp01((c.url ? 0.5 : 0.2) + (c.address ? 0.2 : 0) + (c.phone ? 0.1 : 0));
+  const offerFit = clamp01(c.niche ? 0.6 : 0.4);
+  const freshness = clamp01(1 - Math.min(1, (now - (c.fetchedAt || now)) / (30 * DAY)));
+  // Ryzyko: przykład = wysokie; poza tym rośnie, gdy pewność kandydata niska lub są ostrzeżenia.
+  const risk = c.isSample ? 0.85 : clamp01(0.2 + (1 - clamp01(c.confidence)) * 0.4 + Math.min(0.3, c.qualityWarnings.length * 0.1));
+  return {
+    offerFit,
+    companyActivity,
+    needSignal,
+    potentialValue: 0.4, // nieznana przed rozmową — neutralna
+    contactCompleteness,
+    sourceCredibility,
+    freshness,
+    competition: 0.4,
+    risk,
+  };
+}
+
 // — Douczanie wag z realnych wyników (bezpieczne granice + reset) —
 const WEIGHT_MIN_FACTOR = 0.5;
 const WEIGHT_MAX_FACTOR = 2;
@@ -128,6 +174,23 @@ export function adjustWeight(weights: ScoringWeights, signal: keyof ScoringSigna
   const next = { ...weights };
   const delta = won ? LEARN_STEP : -LEARN_STEP;
   next[signal] = Math.max(base * WEIGHT_MIN_FACTOR, Math.min(base * WEIGHT_MAX_FACTOR, weights[signal] + delta));
+  return next;
+}
+
+/**
+ * Pure: doucz wagi z POTWIERDZONEGO wyniku leada (won/lost). Nudge dostają sygnały, które były
+ * najmocniejsze w tym leadzie — bo to one „przewidziały" wynik. Tylko sygnały dodatnie; granice
+ * bezpieczne (patrz adjustWeight). To jedyna ścieżka uczenia — nigdy z DRAFT/SIMULATED.
+ */
+export function learnWeightsFromOutcome(weights: ScoringWeights, signals: ScoringSignals, won: boolean): ScoringWeights {
+  const positives: (keyof ScoringSignals)[] = ["offerFit", "companyActivity", "needSignal", "potentialValue", "contactCompleteness", "sourceCredibility", "freshness"];
+  const ranked = positives
+    .map((k) => ({ k, v: clamp01(signals[k]) * weights[k] }))
+    .sort((a, b) => b.v - a.v)
+    .filter((c) => c.v > 0.02)
+    .slice(0, 2);
+  let next = weights;
+  for (const c of ranked) next = adjustWeight(next, c.k, won);
   return next;
 }
 

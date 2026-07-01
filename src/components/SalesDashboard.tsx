@@ -7,6 +7,7 @@ import { splitOffer } from "../lib/glinks";
 import { canSendDirect, draftAndSendOffer, sentTodayCount, sendAllOffers } from "../lib/mailer";
 import { findLeads, browserCity } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
+import { scoreLead, signalsFromLead, learnWeightsFromOutcome, DEFAULT_WEIGHTS, type IcpScore } from "../lib/leadScoring";
 import { leadsToCsv, followUpsDue, callNowList, searchLeads, wasLeadEmailed } from "../lib/salesEngine";
 import { importLeads } from "../lib/leadImport";
 import { buildLoraCorpus, corpusToJsonl } from "../lib/loraExport";
@@ -24,6 +25,15 @@ const STATUS: { id: LeadStatus; label: string; color: string }[] = [
   { id: "won", label: "Klient ✅", color: "var(--ok, #58e08a)" },
   { id: "lost", label: "Odrzucony", color: "var(--text-dim)" },
 ];
+
+// Etykiety „najlepszej następnej akcji" (ICP bestNextAction) — po polsku.
+const NEXT_ACTION_LABEL: Record<IcpScore["bestNextAction"], string> = {
+  research: "dozbieraj dane",
+  call: "zadzwoń",
+  demo: "pokaż demo strony",
+  offer: "wyślij ofertę",
+  reject: "odpuść",
+};
 
 /** Otwórz URL leada tylko gdy to http/https — dane leada bywają z sieci (blokuj javascript:/data:). */
 function openLeadUrl(raw?: string): void {
@@ -257,6 +267,11 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
     store.setData((d) => {
       const l = d.leads.find((x) => x.id === id);
       if (l) {
+        // Uczymy wagi ICP WYŁĄCZNIE z potwierdzonych wyników (won/lost) — nigdy z domysłów.
+        if ((status === "won" || status === "lost") && l.status !== status) {
+          const signals = signalsFromLead(l, Date.now());
+          d.scoringWeights = learnWeightsFromOutcome(d.scoringWeights ?? DEFAULT_WEIGHTS, signals, status === "won");
+        }
         l.status = status;
         l.updatedAt = Date.now();
       }
@@ -312,6 +327,20 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
     [leads, sent],
   );
 
+  // 🎯 Następny ruch — wyjaśnialna rekomendacja ICP: najlepszy aktywny lead + co z nim zrobić.
+  // To produkcyjny konsument leadScoring: wpływa na to, co JARVIS podpowiada robić najpierw.
+  const nextMove = useMemo(() => {
+    const now = Date.now();
+    let best: { l: Lead; icp: IcpScore } | null = null;
+    for (const l of leads) {
+      if (l.status === "won" || l.status === "lost") continue;
+      const icp = scoreLead(signalsFromLead(l, now), data.scoringWeights);
+      if (icp.bestNextAction === "reject") continue;
+      if (!best || icp.score > best.icp.score) best = { l, icp };
+    }
+    return best;
+  }, [leads, data.scoringWeights]);
+
   const shown = useMemo(() => {
     const match = (l: Lead) =>
       filter === "all" ? true
@@ -345,6 +374,23 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
               <div className="muted" style={{ fontSize: 11 }}>✉ wysłane dziś</div>
             </div>
           </div>
+
+          {/* 🎯 Następny ruch — wyjaśnialna rekomendacja ICP (score + powód + akcja). Klik → teczka. */}
+          {nextMove && (
+            <div
+              onClick={() => setOpenLead(nextMove.l.id)}
+              style={{ cursor: "pointer", marginBottom: 10, padding: "8px 12px", borderRadius: 10, border: "1px solid var(--cyan, #6ce7ff)", background: "color-mix(in srgb, var(--cyan, #6ce7ff) 8%, transparent)" }}
+              title={`Pewność ${Math.round(nextMove.icp.confidence * 100)}%${nextMove.icp.topReasons.length ? " · " + nextMove.icp.topReasons.join(", ") : ""}`}
+            >
+              <div style={{ fontSize: 13 }}>
+                🎯 Następny ruch: <b>{NEXT_ACTION_LABEL[nextMove.icp.bestNextAction]}</b> — {nextMove.l.company}
+                <span className="muted" style={{ marginLeft: 6, fontSize: 12 }}>ICP {nextMove.icp.score}/100</span>
+              </div>
+              {nextMove.icp.topReasons.length > 0 && (
+                <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{nextMove.icp.topReasons.map((r) => "✓ " + r).join("  ")}</div>
+              )}
+            </div>
+          )}
 
           {/* Szukanie leadów — wszystko z pulpitu, bez wchodzenia do ustawień. Na wąskich ekranach
               (Samsung S9) pola nisza/miasto układają się PIONOWO (klasa hunt-fields — bez poziomego ścisku). */}

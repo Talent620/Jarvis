@@ -1,6 +1,7 @@
 // Współdzielone typy dla całej aplikacji JARVIS.
 import type { UserProfile } from "./lib/profile";
 import type { CampaignPlan } from "./lib/campaignEngine";
+import type { ScoringWeights } from "./lib/leadScoring";
 
 export type Role = "user" | "assistant";
 
@@ -199,6 +200,8 @@ export interface AppData {
   world?: WorldGraph;
   /** Kampanie (reklamy/social) — trwałe obiekty modelu campaignEngine. */
   campaigns?: CampaignPlan[];
+  /** Douczone wagi ICP score — korygowane WYŁĄCZNIE z potwierdzonych wyników (won/lost). */
+  scoringWeights?: ScoringWeights;
 }
 
 /** Zapisany projekt strony WWW (Kreator stron). Pełny stan do wznowienia pracy. */
