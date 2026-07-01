@@ -22,6 +22,7 @@ export default function More({
   onGoal,
   onGrowthDay,
   onCandidates,
+  onGoalStatus,
   onCommand,
   onStudio,
   onWeb,
@@ -65,6 +66,7 @@ export default function More({
   onGoal: () => void;
   onGrowthDay: () => void;
   onCandidates: () => void;
+  onGoalStatus: () => void;
   onCommand: () => void;
   onStudio: () => void;
   onWeb: () => void;
@@ -104,6 +106,7 @@ export default function More({
     { id: "guardian", icon: "🩺", name: "Diagnoza", desc: "Diagnoza i naprawa (dawny Strażnik)", fn: onGuardian },
     { id: "mind", icon: "🧠", name: "Umysł", desc: "Odprawa, Twój świat, wzorce, samoocena", fn: onMind },
     { id: "goal", icon: "🎯", name: "Zleć cel", desc: "Rozłóż na kroki i zrób za mnie (do-for-me)", fn: onGoal },
+    { id: "goalStatus", icon: "🎯", name: "Cele (autonomia)", desc: "Co JARVIS prowadzi: postęp, zgody, zatrzymaj/wznów", fn: onGoalStatus },
     { id: "growthDay", icon: "📅", name: "Plan dnia", desc: "Co dziś najbardziej ruszy biznes (3 działania)", fn: onGrowthDay },
     { id: "candidates", icon: "🧲", name: "Kandydaci leadów", desc: "Szukaj firm — importuj tylko wybrane (bez zaśmiecania CRM)", fn: onCandidates },
     { id: "notifications", icon: "🔔", name: "Powiadomienia", desc: "Co wymaga uwagi", fn: onNotifications },
@@ -148,7 +151,7 @@ export default function More({
     { title: "🛒 Zakupy i okazje", ids: ["bargain", "wheretobuy", "shoppinglist"] },
     { title: "🎙 Narzędzia AI", ids: ["translator", "transcribe", "hud", "screen", "studio"] },
     { title: "🧠 Ja i pamięć", ids: ["mind", "profile", "memory"] },
-    { title: "⬢ Szef i sterowanie", ids: ["boss", "command", "recall", "goal"] },
+    { title: "⬢ Szef i sterowanie", ids: ["boss", "command", "recall", "goal", "goalStatus"] },
     { title: "⚙️ System i pomoc", ids: ["notifications", "status", "guardian", "history", "data", "audit", "gadgets", "faq", "help", "admin"] },
   ];
 

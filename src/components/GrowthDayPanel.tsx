@@ -14,7 +14,7 @@ import {
   type GrowthAction, type OrchestratorWeights,
 } from "../lib/growthOrchestrator";
 import { emptyStateSuggestion } from "../lib/simpleFlow";
-import { executeGoalPlan } from "../lib/brain";
+import { startAndRunGoal } from "../lib/goalRuntime";
 
 const WEIGHTS_KEY = "jarvis.growthDay.weights.v1";
 const riskLabel: Record<GrowthAction["risk"], string> = { low: "niskie", medium: "średnie", high: "wysokie" };
@@ -40,7 +40,9 @@ export default function GrowthDayPanel({ onClose }: { onClose: () => void }) {
     setStatus(`${a.title} — startuję…`);
     setResults((r) => ({ ...r, [a.id]: { icon: "⏳", text: "w toku…" } }));
     try {
-      const run = await executeGoalPlan(actionToPlan(a), (s) => setStatus(s));
+      // Uruchom jako TRWAŁY cel — pojawi się w „Panelu celu" i przeżyje restart.
+      const now = Date.now();
+      const { result: run } = await startAndRunGoal({ goal: a.title, plan: actionToPlan(a), correlationId: `${a.id}:${now}`, now, onStatus: (s) => setStatus(s) });
       const v = run.verdict;
       const icon = v.canClaimSuccess ? "✅" : v.state === "attempted" ? "⏳" : v.state === "blocked" ? "⏸" : v.state === "failed" ? "❌" : "✍";
       setResults((r) => ({ ...r, [a.id]: { icon, text: v.summary } }));

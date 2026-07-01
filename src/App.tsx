@@ -13,6 +13,7 @@ const Journal = lazy(() => import("./components/Journal"));
 const SalesDashboard = lazy(() => import("./components/SalesDashboard"));
 const GrowthDayPanel = lazy(() => import("./components/GrowthDayPanel"));
 const LeadCandidatesPanel = lazy(() => import("./components/LeadCandidatesPanel"));
+const GoalStatusPanel = lazy(() => import("./components/GoalStatusPanel"));
 const MoneyHub = lazy(() => import("./components/MoneyHub"));
 const FinancialDashboard = lazy(() => import("./components/FinancialDashboard"));
 const Help = lazy(() => import("./components/Help"));
@@ -204,6 +205,7 @@ export default function App() {
   const [showGoal, setShowGoal] = useState(false);
   const [showGrowthDay, setShowGrowthDay] = useState(false);
   const [showCandidates, setShowCandidates] = useState(false);
+  const [showGoalStatus, setShowGoalStatus] = useState(false);
   const [showCmd, setShowCmd] = useState(false);
   const [showRecall, setShowRecall] = useState(false);
   const [recallSeed, setRecallSeed] = useState("");
@@ -264,7 +266,7 @@ export default function App() {
       mind: setShowMind, journal: setShowJournal, projects: setShowProjects,
       profile: setShowProfile, settings: setShowSettings, status: setShowStatus,
       gadgets: setShowGadgets, hud: setShowHud,
-      goal: setShowGoal, recall: setShowRecall, guardian: setShowGuardian, growthDay: setShowGrowthDay, candidates: setShowCandidates,
+      goal: setShowGoal, recall: setShowRecall, guardian: setShowGuardian, growthDay: setShowGrowthDay, candidates: setShowCandidates, goalStatus: setShowGoalStatus,
       data: setShowPanels, history: setShowHistory, admin: setShowAdmin,
     };
     return onScreenRequest((id) => { const fn = map[id]; if (fn) { setShowMore(false); fn(true); } });
@@ -286,6 +288,7 @@ export default function App() {
       open("goal", "🎯 Zleć cel", setShowGoal, "🎯", "do-for-me projekt plan wieloetapowe cel"),
       open("growthDay", "📅 Plan dnia", setShowGrowthDay, "📅", "plan dnia rekomendacje roi wzrost co dzis zrobic orchestrator"),
       open("candidates", "🧲 Kandydaci leadów", setShowCandidates, "🧲", "kandydaci leady szukaj firmy osm import bez zapisu crm"),
+      open("goalStatus", "🎯 Cele (autonomia)", setShowGoalStatus, "🎯", "cele postep autonomia zatrzymaj wznow anuluj trwaly cel status"),
       open("studio", "Studio Obrazów", setShowStudio, "🎨", "zdjecia edycja generuj obraz foto"),
       open("guardian", "Diagnoza i naprawa (dawny Strażnik)", setShowGuardian, "🩺", "napraw przyspiesz pomoc diagnoza strażnik"),
       open("mind", "Umysł JARVISA", setShowMind, "🧠", "odprawa pamiec swiat wzorce samoocena"),
@@ -1500,6 +1503,7 @@ export default function App() {
           onGoal={() => setShowGoal(true)}
           onGrowthDay={() => setShowGrowthDay(true)}
           onCandidates={() => setShowCandidates(true)}
+          onGoalStatus={() => setShowGoalStatus(true)}
           onCommand={() => setShowCmd(true)}
           onWeb={() => { setWebContext(null); setShowWeb(true); }}
           onScreen={isDesktop() ? lookAtScreen : undefined}
@@ -1624,6 +1628,11 @@ export default function App() {
             onClose={() => setShowCandidates(false)}
             onWeb={(ctx) => { setWebContext(ctx); setShowCandidates(false); setShowWeb(true); }}
           />
+        </ScreenBoundary>
+      )}
+      {showGoalStatus && (
+        <ScreenBoundary>
+          <GoalStatusPanel onClose={() => setShowGoalStatus(false)} />
         </ScreenBoundary>
       )}
       {showCmd && (
