@@ -56,6 +56,18 @@ describe("simulatePriceChange — co jeśli podniosę cenę", () => {
     const r = simulatePriceChange({ baselineRevenue: 1000, deltaPct: 9999 });
     expect(r.assumptions.join(" ")).toMatch(/przyci/i);
   });
+
+  it("główny wynik ZAWSZE mieści się we własnych widełkach — nawet przy obniżce z wysoką elastycznością", () => {
+    // Kontrprzykład, który wcześniej łamał widełki: obniżka ceny (popyt może wzrosnąć MOCNIEJ niż
+    // zakłada wariant "pełnej reakcji" liczony tylko dla podwyżek) z elastycznością bliską maksimum.
+    for (const deltaPct of [-90, -60, -30, -10, 0, 10, 50, 200]) {
+      for (const demandElasticity of [0, 0.5, 1, 2, 3]) {
+        const r = simulatePriceChange({ baselineRevenue: 100000, deltaPct, demandElasticity });
+        expect(r.low).toBeLessThanOrEqual(r.value);
+        expect(r.high).toBeGreaterThanOrEqual(r.value);
+      }
+    }
+  });
 });
 
 describe("bestClientByProfitToTime — koszt czasu", () => {
@@ -66,7 +78,21 @@ describe("bestClientByProfitToTime — koszt czasu", () => {
     ];
     const rank = bestClientByProfitToTime(finance);
     expect(rank[0].client).toBe("Szybki");
-    expect(rank[0].profitPerHour).toBeGreaterThan(rank[1].profitPerHour);
+    expect(rank[0].profitPerHour).toBeGreaterThan(rank[1].profitPerHour ?? -Infinity);
+  });
+
+  it("klient BEZ zapisanych godzin nigdy nie udaje stawki godzinowej ani nie wyprzedza realnej stawki", () => {
+    // Bez godzin: 50 000 zł zysku łącznego — gdyby to podstawić jako "zł/h", wygrałby z każdym.
+    const finance = [
+      fin({ id: "a", client: "Bez godzin", amount: 55000, cost: 5000, hours: 0 }),
+      fin({ id: "b", client: "Ze stawką", amount: 5000, cost: 1000, hours: 10 }), // 400 zł/h — realna, skromna stawka
+    ];
+    const rank = bestClientByProfitToTime(finance);
+    const bezGodzin = rank.find((r) => r.client === "Bez godzin")!;
+    const zeStawka = rank.find((r) => r.client === "Ze stawką")!;
+    expect(bezGodzin.profitPerHour).toBeNull(); // NIE 50000 — to nieznana stawka, nie zysk podstawiony
+    // Klient z realną (choć niższą kwotowo) stawką godzinową wyprzedza tego bez danych o czasie.
+    expect(rank.indexOf(zeStawka)).toBeLessThan(rank.indexOf(bezGodzin));
   });
 });
 

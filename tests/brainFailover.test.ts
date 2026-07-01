@@ -35,6 +35,30 @@ describe("askJarvis — failover widoczny (via/fellBack)", () => {
     expect(r.text).toBe("OK-groq");
     expect(r.fellBack).toBe(true);
     expect(r.via).toBe("groq");
+    // Powód failoveru to REALNY, znany błąd głównego dostawcy (humanize) — nie zgadywanie "był zajęty".
+    expect(r.fellBackReason).toMatch(/limit|środk/i);
+  });
+
+  it("nieznany/nietypowy błąd głównego dostawcy → surowy komunikat do użytkownika, NIGDY zmyślona przyczyna", async () => {
+    // Celowa polityka silnika (shouldFallback): nieznany błąd NIE przełącza po cichu na zapas —
+    // najpewniej powtórzyłby się u każdego dostawcy (np. zepsute żądanie), a maskowanie go
+    // odebrałoby użytkownikowi realną informację. Uczciwość = surowy komunikat, bez "był zajęty".
+    store.setSettings({ keys: { ...noKeys, gemini: "G3", groq: "GR3" } });
+    setImpl("gemini", async () => { throw new Error("Coś dziwnego i nieoczekiwanego padło"); });
+    setImpl("groq", async () => reply("groq"));
+    await expect(askJarvis([{ role: "user", content: "hej" }])).rejects.toThrow(/dziwnego i nieoczekiwanego/);
+  });
+
+  it("znany błąd główego dostawcy (np. przeciążenie 503) → failover z REALNYM powodem, nie zgadywanym", async () => {
+    store.setSettings({ keys: { ...noKeys, gemini: "G4", groq: "GR4" } });
+    setImpl("gemini", async () => { throw new Error("503 service unavailable / overloaded"); });
+    setImpl("groq", async () => reply("groq"));
+    const r = await askJarvis([{ role: "user", content: "hej" }]);
+    expect(r.fellBack).toBe(true);
+    expect(r.via).toBe("groq");
+    // humanize() nie zna tego wzorca → przekazuje SUROWY komunikat błędu — nigdy nie zgaduje "był zajęty".
+    expect(r.fellBackReason).toMatch(/unavailable|overloaded/i);
+    expect(r.fellBackReason).not.toMatch(/zajęty/i);
   });
 
   it("główny działa → bez fallbacku; fellBack=false, via=główny", async () => {

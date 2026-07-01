@@ -4,7 +4,7 @@ import { askGemini } from "./gemini";
 import { askWebllm } from "./webllm";
 import { WEBLLM_MODELS, WEBLLM_DEFAULT_MODEL } from "../webllm";
 import { store } from "../store";
-import type { AskCtx, Msg, ProviderId, ProviderMeta } from "./types";
+import type { AskCtx, Msg, ProviderId, ProviderMeta, FallbackReasonKind } from "./types";
 
 // Tylko modele „rozumujące" rozumieją dyrektywę /no_think — dla gemma/llama to zbędny token.
 const REASONING_LOCAL = /qwen3|deepseek|qwq|-r1|reason|think|marco|phi-?4/i;
@@ -224,11 +224,50 @@ export const PROVIDER_LIST: ProviderMeta[] = Object.values(PROVIDERS);
  * Pure: komunikat „odpowiedział zapasowy mózg" (albo null, gdy failoveru nie było).
  * Jedno źródło tekstu współdzielone przez czat tekstowy i wszystkie tryby głosowe —
  * bez tego każdy ekran wymyślałby własne (i rozjeżdżające się) sformułowanie.
+ * NIGDY nie zgaduje przyczyny („był zajęty" itp.) — pokazuje realny, znany powód (fellBackReason,
+ * np. „limit/quota", „błąd sieci", „brak klucza") albo, gdy nieznany, zostaje przy neutralnym „nie odpowiedział".
  */
-export function fallbackNotice(reply: { via?: ProviderId; fellBack?: boolean }): string | null {
+/** Ludzka (ale zgodna z faktem) etykieta strukturalnej klasy powodu — gdy brak tekstu szczegółu. */
+const FALLBACK_KIND_LABEL: Record<FallbackReasonKind, string> = {
+  timeout: "przekroczony czas oczekiwania",
+  quota: "limit zapytań/środków",
+  auth: "problem z kluczem lub dostępem",
+  unavailable: "chwilowo niedostępny",
+  low_confidence: "lokalna odpowiedź była zbyt niepewna",
+  offline: "błąd sieci",
+  unknown: "",
+};
+
+type FallbackMeta = { via?: ProviderId; fellBack?: boolean; fellBackReason?: string; fellBackReasonKind?: FallbackReasonKind };
+
+export function fallbackNotice(reply: FallbackMeta): string | null {
   if (!reply.fellBack || !reply.via) return null;
   const label = PROVIDERS[reply.via]?.label || reply.via;
-  return `🔄 Główny mózg był zajęty — odpowiedział zapasowy: ${label}`;
+  const reason = reply.fellBackReason?.trim() || (reply.fellBackReasonKind ? FALLBACK_KIND_LABEL[reply.fellBackReasonKind] : "");
+  return reason
+    ? `🔄 Główny mózg nie odpowiedział (${reason}) — odpowiedział zapasowy: ${label}`
+    : `🔄 Główny mózg nie odpowiedział — odpowiedział zapasowy: ${label}`;
+}
+
+/**
+ * Pure: krótka linia DO WYPOWIEDZENIA (bez emoji/nawiasów technicznych) — tryby głosowe,
+ * w których użytkownik nie patrzy na ekran, też muszą zauważyć ważne przełączenie.
+ */
+export function fallbackVoiceLine(reply: FallbackMeta): string | null {
+  if (!reply.fellBack || !reply.via) return null;
+  const label = PROVIDERS[reply.via]?.label || reply.via;
+  return `Uwaga: główny mózg nie odpowiedział — mówi zapasowy, ${label}.`;
+}
+
+/**
+ * Pure: czy OGŁOSIĆ failover teraz? Rozsądny poziom natarczywości: ogłaszamy przy ZMIANIE stanu
+ * (wejście w failover albo zmiana zapasowego dostawcy), nie przy każdej kolejnej odpowiedzi tego
+ * samego zapasu — inaczej długa rozmowa na zapasie to seria identycznych przerywników.
+ * `prevVia` = zapasowy dostawca z poprzedniej odpowiedzi (null, gdy poprzednio bez failoveru).
+ */
+export function shouldAnnounceFallback(prevVia: ProviderId | null, reply: FallbackMeta): boolean {
+  if (!reply.fellBack || !reply.via) return false;
+  return prevVia !== reply.via;
 }
 
 /** Klucze per dostawca przechowywane w ustawieniach. */

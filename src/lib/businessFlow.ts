@@ -65,7 +65,10 @@ function wasEmailed(lead: Lead, sent: SentMail[]): boolean {
  */
 export function reachedStage(lead: Lead, projects: FinanceProject[], sent: SentMail[]): BusinessStage {
   const project = projectForLead(lead, projects);
-  if (project && (project.status === "oplacone" || (project.paidAmount || 0) > 0)) return "paid";
+  // TYLKO status "oplacone" (ustawiany przez applyPayment wyłącznie gdy paidAmount >= amount) liczy się
+  // jako domknięty proces. Sama obecność paidAmount>0 NIE wystarcza — zaliczka/częściowa wpłata
+  // zostawia status "oczekuje_platnosci" i proces nie może pokazywać się jako zakończony.
+  if (project && project.status === "oplacone") return "paid";
   if (project) return "finance_project_created";
   if (wasEmailed(lead, sent) || lead.status === "won") return "email_sent";
   if (lead.offer || lead.intel?.email) return "offer_ready";
@@ -81,21 +84,25 @@ export function computeJourney(lead: Lead, projects: FinanceProject[], sent: Sen
   // następny etap = kolejny po osiągniętym (albo „paid", gdy domknięte)
   const nextStage = done ? "paid" : STAGES[Math.min(idx + 1, STAGES.length - 1)];
 
-  const NEXT: Record<BusinessStage, { reason: string; screen: string }> = {
-    lead_found: { reason: "Masz leada — zacznij od teczki (audyt + analiza).", screen: "sales" },
-    dossier_ready: { reason: "Teczka gotowa — przygotuj ofertę.", screen: "sales" },
-    offer_ready: { reason: "Oferta gotowa — wyślij maila do klienta.", screen: "sales" },
-    email_sent: { reason: "Mail wysłany — gdy klient wygrany, utwórz projekt finansowy.", screen: "finance" },
-    finance_project_created: { reason: "Projekt utworzony — dopilnuj płatności.", screen: "finance" },
-    paid: { reason: "Opłacone — przygotuj treść/post o realizacji.", screen: "content" },
+  // Klucz = NASTĘPNY etap do osiągnięcia; treść mówi, JAK go osiągnąć (stan zastany → akcja).
+  // Uwaga na off-by-one: label/reason/screen NIE mogą opisywać etapu jako już osiągniętego —
+  // „Opłacone" wolno powiedzieć wyłącznie w gałęzi done (inwariant: żadnego „opłacono" bez pełnej
+  // wpłaty). Dlatego etykieta następnego kroku to AKCJA („Dopilnuj płatności"), nie nazwa stanu.
+  const NEXT: Record<BusinessStage, { label: string; reason: string; screen: string }> = {
+    lead_found: { label: "Zrób teczkę klienta", reason: "Masz leada — zacznij od teczki (audyt + analiza).", screen: "sales" }, // nieosiągalne jako następny krok (typ wymaga kompletu)
+    dossier_ready: { label: "Zrób teczkę klienta", reason: "Masz leada — zacznij od teczki (audyt + analiza).", screen: "sales" },
+    offer_ready: { label: "Przygotuj ofertę", reason: "Teczka gotowa — przygotuj ofertę.", screen: "sales" },
+    email_sent: { label: "Wyślij maila", reason: "Oferta gotowa — wyślij maila do klienta.", screen: "sales" },
+    finance_project_created: { label: "Utwórz projekt finansowy", reason: "Mail wysłany — gdy klient wygrany, utwórz projekt finansowy.", screen: "finance" },
+    paid: { label: "Dopilnuj płatności", reason: "Projekt utworzony — dopilnuj płatności (pełna wpłata domyka proces).", screen: "finance" },
   };
   const info = NEXT[nextStage];
   return {
     stage: nextStage,
     done,
-    label: STAGE_LABEL[nextStage],
+    label: done ? STAGE_LABEL.paid : info.label,
     reason: done ? "Proces domknięty — opłacone. Czas na treść o realizacji." : info.reason,
-    screen: info.screen,
+    screen: done ? "content" : info.screen,
     leadId: lead.id,
     reached,
   };

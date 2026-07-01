@@ -87,7 +87,8 @@ import { isComplex } from "./lib/modelRouter";
 import { dueCount } from "./lib/cards";
 import { statusFlags } from "./lib/status";
 import { buildContext } from "./lib/context";
-import { isUncensored, fallbackNotice } from "./lib/providers/registry";
+import { isUncensored, fallbackNotice, shouldAnnounceFallback } from "./lib/providers/registry";
+import type { ProviderId } from "./lib/providers/types";
 import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import { isPrivateModeCommand, matchUnfilteredCommand, parseReadAloud } from "./lib/modeCommands";
 import Guardian from "./components/Guardian";
@@ -371,6 +372,9 @@ export default function App() {
   pendingImageRef.current = pendingImage;
   const sendRef = useRef<(t: string) => void>(() => {});
   const retryTextRef = useRef<string>(""); // ostatnie polecenie — do przycisku „Ponów"
+  // Zapas z poprzedniej odpowiedzi — toast o failoverze pokazujemy przy ZMIANIE stanu (wejście
+  // w failover / zmiana zapasu), nie przy każdej wiadomości; sama wiadomość i tak niesie via/fellBack.
+  const lastFallbackViaRef = useRef<ProviderId | null>(null);
   const busyRef = useRef(false); // aktualny „busy" dla pętli proaktywnej (bez stale-closure)
   busyRef.current = busy;
   const micSupported = isSpeechSupported();
@@ -650,12 +654,15 @@ export default function App() {
       } finally {
         setCouncilStep(null);
       }
-      // Failover widoczny: gdy główny mózg był zajęty i odpowiedział zapasowy — powiedz to
-      // wprost (koniec strachu „API się skończyło"). Tylko gdy faktycznie był fallback.
+      // Failover widoczny: gdy główny mózg nie odpowiedział i odpowiedział zapasowy — powiedz to
+      // wprost (koniec strachu „API się skończyło"). Toast przy ZMIANIE stanu (nie przy każdej
+      // kolejnej odpowiedzi tego samego zapasu); metadane wiadomości (via/fellBack) zostają zawsze.
       // Użytkownik kliknął Stop (albo wysłał coś nowego) — porzuć spóźnioną odpowiedź.
       if (!isCurrent(genToken)) return;
+      const announceFallback = shouldAnnounceFallback(lastFallbackViaRef.current, reply);
+      lastFallbackViaRef.current = reply.fellBack && reply.via ? reply.via : null;
       const notice = fallbackNotice(reply);
-      if (notice) toast(notice);
+      if (notice && announceFallback) toast(notice);
       cancelStreamFlush(); // żaden spóźniony batch nie nadpisze finalnego tekstu
       if (streamId) {
         // Tekst już przyleciał strumieniowo — domknij tę samą wiadomość (narzędzia/cytaty/finalny tekst).

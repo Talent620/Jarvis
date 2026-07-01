@@ -137,6 +137,15 @@ describe("fallbackNotice — ujawnienie failover mózgu (parytet głos/tekst)", 
     expect(msg).toContain(PROVIDERS.gemini.label);
     expect(msg).toMatch(/zapasowy/);
   });
+  it("bez znanego powodu NIE zgaduje przyczyny (np. 'był zajęty') — zostaje neutralne 'nie odpowiedział'", () => {
+    const msg = fallbackNotice({ via: "gemini", fellBack: true });
+    expect(msg).toMatch(/nie odpowiedział/);
+    expect(msg).not.toMatch(/zajęty/i);
+  });
+  it("gdy powód jest znany (fellBackReason), pokazuje go wprost zamiast domysłu", () => {
+    const msg = fallbackNotice({ via: "gemini", fellBack: true, fellBackReason: "limit zapytań (429)" });
+    expect(msg).toContain("limit zapytań (429)");
+  });
   it("ten sam komunikat niezależnie od dostawcy (spójność między ekranami)", () => {
     const a = fallbackNotice({ via: "anthropic", fellBack: true });
     const b = fallbackNotice({ via: "groq", fellBack: true });

@@ -1626,9 +1626,18 @@ const tools: Tool[] = [
       if (!nm) return "Podaj nazwę projektu.";
       const st = (FINANCE_STATUSES.find((s) => s.id === status)?.id || "lead") as FinanceStatus;
       const now = Date.now();
-      const p: FinanceProject = { id: uid(), name: nm, client: client ? String(client).trim() : undefined, status: st, amount: Number(amount) || 0, cost: cost != null ? Number(cost) || undefined : undefined, createdAt: now, updatedAt: now };
+      const clientName = client ? String(client).trim() : "";
+      // Ta sama zasada co formularz w Finansach: dokładne dopasowanie nazwy klienta do istniejącego
+      // leada łączy projekt po ID (leadId), nie tylko po nazwie firmy — inaczej ta ścieżka (czat/głos)
+      // byłaby jedynym miejscem tworzenia projektu bez cyfrowego powiązania z klientem.
+      // Auto-łączenie TYLKO przy jednoznacznym dopasowaniu: dwie firmy o tej samej nazwie → NIE
+      // zgadujemy, której dotyczy projekt (rekord zostaje bez leadId, nazwa klienta zostaje).
+      const nameMatches = clientName ? (store.data.leads || []).filter((l) => l.company.trim().toLowerCase() === clientName.toLowerCase()) : [];
+      const matchedLead = nameMatches.length === 1 ? nameMatches[0] : undefined;
+      const p: FinanceProject = { id: uid(), name: nm, client: clientName || undefined, leadId: matchedLead?.id, status: st, amount: Number(amount) || 0, cost: cost != null ? Number(cost) || undefined : undefined, createdAt: now, updatedAt: now };
       store.setData((d) => { if (!d.financeProjects) d.financeProjects = []; d.financeProjects.unshift(p); });
-      return `✅ Dodano projekt: ${p.name}${p.client ? ` (klient ${p.client})` : ""} — ${Math.round(p.amount).toLocaleString("pl-PL")} zł, status ${st}.`;
+      const ambiguous = nameMatches.length > 1 ? ", w CRM jest kilku klientów o tej nazwie — nie zgaduję, którego dotyczy" : "";
+      return `✅ Dodano projekt: ${p.name}${p.client ? ` (klient ${p.client}${matchedLead ? ", połączony z leadem" : ambiguous})` : ""} — ${Math.round(p.amount).toLocaleString("pl-PL")} zł, status ${st}.`;
     },
   },
   {
@@ -1749,8 +1758,22 @@ const tools: Tool[] = [
     run: () => {
       const ranking = bestClientByProfitToTime(store.data.financeProjects || []);
       if (!ranking.length) return "Brak danych — dodaj projekty z godzinami pracy (Finanse), żeby policzyć zysk na godzinę.";
-      const lines = ranking.slice(0, 5).map((c, i) => `${i + 1}. ${c.client}: ${c.profit.toLocaleString("pl-PL")} zł zysku${c.hours > 0 ? ` (${c.profitPerHour.toLocaleString("pl-PL")} zł/h przy ${c.hours}h)` : " (brak zapisanych godzin — nieporównywalne czasowo)"}`);
-      return `📊 Ranking klientów wg zysku na godzinę:\n${lines.join("\n")}`;
+      // Klienci bez zapisanych godzin NIE konkurują liczbowo w rankingu zł/h (zysk całkowity to inna
+      // jednostka) — osobna sekcja z jasnym komunikatem, nigdy „najbardziej efektywny".
+      const withRate = ranking.filter((c) => c.profitPerHour != null);
+      const noHours = ranking.filter((c) => c.profitPerHour == null);
+      const parts: string[] = [];
+      if (withRate.length) {
+        const lines = withRate.slice(0, 5).map((c, i) => `${i + 1}. ${c.client}: ${(c.profitPerHour as number).toLocaleString("pl-PL")} zł/h (${c.profit.toLocaleString("pl-PL")} zł zysku przy ${c.hours}h)`);
+        parts.push(`📊 Ranking klientów wg zysku na godzinę:\n${lines.join("\n")}`);
+      } else {
+        parts.push("📊 Żaden klient nie ma zapisanych godzin — nie da się policzyć zysku na godzinę (uzupełnij godziny w Finansach).");
+      }
+      if (noHours.length) {
+        const lines = noHours.slice(0, 5).map((c) => `• ${c.client}: ${c.profit.toLocaleString("pl-PL")} zł zysku (brak danych o godzinach — nie da się porównać stawki)`);
+        parts.push(`Poza rankingiem (brak godzin):\n${lines.join("\n")}`);
+      }
+      return parts.join("\n\n");
     },
   },
 ];

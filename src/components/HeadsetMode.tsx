@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { speak, stopSpeaking, activeVoiceLabel } from "../lib/voice";
 import { askJarvis } from "../lib/brain";
-import { fallbackNotice } from "../lib/providers/registry";
+import { fallbackNotice, fallbackVoiceLine, shouldAnnounceFallback } from "../lib/providers/registry";
 import { toast } from "../lib/toast";
 import { LIVE_VOICE_PERSONA } from "../lib/voicePersona";
 import { speakableChunks } from "../lib/speechStream";
@@ -48,6 +48,9 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
   const closed = useRef(false);
   const busy = useRef(false);
   const speechCancel = useRef<(() => void) | null>(null); // przerwij strumieniową mowę (barge-in)
+  // Zapas z poprzedniej odpowiedzi — failover ogłaszamy przy ZMIANIE stanu (hands-free: raz,
+  // głosem), nie przerywnikiem w każdej kolejnej turze na tym samym zapasie.
+  const lastFallbackVia = useRef<Parameters<typeof shouldAnnounceFallback>[0]>(null);
 
   const buildEngine = () => {
     const s = store.settings;
@@ -121,9 +124,16 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
       history.current = [...history.current, { role: "assistant" as const, content: reply.text }].slice(-16);
       saveLiveThread(history.current); // ciągłość: zapamiętaj wątek na później
       // Failover widoczny tak jak w czacie tekstowym: głos nie może po cichu odpowiadać
-      // zapasowym mózgiem bez ujawnienia tego użytkownikowi.
-      const notice = fallbackNotice(reply);
-      if (notice) toast(notice);
+      // zapasowym mózgiem bez ujawnienia tego użytkownikowi. Ogłaszamy przy ZMIANIE stanu
+      // (toast + jedna mówiona linia — telefon może być w kieszeni), bez powtarzania co turę.
+      const announceFallback = shouldAnnounceFallback(lastFallbackVia.current, reply);
+      lastFallbackVia.current = reply.fellBack && reply.via ? reply.via : null;
+      if (announceFallback) {
+        const notice = fallbackNotice(reply);
+        if (notice) toast(notice);
+        const vl = fallbackVoiceLine(reply);
+        if (vl) say([vl]); // przez tę samą kolejkę mowy — nie nakłada się na odpowiedź
+      }
       if (!cancelled) {
         setCaption(reply.text);
         // Domknij resztę. Jeśli finał odpowiada strumieniowi (lub nic nie strumieniowano) — mów ogon

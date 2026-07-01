@@ -37,6 +37,15 @@ describe("businessFlow — etap procesu (lead → kasa)", () => {
     expect(j.screen).toBe("content"); // sugeruje treść o realizacji
   });
 
+  it("częściowa wpłata (zaliczka) NIGDY nie liczy się jako domknięty proces — tylko pełny status oplacone", () => {
+    // applyPayment (finance.ts) zostawia status "oczekuje_platnosci" dopóki paidAmount < amount.
+    // Sama obecność paidAmount>0 (np. 30% zaliczki) NIE może przeskoczyć etapu na "paid".
+    const j = computeJourney(lead({}), [proj({ client: "Firma X", status: "oczekuje_platnosci", amount: 10000, paidAmount: 3000 })], []);
+    expect(j.reached).toBe("finance_project_created");
+    expect(j.done).toBe(false);
+    expect(j.screen).not.toBe("content"); // nie sugeruje "treść o realizacji" przed pełną wpłatą
+  });
+
   it("etapy są kumulatywne i kompletne", () => {
     expect(STAGES[0]).toBe("lead_found");
     expect(STAGES[STAGES.length - 1]).toBe("paid");

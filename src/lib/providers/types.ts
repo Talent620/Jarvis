@@ -18,14 +18,30 @@ export interface TokenUsage {
   outputTokens: number;
 }
 
+/** Strukturalna klasa powodu failoveru — z REALNEGO błędu, nigdy zgadywana. „unknown" jest
+ *  uczciwym wyjściem, gdy błąd nie pasuje do żadnego wzorca (nie podstawiamy „był zajęty"). */
+export type FallbackReasonKind =
+  | "timeout"        // przekroczony czas oczekiwania
+  | "quota"          // limit zapytań / brak środków (429/402, rate limit, billing)
+  | "auth"           // klucz/dostęp (401/403, brak skonfigurowanego klucza)
+  | "unavailable"    // dostawca/model niedostępny (5xx, overloaded, brak endpointów, bezpiecznik)
+  | "low_confidence" // eskalacja Bramy Pewności: lokalny refleks był niepewny
+  | "offline"        // błąd sieci po naszej stronie (brak internetu/połączenia)
+  | "unknown";       // nie wiemy — i mówimy to wprost
+
 export interface JarvisReply {
   text: string;
   tools: string[];
   citations?: { title: string; url: string }[];
   /** Który dostawca faktycznie odpowiedział (do informacji o failoverze). */
   via?: ProviderId;
-  /** True, gdy odpowiedział dostawca zapasowy (główny był zajęty/wyczerpany). */
+  /** True, gdy odpowiedział dostawca zapasowy (główny nie odpowiedział/wyczerpany). */
   fellBack?: boolean;
+  /** Prawdziwy, znany powód niepowodzenia głównego dostawcy (humanize() realnego błędu, odkażony
+   *  z sekretów/stack trace) — gdy nieznany, zostaje pusty (NIGDY nie zgadujemy, np. „był zajęty"). */
+  fellBackReason?: string;
+  /** Strukturalna klasa powodu failoveru (patrz FallbackReasonKind). */
+  fellBackReasonKind?: FallbackReasonKind;
   /** Zużycie tokenów zgłoszone przez API (gdy dostępne). */
   usage?: TokenUsage;
   /** Powód zakończenia od dostawcy (gdy zwraca): np. „length"/„max_tokens"/„MAX_TOKENS" = ucięcie. */

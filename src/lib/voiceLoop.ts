@@ -6,7 +6,7 @@ import { detectDecision } from "./decisions";
 import { recordBossDecision } from "./bossMemory";
 import { confidencePct, confidencePreface, isRiskyCommand, isExplainRequest, explainTrace, predictNext, type BossTrace, type VerifyResult } from "./bossInsight";
 import { providerShortName } from "./providerNames";
-import { fallbackNotice } from "./providers/registry";
+import { fallbackNotice, fallbackVoiceLine, shouldAnnounceFallback } from "./providers/registry";
 import { toast } from "./toast";
 import { parseBossMeta } from "./boss";
 import type { Msg, ProviderId } from "./providers/types";
@@ -40,6 +40,9 @@ export class ConversationLoop {
 
   private lastTrace: BossTrace | null = null; // czarna skrzynka ostatniego działania
   private lastReply = ""; // ostatnia wypowiedź Szefa — do meta-rozkazu „powtórz"
+  // Zapasowy dostawca z poprzedniej odpowiedzi (null = poprzednio bez failoveru) — żeby ogłaszać
+  // przełączenie przy ZMIANIE stanu, a nie przerywać każdej kolejnej odpowiedzi tego samego zapasu.
+  private lastFallbackVia: ProviderId | null = null;
 
   static supported(): boolean {
     return isSpeechSupported();
@@ -172,8 +175,12 @@ export class ConversationLoop {
       this.history.push({ role: "assistant", content: reply.text });
       // Failover widoczny tak jak w czacie tekstowym: BossMode i LiveOverlay (silnik „loop")
       // dzielą tę pętlę, więc jedna poprawka ujawnia zapasowy mózg w obu miejscach.
+      // Ogłaszamy przy ZMIANIE stanu (wejście w failover / zmiana zapasu): toast + jedna krótka
+      // linia mówiona (użytkownik bez ekranu też musi to zauważyć) — bez przerywania każdej tury.
+      const announceFallback = shouldAnnounceFallback(this.lastFallbackVia, reply);
+      this.lastFallbackVia = reply.fellBack && reply.via ? reply.via : null;
       const notice = fallbackNotice(reply);
-      if (notice) toast(notice);
+      if (notice && announceFallback) toast(notice);
 
       // 🧭 Insight: skalibrowana pewność (mówiona, gdy istotna), predykcja kroku dalej, ślad do czarnej skrzynki.
       let spoken = reply.text;
@@ -189,6 +196,10 @@ export class ConversationLoop {
       }
 
       this.lastReply = spoken; // zapamiętaj do meta-rozkazu „powtórz"
+      // Jedno krótkie zdanie mówione przy WEJŚCIU w failover (nie przy każdej turze na zapasie)
+      // — celowo po zapisie lastReply, żeby „powtórz" nie powtarzał przerywnika.
+      const voiceLine = announceFallback ? fallbackVoiceLine(reply) : null;
+      if (voiceLine) spoken = `${voiceLine} ${spoken}`;
       this.onCaption(spoken);
       this.onState("speaking");
       if (stalled) stopSpeaking(); // ucisz „jeszcze pracuję”, zanim podasz wynik

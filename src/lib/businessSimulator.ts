@@ -23,6 +23,10 @@ export interface BusinessSnapshot {
 
 const clamp = (x: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, x));
 const r2 = (x: number): number => Math.round(x * 100) / 100;
+// NIEZMIENNIK symulatora: żadne wejście (NaN/±Infinity z zepsutego parsowania/wejścia głosem)
+// nie może zatruć wyniku — każda liczba wejściowa przechodzi przez `fin` z jawnym fallbackiem.
+// Uwaga: `x || fallback` NIE wystarcza (Infinity jest truthy, NaN ?? zostaje NaN).
+const fin = (x: number | undefined, fallback: number): number => (typeof x === "number" && Number.isFinite(x) ? x : fallback);
 
 /** Pure: zbuduj lokalny snapshot biznesu z danych (nie zmienia niczego). */
 export function buildSnapshot(src: { finance?: FinanceProject[]; leads?: Lead[]; availableHours?: number; now?: number }): BusinessSnapshot {
@@ -67,9 +71,9 @@ function saneRate(rate: number): { rate: number; warn?: string } {
 
 /** Symulacja: „co jeśli wyślę N ofert?" — oczekiwany przychód = kontaktowalni × konwersja × średni deal. */
 export function simulateSendOffers(input: { offers: number; conversionRate?: number; avgDealValue: number }): SimResult {
-  const offers = Math.max(0, Math.floor(input.offers || 0));
-  const { rate, warn } = saneRate(input.conversionRate ?? 0.05);
-  const avg = Math.max(0, input.avgDealValue || 0);
+  const offers = Math.max(0, Math.floor(fin(input.offers, 0)));
+  const { rate, warn } = saneRate(fin(input.conversionRate, 0.05));
+  const avg = Math.max(0, fin(input.avgDealValue, 0));
   const expectedWins = offers * rate;
   const value = r2(expectedWins * avg);
   // Niepewność: konwersja realnie waha się ~±50%.
@@ -92,14 +96,20 @@ export function simulateSendOffers(input: { offers: number; conversionRate?: num
 
 /** Symulacja: „co jeśli podniosę cenę o X%?" — uwzględnia spadek popytu (elastyczność). */
 export function simulatePriceChange(input: { baselineRevenue: number; deltaPct: number; demandElasticity?: number }): SimResult {
-  const base = Math.max(0, input.baselineRevenue || 0);
-  const delta = clamp(input.deltaPct || 0, -90, 200);
-  const elasticity = clamp(input.demandElasticity ?? 0.5, 0, 3);
+  const base = Math.max(0, fin(input.baselineRevenue, 0));
+  const delta = clamp(fin(input.deltaPct, 0), -90, 200);
+  const elasticity = clamp(fin(input.demandElasticity, 0.5), 0, 3);
   const demandFactor = Math.max(0, 1 - elasticity * (delta / 100));
   const value = r2(base * (1 + delta / 100) * demandFactor);
-  // Widełki: elastyczność nieznana → policz przy 0 (brak spadku) i 1.0 (silny spadek).
-  const high = r2(base * (1 + delta / 100) * 1);
-  const low = r2(base * (1 + delta / 100) * Math.max(0, 1 - 1.0 * (delta / 100)));
+  // Widełki: elastyczność nieznana → policz przy 0 (brak reakcji popytu) i 1.0 (pełna reakcja).
+  // Dla PODWYŻKI (delta>0) to poprawnie najlepszy/najgorszy scenariusz. Dla OBNIŻKI (delta<0) z wysoką
+  // elastycznością (>1) popyt może wzrosnąć MOCNIEJ niż zakłada wariant „1.0", więc `value` (liczony
+  // z realną, wyższą elastycznością) może wypaść POZA te dwa warianty. Dlatego bierzemy min/max z
+  // WSZYSTKICH TRZECH — widełki muszą zawsze obejmować główny wynik, nigdy odwrotnie.
+  const candidateNoReaction = r2(base * (1 + delta / 100) * 1);
+  const candidateFullReaction = r2(base * (1 + delta / 100) * Math.max(0, 1 - 1.0 * (delta / 100)));
+  const low = Math.min(candidateNoReaction, candidateFullReaction, value);
+  const high = Math.max(candidateNoReaction, candidateFullReaction, value);
   const assumptions = [
     `baseline przychodu ${base} zł`,
     `zmiana ceny ${delta > 0 ? "+" : ""}${delta}%`,
@@ -108,10 +118,10 @@ export function simulatePriceChange(input: { baselineRevenue: number; deltaPct: 
   if ((input.deltaPct || 0) !== delta) assumptions.push("zmiana ceny przycięta do realnego zakresu (-90%..+200%)");
   return {
     metric: "projected_revenue",
-    value, low: Math.min(low, high), high: Math.max(low, high),
+    value, low, high,
     assumptions,
-    uncertainty: "Reakcja popytu jest niepewna — widełki liczą brak spadku vs silny spadek sprzedaży.",
-    explanation: `Zmiana ceny o ${delta}% daje szacunkowo ${value} zł przychodu (widełki ${Math.min(low, high)}–${Math.max(low, high)} zł).`,
+    uncertainty: "Reakcja popytu jest niepewna — widełki liczą brak reakcji vs silną reakcję sprzedaży (zawsze obejmują główny wynik).",
+    explanation: `Zmiana ceny o ${delta}% daje szacunkowo ${value} zł przychodu (widełki ${low}–${high} zł).`,
   };
 }
 
@@ -119,7 +129,9 @@ export interface ClientEfficiency {
   client: string;
   profit: number;
   hours: number;
-  profitPerHour: number;
+  /** null, gdy brak zapisanych godzin — NIE da się policzyć stawki godzinowej. Nigdy nie podstawiaj
+   *  tu samego zysku: zysk całkowity i zysk/h to różne jednostki, mieszanie ich w rankingu myli. */
+  profitPerHour: number | null;
 }
 
 /** Pure: który klient daje najlepszy ZYSK do CZASU? (zysk = przychód - koszt, na godzinę). */
@@ -136,11 +148,18 @@ export function bestClientByProfitToTime(finance: FinanceProject[]): ClientEffic
   const out: ClientEfficiency[] = [];
   for (const [client, v] of byClient) {
     const hours = v.hours;
-    const profitPerHour = hours > 0 ? r2(v.profit / hours) : v.profit; // brak godzin → sam zysk (nieporównywalny czasowo)
+    const profitPerHour = hours > 0 ? r2(v.profit / hours) : null; // brak godzin → NIEZNANA stawka (nie zgaduj)
     out.push({ client, profit: r2(v.profit), hours, profitPerHour });
   }
-  // Najlepszy stosunek zysk/czas na górze (klienci z godzinami przed tymi bez godzin przy remisie zysku).
-  return out.sort((a, b) => b.profitPerHour - a.profitPerHour || b.profit - a.profit);
+  // Klienci z REALNĄ stawką godzinową idą pierwsi (malejąco po zysk/h). Klienci bez godzin (stawka
+  // nieznana) NIGDY nie mieszają się z realnymi stawkami w rankingu — lądują na końcu, posortowani
+  // między sobą po samym zysku (jedyna uczciwie porównywalna liczba, gdy nie znamy czasu pracy).
+  return out.sort((a, b) => {
+    if (a.profitPerHour == null && b.profitPerHour == null) return b.profit - a.profit;
+    if (a.profitPerHour == null) return 1;
+    if (b.profitPerHour == null) return -1;
+    return b.profitPerHour - a.profitPerHour || b.profit - a.profit;
+  });
 }
 
 /** Pure: co NAJBARDZIEJ blokuje przychód? Deterministyczny wybór z snapshotu (z uzasadnieniem). */

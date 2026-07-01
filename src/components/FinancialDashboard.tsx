@@ -30,14 +30,21 @@ export default function FinancialDashboard({ onClose }: { onClose: () => void })
     if (!form.name.trim()) { toast("Podaj nazwę projektu."); return; }
     const now = Date.now();
     const clientName = form.client.trim();
-    const matchedLead = clientName ? (data.leads || []).find((l) => l.company.trim().toLowerCase() === clientName.toLowerCase()) : undefined;
+    // Auto-łączenie TYLKO przy jednoznacznym dopasowaniu — dwie firmy o tej samej nazwie w CRM
+    // to sygnał, żeby NIE zgadywać (projekt zostaje z nazwą, bez leadId; można powiązać ręcznie).
+    const nameMatches = clientName ? (data.leads || []).filter((l) => l.company.trim().toLowerCase() === clientName.toLowerCase()) : [];
+    const matchedLead = nameMatches.length === 1 ? nameMatches[0] : undefined;
     const p: FinanceProject = {
       id: uid(), name: form.name.trim(), client: clientName || undefined, leadId: matchedLead?.id, status: form.status,
       amount: Number(form.amount) || 0, cost: Number(form.cost) || undefined, createdAt: now, updatedAt: now,
     };
     store.setData((d) => { if (!d.financeProjects) d.financeProjects = []; d.financeProjects.unshift(p); });
     setForm({ name: "", client: "", amount: "", cost: "", status: "lead" });
-    toast(matchedLead ? `💰 Dodano projekt: ${p.name} (połączony z leadem ${matchedLead.company})` : `💰 Dodano projekt: ${p.name}`);
+    toast(matchedLead
+      ? `💰 Dodano projekt: ${p.name} (połączony z leadem ${matchedLead.company})`
+      : nameMatches.length > 1
+        ? `💰 Dodano projekt: ${p.name}. W CRM jest ${nameMatches.length} klientów „${clientName}" — nie zgaduję, którego dotyczy (bez auto-połączenia).`
+        : `💰 Dodano projekt: ${p.name}`);
   };
   const setStatus = (id: string, status: FinanceStatus) => {
     // „Opłacone" NIE ustawia po cichu pełnej wpłaty — pytamy o realnie wpłaconą kwotę (domyślnie reszta do zapłaty).

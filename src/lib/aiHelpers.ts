@@ -1,4 +1,5 @@
-// Czyste funkcje pomocnicze mózgu (bez zależności) — łatwe do testowania.
+// Czyste funkcje pomocnicze mózgu (bez zależności runtime) — łatwe do testowania.
+import type { FallbackReasonKind } from "./providers/types";
 
 // Błędy, przy których warto spróbować kolejnego dostawcy (brak kredytów, limit,
 // autoryzacja, a także martwy/nieprawidłowy model — np. zniknięte darmowe endpointy).
@@ -18,6 +19,37 @@ export function isKeyError(msg: string): boolean {
   return /rate.?limit|too many requests|quota|exceeded|insufficient|credit|billing|payment|too low|unauthorized|invalid.?api|forbidden|invalid authentication|oauth 2 access token|api key not valid|\b(401|402|403|429)\b/i.test(
     msg,
   );
+}
+
+/**
+ * Sklasyfikuj REALNY błąd dostawcy do strukturalnej klasy powodu failoveru.
+ * Kolejność ma znaczenie: timeout przed offline (timeout to podzbiór wzorców sieciowych),
+ * auth przed quota (403 bywa w obu kontekstach — tu liczy się dostęp). „unknown" to uczciwa
+ * odpowiedź, gdy nic nie pasuje — NIGDY nie zgadujemy ładniejszej przyczyny.
+ */
+export function classifyFailoverReason(msg: string): FallbackReasonKind {
+  const m = msg || "";
+  if (/timeout|timed?.?out|abort/i.test(m)) return "timeout";
+  if (/\b(401|403)\b|unauthorized|forbidden|invalid.?api|invalid authentication|oauth 2 access token|api key not valid|brak.{0,20}klucza/i.test(m)) return "auth";
+  if (/rate.?limit|too many requests|quota|exceeded|insufficient|credit|billing|payment|too low|\b(402|429)\b/i.test(m)) return "quota";
+  if (isNetworkError(m)) return "offline";
+  if (/overloaded|unavailable|no endpoints|no allowed providers|not a valid model|invalid model|model.{0,3}not.{0,3}found|does not exist|unsupported model|\b(404|500|502|503)\b|bezpiecznik|pomijam/i.test(m)) return "unavailable";
+  return "unknown";
+}
+
+/**
+ * Odkaź powód failoveru zanim trafi do UI/głosu: bez sekretów (klucze API, tokeny), bez
+ * wielolinijkowych stack trace'ów, bez ścian tekstu. Zostawia fakt, ucina resztę.
+ */
+export function sanitizeFailReason(reason: string): string {
+  let r = (reason || "").split(/\r?\n/)[0]; // pierwsza linia — stack trace nigdy nie wychodzi do UI
+  // Tokeny/klucze: długie ciągi po typowych prefiksach lub parametrach uwierzytelniania.
+  r = r.replace(/(sk-|AIza|gsk_|api[_-]?key\s*[=:]\s*|token\s*[=:]\s*|bearer\s+)[A-Za-z0-9_\-.]{6,}/gi, "$1***");
+  // Gołe długie sekrety (base64/hex 24+ znaków) — zbyt podobne do kluczy, by je pokazywać.
+  r = r.replace(/\b[A-Za-z0-9_-]{24,}\b/g, "***");
+  r = r.replace(/\s+/g, " ").trim();
+  if (r.length > 140) r = r.slice(0, 139).trimEnd() + "…";
+  return r;
 }
 
 // Przetłumacz techniczny błąd na zrozumiały komunikat.

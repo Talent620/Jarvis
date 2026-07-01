@@ -12,7 +12,7 @@ import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
 import { retrieveKnowledge } from "./knowledge";
 import { buildProfileBlock } from "./profile";
 import { isDesktop } from "./desktop";
-import { shouldFallback, isNetworkError, isKeyError, humanize, PERSONAL_CUES } from "./aiHelpers";
+import { shouldFallback, isNetworkError, isKeyError, humanize, classifyFailoverReason, sanitizeFailReason, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
 import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
 import { classifyCognitionLocal } from "./cognitiveController";
@@ -36,7 +36,7 @@ import { conversationStyleDirectives } from "./conversationStyle";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
 import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
-import type { JarvisReply, Msg, ProviderId } from "./providers/types";
+import type { JarvisReply, Msg, ProviderId, FallbackReasonKind } from "./providers/types";
 
 // Retry przy chwilowym błędzie sieci — z WYKŁADNICZYM backoffem + jitterem (do 2 ponowień).
 // Ponawiamy TYLKO błędy sieciowe (nie błędy klucza/limitu — te idą do rotacji/fallbacku wyżej).
@@ -791,15 +791,26 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // Brama Pewności (Zadanie 8): jeśli refleks lokalny był niepewny i eskalujemy, trzymamy
   // jego odpowiedź jako deskę ratunku — gdyby Kora też padła, nie gubimy lokalnej odpowiedzi.
   let escalateFallback: JarvisReply | null = null;
+  // Prawdziwy powód, dla którego GŁÓWNY mózg nie odpowiedział — do uczciwego komunikatu failoveru
+  // (App/głos NIE zgadują "był zajęty"; albo znamy realny powód, albo mówimy wprost, że nie wiemy).
+  // Obok tekstu trzymamy strukturalną klasę (timeout/quota/auth/…) — do logiki, nie zgadywania.
+  let primaryFailReason: string | null = null;
+  let primaryFailKind: FallbackReasonKind | null = null;
   providerLoop:
   for (let i = 0; i < order.length; i++) {
     const { provider, model } = order[i];
     // Bezpiecznik: dostawcę „otwartego" (świeża seria awarii) pomijamy szybko — ale NIGDY nie
     // zostawiamy pustego łańcucha (ostatniego z listy próbujemy zawsze, jako deska ratunku).
-    if (!providerBreaker.canPass(provider) && i < order.length - 1) continue;
+    if (!providerBreaker.canPass(provider) && i < order.length - 1) {
+      if (provider === primary && !primaryFailReason) { primaryFailReason = "ostatnio kilka razy nie odpowiedział pod rząd — chwilowo pomijam"; primaryFailKind = "unavailable"; }
+      continue;
+    }
     // Ollama autoryzuje się adresem serwera, nie kluczem; pozostali — listą kluczy.
     const keys = isKeyless(provider) ? ["local"] : orderedKeys(provider);
-    if (!keys.length) continue;
+    if (!keys.length) {
+      if (provider === primary && !primaryFailReason) { primaryFailReason = "brak skonfigurowanego klucza/dostępu"; primaryFailKind = "auth"; }
+      continue;
+    }
 
     let providerErr: unknown;
     for (let j = 0; j < keys.length; j++) {
@@ -843,7 +854,10 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
           const gate = store.settings.adaptiveRouter ? adaptiveConfidenceThreshold(k, base) : { threshold: base };
           if (isLowConfidence(conf, gate.threshold)) {
             logRouteDecision({ provider, model, kind: k, reason: `${gate.reason ? gate.reason + "; " : ""}eskalacja: niska pewność refleksu (${conf.toFixed(2)})`, fellBack: provider !== primary, tier: "reflex", localConfidence: conf, escalated: true, latencyMs: Date.now() - t0 });
-            escalateFallback = { ...reply, via: provider, fellBack: provider !== primary };
+            escalateFallback = {
+              ...reply, via: provider, fellBack: provider !== primary,
+              ...(provider !== primary ? { fellBackReason: "lokalny model miał niską pewność odpowiedzi, a mocniejszy dostawca w kolejce nie odpowiedział", fellBackReasonKind: "low_confidence" as const } : {}),
+            };
             continue providerLoop; // spróbuj kolejnego (silniejszego) dostawcy
           }
         }
@@ -924,8 +938,14 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
             memNamespace,
           ).catch(() => {});
         }
-        // Oznacz, KTO odpowiedział i czy to był zapas — App pokaże delikatny komunikat.
-        const meta = { via: provider, fellBack: provider !== primary };
+        // Oznacz, KTO odpowiedział i czy to był zapas — App pokaże delikatny komunikat. Powód (gdy
+        // znany — nie zgadujemy) pochodzi z REALNEGO błędu głównego dostawcy (humanize(msg)), nie
+        // z domyślnego założenia „był zajęty".
+        const meta = {
+          via: provider, fellBack: provider !== primary,
+          ...(provider !== primary && primaryFailReason ? { fellBackReason: primaryFailReason } : {}),
+          ...(provider !== primary && primaryFailKind ? { fellBackReasonKind: primaryFailKind } : {}),
+        };
         // Router (Faza 4): zapisz faktyczną decyzję (model, klasyfikacja, czy failover) — zasila panel kosztów.
         const cls = classifyTask(lastUser?.content || "", !!lastUser?.image);
         logRouteDecision({ provider, model, kind: cls.kind, reason: cls.reason, fellBack: meta.fellBack, latencyMs: Date.now() - t0 });
@@ -960,6 +980,11 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
     providerBreaker.onFailure(provider); // dostawca padł — przybliż otwarcie bezpiecznika
     logError("provider:" + provider, providerErr, model);
     const msg = providerErr instanceof Error ? providerErr.message : String(providerErr);
+    if (provider === primary && !primaryFailReason) {
+      // Odkażenie PRZED pokazaniem: bez sekretów/kluczy, bez stack trace, bez ścian tekstu.
+      primaryFailReason = sanitizeFailReason(humanize(msg));
+      primaryFailKind = classifyFailoverReason(msg); // klasa z SUROWEGO błędu (pełne wzorce)
+    }
     if (i < order.length - 1 && (shouldFallback(msg) || isNetworkError(msg))) continue; // następny dostawca
     // Eskalacja Bramy Pewności zawiodła (Kora padła) — oddaj lokalną odpowiedź zamiast błędu.
     if (escalateFallback) return escalateFallback;
