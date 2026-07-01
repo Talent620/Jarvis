@@ -3,7 +3,7 @@
 // dayInsights (proactiveOoda + businessSimulator), learnFromUserMessage (learningLoop),
 // correctionRulesBlock i statusView (CognitiveStatus). To dowód produkcyjnego wpięcia.
 import { describe, it, expect } from "vitest";
-import { dayInsights, learnFromUserMessage, correctionRulesBlock, statusView } from "../src/lib/cognitiveRuntime";
+import { dayInsights, learnFromUserMessage, correctionRulesBlock, statusView, recordTrace, learnedProcedure } from "../src/lib/cognitiveRuntime";
 import { acceptCorrection, type Correction } from "../src/lib/learningLoop";
 import type { Lead } from "../src/types";
 
@@ -43,6 +43,20 @@ describe("cognitiveRuntime — learningLoop (korekta z wiadomości)", () => {
     expect(correctionRulesBlock(one.rules)).toBe(""); // candidate, jeszcze nieaktywna
     const active: Correction[] = acceptCorrection(one.rules, "c3", NOW);
     expect(correctionRulesBlock(active)).toMatch(/podpisuj/);
+  });
+});
+
+describe("cognitiveRuntime — workflowLearning (procedury z przebiegów)", () => {
+  it("powtórzony ciąg narzędzi (3×) → wykryta procedura; pojedyncze narzędzie ignorowane", () => {
+    let traces = recordTrace([], ["a"], { id: "t0", now: NOW }); // pojedyncze → pomijane
+    expect(traces.length).toBe(0);
+    traces = recordTrace(traces, ["find_leads", "draft_offer"], { id: "t1", now: NOW });
+    traces = recordTrace(traces, ["find_leads", "draft_offer"], { id: "t2", now: NOW + 1 });
+    expect(learnedProcedure(traces)).toBeNull(); // 2× to za mało (próg 3)
+    traces = recordTrace(traces, ["find_leads", "draft_offer"], { id: "t3", now: NOW + 2 });
+    const proc = learnedProcedure(traces);
+    expect(proc?.tools).toEqual(["find_leads", "draft_offer"]);
+    expect(proc?.count).toBe(3);
   });
 });
 

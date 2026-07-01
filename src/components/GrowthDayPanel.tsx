@@ -15,11 +15,13 @@ import {
 } from "../lib/growthOrchestrator";
 import { emptyStateSuggestion } from "../lib/simpleFlow";
 import { startAndRunGoal } from "../lib/goalRuntime";
-import { dayInsights, statusView } from "../lib/cognitiveRuntime";
+import { dayInsights, statusView, recordTrace, learnedProcedure } from "../lib/cognitiveRuntime";
+import type { ExecutionTrace } from "../lib/workflowLearning";
 import CognitiveStatus from "./CognitiveStatus";
 import type { CognitiveStatusView } from "../lib/cognitiveStatus";
 
 const WEIGHTS_KEY = "jarvis.growthDay.weights.v1";
+const TRACES_KEY = "jarvis.workflow.traces.v1"; // ślady wykonań (workflowLearning)
 const riskLabel: Record<GrowthAction["risk"], string> = { low: "niskie", medium: "średnie", high: "wysokie" };
 
 export default function GrowthDayPanel({ onClose }: { onClose: () => void }) {
@@ -31,6 +33,7 @@ export default function GrowthDayPanel({ onClose }: { onClose: () => void }) {
   const [status, setStatus] = useState("");
   const [results, setResults] = useState<Record<string, { icon: string; text: string }>>({});
   const [cogView, setCogView] = useState<CognitiveStatusView | null>(null); // co JARVIS robi i dlaczego
+  const [procNote, setProcNote] = useState(""); // wykryta powtarzalna procedura (workflowLearning)
 
   const actions = useMemo(
     () => planDailyGrowth({ leads: data.leads, finance: data.financeProjects, now: Date.now(), weights }).filter((a) => !dismissed.has(a.id)),
@@ -58,6 +61,12 @@ export default function GrowthDayPanel({ onClose }: { onClose: () => void }) {
       setResults((r) => ({ ...r, [a.id]: { icon, text: v.summary } }));
       // Uczciwy widok stanu poznawczego: cel, krok, zgody, ostatni POTWIERDZONY wynik (bez sekretów).
       setCogView(statusView({ goal: record, run, confidence: run.verdict.canClaimSuccess ? 0.9 : 0.5 }));
+      // workflowLearning: zapisz ślad (kolejność narzędzi) i wykryj powtarzalną procedurę.
+      const tools = run.steps.map((s) => s.tool || "").filter(Boolean);
+      const traces = recordTrace(loadJson<ExecutionTrace[]>(TRACES_KEY, []), tools, { id: `${a.id}:${now}`, now });
+      saveJson(TRACES_KEY, traces);
+      const proc = learnedProcedure(traces);
+      if (proc) setProcNote(`🔁 Wykryto powtarzalną procedurę: ${proc.tools.join(" → ")} (${proc.count}×) — mogę ją zapamiętać jako gotowy przepis.`);
       persistWeights(recordDecision(weights, a.kind, true)); // wykonane = akceptacja
     } catch (e) {
       setResults((r) => ({ ...r, [a.id]: { icon: "❌", text: e instanceof Error ? e.message : "błąd wykonania" } }));
@@ -104,6 +113,9 @@ export default function GrowthDayPanel({ onClose }: { onClose: () => void }) {
 
           {/* 🧠 Co JARVIS robi i dlaczego — po uruchomieniu działania. */}
           {cogView && <CognitiveStatus view={cogView} />}
+
+          {/* 🔁 Powtarzalna procedura wykryta z realnych przebiegów (workflowLearning). */}
+          {procNote && <p style={{ fontSize: 12, color: "var(--cyan, #6ce7ff)" }}>{procNote}</p>}
 
           {actions.length === 0 && (
             <div className="row" style={{ borderLeft: "3px solid var(--cyan)", paddingLeft: 10, flexDirection: "column", alignItems: "flex-start", gap: 6 }}>

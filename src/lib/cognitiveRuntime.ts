@@ -9,6 +9,7 @@ import { decideSuggestion, type ProactiveSuggestion, type OodaCategory } from ".
 import { buildSnapshot, biggestRevenueBlocker } from "./businessSimulator";
 import { buildCognitiveStatus, type CognitiveStatusView, type CognitiveStatusInput } from "./cognitiveStatus";
 import { detectCorrection, upsertCorrection, activeRules, type Correction } from "./learningLoop";
+import { detectRepeatedWorkflow, type ExecutionTrace, type WorkflowProposal } from "./workflowLearning";
 import type { OutcomeGoal } from "./goalGraph";
 
 export interface DayInsights {
@@ -55,6 +56,22 @@ export function learnFromUserMessage(
   if (!det) return { rules, learned: false };
   const res = upsertCorrection(rules, det, opts);
   return { rules: res.list, learned: true };
+}
+
+// — workflowLearning: nauka powtarzalnych procedur z realnych przebiegów —
+const MAX_TRACES = 60;
+
+/** Pure: dopisz ślad wykonania (kolejność narzędzi, BEZ wartości argumentów). Trzymamy ostatnie N. */
+export function recordTrace(traces: ExecutionTrace[], tools: string[], opts: { id: string; now: number; argKeys?: string[] }): ExecutionTrace[] {
+  const clean = (tools || []).filter(Boolean);
+  if (clean.length < 2) return traces; // pojedyncze narzędzie to nie procedura
+  const next = [...(traces || []), { id: opts.id, tools: clean, at: opts.now, argKeys: opts.argKeys }];
+  return next.slice(-MAX_TRACES);
+}
+
+/** Pure: wykryj powtarzalną procedurę z zebranych śladów (albo null). */
+export function learnedProcedure(traces: ExecutionTrace[]): WorkflowProposal | null {
+  return detectRepeatedWorkflow(traces || []);
 }
 
 /** Pure: aktywne reguły korekt jako zwięzły blok do promptu (puste → ""). */
