@@ -1,6 +1,7 @@
 import { fetchTimeout } from "./http";
 import { store, uid } from "./store";
 import { tavilySearch, hasWebSearch, type SearchHit } from "./research";
+import { discoverLeadCandidates, type LeadCandidate } from "./leadCandidates";
 import type { Lead } from "../types";
 
 // === Silnik wyszukiwania leadów (darmowy, bez kluczy) ===
@@ -541,5 +542,31 @@ export async function findLeads(opts: {
   if (city && city !== s.prospectLocation) store.setSettings({ prospectLocation: city });
   const addedLeads = saveLeads(raws, niche, city);
   return { added: addedLeads.length, found: raws.length, city, sample: raws.slice(0, 5), addedLeads };
+}
+
+/**
+ * Odkryj KANDYDATÓW leadów BEZ zapisu do CRM (samo wyszukanie nie zaśmieca bazy). Zwraca kandydatów
+ * z oceną pewności/dowodami/ostrzeżeniami; do CRM trafiają dopiero zaznaczeni (importCandidates).
+ * findLeads() pozostaje wstecznie zgodny (auto-zapis dla starych narzędzi). Sieć-zależne.
+ */
+export async function discoverCandidates(opts: {
+  niche?: string; location?: string; count?: number; useWeb?: boolean; onlyNoWebsite?: boolean; onlyWithPhone?: boolean;
+}): Promise<{ candidates: LeadCandidate[]; city: string; error?: string }> {
+  const s = store.settings;
+  const count = resolveLeadCount(opts.count, s.prospectCount);
+  const filters: LeadFilters = { onlyNoWebsite: opts.onlyNoWebsite, onlyWithPhone: opts.onlyWithPhone };
+  const niche = opts.niche?.trim() || s.prospectNiche?.trim() || undefined;
+  let city = opts.location?.trim() || s.prospectLocation?.trim() || "";
+  if (!city) city = (await browserCity()) || "";
+  if (!city) return { candidates: [], city: "", error: "Nie wiem, gdzie szukać. Podaj miasto albo zezwól na lokalizację." };
+
+  const osm = await searchOSM(niche, city, count, filters);
+  let raws = osm;
+  if (opts.useWeb) {
+    const web = (await searchWebLeads(niche, city, count)).filter((l) => passesFilters(l, filters));
+    raws = mergeRawLeads(osm, web, count);
+  }
+  const candidates = discoverLeadCandidates(raws, { source: "osm", now: Date.now() });
+  return { candidates, city };
 }
 

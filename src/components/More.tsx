@@ -21,6 +21,7 @@ export default function More({
   onMind,
   onGoal,
   onGrowthDay,
+  onCandidates,
   onCommand,
   onStudio,
   onWeb,
@@ -63,6 +64,7 @@ export default function More({
   onMind: () => void;
   onGoal: () => void;
   onGrowthDay: () => void;
+  onCandidates: () => void;
   onCommand: () => void;
   onStudio: () => void;
   onWeb: () => void;
@@ -103,6 +105,7 @@ export default function More({
     { id: "mind", icon: "🧠", name: "Umysł", desc: "Odprawa, Twój świat, wzorce, samoocena", fn: onMind },
     { id: "goal", icon: "🎯", name: "Zleć cel", desc: "Rozłóż na kroki i zrób za mnie (do-for-me)", fn: onGoal },
     { id: "growthDay", icon: "📅", name: "Plan dnia", desc: "Co dziś najbardziej ruszy biznes (3 działania)", fn: onGrowthDay },
+    { id: "candidates", icon: "🧲", name: "Kandydaci leadów", desc: "Szukaj firm — importuj tylko wybrane (bez zaśmiecania CRM)", fn: onCandidates },
     { id: "notifications", icon: "🔔", name: "Powiadomienia", desc: "Co wymaga uwagi", fn: onNotifications },
     { id: "status", icon: "🟢", name: "Stan systemu", desc: "Co działa (zielone/czerwone)", fn: onStatus },
     { id: "profile", icon: "👤", name: "Mój profil", desc: "Kim jestem (pamięć)", fn: onProfile },
@@ -140,7 +143,7 @@ export default function More({
 
   // Funkcje pogrupowane w czytelne sekcje — łatwiej znaleźć, mniej przewijania.
   const GROUPS: { title: string; ids: string[] }[] = [
-    { title: "📈 Sprzedaż i biznes", ids: ["growthDay", "sales", "finance", "mail", "sent", "content", "ads", "brand", "web", "money"] },
+    { title: "📈 Sprzedaż i biznes", ids: ["growthDay", "candidates", "sales", "finance", "mail", "sent", "content", "ads", "brand", "web", "money"] },
     { title: "✅ Praca i organizacja", ids: ["tasks", "projects", "journal", "cards"] },
     { title: "🛒 Zakupy i okazje", ids: ["bargain", "wheretobuy", "shoppinglist"] },
     { title: "🎙 Narzędzia AI", ids: ["translator", "transcribe", "hud", "screen", "studio"] },

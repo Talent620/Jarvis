@@ -12,6 +12,7 @@ const Projects = lazy(() => import("./components/Projects"));
 const Journal = lazy(() => import("./components/Journal"));
 const SalesDashboard = lazy(() => import("./components/SalesDashboard"));
 const GrowthDayPanel = lazy(() => import("./components/GrowthDayPanel"));
+const LeadCandidatesPanel = lazy(() => import("./components/LeadCandidatesPanel"));
 const MoneyHub = lazy(() => import("./components/MoneyHub"));
 const FinancialDashboard = lazy(() => import("./components/FinancialDashboard"));
 const Help = lazy(() => import("./components/Help"));
@@ -202,6 +203,7 @@ export default function App() {
   const [showMind, setShowMind] = useState(false);
   const [showGoal, setShowGoal] = useState(false);
   const [showGrowthDay, setShowGrowthDay] = useState(false);
+  const [showCandidates, setShowCandidates] = useState(false);
   const [showCmd, setShowCmd] = useState(false);
   const [showRecall, setShowRecall] = useState(false);
   const [recallSeed, setRecallSeed] = useState("");
@@ -262,7 +264,7 @@ export default function App() {
       mind: setShowMind, journal: setShowJournal, projects: setShowProjects,
       profile: setShowProfile, settings: setShowSettings, status: setShowStatus,
       gadgets: setShowGadgets, hud: setShowHud,
-      goal: setShowGoal, recall: setShowRecall, guardian: setShowGuardian, growthDay: setShowGrowthDay,
+      goal: setShowGoal, recall: setShowRecall, guardian: setShowGuardian, growthDay: setShowGrowthDay, candidates: setShowCandidates,
       data: setShowPanels, history: setShowHistory, admin: setShowAdmin,
     };
     return onScreenRequest((id) => { const fn = map[id]; if (fn) { setShowMore(false); fn(true); } });
@@ -283,6 +285,7 @@ export default function App() {
       open("brand", "Dusza Marki", setShowBrand, "🎨", "marka brand ton kolory fonty styl spojnosc"),
       open("goal", "🎯 Zleć cel", setShowGoal, "🎯", "do-for-me projekt plan wieloetapowe cel"),
       open("growthDay", "📅 Plan dnia", setShowGrowthDay, "📅", "plan dnia rekomendacje roi wzrost co dzis zrobic orchestrator"),
+      open("candidates", "🧲 Kandydaci leadów", setShowCandidates, "🧲", "kandydaci leady szukaj firmy osm import bez zapisu crm"),
       open("studio", "Studio Obrazów", setShowStudio, "🎨", "zdjecia edycja generuj obraz foto"),
       open("guardian", "Diagnoza i naprawa (dawny Strażnik)", setShowGuardian, "🩺", "napraw przyspiesz pomoc diagnoza strażnik"),
       open("mind", "Umysł JARVISA", setShowMind, "🧠", "odprawa pamiec swiat wzorce samoocena"),
@@ -1496,6 +1499,7 @@ export default function App() {
           onMind={() => setShowMind(true)}
           onGoal={() => setShowGoal(true)}
           onGrowthDay={() => setShowGrowthDay(true)}
+          onCandidates={() => setShowCandidates(true)}
           onCommand={() => setShowCmd(true)}
           onWeb={() => { setWebContext(null); setShowWeb(true); }}
           onScreen={isDesktop() ? lookAtScreen : undefined}
@@ -1612,6 +1616,14 @@ export default function App() {
       {showGrowthDay && (
         <ScreenBoundary>
           <GrowthDayPanel onClose={() => setShowGrowthDay(false)} />
+        </ScreenBoundary>
+      )}
+      {showCandidates && (
+        <ScreenBoundary>
+          <LeadCandidatesPanel
+            onClose={() => setShowCandidates(false)}
+            onWeb={(ctx) => { setWebContext(ctx); setShowCandidates(false); setShowWeb(true); }}
+          />
         </ScreenBoundary>
       )}
       {showCmd && (
