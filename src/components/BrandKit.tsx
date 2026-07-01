@@ -16,7 +16,7 @@ const FIELDS: { key: keyof BrandKitType; label: string; placeholder: string; are
   { key: "avoid", label: "Czego unikać", placeholder: "np. tani, agresywny, korporacyjny", area: true },
 ];
 
-export default function BrandKit({ onClose }: { onClose: () => void }) {
+export default function BrandKit({ onClose, embedded }: { onClose: () => void; embedded?: boolean }) {
   useEscape(onClose);
   const [kit, setKit] = useState<BrandKitType>(() => ({ ...loadBrandKit() }));
 
@@ -26,13 +26,7 @@ export default function BrandKit({ onClose }: { onClose: () => void }) {
     saveBrandKit(next); // zapis na bieżąco — bez przycisku „Zapisz"
   };
 
-  return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>🎨 Dusza Marki</h2>
-        </div>
+  const body = (
         <div className="panel-body">
           <p className="muted" style={{ fontSize: 12.5, marginTop: 0 }}>
             Ustaw raz tożsamość marki — JARVIS użyje jej automatycznie przy tworzeniu <b>stron</b>, <b>treści</b> i <b>obrazów</b>,
@@ -52,6 +46,16 @@ export default function BrandKit({ onClose }: { onClose: () => void }) {
             </div>
           ))}
         </div>
+  );
+  if (embedded) return body;
+  return (
+    <div className="sheet" onClick={onClose}>
+      <div className="panel" onClick={(e) => e.stopPropagation()}>
+        <div className="panel-head">
+          <div className="grabber" />
+          <h2>🎨 Dusza Marki</h2>
+        </div>
+        {body}
         <div className="panel-foot">
           <button className="btn" onClick={onClose}>Gotowe</button>
         </div>

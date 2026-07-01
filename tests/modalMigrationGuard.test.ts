@@ -16,7 +16,7 @@ const LEGACY_MANUAL = new Set([
   "AdStudio.tsx", "AdminPanel.tsx", "BargainHunter.tsx", "BrandKit.tsx", "Cards.tsx", "ChatHistory.tsx",
   "CostPanel.tsx", "FinancialDashboard.tsx", "Gadgets.tsx", "GoalStatusPanel.tsx", "GrowthDayPanel.tsx",
   "Guardian.tsx", "Help.tsx", "Journal.tsx", "LeadCandidatesPanel.tsx", "LeadDetail.tsx", "MailCompose.tsx",
-  "MoneyHub.tsx", "More.tsx", "Panels.tsx", "PermissionDialog.tsx", "Projects.tsx", "SalesCrm.tsx",
+  "MarketingWorkspace.tsx", "MoneyHub.tsx", "More.tsx", "Panels.tsx", "PermissionDialog.tsx", "Projects.tsx", "SalesCrm.tsx",
   "SalesDashboard.tsx", "SalesPlan.tsx", "Settings.tsx", "Studio.tsx", "TaskHub.tsx",
   "Transcribe.tsx", "Translator.tsx", "WebStudio.tsx", "WhereToBuy.tsx",
 ]);

@@ -21,7 +21,7 @@ const CHANNEL_STATE_LABEL: Record<string, string> = {
 };
 
 // 📢 Generator reklam (Faza 0) — gotowe zestawy reklam Google/Meta do skopiowania.
-export default function AdStudio({ onClose }: { onClose: () => void }) {
+export default function AdStudio({ onClose, embedded }: { onClose: () => void; embedded?: boolean }) {
   useEscape(onClose);
   const [platform, setPlatform] = useState<AdPlatform>("google");
   const [product, setProduct] = useState("");
@@ -62,13 +62,7 @@ export default function AdStudio({ onClose }: { onClose: () => void }) {
   const canShare = typeof navigator !== "undefined" && !!(navigator as { share?: unknown }).share;
   const share = () => shareOrCopy(out, "Skopiowano — wklej w panelu reklam ✓");
 
-  return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>📢 Generator reklam</h2>
-        </div>
+  const body = (
         <div className="panel-body">
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             Podaj produkt — JARVIS napisze gotowy zestaw reklam (nagłówki, opisy, słowa kluczowe, budżet). Kopiujesz i wklejasz w panelu Google/Meta.
@@ -184,6 +178,16 @@ export default function AdStudio({ onClose }: { onClose: () => void }) {
             )}
           </details>
         </div>
+  );
+  if (embedded) return body;
+  return (
+    <div className="sheet" onClick={onClose}>
+      <div className="panel" onClick={(e) => e.stopPropagation()}>
+        <div className="panel-head">
+          <div className="grabber" />
+          <h2>📢 Generator reklam</h2>
+        </div>
+        {body}
         <div className="panel-foot">
           <button className="btn primary" style={{ width: "100%" }} onClick={onClose}>Zamknij</button>
         </div>

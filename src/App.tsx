@@ -57,10 +57,8 @@ const CostPanel = lazy(() => import("./components/CostPanel"));
 const MemoryCenter = lazy(() => import("./components/MemoryCenter"));
 const AuditLog = lazy(() => import("./components/AuditLog"));
 const SentBox = lazy(() => import("./components/SentBox"));
-const ContentStudio = lazy(() => import("./components/ContentStudio"));
-const BrandKit = lazy(() => import("./components/BrandKit"));
+const MarketingWorkspace = lazy(() => import("./components/MarketingWorkspace"));
 const MailCompose = lazy(() => import("./components/MailCompose"));
-const AdStudio = lazy(() => import("./components/AdStudio"));
 const FAQ = lazy(() => import("./components/FAQ"));
 const WebStudio = lazy(() => import("./components/WebStudio"));
 const AdminPanel = lazy(() => import("./components/AdminPanel"));
@@ -1589,8 +1587,8 @@ export default function App() {
         </ScreenBoundary>
       )}
       {showBrand && (
-        <ScreenBoundary>
-          <BrandKit onClose={() => setShowBrand(false)} />
+        <ScreenBoundary name="Marketing" onBack={() => setShowBrand(false)}>
+          <MarketingWorkspace initialTab="brand" onClose={() => setShowBrand(false)} />
         </ScreenBoundary>
       )}
       {showMail && (
@@ -1604,13 +1602,13 @@ export default function App() {
         </ScreenBoundary>
       )}
       {showContent && (
-        <ScreenBoundary>
-          <ContentStudio onClose={() => setShowContent(false)} />
+        <ScreenBoundary name="Marketing" onBack={() => setShowContent(false)}>
+          <MarketingWorkspace initialTab="content" onClose={() => setShowContent(false)} />
         </ScreenBoundary>
       )}
       {showAds && (
-        <ScreenBoundary>
-          <AdStudio onClose={() => setShowAds(false)} />
+        <ScreenBoundary name="Marketing" onBack={() => setShowAds(false)}>
+          <MarketingWorkspace initialTab="campaigns" onClose={() => setShowAds(false)} />
         </ScreenBoundary>
       )}
       {showFaq && (

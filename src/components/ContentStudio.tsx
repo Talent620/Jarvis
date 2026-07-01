@@ -12,7 +12,7 @@ import { uid } from "../lib/store";
 
 // 📱 Maszynka do kontentu — JARVIS pisze gotowy post na social media. Kopiujesz
 // albo udostępniasz jednym tapnięciem do dowolnej apki (IG/FB/TikTok/LinkedIn).
-export default function ContentStudio({ onClose }: { onClose: () => void }) {
+export default function ContentStudio({ onClose, embedded }: { onClose: () => void; embedded?: boolean }) {
   useStore();
   const [platform, setPlatform] = useState<Platform>("instagram");
   const [topic, setTopic] = useState("");
@@ -39,12 +39,8 @@ export default function ContentStudio({ onClose }: { onClose: () => void }) {
   const canShare = typeof navigator !== "undefined" && !!(navigator as { share?: unknown }).share;
   const share = () => shareOrCopy(out);
 
-  return (
-    <Modal
-      title="📱 Maszynka do kontentu"
-      onClose={onClose}
-      foot={<button className="btn primary" style={{ width: "100%" }} onClick={onClose}>Zamknij</button>}
-    >
+  const body = (
+        <>
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             Podaj temat — JARVIS napisze gotowy post. Potem skopiuj albo udostępnij do dowolnej apki.
           </p>
@@ -128,6 +124,16 @@ export default function ContentStudio({ onClose }: { onClose: () => void }) {
               ))}
             </>
           )}
+        </>
+  );
+  if (embedded) return <div className="panel-body">{body}</div>;
+  return (
+    <Modal
+      title="📱 Maszynka do kontentu"
+      onClose={onClose}
+      foot={<button className="btn primary" style={{ width: "100%" }} onClick={onClose}>Zamknij</button>}
+    >
+      {body}
     </Modal>
   );
 }
