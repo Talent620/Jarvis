@@ -10,6 +10,7 @@ import { toast } from "../lib/toast";
 import { safeOpenExternal } from "../lib/glinks";
 import { discoverCandidates } from "../lib/leads";
 import { importCandidates, type LeadCandidate } from "../lib/leadCandidates";
+import { describeLeadSources, sourceBadge } from "../lib/leadSources";
 import { buildGrowthContext, type GrowthContext } from "../lib/growthContext";
 import type { Lead } from "../types";
 
@@ -68,6 +69,18 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             Samo wyszukanie <b>nie</b> dodaje nic do bazy. Zaznacz kandydatów i kliknij „Importuj zaznaczone”.
           </p>
+          {/* Uczciwy status źródeł: live / niedostępne / przykładowe — bez udawania, że coś działa. */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+            {describeLeadSources({
+              online: typeof navigator === "undefined" ? true : navigator.onLine,
+              tavilyKey: store.settings.tavilyApiKey,
+              googlePlacesKey: store.settings.keys?.googlePlaces,
+            }).map((s) => (
+              <span key={s.id} className="chip" style={{ fontSize: 11, opacity: s.status === "unavailable" ? 0.55 : 1 }} title={s.note}>
+                {sourceBadge(s)}
+              </span>
+            ))}
+          </div>
           <div className="field hunt-fields">
             <input value={niche} placeholder="Nisza — opcjonalnie (np. fryzjer)" onChange={(e) => setNiche(e.target.value)} />
             <input value={city} placeholder="Miasto — opcjonalnie (📍 lub auto)" onChange={(e) => setCity(e.target.value)} />
