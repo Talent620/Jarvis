@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { growthContextToBrief, demoProjectName, type GrowthContext } from "../lib/growthContext";
-import { fallbackBlueprint, blueprintSummary } from "../lib/siteBlueprint";
+import { blueprintSummary, type SiteBlueprint, type MotionLevel, type ThreeDMode, type FormMode } from "../lib/siteBlueprint";
 import { validateSite, validationVerdict } from "../lib/siteValidator";
-import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
+import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, planBlueprint, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
 import { assessSeo, seoFixInstruction } from "../lib/seoPreview";
 import { buildRobotsTxt, buildSitemapXml, extractInternalPaths, normalizeDomain } from "../lib/siteSeoFiles";
@@ -78,6 +78,9 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
   const [packages, setPackages] = useState<QuotePackage[] | null>(null);
   const [audit, setAudit] = useState<SiteAudit | null>(null); // ocena jakości wygenerowanej strony
   const [strategy, setStrategy] = useState(""); // ETAP 11 — strategia biznesowa przed budową
+  // Blueprint: plan strony wygenerowany przez model (structured output), edytowalny, STERUJE budową.
+  const [blueprint, setBlueprint] = useState<SiteBlueprint | null>(null);
+  const [planning, setPlanning] = useState(false);
   // 💾 Projekty stron — zapis/wczytanie/wersje
   const [projId, setProjId] = useState<string | null>(null); // aktywny projekt (upsert)
   const [projName, setProjName] = useState("");
@@ -154,7 +157,8 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
     try {
       const base = [briefText, prompt].filter((s) => s.trim()).join("\n\n");
       const desc = edit ? promptText : buildStrategySeed(base, strategy); // wlej strategię (ETAP 11), gdy jest
-      const r = await generateSite(desc, edit && html ? html : undefined, kind, style);
+      // Zatwierdzony blueprint STERUJE budową (sekcje/CTA/ruch/3D/formularz/budżet/preloader).
+      const r = await generateSite(desc, edit && html ? html : undefined, kind, style, blueprint ?? undefined);
       if ("error" in r) setErr(r.error);
       else {
         setHtml(r.html);
@@ -173,6 +177,18 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
       setBusy(false); // zawsze odblokuj przycisk, nawet przy nieoczekiwanym błędzie
     }
   };
+
+  // Kreator najpierw MYŚLI: wygeneruj plan strony (blueprint) przez model, potem można go edytować.
+  const plan = async () => {
+    if (busy || planning) return;
+    setPlanning(true); setErr("");
+    try {
+      const { blueprint: bp } = await planBlueprint(brief);
+      setBlueprint(bp);
+    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+    finally { setPlanning(false); }
+  };
+  const patchBlueprint = (patch: Partial<SiteBlueprint>) => setBlueprint((b) => (b ? { ...b, ...patch } : b));
 
   // ETAP 11 — AI Business Analyst: strategia przed budową (branża, USP, sekcje, ton).
   const analyze = async () => {
@@ -371,14 +387,45 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
               className="ta" style={{ minHeight: 64 }}
             />
           </div>
-          {/* Kreator najpierw MYŚLI: deterministyczny plan sekcji z uzasadnieniem — do wglądu przed budową. */}
-          {!html && briefText && (
-            <details style={{ marginBottom: 8 }}>
-              <summary style={{ cursor: "pointer", fontSize: 13 }}>🧠 Plan strony (najpierw myślimy, potem projektujemy)</summary>
-              <pre style={{ whiteSpace: "pre-wrap", fontSize: 12, marginTop: 6, background: "var(--panel2, rgba(255,255,255,0.03))", padding: 8, borderRadius: 8 }}>
-                {blueprintSummary(fallbackBlueprint(brief))}
-              </pre>
-            </details>
+          {/* Kreator najpierw MYŚLI, potem projektuje: plan (blueprint) z modelu — edytowalny i STERUJĄCY budową. */}
+          {!html && (
+            <div style={{ marginBottom: 8, border: "1px solid var(--line, #234)", borderRadius: 8, padding: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>🧠 Plan strony {blueprint ? "(steruje budową)" : "(najpierw myślimy)"}</span>
+                <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} disabled={busy || planning || !canBuild} onClick={() => void plan()}>
+                  {planning ? "⏳ Planuję…" : blueprint ? "↻ Przeplanuj" : "🧭 Zaplanuj stronę"}
+                </button>
+              </div>
+              {blueprint && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <pre style={{ whiteSpace: "pre-wrap", fontSize: 12, background: "var(--panel2, rgba(255,255,255,0.03))", padding: 8, borderRadius: 8, margin: 0 }}>
+                    {blueprintSummary(blueprint)}
+                  </pre>
+                  {/* Edycja kluczowych pól planu — wprost wpływają na wygenerowaną stronę. */}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 12 }}>
+                    <label style={{ display: "flex", flexDirection: "column", gap: 2 }}>Ruch
+                      <select value={blueprint.motionLevel} onChange={(e) => patchBlueprint({ motionLevel: e.target.value as MotionLevel })}>
+                        <option value="none">bez animacji</option><option value="subtle">subtelny</option><option value="rich">bogaty</option>
+                      </select>
+                    </label>
+                    <label style={{ display: "flex", flexDirection: "column", gap: 2 }}>3D
+                      <select value={blueprint.threeDMode} onChange={(e) => patchBlueprint({ threeDMode: e.target.value as ThreeDMode })}>
+                        <option value="off">OFF</option><option value="css">CSS 2.5D</option><option value="real">REAL</option><option value="auto">AUTO</option>
+                      </select>
+                    </label>
+                    <label style={{ display: "flex", flexDirection: "column", gap: 2 }}>Formularz
+                      <select value={blueprint.formMode} onChange={(e) => patchBlueprint({ formMode: e.target.value as FormMode })}>
+                        <option value="none">brak</option><option value="demo">demonstracyjny</option><option value="connected">podłączony</option>
+                      </select>
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <input type="checkbox" checked={blueprint.preloader} onChange={(e) => patchBlueprint({ preloader: e.target.checked })} /> Preloader
+                    </label>
+                  </div>
+                  <input value={blueprint.primaryAction} onChange={(e) => patchBlueprint({ primaryAction: e.target.value })} placeholder="Główne CTA" style={{ fontSize: 12 }} />
+                </div>
+              )}
+            </div>
           )}
 
           {/* ETAP 11 — strategia przed budową: branża, grupa docelowa, USP, sekcje, ton */}

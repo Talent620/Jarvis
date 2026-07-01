@@ -173,3 +173,35 @@ export function blueprintSummary(bp: SiteBlueprint): string {
   const secs = bp.sections.map((s) => `• ${s.kind}: ${s.purpose} — ${s.justification}`).join("\n");
   return `Cel: ${bp.businessGoal}\nCTA: ${bp.primaryAction}\nTyp: ${bp.pageType}\nSekcje:\n${secs}`;
 }
+
+/**
+ * Pure: przełóż zatwierdzony blueprint na TWARDĄ instrukcję dla generatora — to sprawia, że zmiana
+ * planu realnie zmienia stronę (sekcje, kolejność, CTA, kierunek wizualny, ruch, tryb 3D, formularz,
+ * budżet, preloader). Generator MA się tego trzymać. Deterministyczna (ta sama treść → ten sam tekst).
+ */
+export function blueprintToInstruction(bp: SiteBlueprint): string {
+  const motion = bp.motionLevel === "none" ? "bez animacji (statycznie)" : bp.motionLevel === "rich" ? "bogaty, wyrazisty ruch" : "subtelny ruch";
+  const three = bp.threeDMode === "off" ? "bez 3D" : bp.threeDMode === "real" ? "realne 3D (leniwie, z posterem i fallbackiem)" : bp.threeDMode === "css" ? "lekkie CSS 2.5D" : "3D adaptacyjne (AUTO — na słabym telefonie CSS/poster)";
+  const form = bp.formMode === "none" ? "bez formularza" : bp.formMode === "connected" ? "formularz podłączony do endpointu" : "formularz DEMONSTRACYJNY (bez wysyłki — nie pokazuj „wysłano”)";
+  const sections = bp.sections.map((s, i) => `${i + 1}. ${s.kind} — ${s.purpose} (po co: ${s.justification})`).join("\n");
+  const lines = [
+    "PLAN STRONY (ZATWIERDZONY — trzymaj się go dokładnie):",
+    `- Cel biznesowy: ${bp.businessGoal}`,
+    `- Odbiorca: ${bp.audience}`,
+    `- Główne wezwanie do działania (CTA): ${bp.primaryAction}`,
+    `- Oferta: ${bp.offer}`,
+    bp.objections.length ? `- Rozwiej obiekcje: ${bp.objections.join("; ")}` : "",
+    bp.proof.length ? `- Dowody/zaufanie: ${bp.proof.join("; ")}` : "",
+    `- Typ strony: ${bp.pageType}`,
+    `- Kierunek wizualny: ${bp.visualDirection}`,
+    `- Ruch: ${motion}`,
+    `- 3D: ${three}`,
+    `- Formularz: ${form}`,
+    `- Preloader: ${bp.preloader ? "TAK (krótki)" : "NIE (bez preloadera)"}`,
+    `- Budżet wydajności: LCP ≤ ${bp.performanceBudget.lcpMs}ms, INP ≤ ${bp.performanceBudget.inpMs}ms, CLS ≤ ${bp.performanceBudget.cls}`,
+    "- SEKCJE w tej DOKŁADNEJ kolejności (żadnych dodatkowych „na zapełnienie”):",
+    sections,
+    bp.seoIntent ? `- Intencja SEO: ${bp.seoIntent}` : "",
+  ];
+  return lines.filter(Boolean).join("\n");
+}

@@ -1,4 +1,5 @@
 import { askModel } from "./brain";
+import { validateBlueprint, blueprintToInstruction, fallbackBlueprint, SITE_BLUEPRINT_SCHEMA, type SiteBlueprint } from "./siteBlueprint";
 import { humanize } from "./aiHelpers";
 import { zl } from "./format";
 import { appendBrand } from "./brandKit";
@@ -41,8 +42,8 @@ const BASE = [
 // nagradzaną od przeciętnej. Doklejana zawsze; podnosi pułap bez psucia niezawodności.
 const PREMIUM = [
   "POZIOM PIONIERSKI (to ma robić wrażenie „jak to zrobione?!” — a działać bezbłędnie offline z jednego pliku):",
-  "- INTRO/PRELOADER: krótka, elegancka animacja wejścia (np. odsłonięcie nazwy/logo, 0.8–1.2 s), potem płynne ujawnienie strony. Z poszanowaniem prefers-reduced-motion.",
-  "- BOGACTWO SEKCJI: dla pełnych witryn 8–12 zróżnicowanych sekcji o różnym rytmie (pełnoekranowe vs gęste, jasne vs ciemne), nie monotonna lista kart.",
+  "- WEJŚCIE: preloader/intro TYLKO jeśli plan strony tego wymaga — DOMYŚLNIE BEZ preloadera (nie blokuj pierwszego wyświetlenia/LCP). Z poszanowaniem prefers-reduced-motion.",
+  "- SEKCJE: liczba i rodzaj sekcji wynikają z PLANU strony (każda ma uzasadnienie biznesowe), a nie sztywno 8–12; bez zapychania monotonną listą kart.",
   "- RUCH KLASY AWWWARDS: parallax na transform, sticky scroll storytelling, liczniki „od zera” (count-up) przy wejściu, sekwencyjne reveal z opóźnieniami, magnetyczne/animowane przyciski, animowany podpis SVG (stroke-dashoffset).",
   "- TŁO Z CHARAKTEREM: gradient-mesh/aurora, subtelny szum (SVG feTurbulence jako tekstura), świetliste plamy podążające delikatnie kursorem, albo animowana siatka — jeden spójny motyw, nie wszystko naraz.",
   "- DETALE PRO: spójny system w :root (skala typografii, odstępy, promienie, cienie, easingi), stany focus widoczne i estetyczne, idealny kontrast (WCAG AA), :focus-visible, aria-labels, alt-y.",
@@ -162,7 +163,11 @@ export async function generateSite(
   current?: string,
   kind: SiteKind = "auto",
   style: SiteStyle = "auto",
+  blueprint?: SiteBlueprint,
 ): Promise<{ html: string } | { error: string }> {
+  // Zatwierdzony blueprint STERUJE generowaniem: sekcje/CTA/kierunek/ruch/3D/formularz/budżet/preloader.
+  // Dzięki temu zmiana planu realnie zmienia wygenerowaną stronę (nie jest tylko ozdobą UI).
+  const blueprintBlock = blueprint ? `\n\n${blueprintToInstruction(blueprint)}` : "";
   // ETAP 3: gdy styl „auto" — deterministycznie dobierz system projektowy z opisu (model dopracuje).
   const resolvedStyle: SiteStyle = style === "auto" && !current ? pickSiteStyle(prompt) : style;
   const styleHint = STYLE_HINTS[resolvedStyle] || STYLE_HINTS.auto;
@@ -180,8 +185,8 @@ export async function generateSite(
     };
   }
   const userMsg = current
-    ? `Oto obecny, PEŁNY kod strony:\n\n${current}\n\nWprowadź zmianę: ${prompt}\nZwróć PEŁNY, zaktualizowany plik HTML (od <!DOCTYPE html>), zachowując wysoki poziom wizualny i spójny styl. Nie skracaj i nie pomijaj żadnej istniejącej sekcji.`
-    : `Zbuduj stronę według opisu: ${prompt}`;
+    ? `Oto obecny, PEŁNY kod strony:\n\n${current}\n\nWprowadź zmianę: ${prompt}\nZwróć PEŁNY, zaktualizowany plik HTML (od <!DOCTYPE html>), zachowując wysoki poziom wizualny i spójny styl. Nie skracaj i nie pomijaj żadnej istniejącej sekcji.${blueprintBlock}`
+    : `Zbuduj stronę według opisu: ${prompt}${blueprintBlock}`;
 
   try {
     // Dusza Marki — dokleja tożsamość (kolory/fonty/ton) do system-promptu; pusty kit = bez zmian.
@@ -191,6 +196,30 @@ export async function generateSite(
     return { html };
   } catch (e) {
     return { error: humanize(e instanceof Error ? e.message : String(e)) };
+  }
+}
+
+/**
+ * Zaplanuj stronę PRZED generowaniem: poproś model o structured output wg SITE_BLUEPRINT_SCHEMA,
+ * a wynik ZAWSZE zwaliduj (validateBlueprint naprawia niepełny/błędny JSON). Fallback deterministyczny
+ * TYLKO przy braku sieci/błędzie modelu. Model wstrzykiwalny (testy bez API). Kreator najpierw myśli.
+ */
+export async function planBlueprint(
+  brief: ClientBrief,
+  ask: (system: string, user: string) => Promise<string> = (system, user) => askModel({ system, history: [{ role: "user", content: user }], heavy: true }),
+): Promise<{ blueprint: SiteBlueprint; source: "ai" | "fallback" }> {
+  const system = [
+    "Jesteś strategiem UX. Zaplanuj stronę PRZED projektowaniem.",
+    "Zwróć WYŁĄCZNIE JSON zgodny ze schematem (bez markdown, bez komentarza).",
+    "KAŻDA sekcja musi mieć uzasadnienie biznesowe (justification). Nie dodawaj sekcji „na zapełnienie”.",
+    `Schemat: ${JSON.stringify(SITE_BLUEPRINT_SCHEMA)}`,
+  ].join("\n");
+  const user = `Brief: ${buildClientBrief(brief) || JSON.stringify(brief)}\nZaproponuj cel, CTA, sekcje z uzasadnieniem, kierunek wizualny i intencję SEO.`;
+  try {
+    const reply = await ask(system, user);
+    return { blueprint: validateBlueprint(reply, brief), source: "ai" };
+  } catch {
+    return { blueprint: fallbackBlueprint(brief), source: "fallback" };
   }
 }
 
