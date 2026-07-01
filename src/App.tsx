@@ -30,6 +30,7 @@ import { toast, copyWithToast } from "./lib/toast";
 import { conversationToMarkdown } from "./lib/exportChat";
 import { onScreenRequest } from "./lib/navIntent";
 import { uiRouteReducer, initialRoute, canGoBack } from "./lib/uiRoute";
+import { pickNowCard } from "./lib/homeViewModel";
 import { followUps } from "./lib/followups";
 import { PRESETS } from "./lib/prompts";
 import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } from "./lib/decisions";
@@ -1114,6 +1115,10 @@ export default function App() {
     ...Object.fromEntries(PRESETS.map((p) => [p.id, () => { setShowCmd(false); sendRef.current(p.text); }])),
   };
 
+  // Spokojny ekran główny: nad czatem najwyżej JEDNA karta „Teraz" (priorytet: zgoda → decyzja → sugestia).
+  // Nie pokazujemy naraz decyzji i tipa; reszta sygnałów żyje w Powiadomieniach.
+  const nowCard = pickNowCard({ consent: !!pendingConsent, decision: !!decision, suggestion: !!(tip && store.settings.tips !== false) });
+
   return (
     <div className={`app${messages.length ? " chatting" : ""}`}>
       {booting && <Boot onDone={() => setBooting(false)} />}
@@ -1312,7 +1317,7 @@ export default function App() {
         tasksToday={(store.data.tasks || []).filter((t) => !t.done && (t.due || "").slice(0, 10) === new Date().toISOString().slice(0, 10)).length}
       />
 
-      {tip && store.settings.tips !== false && (
+      {tip && store.settings.tips !== false && nowCard === "suggestion" && (
         <TipBubble tip={tip} onAction={onTipAction} onDismiss={() => setTip(null)} />
       )}
       {/* ← Wstecz — pojawia się, gdy jest dokąd wrócić (np. Centrum → ekran). Zachowuje kontekst trasy. */}
@@ -1337,7 +1342,7 @@ export default function App() {
           </div>
         </div>
       )}
-      {decision && (
+      {decision && nowCard === "decision" && (
         <div
           className="journal-card"
           style={{ margin: "0 8px 8px", padding: "8px 10px", display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}
