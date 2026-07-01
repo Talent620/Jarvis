@@ -15,6 +15,7 @@ import { importCandidates, type LeadCandidate } from "../lib/leadCandidates";
 import { describeLeadSources, sourceBadge } from "../lib/leadSources";
 import { scoreLead, signalsFromCandidate, type IcpScore } from "../lib/leadScoring";
 import { telHref, hasPhone, hasEmail, hasAnyContact, matchContactFilter, type ContactFilter } from "../lib/contactActions";
+import { addSuppression, removeSuppression, filterSuppressed, suppressionKey } from "../lib/leadSuppression";
 import { runGrowthFlowOnStore } from "../lib/growthFlowCoordinator";
 import { buildGrowthContext, type GrowthContext } from "../lib/growthContext";
 import type { Lead } from "../types";
@@ -84,8 +85,13 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
     try {
       const r = await discoverCandidates({ niche: niche.trim() || undefined, location: city.trim() || undefined });
       if (r.error) { setMsg(r.error); return; }
-      setCandidates(r.candidates);
-      setMsg(r.candidates.length ? `Znalazłem ${r.candidates.length} kandydatów w ${r.city}. Zaznacz i zaimportuj tych, których chcesz.` : `Brak kandydatów w ${r.city}. Spróbuj inną niszę/miasto.`);
+      // Odrzuceni (trwałe wykluczenia) NIE wracają przy kolejnym wyszukiwaniu.
+      const fresh = filterSuppressed(r.candidates, store.data.suppressedLeads || []);
+      setCandidates(fresh);
+      const hidden = r.candidates.length - fresh.length;
+      setMsg(fresh.length
+        ? `Znalazłem ${fresh.length} kandydatów w ${r.city}${hidden ? ` (${hidden} wcześniej odrzuconych pominięto)` : ""}. Zaznacz i zaimportuj tych, których chcesz.`
+        : `Brak kandydatów w ${r.city}. Spróbuj inną niszę/miasto.`);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Błąd wyszukiwania.");
     } finally { setBusy(false); }
@@ -105,7 +111,21 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
     setSelected(new Set());
   };
 
-  const reject = (c: LeadCandidate) => setCandidates((cs) => cs.filter((x) => x.id !== c.id));
+  // Odrzuć TRWALE: zapisz wykluczenie (nazwa/sourceId, powód, data) → firma nie wróci przy wyszukiwaniu.
+  // Zawsze z możliwością cofnięcia (Cofnij), żeby „Odrzuć" nie był nieodwracalny.
+  const reject = (c: LeadCandidate) => {
+    setCandidates((cs) => cs.filter((x) => x.id !== c.id));
+    store.setData((d) => { d.suppressedLeads = addSuppression(d.suppressedLeads || [], c, { reason: "odrzucony z listy kandydatów", now: Date.now() }); });
+    const key = suppressionKey(c);
+    toast(`🚫 Odrzucono „${c.company}" — nie wróci przy wyszukiwaniu.`, {
+      label: "Cofnij",
+      onClick: () => {
+        store.setData((d) => { d.suppressedLeads = removeSuppression(d.suppressedLeads || [], key); });
+        setCandidates((cs) => (cs.some((x) => x.id === c.id) ? cs : [...cs, c]));
+        toast(`↩ Przywrócono „${c.company}".`);
+      },
+    });
+  };
 
   // 🚀 Pełny przepływ wzrostu przez JEDEN koordynator (ten sam, który sprawdza E2E): import → scoring
   // → kontekst → blueprint → walidacja → kampania (szkic). BEZ zgody = bez publikacji (bezpiecznie).
@@ -246,7 +266,7 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
                 {!c.isSample && (
                   <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} title="Import + scoring + szkic kampanii (bez publikacji)" onClick={() => runFlow(c)}>🚀 Importuj + przygotuj</button>
                 )}
-                <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} onClick={() => reject(c)}>Odrzuć</button>
+                <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} title="Trwale odrzuć — firma nie wróci przy wyszukiwaniu (z możliwością cofnięcia)" onClick={() => reject(c)}>🚫 Odrzuć (nie pokazuj)</button>
               </div>
             </div>
           ))}
