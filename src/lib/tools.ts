@@ -4,7 +4,7 @@ import { openService, call, sms, navigate, smartHome, openUrl, openCompose } fro
 import { saType, saTap, saGlobal, saOpenApp, saOpenSettings } from "./systemActions";
 import { answerProjectQuestion, type KnowledgeIndex } from "./projectKnowledge";
 import { requestScreen, resolveScreen, SCREENS } from "./navIntent";
-import { financeSummaryText, FINANCE_STATUSES } from "./finance";
+import { financeSummaryText, FINANCE_STATUSES, applyPayment } from "./finance";
 import { businessStatusText, computeJourney } from "./businessFlow";
 import { recommendBrain } from "./brainAdvisor";
 import type { FinanceProject, FinanceStatus } from "../types";
@@ -1633,19 +1633,40 @@ const tools: Tool[] = [
   {
     def: {
       name: "finance_set_status",
-      description: "Zmień status projektu finansowego (dopasowanie po fragmencie nazwy). Status oplacone ustawia też kwotę zapłaconą = kwota projektu.",
-      input_schema: obj({ name: str("Fragment nazwy projektu"), status: str("Nowy status, np. oplacone, w_realizacji, anulowane") }, ["name", "status"]),
+      description: "Zmień status projektu finansowego (dopasowanie po fragmencie nazwy). Status oplacone WYMAGA paid_amount (realnie wpłacona kwota) — jeśli użytkownik nie podał kwoty, NIE zgaduj i nie wywołuj z oplacone; dopytaj go najpierw. Kwota niższa niż wartość projektu zostaje częściową wpłatą (oczekuje_platnosci), dokładnie jak w interfejsie.",
+      input_schema: obj(
+        { name: str("Fragment nazwy projektu"), status: str("Nowy status, np. oplacone, w_realizacji, anulowane"), paid_amount: num("Realnie wpłacona kwota w PLN — WYMAGANE, gdy status=oplacone. Nigdy nie zgaduj tej wartości.") },
+        ["name", "status"],
+      ),
     },
-    run: ({ name, status }) => {
+    run: ({ name, status, paid_amount }) => {
       const st = FINANCE_STATUSES.find((s) => s.id === status || s.label.toLowerCase() === String(status ?? "").toLowerCase());
       if (!st) return `Nieznany status. Dostępne: ${FINANCE_STATUSES.map((s) => s.id).join(", ")}.`;
+      // „oplacone" bez realnej kwoty wpłaty byłoby zgadywaniem przychodu — UI zawsze pyta o kwotę
+      // (window.prompt + applyPayment); tu wymagamy tego samego dowodu zamiast cicho zakładać 100%.
+      const amt = Number(paid_amount);
+      if (st.id === "oplacone" && !(Number.isFinite(amt) && amt > 0)) {
+        return "Żeby oznaczyć projekt jako opłacony, potrzebuję realnie wpłaconej kwoty (paid_amount) — dopytaj użytkownika, ile wpłynęło, zanim wywołasz to narzędzie ponownie. Nie zakładam automatycznie pełnej kwoty.";
+      }
       const q = String(name ?? "").trim().toLowerCase();
       let hit = "";
+      let resultLabel = "";
       store.setData((d) => {
-        const p = (d.financeProjects || []).find((x) => x.name.toLowerCase().includes(q));
-        if (p) { p.status = st.id; p.updatedAt = Date.now(); if (st.id === "oplacone") p.paidAmount = p.amount; hit = p.name; }
+        const list = d.financeProjects || [];
+        const idx = list.findIndex((x) => x.name.toLowerCase().includes(q));
+        if (idx < 0) return;
+        hit = list[idx].name;
+        if (st.id === "oplacone") {
+          const updated = applyPayment(list[idx], { amount: amt }, Date.now());
+          list[idx] = updated;
+          resultLabel = FINANCE_STATUSES.find((s) => s.id === updated.status)?.label || updated.status;
+        } else {
+          list[idx].status = st.id;
+          list[idx].updatedAt = Date.now();
+          resultLabel = st.label;
+        }
       });
-      return hit ? `✅ Projekt ${hit} → status ${st.label}.` : `Nie znalazłem projektu pasującego do "${name}".`;
+      return hit ? `✅ Projekt ${hit} → status ${resultLabel}.` : `Nie znalazłem projektu pasującego do "${name}".`;
     },
   },
   {

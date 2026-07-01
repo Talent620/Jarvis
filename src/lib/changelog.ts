@@ -13,6 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "Lipiec 2026",
     date: "2026-07-01",
     items: [
+      "💰 Naprawiono lukę uczciwości wyniku: polecenie czatu/głosu „oznacz projekt jako opłacony” wcześniej ZAWSZE zapisywało pełną kwotę projektu jako wpłaconą — nawet gdy w rzeczywistości wpłynęła tylko część albo nic. Interfejs (Finanse) zawsze pytał o realną wpłaconą kwotę i nigdy nie zakładał 100% samodzielnie — teraz narzędzie czatu/głosu ma dokładnie tę samą ochronę: bez podanej kwoty wpłaty NIE oznacza projektu jako opłaconego, tylko prosi o doprecyzowanie; podana częściowa kwota zostaje uczciwie „częściowa wpłata”, nie „opłacone”. Koniec z zawyżaniem przychodu przez samo polecenie głosowe.",
       "🔋 Naprawiono profil oszczędny (Samsung S9 i słabsze): JARVIS od dawna wykrywał słaby sprzęt i próbował wyłączyć ciągłe, pełnoekranowe animacje tła (motyw Matrix/Aurora, tło Trybu Szefa) — ale reguła celowała w nieistniejące elementy, więc animacja mimo wszystko działała bez przerwy i obciążała telefon. Teraz naprawiony selektor realnie wyłącza te animacje na wykrytym słabym urządzeniu, tak jak już działało to dla ręcznego ustawienia „ogranicz ruch”. Dodałem test pilnujący, żeby oba mechanizmy zawsze wyłączały te same elementy.",
     ],
   },
