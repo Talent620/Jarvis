@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { growthContextToBrief, demoProjectName, type GrowthContext } from "../lib/growthContext";
+import { fallbackBlueprint, blueprintSummary } from "../lib/siteBlueprint";
 import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
 import { assessSeo, seoFixInstruction } from "../lib/seoPreview";
@@ -360,6 +361,16 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
               className="ta" style={{ minHeight: 64 }}
             />
           </div>
+          {/* Kreator najpierw MYŚLI: deterministyczny plan sekcji z uzasadnieniem — do wglądu przed budową. */}
+          {!html && briefText && (
+            <details style={{ marginBottom: 8 }}>
+              <summary style={{ cursor: "pointer", fontSize: 13 }}>🧠 Plan strony (najpierw myślimy, potem projektujemy)</summary>
+              <pre style={{ whiteSpace: "pre-wrap", fontSize: 12, marginTop: 6, background: "var(--panel2, rgba(255,255,255,0.03))", padding: 8, borderRadius: 8 }}>
+                {blueprintSummary(fallbackBlueprint(brief))}
+              </pre>
+            </details>
+          )}
+
           {/* ETAP 11 — strategia przed budową: branża, grupa docelowa, USP, sekcje, ton */}
           {!html && (
             <button className="btn" style={{ width: "100%", marginBottom: 8 }} disabled={busy || !canBuild} onClick={analyze}>
