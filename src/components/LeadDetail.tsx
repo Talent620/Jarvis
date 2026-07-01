@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { buildGrowthContext, type GrowthContext } from "../lib/growthContext";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { buildDossier, auditWeakPoints, scoreLabel, smsDraft } from "../lib/leadIntel";
@@ -28,7 +29,7 @@ const STATUS: { id: LeadStatus; label: string }[] = [
  * strony, analiza AI słabych punktów, spersonalizowany e-mail i skrypt rozmowy.
  * Jesteś w 100% gotowy do kontaktu zanim podniesiesz słuchawkę.
  */
-export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string; onClose: () => void; onWeb?: () => void }) {
+export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string; onClose: () => void; onWeb?: (ctx?: GrowthContext) => void }) {
   useEscape(onClose);
   const { data } = useStore();
   const lead = data.leads.find((l) => l.id === leadId);
@@ -428,7 +429,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
           )}
 
           {onWeb && (
-            <button className="btn" style={{ marginTop: 14 }} onClick={onWeb}>
+            <button className="btn" style={{ marginTop: 14 }} onClick={() => onWeb(buildGrowthContext(lead))}>
               🌐 Zbuduj demo strony dla tej firmy
             </button>
           )}

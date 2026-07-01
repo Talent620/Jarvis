@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { growthContextToBrief, demoProjectName, type GrowthContext } from "../lib/growthContext";
 import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
 import { assessSeo, seoFixInstruction } from "../lib/seoPreview";
@@ -58,9 +59,11 @@ const IDEAS: Record<string, string[]> = {
   ],
 };
 
-export default function WebStudio({ onClose }: { onClose: () => void }) {
+export default function WebStudio({ onClose, initialContext }: { onClose: () => void; initialContext?: GrowthContext | null }) {
   useEscape(onClose);
   const [prompt, setPrompt] = useState("");
+  // Most Lead → demo: firma, dla której budujemy (z odpięciem). Null = zwykłe wejście z Centrum.
+  const [demoFor, setDemoFor] = useState<GrowthContext | null>(initialContext ?? null);
   const [kind, setKind] = useState<SiteKind>("auto");
   const [style, setStyle] = useState<SiteStyle>("auto");
   const [html, setHtml] = useState("");
@@ -127,6 +130,15 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
     r.readAsText(file);
   };
   const zl = (n: number) => `${Math.round(n).toLocaleString("pl-PL")} zł`;
+
+  // Most Lead → demo: przy wejściu z konkretnego leada wypełnij brief i nazwę projektu jego danymi
+  // (Marcin nie przepisuje niczego ręcznie). Odpalane raz, gdy podano initialContext.
+  useEffect(() => {
+    if (!initialContext) return;
+    setBrief(growthContextToBrief(initialContext));
+    setProjName((n) => n || demoProjectName(initialContext));
+    setShowBrief(true);
+  }, [initialContext]);
 
   const briefText = buildClientBrief(brief);
   const canBuild = !!(prompt.trim() || briefText);
@@ -227,6 +239,17 @@ export default function WebStudio({ onClose }: { onClose: () => void }) {
           <h2>🌐 Kreator stron i sklepów</h2>
         </div>
         <div className="panel-body">
+          {demoFor && (
+            <div className="row" style={{ borderLeft: "3px solid var(--cyan)", paddingLeft: 10, marginBottom: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13 }}>
+                🏢 <b>Demo dla:</b> {demoFor.company}
+                {demoFor.problems.length > 0 && <span className="muted"> · {demoFor.problems.length} wykrytych problemów</span>}
+              </span>
+              <button className="btn" style={{ width: "auto", marginTop: 0, padding: "4px 10px", fontSize: 12, minHeight: 32 }} onClick={() => setDemoFor(null)}>
+                Odepnij kontekst
+              </button>
+            </div>
+          )}
           {!html && (
             <>
               <p className="muted">

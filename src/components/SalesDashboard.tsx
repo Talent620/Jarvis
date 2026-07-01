@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { GrowthContext } from "../lib/growthContext";
 import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
@@ -42,7 +43,7 @@ function numOrUndef(v: string): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: () => void; onWeb?: () => void; onMoney?: () => void }) {
+export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: () => void; onWeb?: (ctx?: GrowthContext) => void; onMoney?: () => void }) {
   useEscape(onClose);
   const { data } = useStore();
   const leads = useMemo(() => data.leads || [], [data.leads]);
@@ -381,7 +382,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
               {hunting ? "🔎 Szukam…" : "🔎 Znajdź leady"}
             </button>
             {onWeb && (
-              <button className="btn" style={{ flex: 1 }} onClick={onWeb}>🌐 Zbuduj demo</button>
+              <button className="btn" style={{ flex: 1 }} onClick={() => onWeb()}>🌐 Zbuduj demo</button>
             )}
           </div>
           {onMoney && (

@@ -1,5 +1,6 @@
 import { lazy, useEffect, useMemo, useRef, useState } from "react";
 import type { CommandItem } from "./lib/commandPalette";
+import type { GrowthContext } from "./lib/growthContext";
 import Orb, { type OrbState } from "./components/Orb";
 import Conversation from "./components/Conversation";
 import Composer from "./components/Composer";
@@ -182,6 +183,8 @@ export default function App() {
   const [showHud, setShowHud] = useState(false);
   const [showStudio, setShowStudio] = useState(false);
   const [showWeb, setShowWeb] = useState(false);
+  // Most Lead → demo: gdy „Zbuduj demo" ruszy z konkretnego leada, jego kontekst zasila kreator.
+  const [webContext, setWebContext] = useState<GrowthContext | null>(null);
   const [interim, setInterim] = useState("");
   const [orb, setOrb] = useState<OrbState>("idle");
   const [busy, setBusy] = useState(false);
@@ -1451,7 +1454,7 @@ export default function App() {
         <ScreenBoundary>
         <SalesDashboard
           onClose={() => setShowSales(false)}
-          onWeb={() => { setShowSales(false); setShowWeb(true); }}
+          onWeb={(ctx) => { setWebContext(ctx ?? null); setShowSales(false); setShowWeb(true); }}
           onMoney={() => { setShowSales(false); setShowMoney(true); }}
         />
         </ScreenBoundary>
@@ -1461,7 +1464,7 @@ export default function App() {
           <MoneyHub
             onClose={() => setShowMoney(false)}
             onSales={() => { setShowMoney(false); setShowSales(true); }}
-            onWeb={() => { setShowMoney(false); setShowWeb(true); }}
+            onWeb={() => { setWebContext(null); setShowMoney(false); setShowWeb(true); }}
           />
         </ScreenBoundary>
       )}
@@ -1490,7 +1493,7 @@ export default function App() {
           onMind={() => setShowMind(true)}
           onGoal={() => setShowGoal(true)}
           onCommand={() => setShowCmd(true)}
-          onWeb={() => setShowWeb(true)}
+          onWeb={() => { setWebContext(null); setShowWeb(true); }}
           onScreen={isDesktop() ? lookAtScreen : undefined}
           onHelp={() => setShowHelp(true)}
           onAdmin={() => setShowAdmin(true)}
@@ -1623,7 +1626,7 @@ export default function App() {
       )}
       {showWeb && (
         <ScreenBoundary>
-          <WebStudio onClose={() => setShowWeb(false)} />
+          <WebStudio onClose={() => { setShowWeb(false); setWebContext(null); }} initialContext={webContext} />
         </ScreenBoundary>
       )}
       {showGadgets && (
