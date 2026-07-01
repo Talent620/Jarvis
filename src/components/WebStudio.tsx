@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { growthContextToBrief, demoProjectName, type GrowthContext } from "../lib/growthContext";
 import { fallbackBlueprint, blueprintSummary } from "../lib/siteBlueprint";
+import { validateSite, validationVerdict } from "../lib/siteValidator";
 import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
 import { assessSeo, seoFixInstruction } from "../lib/seoPreview";
@@ -208,6 +209,15 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
   const setBriefField = (k: keyof ClientBrief, v: string) => setBrief((b) => ({ ...b, [k]: v }));
 
   const download = () => {
+    // Walidacja przed pobraniem: błędy KRYTYCZNE (ucięcie, javascript:, fałszywy „wysłano") blokują,
+    // z jawnym potwierdzeniem — nigdy nie oddajemy po cichu wadliwej/niepełnej strony.
+    const v = validateSite(html);
+    if (!v.safeToDownload) {
+      const crit = v.issues.filter((i) => i.severity === "critical").map((i) => i.message).join("\n• ");
+      if (!confirm(`⛔ Strona ma błędy krytyczne:\n\n• ${crit}\n\nPobrać mimo to?`)) { toast("Pobieranie wstrzymane — popraw błędy krytyczne."); return; }
+    } else if (v.issues.some((i) => i.severity === "warning")) {
+      toast(validationVerdict(v));
+    }
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

@@ -170,8 +170,17 @@ export async function generateSite(
   const system = current
     ? `${BASE}\n\n${PREMIUM}\n\n${KIND_HINTS[kind] || KIND_HINTS.auto}\n\n${styleHint}`
     : `${BASE}\n\n${PREMIUM}\n\n${FULL_SPEC}\n\n${KIND_HINTS[kind] || KIND_HINTS.auto}\n\n${styleHint}`;
+  // Bezpieczna edycja: NIGDY nie tniemy po cichu bieżącego kodu (to gubiło część strony i psuło
+  // wynik). Gdy dokument jest za duży na jednorazową, bezpieczną edycję — odmawiamy jasno, zamiast
+  // edytować niepełną wersję. (Sekcyjna strategia patchy = osobna, świadoma ścieżka.)
+  const SAFE_EDIT_CHARS = 60_000;
+  if (current && current.length > SAFE_EDIT_CHARS) {
+    return {
+      error: `Strona ma ${Math.round(current.length / 1024)} KB — za dużo na jednorazową, bezpieczną edycję. Nie edytuję niepełnej wersji (groziłoby ucięciem). Pobierz stronę i zmieniaj sekcjami albo opisz zmianę konkretnego fragmentu.`,
+    };
+  }
   const userMsg = current
-    ? `Oto obecny kod strony:\n\n${current.slice(0, 14000)}\n\nWprowadź zmianę: ${prompt}\nZwróć PEŁNY, zaktualizowany plik HTML (od <!DOCTYPE html>), zachowując wysoki poziom wizualny i spójny styl.`
+    ? `Oto obecny, PEŁNY kod strony:\n\n${current}\n\nWprowadź zmianę: ${prompt}\nZwróć PEŁNY, zaktualizowany plik HTML (od <!DOCTYPE html>), zachowując wysoki poziom wizualny i spójny styl. Nie skracaj i nie pomijaj żadnej istniejącej sekcji.`
     : `Zbuduj stronę według opisu: ${prompt}`;
 
   try {
