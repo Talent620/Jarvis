@@ -624,6 +624,9 @@ export interface Settings {
    *  "system" = polski głos urządzenia (voiceName); "gemini"/"eleven"/"fish" = chmurowe premium;
    *  "local" = offline na urządzeniu. Pusty = wywnioskuj ze starych ustawień (zgodność wstecz). */
   voiceMode?: "system" | "gemini" | "eleven" | "fish" | "local";
+  /** Co robić, gdy wybrany głos (premium/local) chwilowo padnie: „ask" = zapytaj, NIE zmieniaj po cichu
+   *  (domyślne); „system" = użyj systemowego. Chroni przed samoczynną zmianą głosu. Zgodność wstecz: brak = ask. */
+  voiceFallbackPolicy?: "ask" | "system";
   /** Prosty polski głos systemowy: pomija chmurowe TTS (Gemini/ElevenLabs) — spójny polski, offline. Domyślnie TAK. */
   voiceSystemPl: boolean;
   /** Voice Guardian: „Używaj głosu JARVISA" — przypina jeden, stały głos (voiceName) i wyłącza

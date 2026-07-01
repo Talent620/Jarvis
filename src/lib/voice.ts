@@ -493,8 +493,36 @@ export function activeVoiceLabel(s: Settings): string {
   return s.voiceName?.trim() ? `🇵🇱 ${s.voiceName}${s.voicePinned ? " · przypięty" : ""}` : "🇵🇱 polski systemowy (auto)";
 }
 
-export async function speak(text: string, settings: Settings): Promise<void> {
+export type VoiceFallbackDecision = "play_system" | "notify";
+
+/**
+ * Pure: co zrobić po nieudanym premium/local głosie. Domyślna polityka „ask" NIE zmienia głosu po cichu —
+ * zwraca „notify" (UI zapyta). „system" albo jednorazowa zgoda (systemOverride) → „play_system".
+ * Gdy premium się nie wysypał (np. tryb systemowy od początku) → zawsze „play_system".
+ */
+export function voiceFallbackDecision(opts: { policy?: "ask" | "system"; premiumFailed: boolean; systemOverride?: boolean }): VoiceFallbackDecision {
+  if (!opts.premiumFailed) return "play_system";
+  if (opts.systemOverride) return "play_system";
+  return (opts.policy ?? "ask") === "system" ? "play_system" : "notify";
+}
+
+// Notifier: gdy wybrany głos padł, a polityka to „ask" — UI pokazuje komunikat (Ponów / Systemowy raz).
+export interface VoiceUnavailableInfo {
+  engine: VoiceMode;
+  label: string;
+  /** Ponów tym samym (wybranym) głosem. */
+  retry: () => void;
+  /** Użyj systemowego TYLKO teraz (nie zmienia przypiętego głosu). */
+  useSystemOnce: () => void;
+}
+let voiceUnavailableHandler: ((info: VoiceUnavailableInfo) => void) | null = null;
+export function setVoiceUnavailableHandler(fn: ((info: VoiceUnavailableInfo) => void) | null): void {
+  voiceUnavailableHandler = fn;
+}
+
+export async function speak(text: string, settings: Settings, opts: { systemOverride?: boolean } = {}): Promise<void> {
   if (!settings.speak) return;
+  const originalText = text; // do ewentualnego „Ponów" tym samym głosem (bez podwójnego czyszczenia)
   text = speechShape(cleanForSpeech(text)); // czyść znaczniki + rozwiń skróty/symbole pod naturalną wymowę
   if (!text.trim()) return;
   stopSpeaking();
@@ -505,6 +533,12 @@ export async function speak(text: string, settings: Settings): Promise<void> {
   // JEDEN jednoznaczny wybór silnika (voiceMode) — koniec „walki flag". Każdy premium tor
   // przy braku klucza/niepowodzeniu spada bezpiecznie do głosu systemowego (PL) niżej.
   const mode = resolveVoiceMode(settings);
+  // Czy wybrano PREMIUM/LOCAL z kluczem? Jeśli tak i nie zabrzmi, to prawdziwa AWARIA (nie brak konfiguracji).
+  const premiumWithKey =
+    (mode === "fish" && !!settings.fishAudioApiKey && !!settings.fishAudioVoiceId) ||
+    (mode === "eleven" && !!settings.elevenLabsApiKey && !!settings.elevenLabsVoiceId) ||
+    (mode === "gemini" && !!primaryKey("gemini")) ||
+    (mode === "local" && localTtsUsable());
   // Głos on-device (Kokoro) — prywatnie, bez chmury. Opcja; przy niepowodzeniu fallback niżej.
   if (mode === "local" && localTtsUsable()) {
     try {
@@ -571,6 +605,18 @@ export async function speak(text: string, settings: Settings): Promise<void> {
   // Darmowy, wysokiej jakości głos przez Gemini TTS (gdy wybrany i jest klucz).
   if (mode === "gemini" && primaryKey("gemini")) {
     if (await geminiTts(text, settings)) return;
+  }
+
+  // Wybrany głos (premium/local) NIE zabrzmiał. Zamiast po cichu przełączyć na systemowy —
+  // uszanuj politykę: „ask" (domyślnie) → zapytaj i NIE zmieniaj przypiętego głosu.
+  if (myToken === speakToken && voiceFallbackDecision({ policy: settings.voiceFallbackPolicy, premiumFailed: premiumWithKey, systemOverride: opts.systemOverride }) === "notify") {
+    voiceUnavailableHandler?.({
+      engine: mode,
+      label: activeVoiceLabel(settings),
+      retry: () => void speak(originalText, settings),
+      useSystemOnce: () => void speak(originalText, settings, { systemOverride: true }),
+    });
+    return;
   }
 
   // Android: natywny silnik TTS (WebView Androida często nie ma Web Speech) + WYBRANY głos

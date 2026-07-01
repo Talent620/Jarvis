@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ConversationLoop, type LoopState } from "../lib/voiceLoop";
-import { speak, stopSpeaking } from "../lib/voice";
+import { speak, stopSpeaking, activeVoiceLabel } from "../lib/voice";
 import { store } from "../lib/store";
 import { keepAwake, releaseAwake } from "../lib/wakeLock";
 import { subscribeLevel } from "../lib/audioLevel";
@@ -129,6 +129,7 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
           {fullAccess ? "🟢 PEŁNY DOSTĘP — przewiduję i potwierdzam głosem" : "🔒 Tryb bezpieczny — pełny dostęp w ⚙ → Tryb Szefa"}
         </div>
         <div className="bossmode-sub" style={{ marginTop: 4 }}>🧠 MÓZG: {brainLabel}</div>
+        <div className="bossmode-sub">🎙 GŁOS: {activeVoiceLabel(store.settings)}</div>
         <button
           className="chip"
           style={{ marginTop: 6 }}

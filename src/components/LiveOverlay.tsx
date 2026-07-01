@@ -198,6 +198,7 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
         <div className="brand" style={{ textAlign: "center" }}>
           {brand()}
           <small>ROZMOWA NA ŻYWO · {engine === "gemini" ? "GEMINI LIVE" : providerLabel}</small>
+          <div className="muted" style={{ fontSize: 11 }}>🎙 {engine === "gemini" ? `Gemini Live (${store.settings.geminiVoice?.trim() || "Charon"})` : "głos rozmowy na żywo"}</div>
         </div>
 
         <div className="orb-wrap" style={{ transform: "scale(1.6)", margin: "40px 0" }}>

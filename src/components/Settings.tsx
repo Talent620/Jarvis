@@ -2093,6 +2093,18 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <button className="btn" style={{ marginTop: 8, padding: "5px 14px", width: "auto" }} onClick={() => speak("Dzień dobry. Tu JARVIS — tak właśnie brzmię.", { ...store.settings, ...s, speak: true })}>
                   ▶ Posłuchaj
                 </button>
+                {/* Gdy wybrany głos chwilowo padnie: pytać (nie zmieniać po cichu) czy użyć systemowego. */}
+                <div style={{ marginTop: 10, fontSize: 13 }}>
+                  <div style={{ marginBottom: 4 }}>Gdy wybrany głos chwilowo padnie:</div>
+                  <div className="chips" style={{ flexWrap: "wrap" }}>
+                    {([
+                      { id: "ask", label: "🙋 Zapytaj (nie zmieniaj)" },
+                      { id: "system", label: "🔊 Użyj systemowego" },
+                    ] as const).map((o) => (
+                      <button key={o.id} type="button" className={`chip ${(s.voiceFallbackPolicy ?? "ask") === o.id ? "on" : ""}`} aria-pressed={(s.voiceFallbackPolicy ?? "ask") === o.id} onClick={() => setVoice({ voiceFallbackPolicy: o.id })}>{o.label}</button>
+                    ))}
+                  </div>
+                </div>
               </div>
               {/* 🚀 Jeden klik dla 99% ludzi: dobierz i przypnij najlepszy polski głos. */}
               <button

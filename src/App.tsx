@@ -103,7 +103,7 @@ import { topPredictions } from "./lib/predict";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
 import { currentBrainMode } from "./lib/brainMode";
-import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, checkPinnedVoice, type VoiceListener } from "./lib/voice";
+import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, checkPinnedVoice, setVoiceUnavailableHandler, type VoiceListener, type VoiceUnavailableInfo } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
 import ScreenBoundary from "./components/ScreenBoundary";
@@ -212,10 +212,16 @@ export default function App() {
   const [completionHidden, setCompletionHidden] = useState(false);
   const [tip, setTip] = useState<Tip | null>(null);
   const [decision, setDecision] = useState<DecisionCandidate | null>(null); // 🧠 auto-capture
+  const [voiceIssue, setVoiceIssue] = useState<VoiceUnavailableInfo | null>(null); // 🎙 wybrany głos padł — pytamy
   const tipCountRef = useRef(0);
   // ⌘K — referencja na świeże akcje (rejestr poleceń budowany NIŻEJ, po deklaracji wszystkich stanów,
   // by uniknąć TDZ na setterach useState).
   const actionsRef = useRef<Record<string, () => void>>({});
+  // 🎙 Wybrany głos chwilowo padł — pokaż kartę (Ponów / Systemowy raz), NIE zmieniaj głosu po cichu.
+  useEffect(() => {
+    setVoiceUnavailableHandler((info) => setVoiceIssue(info));
+    return () => setVoiceUnavailableHandler(null);
+  }, []);
   // Skrót ⌘K / Ctrl+K — globalny.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1308,6 +1314,17 @@ export default function App() {
 
       {tip && store.settings.tips !== false && (
         <TipBubble tip={tip} onAction={onTipAction} onDismiss={() => setTip(null)} />
+      )}
+      {voiceIssue && (
+        <div className="journal-card" style={{ position: "fixed", left: 12, right: 12, bottom: 90, zIndex: 60, borderColor: "var(--gold, #d9a400)" }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>🎙 Wybrany głos jest chwilowo niedostępny — nie zmieniłem go</div>
+          <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{voiceIssue.label} nie odpowiedział. Twój przypięty głos zostaje bez zmian.</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "8px 12px", minHeight: 44, borderColor: "var(--cyan, #6ce7ff)" }} onClick={() => { const v = voiceIssue; setVoiceIssue(null); v.retry(); }}>🔁 Ponów</button>
+            <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "8px 12px", minHeight: 44 }} onClick={() => { const v = voiceIssue; setVoiceIssue(null); v.useSystemOnce(); }}>🔊 Użyj systemowego tylko teraz</button>
+            <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "8px 12px", minHeight: 44 }} onClick={() => setVoiceIssue(null)}>Zamknij</button>
+          </div>
+        </div>
       )}
       {decision && (
         <div

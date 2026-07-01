@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { speak, stopSpeaking } from "../lib/voice";
+import { speak, stopSpeaking, activeVoiceLabel } from "../lib/voice";
 import { askJarvis } from "../lib/brain";
 import { LIVE_VOICE_PERSONA } from "../lib/voicePersona";
 import { speakableChunks } from "../lib/speechStream";
@@ -199,6 +199,7 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
 
       <div className="headset-core" style={{ transform: `scale(${scale})` }} data-phase={phase} />
       <div className="headset-status">{LABEL[phase]}</div>
+      <div className="muted" style={{ fontSize: 11 }}>🎙 {activeVoiceLabel(store.settings)}</div>
       <div className="headset-caption" aria-live="polite">{caption}</div>
       {info && <div className="muted" style={{ fontSize: 12 }}>{info}</div>}
 
