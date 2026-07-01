@@ -27,6 +27,9 @@ const RISK: Record<string, Risk> = {
   // read — lokalna nawigacja / odczyt (bez efektów na zewnątrz, bez pytania o zgodę)
   open_screen: "read", project_knowledge: "read", finance_summary: "read",
   business_status: "read", business_next_step: "read", suggest_ai: "read",
+  // read — czyste symulacje „co jeśli" (businessSimulator): zero zapisu, zero efektów ubocznych;
+  // wynik zawsze niesie założenia/widełki, nie jest przedstawiany jako pewny fakt.
+  simulate_price_change: "read", simulate_send_offers: "read", rank_clients_by_efficiency: "read",
   // write — lokalny zapis projektów finansowych (cofalne, wymaga zgody)
   finance_add_project: "write", finance_set_status: "write",
   // write — lokalne, odwracalne ustawienia/zapisy

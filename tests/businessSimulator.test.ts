@@ -82,3 +82,41 @@ describe("biggestRevenueBlocker — co blokuje przychód", () => {
     expect(biggestRevenueBlocker(snap).blocker).toBe("brak kontaktowalnych leadów");
   });
 });
+
+// Wpięcie do czatu/głosu — silnik istniał wcześniej TYLKO w testach (zero konsumentów produkcyjnych).
+// Teraz ma realne narzędzia; sprawdzamy rejestrację, klasyfikację ryzyka (read — bez efektów
+// ubocznych) i że wynik liczy się z REALNYCH danych store (nie ze zmyślonych liczb) przez runTool.
+describe("businessSimulator — narzędzia czatu (wpięcie produkcyjne)", () => {
+  it("simulate_price_change, simulate_send_offers, rank_clients_by_efficiency są w toolDefs i sklasyfikowane read", async () => {
+    const { toolDefs } = await import("../src/lib/tools");
+    const { riskOf } = await import("../src/lib/permissions");
+    for (const name of ["simulate_price_change", "simulate_send_offers", "rank_clients_by_efficiency"]) {
+      expect(toolDefs.some((d) => d.name === name)).toBe(true);
+      expect(riskOf(name)).toBe("read");
+    }
+  });
+
+  it("simulate_price_change: wynik jest jawnie oznaczony jako symulacja, niesie założenia", async () => {
+    const { runTool } = await import("../src/lib/tools");
+    const res = await runTool("simulate_price_change", { delta_pct: 10 });
+    expect(res).toContain("SYMULACJA");
+    expect(res.toLowerCase()).toContain("założenia");
+  });
+
+  it("simulate_send_offers: bez podanej avg_deal_value liczy z REALNYCH finansów w store", async () => {
+    const { runTool } = await import("../src/lib/tools");
+    const { store } = await import("../src/lib/store");
+    store.setData((d) => { d.financeProjects = [{ id: "fp1", name: "P", status: "w_realizacji", amount: 8000, createdAt: 1, updatedAt: 1 }]; });
+    const res = await runTool("simulate_send_offers", { offers: 10 });
+    expect(res).toContain("SYMULACJA");
+    expect(res).toMatch(/8[\s ]?000|8000/); // średnia wartość zlecenia z realnych danych (8000 zł), nie zmyślona
+  });
+
+  it("rank_clients_by_efficiency: pusto → jasny komunikat, nie pusta lista udawana za wynik", async () => {
+    const { runTool } = await import("../src/lib/tools");
+    const { store } = await import("../src/lib/store");
+    store.setData((d) => { d.financeProjects = []; });
+    const res = await runTool("rank_clients_by_efficiency", {});
+    expect(res).toContain("Brak danych");
+  });
+});

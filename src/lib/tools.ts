@@ -4,7 +4,8 @@ import { openService, call, sms, navigate, smartHome, openUrl, openCompose } fro
 import { saType, saTap, saGlobal, saOpenApp, saOpenSettings } from "./systemActions";
 import { answerProjectQuestion, type KnowledgeIndex } from "./projectKnowledge";
 import { requestScreen, resolveScreen, SCREENS } from "./navIntent";
-import { financeSummaryText, FINANCE_STATUSES, applyPayment } from "./finance";
+import { financeSummaryText, FINANCE_STATUSES, applyPayment, financeKpis } from "./finance";
+import { simulatePriceChange, simulateSendOffers, bestClientByProfitToTime } from "./businessSimulator";
 import { businessStatusText, computeJourney } from "./businessFlow";
 import { recommendBrain } from "./brainAdvisor";
 import type { FinanceProject, FinanceStatus } from "../types";
@@ -1703,6 +1704,53 @@ const tools: Tool[] = [
       if (!lead) return `Nie mam leada pasującego do "${company}".`;
       const j = computeJourney(lead, store.data.financeProjects || [], store.data.sentMail || []);
       return `➡ ${lead.company}: ${j.label} — ${j.reason} (otwórz: ${j.screen})`;
+    },
+  },
+  // === Symulator decyzji (businessSimulator) — „co jeśli", NIGDY jako pewny fakt ===
+  // Czyste funkcje z businessSimulator.ts — istniały wcześniej wyłącznie w testach, bez konsumenta
+  // produkcyjnego. Tu tylko WPIĘCIE (żadnej nowej logiki): baseline/średnia wartość zlecenia liczone
+  // z REALNYCH danych store (nie zmyślamy), a wynik zawsze niesie założenia i widełki niepewności.
+  {
+    def: {
+      name: "simulate_price_change",
+      description: "Symulacja „co jeśli zmienię cenę o X%” — licząc z Twojego REALNEGO przychodu jako punktu startowego. To PROGNOZA z założeniami i widełkami niepewności, NIGDY pewny fakt. Używaj, gdy pytasz: co jeśli podniosę/obniżę ceny.",
+      input_schema: obj(
+        { delta_pct: num("Zmiana ceny w % (np. 10 = podwyżka o 10%, -15 = obniżka o 15%)"), demand_elasticity: num("Elastyczność popytu 0..3 (opcjonalnie; domyślnie 0.5 — umiarkowana reakcja klientów)") },
+        ["delta_pct"],
+      ),
+    },
+    run: ({ delta_pct, demand_elasticity }) => {
+      const baseline = financeKpis(store.data.financeProjects || []).revenue;
+      const r = simulatePriceChange({ baselineRevenue: baseline, deltaPct: Number(delta_pct) || 0, demandElasticity: demand_elasticity != null ? Number(demand_elasticity) : undefined });
+      return `🔮 SYMULACJA (nie fakt): ${r.explanation} Założenia: ${r.assumptions.join("; ")}. ${r.uncertainty}`;
+    },
+  },
+  {
+    def: {
+      name: "simulate_send_offers",
+      description: "Symulacja „co jeśli wyślę N ofert” — oczekiwany przychód z Twojej realnej średniej wartości zlecenia (chyba że podasz inną). To PROGNOZA z założeniami i widełkami, NIGDY pewny fakt. Używaj, gdy pytasz: co jeśli zadzwonię/wyślę do X leadów.",
+      input_schema: obj(
+        { offers: num("Ile ofert/rozmów planujesz"), conversion_rate: num("Współczynnik konwersji 0..1 (opcjonalnie; domyślnie 0.05 = 5%)"), avg_deal_value: num("Średnia wartość zlecenia w zł (opcjonalnie; domyślnie z Twoich realnych finansów)") },
+        ["offers"],
+      ),
+    },
+    run: ({ offers, conversion_rate, avg_deal_value }) => {
+      const avgFromReal = financeKpis(store.data.financeProjects || []).avgValue;
+      const r = simulateSendOffers({ offers: Number(offers) || 0, conversionRate: conversion_rate != null ? Number(conversion_rate) : undefined, avgDealValue: avg_deal_value != null ? Number(avg_deal_value) : avgFromReal });
+      return `🔮 SYMULACJA (nie fakt): ${r.explanation} Założenia: ${r.assumptions.join("; ")}. ${r.uncertainty}`;
+    },
+  },
+  {
+    def: {
+      name: "rank_clients_by_efficiency",
+      description: "Ranking klientów wg REALNEGO zysku na godzinę pracy (nie samego przychodu) — pokazuje, kto naprawdę się opłaca. Liczone z Twoich projektów finansowych. Używaj, gdy pytasz: który klient jest najbardziej opłacalny, na kim najwięcej zarabiam na godzinę.",
+      input_schema: obj({}),
+    },
+    run: () => {
+      const ranking = bestClientByProfitToTime(store.data.financeProjects || []);
+      if (!ranking.length) return "Brak danych — dodaj projekty z godzinami pracy (Finanse), żeby policzyć zysk na godzinę.";
+      const lines = ranking.slice(0, 5).map((c, i) => `${i + 1}. ${c.client}: ${c.profit.toLocaleString("pl-PL")} zł zysku${c.hours > 0 ? ` (${c.profitPerHour.toLocaleString("pl-PL")} zł/h przy ${c.hours}h)` : " (brak zapisanych godzin — nieporównywalne czasowo)"}`);
+      return `📊 Ranking klientów wg zysku na godzinę:\n${lines.join("\n")}`;
     },
   },
 ];
