@@ -51,15 +51,16 @@ jobs:
           sed -i 's#<string name="title_activity_main">JARVIS</string>#<string name="title_activity_main">JARVIS v2</string>#' android/app/src/main/res/values/strings.xml
           echo "appId/app_name ustawione na v2:"; grep applicationId android/app/build.gradle
 
-      - name: Build debug APK
+      # RELEASE (stały klucz jarvis.jks) — spójny podpis, aktualizacje v2 też instalują się bez odinstalowywania.
+      - name: Build release APK (stały klucz)
         working-directory: android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK v2
         uses: actions/upload-artifact@v4
         with:
-          name: jarvis-v2-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: jarvis-v2-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
