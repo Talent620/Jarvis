@@ -18,6 +18,7 @@ import type { Lead, LeadStatus } from "../types";
 import { useEscape } from "../hooks/useEscape";
 import LeadDetail from "./LeadDetail";
 import SalesPlan from "./SalesPlan";
+import { leadBucket, type CrmBucket } from "../lib/crmBuckets";
 
 const STATUS: { id: LeadStatus; label: string; color: string }[] = [
   { id: "new", label: "Nowy", color: "var(--cyan)" },
@@ -54,7 +55,7 @@ function numOrUndef(v: string): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: () => void; onWeb?: (ctx?: GrowthContext) => void; onMoney?: () => void }) {
+export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, bucket }: { onClose: () => void; onWeb?: (ctx?: GrowthContext) => void; onMoney?: () => void; embedded?: boolean; bucket?: CrmBucket }) {
   useEscape(onClose);
   const { data } = useStore();
   const leads = useMemo(() => data.leads || [], [data.leads]);
@@ -348,23 +349,27 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
   const roi = useMemo(() => computeRoi(campaigns, leads, Date.now()), [campaigns, leads]);
 
   const shown = useMemo(() => {
+    // Zakładka CRM (kubełek) to filtr NADRZĘDNY: Do działania / Klienci / Archiwum.
+    const inBucket = bucket ? leads.filter((l) => leadBucket(l) === bucket) : leads;
     const match = (l: Lead) =>
       filter === "all" ? true
       : filter === "call" ? (l.status === "new" || l.status === "contacted")
       : filter === "emailed" ? wasLeadEmailed(l, sent)
       : l.status === filter;
-    const base = searchLeads(leads.filter(match), query);
+    const base = searchLeads(inBucket.filter(match), query);
     return [...base].sort((a, b) => (b.intel?.score ?? -1) - (a.intel?.score ?? -1));
-  }, [leads, filter, query, sent]);
+  }, [leads, filter, query, sent, bucket]);
   const copy = (t?: string) => t && copyWithToast(t);
 
-  return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>📈 Pulpit Sprzedaży</h2>
-        </div>
+  const modals = (
+    <>
+      {openLead && <LeadDetail leadId={openLead} onClose={() => setOpenLead(null)} onWeb={onWeb} />}
+      {showPlan && <SalesPlan onClose={() => setShowPlan(false)} onLead={(id) => { setShowPlan(false); setOpenLead(id); }} />}
+    </>
+  );
+
+  const inner = (
+    <>
         <div className="panel-body">
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
             <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
@@ -668,12 +673,25 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
           <div className="field"><input value={form.contact} placeholder="Kontakt (e-mail/tel.)" onChange={(e) => setForm({ ...form, contact: e.target.value })} /></div>
           <button className="btn primary" onClick={add}>💾 Dodaj lead</button>
         </div>
+    </>
+  );
+
+  // Osadzony w ekranie „Sprzedaż / CRM" (zakładki) — bez własnego sheet/nagłówka/stopki.
+  if (embedded) return <>{inner}{modals}</>;
+
+  return (
+    <div className="sheet" onClick={onClose}>
+      <div className="panel" onClick={(e) => e.stopPropagation()}>
+        <div className="panel-head">
+          <div className="grabber" />
+          <h2>📈 Pulpit Sprzedaży</h2>
+        </div>
+        {inner}
         <div className="panel-foot">
           <button className="btn" onClick={onClose}>Zamknij</button>
         </div>
       </div>
-      {openLead && <LeadDetail leadId={openLead} onClose={() => setOpenLead(null)} onWeb={onWeb} />}
-      {showPlan && <SalesPlan onClose={() => setShowPlan(false)} onLead={(id) => { setShowPlan(false); setOpenLead(id); }} />}
+      {modals}
     </div>
   );
 }

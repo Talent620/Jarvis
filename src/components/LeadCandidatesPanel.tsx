@@ -36,7 +36,7 @@ const NEXT_ACTION_LABEL: Record<IcpScore["bestNextAction"], string> = {
   reject: "🚫 Odpuść",
 };
 
-export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () => void; onWeb?: (ctx: GrowthContext) => void }) {
+export default function LeadCandidatesPanel({ onClose, onWeb, embedded, onImported }: { onClose: () => void; onWeb?: (ctx: GrowthContext) => void; embedded?: boolean; onImported?: () => void }) {
   useEscape(onClose);
   const [niche, setNiche] = useState(store.settings.prospectNiche || "");
   const [city, setCity] = useState(store.settings.prospectLocation || "");
@@ -104,7 +104,9 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
     if (!pick.length) { toast("Zaznacz najpierw kandydatów do importu."); return; }
     const added = importCandidates(store.data.leads, pick, { now: Date.now(), makeId: () => uid() });
     if (added.length) store.setData((d) => { d.leads.push(...added); });
-    toast(`✅ Zaimportowano ${added.length} z ${pick.length} zaznaczonych (reszta to duplikaty).`);
+    // Powiedz WPROST, gdzie trafiła firma: do CRM → zakładka „Do działania".
+    toast(added.length ? `✅ Zaimportowano ${added.length} — trafili do CRM → „Do działania".` : "Nic nie dodano (same duplikaty).");
+    if (added.length) onImported?.();
     // Zaimportowanych usuń z listy kandydatów (i z zaznaczenia).
     const addedNames = new Set(added.map((l) => (l.company || "").toLowerCase()));
     setCandidates((cs) => cs.filter((c) => !pick.includes(c) || !addedNames.has(c.company.toLowerCase())));
@@ -136,9 +138,9 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
       { raw, source: c.source, now: Date.now(), three: { requested: "OFF", caps: { webgl: false } }, html, offer: `Nowoczesna strona dla ${c.company}`, consent: false, makeId: (seed) => `${uid()}-${seed}` },
       store,
     );
-    if (res.imported) setCandidates((cs) => cs.filter((x) => x.id !== c.id));
+    if (res.imported) { setCandidates((cs) => cs.filter((x) => x.id !== c.id)); onImported?.(); }
     toast(res.imported
-      ? `🚀 ${c.company}: ICP ${res.leadScore.score}/100 · kampania (szkic) · publikacja ${res.publish.state}`
+      ? `🚀 ${c.company}: ICP ${res.leadScore.score}/100 → CRM „Do działania" · publikacja ${res.publish.state}`
       : `Nie zaimportowano (${res.candidate.persistencePolicy === "no_persist" ? "dane przykładowe" : "duplikat"}).`);
   };
 
@@ -149,13 +151,7 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
     onWeb(buildGrowthContext(tempLead));
   };
 
-  return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>🧲 Kandydaci leadów</h2>
-        </div>
+  const body = (
         <div className="panel-body">
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
             Samo wyszukanie <b>nie</b> dodaje nic do bazy. Zaznacz kandydatów i kliknij „Importuj zaznaczone”.
@@ -271,6 +267,19 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
             </div>
           ))}
         </div>
+  );
+
+  // Osadzony (zakładka „Nowe znalezione" w ekranie Sprzedaż / CRM) — bez własnego sheet/nagłówka.
+  if (embedded) return body;
+
+  return (
+    <div className="sheet" onClick={onClose}>
+      <div className="panel" onClick={(e) => e.stopPropagation()}>
+        <div className="panel-head">
+          <div className="grabber" />
+          <h2>🧲 Kandydaci leadów</h2>
+        </div>
+        {body}
       </div>
     </div>
   );

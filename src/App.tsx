@@ -10,9 +10,8 @@ import LiveOverlay from "./components/LiveOverlay";
 const ChatHistory = lazy(() => import("./components/ChatHistory"));
 const Projects = lazy(() => import("./components/Projects"));
 const Journal = lazy(() => import("./components/Journal"));
-const SalesDashboard = lazy(() => import("./components/SalesDashboard"));
+const SalesCrm = lazy(() => import("./components/SalesCrm"));
 const GrowthDayPanel = lazy(() => import("./components/GrowthDayPanel"));
-const LeadCandidatesPanel = lazy(() => import("./components/LeadCandidatesPanel"));
 const GoalStatusPanel = lazy(() => import("./components/GoalStatusPanel"));
 const MoneyHub = lazy(() => import("./components/MoneyHub"));
 const FinancialDashboard = lazy(() => import("./components/FinancialDashboard"));
@@ -1461,7 +1460,8 @@ export default function App() {
       {showJournal && (<ScreenBoundary><Journal onClose={() => setShowJournal(false)} /></ScreenBoundary>)}
       {showSales && (
         <ScreenBoundary>
-        <SalesDashboard
+        <SalesCrm
+          initialTab="actionable"
           onClose={() => setShowSales(false)}
           onWeb={(ctx) => { setWebContext(ctx ?? null); setShowSales(false); setShowWeb(true); }}
           onMoney={() => { setShowSales(false); setShowMoney(true); }}
@@ -1624,9 +1624,10 @@ export default function App() {
       )}
       {showCandidates && (
         <ScreenBoundary>
-          <LeadCandidatesPanel
+          <SalesCrm
+            initialTab="found"
             onClose={() => setShowCandidates(false)}
-            onWeb={(ctx) => { setWebContext(ctx); setShowCandidates(false); setShowWeb(true); }}
+            onWeb={(ctx) => { setWebContext(ctx ?? null); setShowCandidates(false); setShowWeb(true); }}
           />
         </ScreenBoundary>
       )}
