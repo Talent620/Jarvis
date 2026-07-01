@@ -5,6 +5,7 @@ import { toast } from "../lib/toast";
 import { store } from "../lib/store";
 import { nextBestAction } from "../lib/livingPulse";
 import { requestScreen } from "../lib/navIntent";
+import { CENTER_GOALS, CENTER_GROUPS } from "../lib/centerModel";
 
 export default function More({
   onProjects,
@@ -48,7 +49,6 @@ export default function More({
   onBrand,
   onMail,
   onFinance,
-  onFaq,
   onClose,
 }: {
   onProjects: () => void;
@@ -137,23 +137,16 @@ export default function More({
     { id: "studio", icon: "🎨", name: "Studio Obrazów", desc: "Generuj/edytuj", fn: onStudio },
     { id: "projects", icon: "📁", name: "Projekty", desc: "Projekty / dokumenty", fn: onProjects },
     { id: "history", icon: "🕘", name: "Historia", desc: "Historia rozmów", fn: onHistory },
-    { id: "data", icon: "▣", name: "Dane", desc: "Zadania, targ, audyt…", fn: onData },
+    { id: "data", icon: "▣", name: "Moje dane i kopie", desc: "Zadania, targ, audyt, kopie zapasowe…", fn: onData },
     { id: "gadgets", icon: "🧰", name: "Gadżety", desc: "Latarka, kompas, QR…", fn: onGadgets },
-    { id: "faq", icon: "❓", name: "FAQ", desc: "Do czego służy każda funkcja", fn: onFaq },
-    { id: "help", icon: "📖", name: "Pomoc", desc: "Jak korzystać (szybki start)", fn: onHelp },
+    // Pomoc i FAQ scalone w JEDNO wejście (mniej duplikatów). Otwiera szybki start; FAQ jest w środku.
+    { id: "helpfaq", icon: "❓", name: "Pomoc i FAQ", desc: "Szybki start i do czego służy każda funkcja", fn: onHelp },
     { id: "admin", icon: "🔐", name: "Administrator", desc: "Panel (licencje)", fn: onAdmin },
   ];
 
-  // Funkcje pogrupowane w czytelne sekcje — łatwiej znaleźć, mniej przewijania.
-  const GROUPS: { title: string; ids: string[] }[] = [
-    { title: "📈 Sprzedaż i biznes", ids: ["growthDay", "candidates", "sales", "finance", "mail", "sent", "content", "ads", "brand", "web", "money"] },
-    { title: "✅ Praca i organizacja", ids: ["tasks", "projects", "journal", "cards"] },
-    { title: "🛒 Zakupy i okazje", ids: ["bargain", "wheretobuy", "shoppinglist"] },
-    { title: "🎙 Narzędzia AI", ids: ["translator", "transcribe", "hud", "screen", "studio"] },
-    { title: "🧠 Ja i pamięć", ids: ["mind", "profile", "memory"] },
-    { title: "⬢ Szef i sterowanie", ids: ["boss", "command", "recall", "goal", "goalStatus"] },
-    { title: "⚙️ System i pomoc", ids: ["notifications", "status", "guardian", "history", "data", "audit", "gadgets", "faq", "help", "admin"] },
-  ];
+  // „Wszystkie funkcje" — pełna taksonomia z centerModel (jedno źródło prawdy, testowane: każde id
+  // osiągalne, bez duplikatów). Sześć CELÓW pokazujemy osobno na górze.
+  const GROUPS = CENTER_GROUPS;
 
   type Item = (typeof items)[number];
   const byId = new Map<string, Item>(items.map((i) => [i.id, i]));
@@ -249,6 +242,25 @@ export default function More({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          {/* SZEŚĆ celów — jedno, proste menu na górze. Reszta to „Wszystkie funkcje" poniżej. */}
+          {!query.trim() && (
+            <>
+              <h3 className="menu-sec">🎯 Główne cele</h3>
+              <div className="menu-grid">
+                {CENTER_GOALS.map((g) => {
+                  const target = byId.get(g.opens);
+                  return (
+                    <button key={g.id} type="button" className="menu-tile" title={g.desc} onClick={() => { onClose(); target?.fn?.(); }}>
+                      <span className="ic" aria-hidden="true">{g.icon}</span>
+                      <span className="nm">{g.label}</span>
+                      <span className="ds">{g.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <h3 className="menu-sec" style={{ marginTop: 12 }}>📚 Wszystkie funkcje</h3>
+            </>
+          )}
           {filtered && filtered.length === 0 ? (
             <div className="menu-empty">Brak funkcji dla „{query.trim()}". Spróbuj inaczej.</div>
           ) : (
