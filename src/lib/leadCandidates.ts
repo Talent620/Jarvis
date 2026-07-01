@@ -106,17 +106,25 @@ export function discoverLeadCandidates(
   return out.sort((a, b) => b.confidence - a.confidence);
 }
 
-/** Pure: kandydat → Lead (do importu). Dane przykładowe oznaczamy w notatce. */
+/**
+ * Pure: kandydat → Lead (do importu). Respektuje persistencePolicy:
+ * - id_only (Google Places): trwale TYLKO stabilny identyfikator (placeId) + nazwa; pól takich jak
+ *   adres/e-mail/telefon NIE utrwalamy długoterminowo (zgodnie z warunkami Google — do odświeżenia).
+ * - persist_ok (OSM/Tavily/CEIDG): pełne dane. Dane przykładowe oznaczamy w notatce.
+ */
 export function candidateToLead(c: LeadCandidate, now: number): Omit<Lead, "id"> {
-  const note = [c.isSample ? "[PRZYKŁAD]" : "", `źródło: ${c.source}`, ...c.qualityWarnings].filter(Boolean).join(" · ");
+  const idOnly = c.persistencePolicy === "id_only";
+  const noteBits = [c.isSample ? "[PRZYKŁAD]" : "", `źródło: ${c.source}`, ...c.qualityWarnings];
+  if (idOnly && c.sourceId) noteBits.push(`placeId: ${c.sourceId}`, "[Google — dane odśwież, nie utrwalamy adresu/kontaktu]");
   return {
     company: c.company,
-    url: c.url,
-    email: c.email,
-    contact: c.email || c.phone,
-    address: c.address,
+    url: idOnly ? undefined : c.url,
+    email: idOnly ? undefined : c.email,
+    contact: idOnly ? undefined : (c.email || c.phone),
+    address: idOnly ? undefined : c.address,
     niche: c.niche,
-    note,
+    note: noteBits.filter(Boolean).join(" · "),
+    crmId: idOnly ? c.sourceId : undefined, // stabilny identyfikator miejsca
     status: "new",
     createdAt: now,
     updatedAt: now,
@@ -135,6 +143,8 @@ export function importCandidates(
   const have = new Set((existing || []).map((l) => (l.company || "").trim().toLowerCase()));
   const added: Lead[] = [];
   selected.forEach((c, i) => {
+    // no_persist (mock/SAMPLE) NIE trafia do CRM jako prawdziwy lead — nie udajemy, że przykład jest realny.
+    if (c.persistencePolicy === "no_persist") return;
     const key = c.company.trim().toLowerCase();
     if (have.has(key)) return;
     have.add(key);

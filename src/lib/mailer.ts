@@ -3,6 +3,7 @@ import { gmailSend } from "./google";
 import { draftOffer } from "./offer";
 import { splitOffer } from "./glinks";
 import { fetchTimeout } from "./http";
+import { evaluateContactPolicy } from "./leadSourcePolicy";
 import type { Lead } from "../types";
 
 // Wysyłka e-maili WPROST z aplikacji — inteligentny wybór kanału:
@@ -295,9 +296,44 @@ export async function draftAndSendOffer(lead: Lead, email: string): Promise<Draf
     text = (await draftOffer(lead)).trim();
   }
   if (!text) return { ok: false, error: "Nie udało się napisać oferty — sprawdź klucz API (⚙ → Mózg)." };
+  // Zgodność kontaktu: doNotContact/optOut BLOKUJĄ wysyłkę — ale DRAFT (offer) już powstał i go zwracamy.
+  const suppressed = contactSuppressionReason(lead);
+  if (suppressed) return { ok: false, error: `Nie wysłano — ${suppressed}. Szkic przygotowany.`, offer: text };
   const { subject, body } = splitOffer(text, `Oferta dla ${lead.company}`, store.settings.emailSignature);
   const r = await sendOfferEmail(email, subject, body, lead.company);
   return { ...r, offer: text };
+}
+
+/**
+ * Pure: czy leada wolno automatycznie zmailować? doNotContact/optOut BLOKUJĄ (przez
+ * evaluateContactPolicy). Publiczny e-mail sam w sobie nie wymusza wysyłki — ale suppression
+ * (doNotContact/optOut) zawsze wyklucza. Zwraca powód, gdy zablokowany.
+ */
+export function contactSuppressionReason(lead: Lead): string | null {
+  const p = evaluateContactPolicy({
+    hasEmail: !!leadEmailOf(lead),
+    hasPhone: !!(lead.contact && !lead.contact.includes("@")),
+    doNotContact: lead.doNotContact,
+    optOut: lead.optOut,
+  });
+  return p.suppressionReason ?? null;
+}
+
+/**
+ * Pure: podziel leady na cele masowej wysyłki i pominięte. Egzekwuje: poprawny e-mail, brak
+ * wcześniejszej wysyłki ORAZ zgodność kontaktu (doNotContact/optOut). Jedno źródło dla licznika i wysyłki.
+ */
+export function eligibleForBulkSend(
+  leads: Lead[],
+  index: { companies: Set<string>; addresses: Set<string> },
+): { targets: Lead[]; noEmail: number; alreadyEmailed: number; suppressed: number } {
+  const withEmail = (leads || []).filter((l) => isValidEmail(leadEmailOf(l)));
+  const noEmail = (leads || []).length - withEmail.length;
+  const allowed = withEmail.filter((l) => !contactSuppressionReason(l)); // doNotContact/optOut → poza wysyłką
+  const suppressed = withEmail.length - allowed.length;
+  const targets = allowed.filter((l) => !wasLeadEmailed(index, l.company || "", leadEmailOf(l)));
+  const alreadyEmailed = allowed.length - targets.length;
+  return { targets, noEmail, alreadyEmailed, suppressed };
 }
 
 export interface BulkSendResult {
@@ -305,6 +341,8 @@ export interface BulkSendResult {
   sent: number;
   noEmail: number;
   alreadyEmailed: number;
+  /** Pominięte z powodu zgodności kontaktu (doNotContact/optOut). */
+  suppressed: number;
   failed: number;
   errors: string[];
 }
@@ -347,16 +385,11 @@ export async function sendAllOffers(max = 25, onProgress?: (done: number, total:
   const sentBox = store.data.sentMail || [];
   // Perf: indeks O(m) zamiast skanu sentBox dla KAŻDEGO leada (było O(leady × wysłane)).
   const sentIndex = buildSentIndex(sentBox);
-  const wasEmailed = (l: Lead): boolean => wasLeadEmailed(sentIndex, l.company || "", leadEmailOf(l));
-  // Najpierw policz dokładnie (cała lista), potem wyślij tylko do uprawnionych (limit).
-  // Wymagamy POPRAWNEGO adresu — inaczej marnowalibyśmy wywołanie AI na napisanie oferty,
-  // którą i tak odrzuci walidacja przy wysyłce (np. „biuro(małpa)x”).
-  const withEmail = leads.filter((l) => isValidEmail(leadEmailOf(l)));
-  const noEmail = leads.length - withEmail.length;
-  const targets = withEmail.filter((l) => !wasEmailed(l));
-  const alreadyEmailed = withEmail.length - targets.length;
+  // Uprawnieni = poprawny e-mail + zgodność kontaktu (doNotContact/optOut BLOKUJĄ) + nie mailowani.
+  // Egzekucja polityki kontaktu w REALNEJ masowej wysyłce, nie tylko w teście.
+  const { targets, noEmail, alreadyEmailed, suppressed } = eligibleForBulkSend(leads, sentIndex);
   const batch = targets.slice(0, Math.max(0, max));
-  const res: BulkSendResult = { total: leads.length, sent: 0, noEmail, alreadyEmailed, failed: 0, errors: [] };
+  const res: BulkSendResult = { total: leads.length, sent: 0, noEmail, alreadyEmailed, suppressed, failed: 0, errors: [] };
   for (let i = 0; i < batch.length; i++) {
     const l = batch[i];
     onProgress?.(i + 1, batch.length);

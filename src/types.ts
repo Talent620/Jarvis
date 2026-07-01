@@ -395,6 +395,10 @@ export interface Lead {
   origin?: "salesos";
   /** Identyfikator leada w AI Sales OS (gdy origin = salesos) — do dwukierunkowej synchronizacji. */
   crmId?: string;
+  /** Zgodność kontaktu: „nie kontaktować" — blokuje automatyczną wysyłkę (draft nadal wolno). */
+  doNotContact?: boolean;
+  /** Kontakt wypisał się (opt-out) — blokuje wysyłkę i draft. */
+  optOut?: boolean;
   status: LeadStatus;
   createdAt: number;
   updatedAt: number;

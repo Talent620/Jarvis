@@ -3,6 +3,7 @@ import { store, uid } from "./store";
 import { tavilySearch, hasWebSearch, type SearchHit } from "./research";
 import { discoverLeadCandidates, type LeadCandidate } from "./leadCandidates";
 import { searchGooglePlaces, googlePlacesToCandidates } from "./googlePlaces";
+import { delayUntilAllowed, afterSuccess, afterFailure, type RateState } from "./leadSourcePolicy";
 import type { Lead } from "../types";
 
 // === Silnik wyszukiwania leadów (darmowy, bez kluczy) ===
@@ -137,9 +138,26 @@ export function parseElement(el: any): RawLead | null {
   return { company: String(t.name).slice(0, 80), phone, email, website, address, hours, kind, hasWebsite: !!website };
 }
 
+// Egzekucja polityki OSM Nominatim: maks. 1 req/s + backoff po błędzie (delayUntilAllowed z
+// leadSourcePolicy). Atrybucja: w przeglądarce identyfikuje nas Referer/UA; nagłówek języka dokładamy.
+let nominatimRate: RateState = { lastAt: 0, failures: 0 };
+const sleepMs = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+async function nominatimFetch(path: string, timeout: number): Promise<Response> {
+  const wait = delayUntilAllowed(nominatimRate, Date.now());
+  if (wait > 0) await sleepMs(wait); // realny throttle 1 req/s (+ backoff)
+  try {
+    const res = await fetchTimeout(`${NOMINATIM}${path}`, { headers: { "Accept-Language": "pl" } }, timeout);
+    nominatimRate = afterSuccess(Date.now());
+    return res;
+  } catch (e) {
+    nominatimRate = afterFailure(nominatimRate, Date.now()); // rosnący backoff
+    throw e;
+  }
+}
+
 async function geocode(city: string): Promise<{ bbox: [number, number, number, number]; name: string } | null> {
   try {
-    const res = await fetchTimeout(`${NOMINATIM}/search?city=${encodeURIComponent(city)}&format=json&limit=1`, {}, 9000);
+    const res = await nominatimFetch(`/search?city=${encodeURIComponent(city)}&format=json&limit=1`, 9000);
     const d = await res.json().catch(() => null);
     const r = d?.[0];
     const bbox = r ? toOverpassBbox(r.boundingbox) : null;
@@ -383,7 +401,7 @@ export async function enrichLeadsEmails(leads: RawLead[], max = 12): Promise<Raw
 /** Reverse-geocode współrzędnych → miasto (gdy użytkownik nie poda lokalizacji). */
 export async function cityFromCoords(lat: number, lon: number): Promise<string | null> {
   try {
-    const res = await fetchTimeout(`${NOMINATIM}/reverse?lat=${lat}&lon=${lon}&format=json`, {}, 9000);
+    const res = await nominatimFetch(`/reverse?lat=${lat}&lon=${lon}&format=json`, 9000);
     const d = await res.json().catch(() => null);
     const a = d?.address;
     return a?.city || a?.town || a?.village || a?.municipality || a?.county || null;
@@ -561,14 +579,17 @@ export async function discoverCandidates(opts: {
   if (!city) city = (await browserCity()) || "";
   if (!city) return { candidates: [], city: "", error: "Nie wiem, gdzie szukać. Podaj miasto albo zezwól na lokalizację." };
 
+  const now = Date.now();
+  // PROVENANCE: każdy wynik zachowuje WŁASNE źródło. OSM → source osm; wyniki z sieci (Tavily) →
+  // source tavily (NIE oznaczamy ich jako OSM). Dedup po nazwie (OSM ma pierwszeństwo).
   const osm = await searchOSM(niche, city, count, filters);
-  let raws = osm;
+  let candidates = discoverLeadCandidates(osm, { source: "osm", now });
   if (opts.useWeb) {
     const web = (await searchWebLeads(niche, city, count)).filter((l) => passesFilters(l, filters));
-    raws = mergeRawLeads(osm, web, count);
+    const webCands = discoverLeadCandidates(web, { source: "tavily", now });
+    const have = new Set(candidates.map((c) => c.company.toLowerCase()));
+    candidates = [...candidates, ...webCands.filter((c) => !have.has(c.company.toLowerCase()))];
   }
-  const now = Date.now();
-  let candidates = discoverLeadCandidates(raws, { source: "osm", now });
 
   // Drugie źródło: Google Places (tylko gdy jest klucz). Zgodnie z polityką Google trwale zapisujemy
   // wyłącznie placeId (leadCandidates ustawia persistencePolicy=id_only). Awaria Google nie psuje OSM.
