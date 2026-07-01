@@ -4,6 +4,7 @@ import { blueprintSummary, type SiteBlueprint, type MotionLevel, type ThreeDMode
 import { resolve3D, detectDeviceCaps, toPolicyMode } from "../lib/web3dPolicy";
 import { validateSite, validationVerdict } from "../lib/siteValidator";
 import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, planBlueprint, repairTruncatedSite, continueSite, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
+import { WEB_STEPS, currentStepInfo } from "../lib/webStudioFlow";
 import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
 import { assessSeo, seoFixInstruction } from "../lib/seoPreview";
 import { buildRobotsTxt, buildSitemapXml, extractInternalPaths, normalizeDomain } from "../lib/siteSeoFiles";
@@ -302,6 +303,22 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
           <h2>🌐 Kreator stron i sklepów</h2>
         </div>
         <div className="panel-body">
+          {/* Prosty tor 4 kroków: Brief → Plan → Budowa → Dostarczenie. Zawsze widać, gdzie jesteś. */}
+          {(() => {
+            const info = currentStepInfo({ hasBrief: !!briefText.trim() || !!prompt.trim(), hasBlueprint: !!blueprint, hasSafeHtml: !!html && !brokenDemo });
+            return (
+              <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "stretch" }}>
+                {WEB_STEPS.map((s, i) => (
+                  <div key={s.id} style={{ flex: 1, textAlign: "center", padding: "6px 4px", borderRadius: 8, fontSize: 11,
+                    background: i === info.index ? "color-mix(in srgb, var(--cyan, #6ce7ff) 14%, transparent)" : "transparent",
+                    border: `1px solid ${i <= info.index ? "var(--cyan, #6ce7ff)" : "var(--line, #234)"}`,
+                    opacity: i <= info.index ? 1 : 0.55, fontWeight: i === info.index ? 700 : 400 }}>
+                    {i + 1}. {s.label}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
           {demoFor && (
             <div className="row" style={{ borderLeft: "3px solid var(--cyan)", paddingLeft: 10, marginBottom: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{ fontSize: 13 }}>
