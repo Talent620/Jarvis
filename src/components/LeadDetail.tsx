@@ -10,7 +10,7 @@ import { scoreDeliverability, deliverabilityLabel } from "../lib/emailDeliverabi
 import { applyComposerAction, COMPOSER_ACTIONS, type ComposerAction } from "../lib/emailComposer";
 import { canSendDirect, sendOfferEmail } from "../lib/mailer";
 import { draftOffer } from "../lib/offer";
-import { markContacted } from "../lib/salesEngine";
+import { markContacted, relationshipStatus } from "../lib/salesEngine";
 import { nextStatusAfterContact } from "../lib/leadContact";
 import { leadTimeline, appendLeadNote } from "../lib/leadNotes";
 import { salesOsConfigured, outreachViaSalesOs, leadToOutreachInput, pushLeadStatusToSalesOs } from "../lib/salesOs";
@@ -172,6 +172,23 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
           <h2>🗂 {lead.company}</h2>
         </div>
         <div className="panel-body">
+          {/* Relacja: ostatni kontakt + następny follow-up + ostrzeżenie o zaległości — bez skoku
+              na inny ekran (dane już liczone przez salesEngine, tu tylko odczyt). */}
+          {(() => {
+            const rel = relationshipStatus(lead);
+            if (!rel.lastContactedAt && !rel.nextFollowUpAt) return null;
+            const fmt = (ms: number) => new Date(ms).toLocaleDateString("pl-PL", { day: "numeric", month: "short" });
+            return (
+              <div className="muted" style={{ fontSize: 12.5, marginBottom: 8, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                {rel.lastContactedAt && <span>📞 Ostatni kontakt: {fmt(rel.lastContactedAt)}</span>}
+                {rel.nextFollowUpAt && (
+                  <span style={rel.overdue ? { color: "var(--gold, #d9a400)", fontWeight: 600 } : undefined}>
+                    {rel.overdue ? "⚠ Follow-up zaległy od: " : "🔁 Następny follow-up: "}{fmt(rel.nextFollowUpAt)}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
           {/* Scoring + status */}
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             {score && (

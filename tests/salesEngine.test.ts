@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { isOpenNow, openLabel, callNowList, followUpsDue, followUpMessage, markContacted, scheduleFollowUp, snoozeFollowUp, followUpDueAt, pipelineForecast, leadsToCsv, searchLeads, wasLeadEmailed } from "../src/lib/salesEngine";
+import { isOpenNow, openLabel, callNowList, followUpsDue, followUpMessage, markContacted, scheduleFollowUp, snoozeFollowUp, followUpDueAt, pipelineForecast, leadsToCsv, searchLeads, wasLeadEmailed, relationshipStatus } from "../src/lib/salesEngine";
 import type { SentMail } from "../src/types";
 import { rankRawLeads } from "../src/lib/leads";
 import { store, uid } from "../src/lib/store";
@@ -175,6 +175,42 @@ describe("silnik follow-upów", () => {
   it("followUpDueAt: zaplanowany termin albo kontakt + N dni", () => {
     expect(followUpDueAt(lead({ nextFollowUpAt: 999 }), 3)).toBe(999);
     expect(followUpDueAt(lead({ lastContactedAt: 0 }), 3)).toBe(3 * 86400000);
+  });
+});
+
+// Relationship intelligence (LeadDetail): ostatni kontakt + następny follow-up + zaległość —
+// czysta agregacja istniejących sygnałów (followUpDueAt/status/followUpCount), zero nowej logiki.
+describe("relationshipStatus — pasek relacji z klientem", () => {
+  it("nowy lead (jeszcze nie zaczepiony) → brak next-follow-up (nie kwalifikuje się)", () => {
+    const rel = relationshipStatus(lead({ status: "new" }), 1_000_000);
+    expect(rel.lastContactedAt).toBeUndefined();
+    expect(rel.nextFollowUpAt).toBeUndefined();
+    expect(rel.overdue).toBe(false);
+  });
+
+  it("zaczepiony lead z zaplanowanym terminem w przyszłości → nie zaległy", () => {
+    const now = 1_000_000;
+    const rel = relationshipStatus(lead({ status: "contacted", lastContactedAt: now, nextFollowUpAt: now + 86400000 }), now);
+    expect(rel.lastContactedAt).toBe(now);
+    expect(rel.nextFollowUpAt).toBe(now + 86400000);
+    expect(rel.overdue).toBe(false);
+  });
+
+  it("termin follow-upu już minął → overdue=true (ostrzeżenie przed złamaniem ustalenia)", () => {
+    const now = 1_000_000;
+    const rel = relationshipStatus(lead({ status: "offer", nextFollowUpAt: now - 1 }), now);
+    expect(rel.overdue).toBe(true);
+  });
+
+  it("limit follow-upów wyczerpany (nie nękamy) → brak next-follow-up mimo statusu contacted", () => {
+    const rel = relationshipStatus(lead({ status: "contacted", followUpCount: 10, nextFollowUpAt: 0 }), 1_000_000);
+    expect(rel.nextFollowUpAt).toBeUndefined();
+    expect(rel.overdue).toBe(false);
+  });
+
+  it("wygrany/odrzucony lead → brak next-follow-up (proces zamknięty)", () => {
+    expect(relationshipStatus(lead({ status: "won", nextFollowUpAt: 0 }), 1_000_000).nextFollowUpAt).toBeUndefined();
+    expect(relationshipStatus(lead({ status: "lost", nextFollowUpAt: 0 }), 1_000_000).nextFollowUpAt).toBeUndefined();
   });
 });
 

@@ -150,6 +150,29 @@ export function followUpsDue(leads: Lead[], now = Date.now()): Lead[] {
     .sort((a, b) => followUpDueAt(a, days) - followUpDueAt(b, days));
 }
 
+export interface RelationshipStatus {
+  lastContactedAt?: number;
+  /** Termin następnego follow-upu — TYLKO gdy status się kwalifikuje (contacted/offer) i limit nienadwyrężony. */
+  nextFollowUpAt?: number;
+  /** Termin follow-upu już minął (relationship intelligence: „nie zawiodłem ustalenia"). */
+  overdue: boolean;
+}
+
+/**
+ * Pure: zwięzły stan relacji z klientem — ostatni kontakt + następny follow-up + czy zaległy.
+ * Komponuje istniejące sygnały (followUpDueAt/MAX_FOLLOWUPS), nie dodaje nowej logiki — tylko
+ * jedno miejsce agregacji do wyświetlenia (np. w teczce klienta, bez skoku na inny ekran).
+ */
+export function relationshipStatus(lead: Lead, now = Date.now()): RelationshipStatus {
+  const eligible = (lead.status === "contacted" || lead.status === "offer") && (lead.followUpCount ?? 0) < MAX_FOLLOWUPS;
+  const nextFollowUpAt = eligible ? followUpDueAt(lead) : undefined;
+  return {
+    lastContactedAt: lead.lastContactedAt,
+    nextFollowUpAt,
+    overdue: nextFollowUpAt != null && now >= nextFollowUpAt,
+  };
+}
+
 /** Zaplanuj następny follow-up na konkretny moment (autonomia: JARVIS sam planuje kadencję). */
 export function scheduleFollowUp(leadId: string, whenMs: number): void {
   store.setData((d) => {
