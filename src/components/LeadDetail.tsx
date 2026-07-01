@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { buildGrowthContext, type GrowthContext } from "../lib/growthContext";
-import { store } from "../lib/store";
+import { buildGrowthContext, leadToProjectDraft, hasProjectForClient, type GrowthContext } from "../lib/growthContext";
+import { clientJourney } from "../lib/clientJourney";
+import { requestScreen } from "../lib/navIntent";
+import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { buildDossier, auditWeakPoints, scoreLabel, smsDraft } from "../lib/leadIntel";
 import { gmailComposeUrl, mailtoUrl, mapsSearchUrl, smsUrl, splitOffer, safeOpenExternal } from "../lib/glinks";
@@ -431,6 +433,31 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
           {onWeb && (
             <button className="btn" style={{ marginTop: 14 }} onClick={() => onWeb(buildGrowthContext(lead))}>
               🌐 Zbuduj demo strony dla tej firmy
+            </button>
+          )}
+
+          {/* Handoff Klient → Finanse: „Utwórz projekt" wypełnia nazwę/wartość/klienta z leada. Wymaga
+              zatwierdzenia i NIE tworzy duplikatu. Płatność (w Finansach) sama przesunie etap klienta. */}
+          <button
+            type="button"
+            className="btn"
+            style={{ marginTop: 8 }}
+            onClick={() => {
+              if (hasProjectForClient(store.data.financeProjects || [], lead)) { toast("Projekt dla tej firmy już istnieje — otwieram Finanse."); requestScreen("finance"); return; }
+              const draft = leadToProjectDraft(lead, Date.now());
+              if (!window.confirm(`Utworzyć projekt finansowy „${draft.name}"${draft.amount ? ` na ${draft.amount} zł` : ""}? Nic nie oznaczam jako opłacone — płatność wpiszesz w Finansach.`)) return;
+              store.setData((d) => { d.financeProjects = [...(d.financeProjects || []), { id: uid(), ...draft }]; });
+              toast(`💰 Utworzono projekt dla ${lead.company}. Otwieram Finanse.`);
+              requestScreen("finance");
+            }}
+          >
+            💰 Utwórz projekt finansowy z tego klienta
+          </button>
+
+          {/* Handoff Finanse → Marketing: po POTWIERDZONEJ wpłacie proponuj treść o realizacji. */}
+          {clientJourney(lead, store.data.financeProjects || [], store.data.sentMail || []).done && (
+            <button type="button" className="btn" style={{ marginTop: 8, borderColor: "var(--cyan, #6ce7ff)" }} onClick={() => requestScreen("content")}>
+              📣 Opłacone — przygotuj treść o realizacji
             </button>
           )}
         </div>

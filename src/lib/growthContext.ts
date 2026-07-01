@@ -3,7 +3,7 @@
 // (firma, branża, lokalizacja, strona, kontakt, wykryte problemy, źródła i dowody), który zasila
 // Kreator stron gotowym briefem. Czysty i testowalny; UI tylko go przenosi. S9-safe.
 
-import type { Lead } from "../types";
+import type { Lead, FinanceProject } from "../types";
 import type { ClientBrief } from "./webgen";
 
 export interface GrowthContext {
@@ -75,4 +75,29 @@ export function growthContextToBrief(ctx: GrowthContext): ClientBrief {
 /** Pure: nazwa projektu demo dla kreatora. */
 export function demoProjectName(ctx: GrowthContext): string {
   return `Demo — ${ctx.company}`;
+}
+
+// — Handoff Klient → Finanse (bez ręcznego przepisywania firmy; bez duplikatów) —
+
+/** Pure: czy istnieje już projekt finansowy dla firmy tego leada (dedup po nazwie klienta)? */
+export function hasProjectForClient(projects: FinanceProject[], lead: Pick<Lead, "company">): boolean {
+  const c = (lead.company || "").trim().toLowerCase();
+  if (!c) return false;
+  return (projects || []).some((p) => (p.client || "").trim().toLowerCase() === c);
+}
+
+/**
+ * Pure: SZKIC projektu finansowego z leada — nazwa, klient i wartość wypełnione automatycznie.
+ * To tylko DRAFT (bez id) — utworzenie wymaga zatwierdzenia w UI. Status startowy: w realizacji.
+ */
+export function leadToProjectDraft(lead: Lead, now: number): Omit<FinanceProject, "id"> {
+  return {
+    name: `Projekt — ${lead.company}`,
+    client: lead.company,
+    status: "w_realizacji",
+    amount: typeof lead.value === "number" && lead.value > 0 ? lead.value : 0,
+    startAt: now,
+    createdAt: now,
+    updatedAt: now,
+  };
 }
