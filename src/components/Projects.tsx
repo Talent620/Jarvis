@@ -72,16 +72,16 @@ export default function Projects({ onClose }: { onClose: () => void }) {
         </div>
         <div className="panel-body">
           <div className={`list-item ${!activeId ? "done" : ""}`}>
-            <span style={{ cursor: "pointer", flex: 1 }} onClick={() => select("")}>
+            <button type="button" className="linklike" style={{ flex: 1, textAlign: "left", minHeight: 44 }} aria-pressed={!activeId} onClick={() => select("")}>
               🌐 Ogólny (bez projektu)
-            </span>
+            </button>
           </div>
           {data.projects.map((p) => (
             <div key={p.id} className={`list-item ${p.id === activeId ? "done" : ""}`}>
-              <span style={{ cursor: "pointer", flex: 1 }} onClick={() => select(p.id)}>
+              <button type="button" className="linklike" style={{ flex: 1, textAlign: "left", minHeight: 44 }} aria-pressed={p.id === activeId} onClick={() => select(p.id)}>
                 📂 {p.name}
                 {p.id === activeId ? " · aktywny" : ""}
-              </span>
+              </button>
               <button type="button" className="x" aria-label="Usuń projekt" title="Usuń projekt" onClick={() => del(p.id)}>
                 ✕
               </button>

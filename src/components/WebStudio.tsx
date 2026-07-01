@@ -308,7 +308,7 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
                 🏢 <b>Demo dla:</b> {demoFor.company}
                 {demoFor.problems.length > 0 && <span className="muted"> · {demoFor.problems.length} wykrytych problemów</span>}
               </span>
-              <button className="btn" style={{ width: "auto", marginTop: 0, padding: "4px 10px", fontSize: 12, minHeight: 32 }} onClick={() => setDemoFor(null)}>
+              <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "4px 10px", fontSize: 12, minHeight: 44 }} onClick={() => setDemoFor(null)}>
                 Odepnij kontekst
               </button>
             </div>
@@ -428,7 +428,7 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
             <div style={{ marginBottom: 8, border: "1px solid var(--line, #234)", borderRadius: 8, padding: 8 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 13, fontWeight: 600 }}>🧠 Plan strony {blueprint ? "(steruje budową)" : "(najpierw myślimy)"}</span>
-                <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} disabled={busy || planning || !canBuild} onClick={() => void plan()}>
+                <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44 }} disabled={busy || planning || !canBuild} onClick={() => void plan()}>
                   {planning ? "⏳ Planuję…" : blueprint ? "↻ Przeplanuj" : "🧭 Zaplanuj stronę"}
                 </button>
               </div>

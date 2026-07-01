@@ -173,9 +173,9 @@ export default function TaskHub({ onClose }: { onClose: () => void }) {
           {/* Zakładki */}
           <div className="chips" style={{ flexWrap: "wrap", margin: "6px 0 10px" }}>
             {TABS.map((t) => (
-              <span key={t.id} className={`chip ${view === t.id ? "on" : ""}`} style={{ cursor: "pointer" }} onClick={() => setView(t.id)}>
+              <button key={t.id} type="button" className={`chip ${view === t.id ? "on" : ""}`} aria-pressed={view === t.id} onClick={() => setView(t.id)}>
                 {t.label}{t.n ? ` (${t.n})` : ""}
-              </span>
+              </button>
             ))}
           </div>
 
@@ -186,9 +186,9 @@ export default function TaskHub({ onClose }: { onClose: () => void }) {
               {projects.map((p) => {
                 const n = tasks.filter((t) => !t.done && t.projectId === p.id).length;
                 return (
-                  <span key={p.id} className={`chip ${activeProject === p.id ? "on" : ""}`} style={{ cursor: "pointer" }} onClick={() => setActiveProject(p.id)}>
+                  <button key={p.id} type="button" className={`chip ${activeProject === p.id ? "on" : ""}`} aria-pressed={activeProject === p.id} onClick={() => setActiveProject(p.id)}>
                     📁 {p.name} ({n})
-                  </span>
+                  </button>
                 );
               })}
             </div>

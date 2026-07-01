@@ -176,7 +176,7 @@ export default function Journal({ onClose }: { onClose: () => void }) {
                 <br />
                 <span className="muted">domyślnie prywatne — włącz tylko, jeśli chcesz, by asystent znał ten wpis</span>
               </span>
-              <div className={`switch ${shared ? "on" : ""}`} onClick={() => setShared(!shared)} />
+              <button type="button" className={`switch ${shared ? "on" : ""}`} role="switch" aria-checked={shared} aria-label="Udostępnij wpis asystentowi" onClick={() => setShared(!shared)} />
             </div>
           </div>
           <div className="panel-foot" style={{ display: "flex", gap: 8 }}>
@@ -225,13 +225,13 @@ export default function Journal({ onClose }: { onClose: () => void }) {
 
           {allTags.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "4px 0 10px" }}>
-              <span className={`chip ${!activeTag ? "on" : ""}`} onClick={() => setActiveTag("")} style={{ cursor: "pointer" }}>
+              <button type="button" className={`chip ${!activeTag ? "on" : ""}`} aria-pressed={!activeTag} onClick={() => setActiveTag("")}>
                 wszystkie
-              </span>
+              </button>
               {allTags.map((t) => (
-                <span key={t} className={`chip ${activeTag === t ? "on" : ""}`} onClick={() => setActiveTag(activeTag === t ? "" : t)} style={{ cursor: "pointer" }}>
+                <button key={t} type="button" className={`chip ${activeTag === t ? "on" : ""}`} aria-pressed={activeTag === t} onClick={() => setActiveTag(activeTag === t ? "" : t)}>
                   #{t}
-                </span>
+                </button>
               ))}
             </div>
           )}
@@ -244,7 +244,7 @@ export default function Journal({ onClose }: { onClose: () => void }) {
             </p>
           ) : (
             filtered.map((e) => (
-              <div key={e.id} className="journal-card" onClick={() => openEdit(e)} style={{ cursor: "pointer" }}>
+              <div key={e.id} className="journal-card" role="button" tabIndex={0} aria-label={`Otwórz wpis: ${e.title || "Bez tytułu"}`} onClick={() => openEdit(e)} onKeyDown={(ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); openEdit(e); } }} style={{ cursor: "pointer" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, minWidth: 0 }}>
                   <b style={{ fontSize: 16, minWidth: 0 }}>
                     {e.pinned ? "📌 " : ""}

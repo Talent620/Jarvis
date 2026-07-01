@@ -25,7 +25,7 @@ const CognitiveStatus: React.FC<Props> = ({ view, onStop }) => {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <strong style={{ fontSize: 14 }}>🧠 Co teraz robię i dlaczego</strong>
         {view.canStop && onStop && (
-          <button onClick={onStop} style={{ fontSize: 12, padding: "4px 10px", minHeight: 32, minWidth: 44, borderRadius: 8 }}>
+          <button type="button" onClick={onStop} style={{ fontSize: 12, padding: "4px 10px", minHeight: 44, minWidth: 44, borderRadius: 8 }}>
             ⏹ Zatrzymaj
           </button>
         )}

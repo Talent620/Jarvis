@@ -97,14 +97,14 @@ export default function GoalStatusPanel({ onClose }: { onClose: () => void }) {
                 {busyId === g.id && resumeMsg && <div style={{ fontSize: 12 }}>⏳ {resumeMsg}</div>}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
                   {canStop(g.status) && (
-                    <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 40 }} disabled={busyId === g.id} onClick={() => void doPause(g)}>⏸ Zatrzymaj</button>
+                    <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} disabled={busyId === g.id} onClick={() => void doPause(g)}>⏸ Zatrzymaj</button>
                   )}
                   {canResume(g.status) && (
-                    <button className="btn primary" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 40 }} disabled={busyId === g.id} onClick={() => void doResume(g)}>
+                    <button className="btn primary" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} disabled={busyId === g.id} onClick={() => void doResume(g)}>
                       {busyId === g.id ? "…" : "▶ Wznów i dokończ"}
                     </button>
                   )}
-                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 40 }} disabled={busyId === g.id} onClick={() => void doCancel(g)}>🗑 Anuluj</button>
+                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} disabled={busyId === g.id} onClick={() => void doCancel(g)}>🗑 Anuluj</button>
                 </div>
               </div>
             );

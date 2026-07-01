@@ -280,15 +280,15 @@ export default function LeadCandidatesPanel({ onClose, onWeb, embedded, onImport
               )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 2 }}>
                 {c.sourceUrl && (
-                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} onClick={() => safeOpenExternal(c.sourceUrl!)}>Otwórz źródło</button>
+                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44 }} onClick={() => safeOpenExternal(c.sourceUrl!)}>Otwórz źródło</button>
                 )}
                 {onWeb && (
-                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} onClick={() => buildDemo(c)}>Zbuduj demo</button>
+                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44 }} onClick={() => buildDemo(c)}>Zbuduj demo</button>
                 )}
                 {!c.isSample && (
                   <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44 }} title="Zaimportuj do CRM i policz ICP (nie buduje strony)" onClick={() => importAndScore(c)}>🚀 Importuj + oceń</button>
                 )}
-                <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} title="Trwale odrzuć — firma nie wróci przy wyszukiwaniu (z możliwością cofnięcia)" onClick={() => reject(c)}>🚫 Odrzuć (nie pokazuj)</button>
+                <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44 }} title="Trwale odrzuć — firma nie wróci przy wyszukiwaniu (z możliwością cofnięcia)" onClick={() => reject(c)}>🚫 Odrzuć (nie pokazuj)</button>
               </div>
             </div>
           ))}

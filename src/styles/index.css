@@ -1231,6 +1231,19 @@ button:disabled {
 .chips::-webkit-scrollbar {
   display: none;
 }
+/* Przycisk wyglądający jak zwykły tekst/wiersz (reset natywnego <button>) — do klikalnych wierszy list.
+   Semantyczny (fokus z klawiatury, czytnik ekranu), a wygląd jak dawny span. */
+.linklike {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .chip {
   white-space: nowrap;
   font-size: 13px;
