@@ -9,6 +9,8 @@
     "vercel-build": "prisma generate && prisma db push && next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "gates": "prisma generate && npm run typecheck && npm run lint && next build",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
