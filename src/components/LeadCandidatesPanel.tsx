@@ -6,15 +6,25 @@
 import { useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { store, uid } from "../lib/store";
-import { toast } from "../lib/toast";
+import { toast, copyWithToast } from "../lib/toast";
 import { safeOpenExternal } from "../lib/glinks";
+import { desktop } from "../lib/desktop";
+import { openCompose } from "../lib/deviceControl";
 import { discoverCandidates } from "../lib/leads";
 import { importCandidates, type LeadCandidate } from "../lib/leadCandidates";
 import { describeLeadSources, sourceBadge } from "../lib/leadSources";
 import { scoreLead, signalsFromCandidate, type IcpScore } from "../lib/leadScoring";
+import { telHref, hasPhone, hasEmail, hasAnyContact, matchContactFilter, type ContactFilter } from "../lib/contactActions";
 import { runGrowthFlowOnStore } from "../lib/growthFlowCoordinator";
 import { buildGrowthContext, type GrowthContext } from "../lib/growthContext";
 import type { Lead } from "../types";
+
+const CONTACT_FILTERS: { id: ContactFilter; label: string }[] = [
+  { id: "all", label: "Wszystkie" },
+  { id: "phone", label: "☎ Z telefonem" },
+  { id: "email", label: "✉ Z e-mailem" },
+  { id: "none", label: "Bez kontaktu" },
+];
 
 // Etykiety „najlepszej następnej akcji" (bestNextAction) — po polsku, pod przycisk/podpowiedź.
 const NEXT_ACTION_LABEL: Record<IcpScore["bestNextAction"], string> = {
@@ -33,15 +43,41 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
   const [msg, setMsg] = useState("");
   const [candidates, setCandidates] = useState<LeadCandidate[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [contactFilter, setContactFilter] = useState<ContactFilter>("all");
 
   // ICP score (wyjaśnialny) rządzi KOLEJNOŚCIĄ: najlepsi kandydaci na górze. Uwzględnia
   // provenance (źródło) i politykę kontaktu; wagi douczane wyłącznie z potwierdzonych wyników.
+  // Filtr kontaktu (wszystkie/telefon/e-mail/bez) zawęża listę.
   const ranked = useMemo(() => {
     const now = Date.now();
     return candidates
+      .filter((c) => matchContactFilter(c, contactFilter))
       .map((c) => ({ c, icp: scoreLead(signalsFromCandidate(c, now), store.data.scoringWeights) }))
       .sort((a, b) => b.icp.score - a.icp.score);
-  }, [candidates]);
+  }, [candidates, contactFilter]);
+
+  // 📞 Zadzwoń: Android/przeglądarka → dialer przez tel:; Windows/Electron → spróbuj powłoki,
+  // a przy braku obsługi SKOPIUJ numer i pokaż jasny komunikat. Klik ZAWSZE robi widoczną akcję.
+  const doCall = async (c: LeadCandidate) => {
+    const href = telHref(c.phone);
+    if (!href) { toast("Brak numeru telefonu — wyszukaj dane kontaktowe."); return; }
+    const d = desktop();
+    if (d) {
+      const r = await d.open(href).catch(() => "err");
+      if (r === "ok") { toast(`📞 Dzwonię: ${c.phone}`); return; }
+      await copyWithToast(c.phone || "", `To urządzenie nie obsługuje dzwonienia — skopiowałem numer: ${c.phone}`);
+      return;
+    }
+    window.open(href, "_self");
+    toast(`📞 Otwieram dialer: ${c.phone}`);
+  };
+
+  // ✉ E-mail: gotowa wiadomość (natywny klient / mailto / edytor Gmaila) — jeden klik do wysłania.
+  const doEmail = async (c: LeadCandidate) => {
+    if (!hasEmail(c)) { toast("Brak e-maila — wyszukaj dane kontaktowe."); return; }
+    const msg = await openCompose(c.email || "", `Współpraca — ${c.company}`, `Dzień dobry,\n\n`);
+    toast(msg);
+  };
 
   const search = async () => {
     setBusy(true); setMsg("🔎 Szukam kandydatów (bez zapisu do CRM)…"); setCandidates([]); setSelected(new Set());
@@ -130,7 +166,15 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
               <button className="btn" style={{ width: "auto", marginTop: 0, padding: "8px 12px", minHeight: 44 }} onClick={importSelected} disabled={selected.size === 0}>
                 ⬇ Importuj zaznaczone ({selected.size})
               </button>
-              <span className="muted" style={{ fontSize: 12 }}>{candidates.length} kandydatów</span>
+              <span className="muted" style={{ fontSize: 12 }}>{ranked.length}/{candidates.length} kandydatów</span>
+            </div>
+          )}
+          {/* Filtr kontaktu — pokaż tylko firmy, z którymi da się skontaktować (albo wprost te bez danych). */}
+          {candidates.length > 0 && (
+            <div className="chips" style={{ flexWrap: "wrap", marginBottom: 8 }}>
+              {CONTACT_FILTERS.map((f) => (
+                <button key={f.id} className={`chip ${contactFilter === f.id ? "on" : ""}`} onClick={() => setContactFilter(f.id)}>{f.label}</button>
+              ))}
             </div>
           )}
 
@@ -148,8 +192,34 @@ export default function LeadCandidatesPanel({ onClose, onWeb }: { onClose: () =>
                 {c.isSample && <span style={{ fontSize: 11, color: "var(--gold, #d9a400)" }}>PRZYKŁAD</span>}
               </label>
               <div className="muted" style={{ fontSize: 12 }}>
-                Pewność: {Math.round(c.confidence * 100)}% · Kontakt: {c.contactability} · Źródło: {c.source}
+                Pewność: {Math.round(c.confidence * 100)}% · Źródło: {c.source}
               </div>
+              {/* Prawdziwe dane kontaktowe — widoczne wprost (nie tylko „email/phone"). */}
+              {hasAnyContact(c) ? (
+                <div style={{ fontSize: 12.5, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {hasPhone(c) && <span>☎ {c.phone}</span>}
+                  {hasEmail(c) && <span>✉ {c.email}</span>}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12.5, color: "var(--gold, #d9a400)" }}>Brak kontaktu — wyszukaj dane</div>
+              )}
+              {/* Akcje kontaktu — klik ZAWSZE robi widoczną akcję (dzwoni / pisze / kopiuje). */}
+              {hasAnyContact(c) && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {hasPhone(c) && (
+                    <>
+                      <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40, borderColor: "var(--ok, #58e08a)" }} onClick={() => void doCall(c)}>📞 Zadzwoń</button>
+                      <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} onClick={() => void copyWithToast(c.phone || "", "Skopiowano numer ✓")}>📋 Kopiuj numer</button>
+                    </>
+                  )}
+                  {hasEmail(c) && (
+                    <>
+                      <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40, borderColor: "var(--cyan, #6ce7ff)" }} onClick={() => void doEmail(c)}>✉ Napisz e-mail</button>
+                      <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} onClick={() => void copyWithToast(c.email || "", "Skopiowano e-mail ✓")}>📋 Kopiuj e-mail</button>
+                    </>
+                  )}
+                </div>
+              )}
               {/* Wyjaśnialny ICP: następna akcja + 3 powody + brakujące dowody — nie „czarna skrzynka". */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                 <span className="chip" style={{ fontSize: 11, borderColor: "var(--cyan, #6ce7ff)" }}>{NEXT_ACTION_LABEL[icp.bestNextAction]}</span>
