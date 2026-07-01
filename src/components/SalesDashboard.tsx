@@ -19,6 +19,7 @@ import { useEscape } from "../hooks/useEscape";
 import LeadDetail from "./LeadDetail";
 import SalesPlan from "./SalesPlan";
 import { leadBucket, type CrmBucket } from "../lib/crmBuckets";
+import { clientJourney } from "../lib/clientJourney";
 import { primaryContactAction } from "../lib/salesViewModel";
 import { call as deviceCall, openCompose } from "../lib/deviceControl";
 
@@ -606,6 +607,16 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
                   <button type="button" className="x" aria-label="Usuń leada" title="Usuń leada" style={{ cursor: "pointer", flexShrink: 0 }} onClick={() => del(l.id)}>✕</button>
                 </div>
                 {(l.niche || l.location) && <div className="muted" style={{ fontSize: 12 }}>{[l.niche, l.location].filter(Boolean).join(" · ")}{l.intel ? ` · szansa ${l.intel.score}/100` : ""}</div>}
+                {/* Etap ścieżki klienta + JEDNO główne „Co dalej" (z businessFlow, bez duplikatu logiki). */}
+                {(() => {
+                  const j = clientJourney(l, data.financeProjects || [], data.sentMail || []);
+                  return (
+                    <div style={{ fontSize: 12, marginTop: 2 }}>
+                      <span className="chip" style={{ fontSize: 11, borderColor: "var(--cyan, #6ce7ff)" }}>{j.stageLabel} · {j.progressPct}%</span>
+                      {!j.done && <span className="muted" style={{ marginLeft: 6 }}>→ {j.nextReason}</span>}
+                    </div>
+                  );
+                })()}
                 {l.note && <p className="muted" style={{ fontSize: 13, margin: "4px 0 0" }}>{l.note}</p>}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, alignItems: "center" }}>
                   <select
