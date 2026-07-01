@@ -2,6 +2,7 @@ import { askModel } from "./brain";
 import { validateBlueprint, blueprintToInstruction, fallbackBlueprint, SITE_BLUEPRINT_SCHEMA, type SiteBlueprint } from "./siteBlueprint";
 import { threeDInstruction, type Resolved3D } from "./web3dPolicy";
 import { humanize } from "./aiHelpers";
+import { validateSite, type SiteValidation } from "./siteValidator";
 import { zl } from "./format";
 import { appendBrand } from "./brandKit";
 
@@ -202,6 +203,64 @@ export async function generateSite(
   } catch (e) {
     return { error: humanize(e instanceof Error ? e.message : String(e)) };
   }
+}
+
+/**
+ * Pure: scal urwany dokument z KONTYNUACJĄ modelu (dalszy ciąg, bez ```/doctype). Jeśli kontynuacja
+ * to jednak pełny plik od nowa (zaczyna się od <!doctype>), bierzemy ją w całości.
+ */
+export function mergeHtmlContinuation(partial: string, continuation: string): string {
+  let cont = (continuation || "").trim();
+  cont = cont.replace(/^```[a-z]*\s*/i, "").replace(/```\s*$/i, "").trim();
+  if (!cont) return partial || "";
+  if (/^<!doctype html>/i.test(cont) || /^<html[\s>]/i.test(cont)) return extractHtml(cont);
+  return (partial || "") + cont;
+}
+
+/** Prośba o dokończenie urwanego dokumentu — model dostaje OGON kodu i ma zwrócić tylko dalszy ciąg. */
+export function continuationPrompt(partialHtml: string): string {
+  const tail = (partialHtml || "").slice(-1200);
+  return [
+    "Poniższy dokument HTML został UCIĘTY (limit tokenów). Dokończ go OD MIEJSCA URWANIA.",
+    "Zwróć WYŁĄCZNIE dalszy ciąg (bez powtarzania początku, bez komentarzy, bez bloków ```),",
+    "domykając wszystkie otwarte tagi <style>/<script> i kończąc na </body></html>.",
+    "",
+    "OGON DOTYCHCZASOWEGO KODU:",
+    tail,
+  ].join("\n");
+}
+
+/** Runtime: poproś model o dokończenie urwanego dokumentu (jedna próba). Zwraca dalszy ciąg kodu. */
+export async function continueSite(partialHtml: string): Promise<string> {
+  return askModel({
+    system: "Jesteś generatorem stron HTML. Dokańczasz UCIĘTE dokumenty od miejsca urwania. Zwracasz wyłącznie dalszy ciąg kodu.",
+    history: [{ role: "user", content: continuationPrompt(partialHtml) }],
+    heavy: true,
+  });
+}
+
+export interface SiteRepairResult { html: string; validation: SiteValidation; repaired: boolean }
+
+/**
+ * Wykryj ucięcie i wykonaj DOKŁADNIE JEDNĄ bezpieczną próbę dokończenia, po czym ponów walidację.
+ * `continueFn` jest wstrzykiwane (w runtime = model; w teście = mock) — brak sieci w testach.
+ * Nie „naprawia" na siłę: jeśli po scaleniu wciąż jest ucięte, zwraca to uczciwie (repaired=false).
+ */
+export async function repairTruncatedSite(
+  html: string,
+  continueFn: (partialHtml: string) => Promise<string>,
+): Promise<SiteRepairResult> {
+  const before = validateSite(html);
+  if (!before.truncated) return { html, validation: before, repaired: false };
+  let merged = html;
+  try {
+    const cont = await continueFn(html);
+    merged = mergeHtmlContinuation(html, cont);
+  } catch {
+    /* kontynuacja padła (sieć/quota) — zostaw oryginał, walidacja i tak zablokuje pobranie */
+  }
+  const after = validateSite(merged);
+  return { html: merged, validation: after, repaired: before.truncated && !after.truncated };
 }
 
 /**

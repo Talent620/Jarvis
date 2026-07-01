@@ -3,7 +3,7 @@ import { growthContextToBrief, demoProjectName, type GrowthContext } from "../li
 import { blueprintSummary, type SiteBlueprint, type MotionLevel, type ThreeDMode, type FormMode } from "../lib/siteBlueprint";
 import { resolve3D, detectDeviceCaps, toPolicyMode } from "../lib/web3dPolicy";
 import { validateSite, validationVerdict } from "../lib/siteValidator";
-import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, planBlueprint, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
+import { generateSite, improveSite, auditSite, analyzeBusiness, buildStrategySeed, planBlueprint, repairTruncatedSite, continueSite, SECTION_PRESETS, buildClientBrief, clientHandoverMessage, estimateQuote, formatQuote, marketRanges, quotePackages, formatPackages, type SiteKind, type SiteStyle, type SiteAudit, type ClientBrief, type Quote, type QuotePackage } from "../lib/webgen";
 import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
 import { assessSeo, seoFixInstruction } from "../lib/seoPreview";
 import { buildRobotsTxt, buildSitemapXml, extractInternalPaths, normalizeDomain } from "../lib/siteSeoFiles";
@@ -78,6 +78,8 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [packages, setPackages] = useState<QuotePackage[] | null>(null);
   const [audit, setAudit] = useState<SiteAudit | null>(null); // ocena jakości wygenerowanej strony
+  const [brokenDemo, setBrokenDemo] = useState<{ diagnostics: string[] } | null>(null); // demo ucięte i niedokończone
+  const [showDiag, setShowDiag] = useState(false);
   const [strategy, setStrategy] = useState(""); // ETAP 11 — strategia biznesowa przed budową
   // Blueprint: plan strony wygenerowany przez model (structured output), edytowalny, STERUJE budową.
   const [blueprint, setBlueprint] = useState<SiteBlueprint | null>(null);
@@ -102,7 +104,7 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
   const loadProject = (p: SiteProject) => {
     setHtml(p.html); setPrompt(p.prompt || ""); setKind((p.kind as SiteKind) || "auto"); setStyle((p.style as SiteStyle) || "auto");
     if (p.brief && typeof p.brief === "object") setBrief(p.brief as ClientBrief);
-    setProjId(p.id); setProjName(p.name); setAudit(auditSite(p.html)); setView("preview"); setErr("");
+    setProjId(p.id); setProjName(p.name); setAudit(auditSite(p.html)); setView("preview"); setErr(""); setBrokenDemo(null);
     toast(`📂 Wczytano „${p.name}".`);
   };
   const restoreVersion = (p: SiteProject, idx: number) => {
@@ -163,15 +165,25 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
       // S9/brak WebGL dostaje CSS/poster, REAL tylko gdy urządzenie daje radę (lazy + poster + fallback).
       const resolved3D = blueprint ? resolve3D(toPolicyMode(blueprint.threeDMode), detectDeviceCaps()) : undefined;
       const r = await generateSite(desc, edit && html ? html : undefined, kind, style, blueprint ?? undefined, resolved3D);
-      if ("error" in r) setErr(r.error);
-      else {
-        setHtml(r.html);
-        setAudit(auditSite(r.html)); // ETAP 6/8/9 — automatyczny audyt jakości
-        setView("preview");
-        if (edit && !instructionOverride) setPrompt(""); // czyść pole tylko, gdy to z pola
-        // 💾 Autosave: jeśli pracujesz na zapisanym projekcie, utrwal nową wersję automatycznie.
+      if ("error" in r) { setErr(r.error); return; }
+      // Auto-naprawa: jeśli odpowiedź AI jest UCIĘTA (limit tokenów) — jedna bezpieczna próba dokończenia,
+      // scalenie i ponowna walidacja. Nigdy nie zapisujemy uciętego HTML jako gotowego demo.
+      let finalHtml = r.html;
+      const rep = await repairTruncatedSite(finalHtml, continueSite);
+      finalHtml = rep.html;
+      const v = rep.validation;
+      setHtml(finalHtml);
+      setAudit(auditSite(finalHtml));
+      setView("preview");
+      if (edit && !instructionOverride) setPrompt("");
+      if (!v.safeToDownload) {
+        // Krytycznie uszkodzone (np. wciąż ucięte) — pokaż uczciwie, nie udawaj gotowego demo,
+        // nie zapisuj jako projekt i zablokuj domyślne pobranie.
+        setBrokenDemo({ diagnostics: v.issues.filter((i) => i.severity === "critical").map((i) => i.message) });
+      } else {
+        setBrokenDemo(null);
         if (projId) {
-          const rec = saveSiteProject({ id: projId, name: projName, prompt: edit ? prompt : (instructionOverride ?? prompt), kind, style, html: r.html, brief });
+          const rec = saveSiteProject({ id: projId, name: projName, prompt: edit ? prompt : (instructionOverride ?? prompt), kind, style, html: finalHtml, brief });
           setProjId(rec.id); refreshProjs();
         }
       }
@@ -180,6 +192,20 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
     } finally {
       setBusy(false); // zawsze odblokuj przycisk, nawet przy nieoczekiwanym błędzie
     }
+  };
+
+  // 🔧 Napraw ponownie — kolejna JEDNA próba dokończenia uciętego demo (na żądanie użytkownika).
+  const retryRepair = async () => {
+    if (busy || !html) return;
+    setBusy(true); setErr("");
+    try {
+      const rep = await repairTruncatedSite(html, continueSite);
+      setHtml(rep.html); setAudit(auditSite(rep.html));
+      if (rep.validation.safeToDownload) { setBrokenDemo(null); setShowDiag(false); toast("✅ Udało się dokończyć stronę."); }
+      else { setBrokenDemo({ diagnostics: rep.validation.issues.filter((i) => i.severity === "critical").map((i) => i.message) }); toast("Nadal nie udało się dokończyć — spróbuj przebudować od nowa."); }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally { setBusy(false); }
   };
 
   // Kreator najpierw MYŚLI: wygeneruj plan strony (blueprint) przez model, potem można go edytować.
@@ -451,10 +477,26 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
             <button className="btn primary" style={{ flex: 1 }} onClick={() => run(!!html)} disabled={busy || (html ? !prompt.trim() : !canBuild)}>
               {busy ? "Buduję…" : html ? "✏ Zastosuj zmianę" : strategy ? "✨ Zbuduj wg strategii" : kind === "sklep" ? "🛒 Zbuduj sklep" : "✨ Zbuduj stronę"}
             </button>
-            {html && (
+            {html && !brokenDemo && (
               <button className="btn" style={{ flex: 1 }} onClick={download}>⬇ Pobierz .html</button>
             )}
           </div>
+          {/* Ucięte demo — nie udajemy gotowego. Domyślne pobranie usunięte; jasne opcje naprawy. */}
+          {brokenDemo && (
+            <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 10, border: "1px solid #ff6b6b", background: "color-mix(in srgb, #ff6b6b 8%, transparent)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#ff6b6b" }}>⚠ Nie udało się dokończyć strony</div>
+              <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Odpowiedź AI była ucięta, a próba dokończenia nie zamknęła dokumentu. Pobieranie zablokowane, żeby nie dać Ci uszkodzonego demo.</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", minHeight: 40 }} disabled={busy} onClick={() => void retryRepair()}>🔧 Napraw ponownie</button>
+                <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", minHeight: 40 }} onClick={() => setShowDiag((s) => !s)}>🔎 {showDiag ? "Ukryj" : "Pokaż"} diagnostykę</button>
+              </div>
+              {showDiag && (
+                <ul className="muted" style={{ fontSize: 11, margin: "8px 0 0", paddingLeft: 18 }}>
+                  {brokenDemo.diagnostics.map((d, i) => <li key={i}>{d}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
           {html && (
             <div className="chips" style={{ marginTop: 8 }}>
               <button className="btn" style={{ flex: 1, marginTop: 0 }} onClick={() => copyWithToast(html, "Kod skopiowany ✓")}>

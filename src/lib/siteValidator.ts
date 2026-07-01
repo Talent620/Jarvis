@@ -39,9 +39,20 @@ export function validateSite(html: string): SiteValidation {
   // 1) doctype
   if (!/^\s*<!doctype html>/i.test(src)) add("warning", "no_doctype", "Brak <!DOCTYPE html> na początku dokumentu.");
 
-  // 2) ucięcie dokumentu — nigdy nie edytujemy/nie pobieramy niepełnej strony
-  const truncated = !!src.trim() && !/<\/html>\s*$/i.test(src.trim());
-  if (truncated) add("critical", "truncated", "Dokument wygląda na UCIĘTY (brak zamknięcia </html>) — nie wolno go edytować ani pobierać.");
+  // 2) ucięcie dokumentu — nigdy nie edytujemy/nie pobieramy niepełnej strony.
+  // Wykrywamy trzy typowe skutki limitu tokenów: brak </html>, urwany CSS (<style> bez </style>),
+  // urwany JavaScript (<script> bez </script>). Każdy = krytyczny i blokuje pobranie.
+  const noHtmlClose = !!src.trim() && !/<\/html>\s*$/i.test(src.trim());
+  const styleOpen = (src.match(/<style\b/gi) || []).length;
+  const styleClose = (src.match(/<\/style>/gi) || []).length;
+  const truncatedCss = styleOpen > styleClose;
+  const scriptOpen = (src.match(/<script\b/gi) || []).length;
+  const scriptClose = (src.match(/<\/script>/gi) || []).length;
+  const truncatedJs = scriptOpen > scriptClose;
+  const truncated = noHtmlClose || truncatedCss || truncatedJs;
+  if (noHtmlClose) add("critical", "truncated", "Dokument wygląda na UCIĘTY (brak zamknięcia </html>) — nie wolno go edytować ani pobierać.");
+  if (truncatedCss) add("critical", "truncated_css", "Urwany CSS (<style> bez </style>) — odpowiedź została ucięta; nie wolno pobierać.");
+  if (truncatedJs) add("critical", "truncated_js", "Urwany JavaScript (<script> bez </script>) — odpowiedź została ucięta; nie wolno pobierać.");
 
   // 3) duplikaty ID
   const ids = attrValues(src, "id");
@@ -88,7 +99,7 @@ export function validateSite(html: string): SiteValidation {
     seo: pen(["no_doctype", "img_no_alt", "dup_id"]),
     accessibility: pen(["img_no_alt", "dup_id"]),
     performance: pen(["big_doc", "ext_script"]),
-    integrity: pen(["truncated", "js_url", "fake_form", "dup_id"]),
+    integrity: pen(["truncated", "truncated_css", "truncated_js", "js_url", "fake_form", "dup_id"]),
   };
 
   const safeToDownload = !issues.some((i) => i.severity === "critical");
