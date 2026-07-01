@@ -15,6 +15,9 @@ import {
 } from "../lib/growthOrchestrator";
 import { emptyStateSuggestion } from "../lib/simpleFlow";
 import { startAndRunGoal } from "../lib/goalRuntime";
+import { dayInsights, statusView } from "../lib/cognitiveRuntime";
+import CognitiveStatus from "./CognitiveStatus";
+import type { CognitiveStatusView } from "../lib/cognitiveStatus";
 
 const WEIGHTS_KEY = "jarvis.growthDay.weights.v1";
 const riskLabel: Record<GrowthAction["risk"], string> = { low: "niskie", medium: "średnie", high: "wysokie" };
@@ -27,10 +30,17 @@ export default function GrowthDayPanel({ onClose }: { onClose: () => void }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [results, setResults] = useState<Record<string, { icon: string; text: string }>>({});
+  const [cogView, setCogView] = useState<CognitiveStatusView | null>(null); // co JARVIS robi i dlaczego
 
   const actions = useMemo(
     () => planDailyGrowth({ leads: data.leads, finance: data.financeProjects, now: Date.now(), weights }).filter((a) => !dismissed.has(a.id)),
     [data.leads, data.financeProjects, weights, dismissed],
+  );
+
+  // 🧭 Proaktywne wnioski (OODA) + największy bloker przychodu (cyfrowy bliźniak) — z realnych danych.
+  const insights = useMemo(
+    () => dayInsights({ leads: data.leads, finance: data.financeProjects }, Date.now()),
+    [data.leads, data.financeProjects],
   );
 
   const persistWeights = (w: OrchestratorWeights) => { setWeights(w); saveJson(WEIGHTS_KEY, w); };
@@ -42,10 +52,12 @@ export default function GrowthDayPanel({ onClose }: { onClose: () => void }) {
     try {
       // Uruchom jako TRWAŁY cel — pojawi się w „Panelu celu" i przeżyje restart.
       const now = Date.now();
-      const { result: run } = await startAndRunGoal({ goal: a.title, plan: actionToPlan(a), correlationId: `${a.id}:${now}`, now, onStatus: (s) => setStatus(s) });
+      const { record, result: run } = await startAndRunGoal({ goal: a.title, plan: actionToPlan(a), correlationId: `${a.id}:${now}`, now, onStatus: (s) => setStatus(s) });
       const v = run.verdict;
       const icon = v.canClaimSuccess ? "✅" : v.state === "attempted" ? "⏳" : v.state === "blocked" ? "⏸" : v.state === "failed" ? "❌" : "✍";
       setResults((r) => ({ ...r, [a.id]: { icon, text: v.summary } }));
+      // Uczciwy widok stanu poznawczego: cel, krok, zgody, ostatni POTWIERDZONY wynik (bez sekretów).
+      setCogView(statusView({ goal: record, run, confidence: run.verdict.canClaimSuccess ? 0.9 : 0.5 }));
       persistWeights(recordDecision(weights, a.kind, true)); // wykonane = akceptacja
     } catch (e) {
       setResults((r) => ({ ...r, [a.id]: { icon: "❌", text: e instanceof Error ? e.message : "błąd wykonania" } }));
@@ -76,6 +88,22 @@ export default function GrowthDayPanel({ onClose }: { onClose: () => void }) {
           </p>
 
           {status && <p className="muted" style={{ fontSize: 12 }}>⏳ {status}</p>}
+
+          {/* 🔎 Największy bloker przychodu (cyfrowy bliźniak biznesu) — z realnych finansów/leadów. */}
+          <div className="row" style={{ borderLeft: "3px solid var(--gold, #d9a400)", paddingLeft: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 13 }}>🔎 Bloker: <b>{insights.blocker.blocker}</b> — {insights.blocker.reason}</span>
+          </div>
+
+          {/* 🧭 Proaktywna sugestia (OODA) — jedna, najtrafniejsza rzecz do zrobienia teraz. */}
+          {insights.suggestion && (
+            <div className="row" style={{ borderLeft: "3px solid var(--cyan)", paddingLeft: 10, marginBottom: 8, flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+              <span style={{ fontSize: 13 }}>🧭 {insights.suggestion.what}</span>
+              <span className="muted" style={{ fontSize: 11 }}>{insights.suggestion.whyNow} · pewność {Math.round(insights.suggestion.confidence * 100)}%</span>
+            </div>
+          )}
+
+          {/* 🧠 Co JARVIS robi i dlaczego — po uruchomieniu działania. */}
+          {cogView && <CognitiveStatus view={cogView} />}
 
           {actions.length === 0 && (
             <div className="row" style={{ borderLeft: "3px solid var(--cyan)", paddingLeft: 10, flexDirection: "column", alignItems: "flex-start", gap: 6 }}>

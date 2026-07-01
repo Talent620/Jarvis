@@ -1,4 +1,4 @@
-import { store } from "./store";
+import { store, uid } from "./store";
 import { brand } from "./brand";
 import { toolDefs, resetCitations, getCitations, runTool } from "./tools";
 import { riskOf } from "./permissions";
@@ -16,6 +16,9 @@ import { shouldFallback, isNetworkError, isKeyError, humanize, PERSONAL_CUES } f
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
 import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
 import { classifyCognitionLocal } from "./cognitiveController";
+import { learnFromUserMessage, correctionRulesBlock } from "./cognitiveRuntime";
+import type { Correction } from "./learningLoop";
+import { loadJson, saveJson } from "./lsJson";
 import { curateContext, contextBudgetChars } from "./contextCurator";
 import { gatherContextCandidates } from "./contextCandidates";
 import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
@@ -472,6 +475,10 @@ export async function testApi(): Promise<string> {
 let lastLearnAt = 0;
 const LEARN_COOLDOWN = 15_000; // nie częściej niż co 15 s
 
+// learningLoop: trwałe korekty użytkownika (never/always/prefer/negative). Aktywna reguła (po
+// powtórzeniu+akceptacji) trafia do promptu. Przechowujemy w localStorage (poza schematem store).
+const CORRECTIONS_KEY = "jarvis.corrections.v1";
+
 // Tania bramka: ekstrakcję uruchamiamy tylko, gdy wypowiedź wygląda na niosącą
 // trwałą informację o użytkowniku (oszczędza limity API) — PERSONAL_CUES z aiHelpers.
 async function learnFromExchange(userText: string, replyText: string): Promise<void> {
@@ -674,6 +681,15 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // Z niego bierzemy adaptacyjny profil rozumowania i flagi (needs*), z których korzysta runtime.
   const cognition = classifyCognitionLocal(lastUser?.content || "", { hasImage: !!lastUser?.image });
 
+  // learningLoop (produkcyjne wywołanie): wykryj korektę użytkownika i utrwal. Aktywne reguły
+  // (po powtórzeniu i akceptacji) doklejamy do promptu — JARVIS stosuje trwałe „nigdy/zawsze/wolę".
+  let corrections = loadJson<Correction[]>(CORRECTIONS_KEY, []);
+  if (lastUser?.content && !store.settings.interpreterMode) {
+    const lc = learnFromUserMessage(corrections, lastUser.content, { id: uid(), source: "czat", now: Date.now() });
+    if (lc.learned) { corrections = lc.rules; saveJson(CORRECTIONS_KEY, corrections); }
+  }
+  const rulesBlock = correctionRulesBlock(corrections);
+
   // Kurator kontekstu: tylko gdy decyzja poznawcza wskazuje, że pamięć/kontekst są potrzebne
   // (analiza, akcja, cel, lub osobiste odwołanie) — wtedy wybierz NAJTRAFNIEJSZE fakty pod pytanie.
   // Dla zwykłej pogawędki blok jest pusty (nie zaśmiecamy promptu, nie podnosimy kosztu).
@@ -683,7 +699,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // jest TEN SAM dla WSZYSTKICH dostawców, w tym Ollamy/WebLLM. Mały model lokalny odpowiada z
   // Twoim kontekstem; bez Mem0 degraduje do lokalnego profilu/faktów (zero zależności sieciowych).
   const baseCtx = {
-    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock, curatedBlock }) + (extraSystem ? `\n\n${extraSystem}` : ""),
+    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock, curatedBlock }) + (rulesBlock ? `\n\n${rulesBlock}` : "") + (extraSystem ? `\n\n${extraSystem}` : ""),
     // Tryb on-device wyłącza web-search (zero egres do sieci — pełna prywatność/offline).
     webSearch: store.settings.onDeviceOnly ? false : store.settings.webSearch,
     // Dobór narzędzi wg intencji: mniej definicji na turę (szybciej/taniej). Bezpiecznie —
