@@ -1,5 +1,5 @@
 import { useEscape } from "../hooks/useEscape";
-export default function Help({ onClose }: { onClose: () => void }) {
+export default function Help({ onClose, onFaq }: { onClose: () => void; onFaq?: () => void }) {
   useEscape(onClose);
   return (
     <div className="sheet" onClick={onClose}>
@@ -13,6 +13,11 @@ export default function Help({ onClose }: { onClose: () => void }) {
             JARVIS rozumie naturalny język — po prostu pisz lub mów, czego potrzebujesz. Poniżej
             wszystkie funkcje i jak z nich korzystać.
           </p>
+          {onFaq && (
+            <button type="button" className="btn" style={{ marginBottom: 14 }} onClick={onFaq}>
+              ❓ Pełne FAQ — pytania i odpowiedzi o każdej funkcji
+            </button>
+          )}
 
           <h3>🚀 Start</h3>
           <ul>

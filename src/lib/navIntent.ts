@@ -28,6 +28,8 @@ export const SCREENS: ScreenDef[] = [
   { id: "translator", label: "Tłumacz", aliases: ["tłumacz", "tlumacz", "translator", "tłumaczenie"] },
   { id: "transcribe", label: "Transkrypcja", aliases: ["transkrypcja", "transkrybuj", "nagranie na tekst", "audio na tekst"] },
   { id: "bargain", label: "Łowca okazji", aliases: ["okazje", "promocje", "bargain", "łowca okazji"] },
+  { id: "whereToBuy", label: "Gdzie kupić", aliases: ["gdzie kupić", "gdzie kupic", "porównywarka cen", "porownywarka cen", "gdzie taniej"] },
+  { id: "shoppingList", label: "Lista zakupów", aliases: ["lista zakupów", "lista zakupow", "zakupy", "co kupić", "co kupic"] },
   { id: "boss", label: "Tryb Szefa", aliases: ["szef", "tryb szefa", "boss", "agent"] },
   { id: "mind", label: "Umysł", aliases: ["umysł", "umysl", "mind", "rozumowanie"] },
   { id: "journal", label: "Dziennik", aliases: ["dziennik", "journal"] },

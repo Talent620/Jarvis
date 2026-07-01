@@ -92,7 +92,6 @@ export default function More({
   onBrand: () => void;
   onMail: () => void;
   onFinance: () => void;
-  onFaq: () => void;
   onClose: () => void;
 }) {
   useEscape(onClose);

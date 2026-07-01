@@ -73,6 +73,13 @@ describe("navIntent — pełne pokrycie i klasyfikacja zgód", () => {
     expect(ids.length).toBe(new Set(ids).size);
   });
 
+  it("Gdzie kupić i Lista zakupów są osiągalne głosem/czatem (dawniej tylko z kafla)", () => {
+    expect(resolveScreen("gdzie kupić")?.id).toBe("whereToBuy");
+    expect(resolveScreen("gdzie kupic tanio")?.id).toBe("whereToBuy");
+    expect(resolveScreen("lista zakupów")?.id).toBe("shoppingList");
+    expect(resolveScreen("zakupy")?.id).toBe("shoppingList");
+  });
+
   it("open_screen jest sklasyfikowane jako read (lokalna nawigacja, bez zgody outbound)", async () => {
     const { riskOf } = await import("../src/lib/permissions");
     expect(riskOf("open_screen")).toBe("read");

@@ -309,6 +309,8 @@ export default function App() {
       open("web", "Kreator stron", "🌐", "strona witryna www"),
       open("money", "Zarabianie", "💰", "dochod autopilot pieniadze"),
       open("bargain", "Łowca Okazji", "🏷", "tanio kup okazja cena"),
+      open("whereToBuy", "Gdzie kupić", "🛒", "gdzie kupic sklep cena porownanie"),
+      open("shoppingList", "Lista zakupów", "📝", "lista zakupow zakupy kup"),
       open("translator", "Tłumacz na żywo", "🌍", "tlumacz jezyk rozmowa"),
       open("transcribe", "Transkrypcja", "🎙", "spotkanie mowa tekst"),
       open("cards", "Kapsuły Wiedzy", "🃏", "ucz fiszki nauka"),
@@ -1507,7 +1509,7 @@ export default function App() {
           />
         </ScreenBoundary>
       )}
-      {showHelp && (<ScreenBoundary><Help onClose={() => setShowHelp(false)} /></ScreenBoundary>)}
+      {showHelp && (<ScreenBoundary><Help onClose={() => setShowHelp(false)} onFaq={() => setShowFaq(true)} /></ScreenBoundary>)}
       {showRelicense && (
         <LicenseGate
           onActivated={() => { setShowRelicense(false); checkActivation().then((r) => { setLicInfo(r); setLicensed(r.valid); setLicNudgeOff(false); }); }}
@@ -1558,7 +1560,6 @@ export default function App() {
           onMail={() => setShowMail(true)}
           onFinance={() => setShowFinance(true)}
           onAds={() => setShowAds(true)}
-          onFaq={() => setShowFaq(true)}
           onClose={() => setShowMore(false)}
         />
         </ScreenBoundary>
