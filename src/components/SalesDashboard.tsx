@@ -8,6 +8,7 @@ import { canSendDirect, draftAndSendOffer, sentTodayCount, sendAllOffers } from 
 import { findLeads, browserCity } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { scoreLead, signalsFromLead, learnWeightsFromOutcome, DEFAULT_WEIGHTS, type IcpScore } from "../lib/leadScoring";
+import { computeRoi } from "../lib/campaignRoi";
 import { leadsToCsv, followUpsDue, callNowList, searchLeads, wasLeadEmailed } from "../lib/salesEngine";
 import { importLeads } from "../lib/leadImport";
 import { buildLoraCorpus, corpusToJsonl } from "../lib/loraExport";
@@ -341,6 +342,11 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
     return best;
   }, [leads, data.scoringWeights]);
 
+  // 💸 ROI z realnego store: przychód wygranych leadów przypisany do kampanii (po wspólnym ID).
+  // To produkcyjny konsument growthAttribution — liczy z prawdziwych kampanii i leadów, nie z liczby treści.
+  const campaigns = useMemo(() => data.campaigns || [], [data.campaigns]);
+  const roi = useMemo(() => computeRoi(campaigns, leads, Date.now()), [campaigns, leads]);
+
   const shown = useMemo(() => {
     const match = (l: Lead) =>
       filter === "all" ? true
@@ -389,6 +395,21 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
               {nextMove.icp.topReasons.length > 0 && (
                 <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{nextMove.icp.topReasons.map((r) => "✓ " + r).join("  ")}</div>
               )}
+            </div>
+          )}
+
+          {/* 💸 ROI kampanii — z realnego store: przychód wygranych leadów przypięty do kampanii. */}
+          {campaigns.length > 0 && (
+            <div style={{ marginBottom: 10, padding: "8px 12px", borderRadius: 10, border: "1px solid var(--line, #2a2a2a)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>💸 ROI kampanii ({campaigns.length})</div>
+              <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                Przypisany przychód: <b style={{ color: "var(--ok, #58e08a)" }}>{roi.attribution.total} zł</b>
+                {roi.attribution.unattributed > 0 && <> · nieprzypisane: {roi.attribution.unattributed} zł</>}
+              </div>
+              {roi.byCampaignNamed.slice(0, 3).map((c) => (
+                <div key={c.id} className="muted" style={{ fontSize: 11, marginTop: 2 }}>• {c.name}: {c.revenue} zł</div>
+              ))}
+              {roi.recommendation.variant && <div style={{ fontSize: 11, marginTop: 3, color: "var(--cyan, #6ce7ff)" }}>🏆 {roi.recommendation.reason}</div>}
             </div>
           )}
 
@@ -582,6 +603,17 @@ export default function SalesDashboard({ onClose, onWeb, onMoney }: { onClose: (
                     onChange={(e) => setField(l.id, { value: numOrUndef(e.target.value) })}
                     style={{ width: 70, padding: "4px 8px", borderRadius: 8, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", fontSize: 13 }}
                   />
+                  {campaigns.length > 0 && (
+                    <select
+                      value={l.campaignId || ""}
+                      onChange={(e) => setField(l.id, { campaignId: e.target.value || undefined })}
+                      title="Przypisz lead do kampanii — przychód wygranej trafi do ROI (bez przepisywania ID)"
+                      style={{ width: "auto", padding: "4px 8px", borderRadius: 8, background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", fontSize: 12 }}
+                    >
+                      <option value="">— kampania —</option>
+                      {campaigns.map((c) => <option key={c.id} value={c.id}>{c.offer.slice(0, 24)}</option>)}
+                    </select>
+                  )}
                   <button className="chip" onClick={() => setOpenLead(l.id)}>🗂 Teczka</button>
                   {l.url && <button className="chip" onClick={() => openLeadUrl(l.url)}>🌐 WWW</button>}
                   {l.contact && <button className="chip" onClick={() => copy(l.contact)}>📋 Kontakt</button>}

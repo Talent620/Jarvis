@@ -1,11 +1,24 @@
 import { useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
-import { saveContentPost } from "../lib/contentStudio";
 import { generateAds, AD_PLATFORMS, AD_GOALS, type AdPlatform, type AdGoal } from "../lib/adStudio";
 import { AD_ANGLES, adAngleGuide } from "../lib/adAngles";
 import { scoreAdCopy, adQualityLabel } from "../lib/adQuality";
 import { buildUtmUrl, UTM_PRESETS, type UtmPreset } from "../lib/utm";
+import { buildAdCampaign } from "../lib/adCampaign";
+import { saveCampaign } from "../lib/campaignStore";
+import { canExport, type CampaignPlan } from "../lib/campaignEngine";
+import { resolveChannelCapability } from "../lib/platformCapabilities";
+import { uid } from "../lib/store";
+
+// Etykiety stanu kanału (capability) → uczciwy przycisk: connected/export_only/simulated/unavailable.
+const CHANNEL_STATE_LABEL: Record<string, string> = {
+  connected: "🟢 Połączono (API)",
+  export_only: "📤 Tylko eksport (brak API)",
+  simulated: "🧪 Symulacja",
+  degraded: "🟡 API z problemami",
+  unavailable: "⚪ Niedostępne",
+};
 
 // 📢 Generator reklam (Faza 0) — gotowe zestawy reklam Google/Meta do skopiowania.
 export default function AdStudio({ onClose }: { onClose: () => void }) {
@@ -17,6 +30,7 @@ export default function AdStudio({ onClose }: { onClose: () => void }) {
   const [budget, setBudget] = useState("");
   const [busy, setBusy] = useState(false);
   const [out, setOut] = useState("");
+  const [campaign, setCampaign] = useState<CampaignPlan | null>(null); // strukturalny plan (nie luźny tekst)
   const [angle, setAngle] = useState(""); // kąt emocjonalny (Ad Creative Engine)
   // 🔗 Builder linków UTM (mierzenie ROI reklam/social).
   const [utmUrl, setUtmUrl] = useState("");
@@ -32,8 +46,18 @@ export default function AdStudio({ onClose }: { onClose: () => void }) {
     setBusy(false);
     if (!r) { toast("Nie udało się wygenerować — sprawdź klucz AI (⚙ → Mózg)."); return; }
     setOut(r);
-    saveContentPost(platform === "google" ? "Google Ads" : "Meta Ads", product.trim(), r);
+    // Reklama płatna = PRAWDZIWA kampania (paid_ad), nie „post w historii". Zapisujemy szkic (draft)
+    // z parsowaną kreacją i wspólnym ID (campaignId ↔ utm.campaign) do pętli ROI.
+    const plan = buildAdCampaign({ id: uid(), uiPlatform: platform, product: product.trim(), audience: audience || undefined, goal, rawText: r, now: Date.now() });
+    saveCampaign(plan);
+    setCampaign(plan);
+    setUtmCampaign(plan.utm.campaign); // link UTM dzieli campaignId z kampanią
+    toast("📁 Zapisano kampanię (szkic) — znajdziesz ją w pętli ROI.");
   };
+
+  // Zdolność kanału: klient nie trzyma tokenów reklamowych (sekrety po stronie backendu) → uczciwie
+  // export-only. Nie udajemy „opublikowano". Reklama płatna wymaga Ads API — zwykły post jej nie zastąpi.
+  const capability = resolveChannelCapability({ channel: platform === "google" ? "Google Ads" : "Meta Ads", hasToken: false, supportsExport: true, supportsPaidAds: true });
 
   const canShare = typeof navigator !== "undefined" && !!(navigator as { share?: unknown }).share;
   const share = () => shareOrCopy(out, "Skopiowano — wklej w panelu reklam ✓");
@@ -98,6 +122,26 @@ export default function AdStudio({ onClose }: { onClose: () => void }) {
                 <span style={{ fontWeight: 700, color }}>📋 {adQualityLabel(q)}</span>
                 {q.issues.length > 0 && <div className="muted" style={{ marginTop: 3 }}>Popraw: {q.issues.slice(0, 3).join(" ")}</div>}
                 {q.issues.length === 0 && q.wins.length > 0 && <div className="muted" style={{ marginTop: 3 }}>✓ {q.wins.join(" ")}</div>}
+              </div>
+            );
+          })()}
+
+          {campaign && (() => {
+            // Format walidowany PRZED eksportem (np. za długi nagłówek RSA) — bez fałszywego „gotowe".
+            const fmt = canExport(campaign);
+            return (
+              <div className="journal-card" style={{ marginTop: 10, borderColor: fmt.ok ? "var(--ok, #58e08a)" : "#ff6b6b" }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>
+                  📁 Kampania: {campaign.creative.headlines.length} nagłówków · {campaign.creative.descriptions.length} opisów
+                  <span className="chip" style={{ marginLeft: 6, fontSize: 11 }}>szkic</span>
+                </div>
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  {CHANNEL_STATE_LABEL[capability.state] || capability.state} — {capability.reason}
+                </div>
+                {fmt.ok
+                  ? <div style={{ fontSize: 12, color: "var(--ok, #58e08a)", marginTop: 4 }}>✓ Format {campaign.platform} OK — gotowe do eksportu.</div>
+                  : <div style={{ fontSize: 12, color: "#ff6b6b", marginTop: 4 }}>⚠ {fmt.errors.slice(0, 2).join(" ")}</div>}
+                <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>UTM/campaign: <code>{campaign.utm.campaign}</code> — to samo ID w linku, leadzie i przychodzie.</div>
               </div>
             );
           })()}

@@ -398,6 +398,8 @@ export interface Lead {
   origin?: "salesos";
   /** Identyfikator leada w AI Sales OS (gdy origin = salesos) — do dwukierunkowej synchronizacji. */
   crmId?: string;
+  /** Kampania, z której przyszedł lead (wspólne ID w pętli ROI) — przychód wygranej trafia do tej kampanii. */
+  campaignId?: string;
   /** Zgodność kontaktu: „nie kontaktować" — blokuje automatyczną wysyłkę (draft nadal wolno). */
   doNotContact?: boolean;
   /** Kontakt wypisał się (opt-out) — blokuje wysyłkę i draft. */

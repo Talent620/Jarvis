@@ -6,6 +6,9 @@ import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
 import { generatePost, saveContentPost, markContentPublished, isPublished, contentStatusOf, CONTENT_STATUS_LABEL, PLATFORMS, TONES, type Platform, type Tone } from "../lib/contentStudio";
 import { viralityScore } from "../lib/virality";
 import { assessSocialFit } from "../lib/socialFit";
+import { buildOrganicCampaign } from "../lib/adCampaign";
+import { saveCampaign } from "../lib/campaignStore";
+import { uid } from "../lib/store";
 
 // 📱 Maszynka do kontentu — JARVIS pisze gotowy post na social media. Kopiujesz
 // albo udostępniasz jednym tapnięciem do dowolnej apki (IG/FB/TikTok/LinkedIn).
@@ -27,6 +30,10 @@ export default function ContentStudio({ onClose }: { onClose: () => void }) {
     if (!r) { toast("Nie udało się wygenerować — sprawdź klucz AI (⚙ → Mózg)."); return; }
     setOut(r);
     saveContentPost(platform, topic.trim(), r);
+    // Post organiczny rejestrujemy też jako kampanię organic_post (INNA operacja niż reklama płatna) —
+    // dzięki wspólnemu ID (utm.campaign) organic również może wejść do pętli ROI. Publikacja i tak
+    // pozostaje w osobnym, uczciwym cyklu statusów treści (SIMULATED/PUBLISHED) — tu tylko model.
+    saveCampaign(buildOrganicCampaign({ id: uid(), channel: platform, topic: topic.trim(), text: r, now: Date.now() }));
   };
 
   const canShare = typeof navigator !== "undefined" && !!(navigator as { share?: unknown }).share;
