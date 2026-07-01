@@ -16,6 +16,17 @@ export function telHref(raw?: string): string {
   return p ? `tel:${p}` : "";
 }
 
+/** Pure: adres sms: (pusty gdy brak cyfr). */
+export function smsHref(raw?: string): string {
+  const p = cleanPhone(raw);
+  return p ? `sms:${p}` : "";
+}
+
+/** Pure: zapytanie do wyszukania kontaktu firmy (nazwa + adres + „kontakt telefon"). S9-safe. */
+export function findContactQuery(c: { company: string; address?: string }): string {
+  return [c.company, c.address, "kontakt telefon e-mail"].filter(Boolean).join(" ").trim();
+}
+
 /** Pure: czy kandydat ma użyteczny telefon. */
 export function hasPhone(c: { phone?: string }): boolean {
   return !!cleanPhone(c.phone);

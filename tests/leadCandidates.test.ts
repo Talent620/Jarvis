@@ -61,4 +61,10 @@ describe("leadCandidates — import zapisuje TYLKO zaznaczonych", () => {
     const existing: Lead[] = [{ id: "x", company: "Alfa", status: "new", createdAt: 1, updatedAt: 1 }];
     expect(importCandidates(existing, [c], { now: NOW, makeId: () => "new" })).toHaveLength(0);
   });
+
+  it("mock (no_persist) NIGDY nie wchodzi do CRM, nawet zaznaczony", () => {
+    const mock = normalizeCandidate(raw({ company: "Przykład Sp. z o.o.", email: "x@x.pl" }), { source: "mock", now: NOW, isSample: true });
+    expect(mock.persistencePolicy).toBe("no_persist");
+    expect(importCandidates([], [mock], { now: NOW, makeId: () => "m" })).toHaveLength(0);
+  });
 });

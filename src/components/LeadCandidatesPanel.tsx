@@ -7,16 +7,15 @@ import { useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { store, uid } from "../lib/store";
 import { toast, copyWithToast } from "../lib/toast";
-import { safeOpenExternal } from "../lib/glinks";
+import { safeOpenExternal, smsUrl, mapsSearchUrl } from "../lib/glinks";
 import { desktop } from "../lib/desktop";
 import { openCompose } from "../lib/deviceControl";
 import { discoverCandidates } from "../lib/leads";
 import { importCandidates, type LeadCandidate } from "../lib/leadCandidates";
 import { describeLeadSources, sourceBadge } from "../lib/leadSources";
-import { scoreLead, signalsFromCandidate, type IcpScore } from "../lib/leadScoring";
-import { telHref, hasPhone, hasEmail, hasAnyContact, matchContactFilter, type ContactFilter } from "../lib/contactActions";
+import { scoreLead, signalsFromCandidate, signalsFromLead, type IcpScore } from "../lib/leadScoring";
+import { telHref, findContactQuery, hasPhone, hasEmail, hasAnyContact, matchContactFilter, type ContactFilter } from "../lib/contactActions";
 import { addSuppression, removeSuppression, filterSuppressed, suppressionKey } from "../lib/leadSuppression";
-import { runGrowthFlowOnStore } from "../lib/growthFlowCoordinator";
 import { buildGrowthContext, type GrowthContext } from "../lib/growthContext";
 import type { Lead } from "../types";
 
@@ -80,6 +79,25 @@ export default function LeadCandidatesPanel({ onClose, onWeb, embedded, onImport
     toast(msg);
   };
 
+  // 💬 SMS: Android/przeglądarka → aplikacja Wiadomości; desktop/Electron → spróbuj powłoki, inaczej kopiuj.
+  const doSms = async (c: LeadCandidate) => {
+    if (!hasPhone(c)) { toast("Brak numeru — wyszukaj dane kontaktowe."); return; }
+    const href = smsUrl(c.phone || "", `Dzień dobry, piszę w sprawie ${c.company}.`);
+    const d = desktop();
+    if (d) {
+      const r = await d.open(href).catch(() => "err");
+      if (r === "ok") { toast(`💬 Otwieram SMS do ${c.phone}`); return; }
+      await copyWithToast(c.phone || "", `To urządzenie nie obsługuje SMS — skopiowałem numer: ${c.phone}`);
+      return;
+    }
+    window.open(href, "_self");
+    toast(`💬 Otwieram wiadomość: ${c.phone}`);
+  };
+
+  // 🔎 Znajdź kontakt: gdy brak telefonu/e-maila — otwórz wyszukiwarkę firmy (nazwa + adres), by dobić dane.
+  const findContact = (c: LeadCandidate) =>
+    safeOpenExternal(`https://www.google.com/search?q=${encodeURIComponent(findContactQuery(c))}`);
+
   const search = async () => {
     setBusy(true); setMsg("🔎 Szukam kandydatów (bez zapisu do CRM)…"); setCandidates([]); setSelected(new Set());
     try {
@@ -129,19 +147,16 @@ export default function LeadCandidatesPanel({ onClose, onWeb, embedded, onImport
     });
   };
 
-  // 🚀 Pełny przepływ wzrostu przez JEDEN koordynator (ten sam, który sprawdza E2E): import → scoring
-  // → kontekst → blueprint → walidacja → kampania (szkic). BEZ zgody = bez publikacji (bezpiecznie).
-  const runFlow = (c: LeadCandidate) => {
-    const raw = { company: c.company, email: c.email, phone: c.phone, website: c.url, address: c.address, hasWebsite: !!c.url };
-    const html = `<!DOCTYPE html><html><head><title>${c.company}</title></head><body><h1>${c.company}</h1></body></html>`;
-    const res = runGrowthFlowOnStore(
-      { raw, source: c.source, now: Date.now(), three: { requested: "OFF", caps: { webgl: false } }, html, offer: `Nowoczesna strona dla ${c.company}`, consent: false, makeId: (seed) => `${uid()}-${seed}` },
-      store,
-    );
-    if (res.imported) { setCandidates((cs) => cs.filter((x) => x.id !== c.id)); onImported?.(); }
-    toast(res.imported
-      ? `🚀 ${c.company}: ICP ${res.leadScore.score}/100 → CRM „Do działania" · publikacja ${res.publish.state}`
-      : `Nie zaimportowano (${res.candidate.persistencePolicy === "no_persist" ? "dane przykładowe" : "duplikat"}).`);
+  // 🚀 Importuj + oceń: uczciwie IMPORTUJE i liczy ICP — NIE buduje strony ani nie udaje demo.
+  // (Prawdziwe demo jest pod osobnym przyciskiem „Zbuduj demo", który uruchamia Kreator stron.)
+  const importAndScore = (c: LeadCandidate) => {
+    const added = importCandidates(store.data.leads, [c], { now: Date.now(), makeId: () => uid() });
+    if (!added.length) { toast(`Nie zaimportowano (${c.persistencePolicy === "no_persist" ? "dane przykładowe" : "duplikat"}).`); return; }
+    store.setData((d) => { d.leads.push(...added); });
+    const icp = scoreLead(signalsFromLead(added[0], Date.now()), store.data.scoringWeights);
+    setCandidates((cs) => cs.filter((x) => x.id !== c.id));
+    onImported?.();
+    toast(`🚀 ${c.company}: zaimportowano → CRM „Do działania" · ICP ${icp.score}/100`);
   };
 
   const buildDemo = (c: LeadCandidate) => {
@@ -210,32 +225,43 @@ export default function LeadCandidatesPanel({ onClose, onWeb, embedded, onImport
               <div className="muted" style={{ fontSize: 12 }}>
                 Pewność: {Math.round(c.confidence * 100)}% · Źródło: {c.source}
               </div>
-              {/* Prawdziwe dane kontaktowe — widoczne wprost (nie tylko „email/phone"). */}
-              {hasAnyContact(c) ? (
+              {/* Pełne dane kontaktowe — telefon, e-mail, strona i adres widoczne wprost. */}
+              {(hasAnyContact(c) || c.url || c.address) ? (
                 <div style={{ fontSize: 12.5, display: "flex", gap: 12, flexWrap: "wrap" }}>
                   {hasPhone(c) && <span>☎ {c.phone}</span>}
                   {hasEmail(c) && <span>✉ {c.email}</span>}
+                  {c.url && <span style={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" }}>🌐 {c.url.replace(/^https?:\/\//, "")}</span>}
+                  {c.address && <span>📍 {c.address}</span>}
                 </div>
-              ) : (
+              ) : null}
+              {!hasAnyContact(c) && (
                 <div style={{ fontSize: 12.5, color: "var(--gold, #d9a400)" }}>Brak kontaktu — wyszukaj dane</div>
               )}
-              {/* Akcje kontaktu — klik ZAWSZE robi widoczną akcję (dzwoni / pisze / kopiuje). */}
-              {hasAnyContact(c) && (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {hasPhone(c) && (
-                    <>
-                      <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40, borderColor: "var(--ok, #58e08a)" }} onClick={() => void doCall(c)}>📞 Zadzwoń</button>
-                      <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} onClick={() => void copyWithToast(c.phone || "", "Skopiowano numer ✓")}>📋 Kopiuj numer</button>
-                    </>
-                  )}
-                  {hasEmail(c) && (
-                    <>
-                      <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40, borderColor: "var(--cyan, #6ce7ff)" }} onClick={() => void doEmail(c)}>✉ Napisz e-mail</button>
-                      <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} onClick={() => void copyWithToast(c.email || "", "Skopiowano e-mail ✓")}>📋 Kopiuj e-mail</button>
-                    </>
-                  )}
-                </div>
-              )}
+              {/* Akcje — klik ZAWSZE robi widoczną akcję: dzwoni / SMS / pisze / mapy / otwiera stronę / kopiuje. */}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {hasPhone(c) && (
+                  <>
+                    <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44, borderColor: "var(--ok, #58e08a)" }} onClick={() => void doCall(c)}>📞 Zadzwoń</button>
+                    <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44 }} onClick={() => void doSms(c)}>💬 SMS</button>
+                    <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44 }} onClick={() => void copyWithToast(c.phone || "", "Skopiowano numer ✓")}>📋 Kopiuj numer</button>
+                  </>
+                )}
+                {hasEmail(c) && (
+                  <>
+                    <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44, borderColor: "var(--cyan, #6ce7ff)" }} onClick={() => void doEmail(c)}>✉ Napisz e-mail</button>
+                    <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44 }} onClick={() => void copyWithToast(c.email || "", "Skopiowano e-mail ✓")}>📋 Kopiuj e-mail</button>
+                  </>
+                )}
+                {c.url && (
+                  <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44 }} onClick={() => safeOpenExternal(c.url)}>🌐 Otwórz stronę</button>
+                )}
+                {c.address && (
+                  <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44 }} onClick={() => safeOpenExternal(mapsSearchUrl(`${c.company} ${c.address}`))}>🗺 Mapy</button>
+                )}
+                {!hasAnyContact(c) && (
+                  <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44, borderColor: "var(--gold, #d9a400)" }} onClick={() => findContact(c)}>🔎 Znajdź kontakt</button>
+                )}
+              </div>
               {/* Wyjaśnialny ICP: następna akcja + 3 powody + brakujące dowody — nie „czarna skrzynka". */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                 <span className="chip" style={{ fontSize: 11, borderColor: "var(--cyan, #6ce7ff)" }}>{NEXT_ACTION_LABEL[icp.bestNextAction]}</span>
@@ -260,7 +286,7 @@ export default function LeadCandidatesPanel({ onClose, onWeb, embedded, onImport
                   <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} onClick={() => buildDemo(c)}>Zbuduj demo</button>
                 )}
                 {!c.isSample && (
-                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} title="Import + scoring + szkic kampanii (bez publikacji)" onClick={() => runFlow(c)}>🚀 Importuj + przygotuj</button>
+                  <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 44 }} title="Zaimportuj do CRM i policz ICP (nie buduje strony)" onClick={() => importAndScore(c)}>🚀 Importuj + oceń</button>
                 )}
                 <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 12, minHeight: 40 }} title="Trwale odrzuć — firma nie wróci przy wyszukiwaniu (z możliwością cofnięcia)" onClick={() => reject(c)}>🚫 Odrzuć (nie pokazuj)</button>
               </div>

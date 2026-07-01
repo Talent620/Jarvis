@@ -2,7 +2,7 @@
 // Klik kontaktu ZAWSZE musi mieć widoczny skutek: dlatego normalizacja telefonu, wykrycie braku
 // kontaktu i filtr muszą być deterministyczne. S9-safe.
 import { describe, it, expect } from "vitest";
-import { cleanPhone, telHref, hasPhone, hasEmail, hasAnyContact, matchContactFilter } from "../src/lib/contactActions";
+import { cleanPhone, telHref, smsHref, findContactQuery, hasPhone, hasEmail, hasAnyContact, matchContactFilter } from "../src/lib/contactActions";
 
 describe("contactActions — telefon", () => {
   it("czyści spacje/myślniki/nawiasy, zachowuje wiodący plus", () => {
@@ -17,6 +17,17 @@ describe("contactActions — telefon", () => {
     expect(telHref("")).toBe("");
     expect(telHref("brak")).toBe("");
     expect(telHref("500 390 009")).toBe("tel:500390009");
+  });
+  it("smsHref buduje sms: z oczyszczonego numeru (pusty gdy brak)", () => {
+    expect(smsHref("500 390 009")).toBe("sms:500390009");
+    expect(smsHref("")).toBe("");
+  });
+});
+
+describe("contactActions — Znajdź kontakt", () => {
+  it("findContactQuery łączy nazwę, adres i frazę kontaktu", () => {
+    expect(findContactQuery({ company: "Salon Ola", address: "Kraków" })).toBe("Salon Ola Kraków kontakt telefon e-mail");
+    expect(findContactQuery({ company: "Bar Beta" })).toBe("Bar Beta kontakt telefon e-mail");
   });
 });
 
