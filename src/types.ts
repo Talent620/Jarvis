@@ -1,5 +1,6 @@
 // Współdzielone typy dla całej aplikacji JARVIS.
 import type { UserProfile } from "./lib/profile";
+import type { CampaignPlan } from "./lib/campaignEngine";
 
 export type Role = "user" | "assistant";
 
@@ -196,6 +197,8 @@ export interface AppData {
   financeProjects?: FinanceProject[];
   /** World Model — graf encji (ludzie/projekty/firmy/zadania) i relacji z pewnością. */
   world?: WorldGraph;
+  /** Kampanie (reklamy/social) — trwałe obiekty modelu campaignEngine. */
+  campaigns?: CampaignPlan[];
 }
 
 /** Zapisany projekt strony WWW (Kreator stron). Pełny stan do wznowienia pracy. */
