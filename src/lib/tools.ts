@@ -19,7 +19,16 @@ import { rememberFact } from "./memory";
 import { generateCards } from "./cards";
 import { runAutomation } from "./n8n";
 import { getCrypto, getRate } from "./markets";
-import { findLeads } from "./leads";
+import { findLeads, discoverCandidates } from "./leads";
+import { importCandidates } from "./leadCandidates";
+import { buildGrowthContext } from "./growthContext";
+import { generateSite } from "./webgen";
+import { saveSiteProject } from "./siteProjects";
+import { generatePost, saveContentPost } from "./contentStudio";
+import { generateAds } from "./adStudio";
+import { buildAdCampaign } from "./adCampaign";
+import { saveCampaign } from "./campaignStore";
+import { clientJourney } from "./clientJourney";
 import { safeCalc } from "./calc";
 import { openSalesOs, syncFromSalesOs, salesOsStatsText, pushLeadsToSalesOs, salesOsConfigured, outreachViaSalesOs, flushSalesOsOutreach, leadToOutreachInput, pushLeadStatusToSalesOs } from "./salesOs";
 import { buildDossier, auditWeakPoints } from "./leadIntel";
@@ -682,6 +691,96 @@ const tools: Tool[] = [
       input_schema: obj({}),
     },
     run: () => autoPlanSummary(syncSalesTasks()),
+  },
+  {
+    def: {
+      name: "preview_lead_candidates",
+      description: "POKAŻ kandydatów na leady (firmy) BEZ zapisywania do CRM — sam podgląd (nazwa, telefon, e-mail, kontaktowalność, źródło). W rozmowie DOMYŚLNIE używaj tego, a nie find_leads/import — zapisuj dopiero, gdy użytkownik JAWNIE powie „zapisz/importuj/dodaj do CRM”. Nisza i miasto opcjonalne.",
+      input_schema: obj({ niche: str("Nisza/branża (opcjonalnie)"), location: str("Miasto (opcjonalnie)") }, []),
+    },
+    run: async ({ niche, location }) => {
+      const r = await discoverCandidates({ niche: (niche || "").trim() || undefined, location: (location || "").trim() || undefined });
+      if (r.error) return r.error;
+      if (!r.candidates.length) return `Brak kandydatów w „${r.city}”. Spróbuj inną niszę/miasto.`;
+      const lines = r.candidates.slice(0, 10).map((c) => `• ${c.company}${c.phone ? ` — ☎ ${c.phone}` : ""}${c.email ? ` · ✉ ${c.email}` : ""}${c.url ? "" : " (bez strony)"}`);
+      return `Podgląd (NIC nie zapisano) — ${r.candidates.length} firm w „${r.city}”:\n${lines.join("\n")}\n\nPowiedz „zapisz [nazwy]”, by dodać wybrane do CRM.`;
+    },
+  },
+  {
+    def: {
+      name: "import_lead_candidates",
+      description: "ZAPISZ do CRM tylko WSKAZANE firmy (po nazwie) z ostatnio wyszukiwanych kandydatów. Używaj TYLKO, gdy użytkownik jawnie prosi o zapisanie/import. Dane przykładowe (mock) nigdy nie trafiają do CRM.",
+      input_schema: obj({ companies: { type: "array", items: { type: "string" }, description: "Nazwy firm do zapisania" }, niche: str("Nisza (opcjonalnie, do ponownego wyszukania)"), location: str("Miasto (opcjonalnie)") }, ["companies"]),
+    },
+    run: async ({ companies, niche, location }) => {
+      const want = new Set((Array.isArray(companies) ? companies : []).map((c: string) => String(c).trim().toLowerCase()).filter(Boolean));
+      if (!want.size) return "Podaj nazwy firm do zapisania.";
+      const r = await discoverCandidates({ niche: (niche || "").trim() || undefined, location: (location || "").trim() || undefined });
+      if (r.error) return r.error;
+      const pick = r.candidates.filter((c) => want.has(c.company.trim().toLowerCase()));
+      if (!pick.length) return "Nie znalazłem wskazanych firm wśród kandydatów — sprawdź nazwy albo wyszukaj ponownie.";
+      const added = importCandidates(store.data.leads, pick, { now: Date.now(), makeId: () => uid() });
+      if (added.length) store.setData((d) => { d.leads.push(...added); });
+      return `✅ Zapisałem do CRM ${added.length} z ${pick.length} wskazanych (reszta to duplikaty lub dane przykładowe). Są w Pulpicie Sprzedaży → „Do działania”.`;
+    },
+  },
+  {
+    def: {
+      name: "prepare_lead_demo",
+      description: "Zbuduj PRAWDZIWE demo strony dla firmy z CRM (po nazwie) i zapisz je jako projekt. Kontekst (branża, problemy) bierze z leada — bez przepisywania.",
+      input_schema: obj({ company: str("Nazwa firmy (lead z CRM)") }, ["company"]),
+    },
+    run: async ({ company }) => {
+      const lead = (store.data.leads || []).find((l) => l.company.trim().toLowerCase() === String(company || "").trim().toLowerCase());
+      if (!lead) return `Nie mam leada „${company}” w CRM. Najpierw go zapisz (import_lead_candidates).`;
+      const ctx = buildGrowthContext(lead);
+      const res = await generateSite(`Strona dla firmy: ${ctx.company}${ctx.industry ? ` (${ctx.industry})` : ""}. Problemy: ${ctx.problems.join(", ") || "brak"}.`);
+      if ("error" in res) return `Nie udało się zbudować demo: ${res.error}`;
+      const proj = saveSiteProject({ name: `Demo — ${ctx.company}`, prompt: `Demo dla ${ctx.company}`, kind: "auto", style: "auto", html: res.html });
+      return `✅ Zbudowałem demo dla ${ctx.company} i zapisałem jako projekt „${proj.name}”. Otwórz Kreator stron, by je zobaczyć/dostarczyć.`;
+    },
+  },
+  {
+    def: {
+      name: "create_content_draft",
+      description: "Napisz SZKIC posta na social media (draft — nic nie publikuje). Podaj temat; platforma opcjonalna.",
+      input_schema: obj({ topic: str("Temat posta"), platform: str("Platforma: instagram/facebook/tiktok/linkedin (opcjonalnie)") }, ["topic"]),
+    },
+    run: async ({ topic, platform }) => {
+      const p = ["instagram", "facebook", "tiktok", "linkedin"].includes(String(platform)) ? String(platform) as "instagram" | "facebook" | "tiktok" | "linkedin" : "instagram";
+      const text = await generatePost({ platform: p, topic: String(topic || "").trim(), tone: "swobodny" });
+      if (!text) return "Nie udało się napisać posta — sprawdź klucz AI (⚙ → Mózg).";
+      saveContentPost(p, String(topic || "").trim(), text);
+      return `📱 Szkic posta (${p}) gotowy i zapisany jako DRAFT (nic nie opublikowano):\n\n${text}`;
+    },
+  },
+  {
+    def: {
+      name: "create_campaign_draft",
+      description: "Zbuduj SZKIC kampanii reklamowej (draft — nic nie publikuje ani nie wydaje). Podaj produkt; platforma google/meta opcjonalnie.",
+      input_schema: obj({ product: str("Produkt/usługa"), platform: str("google lub meta (opcjonalnie)") }, ["product"]),
+    },
+    run: async ({ product, platform }) => {
+      const ui = String(platform) === "meta" ? "meta" : "google";
+      const raw = await generateAds({ platform: ui, product: String(product || "").trim() });
+      if (!raw) return "Nie udało się wygenerować reklam — sprawdź klucz AI (⚙ → Mózg).";
+      const plan = buildAdCampaign({ id: uid(), uiPlatform: ui, product: String(product || "").trim(), rawText: raw, now: Date.now() });
+      saveCampaign(plan);
+      return `📢 Szkic kampanii (${ui}) zapisany jako DRAFT: ${plan.creative.headlines.length} nagłówków, ${plan.creative.descriptions.length} opisów. Status: szkic — nic nie opublikowano. Zobacz Marketing → Kampanie.`;
+    },
+  },
+  {
+    def: {
+      name: "client_next_action",
+      description: "Powiedz, na jakim ETAPIE jest klient (Kandydat→Do kontaktu→Oferta→Klient) i JEDNO główne „Co dalej”. Podaj nazwę firmy z CRM.",
+      input_schema: obj({ company: str("Nazwa firmy (lead z CRM)") }, ["company"]),
+    },
+    run: ({ company }) => {
+      const lead = (store.data.leads || []).find((l) => l.company.trim().toLowerCase() === String(company || "").trim().toLowerCase());
+      if (!lead) return `Nie mam leada „${company}” w CRM.`;
+      const j = clientJourney(lead, store.data.financeProjects || [], store.data.sentMail || []);
+      return `📊 ${lead.company}: etap „${j.stageLabel}” (${j.progressPct}%). Co dalej: ${j.nextReason}`;
+    },
   },
   {
     def: {

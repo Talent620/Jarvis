@@ -11,6 +11,11 @@ const RISK: Record<string, Risk> = {
   gmail_search: "read", gcal_list: "read", tally_report: "read", calculate: "read", find_leads: "read",
   list_leads: "read", get_news: "read", get_markets: "read",
   salesos_sync: "read", salesos_stats: "read",
+  // Parytet głos↔UI: podgląd i „co dalej" tylko czytają; drafty ZAPISUJĄ lokalnie (write), NIE są
+  // działaniem zewnętrznym → NIE wymagają zgody outbound. Wysyłka/publikacja/płatności mają własne tooly.
+  preview_lead_candidates: "read", client_next_action: "read",
+  import_lead_candidates: "write", prepare_lead_demo: "write",
+  create_content_draft: "write", create_campaign_draft: "write",
   // read — tylko pisze gotowy szkic follow-upu (bez wysyłki, bez zapisu w store)
   lead_followup: "read",
   // write — zapisuje teczkę (dossier/intel) w leadzie; AI lokalnie, bez wysyłki na zewnątrz
