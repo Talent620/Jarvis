@@ -1,8 +1,9 @@
 // === Rejestr Dowodów (Cross-Device Flight Recorder) ===
 // Jeden kwit na akcję, spięty jednym traceId „od słowa do diody". Append-only,
-// idempotentny po correlationId (ten sam correlationId nie tworzy drugiego kwitu —
-// „wyślij-raz" widoczne też w dowodach). Czysty: funkcje zwracają NOWĄ tablicę tylko
-// gdy faktycznie coś dopisano (idempotencja referencji, ważne dla store S9).
+// idempotentny po kluczu (correlationId + stan + krok) — ten sam FAKT nie tworzy
+// drugiego kwitu, ale zmiana stanu tego samego correlationId jest nowym faktem.
+// Czysty: funkcje zwracają NOWĄ tablicę tylko gdy faktycznie coś dopisano
+// (idempotencja referencji, ważne dla store S9).
 import type { EvidenceEntry, StepResult, Mission } from "./types";
 
 /** Deterministyczny traceId misji (bez losowości — stabilny w testach i resumach). */
@@ -48,9 +49,19 @@ export function evidenceForMission(ledger: EvidenceEntry[], missionId: string): 
   return ledger.filter((e) => e.missionId === missionId);
 }
 
-/** Czy correlationId ma już kwit w stanie CONFIRMED (zabezpieczenie „wyślij-raz"). */
-export function isCorrelationConfirmed(ledger: EvidenceEntry[], correlationId: string): boolean {
-  return ledger.some((e) => e.correlationId === correlationId && e.state === "CONFIRMED");
+/**
+ * Czy correlationId ma już kwit CONFIRMED W TEJ MISJI (zabezpieczenie „wyślij-raz").
+ * Zakres celowo ograniczony do misji (weryfikator, problem B): correlationId
+ * potwierdzony w innej misji NIE może fantomowo „potwierdzić" cudzego kroku.
+ */
+export function isCorrelationConfirmed(
+  ledger: EvidenceEntry[],
+  correlationId: string,
+  missionId: string,
+): boolean {
+  return ledger.some(
+    (e) => e.missionId === missionId && e.correlationId === correlationId && e.state === "CONFIRMED",
+  );
 }
 
 /** Czytelny łańcuch dowodowy dla człowieka („po katastrofie odtwórz głosem"). */

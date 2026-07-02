@@ -128,7 +128,7 @@ describe("Idempotencja i bezpieczne wznowienie (wyślij-raz)", () => {
     const exec = mixedExecutor(dev);
     const r1 = await runMission(initMissionState(mission(relaySteps())), [], exec, { now: NOW });
     const savedLedger = r1.ledger;
-    expect(isCorrelationConfirmed(savedLedger, "c3")).toBe(true);
+    expect(isCorrelationConfirmed(savedLedger, "c3", "m1")).toBe(true);
 
     // „Restart": stan pamięci znika, ale rejestr dowodów przetrwał (trwałość).
     const fresh = initMissionState(mission(relaySteps()));
@@ -186,7 +186,6 @@ describe("Karta Przekazania — twarda granica STOP zamiast cichego wykonania", 
   });
 
   it("po zatwierdzeniu przez człowieka (approvedStops) krok STOP się wykonuje", async () => {
-    const dev = new DeviceEmulator();
     const steps: MissionStep[] = [
       { id: "s1", node: "exe", capability: "pay_invoice", correlationId: "c1", hardStop: "payment", expect: { paid: true } },
     ];
@@ -234,6 +233,69 @@ describe("Rejestr Dowodów — jeden kwit na fakt, łańcuch traceId, idempotenc
     expect(story[0]).toMatch(/telefon/);
     expect(story[1]).toMatch(/komputer/);
     expect(story[2]).toMatch(/urządzenie · set_state · CONFIRMED/);
+  });
+});
+
+describe("Regresje weryfikatora — kolizja correlationId, wisząca Karta, rehearsal+STOP", () => {
+  it("B: correlationId potwierdzony w INNEJ misji nie tworzy fantomowego CONFIRMED", async () => {
+    // Misja A potwierdza c1.
+    const stepsA: MissionStep[] = [
+      { id: "a1", node: "phone", capability: "prepare", correlationId: "c1", expect: { ready: true } },
+    ];
+    const exec: NodeExecutor = async (step) => ({ actuated: true, readback: step.expect });
+    const missionA: Mission = { id: "mA", title: "A", steps: stepsA, createdAt: NOW };
+    const rA = await runMission(initMissionState(missionA), [], exec, { now: NOW });
+    expect(rA.state.status).toBe("done");
+
+    // Misja B: krok PŁATNOŚCI z KOLIDUJĄCYM correlationId c1 — nie może być
+    // raportowo „CONFIRMED" bez zgody; musi powstać Karta Przekazania.
+    const stepsB: MissionStep[] = [
+      { id: "b1", node: "exe", capability: "pay_invoice", correlationId: "c1", hardStop: "payment", expect: { paid: true } },
+    ];
+    const missionB: Mission = { id: "mB", title: "B", steps: stepsB, createdAt: NOW };
+    const rB = await runMission(initMissionState(missionB), rA.ledger, exec, { now: NOW + 1 });
+    expect(rB.state.status).toBe("awaiting_human");
+    expect(rB.state.results.b1).toBeUndefined(); // zero fantomowego potwierdzenia
+
+    // Zwykły (nie-STOP) krok misji B z kolidującym c1 też musi się WYKONAĆ, nie pominąć.
+    const stepsB2: MissionStep[] = [
+      { id: "b2", node: "phone", capability: "prepare", correlationId: "c1", expect: { ready: true } },
+    ];
+    let executed = 0;
+    const countingExec: NodeExecutor = async (step) => {
+      executed += 1;
+      return { actuated: true, readback: step.expect };
+    };
+    const missionB2: Mission = { id: "mB2", title: "B2", steps: stepsB2, createdAt: NOW };
+    const rB2 = await runMission(initMissionState(missionB2), rA.ledger, countingExec, { now: NOW + 2 });
+    expect(executed).toBe(1); // faktyczne wykonanie, nie skrót po cudzym kwicie
+    expect(rB2.state.status).toBe("done");
+  });
+
+  it("C: zatwierdzony krok STOP, który FAILuje, nie zostawia wiszącej Karty Przekazania", async () => {
+    const steps: MissionStep[] = [
+      { id: "s1", node: "exe", capability: "pay_invoice", correlationId: "c1", hardStop: "payment", expect: { paid: true } },
+    ];
+    const failingExec: NodeExecutor = async () => ({ actuated: false, actuateError: "odmowa banku" });
+    const st0 = initMissionState(mission(steps));
+    const r1 = await runMission(st0, [], failingExec, { now: NOW });
+    expect(r1.state.status).toBe("awaiting_human");
+    expect(r1.state.pendingHandoff).toBeTruthy();
+
+    const r2 = await runMission(r1.state, r1.ledger, failingExec, { now: NOW + 1, approvedStops: new Set(["s1"]) });
+    expect(r2.state.results.s1.outcome.state).toBe("FAILED");
+    expect(r2.state.status).toBe("paused");
+    expect(r2.state.pendingHandoff).toBeUndefined(); // karta nie wisi po nieudanym kroku
+  });
+
+  it("D: próba generalna kroku STOP jest fail-closed — awaiting_human, nie ciche SIMULATED", async () => {
+    const steps: MissionStep[] = [
+      { id: "s1", node: "exe", capability: "pay_invoice", correlationId: "c1", hardStop: "payment", expect: { paid: true } },
+    ];
+    const exec: NodeExecutor = async (step) => ({ actuated: true, readback: step.expect });
+    const { state } = await runMission(initMissionState(mission(steps)), [], exec, { now: NOW, rehearsal: true });
+    expect(state.status).toBe("awaiting_human"); // granica STOP obowiązuje też na sucho
+    expect(state.results.s1).toBeUndefined();
   });
 });
 

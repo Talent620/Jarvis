@@ -114,6 +114,18 @@ Cztery bramki JARVIS-a: tsc czysto, ESLint czysto, Vitest 316/2724, build zielon
   `isError` (sztafeta widzi FAILED, nie wyjątek). Testowany przeciwko stubowi HTTP
   (`tests/horizonMcpDevice.test.ts`, 5 testów) — NIE przeciwko fizycznemu sprzętowi.
 
+**Weryfikator (świeży kontekst, commit b7757b4): PRZEKRÓJ WIARYGODNY — 8/8 deklaracji
+potwierdzonych sondami.** Znalezione przypadki brzegowe NAPRAWIONE z regresjami:
+(B) kolizja correlationId między misjami dawała fantomowe CONFIRMED, a check wyślij-raz
+stał przed checkiem STOP → teraz „wyślij-raz" zakresowane per misja i STOP sprawdzany
+PRZED jakimkolwiek skrótem; (C) wisząca Karta Przekazania po nieudanym zatwierdzonym
+kroku → karta żyje tylko w statusie awaiting_human; (D) rehearsal kroku STOP jest
+celowo fail-closed (awaiting_human, nie ciche SIMULATED) — udokumentowane + regresja.
+**Granica zaufania (A, nazwana wprost):** drabina prawdy ufa ODCZYTOWI ZWROTNEMU węzła —
+read-back to nadal auto-raport urządzenia/EXE; węzeł umyślnie kłamiący w read_state może
+sfałszować CONFIRMED. Obrona to podpisy/parowanie węzłów (zaprojektowane, nie zbudowane),
+nie logika sztafety.
+
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;
 działanie na fizycznym S9 i realnym EXE = NIEUDOWODNIONE.

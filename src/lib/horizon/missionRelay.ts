@@ -67,21 +67,26 @@ export async function runMission(
     const prior = results[step.id];
     // Idempotencja: krok już potwierdzony — nie wykonuj ponownie.
     if (prior && prior.outcome.state === "CONFIRMED") continue;
-    // „Wyślij-raz": ten correlationId już potwierdzony (np. w poprzednim przebiegu) — pomiń.
-    if (isCorrelationConfirmed(evid, step.correlationId)) {
+
+    // Twarda granica STOP PRZED jakimkolwiek skrótem (weryfikator, problem B):
+    // krok graniczny nigdy nie jest pomijany „na skróty" — także w próbie generalnej
+    // (rehearsal celowo fail-closed: STOP daje awaiting_human, nie SIMULATED).
+    if (isHardStop(step) && !approved.has(step.id)) {
+      pendingHandoff = makeHandoff(state.mission, step, opts.now);
+      status = "awaiting_human";
+      break; // sztafeta czeka na człowieka — nic dalej się nie dzieje
+    }
+
+    // „Wyślij-raz": ten correlationId już potwierdzony W TEJ MISJI (np. w poprzednim
+    // przebiegu przed restartem) — pomiń bez akcji. Zakres per misja: kolizja
+    // correlationId z INNĄ misją nie tworzy fantomowego CONFIRMED.
+    if (isCorrelationConfirmed(evid, step.correlationId, state.mission.id)) {
       results[step.id] = prior || {
         stepId: step.id,
         node: step.node,
         outcome: { state: "CONFIRMED", evidence: { message: "już potwierdzone (wyślij-raz)" } },
       };
       continue;
-    }
-
-    // Twarda granica STOP → Karta Przekazania (chyba że człowiek już zatwierdził).
-    if (isHardStop(step) && !approved.has(step.id)) {
-      pendingHandoff = makeHandoff(state.mission, step, opts.now);
-      status = "awaiting_human";
-      break; // sztafeta czeka na człowieka — nic dalej się nie dzieje
     }
 
     // Wykonaj krok na węźle (transport wstrzyknięty).
@@ -122,8 +127,10 @@ export async function runMission(
   if (status === "running") {
     const allConfirmed = state.mission.steps.every((s) => results[s.id]?.outcome.state === "CONFIRMED");
     status = allConfirmed ? "done" : opts.rehearsal ? "paused" : "running";
-    if (allConfirmed) pendingHandoff = undefined;
   }
+  // Karta Przekazania żyje WYŁĄCZNIE gdy sztafeta czeka na człowieka (weryfikator,
+  // problem C): zatwierdzony-a-nieudany krok nie zostawia wiszącej, nieaktualnej karty.
+  if (status !== "awaiting_human") pendingHandoff = undefined;
 
   return { state: { mission: state.mission, results, pendingHandoff, status }, ledger: evid };
 }
