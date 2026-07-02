@@ -21,20 +21,26 @@
   text-transform: uppercase;
   letter-spacing: 1px;
 }
+/* Układ pionowy (F4, ocena wizyjna): tekst działania na pełnej szerokości,
+   pod nim wiersz status + przycisk — na 390 px trzy kolumny zgniatały tekst. */
 .action-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
 }
 .action-main {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   min-width: 0;
 }
 .action-text {
   overflow-wrap: anywhere;
+}
+.action-item > .btn {
+  align-self: flex-end;
 }
 .action-form {
   margin-top: 8px;

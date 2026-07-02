@@ -9,6 +9,8 @@
   font-weight: 600;
 }
 
+/* Wyrównane kolumny (F4, ocena wizyjna): etykieta / liczba wpisów / średnia
+   w stałych szerokościach — wiersze dają się skanować pionowo. */
 .week-day-row {
   display: flex;
   gap: 12px;
@@ -19,6 +21,10 @@
 .week-day-label {
   min-width: 72px;
   font-weight: 600;
+}
+
+.week-day-row > span:nth-child(2) {
+  min-width: 84px;
 }
 
 .ai-proposal {
