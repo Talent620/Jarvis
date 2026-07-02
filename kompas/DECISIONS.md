@@ -79,6 +79,23 @@ per wycinek byłby sztuczny i fałszywie sugerował samodzielną zieloność.
 **Odrzucone:** 4 osobne commity z czerwonymi drzewami pośrednimi — historia
 kłamałaby o stanie testów w każdym punkcie.
 
+## D10 — FAZA 5: naprawy adwersarzy + rozszerzenie harnessu o regresje adwersarskie
+Adwersarz A: A1 wstrzyknięcie „- [x]” do eksportu przez \n w tekście użytkownika
+(naprawa: inline() w exportMd), A2 „http://” bez hosta jako dowód (naprawa: regex z hostem)
++ wzmocnienia resolveBet (AND status='active') i closeAction (pre-check stanu).
+Adwersarz B: P1 połykany błąd zapisu (naprawa: persistIssue()/flush() rzuca, banner w App,
+formularze nie czyszczą się po porażce), P2 dwie karty last-writer-wins (naprawa:
+wersjonowany snapshot w jednej transakcji readwrite + twarda blokada zapisu przy konflikcie),
+P3/P4 błąd odczytu/uszkodzona baza → cicha świeża baza / wieczne ładowanie (naprawa: initDb
+odrzuca z czytelnym komunikatem, ekran błędu, ZERO automatycznego kasowania), P5 Bet bez
+flush (naprawa: await flush przed ogłoszeniem sukcesu), P6 podwójny klik dowodu-pliku
+(naprawa: guard + disabled), P7 dwa snapshoty w closeAction (naprawa: batch() = BEGIN/COMMIT
++ jeden snapshot). Zgodnie z D7 dodano testy e2e regresji adwersarskich
+(e2e/adv-integrity.spec.ts) — luki A1/A2 są wykrywalne z poziomu e2e, więc trzymają je testy.
+**Odrzucone:** przeniesienie blobów poza snapshot SQL (propozycja B przy P7) — realna
+poprawa skalowania, ale zmiana architektury trwałości ponad kontrakt tego runu; ryzyko
+zapisane w FINAL.md jako znane ograniczenie.
+
 ## D11 — FAZA 5 runda 2: naprawy obejść i polityka „mutacja w pamięci = formularz czyszczony”
 Runda powtórkowa znalazła: obejście walidacji linku (`https://.` itd. → naprawa: new URL()
 + alfanumeryczny host), rezydualne U+2028/U+2029/NEL w inline() (naprawa: rozszerzona klasa),
