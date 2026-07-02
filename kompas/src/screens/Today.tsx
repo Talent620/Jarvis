@@ -25,6 +25,8 @@ export default function Today() {
   const [text, setText] = useState("");
   const [score, setScore] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  // Nieudany TRWAŁY zapis (flush) — pokazujemy prawdę i NIE czyścimy formularza (P1).
+  const [saveError, setSaveError] = useState<string | null>(null);
   // Ref = blokada synchroniczna: drugi klik przed re-renderem też odbije się od guardu.
   const savingRef = useRef(false);
 
@@ -37,11 +39,15 @@ export default function Today() {
     if (!trimmed || score === null) return; // pusty tekst lub brak oceny — nic nie rób
     savingRef.current = true;
     setSaving(true);
+    setSaveError(null);
     try {
       addEntry(trimmed, score);
-      await flush(); // poczekaj, aż snapshot trafi do IndexedDB (S02/S12)
+      await flush(); // poczekaj, aż snapshot NAPRAWDĘ trafi do IndexedDB (S02/S12)
       setText("");
       setScore(null);
+    } catch (e) {
+      // Zapis trwały nie powiódł się — formularz zostaje, użytkownik widzi dlaczego (P1).
+      setSaveError(e instanceof Error ? e.message : "Zapis nie powiódł się — spróbuj ponownie.");
     } finally {
       savingRef.current = false;
       setSaving(false);
@@ -87,6 +93,7 @@ export default function Today() {
         >
           {saving ? "Zapisywanie…" : "Zapisz"}
         </button>
+        {saveError && <div className="alert">{saveError}</div>}
       </div>
 
       <ul className="list" data-testid="entry-list">

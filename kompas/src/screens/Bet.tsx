@@ -1,7 +1,8 @@
 // W3 One Active Bet + W4 Action Verification — ekran „Zakład” (Wykonawca B).
 // Dane czytane synchronicznie przy renderze (App re-renderuje po każdej mutacji db);
 // tu tylko stan lokalny UI (modale, wybór typu dowodu, panel rozstrzygania).
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { flush } from "../lib/db";
 import {
   activeBet,
   listActions,
@@ -49,6 +50,11 @@ export default function Bet() {
   const [proofUrl, setProofUrl] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofError, setProofError] = useState<string | null>(null);
+  // P6: guard synchroniczny — drugi klik podczas czytania pliku/zapisu nie wchodzi.
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  // P5: błąd trwałego zapisu (flush) pokazywany na ekranie zamiast cichego sukcesu.
+  const [screenError, setScreenError] = useState<string | null>(null);
 
   // Podgląd artefaktu.
   const [viewProofId, setViewProofId] = useState<string | null>(null);
@@ -94,13 +100,19 @@ export default function Bet() {
     }
   }, [viewProofId]);
 
-  function saveAction() {
+  async function saveAction() {
     if (!bet) return;
     const text = actionText.trim();
     if (!text) return;
-    addAction(bet.id, text);
-    setActionText("");
-    setAddingAction(false);
+    setScreenError(null);
+    try {
+      addAction(bet.id, text);
+      await flush(); // „dodane” dopiero po trwałym zapisie (P5)
+      setActionText("");
+      setAddingAction(false);
+    } catch (e) {
+      setScreenError(e instanceof Error ? e.message : "Zapis nie powiódł się — spróbuj ponownie.");
+    }
   }
 
   function openProofForm(actionId: string) {
@@ -123,6 +135,9 @@ export default function Bet() {
 
   async function submitProof() {
     if (!proofFor) return;
+    if (submittingRef.current) return; // P6: podwójny klik nie tworzy drugiego dowodu
+    submittingRef.current = true;
+    setSubmitting(true);
     try {
       let input: ProofInput;
       if (proofKind === "note") {
@@ -144,23 +159,35 @@ export default function Bet() {
         );
       }
       closeAction(proofFor, input);
+      await flush(); // „zrobione” wolno pokazać dopiero po trwałym zapisie (P5)
       closeProofForm(); // sukces — modal znika, status zmienia się na „zrobione”
     } catch (err) {
       if (err instanceof ProofRequiredError) setProofError(err.message);
+      else if (err instanceof Error) setProofError(err.message);
       else setProofError("Nie udało się zapisać dowodu — spróbuj ponownie.");
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   }
 
-  function saveResolve() {
+  async function saveResolve() {
     if (!bet || !outcome) return;
-    resolveBet(bet.id, outcome, learned.trim());
-    setResolving(false);
-    setOutcome(null);
-    setLearned("");
+    setScreenError(null);
+    try {
+      resolveBet(bet.id, outcome, learned.trim());
+      await flush(); // rozstrzygnięcie ogłaszamy dopiero po trwałym zapisie (P5)
+      setResolving(false);
+      setOutcome(null);
+      setLearned("");
+    } catch (e) {
+      setScreenError(e instanceof Error ? e.message : "Zapis nie powiódł się — spróbuj ponownie.");
+    }
   }
 
   return (
     <section className="bet-screen">
+      {screenError && <div className="alert">{screenError}</div>}
       {!bet ? (
         <div className="card" data-testid="bet-empty">
           <p>Brak aktywnego zakładu — dodaj go na ekranie Tydzień.</p>
@@ -225,7 +252,13 @@ export default function Bet() {
                 placeholder="Co konkretnie zrobisz?"
               />
               <div className="row action-form-buttons">
-                <button className="btn primary" data-testid="action-save" onClick={saveAction}>
+                <button
+                  className="btn primary"
+                  data-testid="action-save"
+                  onClick={() => {
+                    void saveAction();
+                  }}
+                >
                   Zapisz działanie
                 </button>
                 <button
@@ -294,7 +327,9 @@ export default function Bet() {
                   className="btn primary"
                   data-testid="bet-resolve-save"
                   disabled={!outcome}
-                  onClick={saveResolve}
+                  onClick={() => {
+                    void saveResolve();
+                  }}
                 >
                   Zapisz rozstrzygnięcie
                 </button>
@@ -415,11 +450,12 @@ export default function Bet() {
               <button
                 className="btn primary"
                 data-testid="proof-submit"
+                disabled={submitting}
                 onClick={() => {
                   void submitProof();
                 }}
               >
-                Zapisz dowód
+                {submitting ? "Zapisywanie…" : "Zapisz dowód"}
               </button>
               <button className="btn" onClick={closeProofForm}>
                 Anuluj

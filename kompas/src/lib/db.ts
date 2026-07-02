@@ -2,16 +2,37 @@
 // Jedno źródło prawdy: baza SQL; po każdej mutacji pełny snapshot bajtów idzie do
 // IndexedDB (zapis atomowy na poziomie transakcji IndexedDB → „raz albo wcale").
 // Jedyne źródło czasu: now() — UI nigdy nie przyjmuje czasu od użytkownika.
+//
+// Po rundzie adwersarzy (FAZA 5) trwałość mówi PRAWDĘ:
+// - P1: nieudany zapis nie jest połykany — persistIssue() + flush() zgłaszają porażkę,
+// - P2: snapshot jest wersjonowany; starsza karta nie nadpisze nowszych danych (blokada),
+// - P3/P4: błąd odczytu lub uszkodzona baza NIE tworzą cichej świeżej bazy — initDb
+//   odrzuca z czytelnym komunikatem i zapis pozostaje niemożliwy (dane nietknięte),
+// - P7: batch() — wieloetapowa mutacja = jedna transakcja SQL + jeden snapshot.
 import initSqlJs, { type Database } from "sql.js";
 import wasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 
 const IDB_NAME = "kompas";
 const IDB_STORE = "sqlite";
 const IDB_KEY = "main";
+const IDB_VERSION_KEY = "version";
 
 let db: Database | null = null;
 const listeners = new Set<() => void>();
 let persistChain: Promise<void> = Promise.resolve();
+// Wersja snapshotu w tej karcie — musi zgadzać się z zapisaną, inaczej ktoś inny pisał.
+let dbVersion = 0;
+// P1: ostatni błąd trwałego zapisu (null = ostatni zapis udany).
+let lastPersistError: string | null = null;
+// P2: twarda blokada zapisu (konflikt kart) — chroni nowsze dane przed nadpisaniem.
+let saveLocked: string | null = null;
+
+class VersionConflictError extends Error {
+  constructor() {
+    super("Dane zostały zmienione w innej karcie tej aplikacji.");
+    this.name = "VersionConflictError";
+  }
+}
 
 /** Jedyne źródło czasu w produkcie (testy sterują nim przez zegar strony). */
 export function now(): number {
@@ -26,6 +47,10 @@ export function uuid(): string {
   return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
 }
 
+function emit(): void {
+  for (const fn of Array.from(listeners)) fn();
+}
+
 function idbOpen(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(IDB_NAME, 1);
@@ -37,30 +62,58 @@ function idbOpen(): Promise<IDBDatabase> {
   });
 }
 
-function idbLoad(): Promise<Uint8Array | null> {
+/** Odczyt snapshotu + wersji w JEDNEJ transakcji. Błąd odczytu ≠ brak snapshotu (P3). */
+function idbLoad(): Promise<{ bytes: Uint8Array | null; version: number }> {
   return idbOpen().then(
     (idb) =>
       new Promise((resolve, reject) => {
         const tx = idb.transaction(IDB_STORE, "readonly");
-        const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
-        req.onsuccess = () => {
-          const v = req.result;
-          resolve(v instanceof Uint8Array ? v : v ? new Uint8Array(v) : null);
+        const store = tx.objectStore(IDB_STORE);
+        const bytesReq = store.get(IDB_KEY);
+        const verReq = store.get(IDB_VERSION_KEY);
+        tx.oncomplete = () => {
+          const v = bytesReq.result;
+          const bytes = v instanceof Uint8Array ? v : v ? new Uint8Array(v) : null;
+          const version = typeof verReq.result === "number" ? verReq.result : 0;
+          resolve({ bytes, version });
         };
-        req.onerror = () => reject(req.error);
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error ?? new Error("Transakcja odczytu przerwana"));
       })
   );
 }
 
-function idbSave(bytes: Uint8Array): Promise<void> {
+/**
+ * Zapis snapshotu z kontrolą wersji w JEDNEJ transakcji readwrite (P2):
+ * jeżeli zapisana wersja ≠ oczekiwanej, transakcja jest przerywana i nic nie nadpisujemy.
+ */
+function idbSaveVersioned(bytes: Uint8Array, expected: number): Promise<void> {
   return idbOpen().then(
     (idb) =>
       new Promise((resolve, reject) => {
+        let conflict = false;
         const tx = idb.transaction(IDB_STORE, "readwrite");
-        tx.objectStore(IDB_STORE).put(bytes, IDB_KEY);
+        const store = tx.objectStore(IDB_STORE);
+        const verReq = store.get(IDB_VERSION_KEY);
+        verReq.onsuccess = () => {
+          const stored = typeof verReq.result === "number" ? verReq.result : 0;
+          if (stored !== expected) {
+            conflict = true;
+            try {
+              tx.abort();
+            } catch {
+              /* już przerwana */
+            }
+            return;
+          }
+          store.put(bytes, IDB_KEY);
+          store.put(expected + 1, IDB_VERSION_KEY);
+        };
         tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(tx.error);
+        tx.onabort = () => reject(conflict ? new VersionConflictError() : tx.error ?? new Error("Zapis przerwany"));
+        tx.onerror = () => {
+          /* po onerror IndexedDB i tak wywoła onabort */
+        };
       })
   );
 }
@@ -102,18 +155,33 @@ CREATE TABLE IF NOT EXISTS actions (
 INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', '1');
 `;
 
-/** Idempotentna inicjalizacja: wczytaj snapshot z IndexedDB albo utwórz schemat. */
+/**
+ * Idempotentna inicjalizacja. Odrzuca z CZYTELNYM błędem (po polsku), gdy:
+ * - odczyt z IndexedDB się nie powiódł (P3 — nie tworzymy cicho świeżej bazy),
+ * - snapshot jest uszkodzony (P4 — nie nadpisujemy go; dane zostają nietknięte).
+ * W obu przypadkach db pozostaje null → każda próba zapisu rzuci, snapshot przetrwa.
+ */
 export async function initDb(): Promise<void> {
   if (db) return;
   const SQL = await initSqlJs({ locateFile: () => wasmUrl });
-  let bytes: Uint8Array | null = null;
+  let loaded: { bytes: Uint8Array | null; version: number };
   try {
-    bytes = await idbLoad();
+    loaded = await idbLoad();
   } catch {
-    bytes = null; // uszkodzony/niedostępny IndexedDB → świeża baza (starych danych nie da się odzyskać)
+    throw new Error(
+      "Nie udało się odczytać zapisanej bazy z tej przeglądarki. Twoje dane NIE zostały skasowane — odśwież stronę i spróbuj ponownie."
+    );
   }
-  db = bytes ? new SQL.Database(bytes) : new SQL.Database();
-  db.exec(SCHEMA); // IF NOT EXISTS — bezpieczne też dla wczytanej bazy (migracje w przód)
+  try {
+    db = loaded.bytes ? new SQL.Database(loaded.bytes) : new SQL.Database();
+    db.exec(SCHEMA); // IF NOT EXISTS — bezpieczne też dla wczytanej bazy (migracje w przód)
+  } catch {
+    db = null;
+    throw new Error(
+      "Zapisana baza wygląda na uszkodzoną. Nie nadpisuję jej automatycznie — dane pozostają w przeglądarce. Odśwież stronę; jeśli błąd wraca, zgłoś go zanim cokolwiek usuniesz."
+    );
+  }
+  dbVersion = loaded.version;
 }
 
 function mustDb(): Database {
@@ -122,18 +190,75 @@ function mustDb(): Database {
 }
 
 function schedulePersist(): void {
+  if (saveLocked) return; // konflikt kart: nie wolno nadpisać nowszych danych (P2)
   const snapshot = mustDb().export(); // pełny, spójny obraz bazy w tym momencie
-  persistChain = persistChain.then(() => idbSave(snapshot)).catch(() => {
-    /* nieudany zapis nie może wywrócić UI; kolejna mutacja spróbuje ponownie */
-  });
+  const expected = dbVersion;
+  dbVersion = expected + 1; // zapisy kolejkują się FIFO w persistChain — wersje rosną z nimi
+  persistChain = persistChain.then(
+    () =>
+      idbSaveVersioned(snapshot, expected).then(
+        () => {
+          // Udany zapis kasuje ewentualny wcześniejszy błąd (np. zwolniło się miejsce).
+          if (lastPersistError) {
+            lastPersistError = null;
+            emit();
+          }
+        },
+        (e) => {
+          if (e instanceof VersionConflictError) {
+            saveLocked =
+              "Dane zostały zmienione w innej karcie tej aplikacji. Ta karta ma nieaktualny stan — odśwież stronę, żeby nie nadpisać nowszych danych. Zapis z tej karty jest zablokowany.";
+          } else {
+            lastPersistError =
+              "Trwały zapis nie powiódł się (np. brak miejsca w przeglądarce). Dane z tej sesji mogą zniknąć po zamknięciu karty — zwolnij miejsce i spróbuj ponownie.";
+          }
+          emit();
+        }
+      )
+    // celowo bez rethrow: łańcuch nigdy nie jest odrzucony (brak unhandled rejection),
+    // a prawda o porażce żyje w lastPersistError/saveLocked i w flush().
+  );
 }
 
 /** Mutacja + automatyczny trwały zapis + powiadomienie subskrybentów. */
 export function run(sql: string, params: unknown[] = []): void {
   const d = mustDb();
   d.run(sql, params as never);
+  if (!batching) {
+    schedulePersist();
+    emit();
+  }
+}
+
+let batching = false;
+
+/**
+ * Partia (P7): wieloetapowa mutacja jako JEDNA transakcja SQL i JEDEN snapshot.
+ * Wyjątek w środku wycofuje całość (ROLLBACK) — bez połowicznych stanów.
+ */
+export function batch(fn: () => void): void {
+  if (batching) {
+    fn(); // zagnieżdżenie dołącza do zewnętrznej partii
+    return;
+  }
+  const d = mustDb();
+  batching = true;
+  d.exec("BEGIN");
+  try {
+    fn();
+    d.exec("COMMIT");
+  } catch (e) {
+    try {
+      d.exec("ROLLBACK");
+    } catch {
+      /* transakcja mogła już upaść */
+    }
+    batching = false;
+    throw e;
+  }
+  batching = false;
   schedulePersist();
-  for (const fn of Array.from(listeners)) fn();
+  emit();
 }
 
 /** Odczyt wielu wierszy jako obiekty. */
@@ -161,7 +286,17 @@ export function subscribe(fn: () => void): () => void {
   return () => listeners.delete(fn);
 }
 
-/** Czekaj, aż wszystkie zaplanowane zapisy trafią do IndexedDB (eksport/testy). */
-export function flush(): Promise<void> {
-  return persistChain;
+/** Bieżący problem trwałości do pokazania użytkownikowi (null = wszystko trwałe). */
+export function persistIssue(): string | null {
+  return saveLocked ?? lastPersistError;
+}
+
+/**
+ * Czekaj na zakończenie zaplanowanych zapisów. RZUCA, gdy trwały zapis się nie
+ * powiódł albo jest zablokowany — „zapisane” wolno powiedzieć tylko po prawdzie (P1).
+ */
+export async function flush(): Promise<void> {
+  await persistChain;
+  const issue = persistIssue();
+  if (issue) throw new Error(issue);
 }

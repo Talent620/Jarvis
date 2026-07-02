@@ -65,11 +65,11 @@ export default function Week() {
     setSaveError(null);
     try {
       createBet(proposal.bet, proposal.prediction, "ai");
-      ustawPropozycje(null); // sukces → schowaj propozycję
-      await flush();
+      await flush(); // sukces ogłaszamy dopiero po trwałym zapisie (P1/P5)
+      ustawPropozycje(null);
     } catch (e) {
       if (e instanceof BetConflictError) setConflict(e.message);
-      else setSaveError("Nie udało się zapisać zakładu — spróbuj ponownie.");
+      else setSaveError(e instanceof Error ? e.message : "Nie udało się zapisać zakładu — spróbuj ponownie.");
     }
   }
 
@@ -89,13 +89,13 @@ export default function Week() {
     setManualOk(false);
     try {
       createBet(t, p, "manual");
+      await flush(); // sukces ogłaszamy dopiero po trwałym zapisie (P1/P5)
       setManualText("");
       setManualPred("");
       setManualOk(true);
-      await flush();
     } catch (e) {
       if (e instanceof BetConflictError) setConflict(e.message);
-      else setSaveError("Nie udało się zapisać zakładu — spróbuj ponownie.");
+      else setSaveError(e instanceof Error ? e.message : "Nie udało się zapisać zakładu — spróbuj ponownie.");
     }
   }
 

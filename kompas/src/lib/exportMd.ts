@@ -33,6 +33,15 @@ const VERDICT: Record<string, string> = {
   unclear: "nierozstrzygnięte",
 };
 
+/**
+ * Tekst użytkownika w JEDNEJ linii (adwersarz A1): znaki nowej linii zamieniane na
+ * spację, żeby wpis nie mógł wstrzyknąć do eksportu własnych linii udających
+ * domknięte działania („- [x] …”) ani nagłówków.
+ */
+function inline(s: string | null | undefined): string {
+  return (s ?? "").replace(/\s*[\r\n]+\s*/g, " ").trim();
+}
+
 /** Data + godzina lokalna (czasy w bazie zawsze od now() z db.ts). */
 function fmt(ms: number): string {
   const d = new Date(ms);
@@ -57,10 +66,10 @@ function actionLines(betId: string): string[] {
   );
   return rows.map((a) => {
     const done = a.done_at != null && a.proof_id != null;
-    if (!done) return "- [ ] " + a.text;
+    if (!done) return "- [ ] " + inline(a.text);
     const kind = KIND_WORD[a.proof_kind ?? ""] ?? "artefakt";
     const when = fmt(a.proof_created_at ?? (a.done_at as number));
-    return "- [x] " + a.text + " — dowód: " + kind + " (" + when + ")";
+    return "- [x] " + inline(a.text) + " — dowód: " + kind + " (" + when + ")";
   });
 }
 
@@ -76,15 +85,15 @@ export function buildMarkdown(): string {
 
   lines.push("## Wpisy", "");
   for (const e of entries) {
-    lines.push("- " + fmt(e.created_at) + " — ocena " + e.score + "/5 — " + e.text);
+    lines.push("- " + fmt(e.created_at) + " — ocena " + e.score + "/5 — " + inline(e.text));
   }
   if (entries.length === 0) lines.push("Brak wpisów.");
   lines.push("", "## Zakłady", "");
 
   const active = one<BetRow>("SELECT * FROM bets WHERE status = 'active' LIMIT 1");
   if (active) {
-    lines.push("### Aktywny zakład: " + active.text, "");
-    lines.push("Przewidywanie: " + active.prediction, "");
+    lines.push("### Aktywny zakład: " + inline(active.text), "");
+    lines.push("Przewidywanie: " + inline(active.prediction), "");
     const acts = actionLines(active.id);
     if (acts.length) lines.push("Działania:", ...acts, "");
   }
@@ -93,10 +102,10 @@ export function buildMarkdown(): string {
     "SELECT * FROM bets WHERE status = 'resolved' ORDER BY resolved_at DESC"
   );
   for (const b of history) {
-    lines.push("### Rozstrzygnięty zakład: " + b.text, "");
-    lines.push("Przewidywanie: " + b.prediction);
+    lines.push("### Rozstrzygnięty zakład: " + inline(b.text), "");
+    lines.push("Przewidywanie: " + inline(b.prediction));
     lines.push("Werdykt: " + (VERDICT[b.outcome ?? ""] ?? "nierozstrzygnięte"));
-    lines.push("Czego się nauczyłem: " + (b.learned ?? ""), "");
+    lines.push("Czego się nauczyłem: " + inline(b.learned), "");
     const acts = actionLines(b.id);
     if (acts.length) lines.push("Działania:", ...acts, "");
   }

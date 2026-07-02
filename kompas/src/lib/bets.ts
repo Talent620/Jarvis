@@ -3,7 +3,7 @@
 // Zasada zerowa: stan „zrobione” działania istnieje WYŁĄCZNIE z artefaktem
 // dowodowym — jedyna droga to closeAction(...) z ważnym dowodem; schemat SQL
 // dodatkowo pilnuje CHECK ((done_at IS NULL) = (proof_id IS NULL)).
-import { all, one, run, now, uuid } from "./db";
+import { all, one, run, batch, now, uuid } from "./db";
 
 export type ProofInput =
   | { kind: "note"; note: string }
@@ -115,6 +115,12 @@ export function addAction(betId: string, text: string): ActionRow {
  * Nieważny dowód → ProofRequiredError, stan działania bez zmian.
  */
 export function closeAction(actionId: string, proof: ProofInput): void {
+  // Stan działania PRZED czymkolwiek (adwersarze A/P6): już domknięte albo nieistniejące
+  // działanie nie może zostawić osieroconego artefaktu w bazie.
+  const act = one<ActionRow>("SELECT * FROM actions WHERE id = ?", [actionId]);
+  if (!act) throw new Error("Nie znaleziono działania — odśwież widok i spróbuj ponownie.");
+  if (act.done_at != null) throw new Error("To działanie jest już domknięte dowodem.");
+
   // Walidacja artefaktu — bez niej nie ma „zrobione”.
   if (proof.kind === "note") {
     if (!proof.note || proof.note.trim().length === 0) {
@@ -122,8 +128,11 @@ export function closeAction(actionId: string, proof: ProofInput): void {
     }
   } else if (proof.kind === "link") {
     const url = (proof.url ?? "").trim();
-    if (!(url.startsWith("http://") || url.startsWith("https://"))) {
-      throw new ProofRequiredError("Link dowodowy musi być adresem URL zaczynającym się od http:// lub https://.");
+    // Adwersarz A2: sam prefiks („http://”) to nie jest dowód — wymagamy hosta.
+    if (!/^https?:\/\/[^\s/]+/.test(url)) {
+      throw new ProofRequiredError(
+        "Link dowodowy musi być pełnym adresem URL z hostem (np. https://example.com/...)."
+      );
     }
   } else if (proof.kind === "file") {
     if (!proof.bytes || proof.bytes.length === 0) {
@@ -135,30 +144,33 @@ export function closeAction(actionId: string, proof: ProofInput): void {
 
   const proofId = uuid();
   const ts = now(); // timestamp dowodu nadaje SYSTEM — nigdy użytkownik
-  if (proof.kind === "note") {
-    run("INSERT INTO proofs (id, kind, note, created_at) VALUES (?, 'note', ?, ?)", [
-      proofId,
-      proof.note.trim(),
+  // P7: jedna transakcja SQL + jeden snapshot — bez okna „proof jest, done nie ma”.
+  batch(() => {
+    if (proof.kind === "note") {
+      run("INSERT INTO proofs (id, kind, note, created_at) VALUES (?, 'note', ?, ?)", [
+        proofId,
+        proof.note.trim(),
+        ts,
+      ]);
+    } else if (proof.kind === "link") {
+      run("INSERT INTO proofs (id, kind, url, created_at) VALUES (?, 'link', ?, ?)", [
+        proofId,
+        proof.url.trim(),
+        ts,
+      ]);
+    } else {
+      run(
+        "INSERT INTO proofs (id, kind, file_name, file_mime, file_blob, created_at) VALUES (?, 'file', ?, ?, ?, ?)",
+        [proofId, proof.name, proof.mime, proof.bytes, ts]
+      );
+    }
+    // Oba pola naraz — schemat ma CHECK, że done_at i proof_id są NULL albo ustawione RAZEM.
+    run("UPDATE actions SET done_at = ?, proof_id = ? WHERE id = ? AND done_at IS NULL", [
       ts,
-    ]);
-  } else if (proof.kind === "link") {
-    run("INSERT INTO proofs (id, kind, url, created_at) VALUES (?, 'link', ?, ?)", [
       proofId,
-      proof.url.trim(),
-      ts,
+      actionId,
     ]);
-  } else {
-    run(
-      "INSERT INTO proofs (id, kind, file_name, file_mime, file_blob, created_at) VALUES (?, 'file', ?, ?, ?, ?)",
-      [proofId, proof.name, proof.mime, proof.bytes, ts]
-    );
-  }
-  // Oba pola naraz — schemat ma CHECK, że done_at i proof_id są NULL albo ustawione RAZEM.
-  run("UPDATE actions SET done_at = ?, proof_id = ? WHERE id = ? AND done_at IS NULL", [
-    ts,
-    proofId,
-    actionId,
-  ]);
+  });
 }
 
 /** Odczyt artefaktu dowodowego (podgląd w UI). */
@@ -168,8 +180,9 @@ export function getProof(proofId: string): ProofRow | null {
 
 /** Rozstrzygnięcie zakładu: werdykt + wnioski; czas rozstrzygnięcia nadaje SYSTEM. */
 export function resolveBet(betId: string, outcome: "hit" | "miss" | "unclear", learned: string): void {
+  // Tylko AKTYWNY zakład da się rozstrzygnąć — werdykt rozstrzygniętego jest niezmienny.
   run(
-    "UPDATE bets SET status = 'resolved', outcome = ?, learned = ?, resolved_at = ? WHERE id = ?",
+    "UPDATE bets SET status = 'resolved', outcome = ?, learned = ?, resolved_at = ? WHERE id = ? AND status = 'active'",
     [outcome, learned, now(), betId]
   );
 }
