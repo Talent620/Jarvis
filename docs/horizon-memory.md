@@ -36,9 +36,83 @@
 - **D2:** Zero resetów i cofania plików — praca wyłącznie addytywna na istniejącym stanie
   (dyrektywa użytkownika, potwierdzona czystym drzewem).
 
-## 3. Odrzucone hipotezy
+## 3. Hipotezy i selekcja (F2)
 
-*(uzupełniane w F2 — na razie brak)*
+**Pula:** 79 hipotez (7 badaczy + kolider); pełny zrzut w journalu workflowu
+`wf_580b1255-b6c` oraz w scratchpadzie sesji (`horizon-digest.md`).
+
+**Kryteria (0–5):** oryginalność, wartość, „jak on to zrobił”, bezekranowość,
+wykonalność-na-repo-w-tej-sesji, spięcie Android+EXE+elektronika, bezpieczeństwo,
+mierzalność, demo-w-tej-sesji, trudność skopiowania.
+
+**Ubój (≥85% → zostaje 10 z 79):** odrzucone m.in. bo (a) czysta integracja bez
+nowej kategorii (H57–H61 „ANTY”, H03, H08, H20, H52), (b) wymaga fizycznego sprzętu
+lub realnego buildu EXE z trayem, więc niedemonstrowalne uczciwie w sesji CI (H06,
+H13, H21, H22, H26, H47, H55), (c) duplikat mocniejszej hipotezy (H43/H01/H10/H24/H62
+→ scalone w „Sztafetę”; H09/H05/H30/H46/H72 → scalone w „Rejestr Dowodów”; H14/H41/H75
+→ „Drabina Prawdy”), (d) zbyt szeroki zakres na jeden przekrój (H14 twin, H27, H48,
+H54, H56 spektakle). Zachowany rdzeń (10): H01 Sztafeta Celów, H23/H12 MCP-everywhere
++ Fizyczny Aktuator, H75 Drabina Prawdy (read-back), H09 Rejestr Dowodów cross-device,
+H76 Meldunek Trzech Kanałów, H11 Karta Przekazania (STOP), H37 Kontrakt Zgody Zakresowej
+Głosem, H31 Strażnik nowej generacji, H33 Idempotentny rejestr wysyłek, H58 Emulator
+jako PRAWDZIWY drugi koniec protokołu.
+
+### Zwycięzca (synteza rdzenia): **Sztafeta Misji z Drabiną Prawdy**
+Jeden trwały cel wędruje między węzłami (telefon / Windows EXE / urządzenie-emulator
+mówiące protokołem MCP). Każdy krok wykonawczy przechodzi **drabinę prawdy**
+SIMULATED → ATTEMPTED → CONFIRMED, gdzie CONFIRMED wymaga **odczytu zwrotnego** z węzła
+(nie deklaracji). Wszystko spina **jeden rejestr dowodów** z `traceId` „od słowa do diody”;
+twarde granice (hasło/płatność/MFA…) zamieniają się w **Kartę Przekazania** (STOP na EXE →
+zatwierdzenie na telefonie), a wysyłki są **idempotentne** (correlationId, wyślij-raz).
+Uczenie WYŁĄCZNIE z CONFIRMED (istniejący `learningLoop.canLearnFromOutcome`).
+
+**Dlaczego to, a nie pojedyncza hipoteza:** archeolog udowodnił, że repo ma ~80%
+fundamentów rozproszonych (goalState/goalRuntime/agentRun, ActionOutcome
+DRAFT/SIMULATED/ATTEMPTED/CONFIRMED, permissions z `grantOutboundScope`, klient MCP
+z fail-safe outbound, Strażnik-autopilot). Wynalazkiem jest **spięcie** ich w jedną
+sztafetę z weryfikacją odczytem — czego żaden pojedynczy silnik dziś nie robi
+(`resumableGoalsNewestFirst` bez konsumenta; EXE bez nasłuchu; sync bez celów/audytu).
+
+### Uczciwa granica wykonalności w TEJ sesji (wg sceptyka + dyrektywy „nie twierdź, że
+### przetestowano hardware”)
+- **DZIAŁAJĄCE + PRZETESTOWANE:** silniki TS (sztafeta, drabina prawdy, rejestr dowodów,
+  idempotencja, karta przekazania) + **emulator urządzenia jako PRAWDZIWY drugi koniec
+  MCP** (moduł TS z tym samym adapterem, read-back potwierdzający stan) + testy Vitest.
+- **SYMULOWANE (oznaczone):** fizyczny ESP32/RPi — emulator, nie sprzęt.
+- **ZAPROJEKTOWANE, nie zbudowane w sesji:** realny nasłuch w EXE (tray/serwer) i kanał
+  push telefon→PC — wymagają zmian w `electron/main.cjs` i buildu Windows; poza jednym
+  bezpiecznym przekrojem, opisane jako następny krok.
+- **NIEUDOWODNIONE:** działanie na fizycznym Samsung S9 i realnym EXE użytkownika.
+
+## 3b. Odrzucone hipotezy (skrót uzasadnień) — patrz wyżej „Ubój”.
+
+## 4b. Zbudowany pionowy przekrój (F4) — DZIAŁAJĄCE + PRZETESTOWANE
+
+Moduły (czyste silniki, `src/lib/horizon/`), spięte z istniejącym `ActionOutcome`:
+- `types.ts` — Mission/MissionStep/StepResult/EvidenceEntry/HandoffCard/MissionState.
+- `deviceEmulator.ts` — urządzenie mówiące protokołem MCP (kontrakt `tools/call`
+  zgodny z `mcp.ts` `formatMcpResult`): `set_state`/`pulse` (ACK, bez „potwierdzam skutek")
+  + `read_state` (ODCZYT ZWROTNY). Wstrzykiwana usterka i offline (test wyrwanej wtyczki).
+- `truthLadder.ts` — `climbLadder`: SIMULATED (rehearsal) / FAILED (błąd) / CONFIRMED
+  (tylko gdy read-back == expect) / ATTEMPTED (akcja OK, brak potwierdzenia).
+- `evidenceLedger.ts` — append-only, jeden `traceId` na misję, idempotentny po
+  (correlationId+state+stepId); `isCorrelationConfirmed` = „wyślij-raz"; `evidenceStory`.
+- `handoff.ts` — twarde granice STOP (payment/publish/mfa…) → Karta Przekazania.
+- `missionRelay.ts` — orkiestrator: idempotencja (CONFIRMED nie wykonuje się 2×),
+  wyślij-raz, outbound bez auto-retry (FAILED/ATTEMPTED → pauza), STOP → awaiting_human.
+- `deviceNode.ts` — adapter „device": akcja → read_state (ten sam adapter dla realnego
+  ESP32/RPi, inny transport).
+
+Dowód: `tests/horizonMissionRelay.test.ts` — **16 testów zielonych** (drabina prawdy,
+sztafeta telefon→EXE→urządzenie, idempotencja+wznowienie po restarcie, test wyrwanej
+wtyczki bez dubli, Karta Przekazania na płatności, rejestr dowodów, próba generalna).
+Cztery bramki JARVIS-a: tsc czysto, ESLint czysto, Vitest 316/2724, build zielony.
+
+**Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
+realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;
+działanie na fizycznym S9 i realnym EXE = NIEUDOWODNIONE.
+**Następny bezpieczny krok:** wpięcie `deviceExecutor` w `mcp.ts` (device przez HTTP)
+i konsument `resumableGoalsNewestFirst` (auto-wznowienie sztafety po restarcie).
 
 ## 4. Pomiary
 
@@ -58,8 +132,12 @@
 
 ## 6. Punkt wznowienia
 
-**Etap:** F1 — badacze uruchomieni (Workflow `wf_580b1255-b6c`, 8 agentów równolegle + kolider).
-**Następny krok:** zebrać wyniki badaczy → F2 (≥50 hipotez, ubój ≥85%, punktacja, wybór).
-**Zaległy artefakt do dostarczenia użytkownikowi:** raport FAZY 10 promptu BESTIA — NAPISANY
-(CI 8/8 zielone — warunek spełniony); kopia w scratchpadzie sesji (`faza10-report.md`),
-do wklejenia w raporcie końcowym HORIZON.
+**Etap:** F1b — WZNOWIONE (2026-07-02, na wyraźne „kontynuuj” użytkownika) po przerwie na
+run KOMPAS (osobny kontrakt; produkt w `kompas/`, FAZA 6 zaakceptowana audytem, zamrożony).
+Pierwszy bieg badaczy przerwał limit sesji: 3/8 skończyło (archeolog, futurysta, architekt
+— wyniki w cache journalu `wf_580b1255-b6c`), 5 + kolider biegnie teraz z resume.
+**Następny krok:** zebrać komplet wyników → F2 (≥50 hipotez, ubój ≥85%, punktacja, wybór).
+**Dostarczone w międzyczasie:** raport FAZY 10 BESTII przekazany użytkownikowi w czacie
+(CI 8/8 dla `5fffac7` potwierdzone).
+**Uwaga o branchu:** commity KOMPAS-a (bd7d443…5d4a222) współdzielą branch — HORIZON
+niczego w `kompas/` nie dotyka (kontrakt KOMPAS zabrania ulepszania po zielonej bramce).
