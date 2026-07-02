@@ -1,0 +1,81 @@
+/* Ekran „Zakład” (W3+W4) — style własne; fundament w styles.css. */
+.bet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.bet-title {
+  margin: 4px 0 6px;
+  font-size: 18px;
+}
+.bet-prediction {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.section-title {
+  margin: 16px 0 8px;
+  font-size: 14px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.action-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.action-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.action-text {
+  overflow-wrap: anywhere;
+}
+.action-form {
+  margin-top: 8px;
+}
+.action-form-buttons,
+.resolve-buttons,
+.proof-buttons {
+  margin-top: 10px;
+}
+.outcome-row {
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.proof-types {
+  margin: 10px 0;
+}
+.proof-image {
+  display: block;
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 8px 0;
+  background: var(--panel-2);
+}
+.proof-file-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.proof-note {
+  white-space: pre-wrap;
+}
+.history-item p {
+  margin: 2px 0;
+}
+.history-text {
+  font-weight: 600;
+}
+.history-prediction,
+.history-learned {
+  color: var(--muted);
+  font-size: 14px;
+}
+.history-verdict {
+  font-size: 14px;
+}

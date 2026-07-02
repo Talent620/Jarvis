@@ -1,7 +1,9 @@
 // W3 One Active Bet + dowody — implementuje Wykonawca B (PLAN.md).
-// Ten plik startuje jako STUB KONTRAKTOWY integratora: sygnatury są UMOWĄ
-// (Wykonawca A importuje createBet/BetConflictError w ekranie Tydzień).
-// Wykonawca B podmienia ciała, NIE zmienia sygnatur.
+// Sygnatury i typy są UMOWĄ (Wykonawca A importuje createBet/BetConflictError).
+// Zasada zerowa: stan „zrobione” działania istnieje WYŁĄCZNIE z artefaktem
+// dowodowym — jedyna droga to closeAction(...) z ważnym dowodem; schemat SQL
+// dodatkowo pilnuje CHECK ((done_at IS NULL) = (proof_id IS NULL)).
+import { all, one, run, now, uuid } from "./db";
 
 export type ProofInput =
   | { kind: "note"; note: string }
@@ -56,31 +58,123 @@ export class ProofRequiredError extends Error {
   }
 }
 
-const TODO = (co: string): never => {
-  throw new Error("W3/W4 do implementacji: " + co);
-};
-
+/** Zwróć aktywny zakład (0 lub 1 w całej bazie) albo null. */
 export function activeBet(): BetRow | null {
-  return TODO("activeBet");
+  return one<BetRow>("SELECT * FROM bets WHERE status = 'active' LIMIT 1");
 }
-export function createBet(_text: string, _prediction: string, _source: "manual" | "ai"): BetRow {
-  return TODO("createBet");
+
+/** Utwórz zakład — odmowa (BetConflictError), gdy aktywny już istnieje. */
+export function createBet(text: string, prediction: string, source: "manual" | "ai"): BetRow {
+  if (activeBet()) throw new BetConflictError();
+  const bet: BetRow = {
+    id: uuid(),
+    text,
+    prediction,
+    source,
+    created_at: now(), // czas nadaje SYSTEM
+    status: "active",
+    outcome: null,
+    learned: null,
+    resolved_at: null,
+  };
+  run(
+    "INSERT INTO bets (id, text, prediction, source, created_at, status) VALUES (?, ?, ?, ?, ?, ?)",
+    [bet.id, bet.text, bet.prediction, bet.source, bet.created_at, bet.status]
+  );
+  return bet;
 }
-export function listActions(_betId: string): ActionRow[] {
-  return TODO("listActions");
+
+/** Działania zakładu rosnąco po czasie utworzenia. */
+export function listActions(betId: string): ActionRow[] {
+  return all<ActionRow>(
+    "SELECT * FROM actions WHERE bet_id = ? ORDER BY created_at ASC",
+    [betId]
+  );
 }
-export function addAction(_betId: string, _text: string): ActionRow {
-  return TODO("addAction");
+
+/** Dodaj działanie — startuje jako „do zrobienia” (bez done_at i proof_id). */
+export function addAction(betId: string, text: string): ActionRow {
+  const action: ActionRow = {
+    id: uuid(),
+    bet_id: betId,
+    text,
+    created_at: now(),
+    done_at: null,
+    proof_id: null,
+  };
+  run(
+    "INSERT INTO actions (id, bet_id, text, created_at, done_at, proof_id) VALUES (?, ?, ?, ?, NULL, NULL)",
+    [action.id, action.bet_id, action.text, action.created_at]
+  );
+  return action;
 }
-export function closeAction(_actionId: string, _proof: ProofInput): void {
-  TODO("closeAction");
+
+/**
+ * JEDYNA droga do „zrobione”: walidacja dowodu → INSERT proofs (czas SYSTEMOWY)
+ * → JEDEN UPDATE actions ustawiający done_at i proof_id RAZEM.
+ * Nieważny dowód → ProofRequiredError, stan działania bez zmian.
+ */
+export function closeAction(actionId: string, proof: ProofInput): void {
+  // Walidacja artefaktu — bez niej nie ma „zrobione”.
+  if (proof.kind === "note") {
+    if (!proof.note || proof.note.trim().length === 0) {
+      throw new ProofRequiredError("Notatka dowodowa jest pusta — bez treści nie ma dowodu.");
+    }
+  } else if (proof.kind === "link") {
+    const url = (proof.url ?? "").trim();
+    if (!(url.startsWith("http://") || url.startsWith("https://"))) {
+      throw new ProofRequiredError("Link dowodowy musi być adresem URL zaczynającym się od http:// lub https://.");
+    }
+  } else if (proof.kind === "file") {
+    if (!proof.bytes || proof.bytes.length === 0) {
+      throw new ProofRequiredError("Plik dowodowy jest pusty — bez bajtów nie ma dowodu.");
+    }
+  } else {
+    throw new ProofRequiredError();
+  }
+
+  const proofId = uuid();
+  const ts = now(); // timestamp dowodu nadaje SYSTEM — nigdy użytkownik
+  if (proof.kind === "note") {
+    run("INSERT INTO proofs (id, kind, note, created_at) VALUES (?, 'note', ?, ?)", [
+      proofId,
+      proof.note.trim(),
+      ts,
+    ]);
+  } else if (proof.kind === "link") {
+    run("INSERT INTO proofs (id, kind, url, created_at) VALUES (?, 'link', ?, ?)", [
+      proofId,
+      proof.url.trim(),
+      ts,
+    ]);
+  } else {
+    run(
+      "INSERT INTO proofs (id, kind, file_name, file_mime, file_blob, created_at) VALUES (?, 'file', ?, ?, ?, ?)",
+      [proofId, proof.name, proof.mime, proof.bytes, ts]
+    );
+  }
+  // Oba pola naraz — schemat ma CHECK, że done_at i proof_id są NULL albo ustawione RAZEM.
+  run("UPDATE actions SET done_at = ?, proof_id = ? WHERE id = ? AND done_at IS NULL", [
+    ts,
+    proofId,
+    actionId,
+  ]);
 }
-export function getProof(_proofId: string): ProofRow | null {
-  return TODO("getProof");
+
+/** Odczyt artefaktu dowodowego (podgląd w UI). */
+export function getProof(proofId: string): ProofRow | null {
+  return one<ProofRow>("SELECT * FROM proofs WHERE id = ?", [proofId]);
 }
-export function resolveBet(_betId: string, _outcome: "hit" | "miss" | "unclear", _learned: string): void {
-  TODO("resolveBet");
+
+/** Rozstrzygnięcie zakładu: werdykt + wnioski; czas rozstrzygnięcia nadaje SYSTEM. */
+export function resolveBet(betId: string, outcome: "hit" | "miss" | "unclear", learned: string): void {
+  run(
+    "UPDATE bets SET status = 'resolved', outcome = ?, learned = ?, resolved_at = ? WHERE id = ?",
+    [outcome, learned, now(), betId]
+  );
 }
+
+/** Historia rozstrzygniętych zakładów — najnowsze najpierw. */
 export function betHistory(): BetRow[] {
-  return TODO("betHistory");
+  return all<BetRow>("SELECT * FROM bets WHERE status = 'resolved' ORDER BY resolved_at DESC");
 }

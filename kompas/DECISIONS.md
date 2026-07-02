@@ -70,3 +70,11 @@ z poziomu e2e. Chromium z `/opt/pw-browsers` (preinstalowany; bez `playwright in
 Manifest + prosty SW (precache bundla, offline shell). Bez push, bez sync w tle —
 kontrakt nie wymaga.
 **Odrzucone:** Workbox/strategie zaawansowane — warstwa ponad dokument.
+
+## D9 — FAZA 3: jeden commit integracyjny zamiast czterech per-wycinek
+Wszystkie 4 wycinki zazieleniły się RAZEM w pierwszym biegu integracji (12/12,
+EVIDENCE/verify-2026-07-02T03-43-29Z.txt). S05 przecina wycinki A i B (propozycja
+AI → createBet), więc drzewo z samym W1+W2 miałoby czerwony harness — commit
+per wycinek byłby sztuczny i fałszywie sugerował samodzielną zieloność.
+**Odrzucone:** 4 osobne commity z czerwonymi drzewami pośrednimi — historia
+kłamałaby o stanie testów w każdym punkcie.
