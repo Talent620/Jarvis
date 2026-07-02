@@ -1,0 +1,31 @@
+{
+  "name": "kompas",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 4317 --strictPort",
+    "lint": "eslint src e2e",
+    "test:e2e": "playwright test",
+    "verify": "bash verify.sh"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sql.js": "^1.13.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@playwright/test": "^1.57.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/sql.js": "^1.4.9",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.0.0",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.0.0",
+    "vite": "^5.4.11"
+  }
+}

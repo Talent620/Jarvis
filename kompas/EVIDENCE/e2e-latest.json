@@ -1,0 +1,1162 @@
+{
+  "config": {
+    "argv": [
+      "/opt/node22/bin/node",
+      "/home/user/Jarvis/kompas/node_modules/.bin/playwright",
+      "test"
+    ],
+    "configFile": "/home/user/Jarvis/kompas/playwright.config.ts",
+    "rootDir": "/home/user/Jarvis/kompas/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 4
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/user/Jarvis/kompas/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/home/user/Jarvis/kompas/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "EVIDENCE/e2e-latest.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.61.1",
+    "workers": 4,
+    "webServer": {
+      "command": "npm run preview",
+      "port": 4317,
+      "reuseExistingServer": true,
+      "timeout": 30000
+    }
+  },
+  "suites": [
+    {
+      "title": "s01-daily-entry.spec.ts",
+      "file": "s01-daily-entry.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "S01: wpis dzienny w 3 interakcjach, widoczny natychmiast z godziną",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 6200,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByTestId('entry-text')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('entry-text')\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByTestId('entry-text')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('entry-text')\u001b[22m\n\n    at /home/user/Jarvis/kompas/e2e/s01-daily-entry.spec.ts:9:48",
+                    "location": {
+                      "file": "/home/user/Jarvis/kompas/e2e/s01-daily-entry.spec.ts",
+                      "column": 48,
+                      "line": 9
+                    },
+                    "snippet": "   7 |   await open(page);\n   8 |   // Ekran startowy MUSI być ekranem wpisu — bez klikania w nawigację.\n>  9 |   await expect(page.getByTestId(\"entry-text\")).toBeVisible();\n     |                                                ^\n  10 |\n  11 |   // Dokładnie 3 interakcje: tekst → ocena → zapis.\n  12 |   await page.getByTestId(\"entry-text\").fill(\"Dobry dzień — domknąłem wycenę dla klienta.\");"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/s01-daily-entry.spec.ts",
+                        "column": 48,
+                        "line": 9
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByTestId('entry-text')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('entry-text')\u001b[22m\n\n\n   7 |   await open(page);\n   8 |   // Ekran startowy MUSI być ekranem wpisu — bez klikania w nawigację.\n>  9 |   await expect(page.getByTestId(\"entry-text\")).toBeVisible();\n     |                                                ^\n  10 |\n  11 |   // Dokładnie 3 interakcje: tekst → ocena → zapis.\n  12 |   await page.getByTestId(\"entry-text\").fill(\"Dobry dzień — domknąłem wycenę dla klienta.\");\n    at /home/user/Jarvis/kompas/e2e/s01-daily-entry.spec.ts:9:48"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:26:42.971Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s01-daily-entry-S01-wpis-d-86cf9-oczny-natychmiast-z-godziną/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s01-daily-entry-S01-wpis-d-86cf9-oczny-natychmiast-z-godziną/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/home/user/Jarvis/kompas/e2e/s01-daily-entry.spec.ts",
+                    "column": 48,
+                    "line": 9
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "9f261ae935666986e119-fce2a3ae58fb3d3e22ea",
+          "file": "s01-daily-entry.spec.ts",
+          "line": 6,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "s02-persistence.spec.ts",
+      "file": "s02-persistence.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "S02: wpis przeżywa zamknięcie karty (ta sama treść i czas)",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "timedOut",
+                  "duration": 30064,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/helpers.ts",
+                        "column": 40,
+                        "line": 32
+                      },
+                      "message": "Error: locator.fill: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('entry-text')\u001b[22m\n\n\n   at helpers.ts:32\n\n  30 | /** Dodaj wpis dzienny: DOKŁADNIE 3 interakcje (tekst, ocena, zapis) — kryterium S01. */\n  31 | export async function addEntry(page: Page, text: string, score = 3): Promise<void> {\n> 32 |   await page.getByTestId(\"entry-text\").fill(text);\n     |                                        ^\n  33 |   await page.getByTestId(\"entry-score-\" + score).click();\n  34 |   await page.getByTestId(\"entry-save\").click();\n  35 |   await expect(page.getByTestId(\"entry-list\")).toContainText(text);\n    at addEntry (/home/user/Jarvis/kompas/e2e/helpers.ts:32:40)\n    at /home/user/Jarvis/kompas/e2e/s02-persistence.spec.ts:8:9"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:26:42.824Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s02-persistence-S02-wpis-p-4b2dc-karty-ta-sama-treść-i-czas-/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s02-persistence-S02-wpis-p-4b2dc-karty-ta-sama-treść-i-czas-/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "e8e8a2d44d1d82bcfaf5-f429149fee6cbb792e9c",
+          "file": "s02-persistence.spec.ts",
+          "line": 6,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "s03-immutable-timestamp.spec.ts",
+      "file": "s03-immutable-timestamp.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "S03: brak jakiejkolwiek ścieżki edycji znacznika czasu wpisu",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "timedOut",
+                  "duration": 30125,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/helpers.ts",
+                        "column": 40,
+                        "line": 32
+                      },
+                      "message": "Error: locator.fill: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('entry-text')\u001b[22m\n\n\n   at helpers.ts:32\n\n  30 | /** Dodaj wpis dzienny: DOKŁADNIE 3 interakcje (tekst, ocena, zapis) — kryterium S01. */\n  31 | export async function addEntry(page: Page, text: string, score = 3): Promise<void> {\n> 32 |   await page.getByTestId(\"entry-text\").fill(text);\n     |                                        ^\n  33 |   await page.getByTestId(\"entry-score-\" + score).click();\n  34 |   await page.getByTestId(\"entry-save\").click();\n  35 |   await expect(page.getByTestId(\"entry-list\")).toContainText(text);\n    at addEntry (/home/user/Jarvis/kompas/e2e/helpers.ts:32:40)\n    at /home/user/Jarvis/kompas/e2e/s03-immutable-timestamp.spec.ts:8:9"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:26:42.839Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s03-immutable-timestamp-S0-3923f-dycji-znacznika-czasu-wpisu/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s03-immutable-timestamp-S0-3923f-dycji-znacznika-czasu-wpisu/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "22ca10f5d29f8286ab9c-34609d24290dcb2e3e9e",
+          "file": "s03-immutable-timestamp.spec.ts",
+          "line": 6,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "s04-weekly-pattern.spec.ts",
+      "file": "s04-weekly-pattern.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "S04a: za mało wpisów → uczciwy komunikat, żadnego zmyślonego wzorca",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "timedOut",
+                  "duration": 30086,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/s04-weekly-pattern.spec.ts",
+                        "column": 38,
+                        "line": 8
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('nav-week')\u001b[22m\n\n\n   6 | test(\"S04a: za mało wpisów → uczciwy komunikat, żadnego zmyślonego wzorca\", async ({ page }) => {\n   7 |   await open(page);\n>  8 |   await page.getByTestId(\"nav-week\").click();\n     |                                      ^\n   9 |   await expect(page.getByTestId(\"week-too-few\")).toBeVisible();\n  10 |   await expect(page.getByTestId(\"week-too-few\")).toContainText(/za mało/i);\n  11 |   expect(await page.getByTestId(\"week-pattern\").count()).toBe(0);\n    at /home/user/Jarvis/kompas/e2e/s04-weekly-pattern.spec.ts:8:38"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:26:42.756Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s04-weekly-pattern-S04a-za-bc3b9-t-żadnego-zmyślonego-wzorca/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s04-weekly-pattern-S04a-za-bc3b9-t-żadnego-zmyślonego-wzorca/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "33ad6f6d67b1915df94f-d7ad0489e753e4f3c05d",
+          "file": "s04-weekly-pattern.spec.ts",
+          "line": 6,
+          "column": 1
+        },
+        {
+          "title": "S04b: wzorzec z zasianego tygodnia zgadza się z ground truth",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 3,
+                  "status": "timedOut",
+                  "duration": 30086,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/helpers.ts",
+                        "column": 41,
+                        "line": 65
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('nav-today')\u001b[22m\n\n\n   at helpers.ts:65\n\n  63 |   for (const it of SEED_WEEK.items) {\n  64 |     await page.clock.setFixedTime(new Date(it.day));\n> 65 |     await page.getByTestId(\"nav-today\").click();\n     |                                         ^\n  66 |     await addEntry(page, it.text, it.score);\n  67 |   }\n  68 | }\n    at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)\n    at /home/user/Jarvis/kompas/e2e/s04-weekly-pattern.spec.ts:15:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:27:15.998Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s04-weekly-pattern-S04b-wz-429e4-a-zgadza-się-z-ground-truth/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s04-weekly-pattern-S04b-wz-429e4-a-zgadza-się-z-ground-truth/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "33ad6f6d67b1915df94f-bc60f4506c2f8d7c9321",
+          "file": "s04-weekly-pattern.spec.ts",
+          "line": 14,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "s05-ai-proposal.spec.ts",
+      "file": "s05-ai-proposal.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "S05: propozycja AI wymaga akceptacji człowieka; po akceptacji zakład aktywny",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 30077,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/helpers.ts",
+                        "column": 41,
+                        "line": 65
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('nav-today')\u001b[22m\n\n\n   at helpers.ts:65\n\n  63 |   for (const it of SEED_WEEK.items) {\n  64 |     await page.clock.setFixedTime(new Date(it.day));\n> 65 |     await page.getByTestId(\"nav-today\").click();\n     |                                         ^\n  66 |     await addEntry(page, it.text, it.score);\n  67 |   }\n  68 | }\n    at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)\n    at /home/user/Jarvis/kompas/e2e/s05-ai-proposal.spec.ts:8:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:26:51.999Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s05-ai-proposal-S05-propoz-f0727-o-akceptacji-zakład-aktywny/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s05-ai-proposal-S05-propoz-f0727-o-akceptacji-zakład-aktywny/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "8603f85dae3cb546a2bf-fb262abe09ea3edddb24",
+          "file": "s05-ai-proposal.spec.ts",
+          "line": 6,
+          "column": 1
+        },
+        {
+          "title": "S05b: odrzucenie propozycji nie zostawia śladu w zakładach",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 8,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 30070,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/helpers.ts",
+                        "column": 41,
+                        "line": 65
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('nav-today')\u001b[22m\n\n\n   at helpers.ts:65\n\n  63 |   for (const it of SEED_WEEK.items) {\n  64 |     await page.clock.setFixedTime(new Date(it.day));\n> 65 |     await page.getByTestId(\"nav-today\").click();\n     |                                         ^\n  66 |     await addEntry(page, it.text, it.score);\n  67 |   }\n  68 | }\n    at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)\n    at /home/user/Jarvis/kompas/e2e/s05-ai-proposal.spec.ts:31:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:27:23.077Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s05-ai-proposal-S05b-odrzu-88096--zostawia-śladu-w-zakładach/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s05-ai-proposal-S05b-odrzu-88096--zostawia-śladu-w-zakładach/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "8603f85dae3cb546a2bf-c15154308db3538ab8bf",
+          "file": "s05-ai-proposal.spec.ts",
+          "line": 29,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "s06-no-key-degradation.spec.ts",
+      "file": "s06-no-key-degradation.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "S06: bez klucza — uczciwa plakietka i działający zakład ręczny",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 5,
+                  "parallelIndex": 1,
+                  "status": "timedOut",
+                  "duration": 30063,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/helpers.ts",
+                        "column": 41,
+                        "line": 65
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('nav-today')\u001b[22m\n\n\n   at helpers.ts:65\n\n  63 |   for (const it of SEED_WEEK.items) {\n  64 |     await page.clock.setFixedTime(new Date(it.day));\n> 65 |     await page.getByTestId(\"nav-today\").click();\n     |                                         ^\n  66 |     await addEntry(page, it.text, it.score);\n  67 |   }\n  68 | }\n    at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)\n    at /home/user/Jarvis/kompas/e2e/s06-no-key-degradation.spec.ts:7:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:27:15.919Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s06-no-key-degradation-S06-19b21--i-działający-zakład-ręczny/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s06-no-key-degradation-S06-19b21--i-działający-zakład-ręczny/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "b1a64a31e06919344b17-c2fdc5a016b0efd059c9",
+          "file": "s06-no-key-degradation.spec.ts",
+          "line": 6,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "s07-one-active-bet.spec.ts",
+      "file": "s07-one-active-bet.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "S07: drugi zakład ręczny odrzucony z komunikatem",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 7,
+                  "parallelIndex": 2,
+                  "status": "timedOut",
+                  "duration": 30099,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/helpers.ts",
+                        "column": 41,
+                        "line": 65
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('nav-today')\u001b[22m\n\n\n   at helpers.ts:65\n\n  63 |   for (const it of SEED_WEEK.items) {\n  64 |     await page.clock.setFixedTime(new Date(it.day));\n> 65 |     await page.getByTestId(\"nav-today\").click();\n     |                                         ^\n  66 |     await addEntry(page, it.text, it.score);\n  67 |   }\n  68 | }\n    at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)\n    at /home/user/Jarvis/kompas/e2e/s07-one-active-bet.spec.ts:7:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:27:16.035Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s07-one-active-bet-S07-dru-e8321-zny-odrzucony-z-komunikatem/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s07-one-active-bet-S07-dru-e8321-zny-odrzucony-z-komunikatem/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "ac9197c503faf5e16b89-898783c6d8c3fe10953d",
+          "file": "s07-one-active-bet.spec.ts",
+          "line": 6,
+          "column": 1
+        },
+        {
+          "title": "S07b: akceptacja propozycji AI przy aktywnym zakładzie też odrzucona",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 2,
+                  "status": "timedOut",
+                  "duration": 30086,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/helpers.ts",
+                        "column": 41,
+                        "line": 65
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('nav-today')\u001b[22m\n\n\n   at helpers.ts:65\n\n  63 |   for (const it of SEED_WEEK.items) {\n  64 |     await page.clock.setFixedTime(new Date(it.day));\n> 65 |     await page.getByTestId(\"nav-today\").click();\n     |                                         ^\n  66 |     await addEntry(page, it.text, it.score);\n  67 |   }\n  68 | }\n    at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)\n    at /home/user/Jarvis/kompas/e2e/s07-one-active-bet.spec.ts:26:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:27:47.485Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s07-one-active-bet-S07b-ak-e96a5-nym-zakładzie-też-odrzucona/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s07-one-active-bet-S07b-ak-e96a5-nym-zakładzie-też-odrzucona/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "ac9197c503faf5e16b89-d22b4a4f9522d344449a",
+          "file": "s07-one-active-bet.spec.ts",
+          "line": 24,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "s08-done-requires-proof.spec.ts",
+      "file": "s08-done-requires-proof.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "S08: próba domknięcia bez dowodu → odmowa z wyjaśnieniem, status bez zmian",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 1,
+                  "status": "timedOut",
+                  "duration": 30067,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/helpers.ts",
+                        "column": 41,
+                        "line": 65
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('nav-today')\u001b[22m\n\n\n   at helpers.ts:65\n\n  63 |   for (const it of SEED_WEEK.items) {\n  64 |     await page.clock.setFixedTime(new Date(it.day));\n> 65 |     await page.getByTestId(\"nav-today\").click();\n     |                                         ^\n  66 |     await addEntry(page, it.text, it.score);\n  67 |   }\n  68 | }\n    at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)\n    at /home/user/Jarvis/kompas/e2e/s08-done-requires-proof.spec.ts:7:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:27:47.134Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s08-done-requires-proof-S0-6a18f-jaśnieniem-status-bez-zmian/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s08-done-requires-proof-S0-6a18f-jaśnieniem-status-bez-zmian/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "8feeb47c2c073d45b8f7-095839e9adb730457615",
+          "file": "s08-done-requires-proof.spec.ts",
+          "line": 6,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "s09-three-proof-types.spec.ts",
+      "file": "s09-three-proof-types.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "S09: plik, notatka i link jako dowody; plik przeżywa restart",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 10,
+                  "parallelIndex": 3,
+                  "status": "timedOut",
+                  "duration": 30077,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/helpers.ts",
+                        "column": 41,
+                        "line": 65
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('nav-today')\u001b[22m\n\n\n   at helpers.ts:65\n\n  63 |   for (const it of SEED_WEEK.items) {\n  64 |     await page.clock.setFixedTime(new Date(it.day));\n> 65 |     await page.getByTestId(\"nav-today\").click();\n     |                                         ^\n  66 |     await addEntry(page, it.text, it.score);\n  67 |   }\n  68 | }\n    at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)\n    at /home/user/Jarvis/kompas/e2e/s09-three-proof-types.spec.ts:7:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:27:47.313Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s09-three-proof-types-S09--aafd5-owody-plik-przeżywa-restart/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s09-three-proof-types-S09--aafd5-owody-plik-przeżywa-restart/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "0adfde93ddbae2116531-2c6333314c7030852236",
+          "file": "s09-three-proof-types.spec.ts",
+          "line": 6,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "s10-bet-resolution.spec.ts",
+      "file": "s10-bet-resolution.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "S10: rozstrzygnięcie pokazuje oryginalne przewidywanie i otwiera miejsce na następny zakład",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 30062,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/helpers.ts",
+                        "column": 41,
+                        "line": 65
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('nav-today')\u001b[22m\n\n\n   at helpers.ts:65\n\n  63 |   for (const it of SEED_WEEK.items) {\n  64 |     await page.clock.setFixedTime(new Date(it.day));\n> 65 |     await page.getByTestId(\"nav-today\").click();\n     |                                         ^\n  66 |     await addEntry(page, it.text, it.score);\n  67 |   }\n  68 | }\n    at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)\n    at /home/user/Jarvis/kompas/e2e/s10-bet-resolution.spec.ts:8:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:27:54.057Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s10-bet-resolution-S10-roz-7702c--miejsce-na-następny-zakład/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s10-bet-resolution-S10-roz-7702c--miejsce-na-następny-zakład/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "0abcf20ba7f0e5c2456b-452457dd24ecaacef524",
+          "file": "s10-bet-resolution.spec.ts",
+          "line": 6,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "s11-export-truth.spec.ts",
+      "file": "s11-export-truth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "S11: eksport .md zgadza się z zasianym ground truth i nie kłamie o dowodach",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 13,
+                  "parallelIndex": 1,
+                  "status": "timedOut",
+                  "duration": 30063,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/helpers.ts",
+                        "column": 41,
+                        "line": 65
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('nav-today')\u001b[22m\n\n\n   at helpers.ts:65\n\n  63 |   for (const it of SEED_WEEK.items) {\n  64 |     await page.clock.setFixedTime(new Date(it.day));\n> 65 |     await page.getByTestId(\"nav-today\").click();\n     |                                         ^\n  66 |     await addEntry(page, it.text, it.score);\n  67 |   }\n  68 | }\n    at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)\n    at /home/user/Jarvis/kompas/e2e/s11-export-truth.spec.ts:8:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:28:18.297Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s11-export-truth-S11-ekspo-e53fc-uth-i-nie-kłamie-o-dowodach/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s11-export-truth-S11-ekspo-e53fc-uth-i-nie-kłamie-o-dowodach/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "2fefe374f74c672ff897-937750b4eb9c48e78068",
+          "file": "s11-export-truth.spec.ts",
+          "line": 7,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "s12-double-submit-refresh.spec.ts",
+      "file": "s12-double-submit-refresh.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "S12a: podwójne szybkie kliknięcie „Zapisz” → dokładnie jeden wpis",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 14,
+                  "parallelIndex": 3,
+                  "status": "timedOut",
+                  "duration": 30061,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/s12-double-submit-refresh.spec.ts",
+                        "column": 40,
+                        "line": 8
+                      },
+                      "message": "Error: locator.fill: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('entry-text')\u001b[22m\n\n\n   6 | test(\"S12a: podwójne szybkie kliknięcie „Zapisz” → dokładnie jeden wpis\", async ({ page }) => {\n   7 |   await open(page);\n>  8 |   await page.getByTestId(\"entry-text\").fill(\"Wpis podatny na dubel\");\n     |                                        ^\n   9 |   await page.getByTestId(\"entry-score-3\").click();\n  10 |   const save = page.getByTestId(\"entry-save\");\n  11 |   // Dwa kliknięcia bez czekania na skutek pierwszego.\n    at /home/user/Jarvis/kompas/e2e/s12-double-submit-refresh.spec.ts:8:40"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:28:18.485Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s12-double-submit-refresh--7cfde-isz”-→-dokładnie-jeden-wpis/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s12-double-submit-refresh--7cfde-isz”-→-dokładnie-jeden-wpis/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "17aace3a18e8f7570d41-3d15e9febc58c819313b",
+          "file": "s12-double-submit-refresh.spec.ts",
+          "line": 6,
+          "column": 1
+        },
+        {
+          "title": "S12b: odświeżenie tuż po zapisie → baza spójna (wpis raz albo wcale)",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 15,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 30065,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/user/Jarvis/kompas/e2e/s12-double-submit-refresh.spec.ts",
+                        "column": 40,
+                        "line": 26
+                      },
+                      "message": "Error: locator.fill: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('entry-text')\u001b[22m\n\n\n  24 | test(\"S12b: odświeżenie tuż po zapisie → baza spójna (wpis raz albo wcale)\", async ({ page }) => {\n  25 |   await open(page);\n> 26 |   await page.getByTestId(\"entry-text\").fill(\"Wpis przerwany odświeżeniem\");\n     |                                        ^\n  27 |   await page.getByTestId(\"entry-score-2\").click();\n  28 |   await page.getByTestId(\"entry-save\").click();\n  29 |   // Odśwież NATYCHMIAST — bez czekania na potwierdzenie zapisu.\n    at /home/user/Jarvis/kompas/e2e/s12-double-submit-refresh.spec.ts:26:40"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-02T03:28:49.509Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/user/Jarvis/kompas/test-results/s12-double-submit-refresh--0cd54-spójna-wpis-raz-albo-wcale-/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/user/Jarvis/kompas/test-results/s12-double-submit-refresh--0cd54-spójna-wpis-raz-albo-wcale-/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "17aace3a18e8f7570d41-e46d6ebde344f04df807",
+          "file": "s12-double-submit-refresh.spec.ts",
+          "line": 24,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-07-02T03:26:39.997Z",
+    "duration": 159903.848,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 16,
+    "flaky": 0
+  }
+}

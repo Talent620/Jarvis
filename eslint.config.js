@@ -15,6 +15,7 @@ export default tseslint.config(
       "sales-os",
       "server",
       "demo-przempol",
+      "kompas", // osobny produkt z własnym lintem (kompas/eslint.config.js)
       "*.config.*",
       "public",
       "ios",

@@ -1,0 +1,19 @@
+KOMPAS verify — 2026-07-02T03-26-19Z
+== git ==
+5fffac7
+?? ./
+
+== build ==
+
+> kompas@0.1.0 build
+> tsc --noEmit && vite build
+
+e2e/s04-weekly-pattern.spec.ts(2,16): error TS6133: 'installClock' is declared but its value is never read.
+build exit: 2
+
+== e2e ==
+(pominięte — build czerwony)
+e2e exit: 1
+
+== scenariusze (eval.md) ==
+(brak wyników e2e)

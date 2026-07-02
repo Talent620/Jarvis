@@ -1,0 +1,27 @@
+KOMPAS verify — 2026-07-02T03-25-55Z
+== git ==
+5fffac7
+?? ./
+
+== build ==
+
+> kompas@0.1.0 build
+> tsc --noEmit && vite build
+
+e2e/s12-double-submit-refresh.spec.ts(6,50): error TS1127: Invalid character.
+e2e/s12-double-submit-refresh.spec.ts(6,62): error TS1005: ',' expected.
+e2e/s12-double-submit-refresh.spec.ts(6,68): error TS1005: ',' expected.
+e2e/s12-double-submit-refresh.spec.ts(6,72): error TS1005: ',' expected.
+e2e/s12-double-submit-refresh.spec.ts(6,96): error TS1002: Unterminated string literal.
+e2e/s12-double-submit-refresh.spec.ts(7,3): error TS1005: ',' expected.
+e2e/s12-double-submit-refresh.spec.ts(7,19): error TS1005: ')' expected.
+e2e/s12-double-submit-refresh.spec.ts(22,1): error TS1128: Declaration or statement expected.
+e2e/s12-double-submit-refresh.spec.ts(22,2): error TS1128: Declaration or statement expected.
+build exit: 2
+
+== e2e ==
+(pominięte — build czerwony)
+e2e exit: 1
+
+== scenariusze (eval.md) ==
+(brak wyników e2e)
