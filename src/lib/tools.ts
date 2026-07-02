@@ -8,7 +8,7 @@ import { financeSummaryText, FINANCE_STATUSES, applyPayment, financeKpis } from 
 import { simulatePriceChange, simulateSendOffers, bestClientByProfitToTime } from "./businessSimulator";
 import { businessStatusText, computeJourney } from "./businessFlow";
 import { calibrationSummary, calibrationText, explainLearning } from "./predictionLedger";
-import { runDemoMission, missionStatusReport } from "./horizon/demoMission";
+import { runDemoMission, missionStatusReport, missionWhyReport } from "./horizon/demoMission";
 import { recommendBrain } from "./brainAdvisor";
 import type { FinanceProject, FinanceStatus } from "../types";
 import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
@@ -1789,10 +1789,18 @@ const tools: Tool[] = [
   {
     def: {
       name: "mission_status",
-      description: "Status misji Sztafety (Project Horizon): które misje są domknięte / wstrzymane / czekają na Twoje zatwierdzenie, z łańcuchem dowodów (każde potwierdzenie = odczyt zwrotny z węzła, nie deklaracja). Używaj, gdy użytkownik pyta: status misji, co z misją, pokaż dowody misji, dlaczego misja stoi.",
+      description: "Status misji Sztafety (Project Horizon): które misje są domknięte / wstrzymane / czekają na Twoje zatwierdzenie, z łańcuchem dowodów (każde potwierdzenie = odczyt zwrotny z węzła, nie deklaracja). Używaj, gdy użytkownik pyta: status misji, co z misją, pokaż dowody misji.",
       input_schema: obj({}, []),
     },
     run: () => missionStatusReport(),
+  },
+  {
+    def: {
+      name: "mission_why",
+      description: "Czarna skrzynka misji Sztafety (Project Horizon): wyjaśnia PO LUDZKU, dlaczego ostatnia misja jest w danym stanie — co potwierdzone, co ją blokuje, dlaczego stoi (twarda granica / brak dowodu / usterka) i ostatnie fakty z łańcucha dowodów. Odpowiada wyłącznie z faktów, nigdy z domysłu. Używaj, gdy użytkownik pyta: dlaczego, dlaczego misja stoi, wyjaśnij misję, co się stało z misją.",
+      input_schema: obj({}, []),
+    },
+    run: () => missionWhyReport(false),
   },
   {
     def: {

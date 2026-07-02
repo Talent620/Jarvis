@@ -145,6 +145,11 @@ nie logika sztafety.
   Klasyfikacja ryzyka: status=read, demo=write (zero outbound). 4 testy
   (`tests/horizonMissionTools.test.ts`).
 
+- `missionWhy.ts` + narzędzie `mission_why` — **czarna skrzynka bez ekranu**: `explainMission`
+  wyjaśnia stan misji z FAKTÓW (potwierdzone kroki, powód pauzy: twarda granica / brak
+  dowodu / usterka, ostatnie fakty łańcucha), wariant `voice` bez emoji dla TTS. Domyka
+  „dlaczego?" z demo HORIZON. read (zero zapisu). 6 testów (`tests/horizonMissionWhy.test.ts`).
+
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;
 działanie na fizycznym S9 i realnym EXE = NIEUDOWODNIONE.

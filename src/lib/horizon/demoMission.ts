@@ -8,6 +8,7 @@ import { deviceExecutor } from "./deviceNode";
 import { runMission, initMissionState, missionProgress, type NodeExecutor } from "./missionRelay";
 import { evidenceStory } from "./evidenceLedger";
 import { loadMissionLog, upsertMission } from "./missionLog";
+import { explainMission } from "./missionWhy";
 import type { Mission, MissionStep } from "./types";
 
 // Emulator żyje przez sesję aplikacji — stan „urządzenia" jest spójny między wywołaniami.
@@ -82,6 +83,15 @@ export async function runDemoMission(missionId: string, now: number): Promise<st
     "",
     "Każde „CONFIRMED” wyżej pochodzi z ODCZYTU ZWROTNEGO stanu urządzenia — nigdy z samego potwierdzenia wysłania komendy. Zapytaj „status misji”, żeby wrócić do tych dowodów.",
   ].join("\n");
+}
+
+/** Wyjaśnij „dlaczego?" dla NAJNOWSZEJ misji w dzienniku (czarna skrzynka bez ekranu). */
+export function missionWhyReport(voice = false): string {
+  const log = loadMissionLog();
+  if (!log.states.length) {
+    return "Nie ma jeszcze żadnej misji Sztafety. Powiedz „pokaż sztafetę misji”, żeby zobaczyć pokaz.";
+  }
+  return explainMission(log.states[0], log.ledger, { voice });
 }
 
 /** Raport stanu misji z dziennika (dla narzędzia mission_status). */
