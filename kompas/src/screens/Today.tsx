@@ -42,11 +42,14 @@ export default function Today() {
     setSaveError(null);
     try {
       addEntry(trimmed, score);
-      await flush(); // poczekaj, aż snapshot NAPRAWDĘ trafi do IndexedDB (S02/S12)
+      // Wpis JEST już w bazie (w pamięci) i na liście — formularz czyścimy od razu,
+      // żeby ponowny klik nie stworzył duplikatu (runda 2/#2).
       setText("");
       setScore(null);
+      await flush(); // poczekaj, aż snapshot NAPRAWDĘ trafi do IndexedDB (S02/S12)
     } catch (e) {
-      // Zapis trwały nie powiódł się — formularz zostaje, użytkownik widzi dlaczego (P1).
+      // Prawda o trwałości: wpis widnieje na liście, ale NIE jest trwale zapisany —
+      // mówi o tym ten alert i stały banner u góry aplikacji (P1).
       setSaveError(e instanceof Error ? e.message : "Zapis nie powiódł się — spróbuj ponownie.");
     } finally {
       savingRef.current = false;

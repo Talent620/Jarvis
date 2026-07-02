@@ -3,7 +3,7 @@
 // Zasada zerowa: stan „zrobione” działania istnieje WYŁĄCZNIE z artefaktem
 // dowodowym — jedyna droga to closeAction(...) z ważnym dowodem; schemat SQL
 // dodatkowo pilnuje CHECK ((done_at IS NULL) = (proof_id IS NULL)).
-import { all, one, run, batch, now, uuid } from "./db";
+import { all, one, run, batch, rowsModified, now, uuid } from "./db";
 
 export type ProofInput =
   | { kind: "note"; note: string }
@@ -128,8 +128,17 @@ export function closeAction(actionId: string, proof: ProofInput): void {
     }
   } else if (proof.kind === "link") {
     const url = (proof.url ?? "").trim();
-    // Adwersarz A2: sam prefiks („http://”) to nie jest dowód — wymagamy hosta.
-    if (!/^https?:\/\/[^\s/]+/.test(url)) {
+    // Adwersarz A2 (runda 2): parsowanie przez URL zamiast regexa — „https://.”,
+    // „http://#”, „http://:” odpadają (host musi zawierać znak alfanumeryczny),
+    // a poprawny „HTTP://example.com” przechodzi (protokół normalizowany).
+    let validUrl = false;
+    try {
+      const u = new URL(url);
+      validUrl = (u.protocol === "http:" || u.protocol === "https:") && /[a-z0-9]/i.test(u.hostname);
+    } catch {
+      validUrl = false;
+    }
+    if (!validUrl) {
       throw new ProofRequiredError(
         "Link dowodowy musi być pełnym adresem URL z hostem (np. https://example.com/...)."
       );
@@ -170,6 +179,11 @@ export function closeAction(actionId: string, proof: ProofInput): void {
       proofId,
       actionId,
     ]);
+    // Defense-in-depth (runda 2): UPDATE, który nic nie trafił, wycofuje CAŁĄ partię
+    // (ROLLBACK przez batch) — dowód nigdy nie zostaje osierocony w bazie.
+    if (rowsModified() === 0) {
+      throw new Error("To działanie zostało już domknięte w międzyczasie — dowód nie został zapisany.");
+    }
   });
 }
 
@@ -185,6 +199,10 @@ export function resolveBet(betId: string, outcome: "hit" | "miss" | "unclear", l
     "UPDATE bets SET status = 'resolved', outcome = ?, learned = ?, resolved_at = ? WHERE id = ? AND status = 'active'",
     [outcome, learned, now(), betId]
   );
+  // Runda 2: cichy no-op (0 wierszy) to utrata werdyktu — mówimy o tym wprost.
+  if (rowsModified() === 0) {
+    throw new Error("Zakład nie jest już aktywny — werdykt nie został zapisany.");
+  }
 }
 
 /** Historia rozstrzygniętych zakładów — najnowsze najpierw. */

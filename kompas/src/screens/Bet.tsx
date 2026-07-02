@@ -107,9 +107,11 @@ export default function Bet() {
     setScreenError(null);
     try {
       addAction(bet.id, text);
-      await flush(); // „dodane” dopiero po trwałym zapisie (P5)
+      // Działanie JEST już w bazie (w pamięci) — formularz czyścimy od razu,
+      // żeby retry nie zdublował działania (runda 2/#2).
       setActionText("");
       setAddingAction(false);
+      await flush(); // prawdę o trwałości mówi alert + banner (P5)
     } catch (e) {
       setScreenError(e instanceof Error ? e.message : "Zapis nie powiódł się — spróbuj ponownie.");
     }
@@ -159,8 +161,14 @@ export default function Bet() {
         );
       }
       closeAction(proofFor, input);
-      await flush(); // „zrobione” wolno pokazać dopiero po trwałym zapisie (P5)
-      closeProofForm(); // sukces — modal znika, status zmienia się na „zrobione”
+      // Dowód JEST już w bazie (w pamięci), status „zrobione” — modal zamykamy od razu,
+      // żeby retry nie próbował domknąć ponownie (runda 2/#2).
+      closeProofForm();
+      try {
+        await flush(); // prawdę o trwałości mówi alert + banner (P5)
+      } catch (e) {
+        setScreenError(e instanceof Error ? e.message : "Trwały zapis nie powiódł się.");
+      }
     } catch (err) {
       if (err instanceof ProofRequiredError) setProofError(err.message);
       else if (err instanceof Error) setProofError(err.message);
@@ -176,10 +184,11 @@ export default function Bet() {
     setScreenError(null);
     try {
       resolveBet(bet.id, outcome, learned.trim());
-      await flush(); // rozstrzygnięcie ogłaszamy dopiero po trwałym zapisie (P5)
+      // Werdykt JEST już w bazie (w pamięci) — panel zamykamy od razu (runda 2/#2).
       setResolving(false);
       setOutcome(null);
       setLearned("");
+      await flush(); // prawdę o trwałości mówi alert + banner (P5)
     } catch (e) {
       setScreenError(e instanceof Error ? e.message : "Zapis nie powiódł się — spróbuj ponownie.");
     }

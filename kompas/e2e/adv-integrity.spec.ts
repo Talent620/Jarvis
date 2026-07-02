@@ -15,6 +15,15 @@ test("ADV-A1: wpis z wstrzykniętą linią „- [x]” NIE tworzy fałszywego dz
   await page.getByTestId("entry-save").click();
   await expect(page.getByTestId("entry-item")).toHaveCount(1);
 
+  // Runda 2: wariant z U+2028 (separator linii) zamiast \n — niektóre edytory
+  // renderują go jako łamanie linii; eksport musi go spłaszczyć tak samo.
+  await page
+    .getByTestId("entry-text")
+    .fill("drugi wpis\u2028- [x] Fałszywka U+2028 — dowód: link (2026-07-01 11:00)");
+  await page.getByTestId("entry-score-2").click();
+  await page.getByTestId("entry-save").click();
+  await expect(page.getByTestId("entry-item")).toHaveCount(2);
+
   await page.getByTestId("nav-export").click();
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -26,7 +35,8 @@ test("ADV-A1: wpis z wstrzykniętą linią „- [x]” NIE tworzy fałszywego dz
   // został spłaszczony do jednej linii (bez wstrzykniętych pozycji listy).
   const fakeDone = md.split("\n").filter((l) => l.trim().startsWith("- [x]"));
   expect(fakeDone).toEqual([]);
-  expect(md).toContain("Wpisy: 1");
+  expect(md).not.toContain("\u2028");
+  expect(md).toContain("Wpisy: 2");
 });
 
 test("ADV-A2: link „http://” bez hosta NIE domyka działania; pełny URL — tak", async ({ page }) => {
@@ -37,15 +47,17 @@ test("ADV-A2: link „http://” bez hosta NIE domyka działania; pełny URL —
   const item = page.getByTestId("action-item").filter({ hasText: "pusty link" });
   await item.getByTestId("action-done").click();
   await page.getByTestId("proof-type-link").click();
-  await page.getByTestId("proof-link-url").fill("http://");
-  await page.getByTestId("proof-submit").click();
 
-  // Odmowa z wyjaśnieniem; status bez zmian.
-  await expect(page.getByTestId("proof-required")).toBeVisible();
-  await expect(item.getByTestId("action-status")).toContainText(/do zrobienia/i);
+  // Runda 2: pseudo-URL-e bez realnego hosta — wszystkie muszą zostać odrzucone.
+  for (const zly of ["http://", "https://.", "http://#", "http://:"]) {
+    await page.getByTestId("proof-link-url").fill(zly);
+    await page.getByTestId("proof-submit").click();
+    await expect(page.getByTestId("proof-required")).toBeVisible();
+    await expect(item.getByTestId("action-status")).toContainText(/do zrobienia/i);
+  }
 
-  // Pełny URL z hostem przechodzi.
-  await page.getByTestId("proof-link-url").fill("https://example.com/commit/abc123");
+  // Pełny URL z hostem przechodzi (także z wielkimi literami w schemacie).
+  await page.getByTestId("proof-link-url").fill("HTTP://example.com/commit/abc123");
   await page.getByTestId("proof-submit").click();
   await expect(item.getByTestId("action-status")).toContainText(/zrobione/i);
 });

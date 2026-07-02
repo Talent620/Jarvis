@@ -39,7 +39,9 @@ const VERDICT: Record<string, string> = {
  * domknięte działania („- [x] …”) ani nagłówków.
  */
 function inline(s: string | null | undefined): string {
-  return (s ?? "").replace(/\s*[\r\n]+\s*/g, " ").trim();
+  // Runda 2: także U+2028/U+2029 (separator linii/akapitu), NEL (U+0085), \v i \f —
+  // niektóre edytory renderują je jako łamanie linii.
+  return (s ?? "").replace(/\s*[\r\n\u2028\u2029\u0085\v\f]+\s*/g, " ").trim();
 }
 
 /** Data + godzina lokalna (czasy w bazie zawsze od now() z db.ts). */

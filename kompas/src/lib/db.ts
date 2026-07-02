@@ -51,13 +51,24 @@ function emit(): void {
   for (const fn of Array.from(listeners)) fn();
 }
 
+// Jedno wspólne połączenie IndexedDB (runda 2/#4): otwierane raz, zamykane przez
+// przeglądarkę — bez mnożenia połączeń przy każdym zapisie.
+let idbConn: IDBDatabase | null = null;
+
 function idbOpen(): Promise<IDBDatabase> {
+  if (idbConn) return Promise.resolve(idbConn);
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(IDB_NAME, 1);
     req.onupgradeneeded = () => {
       if (!req.result.objectStoreNames.contains(IDB_STORE)) req.result.createObjectStore(IDB_STORE);
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      idbConn = req.result;
+      idbConn.onclose = () => {
+        idbConn = null;
+      };
+      resolve(idbConn);
+    };
     req.onerror = () => reject(req.error);
   });
 }
@@ -161,7 +172,21 @@ INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', '1');
  * - snapshot jest uszkodzony (P4 — nie nadpisujemy go; dane zostają nietknięte).
  * W obu przypadkach db pozostaje null → każda próba zapisu rzuci, snapshot przetrwa.
  */
-export async function initDb(): Promise<void> {
+let initPromise: Promise<void> | null = null;
+
+export function initDb(): Promise<void> {
+  // Memoizowana obietnica (runda 2/#3): równoległe wywołania (StrictMode w dev)
+  // dzielą jedną inicjalizację; porażka zeruje memo, żeby przeładowanie mogło spróbować znów.
+  if (!initPromise) {
+    initPromise = doInitDb().catch((e) => {
+      initPromise = null;
+      throw e;
+    });
+  }
+  return initPromise;
+}
+
+async function doInitDb(): Promise<void> {
   if (db) return;
   const SQL = await initSqlJs({ locateFile: () => wasmUrl });
   let loaded: { bytes: Uint8Array | null; version: number };
@@ -192,32 +217,35 @@ function mustDb(): Database {
 function schedulePersist(): void {
   if (saveLocked) return; // konflikt kart: nie wolno nadpisać nowszych danych (P2)
   const snapshot = mustDb().export(); // pełny, spójny obraz bazy w tym momencie
-  const expected = dbVersion;
-  dbVersion = expected + 1; // zapisy kolejkują się FIFO w persistChain — wersje rosną z nimi
-  persistChain = persistChain.then(
-    () =>
-      idbSaveVersioned(snapshot, expected).then(
-        () => {
-          // Udany zapis kasuje ewentualny wcześniejszy błąd (np. zwolniło się miejsce).
-          if (lastPersistError) {
-            lastPersistError = null;
-            emit();
-          }
-        },
-        (e) => {
-          if (e instanceof VersionConflictError) {
-            saveLocked =
-              "Dane zostały zmienione w innej karcie tej aplikacji. Ta karta ma nieaktualny stan — odśwież stronę, żeby nie nadpisać nowszych danych. Zapis z tej karty jest zablokowany.";
-          } else {
-            lastPersistError =
-              "Trwały zapis nie powiódł się (np. brak miejsca w przeglądarce). Dane z tej sesji mogą zniknąć po zamknięciu karty — zwolnij miejsce i spróbuj ponownie.";
-          }
+  persistChain = persistChain.then(() => {
+    if (saveLocked) return; // blokada mogła zapaść, gdy ten zapis czekał w kolejce
+    // `expected` wyznaczane w MOMENCIE WYKONANIA (kolejka FIFO), a wersja rośnie
+    // wyłącznie po UDANYM zapisie — porażka quota nie rozjeżdża licznika i nie
+    // udaje później konfliktu kart (kolejny zapis po prostu próbuje ponownie).
+    const expected = dbVersion;
+    return idbSaveVersioned(snapshot, expected).then(
+      () => {
+        dbVersion = expected + 1;
+        // Udany zapis kasuje ewentualny wcześniejszy błąd (np. zwolniło się miejsce).
+        if (lastPersistError) {
+          lastPersistError = null;
           emit();
         }
-      )
+      },
+      (e) => {
+        if (e instanceof VersionConflictError) {
+          saveLocked =
+            "Dane zostały zmienione w innej karcie tej aplikacji. Ta karta ma nieaktualny stan — odśwież stronę, żeby nie nadpisać nowszych danych. Zapis z tej karty jest zablokowany.";
+        } else {
+          lastPersistError =
+            "Trwały zapis nie powiódł się (np. brak miejsca w przeglądarce). Dane z tej sesji mogą zniknąć po zamknięciu karty — zwolnij miejsce i spróbuj ponownie.";
+        }
+        emit();
+      }
+    );
     // celowo bez rethrow: łańcuch nigdy nie jest odrzucony (brak unhandled rejection),
     // a prawda o porażce żyje w lastPersistError/saveLocked i w flush().
-  );
+  });
 }
 
 /** Mutacja + automatyczny trwały zapis + powiadomienie subskrybentów. */
@@ -278,6 +306,11 @@ export function all<T = Record<string, unknown>>(sql: string, params: unknown[] 
 export function one<T = Record<string, unknown>>(sql: string, params: unknown[] = []): T | null {
   const rows = all<T>(sql, params);
   return rows.length ? rows[0] : null;
+}
+
+/** Liczba wierszy zmienionych ostatnią mutacją — do wykrywania cichych no-opów. */
+export function rowsModified(): number {
+  return mustDb().getRowsModified();
 }
 
 /** Subskrypcja zmian (ekrany renderują się na nowo po mutacji). */

@@ -78,3 +78,18 @@ AI → createBet), więc drzewo z samym W1+W2 miałoby czerwony harness — comm
 per wycinek byłby sztuczny i fałszywie sugerował samodzielną zieloność.
 **Odrzucone:** 4 osobne commity z czerwonymi drzewami pośrednimi — historia
 kłamałaby o stanie testów w każdym punkcie.
+
+## D11 — FAZA 5 runda 2: naprawy obejść i polityka „mutacja w pamięci = formularz czyszczony”
+Runda powtórkowa znalazła: obejście walidacji linku (`https://.` itd. → naprawa: new URL()
++ alfanumeryczny host), rezydualne U+2028/U+2029/NEL w inline() (naprawa: rozszerzona klasa),
+ciche no-opy resolveBet/closeAction (naprawa: rowsModified()===0 → Error, w closeAction
+z ROLLBACK-iem całej partii), POWAŻNY fałszywy VersionConflict po quocie (naprawa: expected
+w momencie wykonania, wersja rośnie tylko po sukcesie), duplikat przy retry po nieudanym
+flush (naprawa: polityka — skoro mutacja JEST w bazie w pamięci i na liście, formularz
+czyścimy od razu, a prawdę o trwałości mówi alert + stały banner persistIssue; retry nie
+tworzy drugiego rekordu), memoizacja initDb (StrictMode), wspólne połączenie IndexedDB.
+**Odrzucone:** „formularz zostaje wypełniony po porażce flush” (pierwotna forma P1) —
+tworzyła ścieżkę duplikatu; uczciwość trwałości zapewnia banner, nie zamrożony formularz.
+Kontrakt przewiduje JEDNĄ rundę powtórki — pozostałe uwagi jakościowe (mutacje w pamięci
+widoczne przy saveLocked, skalowanie pełnego snapshotu z blobami) → znane ograniczenia
+w FINAL.md.
