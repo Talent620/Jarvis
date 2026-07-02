@@ -108,6 +108,12 @@ sztafeta telefon→EXE→urządzenie, idempotencja+wznowienie po restarcie, test
 wtyczki bez dubli, Karta Przekazania na płatności, rejestr dowodów, próba generalna).
 Cztery bramki JARVIS-a: tsc czysto, ESLint czysto, Vitest 316/2724, build zielony.
 
+- `mcpDevice.ts` — transport HTTP JSON-RPC (kontrakt `tools/call`) dla realnego
+  ESP32/RPi/dowolnego serwera MCP: allowlista hostów fail-closed (zero sieci poza listą),
+  timeout, walidacja kształtu odpowiedzi (śmieci nie udają odczytu zwrotnego), błędy jako
+  `isError` (sztafeta widzi FAILED, nie wyjątek). Testowany przeciwko stubowi HTTP
+  (`tests/horizonMcpDevice.test.ts`, 5 testów) — NIE przeciwko fizycznemu sprzętowi.
+
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;
 działanie na fizycznym S9 i realnym EXE = NIEUDOWODNIONE.
