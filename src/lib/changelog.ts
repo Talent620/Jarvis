@@ -10,6 +10,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "Lipiec 2026 — Horyzont",
+    date: "2026-07-02",
+    items: [
+      "🛰 Fundament „Sztafety Misji” (Project Horizon): nowy silnik, w którym jeden trwały cel może wędrować między telefonem, komputerem (EXE) i urządzeniem elektronicznym mówiącym otwartym protokołem MCP. Każdy krok przechodzi drabinę prawdy: „zrobione” wolno powiedzieć WYŁĄCZNIE po odczycie zwrotnym z urządzenia (dioda faktycznie świeci — nie „powinna świecić”); samo potwierdzenie wysłania komendy to najwyżej „wykonano, czekam na dowód”. Awaria w połowie misji uczciwie ją pauzuje (nic nie ponawia się samo po cichu), wznowienie NIGDY nie powtarza wykonanych działań (klucz idempotencji), a płatność/publikacja/MFA zamieniają się w Kartę Przekazania — misja grzecznie czeka na Twoje potwierdzenie zamiast cichego wykonania. Całość zostawia łańcuch kwitów z jednym śladem „od słowa do diody”. Na razie to przetestowany silnik z emulatorem urządzenia (uczciwie: symulacja sprzętu, nie fizyczny ESP32) i bezpiecznym transportem sieciowym z allowlistą — spięcie z ekranami i głosem przyjdzie w kolejnych krokach.",
+      "🔁 Kieszonkowa Ciągłość: JARVIS sam zauważa niedokończony trwały cel (np. po restarcie aplikacji) i proaktywnie OFERUJE wznowienie — z uczciwym stanem („2/5 kroków potwierdzonych”, „czeka na Twoją zgodę”) i gwarancją, że nic nie wykona się podwójnie. Dotąd wznowienie istniało tylko jako ręczny przycisk w panelu celu — łatwo było o nim zapomnieć; teraz przypomnienie przychodzi samo (bez spamu: raz na 6 godzin, tylko cele z ostatniego tygodnia), a kliknięcie otwiera panel celu z przyciskiem „wznów”. Zgodnie z żelazną zasadą: działania wychodzące nigdy nie wznawiają się same po cichu.",
+    ],
+  },
+  {
     version: "Lipiec 2026",
     date: "2026-07-01",
     items: [

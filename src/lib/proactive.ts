@@ -3,6 +3,7 @@ import { loadJson, saveJson } from "./lsJson";
 import { dueReminders } from "./notifyCenter";
 import { followUpsDue } from "./salesEngine";
 import { dueCount } from "./cards";
+import { cachedResumableGoals, resumeNudgeText } from "./goalResume";
 
 // === Proaktywny Agent ===
 // JARVIS sam odzywa się we właściwym momencie — nie czeka na polecenie. Czysta,
@@ -10,8 +11,8 @@ import { dueCount } from "./cards";
 // chwilę, follow-upy, zadania na dziś, fiszki) wybiera JEDEN najważniejszy „szturchaniec".
 // Anty-spam: każdy rodzaj pokazujemy najwyżej raz na swój „cooldown".
 
-export type NudgeKind = "reminders" | "event" | "followups" | "tasks" | "cards" | "predictions";
-export type NudgeScreen = "panels" | "sales" | "cards" | "tasks";
+export type NudgeKind = "reminders" | "event" | "followups" | "tasks" | "cards" | "predictions" | "goalResume";
+export type NudgeScreen = "panels" | "sales" | "cards" | "tasks" | "goals";
 
 export interface Nudge {
   kind: NudgeKind;
@@ -30,6 +31,7 @@ const COOLDOWN: Record<NudgeKind, number> = {
   tasks: 3 * 60 * 60_000,       // 3 h
   cards: 6 * 60 * 60_000,       // 6 h
   predictions: 6 * 60 * 60_000, // 6 h — prognozy nie mogą stać się spamem
+  goalResume: 6 * 60 * 60_000,  // 6 h — oferta wznowienia celu, nie nagabywanie
 };
 
 // TRWAŁY stan „kiedy pokazano dany szturchaniec" — kluczowe: wcześniej był w PAMIĘCI, więc po
@@ -98,6 +100,14 @@ export function nextNudge(now = Date.now()): Nudge | null {
   if (fups.length && !recentlyShown("followups", now)) {
     return { kind: "followups", screen: "sales",
       text: `🔁 ${fups.length} ${fups.length === 1 ? "klient czeka" : "klientów czeka"} na follow-up. Przygotować wiadomości?` };
+  }
+
+  // 3.4) Kieszonkowa Ciągłość: niedokończony trwały cel (np. po restarcie) — OFERTA
+  // wznowienia, nigdy ciche wykonanie (outbound nie wznawia się sam). Cache odświeżany
+  // w cyklu aplikacji (goalResume.refreshResumableGoals w ticku App).
+  const resumeText = resumeNudgeText(cachedResumableGoals(), now);
+  if (resumeText && !recentlyShown("goalResume", now)) {
+    return { kind: "goalResume", screen: "goals", text: resumeText };
   }
 
   // 3.5) Dziennik Predykcji: świeżo SPRAWDZONE ostrzeżenie (przerwa faktycznie się pogłębiła)

@@ -45,6 +45,7 @@ import { startGeneration, cancelGeneration, isCurrent } from "./lib/generation";
 import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
 import { runProactiveNotifications } from "./lib/proactiveNotify";
 import { runPredictionCycleOnStore } from "./lib/predictionCycle";
+import { refreshResumableGoals } from "./lib/goalResume";
 import { recordActiveDay } from "./lib/habit";
 import { nextTip, recordTipShown, contextualTipNow, dailyDigestNow, recordDigestShown, type Tip } from "./lib/tips";
 import TipBubble from "./components/TipBubble";
@@ -470,8 +471,14 @@ export default function App() {
   // za moment, follow-up, zadanie na dziś, fiszka) i delikatnie to zgłasza — bubble
   // w czacie + toast z akcją „Otwórz". Nie przerywa, gdy JARVIS pracuje, i nie spamuje.
   const openProactiveScreen = useCallback((screen?: NudgeScreen) => {
+    if (screen === "goals") {
+      // Oferta wznowienia celu → panel celu (tam jest jawny przycisk „wznów";
+      // outbound nigdy nie wznawia się sam po cichu).
+      setShowGoalStatus(true);
+      return;
+    }
     openScreen(screen === "sales" ? "sales" : screen === "cards" ? "cards" : screen === "tasks" ? "tasks" : "panels");
-  }, [openScreen]);
+  }, [openScreen, setShowGoalStatus]);
   useEffect(() => {
     recordActiveDay(); // licznik serii dni (nawyk) — raz dziennie
     const tick = () => {
@@ -480,6 +487,9 @@ export default function App() {
       // w CYKLU APLIKACJI (nie przy otwieraniu teczki). Idempotentne (bez zmian = bez zapisu),
       // działa też przy schowanej karcie; pierwszy tick ~12 s po starcie = sprawdzenie startowe.
       try { runPredictionCycleOnStore(); } catch { /* nie blokuj ticku proaktywnego */ }
+      // Kieszonkowa Ciągłość: odśwież cache wznawialnych celów (IndexedDB → pamięć),
+      // żeby nextNudge mógł synchronicznie zaoferować wznowienie po restarcie.
+      void refreshResumableGoals().catch(() => {});
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       if (busyRef.current || !hasUsableBrain()) return; // nie przerywaj pracy / brak mózgu (też lokalny)
       const n = nextNudge();

@@ -126,6 +126,12 @@ read-back to nadal auto-raport urządzenia/EXE; węzeł umyślnie kłamiący w r
 sfałszować CONFIRMED. Obrona to podpisy/parowanie węzłów (zaprojektowane, nie zbudowane),
 nie logika sztafety.
 
+- `goalResume.ts` + wpięcie w proactive/App — **Kieszonkowa Ciągłość**: pierwszy konsument
+  `resumableGoalsNewestFirst` (dotąd martwego); proaktywna OFERTA wznowienia celu po
+  restarcie (cache IndexedDB→pamięć w ticku aplikacji, cooldown 6 h, tylko cele ≤7 dni,
+  klik otwiera panel celu). Outbound dalej NIGDY nie wznawia się sam. 8 testów
+  (`tests/goalResume.test.ts`) + wpis w changelogu.
+
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;
 działanie na fizycznym S9 i realnym EXE = NIEUDOWODNIONE.
