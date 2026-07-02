@@ -132,6 +132,12 @@ nie logika sztafety.
   klik otwiera panel celu). Outbound dalej NIGDY nie wznawia się sam. 8 testów
   (`tests/goalResume.test.ts`) + wpis w changelogu.
 
+- `handoffConsent.ts` + `permissions.askConsentUI` — **Karta Przekazania przez znaną
+  bramkę zgód**: misja awaiting_human pyta przez ten sam PermissionDialog co narzędzia
+  outbound, ale SUROWIEJ — zgoda zawsze jednorazowa („zapamiętaj" ignorowane), auto-zgoda
+  Trybu Szefa i grantOutboundScope NIE omijają Karty, brak UI = misja czeka (fail-closed),
+  każda decyzja w audycie. 6 testów (`tests/horizonHandoffConsent.test.ts`).
+
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;
 działanie na fizycznym S9 i realnym EXE = NIEUDOWODNIONE.

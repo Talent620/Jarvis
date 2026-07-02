@@ -185,6 +185,19 @@ export async function requestConsent(tool: string, input: unknown): Promise<bool
   return allow;
 }
 
+/**
+ * Bezpośrednie pytanie do UI zgody — dla TWARDYCH granic STOP (Karta Przekazania misji:
+ * płatność/publikacja/MFA…). Celowo SUROWSZE niż requestConsent: nie honoruje zapamiętanych
+ * zgód, auto-zgody Trybu Szefa ani zakresu sesyjnego i NICZEGO nie zapamiętuje („zapamiętaj"
+ * z dialogu jest ignorowane — taka zgoda jest zawsze jednorazowa). Brak UI → null (fail-closed
+ * po stronie wywołującego).
+ */
+export async function askConsentUI(req: ConsentRequest): Promise<{ allow: boolean } | null> {
+  if (!consentHandler) return null;
+  const { allow } = await consentHandler(req);
+  return { allow };
+}
+
 /** Po udanym dodaniu — zwróć payload undo (najnowszy element kolekcji). */
 export function captureUndo(tool: string): AuditEntry["undo"] {
   const col = UNDO_COLLECTION[tool];
