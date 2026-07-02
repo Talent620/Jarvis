@@ -35,6 +35,9 @@ const RISK: Record<string, Risk> = {
   // Sztafeta Misji (Horizon): status tylko czyta; pokaz pisze LOKALNY dziennik misji
   // i rusza wyłącznie emulator w pamięci (jawna symulacja) — zero akcji wychodzących.
   mission_status: "read", mission_why: "read", mission_demo: "write",
+  // Cofnięcie kroku misji: operacja odwrotna na emulatorze w pamięci + dopisanie kwitu
+  // do lokalnego dziennika (odwracalne, lokalne) — write, nie outbound.
+  mission_undo: "write",
   // write — lokalny zapis projektów finansowych (cofalne, wymaga zgody)
   finance_add_project: "write", finance_set_status: "write",
   // write — lokalne, odwracalne ustawienia/zapisy

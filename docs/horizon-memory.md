@@ -150,6 +150,13 @@ nie logika sztafety.
   dowodu / usterka, ostatnie fakty łańcucha), wariant `voice` bez emoji dla TTS. Domyka
   „dlaczego?" z demo HORIZON. read (zero zapisu). 6 testów (`tests/horizonMissionWhy.test.ts`).
 
+- `missionUndo.ts` + narzędzie `mission_undo` — **„Cofnij" w świecie fizycznym**: operacja
+  odwrotna na węźle (przywróć stan sprzed kroku, zapamiętany jako `priorReadback` przez
+  pre-read w deviceNode), potwierdzona odczytem zwrotnym; cofnięcie to NOWY kwit, nigdy
+  kasowanie. Tylko kroki device odwracalne (nie hardStop); płatność/publikacja jawnie
+  nieodwracalne; brak potwierdzenia → nie ogłasza cofnięcia. Domyka triadę bezekranową
+  „dlaczego?/stop/cofnij". write (lokalne+emulator). 5 testów (`tests/horizonMissionUndo.test.ts`).
+
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;
 działanie na fizycznym S9 i realnym EXE = NIEUDOWODNIONE.

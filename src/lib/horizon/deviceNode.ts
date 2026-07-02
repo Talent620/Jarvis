@@ -31,9 +31,16 @@ function parseJson(text: string): Record<string, unknown> | undefined {
  */
 export function deviceExecutor(dev: McpDevice): (step: MissionStep) => Promise<NodeExecResult> {
   return async (step: MissionStep): Promise<NodeExecResult> => {
+    // Odczyt SPRZED akcji — zapamiętaj stan, żeby dało się bezpiecznie cofnąć operacją odwrotną.
+    let priorReadback: Record<string, unknown> | undefined;
+    if (step.expect) {
+      const keys = Object.keys(step.expect);
+      const pre = await dev.call("read_state", keys.length === 1 ? { key: keys[0] } : {});
+      if (!pre.isError) priorReadback = parseJson(textOf(pre));
+    }
     const act = await dev.call(step.capability, step.args || {});
     if (act.isError) {
-      return { actuated: false, actuateError: textOf(act) || "błąd urządzenia" };
+      return { actuated: false, actuateError: textOf(act) || "błąd urządzenia", priorReadback };
     }
     // Odczyt zwrotny — pobierz faktyczny stan, żeby potwierdzić skutek (nie ufamy ACK).
     let readback: Record<string, unknown> | undefined;
@@ -42,6 +49,6 @@ export function deviceExecutor(dev: McpDevice): (step: MissionStep) => Promise<N
       const rb = await dev.call("read_state", keys.length === 1 ? { key: keys[0] } : {});
       if (!rb.isError) readback = parseJson(textOf(rb));
     }
-    return { actuated: true, readback };
+    return { actuated: true, readback, priorReadback };
   };
 }

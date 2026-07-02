@@ -45,6 +45,8 @@ export interface StepResult {
   outcome: ActionOutcome;
   /** Surowy odczyt zwrotny z węzła (do audytu i weryfikacji CONFIRMED). */
   readback?: Record<string, unknown>;
+  /** Stan węzła SPRZED akcji (odczyt przed wykonaniem) — do bezpiecznego cofnięcia. */
+  priorReadback?: Record<string, unknown>;
 }
 
 /** Wpis rejestru dowodów — jeden kwit na akcję, spięty jednym traceId. */

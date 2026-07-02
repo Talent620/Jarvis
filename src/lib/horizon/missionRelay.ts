@@ -17,6 +17,8 @@ export interface NodeExecResult {
   actuated: boolean;
   actuateError?: string;
   readback?: Record<string, unknown>;
+  /** Stan węzła SPRZED akcji (odczyt przed wykonaniem) — umożliwia cofnięcie. */
+  priorReadback?: Record<string, unknown>;
 }
 
 /**
@@ -107,7 +109,7 @@ export async function runMission(
       now: opts.now,
     });
 
-    const result: StepResult = { stepId: step.id, node: step.node, outcome, readback: ex.readback };
+    const result: StepResult = { stepId: step.id, node: step.node, outcome, readback: ex.readback, priorReadback: ex.priorReadback };
     results[step.id] = result;
     evid = appendEvidence(evid, state.mission, result, step.correlationId, step.capability, opts.now);
 

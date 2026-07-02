@@ -9,6 +9,7 @@ import { runMission, initMissionState, missionProgress, type NodeExecutor } from
 import { evidenceStory } from "./evidenceLedger";
 import { loadMissionLog, upsertMission } from "./missionLog";
 import { explainMission } from "./missionWhy";
+import { undoLastStep } from "./missionUndo";
 import type { Mission, MissionStep } from "./types";
 
 // Emulator żyje przez sesję aplikacji — stan „urządzenia" jest spójny między wywołaniami.
@@ -92,6 +93,17 @@ export function missionWhyReport(voice = false): string {
     return "Nie ma jeszcze żadnej misji Sztafety. Powiedz „pokaż sztafetę misji”, żeby zobaczyć pokaz.";
   }
   return explainMission(log.states[0], log.ledger, { voice });
+}
+
+/** Cofnij ostatni odwracalny krok NAJNOWSZEJ misji (dla narzędzia mission_undo). */
+export async function missionUndoLast(now: number): Promise<string> {
+  const log = loadMissionLog();
+  if (!log.states.length) return "Nie ma żadnej misji do cofnięcia.";
+  const dev = demoEmulator();
+  const exec = demoExecutor(dev);
+  const res = await undoLastStep(log.states[0], log.ledger, exec, now);
+  if (res.ok) upsertMission(res.state, res.ledger);
+  return res.message;
 }
 
 /** Raport stanu misji z dziennika (dla narzędzia mission_status). */

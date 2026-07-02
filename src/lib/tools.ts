@@ -8,7 +8,7 @@ import { financeSummaryText, FINANCE_STATUSES, applyPayment, financeKpis } from 
 import { simulatePriceChange, simulateSendOffers, bestClientByProfitToTime } from "./businessSimulator";
 import { businessStatusText, computeJourney } from "./businessFlow";
 import { calibrationSummary, calibrationText, explainLearning } from "./predictionLedger";
-import { runDemoMission, missionStatusReport, missionWhyReport } from "./horizon/demoMission";
+import { runDemoMission, missionStatusReport, missionWhyReport, missionUndoLast } from "./horizon/demoMission";
 import { recommendBrain } from "./brainAdvisor";
 import type { FinanceProject, FinanceStatus } from "../types";
 import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
@@ -1801,6 +1801,14 @@ const tools: Tool[] = [
       input_schema: obj({}, []),
     },
     run: () => missionWhyReport(false),
+  },
+  {
+    def: {
+      name: "mission_undo",
+      description: "Cofnij ostatni krok misji Sztafety w świecie fizycznym (Project Horizon): przywraca stan urządzenia sprzed kroku OPERACJĄ ODWROTNĄ i potwierdza odczytem zwrotnym — nigdy nie kasuje dowodu, dopisuje fakt cofnięcia. Cofa TYLKO odwracalne kroki urządzenia; twarde granice (płatność, publikacja) są nieodwracalne i mówi to wprost. Używaj, gdy użytkownik mówi: cofnij, cofnij to, wróć do poprzedniego stanu, odwołaj ostatni krok misji.",
+      input_schema: obj({}, []),
+    },
+    run: () => missionUndoLast(Date.now()),
   },
   {
     def: {
