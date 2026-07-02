@@ -8,6 +8,7 @@ import { financeSummaryText, FINANCE_STATUSES, applyPayment, financeKpis } from 
 import { simulatePriceChange, simulateSendOffers, bestClientByProfitToTime } from "./businessSimulator";
 import { businessStatusText, computeJourney } from "./businessFlow";
 import { calibrationSummary, calibrationText, explainLearning } from "./predictionLedger";
+import { runDemoMission, missionStatusReport } from "./horizon/demoMission";
 import { recommendBrain } from "./brainAdvisor";
 import type { FinanceProject, FinanceStatus } from "../types";
 import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
@@ -1776,6 +1777,22 @@ const tools: Tool[] = [
       }
       return parts.join("\n\n");
     },
+  },
+  {
+    def: {
+      name: "mission_demo",
+      description: "Pokaz Sztafety Misji (Project Horizon): jeden cel wykonywany na dwóch węzłach — telefon + urządzenie-EMULATOR mówiące protokołem MCP (jawna SYMULACJA sprzętu, nie fizyczny ESP32). Pokazuje na żywo: usterkę urządzenia w połowie misji → uczciwą pauzę bez cichych ponowień → wznowienie BEZ powtórzenia wykonanych kroków → łańcuch dowodów, gdzie każde „zrobione” pochodzi z ODCZYTU ZWROTNEGO stanu urządzenia. Używaj, gdy użytkownik mówi: pokaż sztafetę misji, zademonstruj misję, pokaż jak działa sztafeta.",
+      input_schema: obj({}, []),
+    },
+    run: () => runDemoMission("demo-" + uid(), Date.now()),
+  },
+  {
+    def: {
+      name: "mission_status",
+      description: "Status misji Sztafety (Project Horizon): które misje są domknięte / wstrzymane / czekają na Twoje zatwierdzenie, z łańcuchem dowodów (każde potwierdzenie = odczyt zwrotny z węzła, nie deklaracja). Używaj, gdy użytkownik pyta: status misji, co z misją, pokaż dowody misji, dlaczego misja stoi.",
+      input_schema: obj({}, []),
+    },
+    run: () => missionStatusReport(),
   },
   {
     def: {

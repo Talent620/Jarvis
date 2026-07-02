@@ -138,6 +138,13 @@ nie logika sztafety.
   Trybu Szefa i grantOutboundScope NIE omijają Karty, brak UI = misja czeka (fail-closed),
   każda decyzja w audycie. 6 testów (`tests/horizonHandoffConsent.test.ts`).
 
+- `demoMission.ts` + `missionLog.ts` + narzędzia `mission_demo`/`mission_status` w tools.ts —
+  **Sztafeta widoczna w produkcie** (głos/czat przez runTool = bramka zgód + audyt):
+  pokaz dwuaktowy (usterka→pauza→wznowienie bez dubli) na emulatorze (jawna symulacja),
+  status z łańcuchem dowodów; dziennik misji bounded w localStorage (10 misji/200 kwitów).
+  Klasyfikacja ryzyka: status=read, demo=write (zero outbound). 4 testy
+  (`tests/horizonMissionTools.test.ts`).
+
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;
 działanie na fizycznym S9 i realnym EXE = NIEUDOWODNIONE.
