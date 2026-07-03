@@ -79,8 +79,8 @@ sztafetę z weryfikacją odczytem — czego żaden pojedynczy silnik dziś nie r
   idempotencja, karta przekazania) + **emulator urządzenia jako PRAWDZIWY drugi koniec
   MCP** (moduł TS z tym samym adapterem, read-back potwierdzający stan) + testy Vitest.
 - **SYMULOWANE (oznaczone):** fizyczny ESP32/RPi — emulator, nie sprzęt.
-- **ZAPROJEKTOWANE, nie zbudowane w sesji:** kanał push telefon→PC, parowanie QR/HMAC i przejście
-  z loopbacku na LAN — wymagają dalszej pracy. (Nasłuch EXE + tray + autostart są już ZBUDOWANE
+- **ZAPROJEKTOWANE, nie zbudowane w sesji:** kanał push telefon→PC i przejście z loopbacku na LAN — wymagają dalszej pracy.
+  (Parowanie QR + podpis HMAC jest już ZBUDOWANE i przetestowane — patrz 4b.) (Nasłuch EXE + tray + autostart są już ZBUDOWANE
   i testowane w Node/CI — patrz 4b.)
 - **NIEUDOWODNIONE:** działanie na fizycznym Samsung S9 i realnym EXE użytkownika.
 
@@ -166,6 +166,17 @@ nie logika sztafety.
   własnej ramki file:// przez IPC. Rdzeń testowany adwersarialnie (Vitest 11 testów:
   brak tokenu→401, obcy origin→403, narzędzie spoza allowlisty→403, zakaz bindu 0.0.0.0,
   ACK≠CONFIRMED, /health bez danych wrażliwych); wiring walidowany `node --check` + CI EXE build.
+
+- `pairing.ts` (czysty, współdzielony) + wpięcie w `horizon-listener-core.cjs`/`.cjs` —
+  **parowanie telefon↔EXE podpisem HMAC**: QR (adres+sekret) ustala sekret RAZ kanałem
+  wizualnym; potem KAŻDE tools/call podpisane HMAC-SHA-256(secret, canonical) + ts + nonce.
+  Sparowany węzeł odrzuca żądania bez podpisu (401), z podrobionym ciałem, z podmienionym
+  podpisem, z powtórzonym nonce i ze starym ts (>5 min). Sekret nigdy w żądaniu; nonce
+  „spalony" dopiero PO udanej weryfikacji. `canonicalString` identyczny po obu stronach
+  (jedno źródło prawdy). 16 testów (`tests/horizonPairing.test.ts`, w tym weryfikacja
+  wewnątrz rdzenia listenera prawdziwym podpisem). UCZCIWIE: warstwa integralności +
+  anty-replay, NIE poufności (bez TLS); realne przejście loopback→LAN za świadomą zgodą
+  = kolejny krok.
 
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;

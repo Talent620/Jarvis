@@ -35,14 +35,25 @@ function err(text) {
   return { content: [{ type: "text", text }], isError: true };
 }
 
+// Kanoniczny string podpisu — MUSI być identyczny jak w src/lib/horizon/pairing.ts
+// (jedno źródło prawdy kontraktu; tu duplikat dla warstwy Node bez importu TS).
+function canonicalString(method, path, timestamp, nonce, body) {
+  return [String(method).toUpperCase(), path, String(timestamp), nonce, body].join("\n");
+}
+
 /**
  * Zdecyduj o żądaniu HTTP do węzła EXE. Czyste: bez sieci, bez efektów ubocznych poza
  * mutacją przekazanego `state` (stan węzła: widoczność okna, ostatni schowek).
  *
- * @param req  { method, path, headers:{authorization?, 'x-horizon-token'?, origin?}, body:obj }
- * @param ctx  { token, port, state:{windowVisible:boolean, clipboard:string},
- *               actions:{ showWindow():void, setClipboard(text):void } }
+ * @param req  { method, path, headers:{...}, body:obj, rawBody?:string }
+ * @param ctx  { token, port, state, actions, pairingSecret?, verifyHmac?(secret,canonical,sig):boolean,
+ *               seenNonce?(nonce):boolean, markNonce?(nonce):void, now?:number }
  * @returns { status:number, json:object }
+ *
+ * Gdy `ctx.pairingSecret` jest ustawiony, KAŻDE tools/call musi być podpisane HMAC
+ * (nagłówki x-horizon-ts / x-horizon-nonce / x-horizon-sig), inaczej 401 — to broni
+ * węzeł, gdyby kiedyś wyszedł poza loopback (podsłuch/replay). Bez sekretu (tryb
+ * loopback-only) zostaje sam token.
  */
 function handleHorizonRequest(req, ctx) {
   const method = String(req.method || "").toUpperCase();
@@ -70,6 +81,31 @@ function handleHorizonRequest(req, ctx) {
   const provided = (bearer && bearer[1]) || headers["x-horizon-token"] || "";
   if (!ctx.token || provided !== ctx.token) {
     return { status: 401, json: err("brak lub zły token") };
+  }
+
+  // Podpis HMAC — WYMAGANY, gdy węzeł jest sparowany (pairingSecret ustawiony).
+  // Broni przed podsłuchem tokenu i replay, gdyby węzeł wyszedł poza loopback.
+  if (ctx.pairingSecret) {
+    const ts = Number(headers["x-horizon-ts"]);
+    const nonce = String(headers["x-horizon-nonce"] || "");
+    const sig = String(headers["x-horizon-sig"] || "");
+    const now = ctx.now || 0;
+    if (!nonce || !sig || !Number.isFinite(ts)) {
+      return { status: 401, json: err("brak podpisu żądania (parowanie wymaga HMAC)") };
+    }
+    if (Math.abs(now - ts) > 5 * 60_000) {
+      return { status: 401, json: err("znacznik czasu poza oknem (replay?)") };
+    }
+    if (typeof ctx.seenNonce === "function" && ctx.seenNonce(nonce)) {
+      return { status: 401, json: err("nonce już użyty (replay)") };
+    }
+    const raw = typeof req.rawBody === "string" ? req.rawBody : JSON.stringify(req.body || {});
+    const canonical = canonicalString(method, pathName, ts, nonce, raw);
+    const okSig = typeof ctx.verifyHmac === "function" && ctx.verifyHmac(ctx.pairingSecret, canonical, sig);
+    if (!okSig) {
+      return { status: 401, json: err("zły podpis żądania") };
+    }
+    if (typeof ctx.markNonce === "function") ctx.markNonce(nonce); // spal nonce PO sukcesie
   }
 
   const body = req.body || {};
@@ -110,4 +146,4 @@ function handleHorizonRequest(req, ctx) {
   }
 }
 
-module.exports = { handleHorizonRequest, resolveBindHost, originAllowed, ALLOWED_TOOLS, LOOPBACK };
+module.exports = { handleHorizonRequest, resolveBindHost, originAllowed, canonicalString, ALLOWED_TOOLS, LOOPBACK };

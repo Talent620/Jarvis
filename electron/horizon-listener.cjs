@@ -5,18 +5,37 @@
 // Electron + tray + autostart za JAWNĄ zgodą. Fail-closed: bez tokenu/obcy origin/bind
 // poza loopbackiem → odmowa. Nie otwiera żadnego portu na świat.
 const http = require("http");
-const { randomBytes } = require("node:crypto");
+const { randomBytes, createHmac, timingSafeEqual } = require("node:crypto");
 const { handleHorizonRequest, resolveBindHost } = require("./horizon-listener-core.cjs");
 
 const PORT = 4318;
 
 let server = null;
 let token = "";
+let pairingSecret = ""; // gdy ustawiony (parowanie), żądania muszą być podpisane HMAC
 const state = { windowVisible: true, clipboard: "" };
+// Anty-replay: nonce'y widziane w oknie MAX_SKEW; czyszczone leniwie po czasie.
+const seenNonces = new Map(); // nonce -> timestamp
 
 /** Losowy, silny token sesji (nowy przy każdym starcie procesu). */
 function freshToken() {
   return randomBytes(32).toString("hex");
+}
+
+/** HMAC-SHA-256(secret, canonical) === sig, w stałym czasie. Ten sam kontrakt co pairing.ts. */
+function verifyHmac(secret, canonical, sig) {
+  try {
+    const expected = createHmac("sha256", secret).update(canonical).digest("hex");
+    const a = Buffer.from(expected, "utf8");
+    const b = Buffer.from(String(sig), "utf8");
+    return a.length === b.length && timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+function pruneNonces(now) {
+  for (const [n, ts] of seenNonces) if (now - ts > 5 * 60_000) seenNonces.delete(n);
 }
 
 /**
@@ -53,9 +72,18 @@ function startHorizonListener(deps = {}) {
         try { bodyObj = JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch { bodyObj = {}; }
       }
       const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+      const now = Date.now();
+      pruneNonces(now);
+      const rawBody = chunks.length ? Buffer.concat(chunks).toString("utf8") : "";
       const out = handleHorizonRequest(
-        { method: req.method, path: url.pathname, headers: req.headers, body: bodyObj },
-        { token, port: PORT, state, actions },
+        { method: req.method, path: url.pathname, headers: req.headers, body: bodyObj, rawBody },
+        {
+          token, port: PORT, state, actions, now,
+          pairingSecret: pairingSecret || undefined,
+          verifyHmac,
+          seenNonce: (n) => seenNonces.has(n),
+          markNonce: (n) => seenNonces.set(n, now),
+        },
       );
       res.writeHead(out.status, { "content-type": "application/json" });
       res.end(JSON.stringify(out.json));
@@ -78,7 +106,29 @@ function stopHorizonListener() {
 }
 
 function listenerStatus() {
-  return { listening: !!server, port: PORT, hasToken: !!token };
+  return { listening: !!server, port: PORT, hasToken: !!token, paired: !!pairingSecret };
+}
+
+/**
+ * Rozpocznij parowanie: wygeneruj nowy sekret HMAC i zwróć ładunek do QR
+ * (adres + sekret). Od tej chwili żądania MUSZĄ być podpisane. `lanUrl` pozwala
+ * jawnie wskazać interfejs LAN (np. http://192.168.1.50:4318/); domyślnie loopback.
+ */
+function startPairing(lanUrl, name) {
+  pairingSecret = randomBytes(32).toString("hex");
+  seenNonces.clear();
+  return {
+    v: 1,
+    url: String(lanUrl || `http://127.0.0.1:${PORT}/`),
+    secret: pairingSecret,
+    name: String(name || "JARVIS PC"),
+  };
+}
+
+/** Rozłącz parowanie: kasuje sekret (żądania znów wymagają tylko tokenu, tryb loopback). */
+function clearPairing() {
+  pairingSecret = "";
+  seenNonces.clear();
 }
 
 /** Token wyłącznie dla własnego renderera (przez zaufany IPC) — nigdy nie wychodzi z procesu. */
@@ -86,4 +136,4 @@ function currentToken() {
   return token;
 }
 
-module.exports = { startHorizonListener, stopHorizonListener, listenerStatus, currentToken, HORIZON_PORT: PORT };
+module.exports = { startHorizonListener, stopHorizonListener, listenerStatus, currentToken, startPairing, clearPairing, HORIZON_PORT: PORT };
