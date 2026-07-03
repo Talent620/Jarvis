@@ -34,7 +34,7 @@ const RISK: Record<string, Risk> = {
   prediction_ledger_status: "read",
   // Sztafeta Misji (Horizon): status tylko czyta; pokaz pisze LOKALNY dziennik misji
   // i rusza wyłącznie emulator w pamięci (jawna symulacja) — zero akcji wychodzących.
-  mission_status: "read", mission_why: "read", mission_demo: "write",
+  mission_status: "read", mission_why: "read", mission_devices: "read", mission_demo: "write",
   // Próba lokalnego węzła EXE: tylko loopback (127.0.0.1) z tokenem, allowlista narzędzi;
   // read — czyta stan lokalnego programu, nic nie wychodzi poza maszynę.
   mission_exe_probe: "read",

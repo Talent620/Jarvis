@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { runDemoMission, missionStatusReport, missionWhyReport, missionUndoLast } from "../lib/horizon/demoMission";
+import { runDemoMission, missionStatusReport, missionWhyReport, missionUndoLast, missionDevicesReport } from "../lib/horizon/demoMission";
 import { runExeProbe } from "../lib/horizon/exeNode";
 import { horizonExeToken, isDesktop } from "../lib/desktop";
 import { uid } from "../lib/store";
@@ -37,6 +37,7 @@ export default function MissionsPanel() {
         <button className="chip" data-testid="mp-status" disabled={busy} onClick={() => run(() => missionStatusReport())}>📋 Status</button>
         <button className="chip" data-testid="mp-why" disabled={busy} onClick={() => run(() => missionWhyReport(false))}>❓ Dlaczego?</button>
         <button className="chip" data-testid="mp-undo" disabled={busy} onClick={() => run(() => missionUndoLast(Date.now()))}>↩ Cofnij</button>
+        <button className="chip" data-testid="mp-devices" disabled={busy} onClick={() => run(() => missionDevicesReport())}>🛡 Węzły</button>
         {isDesktop() && (
           <button className="chip" data-testid="mp-exe" disabled={busy} onClick={() => run(async () => runExeProbe(await horizonExeToken(), Date.now(), uid))}>🖥 Sprawdź węzeł EXE</button>
         )}

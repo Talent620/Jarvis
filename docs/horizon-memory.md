@@ -194,6 +194,14 @@ nie logika sztafety.
   `tests/missionsPanelBehavior.test.ts`, 5 asercji (start pusty, pokaz 3/3+dowody,
   dlaczego, cofnij, brak przycisku EXE poza desktopem).
 
+- `deviceHealth.ts` (czysty) + `deviceHealthStore.ts` + narzędzie `mission_devices`
+  + przycisk „🛡 Węzły" — **Strażnik węzłów (heartbeat floty)**: po każdym CONFIRMED węzła
+  sztafeta bije heartbeat (callback `onNodeConfirmed` wstrzyknięty w czysty missionRelay);
+  klasyfikacja healthy/delayed/dead z czasu od sygnału (warn 30 s / dead 90 s). ZASADA:
+  martwy węzeł NIE wywołuje akcji — Strażnik raportuje i pozwala sztafecie się wstrzymać
+  (zero cichych ponowień). 8 testów (`tests/horizonDeviceHealth.test.ts`, w tym integracja:
+  pokaz bije heartbeaty → mission_devices je widzi).
+
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;
 działanie na fizycznym S9 i realnym EXE = NIEUDOWODNIONE.

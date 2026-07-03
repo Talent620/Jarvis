@@ -8,7 +8,7 @@ import { financeSummaryText, FINANCE_STATUSES, applyPayment, financeKpis } from 
 import { simulatePriceChange, simulateSendOffers, bestClientByProfitToTime } from "./businessSimulator";
 import { businessStatusText, computeJourney } from "./businessFlow";
 import { calibrationSummary, calibrationText, explainLearning } from "./predictionLedger";
-import { runDemoMission, missionStatusReport, missionWhyReport, missionUndoLast } from "./horizon/demoMission";
+import { runDemoMission, missionStatusReport, missionWhyReport, missionUndoLast, missionDevicesReport } from "./horizon/demoMission";
 import { runExeProbe } from "./horizon/exeNode";
 import { horizonExeToken } from "./desktop";
 import { recommendBrain } from "./brainAdvisor";
@@ -1803,6 +1803,14 @@ const tools: Tool[] = [
       input_schema: obj({}, []),
     },
     run: () => missionWhyReport(false),
+  },
+  {
+    def: {
+      name: "mission_devices",
+      description: "Strażnik węzłów Sztafety (Project Horizon): zdrowie floty — które węzły (telefon/komputer/urządzenie) biją sygnał życia, a które są opóźnione lub martwe (na podstawie czasu od ostatniego potwierdzenia). Wykrycie martwego węzła NIE wywołuje żadnej akcji — Strażnik tylko raportuje i pozwala sztafecie się wstrzymać. Używaj, gdy użytkownik pyta: zdrowie węzłów, status urządzeń, czy komputer żyje, stan floty.",
+      input_schema: obj({}, []),
+    },
+    run: () => missionDevicesReport(),
   },
   {
     def: {

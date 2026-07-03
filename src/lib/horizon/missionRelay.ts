@@ -36,6 +36,12 @@ export interface RelayOptions {
    * Krok hardStop wykonuje się TYLKO, jeśli jego id jest tutaj.
    */
   approvedStops?: Set<string>;
+  /**
+   * Wywoływany po każdym kroku zakończonym CONFIRMED (węzeł faktycznie odpowiedział
+   * i potwierdził odczytem) — do zapisu heartbeatu Strażnika węzłów. Wstrzykiwany,
+   * żeby orkiestrator pozostał czysty względem trwałego store'a.
+   */
+  onNodeConfirmed?: (node: MissionStep["node"]) => void;
 }
 
 const NODE_SOURCE: Record<MissionStep["node"], string> = {
@@ -112,6 +118,8 @@ export async function runMission(
     const result: StepResult = { stepId: step.id, node: step.node, outcome, readback: ex.readback, priorReadback: ex.priorReadback };
     results[step.id] = result;
     evid = appendEvidence(evid, state.mission, result, step.correlationId, step.capability, opts.now);
+    // Heartbeat Strażnika: węzeł potwierdził odczytem → żyje (callback wstrzyknięty).
+    if (outcome.state === "CONFIRMED" && opts.onNodeConfirmed) opts.onNodeConfirmed(step.node);
 
     // Outbound nigdy nie jest ponawiany automatycznie: błąd → PAUZA (człowiek decyduje).
     if (outcome.state === "FAILED") {
