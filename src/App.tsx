@@ -85,6 +85,7 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
 import { askJarvis, resolveProvider, hasUsableBrain } from "./lib/brain";
 import { adviseError, adviseNoBrain, adviseEmptyReply, adviceMessage, isEmptyReplyText } from "./lib/errorAdvisor";
+import { dockBodyClass, normalizeDock, DOCK_CLASSES } from "./lib/panelDock";
 import { askCouncil, councilMembers, type CouncilReply } from "./lib/council";
 import { isActionRequest } from "./lib/aiHelpers";
 import { isComplex } from "./lib/modelRouter";
@@ -523,6 +524,14 @@ export default function App() {
     ["theme-gold", "theme-green", "theme-red", "theme-purple", "theme-matrix", "theme-amber", "theme-ocean", "theme-rose", "theme-retro", "theme-xp", "theme-nord", "theme-sunset", "theme-aurora"].forEach((c) => b.classList.remove(c));
     if (settings.theme && settings.theme !== "default") b.classList.add(`theme-${settings.theme}`);
   }, [settings.theme]);
+
+  // Dokowanie okien-paneli (desktop): klasa <body> steruje położeniem sheetów w bok.
+  useEffect(() => {
+    const b = document.body;
+    DOCK_CLASSES.forEach((c) => b.classList.remove(c));
+    const cls = dockBodyClass(normalizeDock(settings.panelDock));
+    if (cls) b.classList.add(cls);
+  }, [settings.panelDock]);
 
   // Trwałość: zapisuj aktywną rozmowę do historii (najnowsze pierwsze).
   // Czat prywatny pomijamy — z założenia nie zostawia śladu w historii.

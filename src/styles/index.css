@@ -879,6 +879,35 @@ button:disabled {
     border-radius: var(--radius-lg);
   }
 }
+
+/* === Dokowanie paneli „w bok" (tylko szeroki ekran / desktop / EXE) ===
+   body.dock-left / .dock-right zmienia sheet z okna na środku w PEŁNOWYSOKĄ szufladę przy
+   krawędzi — lepsze wykorzystanie monitora, a lżejsze tło pozwala widzieć apkę obok. Na wąskich
+   ekranach (telefon) reguły nie działają: sheet zostaje pełnej szerokości jak dotąd. */
+@media (min-width: 1000px) {
+  body.dock-left .sheet { justify-content: flex-start; align-items: stretch; padding: 0; background: rgba(2, 5, 12, 0.42); }
+  body.dock-right .sheet { justify-content: flex-end; align-items: stretch; padding: 0; background: rgba(2, 5, 12, 0.42); }
+  body.dock-left .panel,
+  body.dock-right .panel {
+    width: 460px;
+    max-width: 460px;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  body.dock-left .panel { border-right: 1px solid var(--line-strong); }
+  body.dock-right .panel { border-left: 1px solid var(--line-strong); }
+}
+/* Przełącznik dokowania w nagłówku panelu — widoczny dopiero na desktopie (na telefonie dokowanie nie ma sensu). */
+.dock-switcher { display: none; }
+@media (min-width: 1000px) {
+  .dock-switcher { display: inline-flex; gap: 2px; position: absolute; top: 8px; left: 10px; z-index: 3; }
+  .dock-switcher button {
+    width: 22px; height: 22px; padding: 0; line-height: 1; font-size: 12px;
+    border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--text-dim); cursor: pointer;
+  }
+  .dock-switcher button.on { color: var(--cyan); border-color: var(--line-strong); background: rgba(108, 231, 255, 0.12); }
+}
 /* Dyskretny znak wodny ⬢ JARVIS w każdym oknie-panelu (nie przeszkadza, nie klikalny). */
 .panel::after {
   content: "⬢ JARVIS";

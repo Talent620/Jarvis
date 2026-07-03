@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { store } from "../lib/store";
+import { DOCK_OPTIONS, normalizeDock } from "../lib/panelDock";
 import { SETTINGS_TAB_META, DEFAULT_SETTINGS_GROUP, groupOfTab, GOOGLE_PLACES_KEY_WARNING, type SettingsGroup, type SettingsTab } from "../lib/settingsModel";
 import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, resolveVoiceMode, type NativeVoiceInfo, type VoiceMode } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED, modelBadges } from "../lib/providers/registry";
@@ -2460,6 +2461,21 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     onClick={() => set({ theme: t.id })}
                   >
                     {t.l}
+                  </button>
+                ))}
+              </div>
+
+              <h3 id="set-dock">🪟 Pozycja okien (desktop)</h3>
+              <p className="muted">Na szerokim ekranie panele (Ustawienia, CRM, Kreator…) mogą stać na środku albo być zadokowane w bok — jako pełnowysoka szuflada. Na telefonie bez zmian.</p>
+              <div className="chips" style={{ marginBottom: 8 }}>
+                {DOCK_OPTIONS.map((o) => (
+                  <button
+                    key={o.id}
+                    className={`chip ${normalizeDock(s.panelDock) === o.id ? "on" : ""}`}
+                    title={o.hint}
+                    onClick={() => set({ panelDock: o.id })}
+                  >
+                    {o.icon} {o.label}
                   </button>
                 ))}
               </div>

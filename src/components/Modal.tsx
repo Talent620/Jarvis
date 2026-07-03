@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { useDirtyClose } from "../hooks/useDirtyClose";
 import { FOCUSABLE_SELECTOR, nextTrapIndex } from "../lib/a11y";
+import DockSwitcher from "./DockSwitcher";
 
 // Wspólny „arkusz" (modal/panel) — jedno miejsce dla powtarzanej w ~37 ekranach struktury
 // .sheet/.panel/.panel-head/.panel-body/.panel-foot. Zachowanie 1:1 z dotychczasowym (klik w tło
@@ -69,6 +70,8 @@ export default function Modal({
         aria-modal="true"
         aria-label={label}
       >
+        {/* Przełącznik dokowania okna (⬅ ⬜ ➡) — tylko desktop; chowa się na wąskim ekranie. */}
+        <DockSwitcher />
         {title != null && (
           <div className="panel-head">
             <div className="grabber" />

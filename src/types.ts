@@ -708,6 +708,8 @@ export interface Settings {
   activeProjectId: string;
   /** Motyw HUD: default | gold | green | red | purple. */
   theme: string;
+  /** Dokowanie okien-paneli na szerokim ekranie (desktop/EXE): środek | lewo | prawo. */
+  panelDock?: "center" | "left" | "right";
   /** Język interfejsu (pl|en). Pusty = autodetekcja z przeglądarki. */
   lang?: "pl" | "en";
   /** Imię użytkownika, którym zwraca się JARVIS. */

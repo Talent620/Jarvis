@@ -112,6 +112,7 @@ const defaultSettings: Settings = {
   expertKnowledge: true,
   activeProjectId: "",
   theme: "default",
+  panelDock: "center",
   userName: "Sir",
   profile: { ...emptyProfile },
   persona: "classic",
