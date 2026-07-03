@@ -60,6 +60,12 @@ export default function Composer({
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   };
+  // Po odtworzeniu trwałego szkicu (dłuższy tekst wraca po powrocie do czatu) dopasuj
+  // wysokość od razu — bez tego pole pokazuje 1 linijkę do pierwszego wciśnięcia klawisza.
+  useEffect(() => {
+    if (text) autoGrow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const submit = () => {
     const t = text.trim();

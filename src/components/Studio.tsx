@@ -65,6 +65,12 @@ export default function Studio({ onClose }: { onClose: () => void }) {
   // Trwała sesja funkcji: opis/styl/model przeżywają wyjście z panelu i zamknięcie apki.
   // Obrazy (inputs/history) celowo NIE — bloby są za duże na localStorage (mają swoją historię w IndexedDB).
   const [model, setModel] = usePersistentState<ImageModelId>("studio.model", () => bestImageModel());
+  // Odtworzony szkic mógł zapamiętać model, którego już nie ma w katalogu (stara wersja apki)
+  // — wtedy wróć do najlepszego dostępnego zamiast strzelać błędem generacji.
+  useEffect(() => {
+    if (!IMAGE_MODELS_LIST.some((m) => m.id === model)) setModel(bestImageModel());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [prompt, setPrompt] = usePersistentState("studio.prompt", "");
   const [inputs, setInputs] = useState<Img[]>([]);
   const [imgStyle, setImgStyle] = usePersistentState<ImageStyle>("studio.imgStyle", "auto"); // kierunek artystyczny dla generacji z opisu
