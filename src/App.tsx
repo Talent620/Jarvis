@@ -84,6 +84,7 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 
 type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
 import { askJarvis, resolveProvider, hasUsableBrain } from "./lib/brain";
+import { adviseError, adviseNoBrain } from "./lib/errorAdvisor";
 import { askCouncil, councilMembers, type CouncilReply } from "./lib/council";
 import { isActionRequest } from "./lib/aiHelpers";
 import { isComplex } from "./lib/modelRouter";
@@ -612,6 +613,13 @@ export default function App() {
     const userMsg: ChatMessage = { id: uid(), role: "user", text, image, createdAt: Date.now() };
     setMessages((m) => [...m, userMsg]);
     setPendingImage(null);
+    // Preflight: bez skonfigurowanego mózgu NIE zaczynamy tury (dotąd: wieczne „trzy kropki"
+    // albo mglisty błąd po zepsuciu ustawień). Od razu ludzkie wyjaśnienie + przycisk naprawy.
+    if (!hasUsableBrain()) {
+      const adv = adviseNoBrain();
+      setMessages((m) => [...m, { id: uid(), role: "assistant", text: `⚠ ${adv.human}`, fix: adv.fix, createdAt: Date.now() }]);
+      return;
+    }
     setBusy(true);
     setOrb("thinking");
     const genToken = startGeneration(); // do bezpiecznego „Stop"
@@ -713,14 +721,23 @@ export default function App() {
 
       if (store.settings.speak) {
         setOrb("speaking");
-        await speak(reply.text, store.settings);
+        // Bezpiecznik: syntezator (zwłaszcza systemowy TTS na Androidzie) potrafi NIGDY nie
+        // zgłosić końca — a to jedyny nieograniczony await tej tury. Bez limitu czat wisiał
+        // na „trzech kropkach" na zawsze. 60 s wystarcza na długą wypowiedź; potem oddajemy ster.
+        await Promise.race([
+          speak(reply.text, store.settings),
+          new Promise<void>((resolve) => setTimeout(resolve, 60_000)),
+        ]);
       }
     } catch (e) {
       if (!isCurrent(genToken)) return; // zatrzymane przez użytkownika — nie pokazuj błędu
       const err = e instanceof Error ? e.message : String(e);
+      // Doradca błędów: ludzkie wyjaśnienie + przycisk naprawy (zamiast surowego komunikatu,
+      // z którego nie wiadomo, co zrobić — np. gołe „Internal Server Error (500)").
+      const adv = adviseError(err);
       setMessages((m) => [
         ...m,
-        { id: uid(), role: "assistant", text: `⚠ ${err}`, createdAt: Date.now() },
+        { id: uid(), role: "assistant", text: `⚠ ${adv.human}`, fix: adv.fix, createdAt: Date.now() },
       ]);
     } finally {
       // Resetuj stan tylko, jeśli to wciąż ta sama generacja — inaczej Stop / nowa
@@ -1334,6 +1351,7 @@ export default function App() {
         liveId={liveId}
         onSuggest={handleSend}
         onRetry={() => { if (retryTextRef.current && !busy) handleSend(retryTextRef.current); }}
+        onFix={(nav) => { if (nav === "settings") setShowSettings(true); }}
         thinking={busy}
         needsSetup={!hasUsableBrain()}
         onOpenKeys={() => setShowSettings(true)}

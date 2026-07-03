@@ -73,11 +73,12 @@ function CouncilPanel({ council }: { council: NonNullable<ChatMessage["council"]
 // (nowy obiekt), reszta zachowuje referencję `m` → memo pomija ich re-render. Komparator ignoruje
 // tożsamość `onRetry` (zachowanie „ponów ostatnią" jest stałe), by memo realnie działało.
 const MessageBubble = memo(
-  function MessageBubble({ m, isLive, isLastAssistant, onRetry }: {
+  function MessageBubble({ m, isLive, isLastAssistant, onRetry, onFix }: {
     m: ChatMessage;
     isLive: boolean;
     isLastAssistant: boolean;
     onRetry?: () => void;
+    onFix?: (nav: string) => void;
   }) {
     return (
       <div className={`bubble ${m.role}`}>
@@ -97,10 +98,20 @@ const MessageBubble = memo(
           </div>
         )}
         {m.council && m.council.members.length > 1 && <CouncilPanel council={m.council} />}
-        {m.role === "assistant" && m.text?.startsWith("⚠") && onRetry && (
-          <button className="btn" style={{ marginTop: 8, padding: "6px 12px", fontSize: 13, width: "auto" }} onClick={onRetry}>
-            🔄 Ponów
-          </button>
+        {m.role === "assistant" && m.text?.startsWith("⚠") && (onRetry || (m.fix && onFix)) && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+            {/* Przycisk naprawy PIERWSZY (errorAdvisor) — prowadzi prosto do przyczyny, bez zgadywania. */}
+            {m.fix && onFix && (
+              <button className="btn" style={{ padding: "6px 12px", fontSize: 13, width: "auto" }} onClick={() => onFix(m.fix!.nav)}>
+                {m.fix.label}
+              </button>
+            )}
+            {onRetry && (
+              <button className="btn" style={{ padding: "6px 12px", fontSize: 13, width: "auto" }} onClick={onRetry}>
+                🔄 Ponów
+              </button>
+            )}
+          </div>
         )}
         {m.role === "assistant" && m.text && (
           <MsgActions
@@ -136,6 +147,7 @@ export default function Conversation({
   liveId,
   onSuggest,
   onRetry,
+  onFix,
   thinking,
   needsSetup,
   onOpenKeys,
@@ -149,6 +161,8 @@ export default function Conversation({
   liveId: string | null;
   onSuggest: (text: string) => void;
   onRetry?: () => void;
+  /** Przycisk naprawy przy błędzie (errorAdvisor) — App tłumaczy nav na akcję (np. otwiera ⚙). */
+  onFix?: (nav: string) => void;
   thinking?: boolean;
   needsSetup?: boolean;
   onOpenKeys?: () => void;
@@ -345,6 +359,7 @@ export default function Conversation({
           isLive={m.id === liveId}
           isLastAssistant={m.id === lastAssistantId}
           onRetry={onRetry}
+          onFix={onFix}
         />
       ))}
       {interim && <div className="bubble user">{interim}</div>}

@@ -29,6 +29,8 @@ export interface ChatMessage {
   /** Który dostawca faktycznie odpowiedział (transparentność multi-providera) + czy zapasowy. */
   via?: string;
   fellBack?: boolean;
+  /** Przycisk naprawy przy wiadomości-błędzie (errorAdvisor): etykieta + cel nawigacji. */
+  fix?: { label: string; nav: string };
   createdAt: number;
 }
 
