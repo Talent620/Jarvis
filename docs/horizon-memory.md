@@ -295,6 +295,26 @@ relationshipStatus (salesEngine), FinanceProject.leadId.
 Także `12e0597`: polish trwałych szkiców (walidacja odtworzonego modelu Studia względem
 katalogu; autoGrow Composera po hydratacji). Bramki po `51e80c1`: Vitest 337/2918.
 
+## 4f. Budowa stron w tle + czysta karta (2026-07-03, wieczór)
+
+**Commit `59ee858` — budowa w tle (CI 8/8):** `src/lib/webBuildStatus.ts` — singleton slotu
+budowy POZA komponentem (begin/end/subscribe, guard równoległości, przejęcie martwej budowy
+po BUILD_STALE_MS=10 min, stan w RAM = czysto po restarcie). WebStudio: wynik NAJPIERW wprost
+do trwałego szkicu (`writeDraft webstudio.html/view`) — przeżywa odmontowanie panelu;
+`mountedRef` → przy zamkniętym panelu globalny toast „✅ zbudowana w tle / ⚠ powód błędu";
+busy z globalnego stanu + subskrypcja wciąga świeży wynik po powrocie. Dotyczy run() i
+retryRepair(). 5 testów (`tests/webBuildStatus.test.ts`).
+
+**Commity `5cdcbcf` + `a0b7107` — czysta karta (klasa błędu zgłoszona przez użytkownika
+jako „karygodna podstawa"):** trwała sesja zawsze przywraca szkic → KAŻDY panel twórczy musi
+mieć jawny przycisk nowej pracy, inaczej stary stan więzi na zawsze. WebStudio „🆕 Nowa
+strona" (confirm z ostrzeżeniem o niezapisanej), ContentStudio „🆕 Nowy post", AdStudio
+„🆕 Nowa kampania" (czyści też UTM; platforma=preferencja zostaje), Studio ✕ przy opisie.
+**Test WARTOWNIK** `tests/freshStartBehavior.test.ts` (konwencja repo: createRoot+act+klik
+w jsdom): zasiane szkice wracają po montażu, klik 🆕 czyści stan ORAZ localStorage, przycisk
+znika na pustym panelu. REGUŁA NA PRZYSZŁOŚĆ: nowy panel z usePersistentState = obowiązkowy
+przycisk czystej karty + wpis w tym teście.
+
 ## 4. Pomiary
 
 - Bramki lokalne na `5fffac7`: tsc czysty, ESLint czysty, Vitest 315 plików / 2708 testów
