@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { store } from "../lib/store";
 import { useStore } from "../hooks/useStore";
+import { usePersistentState } from "../hooks/usePersistentState";
 import Modal from "./Modal";
 import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
 import { generatePost, saveContentPost, markContentPublished, isPublished, contentStatusOf, CONTENT_STATUS_LABEL, PLATFORMS, TONES, type Platform, type Tone } from "../lib/contentStudio";
@@ -14,12 +15,13 @@ import { uid } from "../lib/store";
 // albo udostępniasz jednym tapnięciem do dowolnej apki (IG/FB/TikTok/LinkedIn).
 export default function ContentStudio({ onClose, embedded }: { onClose: () => void; embedded?: boolean }) {
   useStore();
-  const [platform, setPlatform] = useState<Platform>("instagram");
-  const [topic, setTopic] = useState("");
-  const [tone, setTone] = useState<Tone>("swobodny");
-  const [brand, setBrand] = useState("");
+  // Trwała sesja funkcji: temat/parametry i wygenerowany post nie giną po wyjściu z panelu.
+  const [platform, setPlatform] = usePersistentState<Platform>("content.platform", "instagram");
+  const [topic, setTopic] = usePersistentState("content.topic", "");
+  const [tone, setTone] = usePersistentState<Tone>("content.tone", "swobodny");
+  const [brand, setBrand] = usePersistentState("content.brand", "");
   const [busy, setBusy] = useState(false);
-  const [out, setOut] = useState("");
+  const [out, setOut] = usePersistentState("content.out", "");
 
   const generate = async () => {
     if (!topic.trim()) { toast("Wpisz temat posta."); return; }

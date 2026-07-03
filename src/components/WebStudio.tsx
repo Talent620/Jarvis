@@ -9,6 +9,7 @@ import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
 import { assessSeo, seoFixInstruction } from "../lib/seoPreview";
 import { buildRobotsTxt, buildSitemapXml, extractInternalPaths, normalizeDomain } from "../lib/siteSeoFiles";
 import { useEscape } from "../hooks/useEscape";
+import { usePersistentState } from "../hooks/usePersistentState";
 import { copyWithToast, toast } from "../lib/toast";
 import { listSiteProjects, saveSiteProject, renameSiteProject, removeSiteProject, exportSiteProject, importSiteProject } from "../lib/siteProjects";
 import type { SiteProject } from "../types";
@@ -65,29 +66,33 @@ const IDEAS: Record<string, string[]> = {
 
 export default function WebStudio({ onClose, initialContext }: { onClose: () => void; initialContext?: GrowthContext | null }) {
   useEscape(onClose);
-  const [prompt, setPrompt] = useState("");
+  // TRWAŁA SESJA FUNKCJI: pola pracy w toku (opis, zbudowany HTML, brief, wycena, strategia,
+  // blueprint, cel zapisu) lustrzane do localStorage przez usePersistentState — po wyjściu z
+  // panelu lub zamknięciu aplikacji budowana strona NIE ginie, wraca przy ponownym wejściu.
+  // Ulotne pola (busy/err/planning/podglądy/audit) zostają w zwykłym useState — nie ma czego ratować.
+  const [prompt, setPrompt] = usePersistentState("webstudio.prompt", "");
   // Most Lead → demo: firma, dla której budujemy (z odpięciem). Null = zwykłe wejście z Centrum.
   const [demoFor, setDemoFor] = useState<GrowthContext | null>(initialContext ?? null);
-  const [kind, setKind] = useState<SiteKind>("auto");
-  const [style, setStyle] = useState<SiteStyle>("auto");
-  const [html, setHtml] = useState("");
+  const [kind, setKind] = usePersistentState<SiteKind>("webstudio.kind", "auto");
+  const [style, setStyle] = usePersistentState<SiteStyle>("webstudio.style", "auto");
+  const [html, setHtml] = usePersistentState("webstudio.html", "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [view, setView] = useState<"preview" | "code">("preview");
+  const [view, setView] = usePersistentState<"preview" | "code">("webstudio.view", "preview");
   const [showBrief, setShowBrief] = useState(false);
-  const [brief, setBrief] = useState<ClientBrief>({});
-  const [quote, setQuote] = useState<Quote | null>(null);
-  const [packages, setPackages] = useState<QuotePackage[] | null>(null);
+  const [brief, setBrief] = usePersistentState<ClientBrief>("webstudio.brief", {});
+  const [quote, setQuote] = usePersistentState<Quote | null>("webstudio.quote", null);
+  const [packages, setPackages] = usePersistentState<QuotePackage[] | null>("webstudio.packages", null);
   const [audit, setAudit] = useState<SiteAudit | null>(null); // ocena jakości wygenerowanej strony
   const [brokenDemo, setBrokenDemo] = useState<{ diagnostics: string[]; keptPrevious: boolean; editFlag: boolean } | null>(null); // demo ucięte i niedokończone
   const [showDiag, setShowDiag] = useState(false);
-  const [strategy, setStrategy] = useState(""); // ETAP 11 — strategia biznesowa przed budową
+  const [strategy, setStrategy] = usePersistentState("webstudio.strategy", ""); // ETAP 11 — strategia biznesowa przed budową
   // Blueprint: plan strony wygenerowany przez model (structured output), edytowalny, STERUJE budową.
-  const [blueprint, setBlueprint] = useState<SiteBlueprint | null>(null);
+  const [blueprint, setBlueprint] = usePersistentState<SiteBlueprint | null>("webstudio.blueprint", null);
   const [planning, setPlanning] = useState(false);
   // 💾 Projekty stron — zapis/wczytanie/wersje
-  const [projId, setProjId] = useState<string | null>(null); // aktywny projekt (upsert)
-  const [projName, setProjName] = useState("");
+  const [projId, setProjId] = usePersistentState<string | null>("webstudio.projId", null); // aktywny projekt (upsert)
+  const [projName, setProjName] = usePersistentState("webstudio.projName", "");
   const [projs, setProjs] = useState<SiteProject[]>(listSiteProjects());
   const refreshProjs = () => setProjs(listSiteProjects());
   const saveProject = () => {
@@ -147,7 +152,15 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
     setBrief(growthContextToBrief(initialContext));
     setProjName((n) => n || demoProjectName(initialContext));
     setShowBrief(true);
-  }, [initialContext]);
+    // settery z usePersistentState są stabilne (useState pod spodem) — w deps dla lintera.
+  }, [initialContext, setBrief, setProjName]);
+
+  // Po powrocie do panelu (odtworzony HTML z trwałego szkicu) przywróć odznakę jakości —
+  // ścieżki build/load liczą audit same, więc robimy to TYLKO raz przy montażu, gdy brakuje.
+  useEffect(() => {
+    if (html && !audit) setAudit(auditSite(html));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const briefText = buildClientBrief(brief);
   const canBuild = !!(prompt.trim() || briefText);

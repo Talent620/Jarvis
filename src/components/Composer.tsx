@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { anticipate, type RecallHit } from "../lib/recall";
 import { store } from "../lib/store";
 import { speak } from "../lib/voice";
+import { usePersistentState } from "../hooks/usePersistentState";
 
 export default function Composer({
   onSend,
@@ -28,7 +29,9 @@ export default function Composer({
   micSupported: boolean;
   councilAvailable?: boolean;
 }) {
-  const [text, setText] = useState("");
+  // Trwały szkic wpisanej, lecz NIEwysłanej wiadomości — po wyjściu z czatu / zamknięciu apki
+  // wraca (jak w każdym komunikatorze). Po wysłaniu setText("") zapisuje pusty szkic (nie wraca).
+  const [text, setText] = usePersistentState("composer.text", "");
   const [council, setCouncil] = useState(false);
   const [research, setResearch] = useState(false);
   const [hint, setHint] = useState<RecallHit | null>(null); // 🧲 anticipatory recall

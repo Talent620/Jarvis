@@ -4,6 +4,7 @@ import { brandImageSuffix } from "../lib/brandKit";
 import { enhanceImagePrompt, IMAGE_STYLES, type ImageStyle } from "../lib/imagePrompt";
 import { capturePhoto } from "../lib/camera";
 import { useEscape } from "../hooks/useEscape";
+import { usePersistentState } from "../hooks/usePersistentState";
 import { store } from "../lib/store";
 import { parseKeys } from "../lib/keys";
 import { toast } from "../lib/toast";
@@ -61,10 +62,12 @@ export default function Studio({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
   // Domyślnie najlepszy DOSTĘPNY generator: serwer SD > Gemini (klucz) > darmowy bez klucza.
   // Dzięki temu Studio działa od razu, nawet bez żadnej konfiguracji (Pollinations).
-  const [model, setModel] = useState<ImageModelId>(bestImageModel());
-  const [prompt, setPrompt] = useState("");
+  // Trwała sesja funkcji: opis/styl/model przeżywają wyjście z panelu i zamknięcie apki.
+  // Obrazy (inputs/history) celowo NIE — bloby są za duże na localStorage (mają swoją historię w IndexedDB).
+  const [model, setModel] = usePersistentState<ImageModelId>("studio.model", () => bestImageModel());
+  const [prompt, setPrompt] = usePersistentState("studio.prompt", "");
   const [inputs, setInputs] = useState<Img[]>([]);
-  const [imgStyle, setImgStyle] = useState<ImageStyle>("auto"); // kierunek artystyczny dla generacji z opisu
+  const [imgStyle, setImgStyle] = usePersistentState<ImageStyle>("studio.imgStyle", "auto"); // kierunek artystyczny dla generacji z opisu
   const [history, setHistory] = useState<Img[]>([]); // wersje wyników (ostatnia = bieżąca)
   const [hist, setHist] = useState<ImageEdit[]>(listImageHistory()); // trwała historia przeróbek
   const [busy, setBusy] = useState(false);
@@ -74,10 +77,10 @@ export default function Studio({ onClose }: { onClose: () => void }) {
   const [keysOpen, setKeysOpen] = useState(false);
   const [studioKeys, setStudioKeys] = useState(store.settings.studioKeys || "");
   const studioKeyCount = parseKeys(studioKeys).length;
-  // Suwaki jakości dla lokalnego Stable Diffusion.
-  const [sdSteps, setSdSteps] = useState(28);
-  const [sdSize, setSdSize] = useState(1024);
-  const [sdDenoise, setSdDenoise] = useState(0.6);
+  // Suwaki jakości dla lokalnego Stable Diffusion — też trwałe (ustawienia robocze użytkownika).
+  const [sdSteps, setSdSteps] = usePersistentState("studio.sdSteps", 28);
+  const [sdSize, setSdSize] = usePersistentState("studio.sdSize", 1024);
+  const [sdDenoise, setSdDenoise] = usePersistentState("studio.sdDenoise", 0.6);
   const [sdProgress, setSdProgress] = useState(0); // 0..1, postęp lokalnego generowania
   const mounted = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);

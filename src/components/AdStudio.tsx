@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { usePersistentState } from "../hooks/usePersistentState";
 import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
 import { generateAds, AD_PLATFORMS, AD_GOALS, type AdPlatform, type AdGoal } from "../lib/adStudio";
 import { AD_ANGLES, adAngleGuide } from "../lib/adAngles";
@@ -23,19 +24,20 @@ const CHANNEL_STATE_LABEL: Record<string, string> = {
 // 📢 Generator reklam (Faza 0) — gotowe zestawy reklam Google/Meta do skopiowania.
 export default function AdStudio({ onClose, embedded }: { onClose: () => void; embedded?: boolean }) {
   useEscape(onClose);
-  const [platform, setPlatform] = useState<AdPlatform>("google");
-  const [product, setProduct] = useState("");
-  const [audience, setAudience] = useState("");
-  const [goal, setGoal] = useState<AdGoal>("leady/kontakty");
-  const [budget, setBudget] = useState("");
+  // Trwała sesja funkcji: parametry i wygenerowany wynik nie giną po wyjściu z panelu/apki.
+  const [platform, setPlatform] = usePersistentState<AdPlatform>("ads.platform", "google");
+  const [product, setProduct] = usePersistentState("ads.product", "");
+  const [audience, setAudience] = usePersistentState("ads.audience", "");
+  const [goal, setGoal] = usePersistentState<AdGoal>("ads.goal", "leady/kontakty");
+  const [budget, setBudget] = usePersistentState("ads.budget", "");
   const [busy, setBusy] = useState(false);
-  const [out, setOut] = useState("");
-  const [campaign, setCampaign] = useState<CampaignPlan | null>(null); // strukturalny plan (nie luźny tekst)
-  const [angle, setAngle] = useState(""); // kąt emocjonalny (Ad Creative Engine)
+  const [out, setOut] = usePersistentState("ads.out", "");
+  const [campaign, setCampaign] = usePersistentState<CampaignPlan | null>("ads.campaign", null); // strukturalny plan (nie luźny tekst)
+  const [angle, setAngle] = usePersistentState("ads.angle", ""); // kąt emocjonalny (Ad Creative Engine)
   // 🔗 Builder linków UTM (mierzenie ROI reklam/social).
-  const [utmUrl, setUtmUrl] = useState("");
-  const [utmPreset, setUtmPreset] = useState<UtmPreset | null>(null);
-  const [utmCampaign, setUtmCampaign] = useState("");
+  const [utmUrl, setUtmUrl] = usePersistentState("ads.utmUrl", "");
+  const [utmPreset, setUtmPreset] = usePersistentState<UtmPreset | null>("ads.utmPreset", null);
+  const [utmCampaign, setUtmCampaign] = usePersistentState("ads.utmCampaign", "");
   const utmLink = utmPreset ? buildUtmUrl({ url: utmUrl, source: utmPreset.source, medium: utmPreset.medium, campaign: utmCampaign }) : "";
 
   const generate = async () => {
