@@ -354,6 +354,47 @@ export interface SentMail {
   at: number;
 }
 
+/** Okno robocze auto-kampanii: godziny i dni tygodnia, w których wolno wysyłać. */
+export interface CampaignWorkingHours {
+  /** Godzina startu (0–23, włącznie). */
+  startHour: number;
+  /** Godzina końca (0–23, wyłącznie). */
+  endHour: number;
+  /** Dni tygodnia, w których wolno wysyłać: 0=niedziela … 6=sobota. */
+  days: number[];
+}
+
+/**
+ * Stan autonomicznej kampanii ofertowej (auto-mail). ŚWIADOMIE zachowawczy: to nie jest
+ * „masowy mailing" — to powolne, limitowane, w pełni odwracalne wysyłanie POJEDYNCZYCH ofert
+ * z twardymi bezpiecznikami (dzienny limit, throttling, okno robocze, wygaśnięcie, bezpiecznik
+ * po serii błędów). Uzbrajana WYŁĄCZNIE za jawną zgodą (outbound) i sama się wyłącza.
+ */
+export interface OfferCampaign {
+  /** Czy kampania jest uzbrojona (cykl aplikacji może wysyłać). */
+  active: boolean;
+  /** Maks. maili na dobę ŁĄCZNIE (z ręcznymi) — chroni reputację nadawcy. */
+  dailyLimit: number;
+  /** Minimalny odstęp między auto-wysyłkami (ms) — throttling. */
+  throttleMs: number;
+  /** Twardy limit na całą kampanię (po jego osiągnięciu kampania się kończy). */
+  totalCap: number;
+  /** Ile ta kampania już wysłała (tylko potwierdzone wysyłki). */
+  sentTotal: number;
+  /** Znacznik ostatniej auto-wysyłki (0 = jeszcze żadnej) — baza throttlingu. */
+  lastSentAt: number;
+  /** Kiedy kampanię uzbrojono. */
+  startedAt: number;
+  /** Auto-wygaśnięcie (ms epoch) — po tym czasie kampania sama gaśnie. */
+  expiresAt: number;
+  /** Kolejne błędy pod rząd (bezpiecznik/circuit-breaker). */
+  failStreak: number;
+  /** Ustawione = kampania WSTRZYMANA (powód dla człowieka); active bez tego = działa. */
+  pausedReason?: string;
+  /** Okno robocze (godziny/dni), w którym wolno wysyłać. */
+  workingHours: CampaignWorkingHours;
+}
+
 /** Obserwowany przedmiot w Łowcy Okazji — pamięta najlepszą widzianą cenę. */
 export interface WatchedItem {
   id: string;
@@ -544,6 +585,8 @@ export interface Settings {
   emailSignature: string;
   /** Dzienny limit wysyłki maili (0 = bez limitu) — chroni reputację nadawcy przed spam-flagą. */
   mailDailyLimit?: number;
+  /** Stan autonomicznej kampanii ofertowej (auto-mail). Brak = kampania nigdy nie uzbrojona. */
+  offerCampaign?: OfferCampaign;
   /** Adres backendu sync (ten sam Worker). */
   syncUrl: string;
   /** Prywatny token przestrzeni danych sync. */

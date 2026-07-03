@@ -215,6 +215,42 @@ działanie na fizycznym S9 i realnym EXE = NIEUDOWODNIONE.
 **Następny bezpieczny krok:** wpięcie `deviceExecutor` w `mcp.ts` (device przez HTTP)
 i konsument `resumableGoalsNewestFirst` (auto-wznowienie sztafety po restarcie).
 
+## 4c. Auto-kampania ofertowa (auto-mail) — ZBUDOWANE + PRZETESTOWANE (2026-07-03)
+
+Kontekst: użytkownik pytał „dlaczego nie wysyła auto maili" → „zrób research i zrób
+najlepiej jak się da". Research (2 agentów): istnieje już cała infra wysyłki w `mailer.ts`
+(`sendOfferEmail`, `draftAndSendOffer`, `eligibleForBulkSend` z dedupem+suppression,
+`sentTodayCount`), ale BRAK autonomicznego, bezpiecznego sterownika. Prawo PL: art. 398 PKE
+(od 10.11.2024) + RODO — każdy mail komercyjny wymaga opt-out, tożsamości nadawcy i noty
+o źródle danych; deliverability: cap 20–50/dobę po rozgrzaniu, throttling.
+
+Zbudowane (`src/lib/offerCampaign.ts` — CZYSTY silnik + cienki adapter):
+- Typy w `types.ts`: `OfferCampaign` (active/dailyLimit/throttleMs/totalCap/sentTotal/
+  lastSentAt/expiresAt/failStreak/pausedReason/workingHours) + `Settings.offerCampaign?`.
+- Czysta bramka `campaignCanSendNow`: uzbrojenie → wygaśnięcie → wstrzymanie → WAŻNA STOPKA
+  (opt-out+tożsamość, fail-closed) → limit kampanii → dzienny limit → okno robocze → throttling.
+- `campaignFooter`/`footerValid`/`withComplianceFooter` — obowiązkowa stopka RODO/opt-out
+  „STOP" (idempotentna, nie dubluje). Bez ważnej stopki wysyłka ZABLOKOWANA.
+- Bezpiecznik: `applyFailure` (seria ≥4 lub `classifyFailure`=auth/limit → natychmiastowa
+  pauza), `applySuccess` (auto-off przy totalCap). `newCampaign` klamruje limity.
+- Adapter `runOfferCampaignCycle()` — co najwyżej JEDEN mail/cykl, reużywa
+  `eligibleForBulkSend`+`draftOffer`+`splitOffer(footer)`+`sendOfferEmail`; „wysłano" tylko
+  z `SendResult.ok` (nie deklaracja). `armOfferCampaign` nadaje ZAKRESOWĄ, wygasającą zgodę
+  outbound (`grantOutboundScope(["send_offers_all","gmail_send"], ttl)`) — nie „*", nie na stałe.
+- Narzędzia: `sales_campaign_arm` (outbound), `sales_campaign_status` (read),
+  `sales_campaign_stop` (write) w `tools.ts` + klasyfikacja w `permissions.ts`.
+- Wpięte w cykl aplikacji (`App.tsx` tick 90 s, obok predictionCycle/resumableGoals).
+- Domyślnie WYŁĄCZONE (uzbraja tylko jawna zgoda). Domyślne: 20/dobę, throttling 90 s,
+  cap 200, okno 8–18 pn–pt, TTL 7 dni.
+
+Dowód: `tests/offerCampaign.test.ts` — **27 testów adwersarskich zielonych** (blokada bez
+stopki, limit/throttling/okno/wygaśnięcie, bezpiecznik po serii i po auth/limit, klamrowanie).
+Cztery bramki: tsc czysto, ESLint czysto (zmienione pliki), Vitest **330/2864 zielone**,
+build produkcyjny zielony.
+**Granica uczciwości:** narzędzie egzekwuje higienę wysyłki (opt-out, limity, throttling,
+dedup, suppression), ale NIE deklaruje „to legalne" — odpowiedzialność za podstawę kontaktu
+(art. 398 PKE) zostaje po stronie użytkownika; komunikat uzbrojenia mówi to wprost.
+
 ## 4. Pomiary
 
 - Bramki lokalne na `5fffac7`: tsc czysty, ESLint czysty, Vitest 315 plików / 2708 testów

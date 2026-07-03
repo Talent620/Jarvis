@@ -14,6 +14,7 @@ import { horizonExeToken } from "./desktop";
 import { recommendBrain } from "./brainAdvisor";
 import type { FinanceProject, FinanceStatus } from "../types";
 import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
+import { armOfferCampaign, disarmOfferCampaign, offerCampaignStatus } from "./offerCampaign";
 import { getWeather } from "./weather";
 import { scheduleReminder, scheduleTimer } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
@@ -1427,6 +1428,39 @@ const tools: Tool[] = [
       if (r.sent >= cap) parts.push(`osiągnięto limit ${cap}/turę — powtórz, by wysłać kolejne`);
       return parts.join(" · ");
     },
+  },
+  {
+    def: {
+      name: "sales_campaign_arm",
+      description:
+        "Uzbrój AUTONOMICZNĄ kampanię ofertową (auto-mail): JARVIS sam, powoli i w limitach, wysyła oferty do leadów z adresem e-mail (pomija już mailowanych, doNotContact/optOut). Twarde bezpieczniki: dzienny limit (domyślnie 20), throttling, okno robocze 8–18 pn–pt, wygaśnięcie po 7 dniach, stopka z opt-out i RODO w KAŻDYM mailu, bezpiecznik po serii błędów. Wymaga skonfigurowanej poczty. Używaj TYLKO gdy użytkownik wprost mówi: włącz auto-wysyłkę, uruchom kampanię, wysyłaj oferty sam, autopilot maili.",
+      input_schema: obj({ daily_limit: { type: "number", description: "Maks. maili/dobę (1–200, domyślnie 20)." } }, []),
+    },
+    run: async ({ daily_limit }) => {
+      if (!canSendDirect()) {
+        return "Najpierw skonfiguruj pocztę: ⚙ → Poczta (adres Gmail + hasło aplikacji); na telefonie dodatkowo ⚙ → Synchronizacja (backend). Bez tego auto-kampania nie ruszy.";
+      }
+      const c = armOfferCampaign(Date.now(), daily_limit != null ? { dailyLimit: Number(daily_limit) } : undefined);
+      return `✅ Auto-kampania uzbrojona (limit ${c.dailyLimit}/dobę, throttling ~${Math.round(c.throttleMs / 1000)} s, okno 8–18 pn–pt, wygasa za 7 dni, twardy limit ${c.totalCap}). Każdy mail dostaje stopkę z „STOP” i informacją RODO. Zatrzymasz w każdej chwili: „zatrzymaj kampanię”. UWAGA: to Ty odpowiadasz za podstawę kontaktu (art. 398 PKE / RODO) — wysyłamy tylko do firm z publicznym adresem i respektujemy opt-out.`;
+    },
+  },
+  {
+    def: {
+      name: "sales_campaign_status",
+      description:
+        "Pokaż stan autonomicznej kampanii ofertowej (auto-mail): aktywna/wstrzymana, ile wysłano łącznie i dziś, limity, okno, kiedy wygasa. Używaj na: „jak idzie kampania / ile maili poszło / status auto-wysyłki”.",
+      input_schema: obj({}, []),
+    },
+    run: () => offerCampaignStatus(),
+  },
+  {
+    def: {
+      name: "sales_campaign_stop",
+      description:
+        "Zatrzymaj (rozbrój) autonomiczną kampanię ofertową — natychmiast, odwracalnie. Używaj na: „zatrzymaj kampanię / wyłącz auto-wysyłkę / przestań wysyłać maile / STOP kampania”.",
+      input_schema: obj({}, []),
+    },
+    run: () => { disarmOfferCampaign(); return "⛔ Auto-kampania zatrzymana. Nic więcej nie wyśle się samo. Wznowisz przez „uruchom kampanię”."; },
   },
   {
     def: {

@@ -56,6 +56,9 @@ const RISK: Record<string, Risk> = {
   // outbound — zewnętrzne lub nieodwracalne (wymaga zgody)
   gmail_send: "outbound", gmail_reply: "outbound", gcal_add: "outbound", clear_tally: "outbound", run_automation: "outbound",
   send_test_email: "outbound", send_offers_all: "outbound",
+  // Uzbrojenie auto-kampanii to zgoda na WYCHODZĄCE wysyłki (outbound). Status tylko czyta.
+  // Zatrzymanie to lokalne, odwracalne wyłączenie (write) — nie wymaga zgody outbound.
+  sales_campaign_arm: "outbound", sales_campaign_status: "read", sales_campaign_stop: "write",
   salesos_open: "outbound", salesos_push: "outbound",
   salesos_email: "outbound", salesos_flush_emails: "outbound", salesos_set_status: "outbound",
   // outbound — działania na zewnątrz / nieodwracalne (wymaga zgody)

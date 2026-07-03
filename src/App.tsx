@@ -46,6 +46,7 @@ import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
 import { runProactiveNotifications } from "./lib/proactiveNotify";
 import { runPredictionCycleOnStore } from "./lib/predictionCycle";
 import { refreshResumableGoals } from "./lib/goalResume";
+import { runOfferCampaignCycle } from "./lib/offerCampaign";
 import { recordActiveDay } from "./lib/habit";
 import { nextTip, recordTipShown, contextualTipNow, dailyDigestNow, recordDigestShown, type Tip } from "./lib/tips";
 import TipBubble from "./components/TipBubble";
@@ -490,6 +491,10 @@ export default function App() {
       // Kieszonkowa Ciągłość: odśwież cache wznawialnych celów (IndexedDB → pamięć),
       // żeby nextNudge mógł synchronicznie zaoferować wznowienie po restarcie.
       void refreshResumableGoals().catch(() => {});
+      // Auto-kampania ofertowa: wyślij CO NAJWYŻEJ jeden mail, jeśli uzbrojona i wszystkie
+      // bramki na to pozwalają (limit/throttling/okno/stopka). Cicha i idempotentna — gdy
+      // nie wolno, nic nie robi. Nieaktywna domyślnie (uzbraja tylko jawna zgoda „uruchom kampanię”).
+      void runOfferCampaignCycle().catch(() => {});
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       if (busyRef.current || !hasUsableBrain()) return; // nie przerywaj pracy / brak mózgu (też lokalny)
       const n = nextNudge();
