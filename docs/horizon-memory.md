@@ -187,6 +187,13 @@ nie logika sztafety.
   horizon-pair/unpair/lan tylko dla własnej ramki. 8 testów (`tests/horizonLanPolicy.test.ts`,
   adwersarialne: publiczny IP / 0.0.0.0 / brak zgody / brak parowania — odrzucane).
 
+- `MissionsPanel.tsx` (cienki) + wpięcie w `Mind.tsx` — **panel Sztafety w 🧠 Umyśle**:
+  przyciski pokaz/status/dlaczego/cofnij + (desktop) próba węzła EXE; wynik w <pre> z
+  łańcuchem dowodów. Cała logika w istniejących silnikach lib (te same, co głos/czat).
+  Test ZACHOWANIA (createRoot+act, realne kliknięcia → prawdziwe silniki):
+  `tests/missionsPanelBehavior.test.ts`, 5 asercji (start pusty, pokaz 3/3+dowody,
+  dlaczego, cofnij, brak przycisku EXE poza desktopem).
+
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;
 działanie na fizycznym S9 i realnym EXE = NIEUDOWODNIONE.

@@ -9,6 +9,7 @@ import { loadEpisodes } from "../lib/episodicMemory";
 import { analyzePerformance, assessmentSummary } from "../lib/selfImprove";
 import { getRouteLog } from "../lib/modelRouter";
 import { reliabilityStats, reliabilityVerdict } from "../lib/errorLog";
+import MissionsPanel from "./MissionsPanel";
 import type { EntityKind } from "../types";
 
 // 🧠 Umysł JARVISA — jedno okno pokazujące „co JARVIS myśli": odprawa dnia (Chief of Staff),
@@ -97,6 +98,9 @@ export default function Mind({ onClose }: { onClose: () => void }) {
 
           {/* 🔮 Dziennik Predykcji — pełna kontrola użytkownika (podgląd, dowody, uczenie, czyszczenie) */}
           <PredictionsSection />
+
+          {/* 🛰 Sztafeta Misji — pokaz/status/dlaczego/cofnij + próba realnego węzła EXE (desktop) */}
+          <MissionsPanel />
     </Modal>
   );
 }
