@@ -84,7 +84,7 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 
 type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
 import { askJarvis, resolveProvider, hasUsableBrain } from "./lib/brain";
-import { adviseError, adviseNoBrain } from "./lib/errorAdvisor";
+import { adviseError, adviseNoBrain, adviseEmptyReply, adviceMessage, isEmptyReplyText } from "./lib/errorAdvisor";
 import { askCouncil, councilMembers, type CouncilReply } from "./lib/council";
 import { isActionRequest } from "./lib/aiHelpers";
 import { isComplex } from "./lib/modelRouter";
@@ -617,7 +617,7 @@ export default function App() {
     // albo mglisty błąd po zepsuciu ustawień). Od razu ludzkie wyjaśnienie + przycisk naprawy.
     if (!hasUsableBrain()) {
       const adv = adviseNoBrain();
-      setMessages((m) => [...m, { id: uid(), role: "assistant", text: `⚠ ${adv.human}`, fix: adv.fix, createdAt: Date.now() }]);
+      setMessages((m) => [...m, { id: uid(), role: "assistant", text: adviceMessage(adv), fix: adv.fix, createdAt: Date.now() }]);
       return;
     }
     setBusy(true);
@@ -677,9 +677,20 @@ export default function App() {
         if (Date.now() - lastFlush >= 40) { cancelStreamFlush(); flushStream(); }
         else if (!flushTimer) { flushTimer = setTimeout(flushStream, 40); }
       };
+      // BEZPIECZNIK „wiecznych trzech kropek": nawet jeśli dostawca zawiesi się mimo wewnętrznych
+      // watchdogów, cała tura MUSI się rozstrzygnąć. Po ANSWER_BACKSTOP_MS rzucamy błąd czasu →
+      // trafia do adviseError (kroki naprawy), a „…" znika. To backstop na twardy zawis, nie
+      // normalny timeout (te są krótsze, w brain.ts/http.ts) — dlatego jest długi.
+      const ANSWER_BACKSTOP_MS = 150_000;
+      let backstop: ReturnType<typeof setTimeout> | undefined;
       try {
-        reply = useCouncil ? await askCouncil(history) : await askJarvis(history, onTok, setCouncilStep);
+        const answer = useCouncil ? askCouncil(history) : askJarvis(history, onTok, setCouncilStep);
+        const timeout = new Promise<never>((_, rej) => {
+          backstop = setTimeout(() => rej(new Error("Odpowiedź trwała zbyt długo (przekroczono czas) — dostawca AI mógł się zawiesić.")), ANSWER_BACKSTOP_MS);
+        });
+        reply = await Promise.race([answer, timeout]);
       } finally {
+        if (backstop) clearTimeout(backstop);
         setCouncilStep(null);
       }
       // Failover widoczny: gdy główny mózg nie odpowiedział i odpowiedział zapasowy — powiedz to
@@ -692,14 +703,21 @@ export default function App() {
       const notice = fallbackNotice(reply);
       if (notice && announceFallback) toast(notice);
       cancelStreamFlush(); // żaden spóźniony batch nie nadpisze finalnego tekstu
+      // Efektywny tekst do pokazania (przy streamingu bierzemy to, co realnie zeszło, gdy finał = „…").
+      const shownText = streamId ? (reply.text && reply.text.trim() && reply.text !== "…" ? reply.text : (pendingText || reply.text)) : reply.text;
+      const toolsUsed = !!(reply.tools && reply.tools.length);
+      const citesUsed = !!(reply.citations && reply.citations.length);
+      // PUSTA ODPOWIEDŹ (samo „…"): model odpowiedział niczym i to WŁAŚNIE wygląda jak wieczne kropki.
+      // Zamień na czytelny komunikat z krokami naprawy (chyba że tura użyła narzędzi/źródeł — wtedy
+      // pusty tekst bywa normalny). Koniec zgadywania „czemu widzę kropki".
+      const empty = isEmptyReplyText(shownText) && !toolsUsed && !citesUsed;
+      const emptyAdv = empty ? adviseEmptyReply() : null;
+      const displayText = emptyAdv ? adviceMessage(emptyAdv) : shownText;
       if (streamId) {
-        // Tekst już przyleciał strumieniowo — domknij tę samą wiadomość (narzędzia/cytaty/finalny tekst).
-        // Jeśli finalny tekst jest pusty/„…" (rzadki przypadek tur z narzędziami) — zostaw to, co już zeszło.
         const sid = streamId;
-        const finalText = reply.text && reply.text.trim() && reply.text !== "…" ? reply.text : (pendingText || reply.text);
         setMessages((m) =>
           m.map((x) =>
-            x.id === sid ? { ...x, text: finalText, tools: reply.tools, citations: reply.citations, via: reply.via, fellBack: reply.fellBack } : x,
+            x.id === sid ? { ...x, text: displayText, fix: emptyAdv?.fix, tools: reply.tools, citations: reply.citations, via: reply.via, fellBack: reply.fellBack } : x,
           ),
         );
       } else {
@@ -707,7 +725,8 @@ export default function App() {
         const aiMsg: ChatMessage = {
           id: uid(),
           role: "assistant",
-          text: reply.text,
+          text: displayText,
+          fix: emptyAdv?.fix,
           tools: reply.tools,
           citations: reply.citations,
           council: (reply as Partial<CouncilReply>).council,
@@ -719,7 +738,7 @@ export default function App() {
         setMessages((m) => [...m, aiMsg]);
       }
 
-      if (store.settings.speak) {
+      if (store.settings.speak && !empty) {
         setOrb("speaking");
         // Bezpiecznik: syntezator (zwłaszcza systemowy TTS na Androidzie) potrafi NIGDY nie
         // zgłosić końca — a to jedyny nieograniczony await tej tury. Bez limitu czat wisiał
@@ -737,7 +756,7 @@ export default function App() {
       const adv = adviseError(err);
       setMessages((m) => [
         ...m,
-        { id: uid(), role: "assistant", text: `⚠ ${adv.human}`, fix: adv.fix, createdAt: Date.now() },
+        { id: uid(), role: "assistant", text: adviceMessage(adv), fix: adv.fix, createdAt: Date.now() },
       ]);
     } finally {
       // Resetuj stan tylko, jeśli to wciąż ta sama generacja — inaczej Stop / nowa

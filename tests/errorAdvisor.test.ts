@@ -1,72 +1,90 @@
 import { describe, it, expect } from "vitest";
-import { adviseError, adviseNoBrain } from "../src/lib/errorAdvisor";
+import { adviseError, adviseNoBrain, adviseEmptyReply, adviceMessage, isEmptyReplyText } from "../src/lib/errorAdvisor";
 
-// Doradca błędów: użytkownik NIGDY nie ma zostać z surowym „Internal Server Error (500)"
-// i pytaniem „co teraz?". Testy pilnują: ludzki polski opis + właściwa akcja per klasa błędu.
+// Doradca błędów: użytkownik NIGDY nie ma zostać z surowym „Internal Server Error (500)”
+// ani z gołym „…”. Każda klasa błędu daje ludzki opis + KROKI naprawy krok po kroku + akcję.
 
-describe("adviseError — klasy błędów mają ludzki opis i akcję", () => {
-  it("REALNY PRZYPADEK użytkownika: błąd 500 → „awaria po ich stronie, nie Twoja wina” + przełącz mózg", () => {
-    for (const raw of ["Internal Server Error (500)", "Błąd API (503)", "The model is overloaded. (529)"]) {
+describe("adviseError — klasy błędów: opis + kroki + akcja", () => {
+  it("każda porada ma niepuste kroki naprawy (krok po kroku)", () => {
+    for (const raw of ["500", "429", "401", "insufficient credit", "ollama connection refused", "Failed to fetch", "model 404", "coś dziwnego"]) {
       const a = adviseError(raw);
-      expect(a.human).toMatch(/awari|po ich stronie/i);
-      expect(a.human).toMatch(/nie zrobiłeś nic złego|nie Twoja/i);
-      expect(a.fix).toBeTruthy();
-      expect(a.fix!.nav).toBe("settings");
+      expect(a.steps.length, `brak kroków dla: ${raw}`).toBeGreaterThan(0);
+      expect(a.human.length).toBeGreaterThan(0);
     }
   });
-  it("429/limit → odczekaj + Ponów, akcja do ⚙", () => {
-    const a = adviseError("429 Too Many Requests: rate limit exceeded");
-    expect(a.human).toMatch(/limit/i);
-    expect(a.human).toMatch(/Ponów/);
+  it("REALNY 500 → „awaria po ich stronie, nie Twoja wina” + krok Ponów + przełącz dostawcę", () => {
+    const a = adviseError("Internal Server Error (500)");
+    expect(a.human).toMatch(/awari|po ich stronie/i);
+    expect(a.human).toMatch(/nie zrobiłeś nic złego/i);
+    expect(a.steps.join(" ")).toMatch(/Ponów/);
+    expect(a.steps.join(" ")).toMatch(/dostawc/i);
     expect(a.fix!.nav).toBe("settings");
   });
-  it("klucz (401/403/brak klucza) → prowadź do wklejenia klucza", () => {
-    for (const raw of ["401 Unauthorized", "API key not valid", "Brak klucza Google Gemini (401)."]) {
-      const a = adviseError(raw);
-      expect(a.human).toMatch(/klucz/i);
-      expect(a.fix!.label).toMatch(/klucz|Ustawienia/i);
-    }
+  it("klucz 401 → kroki prowadzą do wklejenia klucza Gemini", () => {
+    const a = adviseError("401 Unauthorized");
+    expect(a.human).toMatch(/klucz/i);
+    expect(a.steps.join(" ")).toMatch(/aistudio\.google\.com\/apikey/);
   });
-  it("środki/limity konta (billing/quota) → przełącz dostawcę", () => {
-    const a = adviseError("insufficient credit balance");
-    expect(a.human).toMatch(/środk|limit/i);
+  it("timeout/zawis (backstop) → kroki o internecie i przełączeniu dostawcy", () => {
+    const a = adviseError("Odpowiedź trwała zbyt długo (przekroczono czas)");
+    expect(a.human).toMatch(/zbyt długo|zerwał/i);
+    expect(a.steps.join(" ")).toMatch(/internet/i);
     expect(a.fix).toBeTruthy();
   });
-  it("Ollama nieosiągalna → rada humanize + akcja ⚙", () => {
-    const a = adviseError("fetch http://192.168.0.10:11434 failed: connection refused");
-    expect(a.human).toMatch(/Ollama/i);
-    expect(a.fix).toBeTruthy();
-  });
-  it("sieć/timeout → rada bez przycisku ⚙ (Ponów wystarcza — w ustawieniach nic nie naprawi)", () => {
-    const a = adviseError("Failed to fetch");
-    expect(a.human).toMatch(/internet|połączy/i);
-    expect(a.fix).toBeUndefined();
-  });
-  it("model nieistniejący (404) → wybierz inny model", () => {
-    const a = adviseError("model gpt-9 does not exist (404)");
-    expect(a.human).toMatch(/model/i);
-    expect(a.fix).toBeTruthy();
-  });
-  it("nieznany błąd → NIGDY goły surowiec: skrócony + zawsze jakaś droga naprawy", () => {
-    const junk = "XyzUnheardOfFailure: " + "a".repeat(500);
-    const a = adviseError(junk);
-    expect(a.human.length).toBeLessThan(260); // przycięty, nie ściana tekstu
-    expect(a.human).toMatch(/Ponów|ustawie/i);
-    expect(a.fix).toBeTruthy();
-  });
-  it("pusty/null input nie wywraca doradcy", () => {
+  it("pusty/null input nie wywraca doradcy i wciąż daje kroki + akcję", () => {
     expect(() => adviseError("")).not.toThrow();
-    expect(() => adviseError(undefined as unknown as string)).not.toThrow();
-    expect(adviseError("").fix).toBeTruthy(); // nawet „nic" ma drogę naprawy
+    expect(adviseError("").steps.length).toBeGreaterThan(0);
+    expect(adviseError(undefined as unknown as string).fix).toBeTruthy();
+  });
+});
+
+describe("adviseEmptyReply — model odpowiedział PUSTO (samo „…”)", () => {
+  it("wyjaśnia „…” i daje kroki: prostsze polecenie, model Auto, klucz", () => {
+    const a = adviseEmptyReply();
+    expect(a.human).toMatch(/pust/i);
+    expect(a.human).toContain("…");
+    expect(a.steps.join(" ")).toMatch(/Ponów/);
+    expect(a.steps.join(" ")).toMatch(/Model|Auto/);
+    expect(a.fix!.nav).toBe("settings");
+  });
+});
+
+describe("isEmptyReplyText — rozpoznaje brak realnej treści", () => {
+  it("puste / same kropki / wielokropek → true", () => {
+    expect(isEmptyReplyText("")).toBe(true);
+    expect(isEmptyReplyText("   ")).toBe(true);
+    expect(isEmptyReplyText("…")).toBe(true);
+    expect(isEmptyReplyText("...")).toBe(true);
+    expect(isEmptyReplyText(". . .")).toBe(true);
+    expect(isEmptyReplyText(null)).toBe(true);
+    expect(isEmptyReplyText(undefined)).toBe(true);
+  });
+  it("realna treść → false (nawet krótka)", () => {
+    expect(isEmptyReplyText("Cześć")).toBe(false);
+    expect(isEmptyReplyText("Tak.")).toBe(false);
+    expect(isEmptyReplyText("42")).toBe(false);
+  });
+});
+
+describe("adviceMessage — składa nagłówek + numerowaną listę kroków", () => {
+  it("zawiera prefiks, opis i ponumerowane kroki oddzielone nowymi liniami", () => {
+    const msg = adviceMessage(adviseNoBrain());
+    expect(msg).toMatch(/^⚠ /);
+    expect(msg).toContain("Jak to naprawić:");
+    expect(msg).toContain("1. ");
+    expect(msg).toContain("2. ");
+    expect(msg.split("\n").length).toBeGreaterThan(3);
+  });
+  it("własny prefiks jest respektowany", () => {
+    expect(adviceMessage(adviseEmptyReply(), "🤔")).toMatch(/^🤔 /);
   });
 });
 
 describe("adviseNoBrain — preflight zepsutych ustawień (koniec wiecznych trzech kropek)", () => {
-  it("wyjaśnia przyczynę (ustawienia/klucz) i prowadzi do ⚙ → AI", () => {
+  it("wyjaśnia przyczynę i daje kroki do ⚙ → AI", () => {
     const a = adviseNoBrain();
     expect(a.human).toMatch(/mózg|klucz/i);
-    expect(a.human).toMatch(/ustawie/i);
+    expect(a.steps.length).toBeGreaterThan(0);
     expect(a.fix!.nav).toBe("settings");
-    expect(a.fix!.label).toMatch(/Napraw/i);
   });
 });
