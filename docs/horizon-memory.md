@@ -271,6 +271,30 @@ strona; Brand Kit > temat; blueprint=STRUKTURA, filozofia=WYKONANIE; bez GSAP/Le
 deliverable. **Pułapka cudzysłowów uderzyła znowu** (`zł"` w SELF_CRITIQUE_INSTRUCTION → TS1002)
 — naprawa `”`.
 
+## 4e. Błędy UX (errorAdvisor) + CRM Klient 360 (clientCrm) — 2026-07-03
+
+**Commit `346d831` — czytelne błędy + guzik Napraw (CI 8/8 zielone):**
+`src/lib/errorAdvisor.ts` (czysty): `adviseError(raw)→{human,fix?}` — klasy: 5xx/przeciążenie
+(„awaria dostawcy, nie Twoja wina"), 429, klucz 401/403/brak, billing/quota, Ollama, sieć/timeout
+(bez ⚙ — Ponów wystarcza), model 404, nieznane (przycięte + zawsze droga). `adviseNoBrain()` =
+preflight. Rozszerza `humanize()` z aiHelpers (nie dubluje). Integracja: App.tsx preflight PRZED
+turą (brak mózgu → wyjaśnienie+Napraw, zero „trzech kropek"); catch → adviseError;
+**`await speak()` ograniczony do 60 s** (systemowy TTS na Androidzie potrafi nie zgłosić końca —
+to była realna przyczyna wiecznych kropek); `ChatMessage.fix` + przycisk w MessageBubble
+(onFix → setShowSettings). 10 testów (`tests/errorAdvisor.test.ts`).
+
+**Commit `51e80c1` — CRM Klient 360:** `src/lib/clientCrm.ts` (czysty, SKŁADA istniejące
+źródła): `clientTimeline` (notatki+maile+finanse chronologicznie; mail po firmie ci LUB adresie,
+finanse po leadId>nazwie — cudze dane nie przeciekają), `clientCard` (następny krok, wartość
+undefined-gdy-brak, ostatni ślad+czym był, liczniki, sumy), `nextActionFor` (opt-out/doNotContact
+wygrywają), `reminderInDays` (9:00, min. jutro). LeadDetail: karta 360 + chipy przypomnień
+(nextFollowUpAt + ślad w osi) + „🕘 Oś czasu klienta" zamiast listy samych notatek.
+14 testów (`tests/clientCrm.test.ts`). Reużyte: leadTimeline/appendLeadNote (leadNotes),
+relationshipStatus (salesEngine), FinanceProject.leadId.
+
+Także `12e0597`: polish trwałych szkiców (walidacja odtworzonego modelu Studia względem
+katalogu; autoGrow Composera po hydratacji). Bramki po `51e80c1`: Vitest 337/2918.
+
 ## 4. Pomiary
 
 - Bramki lokalne na `5fffac7`: tsc czysty, ESLint czysty, Vitest 315 plików / 2708 testów
