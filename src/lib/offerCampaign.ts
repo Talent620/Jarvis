@@ -217,6 +217,9 @@ export function campaignStatusText(c: OfferCampaign | undefined, sentToday: numb
 // Adapter (impure): wpięcie w cykl aplikacji. Cienki — cała logika decyzyjna jest w funkcjach wyżej.
 // ————————————————————————————————————————————————————————————————
 
+/** Blokada re-entrancji cyklu: gdy jeden bieg czeka na wysyłkę, kolejny tick nie startuje drugiego. */
+let cycleInFlight = false;
+
 /** Zapisz stan kampanii w ustawieniach (trwałość). */
 function persistCampaign(c: OfferCampaign | undefined): void {
   store.setSettings({ offerCampaign: c });
@@ -291,6 +294,21 @@ export async function runOfferCampaignCycle(now = Date.now()): Promise<{ sent: b
   // Twardy warunek techniczny: bez skonfigurowanej wysyłki nie udajemy, że coś idzie.
   if (!canSendDirect()) return { sent: false, reason: "brak skonfigurowanej wysyłki" };
 
+  // BEZPIECZNIK RE-ENTRANCJI: cykl czeka na draftOffer (generacja AI) + wysyłkę — to potrafi
+  // trwać dłużej niż odstęp ticka (90 s). Bez tej blokady drugi tick wszedłby w cykl, PRZED
+  // zapisaniem lastSentAt, przeczytał ten sam stan/licznik i wysłał DRUGI mail — omijając
+  // throttling i dzienny limit. Jedna wysyłka na raz, kropka.
+  if (cycleInFlight) return { sent: false, reason: "cykl już trwa" };
+  cycleInFlight = true;
+  try {
+    return await runCycleGuarded(c, now);
+  } finally {
+    cycleInFlight = false;
+  }
+}
+
+/** Wewnętrzny bieg cyklu (chroniony przez cycleInFlight w runOfferCampaignCycle). */
+async function runCycleGuarded(c: OfferCampaign, now: number): Promise<{ sent: boolean; reason?: string }> {
   const footer = campaignFooter(store.settings.emailSignature);
   const sentToday = sentTodayCount(store.data.sentMail || [], now);
   const gate = campaignCanSendNow(c, { sentToday, footer, now });
