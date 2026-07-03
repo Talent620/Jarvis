@@ -315,6 +315,30 @@ w jsdom): zasiane szkice wracają po montażu, klik 🆕 czyści stan ORAZ local
 znika na pustym panelu. REGUŁA NA PRZYSZŁOŚĆ: nowy panel z usePersistentState = obowiązkowy
 przycisk czystej karty + wpis w tym teście.
 
+## 4g. Błędy-UX (kroki naprawy) + Panel Klienta CRM (2026-07-03, noc)
+
+**errorAdvisor v2 (commity 1cf0889 + silent-provider):** przepisany na `ErrorAdvice.steps[]`
+(numerowane kroki) + `adviceMessage()` (bąbel = white-space:pre-wrap). REALNE przyczyny „…"
+u użytkownika: (1) providers zwracają `text: text || "…"` → PUSTA odpowiedź modelu wygląda jak
+zawis; `isEmptyReplyText()` + `adviseEmptyReply()` zamieniają ją na komunikat z krokami (o ile
+brak tools/citations). (2) App-level BACKSTOP 150 s (Promise.race z askJarvis) — „…" ZAWSZE się
+rozstrzyga. (3) klasa „Dostawca AI milczy / tryb lokalny bez modelu" (watchdog brain.ts:82/84) →
+radzi przełączyć na Gemini/chmurę albo uruchomić Ollamę. ChatMessage.fix + przycisk w bąblu.
+12 testów (`tests/errorAdvisor.test.ts`). UWAGA: pułapka cudzysłowów uderzyła 3× w tej serii
+(errorAdvisor, testy, changelog) — fixer: `re.sub(r'„([^"”]*)"', r'„\1”', linia)` tylko na
+liniach nie-komentarzowych.
+
+**Panel Klienta CRM (commit 9f7ec64, CI 8/8):** research Salesforce/HubSpot/Pipedrive → 10-punktowy
+kanoniczny model rekordu klienta. `src/lib/clientRecord.ts` (czysty): PIPELINE_STAGES +
+pipelineProgress/stageLabel (lejek jako oś), `clientRecord()` (kompletny model widoku z istniejących
+źródeł), etykiety `normalizeTag(s)/addTag/removeTag/suggestedTags` (higiena: bez dubli ci, ≤12).
+`Lead.tags?: string[]` (additive). `src/components/ClientPanel.tsx` — NA WSPÓLNYM Modal
+(a11y+Escape; przeszedł `modalMigrationGuard` bez whitelist-paddingu): pasek+etapy lejka, karta
+następnego kroku, szybkie akcje (dzwoń/mail/SMS/mapy/przypomnij/Teczka AI), 4 zakładki
+(Przegląd+etykiety / Oś czasu / Notatki / Finanse), respekt opt-out. Wpięte w SalesDashboard
+(tap klienta → Panel; Teczka AI/LeadDetail z wnętrza). 13 testów (clientRecord 9 + clientPanelBehavior 4).
+REGUŁA: nowy panel z `.sheet` = użyj `<Modal>`, nie ręcznego sheet (guard to wymusza).
+
 ## 4. Pomiary
 
 - Bramki lokalne na `5fffac7`: tsc czysty, ESLint czysty, Vitest 315 plików / 2708 testów
