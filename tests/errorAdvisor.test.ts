@@ -25,6 +25,15 @@ describe("adviseError — klasy błędów: opis + kroki + akcja", () => {
     expect(a.human).toMatch(/klucz/i);
     expect(a.steps.join(" ")).toMatch(/aistudio\.google\.com\/apikey/);
   });
+  it("dostawca MILCZY / tryb lokalny bez modelu → radzi przełączyć na Gemini/chmurę", () => {
+    for (const raw of ["Dostawca AI milczy — przełączam na kolejny mózg.", "Dostawca AI nie odpowiada — przełączam na kolejny mózg.", "brak mózgu"]) {
+      const a = adviseError(raw);
+      expect(a.human, raw).toMatch(/żaden mózg|lokaln/i);
+      expect(a.steps.join(" ")).toMatch(/Gemini/);
+      expect(a.steps.join(" ")).toMatch(/lokaln/i);
+      expect(a.fix!.nav).toBe("settings");
+    }
+  });
   it("timeout/zawis (backstop) → kroki o internecie i przełączeniu dostawcy", () => {
     const a = adviseError("Odpowiedź trwała zbyt długo (przekroczono czas)");
     expect(a.human).toMatch(/zbyt długo|zerwał/i);

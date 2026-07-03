@@ -91,6 +91,20 @@ export function adviseError(raw: string): ErrorAdvice {
       fix: FIX_AI,
     };
   }
+  // Dostawca MILCZY / nie odpowiada / watchdog przełącza, a mimo to tura padła — najczęściej
+  // TRYB LOKALNY bez uruchomionego modelu (status „Lokalnie") albo wybrany dostawca bez klucza.
+  if (/milczy|nie odpowiada|nie odpowiedział|przełączam na kolejny|brak mózgu|brak dostępnego|no usable|all providers|wszystkie.*(m[óo]zg|dostawc)/i.test(m)) {
+    return {
+      human: "Żaden mózg AI nie odpowiedział. Najczęstsza przyczyna: działasz w trybie LOKALNYM (status „Lokalnie”), a lokalny model nie jest uruchomiony — albo wybrany dostawca w chmurze nie ma klucza.",
+      steps: [
+        "Najpewniejsze wyjście: kliknij „⚙ Napraw” poniżej → w „Ustawienia → AI” ustaw „Dostawca” na „Gemini” (chmura).",
+        "Wklej klucz Gemini z aistudio.google.com/apikey (darmowy) i wybierz „Model: Auto”.",
+        "Jeśli świadomie chcesz trybu LOKALNEGO: włącz komputer z Ollamą i podaj jego adres, albo wyłącz „Tylko na urządzeniu / tryb lokalny”.",
+        "Wróć i kliknij „🔄 Ponów”.",
+      ],
+      fix: FIX_AI,
+    };
+  }
   // Sieć / timeout / zawieszenie (w tym backstop z App: „odpowiedź trwała zbyt długo”).
   if (/timeout|abort|failed to fetch|load failed|network|net::|przekroczono czas|trwała zbyt długo|zbyt długo/i.test(m)) {
     return {
