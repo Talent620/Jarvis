@@ -79,9 +79,9 @@ sztafetę z weryfikacją odczytem — czego żaden pojedynczy silnik dziś nie r
   idempotencja, karta przekazania) + **emulator urządzenia jako PRAWDZIWY drugi koniec
   MCP** (moduł TS z tym samym adapterem, read-back potwierdzający stan) + testy Vitest.
 - **SYMULOWANE (oznaczone):** fizyczny ESP32/RPi — emulator, nie sprzęt.
-- **ZAPROJEKTOWANE, nie zbudowane w sesji:** realny nasłuch w EXE (tray/serwer) i kanał
-  push telefon→PC — wymagają zmian w `electron/main.cjs` i buildu Windows; poza jednym
-  bezpiecznym przekrojem, opisane jako następny krok.
+- **ZAPROJEKTOWANE, nie zbudowane w sesji:** kanał push telefon→PC, parowanie QR/HMAC i przejście
+  z loopbacku na LAN — wymagają dalszej pracy. (Nasłuch EXE + tray + autostart są już ZBUDOWANE
+  i testowane w Node/CI — patrz 4b.)
 - **NIEUDOWODNIONE:** działanie na fizycznym Samsung S9 i realnym EXE użytkownika.
 
 ## 3b. Odrzucone hipotezy (skrót uzasadnień) — patrz wyżej „Ubój”.
@@ -156,6 +156,16 @@ nie logika sztafety.
   kasowanie. Tylko kroki device odwracalne (nie hardStop); płatność/publikacja jawnie
   nieodwracalne; brak potwierdzenia → nie ogłasza cofnięcia. Domyka triadę bezekranową
   „dlaczego?/stop/cofnij". write (lokalne+emulator). 5 testów (`tests/horizonMissionUndo.test.ts`).
+
+- `electron/horizon-listener-core.cjs` (czysty rdzeń) + `electron/horizon-listener.cjs`
+  (transport) + `exeNode.ts` + narzędzie `mission_exe_probe` — **realny lokalny węzeł
+  Windows EXE**: serwer HTTP nasłuchuje WYŁĄCZNIE na 127.0.0.1:4318, losowy token sesji,
+  allowlista show_window/set_clipboard/read_state; próba EXE idzie przez uwierzytelniony
+  HTTP-MCP i osiąga CONFIRMED dopiero po osobnym read_state windowVisible (ACK → ATTEMPTED).
+  Tray utrzymuje proces po schowaniu okna; autostart jawnie opt-in; token tylko dla
+  własnej ramki file:// przez IPC. Rdzeń testowany adwersarialnie (Vitest 11 testów:
+  brak tokenu→401, obcy origin→403, narzędzie spoza allowlisty→403, zakaz bindu 0.0.0.0,
+  ACK≠CONFIRMED, /health bez danych wrażliwych); wiring walidowany `node --check` + CI EXE build.
 
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;

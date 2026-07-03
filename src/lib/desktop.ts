@@ -15,6 +15,9 @@ export interface JarvisDesktop {
   clipWatch(enabled: boolean): Promise<boolean>;
   onClipboard(cb: (text: string) => void): () => void;
   onVoiceMode(cb: () => void): () => void;
+  /** Project Horizon — token/status lokalnego węzła EXE (tylko własna ramka). */
+  horizonToken?(): Promise<string | null>;
+  horizonStatus?(): Promise<{ listening: boolean; port?: number; hasToken?: boolean }>;
 }
 
 export function desktop(): JarvisDesktop | null {
@@ -22,6 +25,13 @@ export function desktop(): JarvisDesktop | null {
 }
 
 export const isDesktop = (): boolean => !!desktop();
+
+/** Token lokalnego węzła EXE (null poza desktopem / gdy listener nie stoi). */
+export async function horizonExeToken(): Promise<string | null> {
+  const d = desktop();
+  if (!d || typeof d.horizonToken !== "function") return null;
+  try { return await d.horizonToken(); } catch { return null; }
+}
 
 const NOT_DESKTOP = "Ta akcja działa tylko w aplikacji desktopowej JARVIS (Windows .exe).";
 

@@ -47,4 +47,7 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
     ipcRenderer.on("jarvis:voicemode", listener);
     return () => ipcRenderer.removeListener("jarvis:voicemode", listener);
   },
+  // Project Horizon — token/status lokalnego węzła EXE (tylko dla własnej ramki).
+  horizonToken: () => ipcRenderer.invoke("jarvis:horizon-token"),
+  horizonStatus: () => ipcRenderer.invoke("jarvis:horizon-status"),
 });

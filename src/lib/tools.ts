@@ -9,6 +9,8 @@ import { simulatePriceChange, simulateSendOffers, bestClientByProfitToTime } fro
 import { businessStatusText, computeJourney } from "./businessFlow";
 import { calibrationSummary, calibrationText, explainLearning } from "./predictionLedger";
 import { runDemoMission, missionStatusReport, missionWhyReport, missionUndoLast } from "./horizon/demoMission";
+import { runExeProbe } from "./horizon/exeNode";
+import { horizonExeToken } from "./desktop";
 import { recommendBrain } from "./brainAdvisor";
 import type { FinanceProject, FinanceStatus } from "../types";
 import { canSendDirect, sendTestEmail, sendAllOffers, sendOfferEmail, isValidEmail, mailReadiness } from "./mailer";
@@ -1801,6 +1803,17 @@ const tools: Tool[] = [
       input_schema: obj({}, []),
     },
     run: () => missionWhyReport(false),
+  },
+  {
+    def: {
+      name: "mission_exe_probe",
+      description: "Próba REALNEGO lokalnego węzła Windows EXE (Project Horizon): przez uwierzytelniony kanał na 127.0.0.1:4318 przywołuje okno programu desktopowego, a skutek POTWIERDZA osobnym odczytem zwrotnym (Drabina Prawdy) — samo potwierdzenie wysłania to za mało. Poza aplikacją desktopową (albo gdy węzeł nieaktywny) mówi wprost „NIEPOTWIERDZONY”, nie udaje sukcesu. Używaj, gdy użytkownik mówi: sprawdź węzeł EXE, przywołaj okno przez węzeł, test lokalnego programu, czy komputer odpowiada.",
+      input_schema: obj({}, []),
+    },
+    run: async () => {
+      const token = await horizonExeToken();
+      return runExeProbe(token, Date.now(), uid);
+    },
   },
   {
     def: {

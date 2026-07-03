@@ -5,7 +5,58 @@ const fs = require("fs");
 const { spawn, exec } = require("child_process");
 const os = require("os");
 
+const { Tray, nativeImage } = require("electron");
+const horizonListener = require("./horizon-listener.cjs");
+
 const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
+
+let tray = null;         // ikona w zasobniku systemowym (Project Horizon)
+let isQuitting = false;  // true tylko przy jawnym „Zakończ" — inaczej zamknięcie chowa do traya
+
+// Zaufane źródło IPC (wersja modułowa): tylko własna ramka file://…/dist może
+// odczytać token/status węzła — kompromitacja renderera nie wyciągnie tokenu.
+function isTrustedIpcGlobal(event) {
+  const url = event?.senderFrame?.url || event?.sender?.getURL?.() || "";
+  return url.startsWith("file://");
+}
+
+// Tray + autostart: zamknięcie okna chowa aplikację (listener EXE zostaje aktywny),
+// a JARVIS wraca skrótem / z ikony. Autostart zmienia WYŁĄCZNIE jawny checkbox.
+function autoStartEnabled() {
+  try { return !!app.getLoginItemSettings().openAtLogin; } catch { return false; }
+}
+function setAutoStart(on) {
+  try { app.setLoginItemSettings({ openAtLogin: !!on }); } catch { /* platforma bez wsparcia */ }
+}
+function buildTrayMenu() {
+  const st = horizonListener.listenerStatus();
+  return Menu.buildFromTemplate([
+    { label: "Pokaż JARVIS", click: () => summonWindow() },
+    { type: "separator" },
+    { label: st.listening ? `Węzeł lokalny: aktywny (127.0.0.1:${st.port})` : "Węzeł lokalny: nieaktywny", enabled: false },
+    { label: "Uruchamiaj przy starcie systemu", type: "checkbox", checked: autoStartEnabled(), click: (mi) => setAutoStart(mi.checked) },
+    { type: "separator" },
+    { label: "Zakończ", click: () => { isQuitting = true; app.quit(); } },
+  ]);
+}
+function createTray() {
+  if (tray) return;
+  try {
+    // Ikona z małego przezroczystego PNG (brak zewnętrznego pliku) — tray i tak działa.
+    const img = nativeImage.createFromDataURL(
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    );
+    tray = new Tray(img);
+    tray.setToolTip("JARVIS — węzeł lokalny (Project Horizon)");
+    tray.setContextMenu(buildTrayMenu());
+    tray.on("click", () => summonWindow());
+  } catch {
+    tray = null; // brak traya (np. środowisko bez GUI) — aplikacja działa dalej
+  }
+}
+function refreshTray() {
+  if (tray) { try { tray.setContextMenu(buildTrayMenu()); } catch { /* ignore */ } }
+}
 
 function loadState() {
   try {
@@ -101,6 +152,14 @@ function createWindow() {
   });
 
   ["resize", "move", "close"].forEach((ev) => mainWindow.on(ev, () => saveState(mainWindow)));
+  // Zamknięcie okna (X) chowa do traya zamiast kończyć — węzeł lokalny zostaje aktywny.
+  // Realny koniec: „Zakończ" z traya (isQuitting) albo Cmd+Q na macOS.
+  mainWindow.on("close", (e) => {
+    if (!isQuitting && tray) {
+      e.preventDefault();
+      mainWindow.hide();
+    }
+  });
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
@@ -498,7 +557,29 @@ if (!gotLock) {
     });
 
     registerDesktopControl();
+
+    // Project Horizon — lokalny węzeł EXE: serwer HTTP wyłącznie na 127.0.0.1:4318
+    // z losowym tokenem sesji. Realne akcje wstrzykiwane (rdzeń pozostaje czysty).
+    try {
+      horizonListener.startHorizonListener({
+        showWindow: () => summonWindow(),
+        setClipboard: (t) => { try { clipboard.writeText(String(t || "")); } catch { /* schowek zajęty */ } },
+        onStatus: () => refreshTray(),
+      });
+    } catch { /* listener nie wstał — aplikacja działa normalnie, węzeł po prostu nieaktywny */ }
+
+    // Token węzła EXE dostępny WYŁĄCZNIE dla własnego renderera przez zaufany IPC.
+    ipcMain.handle("jarvis:horizon-token", (event) => {
+      if (!isTrustedIpcGlobal(event)) return null;
+      return horizonListener.currentToken() || null;
+    });
+    ipcMain.handle("jarvis:horizon-status", (event) => {
+      if (!isTrustedIpcGlobal(event)) return { listening: false };
+      return horizonListener.listenerStatus();
+    });
+
     buildMenu();
+    createTray();
     createWindow();
 
     // Globalny skrót: Ctrl+Alt+J przywołuje JARVIS-a nad każdą aplikacją.
@@ -523,11 +604,15 @@ if (!gotLock) {
   });
 
   app.on("window-all-closed", () => {
+    // Z aktywnym trayem (Windows/Linux) NIE kończymy — węzeł lokalny żyje w tle,
+    // JARVIS wraca z ikony. Bez traya albo po jawnym „Zakończ" — jak dotąd.
+    if (tray && !isQuitting) return;
     if (process.platform !== "darwin") app.quit();
   });
 
   app.on("will-quit", () => {
     globalShortcut.unregisterAll();
     setClipWatch(false);
+    try { horizonListener.stopHorizonListener(); } catch { /* już zamknięty */ }
   });
 }
