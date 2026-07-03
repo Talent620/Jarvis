@@ -10,7 +10,7 @@ import { evidenceStory } from "./evidenceLedger";
 import { loadMissionLog, upsertMission } from "./missionLog";
 import { explainMission } from "./missionWhy";
 import { undoLastStep } from "./missionUndo";
-import { beat, fleetReportText } from "./deviceHealthStore";
+import { beat, fleetReportText, nodeDead } from "./deviceHealthStore";
 import type { Mission, MissionStep } from "./types";
 
 // Emulator żyje przez sesję aplikacji — stan „urządzenia" jest spójny między wywołaniami.
@@ -60,11 +60,11 @@ export async function runDemoMission(missionId: string, now: number): Promise<st
   // AKT 1: usterka transientna urządzenia dokładnie na kroku s2.
   dev.injectFailure();
   const acts1 = dev.actuations;
-  const r1 = await runMission(initMissionState(mission), log.ledger, exec, { now, onNodeConfirmed: (n) => beat(n, now) });
+  const r1 = await runMission(initMissionState(mission), log.ledger, exec, { now, onNodeConfirmed: (n) => beat(n, now), nodeIsDead: (n) => nodeDead(n, now) });
   const afterFail = missionProgress(r1.state);
 
   // AKT 2: wznowienie — bez podwójnych działań (dowód: licznik akcji urządzenia).
-  const r2 = await runMission(r1.state, r1.ledger, exec, { now: now + 1, onNodeConfirmed: (n) => beat(n, now + 1) });
+  const r2 = await runMission(r1.state, r1.ledger, exec, { now: now + 1, onNodeConfirmed: (n) => beat(n, now + 1), nodeIsDead: (n) => nodeDead(n, now + 1) });
   upsertMission(r2.state, r2.ledger);
 
   const prog = missionProgress(r2.state);

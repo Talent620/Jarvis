@@ -42,6 +42,12 @@ export interface RelayOptions {
    * żeby orkiestrator pozostał czysty względem trwałego store'a.
    */
   onNodeConfirmed?: (node: MissionStep["node"]) => void;
+  /**
+   * Predykat Strażnika: czy węzeł jest MARTWY? Sprawdzany PRZED wykonaniem kroku na tym
+   * węźle — martwy węzeł wstrzymuje sztafetę (status „paused"), zamiast strzelać w próżnię.
+   * Wstrzykiwany (silnik czysty względem store'a zdrowia).
+   */
+  nodeIsDead?: (node: MissionStep["node"]) => boolean;
 }
 
 const NODE_SOURCE: Record<MissionStep["node"], string> = {
@@ -95,6 +101,13 @@ export async function runMission(
         outcome: { state: "CONFIRMED", evidence: { message: "już potwierdzone (wyślij-raz)" } },
       };
       continue;
+    }
+
+    // Strażnik węzłów: martwy węzeł → wstrzymaj sztafetę PRZED próbą (nie strzelamy w próżnię,
+    // nie ponawiamy sami). W próbie generalnej (rehearsal) nie blokujemy — nic nie wychodzi.
+    if (!opts.rehearsal && opts.nodeIsDead && opts.nodeIsDead(step.node)) {
+      status = "paused";
+      break;
     }
 
     // Wykonaj krok na węźle (transport wstrzyknięty).

@@ -2,7 +2,7 @@
 // Cienki adapter nad czystym silnikiem deviceHealth.ts. Trzyma ostatnie sygnały życia
 // węzłów między sesjami (jak proactive/missionLog). Zero logiki decyzyjnej tutaj.
 import { loadJson, saveJson } from "../lsJson";
-import { recordHeartbeat, fleetStory, anyDead, type HeartbeatState } from "./deviceHealth";
+import { recordHeartbeat, fleetStory, anyDead, nodeHealth, type HeartbeatState } from "./deviceHealth";
 import type { MissionNode } from "./types";
 
 const KEY = "jarvis.horizon.heartbeats.v1";
@@ -23,6 +23,11 @@ export function beat(node: MissionNode, now = Date.now()): void {
 /** Czy któryś węzeł jest martwy (sygnał dla sztafety, by się wstrzymać)? */
 export function fleetHasDead(now = Date.now()): boolean {
   return anyDead(load(), now);
+}
+
+/** Czy KONKRETNY węzeł jest martwy (predykat Strażnika dla runMission.nodeIsDead). */
+export function nodeDead(node: MissionNode, now = Date.now()): boolean {
+  return nodeHealth(load(), node, now) === "dead";
 }
 
 /** Raport zdrowia floty po ludzku (dla narzędzia mission_devices / panelu). */

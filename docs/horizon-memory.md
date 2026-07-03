@@ -202,6 +202,13 @@ nie logika sztafety.
   (zero cichych ponowień). 8 testów (`tests/horizonDeviceHealth.test.ts`, w tym integracja:
   pokaz bije heartbeaty → mission_devices je widzi).
 
+- `missionRelay.nodeIsDead` (wstrzykiwany predykat) + `deviceHealthStore.nodeDead` —
+  **auto-pauza sztafety na martwym węźle**: PRZED wykonaniem kroku sztafeta pyta Strażnika;
+  martwy węzeł → status „paused" bez próby wykonania (zero strzelania w próżnię, zero
+  cichych ponowień). Zdrowe węzły przechodzą; rehearsal nigdy nie jest blokowany. Silnik
+  pozostaje czysty (predykat wstrzykiwany). 4 testy (`tests/horizonGuardianGate.test.ts`,
+  w tym: executor NIE wołany dla martwego węzła, brak regresji bez predykatu).
+
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;
 działanie na fizycznym S9 i realnym EXE = NIEUDOWODNIONE.
