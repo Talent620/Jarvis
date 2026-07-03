@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { growthContextToBrief, demoProjectName, type GrowthContext } from "../lib/growthContext";
 import { parseDesignTokens } from "../lib/designEngine";
 import { blueprintSummary, type SiteBlueprint, type MotionLevel, type ThreeDMode, type FormMode } from "../lib/siteBlueprint";
@@ -11,6 +11,8 @@ import { assessSeo, seoFixInstruction } from "../lib/seoPreview";
 import { buildRobotsTxt, buildSitemapXml, extractInternalPaths, normalizeDomain } from "../lib/siteSeoFiles";
 import { useEscape } from "../hooks/useEscape";
 import { usePersistentState } from "../hooks/usePersistentState";
+import { writeDraft, readDraft } from "../lib/draftStore";
+import { getWebBuild, beginWebBuild, endWebBuild, subscribeWebBuild } from "../lib/webBuildStatus";
 import { copyWithToast, toast } from "../lib/toast";
 import { listSiteProjects, saveSiteProject, renameSiteProject, removeSiteProject, exportSiteProject, importSiteProject } from "../lib/siteProjects";
 import type { SiteProject } from "../types";
@@ -77,7 +79,9 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
   const [kind, setKind] = usePersistentState<SiteKind>("webstudio.kind", "auto");
   const [style, setStyle] = usePersistentState<SiteStyle>("webstudio.style", "auto");
   const [html, setHtml] = usePersistentState("webstudio.html", "");
-  const [busy, setBusy] = useState(false);
+  // busy startuje z GLOBALNEGO stanu budowy — po powrocie do panelu w trakcie budowy w tle
+  // przyciski są zablokowane i widać, że praca trwa (zamiast udawać bezczynność).
+  const [busy, setBusy] = useState(() => getWebBuild().running);
   const [err, setErr] = useState("");
   const [view, setView] = usePersistentState<"preview" | "code">("webstudio.view", "preview");
   const [showBrief, setShowBrief] = useState(false);
@@ -163,6 +167,23 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Czy panel jest wciąż zamontowany — pętla budowy w tle po ukończeniu wybiera: stan Reacta
+  // (panel otwarty) czy globalny toast „gotowe / błąd" (panel zamknięty w trakcie).
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+  // Żywy stan budowy w tle: gdy budowa (z poprzedniego otwarcia panelu) właśnie SKOŃCZYŁA,
+  // wciągnij świeży wynik ze szkicu do stanu tego (nowego) egzemplarza panelu.
+  useEffect(() => subscribeWebBuild(() => {
+    const running = getWebBuild().running;
+    setBusy(running);
+    if (!running) {
+      const fresh = readDraft("webstudio.html", "");
+      if (fresh) { setHtml(fresh); setAudit(auditSite(fresh)); setView("preview"); }
+    }
+    // settery stabilne (useState/usePersistentState) — subskrypcja zakładana raz przy montażu
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), []);
+
   // 🎨 Design tokens z komentarza DESIGN-TOKENS w wygenerowanym HTML (Premium Design Engine).
   // Memo, bo parsowanie ~100 KB przy każdym renderze (pisanie w polu opisu) to zbędny koszt na S9.
   // Stare projekty bez komentarza → null → panel się nie pokazuje (zero błędów).
@@ -175,6 +196,10 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
     const promptText = instructionOverride ?? prompt;
     // Edycja wymaga polecenia; budowa od zera może wyjść z briefu i/lub opisu.
     if (edit ? !promptText.trim() : !canBuild) return;
+    // BUDOWA W TLE: slot budowy żyje POZA panelem (webBuildStatus) — możesz zamknąć Kreator
+    // i robić coś innego; wynik wyląduje w trwałym szkicu, a toast da znać, że gotowe.
+    // Guard: dwie generacje naraz marnują tokeny i nadpisują się — druga próba grzecznie odmawia.
+    if (!beginWebBuild(edit)) { toast("⏳ Budowa strony już trwa — poczekaj na jej koniec."); return; }
     setBusy(true);
     setErr("");
     try {
@@ -185,7 +210,11 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
       // S9/brak WebGL dostaje CSS/poster, REAL tylko gdy urządzenie daje radę (lazy + poster + fallback).
       const resolved3D = blueprint ? resolve3D(toPolicyMode(blueprint.threeDMode), detectDeviceCaps()) : undefined;
       const r = await generateSite(desc, edit && html ? html : undefined, kind, style, blueprint ?? undefined, resolved3D);
-      if ("error" in r) { setErr(r.error); return; }
+      if ("error" in r) {
+        setErr(r.error); // po odmontowaniu setErr to no-op — wtedy globalny toast niesie wiadomość
+        if (!mountedRef.current) toast(`⚠ Budowa strony nie powiodła się: ${r.error}`);
+        return;
+      }
       // Auto-naprawa: jeśli odpowiedź AI jest UCIĘTA (struktura lub finishReason=MAX_TOKENS) — jedna
       // bezpieczna próba dokończenia, scalenie i ponowna walidacja. Nigdy nie podajemy uciętego HTML.
       const rep = await repairTruncatedSite(r.html, continueSite, { finishReason: r.finishReason });
@@ -199,11 +228,16 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
           return;
         }
         // Nowa strona bez poprzedniej dobrej: pokaż podgląd, ale zablokuj pobranie i nie zapisuj projektu.
+        // Zapis wprost do szkicu — wynik przeżywa nawet zamknięcie panelu w trakcie budowy.
+        writeDraft("webstudio.html", rep.html); writeDraft("webstudio.view", "preview");
         setHtml(rep.html); setAudit(auditSite(rep.html)); setView("preview");
         setBrokenDemo({ diagnostics, keptPrevious: false, editFlag: edit });
+        if (!mountedRef.current) toast("⚠ Strona zbudowana w tle, ale UCIĘTA — otwórz 🌐 Kreator i kliknij „Napraw ponownie”.");
         return;
       }
-      // OK — bezpieczna, kompletna strona.
+      // OK — bezpieczna, kompletna strona. Najpierw wprost do trwałego szkicu (przeżywa
+      // odmontowanie panelu), potem stan Reacta (gdy panel wciąż otwarty — te same wartości).
+      writeDraft("webstudio.html", rep.html); writeDraft("webstudio.view", "preview");
       setHtml(rep.html);
       setAudit(auditSite(rep.html));
       setView("preview");
@@ -213,25 +247,34 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
         const rec = saveSiteProject({ id: projId, name: projName, prompt: edit ? prompt : (instructionOverride ?? prompt), kind, style, html: rep.html, brief });
         setProjId(rec.id); refreshProjs();
       }
+      if (!mountedRef.current) toast(edit ? "✅ Zmiana strony gotowa — otwórz 🌐 Kreator, żeby zobaczyć." : "✅ Strona zbudowana w tle — otwórz 🌐 Kreator, żeby zobaczyć.");
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
+      const em = e instanceof Error ? e.message : String(e);
+      setErr(em);
+      if (!mountedRef.current) toast(`⚠ Budowa strony nie powiodła się: ${em}`);
     } finally {
+      endWebBuild(); // ZAWSZE zwolnij slot budowy (sukces/błąd/wyjątek tak samo)
       setBusy(false); // zawsze odblokuj przycisk, nawet przy nieoczekiwanym błędzie
     }
   };
 
   // 🔧 Napraw ponownie — kolejna JEDNA próba dokończenia uciętego demo (na żądanie użytkownika).
+  // Też w tle: slot budowy + zapis szkicu wprost, więc zamknięcie panelu nie gubi naprawy.
   const retryRepair = async () => {
     if (busy || !html) return;
+    if (!beginWebBuild(true)) { toast("⏳ Budowa strony już trwa — poczekaj na jej koniec."); return; }
     setBusy(true); setErr("");
     try {
       const rep = await repairTruncatedSite(html, continueSite);
+      writeDraft("webstudio.html", rep.html);
       setHtml(rep.html); setAudit(auditSite(rep.html));
       if (rep.validation.safeToDownload) { setBrokenDemo(null); setShowDiag(false); toast("✅ Udało się dokończyć stronę."); }
       else { setBrokenDemo({ diagnostics: rep.validation.issues.filter((i) => i.severity === "critical").map((i) => i.message), keptPrevious: false, editFlag: false }); toast("Nadal nie udało się dokończyć — spróbuj przebudować od nowa."); }
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally { setBusy(false); }
+      const em = e instanceof Error ? e.message : String(e);
+      setErr(em);
+      if (!mountedRef.current) toast(`⚠ Naprawa strony nie powiodła się: ${em}`);
+    } finally { endWebBuild(); setBusy(false); }
   };
 
   // Kreator najpierw MYŚLI: wygeneruj plan strony (blueprint) przez model, potem można go edytować.
