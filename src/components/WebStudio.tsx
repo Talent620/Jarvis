@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { growthContextToBrief, demoProjectName, type GrowthContext } from "../lib/growthContext";
+import { parseDesignTokens } from "../lib/designEngine";
 import { blueprintSummary, type SiteBlueprint, type MotionLevel, type ThreeDMode, type FormMode } from "../lib/siteBlueprint";
 import { resolve3D, detectDeviceCaps, toPolicyMode } from "../lib/web3dPolicy";
 import { validateSite, validationVerdict } from "../lib/siteValidator";
@@ -161,6 +162,11 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
     if (html && !audit) setAudit(auditSite(html));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 🎨 Design tokens z komentarza DESIGN-TOKENS w wygenerowanym HTML (Premium Design Engine).
+  // Memo, bo parsowanie ~100 KB przy każdym renderze (pisanie w polu opisu) to zbędny koszt na S9.
+  // Stare projekty bez komentarza → null → panel się nie pokazuje (zero błędów).
+  const designTokens = useMemo(() => (html ? parseDesignTokens(html) : null), [html]);
 
   const briefText = buildClientBrief(brief);
   const canBuild = !!(prompt.trim() || briefText);
@@ -596,6 +602,38 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* 🎨 Design tokens (Premium Design Engine) — paleta, typografia, element-podpis */}
+          {html && designTokens && (
+            <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, minWidth: 0 }}>🎨 Design</span>
+                {designTokens.feeling.length > 0 && (
+                  <span className="muted" style={{ fontSize: 12, flexShrink: 0 }}>{designTokens.feeling.join(" · ")}</span>
+                )}
+              </div>
+              {designTokens.colors.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                  {designTokens.colors.map((c, i) => (
+                    <span key={i} title={`${c.name} ${c.hex}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11 }}>
+                      <span style={{ width: 14, height: 14, borderRadius: 4, background: c.hex, border: "1px solid rgba(128,128,128,.4)", display: "inline-block" }} />
+                      <span className="muted">{c.name}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {(designTokens.type.display || designTokens.type.body) && (
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  Typografia: {[designTokens.type.display && `nagłówki ${designTokens.type.display}`, designTokens.type.body && `tekst ${designTokens.type.body}`, designTokens.type.mono && `mono ${designTokens.type.mono}`].filter(Boolean).join(" · ")}
+                </div>
+              )}
+              {designTokens.signature.element && (
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  ✒ <b>{designTokens.signature.element}</b>{designTokens.signature.why ? ` — ${designTokens.signature.why}` : ""}
+                </div>
+              )}
             </div>
           )}
 

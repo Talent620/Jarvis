@@ -251,6 +251,26 @@ build produkcyjny zielony.
 dedup, suppression), ale NIE deklaruje „to legalne" — odpowiedzialność za podstawę kontaktu
 (art. 398 PKE) zostaje po stronie użytkownika; komunikat uzbrojenia mówi to wprost.
 
+## 4d. Trwała sesja funkcji + Premium Web Design Engine (2026-07-03)
+
+**Commit 1 `aa18385` — trwała sesja funkcji:** `src/lib/draftStore.ts` (czysty: rekord
+{v,at,value}, TTL 30 dni, bezpiecznik ~1,5 MB, best-effort I/O) + `src/hooks/usePersistentState.ts`
+(drop-in useState z lustrem w localStorage, leniwa hydratacja). Wpięte: WebStudio (prompt/kind/
+style/HTML/brief/quote/strategy/blueprint/projekt), Composer (niewysłany tekst), ContentStudio,
+AdStudio, Studio (opis/styl/model+suwaki SD, bez blobów). 15 testów (`tests/draftStore.test.ts`,
+pragma `// @vitest-environment jsdom` — vitest.config ma environment:"node").
+
+**Commit 2 — Premium Web Design Engine:** `src/lib/designEngine.ts` — metodologia EN 7 faz
+(temat→tokeny→pacing→restraint ruchu→copy→podłoga jakości→samokrytyka), ANTI-TEMPLATE GUARD
+(zakaz 3 domyślnych AI-looków), kontrakt `<!-- DESIGN-TOKENS {json} -->` w <head> (przeżywa
+extractHtml/zapisy/szkice), `parseDesignTokens` (nigdy nie rzuca; hex tylko #rgb/#rrggbb — idzie
+w inline style), `designSystemPrompt` (zastępuje BASE+PREMIUM z webgen.ts; FULL_SPEC tylko nowa
+strona; Brand Kit > temat; blueprint=STRUKTURA, filozofia=WYKONANIE; bez GSAP/Lenis — jeden plik).
+`improveSite` + SELF_CRITIQUE_INSTRUCTION. WebStudio: panel „🎨 Design" (useMemo na html).
+15 testów (`tests/designEngine.test.ts`). Decyzje usera: zawsze włączony · tokeny w UI · pełny
+deliverable. **Pułapka cudzysłowów uderzyła znowu** (`zł"` w SELF_CRITIQUE_INSTRUCTION → TS1002)
+— naprawa `”`.
+
 ## 4. Pomiary
 
 - Bramki lokalne na `5fffac7`: tsc czysty, ESLint czysty, Vitest 315 plików / 2708 testów

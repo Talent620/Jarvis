@@ -1,6 +1,7 @@
 import { askModel, askModelRich } from "./brain";
 import { validateBlueprint, blueprintToInstruction, fallbackBlueprint, SITE_BLUEPRINT_SCHEMA, type SiteBlueprint } from "./siteBlueprint";
 import { threeDInstruction, type Resolved3D } from "./web3dPolicy";
+import { designSystemPrompt, SELF_CRITIQUE_INSTRUCTION } from "./designEngine";
 import { humanize } from "./aiHelpers";
 import { validateSite, type SiteValidation } from "./siteValidator";
 import { zl } from "./format";
@@ -8,52 +9,15 @@ import { appendBrand } from "./brandKit";
 
 // Autonomiczny generator stron i SKLEPÓW: z opisu tworzy KOMPLETNĄ, nowoczesną
 // witrynę w jednym pliku HTML (wbudowany CSS i JS) na poziomie premium. Działa
-// z dowolnym dostawcą AI.
+// z dowolnym dostawcą AI. Serce promptu (filozofia projektowa, anti-template guard,
+// design tokens, samokrytyka) mieszka w designEngine.ts — tu zostaje domena stron:
+// typy witryn, style, kompletność, blueprint, wycena, audyt.
 
 export type SiteKind = "auto" | "landing" | "sklep" | "firma" | "portfolio" | "saas" | "blog";
 export type SiteStyle =
   | "auto" | "editorial" | "brutalist" | "glass" | "neon" | "retro" | "organic" | "swiss" | "luxury"
   // Systemy projektowe klasy światowej (ETAP 3 — AI Design Engine):
   | "apple" | "stripe" | "linear" | "notion" | "tesla" | "airbnb" | "openai" | "saas" | "enterprise" | "cyberpunk" | "minimal";
-
-const BASE = [
-  "Jesteś światowej klasy front-end developerem i dyrektorem artystycznym (poziom Awwwards, nagrody „Site of the Day”). Tworzysz KOMPLETNE, nowoczesne, dopracowane strony w JEDNYM pliku HTML (wbudowany CSS i JavaScript).",
-  "",
-  "ZASADY (bezwzględne):",
-  "- Zwróć WYŁĄCZNIE kod, zaczynając od <!DOCTYPE html>. Bez komentarzy poza kodem, bez bloków ```.",
-  "- Bez zewnętrznych bibliotek JS/CSS. Dozwolone wyłącznie Google Fonts przez <link> oraz zdjęcia z https://images.unsplash.com (trafne, tematyczne adresy).",
-  "- Kod kompletny i działający od razu po otwarciu w przeglądarce.",
-  "- SEO + meta: sensowny <title>, <meta name=description>, Open Graph (og:title/og:description/og:image), favicon jako inline SVG data-URI, lang=pl, znaczniki semantyczne (header/nav/main/section/footer).",
-  "",
-  "ORYGINALNOŚĆ (kluczowe — to NIE może wyglądać jak typowy szablon AI):",
-  "- Zaprojektuj JEDEN mocny motyw przewodni (signature element): charakterystyczny hero, nietypowa siatka, powracający kształt/akcent. Unikaj generycznego układu „hero + 3 karty + cennik”.",
-  "- Odważna, przemyślana KOMPOZYCJA: asymetria, nakładanie warstw, celowe łamanie siatki, duże kontrasty skali. Nie środkuj wszystkiego.",
-  "- Wyrazista para fontów (np. ekspresyjny nagłówek + czytelny tekst). Detale, których nie ma w przeciętnych stronach.",
-  "",
-  "POZIOM WIZUALNY (to ma wyglądać jak strona warta tysiące złotych):",
-  "- Paleta w zmiennych CSS (:root) z 1–2 kolorami akcentu i subtelnymi gradientami; motyw dobrany do branży/stylu.",
-  "- Typografia z charakterem: duży, mocny nagłówek hero (font-size: clamp(...)), wyraźna hierarchia, oddech (duże odstępy, max-width treści).",
-  "- Przyklejony, półprzezroczysty nagłówek z efektem rozmycia (backdrop-filter) i nawigacją; płynne przewijanie do sekcji (scroll-behavior: smooth).",
-  "- Animacje wejścia przy przewijaniu przez IntersectionObserver (fade/slide-up, z opóźnieniami). Mikrointerakcje: hover na kartach (unoszenie + cień), animowane przyciski, podkreślenia linków.",
-  "- Nowoczesne detale: gradientowe lub świetlne tło hero, zaokrąglenia/celowe kanty, miękkie cienie, ikony jako wklejony inline SVG (nie biblioteki).",
-  "- W pełni responsywne (mobile-first), z działającym menu mobilnym (hamburger w czystym JS). Uszanuj prefers-reduced-motion.",
-  "- REALNA treść po polsku dopasowana do tematu (nie lorem ipsum): chwytliwe nagłówki, konkretne opisy, sensowne CTA.",
-].join("\n");
-
-// Warstwa „klasa światowa / pionierska" — techniki i bogactwo, które oddzielają stronę
-// nagradzaną od przeciętnej. Doklejana zawsze; podnosi pułap bez psucia niezawodności.
-const PREMIUM = [
-  "POZIOM PIONIERSKI (to ma robić wrażenie „jak to zrobione?!” — a działać bezbłędnie offline z jednego pliku):",
-  "- WEJŚCIE: preloader/intro TYLKO jeśli plan strony tego wymaga — DOMYŚLNIE BEZ preloadera (nie blokuj pierwszego wyświetlenia/LCP). Z poszanowaniem prefers-reduced-motion.",
-  "- SEKCJE: liczba i rodzaj sekcji wynikają z PLANU strony (każda ma uzasadnienie biznesowe), a nie sztywno 8–12; bez zapychania monotonną listą kart.",
-  "- RUCH KLASY AWWWARDS: parallax na transform, sticky scroll storytelling, liczniki „od zera” (count-up) przy wejściu, sekwencyjne reveal z opóźnieniami, magnetyczne/animowane przyciski, animowany podpis SVG (stroke-dashoffset).",
-  "- TŁO Z CHARAKTEREM: gradient-mesh/aurora, subtelny szum (SVG feTurbulence jako tekstura), świetliste plamy podążające delikatnie kursorem, albo animowana siatka — jeden spójny motyw, nie wszystko naraz.",
-  "- DETALE PRO: spójny system w :root (skala typografii, odstępy, promienie, cienie, easingi), stany focus widoczne i estetyczne, idealny kontrast (WCAG AA), :focus-visible, aria-labels, alt-y.",
-  "- WYDAJNOŚĆ: obrazy z loading=lazy i sensownymi wymiarami, animacje na transform/opacity (nie layout), will-change oszczędnie, IntersectionObserver zamiast nasłuchu scroll.",
-  "- KROPKA NAD i: dopracowana stopka, micro-copy z osobowością, spójne ikony inline SVG, zero martwych linków (kotwice działają), płynne przejścia między sekcjami.",
-  "- Jeśli pasuje do tematu: tryb jasny/ciemny wg prefers-color-scheme, przełącznik motywu w czystym JS, zapamiętany w localStorage.",
-  "Cel: gość ma pomyśleć „to najlepsza strona w tej branży, jaką widziałem”. Ambitnie, ale ZAWSZE kompletnie i bez błędów w jednym pliku.",
-].join("\n");
 
 // Niesztampowe kierunki artystyczne — wymuszają wyrazisty, rozpoznawalny charakter (nie „kolejny szablon”).
 const STYLE_HINTS: Record<SiteStyle, string> = {
@@ -177,10 +141,14 @@ export async function generateSite(
   // ETAP 3: gdy styl „auto" — deterministycznie dobierz system projektowy z opisu (model dopracuje).
   const resolvedStyle: SiteStyle = style === "auto" && !current ? pickSiteStyle(prompt) : style;
   const styleHint = STYLE_HINTS[resolvedStyle] || STYLE_HINTS.auto;
-  // FULL_SPEC tylko dla NOWEJ strony (przy edycji nie wymuszamy przebudowy całości).
-  const system = current
-    ? `${BASE}\n\n${PREMIUM}\n\n${KIND_HINTS[kind] || KIND_HINTS.auto}\n\n${styleHint}`
-    : `${BASE}\n\n${PREMIUM}\n\n${FULL_SPEC}\n\n${KIND_HINTS[kind] || KIND_HINTS.auto}\n\n${styleHint}`;
+  // Premium Web Design Engine: twarde zasady pliku + filozofia (anti-template guard,
+  // design tokens, samokrytyka) + FULL_SPEC tylko dla NOWEJ strony (edycja nie wymusza przebudowy).
+  const system = designSystemPrompt({
+    kindHint: KIND_HINTS[kind] || KIND_HINTS.auto,
+    styleHint,
+    isEdit: !!current,
+    fullSpec: FULL_SPEC,
+  });
   // Bezpieczna edycja: NIGDY nie tniemy po cichu bieżącego kodu (to gubiło część strony i psuło
   // wynik). Gdy dokument jest za duży na jednorazową, bezpieczną edycję — odmawiamy jasno, zamiast
   // edytować niepełną wersję. (Sekcyjna strategia patchy = osobna, świadoma ścieżka.)
@@ -333,7 +301,8 @@ export async function improveSite(html: string, kind: SiteKind = "auto", style: 
   const fix = audit.missing.length ? ` Uzupełnij braki: ${audit.missing.join(", ")}.` : "";
   const instruction =
     "Wciel się w jury Awwwards oraz senior UX/SEO. Znajdź 5 NAJSŁABSZYCH punktów tej strony (design i hierarchia, " +
-    "konwersja/CTA, treść, SEO/schema, dostępność) i NAPRAW je, wyraźnie podnosząc poziom — bez obniżania niczego, co już dobre." +
+    "konwersja/CTA, treść, SEO/schema, dostępność) i NAPRAW je, wyraźnie podnosząc poziom — bez obniżania niczego, co już dobre. " +
+    SELF_CRITIQUE_INSTRUCTION +
     fix +
     " Zwróć pełną, ulepszoną wersję.";
   return generateSite(instruction, html, kind, style);
