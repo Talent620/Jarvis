@@ -224,7 +224,14 @@ i konsument `resumableGoalsNewestFirst` (auto-wznowienie sztafety po restarcie).
 
 ## 5. Aktywne ryzyka
 
-- **R1:** Zgłoszony przez użytkownika błąd 500 (Google/Gemini + druga funkcja równolegle)
+- **R1 — ZDIAGNOZOWANY I NAPRAWIONY (2026-07-03, commit 566493a):** błąd był 400, nie 500 —
+  Gemini „Built-in tools (google_search) and Function Calling cannot be combined in the same
+  request”. Źródło: `providers/gemini.ts` buildBody doklejało `googleSearch` OBOK
+  `functionDeclarations`, gdy webSearch on. Naprawa u ŹRÓDŁA (nie retry): czysta reguła
+  `geminiRequestTools` — function calling wygrywa, grounding pomijany (świeże dane przez
+  narzędzie research), `groundingSkipped` odnotowany do logu. Regresja: 6 testów
+  (`tests/geminiToolsCombination.test.ts`). Żądanie NIGDY nie wysyła już obu naraz.
+- ~~R1 (pierwotnie):~~ Zgłoszony przez użytkownika błąd 500 (Google/Gemini + druga funkcja równolegle)
   — nie zreprodukowany jeszcze w tej sesji; wymaga reprodukcji PRZED poprawką.
 - **R2:** Cel S9/Chrome 79 (es2019, bez `\p{L}`, bez lookbehind) i pułapka cudzysłowów
   („ + prosty " psuje esbuild) — każda nowa linia kodu musi to respektować.
