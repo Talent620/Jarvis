@@ -17,6 +17,7 @@ import { copyWithToast, toast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
 import { useEscape } from "../hooks/useEscape";
 import LeadDetail from "./LeadDetail";
+import ClientPanel from "./ClientPanel";
 import SalesPlan from "./SalesPlan";
 import { leadBucket, type CrmBucket } from "../lib/crmBuckets";
 import { clientJourney } from "../lib/clientJourney";
@@ -77,6 +78,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
   const [useWeb, setUseWeb] = useState(false);
   const [enrichEmail, setEnrichEmail] = useState(false);
   const [openLead, setOpenLead] = useState<string | null>(null);
+  const [openClient, setOpenClient] = useState<string | null>(null); // 🪪 Panel Klienta (CRM)
   const [showPlan, setShowPlan] = useState(false);
   const [bulkMsg, setBulkMsg] = useState("");
   const [bulking, setBulking] = useState(false);
@@ -374,8 +376,10 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
 
   const modals = (
     <>
+      {/* Panel Klienta (CRM-first) — domyślny widok klienta; teczka AI otwiera się z jego wnętrza. */}
+      {openClient && <ClientPanel leadId={openClient} onClose={() => setOpenClient(null)} onDossier={(id) => setOpenLead(id)} onMoney={onMoney} />}
       {openLead && <LeadDetail leadId={openLead} onClose={() => setOpenLead(null)} onWeb={onWeb} />}
-      {showPlan && <SalesPlan onClose={() => setShowPlan(false)} onLead={(id) => { setShowPlan(false); setOpenLead(id); }} />}
+      {showPlan && <SalesPlan onClose={() => setShowPlan(false)} onLead={(id) => { setShowPlan(false); setOpenClient(id); }} />}
     </>
   );
 
@@ -400,7 +404,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
           {/* 🎯 Następny ruch — wyjaśnialna rekomendacja ICP (score + powód + akcja). Klik → teczka. */}
           {nextMove && (
             <div
-              onClick={() => setOpenLead(nextMove.l.id)}
+              onClick={() => setOpenClient(nextMove.l.id)}
               style={{ cursor: "pointer", marginBottom: 10, padding: "8px 12px", borderRadius: 10, border: "1px solid var(--cyan, #6ce7ff)", background: "color-mix(in srgb, var(--cyan, #6ce7ff) 8%, transparent)" }}
               title={`Pewność ${Math.round(nextMove.icp.confidence * 100)}%${nextMove.icp.topReasons.length ? " · " + nextMove.icp.topReasons.join(", ") : ""}`}
             >
@@ -595,7 +599,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
             shown.map((l) => (
               <div key={l.id} className="journal-card">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, minWidth: 0 }}>
-                  <b style={{ cursor: "pointer", minWidth: 0 }} onClick={() => setOpenLead(l.id)}>
+                  <b style={{ cursor: "pointer", minWidth: 0 }} onClick={() => setOpenClient(l.id)}>
                     {l.intel ? `${scoreLabel(l.intel.score).emoji} ` : ""}{l.company}
                     {l.origin === "salesos" && (
                       <span className="chip" style={{ marginLeft: 6, fontSize: 11, color: "var(--gold)", padding: "1px 8px" }} title="Zsynchronizowany z AI Sales OS">🔗 CRM</span>
@@ -646,7 +650,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
                   )}
                   {/* GŁÓWNA akcja kontaktowa (z danych) — wyróżniona; kopiowanie zostaje drugorzędne. */}
                   <button type="button" className="chip" style={{ borderColor: "var(--cyan, #6ce7ff)", fontWeight: 600 }} onClick={() => void doPrimary(l)}>{primaryContactAction(l).label}</button>
-                  <button type="button" className="chip" onClick={() => setOpenLead(l.id)}>🗂 Szczegóły klienta</button>
+                  <button type="button" className="chip" onClick={() => setOpenClient(l.id)}>🪪 Panel klienta</button>
                   {l.url && <button type="button" className="chip" onClick={() => openLeadUrl(l.url)}>🌐 WWW</button>}
                   {l.contact && <button type="button" className="chip" onClick={() => copy(l.contact)}>📋 Kopiuj kontakt</button>}
                   <button className="chip" onClick={() => writeOffer(l)} disabled={drafting === l.id}>

@@ -518,6 +518,8 @@ export interface Lead {
   crmId?: string;
   /** Kampania, z której przyszedł lead (wspólne ID w pętli ROI) — przychód wygranej trafia do tej kampanii. */
   campaignId?: string;
+  /** Etykiety/segmenty CRM (np. „VIP", „polecenie", „gorący") — do filtrowania i grupowania. */
+  tags?: string[];
   /** Zgodność kontaktu: „nie kontaktować" — blokuje automatyczną wysyłkę (draft nadal wolno). */
   doNotContact?: boolean;
   /** Kontakt wypisał się (opt-out) — blokuje wysyłkę i draft. */
