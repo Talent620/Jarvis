@@ -21,6 +21,42 @@ function resolveBindHost(requested) {
   return null; // 0.0.0.0, adres LAN, cokolwiek innego → NIE bindujemy
 }
 
+/**
+ * Czy adres jest PRYWATNY (RFC1918 / link-local), a więc dopuszczalny jako sieć domowa?
+ * Publiczne IP, 0.0.0.0 i „*" → false. Czyste.
+ */
+function isPrivateLanAddress(host) {
+  const h = String(host || "").trim();
+  if (!h || h === "0.0.0.0" || h === "*") return false;
+  // 10.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12, 169.254.0.0/16 (link-local)
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  if (/^169\.254\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  const m = /^172\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/.exec(h);
+  if (m) { const b = Number(m[1]); return b >= 16 && b <= 31; }
+  return false;
+}
+
+/**
+ * Polityka bindu z KONTROLOWANYM wyjściem na LAN. Twarde bariery (wszystkie muszą być spełnione,
+ * inaczej zostajemy na loopbacku albo odmawiamy):
+ *   • loopback → zawsze OK (127.0.0.1);
+ *   • LAN wymaga: opts.allowLan===true (JAWNA zgoda) ORAZ opts.paired===true (HMAC wymagany)
+ *     ORAZ adres PRYWATNY (RFC1918/link-local);
+ *   • 0.0.0.0, „*" i adres PUBLICZNY → NIGDY (nawet ze zgodą — zbyt szeroka ekspozycja).
+ * Zwraca { host } albo { host:null, reason }.
+ */
+function resolveBindPolicy(requested, opts) {
+  const o = opts || {};
+  const h = String(requested || "127.0.0.1").trim().toLowerCase();
+  if (LOOPBACK.includes(h)) return { host: "127.0.0.1" };
+  if (h === "0.0.0.0" || h === "*") return { host: null, reason: "bind na wszystkie interfejsy jest zakazany" };
+  if (!isPrivateLanAddress(h)) return { host: null, reason: "adres nie jest prywatny (LAN) — odmowa" };
+  if (!o.allowLan) return { host: null, reason: "wyjście na LAN wymaga jawnej zgody" };
+  if (!o.paired) return { host: null, reason: "wyjście na LAN wymaga wcześniejszego parowania (podpis HMAC)" };
+  return { host: h };
+}
+
 /** Czy Origin (jeśli podany) jest lokalny? Brak Origin = OK (klient nie-przeglądarkowy). */
 function originAllowed(origin, port) {
   if (!origin) return true;
@@ -146,4 +182,4 @@ function handleHorizonRequest(req, ctx) {
   }
 }
 
-module.exports = { handleHorizonRequest, resolveBindHost, originAllowed, canonicalString, ALLOWED_TOOLS, LOOPBACK };
+module.exports = { handleHorizonRequest, resolveBindHost, resolveBindPolicy, isPrivateLanAddress, originAllowed, canonicalString, ALLOWED_TOOLS, LOOPBACK };

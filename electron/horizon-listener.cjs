@@ -6,13 +6,15 @@
 // poza loopbackiem → odmowa. Nie otwiera żadnego portu na świat.
 const http = require("http");
 const { randomBytes, createHmac, timingSafeEqual } = require("node:crypto");
-const { handleHorizonRequest, resolveBindHost } = require("./horizon-listener-core.cjs");
+const { handleHorizonRequest, resolveBindPolicy } = require("./horizon-listener-core.cjs");
 
 const PORT = 4318;
 
 let server = null;
 let token = "";
 let pairingSecret = ""; // gdy ustawiony (parowanie), żądania muszą być podpisane HMAC
+let bindHost = "127.0.0.1"; // domyślnie loopback; LAN tylko przez enableLan (jawna zgoda)
+let lastDeps = null;        // zapamiętane akcje — potrzebne do restartu przy zmianie bindu
 const state = { windowVisible: true, clipboard: "" };
 // Anty-replay: nonce'y widziane w oknie MAX_SKEW; czyszczone leniwie po czasie.
 const seenNonces = new Map(); // nonce -> timestamp
@@ -43,12 +45,9 @@ function pruneNonces(now) {
  *   { showWindow(): void, setClipboard(text): void, onStatus?(info): void }
  * Zwraca { token, port } albo rzuca, gdy bind poza loopbackiem (nie powinno się zdarzyć).
  */
-function startHorizonListener(deps = {}) {
-  if (server) return { token, port: PORT };
-  const bindHost = resolveBindHost("127.0.0.1");
-  if (!bindHost) throw new Error("Horizon listener: odmowa bindu poza loopbackiem");
-  token = freshToken();
-
+// Uruchom serwer HTTP na module-level `bindHost` (loopback albo — po jawnej zgodzie — LAN).
+function bootServer() {
+  const deps = lastDeps || {};
   const actions = {
     showWindow: () => {
       try { if (deps.showWindow) deps.showWindow(); } catch { /* okno mogło zniknąć */ }
@@ -71,7 +70,7 @@ function startHorizonListener(deps = {}) {
       if (chunks.length) {
         try { bodyObj = JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch { bodyObj = {}; }
       }
-      const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+      const url = new URL(req.url, `http://${bindHost}:${PORT}`);
       const now = Date.now();
       pruneNonces(now);
       const rawBody = chunks.length ? Buffer.concat(chunks).toString("utf8") : "";
@@ -90,7 +89,6 @@ function startHorizonListener(deps = {}) {
     });
   });
 
-  // KLUCZOWE: bind wyłącznie na 127.0.0.1 — nigdy 0.0.0.0. Świat nie widzi tego portu.
   server.listen(PORT, bindHost, () => {
     if (deps.onStatus) deps.onStatus({ listening: true, port: PORT, host: bindHost });
   });
@@ -98,7 +96,48 @@ function startHorizonListener(deps = {}) {
     if (deps.onStatus) deps.onStatus({ listening: false, error: String(e && e.message) });
     server = null;
   });
+}
+
+function startHorizonListener(deps = {}) {
+  if (server) return { token, port: PORT };
+  lastDeps = deps;
+  bindHost = "127.0.0.1"; // start ZAWSZE na loopbacku — LAN wymaga jawnej enableLan
+  token = freshToken();
+  bootServer();
   return { token, port: PORT };
+}
+
+/**
+ * Wyjście na LAN — TYLKO za jawną zgodą i po parowaniu. Twarde bariery w resolveBindPolicy
+ * (prywatny adres, allowLan, paired; publiczny/0.0.0.0 nigdy). Restartuje serwer na nowym
+ * hoście, ROTUJĄC token i sekret (poprzednie parowanie nie działa poza loopbackiem bez
+ * ponownego QR — świadoma decyzja użytkownika). Zwraca { ok, host?/reason }.
+ */
+function enableLan(ip) {
+  const policy = resolveBindPolicy(ip, { allowLan: true, paired: !!pairingSecret });
+  if (!policy.host || policy.host === "127.0.0.1") {
+    return { ok: false, reason: policy.reason || "adres loopback — nie ma po co wychodzić na LAN" };
+  }
+  if (!pairingSecret) return { ok: false, reason: "najpierw sparuj telefon (podpis HMAC jest wymagany na LAN)" };
+  bindHost = policy.host;
+  token = freshToken();      // rotacja tokenu przy zmianie ekspozycji
+  seenNonces.clear();
+  try { if (server) server.close(); } catch { /* ignore */ }
+  server = null;
+  bootServer();
+  return { ok: true, host: bindHost, port: PORT };
+}
+
+/** Powrót do loopbacku (odwracalność) — rotuje token, czyści nonce, restart na 127.0.0.1. */
+function disableLan() {
+  if (bindHost === "127.0.0.1") return { ok: true, host: bindHost };
+  bindHost = "127.0.0.1";
+  token = freshToken();
+  seenNonces.clear();
+  try { if (server) server.close(); } catch { /* ignore */ }
+  server = null;
+  bootServer();
+  return { ok: true, host: bindHost, port: PORT };
 }
 
 function stopHorizonListener() {
@@ -106,7 +145,7 @@ function stopHorizonListener() {
 }
 
 function listenerStatus() {
-  return { listening: !!server, port: PORT, hasToken: !!token, paired: !!pairingSecret };
+  return { listening: !!server, port: PORT, hasToken: !!token, paired: !!pairingSecret, host: bindHost, lan: bindHost !== "127.0.0.1" };
 }
 
 /**
@@ -136,4 +175,4 @@ function currentToken() {
   return token;
 }
 
-module.exports = { startHorizonListener, stopHorizonListener, listenerStatus, currentToken, startPairing, clearPairing, HORIZON_PORT: PORT };
+module.exports = { startHorizonListener, stopHorizonListener, listenerStatus, currentToken, startPairing, clearPairing, enableLan, disableLan, HORIZON_PORT: PORT };

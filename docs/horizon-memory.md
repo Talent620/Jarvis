@@ -79,8 +79,9 @@ sztafetę z weryfikacją odczytem — czego żaden pojedynczy silnik dziś nie r
   idempotencja, karta przekazania) + **emulator urządzenia jako PRAWDZIWY drugi koniec
   MCP** (moduł TS z tym samym adapterem, read-back potwierdzający stan) + testy Vitest.
 - **SYMULOWANE (oznaczone):** fizyczny ESP32/RPi — emulator, nie sprzęt.
-- **ZAPROJEKTOWANE, nie zbudowane w sesji:** kanał push telefon→PC i przejście z loopbacku na LAN — wymagają dalszej pracy.
-  (Parowanie QR + podpis HMAC jest już ZBUDOWANE i przetestowane — patrz 4b.) (Nasłuch EXE + tray + autostart są już ZBUDOWANE
+- **ZAPROJEKTOWANE, nie zbudowane w sesji:** kanał push telefon→PC (powiadomienia od komputera) — wymaga dalszej pracy.
+  (Parowanie QR + podpis HMAC ORAZ kontrolowane wyjście loopback→LAN są już ZBUDOWANE
+  i przetestowane — patrz 4b.) (Nasłuch EXE + tray + autostart są już ZBUDOWANE
   i testowane w Node/CI — patrz 4b.)
 - **NIEUDOWODNIONE:** działanie na fizycznym Samsung S9 i realnym EXE użytkownika.
 
@@ -177,6 +178,14 @@ nie logika sztafety.
   wewnątrz rdzenia listenera prawdziwym podpisem). UCZCIWIE: warstwa integralności +
   anty-replay, NIE poufności (bez TLS); realne przejście loopback→LAN za świadomą zgodą
   = kolejny krok.
+
+- `resolveBindPolicy`/`isPrivateLanAddress` (core) + `enableLan`/`disableLan` (transport) —
+  **kontrolowane wyjście loopback→LAN za jawną zgodą**: bind startuje ZAWSZE na 127.0.0.1;
+  LAN wymaga jednocześnie allowLan (jawna zgoda) + paired (HMAC obowiązkowy) + adresu
+  PRYWATNEGO (RFC1918/link-local). 0.0.0.0, „*” i publiczny IP → NIGDY (nawet ze zgodą).
+  enableLan rotuje token i czyści nonce; disableLan wraca na loopback (odwracalne). IPC
+  horizon-pair/unpair/lan tylko dla własnej ramki. 8 testów (`tests/horizonLanPolicy.test.ts`,
+  adwersarialne: publiczny IP / 0.0.0.0 / brak zgody / brak parowania — odrzucane).
 
 **Granice uczciwości:** emulator = SYMULACJA sprzętu (nie fizyczny ESP32);
 realny nasłuch EXE (tray/serwer) + kanał push telefon→PC = ZAPROJEKTOWANE, nie zbudowane;

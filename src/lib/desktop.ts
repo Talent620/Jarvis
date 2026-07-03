@@ -17,7 +17,12 @@ export interface JarvisDesktop {
   onVoiceMode(cb: () => void): () => void;
   /** Project Horizon — token/status lokalnego węzła EXE (tylko własna ramka). */
   horizonToken?(): Promise<string | null>;
-  horizonStatus?(): Promise<{ listening: boolean; port?: number; hasToken?: boolean }>;
+  horizonStatus?(): Promise<{ listening: boolean; port?: number; hasToken?: boolean; paired?: boolean; host?: string; lan?: boolean }>;
+  /** Parowanie QR: zwraca ładunek { v, url, secret, name } do wyświetlenia jako QR. */
+  horizonPair?(lanUrl?: string, name?: string): Promise<{ v: number; url: string; secret: string; name: string } | null>;
+  horizonUnpair?(): Promise<{ ok: boolean }>;
+  /** Kontrolowane wyjście na LAN (jawna zgoda); zwraca { ok, host?/reason }. */
+  horizonLan?(enable: boolean, ip?: string): Promise<{ ok: boolean; host?: string; port?: number; reason?: string }>;
 }
 
 export function desktop(): JarvisDesktop | null {

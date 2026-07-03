@@ -50,4 +50,7 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   // Project Horizon — token/status lokalnego węzła EXE (tylko dla własnej ramki).
   horizonToken: () => ipcRenderer.invoke("jarvis:horizon-token"),
   horizonStatus: () => ipcRenderer.invoke("jarvis:horizon-status"),
+  horizonPair: (lanUrl, name) => ipcRenderer.invoke("jarvis:horizon-pair", { lanUrl: lanUrl || "", name: name || "" }),
+  horizonUnpair: () => ipcRenderer.invoke("jarvis:horizon-unpair"),
+  horizonLan: (enable, ip) => ipcRenderer.invoke("jarvis:horizon-lan", { enable: !!enable, ip: ip || "" }),
 });

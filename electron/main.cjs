@@ -577,6 +577,22 @@ if (!gotLock) {
       if (!isTrustedIpcGlobal(event)) return { listening: false };
       return horizonListener.listenerStatus();
     });
+    // Parowanie QR (generuj sekret) + kontrolowane wyjście na LAN (jawna zgoda).
+    ipcMain.handle("jarvis:horizon-pair", (event, payload) => {
+      if (!isTrustedIpcGlobal(event)) return null;
+      return horizonListener.startPairing((payload && payload.lanUrl) || "", (payload && payload.name) || "");
+    });
+    ipcMain.handle("jarvis:horizon-unpair", (event) => {
+      if (!isTrustedIpcGlobal(event)) return { ok: false };
+      horizonListener.clearPairing();
+      horizonListener.disableLan();
+      return { ok: true };
+    });
+    ipcMain.handle("jarvis:horizon-lan", (event, payload) => {
+      if (!isTrustedIpcGlobal(event)) return { ok: false, reason: "forbidden" };
+      const on = !!(payload && payload.enable);
+      return on ? horizonListener.enableLan((payload && payload.ip) || "") : horizonListener.disableLan();
+    });
 
     buildMenu();
     createTray();
