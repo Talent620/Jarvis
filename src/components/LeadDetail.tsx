@@ -13,7 +13,8 @@ import { canSendDirect, sendOfferEmail } from "../lib/mailer";
 import { draftOffer } from "../lib/offer";
 import { markContacted, relationshipStatus } from "../lib/salesEngine";
 import { nextStatusAfterContact } from "../lib/leadContact";
-import { leadTimeline, appendLeadNote } from "../lib/leadNotes";
+import { appendLeadNote } from "../lib/leadNotes";
+import { clientCard, clientTimeline, reminderInDays } from "../lib/clientCrm";
 import { salesOsConfigured, outreachViaSalesOs, leadToOutreachInput, pushLeadStatusToSalesOs } from "../lib/salesOs";
 import { copyWithToast, toast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
@@ -173,6 +174,41 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
           <h2>🗂 {lead.company}</h2>
         </div>
         <div className="panel-body">
+          {/* 🧾 Klient 360 — zwarta karta CRM: następny krok, wartość, maile, finanse, przypomnienie.
+              Składa ISTNIEJĄCE źródła (lead + Skrzynka wysłanych + Finanse) — zero zmyślania. */}
+          {(() => {
+            const card = clientCard(lead, store.data.sentMail, store.data.financeProjects);
+            const fmt = (ms: number) => new Date(ms).toLocaleDateString("pl-PL", { day: "numeric", month: "short" });
+            const remind = (days: number) => {
+              const at = reminderInDays(days);
+              set({
+                nextFollowUpAt: at,
+                notes: appendLeadNote(lead.notes, `⏰ Przypomnienie ustawione na ${new Date(at).toLocaleDateString("pl-PL")}`, Date.now()),
+              });
+              toast(`⏰ Przypomnę o „${lead.company}” ${new Date(at).toLocaleDateString("pl-PL")} (Plan dnia / follow-upy).`);
+            };
+            return (
+              <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 8, borderLeft: card.overdue ? "3px solid var(--gold)" : undefined }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{card.nextAction}</div>
+                <div className="muted" style={{ fontSize: 12, marginTop: 6, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {card.value != null && <span>💵 Wartość: {card.value.toLocaleString("pl-PL")} zł</span>}
+                  {card.lastTouchAt && <span>🕘 Ostatni ślad: {fmt(card.lastTouchAt)} ({card.lastTouchWhat})</span>}
+                  {card.emailCount > 0 && <span>✉ Wysłane maile: {card.emailCount}</span>}
+                  {card.financeCount > 0 && (
+                    <span>💰 Projekty: {card.financeCount} · {card.financeTotal.toLocaleString("pl-PL")} zł{card.financePaid > 0 ? ` (wpłacone ${card.financePaid.toLocaleString("pl-PL")} zł)` : ""}</span>
+                  )}
+                </div>
+                {lead.status !== "lost" && !lead.optOut && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, alignItems: "center" }}>
+                    <span className="muted" style={{ fontSize: 12 }}>⏰ Przypomnij:</span>
+                    <button className="chip" onClick={() => remind(2)}>za 2 dni</button>
+                    <button className="chip" onClick={() => remind(7)}>za tydzień</button>
+                    <button className="chip" onClick={() => remind(30)}>za miesiąc</button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           {/* Relacja: ostatni kontakt + następny follow-up + ostrzeżenie o zaległości — bez skoku
               na inny ekran (dane już liczone przez salesEngine, tu tylko odczyt). */}
           {(() => {
@@ -283,9 +319,11 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
             </p>
           )}
 
-          {/* 📞 Dziennik kontaktu — zapisz, co ustaliłeś po rozmowie (CRM) */}
+          {/* 📞 Dziennik kontaktu + SCALONA oś czasu (CRM): notatki + wysłane maile + finanse
+              chronologicznie — jedno miejsce odpowiada na „co się działo z tym klientem". */}
           {(() => {
-            const timeline = leadTimeline(lead);
+            const timeline = clientTimeline(lead, store.data.sentMail, store.data.financeProjects, 20);
+            const ICON: Record<string, string> = { note: "📝", email: "✉", finance: "💰" };
             const saveNote = () => {
               const t = noteInput.trim();
               if (!t) { toast("Wpisz treść notatki."); return; }
@@ -295,7 +333,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
             };
             return (
               <div className="journal-card" style={{ padding: "10px 12px", marginTop: 10 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📞 Dziennik kontaktu</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>🕘 Oś czasu klienta</div>
                 <textarea
                   className="ta"
                   style={{ minHeight: 56 }}
@@ -306,9 +344,9 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
                 <button className="btn" style={{ marginTop: 6 }} onClick={saveNote}>💾 Zapisz notatkę</button>
                 {timeline.length > 0 && (
                   <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-                    {timeline.slice(0, 12).map((n, i) => (
-                      <div key={i} style={{ fontSize: 12.5, lineHeight: 1.45, borderLeft: "2px solid var(--line-strong)", paddingLeft: 8 }}>
-                        <span className="muted" style={{ fontSize: 11 }}>{n.at ? new Date(n.at).toLocaleString("pl-PL") : "—"}</span>
+                    {timeline.map((n, i) => (
+                      <div key={i} style={{ fontSize: 12.5, lineHeight: 1.45, borderLeft: `2px solid ${n.kind === "finance" ? "var(--gold)" : "var(--line-strong)"}`, paddingLeft: 8 }}>
+                        <span className="muted" style={{ fontSize: 11 }}>{ICON[n.kind] || "•"} {n.at ? new Date(n.at).toLocaleString("pl-PL") : "—"}</span>
                         <div>{n.text}</div>
                       </div>
                     ))}
