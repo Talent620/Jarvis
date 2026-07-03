@@ -52,6 +52,31 @@ export function supportsGrounding(modelId: string): boolean {
 }
 
 /**
+ * Pure: zbuduj tablicę `tools` dla żądania Gemini tak, by NIGDY nie łączyć wbudowanego
+ * googleSearch (grounding) z function calling w JEDNYM żądaniu — API zwraca wtedy 400
+ * („Built-in tools and Function Calling cannot be combined"). Reguła „zawsze działa":
+ *   • są narzędzia (function calling) → WYSYŁAMY function calling, grounding POMIJAMY
+ *     (JARVIS i tak ma własne narzędzie web_research/research — świeże dane są osiągalne);
+ *   • brak narzędzi, ale grounding chciany → wysyłamy sam googleSearch;
+ *   • nic → brak pola tools.
+ * Zwraca też `groundingSkipped`, żeby caller mógł to odnotować (telemetria/log), nie zgadując.
+ */
+export function geminiRequestTools(
+  functionDeclarations: unknown[],
+  useGrounding: boolean,
+): { tools: unknown[] | undefined; groundingSkipped: boolean } {
+  const hasFns = Array.isArray(functionDeclarations) && functionDeclarations.length > 0;
+  if (hasFns) {
+    // Function calling wygrywa — nigdy nie doklejamy googleSearch (to właśnie dawało 400).
+    return { tools: [{ functionDeclarations }], groundingSkipped: useGrounding };
+  }
+  if (useGrounding) {
+    return { tools: [{ googleSearch: {} }], groundingSkipped: false };
+  }
+  return { tools: undefined, groundingSkipped: false };
+}
+
+/**
  * Pure: wyłuskaj PRAWDZIWE źródła z groundingMetadata odpowiedzi Gemini (nie wymyślamy źródeł).
  * Zwraca [] gdy brak metadata — wtedy caller użyje zwykłego narzędzia research/web.
  */

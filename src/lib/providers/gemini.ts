@@ -2,7 +2,7 @@ import { runTool } from "../tools";
 import { fetchTimeout, appTokenHeader } from "../http";
 import { GeminiStreamAccumulator, drainSSE } from "../stream";
 import type { AskCtx, JarvisReply } from "./types";
-import { geminiThinkingConfig, supportsGrounding, parseGroundingCitations } from "../geminiCapabilities";
+import { geminiThinkingConfig, supportsGrounding, geminiRequestTools, parseGroundingCitations } from "../geminiCapabilities";
 
 // Gemini odrzuca niektóre pola JSON Schema (np. additionalProperties) — także
 // w zagnieżdżonych obiektach/tablicach. Usuwamy je rekurencyjnie.
@@ -84,14 +84,15 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
   let canStream = !!ctx.onToken && !ctx.proxyUrl;
   const headers = { "content-type": "application/json", ...(ctx.proxyUrl ? appTokenHeader() : {}) };
   // Grounding (aktualne dane ze źródłami) tylko gdy webSearch on i model to wspiera. Offline/on-device
-  // brain.ts i tak ustawia webSearch=false. Łączymy z function calling tylko po sprawdzeniu capability.
+  // brain.ts i tak ustawia webSearch=false. KLUCZOWE: Gemini ZABRANIA łączyć googleSearch
+  // z function calling w jednym żądaniu (400) — geminiRequestTools pilnuje, że nigdy nie
+  // wysyłamy obu naraz (function calling wygrywa; świeże dane i tak przez narzędzie research).
   const useGrounding = ctx.webSearch && supportsGrounding(ctx.model);
+  const { tools: initialTools, groundingSkipped } = geminiRequestTools(functionDeclarations, useGrounding);
+  if (groundingSkipped) console.info("[gemini] grounding pominięty (kolizja z function calling) — świeże dane przez narzędzie research");
   const buildBody = (): any => {
     const reqBody: any = { systemInstruction: { parts: [{ text: ctx.system }] }, contents };
-    const reqTools: any[] = [];
-    if (functionDeclarations.length) reqTools.push({ functionDeclarations });
-    if (useGrounding) reqTools.push({ googleSearch: {} });
-    if (reqTools.length) reqBody.tools = reqTools;
+    if (initialTools) reqBody.tools = initialTools;
     // Adaptacyjne myślenie: profil → thinkingConfig (capability gate — model bez myślenia pomija pole).
     if (ctx.reasoningProfile) {
       const tc = geminiThinkingConfig(ctx.model, ctx.reasoningProfile);
