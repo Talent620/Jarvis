@@ -399,13 +399,25 @@ export default function Studio({ onClose }: { onClose: () => void }) {
             {assist ? "💬 Asystent: dopytuje przed generacją ✓" : "💬 Asystent: wyłączony"}
           </button>
 
-          <div className="field">
+          <div className="field" style={{ position: "relative" }}>
             <textarea
               value={prompt}
               placeholder="Powiedz po ludzku, co zmienić — np. „wysuń 2 papierosy i zamień napis »palenie niszczy« na www.v-ai.pl Marcin Kubicki”."
               onChange={(e) => setPrompt(e.target.value)}
               className="ta"
             />
+            {/* Opis jest trwały (wraca po powrocie) — jedno tapnięcie czyści pod nową pracę. */}
+            {prompt && (
+              <button
+                className="chip"
+                data-testid="studio-clear-prompt"
+                style={{ position: "absolute", top: 6, right: 6, padding: "2px 8px", fontSize: 12 }}
+                onClick={() => setPrompt("")}
+                title="Wyczyść opis"
+              >
+                ✕
+              </button>
+            )}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn" style={{ flex: 1 }} onClick={attach}>📷 Dołącz zdjęcie{inputs.length ? ` (${inputs.length})` : ""}</button>

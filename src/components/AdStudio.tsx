@@ -108,6 +108,24 @@ export default function AdStudio({ onClose, embedded }: { onClose: () => void; e
           <button className="btn primary" style={{ width: "100%" }} onClick={generate} disabled={busy}>
             {busy ? "✍ Tworzę reklamy…" : "✨ Wygeneruj reklamy"}
           </button>
+          {/* 🆕 Czysta karta: sesja jest trwała (produkt/wynik/kampania/UTM wracają zawsze) —
+              jawny reset pod nową kampanię. Platforma zostaje (preferencja), cel wraca do domyślnego. */}
+          {(product || out || campaign || utmUrl) && (
+            <button
+              className="btn"
+              style={{ width: "100%", marginTop: 8 }}
+              data-testid="ads-fresh"
+              disabled={busy}
+              onClick={() => {
+                setProduct(""); setAudience(""); setGoal("leady/kontakty"); setBudget("");
+                setOut(""); setCampaign(null); setAngle("");
+                setUtmUrl(""); setUtmPreset(null); setUtmCampaign("");
+                toast("🆕 Czysta karta — opisz nowy produkt/usługę.");
+              }}
+            >
+              🆕 Nowa kampania (wyczyść)
+            </button>
+          )}
 
           {out && (() => {
             // 📋 Audyt jakości/zgodności reklamy — ryzyko odrzucenia przez Google/Meta (czysto, lokalnie).

@@ -75,6 +75,19 @@ export default function ContentStudio({ onClose, embedded }: { onClose: () => vo
           <button className="btn primary" style={{ width: "100%" }} onClick={generate} disabled={busy}>
             {busy ? "✍ Piszę post…" : "✨ Wygeneruj post"}
           </button>
+          {/* 🆕 Czysta karta: sesja jest trwała (temat/wynik wracają zawsze) — musi istnieć jawna
+              droga do nowego posta. Platformę i ton zostawiamy (to preferencje, nie treść). */}
+          {(topic || out || brand) && (
+            <button
+              className="btn"
+              style={{ width: "100%", marginTop: 8 }}
+              data-testid="content-fresh"
+              disabled={busy}
+              onClick={() => { setTopic(""); setBrand(""); setOut(""); toast("🆕 Czysta karta — podaj nowy temat."); }}
+            >
+              🆕 Nowy post (wyczyść)
+            </button>
+          )}
 
           {out && (
             <div className="journal-card" style={{ marginTop: 10 }}>

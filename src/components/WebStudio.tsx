@@ -591,6 +591,7 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
             <button
               className="btn"
               style={{ width: "100%", marginTop: 8 }}
+              data-testid="web-fresh"
               disabled={busy}
               onClick={startFresh}
             >
