@@ -192,6 +192,25 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
   const briefText = buildClientBrief(brief);
   const canBuild = !!(prompt.trim() || briefText);
 
+  // 🆕 Czysta karta: wyzeruj CAŁĄ sesję Kreatora (stan + trwałe szkice — settery zapisują
+  // wartości domyślne do draftStore). Destrukcyjne dla NIEZAPISANEJ strony → jawne potwierdzenie
+  // z przypomnieniem o 💾. Zapisane projekty zostają nietknięte.
+  const startFresh = () => {
+    if (busy) { toast("⏳ Poczekaj na koniec budowy."); return; }
+    const saved = projId && projs.some((p) => p.id === projId);
+    const ok = window.confirm(
+      saved
+        ? "Zacząć nową stronę? Obecna jest zapisana w Projektach — wrócisz do niej w każdej chwili."
+        : "Zacząć nową stronę? Obecna NIE jest zapisana — przepadnie. (Anuluj i kliknij 💾 Zapisz projekt, jeśli chcesz ją zachować.)",
+    );
+    if (!ok) return;
+    setPrompt(""); setDemoFor(null); setKind("auto"); setStyle("auto"); setHtml("");
+    setView("preview"); setShowBrief(false); setBrief({}); setQuote(null); setPackages(null);
+    setAudit(null); setBrokenDemo(null); setShowDiag(false); setStrategy(""); setBlueprint(null);
+    setProjId(null); setProjName(""); setErr("");
+    toast("🆕 Czysta karta — opisz nową stronę i zbuduj.");
+  };
+
   const run = async (edit: boolean, instructionOverride?: string) => {
     const promptText = instructionOverride ?? prompt;
     // Edycja wymaga polecenia; budowa od zera może wyjść z briefu i/lub opisu.
@@ -566,6 +585,18 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
               <button className="btn" style={{ flex: 1 }} onClick={download}>⬇ Pobierz .html</button>
             )}
           </div>
+          {/* 🆕 Czysta karta: trwała sesja zawsze przywraca szkic, więc „nowy projekt" musi być
+              JAWNYM przyciskiem (dawniej: zamknij-otwórz panel — to już celowo nie czyści). */}
+          {html && (
+            <button
+              className="btn"
+              style={{ width: "100%", marginTop: 8 }}
+              disabled={busy}
+              onClick={startFresh}
+            >
+              🆕 Nowa strona (wyczyść wszystko)
+            </button>
+          )}
           {/* Ucięte demo — nie udajemy gotowego. Domyślne pobranie usunięte; jasne opcje naprawy. */}
           {brokenDemo && (
             <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 10, border: "1px solid #ff6b6b", background: "color-mix(in srgb, #ff6b6b 8%, transparent)" }}>
