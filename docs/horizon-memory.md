@@ -356,6 +356,28 @@ build failed na całym PR. REGUŁA: łańcuch bramek przed commitem MUSI być sp
 (eslint && commit), nigdy `;` — inaczej złamany kod trafia do repo. Fixer pułapki:
 `re.sub(r'„([^"”]*)"', r'„\1”', linia)` tylko na liniach nie-komentarzowych; po edycie ZAWSZE tsc.
 
+## 4i. CRM — wizja + P1 Kokpit + P2 Kanban (2026-07-04)
+
+Na pytanie „CRM jak powinien wyglądać" — wizja w planie sesji: kokpit solo-operatora
+(akcja przed danymi, zero wklepywania, uczciwość liczb), 5 warstw + roadmapa P1–P6. Kluczowe
+odkrycie z eksploracji: silnik LEJKA KONWERSJI już istnieje (`growthAttribution.buildFunnel/
+stageConversion`, `campaignRoi.computeRoi`), ale NIGDY nierenderowany → P3 to głównie „pokaż".
+
+**P1 (commit e50a968, CI 8/8) — Kokpit KPI:** `src/lib/salesCockpit.ts` (czysty:
+`computeCockpit` z pipelineForecast+followUpsDue+callNowList+sentTodayCount → lejek/expected/won/
+winRate(null-gdy-brak)/overdue/todayActions/sentToday; `formatZl`/`winRatePct`). `SalesCockpit.tsx`
+6-kafelkowy pasek zastąpił stary 3-kafelkowy nagłówek w SalesDashboard (usunięto martwy `stats`).
+7 testów.
+
+**P2 (commit 69fe145) — Tablica lejka (kanban):** `src/lib/salesBoard.ts` (`boardColumns` grupuje
+per etap + sumuje wartość, reużywa PIPELINE_STAGES). `SalesBoard.tsx` — kolumny z HTML5 DnD:
+drop karty → status + ślad w osi (appendLeadNote), tap → ClientPanel (mountuje ClientPanel+LeadDetail);
+data-testid col-*/card-* dla testów. Nowa zakładka „📋 Lejek" w SalesCrm (CrmTab += "board";
+countFor zwraca null dla board — bo nie CrmBucket). 5+3 testy (drop zmienia status offer).
+
+POZOSTAŁO: P3 raporty (render funnel/ROI), P4 głębia rekordu, P5 segmenty/widoki, P6 merge dubli.
+Łącznie po P2: Vitest 344/2968.
+
 ## 4. Pomiary
 
 - Bramki lokalne na `5fffac7`: tsc czysty, ESLint czysty, Vitest 315 plików / 2708 testów
