@@ -339,6 +339,23 @@ następnego kroku, szybkie akcje (dzwoń/mail/SMS/mapy/przypomnij/Teczka AI), 4 
 (tap klienta → Panel; Teczka AI/LeadDetail z wnętrza). 13 testów (clientRecord 9 + clientPanelBehavior 4).
 REGUŁA: nowy panel z `.sheet` = użyj `<Modal>`, nie ręcznego sheet (guard to wymusza).
 
+## 4h. Dokowanie okien (desktop) + lekcja o pułapce cudzysłowów (2026-07-04)
+
+**Commit 32cf1a9 (CI 8/8) — dokowanie paneli w bok:** `src/lib/panelDock.ts` (czysty:
+PanelDock center|left|right, dockBodyClass/normalizeDock/cycleDock, DOCK_OPTIONS/DOCK_CLASSES) +
+`Settings.panelDock`. Mechanizm: App.tsx nakłada klasę `<body>` dock-left/dock-right (obok motywu),
+CSS `@media (min-width:1000px)` zmienia sheet z okna na środku w pełnowysoką szufladę przy krawędzi
+(460px, radius 0, lżejsze tło). Telefon bez zmian. Sterowanie: `DockSwitcher` (⬅⬜➡) w nagłówku
+wspólnego `Modal` (desktop-only via CSS) + labeled row w Settings → Interfejs (bo Settings to legacy
+sheet, nie Modal). Testy: panelDock (5, pure) + dockSwitcherBehavior (2, realny klik → setting).
+Weryfikacja: reguły dock-* potwierdzone w zbudowanym dist CSS.
+
+**LEKCJA (kosztowała czerwone CI na c81cddd):** pułapka cudzysłowów uderzyła PONOWNIE w changelog,
+a `npx eslint … && echo OK; git commit` (ŚREDNIK, nie &&) przepuścił commit mimo błędu eslint →
+build failed na całym PR. REGUŁA: łańcuch bramek przed commitem MUSI być spięty `&&` do końca
+(eslint && commit), nigdy `;` — inaczej złamany kod trafia do repo. Fixer pułapki:
+`re.sub(r'„([^"”]*)"', r'„\1”', linia)` tylko na liniach nie-komentarzowych; po edycie ZAWSZE tsc.
+
 ## 4. Pomiary
 
 - Bramki lokalne na `5fffac7`: tsc czysty, ESLint czysty, Vitest 315 plików / 2708 testów
