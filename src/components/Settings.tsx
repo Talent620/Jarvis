@@ -35,12 +35,12 @@ import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromIn
 import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
 import { detectSd, normalizeSdUrl } from "../lib/localImage";
 import { checkFalKey } from "../lib/images";
-import { checkForUpdate, applyUpdate, currentBuild, buildLocalTime, type UpdateInfo } from "../lib/updater";
+import { checkForUpdate, applyUpdate, currentBuild, buildLocalTime, downloadLinks, type UpdateInfo } from "../lib/updater";
 import { CHANGELOG } from "../lib/changelog";
 import { liveUpdateSupported, checkLiveUpdate, applyLiveUpdate } from "../lib/liveUpdate";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
 import { clearRouteLog } from "../lib/modelRouter";
-import { toast } from "../lib/toast";
+import { toast, copyWithToast } from "../lib/toast";
 import { runProspecting } from "../lib/prospect";
 import { verifyMailConnection, sendTestEmail, mailReadiness } from "../lib/mailer";
 import { enrollVoice } from "../lib/voiceEnroll";
@@ -2988,6 +2988,25 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   </button>
                 </div>
               )}
+
+              {/* 📥 Aktualne wersje do pobrania — bezpośrednie linki (bez szukania na GitHub). */}
+              <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>📥 Pobierz najnowszą wersję</div>
+                <div className="muted" style={{ fontSize: 11, marginBottom: 8 }}>Zawsze najświeższy build (tag „latest") — na każde urządzenie.</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {downloadLinks().map((d) => (
+                    <div key={d.plat} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <a className="btn" style={{ flex: 1, minWidth: 150, textDecoration: "none", borderColor: d.current ? "var(--gold)" : undefined }} href={d.url} target="_blank" rel="noopener">
+                        {d.label}{d.current ? " · Twoja platforma" : ""}
+                      </a>
+                      <button className="chip" style={{ fontSize: 11 }} aria-label={`Kopiuj link do ${d.label}`} onClick={() => { copyWithToast(d.url, "Link skopiowany ✓"); }}>📋 Link</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="muted" style={{ fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>
+                  💡 Na PC i telefonie: pobierz i otwórz plik — reszta w 1 kliknięciu. W przeglądarce wystarczy „🔎 Sprawdź aktualizacje" wyżej (odświeża w miejscu).
+                </div>
+              </div>
 
               <details style={{ marginTop: 8 }} open>
                 <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>📜 O JARVIS / Aktualizacje (co nowego)</summary>

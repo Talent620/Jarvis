@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isNewer, downloadUrl, humanizeUpdateError } from "../src/lib/updater";
+import { isNewer, downloadUrl, humanizeUpdateError, downloadLinks } from "../src/lib/updater";
 
 describe("updater — isNewer", () => {
   it("wydanie nowsze o >1 min → true", () => {
@@ -40,5 +40,22 @@ describe("updater — humanizeUpdateError", () => {
   });
   it("inny błąd → zachowuje treść", () => {
     expect(humanizeUpdateError("coś dziwnego")).toMatch(/coś dziwnego/);
+  });
+});
+
+describe("updater — downloadLinks (aktualne wersje do pobrania)", () => {
+  it("zwraca 3 platformy z właściwymi linkami GitHub", () => {
+    const links = downloadLinks("windows");
+    expect(links.map((l) => l.plat)).toEqual(["windows", "android", "ios"]);
+    expect(links.find((l) => l.plat === "windows")!.url).toMatch(/releases\/download\/latest\/JARVIS\.exe$/);
+    expect(links.find((l) => l.plat === "android")!.url).toMatch(/releases\/download\/latest\/jarvis\.apk$/);
+    expect(links.find((l) => l.plat === "ios")!.url).toMatch(/releases\/latest$/);
+  });
+  it("podświetla bieżącą platformę; web traktuje jak Windows", () => {
+    expect(downloadLinks("android").find((l) => l.current)!.plat).toBe("android");
+    expect(downloadLinks("ios").find((l) => l.current)!.plat).toBe("ios");
+    expect(downloadLinks("web").find((l) => l.current)!.plat).toBe("windows");
+    // dokładnie jedna platforma oznaczona jako bieżąca
+    expect(downloadLinks("windows").filter((l) => l.current)).toHaveLength(1);
   });
 });

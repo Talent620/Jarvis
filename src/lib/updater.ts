@@ -42,6 +42,31 @@ export function downloadUrl(p: Plat = platform()): string {
   return `https://github.com/${REPO}/releases/download/latest/${ASSET[p]}`;
 }
 
+export interface DownloadLink {
+  plat: Plat;
+  label: string;
+  url: string;
+  note: string;
+  /** Czy to platforma, na której użytkownik jest TERAZ (do podświetlenia „to Twoja wersja"). */
+  current: boolean;
+}
+
+/**
+ * Pure: stałe linki do POBRANIA najnowszej wersji na każdą platformę (tag „latest"), z zaznaczeniem
+ * tej, na której użytkownik jest teraz. Dzięki temu „aktualne wersje do pobrania" są w aplikacji,
+ * bez szukania na GitHub. `plat` wstrzykiwane do testów (domyślnie wykrywane).
+ */
+export function downloadLinks(plat: Plat = platform()): DownloadLink[] {
+  const rows: { plat: Plat; label: string; note: string }[] = [
+    { plat: "windows", label: "💻 Windows (EXE)", note: "jeden plik, bez instalacji" },
+    { plat: "android", label: "📱 Android (APK)", note: "otwórz plik i potwierdź instalację" },
+    { plat: "ios", label: "🍎 iPhone (iOS)", note: "instrukcja instalacji na stronie wydań" },
+  ];
+  // „web" traktujemy jak Windows dla podświetlenia (na PC w przeglądarce EXE jest naturalnym wyborem).
+  const cur: Plat = plat === "web" ? "windows" : plat;
+  return rows.map((r) => ({ ...r, url: downloadUrl(r.plat), current: r.plat === cur }));
+}
+
 /** Czy build z wydania jest nowszy niż zainstalowany. Czysta (testowalna). */
 export function isNewer(buildStr: string, assetISO: string): boolean {
   if (!buildStr || !assetISO) return false;
