@@ -378,6 +378,27 @@ countFor zwraca null dla board — bo nie CrmBucket). 5+3 testy (drop zmienia st
 POZOSTAŁO: P3 raporty (render funnel/ROI), P4 głębia rekordu, P5 segmenty/widoki, P6 merge dubli.
 Łącznie po P2: Vitest 344/2968.
 
+## 4j. CRM P3 Raporty + Przewodnik budowy stron (2026-07-04)
+
+**P3 Raporty (commit 2dc9b1e, CI 8/8):** `src/lib/salesReports.ts` (czysty) — `leadFunnel`
+(lejek z etapów: total→engaged→offered→won + współczynniki, rate=null gdy brak podstawy),
+`segmentReport(dim)` (skuteczność wg niszy/miasta/źródła, sort po wartości wygranych),
+`monthlyOutcomes` (6 mies.: wygrane/przegrane wg updatedAt + REALNY przychód z Finansów paidAmount
+wg paidAt), pct/statusCounts. `SalesReports.tsx` (3 sekcje z paskami) jako zakładka „📊 Raporty"
+w SalesCrm. 7+2 testy. WAŻNE: growthAttribution/campaignRoi (funnel kampanijny) wymaga
+AttributionEvent których solo-operator nie zasila — świadomie NIE renderowany; raporty liczone 1:1.
+
+**Przewodnik „Zbuduj z JARVISEM" (commit 61a471a, CI 8/8):** `src/lib/webGuide.ts` — CZYSTY,
+DETERMINISTYCZNY tor rozmowy (business→…→done), heurystyki suggestKind/suggestStyle/suggestSections,
+guideAdvice/guideSuggestions/applyAnswer(nie mutuje)/guideToBrief. Kluczowa decyzja projektowa:
+tor deterministyczny (testowalny, nie błądzi), AI dokłada tylko poradę. `WebGuide.tsx` (pytanie+rada+
+chipy+postęp). WebStudio: przycisk „💬 Zbuduj z JARVISEM" nad ręcznym formularzem; onGuideComplete
+→ setBrief/kind/style + pendingBuild flaga + useEffect → run(false) PO commicie stanu (bez wyścigu).
+13+2 testy (realne przejście rozmowy → landing/luxury). Po tej rundzie: Vitest 348/2994.
+
+REGUŁA (utrwalona): łańcuch bramek przed commit MUSI być `&&` do końca (nie `;`); pułapka
+cudzysłowów uderza też w template literals (`„${x || "y"}"` — fixer regex może zepsuć — sprawdzać tsc).
+
 ## 4. Pomiary
 
 - Bramki lokalne na `5fffac7`: tsc czysty, ESLint czysty, Vitest 315 plików / 2708 testów
