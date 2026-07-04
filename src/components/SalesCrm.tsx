@@ -12,11 +12,13 @@ import type { GrowthContext } from "../lib/growthContext";
 import { bucketCounts, type CrmBucket } from "../lib/crmBuckets";
 import LeadCandidatesPanel from "./LeadCandidatesPanel";
 import SalesDashboard from "./SalesDashboard";
+import SalesBoard from "./SalesBoard";
 
-export type CrmTab = "found" | CrmBucket;
+export type CrmTab = "found" | "board" | CrmBucket;
 
 const TABS: { id: CrmTab; label: string }[] = [
   { id: "found", label: "🧲 Nowe znalezione" },
+  { id: "board", label: "📋 Lejek" },
   { id: "actionable", label: "🎯 Do działania" },
   { id: "clients", label: "✅ Klienci" },
   { id: "archive", label: "🗄 Archiwum" },
@@ -32,7 +34,7 @@ export default function SalesCrm({ onClose, onWeb, onMoney, initialTab = "action
   const { data } = useStore();
   const [tab, setTab] = useState<CrmTab>(initialTab);
   const counts = useMemo(() => bucketCounts(data.leads || []), [data.leads]);
-  const countFor = (t: CrmTab): number | null => (t === "found" ? null : counts[t]);
+  const countFor = (t: CrmTab): number | null => (t === "found" || t === "board" ? null : counts[t]);
 
   return (
     <div className="sheet" onClick={onClose}>
@@ -55,6 +57,9 @@ export default function SalesCrm({ onClose, onWeb, onMoney, initialTab = "action
         {tab === "found" ? (
           // „Nowe znalezione" — wyszukiwanie kandydatów. Po imporcie przeskocz do „Do działania".
           <LeadCandidatesPanel embedded onClose={onClose} onWeb={onWeb ? (ctx) => onWeb(ctx) : undefined} onImported={() => setTab("actionable")} />
+        ) : tab === "board" ? (
+          // 📋 Lejek — tablica kanban: wszystkie leady w kolumnach etapów, przeciąganie zmienia etap.
+          <SalesBoard onWeb={onWeb} onMoney={onMoney} />
         ) : (
           // CRM: leady danego kubełka (Do działania / Klienci / Archiwum).
           <SalesDashboard embedded bucket={tab} onClose={onClose} onWeb={onWeb} onMoney={onMoney} />
