@@ -1,0 +1,59 @@
+name: Build Android APK
+
+# Buduje instalacyjny APK JARVIS-a w chmurze GitHub (Android SDK + Gradle gotowe).
+# Po zakończeniu pobierz plik z sekcji "Artifacts" w podsumowaniu uruchomienia.
+
+on:
+  push:
+    branches: ["**"]
+    paths-ignore:
+      - "**.md"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Klucze NIE trafiają do bundla (model BYOK: użytkownik podaje własne, szyfrowane lokalnie;
+      # produkcyjne klucze idą przez BFF). Wcześniejsze env JARVIS_*_KEY było martwe i mylące.
+      - name: Build web + sync Capacitor
+        run: |
+          npm run build
+          npx cap sync android
+
+      # RELEASE (nie debug): podpis STAŁYM kluczem jarvis.jks (signingConfigs.release ma
+      # samowystarczalny fallback z hasłami w build.gradle — bez sekretów). Dzięki temu KAŻDY
+      # build ma ten sam podpis co jarvis.apk z Release'ów, więc aktualizacje instalują się „na
+      # wierzch" bez odinstalowywania (koniec „podczas instalowania pakietu wystąpił problem").
+      - name: Build release APK (stały klucz)
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error

@@ -1,0 +1,36 @@
+name: Tests
+
+# Szybkie testy jednostkowe (Vitest) — uruchamiane przy każdym pushu.
+# Sprawdzają czystą logikę: router/fallback AI, pamięć semantyczną, diagnostykę live.
+
+on:
+  push:
+    branches: ["**"]
+    paths-ignore:
+      - "**.md"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Skan sekretów (blokuje wyciek kluczy)
+        run: npm run scan:secrets
+
+      - name: Run tests
+        run: npm test
+
+      - name: Type-check + build
+        run: npm run build

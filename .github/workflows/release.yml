@@ -1,0 +1,95 @@
+name: Release APK
+
+# Buduje PODPISANY APK (release) i publikuje go w GitHub Releases pod stałym
+# tagiem "latest" — dzięki temu masz niezmienny link do pobrania:
+# https://github.com/<owner>/<repo>/releases/download/latest/jarvis.apk
+#
+# Uruchamiany ręcznie (Actions → Release APK → Run workflow) lub przez tag v*.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/functionality-modification-access-z9kod1"]
+    tags: ["v*"]
+    paths-ignore:
+      - "**.md"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      # JEDEN znacznik buildu (minuta, UTC) dla CAŁEGO wydania: trafia i do __APP_BUILD__
+      # (przez env APP_BUILD czytane w vite.config), i do bundle.json. Dzięki temu OTA NIE
+      # raportuje „nowszej wersji" dla identycznego buildu (wcześniej iso ZIP-a było parę minut
+      # późniejsze niż __APP_BUILD__ → apka wiecznie widziała aktualizację).
+      - name: Ustal znacznik buildu
+        run: echo "APP_BUILD=$(date -u +'%Y-%m-%d %H:%M')" >> "$GITHUB_ENV"
+
+      # Klucze NIE trafiają do APK (BYOK + BFF). Usunięto martwe, mylące env JARVIS_*_KEY —
+      # vite.config.ts ich nie czyta (__DEFAULT_KEYS__ jest puste).
+      - name: Build web + sync Capacitor
+        run: |
+          npm run build
+          npx cap sync android
+
+      # OTA: spakuj sam web-bundle (~1–2 MB) + manifest, by aplikacja pobierała samą ZMIANĘ,
+      # nie cały APK. version/iso pochodzą z TEGO SAMEGO APP_BUILD co __APP_BUILD__ (ta sama minuta).
+      - name: Pakuj web-bundle (OTA) + manifest
+        run: |
+          ( cd dist && zip -qr ../web-bundle.zip . )
+          ISO="$(printf '%sT%s:00Z' "${APP_BUILD% *}" "${APP_BUILD#* }")"
+          printf '{"version":"%s","iso":"%s","url":"https://github.com/Talent620/Jarvis/releases/download/latest/web-bundle.zip"}\n' "$APP_BUILD" "$ISO" > bundle.json
+          ls -lh web-bundle.zip bundle.json
+          cat bundle.json
+
+      - name: Build signed release APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk jarvis.apk
+
+      - name: Publish to GitHub Releases (rolling 'latest')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: JARVIS — najnowszy build
+          body: |
+            Najnowsza wersja JARVIS-a. Wybierz plik z sekcji **Assets** poniżej.
+            Pełna instrukcja: [docs/INSTALACJA.md](https://github.com/Talent620/Jarvis/blob/main/docs/INSTALACJA.md)
+
+            📱 **Android (telefon):** `jarvis.apk` — otwórz i zezwól na instalację z nieznanych źródeł.
+            💻 **Windows (aplikacja):** `JARVIS.exe` — uruchom (Dalej → Dalej → Zainstaluj).
+            🧠 **Serwer Ollama na PC (mózg dla telefonu):** `JARVIS-Ollama-Server.exe` — dwuklik, zostaw okno otwarte,
+            wklej pokazany adres w aplikacji (⚙ → AI). `.ps1` NIE odpala się dwuklikiem — użyj `.exe` lub `JARVIS-Serwer.cmd`.
+            🖼 **Obrazy lokalnie (Studio):** uruchom Stable Diffusion (A1111/Forge) — patrz docs/INSTALACJA.md.
+          files: |
+            jarvis.apk
+            web-bundle.zip
+            bundle.json
+          make_latest: true

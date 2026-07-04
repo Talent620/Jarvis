@@ -1,0 +1,14 @@
+/* Ekran „Eksport” (W4) — style własne; fundament w styles.css. */
+.export-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+.export-stats {
+  margin: 10px 0 14px;
+}
+.export-stats strong {
+  color: var(--accent);
+}
+.export-button {
+  width: 100%;
+}

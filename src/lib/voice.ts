@@ -1,0 +1,910 @@
+import type { Settings } from "../types";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+import { setLevel } from "./audioLevel";
+import { primaryKey } from "./keys";
+import { fetchTimeout } from "./http";
+import { WhisperListener } from "./whisperListener";
+import { synthLocal, localTtsUsable } from "./localTts";
+import { logError } from "./errorLog";
+
+// Natywny silnik mowy Androida (pewniejszy niż Web Speech w WebView).
+export interface NativeVoiceInfo { name: string; lang: string; quality?: number; network?: boolean }
+interface NativeTtsPlugin {
+  speak(o: { text: string; pitch: number; rate: number; lang: string; voice?: string }): Promise<void>;
+  listVoices(): Promise<{ voices: NativeVoiceInfo[] }>;
+  stop(): Promise<void>;
+}
+const NativeTTS = registerPlugin<NativeTtsPlugin>("NativeTTS");
+
+/**
+ * Oczyść tekst PRZED wypowiedzeniem, żeby TTS nie czytał na głos znaczników i symboli (markdown,
+ * emoji, linki, kod) — model czasem je wstawi mimo instrukcji, a czytnik mówiłby wtedy „gwiazdka
+ * gwiazdka", literował URL-e itd. Czysta i testowalna. Świadomie BEZ flagi /u i lookbehind/lookahead
+ * astralnego — stary WebView (Samsung S9) by się wywalił; emoji zdejmujemy przez pary surogatów.
+ */
+export function cleanForSpeech(raw: string): string {
+  let t = raw || "";
+  t = t.replace(/```[\s\S]*?```/g, " "); // bloki kodu — pomiń (nieczytelne na głos)
+  t = t.replace(/`([^`]*)`/g, "$1"); // kod inline → sama treść
+  t = t.replace(/!?\[([^\]]+)\]\([^)]+\)/g, "$1"); // [tekst](url) / ![alt](url) → tekst
+  t = t.replace(/https?:\/\/\S+/gi, "link").replace(/\bwww\.\S+/gi, "link"); // URL-e → „link" (nie literujemy)
+  t = t.replace(/^\s{0,3}#{1,6}\s+/gm, ""); // nagłówki
+  t = t.replace(/^\s{0,3}>\s?/gm, ""); // cytaty
+  t = t.replace(/^\s{0,3}[-*+]\s+/gm, ""); // punktory
+  t = t.replace(/^\s{0,3}\d+[.)]\s+/gm, ""); // listy numerowane
+  t = t.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1"); // pogrubienie/kursywa
+  t = t.replace(/__([^_]+)__/g, "$1").replace(/~~([^~]+)~~/g, "$1"); // podkreślenie/przekreślenie
+  // Emoji/symbole: astralne (pary surogatów) + zakresy BMP (strzałki, dingbaty, technical, ™, FE0F).
+  // Bez flagi /u — stary WebView S9 by się wywalił. Wielokropek (…) i myślnik (—) celowo zostają.
+  t = t.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "");
+  t = t.replace(/[\u2190-\u21FF\u2300-\u27BF\u2B00-\u2BFF\u2122]/g, ""); // strzałki/symbole/dingbaty/™ (BMP)
+  t = t.replace(/\uFE0F/g, "").replace(/\u20E3/g, ""); // selektor wariantu emoji + keycap (osobno — znaki łączące)
+  // Nowe linie → naturalne pauzy: linia bez końcowej interpunkcji dostaje kropkę, reszta → spacja.
+  t = t.replace(/\s*\n+\s*/g, "\n").replace(/([^.!?…:])\n/g, "$1. ").replace(/\n/g, " ");
+  t = t.replace(/\.{3,}/g, "…").replace(/[ \t]{2,}/g, " ").replace(/\s+([.,!?…])/g, "$1");
+  return t.trim();
+}
+
+/**
+ * Ukształtuj tekst pod NATURALNĄ wymowę PO oczyszczeniu (cleanForSpeech). Rozwija skróty i symbole,
+ * które silniki TTS literują albo czytają dziwnie (np. „np." → „na przykład", „%" → „procent").
+ * Świadomie pomijamy skróty zależne od odmiany (godz./tys./zł), bo zła forma brzmi gorzej niż skrót.
+ * Czysta i testowalna — działa na KAŻDYM silniku (systemowym, premium), bez SSML.
+ */
+const SPEECH_ABBR: [RegExp, string][] = [
+  [/\bnp\./gi, "na przykład"],
+  [/\bitp\./gi, "i tym podobne"],
+  [/\bitd\./gi, "i tak dalej"],
+  [/\btzn\./gi, "to znaczy"],
+  [/\bm\.in\./gi, "między innymi"],
+  [/\bok\./gi, "około"],
+  [/\bnr\b/gi, "numer"],
+  [/\bul\./gi, "ulica"],
+];
+export function speechShape(raw: string): string {
+  let t = raw || "";
+  for (const [re, w] of SPEECH_ABBR) t = t.replace(re, w);
+  t = t.replace(/(\d)\s*%/g, "$1 procent").replace(/%/g, " procent"); // procenty
+  t = t.replace(/(\d)\s*°\s*C/gi, "$1 stopni"); // temperatura
+  t = t.replace(/ & /g, " i "); // ampersand
+  return t.replace(/\s{2,}/g, " ").trim();
+}
+
+/** Lista dostępnych głosów do wyboru w ustawieniach — natywne (Android) albo przeglądarkowe.
+ *  Android ma własny silnik (NativeTTS); iOS i web używają Web Speech (WKWebView/przeglądarka). */
+export async function listSpeechVoices(): Promise<NativeVoiceInfo[]> {
+  if (Capacitor.getPlatform?.() === "android") {
+    try {
+      const r = await NativeTTS.listVoices();
+      const list = (r?.voices || []).filter((v) => v.name);
+      if (list.length) return list;
+    } catch {
+      /* spadnij do Web Speech */
+    }
+  }
+  const voices = cachedVoices.length ? cachedVoices : await loadVoices();
+  return voices.map((v) => ({ name: v.name, lang: v.lang }));
+}
+
+/** Pure: ocena jakości głosu (im wyżej, tym lepiej). Preferuje wysoką jakość, sieciowy/Google. */
+export function voiceQualityScore(v: NativeVoiceInfo): number {
+  return (
+    (v.quality || 0) +
+    (v.network ? 50 : 0) + // głosy sieciowe Google brzmią naturalniej
+    (/google/i.test(v.name) ? 30 : 0) +
+    (/-x-|local/i.test(v.name) ? 5 : 0)
+  );
+}
+
+/** Pure: wskaż „najlepszy" polski głos z listy (najwyższa jakość). Zwraca nazwę albo "" gdy brak PL. */
+export function bestPlVoiceName(voices: NativeVoiceInfo[]): string {
+  const pl = voices.filter((v) => /^pl/i.test(v.lang || ""));
+  if (!pl.length) return "";
+  return [...pl].sort((a, b) => voiceQualityScore(b) - voiceQualityScore(a))[0].name;
+}
+
+export interface VoiceGuardResult { changed: boolean; from: string; to: string; reason: "ok" | "missing" | "none" }
+/**
+ * Voice Guardian (start aplikacji): sprawdź, czy PRZYPIĘTY głos (voiceName) nadal istnieje
+ * w silniku. Jeśli zniknął (aktualizacja systemu, usunięcie pakietu) — wybierz najlepszy
+ * polski zamiennik i zapisz go. Czysty wynik (decyzję o zapisie podejmuje caller).
+ */
+export async function checkPinnedVoice(): Promise<VoiceGuardResult> {
+  const { store } = await import("./store");
+  const pinned = store.settings.voiceName?.trim();
+  if (!pinned) return { changed: false, from: "", to: "", reason: "ok" };
+  const voices = await listSpeechVoices();
+  if (!voices.length) return { changed: false, from: pinned, to: pinned, reason: "ok" }; // lista pusta — nie ruszaj
+  if (voices.some((v) => v.name === pinned)) return { changed: false, from: pinned, to: pinned, reason: "ok" };
+  const replacement = bestPlVoiceName(voices);
+  return { changed: !!replacement, from: pinned, to: replacement, reason: replacement ? "missing" : "none" };
+}
+
+// --- Synteza mowy (TTS) ---
+
+let cachedVoices: SpeechSynthesisVoice[] = [];
+
+export function loadVoices(): Promise<SpeechSynthesisVoice[]> {
+  return new Promise((resolve) => {
+    const synth = window.speechSynthesis;
+    const got = synth?.getVoices() ?? [];
+    if (got.length) {
+      cachedVoices = got;
+      resolve(got);
+      return;
+    }
+    if (!synth) {
+      resolve([]);
+      return;
+    }
+    let settled = false;
+    const finish = (v: SpeechSynthesisVoice[]) => {
+      if (settled) return;
+      settled = true;
+      synth.onvoiceschanged = null; // nie zostawiaj wiszącego handlera na globalnym synth
+      clearTimeout(timer);
+      resolve(v);
+    };
+    synth.onvoiceschanged = () => {
+      cachedVoices = synth.getVoices();
+      finish(cachedVoices);
+    };
+    // Fallback, gdyby zdarzenie nie wystąpiło.
+    const timer = setTimeout(() => finish(cachedVoices.length ? cachedVoices : synth.getVoices()), 500);
+  });
+}
+
+// Heurystyka wyboru najbardziej „JARVIS-owego” głosu: brytyjski, męski.
+const JARVIS_HINTS = ["daniel", "george", "ryan", "arthur", "uk english male", "google uk english male"];
+
+function pickVoice(settings: Settings): SpeechSynthesisVoice | undefined {
+  const voices = cachedVoices.length ? cachedVoices : window.speechSynthesis?.getVoices() ?? [];
+  if (!voices.length) return undefined;
+  if (settings.voiceName) {
+    const exact = voices.find((v) => v.name === settings.voiceName);
+    if (exact) return exact;
+  }
+  // Odpowiedzi są PO POLSKU — domyślnie wybierz najlepszy POLSKI głos, by czytał poprawnie
+  // (angielski głos mówiący po polsku brzmi fatalnie). Najlepszy głos JARVIS-a = naturalny PL.
+  const pl = voices.filter((v) => v.lang.toLowerCase().startsWith("pl"));
+  if (pl.length) {
+    const PL_PREF = ["zofia", "marek", "krzysztof", "adam", "paulina", "google", "microsoft", "natural"];
+    for (const h of PL_PREF) { const v = pl.find((x) => x.name.toLowerCase().includes(h)); if (v) return v; }
+    return pl[0];
+  }
+  // Brak polskiego głosu w systemie → klasyczny głos JARVIS-a (angielski) jako fallback.
+  for (const hint of JARVIS_HINTS) {
+    const v = voices.find((x) => x.name.toLowerCase().includes(hint));
+    if (v) return v;
+  }
+  return voices.find((v) => v.lang.toLowerCase().startsWith("en")) || voices[0];
+}
+
+let currentAudio: HTMLAudioElement | null = null;
+let levelCtx: AudioContext | null = null;
+let levelRaf = 0;
+
+/** Krzywa zniekształcenia (waveshaper) — im większy „amount", tym ostrzejszy charkot. Czyste. */
+export function makeDistortionCurve(amount: number, n = 8192): Float32Array {
+  const curve = new Float32Array(n);
+  const deg = Math.PI / 180;
+  for (let i = 0; i < n; i++) {
+    const x = (i * 2) / n - 1;
+    curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
+  }
+  return curve;
+}
+
+// Łańcuch „Kapitan Bomba": podbite niskie (klatka piersiowa), ścięte wysokie, mocne zniekształcenie
+// (charkot/agresja) + makeup gain. Wraz z niższym playbackRate daje głęboki, brutalny, zniekształcony
+// głos — najbliżej kreskówki, jak da się z TTS. Zwraca węzeł wyjściowy do podłączenia dalej.
+function kapitanFxChain(ctx: AudioContext, src: AudioNode): AudioNode {
+  // 1) Highpass — utnij dudnienie/rumble, żeby zniekształcenie nie zamieniło się w błotnistą breję.
+  const highPass = ctx.createBiquadFilter(); highPass.type = "highpass"; highPass.frequency.value = 90;
+  // 2) Lowshelf — klatka piersiowa (groźny, niski fundament).
+  const lowShelf = ctx.createBiquadFilter(); lowShelf.type = "lowshelf"; lowShelf.frequency.value = 180; lowShelf.gain.value = 8;
+  // 3) Drive — napędź waveshaper mocniej, by charkot był SPÓJNY niezależnie od głośności wejścia.
+  const drive = ctx.createGain(); drive.gain.value = 1.7;
+  const shaper = ctx.createWaveShaper(); (shaper as { curve: Float32Array | null }).curve = makeDistortionCurve(20); shaper.oversample = "4x";
+  // 4) Presence peak ~1.5 kHz — słowa PRZEBIJAJĄ się przez zniekształcenie (wyraźniej, nie tylko głośniej).
+  const presence = ctx.createBiquadFilter(); presence.type = "peaking"; presence.frequency.value = 1500; presence.Q.value = 1; presence.gain.value = 6;
+  // 5) Lowpass — zostaw bite, ale bez piszczących wysokich.
+  const lowpass = ctx.createBiquadFilter(); lowpass.type = "lowpass"; lowpass.frequency.value = 3400;
+  const out = ctx.createGain(); out.gain.value = 0.82; // makeup + zapas na clipping
+  src.connect(highPass); highPass.connect(lowShelf); lowShelf.connect(drive); drive.connect(shaper); shaper.connect(presence); presence.connect(lowpass); lowpass.connect(out);
+  return out;
+}
+
+// Odtwórz URL audio i napędzaj poziom głośności (orb „mówi" w rytm dźwięku).
+// Web Audio jest opcjonalne — przy jakimkolwiek błędzie zwykłe odtwarzanie działa.
+// fx="kapitan" → przepuść przez efekt zniekształcenia (głos Kapitana Bomby) i zaniż wysokość.
+async function playUrlWithLevel(url: string, fx?: boolean): Promise<void> {
+  const audio = new Audio(url);
+  currentAudio = audio;
+  if (fx) audio.playbackRate = 0.84; // głębiej i ciężej
+  let srcNode: MediaElementAudioSourceNode | null = null;
+  let analyserNode: AnalyserNode | null = null;
+  let fxOut: AudioNode | null = null;
+  // Sprzątanie: odłącz węzły Web Audio — inaczej akumulują się na współdzielonym
+  // levelCtx przy każdym premium-TTS (wyciek pamięci + CPU w wątku audio).
+  const cleanup = () => {
+    try { srcNode?.disconnect(); } catch { /* ignore */ }
+    try { fxOut?.disconnect(); } catch { /* ignore */ }
+    try { analyserNode?.disconnect(); } catch { /* ignore */ }
+    cancelAnimationFrame(levelRaf);
+    setLevel(0);
+  };
+  audio.onended = () => {
+    URL.revokeObjectURL(url);
+    cleanup();
+  };
+  audio.onerror = () => cleanup();
+  try {
+    levelCtx = levelCtx || new (window.AudioContext || (window as any).webkitAudioContext)();
+    const ctx = levelCtx;
+    if (ctx.state === "suspended") await ctx.resume().catch(() => {});
+    srcNode = ctx.createMediaElementSource(audio);
+    const head: AudioNode = fx ? kapitanFxChain(ctx, srcNode) : srcNode; // efekt KB (lub czysto)
+    fxOut = fx ? head : null;
+    const analyser = ctx.createAnalyser();
+    analyserNode = analyser;
+    analyser.fftSize = 256;
+    head.connect(ctx.destination); // audio zawsze słychać (przez efekt, gdy włączony)
+    head.connect(analyser); // odczep do pomiaru poziomu (bez dalszego routingu)
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    const tick = () => {
+      analyser.getByteTimeDomainData(data);
+      let sum = 0;
+      for (const v of data) {
+        const c = (v - 128) / 128;
+        sum += c * c;
+      }
+      setLevel(Math.min(1, Math.sqrt(sum / data.length) * 3));
+      levelRaf = requestAnimationFrame(tick);
+    };
+    tick();
+  } catch {
+    /* Web Audio niedostępne — odtwarzaj normalnie, bez wizualizacji */
+  }
+  await audio.play();
+}
+
+async function playFromResponse(res: Response, fx?: boolean): Promise<boolean> {
+  if (!res.ok) return false;
+  const blob = await res.blob();
+  await playUrlWithLevel(URL.createObjectURL(blob), fx);
+  return true;
+}
+
+// Token przerwania — stopSpeaking() go zwiększa, więc trwające czytanie
+// (potokowe, po kawałkach) wie, że ma się zatrzymać.
+let speakToken = 0;
+// Czy JARVIS aktualnie mówi (odtwarza TTS). Nasłuch mowy (whisperListener) wycisza wtedy
+// wejście, by nie rozpoznawać własnego głosu (koniec echa/samowyzwalania — dług z AUDIT.md).
+let speakingDepth = 0;
+export function isSpeaking(): boolean {
+  return speakingDepth > 0;
+}
+// Jawne przerwanie bieżącego odtwarzania (ustawiane przez playUrlEnded).
+// Pewniejsze niż zdarzenie „pause", które bywa odpalane także przy końcu utworu.
+let interruptPlayback: (() => void) | null = null;
+
+/** Podziel tekst na krótkie kawałki na granicach zdań (do szybkiego startu głosu). */
+export function splitForSpeech(text: string, max = 200): string[] {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return [];
+  const sentences = clean.match(/[^.!?…]+[.!?…]+|\S[^.!?…]*$/g) || [clean];
+  const out: string[] = [];
+  let buf = "";
+  const push = () => { if (buf.trim()) out.push(buf.trim()); buf = ""; };
+  for (const raw of sentences) {
+    const s = raw.trim();
+    if (!s) continue;
+    if ((buf + " " + s).trim().length <= max) { buf = (buf ? buf + " " : "") + s; continue; }
+    push();
+    if (s.length <= max) { buf = s; continue; }
+    // Bardzo długie zdanie → twardy podział, ostatni fragment zostaje w buforze.
+    const parts = s.match(new RegExp(`.{1,${max}}(\\s|$)`, "g")) || [s];
+    for (let i = 0; i < parts.length - 1; i++) out.push(parts[i].trim());
+    buf = parts[parts.length - 1].trim();
+  }
+  push();
+  return out;
+}
+
+/** Odtwórz URL i rozwiąż, gdy SKOŃCZY (albo przerwano). Napędza poziom orba. */
+function playUrlEnded(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const audio = new Audio(url);
+    currentAudio = audio;
+    let done = false;
+    let srcNode: MediaElementAudioSourceNode | null = null;
+    const finish = (ok: boolean) => {
+      if (done) return;
+      done = true;
+      interruptPlayback = null;
+      try { srcNode?.disconnect(); } catch { /* ignore */ }
+      URL.revokeObjectURL(url);
+      cancelAnimationFrame(levelRaf);
+      setLevel(0);
+      resolve(ok);
+    };
+    interruptPlayback = () => finish(false); // wywoła to stopSpeaking()
+    audio.onended = () => finish(true);
+    audio.onerror = () => finish(false);
+    try {
+      levelCtx = levelCtx || new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ctx = levelCtx;
+      if (ctx.state === "suspended") void ctx.resume().catch(() => {});
+      srcNode = ctx.createMediaElementSource(audio);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      srcNode.connect(ctx.destination);
+      srcNode.connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (const v of data) { const c = (v - 128) / 128; sum += c * c; }
+        setLevel(Math.min(1, Math.sqrt(sum / data.length) * 3));
+        levelRaf = requestAnimationFrame(tick);
+      };
+      tick();
+    } catch {
+      /* bez wizualizacji */
+    }
+    // play() bywa odrzucane (autoplay/urządzenie) — łap też wyjątek synchroniczny,
+    // żeby nie zostawić nieobsłużonej obietnicy i czysto zakończyć odtwarzanie.
+    try {
+      const p = audio.play();
+      if (p && typeof p.catch === "function") p.catch(() => finish(false));
+    } catch {
+      finish(false);
+    }
+  });
+}
+
+// Pakuje surowe PCM16 (z Gemini TTS) w nagłówek WAV, by dało się odtworzyć.
+function pcmToWavUrl(b64: string, sampleRate: number): string {
+  const bin = atob(b64);
+  const len = bin.length;
+  const buffer = new ArrayBuffer(44 + len);
+  const view = new DataView(buffer);
+  const writeStr = (off: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i));
+  };
+  writeStr(0, "RIFF");
+  view.setUint32(4, 36 + len, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, "data");
+  view.setUint32(40, len, true);
+  for (let i = 0; i < len; i++) view.setUint8(44 + i, bin.charCodeAt(i));
+  return URL.createObjectURL(new Blob([view], { type: "audio/wav" }));
+}
+
+// Darmowy głos wysokiej jakości przez Gemini TTS (wymaga klucza Gemini).
+// Wielojęzyczny i naturalny — mówi w języku tekstu (też ukraiński/polski),
+// działa na każdej platformie (chmura), więc świetny do Trybu Tłumacza.
+export async function geminiSpeak(text: string, voiceName?: string): Promise<boolean> {
+  const key = primaryKey("gemini");
+  if (!key || !text.trim()) return false;
+  const voice = voiceName?.trim() || "Charon";
+  const chunks = splitForSpeech(text);
+  if (!chunks.length) return false;
+  const token = ++speakToken; // przejmij „mówienie"; stopSpeaking() je unieważni
+
+  // Synteza JEDNEGO kawałka → URL audio (albo null). Bez odtwarzania.
+  const synth = async (chunk: string): Promise<string | null> => {
+    try {
+      const res = await fetchTimeout(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${key}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: chunk }] }],
+            generationConfig: {
+              responseModalities: ["AUDIO"],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+            },
+          }),
+        },
+        30000,
+      );
+      if (!res.ok) return null;
+      const d = await res.json();
+      const part = (d?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData);
+      const b64 = part?.inlineData?.data;
+      if (!b64) return null;
+      const rate = Number(/rate=(\d+)/.exec(part.inlineData.mimeType || "")?.[1]) || 24000;
+      return pcmToWavUrl(b64, rate);
+    } catch {
+      return null;
+    }
+  };
+
+  // Potok: czytaj bieżący kawałek, a kolejny generuj W TLE — głos startuje
+  // po wygenerowaniu pierwszego krótkiego zdania, nie całej odpowiedzi.
+  let next = synth(chunks[0]);
+  for (let i = 0; i < chunks.length; i++) {
+    const url = await next;
+    if (token !== speakToken) return true; // przerwano (stopSpeaking)
+    if (i === 0 && !url) return false; // pierwszy kawałek padł → fallback (głos systemowy), bez zbędnej syntezy
+    next = i + 1 < chunks.length ? synth(chunks[i + 1]) : Promise.resolve(null);
+    if (url) {
+      const ok = await playUrlEnded(url);
+      if (!ok || token !== speakToken) return true; // przerwane odtwarzanie
+    }
+  }
+  return true;
+}
+
+// Głosy premium Gemini TTS — kilka naturalnych, z czytelnymi opisami.
+export const TTS_VOICES: { id: string; label: string }[] = [
+  { id: "Aoede", label: "Aoede — kobiecy, ciepły" },
+  { id: "Kore", label: "Kore — kobiecy, wyrazisty" },
+  { id: "Leda", label: "Leda — kobiecy, młody" },
+  { id: "Callirrhoe", label: "Callirrhoe — kobiecy, łagodny" },
+  { id: "Charon", label: "Charon — męski, spokojny" },
+  { id: "Puck", label: "Puck — męski, żywy" },
+  { id: "Orus", label: "Orus — męski, głęboki" },
+];
+
+async function geminiTts(text: string, settings: Settings): Promise<boolean> {
+  return geminiSpeak(text, settings.geminiVoice?.trim() || "Charon");
+}
+
+export type VoiceMode = "system" | "gemini" | "eleven" | "fish" | "local";
+
+/**
+ * Pure: rozstrzygnij JEDNOZNACZNIE, którego silnika głosu użyć. Najpierw jawny wybór użytkownika
+ * (voiceMode — źródło prawdy). Gdy go brak (stary profil), wywnioskuj ze starych flag — zgodność wstecz.
+ */
+export function resolveVoiceMode(s: Settings): VoiceMode {
+  if (s.voiceMode) return s.voiceMode;
+  if (s.localTts) return "local";
+  if (s.fishAudioApiKey && s.fishAudioVoiceId) return "fish";
+  const basicPl = s.voicePinned || s.voiceSystemPl !== false;
+  if (!basicPl && s.elevenLabsApiKey && s.elevenLabsVoiceId) return "eleven";
+  if (!basicPl && s.geminiTts && s.keys?.gemini?.trim()) return "gemini";
+  return "system";
+}
+
+/**
+ * Pure: czytelna etykieta tego, co NAPRAWDĘ zabrzmi (uwzględnia brak klucza → spadek do systemowego).
+ * Dzięki temu w Ustawieniach widać jednym rzutem oka aktualny głos — koniec zgadywania.
+ */
+export function activeVoiceLabel(s: Settings): string {
+  if (!s.speak) return "🔇 wyłączony";
+  const mode = resolveVoiceMode(s);
+  if (mode === "local") return "🧠 lokalny (offline)";
+  if (mode === "fish" && s.fishAudioApiKey && s.fishAudioVoiceId) return "🐟 Fish Audio (premium)";
+  if (mode === "eleven" && s.elevenLabsApiKey && s.elevenLabsVoiceId) return "🎙 ElevenLabs (premium)";
+  if (mode === "gemini" && s.keys?.gemini?.trim()) return `🎙 Gemini TTS (${s.geminiVoice || "Charon"})`;
+  // system albo premium bez klucza → realnie zabrzmi głos systemowy (PL).
+  return s.voiceName?.trim() ? `🇵🇱 ${s.voiceName}${s.voicePinned ? " · przypięty" : ""}` : "🇵🇱 polski systemowy (auto)";
+}
+
+export type VoiceFallbackDecision = "play_system" | "notify";
+
+/**
+ * Pure: co zrobić po nieudanym premium/local głosie. Domyślna polityka „ask" NIE zmienia głosu po cichu —
+ * zwraca „notify" (UI zapyta). „system" albo jednorazowa zgoda (systemOverride) → „play_system".
+ * Gdy premium się nie wysypał (np. tryb systemowy od początku) → zawsze „play_system".
+ */
+export function voiceFallbackDecision(opts: { policy?: "ask" | "system"; premiumFailed: boolean; systemOverride?: boolean }): VoiceFallbackDecision {
+  if (!opts.premiumFailed) return "play_system";
+  if (opts.systemOverride) return "play_system";
+  return (opts.policy ?? "ask") === "system" ? "play_system" : "notify";
+}
+
+// Notifier: gdy wybrany głos padł, a polityka to „ask" — UI pokazuje komunikat (Ponów / Systemowy raz).
+export interface VoiceUnavailableInfo {
+  engine: VoiceMode;
+  label: string;
+  /** Ponów tym samym (wybranym) głosem. */
+  retry: () => void;
+  /** Użyj systemowego TYLKO teraz (nie zmienia przypiętego głosu). */
+  useSystemOnce: () => void;
+}
+let voiceUnavailableHandler: ((info: VoiceUnavailableInfo) => void) | null = null;
+export function setVoiceUnavailableHandler(fn: ((info: VoiceUnavailableInfo) => void) | null): void {
+  voiceUnavailableHandler = fn;
+}
+
+export async function speak(text: string, settings: Settings, opts: { systemOverride?: boolean } = {}): Promise<void> {
+  if (!settings.speak) return;
+  const originalText = text; // do ewentualnego „Ponów" tym samym głosem (bez podwójnego czyszczenia)
+  text = speechShape(cleanForSpeech(text)); // czyść znaczniki + rozwiń skróty/symbole pod naturalną wymowę
+  if (!text.trim()) return;
+  stopSpeaking();
+  const myToken = speakToken; // bieżąca „tura mówienia"; nowszy speak()/stop unieważni
+  speakingDepth++;
+  const fx = settings.voiceFx === "kapitan"; // efekt zniekształcenia (głos Kapitana Bomby) na audio buforowym
+  try {
+  // JEDEN jednoznaczny wybór silnika (voiceMode) — koniec „walki flag". Każdy premium tor
+  // przy braku klucza/niepowodzeniu spada bezpiecznie do głosu systemowego (PL) niżej.
+  const mode = resolveVoiceMode(settings);
+  // Czy wybrano PREMIUM/LOCAL z kluczem? Jeśli tak i nie zabrzmi, to prawdziwa AWARIA (nie brak konfiguracji).
+  const premiumWithKey =
+    (mode === "fish" && !!settings.fishAudioApiKey && !!settings.fishAudioVoiceId) ||
+    (mode === "eleven" && !!settings.elevenLabsApiKey && !!settings.elevenLabsVoiceId) ||
+    (mode === "gemini" && !!primaryKey("gemini")) ||
+    (mode === "local" && localTtsUsable());
+  // Głos on-device (Kokoro) — prywatnie, bez chmury. Opcja; przy niepowodzeniu fallback niżej.
+  if (mode === "local" && localTtsUsable()) {
+    try {
+      const blob = await synthLocal(text);
+      if (myToken !== speakToken) return; // nowsza tura przejęła w czasie syntezy
+      if (blob) { await playUrlWithLevel(URL.createObjectURL(blob), fx); return; }
+    } catch {
+      /* fallback do głosów chmurowych/systemowych niżej */
+    }
+  }
+
+  // Premium głos przez Fish Audio (tani, topowy klon), jeśli wybrany i z kluczem.
+  if (mode === "fish" && settings.fishAudioApiKey && settings.fishAudioVoiceId) {
+    try {
+      const res = await fetchTimeout("https://api.fish.audio/v1/tts", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${settings.fishAudioApiKey}`,
+          "content-type": "application/json",
+          model: "s1",
+        },
+        body: JSON.stringify({ text, reference_id: settings.fishAudioVoiceId, format: "mp3" }),
+      }, 30000);
+      if (myToken !== speakToken) return; // nowsza tura przejęła w czasie pobierania
+      if (await playFromResponse(res, fx)) return;
+    } catch {
+      /* fallback niżej */
+    }
+  }
+
+  // Premium głos przez ElevenLabs (najbliżej oryginalnego JARVIS-a), jeśli wybrany i z kluczem.
+  if (mode === "eleven" && settings.elevenLabsApiKey && settings.elevenLabsVoiceId) {
+    try {
+      const res = await fetchTimeout(
+        `https://api.elevenlabs.io/v1/text-to-speech/${settings.elevenLabsVoiceId}`,
+        {
+          method: "POST",
+          headers: {
+            "xi-api-key": settings.elevenLabsApiKey,
+            "content-type": "application/json",
+            accept: "audio/mpeg",
+          },
+          body: JSON.stringify({
+            text,
+            model_id: "eleven_multilingual_v2",
+            // Domyślnie naturalnie; profil może dostroić (np. agresywny Tryb Szefa: niska stabilność, wysoki styl).
+            voice_settings: {
+              stability: typeof settings.elevenStability === "number" ? settings.elevenStability : 0.4,
+              similarity_boost: 0.85,
+              style: typeof settings.elevenStyle === "number" ? settings.elevenStyle : 0,
+              use_speaker_boost: true,
+            },
+          }),
+        },
+        30000,
+      );
+      if (myToken !== speakToken) return; // nowsza tura przejęła w czasie pobierania
+      if (await playFromResponse(res, fx)) return;
+    } catch {
+      /* fallback do systemowego TTS */
+    }
+  }
+
+  // Darmowy, wysokiej jakości głos przez Gemini TTS (gdy wybrany i jest klucz).
+  if (mode === "gemini" && primaryKey("gemini")) {
+    if (await geminiTts(text, settings)) return;
+  }
+
+  // Wybrany głos (premium/local) NIE zabrzmiał. Zamiast po cichu przełączyć na systemowy —
+  // uszanuj politykę: „ask" (domyślnie) → zapytaj i NIE zmieniaj przypiętego głosu.
+  if (myToken === speakToken && voiceFallbackDecision({ policy: settings.voiceFallbackPolicy, premiumFailed: premiumWithKey, systemOverride: opts.systemOverride }) === "notify") {
+    voiceUnavailableHandler?.({
+      engine: mode,
+      label: activeVoiceLabel(settings),
+      retry: () => void speak(originalText, settings),
+      useSystemOnce: () => void speak(originalText, settings, { systemOverride: true }),
+    });
+    return;
+  }
+
+  // Android: natywny silnik TTS (WebView Androida często nie ma Web Speech) + WYBRANY głos
+  // (bez tego silnik bierze domyślny „translatorowy", który się zmienia). iOS i web mają
+  // sprawne Web Speech (WKWebView/przeglądarka) — używają pickVoice niżej.
+  if (Capacitor.getPlatform?.() === "android") {
+    try {
+      await NativeTTS.speak({ text, pitch: settings.voicePitch, rate: settings.voiceRate, lang: "pl-PL", voice: settings.voiceName?.trim() || "" });
+      return;
+    } catch (e) {
+      logError("tts", e, "native"); // zarejestruj błąd TTS — Voice Agent go pokaże
+      /* fallback do Web Speech */
+    }
+  }
+
+  const synth = window.speechSynthesis;
+  if (!synth) return;
+  // Na Androidzie lista głosów bywa pusta przy starcie — poczekaj na nią.
+  if (!cachedVoices.length) await loadVoices();
+  const u = new SpeechSynthesisUtterance(text);
+  const v = pickVoice(settings);
+  if (v) u.voice = v;
+  u.pitch = settings.voicePitch;
+  u.rate = settings.voiceRate;
+  u.lang = v?.lang || "pl-PL";
+  try {
+    synth.resume();
+  } catch {
+    /* ignore */
+  }
+  synth.speak(u);
+  } finally {
+    // Zmniejsz licznik mówienia TYLKO, jeśli ta tura wciąż „posiada" mówienie (myToken aktualny).
+    // Inaczej, przy nakładających się speak(), starsza tura wyzerowałaby licznik należący do nowszej
+    // → isSpeaking()=false mimo grającego TTS → nasłuch łapałby własny głos JARVISA (echo/self-trigger).
+    if (myToken === speakToken) speakingDepth = Math.max(0, speakingDepth - 1);
+  }
+}
+
+export function stopSpeaking(): void {
+  speakToken++; // przerwij trwające potokowe czytanie (Gemini, po kawałkach)
+  speakingDepth = 0; // już nie mówimy — odblokuj nasłuch
+  interruptPlayback?.(); // natychmiast rozwiąż bieżące odtwarzanie kawałka
+  try {
+    window.speechSynthesis?.cancel();
+  } catch {
+    /* ignore */
+  }
+  if (Capacitor.isNativePlatform()) NativeTTS.stop().catch(() => {});
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+  cancelAnimationFrame(levelRaf);
+  setLevel(0);
+}
+
+/**
+ * Przeczytaj tekst w KONKRETNYM języku (kod typu „uk-UA", „pl-PL") — dla Trybu
+ * Tłumacza, niezależnie od głosu JARVIS-a. Na urządzeniu używa natywnego TTS,
+ * w przeglądarce/desktopie dobiera głos pasujący do języka.
+ */
+export async function speakLang(text: string, ttsLang: string, opts?: { voice?: string; premium?: boolean }): Promise<void> {
+  if (!text.trim()) return;
+  stopSpeaking();
+  // Głos PREMIUM (Gemini TTS) — naturalny, wielojęzyczny, działa wszędzie.
+  // Idealny do tłumacza: ukraiński/polski brzmią jak żywy człowiek.
+  if (opts?.premium !== false && primaryKey("gemini")) {
+    if (await geminiSpeak(text, opts?.voice)) return;
+  }
+  if (Capacitor.getPlatform?.() === "android") {
+    try {
+      await NativeTTS.speak({ text, pitch: 1, rate: 1, lang: ttsLang });
+      return;
+    } catch {
+      /* fallback do Web Speech */
+    }
+  }
+  const synth = window.speechSynthesis;
+  if (!synth) return;
+  if (!cachedVoices.length) await loadVoices();
+  const u = new SpeechSynthesisUtterance(text);
+  const pref = ttsLang.slice(0, 2).toLowerCase();
+  const v = cachedVoices.find((x) => x.lang.toLowerCase() === ttsLang.toLowerCase())
+    || cachedVoices.find((x) => x.lang.toLowerCase().startsWith(pref));
+  if (v) u.voice = v;
+  u.lang = v?.lang || ttsLang;
+  try { synth.resume(); } catch { /* ignore */ }
+  synth.speak(u);
+}
+
+// --- Rozpoznawanie mowy (STT) ---
+
+// Minimalne typy Web Speech API (brak ich w domyślnym lib.dom).
+interface SpeechRecognitionLike {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onresult: ((e: any) => void) | null;
+  onerror: ((e: any) => void) | null;
+  onend: (() => void) | null;
+}
+
+export function createRecognition(): SpeechRecognitionLike | null {
+  const Ctor =
+    (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  return Ctor ? new Ctor() : null;
+}
+export type { SpeechRecognitionLike };
+
+// Czy działamy w aplikacji desktopowej (Electron / Windows .exe). Tam wbudowane
+// rozpoznawanie mowy przeglądarki (webkitSpeechRecognition) NIE działa — Chromium
+// w Electronie nie ma klucza do serwerów mowy Google'a (mikrofon zapala się i gaśnie).
+export const isDesktop = (): boolean =>
+  typeof window !== "undefined" && !!(window as any).jarvisDesktop;
+
+// Czy działamy w natywnej powłoce Capacitora (Android/iOS APK). W tamtejszym WebView
+// webkitSpeechRecognition zwykle ISTNIEJE, ale NIE transkrybuje (brak serwerów mowy
+// Google'a — dokładnie jak w Electronie) → mikrofon „słucha" w nieskończoność. Dlatego
+// na natywnym traktujemy nasłuch jak na desktopie: nagrywamy i transkrybujemy Whisperem.
+export const isNativeApp = (): boolean => {
+  try { return Capacitor.isNativePlatform(); } catch { return false; }
+};
+
+// Czy da się nagrywać audio (potrzebne dla silnika Whisper na desktopie/Androidzie).
+const canRecordAudio = (): boolean =>
+  typeof navigator !== "undefined" &&
+  !!navigator.mediaDevices?.getUserMedia &&
+  typeof (window as any).MediaRecorder !== "undefined";
+
+const webSpeechExists = (): boolean =>
+  Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+/**
+ * Czy nasłuch powinien iść torem nagrywanym (Whisper/Groq albo lokalny Whisper) zamiast Web Speech:
+ *  - desktop (Electron) → ZAWSZE (Web Speech tam jest martwe),
+ *  - natywny Android/iOS → ZAWSZE (Web Speech NIE działa w WebView APK — wcześniej bez klucza
+ *    Groq spadaliśmy do Web Speech, które milczy → Tryb Słuchawki „nie działał". Teraz zawsze
+ *    nagrywamy, a warstwa transkrypcji wybiera: lokalny Whisper → Groq → czytelny błąd-podpowiedź).
+ *  - przeglądarka/web → Web Speech (tam realnie działa).
+ */
+export const usesRecordedStt = (): boolean =>
+  canRecordAudio() && (isDesktop() || isNativeApp());
+
+// „Obsługa mowy": desktop = nagrywanie; natywny = nagrywanie LUB Web Speech;
+// przeglądarka/telefon-web = natywne Web Speech.
+export const isSpeechSupported = (): boolean =>
+  isDesktop()
+    ? canRecordAudio()
+    : isNativeApp()
+      ? canRecordAudio() || webSpeechExists()
+      : webSpeechExists();
+
+export interface ListenCallbacks {
+  onInterim?: (text: string) => void;
+  onFinal: (text: string) => void;
+  onWake?: () => void;
+  onEnd?: () => void;
+  onError?: (msg: string) => void;
+  wakeWord?: boolean;
+  // Tryb ciągły (hands-free): po każdej wypowiedzi NIE kończ nasłuchu — słuchaj dalej.
+  // Dotyczy toru nagrywanego (Whisper) bez słowa-klucza, np. „Ciągła" w Słuchawkach.
+  continuous?: boolean;
+}
+
+// Wspólny interfejs nasłuchu — Web Speech (Listener) i Whisper (WhisperListener)
+// są wymienne, więc reszta aplikacji nie musi wiedzieć, który silnik działa.
+export interface VoiceListener {
+  start(lang?: string): void;
+  stop(): void;
+  readonly listening: boolean;
+}
+
+/**
+ * Rozpoznawanie mowy. W trybie wakeWord nasłuchuje ciągle słowa „Jarvis”
+ * i dopiero potem przekazuje komendę. W trybie zwykłym łapie jedną wypowiedź.
+ */
+export class Listener {
+  private rec: SpeechRecognitionLike | null = null;
+  private active = false;
+  private cb: ListenCallbacks;
+  // Anty-storm: zlicz puste, natychmiastowe restarty (utrata mic/sieci) → backoff i poddanie się.
+  private restarts = 0;
+  private gotResult = false;
+  private restartTimer: number | null = null;
+
+  constructor(cb: ListenCallbacks) {
+    this.cb = cb;
+  }
+
+  start(lang = "pl-PL") {
+    if (this.active) return;
+    this.rec = createRecognition();
+    if (!this.rec) return;
+    this.active = true;
+    this.rec.lang = lang;
+    this.rec.continuous = Boolean(this.cb.wakeWord);
+    this.rec.interimResults = true;
+
+    let armed = !this.cb.wakeWord; // bez wakeWord od razu zbieramy komendę
+
+    this.rec.onresult = (e: any) => {
+      this.gotResult = true; // produktywna sesja — zeruje licznik anty-stormu w onend
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        const transcript = r[0].transcript as string;
+        if (r.isFinal) {
+          const clean = transcript.trim();
+          if (!armed) {
+            if (/d[zż]+[ae]rwis|jarvis|dżarwis/i.test(clean)) {
+              armed = true;
+              this.cb.onWake?.();
+            }
+          } else if (clean) {
+            const command = clean.replace(/^.*?(jarvis|dżarwis)[\s,:-]*/i, "").trim() || clean;
+            this.cb.onFinal(command);
+            if (this.cb.wakeWord) armed = false; // wróć do nasłuchu słowa-klucza
+          }
+        } else {
+          interim += transcript;
+        }
+      }
+      if (interim && armed) this.cb.onInterim?.(interim);
+    };
+
+    this.rec.onerror = () => {
+      /* np. brak mowy — restart obsłuży onend */
+    };
+
+    this.rec.onend = () => {
+      if (this.active && this.cb.wakeWord) {
+        // Sesja produktywna (był wynik) → restart natychmiast i zeruj licznik.
+        // Pusta, natychmiastowa (utrata mic/sieci) → backoff; po 8 z rzędu poddaj się,
+        // by nie pętlić w kółko obciążając CPU/silnik mowy.
+        if (this.gotResult) this.restarts = 0;
+        else this.restarts++;
+        if (this.restarts > 8) {
+          this.active = false;
+          this.cb.onEnd?.();
+          return;
+        }
+        const delay = this.gotResult ? 0 : Math.min(5000, 150 * 2 ** this.restarts);
+        this.gotResult = false;
+        this.restartTimer = window.setTimeout(() => {
+          if (!this.active) return;
+          try { this.rec?.start(); } catch { /* ignore */ }
+        }, delay);
+        return;
+      }
+      this.active = false;
+      this.cb.onEnd?.();
+    };
+
+    try {
+      this.rec.start();
+    } catch {
+      this.active = false;
+    }
+  }
+
+  stop() {
+    this.active = false;
+    this.restarts = 0;
+    if (this.restartTimer != null) { clearTimeout(this.restartTimer); this.restartTimer = null; }
+    try {
+      this.rec?.stop();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  get listening() {
+    return this.active;
+  }
+}
+
+/**
+ * Tworzy nasłuch dopasowany do platformy:
+ *  - desktop (Electron/.exe) oraz natywny Android/iOS z kluczem Groq → WhisperListener
+ *    (Groq Whisper), bo Web Speech w tych WebView nie transkrybuje,
+ *  - przeglądarka/telefon-web (i natywny bez Groq) → Listener (natywne Web Speech).
+ * Dzięki temu mikrofon na Windowsie i w APK wreszcie działa (nie wisi „Słucham…").
+ */
+export function createListener(cb: ListenCallbacks): VoiceListener {
+  if (usesRecordedStt()) return new WhisperListener(cb);
+  return new Listener(cb);
+}

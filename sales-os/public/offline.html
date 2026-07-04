@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline · AI Sales OS</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #faf7f2;
+        color: #2b2620;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        text-align: center;
+      }
+      .card { padding: 2rem; max-width: 22rem; }
+      img { width: 72px; height: 72px; border-radius: 18px; }
+      h1 { font-size: 1.25rem; margin: 1rem 0 0.25rem; }
+      p { color: #6f6a61; font-size: 0.9rem; line-height: 1.5; }
+      button {
+        margin-top: 1rem; padding: 0.6rem 1.4rem; border: 0; border-radius: 0.6rem;
+        background: #25503c; color: #faf7f2; font-size: 0.9rem; cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <img src="/icons/icon-192.png" alt="" />
+      <h1>You're offline</h1>
+      <p>AI Sales OS needs a connection for live CRM data. Reconnect and try again.</p>
+      <button onclick="location.reload()">Retry</button>
+    </div>
+  </body>
+</html>

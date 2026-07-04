@@ -1,0 +1,88 @@
+apply plugin: 'com.android.application'
+
+// Wersja zsynchronizowana z numerem builda CI (GITHUB_RUN_NUMBER / JARVIS_BUILD_NUMBER).
+// Fallback 56 — pierwszy bezpieczny build po wycieku w buildach <= 55.
+def buildNo = (System.getenv("JARVIS_BUILD_NUMBER") ?: System.getenv("GITHUB_RUN_NUMBER") ?: "56").toInteger()
+
+android {
+    namespace "net.serwer256.jarvis"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "net.serwer256.jarvis"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode buildNo
+        versionName "2.0." + buildNo
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    // Klucz podpisujący: najpierw zmienne środowiskowe / gradle.properties (sekrety CI),
+    // a w razie ich braku fallback na lokalny klucz dev. Nie trzymaj realnych sekretów w repo —
+    // ustaw JARVIS_RELEASE_* w GitHub Actions secrets (patrz README, sekcja podpisywanie).
+    signingConfigs {
+        release {
+            def envStoreFile = System.getenv("JARVIS_RELEASE_STORE_FILE") ?: project.findProperty("JARVIS_RELEASE_STORE_FILE")
+            if (envStoreFile != null && !envStoreFile.toString().isBlank()) {
+                storeFile file(envStoreFile)
+                storePassword System.getenv("JARVIS_RELEASE_STORE_PASSWORD") ?: project.findProperty("JARVIS_RELEASE_STORE_PASSWORD")
+                keyAlias System.getenv("JARVIS_RELEASE_KEY_ALIAS") ?: project.findProperty("JARVIS_RELEASE_KEY_ALIAS")
+                keyPassword System.getenv("JARVIS_RELEASE_KEY_PASSWORD") ?: project.findProperty("JARVIS_RELEASE_KEY_PASSWORD")
+            } else {
+                // Fallback dev (lokalny klucz). Zalecane: rotacja klucza i przeniesienie do sekretów.
+                storeFile file("../keystore/jarvis.jks")
+                storePassword "jarvis2026"
+                keyAlias "jarvis"
+                keyPassword "jarvis2026"
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+// Niektóre wtyczki (kontakty/kalendarz) ciągną androidx.core 1.15, które wymaga
+// compileSdk 35. Trzymamy compileSdk 34 (AGP 8.2.1) i wymuszamy zgodną wersję.
+configurations.all {
+    resolutionStrategy {
+        force "androidx.core:core:1.13.1"
+        force "androidx.core:core-ktx:1.13.1"
+    }
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

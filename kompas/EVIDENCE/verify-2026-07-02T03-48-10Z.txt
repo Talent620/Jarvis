@@ -1,0 +1,69 @@
+KOMPAS verify — 2026-07-02T03-48-10Z
+== git ==
+6fd83cd
+ M EVIDENCE/verify-latest.txt
+ M src/screens/Bet.css
+ M src/screens/Week.css
+?? EVIDENCE/vision/
+?? scripts/vision.mjs
+
+== build ==
+
+> kompas@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v5.4.21 building for production...
+transforming...
+
+warn - The `content` option in your Tailwind CSS configuration is missing or empty.
+warn - Configure your content sources or your generated CSS will be missing styles.
+warn - https://tailwindcss.com/docs/content-configuration
+✓ 48 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                       0.50 kB │ gzip:  0.31 kB
+dist/assets/sql-wasm-UFUCzYNW.wasm  659.73 kB
+dist/assets/index-9X-z4ANa.css        4.46 kB │ gzip:  1.47 kB
+dist/assets/index-3roxLlVB.js       211.60 kB │ gzip: 69.27 kB
+✓ built in 1.29s
+build exit: 0
+
+== e2e ==
+
+Running 16 tests using 4 workers
+
+  ✓   1 e2e/s04-weekly-pattern.spec.ts:6:1 › S04a: za mało wpisów → uczciwy komunikat, żadnego zmyślonego wzorca (765ms)
+  ✓   3 e2e/s01-daily-entry.spec.ts:6:1 › S01: wpis dzienny w 3 interakcjach, widoczny natychmiast z godziną (1.0s)
+  ✓   2 e2e/s02-persistence.spec.ts:6:1 › S02: wpis przeżywa zamknięcie karty (ta sama treść i czas) (1.4s)
+  ✓   4 e2e/s03-immutable-timestamp.spec.ts:6:1 › S03: brak jakiejkolwiek ścieżki edycji znacznika czasu wpisu (1.3s)
+  ✓   5 e2e/s04-weekly-pattern.spec.ts:14:1 › S04b: wzorzec z zasianego tygodnia zgadza się z ground truth (1.8s)
+  ✓   6 e2e/s05-ai-proposal.spec.ts:6:1 › S05: propozycja AI wymaga akceptacji człowieka; po akceptacji zakład aktywny (2.2s)
+  ✓   8 e2e/s07-one-active-bet.spec.ts:6:1 › S07: drugi zakład ręczny odrzucony z komunikatem (1.8s)
+  ✓   7 e2e/s06-no-key-degradation.spec.ts:6:1 › S06: bez klucza — uczciwa plakietka i działający zakład ręczny (1.9s)
+  ✓   9 e2e/s08-done-requires-proof.spec.ts:6:1 › S08: próba domknięcia bez dowodu → odmowa z wyjaśnieniem, status bez zmian (2.0s)
+  ✓  10 e2e/s05-ai-proposal.spec.ts:29:1 › S05b: odrzucenie propozycji nie zostawia śladu w zakładach (1.9s)
+  ✓  11 e2e/s07-one-active-bet.spec.ts:24:1 › S07b: akceptacja propozycji AI przy aktywnym zakładzie też odrzucona (2.1s)
+  ✓  15 e2e/s12-double-submit-refresh.spec.ts:6:1 › S12a: podwójne szybkie kliknięcie „Zapisz” → dokładnie jeden wpis (930ms)
+  ✓  12 e2e/s09-three-proof-types.spec.ts:6:1 › S09: plik, notatka i link jako dowody; plik przeżywa restart (3.4s)
+  ✓  13 e2e/s10-bet-resolution.spec.ts:6:1 › S10: rozstrzygnięcie pokazuje oryginalne przewidywanie i otwiera miejsce na następny zakład (2.6s)
+  ✓  16 e2e/s12-double-submit-refresh.spec.ts:24:1 › S12b: odświeżenie tuż po zapisie → baza spójna (wpis raz albo wcale) (890ms)
+  ✓  14 e2e/s11-export-truth.spec.ts:7:1 › S11: eksport .md zgadza się z zasianym ground truth i nie kłamie o dowodach (2.5s)
+
+  16 passed (10.1s)
+e2e exit: 0
+
+== scenariusze (eval.md) ==
+S01  ZIELONY
+S02  ZIELONY
+S03  ZIELONY
+S04  ZIELONY
+S05  ZIELONY
+S06  ZIELONY
+S07  ZIELONY
+S08  ZIELONY
+S09  ZIELONY
+S10  ZIELONY
+S11  ZIELONY
+S12  ZIELONY
+---
+zielone: 12/12

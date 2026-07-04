@@ -1,0 +1,531 @@
+import { askModel, askModelRich } from "./brain";
+import { validateBlueprint, blueprintToInstruction, fallbackBlueprint, SITE_BLUEPRINT_SCHEMA, type SiteBlueprint } from "./siteBlueprint";
+import { threeDInstruction, type Resolved3D } from "./web3dPolicy";
+import { designSystemPrompt, SELF_CRITIQUE_INSTRUCTION } from "./designEngine";
+import { humanize } from "./aiHelpers";
+import { validateSite, type SiteValidation } from "./siteValidator";
+import { zl } from "./format";
+import { appendBrand } from "./brandKit";
+
+// Autonomiczny generator stron i SKLEPÓW: z opisu tworzy KOMPLETNĄ, nowoczesną
+// witrynę w jednym pliku HTML (wbudowany CSS i JS) na poziomie premium. Działa
+// z dowolnym dostawcą AI. Serce promptu (filozofia projektowa, anti-template guard,
+// design tokens, samokrytyka) mieszka w designEngine.ts — tu zostaje domena stron:
+// typy witryn, style, kompletność, blueprint, wycena, audyt.
+
+export type SiteKind = "auto" | "landing" | "sklep" | "firma" | "portfolio" | "saas" | "blog";
+export type SiteStyle =
+  | "auto" | "editorial" | "brutalist" | "glass" | "neon" | "retro" | "organic" | "swiss" | "luxury"
+  // Systemy projektowe klasy światowej (ETAP 3 — AI Design Engine):
+  | "apple" | "stripe" | "linear" | "notion" | "tesla" | "airbnb" | "openai" | "saas" | "enterprise" | "cyberpunk" | "minimal";
+
+// Niesztampowe kierunki artystyczne — wymuszają wyrazisty, rozpoznawalny charakter (nie „kolejny szablon”).
+const STYLE_HINTS: Record<SiteStyle, string> = {
+  auto: "KIERUNEK: dobierz oryginalny, niesztampowy styl najlepiej pasujący do branży — i konsekwentnie go pogłęb.",
+  editorial: "KIERUNEK: edytorialowy/magazynowy — ekspresyjna typografia szeryfowa, łamanie jak w magazynie, asymetryczna siatka, dużo światła, cienkie linie jako akcent, numerowane sekcje.",
+  brutalist: "KIERUNEK: neo-brutalizm — surowe bloki, grube czarne obramowania, twarde cienie (box-shadow bez rozmycia), mocne kontrasty, monospaced akcenty, celowa „surowość”, jaskrawe plamy koloru.",
+  glass: "KIERUNEK: glassmorphism — półprzezroczyste, rozmyte panele (backdrop-filter: blur), kolorowy gradient-mesh/poświaty w tle, delikatne obwódki 1px, wyraźna głębia warstw.",
+  neon: "KIERUNEK: cyberpunk/neon — ciemne tło, neonowe akcenty (cyan/magenta), świecące krawędzie (glow, text-shadow), siatki perspektywiczne, animowane gradienty, futurystyczny sznyt.",
+  retro: "KIERUNEK: retro Y2K/vaporwave — paleta lat 90./2000., chrom i gradienty, geometryczne kształty, grid, śmiała nostalgiczna typografia, playful detale.",
+  organic: "KIERUNEK: organiczny — miękkie, płynne kształty (blob SVG), faliste przejścia sekcji (clip-path/SVG), naturalna paleta, łagodne animacje, ciepły, ludzki ton.",
+  swiss: "KIERUNEK: szwajcarski/minimal — ścisła siatka, ogromne odstępy, jeden kolor akcentu, czcionka groteskowa, bezwzględny porządek i precyzja, zero zbędnych ozdobników.",
+  luxury: "KIERUNEK: luksusowy/premium — czerń + złoto/szampan, eleganckie szeryfy, dużo przestrzeni, wyrafinowane detale i subtelne animacje, aura prestiżu i ekskluzywności.",
+  apple: "KIERUNEK: Apple — skrajny minimalizm premium, ogromne odstępy, wielkie produktowe hero na bieli/czerni, perfekcyjna typografia (Inter/Helvetica Now-like), subtelne, dopracowane animacje przewijania, jeden bohater na sekcję, idealny kontrast i detale.",
+  stripe: "KIERUNEK: Stripe — czysty, techniczny, elegancki SaaS: gradientowe kolorowe tła hero (przejścia fioletu/błękitu/zieleni), precyzyjna siatka, subtelne diagramy/ilustracje SVG, znakomita typografia, mikrointerakcje, wrażenie zaawansowania i zaufania.",
+  linear: "KIERUNEK: Linear — ciemny, ultra-nowoczesny: głębokie tła, subtelne poświaty i gradient-mesh, ostre detale, monochromia z jednym akcentem, inżynierski sznyt, perfekcyjne odstępy i typografia.",
+  notion: "KIERUNEK: Notion — przyjazny, czysty, dokumentowy: dużo bieli, miękkie ilustracje/emoji-akcenty, prosta siatka, czytelna treść, ciepły minimalizm, zero przeładowania.",
+  tesla: "KIERUNEK: Tesla — pełnoekranowe, kinowe hero z dużymi zdjęciami produktu, minimalna nawigacja, mocna typografia, czerń/biel + jeden akcent, dramatyczne sekcje na cały ekran, premium i futurystycznie.",
+  airbnb: "KIERUNEK: Airbnb — ciepły, ludzki, ufny: zaokrąglone karty, duże zdjęcia lifestyle, miękka paleta z koralowym akcentem, czytelna siatka, przyjazne mikrokopy — świetne na usługi i komercję.",
+  openai: "KIERUNEK: OpenAI — czysty, spokojny, badawczy: dużo światła, czarno-biała baza z subtelnym akcentem, prosta elegancka typografia, treściwe, minimalne sekcje, powaga i klarowność.",
+  saas: "KIERUNEK: nowoczesny SaaS — hero z mockupem produktu, korzyści z ikonami, social proof (logo, liczby), cennik z wyróżnionym planem, mocne CTA, dynamiczny i konwertujący.",
+  enterprise: "KIERUNEK: enterprise/korporacja — poważny, zaufany, profesjonalny: stonowana paleta (granat/grafit + akcent), klarowna struktura, dane i liczby, referencje, akcent na zgodność i bezpieczeństwo, czytelność ponad ozdobniki. Idealne dla kancelarii, finansów, B2B.",
+  cyberpunk: "KIERUNEK: cyberpunk — ciemne tło, neon (cyan/magenta), glow, perspektywiczne siatki, glitch-akcenty, futurystyczna typografia, mocny ruch — efektowne dla tech/gaming/krypto.",
+  minimal: "KIERUNEK: skrajny minimalizm — biel, jeden akcent, ogromne odstępy, typografia jako główny bohater, zero zbędnych elementów, perfekcyjna hierarchia i oddech.",
+};
+
+// ETAP 3 — auto-dobór systemu projektowego z opisu (deterministyczny pierwszy strzał; model dopracowuje).
+const STYLE_RULES: [Exclude<SiteStyle, "auto">, RegExp][] = [
+  ["enterprise", /kancelari|prawn|adwokat|radc|notari|ksi[eę]gow|finans|ubezpiecz|korporac|enterprise|\bb2b\b|doradztw|audyt/i],
+  ["stripe", /p[łl]atno[śs]|fintech|\bbank|invoic|rozlicze|saas finansow/i],
+  ["linear", /\bsaas\b|aplikacj|dashboard|platform|software|\bdev|api\b|narz[eę]dzi/i],
+  ["luxury", /luksus|premium|jubiler|zegark|apartament|willa|ekskluz|presti[żz]|hotel 5|moda premium|biżuteri/i],
+  ["editorial", /restauracj|kawiarni|bistro|kuchni|piekarni|cukierni|\bfood\b|menu|magazyn|blog|wydawnict/i],
+  ["organic", /fitness|si[łl]own|trener|\bjoga\b|\bsport|gabinet|\bspa\b|kosmet|uroda|wellness|zdrowi|terapi/i],
+  ["cyberpunk", /gaming|\bgr[ay]\b|esport|krypto|\bnft\b|cyber|futur|techno|web3|blockchain/i],
+  ["minimal", /portfolio|fotograf|artyst|projektant|architekt|\bdesign/i],
+  ["apple", /produkt premium|gad[żz]et|elektronik|hardware|urz[ąa]dzeni/i],
+  ["airbnb", /sklep|e-commerce|odzie[żz]|\bbuty\b|turystyk|nocleg|wynajem|us[łl]ug/i],
+];
+
+/** Pure: wybierz najlepszy system projektowy dla opisu strony. Domyślnie nowoczesny SaaS. */
+export function pickSiteStyle(desc: string): Exclude<SiteStyle, "auto"> {
+  const t = (desc || "").toLowerCase();
+  for (const [style, re] of STYLE_RULES) if (re.test(t)) return style;
+  return "saas";
+}
+
+// ETAP 2/6 — pełna, autonomiczna specyfikacja: każdą NOWĄ stronę dostarczamy kompletną, bez dopytywania.
+const FULL_SPEC = [
+  "KOMPLETNOŚĆ (zawrzyj ZAWSZE, samodzielnie, bez zadawania pytań):",
+  "- SEO: trafny <title> (do ~60 zn.), meta description (do ~155 zn.), canonical, lang=pl, semantyczne nagłówki.",
+  "- Open Graph (og:title/description/image/type) + Twitter Cards (summary_large_image).",
+  "- schema.org JSON-LD w <script type=\"application/ld+json\"> dopasowany do typu (Organization/LocalBusiness/Product/FAQPage).",
+  "- Sekcja FAQ jako <details> ORAZ powiązany FAQPage w JSON-LD.",
+  "- Dostępny formularz kontaktowy: <label> dla pól, required, aria, walidacja front-end i komunikat sukcesu (bez backendu).",
+  "- Wyraźne, powracające CTA (główne w hero + w stopce).",
+  "- Cookie banner (RODO) w czystym JS, decyzja zapamiętana w localStorage (akceptuj/odrzuć).",
+  "- Skrót Polityki prywatności na stronie (kotwica) + wzmianka o przetwarzaniu danych z formularza.",
+  "- Stopka: dane kontaktowe, prawa autorskie, nawigacja, ikony social (inline SVG).",
+  "- Dostępność (WCAG AA): dokładnie jeden <h1>, logiczna hierarchia, alt-y, kontrast, :focus-visible, nawigacja klawiaturą.",
+].join("\n");
+
+const KIND_HINTS: Record<SiteKind, string> = {
+  auto: "Dobierz układ i sekcje najlepiej pasujące do opisu.",
+  landing: [
+    "TYP: landing page produktu/usługi. Sekcje: hero z mocnym hasłem i CTA, pasek zaufania/logotypy,",
+    "korzyści (siatka kart z ikonami SVG), jak to działa (kroki), opinie klientów, cennik (2–3 plany z wyróżnionym),",
+    "FAQ (rozwijane <details>), sekcja CTA, stopka z kontaktem.",
+  ].join("\n"),
+  sklep: [
+    "TYP: SKLEP INTERNETOWY (e-commerce front-end). Wymagane:",
+    "- siatka 6–9 produktów (karty: zdjęcie, nazwa, krótki opis, CENA w zł, przycisk Dodaj do koszyka),",
+    "- DZIAŁAJĄCY koszyk w czystym JS: licznik sztuk w nagłówku (badge), wysuwany panel koszyka (drawer) z listą pozycji,",
+    "  zmianą ilości, usuwaniem, sumą częściową i przyciskiem Przejdź do kasy (placeholder z informacją o podpięciu płatności),",
+    "- filtr/kategorie lub sekcje, sekcja bestsellery/wyróżnione, pasek dostawa/zwroty/gwarancja, newsletter, stopka.",
+    "Dane produktów realistyczne dla branży z opisu. Stan koszyka trzymaj w JS (tablica), bez backendu.",
+  ].join("\n"),
+  firma: [
+    "TYP: strona firmowa. Sekcje: hero z propozycją wartości, o firmie, usługi (siatka),",
+    "realizacje/portfolio, zespół, opinie, proces współpracy, kontakt z formularzem (front-end) i mapą placeholder, stopka z danymi.",
+  ].join("\n"),
+  portfolio: [
+    "TYP: portfolio. Sekcje: hero z imieniem i specjalizacją, galeria prac (siatka z hover),",
+    "o mnie, umiejętności, doświadczenie/oś czasu, kontakt. Estetyka minimalistyczna, mocna typografia.",
+  ].join("\n"),
+  saas: [
+    "TYP: strona produktu SaaS. Sekcje: hero z hasłem korzyści i mockupem produktu (placeholder UI w CSS),",
+    "pasek logotypów/zaufania, korzyści (siatka kart z ikonami SVG), sekcja jak to działa (kroki), funkcje z miniprzykładami,",
+    "social proof (liczby count-up, opinie), CENNIK 3 plany z wyróżnionym i przełącznikiem rok/miesiąc (JS), FAQ (rozwijane <details>),",
+    "integracje, sekcja bezpieczeństwo/zaufanie, mocne CTA z formularzem zapisu (front-end), stopka. Ton nowoczesny, konwertujący.",
+  ].join("\n"),
+  blog: [
+    "TYP: blog/magazyn. Sekcje: hero z wyróżnionym wpisem, siatka kart artykułów (miniatura, kategoria, tytuł, lead, data, czas czytania),",
+    "pasek kategorii/filtr, sekcja popularne, newsletter, sekcja o autorze, stopka. Dbaj o czytelną typografię, prześwity i skanowalność.",
+    "Dodaj realistyczne tytuły i leady dla branży z opisu. Pojedynczy artykuł może być placeholderem (kotwica).",
+  ].join("\n"),
+};
+
+function extractHtml(text: string): string {
+  let s = (text || "").trim();
+  const fence = s.match(/```(?:html)?\s*([\s\S]*?)```/i);
+  if (fence) s = fence[1].trim();
+  const i = s.search(/<!doctype html|<html/i);
+  if (i >= 0) s = s.slice(i);
+  return s.includes("<") ? s : "";
+}
+
+export async function generateSite(
+  prompt: string,
+  current?: string,
+  kind: SiteKind = "auto",
+  style: SiteStyle = "auto",
+  blueprint?: SiteBlueprint,
+  resolved3D?: Resolved3D,
+): Promise<{ html: string; finishReason?: string } | { error: string }> {
+  // Zatwierdzony blueprint STERUJE generowaniem: sekcje/CTA/kierunek/ruch/3D/formularz/budżet/preloader.
+  // Dzięki temu zmiana planu realnie zmienia wygenerowaną stronę (nie jest tylko ozdobą UI).
+  const blueprintBlock = blueprint ? `\n\n${blueprintToInstruction(blueprint)}` : "";
+  // Rozstrzygnięta polityka 3D (device-aware) TRAFIA do kodu strony — REAL=WebGL+poster+lazy+fallback,
+  // słaby telefon/S9 → CSS 2.5D/poster (jawnie NIE realne 3D).
+  const threeDBlock = resolved3D ? `\n\n${threeDInstruction(resolved3D)}` : "";
+  // ETAP 3: gdy styl „auto" — deterministycznie dobierz system projektowy z opisu (model dopracuje).
+  const resolvedStyle: SiteStyle = style === "auto" && !current ? pickSiteStyle(prompt) : style;
+  const styleHint = STYLE_HINTS[resolvedStyle] || STYLE_HINTS.auto;
+  // Premium Web Design Engine: twarde zasady pliku + filozofia (anti-template guard,
+  // design tokens, samokrytyka) + FULL_SPEC tylko dla NOWEJ strony (edycja nie wymusza przebudowy).
+  const system = designSystemPrompt({
+    kindHint: KIND_HINTS[kind] || KIND_HINTS.auto,
+    styleHint,
+    isEdit: !!current,
+    fullSpec: FULL_SPEC,
+  });
+  // Bezpieczna edycja: NIGDY nie tniemy po cichu bieżącego kodu (to gubiło część strony i psuło
+  // wynik). Gdy dokument jest za duży na jednorazową, bezpieczną edycję — odmawiamy jasno, zamiast
+  // edytować niepełną wersję. (Sekcyjna strategia patchy = osobna, świadoma ścieżka.)
+  const SAFE_EDIT_CHARS = 60_000;
+  if (current && current.length > SAFE_EDIT_CHARS) {
+    return {
+      error: `Strona ma ${Math.round(current.length / 1024)} KB — za dużo na jednorazową, bezpieczną edycję. Nie edytuję niepełnej wersji (groziłoby ucięciem). Pobierz stronę i zmieniaj sekcjami albo opisz zmianę konkretnego fragmentu.`,
+    };
+  }
+  const userMsg = current
+    ? `Oto obecny, PEŁNY kod strony:\n\n${current}\n\nWprowadź zmianę: ${prompt}\nZwróć PEŁNY, zaktualizowany plik HTML (od <!DOCTYPE html>), zachowując wysoki poziom wizualny i spójny styl. Nie skracaj i nie pomijaj żadnej istniejącej sekcji.${blueprintBlock}${threeDBlock}`
+    : `Zbuduj stronę według opisu: ${prompt}${blueprintBlock}${threeDBlock}`;
+
+  try {
+    // Dusza Marki — dokleja tożsamość (kolory/fonty/ton) do system-promptu; pusty kit = bez zmian.
+    // askModelRich zwraca też finishReason — „max_tokens"/„length" = model UCIĄŁ pełną stronę.
+    const reply = await askModelRich({ system: appendBrand(system), history: [{ role: "user", content: userMsg }], heavy: true });
+    const html = extractHtml(reply.text || "");
+    if (!html) return { error: "Model nie zwrócił kodu HTML — spróbuj doprecyzować opis." };
+    return { html, finishReason: reply.finishReason };
+  } catch (e) {
+    return { error: humanize(e instanceof Error ? e.message : String(e)) };
+  }
+}
+
+/**
+ * Pure: scal urwany dokument z KONTYNUACJĄ modelu (dalszy ciąg, bez ```/doctype). Jeśli kontynuacja
+ * to jednak pełny plik od nowa (zaczyna się od <!doctype>), bierzemy ją w całości.
+ */
+export function mergeHtmlContinuation(partial: string, continuation: string): string {
+  let cont = (continuation || "").trim();
+  cont = cont.replace(/^```[a-z]*\s*/i, "").replace(/```\s*$/i, "").trim();
+  if (!cont) return partial || "";
+  if (/^<!doctype html>/i.test(cont) || /^<html[\s>]/i.test(cont)) return extractHtml(cont);
+  return (partial || "") + cont;
+}
+
+/** Prośba o dokończenie urwanego dokumentu — model dostaje OGON kodu i ma zwrócić tylko dalszy ciąg. */
+export function continuationPrompt(partialHtml: string): string {
+  const tail = (partialHtml || "").slice(-1200);
+  return [
+    "Poniższy dokument HTML został UCIĘTY (limit tokenów). Dokończ go OD MIEJSCA URWANIA.",
+    "Zwróć WYŁĄCZNIE dalszy ciąg (bez powtarzania początku, bez komentarzy, bez bloków ```),",
+    "domykając wszystkie otwarte tagi <style>/<script> i kończąc na </body></html>.",
+    "",
+    "OGON DOTYCHCZASOWEGO KODU:",
+    tail,
+  ].join("\n");
+}
+
+/** Runtime: poproś model o dokończenie urwanego dokumentu (jedna próba). Zwraca dalszy ciąg kodu. */
+export async function continueSite(partialHtml: string): Promise<string> {
+  return askModel({
+    system: "Jesteś generatorem stron HTML. Dokańczasz UCIĘTE dokumenty od miejsca urwania. Zwracasz wyłącznie dalszy ciąg kodu.",
+    history: [{ role: "user", content: continuationPrompt(partialHtml) }],
+    heavy: true,
+  });
+}
+
+/** Pure: czy finishReason dostawcy oznacza ucięcie limitem tokenów (length/max_tokens/MAX_TOKENS). */
+export function maxTokensTruncated(finishReason?: string): boolean {
+  const r = (finishReason || "").toLowerCase();
+  return r === "length" || r === "max_tokens" || r === "model_length" || r.indexOf("max_token") >= 0;
+}
+
+export interface SiteRepairResult { html: string; validation: SiteValidation; repaired: boolean; maxTokens?: boolean }
+
+/**
+ * Wykryj ucięcie i wykonaj DOKŁADNIE JEDNĄ bezpieczną próbę dokończenia, po czym ponów walidację.
+ * `continueFn` jest wstrzykiwane (w runtime = model; w teście = mock) — brak sieci w testach.
+ * Nie „naprawia" na siłę: jeśli po scaleniu wciąż jest ucięte, zwraca to uczciwie (repaired=false).
+ */
+export async function repairTruncatedSite(
+  html: string,
+  continueFn: (partialHtml: string) => Promise<string>,
+  opts: { finishReason?: string } = {},
+): Promise<SiteRepairResult> {
+  const before = validateSite(html);
+  const cutByTokens = maxTokensTruncated(opts.finishReason);
+  // Doklejamy TYLKO gdy struktura jest urwana (pewny sygnał). Ucięcie limitem tokenów i tak zawsze
+  // zostawia urwaną strukturę, więc jest tu złapane; kompletnego dokumentu nie ruszamy (bez korupcji).
+  if (!before.truncated) return { html, validation: before, repaired: false, maxTokens: cutByTokens };
+  let merged = html;
+  try {
+    const cont = await continueFn(html);
+    merged = mergeHtmlContinuation(html, cont);
+  } catch {
+    /* kontynuacja padła (sieć/quota) — zostaw oryginał, walidacja i tak zablokuje pobranie */
+  }
+  const after = validateSite(merged);
+  return { html: merged, validation: after, repaired: before.truncated && after.safeToDownload, maxTokens: cutByTokens };
+}
+
+/**
+ * Zaplanuj stronę PRZED generowaniem: poproś model o structured output wg SITE_BLUEPRINT_SCHEMA,
+ * a wynik ZAWSZE zwaliduj (validateBlueprint naprawia niepełny/błędny JSON). Fallback deterministyczny
+ * TYLKO przy braku sieci/błędzie modelu. Model wstrzykiwalny (testy bez API). Kreator najpierw myśli.
+ */
+export async function planBlueprint(
+  brief: ClientBrief,
+  ask: (system: string, user: string) => Promise<string> = (system, user) => askModel({ system, history: [{ role: "user", content: user }], heavy: true }),
+): Promise<{ blueprint: SiteBlueprint; source: "ai" | "fallback" }> {
+  const system = [
+    "Jesteś strategiem UX. Zaplanuj stronę PRZED projektowaniem.",
+    "Zwróć WYŁĄCZNIE JSON zgodny ze schematem (bez markdown, bez komentarza).",
+    "KAŻDA sekcja musi mieć uzasadnienie biznesowe (justification). Nie dodawaj sekcji „na zapełnienie”.",
+    `Schemat: ${JSON.stringify(SITE_BLUEPRINT_SCHEMA)}`,
+  ].join("\n");
+  const user = `Brief: ${buildClientBrief(brief) || JSON.stringify(brief)}\nZaproponuj cel, CTA, sekcje z uzasadnieniem, kierunek wizualny i intencję SEO.`;
+  try {
+    const reply = await ask(system, user);
+    return { blueprint: validateBlueprint(reply, brief), source: "ai" };
+  } catch {
+    return { blueprint: fallbackBlueprint(brief), source: "fallback" };
+  }
+}
+
+// === ETAP 6/8/9 — deterministyczny audyt jakości wygenerowanej strony (SEO/dostępność/UX) ===
+
+export interface SiteAuditCheck { label: string; ok: boolean }
+export interface SiteAudit { score: number; checks: SiteAuditCheck[]; missing: string[] }
+
+/** Pure: oceń wygenerowany HTML pod SEO/dostępność/UX. Zwraca wynik 0–100 i listę braków. */
+export function auditSite(html: string): SiteAudit {
+  const h = html || "";
+  const checks: SiteAuditCheck[] = [
+    { label: "Tytuł strony", ok: /<title>[^<]{3,}<\/title>/i.test(h) },
+    { label: "Meta description", ok: /<meta[^>]+name=["']description["'][^>]+content=["'][^"']{20,}/i.test(h) },
+    { label: "Open Graph", ok: /property=["']og:title["']/i.test(h) },
+    { label: "Twitter Cards", ok: /name=["']twitter:card["']/i.test(h) },
+    { label: "schema.org (JSON-LD)", ok: /application\/ld\+json/i.test(h) },
+    { label: "Dokładnie jeden H1", ok: (h.match(/<h1[\s>]/gi)?.length ?? 0) === 1 },
+    { label: "Viewport (mobile)", ok: /name=["']viewport["']/i.test(h) },
+    { label: "Język (lang)", ok: /<html[^>]+lang=/i.test(h) },
+    { label: "Sekcje semantyczne", ok: /<header\b/i.test(h) && /<main\b/i.test(h) && /<footer\b/i.test(h) },
+    { label: "Obrazy z alt", ok: !/<img(?![^>]*\balt=)[^>]*>/i.test(h) },
+    { label: "Sekcja FAQ", ok: /<details\b/i.test(h) || /\bfaq\b/i.test(h) },
+    { label: "Formularz kontaktowy", ok: /<form\b/i.test(h) },
+    { label: "Cookie banner (RODO)", ok: /cookie/i.test(h) },
+    { label: "Responsywność (media query)", ok: /@media/i.test(h) },
+    { label: "Animacje wejścia", ok: /IntersectionObserver|@keyframes|transition/i.test(h) },
+  ];
+  const ok = checks.filter((c) => c.ok).length;
+  return { score: Math.round((ok / checks.length) * 100), checks, missing: checks.filter((c) => !c.ok).map((c) => c.label) };
+}
+
+/** ETAP 10 — pętla samodoskonalenia: skrytykuj i podnieś poziom strony (jedno kliknięcie). */
+export async function improveSite(html: string, kind: SiteKind = "auto", style: SiteStyle = "auto"): Promise<{ html: string } | { error: string }> {
+  const audit = auditSite(html);
+  const fix = audit.missing.length ? ` Uzupełnij braki: ${audit.missing.join(", ")}.` : "";
+  const instruction =
+    "Wciel się w jury Awwwards oraz senior UX/SEO. Znajdź 5 NAJSŁABSZYCH punktów tej strony (design i hierarchia, " +
+    "konwersja/CTA, treść, SEO/schema, dostępność) i NAPRAW je, wyraźnie podnosząc poziom — bez obniżania niczego, co już dobre. " +
+    SELF_CRITIQUE_INSTRUCTION +
+    fix +
+    " Zwróć pełną, ulepszoną wersję.";
+  return generateSite(instruction, html, kind, style);
+}
+
+// === ETAP 11 — AI Business Analyst: strategia przed budową (lepiej trafiona strona) ===
+
+const STRATEGY_SYSTEM = [
+  "Jesteś strategiem marek i konwersji (poziom topowej agencji). Na podstawie krótkiego opisu biznesu zaproponuj ZWIĘZŁĄ strategię strony PO POLSKU.",
+  "Odpowiedz krótko, rzeczowo, w punktach (bez markdownu, bez wstępów). Dokładnie te sekcje, każda 1–2 zdania albo lista:",
+  "BRANŻA: …",
+  "GRUPA DOCELOWA: …",
+  "USP (1–3 wyróżniki): …",
+  "OFERTA / GŁÓWNE CTA: …",
+  "KLUCZOWE SEKCJE STRONY: … (lista)",
+  "TON I STYL KOMUNIKACJI: …",
+  "Bądź konkretny i osadzony w realiach tej branży — to ma realnie pomóc sprzedawać.",
+].join("\n");
+
+/** ETAP 11: wygeneruj strategię biznesową dla strony (tekst PL do pokazania i wlania w budowę). */
+export async function analyzeBusiness(desc: string): Promise<{ strategy: string } | { error: string }> {
+  if (!desc.trim()) return { error: "Najpierw opisz, czego dotyczy strona." };
+  try {
+    const reply = await askModel({ system: STRATEGY_SYSTEM, history: [{ role: "user", content: desc }] });
+    const s = (reply || "").trim();
+    if (!s) return { error: "Nie udało się wygenerować strategii — spróbuj doprecyzować opis." };
+    return { strategy: s };
+  } catch (e) {
+    return { error: humanize(e instanceof Error ? e.message : String(e)) };
+  }
+}
+
+/** Pure: złóż opis budowy z oryginalnego opisu + strategii (strategia jako wytyczne dla generatora). */
+export function buildStrategySeed(desc: string, strategy: string): string {
+  const d = (desc || "").trim();
+  const s = (strategy || "").trim();
+  if (!s) return d;
+  return `${d ? d + "\n\n" : ""}WYTYCZNE STRATEGICZNE (zastosuj w treści, strukturze i CTA):\n${s}`;
+}
+
+// === ETAP 4 — biblioteka gotowych SEKCJI PREMIUM (model wstawia je spójnie ze stylem strony) ===
+
+export interface SectionPreset { id: string; label: string; instruction: string }
+
+export const SECTION_PRESETS: SectionPreset[] = [
+  { id: "bento", label: "🍱 Bento grid", instruction: "Dodaj nowoczesną sekcję BENTO GRID: asymetryczna siatka kart różnej wielkości (styl Apple/Linear), każda z ikoną inline SVG, nagłówkiem i krótkim opisem; hover-animacje, w pełni responsywna." },
+  { id: "hero3d", label: "🌀 Hero 3D / parallax", instruction: "Przebuduj HERO na efekt 3D/parallax: warstwy poruszające się z kursorem i przewijaniem (transform), gradient-mesh/aurora w tle, mocny nagłówek clamp() i CTA. Czysty CSS/JS, bez bibliotek, z poszanowaniem prefers-reduced-motion." },
+  { id: "storytelling", label: "📜 Scroll storytelling", instruction: "Dodaj sekcję SCROLL STORYTELLING: sticky element po jednej stronie, treść odsłaniana sekwencyjnie przy przewijaniu (IntersectionObserver), narracja krok po kroku z opóźnieniami." },
+  { id: "stats", label: "📈 Liczby (count-up)", instruction: "Dodaj sekcję STATYSTYK: 3–4 duże liczby z animacją count-up od zera przy wejściu (IntersectionObserver) i podpisami; efektowna, spójna z paletą." },
+  { id: "pricing", label: "💲 Cennik", instruction: "Dodaj sekcję CENNIKA: 3 plany, środkowy wyróżniony, lista cech z checkami SVG, wyraźne CTA, przełącznik miesięcznie/rocznie w czystym JS." },
+  { id: "testimonials", label: "⭐ Opinie", instruction: "Dodaj sekcję OPINII KLIENTÓW: karty z cytatem, inicjałami w kółku, nazwiskiem i rolą, gwiazdki inline SVG; subtelne przewijanie/autoplay." },
+  { id: "logos", label: "🤝 Pasek zaufania", instruction: "Dodaj pasek ZAUFANIA pod hero: rząd logotypów (placeholdery SVG/teksty), wyszarzone z hover na kolor, nagłówek typu Zaufali nam." },
+  { id: "gallery", label: "🖼 Galeria", instruction: "Dodaj GALERIĘ w eleganckiej siatce z hover (zoom/overlay) i prostym lightboxem w czystym JS; obrazy z Unsplash dopasowane do tematu, loading=lazy." },
+  { id: "cta", label: "🎯 Mocne CTA", instruction: "Dodaj na końcu mocną sekcję CTA: duży nagłówek, jeden wyróżniony przycisk, gradient/akcent w tle, krótkie zapewnienie redukujące ryzyko." },
+  { id: "contact", label: "✉ Kontakt + formularz", instruction: "Dodaj sekcję KONTAKT: dostępny formularz (label/required/aria), walidacja w JS i komunikat sukcesu (bez backendu), dane kontaktowe i mapa-placeholder." },
+];
+
+// === Pełen proces „pod klienta”: brief → strona → wiadomość do klienta ===
+
+export interface ClientBrief {
+  business?: string;  // nazwa firmy/marki
+  industry?: string;  // branża
+  goal?: string;      // cel strony (np. pozyskać klientów, sprzedać kurs)
+  audience?: string;  // grupa docelowa
+  sections?: string;  // wymagane sekcje
+  colors?: string;    // kolory/branding
+  contact?: string;   // dane kontaktowe do umieszczenia
+  extra?: string;     // dodatkowe życzenia
+}
+
+/** Pure: złóż bogaty opis strony ze strukturalnego briefu klienta (puste pola pomijane). */
+export function buildClientBrief(b: ClientBrief): string {
+  const map: [string | undefined, string][] = [
+    [b.business, "Firma/marka"],
+    [b.industry, "Branża"],
+    [b.goal, "Cel strony"],
+    [b.audience, "Grupa docelowa"],
+    [b.sections, "Wymagane sekcje"],
+    [b.colors, "Kolory/branding"],
+    [b.contact, "Dane kontaktowe (umieść w stopce i sekcji kontakt/CTA)"],
+    [b.extra, "Dodatkowe życzenia"],
+  ];
+  return map.filter(([v]) => v && v.trim()).map(([v, label]) => `${label}: ${v!.trim()}`).join("\n");
+}
+
+/** Pure: gotowa wiadomość do klienta z demem strony (handover). */
+export function clientHandoverMessage(business?: string): string {
+  const who = business?.trim() ? ` dla ${business.trim()}` : "";
+  return [
+    `Dzień dobry,`,
+    ``,
+    `przygotowałem propozycję nowej strony${who}. W załączniku gotowy plik (.html) — wystarczy otworzyć w przeglądarce, żeby zobaczyć pełny podgląd na żywo (działa też na telefonie).`,
+    ``,
+    `Co dalej, jeśli się spodoba:`,
+    `• publikacja online (mogę postawić ją pod adresem w 1 dzień, hosting od 0 zł),`,
+    `• podpięcie własnej domeny i poczty,`,
+    `• drobne poprawki tekstów/kolorów/zdjęć wg Państwa uwag,`,
+    `• (sklep) podpięcie płatności i wysyłki.`,
+    ``,
+    `Proszę o słowo, co zmienić — nanoszę poprawki od ręki. Pozdrawiam.`,
+  ].join("\n");
+}
+
+// === Automatyczna wycena (realny rynek PL, 2025/2026) ===
+
+export interface QuoteLine { label: string; min: number; max: number; per?: "mc" | "rok" }
+export interface Quote {
+  kind: SiteKind;
+  oneTime: QuoteLine[];   // koszt jednorazowy (wykonanie)
+  recurring: QuoteLine[]; // koszty cykliczne (utrzymanie)
+  totalMin: number;       // suma jednorazowa min
+  totalMax: number;       // suma jednorazowa max
+  marketMin: number;      // rynkowy zakres dla typu (sama strona)
+  marketMax: number;
+}
+
+// Rynkowe widełki w Polsce za SAMO wykonanie strony (freelancer → mała agencja), w zł.
+const MARKET: Record<SiteKind, { min: number; max: number; label: string }> = {
+  landing:   { min: 900,  max: 3000,  label: "Landing page (one-page)" },
+  portfolio: { min: 900,  max: 3000,  label: "Portfolio" },
+  firma:     { min: 2000, max: 6000,  label: "Strona firmowa (kilka sekcji)" },
+  sklep:     { min: 3500, max: 15000, label: "Sklep internetowy (e-commerce)" },
+  saas:      { min: 3000, max: 12000, label: "Strona produktu SaaS" },
+  blog:      { min: 1500, max: 5000,  label: "Blog / magazyn" },
+  auto:      { min: 1500, max: 5000,  label: "Strona www" },
+};
+
+/** Pure: rynkowe widełki cen w Polsce dla wszystkich typów (do pokazania „ile to kosztuje"). */
+export function marketRanges(): { kind: SiteKind; label: string; min: number; max: number }[] {
+  return (Object.keys(MARKET) as SiteKind[]).filter((k) => k !== "auto").map((k) => ({ kind: k, ...MARKET[k] }));
+}
+
+/** Pure: automatyczna wycena pakietu „pod klienta" wg typu i briefu (jednorazowo + cyklicznie). */
+export function estimateQuote(kind: SiteKind, brief: ClientBrief = {}): Quote {
+  const m = MARKET[kind] || MARKET.auto;
+  // Więcej wymaganych sekcji = większa złożoność → podnieś górną granicę wykonania.
+  const sectionCount = (brief.sections || "").split(/[,;]/).map((s) => s.trim()).filter(Boolean).length;
+  const complexityMax = sectionCount > 4 ? Math.round(m.max * 0.2) : 0;
+  const oneTime: QuoteLine[] = [{ label: `Projekt i wykonanie — ${m.label}`, min: m.min, max: m.max + complexityMax }];
+  // Treści/copywriting — pełen pakiet, gdy klient nie dostarcza gotowych tekstów.
+  oneTime.push({ label: "Treści i copywriting (PL)", min: 300, max: 1500 });
+  if (kind === "sklep") oneTime.push({ label: "Integracja płatności (Przelewy24/PayU/Stripe)", min: 500, max: 2000 });
+  oneTime.push({ label: "Publikacja online + konfiguracja domeny", min: 150, max: 500 });
+  const recurring: QuoteLine[] = [
+    { label: "Domena + hosting", min: 120, max: 350, per: "rok" },
+    { label: "Opieka i drobne zmiany", min: 80, max: 300, per: "mc" },
+  ];
+  const totalMin = oneTime.reduce((s, l) => s + l.min, 0);
+  const totalMax = oneTime.reduce((s, l) => s + l.max, 0);
+  return { kind, oneTime, recurring, totalMin, totalMax, marketMin: m.min, marketMax: m.max };
+}
+
+
+/** Pure: czytelna oferta cenowa do wysłania klientowi (PL, z kontekstem rynkowym). */
+export function formatQuote(q: Quote, brief: ClientBrief = {}): string {
+  const who = brief.business?.trim() ? ` dla ${brief.business.trim()}` : "";
+  const lines = [
+    `Oferta — strona internetowa${who}`,
+    ``,
+    `Zakres jednorazowy (wykonanie):`,
+    ...q.oneTime.map((l) => `  • ${l.label}: ${zl(l.min)}–${zl(l.max)}`),
+    ``,
+    `RAZEM (jednorazowo): ${zl(q.totalMin)}–${zl(q.totalMax)}`,
+    ``,
+    `Koszty cykliczne (utrzymanie):`,
+    ...q.recurring.map((l) => `  • ${l.label}: ${zl(l.min)}–${zl(l.max)}/${l.per}`),
+    ``,
+    `Dla porównania — rynkowo w Polsce taka strona kosztuje zwykle ${zl(q.marketMin)}–${zl(q.marketMax)}.`,
+    `Wycena orientacyjna; ostateczna zależy od zakresu i liczby poprawek. Termin: zwykle 3–10 dni roboczych.`,
+  ];
+  return lines.join("\n");
+}
+
+// === Pakiety do wyboru (Start / Pro / Premium) — jak w agencjach, ułatwiają decyzję ===
+
+export type PackageId = "start" | "pro" | "premium";
+export interface QuotePackage { id: PackageId; name: string; price: number; recommended?: boolean; features: string[] }
+
+const round50 = (n: number) => Math.round(n / 50) * 50;
+
+/** Pure: trzy pakiety wg typu i briefu — rosnąca cena i zakres, Pro zalecany. */
+export function quotePackages(kind: SiteKind, brief: ClientBrief = {}): QuotePackage[] {
+  const m = MARKET[kind] || MARKET.auto;
+  const bump = (brief.sections || "").split(/[,;]/).filter((x) => x.trim()).length > 4 ? 1.15 : 1;
+  const isShop = kind === "sklep";
+  const start = round50(m.min * bump);
+  const pro = round50(((m.min + m.max) / 2) * 1.1 * bump);
+  const premium = round50(m.max * 1.4 * bump);
+  return [
+    { id: "start", name: "Start", price: start, features: [
+      `${isShop ? "Sklep" : "Strona"} wg projektu (w pełni responsywna)`,
+      "Podstawowe sekcje i treści startowe",
+      "Publikacja online",
+      "1 runda poprawek",
+    ] },
+    { id: "pro", name: "Pro", price: pro, recommended: true, features: [
+      "Wszystko ze Start",
+      "Copywriting — treści pod SEO",
+      "SEO podstawowe (meta, szybkość, mobilność)",
+      isShop ? "Koszyk + karty produktów" : "Formularz kontaktowy + animacje wejścia",
+      "2 rundy poprawek",
+    ] },
+    { id: "premium", name: "Premium", price: premium, features: [
+      "Wszystko z Pro",
+      isShop ? "Integracja płatności (Przelewy24/Stripe) + wysyłka" : "Integracje (newsletter / CRM)",
+      "SEO zaawansowane + analityka (GA4)",
+      "Grafiki i animacje premium",
+      "1 miesiąc opieki gratis",
+    ] },
+  ];
+}
+
+/** Pure: pakiety jako gotowy tekst oferty do wysłania klientowi. */
+export function formatPackages(pkgs: QuotePackage[], brief: ClientBrief = {}): string {
+  const who = brief.business?.trim() ? ` dla ${brief.business.trim()}` : "";
+  const blocks = pkgs.map((p) =>
+    [`${p.name}${p.recommended ? " (zalecany)" : ""} — ${zl(p.price)}`, ...p.features.map((f) => `  • ${f}`)].join("\n"),
+  );
+  return [
+    `Pakiety — strona internetowa${who}`,
+    ``,
+    ...blocks.flatMap((b) => [b, ""]),
+    `Ceny jednorazowe (wykonanie). Domena + hosting ~120–350 zł/rok, opcjonalna opieka ~80–300 zł/mc.`,
+    `Termin: zwykle 3–10 dni roboczych. Chętnie doprecyzuję zakres pod Państwa potrzeby.`,
+  ].join("\n");
+}

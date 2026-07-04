@@ -1,0 +1,43 @@
+name: Sales OS Gates
+
+# Prawdziwe bramki dla podprojektu sales-os (Next.js + Prisma). Główny ESLint IGNORUJE cały katalog
+# sales-os, więc zmiana tam nie może przejść tylko dlatego, że główne bramki jej nie widzą. Ten
+# workflow uruchamia właściwe bramki sales-os: Prisma Client, typecheck, lint i build Next.js.
+# Uruchamiany, gdy zmienia się cokolwiek w sales-os (albo ręcznie).
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "sales-os/**"
+      - ".github/workflows/sales-os-gates.yml"
+  pull_request:
+    paths:
+      - "sales-os/**"
+  workflow_dispatch:
+
+jobs:
+  sales-os:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sales-os
+    # Bezpieczne środowisko testowe — placeholdery, żeby build się skompilował bez prawdziwej bazy.
+    # Trasy są force-dynamic, więc build NIE łączy się z DB. Sekrety NIE trafiają do klienta.
+    env:
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/db?schema=public"
+      NEXTAUTH_SECRET: "ci-test-secret-not-real"
+      NEXTAUTH_URL: "http://localhost:3000"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies (sales-os)
+        run: npm install --no-audit --no-fund
+
+      - name: Prisma generate + typecheck + lint + Next build
+        run: npm run gates

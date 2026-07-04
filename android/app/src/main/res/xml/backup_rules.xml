@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android <= 11. Backup jest wyłączony (allowBackup=false); to dodatkowe
+     zabezpieczenie: nie kopiuj danych WebView/baz/sharedpref, gdzie żyją klucze
+     i ustawienia (localStorage). -->
+<full-backup-content>
+    <exclude domain="file" path="app_webview" />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+</full-backup-content>

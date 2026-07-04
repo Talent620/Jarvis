@@ -1,0 +1,21 @@
+{
+  "appId": "net.serwer256.jarvis",
+  "productName": "JARVIS",
+  "directories": { "output": "release-desktop" },
+  "files": ["dist/**/*", "electron/**/*"],
+  "win": {
+    "target": "nsis",
+    "artifactName": "JARVIS.exe"
+  },
+  "nsis": {
+    "oneClick": true,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": false,
+    "runAfterFinish": true,
+    "deleteAppDataOnUninstall": false,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "JARVIS",
+    "artifactName": "JARVIS.exe"
+  }
+}

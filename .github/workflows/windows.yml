@@ -1,0 +1,62 @@
+name: Build Windows EXE
+
+# Buduje instalator JARVIS.exe (Electron, NSIS) i publikuje go w GitHub Releases
+# pod tagiem "latest". Instalator pewnie umieszcza wszystkie pliki (m.in. ffmpeg.dll)
+# na dysku — koniec z błędami „nie znaleziono ffmpeg.dll" przy wersji przenośnej.
+# Klucze API NIE są wszywane do EXE (model BYOK: użytkownik podaje własne, szyfrowane lokalnie).
+#
+# Stały link: https://github.com/<owner>/<repo>/releases/download/latest/JARVIS.exe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/functionality-modification-access-z9kod1"]
+    paths:
+      - "electron/**"
+      - "src/**"
+      - "electron-builder.json"
+      - ".github/workflows/windows.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Klucze NIE trafiają do bundla (BYOK + BFF). Usunięto martwe env JARVIS_*_KEY.
+      - name: Build web
+        run: npm run build
+
+      # Podpis cyfrowy (self-signed): instalator i pliki aplikacji są podpisane —
+      # widać wydawcę i integralność pliku. UWAGA: pełne zaufanie SmartScreen
+      # wymaga płatnego certyfikatu OV/EV — wtedy podmień na sekret z PFX.
+      - name: Create code-signing certificate (self-signed)
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Artur Jozefczak - JARVIS" -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddYears(5)
+          $pwd = ConvertTo-SecureString -String "jarvis-ci-sign" -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath "$env:RUNNER_TEMP\jarvis-sign.pfx" -Password $pwd | Out-Null
+          echo "CSC_LINK=$env:RUNNER_TEMP\jarvis-sign.pfx" >> $env:GITHUB_ENV
+          echo "CSC_KEY_PASSWORD=jarvis-ci-sign" >> $env:GITHUB_ENV
+
+      - name: Package installer EXE (signed)
+        run: npx electron-builder --win nsis --publish never
+
+      - name: Publish to GitHub Releases (rolling 'latest')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: JARVIS — najnowszy build
+          files: release-desktop/JARVIS.exe

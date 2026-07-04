@@ -1,0 +1,19 @@
+name = "jarvis-bff"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Synchronizacja danych — utwórz namespace i wklej id:
+#   wrangler kv namespace create JARVIS_KV
+# a następnie wstaw zwrócone id poniżej.
+kv_namespaces = [
+  { binding = "JARVIS_KV", id = "WSTAW_KV_ID" }
+]
+
+# Sekrety (ustaw przez: wrangler secret put NAZWA) — pełny szablon w .dev.vars.example:
+#   Dostawcy AI:  ANTHROPIC_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, GEMINI_API_KEY,
+#                 NVIDIA_API_KEY, MISTRAL_API_KEY, CEREBRAS_API_KEY, GITHUB_MODELS_TOKEN
+#   Research/głos: TAVILY_API_KEY, ELEVENLABS_API_KEY, FISHAUDIO_API_KEY
+#   Hardening (opcjonalne): ALLOWED_ORIGINS, APP_TOKEN, RATE_LIMIT_PER_MIN
+#   Google OAuth: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+#   Licencje/admin: LICENSE_PRIVATE_JWK, ADMIN_TOKEN
+# Klient kieruje ruch tu przez VITE_BFF_URL (np. https://jarvis-bff.<konto>.workers.dev).

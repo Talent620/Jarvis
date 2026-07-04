@@ -1,0 +1,849 @@
+// Współdzielone typy dla całej aplikacji JARVIS.
+import type { UserProfile } from "./lib/profile";
+import type { CampaignPlan } from "./lib/campaignEngine";
+import type { ScoringWeights } from "./lib/leadScoring";
+import type { SuppressedLead } from "./lib/leadSuppression";
+
+export type Role = "user" | "assistant";
+
+export interface Citation {
+  title: string;
+  url: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: Role;
+  /** Tekst widoczny dla użytkownika. */
+  text: string;
+  /** Opcjonalny załączony obraz (wizja). */
+  image?: { data: string; mediaType: string };
+  /** Krótkie etykiety użytych narzędzi (np. "web_search", "add_task"). */
+  tools?: string[];
+  /** Źródła z wyszukiwania (tryb research). */
+  citations?: Citation[];
+  /** Wynik Trybu Konsylium (kilka modeli + ocena zgodności), jeśli użyty. */
+  council?: { members: { label: string; text: string }[]; consensus: string; note: string };
+  /** Wiadomość pojawiła się strumieniowo (słowo-po-słowie) — nie animuj jej ponownie maszyną do pisania. */
+  streamed?: boolean;
+  /** Który dostawca faktycznie odpowiedział (transparentność multi-providera) + czy zapasowy. */
+  via?: string;
+  fellBack?: boolean;
+  /** Przycisk naprawy przy wiadomości-błędzie (errorAdvisor): etykieta + cel nawigacji. */
+  fix?: { label: string; nav: string };
+  createdAt: number;
+}
+
+export interface AuditEntry {
+  id: string;
+  tool: string;
+  input: unknown;
+  output?: string;
+  status: "ok" | "error" | "denied";
+  undo?: { collection: string; id: string };
+  at: number;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  done: boolean;
+  due?: string; // ISO
+  /** Kto odpowiada za zadanie (np. „Ja", „Marek", „klient"). */
+  owner?: string;
+  /** Priorytet — gwiazdka, dzisiejszy fokus (widok „Priorytet" jak w Nozbe). */
+  priority?: boolean;
+  /** Przypisanie do projektu (Project.id) — puste = Skrzynka. */
+  projectId?: string;
+  /** Kontekst/etykieta (np. „telefon", „dom", „komputer"). */
+  category?: string;
+  /** Szczegóły / komentarze do zadania. */
+  notes?: string;
+  /** Powtarzalność: codziennie/tygodniowo/miesięcznie (po wykonaniu wraca). */
+  repeat?: "daily" | "weekly" | "monthly";
+  /** Źródło autopilota (np. „call:<leadId>") — do dedupu i auto-domykania. */
+  sourceId?: string;
+  createdAt: number;
+}
+
+export interface Note {
+  id: string;
+  text: string;
+  createdAt: number;
+}
+
+export interface Reminder {
+  id: string;
+  text: string;
+  at: string; // ISO datetime
+  fired: boolean;
+  createdAt: number;
+}
+
+export interface ShoppingItem {
+  id: string;
+  name: string;
+  qty?: string;
+  done: boolean;
+  createdAt: number;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string; // ISO
+  end?: string; // ISO
+  location?: string;
+  createdAt: number;
+}
+
+export interface TallyItem {
+  id: string;
+  name: string;
+  qty: number;
+  unitPrice: number;
+  createdAt: number;
+}
+
+export interface MemoryFact {
+  id: string;
+  key: string;
+  value: string;
+  pinned?: boolean;
+  /** Jeśli ustawione — fakt należy do projektu (inaczej globalny). */
+  projectId?: string;
+  /** Wektor semantyczny do wyszukiwania trafnych faktów. */
+  embedding?: number[];
+  /** Tag modelu, który policzył wektor (np. "cloud:gemini-004" / "local:minilm-l6").
+   *  Porównujemy tylko wektory z tego samego modelu — inaczej wymiary się nie zgadzają. */
+  embModel?: string;
+  createdAt: number;
+  /** Pamięć ludzka: ostatnie przypomnienie/użycie (wzmacnia trwałość). */
+  lastUsedAt?: number;
+  /** Ile razy wspomnienie zostało wzmocnione (przypomniane/powtórzone). */
+  useCount?: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  instructions: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ProjectFile {
+  id: string;
+  projectId: string;
+  name: string;
+  mime: string;
+  text: string; // wyekstrahowana treść
+  createdAt: number;
+}
+
+export interface SceneAction {
+  entityId: string;
+  action: "on" | "off" | "toggle";
+}
+
+export interface Scene {
+  id: string;
+  name: string;
+  actions: SceneAction[];
+  createdAt: number;
+}
+
+/**
+ * Fiszka (Kapsuły Wiedzy): aktywne przypominanie + powtórki rozłożone w czasie
+ * (algorytm SM-2, jak w Anki). JARVIS tworzy fiszki z Twoich notatek/dziennika/
+ * researchu i odpytuje Cię w optymalnych odstępach, by wiedza została na stałe.
+ */
+export interface Flashcard {
+  id: string;
+  front: string; // pytanie
+  back: string; // odpowiedź
+  deck?: string; // temat/talia
+  source?: string; // skąd pochodzi (notatka, dziennik, temat)
+  // Stan SM-2:
+  ease: number; // współczynnik łatwości (start 2.5)
+  interval: number; // dni do następnej powtórki
+  reps: number; // udane powtórki z rzędu
+  lapses: number; // ile razy zapomniana
+  due: number; // timestamp następnej powtórki
+  createdAt: number;
+}
+
+export interface AppData {
+  tasks: Task[];
+  notes: Note[];
+  reminders: Reminder[];
+  shopping: ShoppingItem[];
+  calendar: CalendarEvent[];
+  memory: MemoryFact[];
+  scenes: Scene[];
+  audit: AuditEntry[];
+  projects: Project[];
+  projectFiles: ProjectFile[];
+  tally: TallyItem[];
+  journal: JournalEntry[];
+  leads: Lead[];
+  flashcards: Flashcard[];
+  bargainWatch: WatchedItem[];
+  /** Skrzynka wysłanych — potwierdzone maile wysłane wprost z aplikacji. */
+  sentMail: SentMail[];
+  /** Historia postów z Maszynki do kontentu. */
+  contentPosts: ContentPost[];
+  /** Historia przeróbek ze Studia Obrazów (ostatnie wyniki — do podglądu/pobrania/dalszej edycji). */
+  imageHistory?: ImageEdit[];
+  /** Zapisane projekty stron WWW (Kreator stron — zapis/wczytanie/wersje). */
+  siteProjects?: SiteProject[];
+  /** 💰 Financial Intelligence — projekty/zlecenia finansowe. */
+  financeProjects?: FinanceProject[];
+  /** World Model — graf encji (ludzie/projekty/firmy/zadania) i relacji z pewnością. */
+  world?: WorldGraph;
+  /** Kampanie (reklamy/social) — trwałe obiekty modelu campaignEngine. */
+  campaigns?: CampaignPlan[];
+  /** Douczone wagi ICP score — korygowane WYŁĄCZNIE z potwierdzonych wyników (won/lost). */
+  scoringWeights?: ScoringWeights;
+  /** Odrzuceni kandydaci (trwałe wykluczenia) — nie wracają przy wyszukiwaniu, da się cofnąć. */
+  suppressedLeads?: SuppressedLead[];
+  /** Dziennik Predykcji — konkretne, sprawdzalne przewidywania JARVISA z terminem i realnym
+   *  rozstrzygnięciem (nie zmyślonym). Fundament uczciwej samooceny celności. */
+  predictionLedger?: PredictionRecord[];
+}
+
+export type PredictionKind = "relationship_neglect";
+/** pending = czeka na termin; correct = przewidywanie się sprawdziło; prevented = użytkownik
+ *  zareagował przed terminem (nie da się orzec przyczynowości, ale zaniedbanie nie wystąpiło);
+ *  moot = sprawa się zamknęła (lead won/lost/usunięty) zanim termin nadszedł — pytanie nieaktualne. */
+export type PredictionVerdict = "pending" | "correct" | "prevented" | "moot";
+
+/** Zamrożony stan wejściowy w chwili prognozy — audyt „na czym się oparłeś".
+ *  NIGDY nie podmieniany po utworzeniu (dowód, nie notatka robocza). */
+export interface PredictionInputState {
+  lastContactedAt?: number;
+  leadStatus?: LeadStatus;
+  /** Suma kwot projektów tego klienta czekających na płatność (Finanse) — podnosi stawkę prognozy. */
+  awaitingPaymentAmount?: number;
+}
+
+/** DOWÓD rozstrzygnięcia — celowo ODDZIELNY od treści prognozy i zapisywany dokładnie raz.
+ *  Treści/warunków prognozy nie wolno przepisywać po utworzeniu; wynik żyje tutaj. */
+export interface PredictionEvidence {
+  /** Kiedy zaobserwowano fakty rozstrzygające. */
+  observedAt: number;
+  /** Co faktycznie się stało (fakty, nie ocena). */
+  outcome: string;
+  /** Surowe fakty źródłowe użyte do werdyktu (np. daty kontaktu, status sprawy). */
+  evidence: string[];
+  verdict: Exclude<PredictionVerdict, "pending">;
+  /** Która deterministyczna reguła zdecydowała (audyt: werdykt NIE pochodzi od modelu). */
+  reason: string;
+  /** Skalibrowana pewność prognoz dla tej encji PO uwzględnieniu tego wyniku. */
+  confidenceAfterResolution: number;
+  /** Użytkownik oznaczył ten dowód jako błędny — rekord zostaje (audyt), ale werdykt
+   *  jest wykluczony z uczenia i statystyk celności. */
+  disputedAt?: number;
+}
+
+/** Jedna FALSYFIKOWALNA predykcja JARVISA — zapisana ZANIM poznamy wynik, rozstrzygana PO fakcie
+ *  deterministyczną regułą na bazie realnych danych (nie domysłu modelu). Nigdy nie usuwana ręcznie,
+ *  nawet gdy wynik nie wypadł po myśli — to jest właśnie dowód uczciwości. Brak `evidence` = pending. */
+export interface PredictionRecord {
+  id: string;
+  kind: PredictionKind;
+  /** Wersja logiki prognozującej — celność porównujemy per wersja, nie mieszamy epok. */
+  logicVersion: number;
+  /** ID encji, której dotyczy (np. lead.id) — NIE nazwa firmy (odporne na duplikaty/rozjazd nazw). */
+  entityId: string;
+  entityLabel: string;
+  madeAt: number;
+  /** Zamrożony stan wejściowy w chwili prognozy. */
+  inputState: PredictionInputState;
+  /** Konkretne, sprawdzalne twierdzenie po polsku (co dokładnie ma się wydarzyć/nie wydarzyć). */
+  claim: string;
+  /** Mierzalne kryterium sukcesu — z góry zapisane, żeby werdyktu nie dało się „dointerpretować". */
+  successCriterion: string;
+  /** Termin, do którego przewidywanie ma się sprawdzić (deadline rozstrzygnięcia). */
+  checkAt: number;
+  /** Pewność 0..1 w chwili prognozy (kalibrowana per encja z wcześniejszych rozstrzygnięć). */
+  confidence: number;
+  /** Jawne założenia prognozy. */
+  assumptions: string[];
+  /** Źródła danych (np. „CRM: lead.lastContactedAt", „Finanse: status projektu"). */
+  sources: string[];
+  /** Jawne przesłanki liczbowe, na których oparto predykcję (dane, nie odczucie). */
+  basis: string[];
+  /** Wynik — OSOBNY obiekt, wypełniany dokładnie raz przy rozstrzygnięciu. Brak = pending. */
+  evidence?: PredictionEvidence;
+}
+
+/** Zapisany projekt strony WWW (Kreator stron). Pełny stan do wznowienia pracy. */
+export interface SiteProject {
+  id: string;
+  name: string;
+  at: number; // utworzono
+  updatedAt: number;
+  prompt: string;
+  kind: string; // SiteKind
+  style: string; // SiteStyle
+  html: string;
+  brief?: unknown; // ClientBrief (luźny typ — moduł webgen jest źródłem prawdy)
+  /** Historia wersji (najnowsza pierwsza) — do przywracania. */
+  versions?: { at: number; html: string }[];
+}
+
+/** Zapisana przeróbka obrazu (Studio Obrazów). data = base64 (bez prefiksu data:). */
+export interface ImageEdit {
+  id: string;
+  at: number;
+  data: string;
+  mediaType: string;
+  prompt?: string; // polecenie/opis, z którego powstała
+}
+
+export type EntityKind = "person" | "project" | "company" | "task" | "topic";
+
+export interface WorldEntity {
+  id: string;
+  kind: EntityKind;
+  name: string;
+  aliases?: string[];
+  confidence: number; // 0..1 — rośnie z liczbą wzmianek
+  mentions: number;
+  firstSeen: number;
+  lastSeen: number;
+  attrs?: Record<string, string>;
+}
+
+export interface WorldRelation {
+  id: string;
+  from: string; // entity id
+  to: string;   // entity id
+  type: string; // np. „powiązany", „pracuje_w", „dotyczy"
+  confidence: number;
+  mentions: number;
+  lastSeen: number;
+}
+
+export interface WorldGraph {
+  entities: WorldEntity[];
+  relations: WorldRelation[];
+}
+
+/** Zapisany post z Maszynki do kontentu. */
+export interface ContentPost {
+  id: string;
+  platform: string;
+  topic: string;
+  text: string;
+  at: number;
+  /** Status publikacji (brak = draft). Wygenerowanie NIE jest publikacją. */
+  status?: "draft" | "ready" | "published_manual" | "published_confirmed" | "failed";
+  /** Kiedy oznaczono jako opublikowane. */
+  publishedAt?: number;
+}
+
+/** Wpis w Skrzynce wysłanych — komu, co, kiedy i jakim kanałem poszło. */
+export interface SentMail {
+  id: string;
+  to: string;
+  subject: string;
+  /** Nazwa firmy/odbiorcy (jeśli wysłano z leada). */
+  company?: string;
+  /** Kanał wysyłki. */
+  via: "SMTP" | "Gmail";
+  at: number;
+}
+
+/** Okno robocze auto-kampanii: godziny i dni tygodnia, w których wolno wysyłać. */
+export interface CampaignWorkingHours {
+  /** Godzina startu (0–23, włącznie). */
+  startHour: number;
+  /** Godzina końca (0–23, wyłącznie). */
+  endHour: number;
+  /** Dni tygodnia, w których wolno wysyłać: 0=niedziela … 6=sobota. */
+  days: number[];
+}
+
+/**
+ * Stan autonomicznej kampanii ofertowej (auto-mail). ŚWIADOMIE zachowawczy: to nie jest
+ * „masowy mailing" — to powolne, limitowane, w pełni odwracalne wysyłanie POJEDYNCZYCH ofert
+ * z twardymi bezpiecznikami (dzienny limit, throttling, okno robocze, wygaśnięcie, bezpiecznik
+ * po serii błędów). Uzbrajana WYŁĄCZNIE za jawną zgodą (outbound) i sama się wyłącza.
+ */
+export interface OfferCampaign {
+  /** Czy kampania jest uzbrojona (cykl aplikacji może wysyłać). */
+  active: boolean;
+  /** Maks. maili na dobę ŁĄCZNIE (z ręcznymi) — chroni reputację nadawcy. */
+  dailyLimit: number;
+  /** Minimalny odstęp między auto-wysyłkami (ms) — throttling. */
+  throttleMs: number;
+  /** Twardy limit na całą kampanię (po jego osiągnięciu kampania się kończy). */
+  totalCap: number;
+  /** Ile ta kampania już wysłała (tylko potwierdzone wysyłki). */
+  sentTotal: number;
+  /** Znacznik ostatniej auto-wysyłki (0 = jeszcze żadnej) — baza throttlingu. */
+  lastSentAt: number;
+  /** Kiedy kampanię uzbrojono. */
+  startedAt: number;
+  /** Auto-wygaśnięcie (ms epoch) — po tym czasie kampania sama gaśnie. */
+  expiresAt: number;
+  /** Kolejne błędy pod rząd (bezpiecznik/circuit-breaker). */
+  failStreak: number;
+  /** Ustawione = kampania WSTRZYMANA (powód dla człowieka); active bez tego = działa. */
+  pausedReason?: string;
+  /** Okno robocze (godziny/dni), w którym wolno wysyłać. */
+  workingHours: CampaignWorkingHours;
+}
+
+/** Obserwowany przedmiot w Łowcy Okazji — pamięta najlepszą widzianą cenę. */
+export interface WatchedItem {
+  id: string;
+  query: string;
+  /** Próg alertu — gdy cena spadnie do/poniżej, oznaczamy „cel osiągnięty". */
+  targetPrice?: number;
+  /** Najniższa cena widziana dotąd. */
+  bestPrice?: number;
+  bestCurrency?: string;
+  /** Ostatnio widziana cena (do wskazania kierunku zmiany). */
+  lastPrice?: number;
+  lastCheckedAt?: number;
+  /** Historia cen (punkty w czasie) — do trendu i mini-wykresu. */
+  history?: { at: number; price: number }[];
+  createdAt: number;
+}
+
+/** Lead sprzedażowy (mini-CRM / Pulpit Sprzedaży). */
+export type LeadStatus = "new" | "contacted" | "offer" | "won" | "lost";
+
+/** Techniczny audyt strony leada (sprawdzany automatycznie, bez AI). */
+export interface SiteAudit {
+  ok: boolean;        // czy udało się pobrać stronę
+  https?: boolean;    // szyfrowanie (kłódka)
+  viewport?: boolean; // wersja mobilna (meta viewport)
+  title?: string;     // tytuł strony (SEO)
+  metaDesc?: boolean; // opis w Google (meta description)
+  h1?: boolean;       // nagłówek główny (struktura SEO)
+  og?: boolean;       // podgląd przy udostępnianiu (Open Graph)
+  contact?: boolean;  // widoczny telefon/e-mail na stronie
+  socials?: string[]; // znalezione sociale (facebook/instagram…)
+  bytes?: number;     // rozmiar HTML (waga)
+  error?: string;     // czemu nie udało się pobrać
+}
+
+/** Teczka klienta — wywiad + analiza AI + materiały sprzedażowe per lead. */
+export interface LeadIntel {
+  /** 0–100: szansa na sprzedaż (im wyżej, tym cieplejszy lead). */
+  score: number;
+  audit?: SiteAudit;
+  /** Analiza AI: słabe punkty → co tracą → rozwiązanie do sprzedania. */
+  analysis?: string;
+  /** Spersonalizowany e-mail (pierwsza linia „Temat: …"). */
+  email?: string;
+  /** Skrypt rozmowy telefonicznej (otwarcie, pytania, obiekcje, domknięcie). */
+  callScript?: string;
+  updatedAt: number;
+}
+
+/** Pojedynczy wpis w dzienniku kontaktu leada (notatka po rozmowie). */
+export interface LeadNote {
+  at: number;
+  text: string;
+}
+
+/** 💰 Financial Intelligence — status projektu (pipeline → realizacja → płatność → koniec). */
+export type FinanceStatus =
+  | "lead" | "oferta" | "negocjacje" | "w_realizacji" | "review" | "gotowe"
+  | "oczekuje_platnosci" | "oplacone" | "zamkniete" | "anulowane";
+
+/** 💰 Projekt/zlecenie w module finansowym. Kwoty NETTO; vatRate w %. */
+export interface FinanceProject {
+  id: string;
+  name: string;
+  client?: string;
+  /** Wspólny identyfikator z Lead — pozwala łączyć finanse z klientem po ID, nie po nazwie firmy
+   *  (fuzzy string-match zostaje jako fallback dla starych/ręcznie tworzonych projektów). */
+  leadId?: string;
+  status: FinanceStatus;
+  amount: number; // przychód netto
+  cost?: number;
+  hours?: number;
+  paidAmount?: number;
+  paidAt?: number; // kiedy wpłynęła (ostatnia) płatność
+  paymentMethod?: string; // metoda płatności (przelew/gotówka/karta…)
+  vatRate?: number; // %
+  category?: string;
+  startAt?: number;
+  dueAt?: number;
+  doneAt?: number;
+  invoiceNo?: string;
+  tags?: string[];
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Lead {
+  id: string;
+  company: string;
+  url?: string;
+  contact?: string; // e-mail / telefon
+  /** E-mail firmy (z OSM/strony), gdy znany — do wysyłki ofert. */
+  email?: string;
+  /** Adres (ulica, miasto) — z OSM. */
+  address?: string;
+  /** Godziny otwarcia — z OSM (wiesz, kiedy dzwonić). */
+  hours?: string;
+  niche?: string;
+  location?: string;
+  note?: string;
+  /** Dziennik kontaktu — ręczne notatki po rozmowach (oś czasu). Stare `note` migruje jako pierwszy wpis. */
+  notes?: LeadNote[];
+  /** Szacowana wartość zlecenia (PLN). */
+  value?: number;
+  /** Gotowy szkic oferty (cold mail) napisany przez JARVIS-a. */
+  offer?: string;
+  /** Teczka klienta: audyt, analiza AI, e-mail, skrypt rozmowy, scoring. */
+  intel?: LeadIntel;
+  /** Kiedy ostatnio nawiązano kontakt (mail/SMS/telefon) — do follow-upów. */
+  lastContactedAt?: number;
+  /** Ile follow-upów (ponagleń) już wysłano. */
+  followUpCount?: number;
+  /** Zaplanowany termin następnego follow-upu (ms). Gdy ustawiony, ma pierwszeństwo nad regułą „co N dni". */
+  nextFollowUpAt?: number;
+  /** Skąd lead pochodzi (np. „salesos" = zsynchronizowany z AI Sales OS). */
+  origin?: "salesos";
+  /** Identyfikator leada w AI Sales OS (gdy origin = salesos) — do dwukierunkowej synchronizacji. */
+  crmId?: string;
+  /** Kampania, z której przyszedł lead (wspólne ID w pętli ROI) — przychód wygranej trafia do tej kampanii. */
+  campaignId?: string;
+  /** Etykiety/segmenty CRM (np. „VIP", „polecenie", „gorący") — do filtrowania i grupowania. */
+  tags?: string[];
+  /** Zgodność kontaktu: „nie kontaktować" — blokuje automatyczną wysyłkę (draft nadal wolno). */
+  doNotContact?: boolean;
+  /** Kontakt wypisał się (opt-out) — blokuje wysyłkę i draft. */
+  optOut?: boolean;
+  status: LeadStatus;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Osobisty dziennik — przemyślenia użytkownika, oddzielne wpisy z tagami. */
+export interface JournalEntry {
+  id: string;
+  title: string;
+  body: string;
+  tags: string[];
+  /** Nastrój/etykieta emocji (opcjonalnie). */
+  mood?: string;
+  /** Jeśli true — czat JARVIS-a może czytać ten wpis (kontekst). Domyślnie prywatne. */
+  shared?: boolean;
+  /** Przypięty wpis — zawsze na górze listy. */
+  pinned?: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Dusza Marki — spójna tożsamość wstrzykiwana do generatorów (stron, treści, obrazów). */
+export interface BrandKit {
+  name?: string; // nazwa marki
+  tagline?: string; // hasło przewodnie
+  voice?: string; // ton głosu (np. „ekspercki, ciepły, bez żargonu")
+  audience?: string; // grupa docelowa
+  colors?: string; // paleta (np. „granat #0A2540, złoty #C8A24B")
+  fonts?: string; // typografia (np. „nagłówki Playfair, tekst Inter")
+  keywords?: string; // słowa kluczowe / styl wizualny
+  avoid?: string; // czego unikać (słowa, style)
+}
+
+/** Zapisany podpis e-mail (do wyboru przed wysyłką). */
+export interface Signature {
+  id: string;
+  name: string;
+  body: string;
+}
+
+export interface Settings {
+  /** Biblioteka podpisów e-mail (aktywny = emailSignature). Puste = działa jak dotąd. */
+  signatures?: Signature[];
+  /** Dusza Marki — opcjonalna, wstrzykiwana do generacji dla spójności (puste = bez zmian). */
+  brandKit?: BrandKit;
+  /** Wybrany dostawca AI: "auto" lub konkretny (anthropic/gemini/groq/openrouter/nvidia/github). */
+  provider: string;
+  /** Klucze API per dostawca (przechowywane lokalnie na urządzeniu). */
+  keys: Record<string, string>;
+  /** Wybrany model (id) lub "auto". */
+  model: string;
+  /** Opcjonalny adres backend-proxy (omija CORS, chowa klucze). */
+  proxyUrl: string;
+  /** Wysyłka e-maili wprost z aplikacji (desktop): adres Gmail/SMTP. */
+  smtpUser: string;
+  /** Hasło aplikacji (Gmail → Hasła aplikacji) — przechowywane lokalnie. */
+  smtpPass: string;
+  /** Serwer SMTP (domyślnie smtp.gmail.com). */
+  smtpHost: string;
+  /** Port SMTP (domyślnie 465 — szyfrowane TLS). */
+  smtpPort: number;
+  /** Podpis (stopka) dopisywany automatycznie na końcu każdego maila/oferty. */
+  emailSignature: string;
+  /** Dzienny limit wysyłki maili (0 = bez limitu) — chroni reputację nadawcy przed spam-flagą. */
+  mailDailyLimit?: number;
+  /** Stan autonomicznej kampanii ofertowej (auto-mail). Brak = kampania nigdy nie uzbrojona. */
+  offerCampaign?: OfferCampaign;
+  /** Adres backendu sync (ten sam Worker). */
+  syncUrl: string;
+  /** Prywatny token przestrzeni danych sync. */
+  syncToken: string;
+  /** Adres aplikacji AI Sales OS (osobne narzędzie, np. http://localhost:3000). */
+  salesOsUrl: string;
+  /** Token przechwytywania leadów (X-Ingest-Token) — wgląd read-only do AI Sales OS. */
+  salesOsToken: string;
+  /** Adres serwera pamięci długoterminowej (Mem0 + Qdrant, self-hosted). Puste = pamięć wyłączona. */
+  memoryServiceUrl: string;
+  /** Opcjonalny token autoryzacji serwera pamięci. */
+  memoryServiceToken: string;
+  /** Serwery MCP (JSON): [{name,url,enabled?,token?}]. Puste = brak narzędzi MCP. */
+  mcpServers: string;
+  /** Dodatkowe zaufane hosty MCP (allowlista), oddzielone przecinkiem/spacją. */
+  mcpAllowlist: string;
+  /** Nadpisania cennika AI (JSON: {"model":{"in":USD/1M,"out":USD/1M}}). Puste = domyślny cennik. */
+  aiPricingOverrides: string;
+  /** Miesięczny budżet AI w USD (0 = brak limitu — tylko podgląd kosztów). */
+  aiMonthlyBudgetUsd: number;
+  /** Tryb on-device (Faza 8): wyłącznie model lokalny (Ollama), bez chmury i web-search — prywatność/offline. */
+  onDeviceOnly: boolean;
+  /** White-label (Faza 9): własna nazwa asystenta w UI. Puste = „JARVIS". */
+  brandName: string;
+  /** Szyfrowanie kluczy API w spoczynku (opcjonalne, hasłem). Domyślnie false = bez zmian. */
+  secretsAtRest: boolean;
+  /** Próg alertu niskiego salda OpenRouter w USD (0 = wyłączony). Tylko odczyt salda, bez płatności. */
+  openrouterLowBalanceUsd: number;
+  /** Embeddingi pamięci liczone on-device (Transformers.js/WebGPU) zamiast w chmurze. Fallback do chmury. */
+  localEmbeddings: boolean;
+  /** Mózg on-device (WebLLM/WebGPU) jako lokalny model w przeglądarce/APK. Fallback do chmury. */
+  webllmEnabled: boolean;
+  /** Wybrany model WebLLM (pusty = domyślny z katalogu). */
+  webllmModel: string;
+  /** Rozpoznawanie mowy on-device (Whisper/Transformers.js) zamiast chmury. Fallback do chmury. */
+  localStt: boolean;
+  /** Synteza mowy on-device (Kokoro) zamiast chmury/systemu. Fallback do dotychczasowych głosów. */
+  localTts: boolean;
+  /** Local-first: proste zapytania kieruj NAJPIERW do Ollamy (chmura zostaje fallbackiem). */
+  localFirstSimple: boolean;
+  /** Ollama: rozmiar kontekstu (num_ctx). Pod 4 GB VRAM nie windować. Domyślnie 4096. */
+  ollamaNumCtx: number;
+  /** Ollama: liczba warstw na GPU (num_gpu). -1 = pełny offload na GPU. */
+  ollamaNumGpu: number;
+  /** Ollama: wyłącz „myślenie" modeli rozumujących (qwen3/deepseek) — dużo szybsze odpowiedzi. Domyślnie TAK. */
+  ollamaNoThink: boolean;
+  /** Ollama: limit długości odpowiedzi (num_predict). 0 = bez limitu. Niżej = szybciej. */
+  ollamaNumPredict: number;
+  /** Ollama: nadpisanie modelu lokalnego per typ zadania (puste = katalog domyślny). */
+  ollamaModelSimple: string;
+  ollamaModelComplex: string;
+  ollamaModelVision: string;
+  /** Ollama: model bez cenzury (używany lokalnie, gdy włączony tryb nieocenzurowany). */
+  ollamaModelUncensored: string;
+  /** Brama Pewności: niepewna odpowiedź lokalna eskaluje do silniejszego dostawcy (Kory). */
+  confidenceGate: boolean;
+  /** Próg pewności (0..1) poniżej którego następuje eskalacja. Domyślnie 0.55. */
+  confidenceThreshold: number;
+  /** Spekulacja: dla zadań complex lokalny draft + równoległa weryfikacja Korą (draft-then-verify). */
+  speculativeMode: boolean;
+  /** Konsylium Hybrydowe: dołącz lokalny model (Ollama) jako dodatkowy głos w naradzie. */
+  councilIncludeLocal: boolean;
+  /** Router uczący się: próg eskalacji (Brama Pewności) adaptuje się do skuteczności refleksu. */
+  adaptiveRouter: boolean;
+  /** Prewarm: trzymaj model lokalny gorący w VRAM (rozgrzewka po focusie/turze) — mniejszy cold-start. */
+  prewarmLocal: boolean;
+  /** Drabina Mądrości: model lokalny sam krytykuje i poprawia złożoną odpowiedź (druga tura na PC). */
+  localRefine: boolean;
+  /** Self-consistency: dla trudnych pytań model lokalny próbuje kilka razy, wybieramy najspójniejszą. */
+  localConsensus: boolean;
+  /** Styl rozmowy — długość odpowiedzi (niezależnie od persony). „balanced" = bez zmian. */
+  responseLength: "concise" | "balanced" | "detailed";
+  /** Tryb inteligencji: economy (szybko/tanio) · balanced (domyślny) · maximum (najmocniejszy model). */
+  intelligenceMode?: "economy" | "balanced" | "maximum";
+  /** Zezwól na modele Gemini preview/experimental (niestabilne) — domyślnie nie. */
+  geminiAllowPreview?: boolean;
+  /** Styl rozmowy — ciepło/serdeczność 0..1 (0.5 = neutralnie, bez zmian). */
+  warmth: number;
+  /** Auto-synchronizacja leadów z AI Sales OS co N minut (0 = wyłączona). */
+  salesOsAutoSync: number;
+  /** Adres lokalnego modelu Ollama (np. http://192.168.0.10:11434). */
+  ollamaUrl: string;
+  /** Adres lokalnego generatora obrazów Stable Diffusion (A1111/Forge, np. http://192.168.0.10:7860). */
+  sdUrl: string;
+  /** Wybrany checkpoint/model SD (z listy serwera). Puste = model domyślny serwera. */
+  sdModel: string;
+  /** Strażnik proaktywny: co jakiś czas sprawdza stan i podpowiada „kliknij Napraw", gdy coś nie gra. */
+  guardianProactive: boolean;
+  /** Autopilot Strażnika: sam (cicho) stosuje bezpieczne, odwracalne naprawy, gdy wykryje problem. */
+  guardianAutopilot: boolean;
+  /** Bezpieczeństwo: wymagaj potwierdzenia akcji wychodzących ZAWSZE — także bez UI (tryb live):
+   *  gdy brak ekranu zgody, akcja zewnętrzna jest BLOKOWANA zamiast wykonywana po cichu (fail-closed). */
+  requireConsentAlways: boolean;
+  /** Tryb Szefa — PEŁNY DOSTĘP: agent głosowy może użyć WSZYSTKICH narzędzi/akcji bez ekranów
+   *  zgody (sam przewiduje i potwierdza głosem). Działa tylko, gdy Tryb Szefa jest otwarty. */
+  bossFullAccess?: boolean;
+  /** Głos Trybu Szefa: „kapitan" (niski systemowy — styl Kapitana Bomby), „premium" (ElevenLabs, ekspresyjny) lub „robot". */
+  bossVoice?: "kapitan" | "premium" | "robot";
+  /** 🆓 Tryb darmowy — mózg działa wyłącznie na darmowych/lokalnych dostawcach (pomija płatnego
+   *  Claude'a). Auto-router i tak wybiera najmocniejszy dostępny darmowy model. */
+  freeMode?: boolean;
+  /** 🧠 Rezerwa głównego API dla mózgu (% miesięcznego budżetu). Gdy zużycie wejdzie w rezerwę,
+   *  pomocnicze wywołania AI (generatory, weryfikacja) przechodzą na darmowe. Domyślnie 35%. */
+  brainReservePct?: number;
+  /** Tryb nieocenzurowany — działa realnie tylko z modelem lokalnym (Ollama):
+   *  JARVIS nie dokłada własnych zastrzeżeń/moralizowania i odpowiada wprost. */
+  unfilteredLocal: boolean;
+  /** Głębokie myślenie — przy złożonych pytaniach robi wewnętrzną analizę przed odpowiedzią. */
+  deepThink: boolean;
+  /** Auto-weryfikacja — przy trudnych pytaniach model sam sprawdza i poprawia swój wynik. */
+  verifyHard: boolean;
+  /** Wszczepiona wiedza ekspercka — dobiera modele mentalne do pytania (offline, za darmo). */
+  expertKnowledge: boolean;
+  /** Aktywny projekt/workspace ("" = ogólny). */
+  activeProjectId: string;
+  /** Motyw HUD: default | gold | green | red | purple. */
+  theme: string;
+  /** Dokowanie okien-paneli na szerokim ekranie (desktop/EXE): środek | lewo | prawo. */
+  panelDock?: "center" | "left" | "right";
+  /** Język interfejsu (pl|en). Pusty = autodetekcja z przeglądarki. */
+  lang?: "pl" | "en";
+  /** Imię użytkownika, którym zwraca się JARVIS. */
+  userName: string;
+  /** Stały profil użytkownika (zainteresowania, cele…) — wbudowana pamięć o nim. */
+  profile: UserProfile;
+  /** Preset osobowości: classic | concise | warm | witty | custom. */
+  persona: string;
+  /** Dodatkowy, własny opis osobowości (zawsze doklejany). */
+  customPersona: string;
+  /** Tryb tłumacza na żywo (JARVIS tłumaczy między językami). */
+  interpreterMode: boolean;
+  /** Język źródłowy tłumacza. */
+  interpreterFrom: string;
+  /** Język docelowy tłumacza. */
+  interpreterTo: string;
+  /** Czy włączyć wyszukiwanie w sieci (gdy dostawca je wspiera). */
+  webSearch: boolean;
+  /** Klucz Tavily (research z cytatami, niezależny od dostawcy). */
+  tavilyApiKey: string;
+  /** Klucz fal.ai — premium modele edycji obrazu (FLUX Kontext, Nano Banana Pro). */
+  falApiKey: string;
+  /** Osobne klucze Gemini TYLKO dla Studia Obrazów (wiele w nowych liniach/po przecinku).
+   *  Niezależne od kluczy czatu — dedykowana pula na generowanie/edycję zdjęć z rotacją. */
+  studioKeys?: string;
+  /** Adres webhooka n8n — warstwa wykonawcza (automatyzacje robią rzeczy). */
+  n8nUrl: string;
+  /** Opcjonalny token autoryzacji do n8n. */
+  n8nToken: string;
+  /** Czy mówić odpowiedzi na głos. */
+  speak: boolean;
+  /** JEDEN, jednoznaczny wybór silnika głosu — źródło prawdy dla speak() (koniec walki flag).
+   *  "system" = polski głos urządzenia (voiceName); "gemini"/"eleven"/"fish" = chmurowe premium;
+   *  "local" = offline na urządzeniu. Pusty = wywnioskuj ze starych ustawień (zgodność wstecz). */
+  voiceMode?: "system" | "gemini" | "eleven" | "fish" | "local";
+  /** Co robić, gdy wybrany głos (premium/local) chwilowo padnie: „ask" = zapytaj, NIE zmieniaj po cichu
+   *  (domyślne); „system" = użyj systemowego. Chroni przed samoczynną zmianą głosu. Zgodność wstecz: brak = ask. */
+  voiceFallbackPolicy?: "ask" | "system";
+  /** Prosty polski głos systemowy: pomija chmurowe TTS (Gemini/ElevenLabs) — spójny polski, offline. Domyślnie TAK. */
+  voiceSystemPl: boolean;
+  /** Voice Guardian: „Używaj głosu JARVISA" — przypina jeden, stały głos (voiceName) i wyłącza
+   *  wszelkie automatyczne podmiany (chmurowe TTS). Gwarantuje, że zawsze brzmi tak samo. */
+  voicePinned: boolean;
+  /** Używaj darmowego głosu Gemini TTS (wysoka jakość, wymaga klucza Gemini). */
+  geminiTts: boolean;
+  /** Nazwa głosu Gemini TTS (np. Charon, Orus, Puck). */
+  geminiVoice: string;
+  /** Potwierdzanie akcji głosem (powiedz „tak"/„nie" w oknie zgody). */
+  voiceConfirm: boolean;
+  /** Subtelne dźwięki interfejsu (HUD). */
+  soundCues: boolean;
+  /** Wibracje (haptyka) przy akcjach. */
+  haptics: boolean;
+  /** Nazwa preferowanego głosu TTS (z systemu). */
+  voiceName: string;
+  /** Wysokość głosu (0.1–2). */
+  voicePitch: number;
+  /** Tempo głosu (0.1–2). */
+  voiceRate: number;
+  /** Ciągłe nasłuchiwanie słowa-klucza "Jarvis". */
+  wakeWord: boolean;
+  /** Po otwarciu aplikacji od razu zacznij słuchać i zapytaj, o co chodzi. */
+  autoListenOnOpen: boolean;
+  /** Po otwarciu pokaż proaktywne powitanie/raport. */
+  proactiveOnOpen: boolean;
+  /** Proaktywny Agent: JARVIS sam odzywa się w trakcie pracy (przypomnienia po
+   *  terminie, zadania na dziś, follow-upy, wydarzenia za chwilę). Domyślnie wł. */
+  proactiveAgent?: boolean;
+  /** Uczenie Dziennika Predykcji (kalibracja okna/pewności per klient z realnych rozstrzygnięć).
+   *  Wyłączone = stałe wartości domyślne; historia zostaje. Domyślnie wł. */
+  predictionLearning?: boolean;
+  /** Dymki-porady (coaching/feature-discovery) co jakiś czas. Domyślnie wł. */
+  tips?: boolean;
+  /** Codzienny poranny briefing (pogoda + kalendarz + zadania) o ustalonej porze. */
+  dailyBriefing: boolean;
+  /** Godzina porannego briefingu w formacie HH:MM. */
+  briefingTime: string;
+  /** Automatyczne wyszukiwanie leadów kilka razy dziennie (gdy apka otwarta). */
+  autoProspect: boolean;
+  /** Autopilot sprzedaży: sam zamienia leady w zadania (telefony, follow-upy). Domyślnie wł. */
+  salesAutopilot?: boolean;
+  /** Data ostatniego automatycznego planu (YYYY-MM-DD) — by uruchamiać raz dziennie. */
+  lastAutoPlanAt?: string;
+  /** Głos premium (Gemini) dla Trybu Tłumacza — np. „Aoede". */
+  translatorVoice?: string;
+  /** Nisza/branża do auto-prospektingu (np. „fryzjer"). */
+  prospectNiche: string;
+  /** Lokalizacja do auto-prospektingu (np. „Kraków"). */
+  prospectLocation: string;
+  /** Ile leadów szukać na raz (3–50, domyślnie 15). */
+  prospectCount: number;
+  /** Auto-pisanie szkiców ofert dla nowych leadów (czekają w Pulpicie). */
+  autoDraftOffers: boolean;
+  /** Co ile dni planować kolejny follow-up po kontakcie (kadencja). Domyślnie 3. */
+  followUpDays: number;
+  /** Natywny nasłuch słowa "Jarvis" w tle (uruchamia apkę głosem). */
+  backgroundWake: boolean;
+  /** Opcjonalny klucz ElevenLabs dla premium głosu JARVIS. */
+  elevenLabsApiKey: string;
+  /** ID głosu ElevenLabs. */
+  elevenLabsVoiceId: string;
+  /** Opcjonalne dostrojenie ElevenLabs (per kontekst, np. agresywny Tryb Szefa): 0–1. */
+  elevenStability?: number;
+  elevenStyle?: number;
+  /** Efekt audio na głosie buforowym (premium/Kokoro): „kapitan" = zniekształcenie Kapitana Bomby. */
+  voiceFx?: "kapitan" | "none";
+  /** Opcjonalny klucz Fish Audio (tani, topowy klon głosu). */
+  fishAudioApiKey: string;
+  /** reference_id głosu Fish Audio (np. sklonowany głos JARVIS). */
+  fishAudioVoiceId: string;
+  /** Desktop: obserwuj schowek i proaktywnie proponuj akcje (prywatność: domyślnie OFF). */
+  clipboardWatch: boolean;
+  /** Tryb Konsylium — przy złożonych pytaniach pytaj kilka modeli naraz i syntezuj. */
+  councilMode: boolean;
+  /** Blokada głosu — Tryb Słuchawki reaguje tylko na głos właściciela (profil). */
+  voiceLock: boolean;
+  /** Profil głosu właściciela (embedding mel) — z funkcji „Naucz głosu". */
+  voiceProfile: number[];
+  /** Próg dopasowania głosu (0–1, wyżej = surowiej). Domyślnie 0.6. */
+  voiceMatch: number;
+  /** Cisza (ms) kończąca turę przy kompletnym zdaniu — czułość przerywania. */
+  endpointShortMs: number;
+  /** Adaptacyjny układ menu — sekcje układają się wg nawyków (pora dnia). */
+  adaptiveUi: boolean;
+  /** Słowo „Jarvis" otwiera pełnoekranowy tryb głosowy (zamiast zwykłego nasłuchu). */
+  voiceModeWake: boolean;
+  /** Adres instancji Home Assistant (np. http://homeassistant.local:8123). */
+  homeAssistantUrl: string;
+  /** Długoterminowy token dostępu Home Assistant. */
+  homeAssistantToken: string;
+  /** Wybrany mikrofon (deviceId). Pusty = systemowy domyślny. Pomaga przy słuchawkach BT. */
+  micDeviceId: string;
+  /** Google OAuth Client ID (do natywnej synchronizacji Kalendarza na komputerze). */
+  googleClientId: string;
+  /** Google OAuth Client Secret (przechowywany lokalnie; nie trafia do repo). */
+  googleClientSecret: string;
+}

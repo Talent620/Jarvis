@@ -1,0 +1,95 @@
+name: Build iOS (.ipa)
+
+# Buduje aplikację iOS na runnerze macOS i publikuje NIEPODPISANY plik .ipa w GitHub Releases
+# (tag "latest", obok jarvis.apk / JARVIS.exe):
+#   https://github.com/<owner>/<repo>/releases/download/latest/JARVIS.ipa
+#
+# WAŻNE (ograniczenie Apple, nie nasze): plik .ipa jest NIEPODPISANY. Na iPhone instaluje się go
+# przez AltStore / Sideloadly TWOIM Apple ID (za darmo, odświeżanie co 7 dni) — patrz docs/IOS.md.
+# Pełny podpis (TestFlight/App Store) wymaga konta Apple Developer (99 USD/rok) i certyfikatów w sekretach.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/functionality-modification-access-z9kod1"]
+    paths:
+      - "ios/**"
+      - "src/**"
+      - "capacitor.config.ts"
+      - ".github/workflows/ios.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Klucze NIE trafiają do bundla (BYOK + BFF) — nic do wstrzykiwania.
+      - name: Build web + sync Capacitor (iOS)
+        run: |
+          npm run build
+          npx cap sync ios
+
+      # CDN CocoaPods (jsDelivr/Varnish) bywa chwilowo niedostępny i zwraca 503 „No healthy
+      # backends" — to NIE błąd kodu. Retry z narastającym backoffem (do ~7,5 min) samo się leczy,
+      # zamiast czerwienić PR przy przejściowej awarii zewnętrznego CDN.
+      - name: CocoaPods install (z retry na 503 z CDN)
+        working-directory: ios/App
+        run: |
+          for i in 1 2 3 4 5; do
+            echo "pod install — próba $i/5"
+            if pod install; then exit 0; fi
+            echo "pod install nie powiodło się (możliwy 503 z CDN CocoaPods) — czekam $((i*30))s i ponawiam"
+            sleep $((i * 30))
+          done
+          echo "::error::pod install nie powiodło się po 5 próbach — prawdopodobnie dłuższa awaria CDN CocoaPods (spróbuj ponownie później)."
+          exit 1
+
+      - name: Build unsigned device app
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package unsigned .ipa
+        run: |
+          APP="ios/build/Build/Products/Release-iphoneos/App.app"
+          if [ ! -d "$APP" ]; then echo "::error::App.app nie powstała — sprawdź log budowy."; exit 1; fi
+          rm -rf Payload JARVIS.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qr JARVIS.ipa Payload
+          ls -lh JARVIS.ipa
+
+      # Artefakt do pobrania z zakładki Actions (gdyby ktoś nie chciał z Releases).
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JARVIS-ios-ipa
+          path: JARVIS.ipa
+
+      - name: Publish to GitHub Releases (rolling 'latest')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          files: JARVIS.ipa
+          make_latest: true

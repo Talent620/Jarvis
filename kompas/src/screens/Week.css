@@ -1,0 +1,44 @@
+/* Ekran „Tydzień” — W2 Typed Memory (Wykonawca A). */
+.week-too-few-text {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.week-count {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+/* Wyrównane kolumny (F4, ocena wizyjna): etykieta / liczba wpisów / średnia
+   w stałych szerokościach — wiersze dają się skanować pionowo. */
+.week-day-row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 14px;
+}
+
+.week-day-label {
+  min-width: 72px;
+  font-weight: 600;
+}
+
+.week-day-row > span:nth-child(2) {
+  min-width: 84px;
+}
+
+.ai-proposal {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.ai-proposal-text {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+}
+
+.week-manual-save {
+  margin-top: 10px;
+}

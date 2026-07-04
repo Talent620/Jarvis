@@ -1,0 +1,29 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.env
+.env.local
+
+# Capacitor / Android build artifacts
+android/app/build
+android/build
+android/.gradle
+android/local.properties
+android/capacitor-cordova-android-plugins
+.idea
+*.iml
+
+# TS build info
+tsconfig.tsbuildinfo
+
+# Klucz prywatny licencji — NIGDY nie commitować
+license-private.json
+
+# Sekrety BFF (lokalny dev) — NIGDY do repo
+proxy/.dev.vars
+.dev.vars
+JARVIS_KOD_BACKUP.zip
+dist-studio
+studio-obrazow-standalone.zip

@@ -1,0 +1,47 @@
+KOMPAS verify — 2026-07-02T04-07-42Z
+== git ==
+f1810a0
+ M DECISIONS.md
+ M EVIDENCE/verify-latest.txt
+ M e2e/adv-integrity.spec.ts
+ M src/lib/bets.ts
+ M src/lib/db.ts
+ M src/lib/exportMd.ts
+ M src/screens/Bet.tsx
+ M src/screens/Today.tsx
+ M src/screens/Week.tsx
+?? EVIDENCE/adversaries/runda2-A-integralnosc.md
+?? EVIDENCE/adversaries/runda2-B-dane.md
+
+== build ==
+
+> kompas@0.1.0 build
+> tsc --noEmit && vite build
+
+src/lib/exportMd.ts(44,28): error TS1161: Unterminated regular expression literal.
+src/lib/exportMd.ts(46,2): error TS1127: Invalid character.
+src/lib/exportMd.ts(46,4): error TS1127: Invalid character.
+src/lib/exportMd.ts(46,6): error TS1005: ',' expected.
+src/lib/exportMd.ts(46,8): error TS1127: Invalid character.
+src/lib/exportMd.ts(46,11): error TS1161: Unterminated regular expression literal.
+build exit: 2
+
+== e2e ==
+(pominięte — build czerwony)
+e2e exit: 1
+
+== scenariusze (eval.md) ==
+S01  ZIELONY
+S02  ZIELONY
+S03  ZIELONY
+S04  ZIELONY
+S05  ZIELONY
+S06  ZIELONY
+S07  ZIELONY
+S08  ZIELONY
+S09  ZIELONY
+S10  ZIELONY
+S11  ZIELONY
+S12  ZIELONY
+---
+zielone: 12/12

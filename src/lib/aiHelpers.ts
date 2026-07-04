@@ -1,0 +1,83 @@
+// Czyste funkcje pomocnicze mózgu (bez zależności runtime) — łatwe do testowania.
+import type { FallbackReasonKind } from "./providers/types";
+
+// Błędy, przy których warto spróbować kolejnego dostawcy (brak kredytów, limit,
+// autoryzacja, a także martwy/nieprawidłowy model — np. zniknięte darmowe endpointy).
+export function shouldFallback(msg: string): boolean {
+  return /credit|billing|insufficient|quota|exceeded|rate.?limit|too low|payment|unauthorized|invalid.?api|forbidden|overloaded|unavailable|no endpoints|no allowed providers|not a valid model|invalid model|model.{0,3}not.{0,3}found|does not exist|unsupported model|invalid authentication|oauth 2 access token|api key not valid|\b(401|402|403|404|429|500|502|503)\b/i.test(
+    msg,
+  );
+}
+
+export const isNetworkError = (msg: string): boolean =>
+  /failed to fetch|load failed|network|networkerror|timeout|abort|failed to connect|connection refused|econnrefused|err_connection|could not connect|unable to connect/i.test(msg);
+
+// Błąd „na poziomie klucza" — limit, wyczerpany kredyt lub zła autoryzacja. Przy
+// takim warto najpierw spróbować INNEGO klucza tego samego dostawcy (rotacja),
+// zanim zejdziemy do kolejnego dostawcy.
+export function isKeyError(msg: string): boolean {
+  return /rate.?limit|too many requests|quota|exceeded|insufficient|credit|billing|payment|too low|unauthorized|invalid.?api|forbidden|invalid authentication|oauth 2 access token|api key not valid|\b(401|402|403|429)\b/i.test(
+    msg,
+  );
+}
+
+/**
+ * Sklasyfikuj REALNY błąd dostawcy do strukturalnej klasy powodu failoveru.
+ * Kolejność ma znaczenie: timeout przed offline (timeout to podzbiór wzorców sieciowych),
+ * auth przed quota (403 bywa w obu kontekstach — tu liczy się dostęp). „unknown" to uczciwa
+ * odpowiedź, gdy nic nie pasuje — NIGDY nie zgadujemy ładniejszej przyczyny.
+ */
+export function classifyFailoverReason(msg: string): FallbackReasonKind {
+  const m = msg || "";
+  if (/timeout|timed?.?out|abort/i.test(m)) return "timeout";
+  if (/\b(401|403)\b|unauthorized|forbidden|invalid.?api|invalid authentication|oauth 2 access token|api key not valid|brak.{0,20}klucza/i.test(m)) return "auth";
+  if (/rate.?limit|too many requests|quota|exceeded|insufficient|credit|billing|payment|too low|\b(402|429)\b/i.test(m)) return "quota";
+  if (isNetworkError(m)) return "offline";
+  if (/overloaded|unavailable|no endpoints|no allowed providers|not a valid model|invalid model|model.{0,3}not.{0,3}found|does not exist|unsupported model|\b(404|500|502|503)\b|bezpiecznik|pomijam/i.test(m)) return "unavailable";
+  return "unknown";
+}
+
+/**
+ * Odkaź powód failoveru zanim trafi do UI/głosu: bez sekretów (klucze API, tokeny), bez
+ * wielolinijkowych stack trace'ów, bez ścian tekstu. Zostawia fakt, ucina resztę.
+ */
+export function sanitizeFailReason(reason: string): string {
+  let r = (reason || "").split(/\r?\n/)[0]; // pierwsza linia — stack trace nigdy nie wychodzi do UI
+  // Tokeny/klucze: długie ciągi po typowych prefiksach lub parametrach uwierzytelniania.
+  r = r.replace(/(sk-|AIza|gsk_|api[_-]?key\s*[=:]\s*|token\s*[=:]\s*|bearer\s+)[A-Za-z0-9_\-.]{6,}/gi, "$1***");
+  // Gołe długie sekrety (base64/hex 24+ znaków) — zbyt podobne do kluczy, by je pokazywać.
+  r = r.replace(/\b[A-Za-z0-9_-]{24,}\b/g, "***");
+  r = r.replace(/\s+/g, " ").trim();
+  if (r.length > 140) r = r.slice(0, 139).trimEnd() + "…";
+  return r;
+}
+
+// Przetłumacz techniczny błąd na zrozumiały komunikat.
+export function humanize(msg: string): string {
+  // Lokalny serwer modelu (Ollama, port 11434) nieosiągalny — częste przy Tailscale/wyłączonym PC.
+  // Łapiemy PRZED ogólnym błędem sieci, bo wymaga innej rady (uruchom serwer / przełącz na chmurę).
+  if ((/\b11434\b|ollama/i.test(msg)) && /failed to connect|connection refused|econnrefused|could not connect|unable to connect|failed to fetch|timeout|network/i.test(msg))
+    return "Nie mogę połączyć się z lokalnym serwerem modelu (Ollama). Sprawdź, czy komputer jest włączony, Ollama działa i jest w sieci (np. Tailscale połączony) — albo przełącz mózg na chmurę w ⚙ → AI.";
+  if (isNetworkError(msg)) return "Brak połączenia z usługą AI. Sprawdź internet i klucz API (⚙ Ustawienia).";
+  if (/oauth 2 access token|invalid authentication credentials|api key not valid/i.test(msg))
+    return "Klucz Gemini jest pusty lub nieprawidłowy. Wklej poprawny klucz w ⚙ → AI (Szybki start) — darmowy: aistudio.google.com/apikey.";
+  if (/401|unauthorized|invalid.?api|forbidden|403/i.test(msg))
+    return "Klucz API jest nieprawidłowy, wygasł lub nie ma dostępu — sprawdź go w ⚙ Ustawienia.";
+  if (/credit|billing|too low|payment|quota|insufficient/i.test(msg))
+    return "Wybrany dostawca nie ma środków/limitu. Przełącz dostawcę lub dodaj inny klucz w ⚙.";
+  if (/no endpoints|no allowed providers|not a valid model|invalid model|model.{0,3}not.{0,3}found|does not exist|unsupported model|404/i.test(msg))
+    return "Wybrany model AI jest chwilowo niedostępny (np. darmowy model bez endpointów). Wybierz inny model lub dostawcę w ⚙ → AI.";
+  return msg;
+}
+
+// Żądania-AKCJE — wymagają NARZĘDZI (leady, e-mail, kalendarz, dom, przypomnienia, zakupy…).
+// Tryb konsylium nie ma narzędzi (tylko deliberacja), więc takie prośby MUSZĄ iść ścieżką
+// jednego mózgu z toolami — inaczej JARVIS „odmawia", twierdząc że nie potrafi.
+export function isActionRequest(text: string): boolean {
+  const t = text || "";
+  return /(znajd[źz]|wyszukaj\s+(lead|firm|klient)|\blead(y|a|ów)?\b|wy[śs]l[ij]|roze[śs]l[ij]|mailing|ofert\w*\s+do|dodaj\s+(do\s+)?(kalendarz|list|zadani|notatk|wydarzeni|zakup)|przypomnij|ustaw\s+(przypomnien|alarm|minutnik|budzik|stoper)|zadzwo[ńn]|zaplanuj\s+(spotkani|wydarzeni|dzie[ńn])|kalendarz|w[łl][aą]cz\b|wy[łl][aą]cz\b|otw[oó]rz\b|\bkup\b|zam[oó]w\b|utw[oó]rz\s+(fiszk|notatk|zadani|scen)|zapisz\s+(lead|kontakt|notatk|zadani))/i.test(t);
+}
+
+// Sygnały, że wypowiedź niesie trwałą informację o użytkowniku (pamięć autonomiczna).
+export const PERSONAL_CUES =
+  /\b(jestem|mam|m[oó]j|moja|moje|moich|lubi[eę]|wol[eę]|nie\s?lubi[eę]|nienawidz[eę]|mieszkam|pracuj[eę]|nazywam|imi[eę]|żona|m[aąż]|partner|dziecko|c[oó]rk|syn|pies|kot|urodzi|adres|alergi|uczulony|dieta|wegeta|wegan|zawsze|nigdy|codziennie|preferuj[eę]|ulubion|zapami[eę]ta|wa[zż]ne|numer|telefon|email|e-mail)/i;

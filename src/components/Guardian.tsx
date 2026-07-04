@@ -1,0 +1,483 @@
+import { useEffect, useRef, useState } from "react";
+import { useEscape } from "../hooks/useEscape";
+import { toast } from "../lib/toast";
+import { store } from "../lib/store";
+import { createListener, isSpeechSupported, speak, stopSpeaking, type VoiceListener } from "../lib/voice";
+import { guardian, guardianAdvise, guardianChat, guardianExecute, guardianPlan, isOutgoingCommand, GUARDIAN_CAPABILITIES, type GuardianActionResult, type GuardianActionKey, type GuardianChatMsg } from "../lib/guardian";
+import { guardianScan, formatScanReport, type GuardianScan, type AgentReport, type AgentState } from "../lib/guardianAgents";
+import { recordGuardianEvent, getGuardianHistory, clearGuardianHistory, topFixes, recurringHint, type GuardianEvent } from "../lib/guardianHistory";
+import { checkForUpdate, applyUpdate } from "../lib/updater";
+import ManualBook from "./ManualBook";
+import { hasUsableBrain } from "../lib/brain";
+import { canSendDirect, hasBackendGmail, canSendGmailNative } from "../lib/mailer";
+import type { ManualCaps } from "../lib/manual";
+
+// 🛡 Strażnik JARVISA — centralny panel dowodzenia. Guardian Core skanuje cały ekosystem przez
+// podagentów (AI, wydajność, głos, obrazy, integracje, aktualizacje), wystawia ocenę zdrowia 0–100,
+// rekomendacje „jednym kliknięciem", tryb doradcy/wykonawcy i autopilota. Jeden ekran „od wszystkiego".
+const STATE_DOT: Record<AgentState, string> = { ok: "🟢", warn: "🟡", problem: "🔴", off: "⚪" };
+const FIND_COL: Record<"ok" | "warn" | "problem", string> = { ok: "var(--text-dim)", warn: "var(--gold)", problem: "#ff6b6b" };
+
+export default function Guardian({ onClose, onRun }: { onClose: () => void; onRun?: (commandId: string) => void }) {
+  useEscape(onClose);
+  // Realne zdolności środowiska — sterują plakietkami „gotowe / trzeba skonfigurować" w instrukcji.
+  const s = store.settings;
+  const k = s.keys || {};
+  const manualCaps: ManualCaps = {
+    brain: hasUsableBrain(),
+    mail: canSendDirect(),
+    gemini: !!k.gemini?.trim(),
+    stt: !!k.groq?.trim() || !!s.localStt,
+    vision: ["gemini", "anthropic", "openrouter", "openai", "nvidia", "github"].some((p) => k[p]?.trim()),
+    google: hasBackendGmail() || canSendGmailNative() || !!s.googleClientId?.trim(),
+    images: !!s.sdUrl?.trim() || !!k.gemini?.trim(),
+    desktop: typeof window !== "undefined" && !!(window as unknown as { jarvisDesktop?: unknown }).jarvisDesktop,
+  };
+  const [scan, setScan] = useState<GuardianScan | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [q, setQ] = useState("");
+  const [advice, setAdvice] = useState("");
+  const [exec, setExec] = useState<{ text: string; tools: string[] } | null>(null);
+  // Podgląd „co zaraz zrobię" + polecenie czekające na potwierdzenie (działania wychodzące).
+  const [preview, setPreview] = useState<{ cmd: string; plan: string } | null>(null);
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [proactive, setProactive] = useState(store.settings.guardianProactive);
+  const [autopilot, setAutopilot] = useState(store.settings.guardianAutopilot);
+  const [history, setHistory] = useState<GuardianEvent[]>(() => getGuardianHistory());
+  // 💬 Osobna, WIELOTUROWA rozmowa ze Strażnikiem — buduje kontekst, może dopytać, zanim doradzi.
+  const [chat, setChat] = useState<GuardianChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [listening, setListening] = useState(false);
+  const recRef = useRef<VoiceListener | null>(null);
+  const voiceOk = isSpeechSupported();
+
+  const refresh = async () => {
+    setBusy(true); setMsg("Skanuję ekosystem JARVISA…");
+    try { setScan(await guardianScan({ checkUpdate: true })); setMsg(""); }
+    catch { setMsg("Nie udało się odczytać stanu."); }
+    finally { setBusy(false); }
+  };
+  useEffect(() => { void refresh(); }, []);
+
+  const run = async (fn: () => Promise<GuardianActionResult> | GuardianActionResult) => {
+    if (busy) return;
+    setBusy(true); setAdvice("");
+    try {
+      const r = await fn();
+      setMsg(r.message);
+      toast(r.message);
+      // Opiekun: zapamiętaj wykonaną naprawę (do historii i statystyk).
+      recordGuardianEvent("fix", r.message);
+      setHistory(getGuardianHistory());
+      await refresh();
+    } catch {
+      setMsg("⚠ Coś poszło nie tak — spróbuj ponownie.");
+      setBusy(false);
+    }
+  };
+
+  const doUpdate = async () => {
+    if (busy) return;
+    setBusy(true); setAdvice(""); setMsg("Sprawdzam aktualizacje JARVISA…");
+    try {
+      const r = await checkForUpdate();
+      if ("error" in r) { setMsg(`❌ ${r.error}`); return; }
+      if (!r.newer) { setMsg(`✅ Masz najnowszą wersję (${r.current}).`); return; }
+      setMsg(`🎉 Jest nowsza wersja (${r.latest}) — ${r.platform === "web" ? "odświeżam…" : "pobieram, kliknij plik, by zainstalować."}`);
+      await applyUpdate(r);
+    } catch {
+      setMsg("⚠ Nie udało się sprawdzić aktualizacji.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Dyrygent: jedno kliknięcie zalecenia → odpowiednia, sprawdzona akcja Strażnika.
+  const runRec = (key?: GuardianActionKey) => {
+    if (key === "fixAll") return void run(() => guardian.fixAll((m) => setMsg(`🩹 ${m}`)));
+    if (key === "connectServers") return void run(() => guardian.connectServers((m) => setMsg(`🔗 ${m}`)));
+    if (key === "smarter") return void run(() => guardian.smarter((m) => setMsg(`🧠 ${m}`)));
+    if (key === "faster") return void run(() => guardian.faster());
+    if (key === "fixVoice") return void run(() => guardian.fixVoice());
+    if (key === "pinVoice") return void run(() => guardian.pinVoice());
+    if (key === "goLocal") return void run(() => guardian.goLocal());
+    if (key === "update") return void doUpdate();
+  };
+
+  const ask = async () => {
+    if (busy || !q.trim()) return;
+    setBusy(true); setExec(null); setPreview(null); setAdvice("⏳ Strażnik analizuje…");
+    try { setAdvice(await guardianAdvise(q.trim())); }
+    catch { setAdvice("Nie udało się uzyskać porady — sprawdź, czy mózg AI odpowiada."); }
+    finally { setBusy(false); }
+  };
+
+  // 💬 Wyślij turę rozmowy — cała historia trafia do Strażnika, więc pamięta kontekst i może dopytać.
+  // `viaVoice` = mówiłeś do niego → odpowiedź ZOSTANIE ODCZYTANA na głos (rozmowa hands-free).
+  const sendChat = async (textArg?: string, viaVoice = false) => {
+    const text = (textArg ?? chatInput).trim();
+    if (chatBusy || !text) return;
+    const next: GuardianChatMsg[] = [...chat, { role: "user", content: text }];
+    setChat(next); setChatInput(""); setChatBusy(true);
+    try {
+      const reply = await guardianChat(next);
+      setChat((c) => [...c, { role: "assistant", content: reply }]);
+      if (viaVoice && store.settings.speak) void speak(reply, { ...store.settings, speak: true }).catch(() => {});
+    } catch {
+      setChat((c) => [...c, { role: "assistant", content: "Nie udało się odpowiedzieć — sprawdź, czy mózg AI odpowiada (Napraw wszystko)." }]);
+    } finally {
+      setChatBusy(false);
+    }
+  };
+
+  // 🎤 Mów do Strażnika: nasłuch (Web Speech / Whisper — wspólny tor apki) → auto-wysyłka →
+  // odczyt odpowiedzi na głos (hands-free). Gdy sprzęt nie wspiera — kieruj do trybów natywnych.
+  const toggleVoice = () => {
+    if (listening) { try { recRef.current?.stop(); } catch { /* ignore */ } setListening(false); return; }
+    if (!voiceOk) { toast("Na tym urządzeniu mowa w czacie jest niedostępna — użyj 🎙 Trybu Słuchawki albo ☎ rozmowy na żywo."); return; }
+    stopSpeaking(); // nie nakładaj na własną mowę
+    const listener = createListener({
+      onFinal: (t) => { setListening(false); const s = (t || "").trim(); if (s) void sendChat(s, true); },
+      onEnd: () => setListening(false),
+      onError: () => setListening(false),
+    });
+    recRef.current = listener;
+    try { listener.start(store.settings.voiceName?.includes("en") ? "en-US" : "pl-PL"); setListening(true); } catch { setListening(false); }
+  };
+  // Sprzątanie: zatrzymaj nasłuch/mowę przy zamknięciu panelu.
+  useEffect(() => () => { try { recRef.current?.stop(); } catch { /* ignore */ } stopSpeaking(); }, []);
+  // Autoprzewijanie do najnowszej wiadomości w rozmowie.
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [chat, chatBusy]);
+
+  // Realne wykonanie: pełny mózg JARVISA + narzędzia (zadania, e-mail, kalendarz, smart home, web, PC…).
+  const realExecute = async (cmd: string) => {
+    setBusy(true); setAdvice(""); setExec(null); setPreview(null); setMsg("⚙ Wykonuję polecenie…");
+    try { setExec(await guardianExecute(cmd)); setMsg(""); }
+    catch { setMsg("⚠ Nie udało się wykonać — sprawdź, czy mózg AI odpowiada."); }
+    finally { setBusy(false); }
+  };
+
+  // WYKONAJ z bramką bezpieczeństwa: polecenia WYCHODZĄCE/nieodwracalne (mail, SMS, telefon,
+  // pieniądze, smart home…) najpierw pokazują podgląd „co zaraz zrobię" i czekają na potwierdzenie.
+  const doExecute = async () => {
+    if (busy || !q.trim()) return;
+    const cmd = q.trim();
+    if (!isOutgoingCommand(cmd)) { await realExecute(cmd); return; }
+    setBusy(true); setAdvice(""); setExec(null); setPreview(null); setMsg("🔎 Przygotowuję podgląd działania…");
+    try { setPreview({ cmd, plan: await guardianPlan(cmd) }); setMsg(""); }
+    catch { setPreview({ cmd, plan: "(Nie udało się przygotować podglądu — potwierdź, jeśli na pewno chcesz wykonać.)" }); setMsg(""); }
+    finally { setBusy(false); }
+  };
+
+  const healthCol = (g: string) => (g === "A" ? "#39d98a" : g === "B" ? "#7ec8ff" : g === "C" ? "var(--gold)" : "#ff6b6b");
+
+  // Karta podagenta: stan, wynik, rozwijane ustalenia + rekomendacje.
+  const AgentCard = (a: AgentReport) => {
+    const isOpen = open[a.id] ?? a.state !== "ok"; // problemy rozwinięte domyślnie
+    return (
+      <div key={a.id} className="journal-card" style={{ padding: "8px 10px", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, cursor: "pointer" }} onClick={() => setOpen((o) => ({ ...o, [a.id]: !isOpen }))}>
+          <span style={{ flexShrink: 0 }}>{STATE_DOT[a.state]}</span>
+          <span style={{ fontSize: 18, flexShrink: 0 }}>{a.icon}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span>
+          <span className="muted" style={{ fontSize: 12, flexShrink: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "right" }}>{a.summary}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: healthCol(a.score >= 85 ? "A" : a.score >= 65 ? "B" : a.score >= 40 ? "C" : "D"), minWidth: 30, flexShrink: 0, textAlign: "right" }}>{a.score}</span>
+        </div>
+        {isOpen && (
+          <div style={{ marginTop: 6 }}>
+            {a.findings.map((f, i) => (
+              <div key={i} style={{ fontSize: 12, color: FIND_COL[f.level], lineHeight: 1.6 }}>
+                {f.level === "problem" ? "🔴" : f.level === "warn" ? "⚠" : "•"} {f.text}
+              </div>
+            ))}
+            {a.recs.length > 0 && (
+              <div className="chips" style={{ flexWrap: "wrap", marginTop: 6 }}>
+                {a.recs.map((r, i) => r.key
+                  ? <button key={i} className="chip" disabled={busy} title={r.why} onClick={() => runRec(r.key)}>{r.label}</button>
+                  : <span key={i} className="muted" style={{ fontSize: 11 }}>💡 {r.why}</span>)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="sheet" onClick={onClose}>
+      <div className="panel" onClick={(e) => e.stopPropagation()}>
+        <div className="panel-head"><div className="grabber" /><h2>🩺 Diagnoza i naprawa</h2></div>
+        <div className="panel-body">
+          <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+            Centralny panel dowodzenia: administrator, architekt AI, opiekun, diagnostyka i automatyzacja w jednym.
+          </p>
+
+          {/* 📖 Instrukcja obsługi / FAQ z wyszukiwarką — „jak uruchomić każdą funkcję i do czego służy”.
+              Zwinięte domyślnie, żeby nie przytłaczać diagnozy; rozwiń, by szukać. */}
+          <details className="guide" style={{ marginBottom: 10 }}>
+            <summary>📖 Instrukcja obsługi i FAQ — jak uruchomić każdą funkcję (z wyszukiwarką)</summary>
+            <div className="guide-body">
+              <ManualBook caps={manualCaps} onRun={onRun} />
+            </div>
+          </details>
+
+          {/* 📊 Health Agent — ocena zdrowia całego systemu (0–100) */}
+          {scan && (
+            <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ fontSize: 32, fontWeight: 800, color: healthCol(scan.health.grade), lineHeight: 1, minWidth: 58, textAlign: "center" }}>{scan.health.score}</div>
+              <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+                <b>Stan JARVISA: {scan.health.label}</b> (ocena {scan.health.grade})<br />
+                <span className="muted" style={{ fontSize: 12 }}>Guardian Core dyryguje {scan.reports.length} agentami i czuwa nad całością.</span>
+              </div>
+            </div>
+          )}
+
+          {/* 🧠 Opiekun: nawracający problem → trwała rada */}
+          {(() => { const h = recurringHint(history); return h ? (
+            <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 8, borderLeft: "3px solid var(--gold)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>🧠 Zauważyłem wzorzec ({h.count}×)</div>
+              <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>{h.advice}</div>
+            </div>
+          ) : null; })()}
+
+          {/* 🩹 Napraw wszystko — główna akcja naprawcza */}
+          <button className="btn primary" style={{ width: "100%", marginBottom: 8 }} disabled={busy} onClick={() => void run(() => guardian.fixAll((m) => setMsg(`🩹 ${m}`)))}>
+            🩹 Napraw wszystko (wykryj serwery i wybierz działający mózg)
+          </button>
+
+          {/* 🎚 Auto-konfiguracja — dobierz tryb pracy do realnego sprzętu */}
+          <button className="btn" style={{ width: "100%", marginBottom: 8 }} disabled={busy} onClick={() => void run(() => guardian.autoConfig())}>
+            🎚 Auto-konfiguracja (dobierz najlepszy tryb do mojego sprzętu)
+          </button>
+
+          {/* 🧭 Najważniejsze rekomendacje — format premium: Problem → Przyczyna → Wpływ → Naprawa → Przycisk */}
+          {scan && scan.recs.length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>🧭 Rekomendacje Strażnika</div>
+              {scan.recs.slice(0, 4).map((r, i) => (
+                r.problem ? (
+                  <div key={i} className="journal-card" style={{ padding: "10px 12px", marginTop: 6 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>⚠ {r.problem}</div>
+                    {r.cause && <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>Przyczyna: {r.cause}</div>}
+                    {r.impact && <div className="muted" style={{ fontSize: 12 }}>Wpływ: {r.impact}</div>}
+                    <div style={{ fontSize: 12, marginTop: 3 }}>Naprawa: {r.why}</div>
+                    {r.key && <button className="btn primary" style={{ width: "100%", marginTop: 8 }} disabled={busy} onClick={() => runRec(r.key)}>{r.label}</button>}
+                  </div>
+                ) : (
+                  <button key={i} className="btn" style={{ width: "100%", textAlign: "left", marginTop: 6, padding: "8px 12px", opacity: r.key ? 1 : 0.85 }} disabled={busy || !r.key} onClick={() => runRec(r.key)}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{r.label}</div>
+                    <div className="muted" style={{ fontSize: 12, fontWeight: 400 }}>{r.why}</div>
+                  </button>
+                )
+              ))}
+            </div>
+          )}
+
+          {/* 🛰 Panel agentów — stan każdej domeny + szybkie zwiń/rozwiń wszystko (czytelność) */}
+          {scan && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>🛰 Agenci systemu</div>
+                <button className="chip" onClick={() => setOpen(Object.fromEntries(scan.reports.map((a) => [a.id, false])))}>⏶ Zwiń</button>
+                <button className="chip" onClick={() => setOpen(Object.fromEntries(scan.reports.map((a) => [a.id, true])))}>⏷ Rozwiń</button>
+              </div>
+              {scan.reports.map((a) => AgentCard(a))}
+            </div>
+          )}
+
+          {/* Szybkie tryby (ręcznie) */}
+          <details style={{ marginBottom: 8 }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 13 }}>⚙ Tryby ręczne</summary>
+            <div className="chips" style={{ flexWrap: "wrap", marginTop: 8 }}>
+              <button className="chip" disabled={busy} onClick={() => void run(() => guardian.faster())}>⚡ Szybciej</button>
+              <button className="chip" disabled={busy} onClick={() => void run(() => guardian.smarter((m) => setMsg(`🧠 ${m}`)))}>🧠 Mądrzej</button>
+              <button className="chip" disabled={busy} onClick={() => void run(() => guardian.uncensored((m) => setMsg(`🔓 ${m}`)))}>🔓 Bez cenzury</button>
+              <button className="chip" disabled={busy} onClick={() => void run(() => guardian.connectServers((m) => setMsg(`🔗 ${m}`)))}>🔗 Połącz serwery</button>
+              <button className="chip" disabled={busy} onClick={() => void run(() => guardian.fixVoice())}>🇵🇱 Napraw głos</button>
+              <button className="chip" disabled={busy} onClick={() => void doUpdate()}>⬆ Aktualizuj</button>
+            </div>
+          </details>
+
+          {msg && <p className="muted" style={{ fontSize: 12, whiteSpace: "pre-line" }}>{msg}</p>}
+
+          {/* Tryb proaktywny */}
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 8, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={proactive}
+              onChange={(e) => { setProactive(e.target.checked); store.setSettings({ guardianProactive: e.target.checked }); }}
+            />
+            🔔 Tryb proaktywny — Strażnik sam co jakiś czas sprawdza i podpowiada „Napraw", gdy coś nie gra.
+          </label>
+
+          {/* Autopilot — dyrygent sam naprawia (tylko bezpieczne, odwracalne akcje) */}
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 6, cursor: proactive ? "pointer" : "not-allowed", opacity: proactive ? 1 : 0.5 }}>
+            <input
+              type="checkbox"
+              checked={autopilot}
+              disabled={!proactive}
+              onChange={(e) => { setAutopilot(e.target.checked); store.setSettings({ guardianAutopilot: e.target.checked }); }}
+            />
+            🤖 Autopilot — sam naprawia bezpieczne rzeczy (łączy serwery, wybiera mózg, poprawia ustawienia). Nigdy nie wysyła nic na zewnątrz.
+          </label>
+
+          {/* Doradca + Wykonanie — Strażnik od wszystkiego */}
+          <h3 style={{ marginTop: 14 }}>💬 Zapytaj lub zleć Strażnikowi</h3>
+          <p className="muted" style={{ marginTop: 0, fontSize: 12 }}>
+            Jedno pytanie lub polecenie (szybko). Potrzebujesz dłuższej rozmowy z kontekstem? Użyj „🗣 Porozmawiaj ze Strażnikiem” niżej.
+          </p>
+          <input
+            value={q}
+            placeholder="np. jak przyspieszyć JARVISA, jaki model wybrać, dodaj zadanie… (Enter wysyła)"
+            disabled={busy}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") void doExecute(); }}
+            style={{ width: "100%" }}
+          />
+          <div className="chips" style={{ marginTop: 8 }}>
+            <button className="btn primary" style={{ flex: 1, marginTop: 0 }} disabled={busy || !q.trim()} onClick={() => void doExecute()}>⚡ Wykonaj</button>
+            <button className="btn" style={{ flex: 1, marginTop: 0 }} disabled={busy || !q.trim()} onClick={() => void ask()}>💡 Doradź</button>
+          </div>
+          {/* Podgląd „co zaraz zrobię" — potwierdzenie przed działaniem wychodzącym */}
+          {preview && (
+            <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8, border: "1px solid var(--gold)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>👁 Zanim wykonam — co zaraz zrobię:</div>
+              <div style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>{preview.plan}</div>
+              <div className="chips" style={{ marginTop: 10 }}>
+                <button className="btn primary" style={{ flex: 1, marginTop: 0 }} disabled={busy} onClick={() => void realExecute(preview.cmd)}>✅ Potwierdź i wykonaj</button>
+                <button className="btn" style={{ flex: 1, marginTop: 0 }} disabled={busy} onClick={() => { setPreview(null); setMsg("Anulowano — nic nie wykonano."); }}>✖ Anuluj</button>
+              </div>
+            </div>
+          )}
+          {exec && (
+            <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8 }}>
+              <div style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>{exec.text}</div>
+              {exec.tools.length > 0 && (
+                <div className="tools" style={{ marginTop: 6 }}>
+                  {exec.tools.map((t) => (<span className="tag" key={t}>{t}</span>))}
+                </div>
+              )}
+            </div>
+          )}
+          {advice && <p className="muted" style={{ fontSize: 13, whiteSpace: "pre-wrap", marginTop: 8 }}>{advice}</p>}
+
+          {/* 💬 Osobna ROZMOWA ze Strażnikiem (wielotura) — ma czas zrozumieć problem i dopytać, zanim doradzi */}
+          <h3 style={{ marginTop: 16 }}>🗣 Porozmawiaj ze Strażnikiem</h3>
+          <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>
+            Osobna rozmowa „na spokojnie": Strażnik pamięta kontekst, może dopytać i prowadzić Cię krok po kroku — nie opiera się na jednym pytaniu.
+          </p>
+          <div className="journal-card" style={{ padding: "10px 12px", marginTop: 6 }}>
+            {/* Dymek powitalny — Strażnik zagaja rozmowę */}
+            {chat.length === 0 && (
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span style={{ fontSize: 20, lineHeight: 1.2 }}>🛡</span>
+                <div style={{ background: "var(--surface-2, rgba(255,255,255,.05))", borderRadius: "12px 12px 12px 4px", padding: "8px 12px", fontSize: 13, lineHeight: 1.5, maxWidth: "85%" }}>
+                  Cześć! Opisz, co Cię trapi w JARVISIE — wolno działa, nie gada, nie łączy się z serwerem? Dopytam i doradzę krok po kroku.
+                </div>
+              </div>
+            )}
+            {/* Dymki rozmowy */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 280, overflowY: "auto" }}>
+              {chat.map((m, i) => (
+                m.role === "assistant" ? (
+                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 20, lineHeight: 1.2 }}>🛡</span>
+                    <div style={{ background: "var(--surface-2, rgba(255,255,255,.05))", borderRadius: "12px 12px 12px 4px", padding: "8px 12px", fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", maxWidth: "85%" }}>{m.content}</div>
+                  </div>
+                ) : (
+                  <div key={i} style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <div style={{ background: "var(--cyan-dim, rgba(108,231,255,.16))", borderRadius: "12px 12px 4px 12px", padding: "8px 12px", fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", maxWidth: "85%" }}>{m.content}</div>
+                  </div>
+                )
+              ))}
+              {chatBusy && (
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <span style={{ fontSize: 20 }}>🛡</span>
+                  <span className="muted" style={{ fontSize: 13 }}>Strażnik myśli…</span>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="chips" style={{ marginTop: 10 }}>
+              <input
+                value={chatInput}
+                placeholder="Napisz do Strażnika… (Enter wysyła)"
+                disabled={chatBusy}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void sendChat(); }}
+                style={{ flex: 1 }}
+              />
+              {voiceOk && (
+                <button
+                  className={`btn ${listening ? "primary" : ""}`}
+                  style={{ marginTop: 0, padding: "8px 14px" }}
+                  disabled={chatBusy}
+                  onClick={toggleVoice}
+                  title={listening ? "Słucham… (kliknij, by przerwać)" : "Mów do Strażnika (głosem)"}
+                  aria-label="Mów do Strażnika"
+                >
+                  {listening ? "🔴" : "🎤"}
+                </button>
+              )}
+              <button className="btn primary" style={{ marginTop: 0, padding: "8px 16px" }} disabled={chatBusy || !chatInput.trim()} onClick={() => void sendChat()}>➤</button>
+            </div>
+            {listening && <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>🎙 Mów teraz — wyślę i odczytam odpowiedź na głos.</p>}
+            {chat.length > 0 && (
+              <button className="btn" style={{ marginTop: 8, padding: "5px 12px", fontSize: 12, width: "auto" }} onClick={() => { setChat([]); setChatInput(""); }}>🗑 Nowa rozmowa</button>
+            )}
+          </div>
+
+          {/* 🗂 Pamięć Strażnika (opiekun) — co robił + najczęstsze naprawy */}
+          {history.length > 0 && (
+            <details style={{ marginTop: 14 }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600 }}>🗂 Pamięć Strażnika ({history.length})</summary>
+              {(() => { const top = topFixes(history); return top.length > 1 ? (
+                <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                  Najczęściej naprawiane: {top.map((t) => `${t.message.replace(/^[^\s]+\s/, "").slice(0, 28)}… ×${t.count}`).join(" · ")}
+                </div>
+              ) : null; })()}
+              <div style={{ marginTop: 6 }}>
+                {history.slice(0, 10).map((e, i) => (
+                  <div key={i} style={{ fontSize: 12, lineHeight: 1.6 }}>
+                    <span className="muted">{new Date(e.at).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span> — {e.message}
+                  </div>
+                ))}
+              </div>
+              <button className="btn" style={{ marginTop: 8, width: "auto", padding: "5px 12px", fontSize: 12 }} onClick={() => { clearGuardianHistory(); setHistory([]); }}>🗑 Wyczyść historię</button>
+            </details>
+          )}
+
+          {/* Katalog możliwości — pełnia mocy (z jasną granicą przy pieniądzach) */}
+          <details style={{ marginTop: 14 }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600 }}>🦾 Co potrafię (pełna lista)</summary>
+            <div style={{ marginTop: 8 }}>
+              {GUARDIAN_CAPABILITIES.map((g) => (
+                <div key={g.group} style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{g.group}</div>
+                  <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: 12, lineHeight: 1.6 }}>
+                    {g.items.map((it) => (<li key={it}>{it}</li>))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
+        <div className="panel-foot" style={{ display: "flex", gap: 8 }}>
+          <button className="btn" style={{ flex: 1 }} disabled={busy} onClick={refresh}>{busy ? "Pracuję…" : "🔄 Skanuj"}</button>
+          <button
+            className="btn"
+            style={{ flex: 1 }}
+            disabled={busy || !scan}
+            onClick={async () => { if (!scan) return; try { await navigator.clipboard?.writeText(formatScanReport(scan)); toast("📋 Raport skopiowany do schowka."); } catch { setMsg(formatScanReport(scan)); } }}
+          >
+            📋 Raport
+          </button>
+          <button className="btn primary" style={{ flex: 1 }} onClick={onClose}>Zamknij</button>
+        </div>
+      </div>
+    </div>
+  );
+}

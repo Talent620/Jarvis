@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  JARVIS łączy się z LOKALNYMI serwerami AI użytkownika (Ollama, Stable Diffusion) po HTTP —
+  w sieci domowej (192.168.x / 10.x), na localhost, albo przez Tailscale (zakres 100.64.x.x).
+  Te serwery nie mają HTTPS, a Android od targetSdk 28+ domyślnie blokuje cleartext (HTTP),
+  stąd błąd "Cleartext HTTP traffic to ... not permitted". Dopuszczamy cleartext globalnie,
+  bo użytkownik świadomie wpisuje adres swojego serwera. Ruch do chmury (API modeli, GitHub)
+  i tak idzie po HTTPS — to nie obniża bezpieczeństwa połączeń zewnętrznych.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

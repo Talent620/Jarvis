@@ -1,0 +1,81 @@
+name: Sales OS build
+
+# Builds AND end-to-end smoke-tests the companion AI Sales OS app (sales-os/)
+# so the public integration endpoints used by JARVIS can't silently regress.
+# Spins up a real Postgres service, seeds demo data, boots the server and runs
+# scripts/smoke-public-api.mjs against all four token-authed endpoints.
+# Runs only when something under sales-os/ changes.
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "sales-os/**"
+      - ".github/workflows/sales-os.yml"
+  pull_request:
+    paths:
+      - "sales-os/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sales-os
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ai_sales_os
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/ai_sales_os?schema=public"
+      NEXTAUTH_SECRET: "ci-build-and-smoke-secret"
+      NEXTAUTH_URL: "http://localhost:3000"
+      AI_PROVIDER: "mock"
+      INGEST_TOKEN: "demo-ingest-token-demo-demo"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: sales-os/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate schema + generate Prisma client
+        run: |
+          npx prisma validate
+          npx prisma generate
+
+      - name: Push schema + seed demo data
+        run: |
+          npx prisma db push --skip-generate
+          npm run db:seed
+
+      - name: Build (type-check + compile all routes)
+        run: npx next build
+
+      - name: Boot server + run public-API smoke test
+        run: |
+          PORT=3000 npx next start &
+          SERVER_PID=$!
+          for i in $(seq 1 60); do
+            curl -sf -o /dev/null "http://localhost:3000/api/public/sync" -H "x-ingest-token: $INGEST_TOKEN" && break
+            sleep 2
+          done
+          npm run smoke
+          kill $SERVER_PID 2>/dev/null || true

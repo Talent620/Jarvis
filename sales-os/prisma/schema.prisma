@@ -1,0 +1,966 @@
+// =====================================================================
+//  AI Sales & Client Acquisition OS — Prisma schema
+//  Multi-tenant by Company. Soft-delete via `deletedAt` where it makes
+//  sense. `createdAt`/`updatedAt` on every model. Lightweight audit on
+//  AI + approval flows via AiDecisionLog and ApprovalRequest.
+// =====================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------- Enums -------------------------------
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum LeadSource {
+  WEBSITE
+  INBOUND_FORM
+  REFERRAL
+  LINKEDIN
+  FACEBOOK_GROUP
+  MARKETPLACE
+  COLD_OUTREACH
+  EVENT
+  ADS
+  GOOGLE_MAPS
+  BUSINESS_REGISTRY
+  OTHER
+}
+
+enum CallStatus {
+  NOT_CALLED
+  NO_ANSWER
+  VOICEMAIL
+  WRONG_NUMBER
+  CALLBACK
+  INTERESTED
+  NOT_INTERESTED
+  MEETING_BOOKED
+}
+
+enum SocialChannel {
+  FACEBOOK
+  INSTAGRAM
+  GOOGLE_BUSINESS
+  LINKEDIN
+}
+
+enum SocialPostStatus {
+  DRAFT
+  APPROVED
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED             // legacy — zachowane dla starych rekordów
+  PUBLISHED_CONFIRMED   // publikacja potwierdzona przez API (externalId)
+  SIMULATED             // brak tokena/tryb demo — NIC nie opublikowano
+  FAILED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum LeadOutcome {
+  OPEN
+  WON
+  LOST
+}
+
+enum ScoreGrade {
+  A
+  B
+  C
+  D
+}
+
+enum ActivityType {
+  NOTE
+  EMAIL
+  CALL
+  MEETING
+  STAGE_CHANGE
+  SCORE_CHANGE
+  MESSAGE_SENT
+  TASK_CREATED
+  AI_DRAFT
+  SYSTEM
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum TaskSource {
+  MANUAL
+  AI
+  SYSTEM
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum CampaignChannel {
+  EMAIL
+  LINKEDIN
+  FACEBOOK
+  INSTAGRAM
+  COLD_CALL
+  MULTI
+}
+
+enum ContentKind {
+  EMAIL
+  DM
+  AD
+  FOLLOW_UP
+  POST
+  OFFER
+  SUBJECT_LINE
+  COLD_CALL_SCRIPT
+}
+
+enum TemplateKind {
+  EMAIL
+  DM
+  AD
+  FOLLOW_UP
+  POST
+  OFFER
+  SUBJECT_LINE
+}
+
+enum ApprovalType {
+  AI_MESSAGE
+  AI_AD
+  AI_FOLLOWUP
+  AI_TASK
+  AI_NEXT_ACTION
+  OTHER
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXECUTED
+}
+
+enum NotificationType {
+  HOT_LEAD
+  TASK_DUE
+  APPROVAL_PENDING
+  REPORT_READY
+  PERFORMANCE_ALERT
+  FUNNEL_SUGGESTION
+  SYSTEM
+}
+
+enum IntegrationType {
+  AI_PROVIDER
+  EMAIL
+  CALENDAR
+  WEBHOOK
+  OTHER
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum AiActionType {
+  GENERATE_MESSAGE
+  GENERATE_AD
+  GENERATE_FOLLOWUP
+  COPILOT_QUERY
+  SCORE_LEAD
+  NEXT_BEST_ACTION
+  WEEKLY_REPORT
+  SUMMARY
+}
+
+enum AiResultStatus {
+  SUCCESS
+  FALLBACK
+  ERROR
+}
+
+enum ReportType {
+  WEEKLY
+  MONTHLY
+  FUNNEL
+  CUSTOM
+}
+
+// ----------------------------- Core --------------------------------
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String?  @unique
+  industry    String?
+  website     String?
+  timezone    String   @default("Europe/Warsaw")
+  currency    String   @default("PLN")
+  // Free-form business context fed to the AI layer (offer, ICP, tone…)
+  aiContext   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users          User[]
+  leads          Lead[]
+  segments       Segment[]
+  campaigns      Campaign[]
+  campaignMsgs   CampaignMessage[]
+  templates      Template[]
+  tasks          Task[]
+  approvals      ApprovalRequest[]
+  notes          Note[]
+  reports        Report[]
+  metrics        MetricSnapshot[]
+  notifications  Notification[]
+  aiLogs         AiDecisionLog[]
+  integrations   Integration[]
+  audiences      Audience[]
+  offers         Offer[]
+  funnelStages   FunnelStage[]
+  activities     LeadActivity[]
+  scores         LeadScore[]
+  acquisitionSettings AcquisitionSettings?
+  acquisitionRuns     AcquisitionRun[]
+  sequences           Sequence[]
+  sequenceEnrollments SequenceEnrollment[]
+  callLogs            CallLog[]
+  websiteAudits       WebsiteAudit[]
+  socialPosts         SocialPost[]
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String
+  role          Role      @default(OWNER)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  ownedLeads         Lead[]            @relation("LeadOwner")
+  tasks              Task[]            @relation("TaskAssignee")
+  notes              Note[]            @relation("NoteAuthor")
+  activities         LeadActivity[]    @relation("ActivityUser")
+  notifications      Notification[]
+  aiLogs             AiDecisionLog[]
+  requestedApprovals ApprovalRequest[] @relation("ApprovalRequester")
+  decidedApprovals   ApprovalRequest[] @relation("ApprovalDecider")
+  callLogs           CallLog[]         @relation("CallLogUser")
+
+  @@index([companyId])
+}
+
+// ----------------------------- Pipeline ----------------------------
+
+model FunnelStage {
+  id          String   @id @default(cuid())
+  name        String
+  order       Int
+  probability Float    @default(0) // win probability 0..1 for weighted revenue
+  color       String   @default("#6b7280")
+  isWon       Boolean  @default(false)
+  isLost      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leads       Lead[]
+
+  @@unique([companyId, order])
+  @@index([companyId])
+}
+
+model Lead {
+  id              String       @id @default(cuid())
+  // Contact
+  name            String
+  email           String?
+  phone           String?
+  position        String?
+  // Company being sold to
+  companyName     String?
+  website         String?
+  industry        String?
+  region          String?
+  // Acquisition + qualification
+  source          LeadSource   @default(OTHER)
+  sourceDetail    String?
+  budget          Int?         // declared budget, minor business currency
+  priority        Priority     @default(MEDIUM)
+  outcome         LeadOutcome  @default(OPEN)
+  estimatedValue  Int?         // expected deal value
+  expectedCloseAt DateTime?
+  // Scoring (denormalized current values; history in LeadScore)
+  score           Int          @default(0)
+  scoreGrade      ScoreGrade   @default(D)
+  // Engagement
+  lastContactedAt DateTime?
+  nextActionAt    DateTime?
+  nextActionNote  String?
+  tags            String[]     @default([])
+  // Calling workflow (denormalized current state; history in CallLog)
+  callStatus      CallStatus   @default(NOT_CALLED)
+  callAttempts    Int          @default(0)
+  lastCallAt      DateTime?
+  nextCallAt      DateTime?
+  // Website qualification (latest audit denormalized; history in WebsiteAudit)
+  hasWebsite      Boolean?     // null = unknown, false = no site (prime lead!)
+  auditScore      Int?         // 0..100 overall website health from last audit
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  deletedAt       DateTime?
+
+  companyId       String
+  company         Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  stageId         String?
+  stage           FunnelStage? @relation(fields: [stageId], references: [id])
+  ownerId         String?
+  owner           User?        @relation("LeadOwner", fields: [ownerId], references: [id])
+
+  activities      LeadActivity[]
+  scores          LeadScore[]
+  notes           Note[]
+  tasks           Task[]
+  approvals       ApprovalRequest[]
+  campaignMsgs    CampaignMessage[]
+  segments        Segment[]    @relation("LeadSegments")
+  enrollments     SequenceEnrollment[]
+  callLogs        CallLog[]
+  audits          WebsiteAudit[]
+
+  @@index([companyId])
+  @@index([companyId, stageId])
+  @@index([companyId, score])
+  @@index([companyId, outcome])
+  @@index([companyId, callStatus])
+}
+
+/// One logged phone call (or attempt). The lead's `callStatus`/`lastCallAt`
+/// mirror the most recent entry so list views stay cheap.
+model CallLog {
+  id          String     @id @default(cuid())
+  status      CallStatus
+  note        String?
+  durationSec Int?
+  nextCallAt  DateTime?  // when to try again / scheduled callback
+  createdAt   DateTime   @default(now())
+
+  companyId   String
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leadId      String
+  lead        Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?      @relation("CallLogUser", fields: [userId], references: [id])
+
+  @@index([leadId, createdAt])
+  @@index([companyId, createdAt])
+}
+
+/// A point-in-time website health check (PageSpeed Insights when configured,
+/// built-in heuristic probe otherwise). Powers "modernization" lead
+/// qualification and personalised outreach ("your site loads in 9s…").
+model WebsiteAudit {
+  id             String   @id @default(cuid())
+  url            String
+  reachable      Boolean  @default(true)
+  https          Boolean  @default(false)
+  mobileFriendly Boolean?
+  performance    Int?     // 0..100 (Lighthouse) or heuristic estimate
+  seo            Int?
+  bestPractices  Int?
+  accessibility  Int?
+  overall        Int      @default(0) // blended 0..100 health score
+  loadTimeMs     Int?     // measured TTFB+body or Lighthouse LCP
+  issues         String[] @default([]) // human-readable problems found
+  opportunities  String[] @default([]) // pitch angles derived from issues
+  summary        String?  // narrative used in outreach + the audit report
+  provider       String   @default("heuristic") // pagespeed | heuristic
+  meta           Json?
+  createdAt      DateTime @default(now())
+
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leadId         String
+  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+  @@index([companyId, createdAt])
+}
+
+/// An ad or organic post for Facebook / Instagram / Google Business Profile.
+/// Drafted (usually by AI), reviewed in the Social Studio, then published via
+/// the connected channel API — or simulated when no token is configured.
+model SocialPost {
+  id          String           @id @default(cuid())
+  channel     SocialChannel    @default(FACEBOOK)
+  kind        ContentKind      @default(POST) // POST (organic) or AD
+  title       String?          // headline (ads) / hook
+  body        String
+  cta         String?          // e.g. "Send message", "Learn more"
+  link        String?          // landing page URL
+  imageUrl    String?          // required by Instagram
+  hashtags    String[]         @default([])
+  status      SocialPostStatus @default(DRAFT)
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  attemptedAt DateTime?         // kiedy rozpoczęto próbę publikacji
+  confirmedAt DateTime?         // kiedy API potwierdziło publikację (externalId)
+  simulated   Boolean          @default(false) // true = symulacja (brak realnej publikacji)
+  externalId  String?          // platform post id (or sim_* when simulated)
+  error       String?
+  isAiGenerated Boolean        @default(true)
+  meta        Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
+
+  companyId   String
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  campaignId  String?
+  campaign    Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status])
+  @@index([companyId, scheduledAt])
+}
+
+model LeadActivity {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  title       String
+  body        String?
+  meta        Json?
+  createdAt   DateTime     @default(now())
+
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leadId      String
+  lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?        @relation("ActivityUser", fields: [userId], references: [id])
+
+  @@index([leadId])
+  @@index([companyId, createdAt])
+}
+
+model LeadScore {
+  id         String   @id @default(cuid())
+  score      Int
+  grade      ScoreGrade
+  breakdown  Json     // { factor: points } map produced by the scoring engine
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leadId     String
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+}
+
+// ----------------------------- Segments ----------------------------
+
+model Segment {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#0f766e")
+  rule        Json?    // optional auto-segmentation rule
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leads       Lead[]   @relation("LeadSegments")
+
+  @@index([companyId])
+}
+
+// ----------------------------- Campaigns ---------------------------
+
+model Campaign {
+  id          String          @id @default(cuid())
+  name        String
+  goal        String?
+  channel     CampaignChannel @default(EMAIL)
+  status      CampaignStatus  @default(DRAFT)
+  startAt     DateTime?
+  endAt       DateTime?
+  // Lightweight performance counters (updated by the app / jobs)
+  sentCount       Int @default(0)
+  repliedCount    Int @default(0)
+  convertedCount  Int @default(0)
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
+
+  companyId   String
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  audienceId  String?
+  audience    Audience?       @relation(fields: [audienceId], references: [id])
+  offerId     String?
+  offer       Offer?          @relation(fields: [offerId], references: [id])
+
+  messages    CampaignMessage[]
+  socialPosts SocialPost[]
+
+  @@index([companyId])
+}
+
+model CampaignMessage {
+  id          String       @id @default(cuid())
+  kind        ContentKind  @default(EMAIL)
+  subject     String?
+  body        String
+  isAiGenerated Boolean    @default(false)
+  approved    Boolean      @default(false)
+  sentAt      DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  campaignId  String?
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  templateId  String?
+  template    Template?    @relation(fields: [templateId], references: [id])
+  offerId     String?
+  offer       Offer?       @relation(fields: [offerId], references: [id])
+  leadId      String?
+  lead        Lead?        @relation(fields: [leadId], references: [id])
+
+  approvals   ApprovalRequest[]
+
+  @@index([companyId])
+  @@index([campaignId])
+}
+
+model Template {
+  id          String       @id @default(cuid())
+  name        String
+  kind        TemplateKind @default(EMAIL)
+  channel     CampaignChannel?
+  subject     String?
+  body        String
+  variables   String[]     @default([]) // e.g. ["firstName","company"]
+  tags        String[]     @default([])
+  isFavorite  Boolean      @default(false)
+  usageCount  Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  campaignMsgs CampaignMessage[]
+
+  @@index([companyId])
+}
+
+// ----------------------------- Tasks -------------------------------
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+  source      TaskSource @default(MANUAL)
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+
+  companyId   String
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leadId      String?
+  lead        Lead?      @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  assigneeId  String?
+  assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+
+  @@index([companyId, status])
+  @@index([companyId, dueDate])
+}
+
+// ----------------------------- Approvals ---------------------------
+
+model ApprovalRequest {
+  id          String         @id @default(cuid())
+  type        ApprovalType   @default(AI_MESSAGE)
+  status      ApprovalStatus @default(PENDING)
+  title       String
+  summary     String?
+  // Proposed content/payload so approvals work even without a linked row
+  payload     Json
+  decisionNote String?
+  decidedAt   DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  companyId   String
+  company     Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leadId      String?
+  lead        Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  campaignMessageId String?
+  campaignMessage   CampaignMessage? @relation(fields: [campaignMessageId], references: [id], onDelete: SetNull)
+  requestedById String?
+  requestedBy   User?        @relation("ApprovalRequester", fields: [requestedById], references: [id])
+  decidedById   String?
+  decidedBy     User?        @relation("ApprovalDecider", fields: [decidedById], references: [id])
+
+  @@index([companyId, status])
+}
+
+// ----------------------------- Notes -------------------------------
+
+model Note {
+  id          String   @id @default(cuid())
+  body        String
+  pinned      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorId    String?
+  author      User?    @relation("NoteAuthor", fields: [authorId], references: [id])
+
+  @@index([companyId])
+  @@index([leadId])
+}
+
+// ----------------------------- Reporting ---------------------------
+
+model Report {
+  id          String     @id @default(cuid())
+  type        ReportType @default(WEEKLY)
+  title       String
+  summary     String?    // human-readable narrative (often AI-written)
+  data        Json?      // structured KPIs
+  periodStart DateTime?
+  periodEnd   DateTime?
+  createdAt   DateTime   @default(now())
+
+  companyId   String
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+}
+
+model MetricSnapshot {
+  id        String   @id @default(cuid())
+  key       String   // e.g. "leads.new", "revenue.won", "reply.rate"
+  value     Float
+  date      DateTime // day bucket
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, key, date])
+  @@index([companyId, key, date])
+}
+
+// ----------------------------- System ------------------------------
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType @default(SYSTEM)
+  title     String
+  body      String?
+  link      String?
+  read      Boolean          @default(false)
+  meta      Json?
+  createdAt DateTime         @default(now())
+
+  companyId String
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, read])
+  @@index([userId, read])
+}
+
+model AiDecisionLog {
+  id            String         @id @default(cuid())
+  actionType    AiActionType
+  status        AiResultStatus @default(SUCCESS)
+  provider      String         @default("mock")
+  model         String?
+  promptKey     String?
+  inputSummary  String?
+  output        String?
+  tokensUsed    Int?
+  relatedLeadId String?
+  meta          Json?
+  createdAt     DateTime       @default(now())
+
+  companyId     String
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId        String?
+  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+}
+
+model Integration {
+  id        String            @id @default(cuid())
+  type      IntegrationType
+  provider  String
+  status    IntegrationStatus @default(DISCONNECTED)
+  config    Json?             // never store raw secrets here in production
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  companyId String
+  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, type, provider])
+  @@index([companyId])
+}
+
+model Audience {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  industry    String?
+  companySize String?
+  region      String?
+  painPoints  String[] @default([])
+  criteria    Json?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  campaigns   Campaign[]
+  sequences   Sequence[]
+
+  @@index([companyId])
+}
+
+model Offer {
+  id           String   @id @default(cuid())
+  name         String
+  summary      String?
+  description  String?
+  priceFrom    Int?
+  priceCurrency String  @default("PLN")
+  deliverables String[] @default([])
+  tier         Int      @default(1) // value-ladder tier
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  campaigns    Campaign[]
+  campaignMsgs CampaignMessage[]
+  sequences    Sequence[]
+
+  @@index([companyId])
+}
+
+// =====================================================================
+//  Acquisition Autopilot — self-driving lead acquisition
+//  Settings (per company), audit of every autonomous run, and a
+//  multi-step outreach sequence engine (human-in-the-loop: every
+//  message is drafted into the approval queue, nothing sends itself).
+// =====================================================================
+
+enum AcquisitionTrigger {
+  CRON
+  MANUAL
+  STARTUP
+}
+
+enum RunStatus {
+  SUCCESS
+  PARTIAL
+  ERROR
+  SKIPPED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  STOPPED
+}
+
+/// Per-company control panel for the autonomous acquisition engine.
+model AcquisitionSettings {
+  id                String   @id @default(cuid())
+  // Master switch + cadence
+  enabled           Boolean  @default(true)
+  cadenceMinutes    Int      @default(60)   // how often the autopilot tick may run
+  // Volume guardrails
+  dailyLeadCap      Int      @default(25)   // hard ceiling of outbound leads sourced per day
+  targetPerDay      Int      @default(10)   // soft target the engine paces toward
+  perRunBatch       Int      @default(5)    // prospects sourced per audience per tick
+  // Behaviour
+  autoDraftInbound  Boolean  @default(true) // AI first-touch reply for inbound → approvals
+  autoDraftOutbound Boolean  @default(true) // AI first-touch draft for sourced leads → approvals
+  autoEnroll        Boolean  @default(true) // auto-enroll new leads into the default sequence
+  enrichLeads       Boolean  @default(true) // run the enrichment pass on new leads
+  minScoreToDraft   Int      @default(0)    // only auto-draft when score ≥ this
+  channels          String[] @default(["EMAIL", "LINKEDIN"]) // CampaignChannel values in play
+  // Local-business prospecting (Google Maps / business registries)
+  prospectingEnabled       Boolean  @default(false) // include local-business search in the tick
+  prospectingQueries       String[] @default([])    // "category @ city" search lines
+  prospectingNoWebsiteOnly Boolean  @default(true)  // only import businesses without a website
+  // Website qualification
+  auditWebsites     Boolean  @default(true)  // auto-audit new leads that have a website
+  // Real sending (off by default: human-in-the-loop)
+  autoSendEmails    Boolean  @default(false) // auto-approve + send AI email drafts
+  dailyEmailCap     Int      @default(20)    // hard ceiling of auto-sent emails per day
+  // Quiet hours (local company tz, 0..23). Outreach drafting pauses in-window.
+  quietHoursStart   Int?     @default(21)
+  quietHoursEnd     Int?     @default(7)
+  // Bookkeeping
+  lastRunAt         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+/// One audit row per autopilot tick (cron, startup or manual).
+model AcquisitionRun {
+  id          String             @id @default(cuid())
+  trigger     AcquisitionTrigger @default(CRON)
+  status      RunStatus          @default(SUCCESS)
+  // Outcome counters
+  discovered  Int                @default(0) // candidates returned by providers
+  created     Int                @default(0) // net-new leads
+  deduped     Int                @default(0) // duplicates skipped
+  enriched    Int                @default(0) // leads enriched this run
+  drafted     Int                @default(0) // AI first-touch drafts queued
+  enrolled    Int                @default(0) // leads enrolled into sequences
+  advanced    Int                @default(0) // sequence steps advanced
+  hotDetected Int                @default(0) // hot leads surfaced
+  durationMs  Int                @default(0)
+  detail      Json?              // per-source / per-audience breakdown, skip reason, etc.
+  error       String?
+  createdAt   DateTime           @default(now())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+}
+
+/// An ordered, multi-touch outreach cadence. Steps are drafted (never sent)
+/// into the approval queue when due.
+model Sequence {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  channel     CampaignChannel @default(MULTI)
+  active      Boolean         @default(true)
+  isDefault   Boolean         @default(false) // the cadence new leads auto-enroll into
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
+
+  companyId   String
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  audienceId  String?
+  audience    Audience?       @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  offerId     String?
+  offer       Offer?          @relation(fields: [offerId], references: [id], onDelete: SetNull)
+
+  steps       SequenceStep[]
+  enrollments SequenceEnrollment[]
+
+  @@index([companyId])
+}
+
+/// A single touch within a Sequence.
+model SequenceStep {
+  id         String          @id @default(cuid())
+  order      Int                                  // 1-based position
+  dayOffset  Int             @default(0)          // days after the previous step (step 1 = days after enrollment)
+  channel    CampaignChannel @default(EMAIL)
+  kind       ContentKind     @default(EMAIL)
+  name       String
+  prompt     String?                              // instruction handed to the AI for this touch
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  sequenceId String
+  sequence   Sequence        @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
+  @@unique([sequenceId, order])
+  @@index([sequenceId])
+}
+
+/// A lead's progress through a Sequence.
+model SequenceEnrollment {
+  id          String           @id @default(cuid())
+  status      EnrollmentStatus @default(ACTIVE)
+  currentStep Int              @default(0) // last step that was drafted (0 = none yet)
+  nextRunAt   DateTime?                    // when the next step becomes due
+  startedAt   DateTime         @default(now())
+  lastStepAt  DateTime?
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  companyId   String
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sequenceId  String
+  sequence    Sequence         @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  leadId      String
+  lead        Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([sequenceId, leadId])
+  @@index([companyId, status, nextRunAt])
+}

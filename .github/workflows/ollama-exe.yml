@@ -1,0 +1,54 @@
+name: Build Ollama Server EXE
+
+# Kompiluje launcher PowerShell (tools/ollama-server) do JEDNOPLIKOWEGO .exe (ps2exe) i
+# publikuje go w GitHub Releases pod stałym tagiem "latest" — obok jarvis.apk / JARVIS.exe:
+#   https://github.com/<owner>/<repo>/releases/download/latest/JARVIS-Ollama-Server.exe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/functionality-modification-access-z9kod1"]
+    paths:
+      - "tools/ollama-server/**"
+      - ".github/workflows/ollama-exe.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ps2exe
+        shell: powershell
+        run: Install-Module -Name ps2exe -Force -Scope CurrentUser
+
+      - name: Compile PS1 -> EXE
+        shell: powershell
+        run: |
+          Import-Module ps2exe
+          Invoke-ps2exe `
+            -InputFile  tools/ollama-server/jarvis-ollama-server.ps1 `
+            -OutputFile JARVIS-Ollama-Server.exe `
+            -title      "JARVIS - Serwer Ollamy" `
+            -description "Uruchamia Ollame dla telefonu i daje gotowy adres do JARVIS" `
+            -company    "JARVIS" `
+            -noConfigFile
+
+      - name: Stage launcher + source next to the EXE
+        shell: powershell
+        run: |
+          Copy-Item tools/ollama-server/JARVIS-Serwer.cmd .
+          Copy-Item tools/ollama-server/jarvis-ollama-server.ps1 .
+
+      - name: Publish to GitHub Releases (rolling 'latest')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          files: |
+            JARVIS-Ollama-Server.exe
+            JARVIS-Serwer.cmd
+            jarvis-ollama-server.ps1
+          make_latest: true

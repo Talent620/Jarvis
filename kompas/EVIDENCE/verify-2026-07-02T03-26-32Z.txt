@@ -1,0 +1,506 @@
+KOMPAS verify — 2026-07-02T03-26-32Z
+== git ==
+5fffac7
+?? ./
+
+== build ==
+
+> kompas@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v5.4.21 building for production...
+transforming...
+
+warn - The `content` option in your Tailwind CSS configuration is missing or empty.
+warn - Configure your content sources or your generated CSS will be missing styles.
+warn - https://tailwindcss.com/docs/content-configuration
+✓ 31 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.50 kB │ gzip:  0.31 kB
+dist/assets/index-BI9Iydn7.css    0.28 kB │ gzip:  0.23 kB
+dist/assets/index-DnBEpWtP.js   142.75 kB │ gzip: 45.92 kB
+✓ built in 4.58s
+build exit: 0
+
+== e2e ==
+
+Running 16 tests using 4 workers
+
+  ✘   4 e2e/s01-daily-entry.spec.ts:6:1 › S01: wpis dzienny w 3 interakcjach, widoczny natychmiast z godziną (6.2s)
+  ✘   2 e2e/s02-persistence.spec.ts:6:1 › S02: wpis przeżywa zamknięcie karty (ta sama treść i czas) (30.1s)
+  ✘   1 e2e/s04-weekly-pattern.spec.ts:6:1 › S04a: za mało wpisów → uczciwy komunikat, żadnego zmyślonego wzorca (30.1s)
+  ✘   3 e2e/s03-immutable-timestamp.spec.ts:6:1 › S03: brak jakiejkolwiek ścieżki edycji znacznika czasu wpisu (30.1s)
+  ✘   5 e2e/s05-ai-proposal.spec.ts:6:1 › S05: propozycja AI wymaga akceptacji człowieka; po akceptacji zakład aktywny (30.1s)
+  ✘   6 e2e/s06-no-key-degradation.spec.ts:6:1 › S06: bez klucza — uczciwa plakietka i działający zakład ręczny (30.1s)
+  ✘   7 e2e/s04-weekly-pattern.spec.ts:14:1 › S04b: wzorzec z zasianego tygodnia zgadza się z ground truth (30.1s)
+  ✘   8 e2e/s07-one-active-bet.spec.ts:6:1 › S07: drugi zakład ręczny odrzucony z komunikatem (30.1s)
+  ✘   9 e2e/s05-ai-proposal.spec.ts:29:1 › S05b: odrzucenie propozycji nie zostawia śladu w zakładach (30.1s)
+  ✘  10 e2e/s08-done-requires-proof.spec.ts:6:1 › S08: próba domknięcia bez dowodu → odmowa z wyjaśnieniem, status bez zmian (30.1s)
+  ✘  11 e2e/s09-three-proof-types.spec.ts:6:1 › S09: plik, notatka i link jako dowody; plik przeżywa restart (30.1s)
+  ✘  12 e2e/s07-one-active-bet.spec.ts:24:1 › S07b: akceptacja propozycji AI przy aktywnym zakładzie też odrzucona (30.1s)
+  ✘  13 e2e/s10-bet-resolution.spec.ts:6:1 › S10: rozstrzygnięcie pokazuje oryginalne przewidywanie i otwiera miejsce na następny zakład (30.1s)
+  ✘  14 e2e/s11-export-truth.spec.ts:7:1 › S11: eksport .md zgadza się z zasianym ground truth i nie kłamie o dowodach (30.1s)
+  ✘  15 e2e/s12-double-submit-refresh.spec.ts:6:1 › S12a: podwójne szybkie kliknięcie „Zapisz” → dokładnie jeden wpis (30.1s)
+  ✘  16 e2e/s12-double-submit-refresh.spec.ts:24:1 › S12b: odświeżenie tuż po zapisie → baza spójna (wpis raz albo wcale) (30.1s)
+
+
+  1) e2e/s01-daily-entry.spec.ts:6:1 › S01: wpis dzienny w 3 interakcjach, widoczny natychmiast z godziną 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByTestId('entry-text')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByTestId('entry-text')
+
+
+       7 |   await open(page);
+       8 |   // Ekran startowy MUSI być ekranem wpisu — bez klikania w nawigację.
+    >  9 |   await expect(page.getByTestId("entry-text")).toBeVisible();
+         |                                                ^
+      10 |
+      11 |   // Dokładnie 3 interakcje: tekst → ocena → zapis.
+      12 |   await page.getByTestId("entry-text").fill("Dobry dzień — domknąłem wycenę dla klienta.");
+        at /home/user/Jarvis/kompas/e2e/s01-daily-entry.spec.ts:9:48
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s01-daily-entry-S01-wpis-d-86cf9-oczny-natychmiast-z-godziną/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s01-daily-entry-S01-wpis-d-86cf9-oczny-natychmiast-z-godziną/error-context.md
+
+  2) e2e/s02-persistence.spec.ts:6:1 › S02: wpis przeżywa zamknięcie karty (ta sama treść i czas) ──
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.fill: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('entry-text')
+
+
+       at helpers.ts:32
+
+      30 | /** Dodaj wpis dzienny: DOKŁADNIE 3 interakcje (tekst, ocena, zapis) — kryterium S01. */
+      31 | export async function addEntry(page: Page, text: string, score = 3): Promise<void> {
+    > 32 |   await page.getByTestId("entry-text").fill(text);
+         |                                        ^
+      33 |   await page.getByTestId("entry-score-" + score).click();
+      34 |   await page.getByTestId("entry-save").click();
+      35 |   await expect(page.getByTestId("entry-list")).toContainText(text);
+        at addEntry (/home/user/Jarvis/kompas/e2e/helpers.ts:32:40)
+        at /home/user/Jarvis/kompas/e2e/s02-persistence.spec.ts:8:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s02-persistence-S02-wpis-p-4b2dc-karty-ta-sama-treść-i-czas-/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s02-persistence-S02-wpis-p-4b2dc-karty-ta-sama-treść-i-czas-/error-context.md
+
+  3) e2e/s03-immutable-timestamp.spec.ts:6:1 › S03: brak jakiejkolwiek ścieżki edycji znacznika czasu wpisu 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.fill: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('entry-text')
+
+
+       at helpers.ts:32
+
+      30 | /** Dodaj wpis dzienny: DOKŁADNIE 3 interakcje (tekst, ocena, zapis) — kryterium S01. */
+      31 | export async function addEntry(page: Page, text: string, score = 3): Promise<void> {
+    > 32 |   await page.getByTestId("entry-text").fill(text);
+         |                                        ^
+      33 |   await page.getByTestId("entry-score-" + score).click();
+      34 |   await page.getByTestId("entry-save").click();
+      35 |   await expect(page.getByTestId("entry-list")).toContainText(text);
+        at addEntry (/home/user/Jarvis/kompas/e2e/helpers.ts:32:40)
+        at /home/user/Jarvis/kompas/e2e/s03-immutable-timestamp.spec.ts:8:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s03-immutable-timestamp-S0-3923f-dycji-znacznika-czasu-wpisu/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s03-immutable-timestamp-S0-3923f-dycji-znacznika-czasu-wpisu/error-context.md
+
+  4) e2e/s04-weekly-pattern.spec.ts:6:1 › S04a: za mało wpisów → uczciwy komunikat, żadnego zmyślonego wzorca 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('nav-week')
+
+
+       6 | test("S04a: za mało wpisów → uczciwy komunikat, żadnego zmyślonego wzorca", async ({ page }) => {
+       7 |   await open(page);
+    >  8 |   await page.getByTestId("nav-week").click();
+         |                                      ^
+       9 |   await expect(page.getByTestId("week-too-few")).toBeVisible();
+      10 |   await expect(page.getByTestId("week-too-few")).toContainText(/za mało/i);
+      11 |   expect(await page.getByTestId("week-pattern").count()).toBe(0);
+        at /home/user/Jarvis/kompas/e2e/s04-weekly-pattern.spec.ts:8:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s04-weekly-pattern-S04a-za-bc3b9-t-żadnego-zmyślonego-wzorca/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s04-weekly-pattern-S04a-za-bc3b9-t-żadnego-zmyślonego-wzorca/error-context.md
+
+  5) e2e/s04-weekly-pattern.spec.ts:14:1 › S04b: wzorzec z zasianego tygodnia zgadza się z ground truth 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('nav-today')
+
+
+       at helpers.ts:65
+
+      63 |   for (const it of SEED_WEEK.items) {
+      64 |     await page.clock.setFixedTime(new Date(it.day));
+    > 65 |     await page.getByTestId("nav-today").click();
+         |                                         ^
+      66 |     await addEntry(page, it.text, it.score);
+      67 |   }
+      68 | }
+        at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)
+        at /home/user/Jarvis/kompas/e2e/s04-weekly-pattern.spec.ts:15:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s04-weekly-pattern-S04b-wz-429e4-a-zgadza-się-z-ground-truth/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s04-weekly-pattern-S04b-wz-429e4-a-zgadza-się-z-ground-truth/error-context.md
+
+  6) e2e/s05-ai-proposal.spec.ts:6:1 › S05: propozycja AI wymaga akceptacji człowieka; po akceptacji zakład aktywny 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('nav-today')
+
+
+       at helpers.ts:65
+
+      63 |   for (const it of SEED_WEEK.items) {
+      64 |     await page.clock.setFixedTime(new Date(it.day));
+    > 65 |     await page.getByTestId("nav-today").click();
+         |                                         ^
+      66 |     await addEntry(page, it.text, it.score);
+      67 |   }
+      68 | }
+        at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)
+        at /home/user/Jarvis/kompas/e2e/s05-ai-proposal.spec.ts:8:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s05-ai-proposal-S05-propoz-f0727-o-akceptacji-zakład-aktywny/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s05-ai-proposal-S05-propoz-f0727-o-akceptacji-zakład-aktywny/error-context.md
+
+  7) e2e/s05-ai-proposal.spec.ts:29:1 › S05b: odrzucenie propozycji nie zostawia śladu w zakładach ─
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('nav-today')
+
+
+       at helpers.ts:65
+
+      63 |   for (const it of SEED_WEEK.items) {
+      64 |     await page.clock.setFixedTime(new Date(it.day));
+    > 65 |     await page.getByTestId("nav-today").click();
+         |                                         ^
+      66 |     await addEntry(page, it.text, it.score);
+      67 |   }
+      68 | }
+        at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)
+        at /home/user/Jarvis/kompas/e2e/s05-ai-proposal.spec.ts:31:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s05-ai-proposal-S05b-odrzu-88096--zostawia-śladu-w-zakładach/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s05-ai-proposal-S05b-odrzu-88096--zostawia-śladu-w-zakładach/error-context.md
+
+  8) e2e/s06-no-key-degradation.spec.ts:6:1 › S06: bez klucza — uczciwa plakietka i działający zakład ręczny 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('nav-today')
+
+
+       at helpers.ts:65
+
+      63 |   for (const it of SEED_WEEK.items) {
+      64 |     await page.clock.setFixedTime(new Date(it.day));
+    > 65 |     await page.getByTestId("nav-today").click();
+         |                                         ^
+      66 |     await addEntry(page, it.text, it.score);
+      67 |   }
+      68 | }
+        at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)
+        at /home/user/Jarvis/kompas/e2e/s06-no-key-degradation.spec.ts:7:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s06-no-key-degradation-S06-19b21--i-działający-zakład-ręczny/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s06-no-key-degradation-S06-19b21--i-działający-zakład-ręczny/error-context.md
+
+  9) e2e/s07-one-active-bet.spec.ts:6:1 › S07: drugi zakład ręczny odrzucony z komunikatem ─────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('nav-today')
+
+
+       at helpers.ts:65
+
+      63 |   for (const it of SEED_WEEK.items) {
+      64 |     await page.clock.setFixedTime(new Date(it.day));
+    > 65 |     await page.getByTestId("nav-today").click();
+         |                                         ^
+      66 |     await addEntry(page, it.text, it.score);
+      67 |   }
+      68 | }
+        at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)
+        at /home/user/Jarvis/kompas/e2e/s07-one-active-bet.spec.ts:7:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s07-one-active-bet-S07-dru-e8321-zny-odrzucony-z-komunikatem/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s07-one-active-bet-S07-dru-e8321-zny-odrzucony-z-komunikatem/error-context.md
+
+  10) e2e/s07-one-active-bet.spec.ts:24:1 › S07b: akceptacja propozycji AI przy aktywnym zakładzie też odrzucona 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('nav-today')
+
+
+       at helpers.ts:65
+
+      63 |   for (const it of SEED_WEEK.items) {
+      64 |     await page.clock.setFixedTime(new Date(it.day));
+    > 65 |     await page.getByTestId("nav-today").click();
+         |                                         ^
+      66 |     await addEntry(page, it.text, it.score);
+      67 |   }
+      68 | }
+        at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)
+        at /home/user/Jarvis/kompas/e2e/s07-one-active-bet.spec.ts:26:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s07-one-active-bet-S07b-ak-e96a5-nym-zakładzie-też-odrzucona/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s07-one-active-bet-S07b-ak-e96a5-nym-zakładzie-też-odrzucona/error-context.md
+
+  11) e2e/s08-done-requires-proof.spec.ts:6:1 › S08: próba domknięcia bez dowodu → odmowa z wyjaśnieniem, status bez zmian 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('nav-today')
+
+
+       at helpers.ts:65
+
+      63 |   for (const it of SEED_WEEK.items) {
+      64 |     await page.clock.setFixedTime(new Date(it.day));
+    > 65 |     await page.getByTestId("nav-today").click();
+         |                                         ^
+      66 |     await addEntry(page, it.text, it.score);
+      67 |   }
+      68 | }
+        at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)
+        at /home/user/Jarvis/kompas/e2e/s08-done-requires-proof.spec.ts:7:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s08-done-requires-proof-S0-6a18f-jaśnieniem-status-bez-zmian/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s08-done-requires-proof-S0-6a18f-jaśnieniem-status-bez-zmian/error-context.md
+
+  12) e2e/s09-three-proof-types.spec.ts:6:1 › S09: plik, notatka i link jako dowody; plik przeżywa restart 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('nav-today')
+
+
+       at helpers.ts:65
+
+      63 |   for (const it of SEED_WEEK.items) {
+      64 |     await page.clock.setFixedTime(new Date(it.day));
+    > 65 |     await page.getByTestId("nav-today").click();
+         |                                         ^
+      66 |     await addEntry(page, it.text, it.score);
+      67 |   }
+      68 | }
+        at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)
+        at /home/user/Jarvis/kompas/e2e/s09-three-proof-types.spec.ts:7:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s09-three-proof-types-S09--aafd5-owody-plik-przeżywa-restart/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s09-three-proof-types-S09--aafd5-owody-plik-przeżywa-restart/error-context.md
+
+  13) e2e/s10-bet-resolution.spec.ts:6:1 › S10: rozstrzygnięcie pokazuje oryginalne przewidywanie i otwiera miejsce na następny zakład 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('nav-today')
+
+
+       at helpers.ts:65
+
+      63 |   for (const it of SEED_WEEK.items) {
+      64 |     await page.clock.setFixedTime(new Date(it.day));
+    > 65 |     await page.getByTestId("nav-today").click();
+         |                                         ^
+      66 |     await addEntry(page, it.text, it.score);
+      67 |   }
+      68 | }
+        at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)
+        at /home/user/Jarvis/kompas/e2e/s10-bet-resolution.spec.ts:8:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s10-bet-resolution-S10-roz-7702c--miejsce-na-następny-zakład/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s10-bet-resolution-S10-roz-7702c--miejsce-na-następny-zakład/error-context.md
+
+  14) e2e/s11-export-truth.spec.ts:7:1 › S11: eksport .md zgadza się z zasianym ground truth i nie kłamie o dowodach 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('nav-today')
+
+
+       at helpers.ts:65
+
+      63 |   for (const it of SEED_WEEK.items) {
+      64 |     await page.clock.setFixedTime(new Date(it.day));
+    > 65 |     await page.getByTestId("nav-today").click();
+         |                                         ^
+      66 |     await addEntry(page, it.text, it.score);
+      67 |   }
+      68 | }
+        at seedWeek (/home/user/Jarvis/kompas/e2e/helpers.ts:65:41)
+        at /home/user/Jarvis/kompas/e2e/s11-export-truth.spec.ts:8:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s11-export-truth-S11-ekspo-e53fc-uth-i-nie-kłamie-o-dowodach/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s11-export-truth-S11-ekspo-e53fc-uth-i-nie-kłamie-o-dowodach/error-context.md
+
+  15) e2e/s12-double-submit-refresh.spec.ts:6:1 › S12a: podwójne szybkie kliknięcie „Zapisz” → dokładnie jeden wpis 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.fill: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('entry-text')
+
+
+       6 | test("S12a: podwójne szybkie kliknięcie „Zapisz” → dokładnie jeden wpis", async ({ page }) => {
+       7 |   await open(page);
+    >  8 |   await page.getByTestId("entry-text").fill("Wpis podatny na dubel");
+         |                                        ^
+       9 |   await page.getByTestId("entry-score-3").click();
+      10 |   const save = page.getByTestId("entry-save");
+      11 |   // Dwa kliknięcia bez czekania na skutek pierwszego.
+        at /home/user/Jarvis/kompas/e2e/s12-double-submit-refresh.spec.ts:8:40
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s12-double-submit-refresh--7cfde-isz”-→-dokładnie-jeden-wpis/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s12-double-submit-refresh--7cfde-isz”-→-dokładnie-jeden-wpis/error-context.md
+
+  16) e2e/s12-double-submit-refresh.spec.ts:24:1 › S12b: odświeżenie tuż po zapisie → baza spójna (wpis raz albo wcale) 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.fill: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByTestId('entry-text')
+
+
+      24 | test("S12b: odświeżenie tuż po zapisie → baza spójna (wpis raz albo wcale)", async ({ page }) => {
+      25 |   await open(page);
+    > 26 |   await page.getByTestId("entry-text").fill("Wpis przerwany odświeżeniem");
+         |                                        ^
+      27 |   await page.getByTestId("entry-score-2").click();
+      28 |   await page.getByTestId("entry-save").click();
+      29 |   // Odśwież NATYCHMIAST — bez czekania na potwierdzenie zapisu.
+        at /home/user/Jarvis/kompas/e2e/s12-double-submit-refresh.spec.ts:26:40
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s12-double-submit-refresh--0cd54-spójna-wpis-raz-albo-wcale-/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s12-double-submit-refresh--0cd54-spójna-wpis-raz-albo-wcale-/error-context.md
+
+  16 failed
+    e2e/s01-daily-entry.spec.ts:6:1 › S01: wpis dzienny w 3 interakcjach, widoczny natychmiast z godziną 
+    e2e/s02-persistence.spec.ts:6:1 › S02: wpis przeżywa zamknięcie karty (ta sama treść i czas) ───
+    e2e/s03-immutable-timestamp.spec.ts:6:1 › S03: brak jakiejkolwiek ścieżki edycji znacznika czasu wpisu 
+    e2e/s04-weekly-pattern.spec.ts:6:1 › S04a: za mało wpisów → uczciwy komunikat, żadnego zmyślonego wzorca 
+    e2e/s04-weekly-pattern.spec.ts:14:1 › S04b: wzorzec z zasianego tygodnia zgadza się z ground truth 
+    e2e/s05-ai-proposal.spec.ts:6:1 › S05: propozycja AI wymaga akceptacji człowieka; po akceptacji zakład aktywny 
+    e2e/s05-ai-proposal.spec.ts:29:1 › S05b: odrzucenie propozycji nie zostawia śladu w zakładach ──
+    e2e/s06-no-key-degradation.spec.ts:6:1 › S06: bez klucza — uczciwa plakietka i działający zakład ręczny 
+    e2e/s07-one-active-bet.spec.ts:6:1 › S07: drugi zakład ręczny odrzucony z komunikatem ──────────
+    e2e/s07-one-active-bet.spec.ts:24:1 › S07b: akceptacja propozycji AI przy aktywnym zakładzie też odrzucona 
+    e2e/s08-done-requires-proof.spec.ts:6:1 › S08: próba domknięcia bez dowodu → odmowa z wyjaśnieniem, status bez zmian 
+    e2e/s09-three-proof-types.spec.ts:6:1 › S09: plik, notatka i link jako dowody; plik przeżywa restart 
+    e2e/s10-bet-resolution.spec.ts:6:1 › S10: rozstrzygnięcie pokazuje oryginalne przewidywanie i otwiera miejsce na następny zakład 
+    e2e/s11-export-truth.spec.ts:7:1 › S11: eksport .md zgadza się z zasianym ground truth i nie kłamie o dowodach 
+    e2e/s12-double-submit-refresh.spec.ts:6:1 › S12a: podwójne szybkie kliknięcie „Zapisz” → dokładnie jeden wpis 
+    e2e/s12-double-submit-refresh.spec.ts:24:1 › S12b: odświeżenie tuż po zapisie → baza spójna (wpis raz albo wcale) 
+e2e exit: 1
+
+== scenariusze (eval.md) ==
+S01  CZERWONY
+S02  CZERWONY
+S03  CZERWONY
+S04  CZERWONY
+S05  CZERWONY
+S06  CZERWONY
+S07  CZERWONY
+S08  CZERWONY
+S09  CZERWONY
+S10  CZERWONY
+S11  CZERWONY
+S12  CZERWONY
+---
+zielone: 0/12
