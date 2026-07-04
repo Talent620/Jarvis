@@ -4,7 +4,8 @@ import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
 import { splitOffer } from "../lib/glinks";
-import { canSendDirect, draftAndSendOffer, sentTodayCount, sendAllOffers } from "../lib/mailer";
+import { canSendDirect, draftAndSendOffer, sendAllOffers } from "../lib/mailer";
+import SalesCockpit from "./SalesCockpit";
 import { findLeads, browserCity } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { scoreLead, signalsFromLead, learnWeightsFromOutcome, DEFAULT_WEIGHTS, type IcpScore } from "../lib/leadScoring";
@@ -315,17 +316,6 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
     toast(`➕ Dodano: ${c}`);
   };
 
-  const stats = useMemo(() => {
-    const won = leads.filter((l) => l.status === "won");
-    const pipeline = leads.filter((l) => l.status !== "lost" && l.status !== "won");
-    return {
-      total: leads.length,
-      won: won.length,
-      earned: won.reduce((s, l) => s + (l.value || 0), 0),
-      potential: pipeline.reduce((s, l) => s + (l.value || 0), 0),
-    };
-  }, [leads]);
-
   // Gorące leady (wysoki score z teczki) na górze — wiesz, do kogo dzwonić najpierw.
   const sent = useMemo(() => data.sentMail || [], [data.sentMail]);
   // Liczniki CRM (pytania szefa): klienci / do dzwonienia / mailowani / odrzuceni.
@@ -386,20 +376,8 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
   const inner = (
     <>
         <div className="panel-body">
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-            <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontFamily: "Orbitron", color: "var(--gold)" }}>{stats.potential} zł</div>
-              <div className="muted" style={{ fontSize: 11 }}>potencjał w toku</div>
-            </div>
-            <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontFamily: "Orbitron", color: "var(--ok, #58e08a)" }}>{stats.earned} zł</div>
-              <div className="muted" style={{ fontSize: 11 }}>zarobione ({stats.won})</div>
-            </div>
-            <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontFamily: "Orbitron", color: "var(--cyan, #6ce7ff)" }}>{sentTodayCount(data.sentMail || [])}</div>
-              <div className="muted" style={{ fontSize: 11 }}>✉ wysłane dziś</div>
-            </div>
-          </div>
+          {/* 📊 Kokpit — pełen pasek KPI (lejek, prognoza ważona, wygrane, skuteczność, zaległe, na dziś). */}
+          <SalesCockpit leads={leads} sentMail={sent} onOpenPlan={() => setShowPlan(true)} />
 
           {/* 🎯 Następny ruch — wyjaśnialna rekomendacja ICP (score + powód + akcja). Klik → teczka. */}
           {nextMove && (
