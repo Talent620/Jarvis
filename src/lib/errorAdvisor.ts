@@ -166,6 +166,93 @@ export function adviseEmptyReply(): ErrorAdvice {
   };
 }
 
+const FIX_MAIL = { label: "⚙ Sprawdź Pocztę (Ustawienia → Poczta)", nav: "settings" as FixNav };
+
+/**
+ * Pure: porada dla błędu WYSYŁKI e-maila (oferty/cold-mail). Osobno od adviseError, bo tam każda
+ * rada prowadzi do „Ustawienia → AI” — a problem z pocztą naprawia się w „Ustawienia → Poczta”
+ * (hasło aplikacji, backend), nie kluczem AI. Pierwsza pasująca klasa wygrywa.
+ */
+export function adviseSendError(raw: string): ErrorAdvice {
+  const m = (raw || "").toLowerCase();
+  // Odrzucone logowanie / złe hasło — NAJCZĘSTSZE: zwykłe hasło zamiast HASŁA APLIKACJI.
+  if (/\b535\b|\b534\b|eauth|invalid login|auth|logow|hasł|password|credential|username|badcredentials/i.test(m)) {
+    return {
+      human: "Serwer poczty odrzucił logowanie — prawie zawsze to zwykłe hasło zamiast HASŁA APLIKACJI.",
+      steps: [
+        "Wejdź w „⚙ → Poczta” i wpisz HASŁO APLIKACJI (nie zwykłe hasło do skrzynki).",
+        "Gmail: konto Google → Bezpieczeństwo → Hasła aplikacji → wygeneruj 16-znakowy kod i wklej.",
+        "Sprawdź, że adres e-mail jest wpisany dokładnie (bez spacji) i spróbuj ponownie.",
+      ],
+      fix: FIX_MAIL,
+    };
+  }
+  // Timeout / zawieszenie wysyłki (sprawdzany PRZED „backend”, bo „przekroczono czas przez backend”
+  // to przede wszystkim timeout — bardziej konkretna i actionable klasa).
+  if (/timeout|abort|przekroczono czas|zbyt długo|trwał/i.test(m)) {
+    return {
+      human: "Wysyłka trwała za długo — serwer poczty nie odpowiedział na czas.",
+      steps: [
+        "Sprawdź internet (Wi-Fi / zasięg) i spróbuj wysłać ponownie.",
+        "Jeśli powtarza się: sprawdź dane w „⚙ → Poczta” (serwer/port) lub połącz Gmaila w „⚙ → Integracje”.",
+      ],
+      fix: FIX_MAIL,
+    };
+  }
+  // Backend/synchronizacja niedostępny (telefon wysyła w tle przez backend).
+  if (/backend|synchroniz|relay|\btoken\b/i.test(m)) {
+    return {
+      human: "Nie udało się wysłać przez backend (usługa w tle) — brak połączenia albo błędny adres/token.",
+      steps: [
+        "Sprawdź „⚙ → Synchronizacja”: adres backendu i token muszą być poprawne.",
+        "Na komputerze możesz wysyłać bez backendu — wpisz adres e-mail + hasło aplikacji w „⚙ → Poczta”.",
+        "Sprawdź internet i spróbuj ponownie.",
+      ],
+      fix: { label: "⚙ Sprawdź Synchronizację (Ustawienia)", nav: "settings" },
+    };
+  }
+  // Awaria serwera poczty (5xx).
+  if (/\b5\d\d\b|server error|unavailable|bad gateway|overload/i.test(m)) {
+    return {
+      human: "Serwer poczty ma chwilową awarię (po ich stronie — nie Twoja wina).",
+      steps: [
+        "Odczekaj chwilę i spróbuj wysłać ponownie.",
+        "Jeśli wraca: połącz Gmaila w „⚙ → Integracje” albo sprawdź dane w „⚙ → Poczta”.",
+      ],
+      fix: FIX_MAIL,
+    };
+  }
+  // Limit wysyłki.
+  if (/\b429\b|too many|rate.?limit|limit/i.test(m)) {
+    return {
+      human: "Serwer poczty chwilowo ogranicza wysyłkę (za dużo maili naraz).",
+      steps: [
+        "Odczekaj kilka minut i wyślij ponownie — rozłóż wysyłkę w czasie.",
+        "Dostawcy poczty mają dzienne limity; przy większych kampaniach rozłóż je na kilka dni.",
+      ],
+      fix: FIX_MAIL,
+    };
+  }
+  // Brak konfiguracji poczty (mailer zwraca już czytelny powód — przepuść go z krokiem do Poczty).
+  if (/wpisz adres|dodaj backend|brak gotowej|hasło aplikacji|połącz gmail/i.test(m)) {
+    return {
+      human: raw.trim(),
+      steps: ["Uzupełnij dane w „⚙ → Poczta” (adres + hasło aplikacji) lub połącz Gmaila w „⚙ → Integracje”, potem wyślij ponownie."],
+      fix: FIX_MAIL,
+    };
+  }
+  // Nieznany błąd wysyłki: humanize + zawsze droga naprawy.
+  const human = humanize((raw || "").trim());
+  return {
+    human: human && human !== raw ? human : `Nie udało się wysłać: ${truncate((raw || "").trim() || "nieznany błąd", 140)}`,
+    steps: [
+      "Spróbuj wysłać ponownie — część błędów jest chwilowa.",
+      "Jeśli wraca: sprawdź dane w „⚙ → Poczta” (adres + hasło aplikacji) lub połącz Gmaila w „⚙ → Integracje”.",
+    ],
+    fix: FIX_MAIL,
+  };
+}
+
 /** Pure: czy tekst odpowiedzi jest w praktyce PUSTY (nic albo same kropki/wielokropek/spacje)? */
 export function isEmptyReplyText(text: string | undefined | null): boolean {
   const t = (text || "").trim();

@@ -16,6 +16,7 @@ import { buildLoraCorpus, corpusToJsonl } from "../lib/loraExport";
 import { openSalesOs, syncFromSalesOs, pushLeadsToSalesOs, flushSalesOsOutreach, getLastSnapshot, metricsToText } from "../lib/salesOs";
 import { copyWithToast, toast } from "../lib/toast";
 import { removeLead, restoreLead } from "../lib/leadDelete";
+import { adviseSendError } from "../lib/errorAdvisor";
 import type { Lead, LeadStatus } from "../types";
 import { useEscape } from "../hooks/useEscape";
 import LeadDetail from "./LeadDetail";
@@ -272,7 +273,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
         if (x) { x.offer = r.offer; x.updatedAt = Date.now(); }
       });
     }
-    if (!r.ok) { toast(`Nie wysłano: ${r.error}`); return; }
+    if (!r.ok) { toast(`⚠ Nie wysłano — ${adviseSendError(r.error || "").human}`); return; }
     toast(`✅ Mail wysłany do ${to} (${r.via}) — zapisano w 📤 Skrzynce wysłanych`);
     store.setData((d) => {
       const x = d.leads.find((y) => y.id === l.id);

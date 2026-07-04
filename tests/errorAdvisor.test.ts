@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { adviseError, adviseNoBrain, adviseEmptyReply, adviceMessage, isEmptyReplyText } from "../src/lib/errorAdvisor";
+import { adviseError, adviseNoBrain, adviseEmptyReply, adviceMessage, isEmptyReplyText, adviseSendError } from "../src/lib/errorAdvisor";
 
 // Doradca błędów: użytkownik NIGDY nie ma zostać z surowym „Internal Server Error (500)”
 // ani z gołym „…”. Każda klasa błędu daje ludzki opis + KROKI naprawy krok po kroku + akcję.
@@ -86,6 +86,33 @@ describe("adviceMessage — składa nagłówek + numerowaną listę kroków", ()
   });
   it("własny prefiks jest respektowany", () => {
     expect(adviceMessage(adviseEmptyReply(), "🤔")).toMatch(/^🤔 /);
+  });
+});
+
+describe("adviseSendError — błąd WYSYŁKI maila prowadzi do Poczty, nie do AI", () => {
+  it("każda klasa daje niepuste kroki + akcję, nigdy nie rzuca", () => {
+    for (const raw of ["535 auth failed", "Błąd połączenia z backendem: NetworkError", "Przekroczono czas wysyłki przez backend.", "Błąd (500).", "429 too many", "", undefined as unknown as string]) {
+      const a = adviseSendError(raw);
+      expect(a.steps.length, `brak kroków dla: ${raw}`).toBeGreaterThan(0);
+      expect(a.human.length).toBeGreaterThan(0);
+      expect(a.fix!.nav).toBe("settings");
+    }
+  });
+  it("odrzucone logowanie (535/auth) → radzi HASŁO APLIKACJI w ⚙ → Poczta", () => {
+    const a = adviseSendError("SMTP 535 Invalid login");
+    expect(a.human).toMatch(/logowanie|hasł/i);
+    expect(a.steps.join(" ")).toMatch(/HASŁO APLIKACJI/);
+    expect(a.steps.join(" ")).toMatch(/Poczta/);
+    expect(a.human).not.toMatch(/klucz Gemini|Ustawienia → AI/); // NIE myli z błędem AI
+  });
+  it("timeout wysyłki → o internecie i ponowieniu, kieruje do Poczty", () => {
+    const a = adviseSendError("Przekroczono czas wysyłki przez backend.");
+    expect(a.human).toMatch(/za długo|nie odpowiedział/i);
+    expect(a.fix!.label).toMatch(/Poczt/i);
+  });
+  it("awaria 5xx serwera poczty → „po ich stronie”", () => {
+    const a = adviseSendError("Błąd (503).");
+    expect(a.human).toMatch(/awari|po ich stronie/i);
   });
 });
 
