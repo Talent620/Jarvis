@@ -13,8 +13,9 @@ import { bucketCounts, type CrmBucket } from "../lib/crmBuckets";
 import LeadCandidatesPanel from "./LeadCandidatesPanel";
 import SalesDashboard from "./SalesDashboard";
 import SalesBoard from "./SalesBoard";
+import SalesReports from "./SalesReports";
 
-export type CrmTab = "found" | "board" | CrmBucket;
+export type CrmTab = "found" | "board" | "reports" | CrmBucket;
 
 const TABS: { id: CrmTab; label: string }[] = [
   { id: "found", label: "🧲 Nowe znalezione" },
@@ -22,6 +23,7 @@ const TABS: { id: CrmTab; label: string }[] = [
   { id: "actionable", label: "🎯 Do działania" },
   { id: "clients", label: "✅ Klienci" },
   { id: "archive", label: "🗄 Archiwum" },
+  { id: "reports", label: "📊 Raporty" },
 ];
 
 export default function SalesCrm({ onClose, onWeb, onMoney, initialTab = "actionable" }: {
@@ -34,7 +36,7 @@ export default function SalesCrm({ onClose, onWeb, onMoney, initialTab = "action
   const { data } = useStore();
   const [tab, setTab] = useState<CrmTab>(initialTab);
   const counts = useMemo(() => bucketCounts(data.leads || []), [data.leads]);
-  const countFor = (t: CrmTab): number | null => (t === "found" || t === "board" ? null : counts[t]);
+  const countFor = (t: CrmTab): number | null => (t === "found" || t === "board" || t === "reports" ? null : counts[t]);
 
   return (
     <div className="sheet" onClick={onClose}>
@@ -60,6 +62,9 @@ export default function SalesCrm({ onClose, onWeb, onMoney, initialTab = "action
         ) : tab === "board" ? (
           // 📋 Lejek — tablica kanban: wszystkie leady w kolumnach etapów, przeciąganie zmienia etap.
           <SalesBoard onWeb={onWeb} onMoney={onMoney} />
+        ) : tab === "reports" ? (
+          // 📊 Raporty — lejek konwersji, skuteczność segmentów, wygrane/przychód w czasie.
+          <SalesReports />
         ) : (
           // CRM: leady danego kubełka (Do działania / Klienci / Archiwum).
           <SalesDashboard embedded bucket={tab} onClose={onClose} onWeb={onWeb} onMoney={onMoney} />
