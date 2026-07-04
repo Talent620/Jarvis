@@ -19,11 +19,11 @@
 |---|---|---|---|---|
 | ~~**B1**~~ | ~~Puste pola liczbowe zapisują `NaN`.~~ **NIEAKTUALNE (zweryfikowane w FAZA 2):** wskazane pola to `type="range"` (suwak nigdy nie jest pusty), a wszystkie pola `type="number"` z bezpośrednim `Number()` już mają guard (`\|\| undefined`/`\|\| 0`/`\|\| 465`, helper `numOrUndef`); dodatkowo `Number("")` === `0` (nie `NaN`) i przeglądarka blokuje nie-cyfry. Brak realnego błędu. | `Settings.tsx:1607,1644,1732,1749` | — | — |
 | ~~**B2**~~ | ~~Gmail 500 na polskich tematach (`b64` lokalne).~~ **NIEAKTUALNE (zweryfikowane):** `b64` JEST moduł-globalne (`worker.js:39`, komentarz „używane też poza smtpRelay (np. /v1/gmail/send)"); ścieżka Gmaila (`worker.js:613`) widzi je bez `ReferenceError`. Naprawione we wcześniejszej rundzie. | `proxy/worker.js:39,613` | — | — |
-| **B3** | **Import kopii zapasowej nadpisuje ustawienia bez walidacji.** `applyParsed` robi `setSettings(parsed.settings)` — spreparowany plik może wstrzyknąć `proxyUrl`/`syncUrl`/`smtpHost` i przekierować cały ruch AI + pocztę. `looksLikeBackup` sprawdza tylko tablice danych. | `src/lib/backup.ts:36-39` | 4 | 2 |
-| **B4** | **Cichy data-loss przy zapełnionym localStorage.** `setData` zmienia RAM i `emit()`, ale gdy `write()` przekroczy quota — zapis do localStorage nie przechodzi, a UI pokazuje „zapisane". Zmiany giną po restarcie. | `src/lib/store.ts:118-130` | 4 | 2 |
+| ~~**B3**~~ | ~~Import kopii nadpisuje ustawienia bez walidacji.~~ **NIEAKTUALNE (zweryfikowane):** `backup.ts` ma `ENDPOINT_KEYS` (L62) i `applyParsed(confirmEndpoints: (keys) => boolean)` (L71) — potwierdzenie użytkownika przy zmianie pól-endpointów (proxyUrl/syncUrl/smtpHost…). Naprawione. | `src/lib/backup.ts:62,71` | — | — |
+| ~~**B4**~~ | ~~Cichy data-loss przy zapełnionym localStorage.~~ **NIEAKTUALNE (zweryfikowane):** `write()` łapie `QuotaExceededError` (L224), głośny toast „Nowe zmiany NIE zapisują się!" (L230) + trwały sygnał baneru (L211) + obsługa trybu prywatnego (L239). Naprawione. | `src/lib/store.ts:211-239` | — | — |
 | ~~**B5**~~ | ~~Wyciek węzłów audio przy premium-TTS.~~ **NIEAKTUALNE (zweryfikowane):** `playUrlWithLevel` (`voice.ts:221`) ma `cleanup()` odłączający `srcNode`/`fxOut`/`analyserNode` w `onended`/`onerror` (`voice.ts:229-241`). Naprawione. | `src/lib/voice.ts:221-241` | — | — |
 | ~~**B6**~~ | ~~Web Speech restart-storm.~~ **NIEAKTUALNE (zweryfikowane):** klasa rozpoznawania ma anty-storm — licznik `restarts`, backoff `min(5000, 150·2^n)`, poddanie po 8 próbach, zerowanie przy produktywnej sesji (`voice.ts:801-886`). Naprawione. | `src/lib/voice.ts:801-886` | — | — |
-| **B7** | **sales-os per-lead outreach omija limity.** Ścieżka per-lead wysyła od razu (Resend/Mailgun) bez sprawdzenia `autoSendEmails` ani `dailyEmailCap` (flush je honoruje). Token-holder może wysłać nieograniczoną pocztę. | `sales-os/.../public-outreach.ts:125-171` | 4 | 1 |
+| ~~**B7**~~ | ~~sales-os per-lead outreach omija limity.~~ **NIEAKTUALNE (zweryfikowane):** brama jest w route (`outreach/route.ts:~119-130`) — przed `draftAndSendForLead` sprawdza `autoSendEmails` ORAZ `emailsSentToday < dailyEmailCap`; inaczej `effectiveSend=false` i szkic idzie do kolejki akceptacji. Dokładnie jak flush. Naprawione (gate we właściwym miejscu — route, nie silnik). | `outreach/route.ts:119-130` | — | — |
 
 ---
 
@@ -92,6 +92,30 @@ U1/E6 (kanban ma działającą drogę dotykową).
 > opierały się na znacznikach „✅ do naprawy" z audytu bezpieczeństwa, a te naprawy zdążyły wejść.
 > Zweryfikowałem każde na żywym kodzie ZANIM cokolwiek zmieniłem (zamiast wymyślać poprawki „na siłę").
 
-**Pozostałe realne BŁĘDY do rozważenia (wyższe ryzyko — weryfikuję pojedynczo):** B3 (walidacja importu
-kopii), B4 (głośna obsługa quota / cichy data-loss), B7 (gate limitów w sales-os per-lead). Każde =
-osobny commit + test + 4 bramki + push + CI. Nic z „POZA ZAKRESEM" bez wyraźnego „tak".
+**BŁĘDY B3/B4/B7 — zweryfikowane jako JUŻ NAPRAWIONE** (walidacja importu kopii: `backup.ts:62,71`;
+głośna quota: `store.ts:211-239`; gate limitów sales-os: `outreach/route.ts:119-130`). Potwierdzone w kodzie.
+
+---
+
+## Podsumowanie FAZA 2 (uczciwe)
+
+Z 10 zgłoszonych BŁĘDÓW/ŁATWYCH WYGRANYCH wykonanych realnie: **2** (E1 strażnik cudzysłowów, E5 Cofnij
+usunięcie leada). Pozostałe **8 zweryfikowano jako już naprawione** we wcześniejszych rundach hardeningu
+(B1/B2/B3/B4/B5/B6/B7 + odrzucone U1/E6). **Zero „napraw na siłę".**
+
+**Dlaczego tak mało nowego kodu = to jest DOBRY wynik:** mój UX-audyt opierał się na znacznikach
+„✅ do naprawy" z `AUDIT-SECURITY.md`, a te naprawy zdążyły wejść, zanim spisałem znaleziska. Każde
+zweryfikowałem na żywym kodzie ZANIM cokolwiek zmieniłem — zgodnie z zasadą „jeśli nie masz pewności
+czy to dodanie czy zepsucie, zostaw". Kod jest w bardzo dobrej kondycji (3010 testów, 4 bramki czyste).
+
+**Co ZOSTAJE dla Twojej decyzji (nie ruszam autonomicznie — większe/ryzykowne):**
+- **DŁUG TECHNICZNY** D2/D3 (rozbicie god-modułów `Settings.tsx` 3190 l., `tools.ts` 1967 l.) — duży
+  refaktor, ryzyko regresji; robić tylko świadomie, wycinkami.
+- **BRAKI UX** U3 (dokończyć advisor błędów na WSZYSTKICH ścieżkach), U4 (audyt tap-targets <44px),
+  U5 (aria-label na ikonach) — częściowo już pilnowane testami (`touchTargets`, `interactiveSemantics`,
+  `uiQualityGuard`); sensowne jako osobny „a11y sweep", jeśli zlecisz.
+- **POZA ZAKRESEM** (sekcja niżej): rotacja klucza OpenRouter (musisz Ty), pozycje „DO MOJEJ DECYZJI"
+  z `AUDIT-SECURITY.md`.
+
+Wskaż, co z powyższego (albo coś spoza listy) mam wziąć — inaczej uznaję FAZA 2 (bezpieczne wygrane)
+za domkniętą.
