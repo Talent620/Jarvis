@@ -559,6 +559,29 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           {/* ============ 🤖 AI ============ */}
           {tab === "ai" && (
             <>
+              {/* 🧠 Status mózgu — NAJPIERW widać, co działa TERAZ (koniec „czemu czat nie odpowiada?"). */}
+              {(() => {
+                const ready = effProvider ? providerReady(effProvider) : false;
+                const provLabel = effProvider ? (PROVIDERS[effProvider]?.label || effProvider) : "—";
+                return (
+                  <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 12, border: `1px solid ${ready ? "var(--ok, #58e08a)" : "#ff6b6b"}` }}>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{ready ? "🧠 Teraz myśli za Ciebie:" : "⚠ Żaden mózg nie jest gotowy"}</div>
+                    {ready ? (
+                      <div style={{ fontSize: 13, marginTop: 3 }}>
+                        <b>{provLabel}</b>{effModel ? <span className="muted"> · {effModel}</span> : null}
+                        {s.provider === "auto" ? <span className="muted"> · tryb Auto</span> : null}
+                        <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>✅ Klucz jest — czat i głos odpowiedzą.</div>
+                      </div>
+                    ) : (
+                      <div className="muted" style={{ fontSize: 12.5, marginTop: 3, lineHeight: 1.5 }}>
+                        Wybrany dostawca nie ma klucza, więc czat nie odpowie (zobaczysz „…"). Napraw w 10 sekund:
+                        wklej dowolny klucz w <b>„🚀 Szybki start"</b> niżej (darmowy Gemini — <span style={{ color: "var(--cyan)" }}>aistudio.google.com/apikey</span>),
+                        albo wybierz gotowy <b>🎛 Tryb pracy</b> poniżej.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               {/* 🎛 Tryb pracy — jasny wybór zamiast dziesiątek przełączników */}
               <h3 id="set-mode">🎛 Tryb pracy JARVISA</h3>
               <p className="muted">Najprościej: wybierz <b>jeden</b> tryb — JARVIS ustawi za Ciebie dostawcę, model i szybkość. Chcesz sam? Niżej: <b>🤖 Dostawca i model</b>.</p>
