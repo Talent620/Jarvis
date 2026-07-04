@@ -136,6 +136,11 @@ export default function ClientPanel({ leadId, onClose, onDossier, onMoney }: {
               {rec.address && <span>📍 {rec.address}</span>}
               {rec.hours && <span>🕐 {rec.hours}</span>}
               {!rec.phone && !rec.email && <span className="muted">📵 Brak danych kontaktowych — kliknij „🗺 Mapy/opinie”, żeby znaleźć numer.</span>}
+              {/* 📅 Daty klienta — w bazie od / ostatnia zmiana (kartoteka CRM). */}
+              <span style={{ fontSize: 11, opacity: 0.85 }}>
+                📅 W bazie od {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString("pl-PL") : "—"}
+                {lead.updatedAt ? ` · ostatnia zmiana ${new Date(lead.updatedAt).toLocaleDateString("pl-PL")}` : ""}
+              </span>
             </div>
           </div>
           {/* Wartość dealu — edytowalna wprost */}
