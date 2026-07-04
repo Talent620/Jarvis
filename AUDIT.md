@@ -17,7 +17,7 @@
 
 | # | Znalezisko | Plik:linia | Wpływ | Ryzyko |
 |---|---|---|---|---|
-| **B1** | **Puste pola liczbowe zapisują `NaN` do ustawień.** `Number(e.target.value)` bez fallbacku — skasowanie zawartości pola „Ollama num_predict / num_ctx / num_gpu" i progu pewności wpisuje `NaN`, co potem leci do modelu/logiki i psuje zachowanie po cichu. | `Settings.tsx:1607,1644,1732,1749` | 3 | 1 |
+| ~~**B1**~~ | ~~Puste pola liczbowe zapisują `NaN`.~~ **NIEAKTUALNE (zweryfikowane w FAZA 2):** wskazane pola to `type="range"` (suwak nigdy nie jest pusty), a wszystkie pola `type="number"` z bezpośrednim `Number()` już mają guard (`\|\| undefined`/`\|\| 0`/`\|\| 465`, helper `numOrUndef`); dodatkowo `Number("")` === `0` (nie `NaN`) i przeglądarka blokuje nie-cyfry. Brak realnego błędu. | `Settings.tsx:1607,1644,1732,1749` | — | — |
 | **B2** | **Gmail 500 na polskich tematach.** `worker.js` woła `b64(...)`, ale `b64` jest zdefiniowane tylko lokalnie w `smtpRelay`; w zasięgu modułu jest `b64url`. Temat z polskimi znakami → `ReferenceError` → 500 połknięty przez catch. Apka jest PL-first → realnie łamie wysyłkę. | `proxy/worker.js:467-468` | 4 | 1 |
 | **B3** | **Import kopii zapasowej nadpisuje ustawienia bez walidacji.** `applyParsed` robi `setSettings(parsed.settings)` — spreparowany plik może wstrzyknąć `proxyUrl`/`syncUrl`/`smtpHost` i przekierować cały ruch AI + pocztę. `looksLikeBackup` sprawdza tylko tablice danych. | `src/lib/backup.ts:36-39` | 4 | 2 |
 | **B4** | **Cichy data-loss przy zapełnionym localStorage.** `setData` zmienia RAM i `emit()`, ale gdy `write()` przekroczy quota — zapis do localStorage nie przechodzi, a UI pokazuje „zapisane". Zmiany giną po restarcie. | `src/lib/store.ts:118-130` | 4 | 2 |
@@ -58,7 +58,7 @@
 | # | Znalezisko | Co zrobić | Wpływ | Ryzyko |
 |---|---|---|---|---|
 | **E1** | **Strażnik pułapki cudzysłowów.** Dodać pure-funkcję `scanQuoteTrap()` + test + wpiąć w `scan:secrets`/pre-commit. Blokuje najczęstszą regresję CI raz na zawsze. | nowy `src/lib/quoteGuard.ts` + test | 4 | 1 |
-| **E2** | **Guard `NaN` w polach liczbowych.** Dodać fallback (`|| domyślna`) do 4 pól Ollama/progu. Czysta, lokalna zmiana. | `Settings.tsx` (B1) | 3 | 1 |
+| ~~**E2**~~ | ~~Guard `NaN` w polach liczbowych.~~ **ODRZUCONE** — B1 zweryfikowane jako nieaktualne (suwaki + istniejące guardy + `Number("")===0`). Brak zmiany. | `Settings.tsx` (B1) | — | — |
 | **E3** | **`b64` globalny w workerze.** Wynieść `b64` do zasięgu modułu → naprawia Gmail 500 na PL tematach. | `worker.js` (B2) | 4 | 1 |
 | **E4** | **Odłączanie węzłów audio.** Odłączać w `onended`/error (lub kierować przez `playUrlEnded`). | `voice.ts` (B5) | 3 | 1 |
 | **E5** | **„Cofnij" po usunięciu leada.** Trzymać ostatnio usunięty lead ~6s + toast „Cofnij". | Sales (U2) | 3 | 2 |
