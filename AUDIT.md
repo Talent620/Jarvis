@@ -34,9 +34,9 @@
 | ~~**U1**~~ | ~~Kanban martwy na dotyku.~~ **CZĘŚCIOWE / ODRZUCONE (zweryfikowane):** HTML5 drag faktycznie nie działa na dotyku, ALE istnieje działająca, odkrywalna droga dotykowa — tap karty → Panel Klienta → chipy etapów (`ClientPanel.tsx:81-82`), świadomie „jedno miejsce sterowania statusem" (komentarz `SalesBoard.tsx:17`). Menu „przenieś" na karcie tylko dublowałoby chipy. Zostawione. | `SalesBoard.tsx:74-75` | — | — |
 | ✅ **U2** | ~~Usunięcie leada bez cofnięcia.~~ **ZROBIONE (E5, commit 394842e):** `del()` zachowuje confirm i dokłada 6-sekundowy toast „Cofnij" przywracający lead (silnik pure `leadDelete.ts` + test). | `SalesDashboard.tsx` | 3 | 2 |
 | ✅ **U3** | ~~Surowe komunikaty błędów poczty.~~ **CZĘŚCIOWO ZROBIONE (commit fd0029a):** nowy `adviseSendError` — nieudana wysyłka oferty pokazuje ludzką radę pod POCZTĘ (hasło aplikacji/timeout/backend/5xx), nie surowe `r.error`. Reszta ścieżek poczty już miała czytelne komunikaty (mailer `sendReady`). | `SalesDashboard.tsx` + `errorAdvisor.ts` | 3 | 2 |
-| **U4** | **Małe cele dotykowe (<44px).** Część guzików/ikon w gęstych panelach jest poniżej rekomendowanych 44×44px — trudne trafienie kciukiem na telefonie. | panele gęste (Sales/Settings) | 3 | 2 |
-| **U5** | **Brak aria-label na części akcji-ikon.** Przyciski bez tekstu (tylko emoji/ikona) nie mają etykiety → gorsza dostępność i czytnik ekranu mówi „przycisk". | ikony akcji w komponentach | 2 | 1 |
-| **U6** | **Prognoza ważona schowana.** `pipelineForecast` liczy expected value, ale pokazujemy ją tylko w pod-panelu Plan, nie w kokpicie Sprzedaży — użytkownik nie widzi „ile realnie wpłynie". | `SalesPlan` vs kokpit | 3 | 2 |
+| ~~**U4**~~ | ~~Małe cele dotykowe (<44px).~~ **PILNOWANE (zweryfikowane):** strażnik `tests/touchTargets.test.ts` (78 sprawdzeń, zielony) zakazuje `minHeight 32/40` na krytycznych ekranach. Kontrakt egzekwowany; ewentualny szerszy „a11y sweep" — do decyzji. | test `touchTargets` | — | — |
+| **U5** | **Brak aria-label na części akcji-ikon.** Przyciski tylko-emoji nie mają etykiety → czytnik ekranu mówi „przycisk". *Niska wartość dla solo-operatora (główny użytkownik = właściciel); do decyzji jako osobny a11y sweep.* | ikony akcji | 2 | 1 |
+| ~~**U6**~~ | ~~Prognoza ważona schowana.~~ **NIEAKTUALNE (zweryfikowane):** kokpit `SalesCockpit.tsx:32` pokazuje „🎯 prognoza" = `expected` (prognoza ważona, dodane w CRM P1). | `SalesCockpit.tsx:32` | — | — |
 
 ---
 
@@ -97,25 +97,29 @@ głośna quota: `store.ts:211-239`; gate limitów sales-os: `outreach/route.ts:1
 
 ---
 
-## Podsumowanie FAZA 2 (uczciwe)
+## Podsumowanie FAZA 2 (uczciwe, domknięte)
 
-Z 10 zgłoszonych BŁĘDÓW/ŁATWYCH WYGRANYCH wykonanych realnie: **2** (E1 strażnik cudzysłowów, E5 Cofnij
-usunięcie leada). Pozostałe **8 zweryfikowano jako już naprawione** we wcześniejszych rundach hardeningu
-(B1/B2/B3/B4/B5/B6/B7 + odrzucone U1/E6). **Zero „napraw na siłę".**
+**Zrobione realnie — 3 poprawki** (każda: silnik pure + test + 4 bramki + push + CI):
+- ✅ **E1** — strażnik pułapki cudzysłowów (commit 1b45293)
+- ✅ **E5** — „Cofnij" po usunięciu leada (commit 394842e)
+- ✅ **U3** — czytelny błąd nieudanej wysyłki oferty (`adviseSendError`, commit fd0029a)
 
-**Dlaczego tak mało nowego kodu = to jest DOBRY wynik:** mój UX-audyt opierał się na znacznikach
-„✅ do naprawy" z `AUDIT-SECURITY.md`, a te naprawy zdążyły wejść, zanim spisałem znaleziska. Każde
-zweryfikowałem na żywym kodzie ZANIM cokolwiek zmieniłem — zgodnie z zasadą „jeśli nie masz pewności
-czy to dodanie czy zepsucie, zostaw". Kod jest w bardzo dobrej kondycji (3010 testów, 4 bramki czyste).
+**Zweryfikowane jako już naprawione / już obecne** (potwierdzone w kodzie, zero „napraw na siłę"):
+B1/E2 (NaN — suwaki), B2/E3 (Gmail b64), B3 (walidacja importu), B4 (głośna quota), B5/E4 (węzły audio),
+B6/E7 (Web Speech), B7 (limity sales-os), U2 (Cofnij — to E5), U4 (tap-targety — strażnik zielony),
+U6 (prognoza ważona w kokpicie). **Odrzucone jako zbędne:** U1/E6 (kanban ma drogę dotykową).
 
-**Co ZOSTAJE dla Twojej decyzji (nie ruszam autonomicznie — większe/ryzykowne):**
-- **DŁUG TECHNICZNY** D2/D3 (rozbicie god-modułów `Settings.tsx` 3190 l., `tools.ts` 1967 l.) — duży
-  refaktor, ryzyko regresji; robić tylko świadomie, wycinkami.
-- **BRAKI UX** U3 (dokończyć advisor błędów na WSZYSTKICH ścieżkach), U4 (audyt tap-targets <44px),
-  U5 (aria-label na ikonach) — częściowo już pilnowane testami (`touchTargets`, `interactiveSemantics`,
-  `uiQualityGuard`); sensowne jako osobny „a11y sweep", jeśli zlecisz.
-- **POZA ZAKRESEM** (sekcja niżej): rotacja klucza OpenRouter (musisz Ty), pozycje „DO MOJEJ DECYZJI"
-  z `AUDIT-SECURITY.md`.
+**Dlaczego tak mało NOWEGO kodu = DOBRY wynik:** mój UX-audyt opierał się na znacznikach „✅ do naprawy"
+z `AUDIT-SECURITY.md`, a te naprawy zdążyły wejść zanim spisałem znaleziska. Każde zweryfikowałem na
+żywym kodzie ZANIM cokolwiek zmieniłem. Kod jest w bardzo dobrej kondycji: **3014 testów, 4 bramki czyste.**
 
-Wskaż, co z powyższego (albo coś spoza listy) mam wziąć — inaczej uznaję FAZA 2 (bezpieczne wygrane)
-za domkniętą.
+**Co ZOSTAJE dla Twojej decyzji (świadomie NIE ruszam autonomicznie):**
+- **DŁUG D2/D3** — rozbicie god-modułów `Settings.tsx` (3190 l.), `tools.ts` (1967 l.): duży refaktor,
+  ryzyko regresji; sensowne tylko wycinkami, za Twoją zgodą.
+- **U5 (a11y sweep)** — aria-label na ikonach: niska wartość dla solo-operatora, wiele plików w jednym ruchu.
+- **POZA ZAKRESEM**: rotacja klucza OpenRouter (tylko Ty), pozycje „DO MOJEJ DECYZJI" z `AUDIT-SECURITY.md`
+  (BFF auth/SSRF, `admin.ts`, keystore, self-signed EXE) — ryzykowne / mogą zerwać wdrożenie.
+
+**Bezpieczna część FAZY 2 jest wyczerpana** — dalej wchodzą już rzeczy ryzykowne albo niskiej wartości,
+więc zgodnie z Twoją zasadą („zatrzymaj się, gdy wyczerpiesz listę zatwierdzonych zadań") oddaję Ci ster.
+Wskaż numer (np. „D2", „U5") jeśli chcesz, żebym wszedł w któreś z powyższych.
