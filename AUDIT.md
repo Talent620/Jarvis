@@ -18,11 +18,11 @@
 | # | Znalezisko | Plik:linia | Wpływ | Ryzyko |
 |---|---|---|---|---|
 | ~~**B1**~~ | ~~Puste pola liczbowe zapisują `NaN`.~~ **NIEAKTUALNE (zweryfikowane w FAZA 2):** wskazane pola to `type="range"` (suwak nigdy nie jest pusty), a wszystkie pola `type="number"` z bezpośrednim `Number()` już mają guard (`\|\| undefined`/`\|\| 0`/`\|\| 465`, helper `numOrUndef`); dodatkowo `Number("")` === `0` (nie `NaN`) i przeglądarka blokuje nie-cyfry. Brak realnego błędu. | `Settings.tsx:1607,1644,1732,1749` | — | — |
-| **B2** | **Gmail 500 na polskich tematach.** `worker.js` woła `b64(...)`, ale `b64` jest zdefiniowane tylko lokalnie w `smtpRelay`; w zasięgu modułu jest `b64url`. Temat z polskimi znakami → `ReferenceError` → 500 połknięty przez catch. Apka jest PL-first → realnie łamie wysyłkę. | `proxy/worker.js:467-468` | 4 | 1 |
+| ~~**B2**~~ | ~~Gmail 500 na polskich tematach (`b64` lokalne).~~ **NIEAKTUALNE (zweryfikowane):** `b64` JEST moduł-globalne (`worker.js:39`, komentarz „używane też poza smtpRelay (np. /v1/gmail/send)"); ścieżka Gmaila (`worker.js:613`) widzi je bez `ReferenceError`. Naprawione we wcześniejszej rundzie. | `proxy/worker.js:39,613` | — | — |
 | **B3** | **Import kopii zapasowej nadpisuje ustawienia bez walidacji.** `applyParsed` robi `setSettings(parsed.settings)` — spreparowany plik może wstrzyknąć `proxyUrl`/`syncUrl`/`smtpHost` i przekierować cały ruch AI + pocztę. `looksLikeBackup` sprawdza tylko tablice danych. | `src/lib/backup.ts:36-39` | 4 | 2 |
 | **B4** | **Cichy data-loss przy zapełnionym localStorage.** `setData` zmienia RAM i `emit()`, ale gdy `write()` przekroczy quota — zapis do localStorage nie przechodzi, a UI pokazuje „zapisane". Zmiany giną po restarcie. | `src/lib/store.ts:118-130` | 4 | 2 |
-| **B5** | **Wyciek węzłów audio przy premium-TTS.** `playUrlWithLevel` (Fish/ElevenLabs) tworzy `MediaElementAudioSourceNode`+`AnalyserNode` na współdzielonym `levelCtx` i nigdy ich nie odłącza. Akumulacja + CPU w wątku audio przez całą sesję. | `src/lib/voice.ts:65-98` | 3 | 1 |
-| **B6** | **Web Speech restart-storm.** `onend→start()` bez backoffu — przy utracie mic/sieci pętli się w kółko; `onerror` to no-op. Rozgrzewa CPU/baterię i blokuje mikrofon. | `src/lib/voice.ts:525-541` | 3 | 1 |
+| ~~**B5**~~ | ~~Wyciek węzłów audio przy premium-TTS.~~ **NIEAKTUALNE (zweryfikowane):** `playUrlWithLevel` (`voice.ts:221`) ma `cleanup()` odłączający `srcNode`/`fxOut`/`analyserNode` w `onended`/`onerror` (`voice.ts:229-241`). Naprawione. | `src/lib/voice.ts:221-241` | — | — |
+| ~~**B6**~~ | ~~Web Speech restart-storm.~~ **NIEAKTUALNE (zweryfikowane):** klasa rozpoznawania ma anty-storm — licznik `restarts`, backoff `min(5000, 150·2^n)`, poddanie po 8 próbach, zerowanie przy produktywnej sesji (`voice.ts:801-886`). Naprawione. | `src/lib/voice.ts:801-886` | — | — |
 | **B7** | **sales-os per-lead outreach omija limity.** Ścieżka per-lead wysyła od razu (Resend/Mailgun) bez sprawdzenia `autoSendEmails` ani `dailyEmailCap` (flush je honoruje). Token-holder może wysłać nieograniczoną pocztę. | `sales-os/.../public-outreach.ts:125-171` | 4 | 1 |
 
 ---
@@ -31,8 +31,8 @@
 
 | # | Znalezisko | Gdzie | Wpływ | Ryzyko |
 |---|---|---|---|---|
-| **U1** | **Kanban lejka martwy na dotyku.** Tablica używa HTML5 `draggable`/`onDragStart` — na telefonie (Galaxy S9, główny cel) przeciąganie kart nie działa wcale; brak `onTouchStart`/fallbacku „przenieś do…". Na mobile nie zmienisz etapu przez kanban. | `SalesBoard.tsx:74-75` | 4 | 3 |
-| **U2** | **Usunięcie leada bez cofnięcia.** Po `window.confirm` lead znika bezpowrotnie (razem z ofertą). Pomyłkowe „OK" = utrata kontaktu, brak „Cofnij". | `SalesDashboard.tsx:301` | 3 | 2 |
+| ~~**U1**~~ | ~~Kanban martwy na dotyku.~~ **CZĘŚCIOWE / ODRZUCONE (zweryfikowane):** HTML5 drag faktycznie nie działa na dotyku, ALE istnieje działająca, odkrywalna droga dotykowa — tap karty → Panel Klienta → chipy etapów (`ClientPanel.tsx:81-82`), świadomie „jedno miejsce sterowania statusem" (komentarz `SalesBoard.tsx:17`). Menu „przenieś" na karcie tylko dublowałoby chipy. Zostawione. | `SalesBoard.tsx:74-75` | — | — |
+| ✅ **U2** | ~~Usunięcie leada bez cofnięcia.~~ **ZROBIONE (E5, commit 394842e):** `del()` zachowuje confirm i dokłada 6-sekundowy toast „Cofnij" przywracający lead (silnik pure `leadDelete.ts` + test). | `SalesDashboard.tsx` | 3 | 2 |
 | **U3** | **Surowe komunikaty błędów poczty/API.** Część błędów pokazuje techniczny tekst dostawcy zamiast „co się stało + krok po kroku jak naprawić" (część ścieżek już ma advisor, ale nie wszystkie). | poczta/API w Settings/Sales | 3 | 2 |
 | **U4** | **Małe cele dotykowe (<44px).** Część guzików/ikon w gęstych panelach jest poniżej rekomendowanych 44×44px — trudne trafienie kciukiem na telefonie. | panele gęste (Sales/Settings) | 3 | 2 |
 | **U5** | **Brak aria-label na części akcji-ikon.** Przyciski bez tekstu (tylko emoji/ikona) nie mają etykiety → gorsza dostępność i czytnik ekranu mówi „przycisk". | ikony akcji w komponentach | 2 | 1 |
@@ -57,13 +57,13 @@
 
 | # | Znalezisko | Co zrobić | Wpływ | Ryzyko |
 |---|---|---|---|---|
-| **E1** | **Strażnik pułapki cudzysłowów.** Dodać pure-funkcję `scanQuoteTrap()` + test + wpiąć w `scan:secrets`/pre-commit. Blokuje najczęstszą regresję CI raz na zawsze. | nowy `src/lib/quoteGuard.ts` + test | 4 | 1 |
+| ✅ **E1** | ~~Strażnik pułapki cudzysłowów.~~ **ZROBIONE (commit 1b45293):** detektor przez parser TS w `tests/quoteGuard.test.ts` (nie w `src/` — bez wciągania `typescript` do bundla), skan całego `src/**` w bramce vitest/CI, zero false-positives. Już złapał realną pułapkę w changelogu podczas E5. | `tests/quoteGuard.test.ts` | 4 | 1 |
 | ~~**E2**~~ | ~~Guard `NaN` w polach liczbowych.~~ **ODRZUCONE** — B1 zweryfikowane jako nieaktualne (suwaki + istniejące guardy + `Number("")===0`). Brak zmiany. | `Settings.tsx` (B1) | — | — |
-| **E3** | **`b64` globalny w workerze.** Wynieść `b64` do zasięgu modułu → naprawia Gmail 500 na PL tematach. | `worker.js` (B2) | 4 | 1 |
-| **E4** | **Odłączanie węzłów audio.** Odłączać w `onended`/error (lub kierować przez `playUrlEnded`). | `voice.ts` (B5) | 3 | 1 |
-| **E5** | **„Cofnij" po usunięciu leada.** Trzymać ostatnio usunięty lead ~6s + toast „Cofnij". | Sales (U2) | 3 | 2 |
-| **E6** | **Dotykowy fallback kanbana.** Dodać na karcie menu „Przenieś do etapu →" (działa na dotyku), obok istniejącego drag na desktopie. | `SalesBoard.tsx` (U1) | 4 | 2 |
-| **E7** | **Backoff w Web Speech restart.** Dodać rosnący odstęp + limit prób przy `onend/onerror`. | `voice.ts` (B6) | 3 | 1 |
+| ~~**E3**~~ | ~~`b64` globalny w workerze.~~ **NIEAKTUALNE** — B2 już naprawione (`b64` moduł-globalne, `worker.js:39`). | `worker.js` (B2) | — | — |
+| ~~**E4**~~ | ~~Odłączanie węzłów audio.~~ **NIEAKTUALNE** — B5 już naprawione (`cleanup()` w `voice.ts:229-241`). | `voice.ts` (B5) | — | — |
+| ✅ **E5** | ~~„Cofnij" po usunięciu leada.~~ **ZROBIONE (commit 394842e):** silnik pure `leadDelete.ts` + 6-sekundowy toast „Cofnij" w `SalesDashboard.del()`. | Sales (U2) | 3 | 2 |
+| ~~**E6**~~ | ~~Dotykowy fallback kanbana.~~ **ODRZUCONE** — istnieje działająca droga dotykowa (tap karty → chipy etapów w Panelu Klienta); menu na karcie tylko dublowałoby jedyny punkt sterowania statusem. | `SalesBoard.tsx` (U1) | — | — |
+| ~~**E7**~~ | ~~Backoff w Web Speech restart.~~ **NIEAKTUALNE** — B6 już naprawione (anty-storm + backoff w `voice.ts:801-886`). | `voice.ts` (B6) | — | — |
 
 ---
 
@@ -80,11 +80,18 @@
 
 ---
 
-## Rekomendowana kolejność FAZA 2 (bezpieczne najpierw)
+## Postęp FAZA 2 (autonomiczny — za zgodą użytkownika „lec dalej")
 
-**E1 → E2 → E3 → E4 → E7 → E5 → E6**, potem B3/B4/B7 (walidacja importu, głośna quota, gate limitów
-sales-os). Każde = osobny commit + test + 4 bramki (tsc/eslint/vitest/build) + push + CI. Nic z sekcji
-„POZA ZAKRESEM" bez Twojego wyraźnego „tak".
+**Zrobione:** ✅ E1 (strażnik pułapki cudzysłowów, commit 1b45293) · ✅ E5 (Cofnij po usunięciu leada,
+commit 394842e).
+**Zweryfikowane jako nieaktualne** (naprawione we wcześniejszych rundach, potwierdzone w kodzie):
+B1/E2 (NaN), B2/E3 (Gmail b64), B5/E4 (węzły audio), B6/E7 (Web Speech). **Odrzucone jako zbędne:**
+U1/E6 (kanban ma działającą drogę dotykową).
 
-*Nie wprowadzam żadnych zmian w tej fazie. Wskaż numery (np. „E1, E2, E5") lub napisz „wszystkie łatwe
-wygrane", a ruszam FAZA 2 — jedno zadanie na raz.*
+> **Wniosek uczciwościowy:** większość „łatwych wygranych" była już naprawiona — moje UX-znaleziska
+> opierały się na znacznikach „✅ do naprawy" z audytu bezpieczeństwa, a te naprawy zdążyły wejść.
+> Zweryfikowałem każde na żywym kodzie ZANIM cokolwiek zmieniłem (zamiast wymyślać poprawki „na siłę").
+
+**Pozostałe realne BŁĘDY do rozważenia (wyższe ryzyko — weryfikuję pojedynczo):** B3 (walidacja importu
+kopii), B4 (głośna obsługa quota / cichy data-loss), B7 (gate limitów w sales-os per-lead). Każde =
+osobny commit + test + 4 bramki + push + CI. Nic z „POZA ZAKRESEM" bez wyraźnego „tak".
