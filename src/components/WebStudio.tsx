@@ -11,6 +11,7 @@ import { assessSeo, seoFixInstruction } from "../lib/seoPreview";
 import { buildRobotsTxt, buildSitemapXml, extractInternalPaths, normalizeDomain } from "../lib/siteSeoFiles";
 import { useEscape } from "../hooks/useEscape";
 import { usePersistentState } from "../hooks/usePersistentState";
+import WebGuide from "./WebGuide";
 import { writeDraft, readDraft } from "../lib/draftStore";
 import { getWebBuild, beginWebBuild, endWebBuild, subscribeWebBuild } from "../lib/webBuildStatus";
 import { copyWithToast, toast } from "../lib/toast";
@@ -95,6 +96,9 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
   // Blueprint: plan strony wygenerowany przez model (structured output), edytowalny, STERUJE budową.
   const [blueprint, setBlueprint] = usePersistentState<SiteBlueprint | null>("webstudio.blueprint", null);
   const [planning, setPlanning] = useState(false);
+  // 💬 Przewodnik „zbuduj z JARVISEM" — rozmowa krok po kroku zamiast pustego formularza.
+  const [guiding, setGuiding] = useState(false);
+  const [pendingBuild, setPendingBuild] = useState(false);
   // 💾 Projekty stron — zapis/wczytanie/wersje
   const [projId, setProjId] = usePersistentState<string | null>("webstudio.projId", null); // aktywny projekt (upsert)
   const [projName, setProjName] = usePersistentState("webstudio.projName", "");
@@ -277,6 +281,21 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
     }
   };
 
+  // Koniec rozmowy-przewodnika: wpisz ustalenia (brief/typ/styl) i uruchom budowę. Ustawienie
+  // stanu + flaga pendingBuild — efekt niżej zbuduje PO commicie stanu (bez wyścigu React state).
+  const onGuideComplete = (b: ClientBrief, k: SiteKind, s: SiteStyle) => {
+    setBrief(b); setKind(k); setStyle(s); setDemoFor(null); setBlueprint(null);
+    setGuiding(false);
+    setPendingBuild(true);
+    toast("💬 Mam wszystko — buduję stronę wg naszych ustaleń…");
+  };
+  useEffect(() => {
+    if (!pendingBuild) return;
+    setPendingBuild(false);
+    void run(false); // brief/kind/style są już scommitowane
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingBuild]);
+
   // 🔧 Napraw ponownie — kolejna JEDNA próba dokończenia uciętego demo (na żądanie użytkownika).
   // Też w tle: slot budowy + zapis szkicu wprost, więc zamknięcie panelu nie gubi naprawy.
   const retryRepair = async () => {
@@ -418,6 +437,16 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
                 z animacjami, responsywną, a sklep z <b>działającym koszykiem</b>. Podgląd na żywo, edycja słowem, pobranie.
               </p>
 
+              {guiding ? (
+                <WebGuide onComplete={onGuideComplete} onCancel={() => setGuiding(false)} />
+              ) : (
+              <>
+              {/* 💬 Rozmowa zamiast pustego formularza — poprowadzi, doradzi i zbuduje. */}
+              <button className="btn primary" style={{ width: "100%", marginBottom: 6 }} disabled={busy} onClick={() => setGuiding(true)}>
+                💬 Zbuduj z JARVISEM — poprowadzę Cię krok po kroku
+              </button>
+              <div className="muted" style={{ fontSize: 11, textAlign: "center", marginBottom: 10 }}>…albo ustaw wszystko ręcznie poniżej</div>
+
               {/* Wybór typu */}
               <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Typ strony</div>
               <div className="chips" style={{ marginBottom: 8 }}>
@@ -486,6 +515,8 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
                 <p><b>4. Sklep z prawdziwymi płatnościami</b> — ten kreator robi <b>wygląd i koszyk</b>. Żeby brać płatności, podłącz bramkę: <b>Przelewy24 / PayU / Stripe</b> (prowizja ~1–2% od transakcji). Pełny sklep z magazynem to też <b>Shopify (~120 zł/mc)</b> lub <b>WooCommerce</b> — JARVIS przygotuje front, integrację wdraża się osobno.</p>
                 <p><b>5. Zdjęcia</b> — wrzuć własne albo darmowe z <b>unsplash.com / pexels.com</b>.</p>
               </Guide>
+              </>
+              )}
             </>
           )}
 
