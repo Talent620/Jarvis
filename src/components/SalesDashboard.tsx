@@ -15,6 +15,7 @@ import { importLeads } from "../lib/leadImport";
 import { buildLoraCorpus, corpusToJsonl } from "../lib/loraExport";
 import { openSalesOs, syncFromSalesOs, pushLeadsToSalesOs, flushSalesOsOutreach, getLastSnapshot, metricsToText } from "../lib/salesOs";
 import { copyWithToast, toast } from "../lib/toast";
+import { removeLead, restoreLead } from "../lib/leadDelete";
 import type { Lead, LeadStatus } from "../types";
 import { useEscape } from "../hooks/useEscape";
 import LeadDetail from "./LeadDetail";
@@ -299,7 +300,17 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
     });
   const del = (id: string) => {
     if (!window.confirm("Usun\u0105\u0107 ten lead (razem z ofert\u0105)?")) return;
-    store.setData((d) => { d.leads = d.leads.filter((x) => x.id !== id); });
+    const { removed, index } = removeLead(store.data.leads, id);
+    if (!removed) return;
+    store.setData((d) => { d.leads = removeLead(d.leads, id).next; });
+    // \u201eCofnij" przez 6 s \u2014 pomy\u0142kowe usuni\u0119cie nie kasuje kontaktu bezpowrotnie.
+    toast(`\ud83d\uddd1 Usuni\u0119to \u201e${removed.company}\u201d`, {
+      label: "Cofnij",
+      onClick: () => {
+        store.setData((d) => { d.leads = restoreLead(d.leads, removed, index); });
+        toast(`Przywr\u00f3cono \u201e${removed.company}\u201d`);
+      },
+    });
   };
 
   const add = () => {
