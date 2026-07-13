@@ -11,7 +11,7 @@ name: Build iOS (.ipa)
 on:
   workflow_dispatch:
   push:
-    branches: ["claude/functionality-modification-access-z9kod1"]
+    branches: ["main", "claude/functionality-modification-access-z9kod1"]
     paths:
       - "ios/**"
       - "src/**"
@@ -35,6 +35,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Ustal znacznik buildu iOS
+        run: echo "APP_BUILD=$(date -u +'%Y-%m-%d %H:%M')" >> "$GITHUB_ENV"
 
       # Klucze NIE trafiają do bundla (BYOK + BFF) — nic do wstrzykiwania.
       - name: Build web + sync Capacitor (iOS)
@@ -80,6 +83,11 @@ jobs:
           zip -qr JARVIS.ipa Payload
           ls -lh JARVIS.ipa
 
+      - name: Utwórz manifest wersji iOS
+        run: |
+          ISO="$(printf '%sT%s:00Z' "${APP_BUILD% *}" "${APP_BUILD#* }")"
+          printf '{"version":"%s","iso":"%s","url":"https://github.com/Talent620/Jarvis/releases/download/latest/JARVIS.ipa"}\n' "$APP_BUILD" "$ISO" > ios.json
+
       # Artefakt do pobrania z zakładki Actions (gdyby ktoś nie chciał z Releases).
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -91,5 +99,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          files: JARVIS.ipa
+          files: |
+            JARVIS.ipa
+            ios.json
           make_latest: true

@@ -1,6 +1,7 @@
 import { lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { CommandItem } from "./lib/commandPalette";
 import type { GrowthContext } from "./lib/growthContext";
+import type { SettingsTab } from "./lib/settingsModel";
 import Orb, { type OrbState } from "./components/Orb";
 import Conversation from "./components/Conversation";
 import Composer from "./components/Composer";
@@ -124,6 +125,7 @@ import { useStore } from "./hooks/useStore";
 import type { ChatMessage } from "./types";
 
 type PendingImage = { data: string; mediaType: string } | null;
+type SettingsRouteContext = { tab?: SettingsTab; anchor?: string };
 
 // Lokalne proaktywne powitanie (bez API) — pora dnia + krótki raport.
 function buildGreeting(): string {
@@ -183,6 +185,7 @@ export default function App() {
   const screenSetter = (id: string) => (v: boolean) => dispatch(v ? { type: "open", screen: id } : { type: "closeIf", screen: id });
   // Stabilny opener (dispatch jest stały) — do hooków z [] (requestScreen, ⌘K) bez migotania zależności.
   const openScreen = useCallback((id: string) => dispatch({ type: "open", screen: id }), []);
+  const openConnectionSettings = useCallback(() => dispatch({ type: "open", screen: "settings", ctx: { tab: "integrations", anchor: "set-salesos" } satisfies SettingsRouteContext }), []);
   const goBack = () => dispatch({ type: "back" });
   const showHistory = route.screen === "history"; const setShowHistory = screenSetter("history");
   // Czat prywatny/tymczasowy (jak w ChatGPT) — rozmowa NIE trafia do historii.
@@ -203,6 +206,8 @@ export default function App() {
   const [orb, setOrb] = useState<OrbState>("idle");
   const [busy, setBusy] = useState(false);
   const showSettings = route.screen === "settings"; const setShowSettings = screenSetter("settings");
+  const settingsRoute = showSettings ? route.ctx as SettingsRouteContext | undefined : undefined;
+  const closeSettings = () => canGoBack(route) ? goBack() : setShowSettings(false);
   const showPanels = route.screen === "panels"; const setShowPanels = screenSetter("panels");
   const [showLive, setShowLive] = useState(false);
   const [micOn, setMicOn] = useState(false);
@@ -1012,7 +1017,14 @@ export default function App() {
         // nie zadziała i sprawdzalibyśmy przy każdym starcie.
         localStorage.setItem("jarvis.update.lastCheck", String(Date.now()));
         if (!r.newer) return;
-        toast(`🎉 Jest nowsza wersja JARVISA (${r.latest})`, { label: r.platform === "web" ? "Odśwież" : "Pobierz", onClick: () => void applyUpdate(r) });
+        if (!r.assetAvailable) {
+          toast(`Nowa wersja ${r.latest} jest wykryta. Instalator jeszcze się przygotowuje.`);
+          return;
+        }
+        toast(`🎉 Jest nowsza wersja JARVISA (${r.latest})`, {
+          label: r.platform === "web" ? "Odśwież" : "Pobierz",
+          onClick: () => void applyUpdate(r).then((result) => { if (!result.ok) toast(result.message); }),
+        });
       } catch { /* sieć — pomiń */ }
     }, 8000); // po starcie, nie blokuj pierwszego renderu
     return () => clearTimeout(t);
@@ -1504,7 +1516,11 @@ export default function App() {
           />
         </ScreenBoundary>
       )}
-      {showSettings && (<ScreenBoundary name="Ustawienia" onBack={() => setShowSettings(false)}><SettingsPanel onClose={() => setShowSettings(false)} /></ScreenBoundary>)}
+      {showSettings && (
+        <ScreenBoundary name="Ustawienia" onBack={closeSettings}>
+          <SettingsPanel initialTab={settingsRoute?.tab} initialAnchor={settingsRoute?.anchor} onClose={closeSettings} />
+        </ScreenBoundary>
+      )}
       {showPanels && (<ScreenBoundary><Panels onClose={() => setShowPanels(false)} /></ScreenBoundary>)}
       {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}
       {showHistory && (
@@ -1519,6 +1535,7 @@ export default function App() {
           onClose={() => setShowSales(false)}
           onWeb={(ctx) => { setWebContext(ctx ?? null); setShowSales(false); setShowWeb(true); }}
           onMoney={() => { setShowSales(false); setShowMoney(true); }}
+          onConnections={openConnectionSettings}
         />
         </ScreenBoundary>
       )}
@@ -1681,6 +1698,7 @@ export default function App() {
             initialTab="found"
             onClose={() => setShowCandidates(false)}
             onWeb={(ctx) => { setWebContext(ctx ?? null); setShowCandidates(false); setShowWeb(true); }}
+            onConnections={openConnectionSettings}
           />
         </ScreenBoundary>
       )}

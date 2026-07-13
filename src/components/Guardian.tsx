@@ -86,8 +86,10 @@ export default function Guardian({ onClose, onRun }: { onClose: () => void; onRu
       const r = await checkForUpdate();
       if ("error" in r) { setMsg(`❌ ${r.error}`); return; }
       if (!r.newer) { setMsg(`✅ Masz najnowszą wersję (${r.current}).`); return; }
+      if (!r.assetAvailable) { setMsg(`Nowa wersja ${r.latest} jest wykryta, ale instalator jeszcze się przygotowuje. Spróbuj ponownie za kilka minut.`); return; }
       setMsg(`🎉 Jest nowsza wersja (${r.latest}) — ${r.platform === "web" ? "odświeżam…" : "pobieram, kliknij plik, by zainstalować."}`);
-      await applyUpdate(r);
+      const applied = await applyUpdate(r);
+      if (!applied.ok) setMsg(`❌ ${applied.message}`);
     } catch {
       setMsg("⚠ Nie udało się sprawdzić aktualizacji.");
     } finally {

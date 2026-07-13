@@ -22,10 +22,11 @@ const TABS: { id: CrmTab; label: string }[] = [
   { id: "archive", label: "🗄 Archiwum" },
 ];
 
-export default function SalesCrm({ onClose, onWeb, onMoney, initialTab = "actionable" }: {
+export default function SalesCrm({ onClose, onWeb, onMoney, onConnections, initialTab = "actionable" }: {
   onClose: () => void;
   onWeb?: (ctx?: GrowthContext) => void;
   onMoney?: () => void;
+  onConnections?: () => void;
   initialTab?: CrmTab;
 }) {
   useEscape(onClose);
@@ -57,7 +58,7 @@ export default function SalesCrm({ onClose, onWeb, onMoney, initialTab = "action
           <LeadCandidatesPanel embedded onClose={onClose} onWeb={onWeb ? (ctx) => onWeb(ctx) : undefined} onImported={() => setTab("actionable")} />
         ) : (
           // CRM: leady danego kubełka (Do działania / Klienci / Archiwum).
-          <SalesDashboard embedded bucket={tab} onClose={onClose} onWeb={onWeb} onMoney={onMoney} />
+          <SalesDashboard embedded bucket={tab} onClose={onClose} onWeb={onWeb} onMoney={onMoney} onConnections={onConnections} />
         )}
         <div className="panel-foot">
           <button className="btn" onClick={onClose}>Zamknij</button>

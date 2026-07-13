@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isNewer, downloadUrl, humanizeUpdateError } from "../src/lib/updater";
+import { isNewer, isNewerLegacyAsset, downloadUrl, formatUpdateSize, humanizeUpdateError, platformLabel } from "../src/lib/updater";
 
 describe("updater — isNewer", () => {
   it("wydanie nowsze o >1 min → true", () => {
@@ -40,5 +40,31 @@ describe("updater — humanizeUpdateError", () => {
   });
   it("inny błąd → zachowuje treść", () => {
     expect(humanizeUpdateError("coś dziwnego")).toMatch(/coś dziwnego/);
+  });
+});
+
+describe("updater — zgodność ze starszym wydaniem bez manifestu platformy", () => {
+  it("nie uznaje czasu uploadu tego samego buildu za nową wersję", () => {
+    expect(isNewerLegacyAsset("2026-07-04 09:26", "2026-07-04T09:27:50Z")).toBe(false);
+  });
+
+  it("wykrywa realnie późniejsze wydanie", () => {
+    expect(isNewerLegacyAsset("2026-07-04 09:26", "2026-07-04T10:00:00Z")).toBe(true);
+  });
+});
+
+describe("updater — czytelny status", () => {
+  it("pokazuje platformę po ludzku", () => {
+    expect(platformLabel("windows")).toBe("Windows");
+    expect(platformLabel("android")).toBe("Android");
+    expect(platformLabel("ios")).toMatch(/iPhone/);
+    expect(platformLabel("web")).toMatch(/PWA/);
+  });
+
+  it("formatuje rozmiar aktualizacji bez technicznego szumu", () => {
+    expect(formatUpdateSize()).toBe("");
+    expect(formatUpdateSize(1500)).toBe("1 KB");
+    expect(formatUpdateSize(1.5 * 1024 * 1024)).toBe("1.5 MB");
+    expect(formatUpdateSize(24 * 1024 * 1024)).toBe("24 MB");
   });
 });

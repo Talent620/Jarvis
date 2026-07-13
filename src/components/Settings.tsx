@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, BarChart3, BrainCircuit, Check, Clock3, Download, Mail, PlugZap, RefreshCw, ShieldCheck } from "lucide-react";
 import { store } from "../lib/store";
 import { SETTINGS_TAB_META, DEFAULT_SETTINGS_GROUP, groupOfTab, GOOGLE_PLACES_KEY_WARNING, type SettingsGroup, type SettingsTab } from "../lib/settingsModel";
 import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, resolveVoiceMode, type NativeVoiceInfo, type VoiceMode } from "../lib/voice";
@@ -10,12 +11,12 @@ import { systemActionsAvailable, saOpenAccessibility } from "../lib/systemAction
 import { FREE_STACK } from "../lib/freeMode";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
-import { openSalesOs, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
+import { openSalesOs, salesOsConfigured, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
 import { getAllMemories, memoryServiceAvailable } from "../lib/memoryService";
 import { mcpManager } from "../lib/mcp";
 import { enableAtRest, disableAtRest } from "../lib/secretsVault";
 import { googleStartUrl, gmailSearch, connectDesktopGoogle } from "../lib/google";
-import { testApi, testProvider, resolveProvider } from "../lib/brain";
+import { hasUsableBrain, testApi, testProvider, resolveProvider } from "../lib/brain";
 import { activeBrainLabel } from "../lib/brainAdvisor";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
 import { exportData, exportFull, exportFullEncrypted, importData } from "../lib/backup";
@@ -34,7 +35,7 @@ import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromIn
 import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
 import { detectSd, normalizeSdUrl } from "../lib/localImage";
 import { checkFalKey } from "../lib/images";
-import { checkForUpdate, applyUpdate, currentBuild, buildLocalTime, type UpdateInfo } from "../lib/updater";
+import { applyUpdate, buildLocalTime, checkForUpdate, currentBuild, formatUpdateSize, platform, platformLabel, type UpdateInfo } from "../lib/updater";
 import { CHANGELOG } from "../lib/changelog";
 import { liveUpdateSupported, checkLiveUpdate, applyLiveUpdate } from "../lib/liveUpdate";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
@@ -102,18 +103,36 @@ const SETTINGS_INDEX: { label: string; tab: Tab; anchor?: string; keys: string }
   { label: "💸 Automat sprzedaży / leady", tab: "behavior", anchor: "set-sales", keys: "sprzedaz leady prospekting oferty firmy" },
   { label: "🌍 Język interfejsu (PL/EN)", tab: "interface", anchor: "set-language", keys: "jezyk language english polski angielski lang i18n" },
   { label: "🎨 Motyw / wygląd", tab: "interface", anchor: "set-theme", keys: "motyw kolor wyglad interfejs hud theme" },
-  { label: "🔗 Integracje (Google, MCP…)", tab: "integrations", keys: "integracje google kalendarz mcp salesos pamiec sync" },
+  { label: "🔗 Centrum połączeń", tab: "integrations", anchor: "set-connections", keys: "integracje polaczenia google kalendarz mcp salesos poczta ai pamiec sync" },
+  { label: "📈 AI Sales OS", tab: "integrations", anchor: "set-salesos", keys: "sales os ai sales sprzedaz crm token klucz polaczenia" },
   { label: "⬆ Aktualizacja JARVISA", tab: "data", anchor: "set-update", keys: "aktualizacja update wersja nowa" },
   { label: "🗄 Kopia danych (backup/eksport)", tab: "data", anchor: "set-backup", keys: "kopia backup eksport import dane zapis przywroc" },
   { label: "🔒 Blokada aplikacji (PIN)", tab: "data", anchor: "set-lock", keys: "blokada pin haslo lock zabezpieczenie" },
   { label: "🛡 Prywatność i zgody", tab: "data", anchor: "set-privacy", keys: "prywatnosc zgody consent uprawnienia" },
 ];
 
-export default function SettingsPanel({ onClose }: { onClose: () => void }) {
+type SettingsPanelProps = {
+  onClose: () => void;
+  initialTab?: SettingsTab;
+  initialAnchor?: string;
+};
+
+function revealSetting(anchor?: string): void {
+  if (!anchor) return;
+  window.setTimeout(() => {
+    const target = document.getElementById(anchor);
+    if (!target) return;
+    const details = target.closest("details");
+    if (details) details.open = true;
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 90);
+}
+
+export default function SettingsPanel({ onClose, initialTab = "ai", initialAnchor }: SettingsPanelProps) {
   useEscape(onClose);
   const [s, setS] = useState<Settings>(() => ({ ...store.settings, keys: { ...store.settings.keys } }));
-  const [tab, setTabRaw] = useState<Tab>("ai");
-  const [settingsGroup, setSettingsGroup] = useState<SettingsGroup>(DEFAULT_SETTINGS_GROUP);
+  const [tab, setTabRaw] = useState<Tab>(initialTab);
+  const [settingsGroup, setSettingsGroup] = useState<SettingsGroup>(() => initialTab ? groupOfTab(initialTab) : DEFAULT_SETTINGS_GROUP);
   // Przełączenie zakładki przełącza też grupę (deep-link/szukanie w „Zaawansowane" samo je odsłoni).
   const setTab = (t: Tab) => { setTabRaw(t); setSettingsGroup(groupOfTab(t as SettingsTab)); };
   const [voices, setVoices] = useState<NativeVoiceInfo[]>([]);
@@ -162,6 +181,12 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     listMics().then(setMics);
   }, []);
 
+  useEffect(() => {
+    setTabRaw(initialTab);
+    setSettingsGroup(groupOfTab(initialTab));
+    revealSetting(initialAnchor);
+  }, [initialAnchor, initialTab]);
+
   const loadMics = async () => {
     setMicMsg("Sprawdzam mikrofony…");
     const ok = await ensureMicPermission();
@@ -201,10 +226,12 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const findResults = find.trim()
     ? SETTINGS_INDEX.filter((x) => `${x.label} ${x.keys}`.toLowerCase().includes(find.trim().toLowerCase())).slice(0, 6)
     : [];
-  const jumpTo = (r: (typeof SETTINGS_INDEX)[number]) => {
-    setTab(r.tab); setFind("");
-    if (r.anchor) setTimeout(() => document.getElementById(r.anchor as string)?.scrollIntoView({ behavior: "smooth", block: "start" }), 90);
+  const goToSetting = (nextTab: Tab, anchor?: string) => {
+    setTab(nextTab);
+    setFind("");
+    revealSetting(anchor);
   };
+  const jumpTo = (r: (typeof SETTINGS_INDEX)[number]) => goToSetting(r.tab, r.anchor);
   // Klucze zapisują się NATYCHMIAST do magazynu — nigdy nie giną po wyjściu bez „Zapisz".
   const setKey = (id: ProviderId, val: string) => {
     const keys = { ...s.keys, [id]: val };
@@ -301,6 +328,10 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [updBusy, setUpdBusy] = useState(false);
   const [updMsg, setUpdMsg] = useState("");
   const [updInfo, setUpdInfo] = useState<UpdateInfo | null>(null);
+  const [updLastChecked, setUpdLastChecked] = useState(() => {
+    try { return Number(localStorage.getItem("jarvis.update.lastCheck") || 0); }
+    catch { return 0; }
+  });
   // Benchmark szybkości modeli na sprzęcie użytkownika.
   const [benchBusy, setBenchBusy] = useState(false);
   const [benchMsg, setBenchMsg] = useState("");
@@ -505,6 +536,60 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     }
     store.setSettings(next);
     onClose();
+  };
+
+  const checkUpdates = async () => {
+    if (updBusy) return;
+    setUpdBusy(true);
+    setUpdMsg("Sprawdzam najnowszą wersję i właściwy plik dla tego urządzenia…");
+    const r = await checkForUpdate();
+    setUpdBusy(false);
+    if ("error" in r) {
+      setUpdInfo(null);
+      setUpdMsg(`❌ ${r.error}`);
+      return;
+    }
+    setUpdInfo(r);
+    setUpdLastChecked(r.checkedAt);
+    if (r.newer && !r.assetAvailable) {
+      setUpdMsg(`Nowa wersja ${r.latest} jest wykryta, ale instalator dla ${platformLabel(r.platform)} jeszcze się buduje. Spróbuj ponownie za kilka minut.`);
+      return;
+    }
+    setUpdMsg(r.newer
+      ? `Nowa wersja ${r.latest} jest gotowa. Twoja wersja: ${r.current}.`
+      : `Masz najnowszą wersję (${r.current}).`);
+  };
+
+  const applyFullInstaller = async () => {
+    if (!updInfo || updBusy) return;
+    setUpdBusy(true);
+    setUpdMsg(updInfo.platform === "web" ? "Odświeżam aplikację…" : "Otwieram bezpieczne pobieranie z GitHub…");
+    const r = await applyUpdate(updInfo);
+    setUpdBusy(false);
+    setUpdMsg(r.message);
+    toast(r.ok ? r.message : `❌ ${r.message}`);
+  };
+
+  const applyRecommendedUpdate = async () => {
+    if (!updInfo || updBusy) return;
+    if (!liveUpdateSupported()) {
+      await applyFullInstaller();
+      return;
+    }
+    setUpdBusy(true);
+    setUpdMsg("Pobieram małą aktualizację bez instalatora…");
+    const c = await checkLiveUpdate();
+    if (!c.available || !c.manifest) {
+      setUpdBusy(false);
+      setUpdMsg(c.error
+        ? `Aktualizacja błyskawiczna nie jest teraz dostępna: ${c.error} Możesz użyć pełnej wersji poniżej.`
+        : "Mała paczka nie jest jeszcze gotowa. Możesz użyć pełnej wersji poniżej.");
+      return;
+    }
+    const r = await applyLiveUpdate(c.manifest);
+    setUpdBusy(false);
+    if (r.ok) toast("Zaktualizowano. JARVIS uruchamia nową wersję…");
+    else setUpdMsg(`❌ ${r.error || "Nie udało się zastosować aktualizacji."}`);
   };
 
   return (
@@ -2514,6 +2599,81 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
 
           {tab === "integrations" && (
             <>
+              {(() => {
+                const brainReady = hasUsableBrain(s);
+                const mail = mailReadiness();
+                const salesReady = salesOsConfigured();
+                const readyCount = [brainReady, mail.ready, salesReady].filter(Boolean).length;
+                const cards = [
+                  {
+                    id: "brain",
+                    title: "Mózg AI",
+                    ready: brainReady,
+                    detail: brainReady ? "Dostawca lub model lokalny jest gotowy." : "Wybierz dostawcę albo lokalny model.",
+                    action: brainReady ? "Zarządzaj" : "Połącz AI",
+                    icon: BrainCircuit,
+                    tab: "ai" as Tab,
+                    anchor: "set-provider",
+                  },
+                  {
+                    id: "mail",
+                    title: "Poczta",
+                    ready: mail.ready,
+                    detail: mail.ready ? mail.reason : "Dodaj adres i hasło aplikacji lub Gmail.",
+                    action: mail.ready ? "Zarządzaj" : "Połącz pocztę",
+                    icon: Mail,
+                    tab: "ai" as Tab,
+                    anchor: "set-email",
+                  },
+                  {
+                    id: "sales",
+                    title: "AI Sales OS",
+                    ready: salesReady,
+                    detail: salesReady ? "Gotowy do synchronizacji leadów." : "Wklej klucz i połącz CRM jednym testem.",
+                    action: salesReady ? "Zarządzaj" : "Połącz Sales",
+                    icon: BarChart3,
+                    tab: "integrations" as Tab,
+                    anchor: "set-salesos",
+                  },
+                ];
+                return (
+                  <section className="connection-hub" aria-labelledby="set-connections">
+                    <div className="connection-hub-head">
+                      <div>
+                        <h3 id="set-connections"><PlugZap size={16} aria-hidden="true" /> Centrum połączeń</h3>
+                        <p className="muted">Najważniejsze usługi w jednym miejscu. Kliknij tylko to, co chcesz uruchomić.</p>
+                      </div>
+                      <span className="connection-count">{readyCount}/3 gotowe</span>
+                    </div>
+                    <div className="connection-progress" aria-label={`${readyCount} z 3 połączeń gotowych`}>
+                      <span style={{ width: `${(readyCount / 3) * 100}%` }} />
+                    </div>
+                    <div className="connection-grid">
+                      {cards.map((card) => {
+                        const Icon = card.icon;
+                        return (
+                          <article key={card.id} className={`connection-card ${card.ready ? "is-ready" : ""}`}>
+                            <div className="connection-card-icon"><Icon size={18} aria-hidden="true" /></div>
+                            <div className="connection-card-copy">
+                              <div className="connection-card-title">
+                                <b>{card.title}</b>
+                                <span className={`connection-state ${card.ready ? "is-ready" : ""}`}>
+                                  {card.ready && <Check size={12} aria-hidden="true" />}
+                                  {card.ready ? "Gotowe" : "Do ustawienia"}
+                                </span>
+                              </div>
+                              <p>{card.detail}</p>
+                            </div>
+                            <button type="button" className="connection-action" onClick={() => goToSetting(card.tab, card.anchor)}>
+                              {card.action}<ArrowRight size={15} aria-hidden="true" />
+                            </button>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })()}
               <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
               <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🧠 Pamięć długoterminowa (Mem0 + Qdrant)</summary>
               <p className="muted">
@@ -2604,13 +2764,13 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
 
               </details>
               <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
-              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>📈 AI Sales OS (osobne narzędzie)</summary>
-              <p className="muted">
-                AI Sales OS to <b>osobna aplikacja</b> (katalog <code>sales-os/</code>), z której korzystasz
-                w przeglądarce. JARVIS jej nie wchłania — ma do niej <b>wgląd</b>: jednym kliknięciem ją
-                otwierasz, a drugim pobierasz jej leady (read-only) do Pulpitu Sprzedaży. Uruchom ją raz:{" "}
-                <code>npm run salesos</code> w katalogu JARVIS-a.
-              </p>
+              <summary id="set-salesos" style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>📈 AI Sales OS</summary>
+              <p className="muted">Połącz osobny moduł sprzedażowy, aby leady i wyniki przepływały między nim a JARVISEM.</p>
+              <ol className="connection-steps">
+                <li><b>Otwórz AI Sales OS</b> przyciskiem poniżej.</li>
+                <li>W AI Sales przejdź do <b>Pozyskiwanie → Inbound</b> i skopiuj klucz połączenia.</li>
+                <li>Wklej klucz tutaj i kliknij <b>Test połączenia</b>.</li>
+              </ol>
               <div className="field">
                 <label>Adres AI Sales OS</label>
                 <input
@@ -2620,21 +2780,24 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 />
               </div>
               <div className="field">
-                <label>Token przechwytywania (X-Ingest-Token)</label>
+                <label>Klucz połączenia z AI Sales</label>
                 <input
                   type="password"
                   value={s.salesOsToken}
-                  placeholder="token z ⚙ Sales OS → Pozyskiwanie → Inbound"
+                  placeholder="Wklej klucz z Pozyskiwanie → Inbound"
                   onChange={(e) => set({ salesOsToken: e.target.value })}
                 />
+                <span className="muted" style={{ display: "block", marginTop: 4 }}>Techniczna nazwa: X-Ingest-Token.</span>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button
                   className="btn"
                   style={{ flex: 1 }}
                   onClick={() => {
-                    store.setSettings({ salesOsUrl: s.salesOsUrl, salesOsToken: s.salesOsToken });
-                    if (!openSalesOs()) setSalesOsMsg("Najpierw podaj adres AI Sales OS.");
+                    const salesOsUrl = s.salesOsUrl.trim() || "http://localhost:3000";
+                    set({ salesOsUrl });
+                    store.setSettings({ salesOsUrl, salesOsToken: s.salesOsToken });
+                    if (!openSalesOs()) setSalesOsMsg("Nie udało się otworzyć AI Sales OS. Sprawdź, czy aplikacja jest uruchomiona.");
                   }}
                 >
                   🚀 Otwórz Sales OS
@@ -2909,72 +3072,81 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           {/* ============ 🗄 DANE ============ */}
           {tab === "data" && (
             <>
-              <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>
-                🧩 Wersja (build): <b>{typeof __APP_BUILD__ !== "undefined" ? __APP_BUILD__ : "dev"}</b> UTC
-                {(() => { const loc = buildLocalTime(currentBuild()); return loc ? <> · u Ciebie: <b>{loc}</b></> : null; })()} — podaj ją, gdy zgłaszasz problem.
-              </p>
+              {(() => {
+                const activePlatform = updInfo?.platform ?? platform();
+                const localBuild = currentBuild();
+                const localTime = buildLocalTime(localBuild);
+                const checkedAt = updInfo?.checkedAt || updLastChecked;
+                const status = updBusy ? "checking"
+                  : updInfo?.newer && updInfo.assetAvailable ? "available"
+                  : updInfo?.newer && !updInfo.assetAvailable ? "building"
+                  : updInfo && !updInfo.newer ? "current"
+                  : updMsg.startsWith("❌") ? "error"
+                  : "idle";
+                const statusLabel = status === "checking" ? "Sprawdzam"
+                  : status === "available" ? "Aktualizacja gotowa"
+                  : status === "building" ? "Instalator się przygotowuje"
+                  : status === "current" ? "Wersja aktualna"
+                  : status === "error" ? "Nie udało się sprawdzić"
+                  : "Gotowy do sprawdzenia";
+                return (
+                  <section className={`update-center is-${status}`} aria-labelledby="set-update">
+                    <div className="update-center-head">
+                      <div className="update-center-icon"><RefreshCw size={19} aria-hidden="true" /></div>
+                      <div>
+                        <h3 id="set-update">Aktualizacja JARVISA</h3>
+                        <p>{statusLabel}</p>
+                      </div>
+                      <span className="update-trust"><ShieldCheck size={14} aria-hidden="true" /> GitHub</span>
+                    </div>
 
-              <h3 id="set-update">⬆ Aktualizacja JARVISA</h3>
-              <p className="muted" style={{ marginTop: -4 }}>
-                Sprawdź i pobierz najnowszą wersję z GitHub. Na telefonie/PC: 1 klik → instalacja najnowszej.
-                W przeglądarce: odświeży do najnowszej od ręki.
-              </p>
-              <button
-                className="btn primary"
-                disabled={updBusy}
-                onClick={async () => {
-                  setUpdBusy(true); setUpdMsg("Sprawdzam najnowszą wersję…");
-                  const r = await checkForUpdate();
-                  setUpdBusy(false);
-                  if ("error" in r) { setUpdMsg(`❌ ${r.error}`); return; }
-                  setUpdInfo(r);
-                  setUpdMsg(r.newer
-                    ? `🎉 Jest nowsza wersja (${r.latest}). Twoja: ${r.current}.`
-                    : `✅ Masz najnowszą wersję (${r.current}).`);
-                }}
-              >
-                {updBusy ? "⏳ Sprawdzam…" : "🔎 Sprawdź aktualizacje"}
-              </button>
-              {updMsg && <p className="muted" style={{ fontSize: 12, marginTop: 6, whiteSpace: "pre-line" }}>{updMsg}</p>}
-              {updInfo?.newer && (
-                <button
-                  className="btn"
-                  style={{ marginTop: 6 }}
-                  onClick={() => { void applyUpdate(updInfo); toast(updInfo.platform === "web" ? "↻ Odświeżam do najnowszej…" : "⬇ Pobieram najnowszą — kliknij plik, by zainstalować."); }}
-                >
-                  {updInfo.platform === "web" ? "↻ Odśwież do najnowszej" : "⬇ Pobierz i zainstaluj najnowszą"}
-                </button>
-              )}
-              {liveUpdateSupported() && (
-                <div className="journal-card" style={{ padding: "10px 12px", marginTop: 8, border: "1px solid var(--gold)" }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>⚡ Aktualizacja błyskawiczna (OTA)</div>
-                  <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
-                    Pobiera tylko zmianę (sam web-bundle, ~1–2 MB) zamiast całego APK — i podmienia ją od
-                    razu, bez instalatora. Zła paczka sama się cofa.
-                  </div>
-                  <button
-                    className="btn primary"
-                    style={{ marginTop: 8 }}
-                    disabled={updBusy}
-                    onClick={async () => {
-                      setUpdBusy(true); setUpdMsg("⚡ Sprawdzam aktualizację błyskawiczną…");
-                      const c = await checkLiveUpdate();
-                      if (c.error) { setUpdBusy(false); setUpdMsg(`❌ ${c.error}`); return; }
-                      if (!c.available) { setUpdBusy(false); setUpdMsg(`✅ Masz najnowszą wersję (${currentBuild()}).`); return; }
-                      setUpdMsg(`⬇ Pobieram zmianę (${c.version})…`);
-                      const r = await applyLiveUpdate(c.manifest!);
-                      setUpdBusy(false);
-                      if (r.ok) { toast("⚡ Zaktualizowano — przeładowuję…"); }
-                      else { setUpdMsg(`❌ ${r.error}`); }
-                    }}
-                  >
-                    {updBusy ? "⏳ Pracuję…" : "⚡ Zaktualizuj błyskawicznie"}
-                  </button>
-                </div>
-              )}
+                    <div className="update-meta">
+                      <div><span>Twoja wersja</span><b>{localTime || localBuild || "deweloperska"}</b></div>
+                      <div><span>Urządzenie</span><b>{platformLabel(activePlatform)}</b></div>
+                      <div><span>Ostatnie sprawdzenie</span><b>{checkedAt ? new Date(checkedAt).toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "short" }) : "Jeszcze nie"}</b></div>
+                    </div>
 
-              <details style={{ marginTop: 8 }} open>
-                <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>📜 O JARVIS / Aktualizacje (co nowego)</summary>
+                    {updBusy && <div className="update-progress" aria-label="Sprawdzanie aktualizacji"><span /></div>}
+                    {updMsg && <p className="update-message">{updMsg}</p>}
+                    {updInfo?.newer && updInfo.assetAvailable && (
+                      <div className="update-release">
+                        <Check size={16} aria-hidden="true" />
+                        <span><b>Wersja {updInfo.latest}</b>{formatUpdateSize(updInfo.size) ? ` · ${formatUpdateSize(updInfo.size)}` : ""}</span>
+                        <small>{updInfo.verifiedBuild ? "Potwierdzona dla tego urządzenia" : "Starszy format wydania"}</small>
+                      </div>
+                    )}
+
+                    <div className="update-actions">
+                      {updInfo?.newer && updInfo.assetAvailable ? (
+                        <button type="button" className="btn primary" disabled={updBusy} onClick={() => void applyRecommendedUpdate()}>
+                          <Download size={16} aria-hidden="true" />
+                          {liveUpdateSupported() ? "Zaktualizuj teraz" : activePlatform === "web" ? "Odśwież do najnowszej" : "Pobierz aktualizację"}
+                        </button>
+                      ) : (
+                        <button type="button" className="btn primary" disabled={updBusy} onClick={() => void checkUpdates()}>
+                          <RefreshCw size={16} aria-hidden="true" />
+                          {updBusy ? "Sprawdzam…" : updInfo ? "Sprawdź ponownie" : "Sprawdź aktualizacje"}
+                        </button>
+                      )}
+                      {updInfo?.newer && updInfo.assetAvailable && (
+                        <button type="button" className="btn" disabled={updBusy} onClick={() => void checkUpdates()} title="Sprawdź wydanie jeszcze raz">
+                          <RefreshCw size={16} aria-hidden="true" /> Sprawdź ponownie
+                        </button>
+                      )}
+                    </div>
+
+                    {liveUpdateSupported() && updInfo?.newer && updInfo.assetAvailable && (
+                      <button type="button" className="update-full-link" disabled={updBusy} onClick={() => void applyFullInstaller()}>
+                        Pełna wersja instalacyjna
+                      </button>
+                    )}
+                    <div className="update-safety"><Clock3 size={14} aria-hidden="true" /> JARVIS sprawdza nowe wydanie raz dziennie. Dane i ustawienia zostają na miejscu.</div>
+                  </section>
+                );
+              })()}
+
+              <details style={{ marginTop: 8 }}>
+                <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>📜 Co nowego · {CHANGELOG[0]?.version}</summary>
                 {CHANGELOG.map((c) => (
                   <div key={c.version} style={{ marginTop: 8 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "var(--gold)" }}>

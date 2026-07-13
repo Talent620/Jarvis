@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
+import { BarChart3, Mail, Settings2 } from "lucide-react";
 import type { GrowthContext } from "../lib/growthContext";
 import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { draftOffer } from "../lib/offer";
 import { splitOffer } from "../lib/glinks";
-import { canSendDirect, draftAndSendOffer, sentTodayCount, sendAllOffers } from "../lib/mailer";
+import { canSendDirect, draftAndSendOffer, mailReadiness, sentTodayCount, sendAllOffers } from "../lib/mailer";
 import { findLeads, browserCity } from "../lib/leads";
 import { buildDossiers, scoreLabel } from "../lib/leadIntel";
 import { scoreLead, signalsFromLead, learnWeightsFromOutcome, DEFAULT_WEIGHTS, type IcpScore } from "../lib/leadScoring";
@@ -58,9 +59,9 @@ function numOrUndef(v: string): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, bucket }: { onClose: () => void; onWeb?: (ctx?: GrowthContext) => void; onMoney?: () => void; embedded?: boolean; bucket?: CrmBucket }) {
+export default function SalesDashboard({ onClose, onWeb, onMoney, onConnections, embedded, bucket }: { onClose: () => void; onWeb?: (ctx?: GrowthContext) => void; onMoney?: () => void; onConnections?: () => void; embedded?: boolean; bucket?: CrmBucket }) {
   useEscape(onClose);
-  const { data } = useStore();
+  const { data, settings } = useStore();
   const leads = useMemo(() => data.leads || [], [data.leads]);
   const [filter, setFilter] = useState<LeadStatus | "all" | "call" | "emailed">("all");
   const [query, setQuery] = useState("");
@@ -87,6 +88,8 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
     const snap = getLastSnapshot();
     return snap?.metrics ? metricsToText(snap.metrics, snap.company?.name) : "";
   });
+  const mailConnection = mailReadiness();
+  const salesConnectionReady = !!settings.salesOsUrl?.trim() && !!settings.salesOsToken?.trim();
 
   const doImport = () => {
     if (!importText.trim()) return;
@@ -397,6 +400,25 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
             </div>
           </div>
 
+          <section className="connection-strip" aria-label="Połączenia sprzedaży">
+            <div className="connection-strip-copy">
+              <div className={`connection-strip-status ${mailConnection.ready ? "is-ready" : ""}`}>
+                <Mail size={16} aria-hidden="true" />
+                <span><b>Poczta</b><small>{mailConnection.ready ? "Gotowa do wysyłki" : "Wymaga połączenia"}</small></span>
+              </div>
+              <div className={`connection-strip-status ${salesConnectionReady ? "is-ready" : ""}`}>
+                <BarChart3 size={16} aria-hidden="true" />
+                <span><b>AI Sales</b><small>{salesConnectionReady ? "Synchronizacja gotowa" : "Wymaga klucza"}</small></span>
+              </div>
+            </div>
+            {onConnections && (
+              <button type="button" className="connection-strip-action" onClick={onConnections}>
+                <Settings2 size={16} aria-hidden="true" />
+                {mailConnection.ready && salesConnectionReady ? "Zarządzaj" : "Ustaw połączenia"}
+              </button>
+            )}
+          </section>
+
           {/* 🎯 Następny ruch — wyjaśnialna rekomendacja ICP (score + powód + akcja). Klik → teczka. */}
           {nextMove && (
             <div
@@ -495,13 +517,12 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
             <button className="btn" onClick={exportLora} title="Dane treningowe LoRA Twój głos (zanonimizowane)">🧠 Trening</button>
           </div>
           {(store.settings.salesOsUrl || "").trim() && (
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <button className="btn" style={{ flex: 1 }} onClick={() => { if (!openSalesOs()) toast("Najpierw podaj adres AI Sales OS (⚙ → Integracje)."); }} title="Otwórz osobną aplikację AI Sales OS">
+            <div className="sales-os-actions">
+              <button className="btn" onClick={() => { if (!openSalesOs()) toast("Najpierw podaj adres AI Sales OS (⚙ → Integracje)."); }} title="Otwórz osobną aplikację AI Sales OS">
                 🚀 Sales OS
               </button>
               <button
                 className="btn"
-                style={{ flex: 1 }}
                 disabled={syncingOs}
                 onClick={async () => { setSyncingOs(true); const r = await syncFromSalesOs(); setSyncingOs(false); toast(r.message); const snap = getLastSnapshot(); if (snap?.metrics) setOsInsight(metricsToText(snap.metrics, snap.company?.name)); if (r.added) setFilter("all"); }}
                 title="Pobierz leady z AI Sales OS (read-only)"
@@ -510,7 +531,6 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
               </button>
               <button
                 className="btn"
-                style={{ flex: 1 }}
                 disabled={syncingOs}
                 onClick={async () => { setSyncingOs(true); const r = await pushLeadsToSalesOs(); setSyncingOs(false); toast(r.message); }}
                 title="Odeślij świeże leady do AI Sales OS (źródła prawdy)"
@@ -519,7 +539,6 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, embedded, buck
               </button>
               <button
                 className="btn"
-                style={{ flex: 1 }}
                 disabled={syncingOs}
                 onClick={async () => { setSyncingOs(true); const r = await flushSalesOsOutreach(); setSyncingOs(false); toast(r.message); }}
                 title="Sales OS pisze (AI) i auto-wysyła zaległe maile z kolejki"
