@@ -4,15 +4,26 @@ name: Release APK
 # tagiem "latest" — dzięki temu masz niezmienny link do pobrania:
 # https://github.com/<owner>/<repo>/releases/download/latest/jarvis.apk
 #
-# Uruchamiany ręcznie (Actions → Release APK → Run workflow) lub przez tag v*.
+# Uruchamiany automatycznie po zmianach aplikacji na main, ręcznie albo przez tag v*.
 
 on:
   workflow_dispatch:
   push:
-    branches: ["claude/functionality-modification-access-z9kod1"]
+    branches: ["main", "claude/functionality-modification-access-z9kod1"]
     tags: ["v*"]
-    paths-ignore:
-      - "**.md"
+    paths:
+      - "android/**"
+      - "public/**"
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "capacitor.config.ts"
+      - "vite.config.ts"
+      - ".github/workflows/release.yml"
+
+concurrency:
+  group: jarvis-android-release
+  cancel-in-progress: true
 
 permissions:
   contents: write
