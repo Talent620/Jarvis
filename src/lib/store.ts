@@ -60,6 +60,8 @@ const defaultSettings: Settings = {
   salesOsUrl: "",
   salesOsToken: "",
   salesOsAutoSync: 0,
+  siteOsUrl: "http://127.0.0.1:3210",
+  siteOsToken: "",
   memoryServiceUrl: "",
   memoryServiceToken: "",
   mcpServers: "",
