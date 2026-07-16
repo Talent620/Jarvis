@@ -82,7 +82,7 @@ function renderProjects() {
     button.className = "project-item" + (project.id === state.current?.id ? " active" : "");
     button.innerHTML = `<span class="project-thumb">${project.name.slice(0, 2).toUpperCase()}</span><span><strong></strong><span></span></span>`;
     $("strong", button).textContent = project.name;
-    $$("span", button)[3].textContent = formatDate(project.updatedAt);
+    $("span", button)[2].textContent = formatDate(project.updatedAt);
     button.addEventListener("click", () => loadProject(project.id));
     ui.projectList.append(button);
   }
@@ -362,6 +362,7 @@ async function startTunnel() {
     for (let attempt = 0; attempt < 20; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 900));
       const data = await api("/api/tunnel");
+      if (data.error) throw new Error("Nie udało się uruchomić tunelu: " + data.error);
       if (data.tunnelUrl) {
         state.tunnelUrl = data.tunnelUrl;
         updateTunnelUi();
@@ -515,6 +516,20 @@ function bindControls() {
   window.addEventListener("beforeunload", flushSave);
 }
 
+async function checkRemoteProjectUpdate() {
+  if (!state.current || state.saving || document.hidden) return;
+  try {
+    const data = await api("/api/projects");
+    const remote = data.projects.find((item) => item.id === state.current.id);
+    if (remote && remote.updatedAt > state.current.updatedAt + 250) {
+      await loadProject(state.current.id);
+      toast("JARVIS zastosował nową wersję projektu.");
+    }
+  } catch {
+    // Kolejna próba nastąpi automatycznie.
+  }
+}
+
 async function init() {
   bindControls();
   try {
@@ -526,6 +541,7 @@ async function init() {
     await refreshProjects();
     ui.app.dataset.ready = "true";
     ui.status.textContent = "Site OS " + health.version + " · gotowy";
+    setInterval(checkRemoteProjectUpdate, 5000);
   } catch (error) {
     ui.status.textContent = "Brak połączenia";
     toast(error.message);
