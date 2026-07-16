@@ -106,6 +106,7 @@ import { checkForUpdate, applyUpdate } from "./lib/updater";
 import { topPredictions } from "./lib/predict";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
+import { processPendingSiteOsCommands } from "./lib/siteOs";
 import { currentBrainMode } from "./lib/brainMode";
 import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, checkPinnedVoice, setVoiceUnavailableHandler, type VoiceListener, type VoiceUnavailableInfo } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
@@ -987,6 +988,17 @@ export default function App() {
         ]);
       }
     }, 60000);
+    return () => clearInterval(tick);
+  }, []);
+
+  // --- Site OS: odbieraj polecenia z pełnoekranowego edytora i stosuj je obecnym silnikiem AI ---
+  useEffect(() => {
+    const run = async () => {
+      const result = await processPendingSiteOsCommands();
+      if (result.processed && result.message) toast(result.message);
+    };
+    void run();
+    const tick = setInterval(() => { void run(); }, 12000);
     return () => clearInterval(tick);
   }, []);
 
