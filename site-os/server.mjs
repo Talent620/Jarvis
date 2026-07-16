@@ -11,6 +11,7 @@ const publicDir = path.join(rootDir, "public");
 const dataDir = path.join(rootDir, "data");
 const runtimeDir = path.join(rootDir, ".runtime");
 const projectsFile = path.join(dataDir, "projects.json");
+const commandsFile = path.join(dataDir, "commands.json");
 const runtimeFile = path.join(runtimeDir, "connection.json");
 const host = process.env.SITE_OS_HOST || "127.0.0.1";
 const port = Number(process.env.SITE_OS_PORT || 3210);
@@ -20,6 +21,7 @@ const maxBodyBytes = 8 * 1024 * 1024;
 
 let tunnelProcess = null;
 let tunnelUrl = "";
+let tunnelError = "";
 
 function starterHtml() {
   return `<!doctype html>
@@ -109,7 +111,8 @@ async function ensureState() {
       : randomBytes(32).toString("hex"),
     pairingCode: String(randomInt(100000, 999999)),
     startedAt: new Date().toISOString(),
-    tunnelUrl: ""
+    tunnelUrl: "",
+    lastJarvisSeen: Number(previous.lastJarvisSeen || 0)
   };
   await writeJson(runtimeFile, runtime);
   return runtime;
@@ -200,6 +203,7 @@ async function updateRuntime() {
 
 function startTunnel() {
   if (tunnelProcess && !tunnelProcess.killed) return;
+  tunnelError = "";
   tunnelProcess = spawn("cloudflared", ["tunnel", "--url", localUrl, "--no-autoupdate"], {
     cwd: rootDir,
     windowsHide: true,
@@ -217,6 +221,8 @@ function startTunnel() {
   tunnelProcess.stderr.on("data", inspect);
   tunnelProcess.on("error", (error) => {
     tunnelUrl = "";
+    tunnelError = error.message;
+    updateRuntime().catch(() => {});
     console.error("Nie udało się uruchomić tunelu: " + error.message);
   });
   tunnelProcess.on("exit", () => {
@@ -268,6 +274,7 @@ const server = http.createServer(async (req, res) => {
         version,
         localUrl,
         tunnelUrl,
+        tunnelError,
         pairingRequired: true
       });
     }
@@ -299,6 +306,58 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname.startsWith("/api/") && !authorized(req)) {
       return send(req, res, 401, { ok: false, error: "Brak autoryzacji Site OS." });
+    }
+
+    if (req.method === "POST" && pathname === "/api/commands") {
+      const input = await bodyJson(req);
+      const projectExists = (await projects()).some((item) => item.id === input.projectId);
+      if (!projectExists || typeof input.prompt !== "string" || !input.prompt.trim()) {
+        return send(req, res, 400, { ok: false, error: "Projekt i polecenie są wymagane." });
+      }
+      const list = await readJson(commandsFile, []);
+      const command = {
+        id: randomUUID(),
+        projectId: input.projectId,
+        prompt: input.prompt.trim().slice(0, 4000),
+        selection: input.selection || null,
+        status: "pending",
+        createdAt: Date.now()
+      };
+      await writeJson(commandsFile, [command, ...(Array.isArray(list) ? list : [])].slice(0, 200));
+      return send(req, res, 201, {
+        ok: true,
+        command,
+        connected: Date.now() - Number(runtime.lastJarvisSeen || 0) < 45000
+      });
+    }
+
+    if (req.method === "GET" && pathname === "/api/public/commands") {
+      runtime.lastJarvisSeen = Date.now();
+      await updateRuntime();
+      const list = await readJson(commandsFile, []);
+      const pending = (Array.isArray(list) ? list : []).filter((item) => item.status === "pending");
+      return send(req, res, 200, { ok: true, commands: pending });
+    }
+
+    const commandMatch = pathname.match(/^\/api\/public\/commands\/([a-f0-9-]+)$/i);
+    if (req.method === "PUT" && commandMatch) {
+      const input = await bodyJson(req);
+      const list = await readJson(commandsFile, []);
+      const command = (Array.isArray(list) ? list : []).find((item) => item.id === commandMatch[1]);
+      if (!command) return send(req, res, 404, { ok: false, error: "Nie znaleziono polecenia." });
+      command.status = input.status === "failed" ? "failed" : "done";
+      command.error = typeof input.error === "string" ? input.error.slice(0, 1000) : null;
+      command.completedAt = Date.now();
+      if (typeof input.html === "string" && input.html.trim()) {
+        const projectList = await projects();
+        const existing = projectList.find((item) => item.id === command.projectId);
+        if (existing) {
+          const project = cleanProject({ html: input.html }, existing);
+          await saveProjects([project, ...projectList.filter((item) => item.id !== project.id)]);
+        }
+      }
+      await writeJson(commandsFile, list);
+      return send(req, res, 200, { ok: true, command });
     }
 
     if (req.method === "GET" && pathname === "/api/projects") {
@@ -347,7 +406,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "GET" && pathname === "/api/tunnel") {
-      return send(req, res, 200, { ok: true, active: Boolean(tunnelUrl), tunnelUrl });
+      return send(req, res, 200, { ok: true, active: Boolean(tunnelUrl), tunnelUrl, error: tunnelError });
     }
 
     if (await serveStatic(req, res, pathname)) return;
