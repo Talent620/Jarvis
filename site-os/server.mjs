@@ -10,6 +10,7 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(rootDir, "public");
 const dataDir = path.join(rootDir, "data");
 const runtimeDir = path.join(rootDir, ".runtime");
+const toolsDir = path.join(rootDir, ".tools");
 const projectsFile = path.join(dataDir, "projects.json");
 const commandsFile = path.join(dataDir, "commands.json");
 const runtimeFile = path.join(runtimeDir, "connection.json");
@@ -22,6 +23,7 @@ const maxBodyBytes = 8 * 1024 * 1024;
 let tunnelProcess = null;
 let tunnelUrl = "";
 let tunnelError = "";
+let tunnelStarting = null;
 
 function starterHtml() {
   return `<!doctype html>
@@ -207,37 +209,74 @@ async function updateRuntime() {
   await writeJson(runtimeFile, { ...runtime, tunnelUrl });
 }
 
-function startTunnel() {
-  if (tunnelProcess && !tunnelProcess.killed) return;
-  tunnelError = "";
-  tunnelProcess = spawn("cloudflared", ["tunnel", "--url", localUrl, "--no-autoupdate"], {
-    cwd: rootDir,
-    windowsHide: true,
-    stdio: ["ignore", "pipe", "pipe"]
-  });
-  const inspect = async (chunk) => {
-    const match = String(chunk).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
-    if (match) {
-      tunnelUrl = match[0];
-      await updateRuntime();
-      console.log("Publiczny podgląd: " + tunnelUrl);
-    }
-  };
-  tunnelProcess.stdout.on("data", inspect);
-  tunnelProcess.stderr.on("data", inspect);
-  tunnelProcess.on("error", (error) => {
-    tunnelUrl = "";
-    tunnelError = error.message;
-    updateRuntime().catch(() => {});
-    console.error("Nie udało się uruchomić tunelu: " + error.message);
-  });
-  tunnelProcess.on("exit", () => {
-    tunnelProcess = null;
-    tunnelUrl = "";
-    updateRuntime().catch(() => {});
-  });
+async function ensureCloudflared() {
+  if (process.env.CLOUDFLARED_PATH) return process.env.CLOUDFLARED_PATH;
+  if (process.platform !== "win32") return "cloudflared";
+
+  const executable = path.join(toolsDir, "cloudflared.exe");
+  if (existsSync(executable)) return executable;
+
+  await mkdir(toolsDir, { recursive: true });
+  const temp = executable + ".download";
+  const source = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe";
+  console.log("Pobieram oficjalny Cloudflare Tunnel…");
+  const response = await fetch(source, { redirect: "follow" });
+  if (!response.ok) throw new Error("Nie udało się pobrać Cloudflare Tunnel (HTTP " + response.status + ").");
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length < 5_000_000) throw new Error("Pobrany plik Cloudflare Tunnel jest nieprawidłowy.");
+  await writeFile(temp, bytes);
+  await rename(temp, executable);
+  console.log("Cloudflare Tunnel jest gotowy.");
+  return executable;
 }
 
+async function startTunnel() {
+  if (tunnelProcess && !tunnelProcess.killed) return;
+  if (tunnelStarting) return tunnelStarting;
+
+  tunnelStarting = (async () => {
+    tunnelError = "";
+    try {
+      const executable = await ensureCloudflared();
+      tunnelProcess = spawn(executable, ["tunnel", "--url", localUrl, "--no-autoupdate"], {
+        cwd: rootDir,
+        windowsHide: true,
+        stdio: ["ignore", "pipe", "pipe"]
+      });
+      const inspect = async (chunk) => {
+        const match = String(chunk).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
+        if (match) {
+          tunnelUrl = match[0];
+          await updateRuntime();
+          console.log("Publiczny podgląd: " + tunnelUrl);
+        }
+      };
+      tunnelProcess.stdout.on("data", inspect);
+      tunnelProcess.stderr.on("data", inspect);
+      tunnelProcess.on("error", (error) => {
+        tunnelUrl = "";
+        tunnelError = error.message;
+        updateRuntime().catch(() => {});
+        console.error("Nie udało się uruchomić tunelu: " + error.message);
+      });
+      tunnelProcess.on("exit", () => {
+        tunnelProcess = null;
+        tunnelUrl = "";
+        updateRuntime().catch(() => {});
+      });
+    } catch (error) {
+      tunnelProcess = null;
+      tunnelUrl = "";
+      tunnelError = error instanceof Error ? error.message : String(error);
+      await updateRuntime();
+      throw error;
+    } finally {
+      tunnelStarting = null;
+    }
+  })();
+
+  return tunnelStarting;
+}
 function stopTunnel() {
   if (tunnelProcess && !tunnelProcess.killed) tunnelProcess.kill();
   tunnelProcess = null;
@@ -402,8 +441,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && pathname === "/api/tunnel/start") {
-      startTunnel();
-      return send(req, res, 202, { ok: true, status: "starting", tunnelUrl });
+      await startTunnel();
+      return send(req, res, 202, { ok: true, status: "starting", tunnelUrl, error: tunnelError });
     }
 
     if (req.method === "POST" && pathname === "/api/tunnel/stop") {
@@ -428,7 +467,7 @@ server.listen(port, host, () => {
   console.log("JARVIS Site OS " + version);
   console.log("Edytor: " + localUrl);
   console.log("Kod parowania: " + runtime.pairingCode);
-  if (process.argv.includes("--tunnel")) startTunnel();
+  if (process.argv.includes("--tunnel")) void startTunnel();
 });
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
