@@ -552,6 +552,10 @@ export interface Settings {
   salesOsUrl: string;
   /** Token przechwytywania leadów (X-Ingest-Token) — wgląd read-only do AI Sales OS. */
   salesOsToken: string;
+  /** Adres osobnej aplikacji JARVIS Site OS (domyślnie lokalnie na porcie 3210). */
+  siteOsUrl: string;
+  /** Prywatny token parowania z Site OS. */
+  siteOsToken: string;
   /** Adres serwera pamięci długoterminowej (Mem0 + Qdrant, self-hosted). Puste = pamięć wyłączona. */
   memoryServiceUrl: string;
   /** Opcjonalny token autoryzacji serwera pamięci. */
