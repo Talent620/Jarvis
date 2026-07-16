@@ -1,0 +1,4 @@
+data/*.json
+.runtime/
+node_modules/
+.env
