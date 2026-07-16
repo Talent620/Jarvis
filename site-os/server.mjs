@@ -121,15 +121,21 @@ async function ensureState() {
 const runtime = await ensureState();
 
 function isLoopback(req) {
+  // Tunel łączy się z serwerem lokalnie, dlatego sam remoteAddress nie wystarcza.
+  // Każdy nagłówek proxy oznacza, że żądanie przyszło z zewnątrz.
+  if (req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"] || req.headers.forwarded) return false;
   const address = req.socket.remoteAddress || "";
   return address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1";
 }
 
 function corsHeaders(req) {
   const origin = req.headers.origin || "";
-  const allowed = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+  const allowed = !origin
+    || origin === "null"
+    || /^(capacitor|ionic):\/\/localhost$/i.test(origin)
+    || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
   return {
-    "Access-Control-Allow-Origin": allowed ? origin : localUrl,
+    ...(allowed && origin ? { "Access-Control-Allow-Origin": origin } : {}),
     "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Jarvis-Token",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Vary": "Origin"
