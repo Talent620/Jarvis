@@ -26,7 +26,9 @@
     "salesos": "bash sales-os/start.sh",
     "lint": "eslint .",
     "build:studio": "vite build --config vite.studio.config.ts",
-    "knowledge": "node scripts/gen-knowledge.mjs"
+    "knowledge": "node scripts/gen-knowledge.mjs",
+    "siteos": "node site-os/server.mjs",
+    "siteos:tunnel": "node site-os/server.mjs --tunnel"
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",
