@@ -29,11 +29,7 @@ Edytor otworzy się pod adresem [http://127.0.0.1:3210](http://127.0.0.1:3210).
 
 ## Tunel
 
-Przycisk **Uruchom tunel** używa programu `cloudflared`. Instalacja na Windows:
-
-```powershell
-winget install --id Cloudflare.cloudflared
-```
+Przycisk **Uruchom tunel** automatycznie pobiera oficjalny program Cloudflare do prywatnego katalogu `site-os/.tools/` i uruchamia go bez konfiguracji routera. Ręczna instalacja nie jest wymagana. Własną lokalizację programu można opcjonalnie podać przez `CLOUDFLARED_PATH`.
 
 Tunel wystawia wyłącznie zapisany podgląd projektu. Endpointy projektów i edytor wymagają tokenu, a lokalna sesja edytora jest wydawana tylko dla połączenia z tego komputera.
 
