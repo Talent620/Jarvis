@@ -1,8 +1,13 @@
 {
   "appId": "net.serwer256.jarvis",
   "productName": "JARVIS",
-  "directories": { "output": "release-desktop" },
-  "files": ["dist/**/*", "electron/**/*"],
+  "directories": {
+    "output": "release-desktop"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*"
+  ],
   "win": {
     "target": "nsis",
     "artifactName": "JARVIS.exe"
@@ -17,5 +22,15 @@
     "createStartMenuShortcut": true,
     "shortcutName": "JARVIS",
     "artifactName": "JARVIS.exe"
-  }
+  },
+  "extraResources": [
+    {
+      "from": "site-os",
+      "to": "site-os",
+      "filter": [
+        "server.mjs",
+        "public/**/*"
+      ]
+    }
+  ]
 }
