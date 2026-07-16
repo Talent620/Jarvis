@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101817">
+  <title>JARVIS Site OS</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="app" class="app-shell" data-ready="false">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">J</span>
+        <div><strong>JARVIS</strong><span>SITE OS</span></div>
+      </div>
+      <div class="project-title">
+        <input id="projectName" aria-label="Nazwa projektu" maxlength="120" value="Projekt">
+        <span id="saveState" class="save-state">Zapisano</span>
+      </div>
+      <div class="top-actions">
+        <span id="connectionState" class="connection-state"><i></i> Lokalnie</span>
+        <button id="undoBtn" class="icon-btn" type="button" title="Cofnij" aria-label="Cofnij">↶</button>
+        <button id="redoBtn" class="icon-btn" type="button" title="Ponów" aria-label="Ponów">↷</button>
+        <button id="shareBtn" class="button secondary" type="button">Udostępnij</button>
+        <button id="previewBtn" class="button primary" type="button">Otwórz stronę</button>
+      </div>
+    </header>
+
+    <aside class="project-rail">
+      <div class="rail-head">
+        <h2>Projekty</h2>
+        <button id="newProjectBtn" class="icon-btn" type="button" title="Nowy projekt" aria-label="Nowy projekt">+</button>
+      </div>
+      <label class="search">
+        <span aria-hidden="true">⌕</span>
+        <input id="projectSearch" type="search" placeholder="Szukaj">
+      </label>
+      <div id="projectList" class="project-list" aria-live="polite"></div>
+      <div class="rail-footer">
+        <button id="importBtn" class="text-button" type="button">Importuj HTML</button>
+        <input id="importInput" type="file" accept=".html,text/html" hidden>
+        <button id="deleteBtn" class="icon-btn danger" type="button" title="Usuń projekt" aria-label="Usuń projekt">×</button>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div class="canvas-toolbar">
+        <div class="segmented" aria-label="Rozmiar podglądu">
+          <button type="button" class="active" data-viewport="desktop">Desktop</button>
+          <button type="button" data-viewport="tablet">Tablet</button>
+          <button type="button" data-viewport="mobile">Telefon</button>
+        </div>
+        <div class="canvas-meta">
+          <span id="canvasHint">Kliknij element, aby go edytować</span>
+          <button id="selectModeBtn" class="mode-button active" type="button">Edycja</button>
+        </div>
+      </div>
+      <div id="canvasStage" class="canvas-stage" data-viewport="desktop">
+        <div class="browser-frame">
+          <div class="browser-bar"><i></i><i></i><i></i><span id="previewAddress">podgląd lokalny</span></div>
+          <iframe id="siteFrame" title="Podgląd edytowanej strony" sandbox="allow-same-origin allow-forms"></iframe>
+        </div>
+      </div>
+      <footer class="statusbar">
+        <span id="statusText">Gotowy</span>
+        <span id="projectStats">0 sekcji · 0 KB</span>
+      </footer>
+    </main>
+
+    <aside class="inspector">
+      <div class="inspector-tabs" role="tablist">
+        <button class="active" type="button" data-tab="element">Element</button>
+        <button type="button" data-tab="jarvis">JARVIS</button>
+        <button type="button" data-tab="publish">Publikacja</button>
+      </div>
+
+      <section id="elementPanel" class="inspector-panel active" data-panel="element">
+        <div id="emptySelection" class="empty-selection">
+          <span class="selection-glyph" aria-hidden="true">⌁</span>
+          <h3>Wybierz element strony</h3>
+          <p>Zaznacz tekst, przycisk, zdjęcie lub sekcję na podglądzie.</p>
+        </div>
+        <div id="elementControls" hidden>
+          <div class="selected-head">
+            <div><span>Zaznaczenie</span><strong id="selectedName">Element</strong></div>
+            <div class="inline-actions">
+              <button id="moveUpBtn" class="icon-btn" type="button" title="Przesuń wyżej">↑</button>
+              <button id="moveDownBtn" class="icon-btn" type="button" title="Przesuń niżej">↓</button>
+              <button id="duplicateBtn" class="icon-btn" type="button" title="Duplikuj">⧉</button>
+              <button id="removeElementBtn" class="icon-btn danger" type="button" title="Usuń">×</button>
+            </div>
+          </div>
+
+          <label class="field">
+            <span>Treść</span>
+            <textarea id="textControl" rows="4"></textarea>
+          </label>
+          <label id="linkField" class="field" hidden>
+            <span>Adres linku</span>
+            <input id="linkControl" type="text" placeholder="https:// lub #sekcja">
+          </label>
+          <label id="imageField" class="field" hidden>
+            <span>Adres zdjęcia</span>
+            <input id="imageControl" type="url" placeholder="https://">
+          </label>
+
+          <div class="control-group">
+            <h3>Typografia</h3>
+            <div class="two-columns">
+              <label class="field compact"><span>Rozmiar</span><input id="fontSizeControl" type="number" min="8" max="180"></label>
+              <label class="field compact"><span>Grubość</span>
+                <select id="fontWeightControl">
+                  <option value="400">Regular</option><option value="500">Medium</option>
+                  <option value="600">Semibold</option><option value="700">Bold</option>
+                </select>
+              </label>
+            </div>
+            <div class="segmented full">
+              <button type="button" data-align="left">Lewo</button>
+              <button type="button" data-align="center">Środek</button>
+              <button type="button" data-align="right">Prawo</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <h3>Wygląd</h3>
+            <div class="two-columns">
+              <label class="field compact color-field"><span>Tekst</span><input id="colorControl" type="color"></label>
+              <label class="field compact color-field"><span>Tło</span><input id="backgroundControl" type="color"></label>
+              <label class="field compact"><span>Odstęp</span><input id="paddingControl" type="number" min="0" max="160"></label>
+              <label class="field compact"><span>Rogi</span><input id="radiusControl" type="number" min="0" max="80"></label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="jarvisPanel" class="inspector-panel" data-panel="jarvis">
+        <div class="panel-heading">
+          <span class="ai-dot"></span>
+          <div><h3>Dyrektor kreatywny</h3><p>Zmiany dotyczą bieżącego projektu.</p></div>
+        </div>
+        <div class="prompt-presets">
+          <button type="button" data-prompt="Podnieś wizualny poziom tej sekcji, zachowując treść i styl marki.">Bardziej premium</button>
+          <button type="button" data-prompt="Popraw wersję mobilną, rytm odstępów i czytelność tej strony.">Dopracuj telefon</button>
+          <button type="button" data-prompt="Wzmocnij główne wezwanie do działania i ścieżkę konwersji.">Wzmocnij CTA</button>
+          <button type="button" data-prompt="Sprawdź spójność całej strony i zaproponuj najważniejszą poprawkę.">Audyt całości</button>
+        </div>
+        <label class="field prompt-field">
+          <span>Polecenie dla JARVISA</span>
+          <textarea id="aiPrompt" rows="7" placeholder="Np. zamień tę sekcję na spokojniejszą, bardziej luksusową i dodaj mocny dowód społeczny"></textarea>
+        </label>
+        <button id="sendPromptBtn" class="button primary wide" type="button">Zastosuj z JARVISEM</button>
+        <div id="aiStatus" class="notice" hidden></div>
+      </section>
+
+      <section id="publishPanel" class="inspector-panel" data-panel="publish">
+        <div class="panel-heading">
+          <span class="publish-dot"></span>
+          <div><h3>Podgląd dla klienta</h3><p>Edytor pozostaje dostępny tylko na tym komputerze.</p></div>
+        </div>
+        <div class="publish-block">
+          <span>Adres lokalny</span>
+          <div class="copy-row"><input id="localPreviewUrl" readonly><button data-copy="localPreviewUrl" type="button">Kopiuj</button></div>
+        </div>
+        <div class="publish-block">
+          <span>Publiczny link</span>
+          <div id="tunnelEmpty">
+            <p>Uruchom bezpieczny, tymczasowy link do obecnego projektu.</p>
+            <button id="startTunnelBtn" class="button primary wide" type="button">Uruchom tunel</button>
+          </div>
+          <div id="tunnelReady" hidden>
+            <div class="copy-row"><input id="publicPreviewUrl" readonly><button data-copy="publicPreviewUrl" type="button">Kopiuj</button></div>
+            <button id="stopTunnelBtn" class="text-button danger-text" type="button">Wyłącz tunel</button>
+          </div>
+        </div>
+        <div class="security-note">
+          <strong>Prywatność</strong>
+          <p>Link pokazuje wyłącznie zapisaną stronę. Projekty, panel i token JARVISA nie są udostępniane.</p>
+        </div>
+      </section>
+    </aside>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
