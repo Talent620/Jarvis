@@ -11,6 +11,7 @@ import { buildRobotsTxt, buildSitemapXml, extractInternalPaths, normalizeDomain 
 import { useEscape } from "../hooks/useEscape";
 import { copyWithToast, toast } from "../lib/toast";
 import { listSiteProjects, saveSiteProject, renameSiteProject, removeSiteProject, exportSiteProject, importSiteProject } from "../lib/siteProjects";
+import { openSiteOs, sendProjectToSiteOs } from "../lib/siteOs";
 import type { SiteProject } from "../types";
 import Guide from "./Guide";
 
@@ -72,6 +73,7 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
   const [style, setStyle] = useState<SiteStyle>("auto");
   const [html, setHtml] = useState("");
   const [busy, setBusy] = useState(false);
+  const [siteOsBusy, setSiteOsBusy] = useState(false);
   const [err, setErr] = useState("");
   const [view, setView] = useState<"preview" | "code">("preview");
   const [showBrief, setShowBrief] = useState(false);
@@ -280,6 +282,26 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+
+  const openInSiteOs = async () => {
+    if (!html || brokenDemo) return;
+    setSiteOsBusy(true);
+    try {
+      const name = projName || demoProjectName(demoFor) || `Projekt ${new Date().toLocaleDateString("pl-PL")}`;
+      await sendProjectToSiteOs({
+        id: projId || `jarvis_${Date.now()}`,
+        name,
+        html,
+        brief: { ...brief, prompt, kind, style, lead: demoFor },
+      });
+      openSiteOs();
+      toast("Projekt otwarty w JARVIS Site OS.");
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSiteOsBusy(false);
+    }
   };
 
   // ⬇ Pobierz dowolny plik tekstowy (robots.txt / sitemap.xml).
@@ -504,6 +526,16 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
               <button className="btn" style={{ flex: 1 }} onClick={download}>⬇ Pobierz .html</button>
             )}
           </div>
+          {html && !brokenDemo && (
+            <button
+              className="btn"
+              style={{ width: "100%", marginTop: 8, borderColor: "var(--cyan)" }}
+              onClick={openInSiteOs}
+              disabled={siteOsBusy}
+            >
+              {siteOsBusy ? "Przekazuję projekt…" : "▣ Otwórz w pełnym JARVIS Site OS"}
+            </button>
+          )}
           {/* Ucięte demo — nie udajemy gotowego. Domyślne pobranie usunięte; jasne opcje naprawy. */}
           {brokenDemo && (
             <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 10, border: "1px solid #ff6b6b", background: "color-mix(in srgb, #ff6b6b 8%, transparent)" }}>
