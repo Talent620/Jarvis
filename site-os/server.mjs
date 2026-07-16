@@ -8,9 +8,9 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(rootDir, "public");
-const dataDir = path.join(rootDir, "data");
-const runtimeDir = path.join(rootDir, ".runtime");
-const toolsDir = path.join(rootDir, ".tools");
+const dataDir = process.env.SITE_OS_DATA_DIR ? path.resolve(process.env.SITE_OS_DATA_DIR) : path.join(rootDir, "data");
+const runtimeDir = process.env.SITE_OS_RUNTIME_DIR ? path.resolve(process.env.SITE_OS_RUNTIME_DIR) : path.join(rootDir, ".runtime");
+const toolsDir = process.env.SITE_OS_TOOLS_DIR ? path.resolve(process.env.SITE_OS_TOOLS_DIR) : path.join(rootDir, ".tools");
 const projectsFile = path.join(dataDir, "projects.json");
 const commandsFile = path.join(dataDir, "commands.json");
 const runtimeFile = path.join(runtimeDir, "connection.json");
