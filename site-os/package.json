@@ -1,0 +1,16 @@
+{
+  "name": "jarvis-site-os",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Autonomous website workspace connected to JARVIS.",
+  "scripts": {
+    "dev": "node --watch server.mjs",
+    "start": "node server.mjs",
+    "tunnel": "node server.mjs --tunnel",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
