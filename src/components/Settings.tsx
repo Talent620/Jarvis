@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BarChart3, BrainCircuit, Check, Clock3, Download, Mail, PlugZap, RefreshCw, ShieldCheck } from "lucide-react";
+import { ArrowRight, BarChart3, BrainCircuit, Check, Clock3, Download, Mail, PanelsTopLeft, PlugZap, RefreshCw, ShieldCheck } from "lucide-react";
 import { store } from "../lib/store";
 import { SETTINGS_TAB_META, DEFAULT_SETTINGS_GROUP, groupOfTab, GOOGLE_PLACES_KEY_WARNING, type SettingsGroup, type SettingsTab } from "../lib/settingsModel";
 import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, resolveVoiceMode, type NativeVoiceInfo, type VoiceMode } from "../lib/voice";
@@ -12,6 +12,7 @@ import { FREE_STACK } from "../lib/freeMode";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, salesOsConfigured, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
+import { openSiteOs, pairSiteOs, siteOsConfigured, testSiteOs } from "../lib/siteOs";
 import { getAllMemories, memoryServiceAvailable } from "../lib/memoryService";
 import { mcpManager } from "../lib/mcp";
 import { enableAtRest, disableAtRest } from "../lib/secretsVault";
@@ -105,6 +106,7 @@ const SETTINGS_INDEX: { label: string; tab: Tab; anchor?: string; keys: string }
   { label: "🎨 Motyw / wygląd", tab: "interface", anchor: "set-theme", keys: "motyw kolor wyglad interfejs hud theme" },
   { label: "🔗 Centrum połączeń", tab: "integrations", anchor: "set-connections", keys: "integracje polaczenia google kalendarz mcp salesos poczta ai pamiec sync" },
   { label: "📈 AI Sales OS", tab: "integrations", anchor: "set-salesos", keys: "sales os ai sales sprzedaz crm token klucz polaczenia" },
+  { label: "▣ JARVIS Site OS", tab: "integrations", anchor: "set-siteos", keys: "site os kreator stron edytor tunel publikacja parowanie" },
   { label: "⬆ Aktualizacja JARVISA", tab: "data", anchor: "set-update", keys: "aktualizacja update wersja nowa" },
   { label: "🗄 Kopia danych (backup/eksport)", tab: "data", anchor: "set-backup", keys: "kopia backup eksport import dane zapis przywroc" },
   { label: "🔒 Blokada aplikacji (PIN)", tab: "data", anchor: "set-lock", keys: "blokada pin haslo lock zabezpieczenie" },
@@ -139,6 +141,9 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
   const [syncMsg, setSyncMsg] = useState("");
   const [salesOsMsg, setSalesOsMsg] = useState("");
   const [salesOsBusy, setSalesOsBusy] = useState(false);
+  const [siteOsMsg, setSiteOsMsg] = useState("");
+  const [siteOsBusy, setSiteOsBusy] = useState(false);
+  const [siteOsPairCode, setSiteOsPairCode] = useState("");
   const [memMsg, setMemMsg] = useState("");
   const [memBusy, setMemBusy] = useState(false);
   const [mcpMsg, setMcpMsg] = useState("");
@@ -2603,7 +2608,8 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 const brainReady = hasUsableBrain(s);
                 const mail = mailReadiness();
                 const salesReady = salesOsConfigured();
-                const readyCount = [brainReady, mail.ready, salesReady].filter(Boolean).length;
+                const siteReady = siteOsConfigured();
+                const readyCount = [brainReady, mail.ready, salesReady, siteReady].filter(Boolean).length;
                 const cards = [
                   {
                     id: "brain",
@@ -2635,6 +2641,16 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                     tab: "integrations" as Tab,
                     anchor: "set-salesos",
                   },
+                  {
+                    id: "site",
+                    title: "JARVIS Site OS",
+                    ready: siteReady,
+                    detail: siteReady ? "Edytor i polecenia AI są połączone." : "Uruchom edytor i wpisz kod parowania.",
+                    action: siteReady ? "Zarządzaj" : "Połącz kreator",
+                    icon: PanelsTopLeft,
+                    tab: "integrations" as Tab,
+                    anchor: "set-siteos",
+                  },
                 ];
                 return (
                   <section className="connection-hub" aria-labelledby="set-connections">
@@ -2643,10 +2659,10 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                         <h3 id="set-connections"><PlugZap size={16} aria-hidden="true" /> Centrum połączeń</h3>
                         <p className="muted">Najważniejsze usługi w jednym miejscu. Kliknij tylko to, co chcesz uruchomić.</p>
                       </div>
-                      <span className="connection-count">{readyCount}/3 gotowe</span>
+                      <span className="connection-count">{readyCount}/4 gotowe</span>
                     </div>
-                    <div className="connection-progress" aria-label={`${readyCount} z 3 połączeń gotowych`}>
-                      <span style={{ width: `${(readyCount / 3) * 100}%` }} />
+                    <div className="connection-progress" aria-label={`${readyCount} z 4 połączeń gotowych`}>
+                      <span style={{ width: `${(readyCount / 4) * 100}%` }} />
                     </div>
                     <div className="connection-grid">
                       {cards.map((card) => {
@@ -2763,6 +2779,78 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
               )}
 
               </details>
+              <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
+              <summary id="set-siteos" style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>▣ JARVIS Site OS</summary>
+              <p className="muted">Pełnoekranowy kreator stron działa jako osobna aplikacja w przeglądarce i wymienia projekty z JARVISEM.</p>
+              <ol className="connection-steps">
+                <li>Uruchom <b>site-os/start.cmd</b> lub wpisz <b>npm run siteos</b>.</li>
+                <li>Wróć tutaj i wpisz sześciocyfrowy kod pokazany w oknie Site OS.</li>
+                <li>Połącz raz. Kolejne projekty i polecenia AI będą synchronizowane automatycznie.</li>
+              </ol>
+              <div className="field">
+                <label>Adres Site OS</label>
+                <input
+                  value={s.siteOsUrl}
+                  placeholder="http://127.0.0.1:3210"
+                  onChange={(e) => set({ siteOsUrl: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>Kod parowania</label>
+                <input
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={siteOsPairCode}
+                  placeholder="6 cyfr z okna Site OS"
+                  onChange={(e) => setSiteOsPairCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  className="btn"
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    const siteOsUrl = s.siteOsUrl.trim() || "http://127.0.0.1:3210";
+                    set({ siteOsUrl });
+                    if (!openSiteOs()) setSiteOsMsg("Nie udało się otworzyć Site OS. Uruchom site-os/start.cmd.");
+                  }}
+                >
+                  Otwórz Site OS
+                </button>
+                <button
+                  className="btn"
+                  style={{ flex: 1 }}
+                  disabled={siteOsBusy || siteOsPairCode.length !== 6}
+                  onClick={async () => {
+                    store.setSettings({ siteOsUrl: s.siteOsUrl.trim() || "http://127.0.0.1:3210" });
+                    setSiteOsBusy(true);
+                    setSiteOsMsg("Paruję JARVISA z Site OS…");
+                    const message = await pairSiteOs(siteOsPairCode);
+                    setS((current) => ({ ...current, siteOsUrl: store.settings.siteOsUrl, siteOsToken: store.settings.siteOsToken }));
+                    setSiteOsMsg(message);
+                    setSiteOsBusy(false);
+                  }}
+                >
+                  {siteOsBusy ? "Łączenie…" : "Połącz kodem"}
+                </button>
+                <button
+                  className="btn"
+                  style={{ flex: 1 }}
+                  disabled={siteOsBusy}
+                  onClick={async () => {
+                    store.setSettings({ siteOsUrl: s.siteOsUrl, siteOsToken: s.siteOsToken });
+                    setSiteOsBusy(true);
+                    setSiteOsMsg("Sprawdzam połączenie…");
+                    setSiteOsMsg(await testSiteOs());
+                    setSiteOsBusy(false);
+                  }}
+                >
+                  Test połączenia
+                </button>
+              </div>
+              {siteOsMsg && <p className="muted">{siteOsMsg}</p>}
+              </details>
+
               <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
               <summary id="set-salesos" style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>📈 AI Sales OS</summary>
               <p className="muted">Połącz osobny moduł sprzedażowy, aby leady i wyniki przepływały między nim a JARVISEM.</p>
