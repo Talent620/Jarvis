@@ -288,7 +288,7 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
     if (!html || brokenDemo) return;
     setSiteOsBusy(true);
     try {
-      const name = projName || demoProjectName(demoFor) || `Projekt ${new Date().toLocaleDateString("pl-PL")}`;
+      const name = projName || (demoFor ? demoProjectName(demoFor) : "") || `Projekt ${new Date().toLocaleDateString("pl-PL")}`;
       await sendProjectToSiteOs({
         id: projId || `jarvis_${Date.now()}`,
         name,
