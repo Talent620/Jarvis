@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   platform: process.platform,
   // Otwórz URL, plik lub folder w domyślnej aplikacji systemu.
   open: (target) => ipcRenderer.invoke("jarvis:open", String(target || "")),
+  // Uruchom dołączony kreator stron i otwórz go w domyślnej przeglądarce.
+  siteOsStart: (tunnel = false) => ipcRenderer.invoke("jarvis:site-os-start", { tunnel: Boolean(tunnel) }),
   // Uruchom lokalny program (po nazwie znanej lub ścieżce/poleceniu).
   launch: (appName) => ipcRenderer.invoke("jarvis:launch", String(appName || "")),
   // Akcja zasilania: lock | sleep | restart | shutdown | logoff.

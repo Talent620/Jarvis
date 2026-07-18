@@ -43,7 +43,18 @@ const proxiedSession = await json("/api/session", { headers: { "CF-Connecting-IP
 if (proxiedSession.response.status !== 403) throw new Error("Tunel uzyskał dostęp do lokalnego tokenu.");
 
 const preview = await fetch(base + "/p/" + projectId);
-if (!preview.ok || !(await preview.text()).includes("<html")) throw new Error("Podgląd klienta nie działa.");
+const previewHtml = await preview.text();
+if (!preview.ok || !previewHtml.includes("<html") || !previewHtml.includes("/api/leads/" + projectId)) throw new Error("Podgląd klienta nie działa.");
+
+const lead = await json("/api/leads/" + projectId, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ name: "Test Site OS", email: "site-os@example.com", message: "Test formularza leadowego" })
+});
+if (!lead.response.ok || !lead.body.id) throw new Error("Formularz leadowy nie zapisuje kontaktów.");
+
+const leads = await json("/api/leads/" + projectId, { headers });
+if (!leads.body.leads?.some((item) => item.id === lead.body.id)) throw new Error("Panel nie odczytuje kontaktów.");
 
 console.log(JSON.stringify({
   ok: true,
@@ -51,5 +62,6 @@ console.log(JSON.stringify({
   projects: projects.body.projects.length,
   commandQueue: "ok",
   preview: "ok",
+  leadCapture: "ok",
   tunnelIsolation: "ok"
 }, null, 2));

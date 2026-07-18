@@ -179,6 +179,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
   // Aktywny model Gemini dla wybranego trybu inteligencji (uczciwie pokazany — bez chain-of-thought).
   const [activeGeminiModel, setActiveGeminiModel] = useState<string | null>(null);
   const desktopGoogle = typeof window !== "undefined" && !!(window as { jarvisDesktop?: { googleConnect?: unknown } }).jarvisDesktop?.googleConnect;
+  const desktopSiteOs = typeof window !== "undefined" && !!(window as { jarvisDesktop?: { siteOsStart?: unknown } }).jarvisDesktop?.siteOsStart;
 
   useEffect(() => {
     listSpeechVoices().then(setVoices);
@@ -2781,11 +2782,11 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
               </details>
               <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
               <summary id="set-siteos" style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>▣ JARVIS Site OS</summary>
-              <p className="muted">Pełnoekranowy kreator stron działa jako osobna aplikacja w przeglądarce i wymienia projekty z JARVISEM.</p>
+              <p className="muted">Pełnoekranowy kreator stron otwiera się w przeglądarce i wymienia projekty z JARVISEM.</p>
               <ol className="connection-steps">
-                <li>Uruchom <b>site-os/start.cmd</b> lub wpisz <b>npm run siteos</b>.</li>
-                <li>Wróć tutaj i wpisz sześciocyfrowy kod pokazany w oknie Site OS.</li>
-                <li>Połącz raz. Kolejne projekty i polecenia AI będą synchronizowane automatycznie.</li>
+                <li>{desktopSiteOs ? <>Kliknij <b>Uruchom Site OS</b>. JARVIS włączy kreator automatycznie.</> : <>Uruchom <b>site-os/start.cmd</b> lub wpisz <b>npm run siteos</b>.</>}</li>
+                <li>Wpisz tutaj sześciocyfrowy kod pokazany w kreatorze.</li>
+                <li>Połącz raz. Kolejne projekty, polecenia AI i publikacje będą synchronizowane automatycznie.</li>
               </ol>
               <div className="field">
                 <label>Adres Site OS</label>
@@ -2809,13 +2810,29 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 <button
                   className="btn"
                   style={{ flex: 1 }}
-                  onClick={() => {
+                  disabled={siteOsBusy}
+                  onClick={async () => {
                     const siteOsUrl = s.siteOsUrl.trim() || "http://127.0.0.1:3210";
                     set({ siteOsUrl });
+                    const desktop = (window as unknown as { jarvisDesktop?: { siteOsStart?: (tunnel?: boolean) => Promise<{ ok?: boolean; url?: string; error?: string }> } }).jarvisDesktop;
+                    if (desktop?.siteOsStart) {
+                      setSiteOsBusy(true);
+                      setSiteOsMsg("Uruchamiam Site OS…");
+                      const result = await desktop.siteOsStart(false);
+                      if (result.ok) {
+                        const openedUrl = result.url || siteOsUrl;
+                        set({ siteOsUrl: openedUrl });
+                        setSiteOsMsg("Site OS działa. Przepisz kod parowania z otwartego okna.");
+                      } else {
+                        setSiteOsMsg(`Nie udało się uruchomić Site OS: ${result.error || "nieznany błąd"}`);
+                      }
+                      setSiteOsBusy(false);
+                      return;
+                    }
                     if (!openSiteOs()) setSiteOsMsg("Nie udało się otworzyć Site OS. Uruchom site-os/start.cmd.");
                   }}
                 >
-                  Otwórz Site OS
+                  {siteOsBusy ? "Uruchamiam…" : desktopSiteOs ? "Uruchom Site OS" : "Otwórz Site OS"}
                 </button>
                 <button
                   className="btn"

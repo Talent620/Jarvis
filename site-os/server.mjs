@@ -8,15 +8,16 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(rootDir, "public");
-const dataDir = path.join(rootDir, "data");
-const runtimeDir = path.join(rootDir, ".runtime");
-const toolsDir = path.join(rootDir, ".tools");
+const dataDir = process.env.SITE_OS_DATA_DIR ? path.resolve(process.env.SITE_OS_DATA_DIR) : path.join(rootDir, "data");
+const runtimeDir = process.env.SITE_OS_RUNTIME_DIR ? path.resolve(process.env.SITE_OS_RUNTIME_DIR) : path.join(rootDir, ".runtime");
+const toolsDir = process.env.SITE_OS_TOOLS_DIR ? path.resolve(process.env.SITE_OS_TOOLS_DIR) : path.join(rootDir, ".tools");
 const projectsFile = path.join(dataDir, "projects.json");
 const commandsFile = path.join(dataDir, "commands.json");
+const leadsFile = path.join(dataDir, "leads.json");
 const runtimeFile = path.join(runtimeDir, "connection.json");
 const host = process.env.SITE_OS_HOST || "127.0.0.1";
 const port = Number(process.env.SITE_OS_PORT || 3210);
-const version = "0.1.0";
+const version = "0.2.0";
 const localUrl = "http://" + host + ":" + port;
 const maxBodyBytes = 8 * 1024 * 1024;
 
@@ -24,6 +25,7 @@ let tunnelProcess = null;
 let tunnelUrl = "";
 let tunnelError = "";
 let tunnelStarting = null;
+const leadRate = new Map();
 
 function starterHtml() {
   return `<!doctype html>
@@ -35,14 +37,14 @@ function starterHtml() {
   <meta name="description" content="Projektujemy miejsca, do których chce się wracać.">
   <style>
     :root{--ink:#10201c;--paper:#f5f3ed;--green:#1f6b52;--coral:#e76f51;--line:#c8cec7}
-    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 Arial,sans-serif}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;overflow-x:hidden;background:var(--paper);color:var(--ink);font:16px/1.55 Arial,sans-serif}
     nav{height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 6vw;border-bottom:1px solid var(--line)}
     nav strong{font-size:18px}nav a{color:inherit;text-decoration:none;margin-left:24px}
     .hero{min-height:72vh;display:grid;grid-template-columns:1.05fr .95fr;align-items:stretch}
     .hero-copy{padding:9vw 6vw 6vw;display:flex;flex-direction:column;justify-content:center}
     .eyebrow{text-transform:uppercase;font-size:12px;font-weight:700;color:var(--green)}
     h1{font:700 clamp(44px,7vw,96px)/.98 Georgia,serif;margin:18px 0 24px;letter-spacing:0}
-    .lead{font-size:20px;max-width:580px}.actions{display:flex;gap:12px;margin-top:30px}
+    .lead{font-size:20px;max-width:580px;overflow-wrap:anywhere}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
     .button{display:inline-flex;padding:13px 18px;background:var(--green);color:white;text-decoration:none;font-weight:700}
     .button.alt{background:transparent;color:var(--ink);border:1px solid var(--ink)}
     .hero-image{min-height:520px;background:url("https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1400&q=85") center/cover}
@@ -183,6 +185,33 @@ async function projects() {
 
 async function saveProjects(value) {
   await writeJson(projectsFile, value.slice(0, 200));
+}
+
+function leadClientKey(req) {
+  return String(req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "local").split(",")[0].trim();
+}
+
+function allowLead(req) {
+  const key = leadClientKey(req);
+  const now = Date.now();
+  const recent = (leadRate.get(key) || []).filter((at) => now - at < 10 * 60 * 1000);
+  if (recent.length >= 8) return false;
+  recent.push(now);
+  leadRate.set(key, recent);
+  return true;
+}
+
+function cleanLeadValue(value, limit) {
+  return String(value || "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim().slice(0, limit);
+}
+
+function captureScript(projectId) {
+  return `<script>(function(){document.addEventListener("submit",async function(event){var form=event.target.closest&&event.target.closest("[data-siteos-form]");if(!form)return;event.preventDefault();var status=form.querySelector(".siteos-form__status");var button=form.querySelector("[type=submit]");if(button)button.disabled=true;if(status)status.textContent="Wysyłanie…";try{var data=Object.fromEntries(new FormData(form).entries());var response=await fetch("/api/leads/${projectId}",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});var result=await response.json();if(!response.ok)throw new Error(result.error||"Nie udało się wysłać formularza.");form.reset();if(status)status.textContent="Dziękujemy. Wiadomość została wysłana."}catch(error){if(status)status.textContent=error.message||"Spróbuj ponownie za chwilę."}finally{if(button)button.disabled=false}},true)})();</script>`;
+}
+
+function withCapture(html, projectId) {
+  const script = captureScript(projectId);
+  return /<\/body\s*>/i.test(html) ? html.replace(/<\/body\s*>/i, script + "</body>") : html + script;
 }
 
 function cleanProject(input, existing) {
@@ -346,7 +375,31 @@ const server = http.createServer(async (req, res) => {
         "Content-Security-Policy": "frame-ancestors *",
         "Referrer-Policy": "strict-origin-when-cross-origin"
       });
-      return res.end(project.html);
+      return res.end(withCapture(project.html, project.id));
+    }
+
+    const publicLeadMatch = pathname.match(/^\/api\/leads\/([a-f0-9-]+)$/i);
+    if (req.method === "POST" && publicLeadMatch) {
+      if (!allowLead(req)) return send(req, res, 429, { ok: false, error: "Za dużo prób. Spróbuj ponownie za kilka minut." });
+      const projectExists = (await projects()).some((item) => item.id === publicLeadMatch[1]);
+      if (!projectExists) return send(req, res, 404, { ok: false, error: "Nie znaleziono projektu." });
+      const input = await bodyJson(req);
+      if (cleanLeadValue(input.website, 200)) return send(req, res, 202, { ok: true });
+      const lead = {
+        id: randomUUID(),
+        projectId: publicLeadMatch[1],
+        name: cleanLeadValue(input.name, 160),
+        email: cleanLeadValue(input.email, 240),
+        phone: cleanLeadValue(input.phone, 80),
+        message: cleanLeadValue(input.message, 4000),
+        createdAt: Date.now()
+      };
+      if (!lead.name || !/^\S+@\S+\.\S+$/.test(lead.email) || !lead.message) {
+        return send(req, res, 400, { ok: false, error: "Uzupełnij imię, poprawny e-mail i wiadomość." });
+      }
+      const list = await readJson(leadsFile, []);
+      await writeJson(leadsFile, [lead, ...(Array.isArray(list) ? list : [])].slice(0, 2000));
+      return send(req, res, 201, { ok: true, id: lead.id });
     }
 
     if (pathname.startsWith("/api/") && !authorized(req)) {
@@ -374,6 +427,12 @@ const server = http.createServer(async (req, res) => {
         command,
         connected: Date.now() - Number(runtime.lastJarvisSeen || 0) < 45000
       });
+    }
+
+    if (req.method === "GET" && publicLeadMatch) {
+      const list = await readJson(leadsFile, []);
+      const leads = (Array.isArray(list) ? list : []).filter((lead) => lead.projectId === publicLeadMatch[1]).slice(0, 500);
+      return send(req, res, 200, { ok: true, leads });
     }
 
     if (req.method === "GET" && pathname === "/api/public/commands") {

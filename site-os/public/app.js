@@ -10,7 +10,9 @@ const state = {
   undo: [],
   redo: [],
   saving: null,
-  tunnelUrl: ""
+  tunnelUrl: "",
+  leads: [],
+  audit: null
 };
 
 const ui = {
@@ -41,10 +43,50 @@ const ui = {
   radius: $("#radiusControl"),
   aiPrompt: $("#aiPrompt"),
   aiStatus: $("#aiStatus"),
+  structureList: $("#structureList"),
+  structureCount: $("#structureCount"),
+  auditScore: $("#auditScore"),
+  auditMeter: $("#auditMeter i"),
+  auditResults: $("#auditResults"),
+  seoTitle: $("#seoTitle"),
+  seoDescription: $("#seoDescription"),
+  leadCount: $("#leadCount"),
+  leadList: $("#leadList"),
+  projectDialog: $("#newProjectDialog"),
   localPreview: $("#localPreviewUrl"),
   publicPreview: $("#publicPreviewUrl"),
   tunnelEmpty: $("#tunnelEmpty"),
   tunnelReady: $("#tunnelReady")
+};
+
+const PALETTES = {
+  north: { ink: "#10201c", paper: "#f5f3ed", brand: "#1f6b52", accent: "#e76f51", line: "#c8cec7" },
+  noir: { ink: "#111111", paper: "#f5f5f2", brand: "#111111", accent: "#9cca28", line: "#c9cbc6" },
+  signal: { ink: "#10192d", paper: "#f7f9ff", brand: "#1557ff", accent: "#d59f00", line: "#cbd5eb" },
+  atelier: { ink: "#33151c", paper: "#fff8f3", brand: "#7b2639", accent: "#d17e45", line: "#dfc8bd" }
+};
+
+const BLOCK_STYLES = `
+  .siteos-block{--so-ink:var(--ink,var(--foreground,#10201c));--so-paper:var(--paper,var(--background,#f6f5f0));--so-brand:var(--green,var(--brand,#1f6b52));--so-accent:var(--coral,var(--accent,#e76f51));box-sizing:border-box;padding:clamp(64px,8vw,112px) clamp(24px,6vw,88px);overflow-wrap:anywhere;background:var(--so-paper);color:var(--so-ink);font-family:inherit}
+  .siteos-block *{box-sizing:border-box}.siteos-block__inner{width:min(1160px,100%);margin:0 auto}.siteos-block__eyebrow{display:block;margin-bottom:14px;color:var(--so-brand);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.siteos-block h2{max-width:820px;margin:0 0 18px;font:700 clamp(34px,5vw,64px)/1.04 Georgia,serif;letter-spacing:0}.siteos-block__lead{max-width:680px;margin:0 0 34px;font-size:18px;line-height:1.6;opacity:.78}
+  .siteos-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.siteos-card{padding:28px;border:1px solid color-mix(in srgb,var(--so-ink) 18%,transparent);background:color-mix(in srgb,var(--so-paper) 88%,white)}.siteos-card b{display:block;margin-bottom:10px;font-size:19px}.siteos-card p{margin:0;line-height:1.6;opacity:.72}.siteos-button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 21px;background:var(--so-brand);color:white;text-decoration:none;font-weight:800}.siteos-button--line{margin-left:8px;border:1px solid var(--so-ink);background:transparent;color:var(--so-ink)}
+  .siteos-hero{display:grid;grid-template-columns:1.02fr .98fr;min-height:650px;padding:0}.siteos-hero__copy{display:flex;flex-direction:column;justify-content:center;padding:clamp(70px,9vw,132px) clamp(28px,6vw,90px)}.siteos-hero h1{max-width:760px;margin:0 0 24px;font:700 clamp(48px,7vw,96px)/.96 Georgia,serif;letter-spacing:0}.siteos-hero__media{min-height:520px;background:center/cover no-repeat url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1500&q=85')}
+  .siteos-proof{display:grid;grid-template-columns:repeat(3,1fr);padding:0;border-top:1px solid color-mix(in srgb,var(--so-ink) 20%,transparent);border-bottom:1px solid color-mix(in srgb,var(--so-ink) 20%,transparent)}.siteos-proof article{padding:42px clamp(24px,5vw,70px);border-right:1px solid color-mix(in srgb,var(--so-ink) 20%,transparent)}.siteos-proof article:last-child{border-right:0}.siteos-proof b{display:block;font:700 44px Georgia,serif}.siteos-proof span{opacity:.68}
+  .siteos-quote{font:600 22px/1.5 Georgia,serif}.siteos-author{margin-top:22px;font-size:13px}.siteos-price{position:relative}.siteos-price--featured{border:2px solid var(--so-brand)}.siteos-price small{display:block;color:var(--so-brand);font-weight:800;text-transform:uppercase}.siteos-price strong{display:block;margin:18px 0;font:700 38px Georgia,serif}.siteos-price ul{padding-left:18px;line-height:1.9;opacity:.76}
+  .siteos-faq details{padding:19px 0;border-top:1px solid color-mix(in srgb,var(--so-ink) 18%,transparent)}.siteos-faq summary{cursor:pointer;font-weight:800}.siteos-faq p{max-width:760px;line-height:1.65;opacity:.72}.siteos-contact{display:grid;grid-template-columns:.85fr 1.15fr;gap:8vw}.siteos-form{display:grid;gap:12px}.siteos-form label{display:grid;gap:6px;font-size:12px;font-weight:700}.siteos-form input,.siteos-form textarea{width:100%;padding:14px;border:1px solid color-mix(in srgb,var(--so-ink) 25%,transparent);border-radius:0;background:white;color:#111;font:inherit}.siteos-form button{border:0;cursor:pointer}.siteos-form__status{min-height:22px;font-size:13px}.siteos-honeypot{position:absolute;left:-10000px}
+  .siteos-cta{text-align:center;background:var(--so-ink);color:var(--so-paper)}.siteos-cta h2,.siteos-cta .siteos-block__lead{margin-left:auto;margin-right:auto}.siteos-cta .siteos-button{background:var(--so-accent);color:#101010}
+  @media(max-width:780px){.siteos-grid-3,.siteos-contact,.siteos-hero{grid-template-columns:1fr}.siteos-hero__media{min-height:390px;order:-1}.siteos-proof{grid-template-columns:1fr}.siteos-proof article{border-right:0;border-bottom:1px solid color-mix(in srgb,var(--so-ink) 20%,transparent)}.siteos-button--line{margin:8px 0 0}.siteos-block{padding:64px 24px}}
+`;
+
+const SECTION_TEMPLATES = {
+  hero: `<section class="siteos-block siteos-hero" data-siteos-label="Hero premium"><div class="siteos-hero__copy"><span class="siteos-block__eyebrow">Nowy standard w Twojej branży</span><h1>Rezultat, który widać od pierwszego dnia.</h1><p class="siteos-block__lead">Łączymy strategię, wykonanie i dbałość o szczegóły, aby Twoi klienci szybciej podejmowali decyzję.</p><div><a class="siteos-button" href="#kontakt">Umów rozmowę</a><a class="siteos-button siteos-button--line" href="#oferta">Poznaj ofertę</a></div></div><div class="siteos-hero__media" role="img" aria-label="Dopracowana przestrzeń pracy"></div></section>`,
+  benefits: `<section class="siteos-block" id="oferta" data-siteos-label="Korzyści"><div class="siteos-block__inner"><span class="siteos-block__eyebrow">Dlaczego my</span><h2>Każdy element pracuje na Twój wynik.</h2><p class="siteos-block__lead">Krótko, konkretnie i bez pustych obietnic. Pokazujemy wartość, którą klient może zrozumieć i zapamiętać.</p><div class="siteos-grid-3"><article class="siteos-card"><b>Strategia przed działaniem</b><p>Najpierw porządkujemy cel i decyzje, dopiero potem projektujemy rozwiązanie.</p></article><article class="siteos-card"><b>Jedna odpowiedzialność</b><p>Masz jeden zespół, czytelny proces i pełną kontrolę nad kolejnymi krokami.</p></article><article class="siteos-card"><b>Jakość, która skaluje</b><p>Budujemy system gotowy rosnąć razem z marką, ofertą i ruchem.</p></article></div></div></section>`,
+  proof: `<section class="siteos-block siteos-proof" data-siteos-label="Dowody i liczby"><article><b>42+</b><span>zrealizowane projekty</span></article><article><b>4.9/5</b><span>średnia ocena współpracy</span></article><article><b>18%</b><span>średni wzrost zapytań</span></article></section>`,
+  testimonials: `<section class="siteos-block" data-siteos-label="Opinie klientów"><div class="siteos-block__inner"><span class="siteos-block__eyebrow">Głos klientów</span><h2>Współpraca, którą chce się polecać.</h2><div class="siteos-grid-3"><article class="siteos-card"><div class="siteos-quote">„Wreszcie mamy stronę, która wygląda jak nasza najlepsza usługa.”</div><div class="siteos-author"><b>Anna Kowalska</b> · CEO</div></article><article class="siteos-card"><div class="siteos-quote">„Decyzje były szybkie, proces przejrzysty, a efekt przerósł oczekiwania.”</div><div class="siteos-author"><b>Marek Nowak</b> · Founder</div></article><article class="siteos-card"><div class="siteos-quote">„Liczba jakościowych zapytań wzrosła już w pierwszym miesiącu.”</div><div class="siteos-author"><b>Julia Wiśniewska</b> · Growth Lead</div></article></div></div></section>`,
+  pricing: `<section class="siteos-block" data-siteos-label="Cennik"><div class="siteos-block__inner"><span class="siteos-block__eyebrow">Prosta oferta</span><h2>Wybierz zakres dopasowany do etapu firmy.</h2><p class="siteos-block__lead">Każdy wariant ma jasno określony efekt, zakres i następny krok.</p><div class="siteos-grid-3"><article class="siteos-card siteos-price"><small>Start</small><strong>2 900 zł</strong><p>Dobry początek dla jednej oferty.</p><ul><li>Strategia strony</li><li>5 kluczowych sekcji</li><li>Wersja mobilna</li></ul></article><article class="siteos-card siteos-price siteos-price--featured"><small>Najczęściej wybierany</small><strong>6 900 zł</strong><p>Pełna strona nastawiona na konwersję.</p><ul><li>Warsztat strategiczny</li><li>Pełny projekt i treści</li><li>SEO i analityka</li></ul></article><article class="siteos-card siteos-price"><small>Partner</small><strong>Indywidualnie</strong><p>System dla rosnącej marki.</p><ul><li>Wiele podstron</li><li>Integracje i automatyzacje</li><li>Stałe wsparcie</li></ul></article></div></div></section>`,
+  faq: `<section class="siteos-block siteos-faq" data-siteos-label="Najczęstsze pytania"><div class="siteos-block__inner"><span class="siteos-block__eyebrow">FAQ</span><h2>Wszystko, co warto wiedzieć przed startem.</h2><details open><summary>Ile trwa realizacja?</summary><p>Typowy projekt zamykamy w 3–5 tygodni. Dokładny harmonogram ustalamy po krótkiej rozmowie o zakresie.</p></details><details><summary>Czy mogę samodzielnie zmieniać treści?</summary><p>Tak. Otrzymujesz prosty system i instrukcję, dzięki którym codzienne aktualizacje nie wymagają pomocy technicznej.</p></details><details><summary>Co jest potrzebne na początek?</summary><p>Wystarczy cel biznesowy, podstawowa oferta i 45 minut na rozmowę. Resztę porządkujemy razem.</p></details></div></section>`,
+  contact: `<section class="siteos-block" id="kontakt" data-siteos-label="Formularz leadowy"><div class="siteos-block__inner siteos-contact"><div><span class="siteos-block__eyebrow">Porozmawiajmy</span><h2>Zacznijmy od krótkiej rozmowy.</h2><p class="siteos-block__lead">Opowiedz, czego potrzebujesz. Wrócimy z konkretnym następnym krokiem w ciągu jednego dnia roboczego.</p></div><form class="siteos-form" data-siteos-form><label>Imię i nazwisko<input name="name" autocomplete="name" required></label><label>E-mail<input name="email" type="email" autocomplete="email" required></label><label>Telefon<input name="phone" type="tel" autocomplete="tel"></label><label>Jak możemy pomóc?<textarea name="message" rows="5" required></textarea></label><label class="siteos-honeypot" aria-hidden="true">Strona<input name="website" tabindex="-1" autocomplete="off"></label><button class="siteos-button" type="submit">Wyślij zapytanie</button><div class="siteos-form__status" aria-live="polite"></div></form></div></section>`,
+  cta: `<section class="siteos-block siteos-cta" data-siteos-label="Finałowe wezwanie"><div class="siteos-block__inner"><span class="siteos-block__eyebrow">Dobry moment jest teraz</span><h2>Zmień pierwsze wrażenie w realną przewagę.</h2><p class="siteos-block__lead">Jedna rozmowa wystarczy, aby zobaczyć najkrótszą drogę od obecnej strony do lepszego wyniku.</p><a class="siteos-button" href="#kontakt">Umów bezpłatną konsultację</a></div></section>`
 };
 
 function toast(message) {
@@ -72,6 +114,100 @@ function safeName(value) {
   return String(value || "Projekt").trim().slice(0, 120) || "Projekt";
 }
 
+function projectTemplate(kind) {
+  if (kind === "blank") {
+    return `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nowy projekt</title><meta name="description" content="Nowa strona przygotowana w JARVIS Site OS."><style>:root{--ink:#10201c;--paper:#f5f3ed;--green:#1f6b52;--coral:#e76f51;--line:#c8cec7}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 Arial,sans-serif}</style></head><body>${SECTION_TEMPLATES.hero}${SECTION_TEMPLATES.contact}</body></html>`;
+  }
+  const kits = {
+    service: {
+      title: "Aurelia Studio — strategia i design premium",
+      description: "Strategia, design i wdrożenie dla marek, które chcą wyglądać tak dobrze, jak działają.",
+      brand: "AURELIA",
+      eyebrow: "Strategia · design · wzrost",
+      heading: "Marka, która od razu budzi zaufanie.",
+      lead: "Porządkujemy strategię, projektujemy doświadczenie i wdrażamy stronę gotową zamieniać uwagę w wartościowe rozmowy.",
+      image: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1600&q=85",
+      primary: "#1f6b52", accent: "#e76f51", paper: "#f5f3ed", ink: "#10201c",
+      proof: [["42+", "zrealizowane marki"], ["4.9/5", "ocena współpracy"], ["18%", "więcej zapytań"]]
+    },
+    product: {
+      title: "Flowbase — praca zespołu bez chaosu",
+      description: "Jedno miejsce do planowania, automatyzacji i podejmowania szybszych decyzji.",
+      brand: "FLOWBASE",
+      eyebrow: "System operacyjny dla zespołu",
+      heading: "Mniej statusów. Więcej pracy, która ma znaczenie.",
+      lead: "Flowbase łączy projekty, klientów i automatyzacje w jednym spokojnym widoku, który każdy rozumie od pierwszego dnia.",
+      image: "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1600&q=85",
+      primary: "#1557ff", accent: "#e4ab00", paper: "#f7f9ff", ink: "#10192d",
+      proof: [["12 h", "odzyskanych tygodniowo"], ["31%", "szybsze projekty"], ["2 min", "do pierwszego procesu"]]
+    },
+    local: {
+      title: "Soma House — miejsce stworzone dla regeneracji",
+      description: "Kameralne spa i rytuały regeneracyjne w sercu miasta.",
+      brand: "SOMA HOUSE",
+      eyebrow: "Rytuały · regeneracja · spokój",
+      heading: "Wróć do siebie. Resztą zajmiemy się my.",
+      lead: "Kameralna przestrzeń, doświadczeni terapeuci i rytuały dobrane do tego, czego naprawdę potrzebuje dziś Twoje ciało.",
+      image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1600&q=85",
+      primary: "#7b2639", accent: "#d17e45", paper: "#fff8f3", ink: "#33151c",
+      proof: [["8 lat", "doświadczenia"], ["4.9/5", "od naszych gości"], ["60 min", "tylko dla Ciebie"]]
+    }
+  };
+  const kit = kits[kind] || kits.service;
+  const proof = kit.proof.map(([value, label]) => `<article><b>${value}</b><span>${label}</span></article>`).join("");
+  return `<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${kit.title}</title><meta name="description" content="${kit.description}"><style>
+:root{--ink:${kit.ink};--paper:${kit.paper};--green:${kit.primary};--coral:${kit.accent};--line:color-mix(in srgb,var(--ink) 20%,transparent)}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;overflow-x:hidden;background:var(--paper);color:var(--ink);font:16px/1.55 Arial,sans-serif}nav{height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 6vw;border-bottom:1px solid var(--line)}nav strong{font-size:17px}nav a{margin-left:22px;color:inherit;text-decoration:none;font-size:14px}.siteos-hero__media{background-image:url('${kit.image}')!important}@media(max-width:760px){nav div{display:none}}
+${BLOCK_STYLES}</style></head><body><nav data-siteos-label="Nawigacja"><strong>${kit.brand}</strong><div><a href="#oferta">Oferta</a><a href="#kontakt">Kontakt</a></div></nav><section class="siteos-block siteos-hero" data-siteos-label="Hero"><div class="siteos-hero__copy"><span class="siteos-block__eyebrow">${kit.eyebrow}</span><h1>${kit.heading}</h1><p class="siteos-block__lead">${kit.lead}</p><div><a class="siteos-button" href="#kontakt">Umów rozmowę</a><a class="siteos-button siteos-button--line" href="#oferta">Poznaj ofertę</a></div></div><div class="siteos-hero__media" role="img" aria-label="${kit.brand} — główne doświadczenie marki"></div></section><section class="siteos-block siteos-proof" data-siteos-label="Dowody">${proof}</section>${SECTION_TEMPLATES.benefits}${SECTION_TEMPLATES.testimonials}${SECTION_TEMPLATES.contact}<footer class="siteos-block" data-siteos-label="Stopka" style="padding-top:28px;padding-bottom:28px;border-top:1px solid var(--line)"><div class="siteos-block__inner"><b>${kit.brand}</b><span style="float:right;opacity:.65">© ${new Date().getFullYear()}</span></div></footer></body></html>`;
+}
+
+function ensureBlockStyles(doc) {
+  if (doc.getElementById("siteos-block-styles")) return;
+  const style = doc.createElement("style");
+  style.id = "siteos-block-styles";
+  style.textContent = BLOCK_STYLES;
+  (doc.head || doc.documentElement).append(style);
+}
+
+function pageSections() {
+  const doc = ui.frame.contentDocument;
+  if (!doc) return [];
+  const direct = [...doc.body.children].filter((element) => ["NAV", "HEADER", "MAIN", "SECTION", "FOOTER"].includes(element.tagName));
+  if (direct.length) {
+    return direct.flatMap((element) => {
+      if (element.tagName !== "MAIN") return [element];
+      const nested = [...element.children].filter((child) => ["HEADER", "SECTION", "FOOTER", "DIV"].includes(child.tagName));
+      return nested.length ? nested : [element];
+    });
+  }
+  return [...doc.querySelectorAll("section, header, footer")];
+}
+
+function sectionLabel(element, index) {
+  const explicit = element.getAttribute("data-siteos-label");
+  const heading = element.querySelector("h1,h2,h3")?.textContent?.trim();
+  return (explicit || heading || element.id || element.tagName + " " + (index + 1)).slice(0, 54);
+}
+
+function renderStructure() {
+  const sections = pageSections();
+  ui.structureCount.textContent = sections.length;
+  ui.structureList.innerHTML = "";
+  sections.forEach((element, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "structure-item" + (state.selected && (element === state.selected || element.contains(state.selected)) ? " active" : "");
+    button.innerHTML = `<i>${String(index + 1).padStart(2, "0")}</i><span></span><small>${element.tagName.toLowerCase()}</small>`;
+    $("span", button).textContent = sectionLabel(element, index);
+    button.addEventListener("click", () => {
+      selectElement(element);
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      setPanel("element");
+    });
+    ui.structureList.append(button);
+  });
+}
+
 function renderProjects() {
   const query = ui.projectSearch.value.trim().toLowerCase();
   const list = state.projects.filter((project) => project.name.toLowerCase().includes(query));
@@ -82,7 +218,7 @@ function renderProjects() {
     button.className = "project-item" + (project.id === state.current?.id ? " active" : "");
     button.innerHTML = `<span class="project-thumb">${project.name.slice(0, 2).toUpperCase()}</span><span><strong></strong><span></span></span>`;
     $("strong", button).textContent = project.name;
-    $("span", button)[2].textContent = formatDate(project.updatedAt);
+    $$("span", button)[2].textContent = formatDate(project.updatedAt);
     button.addEventListener("click", () => loadProject(project.id));
     ui.projectList.append(button);
   }
@@ -106,6 +242,8 @@ async function loadProject(id) {
   flushSave();
   const data = await api("/api/projects/" + encodeURIComponent(id));
   state.current = data.project;
+  state.audit = null;
+  state.leads = [];
   state.undo = [];
   state.redo = [];
   state.selected = null;
@@ -114,6 +252,7 @@ async function loadProject(id) {
   renderProjects();
   renderFrame();
   updateHistoryButtons();
+  void loadLeads();
 }
 
 function renderFrame() {
@@ -182,6 +321,7 @@ function selectElement(element) {
   element.classList.add("siteos-selected");
   state.selected = element;
   updateSelectionPanel();
+  renderStructure();
 }
 
 function rgbToHex(value, fallback = "#ffffff") {
@@ -312,6 +452,216 @@ function updateStats() {
   const sections = doc ? doc.querySelectorAll("section, header, main > div, footer").length : 0;
   const size = Math.max(1, Math.round(state.current.html.length / 1024));
   ui.stats.textContent = sections + " sekcji · " + size + " KB";
+  renderStructure();
+  syncSeoFields();
+}
+
+function insertSection(type) {
+  const html = SECTION_TEMPLATES[type];
+  const doc = ui.frame.contentDocument;
+  if (!html || !doc || !state.current) return;
+  const before = snapshot();
+  ensureBlockStyles(doc);
+  const template = doc.createElement("template");
+  template.innerHTML = html.trim();
+  const section = template.content.firstElementChild;
+  const selectedSection = state.selected?.closest?.("section,header,main,footer");
+  if (selectedSection && selectedSection !== doc.querySelector("footer")) selectedSection.after(section);
+  else {
+    const footer = doc.querySelector("footer");
+    if (footer) footer.before(section);
+    else doc.body.append(section);
+  }
+  recordMutation(before);
+  selectElement(section);
+  section.scrollIntoView({ behavior: "smooth", block: "center" });
+  setPanel("element");
+  toast("Sekcja dodana. Kliknij tekst, aby go zmienić.");
+}
+
+function applyPalette(name) {
+  const palette = PALETTES[name];
+  const doc = ui.frame.contentDocument;
+  if (!palette || !doc || !state.current) return;
+  const before = snapshot();
+  const root = doc.documentElement.style;
+  root.setProperty("--ink", palette.ink);
+  root.setProperty("--foreground", palette.ink);
+  root.setProperty("--paper", palette.paper);
+  root.setProperty("--background", palette.paper);
+  root.setProperty("--green", palette.brand);
+  root.setProperty("--brand", palette.brand);
+  root.setProperty("--coral", palette.accent);
+  root.setProperty("--accent", palette.accent);
+  root.setProperty("--line", palette.line);
+  doc.body.style.backgroundColor = palette.paper;
+  doc.body.style.color = palette.ink;
+  recordMutation(before);
+  toast("Paleta marki zastosowana.");
+}
+
+function syncSeoFields() {
+  const doc = ui.frame.contentDocument;
+  if (!doc) return;
+  ui.seoTitle.value = doc.title || "";
+  ui.seoDescription.value = doc.querySelector('meta[name="description"]')?.getAttribute("content") || "";
+}
+
+function saveSeo() {
+  const doc = ui.frame.contentDocument;
+  if (!doc || !state.current) return;
+  const before = snapshot();
+  doc.title = ui.seoTitle.value.trim() || state.current.name;
+  let description = doc.querySelector('meta[name="description"]');
+  if (!description) {
+    description = doc.createElement("meta");
+    description.setAttribute("name", "description");
+    doc.head.append(description);
+  }
+  description.setAttribute("content", ui.seoDescription.value.trim());
+  recordMutation(before);
+  toast("Tytuł i opis SEO zapisane.");
+}
+
+function auditPage() {
+  const doc = ui.frame.contentDocument;
+  if (!doc) return null;
+  const title = doc.title.trim();
+  const description = doc.querySelector('meta[name="description"]')?.getAttribute("content")?.trim() || "";
+  const h1s = doc.querySelectorAll("h1");
+  const images = [...doc.querySelectorAll("img")];
+  const missingAlt = images.filter((image) => !image.getAttribute("alt")?.trim());
+  const links = [...doc.querySelectorAll("a")];
+  const emptyLinks = links.filter((link) => !link.getAttribute("href")?.trim());
+  const buttonsWithoutType = [...doc.querySelectorAll("button:not([type])")];
+  const forms = [...doc.querySelectorAll("form")];
+  const fieldsWithoutLabels = [...doc.querySelectorAll("input:not([type=hidden]),textarea,select")].filter((field) => !field.closest("label") && !field.id);
+  const styleText = [...doc.querySelectorAll("style")].map((style) => style.textContent).join(" ");
+  const ctas = [...doc.querySelectorAll("a,button")].filter((element) => /kontakt|rozmow|kup|wyprób|zacznij|umów|zamów|ofert|demo|zapyt/i.test(element.textContent));
+  const sections = pageSections();
+  const checks = [
+    { key: "title", label: "Tytuł ma 10–65 znaków", pass: title.length >= 10 && title.length <= 65, weight: 12 },
+    { key: "description", label: "Opis SEO ma 70–170 znaków", pass: description.length >= 70 && description.length <= 170, weight: 12 },
+    { key: "h1", label: "Strona ma dokładnie jeden nagłówek H1", pass: h1s.length === 1, weight: 12 },
+    { key: "alt", label: "Wszystkie zdjęcia mają opis alternatywny", pass: missingAlt.length === 0, weight: 10 },
+    { key: "viewport", label: "Widok mobilny jest poprawnie skonfigurowany", pass: Boolean(doc.querySelector('meta[name="viewport"]')), weight: 10 },
+    { key: "responsive", label: "Projekt zawiera reguły dla telefonu", pass: /@media/i.test(styleText), weight: 10 },
+    { key: "cta", label: "Jest czytelne wezwanie do działania", pass: ctas.length > 0, weight: 10 },
+    { key: "structure", label: "Strona ma co najmniej cztery logiczne części", pass: sections.length >= 4, weight: 8 },
+    { key: "links", label: "Linki nie są puste", pass: emptyLinks.length === 0, weight: 6 },
+    { key: "forms", label: "Pola formularzy mają etykiety", pass: forms.length === 0 || fieldsWithoutLabels.length === 0, weight: 6 },
+    { key: "lang", label: "Ustawiono język dokumentu", pass: Boolean(doc.documentElement.lang), weight: 4 }
+  ];
+  const score = Math.max(0, 100 - checks.filter((check) => !check.pass).reduce((sum, check) => sum + check.weight, 0));
+  return { score, checks, missingAlt, emptyLinks, buttonsWithoutType };
+}
+
+function renderAudit() {
+  const result = auditPage();
+  if (!result) return;
+  state.audit = result;
+  ui.auditScore.textContent = result.score + "/100 · " + (result.score >= 90 ? "gotowa" : result.score >= 72 ? "blisko celu" : "wymaga pracy");
+  ui.auditMeter.style.width = result.score + "%";
+  ui.auditMeter.style.background = result.score >= 90 ? "var(--green)" : result.score >= 72 ? "var(--yellow)" : "var(--coral)";
+  ui.auditResults.innerHTML = result.checks.map((check) => `<div class="audit-item ${check.pass ? "pass" : "warn"}"><i>${check.pass ? "✓" : "!"}</i><span>${check.label}</span></div>`).join("");
+  $("#fixAuditBtn").hidden = result.checks.every((check) => check.pass);
+  return result;
+}
+
+function fixAudit() {
+  const doc = ui.frame.contentDocument;
+  if (!doc || !state.current) return;
+  const before = snapshot();
+  if (!doc.documentElement.lang) doc.documentElement.lang = "pl";
+  if (!doc.querySelector('meta[name="viewport"]')) {
+    const viewport = doc.createElement("meta");
+    viewport.name = "viewport";
+    viewport.content = "width=device-width,initial-scale=1";
+    doc.head.append(viewport);
+  }
+  if (!doc.title.trim() || doc.title.trim().length < 10) doc.title = (doc.querySelector("h1")?.textContent || state.current.name).trim().slice(0, 65);
+  let description = doc.querySelector('meta[name="description"]');
+  if (!description) {
+    description = doc.createElement("meta");
+    description.name = "description";
+    doc.head.append(description);
+  }
+  if ((description.content || "").trim().length < 70) {
+    const source = [...doc.querySelectorAll("p")].map((p) => p.textContent.trim()).find((text) => text.length >= 70) || `Poznaj ${state.current.name} i zobacz ofertę przygotowaną z myślą o jakości, wygodzie oraz mierzalnych rezultatach.`;
+    description.content = source.slice(0, 170);
+  }
+  const h1s = [...doc.querySelectorAll("h1")];
+  if (h1s.length === 0) {
+    const firstHeading = doc.querySelector("h2,h3");
+    if (firstHeading) {
+      const h1 = doc.createElement("h1");
+      [...firstHeading.attributes].forEach((attribute) => h1.setAttribute(attribute.name, attribute.value));
+      h1.innerHTML = firstHeading.innerHTML;
+      firstHeading.replaceWith(h1);
+    }
+  } else if (h1s.length > 1) {
+    h1s.slice(1).forEach((heading) => {
+      const h2 = doc.createElement("h2");
+      [...heading.attributes].forEach((attribute) => h2.setAttribute(attribute.name, attribute.value));
+      h2.innerHTML = heading.innerHTML;
+      heading.replaceWith(h2);
+    });
+  }
+  [...doc.querySelectorAll("img")].forEach((image, index) => {
+    if (!image.getAttribute("alt")?.trim()) image.alt = `${state.current.name} — zdjęcie ${index + 1}`;
+  });
+  [...doc.querySelectorAll('a[target="_blank"]')].forEach((link) => link.setAttribute("rel", "noopener noreferrer"));
+  [...doc.querySelectorAll("button:not([type])")].forEach((button) => button.type = "button");
+  recordMutation(before);
+  renderAudit();
+  toast("Bezpieczne poprawki jakości zostały zastosowane.");
+}
+
+function downloadFile(name, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = name;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function downloadHtml() {
+  if (!state.current) return;
+  downloadFile(safeName(state.current.name).replace(/[^a-z0-9-_]+/gi, "-").toLowerCase() + ".html", serializeFrame(), "text/html;charset=utf-8");
+  toast("Plik HTML jest gotowy.");
+}
+
+async function loadLeads() {
+  if (!state.current) return;
+  try {
+    const data = await api("/api/leads/" + state.current.id);
+    state.leads = data.leads || [];
+    ui.leadCount.textContent = state.leads.length;
+    ui.leadList.innerHTML = "";
+    if (!state.leads.length) {
+      ui.leadList.innerHTML = "<p>Brak zapytań. Opublikuj link i dodaj formularz leadowy.</p>";
+      return;
+    }
+    state.leads.slice(0, 6).forEach((lead) => {
+      const item = document.createElement("div");
+      item.className = "lead-item";
+      item.innerHTML = "<strong></strong><span></span>";
+      $("strong", item).textContent = lead.name || lead.email || "Nowe zapytanie";
+      $("span", item).textContent = [lead.email, lead.phone, formatDate(lead.createdAt)].filter(Boolean).join(" · ");
+      ui.leadList.append(item);
+    });
+  } catch {
+    ui.leadList.innerHTML = "<p>Nie udało się pobrać zapytań.</p>";
+  }
+}
+
+function exportLeads() {
+  if (!state.leads.length) return toast("Nie ma jeszcze kontaktów do eksportu.");
+  const quote = (value) => `"${String(value || "").replaceAll('"', '""')}"`;
+  const csv = ["Imię,E-mail,Telefon,Wiadomość,Data", ...state.leads.map((lead) => [lead.name, lead.email, lead.phone, lead.message, new Date(lead.createdAt).toISOString()].map(quote).join(","))].join("\n");
+  downloadFile("site-os-leady.csv", "\ufeff" + csv, "text/csv;charset=utf-8");
 }
 
 function updatePreviewUrls() {
@@ -322,10 +672,10 @@ function updatePreviewUrls() {
   $("#previewAddress").textContent = state.current.name + " · podgląd lokalny";
 }
 
-async function createProject(html) {
+async function createProject(html, name = "Nowy projekt") {
   const data = await api("/api/projects", {
     method: "POST",
-    body: JSON.stringify({ name: "Nowy projekt", html: html || undefined })
+    body: JSON.stringify({ name, html: html || undefined })
   });
   state.projects.unshift({
     id: data.project.id,
@@ -352,6 +702,8 @@ async function deleteProject() {
 function setPanel(name) {
   $$("[data-tab]").forEach((button) => button.classList.toggle("active", button.dataset.tab === name));
   $$("[data-panel]").forEach((panel) => panel.classList.toggle("active", panel.dataset.panel === name));
+  if (name === "sections") renderStructure();
+  if (name === "publish") void loadLeads();
 }
 
 async function startTunnel() {
@@ -435,7 +787,22 @@ function bindControls() {
     scheduleSave();
     updatePreviewUrls();
   });
-  $("#newProjectBtn").addEventListener("click", () => createProject());
+  $("#newProjectBtn").addEventListener("click", () => ui.projectDialog.showModal());
+  $("#closeProjectDialog").addEventListener("click", () => ui.projectDialog.close());
+  ui.projectDialog.addEventListener("click", (event) => {
+    if (event.target === ui.projectDialog) ui.projectDialog.close();
+  });
+  $$("[data-starter]").forEach((button) => button.addEventListener("click", async () => {
+    const names = { service: "Aurelia Studio", product: "Flowbase", local: "Soma House", blank: "Nowy projekt" };
+    button.disabled = true;
+    try {
+      await createProject(projectTemplate(button.dataset.starter), names[button.dataset.starter]);
+      ui.projectDialog.close();
+      toast("Projekt jest gotowy do edycji.");
+    } finally {
+      button.disabled = false;
+    }
+  }));
   $("#deleteBtn").addEventListener("click", deleteProject);
   $("#importBtn").addEventListener("click", () => $("#importInput").click());
   $("#importInput").addEventListener("change", async (event) => {
@@ -473,6 +840,8 @@ function bindControls() {
   $$("[data-tab]").forEach((button) => button.addEventListener("click", () => setPanel(button.dataset.tab)));
   $("#shareBtn").addEventListener("click", () => setPanel("publish"));
   $("#previewBtn").addEventListener("click", () => state.current && window.open("/p/" + state.current.id, "_blank", "noopener"));
+  $$("[data-section]").forEach((button) => button.addEventListener("click", () => insertSection(button.dataset.section)));
+  $$("[data-palette]").forEach((button) => button.addEventListener("click", () => applyPalette(button.dataset.palette)));
 
   ui.text.addEventListener("change", () => mutate((element) => { if (!ui.text.disabled) element.textContent = ui.text.value; }));
   ui.link.addEventListener("change", () => mutate((element) => element.setAttribute("href", ui.link.value)));
@@ -506,6 +875,15 @@ function bindControls() {
     ui.aiPrompt.focus();
   }));
   $("#sendPromptBtn").addEventListener("click", sendPrompt);
+  $("#runAuditBtn").addEventListener("click", () => renderAudit());
+  $("#fixAuditBtn").addEventListener("click", fixAudit);
+  $("#runPublishAuditBtn").addEventListener("click", () => {
+    renderAudit();
+    setPanel("jarvis");
+  });
+  $("#saveSeoBtn").addEventListener("click", saveSeo);
+  $("#downloadHtmlBtn").addEventListener("click", downloadHtml);
+  $("#exportLeadsBtn").addEventListener("click", exportLeads);
   $("#startTunnelBtn").addEventListener("click", startTunnel);
   $("#stopTunnelBtn").addEventListener("click", stopTunnel);
   $$("[data-copy]").forEach((button) => button.addEventListener("click", async () => {
@@ -513,6 +891,24 @@ function bindControls() {
     await navigator.clipboard.writeText(input.value);
     toast("Link skopiowany.");
   }));
+  document.addEventListener("keydown", (event) => {
+    const command = event.ctrlKey || event.metaKey;
+    const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target?.isContentEditable;
+    if (command && event.key.toLowerCase() === "s") {
+      event.preventDefault();
+      flushSave();
+      toast("Projekt zapisany.");
+    }
+    if (!typing && command && event.key.toLowerCase() === "z" && !event.shiftKey) {
+      event.preventDefault();
+      $("#undoBtn").click();
+    }
+    if (!typing && command && (event.key.toLowerCase() === "y" || (event.shiftKey && event.key.toLowerCase() === "z"))) {
+      event.preventDefault();
+      $("#redoBtn").click();
+    }
+    if (event.key === "Escape" && ui.projectDialog.open) ui.projectDialog.close();
+  });
   window.addEventListener("beforeunload", flushSave);
 }
 

@@ -2,6 +2,7 @@
 const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const http = require("http");
 const { spawn, exec } = require("child_process");
 const os = require("os");
 
@@ -25,6 +26,60 @@ function saveState(win) {
 }
 
 let mainWindow = null;
+let siteOsProcess = null;
+
+function siteOsPaths() {
+  const base = path.join(app.getPath("userData"), "site-os");
+  return {
+    script: app.isPackaged
+      ? path.join(process.resourcesPath, "site-os", "server.mjs")
+      : path.join(__dirname, "..", "site-os", "server.mjs"),
+    data: path.join(base, "data"),
+    runtime: path.join(base, "runtime"),
+    tools: path.join(base, "tools"),
+  };
+}
+
+function siteOsReady(url) {
+  return new Promise((resolve) => {
+    const request = http.get(url + "/api/health", { timeout: 900 }, (response) => {
+      response.resume();
+      resolve(response.statusCode === 200);
+    });
+    request.on("timeout", () => { request.destroy(); resolve(false); });
+    request.on("error", () => resolve(false));
+  });
+}
+
+async function startSiteOs({ tunnel = false } = {}) {
+  const url = "http://127.0.0.1:3210";
+  const paths = siteOsPaths();
+  if (!fs.existsSync(paths.script)) return { ok: false, error: "Brak modułu Site OS w instalacji." };
+
+  if (!(await siteOsReady(url)) && (!siteOsProcess || siteOsProcess.exitCode !== null)) {
+    siteOsProcess = spawn(process.execPath, [paths.script, ...(tunnel ? ["--tunnel"] : [])], {
+      env: {
+        ...process.env,
+        ELECTRON_RUN_AS_NODE: "1",
+        SITE_OS_DATA_DIR: paths.data,
+        SITE_OS_RUNTIME_DIR: paths.runtime,
+        SITE_OS_TOOLS_DIR: paths.tools,
+      },
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    siteOsProcess.once("exit", () => { siteOsProcess = null; });
+  }
+
+  let ready = await siteOsReady(url);
+  for (let attempt = 0; !ready && attempt < 40; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    ready = await siteOsReady(url);
+  }
+  if (!ready) return { ok: false, error: "Site OS nie uruchomił się w ciągu 20 sekund." };
+  await shell.openExternal(url);
+  return { ok: true, url };
+}
 
 // Przywołanie JARVIS-a nad każdą aplikacją (globalny skrót systemowy).
 function summonWindow() {
@@ -253,6 +308,15 @@ function registerDesktopControl() {
     const url = event?.senderFrame?.url || event?.sender?.getURL?.() || "";
     return url.startsWith("file://");
   };
+  ipcMain.handle("jarvis:site-os-start", async (event, options) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    try {
+      return await startSiteOs({ tunnel: Boolean(options && options.tunnel) });
+    } catch (error) {
+      return { ok: false, error: error && error.message ? error.message : String(error) };
+    }
+  });
+
   // --- Kalendarz Google (natywnie, bez serwera) ---
   ipcMain.handle("jarvis:google-connect", async (event, payload) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
@@ -529,5 +593,6 @@ if (!gotLock) {
   app.on("will-quit", () => {
     globalShortcut.unregisterAll();
     setClipWatch(false);
+    if (siteOsProcess && siteOsProcess.exitCode === null) siteOsProcess.kill();
   });
 }

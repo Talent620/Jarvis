@@ -10,6 +10,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "Lipiec 2026 — Site OS 0.2",
+    date: "2026-07-18",
+    items: [
+      "JARVIS Site OS jest teraz częścią instalatora Windows i uruchamia się z Centrum połączeń jednym przyciskiem w domyślnej przeglądarce — bez osobnej instalacji Node.js i bez wpisywania poleceń.",
+      "Kreator dostał trzy kompletne szablony startowe, bibliotekę ośmiu responsywnych sekcji, strukturę strony oraz gotowe palety marki. Tekst, obrazy, linki i układ nadal edytujesz bezpośrednio na podglądzie.",
+      "Nowy audyt 0–100 sprawdza SEO, dostępność, telefon i ścieżkę konwersji, a bezpieczne braki potrafi poprawić automatycznie bez przebudowy treści.",
+      "Formularze z publicznego podglądu zapisują prawdziwe zapytania w prywatnej skrzynce Site OS. Kontakty można od razu wyeksportować do CSV, a gotową stronę pobrać jako HTML.",
+      "Publiczny tunel pozostał odseparowany od edytora i tokenu JARVISA; dodałem limit prób i pole-pułapkę chroniące formularze przed prostym spamem.",
+    ],
+  },
+  {
     version: "Lipiec 2026 — Horyzont",
     date: "2026-07-02",
     items: [
