@@ -71,8 +71,9 @@
     <aside class="inspector">
       <div class="inspector-tabs" role="tablist">
         <button class="active" type="button" data-tab="element">Element</button>
+        <button type="button" data-tab="sections">Sekcje</button>
         <button type="button" data-tab="jarvis">JARVIS</button>
-        <button type="button" data-tab="publish">Publikacja</button>
+        <button type="button" data-tab="publish">Publikuj</button>
       </div>
 
       <section id="elementPanel" class="inspector-panel active" data-panel="element">
@@ -135,6 +136,38 @@
         </div>
       </section>
 
+      <section id="sectionsPanel" class="inspector-panel" data-panel="sections">
+        <div class="panel-heading">
+          <span class="sections-dot"></span>
+          <div><h3>Biblioteka sekcji</h3><p>Gotowe, responsywne bloki dopasują się do kolorów strony.</p></div>
+        </div>
+        <div class="section-library" id="sectionLibrary">
+          <button type="button" data-section="hero"><span>H1</span><strong>Hero premium</strong><small>Obietnica, obraz, CTA</small></button>
+          <button type="button" data-section="benefits"><span>03</span><strong>Korzyści</strong><small>Trzy mocne argumenty</small></button>
+          <button type="button" data-section="proof"><span>99</span><strong>Dowody</strong><small>Liczby i wiarygodność</small></button>
+          <button type="button" data-section="testimonials"><span>“”</span><strong>Opinie</strong><small>Historie klientów</small></button>
+          <button type="button" data-section="pricing"><span>PLN</span><strong>Cennik</strong><small>Trzy warianty oferty</small></button>
+          <button type="button" data-section="faq"><span>?</span><strong>FAQ</strong><small>Obiekcje i odpowiedzi</small></button>
+          <button type="button" data-section="contact"><span>@</span><strong>Formularz leadowy</strong><small>Zapytania trafiają tutaj</small></button>
+          <button type="button" data-section="cta"><span>→</span><strong>Finałowe CTA</strong><small>Mocne domknięcie</small></button>
+        </div>
+
+        <div class="control-group">
+          <div class="group-heading"><h3>Struktura strony</h3><span id="structureCount">0</span></div>
+          <div id="structureList" class="structure-list"></div>
+        </div>
+
+        <div class="control-group">
+          <h3>Paleta marki</h3>
+          <div class="palette-grid">
+            <button type="button" data-palette="north"><i style="--a:#164f42;--b:#ef765f;--c:#f4f1e9"></i><span>North</span></button>
+            <button type="button" data-palette="noir"><i style="--a:#111111;--b:#c7ff4a;--c:#f5f5f2"></i><span>Noir</span></button>
+            <button type="button" data-palette="signal"><i style="--a:#1557ff;--b:#ffcf33;--c:#f7f9ff"></i><span>Signal</span></button>
+            <button type="button" data-palette="atelier"><i style="--a:#7b2639;--b:#e7a977;--c:#fff8f3"></i><span>Atelier</span></button>
+          </div>
+        </div>
+      </section>
+
       <section id="jarvisPanel" class="inspector-panel" data-panel="jarvis">
         <div class="panel-heading">
           <span class="ai-dot"></span>
@@ -152,6 +185,15 @@
         </label>
         <button id="sendPromptBtn" class="button primary wide" type="button">Zastosuj z JARVISEM</button>
         <div id="aiStatus" class="notice" hidden></div>
+        <div class="quality-card">
+          <div class="quality-head">
+            <div><span>Kontrola jakości</span><strong id="auditScore">Nie sprawdzono</strong></div>
+            <button id="runAuditBtn" class="button secondary" type="button">Uruchom audyt</button>
+          </div>
+          <div id="auditMeter" class="audit-meter"><i></i></div>
+          <div id="auditResults" class="audit-results"><p>Sprawdzę SEO, telefon, dostępność i ścieżkę konwersji.</p></div>
+          <button id="fixAuditBtn" class="text-button" type="button" hidden>Napraw automatycznie bezpieczne elementy</button>
+        </div>
       </section>
 
       <section id="publishPanel" class="inspector-panel" data-panel="publish">
@@ -174,6 +216,21 @@
             <button id="stopTunnelBtn" class="text-button danger-text" type="button">Wyłącz tunel</button>
           </div>
         </div>
+        <div class="publish-block">
+          <span>SEO i udostępnianie</span>
+          <label class="field compact"><span>Tytuł strony</span><input id="seoTitle" maxlength="70" placeholder="Nazwa i główna korzyść"></label>
+          <label class="field compact seo-description"><span>Opis</span><textarea id="seoDescription" rows="3" maxlength="180" placeholder="Krótki opis widoczny w Google"></textarea></label>
+          <button id="saveSeoBtn" class="button secondary wide" type="button">Zapisz SEO</button>
+        </div>
+        <div class="publish-block">
+          <div class="publish-title-row"><span>Zapytania z formularzy</span><b id="leadCount">0</b></div>
+          <div id="leadList" class="lead-list"><p>Dodaj sekcję Formularz leadowy, aby zbierać kontakty.</p></div>
+          <button id="exportLeadsBtn" class="text-button" type="button">Eksportuj kontakty CSV</button>
+        </div>
+        <div class="publish-actions-grid">
+          <button id="downloadHtmlBtn" class="button secondary" type="button">Pobierz HTML</button>
+          <button id="runPublishAuditBtn" class="button secondary" type="button">Sprawdź przed publikacją</button>
+        </div>
         <div class="security-note">
           <strong>Prywatność</strong>
           <p>Link pokazuje wyłącznie zapisaną stronę. Projekty, panel i token JARVISA nie są udostępniane.</p>
@@ -182,6 +239,16 @@
     </aside>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <dialog id="newProjectDialog" class="project-dialog">
+      <div class="dialog-head"><div><span>Nowy projekt</span><h2>Wybierz mocny punkt startu</h2></div><button id="closeProjectDialog" class="icon-btn" type="button" aria-label="Zamknij">×</button></div>
+      <div class="starter-grid">
+        <button type="button" data-starter="service"><span class="starter-preview service"></span><strong>Usługa premium</strong><small>Ekspert, studio, doradztwo</small></button>
+        <button type="button" data-starter="product"><span class="starter-preview product"></span><strong>Produkt cyfrowy</strong><small>SaaS, aplikacja, platforma</small></button>
+        <button type="button" data-starter="local"><span class="starter-preview local"></span><strong>Marka lokalna</strong><small>Hotel, klinika, restauracja</small></button>
+        <button type="button" data-starter="blank"><span class="starter-preview blank">+</span><strong>Czysty projekt</strong><small>Minimalny układ do własnej budowy</small></button>
+      </div>
+    </dialog>
   </div>
   <script type="module" src="/app.js"></script>
 </body>

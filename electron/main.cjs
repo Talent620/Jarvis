@@ -2,6 +2,7 @@
 const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const http = require("http");
 const { spawn, exec } = require("child_process");
 const os = require("os");
 
@@ -39,12 +40,23 @@ function siteOsPaths() {
   };
 }
 
+function siteOsReady(url) {
+  return new Promise((resolve) => {
+    const request = http.get(url + "/api/health", { timeout: 900 }, (response) => {
+      response.resume();
+      resolve(response.statusCode === 200);
+    });
+    request.on("timeout", () => { request.destroy(); resolve(false); });
+    request.on("error", () => resolve(false));
+  });
+}
+
 async function startSiteOs({ tunnel = false } = {}) {
   const url = "http://127.0.0.1:3210";
   const paths = siteOsPaths();
   if (!fs.existsSync(paths.script)) return { ok: false, error: "Brak modułu Site OS w instalacji." };
 
-  if (!siteOsProcess || siteOsProcess.exitCode !== null) {
+  if (!(await siteOsReady(url)) && (!siteOsProcess || siteOsProcess.exitCode !== null)) {
     siteOsProcess = spawn(process.execPath, [paths.script, ...(tunnel ? ["--tunnel"] : [])], {
       env: {
         ...process.env,
@@ -57,9 +69,14 @@ async function startSiteOs({ tunnel = false } = {}) {
       windowsHide: true,
     });
     siteOsProcess.once("exit", () => { siteOsProcess = null; });
-    await new Promise((resolve) => setTimeout(resolve, 650));
   }
 
+  let ready = await siteOsReady(url);
+  for (let attempt = 0; !ready && attempt < 40; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    ready = await siteOsReady(url);
+  }
+  if (!ready) return { ok: false, error: "Site OS nie uruchomił się w ciągu 20 sekund." };
   await shell.openExternal(url);
   return { ok: true, url };
 }

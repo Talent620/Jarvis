@@ -14,6 +14,7 @@ on:
     paths:
       - "electron/**"
       - "src/**"
+      - "site-os/**"
       - "electron-builder.json"
       - ".github/workflows/windows.yml"
 
