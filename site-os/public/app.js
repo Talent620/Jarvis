@@ -10,6 +10,7 @@ const state = {
   undo: [],
   redo: [],
   saving: null,
+  imageInputTimer: null,
   tunnelUrl: "",
   leads: [],
   audit: null
@@ -35,6 +36,14 @@ const ui = {
   link: $("#linkControl"),
   imageField: $("#imageField"),
   image: $("#imageControl"),
+  imageAlt: $("#imageAltControl"),
+  imageUpload: $("#imageUploadInput"),
+  imageUploadBtn: $("#imageUploadBtn"),
+  imageRemoveBtn: $("#imageRemoveBtn"),
+  imageDropzone: $("#imageDropzone"),
+  imagePreview: $("#imagePreview"),
+  imageDropLabel: $("#imageDropLabel"),
+  imageStatus: $("#imageStatus"),
   fontSize: $("#fontSizeControl"),
   fontWeight: $("#fontWeightControl"),
   color: $("#colorControl"),
@@ -332,6 +341,169 @@ function rgbToHex(value, fallback = "#ffffff") {
   return "#" + values.slice(0, 3).map((part) => Math.max(0, Math.min(255, Number(part))).toString(16).padStart(2, "0")).join("");
 }
 
+function cssImageUrl(value) {
+  const match = String(value || "").trim().match(/^url\((?:["']?)(.*?)(?:["']?)\)$/i);
+  return match ? match[1].replace(/\\(["'])/g, "$1") : "";
+}
+
+function imageDescriptor(element) {
+  if (!element) return null;
+  if (element.tagName === "IMG") {
+    return { kind: "element", url: element.getAttribute("src") || "", alt: element.getAttribute("alt") || "" };
+  }
+  const style = ui.frame.contentWindow.getComputedStyle(element);
+  const url = cssImageUrl(element.style.backgroundImage) || cssImageUrl(style.backgroundImage);
+  if (!url && element.getAttribute("role") !== "img") return null;
+  return { kind: "background", url, alt: element.getAttribute("aria-label") || "" };
+}
+
+function setImageStatus(message, tone = "") {
+  ui.imageStatus.textContent = message;
+  ui.imageStatus.className = "image-status" + (tone ? " " + tone : "");
+}
+
+function updateImageEditor(descriptor) {
+  ui.imageField.hidden = !descriptor;
+  if (!descriptor) return;
+  const embedded = descriptor.url.startsWith("data:");
+  ui.image.value = embedded ? "" : descriptor.url;
+  ui.image.placeholder = embedded ? "Grafika osadzona w projekcie" : "https://";
+  ui.imageAlt.value = descriptor.alt;
+  ui.imagePreview.hidden = !descriptor.url;
+  ui.imagePreview.removeAttribute("src");
+  if (descriptor.url) ui.imagePreview.src = descriptor.url;
+  ui.imageDropLabel.textContent = descriptor.url ? "Kliknij, aby zmienić grafikę" : "Wybierz grafikę z komputera";
+  setImageStatus(embedded
+    ? "Grafika jest zoptymalizowana i bezpiecznie osadzona w projekcie."
+    : "JPG, PNG lub WebP. Duże pliki zoptymalizujemy automatycznie.", embedded ? "success" : "");
+}
+
+function applyImageSource(element, source) {
+  const descriptor = imageDescriptor(element);
+  if (!descriptor || descriptor.kind === "element") {
+    if (source) element.setAttribute("src", source);
+    else element.removeAttribute("src");
+    return;
+  }
+  element.style.backgroundImage = source ? `url(${JSON.stringify(source)})` : "none";
+  if (source) {
+    element.setAttribute("role", "img");
+    element.style.backgroundPosition ||= "center";
+    element.style.backgroundSize ||= "cover";
+    element.style.backgroundRepeat ||= "no-repeat";
+  }
+}
+
+function commitImageUrl() {
+  clearTimeout(state.imageInputTimer);
+  state.imageInputTimer = null;
+  const source = ui.image.value.trim();
+  mutate((element) => applyImageSource(element, source));
+}
+
+function scheduleImageUrl() {
+  clearTimeout(state.imageInputTimer);
+  const selected = state.selected;
+  state.imageInputTimer = setTimeout(() => {
+    if (state.selected === selected) commitImageUrl();
+  }, 450);
+}
+
+function canvasBlob(canvas, quality) {
+  return new Promise((resolve, reject) => canvas.toBlob(
+    (blob) => blob ? resolve(blob) : reject(new Error("Nie udało się przetworzyć grafiki.")),
+    "image/webp",
+    quality
+  ));
+}
+
+function blobDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Nie udało się odczytać grafiki."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function decodeImage(file) {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+      return { source: bitmap, width: bitmap.width, height: bitmap.height, close: () => bitmap.close() };
+    } catch {
+      // Starsze silniki korzystają z kompatybilnej ścieżki poniżej.
+    }
+  }
+  const url = URL.createObjectURL(file);
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve({
+      source: image,
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+      close: () => URL.revokeObjectURL(url)
+    });
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Nie udało się odczytać tej grafiki."));
+    };
+    image.src = url;
+  });
+}
+
+async function optimizeImage(file) {
+  const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
+  if (!allowed.has(file.type)) throw new Error("Wybierz plik JPG, PNG lub WebP.");
+  if (file.size > 15 * 1024 * 1024) throw new Error("Grafika jest większa niż 15 MB. Wybierz mniejszy plik.");
+
+  const decoded = await decodeImage(file);
+  try {
+    let scale = Math.min(1, 1800 / Math.max(decoded.width, decoded.height));
+    let quality = 0.86;
+    let blob;
+    for (let attempt = 0; attempt < 7; attempt += 1) {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(decoded.width * scale));
+      canvas.height = Math.max(1, Math.round(decoded.height * scale));
+      const context = canvas.getContext("2d", { alpha: true });
+      if (!context) throw new Error("Przeglądarka nie może przetworzyć tej grafiki.");
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.drawImage(decoded.source, 0, 0, canvas.width, canvas.height);
+      blob = await canvasBlob(canvas, quality);
+      if (blob.size <= 700 * 1024 || Math.max(canvas.width, canvas.height) <= 720) break;
+      scale *= 0.82;
+      quality = Math.max(0.62, quality - 0.06);
+    }
+    if (!blob) throw new Error("Nie udało się przygotować grafiki.");
+    return { dataUrl: await blobDataUrl(blob), size: blob.size };
+  } finally {
+    decoded.close();
+  }
+}
+
+async function uploadSelectedImage(file) {
+  if (!file || !state.selected || !imageDescriptor(state.selected)) return;
+  const selected = state.selected;
+  ui.imageUploadBtn.disabled = true;
+  setImageStatus("Optymalizuję grafikę…");
+  try {
+    const result = await optimizeImage(file);
+    if (state.selected !== selected) throw new Error("Zaznaczenie zmieniło się podczas wczytywania grafiki.");
+    mutate((element) => applyImageSource(element, result.dataUrl));
+    const kb = Math.max(1, Math.round(result.size / 1024));
+    setImageStatus(`Gotowe. Grafika zajmuje ${kb} KB i jest osadzona w projekcie.`, "success");
+    toast("Grafika została dodana.");
+  } catch (error) {
+    setImageStatus(error.message || "Nie udało się dodać grafiki.", "error");
+    toast(error.message || "Nie udało się dodać grafiki.");
+  } finally {
+    ui.imageUploadBtn.disabled = false;
+    ui.imageUpload.value = "";
+  }
+}
+
 function updateSelectionPanel() {
   const element = state.selected;
   ui.emptySelection.hidden = Boolean(element);
@@ -339,14 +511,14 @@ function updateSelectionPanel() {
   if (!element) return;
   const tag = element.tagName.toLowerCase();
   const style = ui.frame.contentWindow.getComputedStyle(element);
-  const label = element.id ? tag + "#" + element.id : element.classList.length ? tag + "." + [...element.classList].filter((name) => !name.startsWith("siteos-"))[0] : tag;
+  const publicClass = [...element.classList].find((name) => !name.startsWith("siteos-"));
+  const label = element.id ? tag + "#" + element.id : publicClass ? tag + "." + publicClass : imageDescriptor(element) ? tag + ".grafika" : tag;
   ui.selectedName.textContent = label || tag;
   ui.text.disabled = element.children.length > 0 || ["IMG", "INPUT", "TEXTAREA", "SELECT", "VIDEO"].includes(element.tagName);
   ui.text.value = ui.text.disabled ? "Zaznacz element tekstowy wewnątrz tej sekcji." : element.textContent.trim();
   ui.linkField.hidden = element.tagName !== "A";
   ui.link.value = element.getAttribute("href") || "";
-  ui.imageField.hidden = element.tagName !== "IMG";
-  ui.image.value = element.getAttribute("src") || "";
+  updateImageEditor(imageDescriptor(element));
   ui.fontSize.value = Math.round(parseFloat(style.fontSize) || 16);
   ui.fontWeight.value = ["400", "500", "600", "700"].includes(style.fontWeight) ? style.fontWeight : "400";
   ui.color.value = rgbToHex(style.color, "#111111");
@@ -530,7 +702,11 @@ function auditPage() {
   const description = doc.querySelector('meta[name="description"]')?.getAttribute("content")?.trim() || "";
   const h1s = doc.querySelectorAll("h1");
   const images = [...doc.querySelectorAll("img")];
-  const missingAlt = images.filter((image) => !image.getAttribute("alt")?.trim());
+  const backgroundImages = [...doc.querySelectorAll('[role="img"]')].filter((element) => imageDescriptor(element)?.kind === "background");
+  const missingAlt = [
+    ...images.filter((image) => !image.getAttribute("alt")?.trim()),
+    ...backgroundImages.filter((image) => !image.getAttribute("aria-label")?.trim())
+  ];
   const links = [...doc.querySelectorAll("a")];
   const emptyLinks = links.filter((link) => !link.getAttribute("href")?.trim());
   const buttonsWithoutType = [...doc.querySelectorAll("button:not([type])")];
@@ -609,6 +785,9 @@ function fixAudit() {
   }
   [...doc.querySelectorAll("img")].forEach((image, index) => {
     if (!image.getAttribute("alt")?.trim()) image.alt = `${state.current.name} — zdjęcie ${index + 1}`;
+  });
+  [...doc.querySelectorAll('[role="img"]')].forEach((image, index) => {
+    if (!image.getAttribute("aria-label")?.trim()) image.setAttribute("aria-label", `${state.current.name} — grafika ${index + 1}`);
   });
   [...doc.querySelectorAll('a[target="_blank"]')].forEach((link) => link.setAttribute("rel", "noopener noreferrer"));
   [...doc.querySelectorAll("button:not([type])")].forEach((button) => button.type = "button");
@@ -704,6 +883,19 @@ function setPanel(name) {
   $$("[data-panel]").forEach((panel) => panel.classList.toggle("active", panel.dataset.panel === name));
   if (name === "sections") renderStructure();
   if (name === "publish") void loadLeads();
+}
+
+async function importedHtml(file) {
+  if (!/\.html?$/i.test(file.name) && !["text/html", "application/xhtml+xml"].includes(file.type)) {
+    throw new Error("Wybierz plik HTML.");
+  }
+  if (file.size > 7 * 1024 * 1024) throw new Error("Plik HTML jest większy niż 7 MB.");
+  const html = await file.text();
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  if (!html.trim() || !doc.documentElement || (!doc.body.children.length && !doc.head.children.length)) {
+    throw new Error("Plik nie zawiera poprawnej strony HTML.");
+  }
+  return html;
 }
 
 async function startTunnel() {
@@ -808,8 +1000,14 @@ function bindControls() {
   $("#importInput").addEventListener("change", async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    await createProject(await file.text());
-    event.target.value = "";
+    try {
+      await createProject(await importedHtml(file));
+      toast("Strona HTML została zaimportowana.");
+    } catch (error) {
+      toast(error.message || "Nie udało się zaimportować strony.");
+    } finally {
+      event.target.value = "";
+    }
   });
 
   $("#undoBtn").addEventListener("click", () => {
@@ -845,7 +1043,40 @@ function bindControls() {
 
   ui.text.addEventListener("change", () => mutate((element) => { if (!ui.text.disabled) element.textContent = ui.text.value; }));
   ui.link.addEventListener("change", () => mutate((element) => element.setAttribute("href", ui.link.value)));
-  ui.image.addEventListener("change", () => mutate((element) => element.setAttribute("src", ui.image.value)));
+  ui.image.addEventListener("input", scheduleImageUrl);
+  ui.image.addEventListener("change", commitImageUrl);
+  ui.image.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitImageUrl();
+      ui.image.blur();
+    }
+  });
+  ui.imageAlt.addEventListener("change", () => mutate((element) => {
+    const descriptor = imageDescriptor(element);
+    if (descriptor?.kind === "element") element.setAttribute("alt", ui.imageAlt.value.trim());
+    else {
+      element.setAttribute("role", "img");
+      element.setAttribute("aria-label", ui.imageAlt.value.trim());
+    }
+  }));
+  ui.imageUploadBtn.addEventListener("click", () => ui.imageUpload.click());
+  ui.imageDropzone.addEventListener("click", () => ui.imageUpload.click());
+  ui.imageUpload.addEventListener("change", () => uploadSelectedImage(ui.imageUpload.files?.[0]));
+  ["dragenter", "dragover"].forEach((name) => ui.imageDropzone.addEventListener(name, (event) => {
+    event.preventDefault();
+    ui.imageDropzone.classList.add("dragging");
+  }));
+  ["dragleave", "drop"].forEach((name) => ui.imageDropzone.addEventListener(name, (event) => {
+    event.preventDefault();
+    ui.imageDropzone.classList.remove("dragging");
+  }));
+  ui.imageDropzone.addEventListener("drop", (event) => uploadSelectedImage(event.dataTransfer?.files?.[0]));
+  ui.imagePreview.addEventListener("error", () => {
+    ui.imagePreview.hidden = true;
+    setImageStatus("Nie udało się wczytać grafiki spod tego adresu.", "error");
+  });
+  ui.imageRemoveBtn.addEventListener("click", () => mutate((element) => applyImageSource(element, "")));
   ui.fontSize.addEventListener("change", () => mutate((element) => { element.style.fontSize = ui.fontSize.value + "px"; }));
   ui.fontWeight.addEventListener("change", () => mutate((element) => { element.style.fontWeight = ui.fontWeight.value; }));
   ui.color.addEventListener("change", () => mutate((element) => { element.style.color = ui.color.value; }));

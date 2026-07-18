@@ -39,7 +39,7 @@
       <div id="projectList" class="project-list" aria-live="polite"></div>
       <div class="rail-footer">
         <button id="importBtn" class="text-button" type="button">Importuj HTML</button>
-        <input id="importInput" type="file" accept=".html,text/html" hidden>
+        <input id="importInput" type="file" accept=".html,.htm,text/html" hidden>
         <button id="deleteBtn" class="icon-btn danger" type="button" title="Usuń projekt" aria-label="Usuń projekt">×</button>
       </div>
     </aside>
@@ -101,10 +101,28 @@
             <span>Adres linku</span>
             <input id="linkControl" type="text" placeholder="https:// lub #sekcja">
           </label>
-          <label id="imageField" class="field" hidden>
-            <span>Adres zdjęcia</span>
-            <input id="imageControl" type="url" placeholder="https://">
-          </label>
+          <div id="imageField" class="field image-editor" hidden>
+            <span>Grafika</span>
+            <button id="imageDropzone" class="image-dropzone" type="button">
+              <img id="imagePreview" alt="Podgląd wybranej grafiki">
+              <span id="imageDropLabel">Wybierz grafikę z komputera</span>
+              <small>Możesz też przeciągnąć tutaj plik</small>
+            </button>
+            <input id="imageUploadInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+            <div class="image-actions">
+              <button id="imageUploadBtn" class="button secondary" type="button">Wybierz plik</button>
+              <button id="imageRemoveBtn" class="text-button danger" type="button">Wyczyść</button>
+            </div>
+            <label class="field compact image-url-field">
+              <span>Lub adres internetowy</span>
+              <input id="imageControl" type="text" inputmode="url" placeholder="https://">
+            </label>
+            <label class="field compact">
+              <span>Opis grafiki</span>
+              <input id="imageAltControl" type="text" maxlength="240" placeholder="Co przedstawia grafika?">
+            </label>
+            <small id="imageStatus" class="image-status">JPG, PNG lub WebP. Duże pliki zoptymalizujemy automatycznie.</small>
+          </div>
 
           <div class="control-group">
             <h3>Typografia</h3>

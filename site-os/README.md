@@ -23,6 +23,7 @@ Edytor otworzy się pod adresem [http://127.0.0.1:3210](http://127.0.0.1:3210).
 - trzy kompletne szablony startowe oraz czysty projekt,
 - biblioteka responsywnych sekcji: hero, korzyści, dowody, opinie, cennik, FAQ, formularz i CTA,
 - czytelna struktura strony i gotowe palety marki,
+- własne grafiki JPG, PNG i WebP dodawane z komputera lub przeciągane do panelu; duże pliki są automatycznie zmniejszane i osadzane w projekcie,
 - wybieranie i edycja tekstu, linków, zdjęć, kolorów i odstępów,
 - przesuwanie, duplikowanie i usuwanie elementów,
 - audyt 0–100 obejmujący SEO, dostępność, telefon i konwersję oraz bezpieczne autopoprawki,
