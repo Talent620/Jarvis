@@ -15,6 +15,14 @@ const headers = {
 };
 
 const health = await json("/api/health");
+if (health.body.version !== "0.2.1") throw new Error("Serwer zwraca nieprawidłową wersję.");
+
+const malformed = await json("/api/pair", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: "{"
+});
+if (malformed.response.status !== 400) throw new Error("Nieprawidłowy JSON nie zwraca czytelnego błędu.");
 const projects = await json("/api/projects", { headers });
 if (!projects.body.projects?.length) throw new Error("Brak projektu startowego.");
 
@@ -63,5 +71,6 @@ console.log(JSON.stringify({
   commandQueue: "ok",
   preview: "ok",
   leadCapture: "ok",
+  requestValidation: "ok",
   tunnelIsolation: "ok"
 }, null, 2));

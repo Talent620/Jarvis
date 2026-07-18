@@ -10,9 +10,10 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "Lipiec 2026 — Site OS 0.2",
+    version: "Lipiec 2026 — Site OS 0.2.1",
     date: "2026-07-18",
     items: [
+      "Do kreatora dodasz teraz własne grafiki z komputera. Site OS obsługuje zdjęcia i tła sekcji, automatycznie zmniejsza duże pliki, osadza je w projekcie i zachowuje przy eksporcie oraz publikacji.",
       "JARVIS Site OS jest teraz częścią instalatora Windows i uruchamia się z Centrum połączeń jednym przyciskiem w domyślnej przeglądarce — bez osobnej instalacji Node.js i bez wpisywania poleceń.",
       "Kreator dostał trzy kompletne szablony startowe, bibliotekę ośmiu responsywnych sekcji, strukturę strony oraz gotowe palety marki. Tekst, obrazy, linki i układ nadal edytujesz bezpośrednio na podglądzie.",
       "Nowy audyt 0–100 sprawdza SEO, dostępność, telefon i ścieżkę konwersji, a bezpieczne braki potrafi poprawić automatycznie bez przebudowy treści.",

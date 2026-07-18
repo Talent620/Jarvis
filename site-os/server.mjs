@@ -17,7 +17,7 @@ const leadsFile = path.join(dataDir, "leads.json");
 const runtimeFile = path.join(runtimeDir, "connection.json");
 const host = process.env.SITE_OS_HOST || "127.0.0.1";
 const port = Number(process.env.SITE_OS_PORT || 3210);
-const version = "0.2.0";
+const version = "0.2.1";
 const localUrl = "http://" + host + ":" + port;
 const maxBodyBytes = 8 * 1024 * 1024;
 
@@ -167,15 +167,31 @@ function authorized(req) {
 }
 
 async function bodyJson(req) {
+  const declaredSize = Number(req.headers["content-length"] || 0);
+  if (declaredSize > maxBodyBytes) {
+    const error = new Error("Projekt jest zbyt duży. Zmniejsz liczbę lub rozmiar grafik.");
+    error.statusCode = 413;
+    throw error;
+  }
   let size = 0;
   const chunks = [];
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > maxBodyBytes) throw new Error("Payload jest zbyt duży.");
+    if (size > maxBodyBytes) {
+      const error = new Error("Projekt jest zbyt duży. Zmniejsz liczbę lub rozmiar grafik.");
+      error.statusCode = 413;
+      throw error;
+    }
     chunks.push(chunk);
   }
   if (!chunks.length) return {};
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    const error = new Error("Dane żądania mają nieprawidłowy format.");
+    error.statusCode = 400;
+    throw error;
+  }
 }
 
 async function projects() {
@@ -221,6 +237,7 @@ function cleanProject(input, existing) {
   if (existing?.html && existing.html !== html) {
     versions.unshift({ at: now, html: existing.html });
     versions.length = Math.min(20, versions.length);
+    while (versions.length > 1 && versions.reduce((sum, item) => sum + item.html.length, 0) > 8 * 1024 * 1024) versions.pop();
   }
   return {
     id: existing?.id || (typeof input.id === "string" && input.id) || randomUUID(),
@@ -517,7 +534,8 @@ const server = http.createServer(async (req, res) => {
     send(req, res, 404, { ok: false, error: "Nie znaleziono." });
   } catch (error) {
     console.error(error);
-    send(req, res, 500, { ok: false, error: error instanceof Error ? error.message : "Błąd Site OS." });
+    const status = Number(error?.statusCode) || 500;
+    send(req, res, status, { ok: false, error: error instanceof Error ? error.message : "Błąd Site OS." });
   }
 });
 
