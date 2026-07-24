@@ -9,7 +9,12 @@ const { inside, safeArgs } = require("../electron/workspace-tools.cjs");
 describe("workspace tools safety", () => {
   it("blokuje wyjście poza katalog roboczy", () => {
     expect(() => inside("C:\\work", "..\\secret.txt")).toThrow(/poza katalog/);
+    expect(() => inside("C:\\work", "../secret.txt")).toThrow(/poza katalog/);
+    expect(() => inside("/work", "../secret.txt")).toThrow(/poza katalog/);
+    expect(() => inside("/work", "..\\secret.txt")).toThrow(/poza katalog/);
+    expect(() => inside("/work", "/workspace-sibling/secret.txt")).toThrow(/poza katalog/);
     expect(inside("C:\\work", "src")).toBe("C:\\work\\src");
+    expect(inside("/work", "src")).toBe("/work/src");
   });
 
   it("blokuje destrukcyjne argumenty terminala i gita", () => {

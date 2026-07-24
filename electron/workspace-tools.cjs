@@ -7,9 +7,17 @@ const SAFE_COMMANDS = new Set(["git", "node", "npm", "npx", "docker", "sqlite3",
 const BLOCKED_ARGS = /(?:^|\s)(?:--?force|-f|reset\s+--hard|clean\s+-[a-z]*f|rm\b|rmdir\b|del\b|format\b|shutdown\b)/i;
 
 function inside(root, requested = ".") {
-  const base = path.resolve(root);
-  const target = path.resolve(base, String(requested || "."));
-  if (target !== base && !target.startsWith(base + path.sep)) throw new Error("Ścieżka wychodzi poza katalog roboczy.");
+  const rawRoot = String(root);
+  const flavor = /^[a-z]:[\\/]/i.test(rawRoot) || rawRoot.startsWith("\\\\") ? path.win32 : path.posix;
+  const rawRequested = String(requested || ".");
+  const normalized = flavor === path.win32
+    ? rawRequested.replace(/\//g, "\\")
+    : rawRequested.replace(/\\/g, "/");
+  const base = flavor.resolve(rawRoot);
+  const target = flavor.resolve(base, normalized);
+  const relative = flavor.relative(base, target);
+  const outside = relative === ".." || relative.startsWith(".." + flavor.sep) || flavor.isAbsolute(relative);
+  if (outside) throw new Error("Ścieżka wychodzi poza katalog roboczy.");
   return target;
 }
 
