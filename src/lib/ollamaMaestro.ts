@@ -183,6 +183,35 @@ export interface EnsureResult {
   error?: string;
 }
 
+/** Zainstaluj jeden model dla agenta researchowego i ustaw go jako lokalny mózg złożonych zadań. */
+export async function ensureResearchAgent(
+  model: string,
+  context: number,
+  onProgress?: (msg: string) => void,
+): Promise<EnsureResult> {
+  const det = await detectOllama(store.settings.ollamaUrl);
+  if (!det.ok) return { ok: false, installed: [], pulled: [], error: det.error || "Nie połączono z Ollamą." };
+  const missing = missingModels(det.models, [model]);
+  const pulled: string[] = [];
+  if (missing.length) {
+    onProgress?.(`Pobieram ${model}…`);
+    const result = await pullOllamaModel(model, (p) => onProgress?.(`${p.status}${p.percent != null ? ` ${p.percent}%` : ""}`));
+    if (!result.ok) return { ok: false, installed: det.models, pulled, error: result.error || `Nie udało się pobrać ${model}.` };
+    pulled.push(model);
+  }
+  store.setSettings({
+    provider: "ollama",
+    ollamaModelComplex: model,
+    ollamaNumCtx: context,
+    confidenceGate: true,
+    adaptiveRouter: true,
+    prewarmLocal: true,
+    localRefine: true,
+  });
+  onProgress?.(`Agent Research AI gotowy: ${model}.`);
+  return { ok: true, installed: [...det.models, ...pulled], pulled };
+}
+
 /**
  * Dopilnuj, by PC miał komplet modeli premium — wykryj zainstalowane i POBIERZ brakujące SAM
  * (z paskiem postępu przez `onProgress`). To jest „na PC pobierz sam".

@@ -4,6 +4,7 @@
 export interface JarvisDesktop {
   platform: string;
   agentTool?(tool: string, input?: Record<string, unknown>): Promise<{ ok: boolean; error?: string; [key: string]: unknown }>;
+  hardwareInfo?(): Promise<{ ok: boolean; platform?: string; cpu?: string; cores?: number; ramGb?: number; gpu?: string; vramGb?: number; error?: string }>;
   open(target: string): Promise<string>;
   launch(appName: string): Promise<string>;
   power(action: string): Promise<string>;

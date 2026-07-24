@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   platform: process.platform,
   // Bezpieczna warstwa narzędzi systemowych (MCP-style): zawsze przez jeden kontrolowany IPC.
   agentTool: (tool, input = {}) => ipcRenderer.invoke("jarvis:agent-tool", { tool: String(tool || ""), input }),
+  hardwareInfo: () => ipcRenderer.invoke("jarvis:hardware-info"),
   // Otwórz URL, plik lub folder w domyślnej aplikacji systemu.
   open: (target) => ipcRenderer.invoke("jarvis:open", String(target || "")),
   // Uruchom dołączony kreator stron i otwórz go w domyślnej przeglądarce.

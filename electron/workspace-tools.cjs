@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { spawn } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 
 const MAX_OUTPUT = 200_000;
 const SAFE_COMMANDS = new Set(["git", "node", "npm", "npx", "docker", "sqlite3", "psql"]);
@@ -60,6 +60,11 @@ function createWorkspaceTools(options) {
     fs.appendFileSync(path.join(logDir, "actions.jsonl"), JSON.stringify(record) + "\n");
   };
 
+  const available = (command) => {
+    const probe = spawnSync(command, ["--version"], { shell: false, windowsHide: true, timeout: 10_000 });
+    return !probe.error;
+  };
+
   async function call(tool, rawInput = {}) {
     const input = rawInput && typeof rawInput === "object" ? rawInput : {};
     let result;
@@ -112,6 +117,12 @@ function createWorkspaceTools(options) {
           signal: AbortSignal.timeout(20_000),
         });
         result = { ok: response.ok, status: response.status, body: (await response.text()).slice(0, MAX_OUTPUT) };
+      } else if (tool === "browser_open") {
+        const url = new URL(String(input.url || ""));
+        if (!['http:', 'https:'].includes(url.protocol)) throw new Error("Przeglądarka otwiera tylko bezpieczne adresy HTTP/HTTPS.");
+        if (typeof options.openExternal !== "function") throw new Error("Otwieranie przeglądarki jest niedostępne w tym środowisku.");
+        await options.openExternal(url.toString());
+        result = { ok: true, url: url.toString() };
       } else if (tool === "generated_tool") {
         const name = String(input.name || "").replace(/[^a-z0-9_-]/gi, "").slice(0, 60);
         if (!name) throw new Error("Brak poprawnej nazwy narzędzia.");
@@ -141,6 +152,10 @@ function createWorkspaceTools(options) {
           ok: true,
           root,
           capabilities: ["files", "git", "terminal", "sqlite", "postgres", "browser", "docker", "http", "generated-tools"],
+          dependencies: {
+            git: available("git"), node: available(process.execPath), docker: available("docker"),
+            sqlite: available("sqlite3"), postgres: available("psql"), browser: typeof options.openExternal === "function",
+          },
           safety: { workspaceBoundary: true, commandAllowlist: [...SAFE_COMMANDS], backups: true, auditLog: true },
         };
       } else throw new Error(`Nieznane narzędzie systemowe: ${tool}`);

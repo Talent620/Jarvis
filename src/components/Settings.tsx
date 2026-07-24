@@ -32,7 +32,9 @@ import { pullOllamaModel } from "../lib/ollamaPull";
 import { warmNow } from "../lib/prewarm";
 import { getGeminiModels, pickGeminiModel, type IntelligenceMode } from "../lib/geminiCapabilities";
 import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkOllama";
-import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromInstalled, ADDABLE_MODELS } from "../lib/ollamaMaestro";
+import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromInstalled, ensureResearchAgent, ADDABLE_MODELS } from "../lib/ollamaMaestro";
+import { recommendLocalResearchAgent, type HardwareSnapshot } from "../lib/localResearchAgent";
+import { desktop } from "../lib/desktop";
 import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
 import { detectSd, normalizeSdUrl } from "../lib/localImage";
 import { checkFalKey } from "../lib/images";
@@ -375,6 +377,33 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
     } else {
       setMaestroMsg(`❌ ${r.error}`);
       toast(`❌ ${r.error}`);
+    }
+  };
+
+  const installResearchAgent = async () => {
+    if (maestroBusy) return;
+    if (!store.settings.ollamaUrl?.trim()) { toast("Najpierw wpisz adres Ollamy (np. http://localhost:11434)."); return; }
+    setMaestroBusy(true);
+    setMaestroMsg("Analizuję CPU, RAM i GPU…");
+    const detected = await desktop()?.hardwareInfo?.().catch(() => null);
+    const hw: HardwareSnapshot = {
+      platform: detected?.platform || "web",
+      cpu: detected?.cpu || "nieznany",
+      cores: detected?.cores || navigator.hardwareConcurrency || 2,
+      ramGb: detected?.ramGb || 8,
+      gpu: detected?.gpu || "nieznana",
+      vramGb: detected?.vramGb || 0,
+    };
+    const rec = recommendLocalResearchAgent(hw);
+    setMaestroMsg(`${hw.cpu} · ${hw.ramGb} GB RAM · ${hw.gpu || "GPU nieznane"}\n${rec.reason}\nPrzygotowuję ${rec.model}…`);
+    const result = await ensureResearchAgent(rec.model, rec.context, setMaestroMsg);
+    setMaestroBusy(false);
+    setS((prev) => ({ ...prev, ...store.settings }));
+    if (result.ok) {
+      setMaestroMsg(`✅ Research AI gotowy: ${rec.model}, kontekst ${rec.context}. ${rec.reason}`);
+      void loadOllamaModels(); void warmNow(); toast("Research AI jest gotowy.");
+    } else {
+      setMaestroMsg(`❌ ${result.error}`); toast(result.error || "Nie udało się przygotować Research AI.");
     }
   };
 
@@ -1565,6 +1594,9 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button className="btn primary" style={{ width: "auto", marginTop: 0 }} disabled={maestroBusy} onClick={() => void runMaestro(false)}>
                       {maestroBusy ? "⏳ Pracuję…" : "🚀 Tryb premium lokalny (auto)"}
+                    </button>
+                    <button className="btn primary" style={{ width: "auto", marginTop: 0 }} disabled={maestroBusy} onClick={() => void installResearchAgent()} title="Wykrywa sprzęt, dobiera model i przygotowuje lokalnego agenta do raportów ze źródłami">
+                      {maestroBusy ? "⏳ Analizuję…" : "🔎 Research AI pod mój sprzęt"}
                     </button>
                     <button className="btn" style={{ width: "auto", marginTop: 0 }} disabled={maestroBusy} onClick={() => void runMaestro(true)}>
                       🔓 + bez cenzury

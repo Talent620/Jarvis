@@ -17,6 +17,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Zadania techniczne mogą teraz przejść przez czytelną sztafetę ról: Planner → Coder → Tester → Debugger → Reviewer. Wynik jest zatwierdzany tylko wtedy, gdy kroki mają potwierdzenie.",
       "Przed nadpisaniem pliku JARVIS tworzy lokalną kopię, a wygenerowane narzędzia trafiają najpierw do kwarantanny i zostają zachowane wyłącznie po kontroli składni oraz self-teście.",
       "Dodano wydanie desktopowe dla Ubuntu: instalator .deb i przenośny AppImage będą automatycznie budowane i publikowane razem z nową wersją.",
+      "Nowy Research AI wykrywa CPU, RAM i GPU, dobiera lokalny model, instaluje go jednym przyciskiem i tworzy raporty z prawdziwych źródeł. Na komputerze z GTX 1050 Ti używa Qwen 3.5 4B do jakości oraz Qwen 3 1.7B do szybkich odpowiedzi.",
+      "Diagnostyka narzędzi sprawdza pliki, Git, terminal, HTTP, przeglądarkę, Docker, bazy i generowane skrypty. Brak zewnętrznego klienta lub wyłączony silnik jest teraz pokazywany wprost.",
     ],
   },
   {

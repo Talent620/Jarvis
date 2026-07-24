@@ -593,6 +593,19 @@ const tools: Tool[] = [
   },
   {
     def: {
+      name: "local_research_agent",
+      description: "Wykonaj pogłębiony research w prawdziwych źródłach, a następnie opracuj je prywatnie lokalnym modelem AI. Zwraca raport po polsku, cytaty, wnioski i ryzyka.",
+      input_schema: obj({ query: str("Temat lub pytanie badawcze") }, ["query"]),
+    },
+    run: async ({ query }) => {
+      const { runLocalResearchAgent } = await import("./localResearchAgent");
+      const result = await runLocalResearchAgent(String(query || ""));
+      result.sources.forEach((source) => citationBuffer.push({ title: source.title, url: source.url }));
+      return `${result.report}\n\nModel lokalny: ${result.model}`;
+    },
+  },
+  {
+    def: {
       name: "save_lead",
       description:
         "Zapisz lead (potencjalnego klienta) do Pulpitu Sprzedaży. Używaj po find_leads, aby zachować obiecujące firmy. Podaj nazwę, a jeśli znasz — stronę, kontakt, niszę, lokalizację, szacowaną wartość zlecenia (PLN) i krótką notatkę (czego im brakuje / kąt sprzedażowy).",

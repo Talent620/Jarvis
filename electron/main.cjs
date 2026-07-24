@@ -309,10 +309,33 @@ function registerDesktopControl() {
     const url = event?.senderFrame?.url || event?.sender?.getURL?.() || "";
     return url.startsWith("file://");
   };
-  const workspaceTools = createWorkspaceTools({ root: path.join(app.getPath("documents"), "JARVIS Workspace") });
+  const workspaceTools = createWorkspaceTools({
+    root: path.join(app.getPath("documents"), "JARVIS Workspace"),
+    openExternal: (url) => shell.openExternal(url),
+  });
   ipcMain.handle("jarvis:agent-tool", async (event, payload) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     return workspaceTools.call(String(payload && payload.tool || ""), payload && payload.input);
+  });
+  ipcMain.handle("jarvis:hardware-info", async (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    try {
+      const gpuInfo = await app.getGPUInfo("basic");
+      const active = (gpuInfo.gpuDevice || []).find((device) => device.active) || (gpuInfo.gpuDevice || [])[0] || {};
+      const gpu = String(active.deviceString || active.device_string || "");
+      const knownVram = /1050\s*ti/i.test(gpu) ? 4 : 0;
+      return {
+        ok: true,
+        platform: process.platform,
+        cpu: os.cpus()[0] ? os.cpus()[0].model : "",
+        cores: os.cpus().length,
+        ramGb: Math.round((os.totalmem() / 1073741824) * 10) / 10,
+        gpu,
+        vramGb: knownVram,
+      };
+    } catch (error) {
+      return { ok: false, error: error && error.message ? error.message : String(error) };
+    }
   });
   ipcMain.handle("jarvis:site-os-start", async (event, options) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };

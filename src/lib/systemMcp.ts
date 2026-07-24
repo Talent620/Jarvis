@@ -7,7 +7,7 @@ export interface SystemToolResult {
   [key: string]: unknown;
 }
 
-type SystemTool = "status" | "files_list" | "files_read" | "files_write" | "git" | "terminal" | "docker" | "database" | "http" | "generated_tool";
+type SystemTool = "status" | "files_list" | "files_read" | "files_write" | "git" | "terminal" | "docker" | "database" | "http" | "browser_open" | "generated_tool";
 
 const schema = (properties: Record<string, unknown>, required: string[] = []) => ({
   type: "object",
@@ -28,6 +28,7 @@ const definitions: { tool: SystemTool; name: string; description: string; input:
   { tool: "docker", name: "system_docker", description: "Sprawdź Docker lub uruchom bezpieczne polecenie Docker.", input: schema({ args: arr("Argumenty Docker"), cwd: str("Opcjonalny podkatalog") }) },
   { tool: "database", name: "system_database_read", description: "Wykonaj odczytowe SELECT/PRAGMA/EXPLAIN/WITH w SQLite lub PostgreSQL.", input: schema({ engine: str("sqlite albo postgres"), database: str("Względna ścieżka SQLite"), connection: str("Connection string PostgreSQL"), query: str("Zapytanie tylko do odczytu") }, ["engine", "query"]) },
   { tool: "http", name: "system_http_request", description: "Wywołaj API HTTP/HTTPS z limitem czasu i rozmiaru odpowiedzi.", input: schema({ url: str("Adres HTTP/HTTPS"), method: str("Metoda HTTP"), body: str("Opcjonalne body") }, ["url"]) },
+  { tool: "browser_open", name: "system_browser_open", description: "Otwórz bezpieczny adres HTTP/HTTPS w domyślnej przeglądarce użytkownika.", input: schema({ url: str("Adres HTTP/HTTPS") }, ["url"]) },
   { tool: "generated_tool", name: "system_generate_tool", description: "Utwórz narzędzie Node w tools/generated; zachowaj je wyłącznie po kontroli składni i self-teście.", input: schema({ name: str("Bezpieczna nazwa"), code: str("Kod CommonJS obsługujący --self-test") }, ["name", "code"]) },
 ];
 
