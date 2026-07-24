@@ -10,6 +10,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "Lipiec 2026 — Agent Workspace",
+    date: "2026-07-24",
+    items: [
+      "JARVIS dostał bezpieczną warstwę narzędzi systemowych: pliki, Git, ograniczony terminal, Docker, HTTP/API i odczyt SQLite/PostgreSQL. Wszystkie działania pozostają w wybranym katalogu roboczym, mają limit czasu i zapisują audyt.",
+      "Zadania techniczne mogą teraz przejść przez czytelną sztafetę ról: Planner → Coder → Tester → Debugger → Reviewer. Wynik jest zatwierdzany tylko wtedy, gdy kroki mają potwierdzenie.",
+      "Przed nadpisaniem pliku JARVIS tworzy lokalną kopię, a wygenerowane narzędzia trafiają najpierw do kwarantanny i zostają zachowane wyłącznie po kontroli składni oraz self-teście.",
+      "Dodano wydanie desktopowe dla Ubuntu: instalator .deb i przenośny AppImage będą automatycznie budowane i publikowane razem z nową wersją.",
+    ],
+  },
+  {
     version: "Lipiec 2026 — Site OS 0.2.1",
     date: "2026-07-18",
     items: [

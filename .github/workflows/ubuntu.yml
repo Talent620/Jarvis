@@ -1,0 +1,39 @@
+name: Build Ubuntu
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "electron/**"
+      - "src/**"
+      - "site-os/**"
+      - "electron-builder.json"
+      - "package.json"
+      - ".github/workflows/ubuntu.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Build application
+        run: npm run build
+      - name: Package Ubuntu
+        run: npx electron-builder --linux AppImage deb --publish never
+      - name: Publish rolling Linux release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: JARVIS — najnowszy build
+          files: |
+            release-desktop/JARVIS.AppImage
+            release-desktop/JARVIS.deb

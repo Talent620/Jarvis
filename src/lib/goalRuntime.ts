@@ -4,7 +4,8 @@
 // Dzięki temu każde uruchomione działanie jest śledzone i widoczne w panelu celu. Kanoniczne wejście
 // dla UI (Plan dnia, panel celu). Bez chain-of-thought. S9-safe.
 
-import { runPlan, makeDefaultExecTool, type RunResult, type StepResult } from "./agentRun";
+import { makeDefaultExecTool, type RunResult, type StepResult } from "./agentRun";
+import { runAgentPipeline } from "./agentPipeline";
 import { newGoal, recordStepOutcome, loadGoals, upsertGoal, resumableGoals, type GoalRecord, type GoalStatus, type GoalStorage } from "./goalState";
 import type { AgentPlan } from "./agentPlanner";
 import { runTool, toolDefs } from "./tools";
@@ -38,7 +39,7 @@ export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStora
   let record: GoalRecord = { ...newGoal(input.goal, input.plan, input.correlationId, input.now), status: "running" };
   await upsertGoal(record, storage);
 
-  const result = await runPlan(input.plan, {
+  const pipeline = await runAgentPipeline(input.plan, {
     toolExists,
     riskOf,
     execTool: makeDefaultExecTool(runTool, riskOf),
@@ -49,6 +50,7 @@ export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStora
       input.onStep?.(r);
     },
   });
+  const result = pipeline.run;
 
   record = { ...record, status: finalStatus(result), updatedAt: input.now };
   await upsertGoal(record, storage);
@@ -73,7 +75,7 @@ export async function resumeAndRunGoal(
   let rec: GoalRecord = { ...record, status: "running", updatedAt: opts.now };
   await upsertGoal(rec, storage);
 
-  const result = await runPlan(record.plan, {
+  const pipeline = await runAgentPipeline(record.plan, {
     toolExists,
     riskOf,
     execTool: makeDefaultExecTool(runTool, riskOf),
@@ -85,6 +87,7 @@ export async function resumeAndRunGoal(
       opts.onStep?.(r);
     },
   });
+  const result = pipeline.run;
 
   rec = { ...rec, status: finalStatus(result), updatedAt: opts.now };
   await upsertGoal(rec, storage);

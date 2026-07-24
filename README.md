@@ -11,6 +11,16 @@ Aplikacja webowa (React + Vite) opakowana w Androida przez **Capacitor** — nas
 oryginalnego `JARVIS.apk`, tym razem z pełnym kodem źródłowym, który możesz dowolnie
 modyfikować i z którego zbudujesz nowy APK.
 
+## Desktop: Windows i Ubuntu
+
+JARVIS desktop działa na Windows oraz Ubuntu. Dla Ubuntu dostępne są dwa warianty:
+
+- `JARVIS.deb` — zwykła instalacja w Ubuntu/Debian.
+- `JARVIS.AppImage` — pojedynczy, przenośny plik uruchamiany bez instalacji.
+
+Tworzenie pakietów lokalnie: `npm run desktop:ubuntu`. GitHub Actions publikuje oba
+pliki przy aktualizacji gałęzi `main`.
+
 ## Co potrafi
 
 - **Wybór modelu z wielu dostawców** — Claude (Opus 4.8), Google Gemini, Groq,

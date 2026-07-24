@@ -5,6 +5,7 @@ const fs = require("fs");
 const http = require("http");
 const { spawn, exec } = require("child_process");
 const os = require("os");
+const { createWorkspaceTools } = require("./workspace-tools.cjs");
 
 const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
 
@@ -308,6 +309,11 @@ function registerDesktopControl() {
     const url = event?.senderFrame?.url || event?.sender?.getURL?.() || "";
     return url.startsWith("file://");
   };
+  const workspaceTools = createWorkspaceTools({ root: path.join(app.getPath("documents"), "JARVIS Workspace") });
+  ipcMain.handle("jarvis:agent-tool", async (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    return workspaceTools.call(String(payload && payload.tool || ""), payload && payload.input);
+  });
   ipcMain.handle("jarvis:site-os-start", async (event, options) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     try {

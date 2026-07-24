@@ -12,6 +12,14 @@
     "target": "nsis",
     "artifactName": "JARVIS.exe"
   },
+  "linux": {
+    "target": [
+      "AppImage",
+      "deb"
+    ],
+    "category": "Utility",
+    "artifactName": "JARVIS.${ext}"
+  },
   "nsis": {
     "oneClick": true,
     "perMachine": false,

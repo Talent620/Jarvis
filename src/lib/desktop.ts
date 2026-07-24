@@ -3,6 +3,7 @@
 
 export interface JarvisDesktop {
   platform: string;
+  agentTool?(tool: string, input?: Record<string, unknown>): Promise<{ ok: boolean; error?: string; [key: string]: unknown }>;
   open(target: string): Promise<string>;
   launch(appName: string): Promise<string>;
   power(action: string): Promise<string>;

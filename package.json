@@ -21,6 +21,7 @@
     "ios:build": "bash scripts/ios-build.sh",
     "electron:dev": "electron .",
     "desktop:build": "npm run build && electron-builder --win nsis",
+    "desktop:ubuntu": "npm run build && electron-builder --linux AppImage deb",
     "test": "vitest run",
     "test:watch": "vitest",
     "salesos": "bash sales-os/start.sh",
