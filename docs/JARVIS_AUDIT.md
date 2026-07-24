@@ -176,7 +176,7 @@ Braki do poziomu produkcyjnego:
 | Kontrola | Wynik |
 | --- | --- |
 | `npm run build` | PASS, 2410 modułów |
-| pełny Vitest po poprawkach | 327 plików, 2788/2788 PASS; dodatkowy test mostu MCP 1/1 PASS |
+| pełny Vitest po poprawkach | 327 plików, 2789/2789 PASS |
 | MCP stdio | realny proces testowy: connect, tools/list, tools/call i shutdown PASS |
 | ESLint po poprawce | PASS |
 | skan sekretów po poprawce | PASS |
@@ -187,6 +187,7 @@ Braki do poziomu produkcyjnego:
 | AI Sales gates | PASS na Next.js 15.5.21 |
 | AI Sales npm audit | PASS, 0 podatności |
 | główne zależności produkcyjne npm audit | PASS, 0 podatności |
+| `npm run quality:all` | PASS: sekrety, lint, testy, build, Site OS smoke i AI Sales gates |
 | bootstrap Ubuntu `--check` | PASS diagnostyki; prawidłowo wykrywa brak natywnego Node/npm w WSL |
 | cross-build Linux na Windows | build aplikacji PASS; pakowanie przerwane przez błąd DNS pobierania Electrona |
 

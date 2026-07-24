@@ -89,3 +89,14 @@ Stan tych narzędzi można sprawdzić:
 npm run tools:verify
 ```
 
+Pełna lokalna kontrola Jarvisa i Kreatora:
+
+```bash
+npm run quality
+```
+
+Kontrola całego repozytorium razem z AI Sales:
+
+```bash
+npm run quality:all
+```

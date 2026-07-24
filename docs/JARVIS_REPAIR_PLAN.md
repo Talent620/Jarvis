@@ -96,16 +96,17 @@ Warunek odbioru: artefakty startują na czystym Ubuntu 22.04/24.04.
 - do rozbudowy: limit pamięci procesu i automatyczny restart;
 - do rozbudowy: osobne zgody per narzędzie dla odczytu, zapisu i działań wychodzących.
 
-### W5. Jedna bramka jakości
+### W5. Jedna bramka jakości — wykonane
 
-Nowy skrypt powinien kolejno sprawdzać:
+`npm run quality` sprawdza:
 
 1. skan sekretów;
 2. lint;
 3. typecheck/build;
 4. szybkie testy głównej aplikacji;
 5. Site OS smoke;
-6. AI Sales gates, jeśli jego zależności są zainstalowane.
+
+`npm run quality:all` wykonuje ten sam przepływ i dodatkowo uruchamia AI Sales gates.
 
 ## OPTYMALIZACJE
 

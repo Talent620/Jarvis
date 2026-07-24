@@ -32,7 +32,9 @@
     "knowledge": "node scripts/gen-knowledge.mjs",
     "siteos": "node site-os/server.mjs",
     "siteos:tunnel": "node site-os/server.mjs --tunnel",
-    "tools:verify": "node scripts/verify-workspace-tools.cjs"
+    "tools:verify": "node scripts/verify-workspace-tools.cjs",
+    "quality": "node scripts/quality-gate.mjs",
+    "quality:all": "node scripts/quality-gate.mjs --sales"
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",
