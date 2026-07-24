@@ -27,7 +27,11 @@ describe("Ollama — model bez obsługi narzędzi (400) → ponów BEZ tools", (
       if (body.tools) {
         return new Response(JSON.stringify({ error: { message: "registry.ollama.ai/library/dolphin-mistral:latest does not support tools" } }), { status: 400 });
       }
-      return new Response(JSON.stringify({ choices: [{ message: { role: "assistant", content: "Cześć! W czym pomóc?" } }], usage: {} }), { status: 200 });
+      return new Response(JSON.stringify({
+        message: { role: "assistant", content: "Cześć! W czym pomóc?" },
+        prompt_eval_count: 4,
+        eval_count: 7,
+      }), { status: 200 });
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -39,7 +43,11 @@ describe("Ollama — model bez obsługi narzędzi (400) → ponów BEZ tools", (
 
   it("model z obsługą tools → bez dodatkowego ponawiania", async () => {
     const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify({ choices: [{ message: { role: "assistant", content: "ok" } }], usage: {} }), { status: 200 }),
+      new Response(JSON.stringify({
+        message: { role: "assistant", content: "ok" },
+        prompt_eval_count: 3,
+        eval_count: 1,
+      }), { status: 200 }),
     );
     vi.stubGlobal("fetch", fetchMock);
     const r = await PROVIDERS.ollama.impl(ctx({ model: "qwen3.5:4b" }));

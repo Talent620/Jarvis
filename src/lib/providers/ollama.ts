@@ -53,7 +53,12 @@ export async function askOllamaNative(
       eval_count?: number;
     } | null;
     if (!response.ok || !data?.message) {
-      const error = data?.error || `Ollama HTTP ${response.status}`;
+      const rawError = data?.error;
+      const error = typeof rawError === "string"
+        ? rawError
+        : rawError && typeof rawError === "object" && "message" in rawError
+          ? String((rawError as { message?: unknown }).message || `Ollama HTTP ${response.status}`)
+          : `Ollama HTTP ${response.status}`;
       if (useTools && /does not support tools|tools?.*not support/i.test(error)) { useTools = false; continue; }
       throw new Error(error);
     }
