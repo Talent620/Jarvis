@@ -2769,16 +2769,32 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
               <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
               <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🔌 Serwery MCP (narzędzia)</summary>
               <p className="muted">
-                Podłącz narzędzia przez standard MCP. Tylko hosty z allowlisty (domyślnie localhost +
-                mcp.googleapis.com). Niedostępny serwer jest pomijany — JARVIS działa dalej.
+                Podłącz zdalny adres albo lokalny serwer uruchamiany przez aplikację desktopową.
+                Niedostępny serwer jest pomijany — JARVIS działa dalej.
               </p>
+              {desktopSiteOs && (
+                <button
+                  className="btn secondary"
+                  type="button"
+                  onClick={() => set({
+                    mcpServers: JSON.stringify([{
+                      name: "pliki",
+                      command: "npx",
+                      args: ["-y", "@modelcontextprotocol/server-filesystem", "."],
+                      cwd: ".",
+                    }], null, 2),
+                  })}
+                >
+                  Dodaj lokalne pliki MCP
+                </button>
+              )}
               <div className="field">
                 <label>Serwery MCP (JSON)</label>
                 <textarea
                   className="ta"
-                  rows={3}
+                  rows={5}
                   value={s.mcpServers}
-                  placeholder='[{"name":"gcal","url":"http://localhost:9100/mcp"}]'
+                  placeholder='[{"name":"lokalny","command":"npx","args":["-y","pakiet-mcp"]}]'
                   onChange={(e) => set({ mcpServers: e.target.value })}
                 />
               </div>

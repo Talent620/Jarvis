@@ -4,7 +4,10 @@ import { isAllowedHost, mcpToolName, mcpToolsToDefs, formatMcpResult, McpManager
 import { toolDefs, runTool } from "../src/lib/tools";
 import { grantOutboundScope } from "../src/lib/permissions";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  delete (window as unknown as { jarvisDesktop?: unknown }).jarvisDesktop;
+});
 
 describe("MCP — funkcje czyste", () => {
   it("isAllowedHost: dokładny host lub subdomena; reszta odrzucona", () => {
@@ -72,5 +75,29 @@ describe("MCP — McpManager (mock JSON-RPC)", () => {
     const mgr = new McpManager();
     const loaded = await mgr.loadAll([{ name: "down", url: "http://localhost:9200/mcp" }], ["localhost"]);
     expect(loaded).toEqual([]);
+  });
+
+  it("rejestruje i wywołuje lokalne narzędzie stdio przez most desktopowy", async () => {
+    const mcpStdioConnect = vi.fn(async () => ({
+      ok: true,
+      tools: [{ name: "local_ping", description: "Lokalny test", inputSchema: { type: "object", properties: {} } }],
+    }));
+    const mcpStdioCall = vi.fn(async () => ({
+      ok: true,
+      result: { content: [{ type: "text", text: "local-pong" }] },
+    }));
+    (window as unknown as { jarvisDesktop: unknown }).jarvisDesktop = {
+      platform: "linux",
+      mcpStdioConnect,
+      mcpStdioCall,
+    };
+
+    const mgr = new McpManager();
+    const loaded = await mgr.loadAll([{ name: "local-fixture", command: "node", args: ["server.mjs"] }]);
+    expect(loaded.map((tool) => tool.toolName)).toContain("mcp_local_fixture_local_ping");
+    grantOutboundScope("*");
+    await expect(runTool("mcp_local_fixture_local_ping", {})).resolves.toBe("local-pong");
+    expect(mcpStdioConnect).toHaveBeenCalledOnce();
+    expect(mcpStdioCall).toHaveBeenCalledWith("local-fixture", "local_ping", {});
   });
 });

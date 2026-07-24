@@ -6,6 +6,7 @@ const http = require("http");
 const { spawn, exec } = require("child_process");
 const os = require("os");
 const { createWorkspaceTools } = require("./workspace-tools.cjs");
+const { createStdioMcpManager } = require("./mcp-stdio.cjs");
 
 const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
 
@@ -28,6 +29,8 @@ function saveState(win) {
 
 let mainWindow = null;
 let siteOsProcess = null;
+let stdioMcp = null;
+let closingStdioMcp = false;
 
 function siteOsPaths() {
   const base = path.join(app.getPath("userData"), "site-os");
@@ -313,9 +316,22 @@ function registerDesktopControl() {
     root: path.join(app.getPath("documents"), "JARVIS Workspace"),
     openExternal: (url) => shell.openExternal(url),
   });
+  stdioMcp = createStdioMcpManager({ root: workspaceTools.root });
   ipcMain.handle("jarvis:agent-tool", async (event, payload) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     return workspaceTools.call(String(payload && payload.tool || ""), payload && payload.input);
+  });
+  ipcMain.handle("jarvis:mcp-stdio-connect", async (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    return stdioMcp.connect(payload);
+  });
+  ipcMain.handle("jarvis:mcp-stdio-call", async (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    return stdioMcp.call(payload?.server, payload?.tool, payload?.input);
+  });
+  ipcMain.handle("jarvis:mcp-stdio-disconnect", async (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    return stdioMcp.close(String(payload?.server || ""));
   });
   ipcMain.handle("jarvis:hardware-info", async (event) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
@@ -617,6 +633,13 @@ if (!gotLock) {
 
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();
+  });
+
+  app.on("before-quit", (event) => {
+    if (!stdioMcp || closingStdioMcp) return;
+    event.preventDefault();
+    closingStdioMcp = true;
+    void stdioMcp.closeAll().finally(() => app.quit());
   });
 
   app.on("will-quit", () => {

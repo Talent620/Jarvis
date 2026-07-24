@@ -81,19 +81,20 @@ Warunek odbioru: artefakty startują na czystym Ubuntu 22.04/24.04.
 - automatycznie wykrywać lokalny adres, port i istniejącą instancję;
 - pokazywać użytkownikowi rezultat, a szczegóły techniczne chować w raporcie.
 
-### W3. Site OS: zarządzanie procesem i portem
+### W3. Site OS: zarządzanie procesem i portem — wykonane
 
 - wykryć już uruchomioną instancję;
 - przy zajętym porcie otworzyć istniejącą instancję lub wybrać kolejny port;
 - dodać endpoint stanu i czytelny smoke test;
 - zachować lokalne grafiki i projekty po restarcie.
 
-### W4. MCP stdio na Ubuntu
+### W4. MCP stdio na Ubuntu — fundament wykonany
 
-- menedżer procesów z allowlistą komend i katalogów;
-- jawna konfiguracja serwera, timeout, restart i limit pamięci;
-- oddzielne zgody dla odczytu, zapisu i działań wychodzących;
-- pełny dziennik oraz przycisk zatrzymania.
+- wykonano: oficjalny klient MCP 1.x, menedżer procesów i allowlista programów/katalogów;
+- wykonano: konfiguracja lokalnego serwera, timeout, dziennik oraz kontrolowane zatrzymanie;
+- wykonano: rejestracja odkrytych narzędzi w istniejącym routerze Jarvisa;
+- do rozbudowy: limit pamięci procesu i automatyczny restart;
+- do rozbudowy: osobne zgody per narzędzie dla odczytu, zapisu i działań wychodzących.
 
 ### W5. Jedna bramka jakości
 
@@ -193,7 +194,7 @@ Jeden ekran powinien pokazywać:
 3. K5: paczki AppImage/DEB.
 4. W1 + W2: diagnostyka i prosty kreator integracji.
 5. W3: autonomiczne uruchamianie Site OS i tunelu.
-6. W4: MCP stdio.
+6. W4: MCP stdio — fundament wykonany.
 7. W5 + O1: jedna szybka bramka jakości.
 8. R1-R4: trwała autonomia z checkpointami i rollbackiem.
 

@@ -9,17 +9,16 @@ Punkt odniesienia: `99e5ec9` oraz poprawki audytowe `c3a409b`, `2fad726`
 JARVIS nie jest prototypem do przepisania od zera. To duży, działający system React/TypeScript z
 aplikacją Electron, wersjami mobilnymi, pamięcią lokalną, rozbudowanym zestawem narzędzi,
 integracjami AI, AI Sales OS i Site OS. Główna aplikacja buduje się produkcyjnie, a zdecydowana
-większość testów przechodzi.
+pełny zestaw testów przechodzi.
 
 Największe ryzyko nie leży w braku funkcji, lecz w spójności dystrybucji i utrzymania:
 
-- świeże Ubuntu nie ma jednego, sprawdzonego bootstrapu środowiska;
+- bootstrap Ubuntu istnieje, ale paczki AppImage/DEB wymagają jeszcze uruchomienia na czystym Ubuntu;
 - AI Sales OS wymagał aktualizacji Next/Auth i osobnego przygotowania lokalnych zależności;
 - część zdolności systemowych wymaga zewnętrznych programów (`docker`, `sqlite3`, `psql`);
 - pełny zestaw testów jest wolny, a osobne produkty mają różne bramki jakości;
 - kilka workflow publikuje artefakty do wspólnego wydania `latest`, co grozi kolizją;
-- aktualny system MCP jest klientem HTTP/IPC w stylu MCP, ale nie jest jeszcze kompletnym
-  menedżerem procesów MCP stdio na Ubuntu.
+- lokalny MCP stdio działa przez oficjalny SDK 1.x, z kontrolą procesu i ograniczeniami katalogu.
 
 Ocena bieżąca: **działający fundament, jeszcze nie gotowy do bezobsługowej instalacji na czystym
 Ubuntu**.
@@ -116,10 +115,11 @@ Ryzyka:
 
 ## 6. MCP i narzędzia systemowe
 
-Istnieją dwie warstwy:
+Istnieją trzy warstwy:
 
 1. Klient MCP JSON-RPC przez HTTP z allowlistą hostów.
-2. Systemowe narzędzia IPC Electrona, rejestrowane jako narzędzia MCP-style:
+2. Klient MCP stdio uruchamiający lokalne serwery przez oficjalny SDK 1.x.
+3. Systemowe narzędzia IPC Electrona, rejestrowane jako narzędzia MCP-style:
    pliki, Git, ograniczony terminal, SQLite/PostgreSQL, przeglądarka, Docker, HTTP i generator
    narzędzi.
 
@@ -130,6 +130,8 @@ Zabezpieczenia już obecne:
 - tylko odczyt dla zapytań bazodanowych;
 - kopia pliku przed zapisem;
 - dziennik operacji;
+- allowlista programów MCP stdio, uruchamianie bez powłoki, timeout i kontrolowane zamykanie;
+- blokada wyjścia z workspace także przez dowiązania symboliczne;
 - składnia i self-test przed zachowaniem wygenerowanego narzędzia;
 - fail-safe dla niesklasyfikowanych narzędzi.
 
@@ -137,7 +139,6 @@ Braki:
 
 - `sqlite3` i `psql` są wymaganymi zewnętrznymi programami, nie są dostarczane z aplikacją;
 - Docker wymaga działającego demona;
-- brak adaptera uruchamiającego lokalne serwery MCP stdio z kontrolą procesu i uprawnień;
 - backup dotyczy zapisywanego pliku, ale nie tworzy kompletnego punktu przywracania całej operacji;
 - rollback Git i podgląd zmian nie są jeszcze jednym intuicyjnym przepływem w UI.
 
@@ -175,16 +176,17 @@ Braki do poziomu produkcyjnego:
 | Kontrola | Wynik |
 | --- | --- |
 | `npm run build` | PASS, 2410 modułów |
-| pełny Vitest przed poprawką | 2770 PASS, 3 FAIL |
-| testy regresji po poprawce | 5/5 PASS |
+| pełny Vitest po poprawkach | 327 plików, 2788/2788 PASS; dodatkowy test mostu MCP 1/1 PASS |
+| MCP stdio | realny proces testowy: connect, tools/list, tools/call i shutdown PASS |
 | ESLint po poprawce | PASS |
 | skan sekretów po poprawce | PASS |
-| Site OS | serwer już działa na `127.0.0.1:3210`; drugi start poprawnie zgłasza zajęty port |
+| Site OS | drugi start rozpoznaje działającą instancję; konflikt z obcą aplikacją jest czytelny |
 | narzędzia systemowe | pliki, Git, terminal, HTTP, browser i generator PASS |
 | SQLite/PostgreSQL | pominięte: brak klientów CLI |
 | Docker | CLI wykryty, demon niedostępny |
 | AI Sales gates | PASS na Next.js 15.5.21 |
 | AI Sales npm audit | PASS, 0 podatności |
+| główne zależności produkcyjne npm audit | PASS, 0 podatności |
 | bootstrap Ubuntu `--check` | PASS diagnostyki; prawidłowo wykrywa brak natywnego Node/npm w WSL |
 | cross-build Linux na Windows | build aplikacji PASS; pakowanie przerwane przez błąd DNS pobierania Electrona |
 
@@ -202,11 +204,8 @@ badawczego oraz aktualizacja kontraktu testów natywnej Ollamy.
 ### Ważne
 
 1. Zdolności SQLite/PostgreSQL/Docker są prezentowane mimo brakujących programów lub demona.
-2. Brak menedżera lokalnych serwerów MCP stdio.
-3. Site OS przy zajętym porcie kończy się surowym wyjątkiem zamiast wskazać działającą instancję
-   lub wybrać bezpieczny wolny port.
-4. Publikacja wielu platform do wspólnego wydania `latest` może powodować kolizje artefaktów.
-5. Brak jednej bramki jakości obejmującej główną aplikację, Site OS i AI Sales OS.
+2. Publikacja wielu platform do wspólnego wydania `latest` może powodować kolizje artefaktów.
+3. Brak jednej bramki jakości obejmującej główną aplikację, Site OS i AI Sales OS.
 
 ### Optymalizacje
 
