@@ -14,7 +14,7 @@ większość testów przechodzi.
 Największe ryzyko nie leży w braku funkcji, lecz w spójności dystrybucji i utrzymania:
 
 - świeże Ubuntu nie ma jednego, sprawdzonego bootstrapu środowiska;
-- AI Sales OS ma krytycznie przestarzały stos Next/Auth i niekompletne lokalne zależności;
+- AI Sales OS wymagał aktualizacji Next/Auth i osobnego przygotowania lokalnych zależności;
 - część zdolności systemowych wymaga zewnętrznych programów (`docker`, `sqlite3`, `psql`);
 - pełny zestaw testów jest wolny, a osobne produkty mają różne bramki jakości;
 - kilka workflow publikuje artefakty do wspólnego wydania `latest`, co grozi kolizją;
@@ -59,14 +59,13 @@ zależnościach. Ich aktualizacja wymaga migracji wersji głównych i osobnej wa
 
 ### AI Sales OS
 
-- Next 14.2.15
+- Next 15.5.21
 - NextAuth 4.24.x
 - Prisma 5.22 + PostgreSQL
 - osobny `package-lock.json` i osobny cykl instalacji
 
-Audyt produkcyjny: **5 podatności**, w tym **2 krytyczne**. Krytyczne dotyczą Next.js oraz
-NextAuth. Ten moduł nie powinien być wystawiany przez tunel lub publicznie przed aktualizacją,
-testem autoryzacji i testem migracji.
+Po migracji audyt wszystkich zależności AI Sales pokazuje **0 podatności**. NextAuth został
+podniesiony do 4.24.15, a framework do Next.js 15.5.21 wraz z nowym kontraktem parametrów tras.
 
 ### Python
 
@@ -85,7 +84,9 @@ Istnieją:
 - workflow Ubuntu 22.04 budujący AppImage oraz DEB;
 - konfiguracja electron-builder dla `AppImage` i `deb`.
 
-Środowisko WSL dostępne podczas audytu ma Ubuntu 26.04, ale nie ma natywnego Node.js. Polecenie
+Dodano `scripts/bootstrap-ubuntu.sh`, który kontroluje środowisko bez zmian albo instaluje
+natywny Node.js 22 LTS, biblioteki Electrona i zależności obu aplikacji. Środowisko WSL dostępne
+podczas audytu ma Ubuntu 26.04, ale nie ma natywnego Node.js. Polecenie
 `npm` wskazuje na instalację Windows w `/mnt/c/Program Files/nodejs`, co jest niepoprawnym,
 mieszanym środowiskiem. Lokalny build Ubuntu wymaga natywnego Node LTS, npm i bibliotek
 systemowych Electron. Docker CLI jest widoczny, lecz demon nie działa.
@@ -182,7 +183,9 @@ Braki do poziomu produkcyjnego:
 | narzędzia systemowe | pliki, Git, terminal, HTTP, browser i generator PASS |
 | SQLite/PostgreSQL | pominięte: brak klientów CLI |
 | Docker | CLI wykryty, demon niedostępny |
-| AI Sales gates | BLOCKED: lokalny moduł nie ma kompletnej instalacji dev (`prisma` niedostępna) |
+| AI Sales gates | PASS na Next.js 15.5.21 |
+| AI Sales npm audit | PASS, 0 podatności |
+| bootstrap Ubuntu `--check` | PASS diagnostyki; prawidłowo wykrywa brak natywnego Node/npm w WSL |
 
 Trzy błędy pełnego zestawu zostały usunięte w `c3a409b`: jawna klasyfikacja ryzyka agenta
 badawczego oraz aktualizacja kontraktu testów natywnej Ollamy.
@@ -191,9 +194,9 @@ badawczego oraz aktualizacja kontraktu testów natywnej Ollamy.
 
 ### Krytyczne
 
-1. AI Sales OS zawiera krytyczne podatności Next.js i NextAuth.
-2. Brak powtarzalnego bootstrapu i smoke testu na świeżym Ubuntu.
-3. Pełne lokalne bramki AI Sales OS nie uruchamiają się bez osobnej instalacji zależności.
+1. Paczki AppImage/DEB nie zostały jeszcze uruchomione na czystym Ubuntu po instalacji.
+2. Bootstrap Ubuntu jest zaimplementowany, ale pełny tryb instalacji czeka na wykonanie w CI lub
+   środowisku z uprawnieniami `sudo`.
 
 ### Ważne
 
@@ -238,4 +241,3 @@ Najmniej inwazyjna droga do stabilnego autonomicznego JARVISA:
 4. rozbudować istniejące IPC/MCP zamiast wprowadzać drugi framework agentowy;
 5. dodać trwały dziennik wykonań i checkpointy;
 6. udostępnić użytkownikowi jeden ekran: połącz, sprawdź, uruchom, zatrzymaj, cofnij.
-

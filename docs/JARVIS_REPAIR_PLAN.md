@@ -7,7 +7,7 @@ bez potwierdzenia.
 
 ### K1. Przywrócić zielone testy głównej aplikacji
 
-Status: **wykonane**  
+Status: **wykonane**
 Commit: `c3a409b`
 
 - jawnie sklasyfikować ryzyko lokalnego agenta badawczego;
@@ -29,7 +29,8 @@ Warunek odbioru: lint i skan sekretów przechodzą bez fałszywych błędów.
 
 ### K3. Naprawić bezpieczeństwo AI Sales OS
 
-Status: **następne**
+Status: **wykonane**  
+Commity: `4f61985`, `d406a8a`
 
 - wykonać czystą instalację z lockfile;
 - podnieść NextAuth do bezpiecznej wersji kompatybilnej;
@@ -41,7 +42,7 @@ Warunek odbioru: brak krytycznych podatności produkcyjnych i zielone gates.
 
 ### K4. Dodać bootstrap Ubuntu
 
-Status: **oczekuje**
+Status: **zaimplementowane, oczekuje na pełny przebieg CI**
 
 - sprawdzić/doinstalować natywny Node LTS, npm, Git i biblioteki Electron;
 - opcjonalnie instalować `sqlite3`, klienta PostgreSQL i Docker;
@@ -208,4 +209,3 @@ zmienione pliki
 wyniki testów
 następny krok
 ```
-

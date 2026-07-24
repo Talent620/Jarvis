@@ -24,6 +24,8 @@ jobs:
         with:
           node-version: "20"
           cache: npm
+      - name: Check native Ubuntu environment
+        run: bash scripts/bootstrap-ubuntu.sh --check
       - run: npm ci
       - name: Build application
         run: npm run build

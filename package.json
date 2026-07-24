@@ -22,6 +22,8 @@
     "electron:dev": "electron .",
     "desktop:build": "npm run build && electron-builder --win nsis",
     "desktop:ubuntu": "npm run build && electron-builder --linux AppImage deb",
+    "ubuntu:check": "bash scripts/bootstrap-ubuntu.sh --check",
+    "ubuntu:setup": "bash scripts/bootstrap-ubuntu.sh --install",
     "test": "vitest run",
     "test:watch": "vitest",
     "salesos": "bash sales-os/start.sh",
