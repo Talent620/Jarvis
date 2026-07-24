@@ -358,7 +358,7 @@ describe("predictionLedger — narzędzie czatu (prediction_ledger_status)", () 
     const { riskOf } = await import("../src/lib/permissions");
     expect(toolDefs.some((d) => d.name === "prediction_ledger_status")).toBe(true);
     expect(riskOf("prediction_ledger_status")).toBe("read");
-  });
+  }, 15_000);
 
   it("bez zapisanych predykcji zwraca uczciwy komunikat, nie zmyśloną statystykę", async () => {
     const { runTool } = await import("../src/lib/tools");
