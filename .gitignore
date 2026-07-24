@@ -27,3 +27,7 @@ proxy/.dev.vars
 JARVIS_KOD_BACKUP.zip
 dist-studio
 studio-obrazow-standalone.zip
+release-desktop
+
+# Kandydaci narzędzi generowanych przez agenta nigdy nie trafiają do repozytorium.
+tools/generated/*.candidate.cjs

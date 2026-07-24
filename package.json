@@ -21,6 +21,9 @@
     "ios:build": "bash scripts/ios-build.sh",
     "electron:dev": "electron .",
     "desktop:build": "npm run build && electron-builder --win nsis",
+    "desktop:ubuntu": "npm run build && electron-builder --linux AppImage deb",
+    "ubuntu:check": "bash scripts/bootstrap-ubuntu.sh --check",
+    "ubuntu:setup": "bash scripts/bootstrap-ubuntu.sh --install",
     "test": "vitest run",
     "test:watch": "vitest",
     "salesos": "bash sales-os/start.sh",
@@ -28,7 +31,10 @@
     "build:studio": "vite build --config vite.studio.config.ts",
     "knowledge": "node scripts/gen-knowledge.mjs",
     "siteos": "node site-os/server.mjs",
-    "siteos:tunnel": "node site-os/server.mjs --tunnel"
+    "siteos:tunnel": "node site-os/server.mjs --tunnel",
+    "tools:verify": "node scripts/verify-workspace-tools.cjs",
+    "quality": "node scripts/quality-gate.mjs",
+    "quality:all": "node scripts/quality-gate.mjs --sales"
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",
@@ -42,6 +48,7 @@
     "@capacitor/status-bar": "^6.0.3",
     "@capgo/capacitor-updater": "^6.45.10",
     "@ebarooni/capacitor-calendar": "^6.7.2",
+    "@modelcontextprotocol/sdk": "1.29.0",
     "dexie": "^4.4.4",
     "framer-motion": "^11.18.2",
     "jsqr": "^1.4.0",
@@ -73,5 +80,8 @@
     "typescript-eslint": "^8.61.1",
     "vite": "^5.4.10",
     "vitest": "^2.1.9"
+  },
+  "overrides": {
+    "@hono/node-server": "^2.0.5"
   }
 }

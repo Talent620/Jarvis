@@ -11,10 +11,15 @@
 import { fetchTimeout, appTokenHeader } from "./http";
 import { registerTool, type ToolDef } from "./tools";
 import { store } from "./store";
+import { desktop } from "./desktop";
 
 export interface McpServerConfig {
   name: string;
-  url: string;
+  url?: string;
+  command?: string;
+  args?: string[];
+  cwd?: string;
+  env?: Record<string, string>;
   enabled?: boolean;
   token?: string;
 }
@@ -105,6 +110,35 @@ export class McpManager {
     const allow = allowlist ?? readAllowlist();
     for (const srv of cfg) {
       if (srv.enabled === false) continue;
+      if (srv.command) {
+        const bridge = desktop();
+        if (!bridge?.mcpStdioConnect || !bridge?.mcpStdioCall) {
+          console.warn(`[mcp] stdio wymaga aplikacji desktopowej: ${srv.name}`);
+          continue;
+        }
+        try {
+          const connected = await bridge.mcpStdioConnect(srv as unknown as Record<string, unknown>);
+          if (!connected.ok) throw new Error(connected.error || "Nie udało się połączyć.");
+          for (const { def, original } of mcpToolsToDefs({ tools: connected.tools }, srv.name)) {
+            if (this.registered.has(def.name)) continue;
+            try {
+              registerTool(def, async (input) => {
+                const response = await bridge.mcpStdioCall!(srv.name, original, input as Record<string, unknown>);
+                if (!response.ok) return `Narzędzie MCP „${original}" niedostępne (${response.error || "błąd"}).`;
+                return formatMcpResult(response.result);
+              });
+              this.registered.add(def.name);
+              this.loaded.push({ toolName: def.name, server: srv.name, original });
+            } catch {
+              /* nazwa zajęta / nieprawidłowa — pomiń to narzędzie */
+            }
+          }
+        } catch (e) {
+          console.warn(`[mcp] nie udało się uruchomić ${srv.name}:`, e instanceof Error ? e.message : e);
+        }
+        continue;
+      }
+      if (!srv.url) continue;
       if (!isAllowedHost(srv.url, allow)) {
         console.warn(`[mcp] serwer poza allowlistą — pomijam: ${srv.url}`);
         continue;
@@ -132,6 +166,7 @@ export class McpManager {
 
   /** Wykonaj narzędzie MCP (wołane przez runTool dla zarejestrowanych nazw). */
   async call(srv: McpServerConfig, name: string, args: unknown): Promise<string> {
+    if (!srv.url) return `Narzędzie MCP „${name}" nie ma adresu HTTP.`;
     try {
       const result = await rpc(srv.url, "tools/call", { name, arguments: args ?? {} }, srv.token);
       return formatMcpResult(result);
@@ -150,7 +185,8 @@ export function readServers(): McpServerConfig[] {
   try {
     const raw = JSON.parse(store.settings.mcpServers || "[]");
     if (!Array.isArray(raw)) return [];
-    return raw.filter((s) => s && typeof s.url === "string" && typeof s.name === "string");
+    return raw.filter((s) => s && typeof s.name === "string"
+      && (typeof s.url === "string" || typeof s.command === "string"));
   } catch {
     return [];
   }

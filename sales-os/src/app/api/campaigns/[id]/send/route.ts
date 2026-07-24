@@ -13,7 +13,8 @@ const RECIPIENT_CAP = 500;
  * messages as sent, updates counters, and notifies the team. No external email
  * is sent unless a real channel integration is wired up (kept honest + safe).
  */
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const a = await getAuth();
   if ("res" in a) return a.res;
 

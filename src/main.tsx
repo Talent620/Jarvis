@@ -9,6 +9,7 @@ import { initPlugins } from "./plugins";
 import { installSecretsVault } from "./lib/secretsVault";
 import { applyPerformanceProfile } from "./lib/performanceProfile";
 import { setChatStorageWarner } from "./lib/chats";
+import { initSystemMcp } from "./lib/systemMcp";
 
 // Opcjonalny, OPT-IN podgląd „Neural Interface" pod hash-route `#neural` — ładowany leniwie,
 // więc framer-motion/Tailwind nie wchodzą do głównego bundla zwykłych użytkowników.
@@ -19,6 +20,7 @@ window.addEventListener("hashchange", () => location.reload()); // przełączani
 
 installSecretsVault(); // szyfrowanie kluczy w spoczynku (no-op, gdy wyłączone)
 initPlugins();
+initSystemMcp();
 
 // Profil wydajności: na słabszych urządzeniach (np. S9) włącz klasę low-power (CSS zdejmuje
 // blur/ciężkie animacje). Pauzuj animacje, gdy aplikacja schowana (bateria/CPU).

@@ -2,6 +2,7 @@ import { askAnthropic } from "./anthropic";
 import { makeOpenAICompatible } from "./openai";
 import { askGemini } from "./gemini";
 import { askWebllm } from "./webllm";
+import { askOllamaNative } from "./ollama";
 import { WEBLLM_MODELS, WEBLLM_DEFAULT_MODEL } from "../webllm";
 import { store } from "../store";
 import type { AskCtx, Msg, ProviderId, ProviderMeta, FallbackReasonKind } from "./types";
@@ -35,9 +36,7 @@ function askOllama(ctx: AskCtx) {
     const h = injectNoThink(ctx.history, ctx.model);
     if (h !== ctx.history) useCtx = { ...ctx, history: h };
   }
-  return makeOpenAICompatible(`${base}/v1/chat/completions`, {
-    extraBody: { keep_alive: "30m", options },
-  })(useCtx);
+  return askOllamaNative(useCtx, { base, think: !s.ollamaNoThink, options });
 }
 
 // Katalog dostawców i darmowych/mocnych modeli. „rank" steruje trybem auto.

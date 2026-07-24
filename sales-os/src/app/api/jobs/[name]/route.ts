@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
  * Valid names: discover-leads, enrich-leads, advance-sequences, detect-hot-leads,
  * performance-alerts, weekly-report.
  */
-export async function POST(_req: Request, { params }: { params: { name: string } }) {
+export async function POST(_req: Request, props: { params: Promise<{ name: string }> }) {
+  const params = await props.params;
   const a = await getAuth();
   if ("res" in a) return a.res;
 

@@ -27,6 +27,39 @@ let tunnelError = "";
 let tunnelStarting = null;
 const leadRate = new Map();
 
+async function connectToRunningInstance() {
+  const healthResponse = await fetch(localUrl + "/api/health", {
+    signal: AbortSignal.timeout(3000)
+  });
+  const health = await healthResponse.json();
+  if (!healthResponse.ok || health?.ok !== true || health?.name !== runtime.name) {
+    throw new Error("Port jest zajęty przez inną aplikację.");
+  }
+
+  if (process.argv.includes("--tunnel")) {
+    const sessionResponse = await fetch(localUrl + "/api/session", {
+      signal: AbortSignal.timeout(3000)
+    });
+    const session = await sessionResponse.json();
+    if (!sessionResponse.ok || !session?.token) {
+      throw new Error("Nie udało się pobrać lokalnej sesji Site OS.");
+    }
+    const tunnelResponse = await fetch(localUrl + "/api/tunnel/start", {
+      method: "POST",
+      headers: { "X-Jarvis-Token": session.token },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!tunnelResponse.ok) {
+      throw new Error("Nie udało się uruchomić tunelu w działającym Site OS.");
+    }
+  }
+
+  console.log("");
+  console.log("JARVIS Site OS już działa.");
+  console.log("Edytor: " + localUrl);
+  if (process.argv.includes("--tunnel")) console.log("Tunel jest uruchamiany w działającej instancji.");
+}
+
 function starterHtml() {
   return `<!doctype html>
 <html lang="pl">
@@ -536,6 +569,24 @@ const server = http.createServer(async (req, res) => {
     console.error(error);
     const status = Number(error?.statusCode) || 500;
     send(req, res, status, { ok: false, error: error instanceof Error ? error.message : "Błąd Site OS." });
+  }
+});
+
+server.on("error", async (error) => {
+  if (error?.code !== "EADDRINUSE") {
+    console.error("Nie udało się uruchomić JARVIS Site OS:", error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+
+  try {
+    await connectToRunningInstance();
+    process.exit(0);
+  } catch (connectionError) {
+    console.error(
+      "Port " + port + " jest już zajęty:",
+      connectionError instanceof Error ? connectionError.message : connectionError
+    );
+    process.exit(1);
   }
 });
 

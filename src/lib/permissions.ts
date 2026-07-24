@@ -23,7 +23,7 @@ const RISK: Record<string, Risk> = {
   // read — tylko czytają/analizują (bez efektów ubocznych)
   gcal_day: "read", gmail_read: "read", chief_of_staff: "read", deep_solve: "read",
   predictions: "read", reflect: "read", sales_plan: "read", self_check: "read",
-  system_health: "read", world_recall: "read",
+  system_health: "read", world_recall: "read", local_research_agent: "read",
   // read — lokalna nawigacja / odczyt (bez efektów na zewnątrz, bez pytania o zgodę)
   open_screen: "read", project_knowledge: "read", finance_summary: "read",
   business_status: "read", business_next_step: "read", suggest_ai: "read",
