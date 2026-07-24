@@ -186,6 +186,7 @@ Braki do poziomu produkcyjnego:
 | AI Sales gates | PASS na Next.js 15.5.21 |
 | AI Sales npm audit | PASS, 0 podatności |
 | bootstrap Ubuntu `--check` | PASS diagnostyki; prawidłowo wykrywa brak natywnego Node/npm w WSL |
+| cross-build Linux na Windows | build aplikacji PASS; pakowanie przerwane przez błąd DNS pobierania Electrona |
 
 Trzy błędy pełnego zestawu zostały usunięte w `c3a409b`: jawna klasyfikacja ryzyka agenta
 badawczego oraz aktualizacja kontraktu testów natywnej Ollamy.

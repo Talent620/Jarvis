@@ -18,7 +18,7 @@ Warunek odbioru: testy regresji i build przechodzą.
 
 ### K2. Ustabilizować narzędzia jakości na Windows i Ubuntu
 
-Status: **wykonane**  
+Status: **wykonane**
 Commit: `2fad726`
 
 - usunąć polecenia powłoki zależne od systemu ze skanera sekretów;
@@ -29,7 +29,7 @@ Warunek odbioru: lint i skan sekretów przechodzą bez fałszywych błędów.
 
 ### K3. Naprawić bezpieczeństwo AI Sales OS
 
-Status: **wykonane**  
+Status: **wykonane**
 Commity: `4f61985`, `d406a8a`
 
 - wykonać czystą instalację z lockfile;
