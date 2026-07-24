@@ -2,6 +2,8 @@ name: Build Ubuntu
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: ["main"]
   push:
     branches: ["main"]
     paths:
@@ -31,7 +33,15 @@ jobs:
         run: npm run build
       - name: Package Ubuntu
         run: npx electron-builder --linux AppImage deb --publish never
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-linux
+          path: |
+            release-desktop/JARVIS.AppImage
+            release-desktop/JARVIS.deb
       - name: Publish rolling Linux release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
