@@ -6,6 +6,21 @@ const MAX_OUTPUT = 200_000;
 const SAFE_COMMANDS = new Set(["git", "node", "npm", "npx", "docker", "sqlite3", "psql"]);
 const BLOCKED_ARGS = /(?:^|\s)(?:--?force|-f|reset\s+--hard|clean\s+-[a-z]*f|rm\b|rmdir\b|del\b|format\b|shutdown\b)/i;
 
+function isOutside(flavor, base, target) {
+  const relative = flavor.relative(base, target);
+  return relative === ".." || relative.startsWith(".." + flavor.sep) || flavor.isAbsolute(relative);
+}
+
+function existingAncestor(target) {
+  let current = target;
+  while (!fs.existsSync(current)) {
+    const parent = path.dirname(current);
+    if (parent === current) return null;
+    current = parent;
+  }
+  return current;
+}
+
 function inside(root, requested = ".") {
   const rawRoot = String(root);
   const flavor = /^[a-z]:[\\/]/i.test(rawRoot) || rawRoot.startsWith("\\\\") ? path.win32 : path.posix;
@@ -15,9 +30,19 @@ function inside(root, requested = ".") {
     : rawRequested.replace(/\\/g, "/");
   const base = flavor.resolve(rawRoot);
   const target = flavor.resolve(base, normalized);
-  const relative = flavor.relative(base, target);
-  const outside = relative === ".." || relative.startsWith(".." + flavor.sep) || flavor.isAbsolute(relative);
-  if (outside) throw new Error("Ścieżka wychodzi poza katalog roboczy.");
+  if (isOutside(flavor, base, target)) throw new Error("Ścieżka wychodzi poza katalog roboczy.");
+
+  const nativeFlavor = process.platform === "win32" ? path.win32 : path.posix;
+  if (flavor === nativeFlavor && fs.existsSync(base)) {
+    const ancestor = existingAncestor(target);
+    if (ancestor) {
+      const realBase = fs.realpathSync(base);
+      const realAncestor = fs.realpathSync(ancestor);
+      if (isOutside(nativeFlavor, realBase, realAncestor)) {
+        throw new Error("Ścieżka wychodzi poza katalog roboczy przez dowiązanie symboliczne.");
+      }
+    }
+  }
   return target;
 }
 

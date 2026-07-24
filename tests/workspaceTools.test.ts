@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -15,6 +16,21 @@ describe("workspace tools safety", () => {
     expect(() => inside("/work", "/workspace-sibling/secret.txt")).toThrow(/poza katalog/);
     expect(inside("C:\\work", "src")).toBe("C:\\work\\src");
     expect(inside("/work", "src")).toBe("/work/src");
+  });
+
+  it("blokuje wyjście przez dowiązanie symboliczne", () => {
+    const temp = mkdtempSync(join(tmpdir(), "jarvis-boundary-"));
+    const root = join(temp, "workspace");
+    const outside = join(temp, "outside");
+    mkdirSync(root);
+    mkdirSync(outside);
+    symlinkSync(outside, join(root, "link"), process.platform === "win32" ? "junction" : "dir");
+
+    try {
+      expect(() => inside(root, "link/secret.txt")).toThrow(/dowiązanie symboliczne/);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
   });
 
   it("blokuje destrukcyjne argumenty terminala i gita", () => {
