@@ -7,7 +7,14 @@
  *
  * Pominięcie pojedynczej linii: dopisz komentarz  secret-scan-allow
  */
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+
+const git = (args) => execFileSync("git", args, {
+  encoding: "utf8",
+  maxBuffer: 32 * 1024 * 1024,
+  windowsHide: true,
+});
 
 const PATTERNS = [
   { name: "OpenRouter", re: /sk-or-v1-[A-Za-z0-9]{24,}/ },
@@ -24,16 +31,16 @@ const all = process.argv.includes("--all");
 const lines = [];
 try {
   if (all) {
-    const files = execSync("git ls-files", { encoding: "utf8" }).split("\n").filter(Boolean);
+    const files = git(["ls-files", "-z"]).split("\0").filter(Boolean);
     for (const f of files) {
       if (SKIP.some((re) => re.test(f))) continue;
       let body = "";
-      try { body = execSync(`git show :"${f}" 2>/dev/null || cat "${f}"`, { encoding: "utf8" }); } catch { continue; }
+      try { body = readFileSync(f, "utf8"); } catch { continue; }
       body.split("\n").forEach((text, i) => lines.push({ file: f, n: i + 1, text }));
     }
   } else {
     // Dodane linie ze staging (format: +treść, z nagłówkami plików).
-    const diff = execSync("git diff --cached --unified=0 --no-color", { encoding: "utf8" });
+    const diff = git(["diff", "--cached", "--unified=0", "--no-color"]);
     let file = "";
     for (const raw of diff.split("\n")) {
       if (raw.startsWith("+++ b/")) { file = raw.slice(6); continue; }

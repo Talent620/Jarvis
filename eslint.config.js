@@ -12,6 +12,8 @@ export default tseslint.config(
       "dist",
       "dist-studio",
       "node_modules",
+      "**/node_modules/**",
+      "node_modules_incomplete/**",
       "sales-os",
       "server",
       "demo-przempol",
@@ -66,6 +68,26 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" }],
       "no-empty": ["warn", { allowEmptyCatch: true }],
       "prefer-const": "warn",
+    },
+  },
+  // --- Site OS: osobny lokalny serwer + aplikacja przeglądarkowa bez bundlera ---
+  {
+    files: ["site-os/public/**/*.js"],
+    languageOptions: { sourceType: "script", globals: { ...globals.browser } },
+  },
+  {
+    files: ["site-os/server.mjs", "site-os/scripts/**/*.mjs"],
+    languageOptions: { sourceType: "module", globals: { ...globals.node } },
+    rules: {
+      // Serwer usuwa znaki sterujące z wejścia użytkownika przed zapisem pliku.
+      "no-control-regex": "off",
+    },
+  },
+  {
+    files: ["site-os/scripts/**/*.cjs"],
+    languageOptions: { sourceType: "commonjs", globals: { ...globals.node } },
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
   // --- Cloudflare Worker (BFF): środowisko service-worker + Web API ---
