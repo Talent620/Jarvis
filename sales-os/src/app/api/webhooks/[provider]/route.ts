@@ -28,7 +28,8 @@ function sourceFor(provider: string): LeadSource {
  * normalizes them into the shared ingest pipeline. Token via `?token=` or the
  * `X-Ingest-Token` header.
  */
-export async function POST(req: Request, { params }: { params: { provider: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ provider: string }> }) {
+  const params = await props.params;
   const url = new URL(req.url);
   const token =
     req.headers.get("x-ingest-token") ?? url.searchParams.get("token") ?? undefined;

@@ -9,7 +9,8 @@ async function owned(companyId: string, id: string) {
   return prisma.sequence.findFirst({ where: { id, companyId, deletedAt: null }, select: { id: true } });
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const a = await getAuth();
   if ("res" in a) return a.res;
 
@@ -45,7 +46,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const a = await getAuth();
   if ("res" in a) return a.res;
   try {

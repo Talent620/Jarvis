@@ -4,7 +4,8 @@ import { getAuth, serverError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-export async function PATCH(_req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const a = await getAuth();
   if ("res" in a) return a.res;
 

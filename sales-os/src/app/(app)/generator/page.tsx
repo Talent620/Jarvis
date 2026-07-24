@@ -9,11 +9,12 @@ export const dynamic = "force-dynamic";
 
 const VALID_KINDS = new Set<string>(Object.values(ContentKind));
 
-export default async function GeneratorPage({
-  searchParams,
-}: {
-  searchParams: { leadId?: string; kind?: string };
-}) {
+export default async function GeneratorPage(
+  props: {
+    searchParams: Promise<{ leadId?: string; kind?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const a = await getAuth();
   if ("res" in a) redirect("/login");
   const { companyId } = a.ctx;

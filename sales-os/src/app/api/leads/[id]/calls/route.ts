@@ -7,7 +7,8 @@ import { CALL_STATUS_META } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const a = await getAuth();
   if ("res" in a) return a.res;
 
@@ -26,7 +27,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
 /** Log a call: writes the CallLog, mirrors status onto the lead, logs the
  * timeline entry and (for callbacks) creates the follow-up task. */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const a = await getAuth();
   if ("res" in a) return a.res;
 

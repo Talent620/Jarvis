@@ -6,7 +6,8 @@ import { campaignTrackSchema } from "@/lib/validations";
 export const dynamic = "force-dynamic";
 
 /** Record a reply or conversion against a campaign (updates the funnel counters). */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const a = await getAuth();
   if ("res" in a) return a.res;
 
