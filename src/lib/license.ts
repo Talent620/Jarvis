@@ -15,8 +15,8 @@ import { isRevoked } from "./revoked";
 export const PUBLIC_JWK: JsonWebKey = {
   kty: "EC",
   crv: "P-256",
-  x: "yVt6bj1aOh50oDQOH8oKKEVJ2ETteQF9-N0UbSsiUFo",
-  y: "YzRn5l1wri_mFT2SHV_jsbOegqbR9b3TtjJ-5vSHzfk",
+  x: "cr_zxxKQMLPKsuGybJtd05h_z-m0H_xnhS7WiYtEmdU",
+  y: "a1Xl4CHImK2EAIXg19PVIFuagNCa4PQ2zatk4gysxzg",
 };
 
 const STORE_KEY = "jarvis.license.v1";
