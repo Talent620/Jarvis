@@ -65,3 +65,15 @@ was navigated yet, to the most salient one (the main comments list, not nested r
 When the freshest referent compatible with a phrase was invalidated (navigation, DOM change),
 resolution returns "stale" instead of silently using an older valid referent. JARVIS then
 says what expired and re-observes, instead of acting on the wrong thing.
+
+## D-013 Coalesced store persistence
+`setData` no longer serializes the blob synchronously. Window: 200 ms debounce, 1 s max wait,
+synchronous flush on pagehide / beforeunload / hidden / dispose / `store.flush()`. Risk: a
+renderer crash can lose up to ~1 s of changes; accepted because every normal close path
+flushes and the synchronous cost dropped from ~20 ms to ~0.01 ms per mutation. The separate
+IndexedDB debounce was removed because persistence is already coalesced.
+
+## D-014 No /u or \p{} regex literals in src (S9 contract)
+`tests/s9RegexGuard.test.ts` forbids them (old Chrome 79 WebView). Unicode classes live in
+`src/lib/runtime/unicode.ts`: `new RegExp("\\p{L}", "u")` inside try/catch with explicit
+range fallbacks, so an old engine degrades instead of failing to parse the bundle.

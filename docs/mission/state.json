@@ -17,14 +17,24 @@
     },
     {
       "id": "M1",
-      "status": "in_progress",
-      "evidence": [],
-      "last_commit": "",
-      "next_action": "Runtime Kernel (typed events, dedup, reducer, cancellation), task journal outside the store blob, Referent Registry with epochs, Situation Snapshot, capability registry, store selectors and batched persistence."
+      "status": "done",
+      "evidence": [
+        "npx vitest run: exit 0, 335 files, 2921/2921 tests",
+        "tests/runtime/kernel.test.ts 30/30: event and utterance dedup, repeated final within 1.5 s, stop aborts task signal, pause/resume gate, idempotency conflicts, UNKNOWN_AFTER_ATTEMPT for external effects, CONFIRMED needs evidence, epochs, journal only durable events, retry after journal failure, restore after restart, DexieJournal round trip (mutation check: 5 tests fail when idempotency and evidence guards are removed)",
+        "tests/runtime/resolvePolish.test.ts 53/53 Polish reference resolution cases (ordinals, nie ten/następny, poprzedni, wróćmy do, typed pronouns, stale detection)",
+        "tests/runtime/text.test.ts 13/13 graphemes and letters (Łódź, żółw, @marcin, emoji, modifiers, ZWJ, combining marks, fallback segmenter)",
+        "tests/runtime/snapshotCapabilities.test.ts 11/11 snapshot <= 1200 chars/300 tokens, data quoting, capability requirements and probes",
+        "tests/runtime/agentRunCancel.test.ts 6/6 (5 fail on the pre-M1 agentRun)",
+        "tests/runtime/storePersist.test.ts 7/7 and tests/runtime/rootRenders.test.ts 2/2",
+        "docs/JARVIS-PERFORMANCE.md: setData 20 ms -> 0.007 ms, burst of 200 mutations 200 -> 1 storage writes (428.8 MB -> 2.1 MB), root re-renders per unrelated mutation 1 -> 0",
+        "npx tsc -b exit 0, npx eslint . exit 0, npx vite build exit 0, npm run scan:secrets exit 0"
+      ],
+      "last_commit": "1d9b49a",
+      "next_action": "Done. Kernel is not yet wired into the voice/chat UI: that happens in M3 (lanes) and M10 (status panel)."
     },
     {
       "id": "M2",
-      "status": "todo",
+      "status": "in_progress",
       "evidence": [],
       "last_commit": "",
       "next_action": "Pin Playwright, ManagedBrowser environment, YouTube fixture server in tests/fixtures/youtube/, golden steps 1-7."

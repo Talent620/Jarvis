@@ -9,15 +9,15 @@ Status: todo, in_progress, done, blocked, needs_hardware. Nothing is done withou
 | B-003 | Remove hardcoded keystore passwords; unsigned or debug-signed non-production artifact without secrets | security | done | android/app/build.gradle, .github/workflows/android*.yml | breaking release builds | gradle config review, CI android job | Android SDK not in cloud |
 | B-004 | docs/JARVIS-SECURITY.md: keystore compromise, apksigner --lineage options | security | done | docs/JARVIS-SECURITY.md | none | review | none |
 | B-005 | Startup performance baseline (store write cost, render fan-out, bundle) | M1 input | done | scripts/, docs/JARVIS-PERFORMANCE.md | noisy numbers | repeatable bench script | none |
-| B-006 | Runtime Kernel: typed events, ids, dedup, reducer, single writer | core | todo | src/lib/runtime/ | scope creep | unit tests | none |
-| B-007 | Append-only task journal outside store blob (Dexie) | core | todo | src/lib/runtime/journal.ts | IndexedDB in tests | fake-indexeddb tests | none |
-| B-008 | Cancellation: AbortController per task in agentRun | core | todo | src/lib/agentRun.ts | regressions in agentRun tests | existing + new tests | none |
-| B-009 | Referent Registry with epochs, collections with cursor, typed pronoun resolution | core | todo | src/lib/runtime/referents.ts | ambiguity rules | 40+ Polish resolution tests | none |
-| B-010 | Situation Snapshot (<= ~300 tokens) | core | todo | src/lib/runtime/snapshot.ts | token overrun | size tests | none |
-| B-011 | Capability registry + diagnostic matrix | core | todo | src/lib/runtime/capabilities.ts | none | unit tests | none |
-| B-012 | Store: selectors in hottest components, batched deferred persistence | perf | todo | src/lib/store.ts, src/hooks/useStore.ts, components | lost writes on close | store tests + before/after numbers | none |
+| B-006 | Runtime Kernel: typed events, ids, dedup, reducer, single writer | core | done | src/lib/runtime/ | scope creep | unit tests | none |
+| B-007 | Append-only task journal outside store blob (Dexie) | core | done | src/lib/runtime/journal.ts | IndexedDB in tests | fake-indexeddb tests | none |
+| B-008 | Cancellation: AbortController per task in agentRun | core | done | src/lib/agentRun.ts | regressions in agentRun tests | existing + new tests | none |
+| B-009 | Referent Registry with epochs, collections with cursor, typed pronoun resolution | core | done | src/lib/runtime/referents.ts | ambiguity rules | 40+ Polish resolution tests | none |
+| B-010 | Situation Snapshot (<= ~300 tokens) | core | done | src/lib/runtime/snapshot.ts | token overrun | size tests | none |
+| B-011 | Capability registry + diagnostic matrix | core | done | src/lib/runtime/capabilities.ts | none | unit tests | none |
+| B-012 | Store: selectors in hottest components, batched deferred persistence | perf | done | src/lib/store.ts, src/hooks/useStore.ts, components | lost writes on close | store tests + before/after numbers | none |
 | B-013 | Permission classes READ..DESTRUCTIVE with AUTO/ASK/DENY, extending permissions.ts | safety | todo | src/lib/permissions.ts | behaviour change for existing tools | permission tests | none |
-| B-014 | Grapheme and letter semantics for Polish text | correctness | todo | src/lib/runtime/text.ts | Intl.Segmenter availability | mandatory cases from 5.10 | none |
+| B-014 | Grapheme and letter semantics for Polish text | correctness | done | src/lib/runtime/text.ts | Intl.Segmenter availability | mandatory cases from 5.10 | none |
 | B-015 | ManagedBrowser (Playwright persistent context, ariaSnapshot, readback) | M2 | todo | src/lib/env/managedBrowser.ts | Playwright version features | fixture tests | browser download (D-001) |
 | B-016 | YouTube fixture server with consent, lazy comments, injection comment | M2 | todo | tests/fixtures/youtube/ | flakiness | 10 consecutive green runs | none |
 | B-017 | Reflex grammar (Polish, tiers 0-2) | M3 | todo | src/lib/runtime/reflex.ts | partial misfires | grammar tests | none |
