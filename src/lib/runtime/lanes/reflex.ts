@@ -21,6 +21,10 @@ const UNDO = /^(?:(?:nie|jarvis)\s+)?(cofnij|cofnij to|odwroc|odwroc to|wroc to|
 const CONFIRM = /^(tak|tak jest|dobra|dobrze|ok|okej|zgoda|potwierdzam|wysylaj|wyslij|jasne|pewnie|zrob to|tak wyslij)$/;
 const REJECT = /^(nie|nie wysylaj|odrzuc|nie rob tego|anuluj wysylke|nie teraz)$/;
 
+/** Words that grant consent for an external effect. "ok", "dobra", "jasne" are too casual. */
+const STRICT_CONSENT = /^(tak|tak jest|tak wyslij|wyslij|wysylaj|potwierdzam|zgoda|zgadzam sie)$/;
+export const isStrictConsent = (text: string): boolean => STRICT_CONSENT.test(normalizeUtterance(text));
+
 /** Classify an utterance (partial or final). Controls are whole short utterances only. */
 export function classifyReflex(text: string): Reflex {
   const norm = normalizeUtterance(text);

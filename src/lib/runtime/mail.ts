@@ -123,11 +123,22 @@ export async function sendExactlyOnce(kernel: Kernel, mail: MailService, spec: S
       return { actionId, truth: t, evidence: "", reason: "cancelled", sends };
     }
     sends++;
-    const out = await withTimeout(mail.send(spec.mail, signal), timeoutMs);
+    // Recorded before the request leaves: a crash mid-send restores as UNKNOWN_AFTER_ATTEMPT.
+    kernel.dispatch({ type: "ActionAttempted", actionId, evidence: `send ${attempt} dispatched` });
+    let out: SendOutcome | "timeout";
+    try {
+      out = await withTimeout(mail.send(spec.mail, signal), timeoutMs);
+    } catch (e) {
+      // A thrown provider error says nothing about whether the request got through.
+      out = { status: "failed", error: e instanceof Error ? e.message : String(e), maybeSent: true };
+    }
     if (out !== "timeout" && out.status === "failed" && !out.maybeSent) {
-      kernel.dispatch({ type: "ActionFailed", actionId, reason: out.error, truth: "FAILED" });
-      step("FAILED", out.error);
-      return { actionId, truth: "FAILED", evidence: "", reason: out.error, sends };
+      // The provider rejected this request before sending. On the first attempt that is a clean
+      // failure; on a retry the first attempt may still have gone out, so it stays unknown.
+      kernel.dispatch({ type: "ActionFailed", actionId, reason: out.error, truth: "FAILED", definite: attempt === 1 });
+      const t = kernel.state.actions[actionId].status as Truth;
+      step(t, out.error);
+      return { actionId, truth: t, evidence: "", reason: out.error, sends };
     }
     kernel.dispatch({ type: "ActionAttempted", actionId, evidence: out === "timeout" ? "timeout" : out.status === "sent" ? `provider id ${out.providerId ?? "?"}` : out.error });
 

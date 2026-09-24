@@ -60,7 +60,8 @@ export interface ReferentRegistry {
 
 export type TaskStatus = "running" | "paused" | "waiting_consent" | "blocked" | "done" | "failed" | "cancelled";
 
-export const TERMINAL_TASK: ReadonlySet<TaskStatus> = new Set<TaskStatus>(["done", "failed", "cancelled"]);
+/** "blocked" ends a task too: a missing precondition or a refusal is final for that task. */
+export const TERMINAL_TASK: ReadonlySet<TaskStatus> = new Set<TaskStatus>(["done", "failed", "cancelled", "blocked"]);
 
 export interface TaskStep {
   id: string;
@@ -83,6 +84,8 @@ export interface TaskState {
   kind: string;
   status: TaskStatus;
   statusReason?: string;
+  /** While paused: the live status to return to on resume (running or waiting_consent). */
+  pausedFrom?: TaskStatus;
   createdAt: number;
   updatedAt: number;
   parentId?: string;

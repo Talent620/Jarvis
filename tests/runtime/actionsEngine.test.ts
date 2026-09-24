@@ -51,13 +51,22 @@ describe("performAction", () => {
   });
 
   it("an 'ok' without matching read-back is retried once, then FAILED (never CONFIRMED)", async () => {
-    const env = new ScriptedEnv([{ status: "done" }, { status: "done" }], [page(0), page(0), page(0)]);
+    const sel = { text: "Łó", visible: true };
+    const env = new ScriptedEnv([{ status: "done" }, { status: "done" }], [sel, sel]);
     const k = await setup(env);
-    const r = await performAction({ kernel: k, env }, { taskId: "T", action: { kind: "browser.scroll", direction: "down", amount: "page" } });
+    const r = await performAction({ kernel: k, env }, { taskId: "T", action: { kind: "text.select", target: { ref: "c1" }, start: 0, end: 4, expected: "Łódź" } });
     expect(r.truth).toBe("FAILED");
     expect(r.attempts).toBe(2);
     expect(env.acts).toHaveLength(2);
     expect(k.state.actions[r.actionId!].status).toBe("FAILED");
+  });
+
+  it("a scroll that did not move is not repeated (a second try would scroll twice)", async () => {
+    const env = new ScriptedEnv([{ status: "done" }, { status: "done" }], [page(0), page(0)]);
+    const k = await setup(env);
+    const r = await performAction({ kernel: k, env }, { taskId: "T", action: { kind: "browser.scroll", direction: "down", amount: "page" } });
+    expect(r.truth).toBe("FAILED");
+    expect(env.acts).toHaveLength(1);
   });
 
   it("at the end of the page scrolling down is BLOCKED and not retried", async () => {

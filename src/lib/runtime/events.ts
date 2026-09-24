@@ -173,6 +173,8 @@ export interface ActionFailed extends Base {
   actionId: string;
   reason: string;
   truth: Exclude<Truth, "CONFIRMED" | "ATTEMPTED">;
+  /** The provider stated the effect did not happen (e.g. rejected before sending). */
+  definite?: boolean;
 }
 
 export interface ClipboardChanged extends Base {

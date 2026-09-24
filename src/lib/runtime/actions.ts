@@ -37,7 +37,10 @@ export interface PerformResult {
   attempts: number;
 }
 
-type FailTruth = "SIMULATED" | "UNKNOWN_AFTER_ATTEMPT" | "FAILED" | "BLOCKED" | "NEEDS_PERMISSION" | "NEEDS_HARDWARE" | "NEEDS_CAPABILITY";
+/** A second attempt would repeat the effect (scroll twice, open another item), not retry it. */
+const NOT_REPEATABLE = new Set<EnvAction["kind"]>(["browser.open", "browser.scroll"]);
+
+type FailTruth ="SIMULATED" | "UNKNOWN_AFTER_ATTEMPT" | "FAILED" | "BLOCKED" | "NEEDS_PERMISSION" | "NEEDS_HARDWARE" | "NEEDS_CAPABILITY";
 
 export async function performAction(ctx: ActionContext, spec: PerformSpec): Promise<PerformResult> {
   const { kernel, env } = ctx;
@@ -68,7 +71,13 @@ export async function performAction(ctx: ActionContext, spec: PerformSpec): Prom
 
   const signal = spec.signal ?? kernel.signal(spec.taskId);
   const query = readQueryFor(spec.action);
-  const maxAttempts = spec.external ? 1 : Math.max(1, spec.maxAttempts ?? 2);
+  const maxAttempts = spec.external || NOT_REPEATABLE.has(kind) ? 1 : Math.max(1, spec.maxAttempts ?? 2);
+  const gate = async () => {
+    // Pause gate: a paused task waits here before the next micro-action; stop rejects it.
+    if (kernel.state.tasks[spec.taskId]) {
+      try { await kernel.waitRunnable(spec.taskId); } catch { /* cancelled or finished: handled by the caller */ }
+    }
+  };
   const fail = (truth: FailTruth, reason: string, attempts: number, extra: Partial<PerformResult> = {}): PerformResult => {
     kernel.dispatch({ type: "ActionFailed", actionId, reason, truth });
     const final = kernel.state.actions[actionId]?.status;
@@ -78,10 +87,15 @@ export async function performAction(ctx: ActionContext, spec: PerformSpec): Prom
   };
 
   let before: ReadResult | undefined;
-  try {
-    before = needsBefore(spec.action) ? await env.read(query) : undefined;
-  } catch (e) {
-    return fail("FAILED", `read-back before action failed: ${e instanceof Error ? e.message : e}`, 0);
+  if (needsBefore(spec.action)) {
+    // A paused task must not take its "before" snapshot now and act on it much later.
+    await gate();
+    if (signal.aborted) return fail("FAILED", "cancelled", 0);
+    try {
+      before = await env.read(query);
+    } catch (e) {
+      return fail("FAILED", `read-back before action failed: ${e instanceof Error ? e.message : e}`, 0);
+    }
   }
 
   let lastReason = "not verified";
@@ -89,16 +103,24 @@ export async function performAction(ctx: ActionContext, spec: PerformSpec): Prom
   let result: ActResult | undefined;
   let after: ReadResult | undefined;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    // Pause gate: a paused task waits here before the next micro-action; stop rejects it.
-    if (kernel.state.tasks[spec.taskId]) {
-      try { await kernel.waitRunnable(spec.taskId); } catch { /* cancelled or finished: handled below */ }
-    }
+    await gate();
     if (signal.aborted) return fail(spec.external && attempt > 1 ? "UNKNOWN_AFTER_ATTEMPT" : "FAILED", "cancelled", attempt - 1);
-    result = await env.act(spec.action, signal);
+    // An external effect is recorded as attempted before it can happen: a crash inside act()
+    // then restores as UNKNOWN_AFTER_ATTEMPT, never as a clean failure.
+    if (spec.external) kernel.dispatch({ type: "ActionAttempted", actionId, evidence: `attempt ${attempt} dispatched` });
+    try {
+      result = await env.act(spec.action, signal);
+    } catch (e) {
+      result = { status: "failed", error: e instanceof Error ? e.message : String(e) };
+    }
     if (result.status === "failed" && result.error === "aborted") {
       return fail(spec.external ? "UNKNOWN_AFTER_ATTEMPT" : "FAILED", "cancelled", attempt, { result });
     }
-    if (result.status === "done") kernel.dispatch({ type: "ActionAttempted", actionId, evidence: `attempt ${attempt}` });
+    if (spec.external && result.status === "failed") {
+      // The environment could not say whether the effect happened.
+      return fail("UNKNOWN_AFTER_ATTEMPT", result.error ?? "failed after dispatch", attempt, { result });
+    }
+    if (!spec.external && result.status === "done") kernel.dispatch({ type: "ActionAttempted", actionId, evidence: `attempt ${attempt}` });
     try {
       after = await env.read(query);
     } catch (e) {

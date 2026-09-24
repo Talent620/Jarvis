@@ -16,7 +16,7 @@ import type { RefQuery } from "./polish";
 import { resolveReference, type Resolution } from "./resolve";
 import { spanFor } from "./text";
 import { isPrecondition, type Truth } from "./truth";
-import type { Referent } from "./types";
+import { TERMINAL_TASK, type Referent } from "./types";
 import { fnv1a64, preview } from "./util";
 
 export interface SessionOptions {
@@ -31,8 +31,8 @@ export interface SessionOptions {
   contacts?: () => Promise<Contact[]>;
   /** User permission policies per action class (settings). */
   policies?: Partial<Record<ActionClass, Policy>>;
-  /** Spoken while a task waits for the user (consent, "który Marcin?"). */
-  onQuestion?: (text: string) => void;
+  /** Spoken while a task waits for the user ("który Marcin?", consent); consentId for consent. */
+  onQuestion?: (text: string, consentId?: string) => void;
   /** How long a task waits for consent or an answer before giving up. */
   answerTimeoutMs?: number;
 }
@@ -414,12 +414,14 @@ export class ActionSession {
   }
 
   private ask(taskId: string, text: string, candidates: Contact[]): Promise<Contact | null> {
-    this.kernel.dispatch({ type: "TaskStatusChanged", taskId, status: "blocked", reason: "waiting for the recipient" });
+    // Waiting for the user (not blocked: blocked is final). Pause and stop still apply.
+    this.kernel.dispatch({ type: "TaskStatusChanged", taskId, status: "waiting_consent", reason: "waiting for the recipient" });
     this.opts.onQuestion?.(text);
     return new Promise((resolve) => {
       const timer = setTimeout(() => { if (this.question?.taskId === taskId) { this.question = null; resolve(null); } }, this.opts.answerTimeoutMs ?? 120_000);
       const off = this.kernel.subscribe((s) => {
-        if (s.tasks[taskId]?.status === "cancelled" && this.question?.taskId === taskId) { this.question = null; clearTimeout(timer); off(); resolve(null); }
+        const st = s.tasks[taskId]?.status;
+        if ((!st || TERMINAL_TASK.has(st)) && this.question?.taskId === taskId) { this.question = null; clearTimeout(timer); off(); resolve(null); }
       });
       this.question = { taskId, candidates, resolve: (c) => { clearTimeout(timer); off(); resolve(c); } };
     });
@@ -434,7 +436,7 @@ export class ActionSession {
         const c = s.consents[consentId];
         if (c?.status === "granted") finish("granted");
         else if (c?.status === "denied") finish("denied");
-        else if (s.tasks[taskId]?.status === "cancelled") finish("cancelled");
+        else if (!s.tasks[taskId] || TERMINAL_TASK.has(s.tasks[taskId].status)) finish("cancelled");
       };
       const timer = setTimeout(() => finish("timeout"), this.opts.answerTimeoutMs ?? 120_000);
       const off = this.kernel.subscribe(check);
@@ -507,11 +509,18 @@ export class ActionSession {
       const consentId = k.id("consent");
       const summary = `Wysłać mail do ${name} <${to}> z treścią «${preview(content, 60)}»?${warning}`;
       k.dispatch({ type: "ConsentRequested", consentId, taskId, summary, args: { to, name, subject: outgoing.subject, body: preview(content, 200), warning: warning.trim() } });
-      this.opts.onQuestion?.(summary);
+      this.opts.onQuestion?.(summary, consentId);
       const decision = await this.waitConsent(consentId, taskId);
       if (decision !== "granted") {
+        if (decision === "timeout") k.dispatch({ type: "ConsentDenied", consentId });
         return { truth: (decision === "cancelled" ? "FAILED" : "BLOCKED") as Truth, say: decision === "timeout" ? "Nie dostałem odpowiedzi, nie wysyłam." : "Dobrze, nie wysyłam.", evidence: decision };
       }
+    }
+    // Granted while paused: the send waits for "wznów"; a stop meanwhile cancels it.
+    try {
+      await k.waitRunnable(taskId);
+    } catch {
+      return { truth: "FAILED" as Truth, say: "Dobrze, nie wysyłam.", evidence: "cancelled before sending" };
     }
 
     // 4. Send exactly once and confirm from Sent.

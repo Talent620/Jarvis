@@ -61,11 +61,25 @@ function setTask(s: KernelState, id: string, patch: Partial<TaskState>, at: numb
   return { ...s, tasks: { ...s.tasks, [id]: { ...t, ...patch, updatedAt: at } } };
 }
 
-function setStatus(s: KernelState, id: string, status: TaskStatus, at: number, reason?: string): KernelState {
+function setStatus(s: KernelState, id: string, status: TaskStatus, at: number, reason?: string, byControl = false): KernelState {
   const t = s.tasks[id];
   if (!t || TERMINAL_TASK.has(t.status) || t.status === status) return s;
-  let next = setTask(s, id, { status, statusReason: reason }, at);
-  if (TERMINAL_TASK.has(status)) next = { ...next, focusStack: withoutFocus(next.focusStack, id) };
+  // Only the user's "wznów" leaves a pause. Anything else that would make a paused task live
+  // (a granted consent, an answered question) only changes where the resume returns to.
+  if (t.status === "paused" && !byControl && (status === "running" || status === "waiting_consent")) {
+    return setTask(s, id, { pausedFrom: status }, at);
+  }
+  const patch: Partial<TaskState> = { status, statusReason: reason, pausedFrom: status === "paused" ? t.status : undefined };
+  let next = setTask(s, id, patch, at);
+  if (TERMINAL_TASK.has(status)) {
+    next = { ...next, focusStack: withoutFocus(next.focusStack, id) };
+    // A consent still pending for a task that ended can never be granted any more.
+    let consents = next.consents;
+    for (const c of Object.values(next.consents)) {
+      if (c.taskId === id && c.status === "pending") consents = { ...consents, [c.id]: { ...c, status: "denied", decidedAt: at } };
+    }
+    if (consents !== next.consents) next = { ...next, consents };
+  }
   return next;
 }
 
@@ -78,7 +92,7 @@ function latestTaskIn(s: KernelState, statuses: TaskStatus[]): string | undefine
   return undefined;
 }
 
-const LIVE: TaskStatus[] = ["running", "paused", "waiting_consent", "blocked"];
+const LIVE: TaskStatus[] = ["running", "paused", "waiting_consent"];
 
 function controlTarget(s: KernelState, explicit?: string): string | undefined {
   if (explicit && s.tasks[explicit]) return explicit;
@@ -103,7 +117,9 @@ function applyControl(s: KernelState, control: string, at: number, taskId?: stri
     case "RESUME": {
       const paused = s.tasks[target].status === "paused" ? target : latestTaskIn(s, ["paused"]);
       if (!paused) return s;
-      const next = setStatus(s, paused, "running", at, "control:resume");
+      // Back to where the pause found it: a task that was waiting for consent waits again.
+      const back = s.tasks[paused].pausedFrom === "waiting_consent" ? "waiting_consent" : "running";
+      const next = setStatus(s, paused, back, at, "control:resume", true);
       return { ...next, focusStack: [...withoutFocus(next.focusStack, paused), paused] };
     }
     default:
@@ -254,8 +270,9 @@ export function reduce(prev: KernelState, e: KernelEvent): KernelState {
     }
     case "ActionAttempted": {
       const a = s.actions[e.actionId];
-      if (!a || a.status !== "started") return s;
-      return { ...s, actions: { ...s.actions, [e.actionId]: { ...a, status: "ATTEMPTED", evidence: e.evidence } } };
+      // A later ATTEMPTED for the same action only refreshes its evidence (e.g. the provider id).
+      if (!a || (a.status !== "started" && a.status !== "ATTEMPTED")) return s;
+      return { ...s, actions: { ...s.actions, [e.actionId]: { ...a, status: "ATTEMPTED", evidence: e.evidence ?? a.evidence } } };
     }
     case "ActionVerified": {
       const a = s.actions[e.actionId];
@@ -276,8 +293,10 @@ export function reduce(prev: KernelState, e: KernelEvent): KernelState {
     case "ActionFailed": {
       const a = s.actions[e.actionId];
       if (!a || a.status === "CONFIRMED") return s;
-      // An external action that may already have happened never degrades to a clean FAILED.
-      const truth = a.external && (a.status === "ATTEMPTED" || a.status === "UNKNOWN_AFTER_ATTEMPT") && e.truth === "FAILED"
+      // An external action that may already have happened never degrades to a clean FAILED,
+      // unless the provider stated it did not happen (and only from ATTEMPTED, not from UNKNOWN).
+      const definite = e.definite === true && a.status === "ATTEMPTED";
+      const truth = a.external && !definite && (a.status === "ATTEMPTED" || a.status === "UNKNOWN_AFTER_ATTEMPT") && e.truth === "FAILED"
         ? "UNKNOWN_AFTER_ATTEMPT"
         : e.truth;
       let next: KernelState = { ...s, actions: { ...s.actions, [e.actionId]: { ...a, status: truth, reason: e.reason, endedAt: e.at } } };
@@ -307,9 +326,11 @@ export function reduce(prev: KernelState, e: KernelEvent): KernelState {
       return { ...s, observationEpoch: s.observationEpoch + 1, window: { id: e.windowId, app: e.app, title: e.title } };
     case "ConsentRequested": {
       if (s.consents[e.consentId]) return s;
+      // A consent for a task that already ended is born denied.
+      const ended = !s.tasks[e.taskId] || TERMINAL_TASK.has(s.tasks[e.taskId].status);
       const rec: ConsentRecord = {
         id: e.consentId, taskId: e.taskId, actionId: e.actionId, summary: e.summary, args: { ...e.args },
-        status: "pending", requestedAt: e.at,
+        status: ended ? "denied" : "pending", requestedAt: e.at, decidedAt: ended ? e.at : undefined,
       };
       const next = { ...s, consents: { ...s.consents, [e.consentId]: rec } };
       return setStatus(next, e.taskId, "waiting_consent", e.at, "consent requested");
@@ -321,7 +342,8 @@ export function reduce(prev: KernelState, e: KernelEvent): KernelState {
       const granted = e.type === "ConsentGranted";
       const next = { ...s, consents: { ...s.consents, [e.consentId]: { ...c, status: granted ? "granted" as const : "denied" as const, decidedAt: e.at } } };
       const t = next.tasks[c.taskId];
-      if (!t || t.status !== "waiting_consent") return next;
+      if (!t || (t.status !== "waiting_consent" && t.status !== "paused")) return next;
+      // Granted while paused: stays paused and resumes as running. Denied ends the task either way.
       return setStatus(next, c.taskId, granted ? "running" : "blocked", e.at, granted ? "consent granted" : "consent denied");
     }
     case "CapabilitiesUpdated": {

@@ -7,7 +7,8 @@ export type Failure =
   | "timeout-before-send" // nothing delivered, the request hangs
   | "error-before-send" // auth or validation error, nothing delivered
   | "reset-after-send" // delivered, connection reset (maybeSent)
-  | "sent-not-visible"; // provider says sent, Sent never shows it
+  | "sent-not-visible" // provider says sent, Sent never shows it
+  | "throw-after-send"; // delivered, then the client library throws
 
 export class MockMail implements MailService {
   readonly id = "mock-gmail";
@@ -34,6 +35,7 @@ export class MockMail implements MailService {
     if (f === "timeout-before-send") return new Promise(() => {});
     if (f === "error-before-send") return { status: "failed", error: "401 invalid credentials", maybeSent: false };
     if (f === "reset-after-send") { this.deliver(m); return { status: "failed", error: "ECONNRESET", maybeSent: true }; }
+    if (f === "throw-after-send") { this.deliver(m); throw new Error("socket hang up"); }
     if (f === "sent-not-visible") { const r = this.deliver(m, false); return { status: "sent", providerId: r.id }; }
     const r = this.deliver(m);
     await new Promise((res) => setTimeout(res, 1));

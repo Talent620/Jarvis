@@ -106,10 +106,11 @@ function send(res, status, type, body, extra = {}) {
 
 /**
  * Start the fixture. Options: port (0 = random), commentDelayMs, rerenderMs (0 disables full
- * re-renders), likeTickMs (0 disables live counters).
+ * re-renders), likeTickMs (0 disables live counters), noCommentIds (true: comments carry no
+ * stable id attribute, like the real site, so identity must come from content).
  */
 export function startYoutubeFixture(options = {}) {
-  const opts = { port: 0, commentDelayMs: 250, rerenderMs: 3000, likeTickMs: 1500, ...options };
+  const opts = { port: 0, commentDelayMs: 250, rerenderMs: 3000, likeTickMs: 1500, noCommentIds: false, ...options };
   const requests = [];
   const server = http.createServer((req, res) => {
     const url = new URL(req.url || "/", "http://fixture.local");
@@ -119,6 +120,7 @@ export function startYoutubeFixture(options = {}) {
       commentDelayMs: Number(url.searchParams.get("delay") ?? opts.commentDelayMs),
       rerenderMs: Number(url.searchParams.get("rerender") ?? opts.rerenderMs),
       likeTickMs: Number(url.searchParams.get("tick") ?? opts.likeTickMs),
+      noCommentIds: url.searchParams.has("noids") || !!opts.noCommentIds,
     };
 
     if (url.pathname === "/client.js") return send(res, 200, "text/javascript; charset=utf-8", CLIENT_JS);

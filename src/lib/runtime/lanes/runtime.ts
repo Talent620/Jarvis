@@ -13,7 +13,7 @@ import { ActionSession, type SessionOptions, type TurnResult } from "../session"
 import { situationSnapshot } from "../snapshot";
 import { TERMINAL_TASK } from "../types";
 import { CONVERSATION_SYSTEM, isStatusQuestion, statusReply, type ConversationModel, type ConversationTurn } from "./conversation";
-import { classifyReflex, tier0FromPartial, DEFAULT_PARTIAL_POLICY, type PartialPolicy } from "./reflex";
+import { classifyReflex, isStrictConsent, tier0FromPartial, DEFAULT_PARTIAL_POLICY, type PartialPolicy } from "./reflex";
 
 /** Voice output. cancel() must stop audio immediately (barge-in). */
 export interface Speaker {
@@ -63,6 +63,8 @@ export class JarvisRuntime {
   private lastActionTaskId: string | null = null;
   /** Commands accepted but not started yet (for "co teraz robisz?"). */
   private queuedTexts: string[] = [];
+  /** The consent whose question the user actually heard: "tak" answers that one only. */
+  private announcedConsentId: string | null = null;
 
   constructor(opts: RuntimeOptions) {
     this.kernel = opts.kernel;
@@ -73,7 +75,11 @@ export class JarvisRuntime {
     this.session = new ActionSession(opts.kernel, opts.env, {
       ...opts.session,
       now: this.now,
-      onQuestion: (q) => { opts.session?.onQuestion?.(q); this.say(q); },
+      onQuestion: (q, consentId) => {
+        opts.session?.onQuestion?.(q, consentId);
+        if (consentId) this.announcedConsentId = consentId;
+        this.say(q);
+      },
     });
   }
 
@@ -145,7 +151,13 @@ export class JarvisRuntime {
         return this.enqueueAction(utteranceId, text, { type: "focusItem", query: { relative: "next" } });
       }
       if (reflex.control === "confirm" || reflex.control === "reject") {
-        const pending = Object.values(this.kernel.state.consents).find((c) => c.status === "pending");
+        const pending = this.announcedConsent();
+        if (pending && reflex.control === "confirm" && !isStrictConsent(text)) {
+          // "ok" or "dobra" is not a yes to sending something outside: ask for a clear answer.
+          const ask = "Powiedz wyraźnie: tak, wyślij. Albo: nie.";
+          this.say(ask);
+          return this.log({ utteranceId, text, route: "ignored", control: reflex.control, say: ask });
+        }
         if (pending) return this.control(utteranceId, text, reflex.control, 2);
         if (reflex.control === "confirm" && parseCommand(text).type !== "unknown") return this.enqueueAction(utteranceId, text, parseCommand(text));
         this.say("Nie mam teraz nic do potwierdzenia.");
@@ -189,12 +201,19 @@ export class JarvisRuntime {
     } else if (control === "resume") {
       say = "Wracam do pracy.";
     } else if (control === "confirm" || control === "reject") {
-      const pending = Object.values(k.state.consents).find((c) => c.status === "pending");
+      const pending = this.announcedConsent();
       if (pending) k.dispatch({ type: control === "confirm" ? "ConsentGranted" : "ConsentDenied", consentId: pending.id });
+      this.announcedConsentId = null;
       say = control === "confirm" ? "Dobrze." : "Nie wysyłam.";
     }
     if (say) this.say(say);
     return this.log({ utteranceId, text, route: "control", control, say });
+  }
+
+  /** The pending consent the user was asked about, if it is still pending. */
+  private announcedConsent() {
+    const c = this.announcedConsentId ? this.kernel.state.consents[this.announcedConsentId] : undefined;
+    return c && c.status === "pending" ? c : undefined;
   }
 
   private lastLiveTask(): string | undefined {

@@ -30,15 +30,30 @@ export function scrollAmount(norm: string): ScrollAmount {
   return "page";
 }
 
+/** Imperative or infinitive navigation verbs (not past or future forms like "otworzyles"). */
+const NAV_VERB = /\b(wejdz|wejsc|wchodz|idz|isc|przejdz|przejsc|otworz|otworzyc|odpal|odpalic|wlacz|wlaczyc|uruchom|uruchomic|pokaz|pokazac|zaprowadz|daj|lec|skocz)\b/;
+/** A question about something (not a polite request such as "czy możesz wejść..."). */
+const QUESTION = /^(?:jarvis )?(co|jak|jaki|jaka|jakie|dlaczego|czemu|ile|kiedy|gdzie|kto|ktory|ktora|ktore|po co|czy (?!mozesz|moglbys|moglabys|dasz rade|bys|zechcesz))\b/;
+const MAX_NAV_WORDS = 12;
+
+/** "Wejdź na YouTube", "YouTube", "możesz otworzyć YouTube?", but not "co sądzisz o YouTube?". */
+function isNavigationRequest(norm: string): boolean {
+  if (QUESTION.test(norm)) return false;
+  const words = norm.split(" ").filter((w) => w && w !== "jarvis" && w !== "prosze");
+  if (words.length > MAX_NAV_WORDS) return false;
+  if (words.length <= 2 && words.every((w) => w === "na" || /^(you ?tub|jutub)/.test(w) || w === "tube")) return true;
+  return NAV_VERB.test(norm);
+}
+
 export function parseCommand(text: string): Command {
   const norm = normalizeUtterance(text);
   const verb = parseVerb(text);
   const q = parseReference(text);
 
-  if (/\bprzegladark\w*|\bchrom\w*|\bfirefox\w*|\bbrowser\w*/.test(norm) && (verb === "open" || /\b(uruchom|odpal|wlacz|otworz)\w*/.test(norm))) {
+  if (/\bprzegladark\w*|\bchrom\w*|\bfirefox\w*|\bbrowser\w*/.test(norm) && isNavigationRequest(norm)) {
     return { type: "browser.launch" };
   }
-  if (/\byou ?tub\w*|\bjutub\w*/.test(norm)) {
+  if (/\byou ?tub\w*|\bjutub\w*/.test(norm) && isNavigationRequest(norm)) {
     return { type: "browser.gotoSite", site: "youtube", openFirst: /\b(film\w*|filmik\w*|wideo|nagrani\w*)\b/.test(norm) };
   }
   if (verb === "scroll_down" || verb === "scroll_up" || /\bprzewin\w*/.test(norm)) {

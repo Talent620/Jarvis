@@ -19,12 +19,9 @@
   }
 
   function renderComment(c, isReply) {
-    var root = h(isReply ? "ytd-comment-renderer" : "ytd-comment-thread-renderer", {
-      class: isReply ? "reply" : "comment-thread",
-      "data-comment-id": c.id,
-      role: "article",
-      "aria-label": "Komentarz od " + c.author,
-    });
+    var attrs = { class: isReply ? "reply" : "comment-thread", role: "article", "aria-label": "Komentarz od " + c.author };
+    if (!cfg.noCommentIds) attrs["data-comment-id"] = c.id;
+    var root = h(isReply ? "ytd-comment-renderer" : "ytd-comment-thread-renderer", attrs);
     if (c.pinned) root.appendChild(h("div", { id: "pinned-comment-badge", class: "pinned", text: "Przypięty przez " + c.author }));
     root.appendChild(h("a", { id: "author-text", href: "/" + c.author, text: c.author }));
     root.appendChild(h("span", { id: "content-text", class: "comment-text", text: c.text }));
@@ -91,7 +88,8 @@
       var first = state.comments[0];
       if (!first) return;
       first.likes += 1;
-      var node = contents.querySelector('[data-comment-id="' + first.id + '"] #vote-count-middle');
+      var thread = contents.querySelector("ytd-comment-thread-renderer");
+      var node = thread && thread.querySelector("#vote-count-middle");
       if (node) { node.textContent = String(first.likes); node.setAttribute("aria-label", first.likes + " polubień"); }
     }, cfg.likeTickMs);
   }

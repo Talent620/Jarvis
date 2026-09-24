@@ -24,8 +24,8 @@ async function waitFor(cond: () => boolean, ms = 10_000) {
   }
 }
 
-async function runGolden18() {
-  const fixture = await startYoutubeFixture({ rerenderMs: 2000 });
+async function runGolden18(fixtureOptions: Record<string, unknown> = { rerenderMs: 2000 }) {
+  const fixture = await startYoutubeFixture(fixtureOptions);
   const profile = mkdtempSync(join(tmpdir(), "jarvis-g18-"));
   const browser = new ManagedBrowser({ userDataDir: profile, executablePath: findChromium(), headless: true });
   const kernel = new Kernel();
@@ -85,6 +85,10 @@ describe("golden scenario 1-8 on the YouTube fixture (mission DoD)", () => {
   it("one run with chatter, one consent, mail confirmed from Sent", async () => {
     assertGolden18(await runGolden18());
   });
+
+  it("comments without data-comment-id (like the real site), list re-rendered every 150 ms", async () => {
+    assertGolden18(await runGolden18({ rerenderMs: 150, noCommentIds: true }));
+  }, 60_000);
 
   it("10 consecutive green runs", async () => {
     const times: number[] = [];
