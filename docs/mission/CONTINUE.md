@@ -2,17 +2,23 @@
 
 - GAŁĄŹ SESJI: `claude/intelligent-brahmagupta-jq7jqj`
   (local test: `git fetch origin claude/intelligent-brahmagupta-jq7jqj && git checkout claude/intelligent-brahmagupta-jq7jqj`)
-- OSTATNI ZIELONY COMMIT: none yet. Baseline commit `8a25942` has 2 red license tests.
-- BIEŻĄCY KAMIEŃ: M0 (baseline measured, fixes not started)
-- STAN TESTÓW: vitest 2787/2789 (exit 1), tsc/eslint/build/secret scan green. See BASELINE.md.
-- STAN CI: not checked yet for this branch.
-- OSTATNIA ZWERYFIKOWANA FUNKCJA: none (bootstrap only).
-- DOKŁADNA NASTĘPNA AKCJA: M0 step 1. Read `tests/license.test.ts` and `src/lib/license.ts`,
-  make the test generate an ECDSA P-256 key pair at runtime, sign the fixture license with it,
-  and inject the public key into the verifier through a test-only seam without weakening
-  production verification. Run `npx vitest run tests/license.test.ts`, then full gates, commit, push.
+- PR: https://github.com/Talent620/Jarvis/pull/7 (draft)
+- OSTATNI ZIELONY COMMIT: `8a61178` (M0; vitest 2799/2799, tsc, eslint, build, secret scan green;
+  CI Tests green on push and PR)
+- BIEŻĄCY KAMIEŃ: M1 (Runtime Kernel + store performance)
+- STAN TESTÓW: vitest 328 files / 2799 tests, exit 0.
+- STAN CI: Tests green. Build Android APK red since September on `android-actions/setup-android@v3`
+  ("Failed to find package 'tools'", runner image change, also red on the bootstrap commit that
+  did not touch Android). Fixed by `packages: "platform-tools"` in android*.yml and release.yml.
+- OSTATNIA ZWERYFIKOWANA FUNKCJA: M0 license verification with injected key pair; Android
+  signing without hardcoded passwords (tests/androidSigning.test.ts).
+- DOKŁADNA NASTĘPNA AKCJA: M1 step 1. Create `src/lib/runtime/` with typed kernel events,
+  event ids + dedup, single-writer reducer, task state with AbortController, append-only task
+  journal (Dexie, outside the store blob). Tests first in `tests/runtime/`.
 - POZYCJE NEEDS_HARDWARE: none recorded yet.
 - POZYCJE BLOCKED: none.
+- OWNER ACTION: set `JARVIS_RELEASE_STORE_PASSWORD` / `JARVIS_RELEASE_KEY_PASSWORD` secrets before
+  the next release (release.yml refuses to publish without them, docs/JARVIS-SECURITY.md).
 
 ## Recovery checklist
 1. `cat CLAUDE.md docs/mission/CONTINUE.md docs/mission/state.json`

@@ -32,6 +32,10 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # The legacy "tools" package no longer exists in current cmdline-tools; the default
+          # "tools platform-tools" makes sdkmanager exit 1 on today's runners.
+          packages: "platform-tools"
 
       - name: Install dependencies
         run: npm ci

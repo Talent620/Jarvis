@@ -1,13 +1,13 @@
 # Mission state
 
-Phase: bootstrap done, waiting for `/goal`. Machine-readable status: `state.json`.
+Phase: M0 done (8a61178), M1 in progress. Machine-readable status: `state.json`.
 
 ## Milestones
 
 | ID | Title | Status |
 |---|---|---|
-| M0 | Baseline and security (license tests, keystore, private key check, perf baseline) | in_progress (baseline measured) |
-| M1 | Runtime Kernel + store performance | todo |
+| M0 | Baseline and security (license tests, keystore, private key check, perf baseline) | done |
+| M1 | Runtime Kernel + store performance | in_progress |
 | M2 | Managed browser + YouTube fixture, steps 1-7 | todo |
 | M3 | Four lanes, task/focus stacks, 12+ interleaved golden conversations | todo |
 | M4 | Mail, external effects exactly once, provenance, contacts | todo |
@@ -18,15 +18,16 @@ Phase: bootstrap done, waiting for `/goal`. Machine-readable status: `state.json
 | M9 | Windows and Android adapters | todo |
 | M10 | Vision, Skill Compiler, visibility, docs, final review | todo |
 
-## Gates at last measurement (commit 8a25942, see BASELINE.md)
+## Gates at last measurement (commit 8a61178)
 
 - tsc -b: pass. eslint: pass. vite build: pass. scan:secrets: pass.
-- vitest: 2787/2789, 2 pre-existing failures in `tests/license.test.ts`.
+- vitest: 2799/2799 (328 files).
+- CI: Tests green; Android APK workflows red on setup-android (runner image), fix pushed after 8a61178.
 
 ## Known risks
 
-- `android/keystore/jarvis.jks` is tracked in a public repo and `android/app/build.gradle` falls
-  back to literal passwords. Treat the signing key as compromised (M0).
+- `android/keystore/jarvis.jks` is tracked in a public repo; the key must be treated as compromised.
+  Passwords removed from build.gradle in M0; rotation options in docs/JARVIS-SECURITY.md (owner).
 - Store persists the whole blob synchronously on every `setData` and wakes all subscribers;
   no component uses `useStoreSelector` yet (M1).
 - No cancellation in agentRun; AbortSignal only in `http.ts` and `ollamaPull.ts` (M1/M3).
