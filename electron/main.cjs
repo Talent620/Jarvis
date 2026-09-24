@@ -31,6 +31,19 @@ let mainWindow = null;
 let siteOsProcess = null;
 let stdioMcp = null;
 let closingStdioMcp = false;
+// JARVIS runtime environment (managed browser). Logic lives in electron/gen/runtime.cjs, built
+// from src/node by scripts/build-electron-runtime.mjs; this file is only the IPC adapter.
+let envHost = null;
+function getEnvHost() {
+  if (!envHost) {
+    const { createManagedBrowserHost } = require("./gen/runtime.cjs");
+    envHost = createManagedBrowserHost({ userDataPath: app.getPath("userData") });
+    envHost.onEvent((ev) => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("jarvis:env-event", ev);
+    });
+  }
+  return envHost;
+}
 
 function siteOsPaths() {
   const base = path.join(app.getPath("userData"), "site-os");
@@ -332,6 +345,14 @@ function registerDesktopControl() {
   ipcMain.handle("jarvis:mcp-stdio-disconnect", async (event, payload) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     return stdioMcp.close(String(payload?.server || ""));
+  });
+  ipcMain.handle("jarvis:env", async (event, req) => {
+    if (!isTrustedIpc(event)) return { status: "failed", error: "forbidden" };
+    try {
+      return await getEnvHost().handle(req);
+    } catch (e) {
+      return { status: "failed", error: e && e.message ? String(e.message) : String(e) };
+    }
   });
   ipcMain.handle("jarvis:hardware-info", async (event) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
@@ -643,6 +664,7 @@ if (!gotLock) {
   });
 
   app.on("will-quit", () => {
+    if (envHost) void envHost.handle({ method: "close", callId: "quit" }).catch(() => undefined);
     globalShortcut.unregisterAll();
     setClipWatch(false);
     if (siteOsProcess && siteOsProcess.exitCode === null) siteOsProcess.kill();

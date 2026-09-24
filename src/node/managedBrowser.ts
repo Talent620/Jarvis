@@ -143,13 +143,14 @@ export class ManagedBrowser implements ComputerEnvironment {
 
   async capabilities(): Promise<CapabilityState[]> {
     const now = (this.opts.now ?? Date.now)();
-    const exe = this.opts.executablePath ?? chromium.executablePath();
+    let exe = this.opts.executablePath;
+    if (!exe) { try { exe = chromium.executablePath(); } catch { exe = undefined; } }
     const present = !!exe && existsSync(exe);
     return [{
       id: "browser.managed.semantic",
       status: present ? "available" : "missing",
       provider: "playwright-chromium",
-      detail: present ? (this.context ? "running" : "ready to launch") : `no browser at ${exe}`,
+      detail: present ? (this.context ? "running" : "ready to launch") : "no Chromium found: install Google Chrome or run `npx playwright install chromium`",
       checkedAt: now,
     }];
   }

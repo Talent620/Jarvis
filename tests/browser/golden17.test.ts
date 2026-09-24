@@ -8,7 +8,9 @@ import { join } from "node:path";
 import { Kernel } from "../../src/lib/runtime/kernel";
 import { ActionSession, type TurnResult } from "../../src/lib/runtime/session";
 import { ManagedBrowser } from "../../src/node/managedBrowser";
-import type { ClipboardRead, PageRead, SelectionRead } from "../../src/lib/runtime/env/types";
+import { createEnvHost } from "../../src/node/envHost";
+import { IpcEnvironment, type EnvBridge } from "../../src/lib/runtime/env/ipc";
+import type { ClipboardRead, ComputerEnvironment, PageRead, SelectionRead } from "../../src/lib/runtime/env/types";
 // @ts-expect-error plain ESM fixture without types
 import { startYoutubeFixture } from "../fixtures/youtube/server.mjs";
 import { findChromium } from "./chromium";
@@ -21,10 +23,22 @@ export interface GoldenRun {
   kernel: Kernel;
 }
 
-export async function runGolden17(opts: { rerenderMs?: number } = {}): Promise<GoldenRun> {
+/** Production path in the desktop app: renderer proxy -> JSON (structured clone) -> main host. */
+export function viaIpc(browser: ManagedBrowser): ComputerEnvironment {
+  const host = createEnvHost(browser);
+  const clone = <T>(v: T): T => (v === undefined ? v : JSON.parse(JSON.stringify(v)));
+  const bridge: EnvBridge = {
+    call: async (req) => clone(await host.handle(clone(req))),
+    onEvent: (cb) => browser.onEvent((e) => cb(clone(e))),
+  };
+  return new IpcEnvironment(browser.id, bridge);
+}
+
+export async function runGolden17(opts: { rerenderMs?: number; ipc?: boolean } = {}): Promise<GoldenRun> {
   const fixture = await startYoutubeFixture({ rerenderMs: opts.rerenderMs ?? 2500 });
   const profile = mkdtempSync(join(tmpdir(), "jarvis-profile-"));
-  const env = new ManagedBrowser({ userDataDir: profile, executablePath: findChromium(), headless: true });
+  const browser = new ManagedBrowser({ userDataDir: profile, executablePath: findChromium(), headless: true });
+  const env = opts.ipc ? viaIpc(browser) : browser;
   const kernel = new Kernel();
   const session = new ActionSession(kernel, env, { youtubeUrl: `${fixture.url}/` });
   const turns: GoldenRun["turns"] = [];
@@ -52,7 +66,7 @@ export async function runGolden17(opts: { rerenderMs?: number } = {}): Promise<G
     return { turns, clipboard: clip.text ?? "", selection: sel.text, url: page.url ?? "", kernel };
   } finally {
     session.stop();
-    await env.close();
+    await browser.close();
     await fixture.close();
     rmSync(profile, { recursive: true, force: true });
   }
@@ -88,6 +102,10 @@ describe("golden scenario steps 1-7 on the YouTube fixture", () => {
   it("runs every step with read-back confirmation", async () => {
     const run = await runGolden17();
     assertGolden(run);
+  });
+
+  it("runs through the Electron IPC proxy exactly like in-process", async () => {
+    assertGolden(await runGolden17({ ipc: true }));
   });
 
   it("survives aggressive list re-renders (every 150 ms) between resolve, select and copy", async () => {

@@ -22,6 +22,7 @@ export default tseslint.config(
       "public",
       "ios",
       "android",
+      "electron/gen", // built by scripts/build-electron-runtime.mjs
     ],
   },
   js.configs.recommended,

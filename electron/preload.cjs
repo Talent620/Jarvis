@@ -5,6 +5,15 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("jarvisDesktop", {
   platform: process.platform,
+  // JARVIS runtime environment (managed browser) in the main process: JSON requests and events.
+  env: {
+    call: (req) => ipcRenderer.invoke("jarvis:env", req),
+    onEvent: (cb) => {
+      const handler = (_event, ev) => cb(ev);
+      ipcRenderer.on("jarvis:env-event", handler);
+      return () => ipcRenderer.removeListener("jarvis:env-event", handler);
+    },
+  },
   // Bezpieczna warstwa narzędzi systemowych (MCP-style): zawsze przez jeden kontrolowany IPC.
   agentTool: (tool, input = {}) => ipcRenderer.invoke("jarvis:agent-tool", { tool: String(tool || ""), input }),
   mcpStdioConnect: (config) => ipcRenderer.invoke("jarvis:mcp-stdio-connect", config),

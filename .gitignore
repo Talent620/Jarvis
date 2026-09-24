@@ -31,3 +31,6 @@ release-desktop
 
 # Kandydaci narzędzi generowanych przez agenta nigdy nie trafiają do repozytorium.
 tools/generated/*.candidate.cjs
+
+# Built by scripts/build-electron-runtime.mjs
+electron/gen/

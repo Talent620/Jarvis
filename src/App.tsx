@@ -123,6 +123,7 @@ import { brand } from "./lib/brand";
 import { isLocked as keysAreLocked } from "./lib/secretsVault";
 import UnlockKeys from "./components/UnlockKeys";
 import { useStoreSelector, shallowEqual } from "./hooks/useStore";
+import { runtimeAvailable, tryRuntimeCommand } from "./lib/runtime/appRuntime";
 import type { ChatMessage } from "./types";
 
 type PendingImage = { data: string; mediaType: string } | null;
@@ -579,6 +580,19 @@ export default function App() {
       setMessages((m) => [...m, { id, role: "assistant", text: "🔊 Czytam na głos.", tools: ["tryb"], createdAt: Date.now() }]);
       void speak(toRead, { ...store.settings, speak: true }).catch(() => {});
       return;
+    }
+
+    // Computer control through the JARVIS runtime (desktop app, managed browser). JARVIS says
+    // "done" only after the action is confirmed by read-back (src/lib/runtime).
+    if (runtimeAvailable()) {
+      const turn = await tryRuntimeCommand(text).catch(() => null);
+      if (turn) {
+        const id = uid();
+        setLiveId(id);
+        setMessages((m) => [...m, { id, role: "assistant", text: turn.say, tools: ["komputer"], createdAt: Date.now() }]);
+        if (store.settings.speak) void speak(turn.say, store.settings).catch(() => {});
+        return;
+      }
     }
 
     // Komenda: Tryb Prywatny (w 100% lokalnie, offline). Tylko KRÓTKA komenda — długi wklejony
