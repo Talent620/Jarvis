@@ -18,7 +18,8 @@ import { classifyReflex, isStrictConsent, tier0FromPartial, DEFAULT_PARTIAL_POLI
 
 /** Voice output. cancel() must stop audio immediately (barge-in). */
 export interface Speaker {
-  say(text: string): void;
+  /** `utteranceId`: the user's utterance this answers (latency marks). */
+  say(text: string, meta?: { utteranceId?: string }): void;
   cancel(): void;
 }
 
@@ -67,6 +68,8 @@ export class JarvisRuntime {
   private lastActionTaskId: string | null = null;
   /** Commands accepted but not started yet (for "co teraz robisz?"). */
   private queuedTexts: string[] = [];
+  /** The utterance whose command the action lane is running now (questions belong to it). */
+  private runningUtteranceId: string | null = null;
   /** The consent whose question the user actually heard: "tak" answers that one only. */
   private announcedConsentId: string | null = null;
 
@@ -83,7 +86,7 @@ export class JarvisRuntime {
       onQuestion: (q, consentId) => {
         opts.session?.onQuestion?.(q, consentId);
         if (consentId) this.announcedConsentId = consentId;
-        this.say(q);
+        this.say(q, "runtime", this.runningUtteranceId ?? undefined);
       },
     });
   }
@@ -156,10 +159,10 @@ export class JarvisRuntime {
    * replies as they are, action results and questions (which quote comments, titles, clipboard)
    * only as one quoted data line, so screen text never sits unquoted in the model's context.
    */
-  private say(text: string, origin: "model" | "runtime" = "runtime"): void {
+  private say(text: string, origin: "model" | "runtime" = "runtime", utteranceId?: string): void {
     this.history.push({ role: "assistant", text: origin === "model" ? text : `[wynik akcji, dane] ${quoteData(text, 160)}` });
     if (this.history.length > 12) this.history.splice(0, this.history.length - 12);
-    this.speaker.say(text);
+    this.speaker.say(text, { utteranceId });
   }
 
   // ---------------------------------------------------------------- speech input
@@ -205,12 +208,12 @@ export class JarvisRuntime {
         if (pending && reflex.control === "confirm" && !isStrictConsent(text)) {
           // "ok" or "dobra" is not a yes to sending something outside: ask for a clear answer.
           const ask = "Powiedz wyraźnie: tak, wyślij. Albo: nie.";
-          this.say(ask);
+          this.say(ask, "runtime", utteranceId);
           return this.log({ utteranceId, text, route: "ignored", control: reflex.control, say: ask });
         }
         if (pending) return this.control(utteranceId, text, reflex.control, 2);
         if (reflex.control === "confirm" && parseCommand(text).type !== "unknown") return this.enqueueAction(utteranceId, text, parseCommand(text));
-        this.say("Nie mam teraz nic do potwierdzenia.");
+        this.say("Nie mam teraz nic do potwierdzenia.", "runtime", utteranceId);
         return this.log({ utteranceId, text, route: "ignored", control: reflex.control });
       }
       return this.control(utteranceId, text, reflex.control, reflex.tier);
@@ -219,7 +222,7 @@ export class JarvisRuntime {
     if (isStatusQuestion(text)) {
       this.kernel.dispatch({ type: "ConversationIntent", intent: "SIDE_CHAT", text, utteranceId });
       const reply = statusReply(this.kernel.state, this.queuedTexts);
-      this.say(reply);
+      this.say(reply, "runtime", utteranceId);
       return this.log({ utteranceId, text, route: "status", say: reply });
     }
     if (reflex.kind === "action") return this.enqueueAction(utteranceId, text, reflex.command);
@@ -236,7 +239,7 @@ export class JarvisRuntime {
         const r = await this.session.undo();
         turn.result = r;
         turn.say = r.say;
-        if (gen === this.generation) this.say(r.say); // a "stop" meanwhile means silence
+        if (gen === this.generation) this.say(r.say, "runtime", utteranceId); // a "stop" meanwhile means silence
       });
       return turn;
     }
@@ -258,7 +261,7 @@ export class JarvisRuntime {
       this.announcedConsentId = null;
       say = control === "confirm" ? "Dobrze." : "Nie wysyłam.";
     }
-    if (say) this.say(say);
+    if (say) this.say(say, "runtime", utteranceId);
     return this.log({ utteranceId, text, route: "control", control, say });
   }
 
@@ -302,11 +305,12 @@ export class JarvisRuntime {
       const amend = !!last && AMENDABLE.has(last.kind as Command["type"]) && command.type === "focusItem" && !!q && (!!q.reject || q.relative !== undefined || !!q.returnTo);
       if (amend) turn.route = "amend";
       k.dispatch({ type: "ConversationIntent", intent: amend ? "AMEND_TASK" : "NEW_TASK", text, utteranceId, taskId: amend ? last!.id : undefined });
-      const r = await this.session.handle(text, { command, amendTaskId: amend ? last!.id : undefined });
+      this.runningUtteranceId = utteranceId;
+      const r = await this.session.handle(text, { command, amendTaskId: amend ? last!.id : undefined }).finally(() => { this.runningUtteranceId = null; });
       if (r.taskId) this.lastActionTaskId = r.taskId;
       turn.result = r;
       turn.say = r.say;
-      if (k.state.tasks[r.taskId ?? ""]?.status !== "cancelled") this.say(r.say);
+      if (k.state.tasks[r.taskId ?? ""]?.status !== "cancelled") this.say(r.say, "runtime", utteranceId);
     });
     return turn;
   }
@@ -319,7 +323,7 @@ export class JarvisRuntime {
     const summarizer = this.summarizer;
     if (!content || !summarizer) {
       turn.say = content ? "Nie mam modelu do streszczania." : "Nie mam przed sobą tekstu do streszczenia.";
-      this.say(turn.say);
+      this.say(turn.say, "runtime", utteranceId);
       return turn;
     }
     const gen = this.generation;
@@ -330,7 +334,7 @@ export class JarvisRuntime {
       } catch {
         turn.say = "Nie udało mi się tego streścić.";
       }
-      if (gen === this.generation) this.say(turn.say);
+      if (gen === this.generation) this.say(turn.say, "runtime", utteranceId);
     })();
     this.sideChats.add(p);
     void p.finally(() => this.sideChats.delete(p));
@@ -342,7 +346,7 @@ export class JarvisRuntime {
     const turn = this.log({ utteranceId, text, route: "side_chat" });
     if (!this.model) {
       turn.say = "Tu nie pomogę bez modelu rozmowy, ale dalej robię swoje.";
-      this.say(turn.say);
+      this.say(turn.say, "runtime", utteranceId);
       return turn;
     }
     const model = this.model;
@@ -352,10 +356,10 @@ export class JarvisRuntime {
       try {
         const reply = await model.reply({ system: CONVERSATION_SYSTEM, snapshot, utterance: text, history: this.history.slice(-8) });
         turn.say = reply;
-        if (gen === this.generation) this.say(reply, "model"); // "stop" silences a late answer too
+        if (gen === this.generation) this.say(reply, "model", utteranceId); // "stop" silences a late answer too
       } catch {
         turn.say = "Nie udało mi się teraz odpowiedzieć.";
-        if (gen === this.generation) this.say(turn.say);
+        if (gen === this.generation) this.say(turn.say, "runtime", utteranceId);
       }
     })();
     this.sideChats.add(p);

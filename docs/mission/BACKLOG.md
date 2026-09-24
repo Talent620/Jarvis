@@ -25,7 +25,7 @@ Status: todo, in_progress, done, blocked, needs_hardware. Nothing is done withou
 | B-019 | Mail send exactly once with Sent read-back, idempotency keys | M4 | done | src/lib/runtime/mail.ts | duplicate sends | timeout and duplicate tests | none |
 | B-020 | Contacts with Polish inflection and runtime disambiguation | M4 | done | src/lib/runtime/contacts.ts | wrong recipient | inflection tests | none |
 | B-021 | Provenance tags and trust boundary for untrusted content | M4 | done | src/lib/runtime/provenance.ts | injection bypass | injection tests | none |
-| B-022 | Streaming voice interfaces, barge-in, provider catalog | M5 | todo | src/lib/voice/ | none | state machine tests | real mic = needs_hardware |
+| B-022 | Streaming voice interfaces, barge-in, provider catalog | M5 | done | src/lib/runtime/voice/ | none | state machine tests | real mic = needs_hardware |
 | B-023 | npm run jarvis:acceptance | M6 | todo | scripts/acceptance/ | accidental real send | --send guard tests | real desktop = needs_hardware |
 | B-024 | Linux AT-SPI, portal/libei, clipboard adapters | M7 | todo | electron/, src/lib/env/linux/ | none | contract tests | needs_hardware for real session |
 | B-025 | BrowserBridge extension + loopback protocol | M8 | todo | extension/, electron/ | token leakage | protocol tests | none |
@@ -36,3 +36,5 @@ Status: todo, in_progress, done, blocked, needs_hardware. Nothing is done withou
 | B-030 | Real YouTube skill check (selectors on the live site) | M6 | needs_hardware | src/node/managedBrowser.ts | site changes | acceptance run on user machine | real site not reachable in CI by policy |
 | B-031 | Real Gmail send + Sent read-back on the user account | M6 | needs_hardware | src/lib/runtime/gmailService.ts, src/lib/google.ts | real mail leaves | acceptance with --send only | no Google account in cloud |
 | B-032 | Address book source for recipients (Google Contacts or local book) | M6 | needs_hardware | src/lib/runtime/contacts.ts, appRuntime.ts | wrong recipient | inflection tests exist; real book on user machine | no contacts in cloud |
+| B-033 | Voice control on a real microphone: echo cancellation, barge-in, Deepgram/Whisper chain, audio latency | M6 | needs_hardware | src/lib/runtime/voice/browserAudio.ts, appRuntime.ts startAppVoice | echo loops | acceptance with mic and speakers | no microphone in cloud |
+| B-034 | UI toggle for voice control (startAppVoice) and Deepgram key field | M10 | todo | src/App.tsx, settings | double audio | UI test | none |

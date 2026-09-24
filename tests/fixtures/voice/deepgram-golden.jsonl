@@ -1,0 +1,51 @@
+{"type": "Metadata", "request_id": "scripted", "model_info": {"name": "nova-3"}}
+{"type": "SpeechStarted", "channel": [0], "timestamp": 0.0}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Jarvis,", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Jarvis, uruchom", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Jarvis, uruchom przeglądarkę.", "confidence": 0.6}]}}
+{"type": "Results", "is_final": true, "speech_final": true, "channel": {"alternatives": [{"transcript": "Jarvis, uruchom przeglądarkę.", "confidence": 0.93}]}}
+{"type": "SpeechStarted", "channel": [0], "timestamp": 0.0}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Wejdź", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Wejdź na", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Wejdź na YouTube.", "confidence": 0.6}]}}
+{"type": "Results", "is_final": true, "speech_final": true, "channel": {"alternatives": [{"transcript": "Wejdź na YouTube.", "confidence": 0.93}]}}
+{"type": "SpeechStarted", "channel": [0], "timestamp": 0.0}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Otwórz", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Otwórz pierwszy", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Otwórz pierwszy film.", "confidence": 0.6}]}}
+{"type": "Results", "is_final": true, "speech_final": true, "channel": {"alternatives": [{"transcript": "Otwórz pierwszy film.", "confidence": 0.93}]}}
+{"type": "SpeechStarted", "channel": [0], "timestamp": 0.0}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Zjedź", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Zjedź trochę", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Zjedź trochę niżej.", "confidence": 0.6}]}}
+{"type": "Results", "is_final": true, "speech_final": false, "channel": {"alternatives": [{"transcript": "Zjedź trochę niżej.", "confidence": 0.93}]}}
+{"type": "UtteranceEnd", "channel": [0, 1], "last_word_end": 2.1}
+{"type": "SpeechStarted", "channel": [0], "timestamp": 0.0}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Znajdź", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Znajdź komentarze.", "confidence": 0.6}]}}
+{"type": "Results", "is_final": true, "speech_final": true, "channel": {"alternatives": [{"transcript": "Znajdź komentarze.", "confidence": 0.93}]}}
+{"type": "SpeechStarted", "channel": [0], "timestamp": 0.0}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Pierwszy", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Pierwszy komentarz.", "confidence": 0.6}]}}
+{"type": "Results", "is_final": true, "speech_final": true, "channel": {"alternatives": [{"transcript": "Pierwszy komentarz.", "confidence": 0.93}]}}
+{"type": "SpeechStarted", "channel": [0], "timestamp": 0.0}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Zaznacz", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Zaznacz pierwsze", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Zaznacz pierwsze cztery", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Zaznacz pierwsze cztery litery.", "confidence": 0.6}]}}
+{"type": "Results", "is_final": true, "speech_final": false, "channel": {"alternatives": [{"transcript": "Zaznacz pierwsze", "confidence": 0.93}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "cztery", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "cztery litery.", "confidence": 0.6}]}}
+{"type": "Results", "is_final": true, "speech_final": true, "channel": {"alternatives": [{"transcript": "cztery litery.", "confidence": 0.93}]}}
+{"type": "SpeechStarted", "channel": [0], "timestamp": 0.0}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Skopiuj.", "confidence": 0.6}]}}
+{"type": "Results", "is_final": true, "speech_final": true, "channel": {"alternatives": [{"transcript": "Skopiuj.", "confidence": 0.93}]}}
+{"type": "SpeechStarted", "channel": [0], "timestamp": 0.0}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Wyślij", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Wyślij to", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Wyślij to mailem", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "Wyślij to mailem Marcinowi.", "confidence": 0.6}]}}
+{"type": "Results", "is_final": true, "speech_final": false, "channel": {"alternatives": [{"transcript": "Wyślij to", "confidence": 0.93}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "mailem", "confidence": 0.6}]}}
+{"type": "Results", "is_final": false, "speech_final": false, "channel": {"alternatives": [{"transcript": "mailem Marcinowi.", "confidence": 0.6}]}}
+{"type": "Results", "is_final": true, "speech_final": true, "channel": {"alternatives": [{"transcript": "mailem Marcinowi.", "confidence": 0.93}]}}

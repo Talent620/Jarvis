@@ -259,10 +259,11 @@ export default function App() {
   useEffect(() => {
     if (!runtimeAvailable()) return;
     setRuntimeSpeaker({
-      say: (text) => {
+      say: (text, meta) => {
         const id = uid();
         setMessages((m) => [...m, { id, role: "assistant", text, tools: ["komputer"], createdAt: Date.now() }]);
-        if (store.settings.speak) void speak(text, store.settings).catch(() => {});
+        // In voice control the voice session speaks (with barge-in); the chat only shows it.
+        if (store.settings.speak && !(meta as { voice?: boolean } | undefined)?.voice) void speak(text, store.settings).catch(() => {});
       },
       cancel: () => stopSpeaking(),
     });

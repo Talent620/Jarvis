@@ -11,6 +11,10 @@ import type { KernelState } from "./reducer";
 import { GmailMailService } from "./gmailService";
 import { JarvisRuntime, type RuntimeTurn, type Speaker } from "./lanes/runtime";
 import type { SessionOptions } from "./session";
+import { BatchSTT, DeepgramSTT, FallbackSTT } from "./voice/adapters";
+import { AppTTS, MicInput, pcm16ToWav } from "./voice/browserAudio";
+import { VoiceSession, type VoiceSessionEvent } from "./voice/session";
+import type { ListenMode, SocketLike, StreamingSTT } from "./voice/types";
 
 interface AppRuntime {
   kernel: Kernel;
@@ -19,6 +23,10 @@ interface AppRuntime {
 
 let runtime: Promise<AppRuntime> | null = null;
 let uiSpeaker: Speaker | null = null;
+let voiceSpeaker: VoiceSession | null = null;
+
+/** What the UI's speaker gets: `voice` means a voice session already speaks it (show only). */
+export type UiSpeakMeta = { utteranceId?: string; voice?: boolean };
 
 /** Everything the runtime says (results, questions, consent) goes through the UI's speaker. */
 export function setRuntimeSpeaker(s: Speaker | null): void {
@@ -26,8 +34,11 @@ export function setRuntimeSpeaker(s: Speaker | null): void {
 }
 
 const forwardingSpeaker: Speaker = {
-  say: (t) => uiSpeaker?.say(t),
-  cancel: () => uiSpeaker?.cancel(),
+  say: (t, meta) => {
+    uiSpeaker?.say(t, { ...meta, voice: !!voiceSpeaker } as UiSpeakMeta);
+    voiceSpeaker?.say(t, meta);
+  },
+  cancel: () => { uiSpeaker?.cancel(); voiceSpeaker?.cancel(); },
 };
 
 export function runtimeAvailable(): boolean {
@@ -106,4 +117,48 @@ export async function tryRuntimeText(text: string, onClaimed?: () => void): Prom
   if (!rt.claims(text, (cmd) => shouldRoute(cmd, rt.kernel.state))) return null;
   onClaimed?.(); // e.g. show the user's words before anything the runtime says
   return rt.onText(text);
+}
+
+export interface AppVoiceIO {
+  /** The app's speech output for one sentence (resolves when done). */
+  speak: (text: string) => Promise<void>;
+  stop: () => void;
+  /** Batch recognizer (Groq Whisper or on-device) for a WAV clip. */
+  transcribe: (wav: Blob) => Promise<string>;
+  /** Deepgram browser credential, when the user configured one (never logged). */
+  deepgramToken?: () => string;
+  mode?: ListenMode;
+  onEvent?: (e: VoiceSessionEvent) => void;
+}
+
+/**
+ * Voice control of the runtime: microphone (echo cancellation on) -> streaming recognizer chain
+ * -> JarvisRuntime -> speech with barge-in. Needs a microphone: acceptance on the user machine.
+ */
+export async function startAppVoice(io: AppVoiceIO): Promise<{ session: VoiceSession; stop: () => Promise<void> }> {
+  const { runtime: rt } = await getAppRuntime();
+  const token = io.deepgramToken?.();
+  const chain: (() => StreamingSTT)[] = [];
+  if (token) chain.push(() => new DeepgramSTT({ connect: (url, protocols) => new WebSocket(url, protocols) as unknown as SocketLike, protocols: ["token", token] }));
+  chain.push(() => new BatchSTT({ transcribe: (frames) => io.transcribe(new Blob([pcm16ToWav(frames)], { type: "audio/wav" })) }));
+  const session = new VoiceSession({ stt: new FallbackSTT(chain), tts: new AppTTS({ speak: io.speak, stop: io.stop }), mode: io.mode, onEvent: io.onEvent });
+  session.attach(rt);
+  const mic = new MicInput();
+  voiceSpeaker = session;
+  try {
+    await session.start();
+    await mic.start((f) => session.pushAudio(f));
+  } catch (e) {
+    voiceSpeaker = null;
+    await session.stop().catch(() => undefined);
+    throw e;
+  }
+  return {
+    session,
+    stop: async () => {
+      if (voiceSpeaker === session) voiceSpeaker = null;
+      await mic.stop();
+      await session.stop();
+    },
+  };
 }

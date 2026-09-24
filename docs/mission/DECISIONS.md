@@ -144,3 +144,16 @@ UI. Unclassified plugin/MCP tools are already consent-gated per tool and keep th
 consent: forcing a prompt on each of their calls made multi-step plugins unusable. Summaries of
 screen text go through an isolated model call (fixed system prompt, quoted data, no tools, no
 history) and stay untrusted.
+
+## D-026 Voice: catalog ids, echo and barge-in rules
+Model ids live in `src/lib/runtime/voice/catalog.ts` with their source and a verified flag. The
+default Live model `gemini-3.8-live` (NON_BLOCKING function calling) comes from the mission
+brief: the official docs were unreachable from the build session (network policy, 403), so it is
+marked unverified; the dead `gemini-2.0-flash-live-001` maps to it. Echo: text heard while or
+right after JARVIS speaks is compared with everything it just said as one bag of words; a single
+word in a growing partial is held back if JARVIS just said it, a single-word final only if JARVIS
+said exactly that word, so a short "tak", "nie" or "stop" from the user always gets through.
+Barge-in: a non-echo user partial (stability >= 0.5, not a backchannel like "mhm") or final
+stops speech at once. Deepgram authenticates with the documented browser subprotocol; OpenAI
+Realtime needs an ephemeral token from a backend, so the app chain is Deepgram (when a key
+exists) then Whisper.

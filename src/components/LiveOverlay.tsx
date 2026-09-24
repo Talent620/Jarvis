@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LiveSession, liveToolDeclarations, LIVE_VOICE_STYLE, LIVE_MODEL_NATIVE, LIVE_MODEL_STABLE, type LiveState } from "../lib/liveVoice";
+import { LiveSession, liveNonBlocking, liveToolDeclarations, LIVE_VOICE_STYLE, LIVE_MODEL_NATIVE, LIVE_MODEL_STABLE, type LiveState } from "../lib/liveVoice";
 import { toolDefs, runTool } from "../lib/tools";
 import { riskOf } from "../lib/permissions";
 import { ConversationLoop, type LoopState } from "../lib/voiceLoop";
@@ -124,6 +124,9 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
         };
         // Najpierw native audio (emocje); jeśli ten klucz go nie obsłuży — cicho stabilny.
         const useNative = !nativeFailed.current;
+        const liveModel = useNative ? LIVE_MODEL_NATIVE : LIVE_MODEL_STABLE;
+        // The default Live model calls functions without blocking the conversation.
+        const declared = liveNonBlocking(liveModel) ? liveToolDeclarations(toolDefs, riskOf, true, true) : liveTools;
         reachedLive.current = false;
         const session = new LiveSession(
           geminiKey,
@@ -142,10 +145,10 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
             if (d) setDetail(d);
           },
           (t) => setCaption((c) => (c + t).slice(-300)),
-          liveTools,
+          declared,
           liveRunTool,
           store.settings.geminiVoice?.trim() || "Charon",
-          useNative ? LIVE_MODEL_NATIVE : LIVE_MODEL_STABLE,
+          liveModel,
           useNative, // affective dialog + proactive audio tylko na native
         );
         liveRef.current = session;

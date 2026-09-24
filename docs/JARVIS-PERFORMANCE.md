@@ -77,3 +77,23 @@ change the root renders re-renders it once. The other 21 `useStore()` components
 mounted only while open. Components that read `store.data` during render without subscribing
 and used to rely on the root re-render (`Conversation` start screen, `More`, `BossMode`) now
 subscribe themselves, only while mounted.
+
+## Voice latency (M5)
+
+The voice session records per-utterance timestamps (`src/lib/runtime/voice/latency.ts`):
+speech start, first partial, final, intent routed, TTS cancel, first action, first verified
+action, first reply text and first audio. These numbers are runtime and browser latencies with
+a scripted recognizer and a fake TTS; microphone, network recognizers and real audio output are
+measured by the local acceptance run (M6, NEEDS_HARDWARE here).
+
+| Delta (ms) | In-memory fixture p50 / p95 | Chromium + YouTube fixture p50 / p95 |
+|---|---|---|
+| final to intent routed | 1 / 2 | 0 / 1 |
+| final to first action started | 1 / 23 | 1 / 33 |
+| final to action confirmed by read-back | 2 / 25 | 73 / 402 |
+| final to first reply (and first audio, fake TTS) | 2 / 16 | 87 / 410 |
+
+Sources: `tests/runtime/voiceSession.test.ts` (golden 1-8 spoken, 11 utterances) and
+`tests/browser/voiceGolden.test.ts` (golden 1-8 on Chromium, 10 utterances). Barge-in cancels
+speech in the same tick as the interrupting partial (`voiceSession.test.ts`, barge-in case).
+A slow action gets "Sekunda." from the pre-rendered clip cache after 1.2 s of silence.
