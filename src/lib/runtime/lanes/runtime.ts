@@ -13,6 +13,7 @@ import { ActionSession, type SessionOptions, type TurnResult } from "../session"
 import { quoteData, situationSnapshot } from "../snapshot";
 import { TERMINAL_TASK } from "../types";
 import { CONVERSATION_SYSTEM, isStatusQuestion, statusReply, type ConversationModel, type ConversationTurn } from "./conversation";
+import { focusedContent, isSummaryRequest, summarizeUntrusted, type IsolatedModel } from "../untrusted";
 import { classifyReflex, isStrictConsent, tier0FromPartial, DEFAULT_PARTIAL_POLICY, type PartialPolicy } from "./reflex";
 
 /** Voice output. cancel() must stop audio immediately (barge-in). */
@@ -21,7 +22,7 @@ export interface Speaker {
   cancel(): void;
 }
 
-export type Route = "control" | "action" | "amend" | "answer" | "side_chat" | "status" | "ignored" | "duplicate";
+export type Route = "control" | "action" | "amend" | "answer" | "side_chat" | "summary" | "status" | "ignored" | "duplicate";
 
 export interface RuntimeTurn {
   utteranceId: string;
@@ -37,6 +38,8 @@ export interface RuntimeOptions {
   kernel: Kernel;
   env: ComputerEnvironment;
   model?: ConversationModel;
+  /** Isolated model for summaries of screen text (no tools, no history). */
+  summarizer?: IsolatedModel;
   speaker?: Speaker;
   session?: SessionOptions;
   partialPolicy?: PartialPolicy;
@@ -52,6 +55,7 @@ export class JarvisRuntime {
   readonly turns: RuntimeTurn[] = [];
   private readonly speaker: Speaker;
   private readonly model?: ConversationModel;
+  private readonly summarizer?: IsolatedModel;
   private readonly policy: PartialPolicy;
   private readonly now: () => number;
   private actionQueue: Promise<void> = Promise.resolve();
@@ -70,6 +74,7 @@ export class JarvisRuntime {
     this.kernel = opts.kernel;
     this.speaker = opts.speaker ?? SILENT;
     this.model = opts.model;
+    this.summarizer = opts.summarizer;
     this.policy = opts.partialPolicy ?? DEFAULT_PARTIAL_POLICY;
     this.now = opts.now ?? (() => Date.now());
     this.session = new ActionSession(opts.kernel, opts.env, {
@@ -127,6 +132,7 @@ export class JarvisRuntime {
       }
     }
     if (isStatusQuestion(text)) return live;
+    if (isSummaryRequest(text)) return !!focusedContent(this.kernel.state);
     return reflex.kind === "action" && routeAction(reflex.command);
   }
 
@@ -209,6 +215,7 @@ export class JarvisRuntime {
       }
       return this.control(utteranceId, text, reflex.control, reflex.tier);
     }
+    if (isSummaryRequest(text)) return this.summary(utteranceId, text);
     if (isStatusQuestion(text)) {
       this.kernel.dispatch({ type: "ConversationIntent", intent: "SIDE_CHAT", text, utteranceId });
       const reply = statusReply(this.kernel.state, this.queuedTexts);
@@ -301,6 +308,32 @@ export class JarvisRuntime {
       turn.say = r.say;
       if (k.state.tasks[r.taskId ?? ""]?.status !== "cancelled") this.say(r.say);
     });
+    return turn;
+  }
+
+  /** "streść to": the focused text goes to an isolated model call; the answer is data. */
+  private summary(utteranceId: string, text: string): RuntimeTurn {
+    this.kernel.dispatch({ type: "ConversationIntent", intent: "SIDE_CHAT", text, utteranceId });
+    const turn = this.log({ utteranceId, text, route: "summary" });
+    const content = focusedContent(this.kernel.state);
+    const summarizer = this.summarizer;
+    if (!content || !summarizer) {
+      turn.say = content ? "Nie mam modelu do streszczania." : "Nie mam przed sobą tekstu do streszczenia.";
+      this.say(turn.say);
+      return turn;
+    }
+    const gen = this.generation;
+    const p = (async () => {
+      try {
+        const s = await summarizeUntrusted(summarizer, content);
+        turn.say = s.value ? `W skrócie: ${s.value}` : "Nie udało mi się tego streścić.";
+      } catch {
+        turn.say = "Nie udało mi się tego streścić.";
+      }
+      if (gen === this.generation) this.say(turn.say);
+    })();
+    this.sideChats.add(p);
+    void p.finally(() => this.sideChats.delete(p));
     return turn;
   }
 

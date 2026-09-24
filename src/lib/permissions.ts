@@ -195,6 +195,28 @@ export function undoAction(entry: AuditEntry): string {
   return `Cofnięto: ${entry.tool}.`;
 }
 
+// --- Untrusted context (mission 5.12) ---
+// Once untrusted content (web page, e-mail, MCP or research output) has entered the agent's
+// context, an external effect may have been suggested by that content. Until the taint expires,
+// outbound tools always get a fresh question: no remembered consent, no auto-consent, no scope.
+export const UNTRUSTED_CONTEXT_MS = 10 * 60 * 1000;
+/** Read tools whose output is outside content, not the user's own data or local state. */
+export const UNTRUSTED_OUTPUT_TOOLS: ReadonlySet<string> = new Set([
+  "web_research", "gmail_search", "gmail_read", "get_news", "local_research_agent", "find_leads", "preview_lead_candidates",
+]);
+let untrustedUntil = 0;
+let untrustedSource = "";
+export function markUntrustedContext(source: string, ttlMs = UNTRUSTED_CONTEXT_MS): void {
+  untrustedUntil = Math.max(untrustedUntil, Date.now() + Math.max(0, ttlMs));
+  untrustedSource = source;
+}
+export function clearUntrustedContext(): void { untrustedUntil = 0; untrustedSource = ""; }
+export function untrustedContext(): string | null {
+  return Date.now() < untrustedUntil ? untrustedSource : null;
+}
+/** Does this tool bring outside content into the context? MCP tools always do. */
+export const outputIsUntrusted = (tool: string): boolean => UNTRUSTED_OUTPUT_TOOLS.has(tool) || tool.startsWith("mcp_");
+
 /**
  * Bramka uprawnień: dla narzędzi read przepuszcza; dla write/outbound pyta UI
  * (chyba że użytkownik zapamiętał zgodę). Zwraca true, jeśli można wykonać.
@@ -202,9 +224,18 @@ export function undoAction(entry: AuditEntry): string {
 export async function requestConsent(tool: string, input: unknown): Promise<boolean> {
   const risk = riskOf(tool);
   const cls = classOf(tool);
-  const policy = decidePolicy(cls, {}, (store.settings as { permissionPolicies?: Partial<Record<ActionClass, Policy>> }).permissionPolicies);
+  // Known external effects (mail, SMS, calls, posts) after outside content entered the context.
+  // Unclassified plugin/MCP tools already ask per tool; forcing a prompt on each of their calls
+  // made multi-step plugins unusable (DECISIONS D-025).
+  const tainted = untrustedContext() !== null && risk === "outbound" && isClassified(tool);
+  const policy = decidePolicy(cls, { untrustedContent: tainted }, (store.settings as { permissionPolicies?: Partial<Record<ActionClass, Policy>> }).permissionPolicies);
   if (policy === "DENY") return false;
   if (policy === "AUTO") return true;
+  // Outside content is in play: an explicit, one-time question, fail-closed without a UI.
+  if (tainted) {
+    const r = await askConsentUI({ tool, input, risk });
+    return !!r?.allow;
+  }
   // DESTRUCTIVE: always a fresh, explicit question (no remembered consent, no auto-consent).
   if (cls === "DESTRUCTIVE") {
     const r = await askConsentUI({ tool, input, risk });

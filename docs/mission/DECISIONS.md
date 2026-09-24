@@ -135,3 +135,12 @@ request for a clear answer. A consent granted while paused waits for "wznów" be
 The journal gets ActionAttempted before the provider call, so a crash mid-send restores as
 UNKNOWN_AFTER_ATTEMPT. A thrown provider error is "maybe sent" (Sent is read before any retry);
 only an explicit rejection on the first attempt is a clean FAILED.
+
+## D-025 After outside content, known external effects always get a fresh question
+Output of web research, mail reads and MCP/plugin tools marks the context untrusted for 10
+minutes. During that time a classified outbound tool (gmail_send, send_sms, make_call, ...)
+ignores remembered consent, auto-consent and session scope and asks once, fail-closed without a
+UI. Unclassified plugin/MCP tools are already consent-gated per tool and keep their remembered
+consent: forcing a prompt on each of their calls made multi-step plugins unusable. Summaries of
+screen text go through an isolated model call (fixed system prompt, quoted data, no tools, no
+history) and stay untrusted.
