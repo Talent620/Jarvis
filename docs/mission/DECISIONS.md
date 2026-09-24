@@ -115,3 +115,23 @@ A 1.5 s window swallowed intended repeats ("dalej", "dalej"; "cofnij", "cofnij")
 input. Now: same utteranceId is always a duplicate; the same normalized text is a duplicate
 only for STT finals within 800 ms. Typed input is never merged by text. External effects are
 still protected by idempotency keys.
+
+## D-022 Scroll and open are never retried; scroll is programmatic
+A second attempt of a scroll or an open repeats the effect (scrolls twice, opens another item)
+instead of retrying it, so both run once and report the read-back honestly. The managed
+browser scrolls with an instant `scrollTo` in the isolated world after the page's `load`
+event: a synthetic wheel right after a navigation was dropped before the first frame on a fast
+CI runner (read-back showed no movement), and a late wheel could land twice. Lazy lists still
+load because IntersectionObserver sees any scroll.
+
+## D-023 "blocked" ends a task; consent needs a clear yes to the question asked
+A missing precondition or a refusal is final for that task, so nothing can wait on it forever.
+Waiting for the user ("który Marcin?", consent) is `waiting_consent`; a pause remembers it and
+"wznów" returns there. A consent is granted only by tak / tak, wyślij / wyślij / potwierdzam /
+zgoda, and only for the consent whose question the user heard; "ok", "dobra", "jasne" get a
+request for a clear answer. A consent granted while paused waits for "wznów" before sending.
+
+## D-024 External effects are recorded as attempted before they happen
+The journal gets ActionAttempted before the provider call, so a crash mid-send restores as
+UNKNOWN_AFTER_ATTEMPT. A thrown provider error is "maybe sent" (Sent is read before any retry);
+only an explicit rejection on the first attempt is a clean FAILED.

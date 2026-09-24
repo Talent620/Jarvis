@@ -35,6 +35,8 @@ class Aborted extends Error {
   constructor() { super("aborted"); this.name = "AbortError"; }
 }
 
+/** Upper bound for waiting on the "load" event before measuring or scrolling a page. */
+const LOAD_WAIT_MS = 5_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const CONSENT_REJECT = /^(Odrzuć wszystko|Reject all)$/i;
@@ -353,6 +355,8 @@ export class ManagedBrowser implements ComputerEnvironment {
       await p.locator(found.selector).first().click();
       await p.waitForURL((u) => u.toString() !== before, { timeout: this.timeout }).catch(() => undefined);
       await p.waitForLoadState("domcontentloaded").catch(() => undefined);
+      // Styles and layout in place before the next step measures or scrolls the page.
+      await p.waitForLoadState("load", { timeout: Math.min(this.timeout, LOAD_WAIT_MS) }).catch(() => undefined);
     } finally {
       this.expectingPopup = false;
     }
@@ -372,17 +376,16 @@ export class ManagedBrowser implements ComputerEnvironment {
 
   private async scroll(direction: "down" | "up", amount: string): Promise<ActResult> {
     const p = this.requirePage();
+    await p.waitForLoadState("load", { timeout: Math.min(this.timeout, LOAD_WAIT_MS) }).catch(() => undefined);
     const { y, vh, max } = await this.iso(() => ({
       y: window.scrollY, vh: window.innerHeight, max: document.documentElement.scrollHeight - window.innerHeight,
     }));
-    if (amount === "end" || amount === "start") {
-      await this.iso((top: number) => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), amount === "end" ? max : 0);
-    } else {
-      const factor = amount === "little" ? 0.35 : amount === "more" ? 0.6 : 0.85;
-      const dy = Math.round(vh * factor) * (direction === "down" ? 1 : -1);
-      await p.mouse.move(Math.round((this.opts.viewport?.width ?? 1280) / 2), Math.round(vh / 2));
-      await p.mouse.wheel(0, dy);
-    }
+    // Programmatic and instant: a synthetic wheel right after a navigation can be dropped before
+    // the first frame, and a scroll that lands late would then count twice. Lazy lists still load
+    // (IntersectionObserver sees any scroll).
+    const top = amount === "end" ? max : amount === "start" ? 0
+      : y + Math.round(vh * (amount === "little" ? 0.35 : amount === "more" ? 0.6 : 0.85)) * (direction === "down" ? 1 : -1);
+    await this.iso((t: number) => window.scrollTo({ top: t, behavior: "instant" as ScrollBehavior }), Math.max(0, Math.min(max, top)));
     await this.settleScroll();
     return { status: "done", undo: { scrollY: y } };
   }
