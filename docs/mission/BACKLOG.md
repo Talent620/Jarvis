@@ -4,11 +4,11 @@ Status: todo, in_progress, done, blocked, needs_hardware. Nothing is done withou
 
 | ID | Title | Impact | Status | Files | Risk | Validation | Blockers |
 |---|---|---|---|---|---|---|---|
-| B-001 | Fix 2 red license tests with injected test key pair | M0 gate green | todo | tests/license.test.ts, src/lib/license.ts | weakening verification by accident | vitest license suite + full suite | none |
-| B-002 | History content scan for private keys (license, keystore) | security | todo | git history, scripts/secret-scan.mjs | false negatives | scan output recorded in JARVIS-SECURITY.md | none |
-| B-003 | Remove hardcoded keystore passwords; unsigned or debug-signed non-production artifact without secrets | security | todo | android/app/build.gradle, .github/workflows/android*.yml | breaking release builds | gradle config review, CI android job | Android SDK not in cloud |
-| B-004 | docs/JARVIS-SECURITY.md: keystore compromise, apksigner --lineage options | security | todo | docs/JARVIS-SECURITY.md | none | review | none |
-| B-005 | Startup performance baseline (store write cost, render fan-out, bundle) | M1 input | todo | scripts/, docs/JARVIS-PERFORMANCE.md | noisy numbers | repeatable bench script | none |
+| B-001 | Fix 2 red license tests with injected test key pair | M0 gate green | done | tests/license.test.ts, src/lib/license.ts | weakening verification by accident | vitest license suite + full suite | none |
+| B-002 | History content scan for private keys (license, keystore) | security | done | git history, scripts/secret-scan.mjs | false negatives | scan output recorded in JARVIS-SECURITY.md | none |
+| B-003 | Remove hardcoded keystore passwords; unsigned or debug-signed non-production artifact without secrets | security | done | android/app/build.gradle, .github/workflows/android*.yml | breaking release builds | gradle config review, CI android job | Android SDK not in cloud |
+| B-004 | docs/JARVIS-SECURITY.md: keystore compromise, apksigner --lineage options | security | done | docs/JARVIS-SECURITY.md | none | review | none |
+| B-005 | Startup performance baseline (store write cost, render fan-out, bundle) | M1 input | done | scripts/, docs/JARVIS-PERFORMANCE.md | noisy numbers | repeatable bench script | none |
 | B-006 | Runtime Kernel: typed events, ids, dedup, reducer, single writer | core | todo | src/lib/runtime/ | scope creep | unit tests | none |
 | B-007 | Append-only task journal outside store blob (Dexie) | core | todo | src/lib/runtime/journal.ts | IndexedDB in tests | fake-indexeddb tests | none |
 | B-008 | Cancellation: AbortController per task in agentRun | core | todo | src/lib/agentRun.ts | regressions in agentRun tests | existing + new tests | none |

@@ -26,3 +26,22 @@ result is exported through `CLAUDE_ENV_FILE` when the harness provides it.
 ## D-005 state.json keeps the exact prescribed schema
 Only `id`, `status`, `evidence`, `last_commit`, `next_action` per milestone. Milestone titles
 live in STATE.md so tools that parse state.json never see unexpected keys.
+
+## D-006 release.yml refuses to publish without signing secrets
+With hardcoded passwords removed, a release build without secrets is debug-signed and
+"-nonprod". Publishing that as `latest` would silently change the signing identity, so the
+release workflow now fails in its first step when `JARVIS_RELEASE_STORE_PASSWORD` or
+`JARVIS_RELEASE_KEY_PASSWORD` is missing. This is a bug fix to the release workflow (allowed by
+mission section 3). CI artifact workflows (android.yml, android-v2.yml) keep building.
+
+## D-007 License verification seam
+`verifyLicenseWithKey(token, key)` holds the verification logic; `verifyLicense(token)` binds
+it to the embedded `PUBLIC_JWK`. Tests generate a P-256 pair at runtime. No production call
+site passes a key, and tests assert the production path rejects test-key and pre-rotation
+tokens, so verification is not weakened.
+
+## D-008 Store benchmark uses vite-node and an in-memory localStorage shim
+`scripts/perf/store-bench.ts` runs the real `src/lib/store.ts` under `vite-node` with a
+deterministic 2.1 MB dataset. It measures synchronous write cost, bytes serialized and
+subscriber wakes; React render cost is inferred from wakes (every `useStore()` component
+re-renders per wake). Same script is used for the M1 "after" numbers.

@@ -34,7 +34,8 @@
     "siteos:tunnel": "node site-os/server.mjs --tunnel",
     "tools:verify": "node scripts/verify-workspace-tools.cjs",
     "quality": "node scripts/quality-gate.mjs",
-    "quality:all": "node scripts/quality-gate.mjs --sales"
+    "quality:all": "node scripts/quality-gate.mjs --sales",
+    "perf:store": "vite-node scripts/perf/store-bench.ts"
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",

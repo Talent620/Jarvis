@@ -2,17 +2,21 @@
   "milestones": [
     {
       "id": "M0",
-      "status": "in_progress",
+      "status": "done",
       "evidence": [
-        "docs/mission/BASELINE.md: npx vitest run exit=1, 2787/2789 passed, 2 failures in tests/license.test.ts",
-        "docs/mission/BASELINE.md: tsc -b exit=0, eslint exit=0, vite build exit=0, scan:secrets exit=0"
+        "npx vitest run: exit 0, 328 files, 2799/2799 tests (baseline 2787/2789)",
+        "tests/license.test.ts: 14/14 with runtime-generated ECDSA key pair; production verifyLicense rejects test-key and pre-rotation tokens",
+        "tests/androidSigning.test.ts: 7/7 (6 of them red before the fix): no literal keystore passwords, -nonprod debug-signed fallback, release.yml guard before build",
+        "full-history scan (916 commits): no PEM private key, no JWK d component; see docs/JARVIS-SECURITY.md",
+        "npm run perf:store: baseline numbers in docs/JARVIS-PERFORMANCE.md (setData 20.5 ms / 2.14 MB localStorage-only, 1.3 ms / 369 kB IDB, 22 wakes)",
+        "npx tsc -b exit 0, npx eslint . exit 0, npx vite build exit 0, npm run scan:secrets exit 0"
       ],
       "last_commit": "",
-      "next_action": "Fix tests/license.test.ts with an injected test key pair (keep ECDSA verification strict); scan history content for private keys; remove hardcoded keystore passwords from android/app/build.gradle with an explicit non-production fallback; write docs/JARVIS-SECURITY.md; record startup performance numbers."
+      "next_action": "Done. Owner: set JARVIS_RELEASE_* secrets before next release (docs/JARVIS-SECURITY.md)."
     },
     {
       "id": "M1",
-      "status": "todo",
+      "status": "in_progress",
       "evidence": [],
       "last_commit": "",
       "next_action": "Runtime Kernel (typed events, dedup, reducer, cancellation), task journal outside the store blob, Referent Registry with epochs, Situation Snapshot, capability registry, store selectors and batched persistence."
