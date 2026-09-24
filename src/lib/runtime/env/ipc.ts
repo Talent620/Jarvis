@@ -20,11 +20,21 @@ export interface EnvBridge {
 let seq = 0;
 const nextId = () => `c${Date.now().toString(36)}${(++seq).toString(36)}`;
 
+/** The main process answers failures with { status: "failed", error }; for reads that is an error. */
+function unwrap<T>(reply: unknown): T {
+  if (reply && typeof reply === "object" && (reply as { status?: unknown }).status === "failed" && "error" in (reply as object)) {
+    throw new Error(String((reply as { error?: unknown }).error ?? "environment call failed"));
+  }
+  return reply as T;
+}
+
 export class IpcEnvironment implements ComputerEnvironment {
   constructor(readonly id: string, private readonly bridge: EnvBridge) {}
 
-  capabilities(): Promise<CapabilityState[]> {
-    return this.bridge.call({ method: "capabilities", callId: nextId() }) as Promise<CapabilityState[]>;
+  async capabilities(): Promise<CapabilityState[]> {
+    const caps = unwrap<CapabilityState[]>(await this.bridge.call({ method: "capabilities", callId: nextId() }));
+    if (!Array.isArray(caps)) throw new Error("invalid capabilities reply");
+    return caps;
   }
 
   async act(action: EnvAction, signal?: AbortSignal): Promise<ActResult> {
@@ -41,12 +51,12 @@ export class IpcEnvironment implements ComputerEnvironment {
     }
   }
 
-  read(query: ReadQuery): Promise<ReadResult> {
-    return this.bridge.call({ method: "read", callId: nextId(), query }) as Promise<ReadResult>;
+  async read(query: ReadQuery): Promise<ReadResult> {
+    return unwrap<ReadResult>(await this.bridge.call({ method: "read", callId: nextId(), query }));
   }
 
-  snapshot(maxChars?: number): Promise<string> {
-    return this.bridge.call({ method: "snapshot", callId: nextId(), maxChars }) as Promise<string>;
+  async snapshot(maxChars?: number): Promise<string> {
+    return unwrap<string>(await this.bridge.call({ method: "snapshot", callId: nextId(), maxChars }));
   }
 
   onEvent(listener: (e: EnvEvent) => void): () => void {

@@ -325,8 +325,9 @@ export function reduce(prev: KernelState, e: KernelEvent): KernelState {
       return setStatus(next, c.taskId, granted ? "running" : "blocked", e.at, granted ? "consent granted" : "consent denied");
     }
     case "CapabilitiesUpdated": {
+      if (!Array.isArray(e.capabilities)) return s;
       const capabilities = { ...s.capabilities };
-      for (const c of e.capabilities) capabilities[c.id] = c;
+      for (const c of e.capabilities) if (c && typeof c.id === "string") capabilities[c.id] = c;
       return { ...s, capabilities };
     }
     default:

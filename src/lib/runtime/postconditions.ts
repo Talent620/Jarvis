@@ -56,30 +56,39 @@ export function verify(a: EnvAction, before: ReadResult | undefined, after: Read
   switch (a.kind) {
     case "browser.launch": {
       const p = after as PageRead;
-      return ladder(result, { open: true }, { open: !!p.open }, `browser open, page ${p.url ?? "about:blank"}`, now);
+      return ladder(result, { open: true }, { open: p.open === true }, `browser open, page ${p.url ?? "about:blank"}`, now);
     }
     case "browser.navigate": {
       const p = after as PageRead;
       const want = urlParts(a.url);
       const got = urlParts(p.url);
-      const arrived = got.host === want.host || (!!p.consentWall && CONSENT_HOSTS.test(got.host));
+      const arrived = p.open === true && (got.host === want.host || (!!p.consentWall && CONSENT_HOSTS.test(got.host)));
       return ladder(result, { arrived: true }, { arrived }, `url ${p.url}${p.consentWall ? " (consent wall)" : ""}`, now);
     }
     case "browser.consent": {
       const p = after as PageRead;
-      return ladder(result, { consentWall: false }, { consentWall: !!p.consentWall }, `consent wall gone, url ${p.url}`, now);
+      // Gone means: an open page, a readable URL, no wall, and not a consent host any more.
+      const gone = p.open === true && typeof p.url === "string" && p.consentWall === false && !CONSENT_HOSTS.test(urlParts(p.url).host);
+      return ladder(result, { gone: true }, { gone }, `consent wall gone, url ${p.url}`, now);
     }
     case "browser.open": {
       const b = before as PageRead | undefined;
       const p = after as PageRead;
-      const moved = !!p.url && p.url !== b?.url;
+      // The page changed from a known URL to the target's own link (a reused element pointing
+      // somewhere else must not count).
+      const href = a.target.semanticKey?.startsWith("video:") ? a.target.semanticKey.slice(6) : undefined;
+      const moved = p.open === true && typeof b?.url === "string" && typeof p.url === "string" && p.url !== b.url && (!href || p.url.includes(href));
       return ladder(result, { navigated: true }, { navigated: moved }, `url ${b?.url ?? "?"} -> ${p.url}`, now);
     }
     case "browser.scroll": {
       const b = before as PageRead | undefined;
       const p = after as PageRead;
-      const y0 = b?.scrollY ?? 0;
-      const y1 = p.scrollY ?? 0;
+      // Both reads must be real: a failed read is never "moved".
+      if (p.open !== true || typeof p.scrollY !== "number" || typeof b?.scrollY !== "number") {
+        return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: "scroll position unreadable" };
+      }
+      const y0 = b.scrollY;
+      const y1 = p.scrollY;
       if (a.direction === "down" && b && nearBottom(b) && y1 <= y0 + 1) return { truth: "BLOCKED", evidence: `scrollY ${y0}`, reason: "already at the end of the page" };
       if (a.direction === "up" && y0 <= 0 && y1 <= 0) return { truth: "BLOCKED", evidence: "scrollY 0", reason: "already at the top of the page" };
       const moved = a.direction === "down" ? y1 > y0 + 1 : y1 < y0 - 1;
@@ -88,7 +97,7 @@ export function verify(a: EnvAction, before: ReadResult | undefined, after: Read
     }
     case "browser.scrollTo": {
       const p = after as PageRead;
-      const ok = Math.abs((p.scrollY ?? -1e9) - a.y) <= 2;
+      const ok = p.open === true && typeof p.scrollY === "number" && Math.abs(p.scrollY - a.y) <= 2;
       return ladder(result, { at: true }, { at: ok }, `scrollY ${Math.round(p.scrollY ?? 0)} (target ${a.y})`, now);
     }
     case "browser.findCollection": {

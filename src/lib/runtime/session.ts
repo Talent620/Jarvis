@@ -62,7 +62,9 @@ export class ActionSession {
   /** Probe capabilities and start mirroring environment perception into the kernel. */
   async start(): Promise<void> {
     const mailCaps = this.opts.mail ? await this.opts.mail.capabilities().catch(() => []) : [];
-    this.kernel.dispatch({ type: "CapabilitiesUpdated", capabilities: [...(await this.env.capabilities()), ...mailCaps] });
+    // A failing probe leaves the capability unknown (actions then say NEEDS_CAPABILITY), never available.
+    const envCaps = await this.env.capabilities().catch(() => []);
+    this.kernel.dispatch({ type: "CapabilitiesUpdated", capabilities: [...(Array.isArray(envCaps) ? envCaps : []), ...mailCaps] });
     this.unsubscribe?.();
     this.unsubscribe = this.env.onEvent(this.onEnvEvent);
   }
@@ -270,6 +272,11 @@ export class ActionSession {
       if (c.truth !== "CONFIRMED") return { truth: c.truth, say: this.failSay(c, "Ekran zgody"), evidence: c.reason };
       p = await this.syncPage();
       consentNote = choice === "reject" ? " Odrzuciłem dodatkowe ciasteczka." : " Zaakceptowałem ciasteczka.";
+    }
+    // "Jestem na YouTube" only when the page really is on the YouTube host.
+    const host = (u: string | undefined) => (/^[a-z]+:\/\/([^/?#]+)/i.exec(u ?? "")?.[1] ?? "").toLowerCase();
+    if (!p.open || host(p.url) !== host(url)) {
+      return { truth: "FAILED" as Truth, say: "Nie jestem na YouTube, strona prowadzi gdzie indziej.", evidence: `url ${p.url ?? "?"}` };
     }
     if (openFirst) {
       const o = await this.openItem(taskId, { ordinal: 1, noun: "video" });

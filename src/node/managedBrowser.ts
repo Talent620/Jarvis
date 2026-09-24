@@ -3,11 +3,13 @@
 // process behind IPC, and directly in tests and the acceptance CLI.
 //
 // Perception is event driven (navigation, list mutations, scroll, selection) through an
-// exposed binding; nothing polls screenshots. Elements carry data-jarvis-ref and a semantic
-// key, so after a framework re-render the target is found again instead of used blindly.
+// exposed binding; nothing polls screenshots. Elements carry data-jarvis-ref plus a semantic
+// key; every lookup re-checks identity, so a reused or re-rendered element is found again or
+// reported missing, never used blindly. Read-backs run in an isolated JavaScript world (CDP),
+// so page scripts cannot forge them.
 
 import { existsSync } from "node:fs";
-import { chromium, type BrowserContext, type Locator, type Page } from "playwright-core";
+import { chromium, type BrowserContext, type CDPSession, type Page } from "playwright-core";
 import type {
   ActResult, ClipboardRead, CollectionRead, ComputerEnvironment, ElementInfo, ElementRead, ElementTarget, EnvAction,
   EnvEvent, PageRead, ReadQuery, ReadResult, SelectionRead,
@@ -22,6 +24,11 @@ export interface ManagedBrowserOptions {
   viewport?: { width: number; height: number };
   actionTimeoutMs?: number;
   now?: () => number;
+  /**
+   * Read the OS clipboard from Node (Electron `clipboard.readText`). When set, pages get no
+   * clipboard-read permission at all; otherwise (tests, headless) the read runs in an isolated world.
+   */
+  readClipboard?: () => Promise<string> | string;
 }
 
 class Aborted extends Error {
@@ -30,24 +37,65 @@ class Aborted extends Error {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const COMMENT_THREAD = "ytd-comment-thread-renderer";
-const VIDEO_LINKS = "a#video-title, a#video-title-link";
 const CONSENT_REJECT = /^(Odrzuć wszystko|Reject all)$/i;
 const CONSENT_ACCEPT = /^(Zaakceptuj wszystko|Accept all)$/i;
+const ALLOWED_SCHEMES = /^https?:\/\//i;
 
-/** In-page perception and overlay, installed in every document before any page script runs. */
+/**
+ * In-page library (plain ES2019), shared by the main-world perception script and by isolated
+ * world read-backs. Comment identity: data-comment-id when the site has it (the fixture), else a
+ * hash of author and text (the real YouTube markup has no stable id attribute).
+ */
+const PAGE_LIB = `var __j = {
+  hash: function (s) { var h = 0x811c9dc5; for (var i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193); return (h >>> 0).toString(16); },
+  threads: function () { return Array.prototype.slice.call(document.querySelectorAll("ytd-comment-thread-renderer")); },
+  commentId: function (el) {
+    var id = el.getAttribute("data-comment-id");
+    if (id) return id;
+    var t = el.querySelector("#content-text"), a = el.querySelector("#author-text");
+    return "h" + __j.hash(((a && a.textContent) || "").trim() + "\\n" + ((t && t.textContent) || ""));
+  },
+  keyOf: function (el) {
+    if (el.matches && el.matches("ytd-comment-thread-renderer")) return "comment:" + __j.commentId(el);
+    if (el.tagName === "A") return "video:" + el.getAttribute("href");
+    return null;
+  },
+  byKey: function (key) {
+    if (!key) return null;
+    if (key.indexOf("comment:") === 0) { var id = key.slice(8), ts = __j.threads(); for (var i = 0; i < ts.length; i++) if (__j.commentId(ts[i]) === id) return ts[i]; return null; }
+    if (key.indexOf("video:") === 0) { var href = key.slice(6), as = document.querySelectorAll("a[href]"); for (var j = 0; j < as.length; j++) if (as[j].getAttribute("href") === href) return as[j]; return null; }
+    return null;
+  },
+  find: function (ref, key) {
+    var el = ref ? document.querySelector('[data-jarvis-ref="' + CSS.escape(ref) + '"]') : null;
+    if (el && key && __j.keyOf(el) !== key) { el.removeAttribute("data-jarvis-ref"); el = null; }
+    var again = false;
+    if (!el && key) { el = __j.byKey(key); again = !!el; if (el && ref) el.setAttribute("data-jarvis-ref", ref); }
+    return el ? { el: el, again: again } : null;
+  }
+};`;
+
+interface PageLib {
+  hash(s: string): string;
+  threads(): Element[];
+  commentId(el: Element): string;
+  keyOf(el: Element): string | null;
+  byKey(key?: string): Element | null;
+  find(ref?: string, key?: string): { el: Element; again: boolean } | null;
+}
+declare const __j: PageLib;
+
+/** Main-world perception and overlay, installed in every document before page scripts run. */
 function initScript(): void {
   const w = window as unknown as {
     __jarvisEmit?: (payload: unknown) => void;
-    __jarvisOverlay?: { track: (selector: string) => void; clear: () => void; rect: () => DOMRect | null };
+    __jarvisOverlay?: { track: (ref: string, key?: string) => void; clear: () => void };
   };
   const emit = (payload: unknown) => { try { w.__jarvisEmit?.(payload); } catch { /* binding not ready */ } };
 
   let signature = "";
   let pending = false;
-  const listSignature = () => Array.from(document.querySelectorAll("[data-comment-id]"))
-    .filter((e) => !e.parentElement?.closest("[data-comment-id]"))
-    .map((e) => e.getAttribute("data-comment-id")).join(",");
+  const listSignature = () => __j.threads().map((e) => __j.commentId(e)).join(",");
   const onMutation = () => {
     if (pending) return;
     pending = true;
@@ -65,27 +113,36 @@ function initScript(): void {
       }
     }, 80);
   };
+  const touchesThreads = (n: Node) => n instanceof Element && (n.matches("ytd-comment-thread-renderer") || !!n.querySelector("ytd-comment-thread-renderer"));
   const start = () => {
     signature = listSignature();
     new MutationObserver((records) => {
-      if (records.some((r) => r.type === "childList" && Array.from(r.removedNodes).concat(Array.from(r.addedNodes)).some((n) => n instanceof Element && (n.matches("[data-comment-id]") || !!n.querySelector?.("[data-comment-id]"))))) onMutation();
+      if (records.some((r) => Array.from(r.removedNodes).some(touchesThreads) || Array.from(r.addedNodes).some(touchesThreads))) onMutation();
+      schedulePlace();
     }).observe(document.body, { childList: true, subtree: true });
   };
   if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
 
   let scrollTimer: ReturnType<typeof setTimeout> | null = null;
   window.addEventListener("scroll", () => {
+    schedulePlace();
     if (scrollTimer) return;
     scrollTimer = setTimeout(() => { scrollTimer = null; emit({ type: "scroll", scrollY: window.scrollY }); }, 150);
   }, { passive: true });
-  document.addEventListener("selectionchange", () => emit({ type: "selection", text: String(document.getSelection() || "") }));
+  window.addEventListener("resize", () => schedulePlace());
+  let selTimer: ReturnType<typeof setTimeout> | null = null;
+  document.addEventListener("selectionchange", () => {
+    if (selTimer) return;
+    selTimer = setTimeout(() => { selTimer = null; emit({ type: "selection", text: String(document.getSelection() || "") }); }, 150);
+  });
 
-  // Overlay: a fixed box that follows the target through scrolls and re-renders.
-  let selector: string | null = null;
+  // Overlay: a fixed box following the target through scrolls and re-renders (event driven).
+  let target: { ref: string; key?: string } | null = null;
   let box: HTMLDivElement | null = null;
-  const place = () => {
-    if (!selector) return;
-    const el = document.querySelector(selector);
+  let frame = 0;
+  function place() {
+    frame = 0;
+    if (!target) return;
     if (!box) {
       box = document.createElement("div");
       box.id = "jarvis-overlay";
@@ -93,39 +150,34 @@ function initScript(): void {
       box.style.cssText = "position:fixed;pointer-events:none;z-index:2147483647;border:3px solid #28c0c8;border-radius:8px;box-shadow:0 0 0 4px rgba(40,192,200,.25)";
       document.documentElement.appendChild(box);
     }
-    if (!el) { box.style.display = "none"; return; }
-    const r = el.getBoundingClientRect();
+    const hit = __j.find(target.ref, target.key);
+    if (!hit) { box.style.display = "none"; return; }
+    const r = hit.el.getBoundingClientRect();
     box.style.display = "block";
     box.style.left = `${r.left - 4}px`;
     box.style.top = `${r.top - 4}px`;
     box.style.width = `${r.width + 8}px`;
     box.style.height = `${r.height + 8}px`;
-  };
-  const loop = () => { place(); if (selector) requestAnimationFrame(loop); };
+  }
+  function schedulePlace() {
+    if (target && !frame) frame = requestAnimationFrame(place);
+  }
   w.__jarvisOverlay = {
-    track: (sel: string) => { const was = selector; selector = sel; if (!was) requestAnimationFrame(loop); place(); },
-    clear: () => { selector = null; if (box) box.style.display = "none"; },
-    rect: () => (box && box.style.display !== "none" ? box.getBoundingClientRect() : null),
+    track: (ref: string, key?: string) => { target = { ref, key }; place(); },
+    clear: () => { target = null; if (box) box.style.display = "none"; },
   };
-}
-
-/** Semantic key -> CSS selector that finds the element again after a re-render. */
-export function semanticSelector(semanticKey: string | undefined): string | null {
-  if (!semanticKey) return null;
-  const esc = (s: string) => s.replace(/["\\]/g, "\\$&");
-  if (semanticKey.startsWith("comment:")) return `[data-comment-id="${esc(semanticKey.slice(8))}"]`;
-  if (semanticKey.startsWith("video:")) return `a[href="${esc(semanticKey.slice(6))}"]`;
-  return null;
 }
 
 export class ManagedBrowser implements ComputerEnvironment {
   readonly id = "managed-browser";
   private context: BrowserContext | null = null;
   private page: Page | null = null;
+  private cdp = new WeakMap<Page, CDPSession>();
   private listeners = new Set<(e: EnvEvent) => void>();
   private pageSeq = 0;
   private pageId = "";
   private lastUrl = "";
+  private expectingPopup = false;
   private readonly timeout: number;
 
   constructor(private readonly opts: ManagedBrowserOptions) {
@@ -160,6 +212,27 @@ export class ManagedBrowser implements ComputerEnvironment {
     this.context = null;
     this.page = null;
     if (c) await c.close().catch(() => undefined);
+  }
+
+  // ---------------------------------------------------------------- isolated world
+
+  /** Evaluate a function in a fresh isolated world of the current page (page scripts cannot patch it). */
+  private async iso<T, A = unknown>(fn: (arg: A) => T | Promise<T>, arg?: A): Promise<T> {
+    const p = this.requirePage();
+    let session = this.cdp.get(p);
+    if (!session) {
+      session = await p.context().newCDPSession(p);
+      this.cdp.set(p, session);
+    }
+    const tree = (await session.send("Page.getFrameTree")) as { frameTree: { frame: { id: string } } };
+    const world = (await session.send("Page.createIsolatedWorld", { frameId: tree.frameTree.frame.id, worldName: "jarvis-readback" })) as { executionContextId: number };
+    const expression = `${PAGE_LIB}\n(${fn.toString()})(${JSON.stringify(arg ?? null)})`;
+    const r = (await session.send("Runtime.evaluate", { expression, contextId: world.executionContextId, returnByValue: true, awaitPromise: true })) as {
+      result: { value?: T };
+      exceptionDetails?: { text?: string; exception?: { description?: string } };
+    };
+    if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description?.split("\n")[0] ?? r.exceptionDetails.text ?? "evaluation failed");
+    return r.result.value as T;
   }
 
   // ---------------------------------------------------------------- actions
@@ -201,13 +274,21 @@ export class ManagedBrowser implements ComputerEnvironment {
       args: ["--no-first-run", "--no-default-browser-check", "--disable-features=Translate"],
     });
     ctx.setDefaultTimeout(this.timeout);
-    await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
+    // With an OS clipboard reader (Electron) pages get no clipboard-read permission at all.
+    await ctx.grantPermissions(this.opts.readClipboard ? ["clipboard-write"] : ["clipboard-read", "clipboard-write"]);
     await ctx.exposeBinding("__jarvisEmit", (source, payload) => this.onPageEvent(source.page, payload as Record<string, unknown>));
-    await ctx.addInitScript(initScript);
+    await ctx.addInitScript({ content: `${PAGE_LIB}\n(${initScript.toString()})();` });
     ctx.on("close", () => { this.context = null; this.page = null; this.emit({ type: "closed" }); });
     this.context = ctx;
     this.attach(ctx.pages()[0] ?? await ctx.newPage());
-    ctx.on("page", (p) => this.attach(p)); // a new tab takes the focus, like a user would expect
+    // New tabs take over only when JARVIS itself opened a link and the opener is its page;
+    // a script's window.open never becomes the page JARVIS reads and acts on.
+    ctx.on("page", (p) => {
+      void (async () => {
+        const opener = await p.opener().catch(() => null);
+        if (this.expectingPopup && opener && opener === this.page) this.attach(p);
+      })();
+    });
     return { status: "done" };
   }
 
@@ -218,8 +299,11 @@ export class ManagedBrowser implements ComputerEnvironment {
       const url = frame.url();
       if (url === this.lastUrl) return;
       this.lastUrl = url;
-      this.pageId = `page-${++this.pageSeq}`;
-      void p.title().catch(() => "").then((title) => this.emit({ type: "navigation", pageId: this.pageId, url, title }));
+      const id = `page-${++this.pageSeq}`;
+      this.pageId = id;
+      void p.title().catch(() => "").then((title) => {
+        if (this.pageId === id) this.emit({ type: "navigation", pageId: id, url, title }); // drop stale titles
+      });
     });
     p.on("close", () => { if (this.page === p) this.page = null; });
   }
@@ -233,6 +317,7 @@ export class ManagedBrowser implements ComputerEnvironment {
   }
 
   private async navigate(url: string): Promise<ActResult> {
+    if (!ALLOWED_SCHEMES.test(url)) return { status: "blocked", error: "only http and https addresses are allowed" };
     const p = this.requirePage();
     const resp = await p.goto(url, { waitUntil: "domcontentloaded" });
     return resp && resp.status() >= 400 ? { status: "failed", error: `HTTP ${resp.status()}` } : { status: "done", data: { url: p.url() } };
@@ -248,16 +333,14 @@ export class ManagedBrowser implements ComputerEnvironment {
     return { status: "done", data: { from: before, url: p.url() } };
   }
 
-  private async locate(target: ElementTarget): Promise<{ loc: Locator; reResolved: boolean } | null> {
-    const p = this.requirePage();
-    const byRef = p.locator(`[data-jarvis-ref="${target.ref.replace(/["\\]/g, "\\$&")}"]`);
-    if (await byRef.count() === 1) return { loc: byRef, reResolved: false };
-    const sel = semanticSelector(target.semanticKey);
-    if (!sel) return null;
-    const bySemantic = p.locator(sel);
-    if (await bySemantic.count() !== 1) return null;
-    await bySemantic.evaluate((el, ref) => el.setAttribute("data-jarvis-ref", ref), target.ref);
-    return { loc: bySemantic, reResolved: true };
+  /** Find the target, re-checking its identity; re-tag it when found again after a re-render. */
+  private async locate(target: ElementTarget): Promise<{ selector: string; reResolved: boolean } | null> {
+    const hit = await this.iso((t: { ref: string; key?: string }) => {
+      const r = __j.find(t.ref, t.key);
+      return r ? { again: r.again } : null;
+    }, { ref: target.ref, key: target.semanticKey });
+    if (!hit) return null;
+    return { selector: `[data-jarvis-ref="${target.ref.replace(/["\\]/g, "\\$&")}"]`, reResolved: hit.again };
   }
 
   private async open(target: ElementTarget): Promise<ActResult> {
@@ -265,17 +348,22 @@ export class ManagedBrowser implements ComputerEnvironment {
     const found = await this.locate(target);
     if (!found) return { status: "not_found", error: `element ${target.ref} not found` };
     const before = p.url();
-    await found.loc.click();
-    await p.waitForURL((u) => u.toString() !== before, { timeout: this.timeout }).catch(() => undefined);
-    await p.waitForLoadState("domcontentloaded").catch(() => undefined);
-    return { status: "done", reResolved: found.reResolved, data: { url: p.url() } };
+    this.expectingPopup = true;
+    try {
+      await p.locator(found.selector).first().click();
+      await p.waitForURL((u) => u.toString() !== before, { timeout: this.timeout }).catch(() => undefined);
+      await p.waitForLoadState("domcontentloaded").catch(() => undefined);
+    } finally {
+      this.expectingPopup = false;
+    }
+    return { status: "done", reResolved: found.reResolved, data: { url: this.requirePage().url() } };
   }
 
-  private async settleScroll(p: Page): Promise<number> {
-    let last = await p.evaluate(() => window.scrollY);
+  private async settleScroll(): Promise<number> {
+    let last = await this.iso(() => window.scrollY);
     for (let i = 0; i < 20; i++) {
       await sleep(50);
-      const y = await p.evaluate(() => window.scrollY);
+      const y = await this.iso(() => window.scrollY);
       if (Math.abs(y - last) < 0.5) return y;
       last = y;
     }
@@ -284,49 +372,44 @@ export class ManagedBrowser implements ComputerEnvironment {
 
   private async scroll(direction: "down" | "up", amount: string): Promise<ActResult> {
     const p = this.requirePage();
-    const { y, vh, max } = await p.evaluate(() => ({
+    const { y, vh, max } = await this.iso(() => ({
       y: window.scrollY, vh: window.innerHeight, max: document.documentElement.scrollHeight - window.innerHeight,
     }));
     if (amount === "end" || amount === "start") {
-      await p.evaluate((top) => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), amount === "end" ? max : 0);
+      await this.iso((top: number) => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), amount === "end" ? max : 0);
     } else {
       const factor = amount === "little" ? 0.35 : amount === "more" ? 0.6 : 0.85;
       const dy = Math.round(vh * factor) * (direction === "down" ? 1 : -1);
       await p.mouse.move(Math.round((this.opts.viewport?.width ?? 1280) / 2), Math.round(vh / 2));
       await p.mouse.wheel(0, dy);
     }
-    await this.settleScroll(p);
+    await this.settleScroll();
     return { status: "done", undo: { scrollY: y } };
   }
 
   private async scrollTo(y: number): Promise<ActResult> {
-    const p = this.requirePage();
-    await p.evaluate((top) => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), y);
-    await this.settleScroll(p);
+    await this.iso((top: number) => window.scrollTo({ top, behavior: "instant" as ScrollBehavior }), y);
+    await this.settleScroll();
     return { status: "done" };
   }
 
   /** Tag and describe the items of a list; comments via the YouTube skill, videos via links. */
   private async extract(itemKind: string): Promise<ElementInfo[]> {
-    const p = this.requirePage();
     if (itemKind === "comment") {
-      return p.evaluate((threadSel) => {
-        const hash = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193); return (h >>> 0).toString(16); };
-        return Array.from(document.querySelectorAll(threadSel)).map((el, index) => {
-          const text = el.querySelector("#content-text")?.textContent ?? "";
-          const author = (el.querySelector("#author-text")?.textContent ?? "").trim();
-          const id = el.getAttribute("data-comment-id") || `h${hash(author + "\n" + text)}`;
-          const ref = `yt-comment:${id}`;
-          el.setAttribute("data-jarvis-ref", ref);
-          return { ref, semanticKey: `comment:${id}`, kind: "comment", index, text, author, pinned: !!el.querySelector("#pinned-comment-badge") };
-        });
-      }, COMMENT_THREAD);
+      return this.iso(() => __j.threads().map((el, index) => {
+        const text = el.querySelector("#content-text")?.textContent ?? "";
+        const author = (el.querySelector("#author-text")?.textContent ?? "").trim();
+        const id = __j.commentId(el);
+        const ref = `yt-comment:${id}`;
+        el.setAttribute("data-jarvis-ref", ref);
+        return { ref, semanticKey: `comment:${id}`, kind: "comment", index, text, author, pinned: !!el.querySelector("#pinned-comment-badge") };
+      }));
     }
     if (itemKind === "video") {
-      return p.evaluate((sel) => {
+      return this.iso(() => {
         const seen = new Set<string>();
-        const links = Array.from(document.querySelectorAll<HTMLAnchorElement>(sel));
-        const all = links.length ? links : Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href*="/watch"]'));
+        const primary = Array.from(document.querySelectorAll<HTMLAnchorElement>("a#video-title, a#video-title-link"));
+        const all = primary.length ? primary : Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href*="/watch"]'));
         return all.filter((a) => { const h = a.getAttribute("href") || ""; if (!h || seen.has(h)) return false; seen.add(h); return true; })
           .map((a, index) => {
             const href = a.getAttribute("href") || "";
@@ -334,38 +417,39 @@ export class ManagedBrowser implements ComputerEnvironment {
             a.setAttribute("data-jarvis-ref", ref);
             return { ref, semanticKey: `video:${href}`, kind: "video", index, text: (a.textContent || "").trim(), href };
           });
-      }, VIDEO_LINKS);
+      });
     }
     return [];
   }
 
   private async findCollection(itemKind: string, minItems: number, more: boolean, signal?: AbortSignal): Promise<ActResult> {
     const p = this.requirePage();
-    const y0 = await p.evaluate(() => window.scrollY);
+    const y0 = await this.iso(() => window.scrollY);
     if (itemKind === "comment") {
-      const section = p.locator("ytd-comments#comments, [role='region'][aria-label='Komentarze']").first();
-      if (await section.count() === 0) return { status: "not_found", error: "no comments section on this page" };
-      const threads = p.locator(COMMENT_THREAD);
-      const start = await threads.count();
+      const hasSection = await this.iso(() => !!document.querySelector("ytd-comments#comments, [role='region'][aria-label='Komentarze']"));
+      if (!hasSection) return { status: "not_found", error: "no comments section on this page" };
+      const count = () => this.iso(() => __j.threads().length);
+      const start = await count();
       const want = more ? start + 1 : minItems;
       const deadline = Date.now() + this.timeout;
       for (let step = 0; step < 24 && Date.now() < deadline; step++) {
         if (signal?.aborted) throw new Aborted();
-        const n = await threads.count();
+        const n = await count();
         if (n >= want) break;
         // Scroll the section (or its end, for continuation) into the lower part of the viewport.
-        const { top, bottom, vh } = await section.evaluate((el) => {
+        const { top, bottom, vh } = await this.iso(() => {
+          const el = document.querySelector("ytd-comments#comments, [role='region'][aria-label='Komentarze']") as Element;
           const r = el.getBoundingClientRect();
           return { top: r.top, bottom: r.bottom, vh: window.innerHeight };
         });
         const dy = more || n > 0 ? Math.max(120, Math.min(bottom - vh * 0.7, vh * 0.8)) : Math.max(120, Math.min(top - vh * 0.25, vh * 0.8));
         await p.mouse.move(640, Math.round(vh / 2));
         await p.mouse.wheel(0, dy);
-        await this.settleScroll(p);
+        await this.settleScroll();
         await sleep(200);
       }
-      // Wait for the pending page of comments, if any, then describe what is on screen.
-      await p.waitForFunction((sel) => document.querySelectorAll(sel).length > 0, COMMENT_THREAD, { timeout: 3000 }).catch(() => undefined);
+      const t0 = Date.now();
+      while (Date.now() - t0 < 3000 && (await count()) === 0) await sleep(50);
     }
     const items = await this.extract(itemKind);
     return items.length
@@ -377,11 +461,10 @@ export class ManagedBrowser implements ComputerEnvironment {
     const p = this.requirePage();
     const found = await this.locate(target);
     if (!found) return { status: "not_found", error: `element ${target.ref} not found` };
-    const y = await p.evaluate(() => window.scrollY);
-    await found.loc.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "instant" as ScrollBehavior }));
-    const sel = semanticSelector(target.semanticKey) ?? `[data-jarvis-ref="${target.ref.replace(/["\\]/g, "\\$&")}"]`;
-    await p.evaluate((s) => (window as unknown as { __jarvisOverlay?: { track: (x: string) => void } }).__jarvisOverlay?.track(s), sel);
-    await this.settleScroll(p);
+    const y = await this.iso(() => window.scrollY);
+    await this.iso((t: { ref: string; key?: string }) => { __j.find(t.ref, t.key)?.el.scrollIntoView({ block: "center", behavior: "instant" as ScrollBehavior }); }, { ref: target.ref, key: target.semanticKey });
+    await p.evaluate((t) => (window as unknown as { __jarvisOverlay?: { track: (r: string, k?: string) => void } }).__jarvisOverlay?.track(t.ref, t.key), { ref: target.ref, key: target.semanticKey });
+    await this.settleScroll();
     await sleep(40);
     return { status: "done", reResolved: found.reResolved, undo: { scrollY: y } };
   }
@@ -389,7 +472,10 @@ export class ManagedBrowser implements ComputerEnvironment {
   private async select(target: ElementTarget, start: number, end: number): Promise<ActResult> {
     const found = await this.locate(target);
     if (!found) return { status: "not_found", error: `element ${target.ref} not found` };
-    const ok = await found.loc.evaluate((el, range) => {
+    const ok = await this.iso((a: { ref: string; key?: string; start: number; end: number }) => {
+      const hit = __j.find(a.ref, a.key);
+      if (!hit) return false;
+      const el = hit.el;
       const root = el.querySelector("#content-text") ?? el;
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       let offset = 0;
@@ -399,8 +485,8 @@ export class ManagedBrowser implements ComputerEnvironment {
       let endOff = 0;
       for (let n = walker.nextNode() as Text | null; n; n = walker.nextNode() as Text | null) {
         const len = n.data.length;
-        if (!startNode && range.start <= offset + len) { startNode = n; startOff = range.start - offset; }
-        if (range.end <= offset + len) { endNode = n; endOff = range.end - offset; break; }
+        if (!startNode && a.start <= offset + len) { startNode = n; startOff = a.start - offset; }
+        if (a.end <= offset + len) { endNode = n; endOff = a.end - offset; break; }
         offset += len;
       }
       if (!startNode || !endNode) return false;
@@ -414,13 +500,13 @@ export class ManagedBrowser implements ComputerEnvironment {
       s.removeAllRanges();
       s.addRange(r);
       return true;
-    }, { start, end });
+    }, { ref: target.ref, key: target.semanticKey, start, end });
     return ok ? { status: "done", reResolved: found.reResolved } : { status: "failed", error: "text offsets outside the element" };
   }
 
   private async copy(expected: string, reselect?: { target: ElementTarget; start: number; end: number }): Promise<ActResult> {
     const p = this.requirePage();
-    const current = await p.evaluate(() => String(document.getSelection() || ""));
+    const current = await this.iso(() => String(document.getSelection() || ""));
     let reselected = false;
     if (current !== expected && reselect) {
       // The selection was lost (e.g. the list re-rendered): restore it before copying.
@@ -433,7 +519,7 @@ export class ManagedBrowser implements ComputerEnvironment {
     return { status: "done", data: { reselected } };
   }
 
-  // ---------------------------------------------------------------- read-backs
+  // ---------------------------------------------------------------- read-backs (isolated world)
 
   async read(q: ReadQuery): Promise<ReadResult> {
     if (!this.page || this.page.isClosed()) {
@@ -443,10 +529,9 @@ export class ManagedBrowser implements ComputerEnvironment {
       if (q.kind === "element") return { found: false } satisfies ElementRead;
       return { count: 0, items: [] } satisfies CollectionRead;
     }
-    const p = this.page;
     switch (q.kind) {
       case "page": {
-        const info = await p.evaluate(() => ({
+        const info = await this.iso(() => ({
           url: location.href,
           title: document.title,
           scrollY: window.scrollY,
@@ -458,7 +543,7 @@ export class ManagedBrowser implements ComputerEnvironment {
         return { open: true, pageId: this.pageId, ...info } satisfies PageRead;
       }
       case "selection":
-        return p.evaluate(() => {
+        return this.iso(() => {
           const s = document.getSelection();
           const text = String(s || "");
           if (!s || !s.rangeCount || !text) return { text, visible: false };
@@ -466,13 +551,13 @@ export class ManagedBrowser implements ComputerEnvironment {
           const r = range.getBoundingClientRect();
           const visible = r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < window.innerHeight;
           const node = range.commonAncestorContainer;
-          const el = (node.nodeType === 1 ? node as Element : node.parentElement)?.closest("[data-jarvis-ref], [data-comment-id]");
-          const ref = el?.getAttribute("data-jarvis-ref") || (el?.getAttribute("data-comment-id") ? `yt-comment:${el.getAttribute("data-comment-id")}` : undefined);
+          const el = (node.nodeType === 1 ? node as Element : node.parentElement)?.closest("ytd-comment-thread-renderer, [data-jarvis-ref]");
+          const ref = el ? (el.matches("ytd-comment-thread-renderer") ? `yt-comment:${__j.commentId(el)}` : el.getAttribute("data-jarvis-ref") ?? undefined) : undefined;
           return { text, visible, ref };
         }) as Promise<SelectionRead>;
       case "clipboard":
         try {
-          const text = await p.evaluate(() => navigator.clipboard.readText());
+          const text = this.opts.readClipboard ? await this.opts.readClipboard() : await this.iso(() => navigator.clipboard.readText());
           return { ok: true, text } satisfies ClipboardRead;
         } catch (e) {
           return { ok: false, error: e instanceof Error ? e.message.split("\n")[0] : String(e) } satisfies ClipboardRead;
@@ -480,14 +565,17 @@ export class ManagedBrowser implements ComputerEnvironment {
       case "element": {
         const found = await this.locate(q.target);
         if (!found) return { found: false } satisfies ElementRead;
-        const info = await found.loc.evaluate((el) => {
-          const r = el.getBoundingClientRect();
+        const info = await this.iso((t: { ref: string; key?: string }) => {
+          const hit = __j.find(t.ref, t.key);
+          if (!hit) return null;
+          const r = hit.el.getBoundingClientRect();
           const inViewport = r.bottom > 0 && r.top < window.innerHeight && r.height > 0;
-          const o = (window as unknown as { __jarvisOverlay?: { rect: () => DOMRect | null } }).__jarvisOverlay?.rect() ?? null;
+          const box = document.getElementById("jarvis-overlay");
+          const o = box && box.style.display !== "none" ? box.getBoundingClientRect() : null;
           const highlighted = !!o && Math.abs(o.top + 4 - r.top) < 6 && Math.abs(o.left + 4 - r.left) < 6;
-          return { inViewport, highlighted, text: el.querySelector("#content-text")?.textContent ?? el.textContent ?? "" };
-        });
-        return { found: true, reResolved: found.reResolved, ...info } satisfies ElementRead;
+          return { inViewport, highlighted, text: hit.el.querySelector("#content-text")?.textContent ?? hit.el.textContent ?? "" };
+        }, { ref: q.target.ref, key: q.target.semanticKey });
+        return info ? ({ found: true, reResolved: found.reResolved, ...info } satisfies ElementRead) : ({ found: false } satisfies ElementRead);
       }
       case "collection": {
         const items = await this.extract(q.itemKind);
