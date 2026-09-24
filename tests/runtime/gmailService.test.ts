@@ -48,7 +48,7 @@ describe("GmailMailService contract", () => {
     expect(r).toMatchObject({ truth: "CONFIRMED", sends: 1 });
     expect(r.evidence).toMatch(/^in Sent: g1 to marcin\.kubicki@example\.com/);
     expect(g.calls).toEqual(["list", "send", "list"]);
-    expect(g.queries[0]).toMatch(/^in:sent to:marcin\.kubicki@example\.com subject:\(Łódź\) newer_than:1d$/);
+    expect(g.queries[0]).toMatch(/^in:sent to:marcin\.kubicki@example\.com subject:\(Łódź\) newer_than:[12]d$/); // 24 h window plus the ms since it was computed
   });
 
   it("matches HTML-escaped, truncated snippets and quotes in the subject cannot break the query", async () => {

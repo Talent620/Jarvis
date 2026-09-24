@@ -49,21 +49,36 @@
     },
     {
       "id": "M3",
-      "status": "in_progress",
-      "evidence": [],
-      "last_commit": "",
-      "next_action": "Orchestrator lanes/runtime.ts (speech partial/final routing, side chat concurrent with actions, action queue, stop barge-in), in-memory YouTube env for fast golden conversations, 12+ interleaved golden conversations, browser subset."
+      "status": "done",
+      "evidence": [
+        "tests/runtime/goldenConversations.test.ts 17/17 interleaved golden conversations (weather while comments load + 'wróćmy do komentarza', 'poczekaj' while resolving, 'nie ten, następny', 'stop' during TTS, 'co teraz robisz?', duplicated STT final, stale references refused, selection epoch kept)",
+        "tests/runtime/reflex.test.ts 52/52 (Polish control grammar, tiers 0-2, partial policy)",
+        "tests/browser/conversations.test.ts 4/4 on Chromium (weather while comments load, stop cancels and drops the queue, AMEND highlights the second comment, stale selection refused after another video)",
+        "adversarial review of M1-M3 (4 high, 10 medium, lows) fixed with regression tests: tests/runtime/reviewFixes.test.ts 53/53, tests/browser/managedBrowser.test.ts 3/3 (isolated-world read-backs ignore a hostile page)",
+        "app integration: appRuntime drives JarvisRuntime (tests/runtime/appRuntime.test.ts 3/3)",
+        "CI green on a01422e: Tests push run 36072124283 and pull_request run 36072128238 (jobs test + browser)",
+        "vitest 349 files / 3159 tests exit 0; tsc -b, eslint ., npm run build, scan:secrets exit 0 (after M4 commits)"
+      ],
+      "last_commit": "a01422e",
+      "next_action": "Done. Numbered badges for ambiguous targets (B-029) moved to M10 visibility."
     },
     {
       "id": "M4",
-      "status": "todo",
-      "evidence": [],
-      "last_commit": "",
-      "next_action": "Mail with content resolution, Polish contact inflection, permission classes, provenance, idempotency, mock Gmail with Sent read-back; full scenario 1-8 on fixtures."
+      "status": "done",
+      "evidence": [
+        "tests/browser/golden18.test.ts: steps 1-8 on Chromium with the YouTube fixture and a mock Gmail, one consent at the send boundary, mail CONFIRMED from Sent; 10 consecutive green runs (1.34-1.60 s each) locally, also a variant without data-comment-id re-rendered every 150 ms; CI browser job green on a01422e (runs 36072124283, 36072128238)",
+        "tests/runtime/goldenMail.test.ts 9/9: clipboard changed outside after 'skopiuj' warned in the consent, two Marcins -> question at runtime, address from the injected comment never the recipient, duplicated 'wyślij' -> one message, timeout after send -> Sent checked before retry, denied and stopped consent send nothing",
+        "tests/runtime/mailExactlyOnce.test.ts 9/9, tests/runtime/contacts.test.ts 24/24 (Polish inflection), tests/runtime/permissionClasses.test.ts 6/6",
+        "tests/runtime/untrustedContent.test.ts 8/8 (mission 5.12): isolated summary without tools or history, injected comment with an obeying model creates no task/consent/mail, malicious accessibility label stays quoted, malicious MCP result forces a fresh question before gmail_send",
+        "tests/runtime/gmailService.test.ts 8/8: production Gmail MailService contract with a fake transport, incl. golden 1-8 on the same runtime",
+        "real Gmail account and address book: NEEDS_HARDWARE (not touched in this session); covered by M6 acceptance"
+      ],
+      "last_commit": "301098a",
+      "next_action": "Done on fixtures. Real Gmail send and Sent read-back: run M6 acceptance on the user machine (NEEDS_HARDWARE)."
     },
     {
       "id": "M5",
-      "status": "todo",
+      "status": "in_progress",
       "evidence": [],
       "last_commit": "",
       "next_action": "Streaming voice runtime behind interfaces, barge-in, dedup, provider catalog replacing dead Gemini Live id, latency instrumentation."

@@ -3,20 +3,21 @@
 - GAŁĄŹ SESJI: `claude/intelligent-brahmagupta-jq7jqj`
   (local test: `git fetch origin claude/intelligent-brahmagupta-jq7jqj && git checkout claude/intelligent-brahmagupta-jq7jqj`)
 - PR: https://github.com/Talent620/Jarvis/pull/7 (draft)
-- OSTATNI ZIELONY COMMIT: `6e8f018` (M3 part 1 on top of M2 `ddc05e3`)
-- BIEŻĄCY KAMIEŃ: M3 (four lanes, 12+ interleaved golden conversations)
-- STAN TESTÓW: vitest 2968/2968 at M2; runtime 178/178 at 6e8f018; browser suite 4/4
-  (golden 1-7 x10) locally and in CI.
-- STAN CI: Tests, browser, Ubuntu, Android APK green on ddc05e3.
-- OSTATNIA ZWERYFIKOWANA FUNKCJA: golden steps 1-7 on the YouTube fixture with a real Chromium,
-  10 consecutive green runs, also through the Electron IPC proxy (tests/browser/golden17.test.ts).
-- DOKŁADNA NASTĘPNA AKCJA: M3. Write src/lib/runtime/lanes/runtime.ts (JarvisRuntime: onPartial /
-  onFinal / onText, reflex controls incl. tier-0 partial stop with Speaker.cancel(), side chat via
-  ConversationModel concurrently with the serial action queue, AMEND for "nie ten, następny",
-  "wróćmy do komentarza", undo), then tests/helpers/memoryBrowser.ts and
-  tests/runtime/goldenConversations.test.ts with 12+ interleaved conversations.
+- OSTATNI ZIELONY COMMIT: `a01422e` in CI (Tests push 36072124283, pull_request 36072128238);
+  `301098a` (Gmail MailService) green locally, CI pending at the time of writing.
+- BIEŻĄCY KAMIEŃ: M5 (streaming voice runtime). M0-M4 done (M4 on fixtures).
+- STAN TESTÓW: vitest 3159/3159 (349 files); browser suite 14/14 (golden 1-7 x10,
+  golden 1-8 x10, no-id variant, conversations, ManagedBrowser hardening).
+- OSTATNIA ZWERYFIKOWANA FUNKCJA: golden scenario 1-8 on Chromium with the YouTube fixture and a
+  mock Gmail, one consent, mail CONFIRMED from Sent, 10 consecutive green runs, also in CI.
+- DOKŁADNA NASTĘPNA AKCJA: M5. Streaming voice behind interfaces (mission 5.14): STT partial/final
+  stream -> JarvisRuntime.onPartial/onFinal, TTS with immediate cancel on barge-in, echo
+  suppression, dedup of finals, provider catalog replacing the dead Gemini Live id (optional
+  gemini-3.8-live adapter), latency timestamps (partial, intent, cancel signal, action start,
+  verification, first chat token, first TTS audio). Tests on synthetic and recorded event streams.
 - LOCAL RUN: `npm ci && npm run test:browser` (needs Chromium: `npx playwright install chromium`).
-- POZYCJE NEEDS_HARDWARE: none recorded yet.
+- POZYCJE NEEDS_HARDWARE: B-030 real YouTube selectors, B-031 real Gmail send + Sent read-back,
+  B-032 address book source. All for M6 acceptance on the user machine.
 - POZYCJE BLOCKED: none.
 - OWNER ACTION: set `JARVIS_RELEASE_STORE_PASSWORD` / `JARVIS_RELEASE_KEY_PASSWORD` secrets before
   the next release (release.yml refuses to publish without them, docs/JARVIS-SECURITY.md).
