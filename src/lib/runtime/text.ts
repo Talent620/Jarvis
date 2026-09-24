@@ -2,6 +2,8 @@
 // base character is a Unicode letter. Emoji, punctuation, digits and a leading "@" are not
 // letters. Offsets are UTF-16 code units so they map directly onto DOM Range offsets.
 
+import { isLetterChar, isMarkChar, isNumberChar } from "./unicode";
+
 export interface Grapheme {
   text: string;
   /** UTF-16 offset of the first code unit. */
@@ -26,12 +28,11 @@ export function __setSegmenterForTests(s: SegmenterLike | null | undefined): voi
   segmenter = s;
 }
 
-const MARK = /^\p{M}$/u;
 
 /** Code point extends the previous grapheme: marks, ZWJ, variation selectors, skin tones, tags. */
 function isExtend(cp: string): boolean {
   const c = cp.codePointAt(0) ?? 0;
-  return MARK.test(cp) || c === 0x200d || c === 0xfe0f || c === 0xfe0e
+  return isMarkChar(cp) || c === 0x200d || c === 0xfe0f || c === 0xfe0e
     || (c >= 0x1f3fb && c <= 0x1f3ff) || (c >= 0xe0020 && c <= 0xe007f);
 }
 
@@ -76,10 +77,10 @@ export function graphemes(text: string): Grapheme[] {
 export function isLetter(g: string): boolean {
   const first = g.codePointAt(0);
   if (first === undefined) return false;
-  return /^\p{L}$/u.test(String.fromCodePoint(first));
+  return isLetterChar(String.fromCodePoint(first));
 }
 
-export const isWordChar = (g: string): boolean => isLetter(g) || /^\p{N}/u.test(g);
+export const isWordChar = (g: string): boolean => isLetter(g) || isNumberChar(String.fromCodePoint(g.codePointAt(0) ?? 0));
 
 export interface TextSpan {
   start: number;
@@ -110,7 +111,7 @@ export function firstLetters(text: string, n: number): TextSpan {
 export function firstChars(text: string, n: number): TextSpan {
   const gs = graphemes(text);
   let i = 0;
-  while (i < gs.length && /^\s+$/u.test(gs[i].text)) i++;
+  while (i < gs.length && /^\s+$/.test(gs[i].text)) i++;
   const picked = gs.slice(i, i + Math.max(0, n));
   if (!picked.length) return { start: 0, end: 0, text: "", complete: n <= 0, units: [] };
   const start = picked[0].index;

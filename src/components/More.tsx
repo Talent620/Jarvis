@@ -3,6 +3,7 @@ import { useEscape } from "../hooks/useEscape";
 import { adaptiveOrder, track, shouldAnnounceAdapt } from "../lib/usage";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
+import { useStoreSelector } from "../hooks/useStore";
 import { nextBestAction } from "../lib/livingPulse";
 import { requestScreen } from "../lib/navIntent";
 import { CENTER_GOALS, CENTER_GROUPS } from "../lib/centerModel";
@@ -95,6 +96,8 @@ export default function More({
   onClose: () => void;
 }) {
   useEscape(onClose);
+  // The menu shows a data-driven "next best action"; refresh it on data changes while open.
+  useStoreSelector(() => store.version);
   const [query, setQuery] = useState("");
 
   // Każda funkcja: krótka NAZWA (na kafelku) + OPIS (podtytuł kafelka i pole wyszukiwania).

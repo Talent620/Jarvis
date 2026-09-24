@@ -1,5 +1,7 @@
 // Small deterministic helpers shared by the runtime.
 
+import { isLetterChar, isMarkChar, isNumberChar } from "./unicode";
+
 /** JSON with sorted object keys, so equal arguments always hash the same. */
 export function stableStringify(v: unknown): string {
   if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "null";
@@ -27,14 +29,12 @@ export const hashArgs = (args: unknown): string => fnv1a64(stableStringify(args)
 
 /** Lowercase, strip diacritics and punctuation, collapse spaces. For comparing utterances. */
 export function normalizeUtterance(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/ł/g, "l")
-    .normalize("NFD")
-    .replace(/\p{M}+/gu, "")
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  let out = "";
+  for (const ch of Array.from(text.toLowerCase().replace(/ł/g, "l").normalize("NFD"))) {
+    if (isMarkChar(ch)) continue;
+    out += isLetterChar(ch) || isNumberChar(ch) || /\s/.test(ch) ? ch : " ";
+  }
+  return out.replace(/\s+/g, " ").trim();
 }
 
 let counter = 0;

@@ -317,6 +317,9 @@ export function setSettingsPersistTransform(fn: (s: Settings) => Settings): void
   settingsPersistTransform = fn;
 }
 
+export const PERSIST_DEBOUNCE_MS = 200;
+export const PERSIST_MAX_WAIT_MS = 1000;
+
 // Moduł-level uchwyt na AKTUALNIE podpiętą instancję globalnych listenerów. Gwarantuje, że nawet
 // po ponownej ewaluacji modułu (HMR) lub utworzeniu drugiej instancji Store, STARE listenery
 // zostają odpięte przed podpięciem nowych — koniec narastania (wyciek listenerów/pamięci).
@@ -330,11 +333,18 @@ export class Store {
   private listeners = new Set<Listener>();
   /** Czy duże kolekcje są obsługiwane przez IndexedDB (po udanej migracji/hydratacji). */
   private idbReady = false;
-  private idbFlushTimer: ReturnType<typeof setTimeout> | null = null;
   // Atomowość A2: serializacja flushy IDB. `flushing` = trwa flush; `flushDirty` = dane zmieniły
   // się w trakcie i trzeba flush ponowić z najświeższym stanem.
   private flushing = false;
   private flushDirty = false;
+  // Coalesced persistence of the data blob: setData only marks it dirty; one serialization runs
+  // after PERSIST_DEBOUNCE_MS of quiet (at most PERSIST_MAX_WAIT_MS after the first change) and
+  // immediately on pagehide / hidden / beforeunload or an explicit flush().
+  private dataDirty = false;
+  private firstDirtyAt = 0;
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Number of full blob serializations (diagnostics and benchmarks). */
+  persistCount = 0;
 
   // STABILNE referencje handlerów — niezbędne, by removeEventListener faktycznie je odpiął.
   private onStorage = (e: StorageEvent) => {
@@ -347,7 +357,7 @@ export class Store {
     }
   };
   private flushOnHide = () => {
-    if (this.idbFlushTimer) { clearTimeout(this.idbFlushTimer); this.idbFlushTimer = null; void this.flushIdb(); }
+    this.flush();
   };
   private onVisibility = () => {
     if (typeof document !== "undefined" && document.visibilityState === "hidden") this.flushOnHide();
@@ -368,6 +378,7 @@ export class Store {
       boundStore?.unbindGlobalListeners(); // anty-wyciek: usuń poprzednie powiązanie
       window.addEventListener("storage", this.onStorage);
       window.addEventListener("pagehide", this.flushOnHide);
+      window.addEventListener("beforeunload", this.flushOnHide);
       if (typeof document !== "undefined") document.addEventListener("visibilitychange", this.onVisibility);
       boundStore = this;
     } catch { /* środowisko bez window/document — pomiń */ }
@@ -379,6 +390,7 @@ export class Store {
     try {
       window.removeEventListener("storage", this.onStorage);
       window.removeEventListener("pagehide", this.flushOnHide);
+      window.removeEventListener("beforeunload", this.flushOnHide);
       if (typeof document !== "undefined") document.removeEventListener("visibilitychange", this.onVisibility);
     } catch { /* ignore */ }
     if (boundStore === this) boundStore = null;
@@ -389,8 +401,29 @@ export class Store {
    * Electrona / HMR / w testach. Additive — nie zmienia istniejącego API.
    */
   dispose(): void {
+    this.flush();
     this.unbindGlobalListeners();
-    if (this.idbFlushTimer) { clearTimeout(this.idbFlushTimer); this.idbFlushTimer = null; }
+  }
+
+  /** Write pending data changes now (synchronously). Safe to call any time. */
+  flush(): void {
+    if (this.persistTimer) { clearTimeout(this.persistTimer); this.persistTimer = null; }
+    if (!this.dataDirty) return;
+    this.dataDirty = false;
+    this.persistData();
+  }
+
+  /** True while data changes are waiting for the coalesced write. */
+  get hasPendingWrites(): boolean {
+    return this.dataDirty;
+  }
+
+  private schedulePersist(): void {
+    const now = Date.now();
+    if (!this.dataDirty) { this.dataDirty = true; this.firstDirtyAt = now; }
+    if (this.persistTimer) clearTimeout(this.persistTimer);
+    const wait = Math.max(0, Math.min(PERSIST_DEBOUNCE_MS, this.firstDirtyAt + PERSIST_MAX_WAIT_MS - now));
+    this.persistTimer = setTimeout(() => { this.persistTimer = null; this.flush(); }, wait);
   }
 
   subscribe(fn: Listener): () => void {
@@ -408,6 +441,9 @@ export class Store {
   // finanse…) są w blobie → adoptujemy je. Ciężkie kolekcje IDB zachowujemy z RAM (źródłem
   // prawdy dla nich jest IDB; pojawią się po naturalnym przeładowaniu apki).
   private reloadDataFromDisk() {
+    // Local changes not written yet win (last writer wins, as with synchronous writes): write
+    // them now so the other tab receives them, instead of dropping them by reloading.
+    if (this.dataDirty) { this.flush(); return; }
     try {
       const fresh = normalizeData(read<AppData>(DATA_KEY, emptyData));
       if (this.idbReady) {
@@ -422,23 +458,15 @@ export class Store {
   // Trwałość danych: gdy IndexedDB gotowy, duże kolekcje idą do IDB, a w localStorage
   // zostaje odchudzony blob (bez nich). Inaczej — pełny blob w localStorage (zachowanie sprzed).
   private persistData() {
+    this.persistCount++;
     if (this.idbReady) {
       const slim = { ...this.data } as AppData;
       for (const c of IDB_COLLECTIONS) (slim as unknown as Record<string, unknown[]>)[c] = [];
       write(DATA_KEY, slim);
-      this.scheduleIdbFlush();
+      void this.flushIdb(); // persistData is already coalesced, so no second debounce here
     } else {
       write(DATA_KEY, this.data);
     }
-  }
-
-  // Debounce: duże tablice zapisujemy do IDB zbiorczo, nie na każdą mikro-zmianę.
-  private scheduleIdbFlush() {
-    if (this.idbFlushTimer) clearTimeout(this.idbFlushTimer);
-    this.idbFlushTimer = setTimeout(() => {
-      this.idbFlushTimer = null;
-      void this.flushIdb();
-    }, 300);
   }
 
   private async flushIdb() {
@@ -482,6 +510,7 @@ export class Store {
         if (!ok) return; // migracja nieudana — zostajemy na localStorage (zero utraty)
         try { localStorage.setItem(IDB_MIGRATED_KEY, "1"); } catch { /* ignore */ }
         this.idbReady = true;
+        this.dataDirty = false;
         this.persistData(); // odchudź blob localStorage (duże kolekcje są już w IDB)
       } else {
         // WAŻNE: nie ustawiaj idbReady=true PRZED hydratacją. Inaczej setData w trakcie `await idbGet`
@@ -521,7 +550,7 @@ export class Store {
     // i kontynuujemy (zapis + emit bieżącego stanu), zamiast pozwolić wyjątkowi rozlać się po UI.
     try { mut(this.data); } catch (e) { try { console.error("[JARVIS] setData mutator error:", e); } catch { /* ignore */ } }
     capCollections(this.data); // utnij rozrośnięte logi (sentMail/contentPosts) przed zapisem
-    this.persistData();
+    this.schedulePersist();
     this.emit();
   }
 

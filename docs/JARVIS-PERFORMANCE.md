@@ -41,6 +41,39 @@ some WebViews) a single toggle costs ~20 ms, more than a 60 Hz frame budget.
 - `dist` 4.1 MB, 74 assets.
 - Largest chunk `index-*.js` 823 kB (305 kB gzip); `pdf-*.js` 366 kB; `Settings-*.js` 233 kB.
 
-## After (M1)
+## M1 before/after (same script, same dataset)
 
-To be filled by M1 with the same commands.
+"Before" = `src/lib/store.ts` from commit 8a25942 run under the M1 version of
+`scripts/perf/store-bench.ts`; "after" = M1 store. Three runs per mode, ranges shown.
+
+| Metric | Before, no IDB | After, no IDB | Before, IDB | After, IDB |
+|---|---|---|---|---|
+| `setData` synchronous cost, mean | 19.9-21.1 ms | 0.007-0.008 ms | 1.24-1.35 ms | 0.007 ms |
+| `setData` p95 | 21.9-27.6 ms | 0.015-0.017 ms | 1.55-2.08 ms | 0.011-0.014 ms |
+| Burst of 200 mutations: storage writes | 200 | 1 | 200 | 1 |
+| Burst of 200 mutations: bytes serialized | 428.8 MB | 2.1 MB | 73.9 MB | 0.37 MB |
+| One coalesced flush (the write the burst still pays once) | n/a | 21-23 ms | n/a | 8-16 ms |
+| 40 mutations 50 ms apart: storage writes | 40 | 2 | 40 | 2 |
+| 40 mutations 50 ms apart: bytes serialized | 85.8 MB | 4.3 MB | 14.8 MB | 0.74 MB |
+| `setSettings` (unchanged, still synchronous) | 0.014-0.023 ms | 0.014-0.024 ms | 0.014-0.015 ms | 0.014-0.033 ms |
+
+Persistence policy: `setData` marks the blob dirty; one write runs after 200 ms of quiet and at
+most 1 s after the first unwritten change, and synchronously on `pagehide`, `beforeunload`,
+`visibilitychange` to hidden, `dispose()` and `store.flush()`. In-memory state and subscribers
+stay synchronous. A cross-tab `storage` event never drops unwritten local changes.
+Regression tests: `tests/runtime/storePersist.test.ts`.
+
+### Re-renders
+
+| | Before | After |
+|---|---|---|
+| Always-mounted components calling `useStore()` | 1: `App` (the root, so every data mutation re-rendered the whole tree) | 0 |
+| Root re-renders per data mutation that does not change what the root shows | 1 (whole tree) | 0 |
+| Root re-renders when tasks-today, project name, today's value or settings change | 1 | 1 |
+
+Measured with React in jsdom (`tests/runtime/rootRenders.test.ts`): 100 unrelated data
+mutations re-render a `useStore()` consumer 100 times and the selector-based root 0 times; a
+change the root renders re-renders it once. The other 21 `useStore()` components are screens
+mounted only while open. Components that read `store.data` during render without subscribing
+and used to rely on the root re-render (`Conversation` start screen, `More`, `BossMode`) now
+subscribe themselves, only while mounted.

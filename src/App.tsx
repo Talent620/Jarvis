@@ -122,7 +122,7 @@ import { store, uid } from "./lib/store";
 import { brand } from "./lib/brand";
 import { isLocked as keysAreLocked } from "./lib/secretsVault";
 import UnlockKeys from "./components/UnlockKeys";
-import { useStore } from "./hooks/useStore";
+import { useStoreSelector, shallowEqual } from "./hooks/useStore";
 import type { ChatMessage } from "./types";
 
 type PendingImage = { data: string; mediaType: string } | null;
@@ -175,7 +175,20 @@ const initialChat = (() => {
 })();
 
 export default function App() {
-  const { settings } = useStore();
+  // The root subscribes only to what it renders: settings (a new object on every setSettings) and
+  // a few values derived from data. Data mutations no longer re-render the whole tree
+  // (docs/JARVIS-PERFORMANCE.md). Screens that render store.data subscribe themselves.
+  const settings = useStoreSelector(() => store.settings);
+  const derived = useStoreSelector(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const value = valueToday(store.data.audit || []);
+    return {
+      projectName: store.data.projects.find((x) => x.id === store.settings.activeProjectId)?.name ?? "",
+      tasksToday: (store.data.tasks || []).filter((t) => !t.done && (t.due || "").slice(0, 10) === today).length,
+      valueActions: value.actions,
+      valueMinutes: value.minutes,
+    };
+  }, shallowEqual);
   const [messages, setMessages] = useState<ChatMessage[]>(initialChat?.messages ?? []);
   const [activeId, setActiveId] = useState<string>(initialChat?.id ?? uid());
   // JEDNA nawigacja: wszystkie „zwykłe" ekrany mają jeden aktywny stan (route) + historię „Wstecz".
@@ -1198,10 +1211,7 @@ export default function App() {
           {brand()}
           <small>
             {(resolveProvider()?.model || (hasUsableBrain() ? "LOKALNY" : "BRAK API")).toUpperCase()}
-            {(() => {
-              const p = store.data.projects.find((x) => x.id === settings.activeProjectId);
-              return p ? ` · ${p.name.toUpperCase()}` : "";
-            })()}{" "}
+            {derived.projectName ? ` · ${derived.projectName.toUpperCase()}` : ""}{" "}
             · {online ? "ONLINE" : "OFFLINE"}
             {(() => {
               const m = currentBrainMode(online);
@@ -1359,7 +1369,7 @@ export default function App() {
         onBoss={() => setShowBoss(true)}
         onMemory={() => setShowMemory(true)}
         onVoice={() => setShowVoice(true)}
-        tasksToday={(store.data.tasks || []).filter((t) => !t.done && (t.due || "").slice(0, 10) === new Date().toISOString().slice(0, 10)).length}
+        tasksToday={derived.tasksToday}
       />
 
       {tip && store.settings.tips !== false && nowCard === "suggestion" && (
@@ -1459,7 +1469,7 @@ export default function App() {
 
       {/* ✨ Wartość dnia — co JARVIS realnie zrobił za Ciebie (z audytu). Etyczny haczyk. */}
       {(() => {
-        const v = valueToday(store.data.audit || []);
+        const v = { actions: derived.valueActions, minutes: derived.valueMinutes };
         if (v.actions < 1) return null;
         return (
           <div className="value-card" onClick={() => setShowAudit(true)} title="Zobacz, co JARVIS zrobił (dziennik działań)">

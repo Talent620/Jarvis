@@ -70,18 +70,36 @@ async function main() {
   const SUBSCRIBERS = 22; // components calling useStore() at baseline
   let wakes = 0;
   for (let i = 0; i < SUBSCRIBERS; i++) store.subscribe(() => { wakes++; });
+  // Works for the baseline store (synchronous writes, no flush) and the coalescing one.
+  const flush = (): void => { (store as unknown as { flush?: () => void }).flush?.(); };
 
+  // Burst: 200 back-to-back single-field mutations (e.g. a voice command touching data).
   const N = 200;
-  const bytesBefore = ls.bytesWritten, writesBefore = ls.writes;
+  flush();
+  let w0 = ls.writes, b0 = ls.bytesWritten;
   const times: number[] = [];
   for (let i = 0; i < N; i++) {
     const s = performance.now();
     store.setData((d) => { const t = d.tasks[i % d.tasks.length]; t.done = !t.done; });
     times.push(performance.now() - s);
   }
-  const setDataBytes = (ls.bytesWritten - bytesBefore) / N;
-  const setDataWrites = (ls.writes - writesBefore) / N;
+  const burstWritesBeforeFlush = ls.writes - w0;
+  const f0 = performance.now();
+  flush();
+  const flushMs = performance.now() - f0;
+  const burstWrites = ls.writes - w0;
+  const burstBytes = ls.bytesWritten - b0;
   const setDataWakes = wakes / N;
+
+  // Spaced: 40 mutations 50 ms apart (2 s of activity, e.g. timers + streaming UI updates).
+  w0 = ls.writes; b0 = ls.bytesWritten;
+  for (let i = 0; i < 40; i++) {
+    store.setData((d) => { d.tasks[0].done = !d.tasks[0].done; });
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  flush();
+  const spacedWrites = ls.writes - w0;
+  const spacedBytes = ls.bytesWritten - b0;
 
   wakes = 0;
   const sTimes: number[] = [];
@@ -96,17 +114,13 @@ async function main() {
     mode: useIdb ? "indexeddb" : "localStorage-only",
     blobBytes: blob.length,
     importAndHydrateMs: +importMs.toFixed(1),
-    setData: { ...stats(times), bytesPerCall: Math.round(setDataBytes), storageWritesPerCall: setDataWrites, subscriberWakesPerCall: setDataWakes },
+    setData: { ...stats(times), subscriberWakesPerCall: setDataWakes },
+    burst200: { storageWritesDuringBurst: burstWritesBeforeFlush, storageWritesTotal: burstWrites, bytesTotal: burstBytes, flushMs: +flushMs.toFixed(2) },
+    spaced40x50ms: { storageWrites: spacedWrites, bytesTotal: spacedBytes },
     setSettings: { ...stats(sTimes), bytesPerCall: Math.round((ls.bytesWritten - sBytes0) / N), subscriberWakesPerCall: wakes / N },
-    burst100SetDataMs: 0,
   };
-  const b0 = performance.now();
-  for (let i = 0; i < 100; i++) store.setData((d) => { d.tasks[0].done = !d.tasks[0].done; });
-  result.burst100SetDataMs = +(performance.now() - b0).toFixed(1);
-
   if (asJson) console.log(JSON.stringify(result));
-  else console.table({ ...result.setData, mode: result.mode });
-  if (!asJson) console.log(JSON.stringify(result, null, 2));
+  else console.log(JSON.stringify(result, null, 2));
   store.dispose();
   process.exit(0);
 }
