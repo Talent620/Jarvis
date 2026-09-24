@@ -3,19 +3,19 @@
 - GAŁĄŹ SESJI: `claude/intelligent-brahmagupta-jq7jqj`
   (local test: `git fetch origin claude/intelligent-brahmagupta-jq7jqj && git checkout claude/intelligent-brahmagupta-jq7jqj`)
 - PR: https://github.com/Talent620/Jarvis/pull/7 (draft)
-- OSTATNI ZIELONY COMMIT: `1d9b49a` (M1; vitest 2921/2921, tsc, eslint, build, secret scan green)
-- BIEŻĄCY KAMIEŃ: M2 (ManagedBrowser + YouTube fixture, golden steps 1-7)
-- STAN TESTÓW: vitest 335 files / 2921 tests, exit 0.
-- STAN CI: Tests green. Build Android APK red since September on `android-actions/setup-android@v3`
-  ("Failed to find package 'tools'", runner image change, also red on the bootstrap commit that
-  did not touch Android). Fixed by `packages: "platform-tools"` in android*.yml and release.yml.
-- OSTATNIA ZWERYFIKOWANA FUNKCJA: M1 runtime kernel, Polish reference resolution (53 tests),
-  snapshot, capabilities, agentRun cancellation, coalesced store persistence (root re-renders 1 -> 0).
-- DOKŁADNA NASTĘPNA AKCJA: M2 step 1. Add pinned `playwright` to devDependencies (use
-  JARVIS_CHROMIUM_PATH / /opt/pw-browsers/chromium as executablePath), build the YouTube fixture
-  server in tests/fixtures/youtube/ (consent screen, video page, lazy comments, pinned, replies,
-  Polish/emoji/@nick, DOM re-renders, injection comment), then ManagedBrowser environment
-  (observe/resolve/act/readback/undo) in src/lib/env/.
+- OSTATNI ZIELONY COMMIT: `6e8f018` (M3 part 1 on top of M2 `ddc05e3`)
+- BIEŻĄCY KAMIEŃ: M3 (four lanes, 12+ interleaved golden conversations)
+- STAN TESTÓW: vitest 2968/2968 at M2; runtime 178/178 at 6e8f018; browser suite 4/4
+  (golden 1-7 x10) locally and in CI.
+- STAN CI: Tests, browser, Ubuntu, Android APK green on ddc05e3.
+- OSTATNIA ZWERYFIKOWANA FUNKCJA: golden steps 1-7 on the YouTube fixture with a real Chromium,
+  10 consecutive green runs, also through the Electron IPC proxy (tests/browser/golden17.test.ts).
+- DOKŁADNA NASTĘPNA AKCJA: M3. Write src/lib/runtime/lanes/runtime.ts (JarvisRuntime: onPartial /
+  onFinal / onText, reflex controls incl. tier-0 partial stop with Speaker.cancel(), side chat via
+  ConversationModel concurrently with the serial action queue, AMEND for "nie ten, następny",
+  "wróćmy do komentarza", undo), then tests/helpers/memoryBrowser.ts and
+  tests/runtime/goldenConversations.test.ts with 12+ interleaved conversations.
+- LOCAL RUN: `npm ci && npm run test:browser` (needs Chromium: `npx playwright install chromium`).
 - POZYCJE NEEDS_HARDWARE: none recorded yet.
 - POZYCJE BLOCKED: none.
 - OWNER ACTION: set `JARVIS_RELEASE_STORE_PASSWORD` / `JARVIS_RELEASE_KEY_PASSWORD` secrets before

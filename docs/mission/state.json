@@ -34,17 +34,25 @@
     },
     {
       "id": "M2",
-      "status": "in_progress",
-      "evidence": [],
-      "last_commit": "",
-      "next_action": "Pin Playwright, ManagedBrowser environment, YouTube fixture server in tests/fixtures/youtube/, golden steps 1-7."
+      "status": "done",
+      "evidence": [
+        "npm run test:browser (local): tests/browser/golden17.test.ts 4/4 in 24.9 s: single run, run through the Electron IPC proxy, 5 runs with list re-render every 150 ms, 10 consecutive green runs (1.41-1.55 s each)",
+        "CI job 'browser' green on ddc05e3: runs 36064436452 (pull_request) and 36064430755 (push), Chromium installed by npx playwright install",
+        "every golden step CONFIRMED by read-back; test re-reads clipboard ('Łódź') from the page itself; all kernel actions CONFIRMED with evidence, all tasks done",
+        "tests/runtime/actionsEngine.test.ts 36/36 (engine retries, BLOCKED at page end, external never retried, NEEDS_CAPABILITY without starting, cancellation, postconditions, Polish command grammar)",
+        "tests/runtime/envIpc.test.ts 5/5 (IPC round trip, abort crosses to main, bridge failure never success, main.cjs trusted-frame guard) and tests/runtime/appRuntime.test.ts 2/2",
+        "regression: text range fell back to an arbitrary comment after a re-read (found by the 10-run loop) fixed, tests in resolvePolish.test.ts",
+        "vitest 339 files / 2968 tests exit 0; tsc -b, eslint ., npm run build (incl. electron/gen/runtime.cjs), scan:secrets exit 0"
+      ],
+      "last_commit": "ddc05e3",
+      "next_action": "Done. Deferred to M3: numbered badges on ambiguous targets (needs the conversation lane to ask 'który?')."
     },
     {
       "id": "M3",
-      "status": "todo",
+      "status": "in_progress",
       "evidence": [],
       "last_commit": "",
-      "next_action": "Perception, reflex, conversation, action lanes with task and focus stacks; 12+ interleaved golden conversations."
+      "next_action": "Orchestrator lanes/runtime.ts (speech partial/final routing, side chat concurrent with actions, action queue, stop barge-in), in-memory YouTube env for fast golden conversations, 12+ interleaved golden conversations, browser subset."
     },
     {
       "id": "M4",

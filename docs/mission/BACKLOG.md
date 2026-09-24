@@ -18,8 +18,8 @@ Status: todo, in_progress, done, blocked, needs_hardware. Nothing is done withou
 | B-012 | Store: selectors in hottest components, batched deferred persistence | perf | done | src/lib/store.ts, src/hooks/useStore.ts, components | lost writes on close | store tests + before/after numbers | none |
 | B-013 | Permission classes READ..DESTRUCTIVE with AUTO/ASK/DENY, extending permissions.ts | safety | todo | src/lib/permissions.ts | behaviour change for existing tools | permission tests | none |
 | B-014 | Grapheme and letter semantics for Polish text | correctness | done | src/lib/runtime/text.ts | Intl.Segmenter availability | mandatory cases from 5.10 | none |
-| B-015 | ManagedBrowser (Playwright persistent context, ariaSnapshot, readback) | M2 | todo | src/lib/env/managedBrowser.ts | Playwright version features | fixture tests | browser download (D-001) |
-| B-016 | YouTube fixture server with consent, lazy comments, injection comment | M2 | todo | tests/fixtures/youtube/ | flakiness | 10 consecutive green runs | none |
+| B-015 | ManagedBrowser (Playwright persistent context, ariaSnapshot, readback) | M2 | done | src/lib/env/managedBrowser.ts | Playwright version features | fixture tests | browser download (D-001) |
+| B-016 | YouTube fixture server with consent, lazy comments, injection comment | M2 | done | tests/fixtures/youtube/ | flakiness | 10 consecutive green runs | none |
 | B-017 | Reflex grammar (Polish, tiers 0-2) | M3 | todo | src/lib/runtime/reflex.ts | partial misfires | grammar tests | none |
 | B-018 | Lanes + task/focus stacks + intent routing | M3 | todo | src/lib/runtime/lanes/ | races | 12+ golden conversations | none |
 | B-019 | Mail send exactly once with Sent read-back, idempotency keys | M4 | todo | src/lib/runtime/effects.ts | duplicate sends | timeout and duplicate tests | none |
@@ -31,4 +31,6 @@ Status: todo, in_progress, done, blocked, needs_hardware. Nothing is done withou
 | B-025 | BrowserBridge extension + loopback protocol | M8 | todo | extension/, electron/ | token leakage | protocol tests | none |
 | B-026 | Windows UIA and Android node-tree adapters | M9 | todo | electron/, android/ | breaking platforms | contract tests | needs_hardware |
 | B-027 | Vision env, locator cache, Skill Compiler, status panel | M10 | todo | src/lib/env/vision.ts, src/lib/runtime/skills.ts | learning destructive actions | unit tests | none |
-| B-028 | CI: concurrency groups, lint + typecheck + browser-on-fixtures jobs | CI | todo | .github/workflows/test.yml | CI minutes | green run | none |
+| B-028 | CI: concurrency groups, lint + typecheck + browser-on-fixtures jobs | CI | done | .github/workflows/test.yml | CI minutes | green run | none |
+| B-029 | Numbered overlay badges when a target is ambiguous, with "który?" question | M3 | todo | src/node/managedBrowser.ts, lanes | noisy UI | browser test | needs ambiguity from resolver |
+| B-030 | Real YouTube skill check (selectors on the live site) | M6 | needs_hardware | src/node/managedBrowser.ts | site changes | acceptance run on user machine | real site not reachable in CI by policy |

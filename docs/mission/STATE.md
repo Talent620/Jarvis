@@ -1,6 +1,6 @@
 # Mission state
 
-Phase: M0 done (8a61178), M1 done (1d9b49a), M2 in progress. Machine-readable status: `state.json`.
+Phase: M0 done (8a61178), M1 done (1d9b49a), M2 done (ddc05e3), M3 in progress. Machine-readable status: `state.json`.
 
 ## Milestones
 
@@ -8,8 +8,8 @@ Phase: M0 done (8a61178), M1 done (1d9b49a), M2 in progress. Machine-readable st
 |---|---|---|
 | M0 | Baseline and security (license tests, keystore, private key check, perf baseline) | done |
 | M1 | Runtime Kernel + store performance | done |
-| M2 | Managed browser + YouTube fixture, steps 1-7 | in_progress |
-| M3 | Four lanes, task/focus stacks, 12+ interleaved golden conversations | todo |
+| M2 | Managed browser + YouTube fixture, steps 1-7 | done |
+| M3 | Four lanes, task/focus stacks, 12+ interleaved golden conversations | in_progress |
 | M4 | Mail, external effects exactly once, provenance, contacts | todo |
 | M5 | Streaming voice runtime | todo |
 | M6 | Local acceptance command | todo |
@@ -18,11 +18,13 @@ Phase: M0 done (8a61178), M1 done (1d9b49a), M2 in progress. Machine-readable st
 | M9 | Windows and Android adapters | todo |
 | M10 | Vision, Skill Compiler, visibility, docs, final review | todo |
 
-## Gates at last measurement (commit 1d9b49a)
+## Gates at last measurement (commit 6e8f018)
 
-- tsc -b: pass. eslint: pass. vite build: pass. scan:secrets: pass.
-- vitest: 2921/2921 (335 files).
-- CI: Tests green on 8a61178; Android workflows fixed in e192be6 (setup-android packages).
+- tsc -b, eslint, npm run build (web + electron/gen/runtime.cjs), scan:secrets: pass.
+- vitest: 2968/2968 (339 files) before M3 part 1; runtime suite 178/178 after it.
+- Browser suite (npm run test:browser): golden steps 1-7, 10 consecutive green runs, IPC path,
+  150 ms re-render stress; green locally and in the CI `browser` job.
+- CI: Tests, browser, Ubuntu build, Android APK green on the branch.
 
 ## Runtime (src/lib/runtime) after M1
 
@@ -30,7 +32,9 @@ kernel.ts (single writer, dedup, AbortController per task, journal), reducer.ts,
 journal.ts (Dexie, own DB), referents.ts + resolve.ts + polish.ts (Polish reference
 resolution), text.ts + unicode.ts (graphemes/letters, S9-safe), snapshot.ts (<= 300 tokens),
 capabilities.ts (requirements, probes, matrix), truth.ts, provenance.ts, util.ts.
-Not yet wired into the chat/voice UI (M3) or a status panel (M10).
+M2 added: env/types.ts (ComputerEnvironment), env/ipc.ts, postconditions.ts, actions.ts,
+commands.ts, session.ts, appRuntime.ts; src/node/managedBrowser.ts (+ envHost, electronRuntime,
+browserExecutable). Desktop app routes computer-control commands from the chat to the runtime.
 
 ## Known risks
 
