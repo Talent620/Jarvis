@@ -8,7 +8,9 @@ import { IpcEnvironment, desktopEnvBridge } from "./env/ipc";
 import { DexieJournal, hasIndexedDb } from "./journal";
 import { Kernel } from "./kernel";
 import type { KernelState } from "./reducer";
+import { GmailMailService } from "./gmailService";
 import { JarvisRuntime, type RuntimeTurn, type Speaker } from "./lanes/runtime";
+import type { SessionOptions } from "./session";
 
 interface AppRuntime {
   kernel: Kernel;
@@ -62,12 +64,12 @@ export function shouldRoute(cmd: Command, state: KernelState | undefined): boole
 }
 
 /** Build the app runtime once; a failed start closes what it opened so a retry starts clean. */
-export async function createAppRuntime(bridge = desktopEnvBridge(), speaker: Speaker = forwardingSpeaker): Promise<AppRuntime> {
+export async function createAppRuntime(bridge = desktopEnvBridge(), speaker: Speaker = forwardingSpeaker, session: SessionOptions = {}): Promise<AppRuntime> {
   if (!bridge) throw new Error("runtime is only available in the desktop app");
   const journal = hasIndexedDb() ? new DexieJournal() : undefined;
   try {
     const kernel = journal ? await Kernel.restore(journal) : new Kernel();
-    const rt = new JarvisRuntime({ kernel, env: new IpcEnvironment("managed-browser", bridge), speaker });
+    const rt = new JarvisRuntime({ kernel, env: new IpcEnvironment("managed-browser", bridge), speaker, session });
     await rt.start();
     return { kernel, runtime: rt };
   } catch (e) {
@@ -78,7 +80,13 @@ export async function createAppRuntime(bridge = desktopEnvBridge(), speaker: Spe
 
 export function getAppRuntime(): Promise<AppRuntime> {
   if (!runtime) {
-    runtime = createAppRuntime();
+    runtime = (async () => {
+      // Mail with Sent read-back through the connected Gmail (desktop bridge or backend). No
+      // address book yet: recipients come from the user's words ("na adres ...") until one exists.
+      const { gmailTransport } = await import("../google");
+      const transport = gmailTransport();
+      return createAppRuntime(desktopEnvBridge(), forwardingSpeaker, { mail: transport ? new GmailMailService(transport) : undefined });
+    })();
     runtime.catch(() => { runtime = null; });
   }
   return runtime;
