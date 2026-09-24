@@ -77,3 +77,31 @@ IndexedDB debounce was removed because persistence is already coalesced.
 `tests/s9RegexGuard.test.ts` forbids them (old Chrome 79 WebView). Unicode classes live in
 `src/lib/runtime/unicode.ts`: `new RegExp("\\p{L}", "u")` inside try/catch with explicit
 range fallbacks, so an old engine degrades instead of failing to parse the bundle.
+
+## D-015 Playwright 1.63.0 pinned; Chrome for Testing when the CDN is blocked
+1.63 exposes `locator.ariaSnapshot({ mode: "ai", boxes, signal })` with `[ref=eN]` references
+and `aria-ref=` locators (1.56 only had a private `_snapshotForAI`). `playwright-core` is a
+runtime dependency (Electron main process drives the managed browser), `playwright` a dev
+dependency (CLI for `npx playwright install`). In this cloud the Playwright CDN is blocked by
+the egress policy, so `scripts/cloud-setup.sh` fetches the same Chromium build as Chrome for
+Testing 153.0.8010.12 from storage.googleapis.com and exports JARVIS_CHROMIUM_PATH.
+
+## D-016 EU consent wall: reject non-essential cookies by default
+"Wejdź na YouTube" on a consent wall clicks "Odrzuć wszystko" and says so. Privacy first; the
+option `consentChoice: "accept"` exists for users who prefer it.
+
+## D-017 Environments return raw facts, the runtime judges
+`ComputerEnvironment.act` never decides success. `postconditions.verify` checks each action's
+end condition on a read-back through `horizon/truthLadder.climbLadder`, so every environment
+(browser, AT-SPI, UIA, Android, fixtures) is judged by the same rules.
+
+## D-018 Element identity survives re-renders by semantic key
+Environment refs (`data-jarvis-ref`) are lost when a framework re-renders a list; the target
+is found again by its semantic key (`comment:<id>`, `video:<href>`, or a hash of author+text on
+the real site). A re-render with the same item order is a minor DOM change and does not
+invalidate references; a different order or removed items is a major change. After a re-read
+the collection cursor is restored to the same semantic item.
+
+## D-019 Browser tests are a separate suite
+`tests/browser/**` needs Chromium; it runs via `npm run test:browser` locally and in the CI
+`browser` job (which installs Chromium), and is excluded from the default `npm test`.

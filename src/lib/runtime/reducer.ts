@@ -220,6 +220,15 @@ export function reduce(prev: KernelState, e: KernelEvent): KernelState {
       reg = patchReferent(reg, e.collectionId, { lastMentioned: e.at }, false);
       return { ...s, referents: reg };
     }
+    case "CollectionUpdated": {
+      const c = s.referents.collections[e.collectionId];
+      if (!c) return s;
+      const current = c.cursor >= 0 ? c.items[c.cursor] : undefined;
+      const cursor = current ? e.items.indexOf(current) : -1;
+      const items = [...e.items];
+      const rejected = c.rejected.filter((id) => items.includes(id));
+      return { ...s, referents: { ...s.referents, collections: { ...s.referents.collections, [e.collectionId]: { ...c, items, cursor, rejected } } } };
+    }
     case "ActionStarted": {
       if (s.actions[e.actionId]) return s;
       const rec: ActionRecord = {

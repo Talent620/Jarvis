@@ -134,7 +134,10 @@ export function resolveReference(state: KernelState, input: ResolveInput): Resol
 
   // "pierwsze cztery litery": a range inside the focused text-bearing element.
   if (noun && TEXT_UNITS.has(noun) && q.count) {
-    const base = currentOf(reg) ?? byRecency(allOf(reg, ["Element", "TextRange"])).find((r) => typeof r.metadata.text === "string");
+    // The focused item, else the element the user last talked about or acted on. Never a guess
+    // among untouched elements (they only differ by creation order).
+    const touched = allOf(reg, ["Element", "TextRange"]).filter((r) => typeof r.metadata.text === "string" && (r.lastMentioned !== undefined || r.lastActed !== undefined));
+    const base = currentOf(reg) ?? byRecency(touched)[0];
     if (!base) return { status: "none", reason: "no_candidate", events: [] };
     if (!base.valid) return { status: "stale", referent: base, reason: base.invalidatedReason ?? "stale", events: [] };
     return {

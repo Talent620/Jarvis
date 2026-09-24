@@ -71,6 +71,15 @@ export default tseslint.config(
     },
   },
   // --- Site OS: osobny lokalny serwer + aplikacja przeglądarkowa bez bundlera ---
+  // Test fixtures: a local Node server (.mjs) and the page script it serves (.js).
+  {
+    files: ["tests/fixtures/**/*.mjs"],
+    languageOptions: { sourceType: "module", globals: { ...globals.node } },
+  },
+  {
+    files: ["tests/fixtures/**/*.js"],
+    languageOptions: { sourceType: "script", globals: { ...globals.browser } },
+  },
   {
     files: ["site-os/public/**/*.js"],
     languageOptions: { sourceType: "script", globals: { ...globals.browser } },

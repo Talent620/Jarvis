@@ -38,13 +38,19 @@ export interface CapabilityProbe {
 export type Requirement = CapabilityId[][];
 
 /** What each action kind needs. Unknown kinds need nothing extra (pure reasoning steps). */
+const BROWSER: CapabilityId[] = ["browser.managed.semantic", "browser.bridge"];
+const TEXT_ENVS: CapabilityId[] = ["browser.managed.semantic", "browser.bridge", "linux.atspi", "windows.uia", "android.accessibility.tree"];
+
 export const ACTION_REQUIREMENTS: Record<string, Requirement> = {
-  "browser.launch": [["browser.managed.semantic", "browser.bridge"]],
-  "browser.navigate": [["browser.managed.semantic", "browser.bridge"]],
-  "browser.scroll": [["browser.managed.semantic", "browser.bridge", "linux.atspi", "windows.uia"]],
-  "browser.findCollection": [["browser.managed.semantic", "browser.bridge"]],
-  "browser.focusItem": [["browser.managed.semantic", "browser.bridge"]],
-  "text.select": [["browser.managed.semantic", "browser.bridge", "linux.atspi", "windows.uia", "android.accessibility.tree"]],
+  "browser.launch": [BROWSER],
+  "browser.navigate": [BROWSER],
+  "browser.consent": [BROWSER],
+  "browser.open": [BROWSER],
+  "browser.scroll": [[...BROWSER, "linux.atspi", "windows.uia"]],
+  "browser.scrollTo": [[...BROWSER, "linux.atspi", "windows.uia"]],
+  "browser.findCollection": [BROWSER],
+  "browser.focus": [BROWSER],
+  "text.select": [TEXT_ENVS],
   "clipboard.copy": [["browser.managed.semantic", "desktop.clipboard"]],
   "mail.send": [["mail.send"], ["mail.sent_readback"]],
   "desktop.type": [["linux.input.portal", "linux.input.authorized", "linux.input.ydotool", "windows.uia"]],

@@ -42,8 +42,13 @@ else
   rm -f "$NPM_LOG"
 fi
 
-# 2. Test browser (docs/mission/DECISIONS.md D-004).
-resolve_browser() {
+# 2. Test browser (docs/mission/DECISIONS.md D-004, D-015). Prefer the Chromium build that
+# matches the pinned Playwright: its own download, else the same Chrome for Testing version
+# from storage.googleapis.com, and only then the older image-provided Chromium.
+CFT_DIR="$HOME/.cache/jarvis-chrome"
+PW_CFT_VERSION="$(node -e "try{const b=JSON.parse(require('fs').readFileSync('node_modules/playwright-core/browsers.json','utf8')).browsers.find(x=>x.name==='chromium');process.stdout.write(b.browserVersion||'')}catch{}" 2>/dev/null)"
+
+matching_browser() {
   if [ -n "${JARVIS_CHROMIUM_PATH:-}" ] && [ -x "${JARVIS_CHROMIUM_PATH}" ]; then
     printf '%s' "$JARVIS_CHROMIUM_PATH"; return 0
   fi
@@ -52,30 +57,28 @@ resolve_browser() {
     p="$(node -e "try{const p=require('playwright-core').chromium.executablePath();if(require('fs').existsSync(p))process.stdout.write(p)}catch{}" 2>/dev/null)"
     if [ -n "$p" ]; then printf '%s' "$p"; return 0; fi
   fi
-  local c
-  for c in "${PLAYWRIGHT_BROWSERS_PATH:-/opt/pw-browsers}/chromium" /opt/pw-browsers/chromium "$HOME/.cache/jarvis-chrome/current"; do
-    if [ -x "$c" ]; then printf '%s' "$c"; return 0; fi
-  done
+  if [ -n "$PW_CFT_VERSION" ] && [ -x "$CFT_DIR/chrome/linux-$PW_CFT_VERSION/chrome-linux64/chrome" ]; then
+    printf '%s' "$CFT_DIR/chrome/linux-$PW_CFT_VERSION/chrome-linux64/chrome"; return 0
+  fi
   return 1
 }
 
-BROWSER="$(resolve_browser)"
+BROWSER="$(matching_browser)"
 if [ -z "$BROWSER" ] && [ -d node_modules/playwright ]; then
   log "browser: trying npx playwright install chromium"
-  timeout 300 npx --no-install playwright install chromium >/dev/null 2>&1 || log "WARN browser: playwright install failed"
-  BROWSER="$(resolve_browser)"
+  timeout 120 npx --no-install playwright install chromium >/dev/null 2>&1 || log "WARN browser: playwright install failed (CDN blocked?)"
+  BROWSER="$(matching_browser)"
+fi
+if [ -z "$BROWSER" ] && [ -n "$PW_CFT_VERSION" ]; then
+  log "browser: trying Chrome for Testing $PW_CFT_VERSION via @puppeteer/browsers"
+  timeout 300 npx --yes @puppeteer/browsers install "chrome@$PW_CFT_VERSION" --path "$CFT_DIR" >/dev/null 2>&1 \
+    || log "WARN browser: Chrome for Testing download failed"
+  BROWSER="$(matching_browser)"
 fi
 if [ -z "$BROWSER" ]; then
-  log "browser: trying Chrome for Testing via @puppeteer/browsers"
-  CFT_DIR="$HOME/.cache/jarvis-chrome"
-  OUT="$(timeout 300 npx --yes @puppeteer/browsers install chrome@stable --path "$CFT_DIR" 2>/dev/null | tail -n 1)"
-  CFT_BIN="${OUT##* }"
-  if [ -n "$CFT_BIN" ] && [ -x "$CFT_BIN" ]; then
-    ln -sfn "$CFT_BIN" "$CFT_DIR/current"
-    BROWSER="$CFT_BIN"
-  else
-    log "WARN browser: Chrome for Testing download failed"
-  fi
+  for c in "${PLAYWRIGHT_BROWSERS_PATH:-/opt/pw-browsers}/chromium" /opt/pw-browsers/chromium; do
+    if [ -x "$c" ]; then BROWSER="$c"; log "WARN browser: using image Chromium, version may not match Playwright"; break; fi
+  done
 fi
 if [ -n "$BROWSER" ]; then
   persist_env JARVIS_CHROMIUM_PATH "$BROWSER"

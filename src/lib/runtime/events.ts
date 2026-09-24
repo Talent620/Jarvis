@@ -135,6 +135,13 @@ export interface CollectionCursorMoved extends Base {
   rejected?: string;
 }
 
+/** A collection grew or was re-read; the cursor stays on the same item when it still exists. */
+export interface CollectionUpdated extends Base {
+  type: "CollectionUpdated";
+  collectionId: string;
+  items: string[];
+}
+
 export interface ActionStarted extends Base {
   type: "ActionStarted";
   actionId: string;
@@ -208,7 +215,7 @@ export interface CapabilitiesUpdated extends Base {
 export type KernelEvent =
   | SpeechPartial | SpeechFinal | ControlIntent | ConversationIntent
   | TaskCreated | TaskAmended | TaskStatusChanged | TaskCancelled | TaskStepChanged | FocusChanged
-  | ObservationReceived | ReferentAdded | ReferentResolved | ReferentVerified | CollectionCursorMoved
+  | ObservationReceived | ReferentAdded | ReferentResolved | ReferentVerified | CollectionCursorMoved | CollectionUpdated
   | ActionStarted | ActionAttempted | ActionVerified | ActionFailed
   | ClipboardChanged | WindowFocused
   | ConsentRequested | ConsentGranted | ConsentDenied

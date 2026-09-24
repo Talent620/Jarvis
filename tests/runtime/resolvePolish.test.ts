@@ -245,6 +245,22 @@ describe("text ranges", () => {
   });
 });
 
+describe("regressions", () => {
+  // Found by the 10-run golden loop: after a re-read reset the cursor, "zaznacz pierwsze cztery
+  // litery" selected text in an arbitrary comment ("świe" instead of "Łódź").
+  it("a text range without a focused or touched element is not guessed", () => {
+    const r = say("zaznacz pierwsze cztery litery");
+    expect(r).toMatchObject({ status: "none", reason: "no_candidate" });
+  });
+
+  it("a text range falls back to the element the user last talked about", () => {
+    k.dispatch({ type: "ReferentResolved", referentId: "c4", at: t + 100 });
+    t += 200;
+    const r = say("zaznacz pierwsze cztery litery");
+    expect(r.status === "resolved" && r.referent.id).toBe("c4");
+  });
+});
+
 describe("epochs", () => {
   it("navigation makes the collection stale", () => {
     say("pierwszy komentarz");
