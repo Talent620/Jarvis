@@ -45,3 +45,23 @@ tokens, so verification is not weakened.
 deterministic 2.1 MB dataset. It measures synchronous write cost, bytes serialized and
 subscriber wakes; React render cost is inferred from wakes (every `useStore()` component
 re-renders per wake). Same script is used for the M1 "after" numbers.
+
+## D-009 "Pierwsze cztery litery" is a contiguous span
+Letters are graphemes whose base code point is `\p{L}`. The span runs from the first letter to
+the n-th letter; leading non-letters ("@", emoji, spaces) are excluded, non-letters between
+letters stay inside because a visible DOM selection is contiguous ("Ala ma kota" -> "Ala m").
+The golden fixture's first comment starts with a word of at least four letters.
+
+## D-010 Duplicate STT finals
+Two SpeechFinal events are one utterance when they share an utteranceId, or when their
+normalized text is equal and they arrive within 1.5 s. A user repeating a command after
+1.5 s is treated as a new command; idempotency keys still protect external effects.
+
+## D-011 Collection choice without a noun
+"następny", "trzeciego" without a noun go to the collection the user last navigated; if none
+was navigated yet, to the most salient one (the main comments list, not nested replies).
+
+## D-012 Stale beats fallback
+When the freshest referent compatible with a phrase was invalidated (navigation, DOM change),
+resolution returns "stale" instead of silently using an older valid referent. JARVIS then
+says what expired and re-observes, instead of acting on the wrong thing.
