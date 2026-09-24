@@ -1,5 +1,6 @@
 import { store, uid } from "./store";
 import type { AuditEntry } from "../types";
+import { DEFAULT_POLICIES, decidePolicy, type ActionClass, type Policy, type PermissionContext } from "./permissionClasses";
 
 // --- Klasyfikacja ryzyka narzędzi ---
 export type Risk = "read" | "write" | "outbound";
@@ -68,20 +69,9 @@ const RISK: Record<string, Risk> = {
   android_open_app: "outbound", android_open_settings: "outbound",
 };
 
-// --- Action classes and policies (mission 5.11) ---
-// Finer than Risk: what the action does to the world. Policies per class come from settings;
-// DESTRUCTIVE is never AUTO, and untrusted content + an external effect is always ASK.
-export type ActionClass = "READ" | "NAVIGATE" | "LOCAL_REVERSIBLE" | "LOCAL_WRITE" | "EXTERNAL_SIDE_EFFECT" | "DESTRUCTIVE";
-export type Policy = "AUTO" | "ASK" | "DENY";
-
-export const DEFAULT_POLICIES: Record<ActionClass, Policy> = {
-  READ: "AUTO",
-  NAVIGATE: "AUTO",
-  LOCAL_REVERSIBLE: "AUTO",
-  LOCAL_WRITE: "AUTO",
-  EXTERNAL_SIDE_EFFECT: "ASK",
-  DESTRUCTIVE: "ASK",
-};
+// --- Action classes and policies (mission 5.11); pure definitions live in permissionClasses.ts
+// so the runtime can use them without importing the app store.
+export { DEFAULT_POLICIES, decidePolicy, type ActionClass, type Policy, type PermissionContext };
 
 const CLASS: Record<string, ActionClass> = {
   desktop_volume: "LOCAL_REVERSIBLE", desktop_media: "LOCAL_REVERSIBLE",
@@ -101,22 +91,6 @@ export function classOf(tool: string): ActionClass {
   if (c) return c;
   const r = riskOf(tool);
   return r === "read" ? "READ" : r === "write" ? "LOCAL_WRITE" : "EXTERNAL_SIDE_EFFECT";
-}
-
-export interface PermissionContext {
-  /** The arguments contain untrusted content (web page, e-mail, clipboard, tool output). */
-  untrustedContent?: boolean;
-  /** The arguments contain private data (contacts, messages, files). */
-  privateData?: boolean;
-}
-
-/** Final policy for an action class under the user's settings and the data involved. */
-export function decidePolicy(cls: ActionClass, ctx: PermissionContext = {}, overrides?: Partial<Record<ActionClass, Policy>>): Policy {
-  const configured = overrides?.[cls] ?? DEFAULT_POLICIES[cls];
-  if (configured === "DENY") return "DENY";
-  if (cls === "DESTRUCTIVE") return "ASK";
-  if (cls === "EXTERNAL_SIDE_EFFECT" && (ctx.untrustedContent || ctx.privateData)) return "ASK";
-  return configured;
 }
 
 /** Czy narzędzie ma JAWNĄ klasyfikację ryzyka (a nie tylko fail-safe outbound)? */

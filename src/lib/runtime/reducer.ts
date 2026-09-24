@@ -221,7 +221,8 @@ export function reduce(prev: KernelState, e: KernelEvent): KernelState {
       let reg = moveCursor(s.referents, e.collectionId, e.cursor, e.rejected);
       const item = c.items[e.cursor];
       if (item) reg = patchReferent(reg, item, { lastMentioned: e.at }, true);
-      reg = patchReferent(reg, e.collectionId, { lastMentioned: e.at }, false);
+      reg = patchReferent(reg, e.collectionId, { lastMentioned: e.at }, true);
+      if (item) reg = patchReferent(reg, item, {}, true); // the item stays the most recent
       return { ...s, referents: reg };
     }
     case "CollectionUpdated": {

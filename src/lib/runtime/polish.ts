@@ -76,6 +76,10 @@ const CARDINALS: Record<string, number> = {
   jeden: 1, jedna: 1, jedno: 1, dwa: 2, dwie: 2, dwoch: 2, trzy: 3, trzech: 3, cztery: 4, czterech: 4,
   piec: 5, pieciu: 5, szesc: 6, szesciu: 6, siedem: 7, siedmiu: 7, osiem: 8, osmiu: 8,
   dziewiec: 9, dziewieciu: 9, dziesiec: 10, dziesieciu: 10,
+  jedenascie: 11, jedenastu: 11, dwanascie: 12, dwunastu: 12, trzynascie: 13, trzynastu: 13,
+  czternascie: 14, czternastu: 14, pietnascie: 15, pietnastu: 15, szesnascie: 16, szesnastu: 16,
+  siedemnascie: 17, siedemnastu: 17, osiemnascie: 18, osiemnastu: 18, dziewietnascie: 19, dziewietnastu: 19,
+  dwadziescia: 20, dwudziestu: 20,
 };
 
 const DEMONSTRATIVE = /^(ten|ta|to|te|tego|tej|temu|tym|tamten|tamta|tamto|tamtego|tamtej)$/;

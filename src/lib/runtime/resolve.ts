@@ -35,8 +35,13 @@ export interface ResolveInput {
 
 const recency = (r: Referent): number => Math.max(r.lastMentioned ?? 0, r.lastActed ?? 0, r.createdAt);
 
+// Timestamps have millisecond resolution and fast environments produce ties; the registry's
+// "recent" list records the real order of events, so it breaks ties deterministically.
+let recentRank: Map<string, number> = new Map();
+const rank = (r: Referent): number => recentRank.get(r.id) ?? Number.MAX_SAFE_INTEGER;
+
 function byRecency(list: Referent[]): Referent[] {
-  return [...list].sort((a, b) => recency(b) - recency(a) || b.salience - a.salience);
+  return [...list].sort((a, b) => recency(b) - recency(a) || rank(a) - rank(b) || b.salience - a.salience);
 }
 
 const kindOf = (r: Referent): string | undefined => (typeof r.metadata.kind === "string" ? r.metadata.kind : undefined);
@@ -64,7 +69,7 @@ function freshest(list: Referent[]): { ok: Referent } | { stale: Referent } | nu
 function findCollection(reg: ReferentRegistry, itemKind?: string): Referent | undefined {
   const colls = Object.values(reg.byId).filter((r) => r.type === "Collection" && (!itemKind || reg.collections[r.id]?.itemKind === itemKind));
   if (itemKind) return byRecency(colls)[0];
-  const mentioned = colls.filter((r) => r.lastMentioned !== undefined).sort((a, b) => (b.lastMentioned ?? 0) - (a.lastMentioned ?? 0));
+  const mentioned = colls.filter((r) => r.lastMentioned !== undefined).sort((a, b) => (b.lastMentioned ?? 0) - (a.lastMentioned ?? 0) || rank(a) - rank(b));
   if (mentioned.length) return mentioned[0];
   return [...colls].sort((a, b) => b.salience - a.salience || recency(b) - recency(a))[0];
 }
@@ -128,6 +133,7 @@ function currentOf(reg: ReferentRegistry, itemKind?: string): Referent | undefin
 
 export function resolveReference(state: KernelState, input: ResolveInput): Resolution {
   const reg = state.referents;
+  recentRank = new Map(reg.recent.map((id, i) => [id, i]));
   const q = input.query ?? parseReference(input.text ?? "");
   const verb = input.verb ?? (input.text ? parseVerb(input.text) : undefined);
   const noun = q.noun;

@@ -3,9 +3,13 @@
 // clipboard in the kernel. The same code runs against the YouTube fixture in tests and the
 // real managed browser in production; there is no separate demo engine.
 
+import { decidePolicy, type ActionClass, type Policy } from "../permissionClasses";
 import { performAction, type PerformResult } from "./actions";
+import { instructionEmails, pickCandidate, resolveContact, type Contact } from "./contacts";
+import { mailIdempotencyKey, sendExactlyOnce, type MailService, type SendOptions } from "./mail";
+import { isUntrusted, type Provenance } from "./provenance";
 import { parseCommand, type Command } from "./commands";
-import type { ComputerEnvironment, ElementInfo, ElementTarget, EnvAction, EnvEvent, PageRead, ScrollAmount } from "./env/types";
+import type { ClipboardRead, ComputerEnvironment, ElementInfo, ElementTarget, EnvAction, EnvEvent, PageRead, ScrollAmount } from "./env/types";
 import type { Kernel } from "./kernel";
 import { TaskAbortedError } from "./kernel";
 import type { RefQuery } from "./polish";
@@ -20,6 +24,17 @@ export interface SessionOptions {
   youtubeUrl?: string;
   consentChoice?: "reject" | "accept";
   now?: () => number;
+  /** Mail service with a Sent read-back (Gmail in the app, a mock in tests). */
+  mail?: MailService;
+  mailOptions?: SendOptions;
+  /** Address book for recipients named in the instruction. */
+  contacts?: () => Promise<Contact[]>;
+  /** User permission policies per action class (settings). */
+  policies?: Partial<Record<ActionClass, Policy>>;
+  /** Spoken while a task waits for the user (consent, "który Marcin?"). */
+  onQuestion?: (text: string) => void;
+  /** How long a task waits for consent or an answer before giving up. */
+  answerTimeoutMs?: number;
 }
 
 export interface TurnResult {
@@ -46,7 +61,8 @@ export class ActionSession {
 
   /** Probe capabilities and start mirroring environment perception into the kernel. */
   async start(): Promise<void> {
-    this.kernel.dispatch({ type: "CapabilitiesUpdated", capabilities: await this.env.capabilities() });
+    const mailCaps = this.opts.mail ? await this.opts.mail.capabilities().catch(() => []) : [];
+    this.kernel.dispatch({ type: "CapabilitiesUpdated", capabilities: [...(await this.env.capabilities()), ...mailCaps] });
     this.unsubscribe?.();
     this.unsubscribe = this.env.onEvent(this.onEnvEvent);
   }
@@ -196,6 +212,7 @@ export class ActionSession {
       case "focusItem": return this.runTask(text, cmd, (t) => this.focusItem(t, cmd.query));
       case "selectText": return this.runTask(text, cmd, (t) => this.selectText(t, cmd.query));
       case "copy": return this.runTask(text, cmd, (t) => this.copy(t, cmd.query));
+      case "send": return this.runTask(text, cmd, (t) => this.send(t, text, cmd.query));
       default: return { command: "unknown", truth: "BLOCKED", say: "Nie wiem, co mam zrobić." };
     }
   }
@@ -361,4 +378,146 @@ export class ActionSession {
     this.kernel.dispatch({ type: "ClipboardChanged", hash: fnv1a64(text), preview: preview(text, 80), byJarvis: true, provenance: sel.provenance ?? "UNTRUSTED_WEB" });
     return { truth: r.truth, say: `Skopiowane: „${text}”.`, evidence: r.evidence, data: { clipboard: text } };
   }
+
+  // ---------------------------------------------------------------- step 8: send (mission 5.9, 5.11-5.13)
+
+  private question: { taskId: string; candidates: Contact[]; resolve: (c: Contact | null) => void } | null = null;
+
+  /** A question is waiting for the user's answer ("Którego Marcina?"). */
+  hasPendingQuestion(): boolean {
+    return this.question !== null;
+  }
+
+  /** Try to answer the pending question. Returns false when the text is not an answer. */
+  answer(text: string): boolean {
+    const q = this.question;
+    if (!q) return false;
+    const picked = pickCandidate(text, q.candidates);
+    if (picked) {
+      this.question = null;
+      q.resolve(picked);
+      return true;
+    }
+    if (/^(nie|anuluj|stop|zostaw|nie wysylaj|nikomu)\b/.test(normalizeForAnswer(text))) {
+      this.question = null;
+      q.resolve(null);
+      return true;
+    }
+    return false;
+  }
+
+  private ask(taskId: string, text: string, candidates: Contact[]): Promise<Contact | null> {
+    this.kernel.dispatch({ type: "TaskStatusChanged", taskId, status: "blocked", reason: "waiting for the recipient" });
+    this.opts.onQuestion?.(text);
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => { if (this.question?.taskId === taskId) { this.question = null; resolve(null); } }, this.opts.answerTimeoutMs ?? 120_000);
+      const off = this.kernel.subscribe((s) => {
+        if (s.tasks[taskId]?.status === "cancelled" && this.question?.taskId === taskId) { this.question = null; clearTimeout(timer); off(); resolve(null); }
+      });
+      this.question = { taskId, candidates, resolve: (c) => { clearTimeout(timer); off(); resolve(c); } };
+    });
+  }
+
+  private waitConsent(consentId: string, taskId: string): Promise<"granted" | "denied" | "timeout" | "cancelled"> {
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = (r: "granted" | "denied" | "timeout" | "cancelled") => { if (done) return; done = true; clearTimeout(timer); off(); resolve(r); };
+      const check = () => {
+        const s = this.kernel.state;
+        const c = s.consents[consentId];
+        if (c?.status === "granted") finish("granted");
+        else if (c?.status === "denied") finish("denied");
+        else if (s.tasks[taskId]?.status === "cancelled") finish("cancelled");
+      };
+      const timer = setTimeout(() => finish("timeout"), this.opts.answerTimeoutMs ?? 120_000);
+      const off = this.kernel.subscribe(check);
+      check();
+    });
+  }
+
+  private async send(taskId: string, text: string, query: RefQuery) {
+    const k = this.kernel;
+    const mail = this.opts.mail;
+    if (!mail) return { truth: "NEEDS_CAPABILITY" as Truth, say: "Nie mam skonfigurowanej poczty z odczytem Wysłanych." };
+
+    // 1. What is "to": the fresher of the selection and the clipboard (typed by the verb).
+    const res = resolveReference(k.state, { query, verb: "send" });
+    if (res.status === "stale") return { truth: "BLOCKED" as Truth, say: "To, co było zaznaczone, wygasło, bo strona się zmieniła. Zaznacz albo skopiuj jeszcze raz.", evidence: res.reason };
+    if (res.status !== "resolved") return { truth: "BLOCKED" as Truth, say: "Nie wiem, co wysłać: najpierw coś zaznacz albo skopiuj.", evidence: res.status };
+    this.dispatchAll(res);
+    let content = String(res.referent.metadata.text ?? "");
+    let provenance: Provenance = res.referent.provenance ?? "UNTRUSTED_WEB";
+    let warning = "";
+    // A selection JARVIS already copied means "the copied text": check the clipboard itself, so an
+    // outside change after "skopiuj" is caught whichever referent was a hair fresher.
+    const copiedSelection = res.referent.type === "Selection" && !!k.state.clipboard?.jarvisHash && k.state.clipboard.jarvisHash === fnv1a64(content);
+    if (res.referent.type === "Clipboard" || copiedSelection) {
+      const clip = (await this.env.read({ kind: "clipboard" })) as ClipboardRead;
+      if (!clip.ok) return { truth: "NEEDS_PERMISSION" as Truth, say: "Nie mogę odczytać schowka.", evidence: clip.error };
+      content = clip.text ?? "";
+      const hash = fnv1a64(content);
+      const cb = k.state.clipboard;
+      if (cb?.jarvisHash && hash !== cb.jarvisHash) {
+        // Changed outside JARVIS since "skopiuj": warn at the consent boundary, treat as untrusted.
+        k.dispatch({ type: "ClipboardChanged", hash, preview: preview(content, 80), byJarvis: false, provenance: "UNTRUSTED_CLIPBOARD" });
+        provenance = "UNTRUSTED_CLIPBOARD";
+        warning = " Uwaga: schowek zmienił się poza mną od ostatniego kopiowania.";
+      }
+    }
+    if (!content.trim()) return { truth: "BLOCKED" as Truth, say: "Nie ma czego wysłać, treść jest pusta." };
+
+    // 2. Recipient: only from the user's own words or the address book, never from the content.
+    let to: string;
+    let name: string;
+    const spoken = instructionEmails(text);
+    if (spoken.length === 1) {
+      to = spoken[0];
+      name = to;
+    } else {
+      const contacts = this.opts.contacts ? await this.opts.contacts() : [];
+      const r = resolveContact(text, contacts);
+      let contact: Contact | null = null;
+      if (r.status === "resolved") contact = r.contact;
+      else if (r.status === "ambiguous") {
+        contact = await this.ask(taskId, r.question, r.candidates);
+        if (!contact) return { truth: "BLOCKED" as Truth, say: "Dobrze, nie wysyłam.", evidence: "no recipient chosen" };
+        k.dispatch({ type: "TaskStatusChanged", taskId, status: "running", reason: "recipient chosen" });
+      } else {
+        const who = r.tokens.length ? r.tokens.join(" ") : "tej osoby";
+        return { truth: "BLOCKED" as Truth, say: `Nie znam adresu: ${who}. Podaj adres albo dodaj kontakt.`, evidence: "recipient not found" };
+      }
+      to = contact.emails[0];
+      name = contact.name;
+    }
+    const outgoing = { to, subject: preview(content, 40), body: content };
+
+    // 3. Consent exactly once, at the commit boundary, with the final arguments.
+    const key = mailIdempotencyKey(outgoing);
+    const alreadyAttempted = !!k.state.idempotency[key];
+    const policy = decidePolicy("EXTERNAL_SIDE_EFFECT", { untrustedContent: isUntrusted(provenance), privateData: true }, this.opts.policies);
+    if (policy === "DENY") return { truth: "BLOCKED" as Truth, say: "Wysyłanie maili jest wyłączone w ustawieniach." };
+    if (policy === "ASK" && !alreadyAttempted) {
+      const consentId = k.id("consent");
+      const summary = `Wysłać mail do ${name} <${to}> z treścią «${preview(content, 60)}»?${warning}`;
+      k.dispatch({ type: "ConsentRequested", consentId, taskId, summary, args: { to, name, subject: outgoing.subject, body: preview(content, 200), warning: warning.trim() } });
+      this.opts.onQuestion?.(summary);
+      const decision = await this.waitConsent(consentId, taskId);
+      if (decision !== "granted") {
+        return { truth: (decision === "cancelled" ? "FAILED" : "BLOCKED") as Truth, say: decision === "timeout" ? "Nie dostałem odpowiedzi, nie wysyłam." : "Dobrze, nie wysyłam.", evidence: decision };
+      }
+    }
+
+    // 4. Send exactly once and confirm from Sent.
+    const r = await sendExactlyOnce(k, mail, { taskId, stepId: "send", mail: outgoing }, this.opts.mailOptions);
+    const first = name.split(/\s+/)[0];
+    if (r.truth === "CONFIRMED") {
+      return { truth: r.truth, say: r.duplicate ? `To już wysłałem wcześniej do ${first}.` : `Wysłane do ${first}. Jest w Wysłanych.`, evidence: r.evidence, data: { to, body: content, duplicate: !!r.duplicate } };
+    }
+    if (r.truth === "UNKNOWN_AFTER_ATTEMPT") {
+      return { truth: r.truth, say: "Nie mam pewności, czy mail wyszedł: nie widzę go w Wysłanych. Nie wysyłam drugi raz, żeby nie zdublować.", evidence: r.reason };
+    }
+    return { truth: r.truth, say: `Nie udało się wysłać: ${r.reason ?? "błąd poczty"}.`, evidence: r.reason };
+  }
 }
+
+const normalizeForAnswer = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l").trim();

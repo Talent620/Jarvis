@@ -21,7 +21,7 @@ export interface Speaker {
   cancel(): void;
 }
 
-export type Route = "control" | "action" | "amend" | "side_chat" | "status" | "ignored" | "duplicate";
+export type Route = "control" | "action" | "amend" | "answer" | "side_chat" | "status" | "ignored" | "duplicate";
 
 export interface RuntimeTurn {
   utteranceId: string;
@@ -70,7 +70,11 @@ export class JarvisRuntime {
     this.model = opts.model;
     this.policy = opts.partialPolicy ?? DEFAULT_PARTIAL_POLICY;
     this.now = opts.now ?? (() => Date.now());
-    this.session = new ActionSession(opts.kernel, opts.env, { ...opts.session, now: this.now });
+    this.session = new ActionSession(opts.kernel, opts.env, {
+      ...opts.session,
+      now: this.now,
+      onQuestion: (q) => { opts.session?.onQuestion?.(q); this.say(q); },
+    });
   }
 
   start(): Promise<void> {
@@ -127,6 +131,11 @@ export class JarvisRuntime {
   // ---------------------------------------------------------------- routing
 
   private route(utteranceId: string, text: string): RuntimeTurn {
+    // A task is waiting for an answer ("Którego Marcina?"): try that first.
+    if (this.session.hasPendingQuestion() && this.session.answer(text)) {
+      this.kernel.dispatch({ type: "ConversationIntent", intent: "CONFIRM", text, utteranceId });
+      return this.log({ utteranceId, text, route: "answer" });
+    }
     const reflex = classifyReflex(text);
     if (reflex.kind === "control") {
       // "dalej": resume a paused task, otherwise it means "the next item".

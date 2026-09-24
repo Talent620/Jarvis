@@ -14,6 +14,7 @@ export type Command =
   | { type: "focusItem"; query: RefQuery }
   | { type: "selectText"; query: RefQuery }
   | { type: "copy"; query: RefQuery }
+  | { type: "send"; channel: "email" | "sms"; query: RefQuery }
   | { type: "unknown"; text: string };
 
 const LITTLE = /\b(troche|troszke|troszeczke|lekko|odrobine|ciut|kawalek|kapke)\b/;
@@ -47,6 +48,7 @@ export function parseCommand(text: string): Command {
     const direction = up && !down ? "up" : down && !up ? "down" : verb === "scroll_up" ? "up" : "down";
     return { type: "scroll", direction, amount: scrollAmount(norm) };
   }
+  if (verb === "send") return { type: "send", channel: q.channel ?? "email", query: q };
   if (verb === "select") return { type: "selectText", query: q };
   if (verb === "copy") return { type: "copy", query: q };
   if (q.noun === "video" && (verb === "open" || verb === "show" || /\b(pusc|odtworz|wlacz|zagraj)\w*/.test(norm))) {
