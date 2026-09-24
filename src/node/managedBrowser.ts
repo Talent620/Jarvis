@@ -37,6 +37,8 @@ class Aborted extends Error {
 
 /** Upper bound for waiting on the "load" event before measuring or scrolling a page. */
 const LOAD_WAIT_MS = 5_000;
+/** How long an empty list may take to appear before it is reported as not found. */
+const ITEMS_WAIT_MS = 3_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const CONSENT_REJECT = /^(Odrzuć wszystko|Reject all)$/i;
@@ -322,6 +324,7 @@ export class ManagedBrowser implements ComputerEnvironment {
     if (!ALLOWED_SCHEMES.test(url)) return { status: "blocked", error: "only http and https addresses are allowed" };
     const p = this.requirePage();
     const resp = await p.goto(url, { waitUntil: "domcontentloaded" });
+    await p.waitForLoadState("load", { timeout: Math.min(this.timeout, LOAD_WAIT_MS) }).catch(() => undefined);
     return resp && resp.status() >= 400 ? { status: "failed", error: `HTTP ${resp.status()}` } : { status: "done", data: { url: p.url() } };
   }
 
@@ -330,8 +333,14 @@ export class ManagedBrowser implements ComputerEnvironment {
     const button = p.getByRole("button", { name: choice === "reject" ? CONSENT_REJECT : CONSENT_ACCEPT });
     if (await button.count() === 0) return { status: "not_found", error: "no consent dialog" };
     const before = p.url();
-    await Promise.all([p.waitForLoadState("domcontentloaded"), button.first().click()]);
-    await p.waitForFunction(() => !document.querySelector("#consent, [aria-labelledby='consent-title']"), undefined, { timeout: this.timeout }).catch(() => undefined);
+    // The answer is usually a form post that loads a new document at the same URL, so waiting on
+    // the old document's load state (already reached) returned before the new page existed.
+    const navigated = p.waitForEvent("framenavigated", { predicate: (f) => f === p.mainFrame(), timeout: this.timeout }).then(() => "nav", () => "none");
+    await button.first().click();
+    const gone = p.waitForFunction(() => !document.querySelector("#consent, [aria-labelledby='consent-title']"), undefined, { timeout: this.timeout }).then(() => "gone", () => "none");
+    await Promise.race([navigated, gone]);
+    await p.waitForLoadState("load", { timeout: Math.min(this.timeout, LOAD_WAIT_MS) }).catch(() => undefined);
+    await gone;
     return { status: "done", data: { from: before, url: p.url() } };
   }
 
@@ -426,7 +435,7 @@ export class ManagedBrowser implements ComputerEnvironment {
   }
 
   private async findCollection(itemKind: string, minItems: number, more: boolean, signal?: AbortSignal): Promise<ActResult> {
-    const p = this.requirePage();
+    this.requirePage();
     const y0 = await this.iso(() => window.scrollY);
     if (itemKind === "comment") {
       const hasSection = await this.iso(() => !!document.querySelector("ytd-comments#comments, [role='region'][aria-label='Komentarze']"));
@@ -446,15 +455,19 @@ export class ManagedBrowser implements ComputerEnvironment {
           return { top: r.top, bottom: r.bottom, vh: window.innerHeight };
         });
         const dy = more || n > 0 ? Math.max(120, Math.min(bottom - vh * 0.7, vh * 0.8)) : Math.max(120, Math.min(top - vh * 0.25, vh * 0.8));
-        await p.mouse.move(640, Math.round(vh / 2));
-        await p.mouse.wheel(0, dy);
+        await this.iso((d: number) => window.scrollBy({ top: d, behavior: "instant" as ScrollBehavior }), Math.round(dy));
         await this.settleScroll();
         await sleep(200);
       }
       const t0 = Date.now();
       while (Date.now() - t0 < 3000 && (await count()) === 0) await sleep(50);
     }
-    const items = await this.extract(itemKind);
+    let items = await this.extract(itemKind);
+    // A list rendered by the page's scripts may appear a moment after load.
+    for (const t0 = Date.now(); !items.length && Date.now() - t0 < ITEMS_WAIT_MS; items = await this.extract(itemKind)) {
+      if (signal?.aborted) throw new Aborted();
+      await sleep(100);
+    }
     return items.length
       ? { status: "done", data: { items }, undo: { scrollY: y0 } }
       : { status: "not_found", error: `no ${itemKind} items found` };
