@@ -183,7 +183,8 @@ export class ActionSession {
     try {
       const r = await fn(taskId);
       const status = r.truth === "CONFIRMED" ? "done" : isPrecondition(r.truth) ? "blocked" : "failed";
-      if (k.state.tasks[taskId]?.status === "cancelled") return { ...r, command: command.type, taskId, truth: "FAILED", say: "Przerwałem." };
+      // Stopped while running: an action that was already confirmed stays confirmed (it happened).
+      if (k.state.tasks[taskId]?.status === "cancelled" && r.truth !== "CONFIRMED") return { ...r, command: command.type, taskId, truth: "FAILED", say: "Przerwałem." };
       k.dispatch({ type: "TaskStatusChanged", taskId, status, reason: r.evidence ?? r.say });
       return { ...r, command: command.type, taskId };
     } catch (e) {
@@ -395,6 +396,12 @@ export class ActionSession {
     return this.question !== null;
   }
 
+  /** Would this text answer the pending question? No side effects. */
+  isAnswer(text: string): boolean {
+    const q = this.question;
+    return !!q && (!!pickCandidate(text, q.candidates) || NO_ANSWER.test(normalizeForAnswer(text)));
+  }
+
   /** Try to answer the pending question. Returns false when the text is not an answer. */
   answer(text: string): boolean {
     const q = this.question;
@@ -405,7 +412,7 @@ export class ActionSession {
       q.resolve(picked);
       return true;
     }
-    if (/^(nie|anuluj|stop|zostaw|nie wysylaj|nikomu)\b/.test(normalizeForAnswer(text))) {
+    if (NO_ANSWER.test(normalizeForAnswer(text))) {
       this.question = null;
       q.resolve(null);
       return true;
@@ -536,4 +543,5 @@ export class ActionSession {
   }
 }
 
+const NO_ANSWER = /^(nie|anuluj|stop|zostaw|nie wysylaj|nikomu)\b/;
 const normalizeForAnswer = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l").trim();

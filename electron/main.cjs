@@ -37,7 +37,8 @@ let envHost = null;
 function getEnvHost() {
   if (!envHost) {
     const { createManagedBrowserHost } = require("./gen/runtime.cjs");
-    envHost = createManagedBrowserHost({ userDataPath: app.getPath("userData") });
+    // The copy read-back uses the real system clipboard, not the page's view of it.
+    envHost = createManagedBrowserHost({ userDataPath: app.getPath("userData"), readClipboard: () => clipboard.readText() });
     envHost.onEvent((ev) => {
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("jarvis:env-event", ev);
     });

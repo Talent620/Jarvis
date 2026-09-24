@@ -36,7 +36,7 @@ describe("situation snapshot", () => {
     const snap = situationSnapshot(k.state, t);
     expect(snap).toContain('TASK: «Znajdź komentarze pod filmem» [running] step 2/2: collect comments (running)');
     expect(snap).toContain("WINDOW: chromium «JARVIS browser»");
-    expect(snap).toContain("PAGE: «Film o Łodzi» 127.0.0.1:4173 (epoch 2, scrollY 640)");
+    expect(snap).toContain("PAGE: «Film o Łodzi» «127.0.0.1:4173» (epoch 2, scrollY 640)");
     expect(snap).toContain("FOCUS: comment 1/2 «Łódź to piękne miasto»");
     expect(snap).toContain("SELECTION: «Łódź» verified");
     expect(snap).toContain("CLIPBOARD: «Łódź» copied by JARVIS, 3s ago");

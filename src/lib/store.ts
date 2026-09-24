@@ -325,6 +325,10 @@ export const PERSIST_MAX_WAIT_MS = 1000;
 // zostają odpięte przed podpięciem nowych — koniec narastania (wyciek listenerów/pamięci).
 let boundStore: Store | null = null;
 
+const cloneJson = <T,>(v: T): T => {
+  try { return typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v)); } catch { return JSON.parse(JSON.stringify(v)); }
+};
+
 export class Store {
   data: AppData = normalizeData(read<AppData>(DATA_KEY, emptyData)); // #1: twarda normalizacja
   settings: Settings = normalizeSettings(read<Settings>(SETTINGS_KEY, defaultSettings));
@@ -345,6 +349,8 @@ export class Store {
   private persistTimer: ReturnType<typeof setTimeout> | null = null;
   /** Number of full blob serializations (diagnostics and benchmarks). */
   persistCount = 0;
+  /** Mutators applied since the last write: replayed on top of another tab's newer data. */
+  private unsavedMutators: ((d: AppData) => void)[] = [];
 
   // STABILNE referencje handlerów — niezbędne, by removeEventListener faktycznie je odpiął.
   private onStorage = (e: StorageEvent) => {
@@ -410,6 +416,7 @@ export class Store {
     if (this.persistTimer) { clearTimeout(this.persistTimer); this.persistTimer = null; }
     if (!this.dataDirty) return;
     this.dataDirty = false;
+    this.unsavedMutators = [];
     this.persistData();
   }
 
@@ -441,18 +448,29 @@ export class Store {
   // finanse…) są w blobie → adoptujemy je. Ciężkie kolekcje IDB zachowujemy z RAM (źródłem
   // prawdy dla nich jest IDB; pojawią się po naturalnym przeładowaniu apki).
   private reloadDataFromDisk() {
-    // Local changes not written yet win (last writer wins, as with synchronous writes): write
-    // them now so the other tab receives them, instead of dropping them by reloading.
-    if (this.dataDirty) { this.flush(); return; }
     try {
       const fresh = normalizeData(read<AppData>(DATA_KEY, emptyData));
-      if (this.idbReady) {
-        const cur = this.data as unknown as Record<string, unknown[]>;
-        for (const c of IDB_COLLECTIONS) (fresh as unknown as Record<string, unknown[]>)[c] = cur[c] || [];
+      const cur = this.data as unknown as Record<string, unknown[]>;
+      const f = fresh as unknown as Record<string, unknown[]>;
+      const pending = this.dataDirty ? this.unsavedMutators : [];
+      if (pending.length) {
+        // Both tabs changed data: keep the other tab's write and re-apply our unwritten changes on
+        // top (as with synchronous writes, where ours would already be on disk). Heavy IDB
+        // collections are not in the blob: a throwaway copy absorbs the replay, RAM stays as is.
+        if (this.idbReady) for (const c of IDB_COLLECTIONS) f[c] = cloneJson(cur[c] || []);
+        for (const mut of pending) {
+          try { mut(fresh); } catch { /* the same mutator may not fit the other tab's data: skip */ }
+        }
+        capCollections(fresh);
       }
+      if (this.idbReady) for (const c of IDB_COLLECTIONS) f[c] = cur[c] || [];
       this.data = fresh;
+      if (pending.length) this.flush(); // write the merge so the other tab receives it
       this.emit();
-    } catch { /* ignore — zostaje bieżący stan RAM */ }
+    } catch {
+      // Unreadable blob: keep RAM and write it, so the next reader gets a valid state.
+      if (this.dataDirty) this.flush();
+    }
   }
 
   // Trwałość danych: gdy IndexedDB gotowy, duże kolekcje idą do IDB, a w localStorage
@@ -551,6 +569,7 @@ export class Store {
     try { mut(this.data); } catch (e) { try { console.error("[JARVIS] setData mutator error:", e); } catch { /* ignore */ } }
     capCollections(this.data); // utnij rozrośnięte logi (sentMail/contentPosts) przed zapisem
     this.schedulePersist();
+    this.unsavedMutators.push(mut);
     this.emit();
   }
 

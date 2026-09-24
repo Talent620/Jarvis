@@ -21,9 +21,10 @@ export function quoteData(text: string, max = 48): string {
   return `«${cut.length > max ? `${cut.slice(0, max - 1).join("")}…` : clean}»`;
 }
 
+/** The page host, quoted: it comes from the page and could carry text. */
 function host(url: string): string {
   const m = /^[a-z]+:\/\/([^/?#]+)/i.exec(url);
-  return m ? m[1] : url.slice(0, 40);
+  return quoteData(m ? m[1] : url, 40);
 }
 
 function age(now: number, at: number | undefined): string {

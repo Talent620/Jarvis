@@ -10,7 +10,7 @@ import type { ComputerEnvironment } from "../env/types";
 import type { Kernel } from "../kernel";
 import { focusedTaskId } from "../reducer";
 import { ActionSession, type SessionOptions, type TurnResult } from "../session";
-import { situationSnapshot } from "../snapshot";
+import { quoteData, situationSnapshot } from "../snapshot";
 import { TERMINAL_TASK } from "../types";
 import { CONVERSATION_SYSTEM, isStatusQuestion, statusReply, type ConversationModel, type ConversationTurn } from "./conversation";
 import { classifyReflex, isStrictConsent, tier0FromPartial, DEFAULT_PARTIAL_POLICY, type PartialPolicy } from "./reflex";
@@ -91,6 +91,45 @@ export class JarvisRuntime {
     this.session.stop();
   }
 
+  /** An action is running or queued. */
+  isBusy(): boolean {
+    return this.pendingActions > 0;
+  }
+
+  /** The user was asked something (a consent or "który Marcin?") and it is still open. */
+  awaitingAnswer(): boolean {
+    return this.session.hasPendingQuestion() || !!this.announcedConsent();
+  }
+
+  /**
+   * Would the runtime take this utterance (answer, control, status, action) rather than leave it
+   * to a chat? No side effects. `routeAction` decides whether a parsed command is for the runtime.
+   */
+  claims(text: string, routeAction: (cmd: Command) => boolean): boolean {
+    if (this.session.hasPendingQuestion() && this.session.isAnswer(text)) return true;
+    const reflex = classifyReflex(text);
+    const live = this.isBusy() || !!this.lastLiveTask();
+    if (reflex.kind === "control") {
+      switch (reflex.control) {
+        case "confirm": {
+          if (this.announcedConsent()) return true;
+          const cmd = parseCommand(text); // "wyślij" with nothing to confirm is a send command
+          return cmd.type !== "unknown" && routeAction(cmd);
+        }
+        case "reject":
+          return !!this.announcedConsent();
+        case "undo":
+          return Object.values(this.kernel.state.tasks).some((t) => t.undo.length > 0);
+        case "next":
+          return Object.values(this.kernel.state.tasks).some((t) => t.status === "paused") || routeAction({ type: "focusItem", query: { relative: "next" } });
+        default:
+          return live;
+      }
+    }
+    if (isStatusQuestion(text)) return live;
+    return reflex.kind === "action" && routeAction(reflex.command);
+  }
+
   /** Resolves when every queued action and side chat has finished. */
   async idle(): Promise<void> {
     for (;;) {
@@ -106,8 +145,13 @@ export class JarvisRuntime {
     return turn;
   }
 
-  private say(text: string): void {
-    this.history.push({ role: "assistant", text });
+  /**
+   * Speak. What reaches the conversation model's history depends on the origin: the model's own
+   * replies as they are, action results and questions (which quote comments, titles, clipboard)
+   * only as one quoted data line, so screen text never sits unquoted in the model's context.
+   */
+  private say(text: string, origin: "model" | "runtime" = "runtime"): void {
+    this.history.push({ role: "assistant", text: origin === "model" ? text : `[wynik akcji, dane] ${quoteData(text, 160)}` });
     if (this.history.length > 12) this.history.splice(0, this.history.length - 12);
     this.speaker.say(text);
   }
@@ -181,10 +225,11 @@ export class JarvisRuntime {
     if (control === "undo") {
       const turn = this.log({ utteranceId, text, route: "control", control });
       this.queue(async () => {
+        const gen = this.generation;
         const r = await this.session.undo();
         turn.result = r;
         turn.say = r.say;
-        this.say(r.say);
+        if (gen === this.generation) this.say(r.say); // a "stop" meanwhile means silence
       });
       return turn;
     }
@@ -269,14 +314,15 @@ export class JarvisRuntime {
     }
     const model = this.model;
     const snapshot = situationSnapshot(this.kernel.state, this.now());
+    const gen = this.generation;
     const p = (async () => {
       try {
         const reply = await model.reply({ system: CONVERSATION_SYSTEM, snapshot, utterance: text, history: this.history.slice(-8) });
         turn.say = reply;
-        this.say(reply);
+        if (gen === this.generation) this.say(reply, "model"); // "stop" silences a late answer too
       } catch {
         turn.say = "Nie udało mi się teraz odpowiedzieć.";
-        this.say(turn.say);
+        if (gen === this.generation) this.say(turn.say);
       }
     })();
     this.sideChats.add(p);

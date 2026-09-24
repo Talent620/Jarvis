@@ -73,13 +73,36 @@ describe("store: coalesced persistence", () => {
     store.dispose();
   });
 
-  it("a storage event from another tab does not drop unwritten local changes", async () => {
+  it("a storage event from another tab keeps both: their write and our unwritten changes", async () => {
     const { store } = await freshStore();
     store.setData((d) => { d.tasks.unshift({ id: "local", title: "mine", done: false }); });
     localStorage.setItem("jarvis.data.v2", JSON.stringify({ tasks: [{ id: "other", title: "theirs", done: false }] }));
     window.dispatchEvent(new StorageEvent("storage", { key: "jarvis.data.v2" }));
-    expect(store.data.tasks[0].id).toBe("local");
-    expect(JSON.parse(blob()!).tasks[0].id).toBe("local");
+    expect(store.data.tasks.map((t) => t.id)).toEqual(["local", "other"]);
+    // The merge is written at once, so the other tab reads both as well.
+    expect(store.hasPendingWrites).toBe(false);
+    expect(JSON.parse(blob()!).tasks.map((t: { id: string }) => t.id)).toEqual(["local", "other"]);
+    store.dispose();
+  });
+
+  it("without local changes the other tab's data is adopted as is", async () => {
+    const { store } = await freshStore();
+    store.setData((d) => { d.tasks.unshift({ id: "old", title: "x", done: false }); });
+    store.flush();
+    localStorage.setItem("jarvis.data.v2", JSON.stringify({ tasks: [{ id: "other", title: "theirs", done: true }] }));
+    window.dispatchEvent(new StorageEvent("storage", { key: "jarvis.data.v2" }));
+    expect(store.data.tasks.map((t) => [t.id, t.done])).toEqual([["other", true]]);
+    store.dispose();
+  });
+
+  it("a throwing replay does not lose the other tab's data", async () => {
+    const { store } = await freshStore();
+    const err = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    store.setData((d) => { d.tasks[0].done = true; }); // throws on empty tasks: logged, skipped
+    localStorage.setItem("jarvis.data.v2", JSON.stringify({ tasks: [] }));
+    window.dispatchEvent(new StorageEvent("storage", { key: "jarvis.data.v2" }));
+    err.mockRestore();
+    expect(store.data.tasks).toEqual([]);
     store.dispose();
   });
 });

@@ -123,7 +123,7 @@ import { brand } from "./lib/brand";
 import { isLocked as keysAreLocked } from "./lib/secretsVault";
 import UnlockKeys from "./components/UnlockKeys";
 import { useStoreSelector, shallowEqual } from "./hooks/useStore";
-import { runtimeAvailable, tryRuntimeCommand } from "./lib/runtime/appRuntime";
+import { runtimeAvailable, setRuntimeSpeaker, tryRuntimeText } from "./lib/runtime/appRuntime";
 import type { ChatMessage } from "./types";
 
 type PendingImage = { data: string; mediaType: string } | null;
@@ -253,6 +253,20 @@ export default function App() {
   useEffect(() => {
     setVoiceUnavailableHandler((info) => setVoiceIssue(info));
     return () => setVoiceUnavailableHandler(null);
+  }, []);
+  // JARVIS runtime (desktop): results, questions and consent requests arrive asynchronously and
+  // are shown and spoken here; "stop" silences speech at once (barge-in).
+  useEffect(() => {
+    if (!runtimeAvailable()) return;
+    setRuntimeSpeaker({
+      say: (text) => {
+        const id = uid();
+        setMessages((m) => [...m, { id, role: "assistant", text, tools: ["komputer"], createdAt: Date.now() }]);
+        if (store.settings.speak) void speak(text, store.settings).catch(() => {});
+      },
+      cancel: () => stopSpeaking(),
+    });
+    return () => setRuntimeSpeaker(null);
   }, []);
   // Skrót ⌘K / Ctrl+K — globalny.
   useEffect(() => {
@@ -584,15 +598,12 @@ export default function App() {
 
     // Computer control through the JARVIS runtime (desktop app, managed browser). JARVIS says
     // "done" only after the action is confirmed by read-back (src/lib/runtime).
+    // Replies (and later results) come through the runtime speaker registered above.
     if (runtimeAvailable()) {
-      const turn = await tryRuntimeCommand(text).catch(() => null);
-      if (turn) {
-        const id = uid();
-        setLiveId(id);
-        setMessages((m) => [...m, { id, role: "assistant", text: turn.say, tools: ["komputer"], createdAt: Date.now() }]);
-        if (store.settings.speak) void speak(turn.say, store.settings).catch(() => {});
-        return;
-      }
+      const turn = await tryRuntimeText(text, () => {
+        setMessages((m) => [...m, { id: uid(), role: "user", text, createdAt: Date.now() }]);
+      }).catch(() => null);
+      if (turn) return;
     }
 
     // Komenda: Tryb Prywatny (w 100% lokalnie, offline). Tylko KRÓTKA komenda — długi wklejony

@@ -181,7 +181,7 @@ export function reduce(prev: KernelState, e: KernelEvent): KernelState {
       return reopened ? { ...next, focusStack: [...withoutFocus(next.focusStack, e.taskId), e.taskId] } : next;
     }
     case "TaskStatusChanged":
-      return setStatus(s, e.taskId, e.status, e.at, e.reason);
+      return setStatus(s, e.taskId, e.status, e.at, e.reason, e.control === true);
     case "TaskCancelled":
       return setStatus(s, e.taskId, "cancelled", e.at, e.reason);
     case "TaskStepChanged": {

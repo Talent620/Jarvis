@@ -3,7 +3,7 @@
 // appends durable events to the task journal and notifies subscribers.
 
 import type { EventInput, KernelEvent } from "./events";
-import { isDurable } from "./events";
+import { HIGH_FREQUENCY_EVENTS, isDurable } from "./events";
 import type { TaskJournal } from "./journal";
 import { initialState, reduce, type KernelState } from "./reducer";
 import type { TaskStatus } from "./types";
@@ -83,13 +83,14 @@ export class Kernel {
     const event = { ...input, id: input.id ?? this.newId("ev"), at: input.at ?? this.now() } as KernelEvent;
     const dup = this.checkDuplicate(event);
     if (dup) return dup;
-    this.remember(`id:${event.id}`);
+    if (!HIGH_FREQUENCY_EVENTS.has(event.type)) this.remember(`id:${event.id}`);
     for (const k of semanticKeys(event)) this.remember(k);
 
     const prev = this.s;
     this.s = reduce(prev, event);
     this.applySideEffects(prev, event);
     if (this.journal && isDurable(event)) this.enqueueJournal(event);
+    else if (this.journal) this.journalStatusEffects(prev, event);
 
     this.notifyQueue.push(event);
     if (!this.notifying) this.drainNotifications();
@@ -124,10 +125,13 @@ export class Kernel {
   /** Wait until every durable event dispatched so far is in the journal (or failed to write). */
   flush(): Promise<void> {
     this.flushScheduled = false;
-    const batch = this.pendingJournal.splice(0);
-    if (!batch.length || !this.journal) return this.flushChain;
+    if (!this.journal || !this.pendingJournal.length) return this.flushChain;
     const journal = this.journal;
     this.flushChain = this.flushChain.then(async () => {
+      // Taken when this write runs, not when it was scheduled: a failed earlier batch is back at
+      // the head of the queue by then, so the journal keeps event order.
+      const batch = this.pendingJournal.splice(0);
+      if (!batch.length) return;
       try {
         await journal.append(batch);
       } catch {
@@ -224,6 +228,20 @@ export class Kernel {
         if (!this.controllers.has(id)) this.controllers.set(id, new AbortController());
         if (t.status === "running") this.settleWaiters(id);
       }
+    }
+  }
+
+  /**
+   * A non-durable event (a spoken "stop", "poczekaj", "wznów") changed task states: journal the
+   * outcome as durable status events, so a restart does not bring a cancelled task back.
+   */
+  private journalStatusEffects(prev: KernelState, e: KernelEvent): void {
+    for (const [id, t] of Object.entries(this.s.tasks)) {
+      if (prev.tasks[id]?.status === t.status) continue;
+      const reason = t.statusReason ?? e.type;
+      this.enqueueJournal(t.status === "cancelled"
+        ? { type: "TaskCancelled", taskId: id, reason, id: this.newId("ev"), at: e.at }
+        : { type: "TaskStatusChanged", taskId: id, status: t.status, reason, control: true, id: this.newId("ev"), at: e.at });
     }
   }
 

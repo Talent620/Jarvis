@@ -166,10 +166,10 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
         const { outcome, output } = await deps.execTool(step.tool, step.arguments, step, deps.signal);
         return { ...base, outcome, output, reason: lastReason };
       } catch (e) {
-        // Aborted mid-call: an outbound tool may already have acted, so its state is unknown
-        // (ATTEMPTED, never retried); a local step is simply cancelled.
+        // Aborted mid-call: an outbound or writing tool may already have acted, so its state is
+        // unknown (ATTEMPTED, never retried); a read-only step is simply cancelled.
         if (isCancelled()) {
-          return risk === "outbound"
+          return risk === "outbound" || risk === "write"
             ? { ...base, outcome: attempted(step.tool, "przerwano w trakcie, stan nieznany: sprawdź przed ponowieniem"), reason: "anulowano" }
             : cancelledStep(step);
         }

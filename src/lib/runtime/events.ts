@@ -74,6 +74,8 @@ export interface TaskStatusChanged extends Base {
   taskId: string;
   status: Exclude<TaskStatus, "cancelled">;
   reason?: string;
+  /** Caused by the user's control (e.g. "wznów"): may leave a pause. */
+  control?: boolean;
 }
 
 export interface TaskCancelled extends Base {
@@ -243,3 +245,11 @@ export const DURABLE_EVENTS: ReadonlySet<KernelEventType> = new Set<KernelEventT
 ]);
 
 export const isDurable = (e: KernelEvent): boolean => DURABLE_EVENTS.has(e.type);
+
+/**
+ * Frequent screen and speech events: their ids are not kept for dedup, so a stream of them
+ * cannot push the ids of commands and actions out of the bounded "seen" set.
+ */
+export const HIGH_FREQUENCY_EVENTS: ReadonlySet<KernelEventType> = new Set<KernelEventType>([
+  "SpeechPartial", "ObservationReceived", "CollectionUpdated", "CapabilitiesUpdated", "WindowFocused",
+]);
