@@ -150,10 +150,18 @@ export class ActionSession {
     for (const e of res.events) this.kernel.dispatch(e);
   }
 
-  private async runTask(goal: string, command: Command, fn: (taskId: string) => Promise<Omit<TurnResult, "command" | "taskId">>): Promise<TurnResult> {
+  private async runTask(goal: string, command: Command, fn: (taskId: string) => Promise<Omit<TurnResult, "command" | "taskId">>, amendTaskId?: string): Promise<TurnResult> {
     const k = this.kernel;
-    const taskId = k.id("task");
-    k.dispatch({ type: "TaskCreated", taskId, goal, kind: command.type });
+    const amend = amendTaskId ? k.state.tasks[amendTaskId] : undefined;
+    let taskId: string;
+    if (amend && (amend.status === "done" || amend.status === "running" || amend.status === "paused")) {
+      // "nie ten, następny" refines the current goal instead of starting a new one.
+      taskId = amend.id;
+      k.dispatch({ type: "TaskAmended", taskId, change: goal });
+    } else {
+      taskId = k.id("task");
+      k.dispatch({ type: "TaskCreated", taskId, goal, kind: command.type });
+    }
     try {
       const r = await fn(taskId);
       const status = r.truth === "CONFIRMED" ? "done" : isPrecondition(r.truth) ? "blocked" : "failed";
@@ -176,8 +184,9 @@ export class ActionSession {
 
   // ---------------------------------------------------------------- commands
 
-  async handle(text: string): Promise<TurnResult> {
-    const cmd = parseCommand(text);
+  async handle(text: string, opts: { amendTaskId?: string; command?: Command } = {}): Promise<TurnResult> {
+    const cmd = opts.command ?? parseCommand(text);
+    if (opts.amendTaskId && cmd.type === "focusItem") return this.runTask(text, cmd, (t) => this.focusItem(t, cmd.query), opts.amendTaskId);
     switch (cmd.type) {
       case "browser.launch": return this.runTask(text, cmd, (t) => this.launch(t));
       case "browser.gotoSite": return this.runTask(text, cmd, (t) => this.gotoYoutube(t, cmd.openFirst));
@@ -190,6 +199,29 @@ export class ActionSession {
       default: return { command: "unknown", truth: "BLOCKED", say: "Nie wiem, co mam zrobić." };
     }
   }
+
+  /** Reverse the most recent reversible action (scroll position), confirmed by read-back. */
+  async undo(): Promise<TurnResult> {
+    const k = this.kernel;
+    const records = Object.values(k.state.tasks)
+      .flatMap((t) => t.undo.map((u) => ({ u, at: k.state.actions[u.actionId]?.endedAt ?? 0 })))
+      .filter(({ u }) => !this.undone.has(u.actionId))
+      .sort((a, b) => b.at - a.at);
+    const last = records[0]?.u;
+    const command: Command = { type: "unknown", text: "cofnij" };
+    if (!last || typeof last.data.scrollY !== "number") {
+      return { command: command.type, truth: "BLOCKED", say: "Nie mam czego bezpiecznie cofnąć." };
+    }
+    return this.runTask("cofnij", command, async (taskId) => {
+      const r = await this.act(taskId, { kind: "browser.scrollTo", y: last.data.scrollY as number }, "undo");
+      if (r.truth === "CONFIRMED") this.undone.add(last.actionId);
+      return r.truth === "CONFIRMED"
+        ? { truth: r.truth, say: "Cofnięte.", evidence: r.evidence }
+        : { truth: r.truth, say: this.failSay(r, "Cofanie"), evidence: r.reason };
+    });
+  }
+
+  private undone = new Set<string>();
 
   private async launch(taskId: string) {
     const r = await this.act(taskId, { kind: "browser.launch" }, "launch");

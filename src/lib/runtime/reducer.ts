@@ -154,11 +154,15 @@ export function reduce(prev: KernelState, e: KernelEvent): KernelState {
     }
     case "TaskAmended": {
       const t = s.tasks[e.taskId];
-      if (!t || TERMINAL_TASK.has(t.status)) return s;
+      // A done task can be amended ("nie ten, następny" refines the same goal): it reopens.
+      // Cancelled and failed tasks stay closed.
+      if (!t || t.status === "cancelled" || t.status === "failed") return s;
       const steps = e.steps
         ? e.steps.map((x) => t.steps.find((o) => o.id === x.id) ?? { ...x, status: "pending" as const })
         : t.steps;
-      return setTask(s, e.taskId, { steps, statusReason: `amended: ${e.change}` }, e.at);
+      const reopened = t.status === "done";
+      const next = setTask(s, e.taskId, { steps, statusReason: `amended: ${e.change}`, status: reopened ? "running" : t.status }, e.at);
+      return reopened ? { ...next, focusStack: [...withoutFocus(next.focusStack, e.taskId), e.taskId] } : next;
     }
     case "TaskStatusChanged":
       return setStatus(s, e.taskId, e.status, e.at, e.reason);

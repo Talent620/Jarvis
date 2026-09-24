@@ -219,8 +219,10 @@ export class Kernel {
       if (TERMINAL_TASK.has(t.status)) {
         this.controllers.delete(id);
         this.settleWaiters(id, new TaskAbortedError(id, t.status));
-      } else if (t.status === "running") {
-        this.settleWaiters(id);
+      } else {
+        // A reopened (amended) task gets a fresh controller.
+        if (!this.controllers.has(id)) this.controllers.set(id, new AbortController());
+        if (t.status === "running") this.settleWaiters(id);
       }
     }
   }

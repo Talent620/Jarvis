@@ -89,6 +89,10 @@ export async function performAction(ctx: ActionContext, spec: PerformSpec): Prom
   let result: ActResult | undefined;
   let after: ReadResult | undefined;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    // Pause gate: a paused task waits here before the next micro-action; stop rejects it.
+    if (kernel.state.tasks[spec.taskId]) {
+      try { await kernel.waitRunnable(spec.taskId); } catch { /* cancelled or finished: handled below */ }
+    }
     if (signal.aborted) return fail(spec.external && attempt > 1 ? "UNKNOWN_AFTER_ATTEMPT" : "FAILED", "cancelled", attempt - 1);
     result = await env.act(spec.action, signal);
     if (result.status === "failed" && result.error === "aborted") {
