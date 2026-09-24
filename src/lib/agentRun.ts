@@ -24,7 +24,7 @@ export interface StepResult {
   reason?: string;
 }
 
-export type RunStatus = "completed" | "blocked" | "failed" | "stopped";
+export type RunStatus = "completed" | "blocked" | "failed" | "stopped" | "cancelled";
 
 export interface RunResult {
   status: RunStatus;
@@ -40,7 +40,7 @@ export interface RunDeps {
   toolExists: (name: string) => boolean;
   riskOf: (name: string) => Risk;
   /** Wykonanie kroku z narzędziem → ActionOutcome (+ opcjonalny output). Read = auto. */
-  execTool: (name: string, args: Record<string, unknown> | undefined, step: PlanStep) => Promise<{ outcome: ActionOutcome; output?: string }>;
+  execTool: (name: string, args: Record<string, unknown> | undefined, step: PlanStep, signal?: AbortSignal) => Promise<{ outcome: ActionOutcome; output?: string }>;
   /** Opcjonalny PRE-gate zgody (outbound / ryzykowny zapis). Brak → zgodę egzekwuje execTool/runTool. */
   requestConsent?: (step: PlanStep, risk: Risk) => Promise<boolean>;
   onStatus?: (msg: string) => void;
@@ -58,6 +58,10 @@ export interface RunDeps {
   /** Wznowienie: wcześniejsze wyniki kroków. CONFIRMED/ATTEMPTED NIE są wykonywane ponownie
    *  (bez podwójnych działań), ale liczą się jako spełnione/blokujące zależności. */
   seed?: StepResult[];
+  /** Cancellation (runtime kernel task signal). Remaining steps are skipped, nothing new starts. */
+  signal?: AbortSignal;
+  /** Pause gate awaited before every step (kernel.waitRunnable). Rejecting cancels the run. */
+  gate?: () => Promise<void>;
 }
 
 const DEFAULT_MAX_STEPS = 12;
@@ -121,6 +125,11 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
   for (const s of deps.seed || []) results.set(s.id, s);
   let toolCalls = 0;
   let stoppedByLimit = false;
+  let cancelled = false;
+  const isCancelled = (): boolean => cancelled || !!deps.signal?.aborted;
+  const cancelledStep = (step: PlanStep): StepResult => ({
+    id: step.id, intent: step.intent, tool: step.tool, outcome: draft("anulowano"), skipped: true, reason: "anulowano",
+  });
 
   const depConfirmed = (step: PlanStep): boolean =>
     (step.dependsOn || []).every((d) => results.get(d)?.outcome.state === "CONFIRMED");
@@ -151,17 +160,26 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
     let attempt = 0;
     let lastReason: string | undefined;
     for (;;) {
+      if (isCancelled()) return cancelledStep(step);
       try {
         toolCalls += 1;
-        const { outcome, output } = await deps.execTool(step.tool, step.arguments, step);
+        const { outcome, output } = await deps.execTool(step.tool, step.arguments, step, deps.signal);
         return { ...base, outcome, output, reason: lastReason };
       } catch (e) {
+        // Aborted mid-call: an outbound tool may already have acted, so its state is unknown
+        // (ATTEMPTED, never retried); a local step is simply cancelled.
+        if (isCancelled()) {
+          return risk === "outbound"
+            ? { ...base, outcome: attempted(step.tool, "przerwano w trakcie, stan nieznany: sprawdź przed ponowieniem"), reason: "anulowano" }
+            : cancelledStep(step);
+        }
         if (!deps.recover) return { ...base, outcome: failed(e instanceof Error ? e.message : "błąd narzędzia"), reason: "błąd narzędzia" };
         const decision = deps.recover(e, risk, attempt);
         lastReason = decision.reason;
         if (decision.action === "retry_backoff" && attempt + 1 < maxAttempts && toolCalls < maxToolCalls) {
           attempt += 1;
           if (decision.delayMs > 0 && deps.sleep) await deps.sleep(decision.delayMs);
+          if (isCancelled()) return cancelledStep(step);
           continue; // ponów ten sam krok
         }
         // Brak retry (np. outbound / zły argument / trwały błąd) → zapisz wynik z czytelnym powodem.
@@ -179,8 +197,19 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
     // brak podwójnych działań; jego wynik z seeda zostaje i liczy się do zależności.
     const seeded = results.get(step.id);
     if (seeded && (seeded.outcome.state === "CONFIRMED" || seeded.outcome.state === "ATTEMPTED")) continue;
+    if (!isCancelled() && deps.gate) {
+      try { await deps.gate(); } catch { cancelled = true; }
+    }
+    if (isCancelled()) {
+      cancelled = true;
+      const r = cancelledStep(step);
+      results.set(step.id, r);
+      if (deps.onStep) await deps.onStep(r);
+      continue;
+    }
     if (deps.onStatus) deps.onStatus(`${short(step.intent)} — krok ${pos} z ${total}`);
     const r = await evalStep(step);
+    if (r.reason === "anulowano") cancelled = true;
     results.set(step.id, r);
     if (deps.onStep) await deps.onStep(r); // trwały zapis postępu (durable goals)
   }
@@ -188,7 +217,7 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
   const ordered = order.map((s) => results.get(s.id)).filter(Boolean) as StepResult[];
   const anyFailed = ordered.some((r) => r.outcome.state === "FAILED");
   const anySkipped = ordered.some((r) => r.skipped);
-  const status: RunStatus = stoppedByLimit ? "stopped" : anyFailed ? "failed" : anySkipped ? "blocked" : "completed";
+  const status: RunStatus = cancelled ? "cancelled" : stoppedByLimit ? "stopped" : anyFailed ? "failed" : anySkipped ? "blocked" : "completed";
 
   // Werdykt końcowy ZAWSZE z weryfikatora — jedyne źródło uczciwego statusu (bez „Gotowe" bez dowodu).
   const verdict = verifyRun({ goal: plan.goal, steps: ordered.map((r) => ({ id: r.id, intent: r.intent, outcome: r.outcome, skipped: r.skipped })) });

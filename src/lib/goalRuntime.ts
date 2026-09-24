@@ -19,6 +19,7 @@ function finalStatus(run: RunResult): GoalStatus {
   if (run.status === "failed") return "failed";
   if (run.status === "blocked") return "waiting_consent"; // wstrzymane na zgodzie/zależności
   if (run.status === "stopped") return "paused";
+  if (run.status === "cancelled") return "failed"; // GoalStatus "failed" covers cancelled goals
   return "running";
 }
 
