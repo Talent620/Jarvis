@@ -7,7 +7,7 @@
 //     komunikat zamiast wyjątku/żądania sieciowego).
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { toolDefs, runTool } from "../src/lib/tools";
-import { riskOf, grantOutboundScope } from "../src/lib/permissions";
+import { riskOf, grantOutboundScope, setConsentHandler } from "../src/lib/permissions";
 import { store } from "../src/lib/store";
 
 // Test hermetyczny: żadne narzędzie nie sięga do realnej sieci (np. daily_briefing
@@ -19,7 +19,12 @@ beforeEach(() => {
 });
 afterEach(() => {
   global.fetch = realFetch;
+  setConsentHandler(null);
 });
+
+// DESTRUCTIVE tools (mission 5.11) are always asked, a session scope does not cover them:
+// tests of their behaviour give the explicit "yes" a user would.
+const userSaysYes = () => setConsentHandler(async () => ({ allow: true, remember: false }));
 
 beforeEach(() => {
   store.setData((d) => {
@@ -184,6 +189,7 @@ describe("narzędzia lokalne — wykonanie end-to-end (runTool)", () => {
     const report = await runTool("tally_report", {});
     expect(report).toContain("truskawki");
     expect(report).toMatch(/20[.,]50|20[.,]5/);
+    userSaysYes();
     expect(await runTool("clear_tally", {})).toMatch(/wyczyszczon/i);
     expect(store.data.tally).toHaveLength(0);
   });
@@ -207,6 +213,7 @@ describe("narzędzia lokalne — wykonanie end-to-end (runTool)", () => {
 
   it("forget_fact usuwa zapamiętany fakt", async () => {
     await runTool("remember_fact", { key: "miasto", value: "Kraków" });
+    userSaysYes();
     expect(await runTool("forget_fact", { key: "miasto" })).toMatch(/Usunąłem/);
     expect(store.data.memory.find((m) => m.key === "miasto")).toBeUndefined();
     expect(await runTool("forget_fact", { key: "nieistnieje" })).toMatch(/Nie znalazłem/);
@@ -235,6 +242,7 @@ describe("łagodna degradacja — brak konfiguracji nie wybucha", () => {
   });
 
   it("narzędzia desktop_* poza komputerem → czytelny komunikat", async () => {
+    userSaysYes();
     for (const [tool, input] of [
       ["desktop_launch_app", { app: "notepad" }],
       ["desktop_open", { target: "C:/" }],

@@ -520,6 +520,8 @@ export interface Signature {
 }
 
 export interface Settings {
+  /** Per-class permission policies (mission 5.11); missing classes use DEFAULT_POLICIES. */
+  permissionPolicies?: Partial<Record<"READ" | "NAVIGATE" | "LOCAL_REVERSIBLE" | "LOCAL_WRITE" | "EXTERNAL_SIDE_EFFECT" | "DESTRUCTIVE", "AUTO" | "ASK" | "DENY">>;
   /** Biblioteka podpisów e-mail (aktywny = emailSignature). Puste = działa jak dotąd. */
   signatures?: Signature[];
   /** Dusza Marki — opcjonalna, wstrzykiwana do generacji dla spójności (puste = bez zmian). */

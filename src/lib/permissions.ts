@@ -59,13 +59,65 @@ const RISK: Record<string, Risk> = {
   make_call: "outbound", send_sms: "outbound", smart_home: "outbound", run_scene: "outbound",
   open_service: "outbound", navigate_to: "outbound", call_contact: "outbound", text_contact: "outbound",
   open_url: "outbound",
-  // sterowanie komputerem (Windows) — wymaga zgody
+  // sterowanie komputerem (Windows) — wymaga zgody. Volume and media are local and reversible
+  // (mission 5.11: they must not share a class with shutting the computer down).
   desktop_launch_app: "outbound", desktop_open: "outbound", desktop_power: "outbound",
-  desktop_volume: "outbound", desktop_media: "outbound", desktop_type: "outbound", desktop_hotkey: "outbound",
+  desktop_volume: "write", desktop_media: "write", desktop_type: "outbound", desktop_hotkey: "outbound",
   // pełne sterowanie telefonem (Android, usługa Dostępności) — wymaga zgody
   android_type: "outbound", android_tap: "outbound", android_global: "outbound",
   android_open_app: "outbound", android_open_settings: "outbound",
 };
+
+// --- Action classes and policies (mission 5.11) ---
+// Finer than Risk: what the action does to the world. Policies per class come from settings;
+// DESTRUCTIVE is never AUTO, and untrusted content + an external effect is always ASK.
+export type ActionClass = "READ" | "NAVIGATE" | "LOCAL_REVERSIBLE" | "LOCAL_WRITE" | "EXTERNAL_SIDE_EFFECT" | "DESTRUCTIVE";
+export type Policy = "AUTO" | "ASK" | "DENY";
+
+export const DEFAULT_POLICIES: Record<ActionClass, Policy> = {
+  READ: "AUTO",
+  NAVIGATE: "AUTO",
+  LOCAL_REVERSIBLE: "AUTO",
+  LOCAL_WRITE: "AUTO",
+  EXTERNAL_SIDE_EFFECT: "ASK",
+  DESTRUCTIVE: "ASK",
+};
+
+const CLASS: Record<string, ActionClass> = {
+  desktop_volume: "LOCAL_REVERSIBLE", desktop_media: "LOCAL_REVERSIBLE",
+  desktop_open: "NAVIGATE", desktop_launch_app: "NAVIGATE", open_url: "NAVIGATE", open_service: "NAVIGATE",
+  android_open_app: "NAVIGATE", android_open_settings: "NAVIGATE", android_global: "NAVIGATE",
+  desktop_type: "LOCAL_WRITE", desktop_hotkey: "LOCAL_WRITE", android_type: "LOCAL_WRITE", android_tap: "LOCAL_WRITE",
+  desktop_power: "DESTRUCTIVE", clear_tally: "DESTRUCTIVE", forget_fact: "DESTRUCTIVE",
+  // Runtime micro-actions (src/lib/runtime).
+  "browser.launch": "NAVIGATE", "browser.navigate": "NAVIGATE", "browser.open": "NAVIGATE", "browser.consent": "LOCAL_REVERSIBLE",
+  "browser.scroll": "LOCAL_REVERSIBLE", "browser.scrollTo": "LOCAL_REVERSIBLE", "browser.focus": "LOCAL_REVERSIBLE",
+  "browser.findCollection": "READ", "text.select": "LOCAL_REVERSIBLE", "clipboard.copy": "LOCAL_REVERSIBLE",
+  "mail.send": "EXTERNAL_SIDE_EFFECT", "sms.send": "EXTERNAL_SIDE_EFFECT", "desktop.type": "LOCAL_WRITE",
+};
+
+export function classOf(tool: string): ActionClass {
+  const c = CLASS[tool];
+  if (c) return c;
+  const r = riskOf(tool);
+  return r === "read" ? "READ" : r === "write" ? "LOCAL_WRITE" : "EXTERNAL_SIDE_EFFECT";
+}
+
+export interface PermissionContext {
+  /** The arguments contain untrusted content (web page, e-mail, clipboard, tool output). */
+  untrustedContent?: boolean;
+  /** The arguments contain private data (contacts, messages, files). */
+  privateData?: boolean;
+}
+
+/** Final policy for an action class under the user's settings and the data involved. */
+export function decidePolicy(cls: ActionClass, ctx: PermissionContext = {}, overrides?: Partial<Record<ActionClass, Policy>>): Policy {
+  const configured = overrides?.[cls] ?? DEFAULT_POLICIES[cls];
+  if (configured === "DENY") return "DENY";
+  if (cls === "DESTRUCTIVE") return "ASK";
+  if (cls === "EXTERNAL_SIDE_EFFECT" && (ctx.untrustedContent || ctx.privateData)) return "ASK";
+  return configured;
+}
 
 /** Czy narzędzie ma JAWNĄ klasyfikację ryzyka (a nie tylko fail-safe outbound)? */
 export function isClassified(tool: string): boolean {
@@ -175,8 +227,20 @@ export function undoAction(entry: AuditEntry): string {
  */
 export async function requestConsent(tool: string, input: unknown): Promise<boolean> {
   const risk = riskOf(tool);
-  // Pytamy tylko o akcje zewnętrzne/nieodwracalne; lokalne zapisy idą automatycznie.
-  if (risk !== "outbound") return true;
+  const cls = classOf(tool);
+  const policy = decidePolicy(cls, {}, (store.settings as { permissionPolicies?: Partial<Record<ActionClass, Policy>> }).permissionPolicies);
+  if (policy === "DENY") return false;
+  if (policy === "AUTO") return true;
+  // DESTRUCTIVE: always a fresh, explicit question (no remembered consent, no auto-consent).
+  if (cls === "DESTRUCTIVE") {
+    const r = await askConsentUI({ tool, input, risk });
+    return !!r?.allow;
+  }
+  // ASK for a non-outbound class (user set LOCAL_WRITE or NAVIGATE to ASK): ask the UI.
+  if (risk !== "outbound") {
+    const r = await askConsentUI({ tool, input, risk });
+    return !!r?.allow;
+  }
   // Tryb Szefa „pełny dostęp": globalna zgoda na outbound, z auto-wygaśnięciem.
   if (isAutoConsent()) return true;
   // Jawny, ograniczony zakres sesyjny (Live/headless) — sankcjonowana droga bez UI.
