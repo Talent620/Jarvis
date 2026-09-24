@@ -1,0 +1,84 @@
+{
+  "milestones": [
+    {
+      "id": "M0",
+      "status": "in_progress",
+      "evidence": [
+        "docs/mission/BASELINE.md: npx vitest run exit=1, 2787/2789 passed, 2 failures in tests/license.test.ts",
+        "docs/mission/BASELINE.md: tsc -b exit=0, eslint exit=0, vite build exit=0, scan:secrets exit=0"
+      ],
+      "last_commit": "",
+      "next_action": "Fix tests/license.test.ts with an injected test key pair (keep ECDSA verification strict); scan history content for private keys; remove hardcoded keystore passwords from android/app/build.gradle with an explicit non-production fallback; write docs/JARVIS-SECURITY.md; record startup performance numbers."
+    },
+    {
+      "id": "M1",
+      "status": "todo",
+      "evidence": [],
+      "last_commit": "",
+      "next_action": "Runtime Kernel (typed events, dedup, reducer, cancellation), task journal outside the store blob, Referent Registry with epochs, Situation Snapshot, capability registry, store selectors and batched persistence."
+    },
+    {
+      "id": "M2",
+      "status": "todo",
+      "evidence": [],
+      "last_commit": "",
+      "next_action": "Pin Playwright, ManagedBrowser environment, YouTube fixture server in tests/fixtures/youtube/, golden steps 1-7."
+    },
+    {
+      "id": "M3",
+      "status": "todo",
+      "evidence": [],
+      "last_commit": "",
+      "next_action": "Perception, reflex, conversation, action lanes with task and focus stacks; 12+ interleaved golden conversations."
+    },
+    {
+      "id": "M4",
+      "status": "todo",
+      "evidence": [],
+      "last_commit": "",
+      "next_action": "Mail with content resolution, Polish contact inflection, permission classes, provenance, idempotency, mock Gmail with Sent read-back; full scenario 1-8 on fixtures."
+    },
+    {
+      "id": "M5",
+      "status": "todo",
+      "evidence": [],
+      "last_commit": "",
+      "next_action": "Streaming voice runtime behind interfaces, barge-in, dedup, provider catalog replacing dead Gemini Live id, latency instrumentation."
+    },
+    {
+      "id": "M6",
+      "status": "todo",
+      "evidence": [],
+      "last_commit": "",
+      "next_action": "npm run jarvis:acceptance with fixture, managed-browser, local-desktop modes and reports/acceptance-*.md/.json."
+    },
+    {
+      "id": "M7",
+      "status": "todo",
+      "evidence": [],
+      "last_commit": "",
+      "next_action": "Linux adapters: AT-SPI, RemoteDesktop portal/libei, clipboard, active window, selection; contract tests."
+    },
+    {
+      "id": "M8",
+      "status": "todo",
+      "evidence": [],
+      "last_commit": "",
+      "next_action": "BrowserBridge WebExtension with loopback, session token, pairing; protocol tests."
+    },
+    {
+      "id": "M9",
+      "status": "todo",
+      "evidence": [],
+      "last_commit": "",
+      "next_action": "Windows UIA and Android node-tree adapters behind ComputerEnvironment contract."
+    },
+    {
+      "id": "M10",
+      "status": "todo",
+      "evidence": [],
+      "last_commit": "",
+      "next_action": "Vision environment, locator cache, Skill Compiler, 'what am I doing' panel, diagnostics export, architecture and capability docs, final adversarial review."
+    }
+  ]
+}
