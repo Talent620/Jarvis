@@ -34,12 +34,14 @@ const STATUS_WORDS: Record<string, string> = {
   running: "w trakcie", paused: "wstrzymane", waiting_consent: "czeka na Twoją zgodę", blocked: "zablokowane",
 };
 
-/** Deterministic answer to "co teraz robisz?" built from kernel state only. */
-export function statusReply(state: KernelState): string {
+/** Deterministic answer to "co teraz robisz?" built from kernel state and the action queue. */
+export function statusReply(state: KernelState, queued: string[] = []): string {
   const fid = focusedTaskId(state);
   const live = state.taskOrder.map((id) => state.tasks[id]).filter((t) => t && !TERMINAL_TASK.has(t.status));
   const task = (fid && state.tasks[fid] && !TERMINAL_TASK.has(state.tasks[fid].status)) ? state.tasks[fid] : live[live.length - 1];
+  const waiting = queued.length ? ` W kolejce: ${queued.slice(0, 3).map((q) => `„${preview(q, 30)}”`).join(", ")}.` : "";
   if (!task) {
+    if (queued.length) return `Zaraz zrobię: „${preview(queued[0], 60)}”.${queued.length > 1 ? ` Potem jeszcze ${queued.length - 1}.` : ""}`;
     const page = state.page && state.page.id !== "closed" ? ` Mam otwartą stronę „${preview(state.page.title, 50)}”.` : "";
     return `Teraz nic nie robię, czekam na polecenie.${page}`;
   }
@@ -47,5 +49,5 @@ export function statusReply(state: KernelState): string {
   const step = idx >= 0 ? ` (krok ${idx + 1} z ${task.steps.length})` : "";
   const others = live.filter((t) => t.id !== task.id);
   const more = others.length ? ` W tle: ${others.map((t) => `„${preview(t.goal, 30)}” ${STATUS_WORDS[t.status] ?? t.status}`).join(", ")}.` : "";
-  return `${STATUS_WORDS[task.status] === "w trakcie" ? "Robię" : "Mam"}: „${preview(task.goal, 60)}”, ${STATUS_WORDS[task.status] ?? task.status}${step}.${more}`;
+  return `${STATUS_WORDS[task.status] === "w trakcie" ? "Robię" : "Mam"}: „${preview(task.goal, 60)}”, ${STATUS_WORDS[task.status] ?? task.status}${step}.${more}${waiting}`;
 }

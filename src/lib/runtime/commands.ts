@@ -41,7 +41,11 @@ export function parseCommand(text: string): Command {
     return { type: "browser.gotoSite", site: "youtube", openFirst: /\b(film\w*|filmik\w*|wideo|nagrani\w*)\b/.test(norm) };
   }
   if (verb === "scroll_down" || verb === "scroll_up" || /\bprzewin\w*/.test(norm)) {
-    return { type: "scroll", direction: verb === "scroll_up" ? "up" : "down", amount: scrollAmount(norm) };
+    // The adverb decides the direction ("zjedź wyżej" goes up); the verb is the default.
+    const up = /\b(wyzej|w gore|do gory|na gore|na poczatek)\b/.test(norm);
+    const down = /\b(nizej|w dol|na dol|do konca)\b/.test(norm);
+    const direction = up && !down ? "up" : down && !up ? "down" : verb === "scroll_up" ? "up" : "down";
+    return { type: "scroll", direction, amount: scrollAmount(norm) };
   }
   if (verb === "select") return { type: "selectText", query: q };
   if (verb === "copy") return { type: "copy", query: q };
@@ -49,7 +53,7 @@ export function parseCommand(text: string): Command {
     return { type: "browser.openItem", itemKind: "video", query: q.ordinal !== undefined || q.relative ? q : { ...q, ordinal: 1 } };
   }
   const itemRef = q.ordinal !== undefined || q.relative !== undefined || q.reject;
-  if ((q.noun === "comment" || q.noun === "reply") && !itemRef && (verb === "find" || verb === "show" || verb === undefined || /\b(wiecej|kolejne|zaladuj)\b/.test(norm))) {
+  if ((q.noun === "comment" || q.noun === "reply") && !itemRef && !q.returnTo && (verb === "find" || verb === "show" || verb === undefined || /\b(wiecej|kolejne|zaladuj)\b/.test(norm))) {
     return { type: "findCollection", itemKind: "comment", more: /\b(wiecej|kolejne|dalsze|zaladuj)\b/.test(norm) };
   }
   if (q.noun === "video" && (verb === "find" || verb === "show")) return { type: "findCollection", itemKind: "video", more: false };

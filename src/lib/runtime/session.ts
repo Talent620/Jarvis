@@ -205,7 +205,7 @@ export class ActionSession {
     const k = this.kernel;
     const records = Object.values(k.state.tasks)
       .flatMap((t) => t.undo.map((u) => ({ u, at: k.state.actions[u.actionId]?.endedAt ?? 0 })))
-      .filter(({ u }) => !this.undone.has(u.actionId))
+      .filter(({ u }) => !this.undone.has(u.actionId) && u.data.pageId === k.state.page?.id)
       .sort((a, b) => b.at - a.at);
     const last = records[0]?.u;
     const command: Command = { type: "unknown", text: "cofnij" };

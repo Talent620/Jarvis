@@ -123,11 +123,12 @@ describe("cursor: następny, nie ten, poprzedni", () => {
     expect(k.state.referents.collections.comments.rejected).toEqual(["c1", "c2"]);
   });
 
-  it("poprzedni skips rejected items and stops at the start", () => {
+  it("poprzedni goes back to the adjacent item, even a rejected one, and stops at the start", () => {
     say("pierwszy komentarz");
     say("nie ten, następny");
+    expect(idOf(say("poprzedni"))).toBe("c1");
     expect(say("poprzedni")).toMatchObject({ status: "none", reason: "start_of_collection" });
-    say("następny");
+    say("trzeci komentarz");
     expect(idOf(say("poprzedni komentarz"))).toBe("c2");
   });
 

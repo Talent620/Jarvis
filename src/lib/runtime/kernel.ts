@@ -61,7 +61,7 @@ export class Kernel {
     this.now = opts.now ?? (() => Date.now());
     this.newId = opts.newId ?? defaultId;
     this.journal = opts.journal;
-    this.finalWindow = opts.finalDedupWindowMs ?? 1500;
+    this.finalWindow = opts.finalDedupWindowMs ?? 800;
     this.maxSeen = opts.maxSeenKeys ?? 5000;
   }
 
@@ -183,7 +183,7 @@ export class Kernel {
   private checkDuplicate(e: KernelEvent): DispatchResult | null {
     if (this.seen.has(`id:${e.id}`)) return { accepted: false, reason: "duplicate_id" };
     for (const k of semanticKeys(e)) if (this.seen.has(k)) return { accepted: false, reason: "duplicate_utterance" };
-    if (e.type === "SpeechFinal") {
+    if (e.type === "SpeechFinal" && e.source !== "typed") {
       const last = this.s.lastFinal;
       if (last && e.at - last.at <= this.finalWindow && normalizeUtterance(last.text) === normalizeUtterance(e.text)) {
         return { accepted: false, reason: "duplicate_final_text" };

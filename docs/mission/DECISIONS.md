@@ -52,7 +52,7 @@ the n-th letter; leading non-letters ("@", emoji, spaces) are excluded, non-lett
 letters stay inside because a visible DOM selection is contiguous ("Ala ma kota" -> "Ala m").
 The golden fixture's first comment starts with a word of at least four letters.
 
-## D-010 Duplicate STT finals
+## D-010 Duplicate STT finals (superseded by D-021)
 Two SpeechFinal events are one utterance when they share an utteranceId, or when their
 normalized text is equal and they arrive within 1.5 s. A user repeating a command after
 1.5 s is treated as a new command; idempotency keys still protect external effects.
@@ -105,3 +105,13 @@ the collection cursor is restored to the same semantic item.
 ## D-019 Browser tests are a separate suite
 `tests/browser/**` needs Chromium; it runs via `npm run test:browser` locally and in the CI
 `browser` job (which installs Chromium), and is excluded from the default `npm test`.
+
+## D-020 "poprzedni" returns to the adjacent item, "następny" skips rejected ones
+After "nie ten, następny" the user saying "poprzedni" has changed their mind; going back to
+the rejected item is what they asked for. Forward navigation still skips rejected items.
+
+## D-021 Text-window dedup of finals only for STT, 800 ms
+A 1.5 s window swallowed intended repeats ("dalej", "dalej"; "cofnij", "cofnij") and typed
+input. Now: same utteranceId is always a duplicate; the same normalized text is a duplicate
+only for STT finals within 800 ms. Typed input is never merged by text. External effects are
+still protected by idempotency keys.

@@ -87,8 +87,9 @@ function navigateCollection(reg: ReferentRegistry, coll: Referent, q: RefQuery, 
     if (meta.cursor < 0) return { status: "none", reason: "no_current", events: [] };
     idx = meta.cursor;
   } else if (q.relative === "previous") {
+    // An explicit "poprzedni" goes back to the adjacent item even if it was rejected before:
+    // the user changed their mind (D-020).
     idx = meta.cursor - 1;
-    while (idx >= 0 && skip.has(meta.items[idx])) idx--;
     if (idx < 0) return { status: "none", reason: "start_of_collection", events: [] };
   } else {
     if (q.reject && meta.cursor >= 0) {

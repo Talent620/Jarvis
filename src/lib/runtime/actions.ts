@@ -108,9 +108,10 @@ export async function performAction(ctx: ActionContext, spec: PerformSpec): Prom
     }
     const v = verify(spec.action, before, after, result, now());
     if (v.truth === "CONFIRMED") {
+      // Undo data is bound to the page it was recorded on: after navigation it no longer applies.
       kernel.dispatch({
         type: "ActionVerified", actionId, evidence: v.evidence,
-        undo: result.undo ? { actionId, kind, data: result.undo } : undefined,
+        undo: result.undo ? { actionId, kind, data: { ...result.undo, pageId: kernel.state.page?.id } } : undefined,
       });
       step("CONFIRMED", v.evidence);
       return { actionId, truth: "CONFIRMED", evidence: v.evidence, result, after, attempts: attempt };

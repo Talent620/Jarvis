@@ -30,6 +30,8 @@ export interface SpeechFinal extends Base {
   utteranceId: string;
   text: string;
   confidence: number;
+  /** "typed" input is never merged by text: a user may type the same command twice on purpose. */
+  source?: "stt" | "typed";
 }
 
 export interface ControlIntent extends Base {
