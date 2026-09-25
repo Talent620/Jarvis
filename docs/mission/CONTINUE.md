@@ -3,9 +3,9 @@
 - GAŁĄŹ SESJI: `claude/intelligent-brahmagupta-jq7jqj`
   (local test: `git fetch origin claude/intelligent-brahmagupta-jq7jqj && git checkout claude/intelligent-brahmagupta-jq7jqj`)
 - PR: https://github.com/Talent620/Jarvis/pull/7 (draft)
-- OSTATNI ZIELONY COMMIT: `4599b20` locally (all gates exit 0); CI green on `13ebcbd` (Tests with
-  test, browser and desktop jobs; Android APK; Ubuntu build). CI for the M10 commits: check the
-  latest run of the branch.
+- OSTATNI ZIELONY COMMIT: `4599b20` (all local gates exit 0; CI Tests run 36082709566 green:
+  test, browser, desktop). Later commits only touch docs and reports; check the latest run of
+  the branch for the Android APK and Ubuntu builds.
 - BIEŻĄCY KAMIEŃ: none. M0-M10 done (state.json); what is left needs the user's machine.
 - STAN TESTÓW (after 4599b20): vitest 3282/3282 (361 files); browser 17/17; desktop on Xvfb 8/8;
   tsc -b, eslint ., npm run build, npm run scan:secrets exit 0. Golden 1-8 on the fixture 10

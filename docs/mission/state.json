@@ -152,6 +152,7 @@
         "final adversarial review (reviewer subagent on 9849da1..2881577): 1 high, 4 medium, 5 low found; all fixed in 4599b20 with tests/runtime/reviewFixesFinal.test.ts 8/8, bridge origin test, rewritten vision tests (D-032)",
         "docs/JARVIS-ARCHITECTURE.md and docs/JARVIS-CAPABILITIES.md (only what works, with evidence; NEEDS_HARDWARE listed)",
         "after 4599b20: vitest 361 files / 3282 tests exit 0; browser 6 files / 17 tests exit 0; desktop (Xvfb) 8/8; tsc -b, eslint ., npm run build, scan:secrets exit 0",
+        "CI green on 4599b20: Tests pull_request run 36082709566 (jobs test, browser incl. golden 1-8 x10 and acceptance fixture, desktop on Xvfb)",
         "golden 1-8 on the YouTube fixture 10 consecutive green runs (tests/browser/golden18.test.ts: 1620, 1481, 1441, 1478, 1404, 1382, 1308, 1369, 1432, 1434 ms); acceptance fixture x10 report reports/acceptance-2026-09-25T01-36-38-962Z.md",
         "real vision model: none wired in the app (capability reads missing); real hardware items NEEDS_HARDWARE"
       ],
