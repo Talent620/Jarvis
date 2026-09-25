@@ -142,6 +142,8 @@ const defaultSettings: Settings = {
   voicePitch: 0.9,
   voiceRate: 1.0,
   wakeWord: false,
+  computerVoice: false,
+  deepgramApiKey: "",
   autoListenOnOpen: false,
   proactiveOnOpen: true,
   proactiveAgent: true,

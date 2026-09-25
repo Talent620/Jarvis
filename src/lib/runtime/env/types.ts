@@ -31,6 +31,8 @@ export type EnvAction =
   | { kind: "desktop.type"; text: string }
   | { kind: "window.activate"; windowId: string }
   | { kind: "clipboard.write"; text: string }
+  // Which browser the browser actions go to: JARVIS's managed one or the user's own (bridge).
+  | { kind: "browser.use"; target: "managed" | "user" }
   // Visual aid only (numbered badges over candidates when a reference is ambiguous); empty clears.
   | { kind: "overlay.mark"; items: { target: ElementTarget; label: string }[] };
 
@@ -77,6 +79,8 @@ export type ReadQuery =
 
 export interface PageRead {
   open: boolean;
+  /** Which browser answered: JARVIS's managed browser or the user's own (through the bridge). */
+  browser?: "managed" | "user";
   pageId?: string;
   url?: string;
   title?: string;

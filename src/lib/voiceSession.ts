@@ -4,7 +4,7 @@
 // Tu jest lekki, czysty arbiter: przejęcie przez nowego właściciela PREEMPTUJE poprzedniego
 // (woła jego callback zwalniający zasoby). Maksymalnie jeden właściciel w danej chwili.
 
-export type VoiceOwner = "main" | "headset" | "live" | "boss" | "permission";
+export type VoiceOwner = "main" | "headset" | "live" | "boss" | "permission" | "computer";
 
 let currentOwner: VoiceOwner | null = null;
 let releaseCb: (() => void) | null = null;

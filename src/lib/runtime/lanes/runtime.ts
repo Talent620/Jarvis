@@ -148,6 +148,11 @@ export class JarvisRuntime {
     return this.skills?.list() ?? [];
   }
 
+  /** The user removed a skill in the panel. */
+  forgetSkill(name: string): boolean {
+    return this.skills?.remove(name) ?? false;
+  }
+
   /** A PAUZA / WZNÓW / STOP button: the same control path as the spoken word. */
   press(control: "pause" | "resume" | "stop"): RuntimeTurn {
     const words = { pause: "pauza", resume: "wznów", stop: "stop" } as const;

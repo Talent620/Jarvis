@@ -15,6 +15,7 @@ export type Command =
   | { type: "selectText"; query: RefQuery }
   | { type: "copy"; query: RefQuery }
   | { type: "send"; channel: "email" | "sms"; query: RefQuery }
+  | { type: "browser.use"; target: "managed" | "user" }
   | { type: "unknown"; text: string };
 
 const LITTLE = /\b(troche|troszke|troszeczke|lekko|odrobine|ciut|kawalek|kapke)\b/;
@@ -45,7 +46,26 @@ function isNavigationRequest(norm: string): boolean {
   return NAV_VERB.test(norm);
 }
 
+const USER_BROWSER = /\b(?:(?:w|na|do|z|we) )?(?:moj(?:a|ej|ego|e)?|moim) (?:przegladar\w*|chrom\w*|firefox\w*|edge\w*)|\bprzegladar\w* uzytkownika\b/;
+const MANAGED_BROWSER = /\b(?:(?:w|na|do|z|we) )?(?:przegladar\w* jarvis\w*|(?:osobn|zarzadzan|swoj|twoj|twoi)\w* przegladar\w*)/;
+
+/** "w mojej przeglądarce" -> the user's own browser (bridge); "w swojej przeglądarce" -> JARVIS's. */
+export function browserChoice(text: string): "user" | "managed" | undefined {
+  const norm = normalizeUtterance(text);
+  if (USER_BROWSER.test(norm)) return "user";
+  if (MANAGED_BROWSER.test(norm)) return "managed";
+  return undefined;
+}
+
 export function parseCommand(text: string): Command {
+  const choice = browserChoice(text);
+  if (choice) {
+    // "Wejdź na YouTube w mojej przeglądarce": the command itself, the session switches first.
+    // "Użyj mojej przeglądarki" alone: only the switch.
+    const norm0 = normalizeUtterance(text);
+    const rest = parseCommand(norm0.replace(choice === "user" ? USER_BROWSER : MANAGED_BROWSER, " ").replace(/\s+/g, " ").trim());
+    return rest.type === "unknown" || rest.type === "browser.launch" ? { type: "browser.use", target: choice } : rest;
+  }
   const norm = normalizeUtterance(text);
   const verb = parseVerb(text);
   const q = parseReference(text);

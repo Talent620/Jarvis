@@ -239,3 +239,25 @@ neither spoken nor parsed, and is clipped to 600 characters otherwise.
 - BrowserBridge tokens are bound to the extension id in the browser-set Origin header; the
   extension reports its origin host (Firefox: the internal UUID).
 - "stop" while JARVIS waits for an answer cancels the task in silence.
+
+## D-033 Continuation session: same branch, same PR
+The continuation goal asked to merge the previous mission branch into this session's branch and
+to open a new draft PR replacing the previous one. The previous mission branch is this session's
+own branch (`claude/intelligent-brahmagupta-jq7jqj`, already containing all mission commits, main
+already merged), so the merge is a no-op. GitHub allows one open PR per head and base, and pushing
+to another branch is not allowed in this session, so a replacement PR cannot be opened: PR #7
+stays the mission PR, its description is updated and a comment records this decision.
+
+## D-034 Voice control switch, browser choice, skills list
+- "Sterowanie komputerem głosem" is a Settings switch (desktop only) with an optional Deepgram
+  key. `VoiceControl` takes the microphone through the app's voice arbiter (owner "computer"),
+  so the chat wake word, headset mode and Live are preempted; another owner taking the
+  microphone stops the session. Listening mode is "wake": the first command starts with
+  "Jarvis", follow-ups do not need it. Without a Deepgram key the batch Groq Whisper chain is
+  used. Errors (no microphone) are shown in the panel, never reported as listening.
+- "w mojej przeglądarce" selects the user's own browser through the BrowserBridge
+  (`SelectableBrowser` in the Electron main process); "w swojej przeglądarce" selects JARVIS's.
+  The switch is an action confirmed by the page read-back (`browser` field); without a
+  connected extension it is NEEDS_CAPABILITY and the command runs nowhere. Events of the browser
+  that is not selected are dropped.
+- The status panel lists remembered skills (steps, send, disabled) with a remove button.

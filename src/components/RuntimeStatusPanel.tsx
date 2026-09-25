@@ -5,6 +5,16 @@
 
 import React, { useEffect, useState } from "react";
 import type { StatusView } from "../lib/runtime/diagnostics";
+import type { VoiceControlStatus } from "../lib/runtime/voiceControl";
+import type { Skill } from "../lib/runtime/skills";
+
+/** One line about voice control for the panel, or null when it is off. */
+export function voiceLine(v: VoiceControlStatus | null | undefined): string | null {
+  if (!v || v.state === "off") return null;
+  if (v.state === "starting") return "włączam mikrofon";
+  if (v.state === "listening") return `słucham (${v.recognizer}); zacznij od „Jarvis"`;
+  return `nie działa: ${v.message}`;
+}
 
 const STATE_LABEL: Record<StatusView["state"], string> = {
   idle: "czekam na polecenie",
@@ -46,6 +56,9 @@ const btn: React.CSSProperties = { fontSize: 12, padding: "4px 12px", minHeight:
 
 interface Props {
   view: StatusView;
+  voice?: VoiceControlStatus | null;
+  skills?: Skill[];
+  onForgetSkill?: (name: string) => void;
   onPause?: () => void;
   onResume?: () => void;
   onStop?: () => void;
@@ -53,7 +66,7 @@ interface Props {
   onClose?: () => void;
 }
 
-export const RuntimeStatusPanel: React.FC<Props> = ({ view, onPause, onResume, onStop, onExport, onClose }) => (
+export const RuntimeStatusPanel: React.FC<Props> = ({ view, voice, skills, onForgetSkill, onPause, onResume, onStop, onExport, onClose }) => (
   <section aria-label="Co robię" role="status" aria-live="polite" style={{ border: "1px solid var(--line, #234)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 6, background: "var(--panel, #0b1620)" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
       <strong style={{ fontSize: 14 }}>Co robię: {STATE_LABEL[view.state]}</strong>
@@ -63,6 +76,7 @@ export const RuntimeStatusPanel: React.FC<Props> = ({ view, onPause, onResume, o
     {view.step && <Row label="Krok">{view.step}{view.stepIndex && view.stepCount ? ` (${view.stepIndex} z ${view.stepCount})` : ""}</Row>}
     {view.target && <Row label="Na czym">{view.target}</Row>}
     <Row label="Gdzie">{view.environment}{view.place ? `, ${view.place}` : ""}</Row>
+    {voiceLine(voice) && <Row label="Głos">{voiceLine(voice)}</Row>}
     {view.model && <Row label="Model">{view.model}</Row>}
     {typeof view.elapsedMs === "number" && <Row label="Czas">{formatElapsed(view.elapsedMs)}</Row>}
     {view.verification && <Row label="Sprawdzenie">{view.verification}</Row>}
@@ -73,6 +87,23 @@ export const RuntimeStatusPanel: React.FC<Props> = ({ view, onPause, onResume, o
       <button type="button" onClick={onStop} disabled={!view.canStop || !onStop} style={btn}>STOP</button>
       {onExport && <button type="button" onClick={onExport} style={btn}>Eksport diagnostyki</button>}
     </div>
+    {!!skills?.length && (
+      <details>
+        <summary style={{ fontSize: 13, cursor: "pointer" }}>Umiejętności ({skills.length}): powiedz „powtórz” i nazwę</summary>
+        <ul aria-label="Umiejętności" style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 12 }}>
+          {skills.map((k) => (
+            <li key={k.name} style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "space-between" }}>
+              <span>
+                {k.name}: {k.steps.length} {k.steps.length === 1 ? "krok" : k.steps.length < 5 ? "kroki" : "kroków"}
+                {k.external ? ", z wysyłką" : ""}
+                {k.invalidated ? " (wyłączona: przestała działać)" : ""}
+              </span>
+              {onForgetSkill && <button type="button" aria-label={`Usuń umiejętność ${k.name}`} onClick={() => onForgetSkill(k.name)} style={btn}>Usuń</button>}
+            </li>
+          ))}
+        </ul>
+      </details>
+    )}
     {!!view.recent.length && (
       <ol aria-label="Ostatnie akcje" style={{ margin: 0, paddingLeft: 18, fontSize: 12 }}>
         {view.recent.map((a, i) => (
@@ -100,6 +131,26 @@ const RuntimeStatusDock: React.FC = () => {
   const [view, setView] = useState<StatusView | null>(null);
   const [open, setOpen] = useState(true);
   const [ctl, setCtl] = useState<import("../lib/runtime/appRuntime").AppRuntimeControls | null>(null);
+  const [voice, setVoice] = useState<VoiceControlStatus | null>(null);
+  useEffect(() => {
+    let off = () => undefined as void;
+    let cancelled = false;
+    void import("../lib/runtime/appRuntime").then(({ peekVoiceControl }) => {
+      if (cancelled) return;
+      // The controller exists once voice control was switched on; check again every second.
+      const attach = () => {
+        const vc = peekVoiceControl();
+        if (!vc) return false;
+        setVoice(vc.current);
+        off = vc.subscribe(setVoice);
+        return true;
+      };
+      if (attach()) return;
+      const t = setInterval(() => { if (attach()) clearInterval(t); }, 1000);
+      off = () => clearInterval(t);
+    });
+    return () => { cancelled = true; off(); };
+  }, []);
   useEffect(() => {
     let off = () => undefined as void;
     let cancelled = false;
@@ -116,7 +167,7 @@ const RuntimeStatusDock: React.FC = () => {
     return () => { cancelled = true; off(); };
   }, []);
   if (!view || !ctl) return null;
-  const active = view.state !== "idle" || view.recent.length > 0;
+  const active = view.state !== "idle" || view.recent.length > 0 || !!voiceLine(voice);
   if (!active) return null;
   if (!open) {
     return (
@@ -129,6 +180,9 @@ const RuntimeStatusDock: React.FC = () => {
     <div style={{ position: "fixed", right: 16, bottom: 88, width: "min(380px, calc(100vw - 32px))", zIndex: 40 }}>
       <RuntimeStatusPanel
         view={view}
+        voice={voice}
+        skills={ctl.skills()}
+        onForgetSkill={(name) => { ctl.forgetSkill(name); setView(ctl.view()); }}
         onPause={() => ctl.press("pause")}
         onResume={() => ctl.press("resume")}
         onStop={() => ctl.press("stop")}

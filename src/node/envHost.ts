@@ -48,6 +48,7 @@ const ACTIONS: Record<EnvAction["kind"], (a: Record<string, unknown>) => boolean
   "desktop.type": (a) => str(a.text, 2000) && (a.text as string).length > 0,
   "window.activate": (a) => str(a.windowId, 100) && (a.windowId as string).length > 0,
   "clipboard.write": (a) => str(a.text, MAX_TEXT),
+  "browser.use": (a) => oneOf(a.target, ["managed", "user"]),
   "overlay.mark": (a) => Array.isArray(a.items) && a.items.length <= 20 && a.items.every((i) => isObj(i) && target(i.target) && str(i.label, 3) && /^[0-9]{1,3}$/.test(i.label as string)),
 };
 

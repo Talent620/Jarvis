@@ -150,3 +150,23 @@ describe("diagnostics export", () => {
     expect(json).not.toContain("Piotrkowskiej"); // video title from what JARVIS said
   });
 });
+
+describe("skills in the panel (B-039)", () => {
+  it("lists remembered skills with their state and removes one for good", async () => {
+    const { kernel, rt } = setup();
+    await rt.start();
+    for (const t of GOLDEN_1_7) rt.onText(t);
+    await rt.idle();
+    rt.onText("zapamiętaj to jako komentarz");
+    const view = statusView(kernel.state, { now: Date.now(), environment: rt.environmentId });
+    const html = renderToStaticMarkup(createElement(RuntimeStatusPanel, { view, skills: rt.listSkills(), onForgetSkill: () => {} }));
+    expect(html).toContain("Umiejętności (1)");
+    expect(html).toContain("komentarz: 8 kroków");
+    expect(html).toContain('aria-label="Usuń umiejętność komentarz"');
+    expect(rt.forgetSkill("komentarz")).toBe(true);
+    expect(rt.listSkills()).toEqual([]);
+    expect(rt.claims("powtórz komentarz", () => false)).toBe(false);
+    const empty = renderToStaticMarkup(createElement(RuntimeStatusPanel, { view, skills: rt.listSkills() }));
+    expect(empty).not.toContain("Umiejętności");
+  });
+});

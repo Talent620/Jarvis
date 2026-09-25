@@ -125,7 +125,8 @@ import { brand } from "./lib/brand";
 import { isLocked as keysAreLocked } from "./lib/secretsVault";
 import UnlockKeys from "./components/UnlockKeys";
 import { useStoreSelector, shallowEqual } from "./hooks/useStore";
-import { runtimeAvailable, setRuntimeSpeaker, tryRuntimeText } from "./lib/runtime/appRuntime";
+import { appVoiceControl, runtimeAvailable, setRuntimeSpeaker, tryRuntimeText, type AppVoiceIO } from "./lib/runtime/appRuntime";
+import { transcribeAudio } from "./lib/transcribe";
 import type { ChatMessage } from "./types";
 
 type PendingImage = { data: string; mediaType: string } | null;
@@ -923,6 +924,26 @@ export default function App() {
     return () => listenerRef.current?.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.wakeWord]);
+
+  // Sterowanie komputerem głosem (runtime JARVIS, desktop, B-034): strumieniowe STT, barge-in,
+  // mikrofon przejęty przez arbitra (nasłuch słowa „Jarvis" w czacie jest wtedy wyparty).
+  useEffect(() => {
+    if (!settings.computerVoice || !runtimeAvailable()) return;
+    const io = (): AppVoiceIO => ({
+      speak: (t) => speak(t, store.settings),
+      stop: () => stopSpeaking(),
+      transcribe: async (wav) => {
+        const r = await transcribeAudio(wav);
+        if ("error" in r) throw new Error(r.error);
+        return r.text;
+      },
+      deepgramToken: () => store.settings.deepgramApiKey?.trim() || "",
+      mode: "wake",
+    });
+    const ctl = appVoiceControl(io);
+    void ctl.start();
+    return () => { void ctl.stop(); };
+  }, [settings.computerVoice]);
 
   // --- Przypomnienia: sprawdzaj co 20 s ---
   useEffect(() => {

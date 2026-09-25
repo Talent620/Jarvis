@@ -178,6 +178,10 @@ export function verify(a: EnvAction, before: ReadResult | undefined, after: Read
       const active = w.found && w.window?.id === a.windowId;
       return ladder(result, { active: true }, { active }, `active window ${w.window?.id ?? "?"} "${preview(w.window?.title ?? "", 40)}"`, now);
     }
+    case "browser.use": {
+      const p = after as PageRead;
+      return ladder(result, { browser: a.target }, { browser: p.browser ?? "managed" }, `browser actions go to the ${a.target === "user" ? "user's own browser" : "managed browser"}`, now);
+    }
     default:
       return { truth: "ATTEMPTED", evidence: "", reason: "no postcondition", unverifiable: result.status === "done" };
   }

@@ -8,7 +8,7 @@ import { performAction, type PerformResult } from "./actions";
 import { instructionEmails, pickCandidate, resolveContact, type Contact } from "./contacts";
 import { mailIdempotencyKey, sendExactlyOnce, type MailService, type SendOptions } from "./mail";
 import { isUntrusted, type Provenance } from "./provenance";
-import { parseCommand, type Command } from "./commands";
+import { browserChoice, parseCommand, type Command } from "./commands";
 import type { ClipboardRead, ComputerEnvironment, ElementInfo, ElementTarget, EnvAction, EnvEvent, PageRead, ScrollAmount } from "./env/types";
 import type { Kernel } from "./kernel";
 import { TaskAbortedError } from "./kernel";
@@ -236,6 +236,18 @@ export class ActionSession {
 
   async handle(text: string, opts: { amendTaskId?: string; command?: Command } = {}): Promise<TurnResult> {
     const cmd = opts.command ?? parseCommand(text);
+    // "Wejdź na YouTube w mojej przeglądarce": switch browsers first; the command only runs there.
+    const choice = browserChoice(text);
+    if (choice && cmd.type !== "browser.use" && cmd.type !== "unknown") {
+      const sw = await this.runTask(text, { type: "browser.use", target: choice }, (t) => this.useBrowser(t, choice));
+      if (sw.truth !== "CONFIRMED") return sw;
+      const r = await this.dispatch(text, cmd, opts);
+      return { ...r, say: `${sw.say} ${r.say}` };
+    }
+    return this.dispatch(text, cmd, opts);
+  }
+
+  private async dispatch(text: string, cmd: Command, opts: { amendTaskId?: string }): Promise<TurnResult> {
     if (opts.amendTaskId && cmd.type === "focusItem") return this.runTask(text, cmd, (t) => this.focusItem(t, cmd.query), opts.amendTaskId);
     switch (cmd.type) {
       case "browser.launch": return this.runTask(text, cmd, (t) => this.launch(t));
@@ -247,6 +259,7 @@ export class ActionSession {
       case "selectText": return this.runTask(text, cmd, (t) => this.selectText(t, cmd.query));
       case "copy": return this.runTask(text, cmd, (t) => this.copy(t, cmd.query));
       case "send": return this.runTask(text, cmd, (t) => this.send(t, text, cmd.query));
+      case "browser.use": return this.runTask(text, cmd, (t) => this.useBrowser(t, cmd.target));
       default: return { command: "unknown", truth: "BLOCKED", say: "Nie wiem, co mam zrobić." };
     }
   }
@@ -273,6 +286,19 @@ export class ActionSession {
   }
 
   private undone = new Set<string>();
+
+  /** Drive JARVIS's own browser or the user's (BrowserBridge); confirmed by the page read-back. */
+  private async useBrowser(taskId: string, target: "managed" | "user") {
+    const r = await this.act(taskId, { kind: "browser.use", target }, "use-browser");
+    if (r.truth === "CONFIRMED") {
+      await this.syncPage();
+      return { truth: r.truth, say: target === "user" ? "Dobrze, pracuję w Twojej przeglądarce." : "Dobrze, pracuję w swojej przeglądarce.", evidence: r.evidence };
+    }
+    const say = target === "user" && isPrecondition(r.truth)
+      ? "Nie widzę rozszerzenia JARVIS w Twojej przeglądarce. Zainstaluj je i sparuj kodem z ustawień."
+      : this.failSay(r, "Przełączenie przeglądarki");
+    return { truth: r.truth, say, evidence: r.reason };
+  }
 
   private async launch(taskId: string) {
     const r = await this.act(taskId, { kind: "browser.launch" }, "launch");

@@ -40,7 +40,7 @@ export interface ReplayResult {
   reason?: string;
 }
 
-const COMPILABLE = new Set<Command["type"]>(["browser.launch", "browser.gotoSite", "browser.openItem", "scroll", "findCollection", "focusItem", "selectText", "copy", "send"]);
+const COMPILABLE = new Set<Command["type"]>(["browser.use", "browser.launch", "browser.gotoSite", "browser.openItem", "scroll", "findCollection", "focusItem", "selectText", "copy", "send"]);
 const MAX_STEPS = 12;
 /** A pause longer than this ends the sequence being remembered (it was another errand). */
 const MAX_GAP_MS = 15 * 60_000;
@@ -95,6 +95,13 @@ export class SkillLibrary {
 
   list(): Skill[] {
     return [...this.skills.values()].map((s) => ({ ...s }));
+  }
+
+  /** Forget a skill for good (the user removed it). */
+  remove(name: string): boolean {
+    const ok = this.skills.delete(normName(name));
+    if (ok) this.persist();
+    return ok;
   }
 
   invalidate(name: string, reason: string): void {

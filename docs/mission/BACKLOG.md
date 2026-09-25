@@ -37,9 +37,9 @@ Status: todo, in_progress, done, blocked, needs_hardware. Nothing is done withou
 | B-031 | Real Gmail send + Sent read-back on the user account | M6 | needs_hardware | src/lib/runtime/gmailService.ts, src/lib/google.ts | real mail leaves | acceptance with --send only | no Google account in cloud |
 | B-032 | Address book source for recipients (Google Contacts or local book) | M6 | needs_hardware | src/lib/runtime/contacts.ts, appRuntime.ts | wrong recipient | inflection tests exist; real book on user machine | no contacts in cloud |
 | B-033 | Voice control on a real microphone: echo cancellation, barge-in, Deepgram/Whisper chain, audio latency | M6 | needs_hardware | src/lib/runtime/voice/browserAudio.ts, appRuntime.ts startAppVoice | echo loops | acceptance with mic and speakers | no microphone in cloud |
-| B-034 | UI toggle for voice control (startAppVoice) and Deepgram key field | M10 | todo | src/App.tsx, settings | double audio | UI test | none |
-| B-035 | Route "w mojej przeglądarce" and tab questions to the BrowserBridge env | M10 | todo | lanes/runtime.ts, electronRuntime.ts | wrong target browser | conversation tests | none |
+| B-034 | UI toggle for voice control (startAppVoice) and Deepgram key field | M10 | done | src/App.tsx, settings | double audio | UI test | none |
+| B-035 | Route "w mojej przeglądarce" and tab questions to the BrowserBridge env | M10 | done | lanes/runtime.ts, electronRuntime.ts | wrong target browser | conversation tests | none |
 | B-036 | Firefox run of the bridge extension (web-ext) | M8 | needs_hardware | extension/browser-bridge | API differences | manual or web-ext run | no Firefox in this environment |
 | B-037 | RemoteDesktop portal + libei helper for Wayland input | M7 | needs_hardware | src/node/linux | consent UX | session on GNOME/KDE Wayland | no Wayland session here |
 | B-038 | Wire a real vision model (local or API) into EscalatingEnvironment with a screen capture and pointer in Electron | M10+ | todo | src/lib/runtime/env/vision.ts, electron | wrong clicks | fake-model tests exist; local acceptance | needs a model choice and cost limits |
-| B-039 | Skills UI: list, rename, delete remembered skills | M10+ | todo | src/components | none | render test | none |
+| B-039 | Skills UI: list, rename, delete remembered skills | M10+ | done | src/components | none | render test | none |

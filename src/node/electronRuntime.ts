@@ -9,9 +9,10 @@ import { resolveBrowserExecutable } from "./browserExecutable";
 import { createEnvHost, type EnvHost } from "./envHost";
 import { ManagedBrowser } from "./managedBrowser";
 import { CompositeEnvironment } from "./compositeEnvironment";
+import { SelectableBrowser } from "./selectableBrowser";
 import { LinuxDesktopEnvironment } from "./linux/environment";
 import { WindowsDesktopEnvironment } from "./windows/uia";
-import type { EnvEvent } from "../lib/runtime/env/types";
+import type { ComputerEnvironment, EnvEvent } from "../lib/runtime/env/types";
 
 export interface ManagedBrowserHost extends EnvHost {
   onEvent(listener: (e: EnvEvent) => void): () => void;
@@ -23,6 +24,8 @@ export interface ManagedBrowserHostOptions {
   executablePath?: string;
   /** The system clipboard (Electron's clipboard.readText): the read-back for "skopiuj". */
   readClipboard?: () => string | Promise<string>;
+  /** The user's own browser (BrowserBridge): "w mojej przeglądarce" switches to it. */
+  userBrowser?: ComputerEnvironment;
 }
 
 /** One managed browser per app, with a dedicated profile under the app's userData folder. */
@@ -36,12 +39,15 @@ export function createManagedBrowserHost(opts: ManagedBrowserHostOptions): Manag
   // The same runtime also reaches the desktop: AT-SPI and X11/Wayland tools on Linux, UI
   // Automation on Windows. Elsewhere desktop actions are NEEDS_CAPABILITY.
   const desktop = process.platform === "linux" ? new LinuxDesktopEnvironment({ pollMs: 1000 }) : process.platform === "win32" ? new WindowsDesktopEnvironment() : null;
-  const env = desktop ? new CompositeEnvironment(browser, desktop) : browser;
+  const browsers = opts.userBrowser ? new SelectableBrowser(browser, opts.userBrowser) : browser;
+  const env = desktop ? new CompositeEnvironment(browsers, desktop) : browsers;
   const host = createEnvHost(env);
   return { ...host, onEvent: (l) => env.onEvent(l) };
 }
 
 export interface BridgeHost {
+  /** The user's current tab as an environment (NEEDS_CAPABILITY until the extension connects). */
+  env: ComputerEnvironment;
   start(): Promise<number>;
   /** A new one-time pairing code to show the user. */
   pair(): string;
@@ -60,6 +66,7 @@ export function createBridgeHost(opts: { userDataPath: string; port?: number }):
   const server = new BridgeServer({ tokens, pairing, port: opts.port ?? 47823 });
   let port: number | null = null;
   return {
+    env: server.env,
     start: async () => (port = await server.start()),
     pair: () => pairing.issue(),
     status: () => ({ connected: server.env.connected, port, paired: tokens.list() }),

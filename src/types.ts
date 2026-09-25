@@ -728,6 +728,10 @@ export interface Settings {
   voiceRate: number;
   /** Ciągłe nasłuchiwanie słowa-klucza "Jarvis". */
   wakeWord: boolean;
+  /** Sterowanie komputerem głosem (runtime JARVIS, desktop): strumieniowe rozpoznawanie mowy. */
+  computerVoice: boolean;
+  /** Klucz Deepgram (strumieniowe STT po polsku); bez niego zapasowo Groq Whisper. */
+  deepgramApiKey: string;
   /** Po otwarciu aplikacji od razu zacznij słuchać i zapytaj, o co chodzi. */
   autoListenOnOpen: boolean;
   /** Po otwarciu pokaż proaktywne powitanie/raport. */

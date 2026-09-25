@@ -17,6 +17,8 @@ import { normalizeUtterance } from "./util";
 import { BatchSTT, DeepgramSTT, FallbackSTT } from "./voice/adapters";
 import { AppTTS, MicInput, pcm16ToWav } from "./voice/browserAudio";
 import { VoiceSession, type VoiceSessionEvent } from "./voice/session";
+import { VoiceControl } from "./voiceControl";
+import { acquireVoice, releaseVoice } from "../voiceSession";
 import type { ListenMode, SocketLike, StreamingSTT } from "./voice/types";
 
 interface AppRuntime {
@@ -37,6 +39,8 @@ export interface AppRuntimeControls {
   subscribe(fn: () => void): () => void;
   press(control: "pause" | "resume" | "stop"): void;
   diagnostics(): Diagnostics;
+  skills(): Skill[];
+  forgetSkill(name: string): void;
 }
 
 const ACTION_MODEL = "polecenia bez modelu (gramatyka PL), odczyt zwrotny";
@@ -47,6 +51,8 @@ function controlsOf(a: AppRuntime): AppRuntimeControls {
     view: () => statusView(a.kernel.state, { now: Date.now(), environment: rt.environmentId, model: ACTION_MODEL }),
     subscribe: (fn) => a.kernel.subscribe(() => fn()),
     press: (c) => { rt.press(c); },
+    skills: () => rt.listSkills(),
+    forgetSkill: (name) => { rt.forgetSkill(name); },
     diagnostics: () => exportDiagnostics({
       state: a.kernel.state, turns: rt.turns, skills: rt.listSkills(), environment: rt.environmentId, now: Date.now(),
       latency: voiceSpeaker ? voiceSpeaker.latency.summary() : undefined,
@@ -107,6 +113,7 @@ export function shouldRoute(cmd: Command, state: KernelState | undefined): boole
   switch (cmd.type) {
     case "browser.launch":
     case "browser.gotoSite":
+    case "browser.use":
       return true;
     case "scroll":
     case "browser.openItem":
@@ -204,13 +211,14 @@ export interface AppVoiceIO {
  * Voice control of the runtime: microphone (echo cancellation on) -> streaming recognizer chain
  * -> JarvisRuntime -> speech with barge-in. Needs a microphone: acceptance on the user machine.
  */
-export async function startAppVoice(io: AppVoiceIO): Promise<{ session: VoiceSession; stop: () => Promise<void> }> {
+export async function startAppVoice(io: AppVoiceIO): Promise<{ session: VoiceSession; stop: () => Promise<void>; recognizer: () => string }> {
   const { runtime: rt } = await getAppRuntime();
   const token = io.deepgramToken?.();
   const chain: (() => StreamingSTT)[] = [];
   if (token) chain.push(() => new DeepgramSTT({ connect: (url, protocols) => new WebSocket(url, protocols) as unknown as SocketLike, protocols: ["token", token] }));
   chain.push(() => new BatchSTT({ transcribe: (frames) => io.transcribe(new Blob([pcm16ToWav(frames)], { type: "audio/wav" })) }));
-  const session = new VoiceSession({ stt: new FallbackSTT(chain), tts: new AppTTS({ speak: io.speak, stop: io.stop }), mode: io.mode, onEvent: io.onEvent });
+  const stt = new FallbackSTT(chain);
+  const session = new VoiceSession({ stt, tts: new AppTTS({ speak: io.speak, stop: io.stop }), mode: io.mode, onEvent: io.onEvent });
   session.attach(rt);
   const mic = new MicInput();
   voiceSpeaker = session;
@@ -224,10 +232,34 @@ export async function startAppVoice(io: AppVoiceIO): Promise<{ session: VoiceSes
   }
   return {
     session,
+    recognizer: () => stt.id,
     stop: async () => {
       if (voiceSpeaker === session) voiceSpeaker = null;
       await mic.stop();
       await session.stop();
     },
   };
+}
+
+let voiceControl: VoiceControl | null = null;
+
+/** The voice controller if the user ever switched voice control on (status for the panel). */
+export const peekVoiceControl = (): VoiceControl | null => voiceControl;
+
+/**
+ * The single "Sterowanie komputerem głosem" controller of the app (B-034). `io` is built by the
+ * UI (speech output, batch recognizer, Deepgram key) at every start, so settings changes apply.
+ */
+export function appVoiceControl(io: () => AppVoiceIO): VoiceControl {
+  if (!voiceControl) {
+    voiceControl = new VoiceControl({
+      start: async () => {
+        const r = await startAppVoice(io());
+        return { stop: r.stop, recognizer: r.recognizer() };
+      },
+      acquire: acquireVoice,
+      release: releaseVoice,
+    });
+  }
+  return voiceControl;
 }
