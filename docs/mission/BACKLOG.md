@@ -26,7 +26,7 @@ Status: todo, in_progress, done, blocked, needs_hardware. Nothing is done withou
 | B-020 | Contacts with Polish inflection and runtime disambiguation | M4 | done | src/lib/runtime/contacts.ts | wrong recipient | inflection tests | none |
 | B-021 | Provenance tags and trust boundary for untrusted content | M4 | done | src/lib/runtime/provenance.ts | injection bypass | injection tests | none |
 | B-022 | Streaming voice interfaces, barge-in, provider catalog | M5 | done | src/lib/runtime/voice/ | none | state machine tests | real mic = needs_hardware |
-| B-023 | npm run jarvis:acceptance | M6 | todo | scripts/acceptance/ | accidental real send | --send guard tests | real desktop = needs_hardware |
+| B-023 | npm run jarvis:acceptance | M6 | done | scripts/acceptance/ | accidental real send | --send guard tests | real desktop = needs_hardware |
 | B-024 | Linux AT-SPI, portal/libei, clipboard adapters | M7 | todo | electron/, src/lib/env/linux/ | none | contract tests | needs_hardware for real session |
 | B-025 | BrowserBridge extension + loopback protocol | M8 | todo | extension/, electron/ | token leakage | protocol tests | none |
 | B-026 | Windows UIA and Android node-tree adapters | M9 | todo | electron/, android/ | breaking platforms | contract tests | needs_hardware |

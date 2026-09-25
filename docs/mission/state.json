@@ -78,21 +78,34 @@
     },
     {
       "id": "M5",
-      "status": "in_progress",
-      "evidence": [],
-      "last_commit": "",
-      "next_action": "Streaming voice runtime behind interfaces, barge-in, dedup, provider catalog replacing dead Gemini Live id, latency instrumentation."
+      "status": "done",
+      "evidence": [
+        "tests/runtime/voiceSession.test.ts 14/14: golden 1-8 spoken with chatter and a spoken consent (in-memory), the same from the Deepgram protocol stream, barge-in cancels TTS in the same tick, 'stop' during speech cancels audio and task, echo not taken as a command, repeated recognizer finals do not repeat actions, wake word and follow-up window, push-to-talk, partials only speculate (reads), clip cache, 'Sekunda.' on slow actions, failed sentence skipped",
+        "tests/runtime/voiceAdapters.test.ts 13/13: Deepgram live and OpenAI Realtime protocol streams (tests/fixtures/voice, scripted from the documented protocols), socket adapters, Whisper batch fallback with a turn detector, fallback chain with reported switches, provider catalog (2 streaming STT with Polish + Whisper, dead Gemini Live id never chosen)",
+        "tests/browser/voiceGolden.test.ts 1/1: golden 1-8 from recognizer events on Chromium; latency final->confirmed p50 73 ms / p95 402 ms (docs/JARVIS-PERFORMANCE.md)",
+        "tests/liveVoice.test.ts: Live model from the catalog (models/gemini-3.8-live, NON_BLOCKING, results WHEN_IDLE); tests/runtime/voiceBrowserAudio.test.ts 4/4 (echo-cancelling mic constraints, PCM16 16 kHz, WAV, app TTS)",
+        "CI green on 588e0a2: Tests push run 36074728692 and pull_request run 36074731352 (test + browser)",
+        "real microphone, speakers and network recognizers: NEEDS_HARDWARE (B-033); gemini-3.8-live id unverified against official docs (network policy, D-026)"
+      ],
+      "last_commit": "588e0a2",
+      "next_action": "Done. Live voice with a real microphone: acceptance on the user machine (B-033); UI toggle B-034."
     },
     {
       "id": "M6",
-      "status": "todo",
-      "evidence": [],
-      "last_commit": "",
-      "next_action": "npm run jarvis:acceptance with fixture, managed-browser, local-desktop modes and reports/acceptance-*.md/.json."
+      "status": "done",
+      "evidence": [
+        "npm run jarvis:acceptance (vite-node scripts/acceptance/run.ts): modes fixture, managed-browser, local-desktop; progressive steps with PASS/FAIL/SKIP/SIMULATED/NEEDS_HARDWARE/BLOCKED, evidence, latency p50/p95, capability matrix, screenshots only on failure",
+        "published report reports/acceptance-2026-09-25T00-01-55-607Z.md (commit b5a026a, only the two report files): fixture mode, golden 1-7 x10 all CONFIRMED (1.33-1.55 s per run), full 1-8 with mock Gmail CONFIRMED from Sent, voice SIMULATED (scripted recognizer), verdict PARTIAL because no microphone",
+        "cloud runs of the other modes are honest: managed-browser BLOCKED (YouTube unreachable, network policy), local-desktop PARTIAL (system clipboard, display, input, AT-SPI, microphone NEEDS_HARDWARE; mail draft answered no, nothing sent)",
+        "tests/acceptance.test.ts 12/12: safe defaults, progressive skip, report rendering, publish only on claude/* and only reports/ paths (commit limited by pathspec), credentials probed by name only, draft mode never builds the real mail service, --send without recipient BLOCKED",
+        "docs/JARVIS-LOCAL-VALIDATION.md; CI browser job runs the fixture mode 3x with --no-publish"
+      ],
+      "last_commit": "ae1cc71",
+      "next_action": "Done. On the user machine: npm run jarvis:acceptance -- --mode=managed-browser and --mode=local-desktop (NEEDS_HARDWARE items B-030..B-033)."
     },
     {
       "id": "M7",
-      "status": "todo",
+      "status": "in_progress",
       "evidence": [],
       "last_commit": "",
       "next_action": "Linux adapters: AT-SPI, RemoteDesktop portal/libei, clipboard, active window, selection; contract tests."
