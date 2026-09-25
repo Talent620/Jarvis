@@ -108,4 +108,25 @@ describe("interleaved conversations on Chromium", () => {
     const clip = (await browser.read({ kind: "clipboard" })) as ClipboardRead;
     expect(clip.text ?? "").not.toBe("Łódź");
   });
+
+  it("an ambiguous 'komentarz o Łodzi' draws numbered badges, asks, and the answer is verified", async () => {
+    const page = () => (browser as unknown as { page: { evaluate: <T>(fn: () => T) => Promise<T> } }).page;
+    const badges = () => page().evaluate(() => Array.from(document.querySelectorAll(".jarvis-badge")).map((b) => (b as HTMLElement).style.display === "none" ? "" : b.textContent));
+    rt.onText("Znajdź komentarze.");
+    await rt.idle();
+    const t = rt.onText("Pokaż komentarz o Łodzi.");
+    const t0 = Date.now();
+    while (!rt.session.hasPendingQuestion()) {
+      if (Date.now() - t0 > 5000) throw new Error("no question");
+      await sleep(20);
+    }
+    expect(await badges()).toEqual(["1", "2"]);
+    expect(said.at(-1)).toMatch(/^Pasuje 2\. Oznaczyłem je numerami\. 1: od @LodzTV/);
+    rt.onText("drugi");
+    await rt.idle();
+    expect(t.result?.truth).toBe("CONFIRMED");
+    const el = (await browser.read({ kind: "element", target: { ref: "yt-comment:c8", semanticKey: "comment:c8" } })) as ElementRead;
+    expect(el.highlighted).toBe(true);
+    expect(await badges()).toEqual([]);
+  });
 });

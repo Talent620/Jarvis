@@ -69,7 +69,8 @@ export function parseCommand(text: string): Command {
   if (q.noun === "video" && (verb === "open" || verb === "show" || /\b(pusc|odtworz|wlacz|zagraj)\w*/.test(norm))) {
     return { type: "browser.openItem", itemKind: "video", query: q.ordinal !== undefined || q.relative ? q : { ...q, ordinal: 1 } };
   }
-  const itemRef = q.ordinal !== undefined || q.relative !== undefined || q.reject;
+  // "komentarz od Ani", "komentarz o Łodzi" describe one item, like an ordinal does.
+  const itemRef = q.ordinal !== undefined || q.relative !== undefined || q.reject || !!q.author || !!q.about;
   if ((q.noun === "comment" || q.noun === "reply") && !itemRef && !q.returnTo && (verb === "find" || verb === "show" || verb === undefined || /\b(wiecej|kolejne|zaladuj)\b/.test(norm))) {
     return { type: "findCollection", itemKind: "comment", more: /\b(wiecej|kolejne|dalsze|zaladuj)\b/.test(norm) };
   }

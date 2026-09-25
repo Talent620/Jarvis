@@ -12,12 +12,12 @@ import { parseCommand, type Command } from "./commands";
 import type { ClipboardRead, ComputerEnvironment, ElementInfo, ElementTarget, EnvAction, EnvEvent, PageRead, ScrollAmount } from "./env/types";
 import type { Kernel } from "./kernel";
 import { TaskAbortedError } from "./kernel";
-import type { RefQuery } from "./polish";
-import { resolveReference, type Resolution } from "./resolve";
+import { matchesDescription, parseReference, type RefQuery } from "./polish";
+import { chooseCandidate, resolveReference, type Resolution } from "./resolve";
 import { spanFor } from "./text";
 import { isPrecondition, type Truth } from "./truth";
 import { TERMINAL_TASK, type Referent } from "./types";
-import { fnv1a64, preview } from "./util";
+import { fnv1a64, normalizeUtterance, preview } from "./util";
 
 export interface SessionOptions {
   /** Where "wejdź na YouTube" goes (the fixture URL in tests). */
@@ -52,6 +52,31 @@ export interface TurnResult {
 
 const ORDINAL_WORDS = ["pierwszy", "drugi", "trzeci", "czwarty", "piąty", "szósty", "siódmy", "ósmy", "dziewiąty", "dziesiąty"];
 const ordinalWord = (n: number) => ORDINAL_WORDS[n - 1] ?? `${n}.`;
+
+const NUMBER_NAMES: Record<string, number> = {
+  jeden: 1, jedynka: 1, jedynke: 1, dwa: 2, dwojka: 2, dwojke: 2, trzy: 3, trojka: 3, trojke: 3, cztery: 4, czworka: 4, czworke: 4,
+  piec: 5, piatka: 5, piatke: 5, szesc: 6, szostka: 6, szostke: 6, siedem: 7, siodemka: 7, siodemke: 7, osiem: 8, osemka: 8, osemke: 8, dziewiec: 9, dziewiatka: 9, dziewiatke: 9,
+};
+
+/** "drugi", "numer 2", "dwójka", "ten od Ani": one of the numbered candidates, else null. */
+export function pickNumbered<T extends { metadata: Record<string, unknown> }>(answer: string, candidates: T[]): T | null {
+  const norm = normalizeUtterance(answer);
+  const toks = norm.split(" ");
+  let n = parseReference(answer).ordinal;
+  if (n === undefined) {
+    const digit = toks.find((t) => /^\d{1,2}$/.test(t));
+    const named = toks.find((t) => NUMBER_NAMES[t] !== undefined);
+    n = digit ? Number(digit) : named ? NUMBER_NAMES[named] : undefined;
+  }
+  if (n !== undefined) return n >= 1 && n <= candidates.length ? candidates[n - 1] : null;
+  const od = /\bod @?([a-z0-9_]{2,40})/.exec(norm);
+  const byAuthor = candidates.filter((c) => {
+    if (od) return matchesDescription({ author: od[1] }, { author: String(c.metadata.author ?? "") });
+    const who = normalizeUtterance(String(c.metadata.author ?? "")).replace(/[@\s_]/g, "");
+    return who.length > 1 && norm.replace(/\s/g, "").includes(who);
+  });
+  return byAuthor.length === 1 ? byAuthor[0] : null;
+}
 
 export class ActionSession {
   private unsubscribe: (() => void) | null = null;
@@ -337,7 +362,13 @@ export class ActionSession {
   }
 
   private async focusItem(taskId: string, query: RefQuery) {
-    const res = await this.resolveItem(taskId, query);
+    let res = await this.resolveItem(taskId, query);
+    if (res.status === "ambiguous") {
+      const chosen = await this.choose(taskId, res.candidates);
+      if (!chosen) return { truth: "BLOCKED" as Truth, say: "Dobrze, zostawiam.", evidence: "no candidate chosen" };
+      this.kernel.dispatch({ type: "TaskStatusChanged", taskId, status: "running", reason: "item chosen" });
+      res = chooseCandidate(this.kernel.state, chosen.id);
+    }
     if (res.status !== "resolved") {
       const say = res.status === "none" && (res.reason === "end_of_collection" || res.reason === "out_of_range") ? "Nie ma więcej komentarzy." : "Nie wiem, o który chodzi.";
       return { truth: "BLOCKED" as Truth, say, evidence: res.status };
@@ -393,9 +424,31 @@ export class ActionSession {
     return { truth: r.truth, say: `Skopiowane: „${text}”.`, evidence: r.evidence, data: { clipboard: text } };
   }
 
+  /**
+   * Several items match ("komentarz od Ani"): numbered badges on the page (a visual aid, only
+   * mentioned when they were really drawn) and a short question; the answer picks one.
+   */
+  private async choose(taskId: string, candidates: Referent[]): Promise<Referent | null> {
+    const shown = candidates.slice(0, 9);
+    const overlay = (items: { target: ElementTarget; label: string }[]) =>
+      Promise.race([
+        this.env.act({ kind: "overlay.mark", items }).catch(() => ({ status: "failed" as const })),
+        new Promise<{ status: "failed" }>((r) => setTimeout(() => r({ status: "failed" }), 3000)),
+      ]);
+    const marked = (await overlay(shown.map((r, i) => ({ target: this.targetOf(r), label: String(i + 1) })))).status === "done";
+    const list = shown.slice(0, 4).map((r, i) => `${i + 1}: od ${String(r.metadata.author ?? "?")}, „${preview(String(r.metadata.text ?? ""), 30)}”`).join("; ");
+    const more = shown.length > 4 ? `; i jeszcze ${shown.length - 4}` : "";
+    const q = `Pasuje ${shown.length}.${marked ? " Oznaczyłem je numerami." : ""} ${list}${more}. Który?`;
+    try {
+      return await this.ask(taskId, q, (a) => pickNumbered(a, shown), "waiting for a choice");
+    } finally {
+      if (marked) await overlay([]);
+    }
+  }
+
   // ---------------------------------------------------------------- step 8: send (mission 5.9, 5.11-5.13)
 
-  private question: { taskId: string; candidates: Contact[]; resolve: (c: Contact | null) => void } | null = null;
+  private question: { taskId: string; pick: (answer: string) => unknown; resolve: (v: unknown) => void } | null = null;
 
   /** A question is waiting for the user's answer ("Którego Marcina?"). */
   hasPendingQuestion(): boolean {
@@ -405,15 +458,15 @@ export class ActionSession {
   /** Would this text answer the pending question? No side effects. */
   isAnswer(text: string): boolean {
     const q = this.question;
-    return !!q && (!!pickCandidate(text, q.candidates) || NO_ANSWER.test(normalizeForAnswer(text)));
+    return !!q && (q.pick(text) !== null || NO_ANSWER.test(normalizeForAnswer(text)));
   }
 
   /** Try to answer the pending question. Returns false when the text is not an answer. */
   answer(text: string): boolean {
     const q = this.question;
     if (!q) return false;
-    const picked = pickCandidate(text, q.candidates);
-    if (picked) {
+    const picked = q.pick(text);
+    if (picked !== null) {
       this.question = null;
       q.resolve(picked);
       return true;
@@ -426,9 +479,9 @@ export class ActionSession {
     return false;
   }
 
-  private ask(taskId: string, text: string, candidates: Contact[]): Promise<Contact | null> {
+  private ask<T>(taskId: string, text: string, pick: (answer: string) => T | null, reason = "waiting for the recipient"): Promise<T | null> {
     // Waiting for the user (not blocked: blocked is final). Pause and stop still apply.
-    this.kernel.dispatch({ type: "TaskStatusChanged", taskId, status: "waiting_consent", reason: "waiting for the recipient" });
+    this.kernel.dispatch({ type: "TaskStatusChanged", taskId, status: "waiting_consent", reason });
     this.opts.onQuestion?.(text);
     return new Promise((resolve) => {
       const timer = setTimeout(() => { if (this.question?.taskId === taskId) { this.question = null; resolve(null); } }, this.opts.answerTimeoutMs ?? 120_000);
@@ -436,7 +489,7 @@ export class ActionSession {
         const st = s.tasks[taskId]?.status;
         if ((!st || TERMINAL_TASK.has(st)) && this.question?.taskId === taskId) { this.question = null; clearTimeout(timer); off(); resolve(null); }
       });
-      this.question = { taskId, candidates, resolve: (c) => { clearTimeout(timer); off(); resolve(c); } };
+      this.question = { taskId, pick, resolve: (c) => { clearTimeout(timer); off(); resolve(c as T | null); } };
     });
   }
 
@@ -501,7 +554,8 @@ export class ActionSession {
       let contact: Contact | null = null;
       if (r.status === "resolved") contact = r.contact;
       else if (r.status === "ambiguous") {
-        contact = await this.ask(taskId, r.question, r.candidates);
+        const candidates = r.candidates;
+        contact = await this.ask(taskId, r.question, (a) => pickCandidate(a, candidates));
         if (!contact) return { truth: "BLOCKED" as Truth, say: "Dobrze, nie wysyłam.", evidence: "no recipient chosen" };
         k.dispatch({ type: "TaskStatusChanged", taskId, status: "running", reason: "recipient chosen" });
       } else {

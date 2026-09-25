@@ -93,7 +93,7 @@ declare const __j: PageLib;
 function initScript(): void {
   const w = window as unknown as {
     __jarvisEmit?: (payload: unknown) => void;
-    __jarvisOverlay?: { track: (ref: string, key?: string) => void; clear: () => void };
+    __jarvisOverlay?: { track: (ref: string, key?: string) => void; clear: () => void; mark: (items: { ref: string; key?: string; label: string }[]) => number };
   };
   const emit = (payload: unknown) => { try { w.__jarvisEmit?.(payload); } catch { /* binding not ready */ } };
 
@@ -144,8 +144,21 @@ function initScript(): void {
   let target: { ref: string; key?: string } | null = null;
   let box: HTMLDivElement | null = null;
   let frame = 0;
+  // Numbered badges over candidates when a reference is ambiguous ("który?").
+  let marks: { ref: string; key?: string; label: string; el: HTMLDivElement }[] = [];
+  function placeMarks() {
+    for (const m of marks) {
+      const hit = __j.find(m.ref, m.key);
+      if (!hit) { m.el.style.display = "none"; continue; }
+      const r = hit.el.getBoundingClientRect();
+      m.el.style.display = "block";
+      m.el.style.left = `${Math.max(0, r.left - 14)}px`;
+      m.el.style.top = `${Math.max(0, r.top - 10)}px`;
+    }
+  }
   function place() {
     frame = 0;
+    placeMarks();
     if (!target) return;
     if (!box) {
       box = document.createElement("div");
@@ -164,11 +177,25 @@ function initScript(): void {
     box.style.height = `${r.height + 8}px`;
   }
   function schedulePlace() {
-    if (target && !frame) frame = requestAnimationFrame(place);
+    if ((target || marks.length) && !frame) frame = requestAnimationFrame(place);
   }
   w.__jarvisOverlay = {
     track: (ref: string, key?: string) => { target = { ref, key }; place(); },
     clear: () => { target = null; if (box) box.style.display = "none"; },
+    mark: (items) => {
+      for (const m of marks) m.el.remove();
+      marks = items.slice(0, 20).map((i) => {
+        const el = document.createElement("div");
+        el.className = "jarvis-badge";
+        el.setAttribute("aria-hidden", "true");
+        el.textContent = String(i.label).slice(0, 3);
+        el.style.cssText = "position:fixed;pointer-events:none;z-index:2147483647;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:#28c0c8;color:#00161a;font:700 14px/24px system-ui,sans-serif;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.4)";
+        document.documentElement.appendChild(el);
+        return { ref: i.ref, key: i.key, label: i.label, el };
+      });
+      placeMarks();
+      return marks.length;
+    },
   };
 }
 
@@ -271,6 +298,7 @@ export class ManagedBrowser implements ComputerEnvironment {
         case "browser.focus": return await this.focus(action.target);
         case "text.select": return await this.select(action.target, action.start, action.end);
         case "clipboard.copy": return await this.copy(action.expected, action.reselect);
+        case "overlay.mark": return await this.mark(action.items);
         default: return { status: "needs_capability", error: `unsupported action ${(action as EnvAction).kind}` };
       }
     } catch (e) {
@@ -499,6 +527,15 @@ export class ManagedBrowser implements ComputerEnvironment {
     await this.settleScroll();
     await sleep(40);
     return { status: "done", reResolved: found.reResolved, undo: { scrollY: y } };
+  }
+
+  /** Numbered badges (visual aid); done only when the page reports them drawn. */
+  private async mark(items: { target: ElementTarget; label: string }[]): Promise<ActResult> {
+    const p = this.requirePage();
+    const want = items.map((i) => ({ ref: i.target.ref, key: i.target.semanticKey, label: i.label }));
+    const drawn = await p.evaluate((list) => (window as unknown as { __jarvisOverlay?: { mark: (l: unknown) => number } }).__jarvisOverlay?.mark(list) ?? -1, want);
+    const seen = await this.iso(() => document.querySelectorAll(".jarvis-badge").length);
+    return drawn === want.length && seen === want.length ? { status: "done", data: { drawn } } : { status: "failed", error: "badges not drawn" };
   }
 
   private async select(target: ElementTarget, start: number, end: number): Promise<ActResult> {

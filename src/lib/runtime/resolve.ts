@@ -3,7 +3,7 @@
 // Pure: returns the events the caller must dispatch so the kernel stays the single writer.
 
 import type { EventInput } from "./events";
-import { parseReference, parseVerb, NOUN_TYPES, VERB_OBJECT_TYPES, type NounKind, type RefQuery, type VerbKind } from "./polish";
+import { matchesDescription, parseReference, parseVerb, NOUN_TYPES, VERB_OBJECT_TYPES, type NounKind, type RefQuery, type VerbKind } from "./polish";
 import type { KernelState } from "./reducer";
 import type { Referent, ReferentRegistry, ReferentType } from "./types";
 
@@ -123,6 +123,20 @@ function navigateCollection(reg: ReferentRegistry, coll: Referent, q: RefQuery, 
   };
 }
 
+/** Resolve to one chosen candidate of an ambiguous reference ("który?" answered). */
+export function chooseCandidate(state: KernelState, referentId: string, utteranceId?: string): Resolution {
+  const reg = state.referents;
+  const item = reg.byId[referentId];
+  if (!item) return { status: "none", reason: "no_candidate", events: [] };
+  if (!item.valid) return { status: "stale", referent: item, reason: item.invalidatedReason ?? "stale", events: [] };
+  const coll = Object.values(reg.byId).find((r) => r.type === "Collection" && reg.collections[r.id]?.items.includes(referentId));
+  const idx = coll ? reg.collections[coll.id].items.indexOf(referentId) : -1;
+  return {
+    status: "resolved", referent: item, via: "collection", collectionId: coll?.id, cursor: idx >= 0 ? idx : undefined,
+    events: [...(coll && idx >= 0 ? [{ type: "CollectionCursorMoved" as const, collectionId: coll.id, cursor: idx }] : []), mention(referentId, utteranceId)],
+  };
+}
+
 /** Current item of the most recent collection of this kind, if any. */
 function currentOf(reg: ReferentRegistry, itemKind?: string): Referent | undefined {
   const coll = findCollection(reg, itemKind);
@@ -168,6 +182,24 @@ export function resolveReference(state: KernelState, input: ResolveInput): Resol
     if (!pick) return { status: "none", reason: "no_candidate", events: [] };
     if ("stale" in pick) return { status: "stale", referent: pick.stale, reason: pick.stale.invalidatedReason ?? "stale", events: [] };
     return { status: "resolved", referent: pick.ok, via: "return", events: [mention(pick.ok.id, input.utteranceId, verb)] };
+  }
+
+  // "komentarz od Ani", "komentarz o Łodzi": the matching items of the collection. One match is
+  // resolved; several are ambiguous (the caller asks "który?" with numbered badges).
+  if ((q.author || q.about) && itemKind) {
+    const coll = findCollection(reg, itemKind);
+    if (!coll) return { status: "none", reason: "no_collection", events: [] };
+    if (!coll.valid) return { status: "stale", referent: coll, reason: coll.invalidatedReason ?? "stale", events: [] };
+    const meta = reg.collections[coll.id];
+    const hits = meta.items
+      .map((id, idx) => ({ r: reg.byId[id], idx }))
+      .filter((h) => h.r && h.r.valid && matchesDescription(q, { author: String(h.r.metadata.author ?? ""), text: String(h.r.metadata.text ?? "") }));
+    if (!hits.length) return { status: "none", reason: "no_candidate", needMore: true, events: [] };
+    if (hits.length > 1) return { status: "ambiguous", candidates: hits.map((h) => h.r), reason: `${hits.length} items match`, events: [] };
+    return {
+      status: "resolved", referent: hits[0].r, via: "collection", collectionId: coll.id, cursor: hits[0].idx,
+      events: [{ type: "CollectionCursorMoved", collectionId: coll.id, cursor: hits[0].idx }, mention(hits[0].r.id, input.utteranceId, verb)],
+    };
   }
 
   // Noun phrase ("ten komentarz", "zaznaczenie", "schowek", "ta karta").

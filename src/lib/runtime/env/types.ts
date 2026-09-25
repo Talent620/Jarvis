@@ -30,7 +30,9 @@ export type EnvAction =
   | { kind: "desktop.keys"; keys: string; expectClipboard?: string }
   | { kind: "desktop.type"; text: string }
   | { kind: "window.activate"; windowId: string }
-  | { kind: "clipboard.write"; text: string };
+  | { kind: "clipboard.write"; text: string }
+  // Visual aid only (numbered badges over candidates when a reference is ambiguous); empty clears.
+  | { kind: "overlay.mark"; items: { target: ElementTarget; label: string }[] };
 
 export type EnvActionKind = EnvAction["kind"];
 

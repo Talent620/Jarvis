@@ -246,8 +246,11 @@ export class JarvisRuntime {
   // ---------------------------------------------------------------- routing
 
   private route(utteranceId: string, text: string): RuntimeTurn {
-    // A task is waiting for an answer ("Którego Marcina?"): try that first.
-    if (this.session.hasPendingQuestion() && this.session.answer(text)) {
+    // A task is waiting for an answer ("Którego Marcina?"): try that first. "stop" stays a stop
+    // (cancel and silence), not a spoken "no".
+    const early = classifyReflex(text);
+    const isStop = early.kind === "control" && early.control === "stop";
+    if (!isStop && this.session.hasPendingQuestion() && this.session.answer(text)) {
       this.kernel.dispatch({ type: "ConversationIntent", intent: "CONFIRM", text, utteranceId });
       return this.log({ utteranceId, text, route: "answer" });
     }

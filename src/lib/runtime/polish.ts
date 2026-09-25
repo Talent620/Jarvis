@@ -28,6 +28,10 @@ export interface RefQuery {
   count?: number;
   /** Delivery channel named in instrumental case ("mailem", "SMS-em"); never the object. */
   channel?: "email" | "sms";
+  /** "komentarz od Ani": the author (normalized, may be inflected). */
+  author?: string;
+  /** "komentarz o Łodzi": words the item's text should contain (normalized, may be inflected). */
+  about?: string;
 }
 
 const CHANNELS: Record<string, "email" | "sms"> = {
@@ -147,7 +151,36 @@ export function parseReference(text: string): RefQuery {
   if (/\bten sam\b|\bta sama\b|\bto samo\b|\btego samego\b/.test(norm)) q.relative = "current";
   // A noun or an ordinal wins over a bare pronoun ("ten komentarz" is not a pronoun reference).
   if (q.pronoun && (q.noun || q.ordinal !== undefined)) q.pronoun = false;
+  // "komentarz od Ani", "komentarz o Łodzi": describe the item instead of counting it.
+  if ((q.noun === "comment" || q.noun === "reply") && q.ordinal === undefined && !q.relative) {
+    const by = /\b(?:komentarz\w*|odpowiedz\w*)\b(?: \w+)? (?:od|autorstwa|uzytkownika|napisan\w* przez) @?([a-z0-9_ ]{2,40})$/.exec(norm);
+    const on = /\b(?:komentarz\w*|odpowiedz\w*)\b(?: \w+)? (?:o|na temat|ze slow\w*|zawierajac\w*|w ktorym jest|gdzie jest) ([a-z0-9 ]{2,60})$/.exec(norm);
+    if (by) q.author = by[1].trim();
+    else if (on) q.about = on[1].trim();
+  }
   return q;
+}
+
+/**
+ * A crude Polish stem: drop an inflection ending so "Łodzi" matches "Łódź", "Piotrkowskiej"
+ * matches "Piotrkowską", "Ani" matches "Ania". Long words lose up to three letters, never below four.
+ */
+const stem = (w: string): string =>
+  w.length >= 8 ? w.slice(0, w.length - 3) : w.length > 4 ? w.slice(0, Math.max(4, w.length - 2)) : w.length > 3 ? w.slice(0, -1) : w;
+
+/** Does an item (author, text) match a described reference? Inputs are free text, normalized here. */
+export function matchesDescription(q: Pick<RefQuery, "author" | "about">, item: { author?: string; text?: string }): boolean {
+  if (q.author) {
+    const who = normalizeUtterance(item.author ?? "").replace(/[@\s_]/g, "");
+    const want = q.author.replace(/[@\s_]/g, "");
+    if (!who || !(who.startsWith(stem(want)) || who.includes(want))) return false;
+  }
+  if (q.about) {
+    const text = normalizeUtterance(item.text ?? "");
+    const words = q.about.split(" ").filter((w) => w.length > 2);
+    if (!words.length || !words.every((w) => text.includes(stem(w)))) return false;
+  }
+  return !!(q.author || q.about);
 }
 
 // ---------------------------------------------------------------- verbs

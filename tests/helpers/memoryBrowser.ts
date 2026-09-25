@@ -35,6 +35,8 @@ export interface MemoryBrowserOptions {
   pageSize?: number;
   comments?: MemComment[];
   capabilities?: CapabilityState[];
+  /** The environment cannot draw badges (overlay.mark -> needs_capability). */
+  noOverlay?: boolean;
 }
 
 export class MemoryBrowser implements ComputerEnvironment {
@@ -51,6 +53,8 @@ export class MemoryBrowser implements ComputerEnvironment {
   selection: { text: string; ref: string } | null = null;
   clipboard = "";
   highlight: string | null = null;
+  /** Numbered badges currently drawn (overlay.mark). */
+  marks: { ref: string; label: string }[] = [];
   pageSeq = 0;
   pageId = "";
   video = "";
@@ -176,6 +180,10 @@ export class MemoryBrowser implements ComputerEnvironment {
         this.selection = { text: hit.c.text.slice(a.start, a.end), ref: `yt-comment:${hit.c.id}` };
         return { status: "done" };
       }
+      case "overlay.mark":
+        if (this.opts.noOverlay) return { status: "needs_capability" };
+        this.marks = a.items.map((i) => ({ ref: i.target.ref, label: i.label }));
+        return { status: "done" };
       case "clipboard.copy": {
         if ((!this.selection || this.selection.text !== a.expected) && a.reselect) {
           const r = await this.act({ kind: "text.select", target: a.reselect.target, start: a.reselect.start, end: a.reselect.end, expected: a.expected });
