@@ -1,0 +1,209 @@
+{
+  "milestones": [
+    {
+      "id": "M0",
+      "status": "done",
+      "evidence": [
+        "npx vitest run: exit 0, 328 files, 2799/2799 tests (baseline 2787/2789)",
+        "tests/license.test.ts: 14/14 with runtime-generated ECDSA key pair; production verifyLicense rejects test-key and pre-rotation tokens",
+        "tests/androidSigning.test.ts: 7/7 (6 of them red before the fix): no literal keystore passwords, -nonprod debug-signed fallback, release.yml guard before build",
+        "full-history scan (916 commits): no PEM private key, no JWK d component; see docs/JARVIS-SECURITY.md",
+        "npm run perf:store: baseline numbers in docs/JARVIS-PERFORMANCE.md (setData 20.5 ms / 2.14 MB localStorage-only, 1.3 ms / 369 kB IDB, 22 wakes)",
+        "npx tsc -b exit 0, npx eslint . exit 0, npx vite build exit 0, npm run scan:secrets exit 0",
+        "CI run 36055327858 (Tests, push, 8a61178): success; run 36055358881 (Tests, pull_request): success"
+      ],
+      "last_commit": "8a61178",
+      "next_action": "Done. Owner: set JARVIS_RELEASE_* secrets before next release (docs/JARVIS-SECURITY.md)."
+    },
+    {
+      "id": "M1",
+      "status": "done",
+      "evidence": [
+        "npx vitest run: exit 0, 335 files, 2921/2921 tests",
+        "tests/runtime/kernel.test.ts 30/30: event and utterance dedup, repeated final within 1.5 s, stop aborts task signal, pause/resume gate, idempotency conflicts, UNKNOWN_AFTER_ATTEMPT for external effects, CONFIRMED needs evidence, epochs, journal only durable events, retry after journal failure, restore after restart, DexieJournal round trip (mutation check: 5 tests fail when idempotency and evidence guards are removed)",
+        "tests/runtime/resolvePolish.test.ts 53/53 Polish reference resolution cases (ordinals, nie ten/następny, poprzedni, wróćmy do, typed pronouns, stale detection)",
+        "tests/runtime/text.test.ts 13/13 graphemes and letters (Łódź, żółw, @marcin, emoji, modifiers, ZWJ, combining marks, fallback segmenter)",
+        "tests/runtime/snapshotCapabilities.test.ts 11/11 snapshot <= 1200 chars/300 tokens, data quoting, capability requirements and probes",
+        "tests/runtime/agentRunCancel.test.ts 6/6 (5 fail on the pre-M1 agentRun)",
+        "tests/runtime/storePersist.test.ts 7/7 and tests/runtime/rootRenders.test.ts 2/2",
+        "docs/JARVIS-PERFORMANCE.md: setData 20 ms -> 0.007 ms, burst of 200 mutations 200 -> 1 storage writes (428.8 MB -> 2.1 MB), root re-renders per unrelated mutation 1 -> 0",
+        "npx tsc -b exit 0, npx eslint . exit 0, npx vite build exit 0, npm run scan:secrets exit 0"
+      ],
+      "last_commit": "1d9b49a",
+      "next_action": "Done. Kernel is not yet wired into the voice/chat UI: that happens in M3 (lanes) and M10 (status panel)."
+    },
+    {
+      "id": "M2",
+      "status": "done",
+      "evidence": [
+        "npm run test:browser (local): tests/browser/golden17.test.ts 4/4 in 24.9 s: single run, run through the Electron IPC proxy, 5 runs with list re-render every 150 ms, 10 consecutive green runs (1.41-1.55 s each)",
+        "CI job 'browser' green on ddc05e3: runs 36064436452 (pull_request) and 36064430755 (push), Chromium installed by npx playwright install",
+        "every golden step CONFIRMED by read-back; test re-reads clipboard ('Łódź') from the page itself; all kernel actions CONFIRMED with evidence, all tasks done",
+        "tests/runtime/actionsEngine.test.ts 36/36 (engine retries, BLOCKED at page end, external never retried, NEEDS_CAPABILITY without starting, cancellation, postconditions, Polish command grammar)",
+        "tests/runtime/envIpc.test.ts 5/5 (IPC round trip, abort crosses to main, bridge failure never success, main.cjs trusted-frame guard) and tests/runtime/appRuntime.test.ts 2/2",
+        "regression: text range fell back to an arbitrary comment after a re-read (found by the 10-run loop) fixed, tests in resolvePolish.test.ts",
+        "vitest 339 files / 2968 tests exit 0; tsc -b, eslint ., npm run build (incl. electron/gen/runtime.cjs), scan:secrets exit 0"
+      ],
+      "last_commit": "ddc05e3",
+      "next_action": "Done. Deferred to M3: numbered badges on ambiguous targets (needs the conversation lane to ask 'który?')."
+    },
+    {
+      "id": "M3",
+      "status": "done",
+      "evidence": [
+        "tests/runtime/goldenConversations.test.ts 17/17 interleaved golden conversations (weather while comments load + 'wróćmy do komentarza', 'poczekaj' while resolving, 'nie ten, następny', 'stop' during TTS, 'co teraz robisz?', duplicated STT final, stale references refused, selection epoch kept)",
+        "tests/runtime/reflex.test.ts 52/52 (Polish control grammar, tiers 0-2, partial policy)",
+        "tests/browser/conversations.test.ts 4/4 on Chromium (weather while comments load, stop cancels and drops the queue, AMEND highlights the second comment, stale selection refused after another video)",
+        "adversarial review of M1-M3 (4 high, 10 medium, lows) fixed with regression tests: tests/runtime/reviewFixes.test.ts 53/53, tests/browser/managedBrowser.test.ts 3/3 (isolated-world read-backs ignore a hostile page)",
+        "app integration: appRuntime drives JarvisRuntime (tests/runtime/appRuntime.test.ts 3/3)",
+        "CI green on a01422e: Tests push run 36072124283 and pull_request run 36072128238 (jobs test + browser)",
+        "vitest 349 files / 3159 tests exit 0; tsc -b, eslint ., npm run build, scan:secrets exit 0 (after M4 commits)"
+      ],
+      "last_commit": "a01422e",
+      "next_action": "Done. Numbered badges for ambiguous targets (B-029) moved to M10 visibility."
+    },
+    {
+      "id": "M4",
+      "status": "done",
+      "evidence": [
+        "tests/browser/golden18.test.ts: steps 1-8 on Chromium with the YouTube fixture and a mock Gmail, one consent at the send boundary, mail CONFIRMED from Sent; 10 consecutive green runs (1.34-1.60 s each) locally, also a variant without data-comment-id re-rendered every 150 ms; CI browser job green on a01422e (runs 36072124283, 36072128238)",
+        "tests/runtime/goldenMail.test.ts 9/9: clipboard changed outside after 'skopiuj' warned in the consent, two Marcins -> question at runtime, address from the injected comment never the recipient, duplicated 'wyślij' -> one message, timeout after send -> Sent checked before retry, denied and stopped consent send nothing",
+        "tests/runtime/mailExactlyOnce.test.ts 9/9, tests/runtime/contacts.test.ts 24/24 (Polish inflection), tests/runtime/permissionClasses.test.ts 6/6",
+        "tests/runtime/untrustedContent.test.ts 8/8 (mission 5.12): isolated summary without tools or history, injected comment with an obeying model creates no task/consent/mail, malicious accessibility label stays quoted, malicious MCP result forces a fresh question before gmail_send",
+        "tests/runtime/gmailService.test.ts 8/8: production Gmail MailService contract with a fake transport, incl. golden 1-8 on the same runtime",
+        "real Gmail account and address book: NEEDS_HARDWARE (not touched in this session); covered by M6 acceptance"
+      ],
+      "last_commit": "301098a",
+      "next_action": "Done on fixtures. Real Gmail send and Sent read-back: run M6 acceptance on the user machine (NEEDS_HARDWARE)."
+    },
+    {
+      "id": "M5",
+      "status": "done",
+      "evidence": [
+        "tests/runtime/voiceSession.test.ts 14/14: golden 1-8 spoken with chatter and a spoken consent (in-memory), the same from the Deepgram protocol stream, barge-in cancels TTS in the same tick, 'stop' during speech cancels audio and task, echo not taken as a command, repeated recognizer finals do not repeat actions, wake word and follow-up window, push-to-talk, partials only speculate (reads), clip cache, 'Sekunda.' on slow actions, failed sentence skipped",
+        "tests/runtime/voiceAdapters.test.ts 13/13: Deepgram live and OpenAI Realtime protocol streams (tests/fixtures/voice, scripted from the documented protocols), socket adapters, Whisper batch fallback with a turn detector, fallback chain with reported switches, provider catalog (2 streaming STT with Polish + Whisper, dead Gemini Live id never chosen)",
+        "tests/browser/voiceGolden.test.ts 1/1: golden 1-8 from recognizer events on Chromium; latency final->confirmed p50 73 ms / p95 402 ms (docs/JARVIS-PERFORMANCE.md)",
+        "tests/liveVoice.test.ts: Live model from the catalog (models/gemini-3.8-live, NON_BLOCKING, results WHEN_IDLE); tests/runtime/voiceBrowserAudio.test.ts 4/4 (echo-cancelling mic constraints, PCM16 16 kHz, WAV, app TTS)",
+        "CI green on 588e0a2: Tests push run 36074728692 and pull_request run 36074731352 (test + browser)",
+        "real microphone, speakers and network recognizers: NEEDS_HARDWARE (B-033); gemini-3.8-live id unverified against official docs (network policy, D-026)",
+        "continuation (6c8f803, 67efac2): 'Sterowanie komputerem głosem' switch in Settings with an optional Deepgram key (encrypted at rest); tests/runtime/voiceControl.test.ts 6/6: microphone held through the voice arbiter, preemption and fatal recognizer errors shown as errors with a retry, live recognizer name, a stop during start leaves nothing running"
+      ],
+      "last_commit": "588e0a2",
+      "next_action": "Done. Live voice with a real microphone: acceptance on the user machine (B-033); UI toggle B-034."
+    },
+    {
+      "id": "M6",
+      "status": "done",
+      "evidence": [
+        "npm run jarvis:acceptance (vite-node scripts/acceptance/run.ts): modes fixture, managed-browser, local-desktop; progressive steps with PASS/FAIL/SKIP/SIMULATED/NEEDS_HARDWARE/BLOCKED, evidence, latency p50/p95, capability matrix, screenshots only on failure",
+        "published report reports/acceptance-2026-09-25T00-01-55-607Z.md (commit b5a026a, only the two report files): fixture mode, golden 1-7 x10 all CONFIRMED (1.33-1.55 s per run), full 1-8 with mock Gmail CONFIRMED from Sent, voice SIMULATED (scripted recognizer), verdict PARTIAL because no microphone",
+        "cloud runs of the other modes are honest: managed-browser BLOCKED (YouTube unreachable, network policy), local-desktop PARTIAL (system clipboard, display, input, AT-SPI, microphone NEEDS_HARDWARE; mail draft answered no, nothing sent)",
+        "tests/acceptance.test.ts 12/12: safe defaults, progressive skip, report rendering, publish only on claude/* and only reports/ paths (commit limited by pathspec), credentials probed by name only, draft mode never builds the real mail service, --send without recipient BLOCKED",
+        "docs/JARVIS-LOCAL-VALIDATION.md; CI browser job runs the fixture mode 3x with --no-publish"
+      ],
+      "last_commit": "ae1cc71",
+      "next_action": "Done. On the user machine: npm run jarvis:acceptance -- --mode=managed-browser and --mode=local-desktop (NEEDS_HARDWARE items B-030..B-033)."
+    },
+    {
+      "id": "M7",
+      "status": "done",
+      "evidence": [
+        "tests/desktop/linuxDesktop.test.ts 8/8 on a real Xvfb session (npm run test:desktop): X11 clipboard write/read-back, active window and window list (xdotool/wmctrl), window.activate confirmed by read-back, primary selection, keys/type through xdotool, AT-SPI focused text and selection in a GTK entry",
+        "tests/runtime/linuxAdapters.test.ts 14/14: scripted command runner (no shell, argv only), Wayland/X11 detection, missing tools -> NEEDS_CAPABILITY, no display -> NEEDS_HARDWARE, CompositeEnvironment routes browser vs desktop actions",
+        "CI job 'desktop' green: Tests run 36078045573 (25b1173) and run 36078764550 (13ebcbd, job 107895789869)",
+        "local acceptance --mode=local-desktop in this container: report reports/acceptance-*.md (commit 3e79678) PARTIAL 6/8 PASS; microphone and real user desktop NEEDS_HARDWARE",
+        "RemoteDesktop portal/libei input on a real Wayland session: NEEDS_HARDWARE (adapter reports capability missing, never fakes input)",
+        "continuation (7ad1620): CI desktop job flake root-caused (GTK started before Xvfb was up; stderr ignored) and fixed by polling the display; desktop job green on 7ad1620 (Tests run 36084362179); local test:desktop 8/8 four times in a row"
+      ],
+      "last_commit": "3e79678",
+      "next_action": "Done. Real GNOME/KDE Wayland session: npm run jarvis:acceptance -- --mode=local-desktop on the user machine."
+    },
+    {
+      "id": "M8",
+      "status": "done",
+      "evidence": [
+        "tests/runtime/bridgeProtocol.test.ts 8/8: loopback only, extension origins only (web page origin cannot open the socket), 6-digit one-time pairing, token stored as SHA-256 and compared with timingSafeEqual, bad version/message closes, silence before hello closes, reconnect with token",
+        "tests/browser/bridgeExtension.test.ts on Chromium: the MV3 extension in extension/browser-bridge is loaded, paired, and drives the user's tab (navigate confirmed by host+path read-back, selection and copy)",
+        "Electron main starts the bridge host on 127.0.0.1:47823 with tokens in jarvis-bridge-tokens.json (mode 600); IPC jarvis:bridge pair/status/revoke",
+        "CI green on 25b1173: Tests run 36078045573 (test + browser + desktop)",
+        "user's own Chrome/Edge/Firefox profile: NEEDS_HARDWARE (docs/JARVIS-BROWSER-BRIDGE.md)",
+        "continuation (6c8f803, 67efac2): 'w mojej przeglądarce' / 'w swojej przeglądarce' through SelectableBrowser in the Electron main process; tests/runtime/browserChoice.test.ts 9/9: the switch is a step of the command's own task (stop cancels both), confirmed only when the chosen browser answers with a tab open, refused without the extension, remarks/questions/negations never switch, events of the other browser dropped, skills replay in the browser they were recorded in; bridge server restart on the same object (reviewFixesFinal)"
+      ],
+      "last_commit": "25b1173",
+      "next_action": "Done. Install the extension in the user's browser and pair it (docs/JARVIS-BROWSER-BRIDGE.md)."
+    },
+    {
+      "id": "M9",
+      "status": "done",
+      "evidence": [
+        "tests/runtime/platformAdapters.test.ts 8/8: Windows UIA helper through a scripted PowerShell runner (user text only inside base64 JSON of -EncodedCommand, SendKeys escaping, select/copy/window switch CONFIRMED by read-back) and Android accessibility through a fake device (permission off -> NEEDS_PERMISSION path, select/copy/type CONFIRMED, background clipboard ATTEMPTED not FAILED)",
+        "Android Java (JarvisAccessibilityService, SystemActionsPlugin) compiles: Build Android APK run 36078764532 success on 13ebcbd",
+        "CI green on 13ebcbd: Tests run 36078764550 (test, browser, desktop), Build Ubuntu run 36078767949",
+        "real Windows desktop and a real Android phone: NEEDS_HARDWARE"
+      ],
+      "last_commit": "13ebcbd",
+      "next_action": "Done in cloud. Windows: run acceptance on a Windows machine; Android: enable the JARVIS accessibility service on a phone."
+    },
+    {
+      "id": "M10",
+      "status": "done",
+      "evidence": [
+        "tests/runtime/skillsVision.test.ts 15/15: LocatorCache (verified only, age, layout signature, failures), EscalatingEnvironment (semantic first, cached box, vision with a realistic pointer: one click on a video link CONFIRMED by the URL read-back; unsure, NaN, malformed, out-of-image answers never clicked; wrong box refused and not cached; a focus is never turned into a click), Skill Compiler (golden 1-7 remembered and replayed after a restart, each step verified again; a send stops at the user's consent; real failure disables, precondition and stop do not)",
+        "tests/runtime/statusDiagnostics.test.ts 5/5: 'co robię' view (goal, step, target, environment, place, time, verification, pending consent), PAUZA/WZNÓW/STOP through the same control path as speech, panel render with Polish labels, redacted diagnostics export (no address, clipboard, mail body or video title)",
+        "tests/runtime/ambiguity.test.ts 7/7 and tests/browser/conversations.test.ts (Chromium): 'komentarz o Łodzi' with two matches draws numbered badges, asks 'Który?', 'drugi' picks, focus CONFIRMED, badges removed",
+        "tests/runtime/timeoutsBrokenModels.test.ts 9/9 (red before the fix): hung tool never retried and UNKNOWN, late effect CONFIRMED by read-back, stop kills child processes, hung or broken conversation and summary models never spoken or acted on",
+        "final adversarial review (reviewer subagent on 9849da1..2881577): 1 high, 4 medium, 5 low found; all fixed in 4599b20 with tests/runtime/reviewFixesFinal.test.ts 8/8, bridge origin test, rewritten vision tests (D-032)",
+        "docs/JARVIS-ARCHITECTURE.md and docs/JARVIS-CAPABILITIES.md (only what works, with evidence; NEEDS_HARDWARE listed)",
+        "after 4599b20: vitest 361 files / 3282 tests exit 0; browser 6 files / 17 tests exit 0; desktop (Xvfb) 8/8; tsc -b, eslint ., npm run build, scan:secrets exit 0",
+        "CI green on 4599b20: Tests pull_request run 36082709566 (jobs test, browser incl. golden 1-8 x10 and acceptance fixture, desktop on Xvfb)",
+        "golden 1-8 on the YouTube fixture 10 consecutive green runs (tests/browser/golden18.test.ts: 1620, 1481, 1441, 1478, 1404, 1382, 1308, 1369, 1432, 1434 ms); acceptance fixture x10 report reports/acceptance-2026-09-25T01-36-38-962Z.md",
+        "real vision model: none wired in the app (capability reads missing); real hardware items NEEDS_HARDWARE",
+        "continuation (6c8f803, 67efac2): skills listed in the status panel with remove (statusDiagnostics 6/6); second adversarial review of the continuation (9 findings, 2 high) all fixed with regression tests (D-035); after 67efac2: vitest 363 files / 3300 tests exit 0, browser 17/17, desktop 8/8, tsc, eslint, build, scan:secrets exit 0; golden 1-8 x10 green again (1709, 1651, 1615, 1628, 1522, 1636, 1698, 1667, 1636, 1689 ms)"
+      ],
+      "last_commit": "4599b20",
+      "next_action": "Done. On the user machine: npm run jarvis:acceptance -- --mode=local-desktop; wire a vision model only after local acceptance."
+    },
+    {
+      "id": "M11",
+      "status": "done",
+      "evidence": [
+        "tests/coder/executor.test.ts 22/22 on fake Codex and Claude CLIs that speak the real JSONL protocols (tests/fixtures/coder): 1 Codex detection (ready, needs_auth from `codex login status`, unavailable), 2 fallback AUTO -> Claude -> local -> NEEDS_CAPABILITY, 3-7 start, streamed events, file change, test command, completion CONFIRMED by the repo's own `npm run test`, 8 agent says done but test red -> FAILED, partial, no checks -> ATTEMPTED, 9 stop kills agent and grandchild even when SIGINT is ignored (no orphan), 10 restart -> INTERRUPTED_AFTER_RESTART and the old process terminated, 11 dirty repo kept, listed to the agent, overlaps reported, 12 write outside the workspace -> BLOCKED, 13 force push / reset --hard / push without permission -> BLOCKED, 14 malicious README is data, 15 secrets redacted in events, history and result, agent env allow-listed, 16 timeout, 17 crash -> UNKNOWN_AFTER_ATTEMPT with validation, 24 one writer per workspace and one agent per task id, Claude instruction delivered now, Codex instruction as next turn via `exec resume <thread>`, 'nie rób release' enforced, pause via SIGSTOP, local backend patch via `git apply --check` CONFIRMED and a non-patch answer FAILED",
+        "tests/coder/units.test.ts 9/9: parsers (Codex item and legacy msg events, Claude stream-json, junk ignored), command classes, test counts (vitest, jest, pytest, cargo), guard (17 forbidden commands, allowed ones, constraints), paths, redaction (keys, tokens, passwords, URL credentials, PEM; SHAs kept), env allow-list, project detection (never invented), workspace lookup by Polish forms, home/root refused, lock, verdict table",
+        "Codex CLI 0.157.0 checked in a scratch folder (no login, no model call): `codex exec --json`, `exec resume`, `-s`, `-C`, `login status` exit codes and event names from the binary",
+        "vitest 365 files / 3331 tests exit 0; tsc -b, eslint ., npm run build, scan:secrets exit 0; desktop suite 8/8 after the shared runner change",
+        "real Codex / Claude login and a real task on the user's machine: NEEDS_HARDWARE (M13 acceptance --mode=codex)"
+      ],
+      "last_commit": "15727f6",
+      "next_action": "Done. M12: coding task in the kernel and UI."
+    },
+    {
+      "id": "M12",
+      "status": "done",
+      "evidence": [
+        "tests/coder/runtime.test.ts 11/11 through the real CoderHost request/event contract (same as the jarvis:coder IPC) and a fake Codex CLI: a spoken coding command becomes a kernel task (kind code, action coder.run) outside the serial browser queue; CONFIRMED and 'Gotowe i sprawdzone' only after the repo's own test; agent says done with a red test -> task failed, spoken as not done (8); 18 duplicated final (same id, same words, same utterance to the controller) starts one agent; 19 'co teraz robi codex?' and 'co teraz robisz?' answered from structured events (stage, command, changed files, tests), agent pid unchanged, task completes; 'stop' cancels the kernel task, kills the process, silence, changes kept; 'pauza' SIGSTOP (state T) and 'wznów' to a verified end; 20 'nie rób release' enforced (git tag -> BLOCKED) and 'dodaj jeszcze X' runs as the next turn of the same Codex session; 'pokaż zmiany' diff; restart: host closed -> agent killed, INTERRUPTED_AFTER_RESTART, new host + runtime, 'kontynuuj' -> exec resume <thread> from the current repo state, not offered again; backends as kernel capabilities",
+        "tests/coder/live.test.ts 8/8: Polish coding grammar (start, backend in words, constraints, instructions, stop/pause, status, diff, continue, chat not claimed), project names without generic words, IPC allow-list rejects 12 malformed requests, event batching (1000 lines -> 5 messages, end flushed at once), 10,000 events: log bounded to 500, one notification, snapshot cached, replay ignored, CODER card render, diagnostics carry coding tasks without goal text or file names",
+        "Performance: 10,000 events 5.3 ms (0.53 us/event), 100,000 events 18.8 ms, naive copy+serialize 2,060 ms for 10,000 (docs/JARVIS-PERFORMANCE.md)",
+        "Electron: jarvis:coder IPC with isTrustedIpc, folder picker only (renderer cannot name a path), batched jarvis:coder-events, agents stopped before quit (bounded 8 s); preload coder bridge; electron/gen/runtime.cjs exports createCoderHost",
+        "UI: KOD screen (backends, login state, AUTO/CODEX/CLAUDE/LOCAL, TANIO/NORMALNIE/MAKSIMUM, projects, START, live card, STOP/PAUZA/WZNÓW/POKAŻ ZMIANY/OTWÓRZ REPO, live log, diff, history), CODER section in the 'Co robię' dock",
+        "vitest 367 files / 3351 tests, tsc -b, eslint ., npm run build, scan:secrets exit 0",
+        "real Codex on the user's machine: NEEDS_HARDWARE (M13 acceptance --mode=codex)"
+      ],
+      "last_commit": "7359e3a",
+      "next_action": "Done. M13: software factory."
+    },
+    {
+      "id": "M13",
+      "status": "done",
+      "evidence": [
+        "tests/coder/factory.test.ts 10/10: classes from words (SIMPLE..CODE_CRITICAL), router table (small = one agent + tests even with two backends; TANIO prefers the local model; planner and reviewer only for hard/critical or MAKSIMUM; reviewer on a second backend, same backend fresh session only for critical/max; branch for hard+), reviewer verdict = last JSON line only; roles run through agentRun.runPlan as separate executor tasks <kernel id>.<role>: small fix one Codex run and zero Claude runs; 21 test -> fail -> debugger (fresh session, failing output quoted as data) -> test -> pass, changedFiles counted from the coder's baseline; 21b debugger fails -> FAILED, spoken as not done; 22 reviewer on Claude finds a regression -> fix round -> tests -> second review approves -> CONFIRMED (planner read-only sandbox, plan passed as data, hard task on a jarvis/ branch); 22b reviewer still rejects -> FAILED; 23 restart during the coder -> 'kontynuuj' keeps the confirmed planner (it ran once), resumes the coder's Codex session (exec resume), then tester and reviewer, same kernel task; stop during a role stops the factory, no further role starts",
+        "tests/coder/acceptance.test.ts 2/2 and `npm run jarvis:coder:acceptance` (fake: 5/5 PASS, reports/coder-acceptance-2026-09-25T03-44-02-877Z.md; local in the cloud: Codex not installed NEEDS_HARDWARE, Claude Code 2.1.282 needs login NEEDS_PERMISSION, Ollama not running NEEDS_HARDWARE, this repo's checks listed, reports/coder-acceptance-2026-09-25T03-44-10-902Z.md; codex mode refused in CI)",
+        "Fixed on the way: `git status --short` output was trimmed as a whole, so the first ' M file' line lost its path (regression test in tests/coder/units.test.ts)",
+        "vitest 370 files / 3364 tests, tsc -b, eslint ., npm run build, scan:secrets exit 0",
+        "real Codex task on the user's machine: NEEDS_HARDWARE (`npm run jarvis:coder:acceptance -- --mode=codex`)",
+        "Final adversarial review of M11-M13: 4 high, 10 medium, 7 low, all fixed (D-039); tests/coder/review.test.ts 14/14; vitest 371 files / 3379 tests, desktop 8/8, tsc, eslint, build, scan:secrets exit 0; coder acceptance fake PASS (reports/coder-acceptance-2026-09-25T04-08-15-188Z.md)"
+      ],
+      "last_commit": "422856c",
+      "next_action": "Done. On the user machine: npm run jarvis:coder:acceptance -- --mode=codex."
+    }
+  ]
+}

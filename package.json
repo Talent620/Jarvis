@@ -8,7 +8,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/build-electron-runtime.mjs",
     "preview": "vite preview",
     "icons": "node scripts/gen-icons.cjs",
     "scan:secrets": "node scripts/secret-scan.mjs --all",
@@ -19,13 +19,15 @@
     "ios:sync": "npm run build && cap sync ios",
     "ios:open": "npm run build && cap sync ios && cap open ios",
     "ios:build": "bash scripts/ios-build.sh",
-    "electron:dev": "electron .",
+    "electron:dev": "node scripts/build-electron-runtime.mjs && electron .",
     "desktop:build": "npm run build && electron-builder --win nsis",
     "desktop:ubuntu": "npm run build && electron-builder --linux AppImage deb",
     "ubuntu:check": "bash scripts/bootstrap-ubuntu.sh --check",
     "ubuntu:setup": "bash scripts/bootstrap-ubuntu.sh --install",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "build:electron-runtime": "node scripts/build-electron-runtime.mjs",
     "salesos": "bash sales-os/start.sh",
     "lint": "eslint .",
     "build:studio": "vite build --config vite.studio.config.ts",
@@ -34,7 +36,11 @@
     "siteos:tunnel": "node site-os/server.mjs --tunnel",
     "tools:verify": "node scripts/verify-workspace-tools.cjs",
     "quality": "node scripts/quality-gate.mjs",
-    "quality:all": "node scripts/quality-gate.mjs --sales"
+    "quality:all": "node scripts/quality-gate.mjs --sales",
+    "perf:store": "vite-node scripts/perf/store-bench.ts",
+    "jarvis:acceptance": "vite-node scripts/acceptance/run.ts --",
+    "jarvis:coder:acceptance": "vite-node scripts/acceptance/coder.ts --",
+    "test:desktop": "vitest run --config vitest.desktop.config.ts"
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",
@@ -54,6 +60,7 @@
     "jsqr": "^1.4.0",
     "lucide-react": "^0.460.0",
     "pdfjs-dist": "^4.10.38",
+    "playwright-core": "1.63.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -65,6 +72,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.5.0",
     "electron": "^33.4.11",
@@ -74,12 +82,14 @@
     "fake-indexeddb": "^6.2.5",
     "globals": "^15.15.0",
     "jsdom": "^25.0.1",
+    "playwright": "1.63.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.61.1",
     "vite": "^5.4.10",
-    "vitest": "^2.1.9"
+    "vitest": "^2.1.9",
+    "ws": "^8.21.0"
   },
   "overrides": {
     "@hono/node-server": "^2.0.5"

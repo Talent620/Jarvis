@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { closeReason, liveToolDeclarations } from "../src/lib/liveVoice";
+import { closeReason, liveFunctionResponse, liveNonBlocking, liveToolDeclarations, LIVE_MODEL_STABLE, LIVE_MODEL_NATIVE } from "../src/lib/liveVoice";
 
 describe("liveToolDeclarations (bezpieczny podzbiór narzędzi w głosie)", () => {
   const defs = [
@@ -55,5 +55,22 @@ describe("closeReason (diagnostyka rozmowy na żywo)", () => {
   });
   it("zwraca undefined przy braku treści i normalnym kodzie", () => {
     expect(closeReason(1000, "")).toBeUndefined();
+  });
+});
+
+describe("Live model from the catalog (M5)", () => {
+  it("the stable model is the catalog default, never the dead 2.0 id", () => {
+    expect(LIVE_MODEL_STABLE).toBe("models/gemini-3.8-live");
+    expect(LIVE_MODEL_STABLE).not.toContain("gemini-2.0-flash-live-001");
+    expect(LIVE_MODEL_NATIVE).toBe("models/gemini-2.5-flash-preview-native-audio-dialog");
+  });
+
+  it("the default model calls functions without blocking; results come back when idle", () => {
+    expect(liveNonBlocking(LIVE_MODEL_STABLE)).toBe(true);
+    expect(liveNonBlocking(LIVE_MODEL_NATIVE)).toBe(false);
+    const decl = liveToolDeclarations([{ name: "get_weather", description: "x", input_schema: {} }], () => "read", false, true);
+    expect(decl[0].behavior).toBe("NON_BLOCKING");
+    expect(liveFunctionResponse({ id: "1", name: "get_weather" }, "18 stopni", true)).toEqual({ id: "1", name: "get_weather", response: { result: "18 stopni", scheduling: "WHEN_IDLE" } });
+    expect(liveFunctionResponse({ id: "1", name: "get_weather" }, "18 stopni", false)).toEqual({ id: "1", name: "get_weather", response: { result: "18 stopni" } });
   });
 });

@@ -1,4 +1,4 @@
-import { lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { CommandItem } from "./lib/commandPalette";
 import type { GrowthContext } from "./lib/growthContext";
 import type { SettingsTab } from "./lib/settingsModel";
@@ -14,6 +14,8 @@ const Journal = lazy(() => import("./components/Journal"));
 const SalesCrm = lazy(() => import("./components/SalesCrm"));
 const GrowthDayPanel = lazy(() => import("./components/GrowthDayPanel"));
 const GoalStatusPanel = lazy(() => import("./components/GoalStatusPanel"));
+const RuntimeStatusDock = lazy(() => import("./components/RuntimeStatusPanel"));
+const CodePanel = lazy(() => import("./components/CodePanel"));
 const MoneyHub = lazy(() => import("./components/MoneyHub"));
 const FinancialDashboard = lazy(() => import("./components/FinancialDashboard"));
 const Help = lazy(() => import("./components/Help"));
@@ -112,6 +114,7 @@ import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, che
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
 import ScreenBoundary from "./components/ScreenBoundary";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { getWeather } from "./lib/weather";
 import { buildChiefBriefing, formatBriefing } from "./lib/chiefOfStaff";
 import { maybePrewarm, warmNow } from "./lib/prewarm";
@@ -122,7 +125,9 @@ import { store, uid } from "./lib/store";
 import { brand } from "./lib/brand";
 import { isLocked as keysAreLocked } from "./lib/secretsVault";
 import UnlockKeys from "./components/UnlockKeys";
-import { useStore } from "./hooks/useStore";
+import { useStoreSelector, shallowEqual } from "./hooks/useStore";
+import { appVoiceControl, runtimeAvailable, setRuntimeSpeaker, tryRuntimeText, type AppVoiceIO } from "./lib/runtime/appRuntime";
+import { transcribeAudio } from "./lib/transcribe";
 import type { ChatMessage } from "./types";
 
 type PendingImage = { data: string; mediaType: string } | null;
@@ -175,7 +180,20 @@ const initialChat = (() => {
 })();
 
 export default function App() {
-  const { settings } = useStore();
+  // The root subscribes only to what it renders: settings (a new object on every setSettings) and
+  // a few values derived from data. Data mutations no longer re-render the whole tree
+  // (docs/JARVIS-PERFORMANCE.md). Screens that render store.data subscribe themselves.
+  const settings = useStoreSelector(() => store.settings);
+  const derived = useStoreSelector(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const value = valueToday(store.data.audit || []);
+    return {
+      projectName: store.data.projects.find((x) => x.id === store.settings.activeProjectId)?.name ?? "",
+      tasksToday: (store.data.tasks || []).filter((t) => !t.done && (t.due || "").slice(0, 10) === today).length,
+      valueActions: value.actions,
+      valueMinutes: value.minutes,
+    };
+  }, shallowEqual);
   const [messages, setMessages] = useState<ChatMessage[]>(initialChat?.messages ?? []);
   const [activeId, setActiveId] = useState<string>(initialChat?.id ?? uid());
   // JEDNA nawigacja: wszystkie „zwykłe" ekrany mają jeden aktywny stan (route) + historię „Wstecz".
@@ -240,6 +258,21 @@ export default function App() {
     setVoiceUnavailableHandler((info) => setVoiceIssue(info));
     return () => setVoiceUnavailableHandler(null);
   }, []);
+  // JARVIS runtime (desktop): results, questions and consent requests arrive asynchronously and
+  // are shown and spoken here; "stop" silences speech at once (barge-in).
+  useEffect(() => {
+    if (!runtimeAvailable()) return;
+    setRuntimeSpeaker({
+      say: (text, meta) => {
+        const id = uid();
+        setMessages((m) => [...m, { id, role: "assistant", text, tools: ["komputer"], createdAt: Date.now() }]);
+        // In voice control the voice session speaks (with barge-in); the chat only shows it.
+        if (store.settings.speak && !(meta as { voice?: boolean } | undefined)?.voice) void speak(text, store.settings).catch(() => {});
+      },
+      cancel: () => stopSpeaking(),
+    });
+    return () => setRuntimeSpeaker(null);
+  }, []);
   // Skrót ⌘K / Ctrl+K — globalny.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -259,6 +292,7 @@ export default function App() {
   const showAdmin = route.screen === "admin"; const setShowAdmin = screenSetter("admin");
   const showCards = route.screen === "cards"; const setShowCards = screenSetter("cards");
   const showTranscribe = route.screen === "transcribe"; const setShowTranscribe = screenSetter("transcribe");
+  const showCode = route.screen === "code"; const setShowCode = screenSetter("code");
   const showProfile = route.screen === "profile"; const setShowProfile = screenSetter("profile");
   const showTasks = route.screen === "tasks"; const setShowTasks = screenSetter("tasks");
   const showTranslator = route.screen === "translator"; const setShowTranslator = screenSetter("translator");
@@ -322,6 +356,7 @@ export default function App() {
       open("shoppingList", "Lista zakupów", "📝", "lista zakupow zakupy kup"),
       open("translator", "Tłumacz na żywo", "🌍", "tlumacz jezyk rozmowa"),
       open("transcribe", "Transkrypcja", "🎙", "spotkanie mowa tekst"),
+      open("code", "Kod: agenci programistyczni", "⌨", "kod codex claude code programista repo projekt napraw testy agent"),
       open("cards", "Kapsuły Wiedzy", "🃏", "ucz fiszki nauka"),
       open("content", "Maszynka do kontentu", "📱", "posty social media"),
       open("ads", "Generator reklam", "📢", "reklamy google facebook ads"),
@@ -566,6 +601,16 @@ export default function App() {
       setMessages((m) => [...m, { id, role: "assistant", text: "🔊 Czytam na głos.", tools: ["tryb"], createdAt: Date.now() }]);
       void speak(toRead, { ...store.settings, speak: true }).catch(() => {});
       return;
+    }
+
+    // Computer control through the JARVIS runtime (desktop app, managed browser). JARVIS says
+    // "done" only after the action is confirmed by read-back (src/lib/runtime).
+    // Replies (and later results) come through the runtime speaker registered above.
+    if (runtimeAvailable()) {
+      const turn = await tryRuntimeText(text, () => {
+        setMessages((m) => [...m, { id: uid(), role: "user", text, createdAt: Date.now() }]);
+      }).catch(() => null);
+      if (turn) return;
     }
 
     // Komenda: Tryb Prywatny (w 100% lokalnie, offline). Tylko KRÓTKA komenda — długi wklejony
@@ -883,6 +928,26 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.wakeWord]);
 
+  // Sterowanie komputerem głosem (runtime JARVIS, desktop, B-034): strumieniowe STT, barge-in,
+  // mikrofon przejęty przez arbitra (nasłuch słowa „Jarvis" w czacie jest wtedy wyparty).
+  useEffect(() => {
+    if (!settings.computerVoice || !runtimeAvailable()) return;
+    const io = (): AppVoiceIO => ({
+      speak: (t) => speak(t, store.settings),
+      stop: () => stopSpeaking(),
+      transcribe: async (wav) => {
+        const r = await transcribeAudio(wav);
+        if ("error" in r) throw new Error(r.error);
+        return r.text;
+      },
+      deepgramToken: () => store.settings.deepgramApiKey?.trim() || "",
+      mode: "wake",
+    });
+    const ctl = appVoiceControl(io);
+    void ctl.start();
+    return () => { void ctl.stop(); };
+  }, [settings.computerVoice]);
+
   // --- Przypomnienia: sprawdzaj co 20 s ---
   useEffect(() => {
     const tick = setInterval(() => {
@@ -1198,10 +1263,7 @@ export default function App() {
           {brand()}
           <small>
             {(resolveProvider()?.model || (hasUsableBrain() ? "LOKALNY" : "BRAK API")).toUpperCase()}
-            {(() => {
-              const p = store.data.projects.find((x) => x.id === settings.activeProjectId);
-              return p ? ` · ${p.name.toUpperCase()}` : "";
-            })()}{" "}
+            {derived.projectName ? ` · ${derived.projectName.toUpperCase()}` : ""}{" "}
             · {online ? "ONLINE" : "OFFLINE"}
             {(() => {
               const m = currentBrainMode(online);
@@ -1359,7 +1421,7 @@ export default function App() {
         onBoss={() => setShowBoss(true)}
         onMemory={() => setShowMemory(true)}
         onVoice={() => setShowVoice(true)}
-        tasksToday={(store.data.tasks || []).filter((t) => !t.done && (t.due || "").slice(0, 10) === new Date().toISOString().slice(0, 10)).length}
+        tasksToday={derived.tasksToday}
       />
 
       {tip && store.settings.tips !== false && nowCard === "suggestion" && (
@@ -1459,7 +1521,7 @@ export default function App() {
 
       {/* ✨ Wartość dnia — co JARVIS realnie zrobił za Ciebie (z audytu). Etyczny haczyk. */}
       {(() => {
-        const v = valueToday(store.data.audit || []);
+        const v = { actions: derived.valueActions, minutes: derived.valueMinutes };
         if (v.actions < 1) return null;
         return (
           <div className="value-card" onClick={() => setShowAudit(true)} title="Zobacz, co JARVIS zrobił (dziennik działań)">
@@ -1471,6 +1533,8 @@ export default function App() {
       {/* ⬢ Szef zawsze w zasięgu — centralny agent głosowy, jedno tknięcie z każdego ekranu.
           Ikonę można przeciągać (drag) — pozycja jest zapamiętywana. */}
       <BossFab onOpen={() => setShowBoss(true)} />
+      {/* JARVIS runtime (desktop): "co robię" with PAUZA / WZNÓW / STOP once it has work. */}
+      {runtimeAvailable() && (<ErrorBoundary label="Panel co robię"><Suspense fallback={null}><RuntimeStatusDock /></Suspense></ErrorBoundary>)}
 
       {showVoice && (<ScreenBoundary><HeadsetMode onClose={() => { releaseVoice("headset"); setShowVoice(false); }} /></ScreenBoundary>)}
       {showAdmin && (
@@ -1486,6 +1550,11 @@ export default function App() {
       {showTranscribe && (
         <ScreenBoundary>
           <Transcribe onClose={() => setShowTranscribe(false)} />
+        </ScreenBoundary>
+      )}
+      {showCode && (
+        <ScreenBoundary>
+          <CodePanel onClose={() => setShowCode(false)} />
         </ScreenBoundary>
       )}
       {showProfile && (
@@ -1594,6 +1663,7 @@ export default function App() {
           onAdmin={() => setShowAdmin(true)}
           onCards={() => setShowCards(true)}
           onTranscribe={() => setShowTranscribe(true)}
+          onCode={runtimeAvailable() ? () => setShowCode(true) : undefined}
           onProfile={() => setShowProfile(true)}
           onTasks={() => setShowTasks(true)}
           onTranslator={() => setShowTranslator(true)}

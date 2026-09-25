@@ -520,6 +520,8 @@ export interface Signature {
 }
 
 export interface Settings {
+  /** Per-class permission policies (mission 5.11); missing classes use DEFAULT_POLICIES. */
+  permissionPolicies?: Partial<Record<"READ" | "NAVIGATE" | "LOCAL_REVERSIBLE" | "LOCAL_WRITE" | "EXTERNAL_SIDE_EFFECT" | "DESTRUCTIVE", "AUTO" | "ASK" | "DENY">>;
   /** Biblioteka podpisów e-mail (aktywny = emailSignature). Puste = działa jak dotąd. */
   signatures?: Signature[];
   /** Dusza Marki — opcjonalna, wstrzykiwana do generacji dla spójności (puste = bez zmian). */
@@ -726,6 +728,10 @@ export interface Settings {
   voiceRate: number;
   /** Ciągłe nasłuchiwanie słowa-klucza "Jarvis". */
   wakeWord: boolean;
+  /** Sterowanie komputerem głosem (runtime JARVIS, desktop): strumieniowe rozpoznawanie mowy. */
+  computerVoice: boolean;
+  /** Klucz Deepgram (strumieniowe STT po polsku); bez niego zapasowo Groq Whisper. */
+  deepgramApiKey: string;
   /** Po otwarciu aplikacji od razu zacznij słuchać i zapytaj, o co chodzi. */
   autoListenOnOpen: boolean;
   /** Po otwarciu pokaż proaktywne powitanie/raport. */

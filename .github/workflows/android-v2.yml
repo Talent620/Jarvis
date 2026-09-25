@@ -32,6 +32,10 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # The legacy "tools" package no longer exists in current cmdline-tools; the default
+          # "tools platform-tools" makes sdkmanager exit 1 on today's runners.
+          packages: "platform-tools"
 
       - name: Install dependencies
         run: npm ci
@@ -51,10 +55,25 @@ jobs:
           sed -i 's#<string name="title_activity_main">JARVIS</string>#<string name="title_activity_main">JARVIS v2</string>#' android/app/src/main/res/values/strings.xml
           echo "appId/app_name ustawione na v2:"; grep applicationId android/app/build.gradle
 
-      # RELEASE (stały klucz jarvis.jks) — spójny podpis, aktualizacje v2 też instalują się bez odinstalowywania.
-      - name: Build release APK (stały klucz)
+      # RELEASE build, production key only when JARVIS_RELEASE_* secrets are set (else "-nonprod").
+      - name: Build release APK
         working-directory: android
+        env:
+          JARVIS_RELEASE_STORE_PASSWORD: ${{ secrets.JARVIS_RELEASE_STORE_PASSWORD }}
+          JARVIS_RELEASE_KEY_PASSWORD: ${{ secrets.JARVIS_RELEASE_KEY_PASSWORD }}
+          JARVIS_RELEASE_KEY_ALIAS: ${{ secrets.JARVIS_RELEASE_KEY_ALIAS || 'jarvis' }}
+          JARVIS_RELEASE_KEYSTORE_B64: ${{ secrets.JARVIS_RELEASE_KEYSTORE_B64 }}
         run: |
+          # Production signing only when secrets exist; otherwise Gradle builds a "-nonprod"
+          # APK signed with the debug key (docs/JARVIS-SECURITY.md).
+          if [ -n "$JARVIS_RELEASE_STORE_PASSWORD" ]; then
+            if [ -n "$JARVIS_RELEASE_KEYSTORE_B64" ]; then
+              printf '%s' "$JARVIS_RELEASE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+              export JARVIS_RELEASE_STORE_FILE="$RUNNER_TEMP/release.jks"
+            else
+              export JARVIS_RELEASE_STORE_FILE="$GITHUB_WORKSPACE/android/keystore/jarvis.jks"
+            fi
+          fi
           chmod +x ./gradlew
           ./gradlew assembleRelease --no-daemon
 

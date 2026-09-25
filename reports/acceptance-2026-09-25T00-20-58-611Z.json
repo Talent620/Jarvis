@@ -1,0 +1,164 @@
+{
+  "startedAt": "2026-09-25T00:20:58.611Z",
+  "finishedAt": "2026-09-25T00:21:04.946Z",
+  "mode": "local-desktop",
+  "args": {
+    "mode": "local-desktop",
+    "send": false,
+    "publish": true,
+    "runs": 1,
+    "headless": false,
+    "to": "unset"
+  },
+  "host": {
+    "platform": "linux-x64",
+    "node": "v22.22.2",
+    "branch": "claude/intelligent-brahmagupta-jq7jqj",
+    "commit": "faf3f67"
+  },
+  "capabilities": [
+    {
+      "id": "node",
+      "status": "available",
+      "detail": "v22.22.2"
+    },
+    {
+      "id": "browser.chromium",
+      "status": "available",
+      "detail": "opt/pw-browsers/chromium"
+    },
+    {
+      "id": "display",
+      "status": "available",
+      "detail": "x11"
+    },
+    {
+      "id": "clipboard.system",
+      "status": "available",
+      "detail": "xclip"
+    },
+    {
+      "id": "input.synthetic",
+      "status": "available",
+      "detail": "xdotool"
+    },
+    {
+      "id": "accessibility.atspi",
+      "status": "available",
+      "detail": "AT-SPI bus (screen reader support)"
+    },
+    {
+      "id": "audio.microphone",
+      "status": "needs_hardware",
+      "detail": "presence of a capture tool only; the device is checked in the voice step"
+    },
+    {
+      "id": "mail.gmail",
+      "status": "needs_hardware",
+      "detail": "set JARVIS_SYNC_URL and JARVIS_SYNC_TOKEN for --send"
+    }
+  ],
+  "steps": [
+    {
+      "id": "capabilities",
+      "title": "1. Capabilities detected",
+      "ms": 1,
+      "status": "PASS",
+      "evidence": "not available: audio.microphone=needs_hardware, mail.gmail=needs_hardware"
+    },
+    {
+      "id": "browser",
+      "title": "2. Real browser starts and reaches the site",
+      "ms": 779,
+      "status": "PASS",
+      "evidence": "http://127.0.0.1:37957/ (Zanim przejdziesz do YouTube)"
+    },
+    {
+      "id": "golden-1-7",
+      "title": "3. Golden steps 1-7 (1 run)",
+      "ms": 1786,
+      "status": "PASS",
+      "evidence": "every step CONFIRMED by read-back; run ms: 1786",
+      "latency": {
+        "command_to_confirmed": {
+          "count": 8,
+          "p50": 140,
+          "p95": 606
+        }
+      }
+    },
+    {
+      "id": "selection-clipboard",
+      "title": "4. Selection and clipboard read back",
+      "ms": 1,
+      "status": "PASS",
+      "evidence": "selection \"Łódź\" visible=true; clipboard \"Łódź\" (read from the system clipboard during the run)"
+    },
+    {
+      "id": "voice",
+      "title": "5. Voice session latency (scripted recognizer)",
+      "ms": 1535,
+      "status": "SIMULATED",
+      "evidence": "5 actions confirmed by voice; no microphone here",
+      "latency": {
+        "final_to_intent": {
+          "count": 5,
+          "p50": 1,
+          "p95": 1
+        },
+        "final_to_action_start": {
+          "count": 5,
+          "p50": 1,
+          "p95": 6
+        },
+        "final_to_verified": {
+          "count": 5,
+          "p50": 84,
+          "p95": 602
+        },
+        "final_to_first_reply": {
+          "count": 5,
+          "p50": 242,
+          "p95": 608
+        },
+        "final_to_first_audio": {
+          "count": 5,
+          "p50": 242,
+          "p95": 608
+        },
+        "partial_to_cancel": {
+          "count": 0,
+          "p50": 0,
+          "p95": 0
+        },
+        "speech_start_to_first_partial": {
+          "count": 5,
+          "p50": 0,
+          "p95": 0
+        }
+      }
+    },
+    {
+      "id": "full-1-8",
+      "title": "6. Full scenario 1-8 with mail",
+      "ms": 1726,
+      "status": "SIMULATED",
+      "evidence": "draft mode: consent \"Wysłać mail do Marcin Kubicki <draft@example.invalid> z treścią «Łódź»?\" answered no; nothing sent (use --send for a real mail)"
+    },
+    {
+      "id": "desktop",
+      "title": "7. Desktop adapters (clipboard round trip, active window)",
+      "ms": 409,
+      "status": "PASS",
+      "evidence": "clipboard round trip ok (restored); active window unreadable; not available: linux.input.ydotool=missing, linux.input.portal=missing"
+    },
+    {
+      "id": "cleanup",
+      "title": "8. Cleanup",
+      "ms": 0,
+      "status": "PASS",
+      "evidence": "site and browsers closed"
+    }
+  ],
+  "verdict": "PARTIAL"
+}
