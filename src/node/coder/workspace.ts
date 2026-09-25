@@ -7,6 +7,7 @@ import { existsSync, readFileSync, writeFileSync, realpathSync, statSync, mkdirS
 import * as path from "node:path";
 import { execRunner, type Run } from "../linux/runner";
 import type { GitSnapshot } from "../../lib/runtime/coder/types";
+import { matchWorkspace } from "../../lib/runtime/coder/match";
 
 export interface Workspace {
   id: string;
@@ -86,17 +87,7 @@ export class WorkspaceRegistry {
 
   /** "Sterownik Studio", "sterownika studio", "jarvis": the registered workspace the words name. */
   find(words: string): Workspace | undefined {
-    const n = ` ${norm(words)} `;
-    const stem = (w: string) => (w.length > 5 ? w.slice(0, w.length - 2) : w.length >= 4 ? w.slice(0, -1) : w);
-    let best: { w: Workspace; score: number } | undefined;
-    for (const w of this.list) {
-      const parts = norm(w.name).split(" ").filter((p) => p.length > 1);
-      if (!parts.length) continue;
-      const hits = parts.filter((p) => n.includes(` ${stem(p)}`)).length;
-      const score = hits / parts.length;
-      if (hits && score > (best?.score ?? 0)) best = { w, score };
-    }
-    return best && best.score >= 0.5 ? best.w : undefined;
+    return matchWorkspace(this.list, words);
   }
 
   // ------------------------------------------------------------------------------- locking

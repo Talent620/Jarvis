@@ -306,3 +306,24 @@ stays the mission PR, its description is updated and a comment records this deci
   runs no commands.
 - Windows: spawning `codex.cmd` without a shell is not supported by Node; the Codex adapter on
   Windows is NEEDS_HARDWARE until tested there.
+
+## D-037 A coding task is a kernel task outside the serial action queue
+
+- A coding command creates an ordinary kernel task (kind `code`, one action `coder.run` with an
+  idempotency key per utterance). "stop", "pauza", "wznów" and the focus stack therefore reach it
+  through the existing control path; `CoderController` only carries the kernel's status change to
+  the agent process (cancel, SIGSTOP, SIGCONT). An agent that cannot pause is put back to running
+  and the user hears so.
+- It never enters the serial browser queue: an agent can work for an hour while the golden
+  scenario runs. Two agents in one project are prevented by the workspace lock, not by the queue.
+- "stop" is silence (like every other task); the panel shows the state. Every other end is spoken
+  from the structured result, and "Gotowe" only with passing checks.
+- The renderer can never name a folder: projects are added through the system folder picker in
+  the main process (`pickWorkspace`); `addWorkspace` over IPC is refused.
+- Words like "projekt", "repo", "app" in a project's name do not identify it ("w projekcie Zeta"
+  is not "Mini Projekt").
+- On quit the agents are stopped (bounded 8 s) and their tasks become INTERRUPTED_AFTER_RESTART;
+  "kontynuuj" starts a new kernel task with `resumeOf`, which resumes the agent's own session from
+  the current repository state; the old record is marked `resumedBy` and not offered again.
+- A read-only task that changed files is caught (changes are read for every task, not only for
+  validated ones) and FAILS.

@@ -97,3 +97,26 @@ Sources: `tests/runtime/voiceSession.test.ts` (golden 1-8 spoken, 11 utterances)
 `tests/browser/voiceGolden.test.ts` (golden 1-8 on Chromium, 10 utterances). Barge-in cancels
 speech in the same tick as the interrupting partial (`voiceSession.test.ts`, barge-in case).
 A slow action gets "Sekunda." from the pre-rendered clip cache after 1.2 s of silence.
+
+## Coding agent live log (M12)
+
+A coding agent can print thousands of lines. The path from the agent to the screen is bounded
+at every step:
+
+- Main process (`src/node/coder/host.ts`): events are batched into one IPC message about every
+  100 ms (or at 200 events); a task's end or a policy stop is flushed at once. 1,000 agent lines
+  make 5 IPC messages (`tests/coder/live.test.ts`, batching case).
+- Executor ring buffer: 2,000 events per task (`CoderExecutor`, `logLimit`).
+- Renderer (`src/lib/runtime/coder/live.ts`): per-task ring buffer of 500 events, live state
+  updated in place per event, one listener notification per batch (coalesced in a microtask),
+  immutable snapshots rebuilt only when the version changed and someone reads them
+  (`useSyncExternalStore`). Nothing serializes the whole log per event.
+
+| Events (batches of 100) | Batched store, total | Per event | Notifications | Log kept |
+|---|---|---|---|---|
+| 10,000 | 5.3 ms | 0.53 us | 100 | 500 |
+| 100,000 | 18.8 ms | 0.19 us | 1,000 | 500 |
+
+For comparison, copying the array and serializing the last 500 events per event (the naive
+approach) takes 2,060 ms for the first 10,000 events. Measured in the cloud container (Node 22,
+vitest); the regression bound in `tests/coder/live.test.ts` is 500 ms for 10,000 events.

@@ -14,6 +14,9 @@ import { LinuxDesktopEnvironment } from "./linux/environment";
 import { WindowsDesktopEnvironment } from "./windows/uia";
 import type { ComputerEnvironment, EnvEvent } from "../lib/runtime/env/types";
 
+// Coding agents under JARVIS (M11-M13): Codex CLI, Claude Code CLI, a local model.
+export { createCoderHost, type CoderHost } from "./coder/host";
+
 export interface ManagedBrowserHost extends EnvHost {
   onEvent(listener: (e: EnvEvent) => void): () => void;
 }

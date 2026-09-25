@@ -58,6 +58,18 @@ export async function gitChanges(root: string, startHead: string | undefined, ru
   return { files: [...files].sort(), stat: untracked.stdout.trim() ? `${stat}${stat ? ", " : ""}${untracked.stdout.trim().split("\n").length} new file(s)` : stat, historyIntact };
 }
 
+/**
+ * What the agent changed since the task started. A file that was dirty before counts only when its
+ * content changed during the task (the user's own edits are not the agent's).
+ */
+export async function agentChanges(o: Pick<ValidateOptions, "root" | "startHead" | "dirtyBefore" | "dirtyHashes">, run: Run = execRunner): Promise<{ files: string[]; overlaps: string[]; stat: string; historyIntact: boolean }> {
+  const g = await gitChanges(o.root, o.startHead, run);
+  const hashesNow = o.dirtyHashes ? hashDirty(o.root, o.dirtyBefore) : {};
+  const touchedBefore = (f: string) => !!o.dirtyHashes && f in o.dirtyHashes;
+  const files = g.files.filter((f) => !f.startsWith(".jarvis/") && (!touchedBefore(f) || o.dirtyHashes![f] !== hashesNow[f]));
+  return { files, overlaps: files.filter((f) => touchedBefore(f)), stat: g.stat, historyIntact: g.historyIntact };
+}
+
 export async function validateWorkspace(o: ValidateOptions): Promise<ValidationResult> {
   const run = o.run ?? execRunner;
   const now = o.now ?? (() => Date.now());
@@ -79,18 +91,14 @@ export async function validateWorkspace(o: ValidateOptions): Promise<ValidationR
     checks.push(result);
     o.onCheck?.(result);
   }
-  const g = await gitChanges(o.root, o.startHead, run);
-  // A file that was dirty before counts only when its content changed during the task.
-  const hashesNow = o.dirtyHashes ? hashDirty(o.root, o.dirtyBefore) : {};
-  const touchedBefore = (f: string) => !!o.dirtyHashes && f in o.dirtyHashes;
-  const changed = g.files.filter((f) => !f.startsWith(".jarvis/") && (!touchedBefore(f) || o.dirtyHashes![f] !== hashesNow[f]));
+  const g = await agentChanges(o, run);
   return {
     ran: true,
     checks,
     noChecks: o.checks.length === 0,
     diffStat: g.stat,
-    changedFiles: changed,
-    overlapsUserChanges: changed.filter((f) => touchedBefore(f)),
+    changedFiles: g.files,
+    overlapsUserChanges: g.overlaps,
     historyIntact: g.historyIntact,
   };
 }

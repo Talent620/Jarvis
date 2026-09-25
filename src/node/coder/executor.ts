@@ -14,7 +14,7 @@ import { execRunner, type Run } from "../linux/runner";
 import type { BackendEnd, BackendRun, CoderBackend } from "./backends";
 import { commandViolation, constraintKeys, pathViolation, redactSecrets, secretEnvValues } from "./guard";
 import type { ParsedEvent } from "./parse";
-import { gitChanges, hashDirty, validateWorkspace } from "./validate";
+import { agentChanges, hashDirty, validateWorkspace } from "./validate";
 import { detectProject, type WorkspaceRegistry } from "./workspace";
 
 export interface ExecutorOptions {
@@ -43,6 +43,8 @@ interface Active {
   seq: number;
   log: CoderEvent[];
   cancelled: boolean;
+  /** The app is quitting: the process is stopped, the task stays resumable. */
+  interrupted?: boolean;
   promise: Promise<CoderResult>;
   listeners: Set<(e: CoderEvent) => void>;
 }
@@ -210,6 +212,7 @@ export class CoderExecutor {
     try {
       const snap = await this.o.registry.snapshot(w.root);
       const prior = spec.resumeOf ? this.records.get(spec.resumeOf) : undefined;
+      if (prior) { prior.resumedBy = spec.taskId; prior.updatedAt = this.now(); }
       a.record.startHead = prior?.startHead ?? snap.head;
       a.record.dirtyBefore = prior?.dirtyBefore ?? snap.dirty;
       a.record.dirtyHashes = prior?.dirtyHashes ?? hashDirty(w.root, snap.dirty);
@@ -223,7 +226,7 @@ export class CoderExecutor {
       const profile = detectProject(w.root);
       const prompt = this.prompt(spec, w.name, snap.dirty, profile.checks.map((c) => [c.cmd, ...c.args].join(" ")), prior);
       this.setState(a, "running", spec.resumeOf ? "resuming from the current state" : "agent started");
-      this.emit(a, "TASK_STARTED", `${chosen.backend.id} started in ${w.name}${a.record.branch ? ` (${a.record.branch})` : ""}`);
+      this.emit(a, "TASK_STARTED", `${chosen.backend.id} started in ${w.name}${a.record.branch ? ` (${a.record.branch})` : ""}`, { backend: chosen.backend.id, branch: a.record.branch });
 
       let end = await this.runAgent(a, w.root, prompt, access, prior?.sessionId);
       // Instructions that arrived while a backend could not take them: one more turn, same task.
@@ -247,9 +250,11 @@ export class CoderExecutor {
             this.emit(a, "CHECK_RESULT", `${c.name}: ${c.ok ? "PASS" : "FAIL"} (exit ${c.exitCode})${c.tests ? `, ${c.tests.passed} passed, ${c.tests.failed} failed` : ""}`, { exitCode: c.exitCode, tests: c.tests, command: c.command });
           },
         });
-      } else if (access === "write") {
-        const g = await gitChanges(w.root, a.record.startHead, this.run);
-        validation = { ran: false, checks: [], noChecks: false, diffStat: g.stat, changedFiles: g.files, overlapsUserChanges: [], historyIntact: g.historyIntact };
+      } else {
+        // Not validated (stopped, blocked, or a read-only role): still read what really changed, so
+        // a read-only agent that edited files is caught and a stop reports the files it left.
+        const g = await agentChanges({ root: w.root, startHead: a.record.startHead, dirtyBefore: a.record.dirtyBefore, dirtyHashes: a.record.dirtyHashes }, this.run);
+        validation = { ran: false, checks: [], noChecks: false, diffStat: g.stat, changedFiles: g.files, overlapsUserChanges: g.overlaps, historyIntact: g.historyIntact };
       }
       if (validation) { a.record.changedFiles = a.live.changedFiles = validation.changedFiles; }
       a.record.currentHead = (await this.o.registry.snapshot(w.root)).head;
@@ -307,8 +312,15 @@ export class CoderExecutor {
       agentSaysDone: v.agentSaysDone, agentSummary: end?.final ? redactSecrets(end.final, this.secrets).slice(0, 2000) : undefined,
       validation: v.validation, violations: [...v.violations], reason: d.reason, sessionId: a.record.sessionId,
     };
-    a.record.result = result;
     a.record.backend = a.live.backend = backend;
+    if (a.interrupted) {
+      // Stopped by the app quitting, not by the user: "kontynuuj" picks it up after the restart.
+      const r: CoderResult = { ...result, state: "interrupted_after_restart", truth: "UNKNOWN_AFTER_ATTEMPT", reason: "JARVIS was closed during the task" };
+      this.setState(a, "interrupted_after_restart");
+      this.emit(a, "WARNING", "interrupted: JARVIS is closing");
+      return r;
+    }
+    a.record.result = result;
     this.setState(a, d.state, d.truth === "CONFIRMED" ? "validated" : d.reason ?? d.state);
     this.emit(a, d.state === "cancelled" ? "TASK_CANCELLED" : "TASK_COMPLETED", `${d.truth}${d.reason ? `: ${d.reason}` : ""}`);
     return result;
@@ -351,6 +363,23 @@ export class CoderExecutor {
     a.cancelled = true;
     await a.run?.cancel();
     return true;
+  }
+
+  /**
+   * The app is quitting: stop every agent process (no orphans) but keep the tasks resumable
+   * (INTERRUPTED_AFTER_RESTART), with their checkpoints on disk.
+   */
+  async shutdown(): Promise<void> {
+    const live = [...this.tasks.values()].filter((a) => LIVE_CODER_STATES.has(a.live.state));
+    for (const a of live) { a.interrupted = true; a.cancelled = true; }
+    await Promise.all(live.map((a) => a.run?.cancel()));
+    await Promise.allSettled(live.map((a) => a.promise));
+    this.persist();
+  }
+
+  /** The persisted result of a finished task (after a restart too). */
+  result(taskId: string): CoderResult | undefined {
+    return this.records.get(taskId)?.result;
   }
 
   pause(taskId: string): boolean {

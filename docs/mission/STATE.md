@@ -18,8 +18,8 @@ Phase: all milestones done. M0 (8a61178), M1 (1d9b49a), M2 (ddc05e3), M3 (a01422
 | M9 | Windows and Android adapters | done (contract tests, APK builds; devices needs_hardware) |
 | M10 | Vision, Skill Compiler, visibility, docs, final review | done (no real vision model wired) |
 | M11 | CoderExecutor: Codex / Claude Code / local behind one contract, workspaces, guard, validation | done (real login needs_hardware) |
-| M12 | Live coding control in the kernel, panel, voice | in_progress |
-| M13 | Software factory roles, cost router, coder acceptance | todo |
+| M12 | Live coding control in the kernel, panel, voice | done |
+| M13 | Software factory roles, cost router, coder acceptance | in_progress |
 
 ## Gates at last measurement (commit 67efac2)
 

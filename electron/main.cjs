@@ -1,5 +1,5 @@
 // Główny proces Electrona — JARVIS na komputer (Windows .exe), pełna wersja.
-const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification } = require("electron");
+const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
@@ -62,6 +62,20 @@ function getBridgeHost() {
     bridgeStarting = bridgeHost.start().catch(() => { bridgeStarting = null; });
   }
   return bridgeHost;
+}
+
+// Coding agents (M11-M13): Codex CLI / Claude Code / local model driven by JARVIS. The executor
+// lives in electron/gen/runtime.cjs; events reach the window in batches.
+let coderHost = null;
+function getCoderHost() {
+  if (!coderHost) {
+    const { createCoderHost } = require("./gen/runtime.cjs");
+    coderHost = createCoderHost({ userDataPath: app.getPath("userData") });
+    coderHost.onEvents((batch) => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("jarvis:coder-events", batch);
+    });
+  }
+  return coderHost;
 }
 
 function siteOsPaths() {
@@ -386,6 +400,29 @@ function registerDesktopControl() {
       return { status: "failed", error: e && e.message ? String(e.message) : String(e) };
     }
   });
+  ipcMain.handle("jarvis:coder", async (event, req) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    const method = String(req?.method || "");
+    try {
+      // Adding a project goes through the system folder picker: the renderer never names a path.
+      if (method === "pickWorkspace") {
+        const r = await dialog.showOpenDialog(mainWindow, { properties: ["openDirectory"], title: "Projekt dla JARVIS-a" });
+        if (r.canceled || !r.filePaths[0]) return { ok: false, error: "cancelled" };
+        return await getCoderHost().handle({ method: "addWorkspace", root: r.filePaths[0] });
+      }
+      if (method === "addWorkspace") return { ok: false, error: "use pickWorkspace" };
+      if (method === "openWorkspace") {
+        const ws = await getCoderHost().handle({ method: "workspaces" });
+        const w = ws.ok ? ws.value.find((x) => x.id === String(req?.id || "")) : null;
+        if (!w) return { ok: false, error: "unknown workspace" };
+        const err = await shell.openPath(w.root);
+        return err ? { ok: false, error: err } : { ok: true, value: true };
+      }
+      return await getCoderHost().handle(req);
+    } catch (e) {
+      return { ok: false, error: e && e.message ? String(e.message) : String(e) };
+    }
+  });
   ipcMain.handle("jarvis:hardware-info", async (event) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     try {
@@ -691,10 +728,13 @@ if (!gotLock) {
   });
 
   app.on("before-quit", (event) => {
-    if (!stdioMcp || closingStdioMcp) return;
+    if ((!stdioMcp && !coderHost) || closingStdioMcp) return;
     event.preventDefault();
     closingStdioMcp = true;
-    void stdioMcp.closeAll().finally(() => app.quit());
+    // Coding agents are stopped with their whole process group before the app exits (no orphans),
+    // bounded so a stuck agent cannot keep JARVIS from closing.
+    const coderClosed = coderHost ? Promise.race([coderHost.close(), new Promise((r) => setTimeout(r, 8000))]) : Promise.resolve();
+    void Promise.allSettled([stdioMcp ? stdioMcp.closeAll() : Promise.resolve(), coderClosed]).finally(() => app.quit());
   });
 
   app.on("will-quit", () => {

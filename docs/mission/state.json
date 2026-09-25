@@ -173,19 +173,27 @@
         "vitest 365 files / 3331 tests exit 0; tsc -b, eslint ., npm run build, scan:secrets exit 0; desktop suite 8/8 after the shared runner change",
         "real Codex / Claude login and a real task on the user's machine: NEEDS_HARDWARE (M13 acceptance --mode=codex)"
       ],
-      "last_commit": "",
+      "last_commit": "15727f6",
       "next_action": "Done. M12: coding task in the kernel and UI."
     },
     {
       "id": "M12",
-      "status": "in_progress",
-      "evidence": [],
+      "status": "done",
+      "evidence": [
+        "tests/coder/runtime.test.ts 11/11 through the real CoderHost request/event contract (same as the jarvis:coder IPC) and a fake Codex CLI: a spoken coding command becomes a kernel task (kind code, action coder.run) outside the serial browser queue; CONFIRMED and 'Gotowe i sprawdzone' only after the repo's own test; agent says done with a red test -> task failed, spoken as not done (8); 18 duplicated final (same id, same words, same utterance to the controller) starts one agent; 19 'co teraz robi codex?' and 'co teraz robisz?' answered from structured events (stage, command, changed files, tests), agent pid unchanged, task completes; 'stop' cancels the kernel task, kills the process, silence, changes kept; 'pauza' SIGSTOP (state T) and 'wznów' to a verified end; 20 'nie rób release' enforced (git tag -> BLOCKED) and 'dodaj jeszcze X' runs as the next turn of the same Codex session; 'pokaż zmiany' diff; restart: host closed -> agent killed, INTERRUPTED_AFTER_RESTART, new host + runtime, 'kontynuuj' -> exec resume <thread> from the current repo state, not offered again; backends as kernel capabilities",
+        "tests/coder/live.test.ts 8/8: Polish coding grammar (start, backend in words, constraints, instructions, stop/pause, status, diff, continue, chat not claimed), project names without generic words, IPC allow-list rejects 12 malformed requests, event batching (1000 lines -> 5 messages, end flushed at once), 10,000 events: log bounded to 500, one notification, snapshot cached, replay ignored, CODER card render, diagnostics carry coding tasks without goal text or file names",
+        "Performance: 10,000 events 5.3 ms (0.53 us/event), 100,000 events 18.8 ms, naive copy+serialize 2,060 ms for 10,000 (docs/JARVIS-PERFORMANCE.md)",
+        "Electron: jarvis:coder IPC with isTrustedIpc, folder picker only (renderer cannot name a path), batched jarvis:coder-events, agents stopped before quit (bounded 8 s); preload coder bridge; electron/gen/runtime.cjs exports createCoderHost",
+        "UI: KOD screen (backends, login state, AUTO/CODEX/CLAUDE/LOCAL, TANIO/NORMALNIE/MAKSIMUM, projects, START, live card, STOP/PAUZA/WZNÓW/POKAŻ ZMIANY/OTWÓRZ REPO, live log, diff, history), CODER section in the 'Co robię' dock",
+        "vitest 367 files / 3351 tests, tsc -b, eslint ., npm run build, scan:secrets exit 0",
+        "real Codex on the user's machine: NEEDS_HARDWARE (M13 acceptance --mode=codex)"
+      ],
       "last_commit": "",
-      "next_action": "Coding task in the kernel, IPC host, live store, RuntimeStatusPanel CODER, CODE UI, voice stop/amend/status/resume, restart recovery."
+      "next_action": "Done. M13: software factory."
     },
     {
       "id": "M13",
-      "status": "todo",
+      "status": "in_progress",
       "evidence": [],
       "last_commit": "",
       "next_action": "Roles through agentRun/agentPipeline, cost router, reviewer loop, jarvis:coder:acceptance, final adversarial review."

@@ -15,6 +15,7 @@ const SalesCrm = lazy(() => import("./components/SalesCrm"));
 const GrowthDayPanel = lazy(() => import("./components/GrowthDayPanel"));
 const GoalStatusPanel = lazy(() => import("./components/GoalStatusPanel"));
 const RuntimeStatusDock = lazy(() => import("./components/RuntimeStatusPanel"));
+const CodePanel = lazy(() => import("./components/CodePanel"));
 const MoneyHub = lazy(() => import("./components/MoneyHub"));
 const FinancialDashboard = lazy(() => import("./components/FinancialDashboard"));
 const Help = lazy(() => import("./components/Help"));
@@ -291,6 +292,7 @@ export default function App() {
   const showAdmin = route.screen === "admin"; const setShowAdmin = screenSetter("admin");
   const showCards = route.screen === "cards"; const setShowCards = screenSetter("cards");
   const showTranscribe = route.screen === "transcribe"; const setShowTranscribe = screenSetter("transcribe");
+  const showCode = route.screen === "code"; const setShowCode = screenSetter("code");
   const showProfile = route.screen === "profile"; const setShowProfile = screenSetter("profile");
   const showTasks = route.screen === "tasks"; const setShowTasks = screenSetter("tasks");
   const showTranslator = route.screen === "translator"; const setShowTranslator = screenSetter("translator");
@@ -354,6 +356,7 @@ export default function App() {
       open("shoppingList", "Lista zakupów", "📝", "lista zakupow zakupy kup"),
       open("translator", "Tłumacz na żywo", "🌍", "tlumacz jezyk rozmowa"),
       open("transcribe", "Transkrypcja", "🎙", "spotkanie mowa tekst"),
+      open("code", "Kod: agenci programistyczni", "⌨", "kod codex claude code programista repo projekt napraw testy agent"),
       open("cards", "Kapsuły Wiedzy", "🃏", "ucz fiszki nauka"),
       open("content", "Maszynka do kontentu", "📱", "posty social media"),
       open("ads", "Generator reklam", "📢", "reklamy google facebook ads"),
@@ -1549,6 +1552,11 @@ export default function App() {
           <Transcribe onClose={() => setShowTranscribe(false)} />
         </ScreenBoundary>
       )}
+      {showCode && (
+        <ScreenBoundary>
+          <CodePanel onClose={() => setShowCode(false)} />
+        </ScreenBoundary>
+      )}
       {showProfile && (
         <ScreenBoundary>
           <Profile onClose={() => setShowProfile(false)} />
@@ -1655,6 +1663,7 @@ export default function App() {
           onAdmin={() => setShowAdmin(true)}
           onCards={() => setShowCards(true)}
           onTranscribe={() => setShowTranscribe(true)}
+          onCode={runtimeAvailable() ? () => setShowCode(true) : undefined}
           onProfile={() => setShowProfile(true)}
           onTasks={() => setShowTasks(true)}
           onTranslator={() => setShowTranslator(true)}

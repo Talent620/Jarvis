@@ -5,6 +5,7 @@
 // consent contents and quoted screen text are reduced to their length, and nothing is sent
 // anywhere by this module.
 
+import type { CoderLiveState, CoderResult } from "./coder/types";
 import { redactSecret } from "../cognitiveStatus";
 import type { KernelState } from "./reducer";
 import { focusedTaskId } from "./reducer";
@@ -136,6 +137,8 @@ export interface DiagnosticsInput {
   capabilities?: CapabilityState[];
   latency?: Record<string, { count: number; p50: number; p95: number }>;
   skills?: Skill[];
+  /** Coding tasks (M12): live states and results, already redacted by the main process. */
+  coder?: { tasks: CoderLiveState[]; results: Record<string, CoderResult> };
   environment: string;
   appVersion?: string;
   now: number;
@@ -155,6 +158,7 @@ export interface Diagnostics {
   latency?: Record<string, { count: number; p50: number; p95: number }>;
   turns: { route: string; text: string; truth?: string; sayChars?: number; at: number }[];
   skills: { name: string; steps: number; external: boolean; runs: number; invalidated?: string }[];
+  coder?: { id: string; backend: string; state: string; truth?: string; changedFiles: number; tests?: { passed: number; failed: number }; checks?: string; reason?: string; violations?: string[] }[];
 }
 
 /** Redacted, bounded diagnostics. Nothing here is sent anywhere; the user decides what to share. */
@@ -186,5 +190,14 @@ export function exportDiagnostics(i: DiagnosticsInput): Diagnostics {
     // What JARVIS said quotes the screen (titles, comments): only its length leaves the machine.
     turns: (i.turns ?? []).slice(-40).map((t) => ({ route: t.route, text: forExport(t.text, 120), truth: t.result?.truth, sayChars: t.say ? [...t.say].length : undefined, at: t.at })),
     skills: (i.skills ?? []).map((k) => ({ name: forExport(k.name, 60), steps: k.steps.length, external: k.external, runs: k.runs, invalidated: k.invalidated ? forExport(k.invalidated.reason, 120) : undefined })),
+    // Coding tasks: states, counts and check names only; no goal text, file names or agent output.
+    coder: i.coder?.tasks.slice(0, 20).map((t) => {
+      const r = i.coder!.results[t.taskId];
+      return {
+        id: t.taskId, backend: t.backend, state: t.state, truth: r?.truth, changedFiles: t.changedFiles.length, tests: t.tests,
+        checks: r?.validation?.checks.map((c) => `${c.name}:${c.ok ? "PASS" : "FAIL"}`).join(" "), reason: r?.reason ? forExport(r.reason, 160) : undefined,
+        violations: r?.violations.length ? r.violations.map((v) => forExport(v, 80)) : undefined,
+      };
+    }),
   };
 }

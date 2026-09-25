@@ -14,6 +14,15 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
       return () => ipcRenderer.removeListener("jarvis:env-event", handler);
     },
   },
+  // Coding agents (Codex CLI, Claude Code, local model) run by JARVIS in the main process.
+  coder: {
+    call: (req) => ipcRenderer.invoke("jarvis:coder", req),
+    onEvents: (cb) => {
+      const handler = (_event, batch) => cb(batch);
+      ipcRenderer.on("jarvis:coder-events", handler);
+      return () => ipcRenderer.removeListener("jarvis:coder-events", handler);
+    },
+  },
   // BrowserBridge pairing and status (the extension itself talks to 127.0.0.1 directly).
   bridge: {
     call: (req) => ipcRenderer.invoke("jarvis:bridge", req),

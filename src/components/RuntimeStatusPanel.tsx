@@ -7,6 +7,9 @@ import React, { useEffect, useRef, useState } from "react";
 import type { StatusView } from "../lib/runtime/diagnostics";
 import type { VoiceControlStatus } from "../lib/runtime/voiceControl";
 import type { Skill } from "../lib/runtime/skills";
+import { CoderLiveCard, useCoderSnapshot } from "./CodePanel";
+import { LIVE_CODER_STATES } from "../lib/runtime/coder/types";
+import { requestScreen } from "../lib/navIntent";
 
 /** One line about voice control for the panel, or null when it is off. */
 export function voiceLine(v: VoiceControlStatus | null | undefined): string | null {
@@ -66,9 +69,11 @@ interface Props {
   onStop?: () => void;
   onExport?: () => void;
   onClose?: () => void;
+  /** CODER: the coding agent's live card (M12), when one works or just finished. */
+  coder?: React.ReactNode;
 }
 
-export const RuntimeStatusPanel: React.FC<Props> = ({ view, voice, onVoiceRetry, skills, onForgetSkill, onPause, onResume, onStop, onExport, onClose }) => (
+export const RuntimeStatusPanel: React.FC<Props> = ({ view, voice, onVoiceRetry, skills, onForgetSkill, onPause, onResume, onStop, onExport, onClose, coder }) => (
   <section aria-label="Co robię" role="status" aria-live="polite" style={{ border: "1px solid var(--line, #234)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 6, background: "var(--panel, #0b1620)" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
       <strong style={{ fontSize: 14 }}>Co robię: {STATE_LABEL[view.state]}</strong>
@@ -94,6 +99,12 @@ export const RuntimeStatusPanel: React.FC<Props> = ({ view, voice, onVoiceRetry,
       <button type="button" onClick={onStop} disabled={!view.canStop || !onStop} style={btn}>STOP</button>
       {onExport && <button type="button" onClick={onExport} style={btn}>Eksport diagnostyki</button>}
     </div>
+    {coder && (
+      <section aria-label="CODER" style={{ borderTop: "1px solid var(--line, #234)", paddingTop: 6 }}>
+        <strong style={{ fontSize: 13 }}>CODER</strong>
+        {coder}
+      </section>
+    )}
     {!!skills?.length && (
       <details>
         <summary style={{ fontSize: 13, cursor: "pointer" }}>Umiejętności ({skills.length}): powiedz „powtórz” i nazwę</summary>
@@ -178,8 +189,23 @@ const RuntimeStatusDock: React.FC = () => {
     });
     return () => { cancelled = true; off(); };
   }, []);
+  const coderCtl = ctl?.coder() ?? null;
+  const coderSnap = useCoderSnapshot(coderCtl);
   if (!view || !ctl) return null;
-  const active = view.state !== "idle" || view.recent.length > 0 || !!voiceLine(voice);
+  // The coding task shown: a live one first, else the newest of this session.
+  const codeTask = coderSnap.tasks.find((t) => LIVE_CODER_STATES.has(t.state)) ?? coderSnap.tasks[0];
+  const coder = codeTask && coderCtl ? (
+    <CoderLiveCard
+      task={codeTask}
+      result={coderSnap.results[codeTask.taskId]}
+      now={Date.now()}
+      onPause={() => coderCtl.control(codeTask.taskId, "pause")}
+      onResume={() => coderCtl.control(codeTask.taskId, "resume")}
+      onStop={() => coderCtl.control(codeTask.taskId, "stop")}
+      onDiff={() => { void coderCtl.loadDiff(codeTask.taskId).then(() => requestScreen("code")); }}
+    />
+  ) : undefined;
+  const active = view.state !== "idle" || view.recent.length > 0 || !!voiceLine(voice) || !!codeTask;
   if (!active) return null;
   if (!open) {
     return (
@@ -201,6 +227,7 @@ const RuntimeStatusDock: React.FC = () => {
         onStop={() => ctl.press("stop")}
         onExport={() => downloadJson(`jarvis-diagnostyka-${new Date().toISOString().replace(/[:.]/g, "-")}.json`, ctl.diagnostics())}
         onClose={() => setOpen(false)}
+        coder={coder}
       />
     </div>
   );

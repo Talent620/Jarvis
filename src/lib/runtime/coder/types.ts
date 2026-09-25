@@ -56,6 +56,9 @@ export interface CoderEvent {
   /** The agent's own session id (Codex thread, Claude session), for resume. */
   sessionId?: string;
   model?: string;
+  /** On JARVIS's own TASK_STARTED: the backend really chosen and the branch it works on. */
+  backend?: CoderBackendId;
+  branch?: string;
 }
 
 /** Lifecycle of a coding task as seen by JARVIS (not by the agent). */
@@ -167,6 +170,8 @@ export interface CoderTaskRecord {
   pid?: number;
   sessionId?: string;
   constraints: string[];
+  /** The task that continued this one after an interruption (it is not offered again). */
+  resumedBy?: string;
   /** Roles of the factory already CONFIRMED (never run again on resume). */
   confirmedRoles?: string[];
   result?: CoderResult;

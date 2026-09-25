@@ -35,10 +35,10 @@ const STATUS_WORDS: Record<string, string> = {
 };
 
 /** Deterministic answer to "co teraz robisz?" built from kernel state and the action queue. */
-export function statusReply(state: KernelState, queued: string[] = []): string {
+export function statusReply(state: KernelState, queued: string[] = [], skipKind?: string): string {
   const fid = focusedTaskId(state);
-  const live = state.taskOrder.map((id) => state.tasks[id]).filter((t) => t && !TERMINAL_TASK.has(t.status));
-  const task = (fid && state.tasks[fid] && !TERMINAL_TASK.has(state.tasks[fid].status)) ? state.tasks[fid] : live[live.length - 1];
+  const live = state.taskOrder.map((id) => state.tasks[id]).filter((t) => t && !TERMINAL_TASK.has(t.status) && t.kind !== skipKind);
+  const task = (fid && state.tasks[fid] && !TERMINAL_TASK.has(state.tasks[fid].status) && state.tasks[fid].kind !== skipKind) ? state.tasks[fid] : live[live.length - 1];
   const waiting = queued.length ? ` W kolejce: ${queued.slice(0, 3).map((q) => `„${preview(q, 30)}”`).join(", ")}.` : "";
   if (!task) {
     if (queued.length) return `Zaraz zrobię: „${preview(queued[0], 60)}”.${queued.length > 1 ? ` Potem jeszcze ${queued.length - 1}.` : ""}`;

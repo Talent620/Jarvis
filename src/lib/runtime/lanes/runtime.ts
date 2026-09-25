@@ -17,6 +17,7 @@ import { focusedContent, isSummaryRequest, summarizeUntrusted, type IsolatedMode
 import { classifyReflex, isStrictConsent, tier0FromPartial, DEFAULT_PARTIAL_POLICY, type PartialPolicy } from "./reflex";
 import { parseRememberSkill, parseRunSkill, type SkillLibrary, type SkillRunner } from "../skills";
 import { normalizeUtterance } from "../util";
+import { CoderController, type CoderControllerOptions } from "../coder/controller";
 
 /** Voice output. cancel() must stop audio immediately (barge-in). */
 export interface Speaker {
@@ -25,7 +26,7 @@ export interface Speaker {
   cancel(): void;
 }
 
-export type Route = "control" | "action" | "amend" | "answer" | "side_chat" | "summary" | "status" | "skill" | "ignored" | "duplicate";
+export type Route = "control" | "action" | "amend" | "answer" | "side_chat" | "summary" | "status" | "skill" | "coder" | "ignored" | "duplicate";
 
 export interface RuntimeTurn {
   utteranceId: string;
@@ -50,6 +51,8 @@ export interface RuntimeOptions {
   skills?: SkillLibrary;
   /** A conversation or summary model that does not answer in time is given up. */
   modelTimeoutMs?: number;
+  /** Coding agents (M12): the coder host in the main process. */
+  coder?: Omit<CoderControllerOptions, "kernel" | "say">;
   now?: () => number;
 }
 
@@ -108,6 +111,8 @@ export class JarvisRuntime {
   /** Resolves when a queued action turn has finished or was dropped. */
   private settles = new WeakMap<RuntimeTurn, Promise<void>>();
   private replaying: string | null = null;
+  /** Coding tasks (Codex CLI, Claude Code, local model) as kernel tasks, outside the serial queue. */
+  readonly coder: CoderController | null;
 
   constructor(opts: RuntimeOptions) {
     this.kernel = opts.kernel;
@@ -128,6 +133,7 @@ export class JarvisRuntime {
         this.say(q, "runtime", this.runningUtteranceId ?? undefined);
       },
     });
+    this.coder = opts.coder ? new CoderController({ ...opts.coder, kernel: opts.kernel, say: (t, u) => this.say(t, "runtime", u) }) : null;
   }
 
   start(): Promise<void> {
@@ -175,6 +181,7 @@ export class JarvisRuntime {
    */
   claims(text: string, routeAction: (cmd: Command) => boolean): boolean {
     if (this.session.hasPendingQuestion() && this.session.isAnswer(text)) return true;
+    if (this.coder?.claims(text)) return true;
     const reflex = classifyReflex(text);
     const live = this.isBusy() || !!this.lastLiveTask();
     if (reflex.kind === "control") {
@@ -203,7 +210,7 @@ export class JarvisRuntime {
   /** Resolves when every queued action and side chat has finished. */
   async idle(): Promise<void> {
     for (;;) {
-      const pending = [this.actionQueue, ...this.sideChats];
+      const pending = [this.actionQueue, ...this.sideChats, this.coder?.idle()];
       await Promise.allSettled(pending);
       if (this.pendingActions === 0 && this.sideChats.size === 0) return;
     }
@@ -259,6 +266,13 @@ export class JarvisRuntime {
       this.kernel.dispatch({ type: "ConversationIntent", intent: "CONFIRM", text, utteranceId });
       return this.log({ utteranceId, text, route: "answer" });
     }
+    // Coding commands ("napraw testy w projekcie X", "dodaj jeszcze", "nie rób release", "pokaż
+    // zmiany") run as their own kernel tasks and never wait for the browser queue.
+    const coder = this.coder?.handle(utteranceId, text);
+    if (coder) {
+      if (coder.intent === "stop") this.speaker.cancel();
+      return this.log({ utteranceId, text, route: "coder", say: coder.say });
+    }
     const skill = this.skillIntent(text);
     if (skill) return skill.kind === "remember" ? this.rememberSkill(utteranceId, text, skill.name) : this.replaySkill(utteranceId, text, skill.name);
     const reflex = classifyReflex(text);
@@ -287,7 +301,10 @@ export class JarvisRuntime {
     if (isSummaryRequest(text)) return this.summary(utteranceId, text);
     if (isStatusQuestion(text)) {
       this.kernel.dispatch({ type: "ConversationIntent", intent: "SIDE_CHAT", text, utteranceId });
-      const reply = statusReply(this.kernel.state, this.queuedTexts);
+      // A coding agent's state comes from its own structured events, the rest from the kernel.
+      const coderLine = this.coder?.statusLine() ?? null;
+      const others = this.kernel.state.taskOrder.some((id) => { const t = this.kernel.state.tasks[id]; return t && t.kind !== "code" && !TERMINAL_TASK.has(t.status); }) || this.queuedTexts.length > 0;
+      const reply = coderLine ? (others ? `${coderLine} ${statusReply(this.kernel.state, this.queuedTexts, "code")}` : coderLine) : statusReply(this.kernel.state, this.queuedTexts);
       this.say(reply, "runtime", utteranceId);
       return this.log({ utteranceId, text, route: "status", say: reply });
     }

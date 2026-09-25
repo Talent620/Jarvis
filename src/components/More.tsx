@@ -33,6 +33,7 @@ export default function More({
   onAdmin,
   onCards,
   onTranscribe,
+  onCode,
   onProfile,
   onTasks,
   onTranslator,
@@ -76,6 +77,8 @@ export default function More({
   onAdmin: () => void;
   onCards: () => void;
   onTranscribe: () => void;
+  /** KOD: coding agents (desktop only). */
+  onCode?: () => void;
   onProfile: () => void;
   onTasks: () => void;
   onTranslator: () => void;
@@ -126,6 +129,7 @@ export default function More({
     { id: "cards", icon: "🎴", name: "Kapsuły Wiedzy", desc: "Ucz się i pamiętaj", fn: onCards },
     { id: "translator", icon: "🌍", name: "Tłumacz", desc: "Na żywo (rozmowa 2 języki)", fn: onTranslator },
     { id: "transcribe", icon: "🎙", name: "Transkrypcja", desc: "Spotkań (mowa→tekst)", fn: onTranscribe },
+    ...(onCode ? [{ id: "code", icon: "⌨", name: "Kod", desc: "Codex, Claude Code: zlecaj i śledź pracę agentów", fn: onCode }] : []),
     { id: "sales", icon: "📈", name: "Sprzedaż", desc: "Pulpit Sprzedaży (leady, CRM)", fn: onSales },
     { id: "content", icon: "📱", name: "Kontent", desc: "Posty na social media", fn: onContent },
     { id: "ads", icon: "📢", name: "Reklamy", desc: "Google Ads / Facebook / Instagram", fn: onAds },

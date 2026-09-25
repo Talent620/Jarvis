@@ -19,6 +19,10 @@ import { AppTTS, MicInput, pcm16ToWav } from "./voice/browserAudio";
 import { VoiceSession, type VoiceSessionEvent } from "./voice/session";
 import { VoiceControl } from "./voiceControl";
 import { acquireVoice, releaseVoice } from "../voiceSession";
+import { desktopCoderPort } from "./coder/port";
+import { mightBeCoding } from "./coder/intent";
+import { loadCoderSettings } from "./coder/settings";
+import type { CoderController } from "./coder/controller";
 import type { ListenMode, SocketLike, StreamingSTT } from "./voice/types";
 
 interface AppRuntime {
@@ -41,6 +45,8 @@ export interface AppRuntimeControls {
   diagnostics(): Diagnostics;
   skills(): Skill[];
   forgetSkill(name: string): void;
+  /** Coding agents (desktop only): live tasks, controls, projects. */
+  coder(): CoderController | null;
 }
 
 const ACTION_MODEL = "polecenia bez modelu (gramatyka PL), odczyt zwrotny";
@@ -53,8 +59,10 @@ function controlsOf(a: AppRuntime): AppRuntimeControls {
     press: (c) => { rt.press(c); },
     skills: () => rt.listSkills(),
     forgetSkill: (name) => { rt.forgetSkill(name); },
+    coder: () => rt.coder,
     diagnostics: () => exportDiagnostics({
       state: a.kernel.state, turns: rt.turns, skills: rt.listSkills(), environment: rt.environmentId, now: Date.now(),
+      coder: rt.coder ? rt.coder.store.snapshot() : undefined,
       latency: voiceSpeaker ? voiceSpeaker.latency.summary() : undefined,
     }),
   };
@@ -149,7 +157,11 @@ export async function createAppRuntime(bridge = desktopEnvBridge(), speaker: Spe
   const journal = hasIndexedDb() ? new DexieJournal() : undefined;
   try {
     const kernel = journal ? await Kernel.restore(journal) : new Kernel();
-    const rt = new JarvisRuntime({ kernel, env: new IpcEnvironment("managed-browser", bridge), speaker, session, skills: new SkillLibrary(localSkillStore) });
+    const port = desktopCoderPort();
+    const rt = new JarvisRuntime({
+      kernel, env: new IpcEnvironment("managed-browser", bridge), speaker, session, skills: new SkillLibrary(localSkillStore),
+      coder: port ? { port, settings: loadCoderSettings } : undefined,
+    });
     await rt.start();
     return { kernel, runtime: rt };
   } catch (e) {
@@ -188,7 +200,8 @@ export async function tryRuntimeText(text: string, onClaimed?: () => void): Prom
   const run = parseRunSkill(norm);
   const skill = !!parseRememberSkill(norm) || (!!run && new SkillLibrary(localSkillStore).has(run));
   // Do not start the browser session for plain chat: only a command, or a runtime already up.
-  if (quick.type === "unknown" && !skill && !runtime) return null;
+  const coding = mightBeCoding(text) && desktopCoderPort() !== null;
+  if (quick.type === "unknown" && !skill && !coding && !runtime) return null;
   const { runtime: rt } = await getAppRuntime();
   if (!rt.claims(text, (cmd) => shouldRoute(cmd, rt.kernel.state))) return null;
   onClaimed?.(); // e.g. show the user's words before anything the runtime says
