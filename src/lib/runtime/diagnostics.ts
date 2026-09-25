@@ -29,11 +29,22 @@ export function redact(text: unknown, max = 200): string {
   return masked.length > max ? `${masked.slice(0, max - 1)}…` : masked;
 }
 
-const QUOTED = /"[^"]*"|„[^”"]*[”"]|«[^»]*»|'[^']*'/g;
+const OPEN_QUOTES = new Set(['"', "„", "«", "'", "“"]);
+const CLOSE_QUOTES = new Set(['"', "”", "»", "'", "“"]);
 
-/** For exports: quoted screen text (selection, clipboard, mail body in evidence) becomes its length. */
+/**
+ * For exports: quoted screen text (selection, clipboard, mail body in evidence) becomes its
+ * length. Everything from the first opening quote to the last closing quote goes, so quotes
+ * inside the quoted text cannot let part of it through.
+ */
 export function maskQuoted(text: string): string {
-  return text.replace(QUOTED, (m) => `[${[...m.slice(1, -1)].length} zn.]`);
+  const chars = [...text];
+  const first = chars.findIndex((c) => OPEN_QUOTES.has(c));
+  if (first < 0) return text;
+  let last = -1;
+  for (let i = chars.length - 1; i > first; i--) if (CLOSE_QUOTES.has(chars[i])) { last = i; break; }
+  if (last < 0) return `${chars.slice(0, first).join("")}[${chars.length - first - 1} zn.]`;
+  return `${chars.slice(0, first).join("")}[${last - first - 1} zn.]${maskQuoted(chars.slice(last + 1).join(""))}`;
 }
 
 const forExport = (text: unknown, max = 160) => maskQuoted(redact(text, max * 4)).slice(0, max);

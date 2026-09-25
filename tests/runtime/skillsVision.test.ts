@@ -49,11 +49,14 @@ class Flaky implements ComputerEnvironment {
   close() { return this.mem.close(); }
 }
 
-/** A screen of the in-memory page: comment i sits at y = 100 + 50 * i, 400 px wide. */
+/**
+ * A screen of the in-memory page: video i on the home page sits at y = 100 + 50 * i, 400 px
+ * wide. A click does only what a real click on that spot does: follow the video link.
+ */
 class FakeScreen implements Screen {
   captures = 0;
   clicks: { x: number; y: number }[] = [];
-  signature = "watch@1280x800";
+  signature = "home@1280x800";
   constructor(private readonly mem: MemoryBrowser) {}
   async capture(): Promise<ScreenImage> {
     this.captures++;
@@ -62,13 +65,13 @@ class FakeScreen implements Screen {
   async click(x: number, y: number): Promise<boolean> {
     this.clicks.push({ x, y });
     const i = Math.floor((y - 100) / 50);
-    const items = (await this.mem.read({ kind: "collection", itemKind: "comment" })) as { items: { ref: string; semanticKey?: string }[] };
-    const hit = x >= 0 && x <= 400 && i >= 0 ? items.items[i] : undefined;
-    if (hit) await this.mem.act({ kind: "browser.focus", target: { ref: hit.ref, semanticKey: hit.semanticKey } });
+    const items = (await this.mem.read({ kind: "collection", itemKind: "video" })) as { items: { ref: string; semanticKey?: string }[] };
+    const hit = this.mem.page === "home" && x >= 0 && x <= 400 && i >= 0 ? items.items[i] : undefined;
+    if (hit) await this.mem.act({ kind: "browser.open", target: { ref: hit.ref, semanticKey: hit.semanticKey } });
     return true;
   }
 }
-const commentBox = (i: number): Box => ({ x: 0, y: 100 + 50 * i, w: 400, h: 40 });
+const videoBox = (i: number): Box => ({ x: 0, y: 100 + 50 * i, w: 400, h: 40 });
 
 class FakeVision implements VisionModel {
   calls: string[] = [];
@@ -136,96 +139,115 @@ describe("LocatorCache", () => {
 });
 
 describe("escalation: semantic, then verified cache, then vision, then not found", () => {
-  async function golden(env: ComputerEnvironment) {
+  const OPEN = GOLDEN_1_7.slice(0, 3);
+  function broken(kind: EnvAction["kind"] = "browser.open") {
+    const mem = new MemoryBrowser();
+    const flaky = new Flaky(mem);
+    flaky.notFound.add(kind);
+    return { mem, flaky, screen: new FakeScreen(mem) };
+  }
+  async function start(env: ComputerEnvironment) {
     const { rt } = runtime(env);
     await rt.start();
-    return { rt, turns: await run(rt, GOLDEN_1_7) };
+    return rt;
   }
 
   it("V1 semantic works: vision is never asked and nothing is captured", async () => {
     const mem = new MemoryBrowser();
     const screen = new FakeScreen(mem);
-    const vision = new FakeVision(() => ({ found: true, box: commentBox(0), confidence: 1 }));
-    const { turns } = await golden(new EscalatingEnvironment(new Flaky(mem), { cache: new LocatorCache(), vision, screen }));
+    const vision = new FakeVision(() => ({ found: true, box: videoBox(0), confidence: 1 }));
+    const rt = await start(new EscalatingEnvironment(new Flaky(mem), { cache: new LocatorCache(), vision, screen }));
+    const turns = await run(rt, GOLDEN_1_7);
     expect(truths(turns)).toEqual(Array(8).fill("CONFIRMED"));
     expect(screen.captures).toBe(0);
     expect(vision.calls).toEqual([]);
   });
 
-  it("V2 broken locator: vision finds it, the click is CONFIRMED by the same read-back, the box is cached and reused", async () => {
-    const mem = new MemoryBrowser();
-    const flaky = new Flaky(mem);
-    flaky.notFound.add("browser.focus");
-    const screen = new FakeScreen(mem);
-    const vision = new FakeVision(() => ({ found: true, box: commentBox(0), confidence: 0.92 }));
+  it("V2 broken link locator: vision finds it, one click, CONFIRMED by the URL read-back, box cached and reused", async () => {
+    const { mem, flaky, screen } = broken();
+    const vision = new FakeVision(() => ({ found: true, box: videoBox(0), confidence: 0.92 }));
     const cache = new LocatorCache();
     const env = new EscalatingEnvironment(flaky, { cache, vision, screen });
     expect((await env.capabilities()).find((c) => c.id === "vision")?.status).toBe("available");
-    const { rt, turns } = await golden(env);
-    expect(truths(turns)).toEqual(Array(8).fill("CONFIRMED"));
-    expect(mem.clipboard).toBe("Łódź");
+    const rt = await start(env);
+    const turns = await run(rt, OPEN);
+    expect(truths(turns)).toEqual(["CONFIRMED", "CONFIRMED", "CONFIRMED"]);
+    expect(mem.url).toBe("http://yt.test/watch?v=lodz");
+    expect(screen.clicks).toHaveLength(1);
+    expect(vision.calls).toEqual(["video video:/watch?v=lodz"]);
+    expect(cache.export()).toEqual([expect.objectContaining({ scope: "yt.test", locator: { strategy: "vision", value: "0,100,400,40" }, signature: "home@1280x800" })]);
+    // Same target again on the same layout: the verified box is reused, the model is not asked.
+    const again = await run(rt, OPEN.slice(1));
+    expect(truths(again)).toEqual(["CONFIRMED", "CONFIRMED"]);
     expect(vision.calls).toHaveLength(1);
-    expect(cache.export()).toEqual([expect.objectContaining({ scope: "yt.test", locator: { strategy: "vision", value: "0,100,400,40" } })]);
-    // Same target again: the verified box is reused, the model is not asked.
-    mem.highlight = null;
-    const again = await run(rt, ["Pierwszy komentarz."]);
-    expect(truths(again)).toEqual(["CONFIRMED"]);
-    expect(vision.calls).toHaveLength(1);
+    expect(screen.clicks).toHaveLength(2);
   });
 
-  it("V3 an unsure or out-of-image answer is never clicked; the step ends honestly", async () => {
-    for (const answer of [{ found: true, box: commentBox(0), confidence: 0.3 }, { found: true, box: { x: 1200, y: 700, w: 400, h: 400 }, confidence: 0.99 }, { found: false, confidence: 0.9 }]) {
-      const mem = new MemoryBrowser();
-      const flaky = new Flaky(mem);
-      flaky.notFound.add("browser.focus");
-      const screen = new FakeScreen(mem);
-      const { rt } = runtime(new EscalatingEnvironment(flaky, { cache: new LocatorCache(), vision: new FakeVision(() => answer), screen }));
-      await rt.start();
-      const turns = await run(rt, GOLDEN_1_7.slice(0, 6));
-      expect(turns[5].result?.truth).not.toBe("CONFIRMED");
+  it("V3 an unsure, malformed or out-of-image answer is never clicked; the step ends honestly", async () => {
+    const answers: unknown[] = [
+      { found: true, box: videoBox(0), confidence: 0.3 },
+      { found: true, box: videoBox(0) },
+      { found: true, box: videoBox(0), confidence: Number.NaN },
+      { found: true, box: { x: 1200, y: 700, w: 400, h: 400 }, confidence: 0.99 },
+      { found: true, box: { x: "0", y: 100, w: 400, h: 40 }, confidence: 0.99 },
+      { found: false, confidence: 0.9 },
+      null,
+    ];
+    for (const answer of answers) {
+      const { mem, flaky, screen } = broken();
+      const rt = await start(new EscalatingEnvironment(flaky, { cache: new LocatorCache(), vision: new FakeVision(() => answer as never), screen }));
+      const turns = await run(rt, OPEN);
+      expect(turns[2].result?.truth).not.toBe("CONFIRMED");
       expect(screen.clicks).toEqual([]);
-      expect(mem.highlight).toBeNull();
+      expect(mem.page).toBe("home");
     }
   });
 
-  it("V4 vision points at the wrong comment: the read-back refuses, nothing is cached", async () => {
-    const mem = new MemoryBrowser();
-    const flaky = new Flaky(mem);
-    flaky.notFound.add("browser.focus");
-    const screen = new FakeScreen(mem);
+  it("V4 vision points at the wrong video: exactly one click, the read-back refuses, nothing cached", async () => {
+    const { mem, flaky, screen } = broken();
     const cache = new LocatorCache();
-    const { rt } = runtime(new EscalatingEnvironment(flaky, { cache, vision: new FakeVision(() => ({ found: true, box: commentBox(1), confidence: 0.95 })), screen }));
-    await rt.start();
-    const turns = await run(rt, GOLDEN_1_7.slice(0, 6));
-    expect(screen.clicks.length).toBeGreaterThan(0);
-    expect(turns[5].result?.truth).not.toBe("CONFIRMED");
+    const rt = await start(new EscalatingEnvironment(flaky, { cache, vision: new FakeVision(() => ({ found: true, box: videoBox(1), confidence: 0.95 })), screen }));
+    const turns = await run(rt, OPEN);
+    expect(screen.clicks).toHaveLength(1);
+    expect(mem.url).toBe("http://yt.test/watch?v=tatry");
+    expect(turns[2].result?.truth).not.toBe("CONFIRMED");
     expect(cache.size).toBe(0);
   });
 
-  it("V5 a cached box on a changed layout is dropped and vision is asked again; no vision configured stays not found", async () => {
-    const mem = new MemoryBrowser();
-    const flaky = new Flaky(mem);
-    flaky.notFound.add("browser.focus");
-    const screen = new FakeScreen(mem);
+  it("V5 a focus is never turned into a pointer click", async () => {
+    const { mem, flaky, screen } = broken("browser.focus");
+    const vision = new FakeVision(() => ({ found: true, box: videoBox(0), confidence: 1 }));
+    const rt = await start(new EscalatingEnvironment(flaky, { cache: new LocatorCache(), vision, screen }));
+    const turns = await run(rt, GOLDEN_1_7.slice(0, 6));
+    expect(turns[5].result?.truth).not.toBe("CONFIRMED");
+    expect(screen.captures).toBe(0);
+    expect(vision.calls).toEqual([]);
+    expect(mem.highlight).toBeNull();
+  });
+
+  it("V6 a changed layout or a missing signature: no reuse, nothing cached; no vision configured stays not found", async () => {
+    const { flaky, screen } = broken();
     const cache = new LocatorCache();
-    const vision = new FakeVision(() => ({ found: true, box: commentBox(0), confidence: 0.9 }));
-    const { rt } = runtime(new EscalatingEnvironment(flaky, { cache, vision, screen }));
-    await rt.start();
-    await run(rt, GOLDEN_1_7.slice(0, 6));
-    screen.signature = "watch@800x600";
-    mem.highlight = null;
-    expect(truths(await run(rt, ["Pierwszy komentarz."]))).toEqual(["CONFIRMED"]);
+    const vision = new FakeVision(() => ({ found: true, box: videoBox(0), confidence: 0.9 }));
+    const rt = await start(new EscalatingEnvironment(flaky, { cache, vision, screen }));
+    await run(rt, OPEN);
+    screen.signature = "home@800x600";
+    expect(truths(await run(rt, OPEN.slice(1)))).toEqual(["CONFIRMED", "CONFIRMED"]);
     expect(vision.calls).toHaveLength(2);
 
-    const mem2 = new MemoryBrowser();
-    const flaky2 = new Flaky(mem2);
-    flaky2.notFound.add("browser.focus");
-    const env2 = new EscalatingEnvironment(flaky2, { cache: new LocatorCache(), screen: new FakeScreen(mem2) });
-    expect((await env2.capabilities()).find((c) => c.id === "vision")?.status).toBe("missing");
-    const r2 = runtime(env2);
-    await r2.rt.start();
-    const t2 = await run(r2.rt, GOLDEN_1_7.slice(0, 6));
-    expect(t2[5].result?.truth).not.toBe("CONFIRMED");
+    const b = broken();
+    b.screen.signature = "";
+    const cache2 = new LocatorCache();
+    const rt2 = await start(new EscalatingEnvironment(b.flaky, { cache: cache2, vision, screen: b.screen }));
+    expect(truths(await run(rt2, OPEN))).toEqual(["CONFIRMED", "CONFIRMED", "CONFIRMED"]);
+    expect(cache2.size).toBe(0);
+
+    const c = broken();
+    const env3 = new EscalatingEnvironment(c.flaky, { cache: new LocatorCache(), screen: c.screen });
+    expect((await env3.capabilities()).find((x) => x.id === "vision")?.status).toBe("missing");
+    const t3 = await run(await start(env3), OPEN);
+    expect(t3[2].result?.truth).not.toBe("CONFIRMED");
+    expect(c.screen.clicks).toEqual([]);
   });
 });
 

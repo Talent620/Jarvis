@@ -48,7 +48,7 @@ async function run(rt: JarvisRuntime, texts: string[]) {
 }
 
 describe("tool timeout", () => {
-  it("a hung env.act is aborted and the step FAILS honestly; the lane keeps working", async () => {
+  it("a hung env.act is aborted, never retried, and ends UNKNOWN; the lane keeps working", async () => {
     const { env, kernel, rt } = setup();
     await rt.start();
     env.hangAct.add("browser.focus");
@@ -56,22 +56,47 @@ describe("tool timeout", () => {
     const turns = await run(rt, GOLDEN_1_6);
     expect(Date.now() - t0).toBeLessThan(2000);
     expect(turns.slice(0, 5).map((t) => t.result?.truth)).toEqual(Array(5).fill("CONFIRMED"));
-    expect(turns[5].result?.truth).toBe("FAILED");
-    expect(env.aborted).toContain("browser.focus"); // the tool was told to stop
+    expect(turns[5].result?.truth).toBe("UNKNOWN_AFTER_ATTEMPT");
+    expect(env.aborted).toEqual(["browser.focus"]); // told to stop, exactly one attempt
+    expect(env.mem.acts.filter((a) => a.action.kind === "browser.focus")).toHaveLength(0);
     const act = Object.values(kernel.state.actions).find((a) => a.kind === "browser.focus")!;
-    expect(act.status).toBe("FAILED");
-    expect(act.reason).toMatch(/no answer from the tool after 60 ms|not verified|mismatch/);
+    expect(act.status).toBe("UNKNOWN_AFTER_ATTEMPT");
+    expect(act.reason).toMatch(/no answer from the tool after 60 ms/);
     env.hangAct.clear();
     expect((await run(rt, ["Pierwszy komentarz."]))[0].result?.truth).toBe("CONFIRMED");
   });
 
-  it("a hung read-back is given up: FAILED, never CONFIRMED", async () => {
+  it("a tool that acted but never answered is CONFIRMED by the read-back alone, and says so", async () => {
+    const { env, kernel, rt } = setup();
+    await rt.start();
+    await run(rt, GOLDEN_1_6.slice(0, 5));
+    const act = env.act.bind(env);
+    env.act = (a, s) => (a.kind === "browser.focus" ? env.mem.act(a).then(() => new Promise<never>(() => undefined)) : act(a, s));
+    const [t] = await run(rt, ["Pierwszy komentarz."]);
+    expect(t.result?.truth).toBe("CONFIRMED");
+    const rec = Object.values(kernel.state.actions).find((a) => a.kind === "browser.focus")!;
+    expect(rec.evidence).toMatch(/seen after the tool timed out/);
+  });
+
+  it("a hung read-back is given up: never CONFIRMED", async () => {
     const { env, rt } = setup();
     await rt.start();
     await run(rt, GOLDEN_1_6.slice(0, 5));
     env.hangRead.add("element");
     const [t] = await run(rt, ["Pierwszy komentarz."]);
     expect(t.result?.truth).toBe("FAILED");
+  });
+
+  it("'stop' kills a running child process at once (typing does not go on)", async () => {
+    const { execRunner } = await import("../../src/node/linux/runner");
+    const ac = new AbortController();
+    const t0 = Date.now();
+    const p = execRunner("sleep", ["5"], { signal: ac.signal, timeoutMs: 10_000 });
+    setTimeout(() => ac.abort(), 50);
+    const r = await p;
+    expect(r.code).toBe(130);
+    expect(Date.now() - t0).toBeLessThan(2000);
+    expect((await execRunner("sleep", ["5"], { signal: ac.signal })).code).toBe(130); // already aborted: never spawned
   });
 
   it("a hung external effect is UNKNOWN_AFTER_ATTEMPT and never retried", async () => {

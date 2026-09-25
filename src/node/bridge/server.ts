@@ -9,7 +9,7 @@ import type {
 } from "../../lib/runtime/env/types";
 import type { CapabilityState } from "../../lib/runtime/types";
 import {
-  PROTOCOL_VERSION, isLoopback, originAllowed, parseExtensionMessage, type BridgeMethod, type Pairing, type ServerMessage, type TokenStore,
+  PROTOCOL_VERSION, extensionIdOf, isLoopback, originAllowed, parseExtensionMessage, type BridgeMethod, type Pairing, type ServerMessage, type TokenStore,
 } from "./protocol";
 
 export interface BridgeServerOptions {
@@ -174,11 +174,12 @@ export class BridgeServer {
       this.wss = wss;
       wss.on("error", reject);
       wss.on("listening", () => resolve((wss.address() as { port: number }).port));
-      wss.on("connection", (ws) => this.accept(ws));
+      wss.on("connection", (ws, req) => this.accept(ws, extensionIdOf(req.headers.origin)));
     });
   }
 
-  private accept(ws: WebSocket): void {
+  /** `originId`: the extension id from the browser-set Origin header (a page cannot forge it). */
+  private accept(ws: WebSocket, originId: string | null): void {
     let authed = false;
     const send = (m: ServerMessage) => { if (ws.readyState === 1) ws.send(JSON.stringify(m)); };
     const reject = (code: "unauthorized" | "bad_version" | "bad_message" | "timeout", message: string) => { send({ type: "error", code, message }); ws.close(4001, code); };
@@ -189,6 +190,9 @@ export class BridgeServer {
       if (!authed) {
         if (m.type !== "hello") return reject("unauthorized", "hello first");
         if (m.v !== PROTOCOL_VERSION) return reject("bad_version", `protocol ${PROTOCOL_VERSION} expected`);
+        // Tokens are bound to the extension that the browser says is connecting, not the one the
+        // client claims to be.
+        if (!originId || m.extensionId !== originId) return reject("unauthorized", "the extension id does not match the connection origin");
         let token: string | undefined;
         if (m.token && this.o.tokens.verify(m.token, m.extensionId)) {
           authed = true;

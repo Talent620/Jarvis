@@ -58,10 +58,16 @@ export function parseExtensionMessage(raw: unknown): ExtensionMessage | null {
 }
 
 /** Which WebSocket origins may connect: extension pages only, optionally a fixed set of ids. */
-export function originAllowed(origin: string | undefined, allowedIds?: string[]): boolean {
+/** The extension id (Chromium) or internal UUID (Firefox) from an extension Origin, else null. */
+export function extensionIdOf(origin: string | undefined): string | null {
   const m = /^(chrome-extension|moz-extension):\/\/([a-z0-9-]{8,64})$/i.exec(origin ?? "");
-  if (!m) return false;
-  return !allowedIds?.length || allowedIds.includes(m[2]);
+  return m ? m[2] : null;
+}
+
+export function originAllowed(origin: string | undefined, allowedIds?: string[]): boolean {
+  const id = extensionIdOf(origin);
+  if (!id) return false;
+  return !allowedIds?.length || allowedIds.includes(id);
 }
 
 export const isLoopback = (addr: string | undefined): boolean => addr === "127.0.0.1" || addr === "::1" || addr === "::ffff:127.0.0.1";

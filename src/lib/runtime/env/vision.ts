@@ -36,7 +36,12 @@ export interface EscalationOptions {
   now?: () => number;
 }
 
-const CLICKABLE = new Set<EnvAction["kind"]>(["browser.open", "browser.focus"]);
+/**
+ * Only actions that really are a pointer click escalate. "browser.focus" is not: it scrolls and
+ * draws JARVIS's own highlight, which a click cannot produce, so a vision click could never be
+ * confirmed and would only press whatever sits under the box (a like, a reply, a link).
+ */
+const CLICKABLE = new Set<EnvAction["kind"]>(["browser.open"]);
 
 function describe(t: ElementTarget): string {
   return t.semanticKey ? `${t.kind ?? "element"} ${t.semanticKey}` : t.ref;
@@ -85,16 +90,24 @@ export class EscalatingEnvironment implements ComputerEnvironment {
     const image = await screen.capture();
     let box: Box | null = null;
     let via: "cache" | "vision" = "cache";
-    const cached = cache.get(scope, key, image.signature);
-    if (cached?.locator.strategy === "vision") box = parseBox(cached.locator.value);
+    // Coordinates are only reused on the very same layout, and still have to fit the image.
+    const cached = image.signature ? cache.get(scope, key, image.signature) : null;
+    if (cached?.locator.strategy === "vision" && cached.signature === image.signature) {
+      const b = parseBox(cached.locator.value);
+      if (b && inside(b, image)) box = b;
+    }
     if (!box) {
       if (!vision) return { ...first, error: `${first.error ?? "not found"}; no vision fallback configured` };
       via = "vision";
-      const v = await vision.locate(image, describe(target), signal).catch(() => ({ found: false, confidence: 0 }) as { found: boolean; box?: Box; confidence: number });
-      if (!v.found || !v.box || v.confidence < (this.o.minConfidence ?? 0.6) || !inside(v.box, image)) {
+      const raw: unknown = await vision.locate(image, describe(target), signal).catch(() => null);
+      const v = (raw && typeof raw === "object" ? raw : { found: false, confidence: 0 }) as { found: boolean; box?: Box; confidence: number };
+      const sure = typeof v.confidence === "number" && Number.isFinite(v.confidence) && v.confidence >= (this.o.minConfidence ?? 0.6);
+      const b = v.box;
+      const boxOk = !!b && [b.x, b.y, b.w, b.h].every((n) => typeof n === "number" && Number.isFinite(n)) && inside(b, image);
+      if (!v.found || !sure || !boxOk) {
         return { ...first, error: `${first.error ?? "not found"}; vision did not find it reliably` };
       }
-      box = v.box;
+      box = b as Box;
     }
     if (signal?.aborted) return { status: "failed", error: "aborted" };
     const clicked = await screen.click(box.x + box.w / 2, box.y + box.h / 2);
@@ -105,7 +118,7 @@ export class EscalatingEnvironment implements ComputerEnvironment {
     // The same read-back the runtime will do decides whether this locator is worth keeping.
     const after = await this.primary.read(query).catch(() => undefined);
     const ok = !!after && verify(action, before, after, { status: "done" }, this.now()).truth === "CONFIRMED";
-    if (ok) cache.recordVerified(scope, key, { strategy: "vision", value: boxToString(box) }, image.signature);
+    if (ok && image.signature) cache.recordVerified(scope, key, { strategy: "vision", value: boxToString(box) }, image.signature);
     else cache.recordFailure(scope, key);
     return { status: "done", data: { via, box: boxToString(box) } };
   }

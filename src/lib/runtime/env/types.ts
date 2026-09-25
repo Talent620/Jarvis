@@ -36,6 +36,9 @@ export type EnvAction =
 
 export type EnvActionKind = EnvAction["kind"];
 
+/** Element refs that live on the desktop (accessibility APIs), not in a browser page. */
+export const isDesktopRef = (ref: string | undefined): boolean => !!ref && /^(atspi|uia|android):/.test(ref);
+
 export interface ElementInfo {
   ref: string;
   semanticKey: string;
@@ -63,7 +66,8 @@ export interface ActResult {
 /** Raw read-back queries. Answers are plain JSON so they can cross IPC. */
 export type ReadQuery =
   | { kind: "page" }
-  | { kind: "selection" }
+  /** `ref`: the target whose selection is meant (routes desktop refs to the desktop adapter). */
+  | { kind: "selection"; ref?: string }
   | { kind: "clipboard" }
   | { kind: "element"; target: ElementTarget }
   | { kind: "collection"; itemKind: string }

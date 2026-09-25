@@ -53,7 +53,7 @@ const ACTIONS: Record<EnvAction["kind"], (a: Record<string, unknown>) => boolean
 
 const READS: Record<ReadQuery["kind"], (q: Record<string, unknown>) => boolean> = {
   page: () => true,
-  selection: () => true,
+  selection: (q) => optStr(q.ref, 500),
   clipboard: () => true,
   element: (q) => target(q.target),
   collection: (q) => str(q.itemKind, 40),

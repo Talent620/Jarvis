@@ -2,7 +2,7 @@
 // and reads go to the desktop, everything else to the browser. The runtime sees one contract,
 // one capability list and one event stream.
 
-import type { ActResult, ComputerEnvironment, EnvAction, EnvEvent, ReadQuery, ReadResult } from "../lib/runtime/env/types";
+import { isDesktopRef, type ActResult, type ComputerEnvironment, type EnvAction, type EnvEvent, type ReadQuery, type ReadResult } from "../lib/runtime/env/types";
 import type { CapabilityState } from "../lib/runtime/types";
 
 const DESKTOP_ACTIONS = new Set<EnvAction["kind"]>(["desktop.keys", "desktop.type", "window.activate", "clipboard.write"]);
@@ -15,7 +15,7 @@ export class CompositeEnvironment implements ComputerEnvironment {
   }
 
   private forDesktop(a: EnvAction): boolean {
-    return DESKTOP_ACTIONS.has(a.kind) || (a.kind === "text.select" && a.target.ref.startsWith("atspi:"));
+    return DESKTOP_ACTIONS.has(a.kind) || (a.kind === "text.select" && isDesktopRef(a.target.ref));
   }
 
   async capabilities(): Promise<CapabilityState[]> {
@@ -31,8 +31,9 @@ export class CompositeEnvironment implements ComputerEnvironment {
   }
 
   read(query: ReadQuery): Promise<ReadResult> {
-    if (DESKTOP_READS.has(query.kind)) {
-      return this.desktop ? this.desktop.read(query) : Promise.resolve(query.kind === "windows" ? { windows: [], error: "no desktop adapter" } : { found: false, error: "no desktop adapter" });
+    if (DESKTOP_READS.has(query.kind) || (query.kind === "selection" && isDesktopRef(query.ref))) {
+      const none: ReadResult = query.kind === "windows" ? { windows: [], error: "no desktop adapter" } : query.kind === "selection" ? { text: "", visible: false } : { found: false, error: "no desktop adapter" };
+      return this.desktop ? this.desktop.read(query) : Promise.resolve(none);
     }
     return this.browser.read(query);
   }

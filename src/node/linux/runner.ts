@@ -15,6 +15,8 @@ export interface RunOptions {
   timeoutMs?: number;
   /** The tool forks and keeps running (xclip, wl-copy): resolve when the parent exits. */
   background?: boolean;
+  /** "stop": the child is killed at once (typing must not go on after the user said stop). */
+  signal?: AbortSignal;
 }
 
 export type Run = (cmd: string, args: string[], opts?: RunOptions) => Promise<RunResult>;
@@ -24,12 +26,15 @@ export const execRunner: Run = (cmd, args, opts = {}) =>
     let out = "";
     let err = "";
     let settled = false;
-    const done = (r: RunResult) => { if (!settled) { settled = true; clearTimeout(timer); resolve(r); } };
+    const done = (r: RunResult) => { if (!settled) { settled = true; clearTimeout(timer); opts.signal?.removeEventListener("abort", onAbort); resolve(r); } };
+    if (opts.signal?.aborted) { resolve({ code: 130, stdout: "", stderr: "aborted" }); return; }
     const child = spawn(cmd, args, {
       stdio: [opts.input !== undefined ? "pipe" : "ignore", opts.background ? "ignore" : "pipe", opts.background ? "ignore" : "pipe"],
       env: process.env,
     });
     const timer = setTimeout(() => { child.kill("SIGKILL"); done({ code: 124, stdout: out, stderr: `${err}timeout` }); }, opts.timeoutMs ?? 5000);
+    function onAbort() { child.kill("SIGKILL"); done({ code: 130, stdout: out, stderr: "aborted" }); }
+    opts.signal?.addEventListener("abort", onAbort, { once: true });
     child.stdout?.on("data", (d) => { out += String(d); });
     child.stderr?.on("data", (d) => { err += String(d); });
     child.on("error", (e) => done({ code: 127, stdout: "", stderr: e.message }));

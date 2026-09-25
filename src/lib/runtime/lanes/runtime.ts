@@ -368,7 +368,15 @@ export class JarvisRuntime {
       if (amend) turn.route = "amend";
       k.dispatch({ type: "ConversationIntent", intent: amend ? "AMEND_TASK" : "NEW_TASK", text, utteranceId, taskId: amend ? last!.id : undefined });
       this.runningUtteranceId = utteranceId;
-      const r = await this.session.handle(text, { command, amendTaskId: amend ? last!.id : undefined }).finally(() => { this.runningUtteranceId = null; });
+      let r: TurnResult;
+      try {
+        r = await this.session.handle(text, { command, amendTaskId: amend ? last!.id : undefined });
+      } catch (e) {
+        // A crash inside the session is a failure the user hears about, never silence or success.
+        r = { command: command.type, truth: "FAILED", say: "Coś poszło nie tak, tego nie zrobiłem.", evidence: e instanceof Error ? e.message : String(e) };
+      } finally {
+        this.runningUtteranceId = null;
+      }
       if (r.taskId) this.lastActionTaskId = r.taskId;
       turn.result = r;
       turn.say = r.say;

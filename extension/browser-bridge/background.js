@@ -28,7 +28,7 @@ async function connect() {
   const socket = new WebSocket(`ws://127.0.0.1:${Number(s.port) || DEFAULT_PORT}/bridge`);
   ws = socket;
   socket.onopen = () => {
-    send({ type: "hello", v: 1, browser: isFirefox ? "firefox" : "chromium", extensionId: api.runtime.id, ...(s.token ? { token: s.token } : { pairCode: String(s.pairCode) }) });
+    send({ type: "hello", v: 1, browser: isFirefox ? "firefox" : "chromium", extensionId: new URL(api.runtime.getURL("")).host, ...(s.token ? { token: s.token } : { pairCode: String(s.pairCode) }) });
   };
   socket.onmessage = async (ev) => {
     let m;

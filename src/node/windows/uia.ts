@@ -106,8 +106,9 @@ export class WindowsDesktopEnvironment implements ComputerEnvironment {
     this.run = o.run ?? execRunner;
   }
 
-  private async call<T>(cmd: UiaCommand, params: Record<string, unknown> = {}): Promise<T & { error?: string }> {
-    const r = await this.run(this.o.shell ?? "powershell.exe", uiaInvocation(cmd, params), { timeoutMs: 10_000 });
+  private async call<T>(cmd: UiaCommand, params: Record<string, unknown> = {}, signal?: AbortSignal): Promise<T & { error?: string }> {
+    const r = await this.run(this.o.shell ?? "powershell.exe", uiaInvocation(cmd, params), { timeoutMs: 10_000, signal });
+    if (signal?.aborted) return { error: "aborted" } as T & { error?: string };
     try {
       return JSON.parse(r.stdout.trim() || "{}") as T & { error?: string };
     } catch {
@@ -125,14 +126,15 @@ export class WindowsDesktopEnvironment implements ComputerEnvironment {
     return ["windows.uia", "desktop.clipboard", "desktop.active_window", "desktop.window_list"].map((id) => ({ id, status, checkedAt: at, provider: this.id, detail: probe.error }));
   }
 
-  async act(action: EnvAction): Promise<ActResult> {
+  async act(action: EnvAction, signal?: AbortSignal): Promise<ActResult> {
+    if (signal?.aborted) return { status: "failed", error: "aborted" };
     const settle = () => new Promise((r) => setTimeout(r, this.o.settleMs ?? 80));
     const done = async (r: { ok?: boolean; error?: string }) => { if (r.ok) { await settle(); return { status: "done" as const }; } return { status: "failed" as const, error: r.error ?? "UI Automation refused" }; };
     switch (action.kind) {
       case "clipboard.write": return done(await this.call("clipboardSet", { text: action.text }));
       case "clipboard.copy": return done(await this.call("keys", { keys: "^c" }));
-      case "desktop.keys": return done(await this.call("keys", { keys: sendKeysCombo(action.keys) }));
-      case "desktop.type": return done(await this.call("keys", { keys: sendKeysText(action.text) }));
+      case "desktop.keys": return done(await this.call("keys", { keys: sendKeysCombo(action.keys) }, signal));
+      case "desktop.type": return done(await this.call("keys", { keys: sendKeysText(action.text) }, signal));
       case "window.activate": return done(await this.call("activate", { id: action.windowId }));
       case "text.select":
         if (action.target.ref !== "uia:focused") return { status: "not_found", error: "desktop selection works on the focused element (uia:focused)" };

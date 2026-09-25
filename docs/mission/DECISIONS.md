@@ -219,3 +219,23 @@ aborted through its signal; a local step then ends FAILED unless the read-back p
 external one ends UNKNOWN_AFTER_ATTEMPT and is not retried. Conversation and summary models get a
 15 s deadline; a reply that is not usable text (not a string, empty, a JSON or tool-call blob) is
 neither spoken nor parsed, and is clipped to 600 characters otherwise.
+
+## D-032 Final adversarial review (M7-M10): what changed
+- Vision escalation only for real pointer clicks (`browser.open`). A focus is JARVIS's own
+  highlight, which a click cannot produce; escalating it could only press whatever sits under the
+  box. Vision answers need a finite confidence, a finite box inside the image, and cached boxes
+  need the same non-empty layout signature.
+- A tool that times out is never retried (it may still act). The read-back alone decides:
+  CONFIRMED with "seen after the tool timed out", otherwise UNKNOWN_AFTER_ATTEMPT. The managed
+  browser allows one launch in flight. "stop" kills child processes (xdotool, ydotool, PowerShell)
+  through the abort signal.
+- `desktop.type` must add one more occurrence of the text to the same focused field; ctrl+c with
+  an expected clipboard that already held that text is ATTEMPTED.
+- Selection read-backs carry the target ref; desktop refs (atspi:, uia:, android:) are read from
+  the desktop and must come back with the same ref.
+- The Linux window poller runs one poll at a time and swallows tool errors; tool JSON is parsed as
+  data. A crash inside a step is spoken as a failure and stops a skill replay (skill disabled).
+- Diagnostics mask from the first opening quote to the last closing quote.
+- BrowserBridge tokens are bound to the extension id in the browser-set Origin header; the
+  extension reports its origin host (Firefox: the internal UUID).
+- "stop" while JARVIS waits for an answer cancels the task in silence.

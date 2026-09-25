@@ -10,6 +10,16 @@ import type { LinuxSession } from "./session";
 
 export type Selection = "clipboard" | "primary";
 
+/** Tool output is data: invalid JSON is an error value, never an exception. */
+function parseJson<T>(text: string): T | null {
+  try {
+    const v: unknown = JSON.parse(text);
+    return v && typeof v === "object" ? (v as T) : null;
+  } catch {
+    return null;
+  }
+}
+
 export class LinuxClipboard {
   constructor(private readonly run: Run, private readonly s: LinuxSession) {}
 
@@ -87,13 +97,16 @@ export class LinuxWindows {
     if (t.has("swaymsg")) {
       const r = await this.run("swaymsg", ["-t", "get_tree", "-r"]);
       if (r.code !== 0) return { found: false, error: r.stderr.trim() };
-      const w = swayWindows(JSON.parse(r.stdout) as SwayNode).find((x) => x.focused);
+      const tree = parseJson<SwayNode>(r.stdout);
+      if (!tree) return { found: false, error: "swaymsg returned invalid JSON" };
+      const w = swayWindows(tree).find((x) => x.focused);
       return w ? { found: true, window: { id: w.id, title: w.title, app: w.app, pid: w.pid } } : { found: false, error: "no focused window" };
     }
     if (t.has("hyprctl")) {
       const r = await this.run("hyprctl", ["activewindow", "-j"]);
       if (r.code !== 0) return { found: false, error: r.stderr.trim() };
-      const w = JSON.parse(r.stdout) as { address?: string; title?: string; class?: string; pid?: number };
+      const w = parseJson<{ address?: string; title?: string; class?: string; pid?: number }>(r.stdout);
+      if (!w) return { found: false, error: "hyprctl returned invalid JSON" };
       return w.address ? { found: true, window: { id: w.address, title: w.title ?? "", app: w.class, pid: w.pid } } : { found: false, error: "no active window" };
     }
     return { found: false, error: "no window tool for this session" };
@@ -114,13 +127,16 @@ export class LinuxWindows {
     if (t.has("swaymsg")) {
       const r = await this.run("swaymsg", ["-t", "get_tree", "-r"]);
       if (r.code !== 0) return { windows: [], error: r.stderr.trim() };
-      return { windows: swayWindows(JSON.parse(r.stdout) as SwayNode).map(({ focused: _f, ...w }) => w) };
+      const tree = parseJson<SwayNode>(r.stdout);
+      if (!tree) return { windows: [], error: "swaymsg returned invalid JSON" };
+      return { windows: swayWindows(tree).map(({ focused: _f, ...w }) => w) };
     }
     if (t.has("hyprctl")) {
       const r = await this.run("hyprctl", ["clients", "-j"]);
       if (r.code !== 0) return { windows: [], error: r.stderr.trim() };
-      const list = JSON.parse(r.stdout) as { address: string; title?: string; class?: string; pid?: number }[];
-      return { windows: list.map((w) => ({ id: w.address, title: w.title ?? "", app: w.class, pid: w.pid })) };
+      const list = parseJson<{ address: string; title?: string; class?: string; pid?: number }[]>(r.stdout);
+      if (!Array.isArray(list)) return { windows: [], error: "hyprctl returned invalid JSON" };
+      return { windows: list.filter((w) => w && typeof w.address === "string").map((w) => ({ id: w.address, title: w.title ?? "", app: w.class, pid: w.pid })) };
     }
     return { windows: [], error: "no window list tool for this session" };
   }
@@ -178,16 +194,16 @@ export class LinuxInput {
     return "none";
   }
 
-  async keys(combo: string): Promise<{ ok: boolean; status?: "needs_permission" | "needs_capability"; error?: string }> {
+  async keys(combo: string, signal?: AbortSignal): Promise<{ ok: boolean; status?: "needs_permission" | "needs_capability"; error?: string }> {
     switch (this.backend) {
       case "xdotool": {
-        const r = await this.run("xdotool", ["key", "--clearmodifiers", xdotoolKeys(combo)]);
+        const r = await this.run("xdotool", ["key", "--clearmodifiers", xdotoolKeys(combo)], { signal });
         return r.code === 0 ? { ok: true } : { ok: false, error: r.stderr.trim() || `exit ${r.code}` };
       }
       case "ydotool": {
         const seq = ydotoolKeys(combo);
         if (!seq) return { ok: false, status: "needs_capability", error: `no evdev code for ${combo}` };
-        const r = await this.run("ydotool", ["key", ...seq.split(" ")]);
+        const r = await this.run("ydotool", ["key", ...seq.split(" ")], { signal });
         return r.code === 0 ? { ok: true } : { ok: false, error: r.stderr.trim() || "ydotool failed (is ydotoold running?)" };
       }
       case "portal":
@@ -197,14 +213,14 @@ export class LinuxInput {
     }
   }
 
-  async type(text: string): Promise<{ ok: boolean; status?: "needs_permission" | "needs_capability"; error?: string }> {
+  async type(text: string, signal?: AbortSignal): Promise<{ ok: boolean; status?: "needs_permission" | "needs_capability"; error?: string }> {
     switch (this.backend) {
       case "xdotool": {
-        const r = await this.run("xdotool", ["type", "--clearmodifiers", "--delay", "12", "--", text], { timeoutMs: 5000 + text.length * 40 });
+        const r = await this.run("xdotool", ["type", "--clearmodifiers", "--delay", "12", "--", text], { timeoutMs: 5000 + text.length * 40, signal });
         return r.code === 0 ? { ok: true } : { ok: false, error: r.stderr.trim() || `exit ${r.code}` };
       }
       case "ydotool": {
-        const r = await this.run("ydotool", ["type", "--", text], { timeoutMs: 5000 + text.length * 40 });
+        const r = await this.run("ydotool", ["type", "--", text], { timeoutMs: 5000 + text.length * 40, signal });
         return r.code === 0 ? { ok: true } : { ok: false, error: r.stderr.trim() || "ydotool failed (is ydotoold running?)" };
       }
       case "portal":

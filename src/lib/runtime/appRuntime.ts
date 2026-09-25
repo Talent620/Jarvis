@@ -54,12 +54,16 @@ function controlsOf(a: AppRuntime): AppRuntimeControls {
   };
 }
 
+function safeCall(fn: Watcher, c: AppRuntimeControls): (() => void) | void {
+  try { return fn(c); } catch { return undefined; }
+}
+
 /**
  * Call `fn` once the app runtime exists (at once if it already does). It never starts the runtime
  * itself: the panel appears only after the user gave the runtime something to do.
  */
 export function whenAppRuntime(fn: Watcher): () => void {
-  if (current) cleanups.set(fn, fn(controlsOf(current)));
+  if (current) cleanups.set(fn, safeCall(fn, controlsOf(current)));
   else waiting.add(fn);
   return () => {
     waiting.delete(fn);
@@ -156,7 +160,8 @@ export function getAppRuntime(): Promise<AppRuntime> {
       const transport = gmailTransport();
       const app = await createAppRuntime(desktopEnvBridge(), forwardingSpeaker, { mail: transport ? new GmailMailService(transport) : undefined });
       current = app;
-      for (const fn of [...waiting]) { waiting.delete(fn); cleanups.set(fn, fn(controlsOf(app))); }
+      // A failing panel callback must never fail (and so duplicate) the runtime start.
+      for (const fn of [...waiting]) { waiting.delete(fn); cleanups.set(fn, safeCall(fn, controlsOf(app))); }
       return app;
     })();
     runtime.catch(() => { runtime = null; });

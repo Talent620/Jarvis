@@ -141,6 +141,22 @@ describe("bridge server with a stand-in extension", () => {
     expect(await d.next((m) => m.type === "error")).toMatchObject({ code: "unauthorized" });
   });
 
+  it("a token is bound to the extension the Origin names, not the id the client claims", async () => {
+    const { port, pairing } = await start();
+    const code = pairing.issue();
+    const a = extension(port);
+    await a.opened;
+    a.send({ type: "hello", v: 1, browser: "chromium", extensionId: EXT, pairCode: code });
+    const welcome = await a.next((m) => m.type === "welcome");
+    a.ws.close();
+    // Another extension replays the stolen token while claiming the paired id.
+    const other = extension(port, "chrome-extension://otherextensionidotherextensionid");
+    await other.opened;
+    other.send({ type: "hello", v: 1, browser: "chromium", extensionId: EXT, token: welcome.token });
+    expect(await other.next((m) => m.type === "error")).toMatchObject({ code: "unauthorized" });
+    expect(await other.closed).toBe(4001);
+  });
+
   it("a web page origin cannot even open the socket; silence before hello is closed", async () => {
     const { port } = await start();
     const page = extension(port, "https://evil.example");

@@ -3,6 +3,7 @@
 // actions. An "ok" from the environment is at most ATTEMPTED.
 
 import { climbLadder } from "../horizon/truthLadder";
+import { isDesktopRef } from "./env/types";
 import type { Truth } from "./truth";
 import type {
   ActResult, ClipboardRead, CollectionRead, ElementRead, EnvAction, FocusedRead, PageRead, ReadQuery, ReadResult, SelectionRead, WindowRead,
@@ -22,7 +23,7 @@ export function readQueryFor(a: EnvAction): ReadQuery {
   switch (a.kind) {
     case "browser.findCollection": return { kind: "collection", itemKind: a.itemKind };
     case "browser.focus": return { kind: "element", target: a.target };
-    case "text.select": return { kind: "selection" };
+    case "text.select": return { kind: "selection", ref: a.target.ref };
     case "clipboard.copy": return { kind: "clipboard" };
     case "clipboard.write": return { kind: "clipboard" };
     case "desktop.keys": return a.expectClipboard !== undefined ? { kind: "clipboard" } : { kind: "window" };
@@ -34,7 +35,17 @@ export function readQueryFor(a: EnvAction): ReadQuery {
 
 /** Does this action need a "before" read-back (relative postconditions)? */
 export const needsBefore = (a: EnvAction): boolean =>
-  a.kind === "browser.scroll" || a.kind === "browser.open" || a.kind === "browser.findCollection";
+  a.kind === "browser.scroll" || a.kind === "browser.open" || a.kind === "browser.findCollection" ||
+  a.kind === "desktop.type" || (a.kind === "desktop.keys" && a.expectClipboard !== undefined);
+
+const occurrences = (hay: string, needle: string): number => {
+  if (!needle) return 0;
+  let n = 0;
+  for (let i = hay.indexOf(needle); i >= 0; i = hay.indexOf(needle, i + needle.length)) n++;
+  return n;
+};
+/** Helpers read at most about 2000 characters of a field: beyond that a count proves nothing. */
+const READ_LIMIT = 1900;
 
 function urlParts(u: string | undefined): { host: string; path: string } {
   const m = /^[a-z]+:\/\/([^/?#]+)([^?#]*)/i.exec(u || "");
@@ -121,7 +132,9 @@ export function verify(a: EnvAction, before: ReadResult | undefined, after: Read
     }
     case "text.select": {
       const s = after as SelectionRead;
-      const inTarget = !s.ref || s.ref === a.target.ref;
+      // A page selection without a ref is accepted for page targets; a desktop target needs its
+      // own ref back (a selection elsewhere, e.g. in the browser, does not count).
+      const inTarget = s.ref === a.target.ref || (!s.ref && !isDesktopRef(a.target.ref));
       return ladder(result, { text: a.expected, visible: true, inTarget: true },
         { text: s.text, visible: s.visible, inTarget }, `selection "${preview(s.text, 40)}" visible=${s.visible}`, now);
     }
@@ -140,13 +153,25 @@ export function verify(a: EnvAction, before: ReadResult | undefined, after: Read
       if (a.expectClipboard === undefined) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: "keys sent, no read-back declared", unverifiable: result.status === "done" };
       const c = after as ClipboardRead;
       if (!c.ok) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: `clipboard unreadable: ${c.error ?? "unknown"}`, unverifiable: result.status === "done" };
+      // The clipboard already held that text: the keys may have gone anywhere, nothing proves them.
+      const b = before as ClipboardRead | undefined;
+      if (b?.ok && b.text === a.expectClipboard && c.text === a.expectClipboard) {
+        return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: "the clipboard held the expected text before the keys", unverifiable: result.status === "done" };
+      }
       return ladder(result, { text: a.expectClipboard }, { text: c.text }, `${a.keys} -> clipboard "${preview(c.text ?? "", 40)}"`, now);
     }
     case "desktop.type": {
       const f = after as FocusedRead;
-      if (!f.found || typeof f.text !== "string") return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: "focused text unreadable", unverifiable: result.status === "done" };
-      const typed = f.text.normalize("NFC").includes(a.text.normalize("NFC"));
-      return ladder(result, { typed: true }, { typed }, `focused ${f.role ?? "element"} now contains "${preview(a.text, 30)}"`, now);
+      const b = before as FocusedRead | undefined;
+      const unverifiable = (reason: string): Verification => ({ truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason, unverifiable: result.status === "done" });
+      if (!f.found || typeof f.text !== "string") return unverifiable("focused text unreadable");
+      // The typed text must be new in the field: one more occurrence than before, in the same field.
+      if (!b?.found || typeof b.text !== "string") return unverifiable("the field could not be read before typing");
+      if (b.role !== f.role || b.name !== f.name) return unverifiable("focus moved to another element while typing");
+      const want = a.text.normalize("NFC");
+      const grew = occurrences(f.text.normalize("NFC"), want) > occurrences(b.text.normalize("NFC"), want);
+      if (!grew && f.text.length >= READ_LIMIT) return unverifiable("the field is longer than its read-back");
+      return ladder(result, { typed: true }, { typed: grew }, `focused ${f.role ?? "element"} gained "${preview(a.text, 30)}"`, now);
     }
     case "window.activate": {
       const w = after as WindowRead;

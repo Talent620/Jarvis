@@ -312,8 +312,16 @@ export class ManagedBrowser implements ComputerEnvironment {
     return this.page;
   }
 
-  private async launch(): Promise<ActResult> {
-    if (this.page && !this.page.isClosed()) return { status: "done", data: { alreadyRunning: true } };
+  private launching: Promise<ActResult> | null = null;
+
+  /** One launch at a time: a second call (a retry after a timeout) waits for the first. */
+  private launch(): Promise<ActResult> {
+    if (this.page && !this.page.isClosed()) return Promise.resolve({ status: "done", data: { alreadyRunning: true } });
+    if (!this.launching) this.launching = this.launchOnce().finally(() => { this.launching = null; });
+    return this.launching;
+  }
+
+  private async launchOnce(): Promise<ActResult> {
     const ctx = await chromium.launchPersistentContext(this.opts.userDataDir, {
       headless: this.opts.headless ?? true,
       executablePath: this.opts.executablePath,

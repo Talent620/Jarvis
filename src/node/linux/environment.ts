@@ -74,13 +74,15 @@ export class LinuxDesktopEnvironment implements ComputerEnvironment {
       case "clipboard.copy":
       case "desktop.keys": {
         const combo = action.kind === "clipboard.copy" ? "ctrl+c" : action.keys;
-        const r = await input.keys(combo);
+        const r = await input.keys(combo, signal);
+        if (signal?.aborted) return { status: "failed", error: "aborted" };
         if (!r.ok) return { status: r.status ?? "failed", error: r.error };
         await settle();
         return { status: "done" };
       }
       case "desktop.type": {
-        const r = await input.type(action.text);
+        const r = await input.type(action.text, signal);
+        if (signal?.aborted) return { status: "failed", error: "aborted" };
         if (!r.ok) return { status: r.status ?? "failed", error: r.error };
         await settle();
         return { status: "done" };
@@ -149,15 +151,26 @@ export class LinuxDesktopEnvironment implements ComputerEnvironment {
     };
   }
 
+  private polling = false;
+
+  /** One poll at a time (a hung X call must not stack polls); errors never escape the timer. */
   private async pollWindow(): Promise<void> {
-    const { windows } = await this.parts();
-    if (!windows.activeAvailable) return;
-    const w = await windows.active();
-    if (!w.found || !w.window) return;
-    const key = `${w.window.id}|${w.window.title}`;
-    if (key === this.lastWindow) return;
-    this.lastWindow = key;
-    for (const l of this.listeners) l({ type: "window", windowId: w.window.id, title: w.window.title, app: w.window.app });
+    if (this.polling) return;
+    this.polling = true;
+    try {
+      const { windows } = await this.parts();
+      if (!windows.activeAvailable) return;
+      const w = await windows.active();
+      if (!w.found || !w.window) return;
+      const key = `${w.window.id}|${w.window.title}`;
+      if (key === this.lastWindow) return;
+      this.lastWindow = key;
+      for (const l of [...this.listeners]) { try { l({ type: "window", windowId: w.window.id, title: w.window.title, app: w.window.app }); } catch { /* a listener must not stop polling */ } }
+    } catch {
+      /* unreadable window state: try again on the next tick */
+    } finally {
+      this.polling = false;
+    }
   }
 
   async close(): Promise<void> {

@@ -140,10 +140,14 @@ export async function performAction(ctx: ActionContext, spec: PerformSpec): Prom
     // An external effect is recorded as attempted before it can happen: a crash inside act()
     // then restores as UNKNOWN_AFTER_ATTEMPT, never as a clean failure.
     if (spec.external) kernel.dispatch({ type: "ActionAttempted", actionId, evidence: `attempt ${attempt} dispatched` });
+    // A hung tool is aborted. It may still be acting (a slow launch, typing), so it is never
+    // retried: the read-back proves the effect (CONFIRMED) or the outcome stays UNKNOWN.
+    let timedOut = false;
     try {
-      // A hung tool is aborted and reported as failed; for a local action the read-back below
-      // still decides (it may have happened late), for an external one it is UNKNOWN.
-      result = await bounded((s) => env.act(spec.action, s), actMs, signal, (): ActResult => ({ status: "failed", error: `no answer from the tool after ${actMs} ms` }));
+      result = await bounded((s) => env.act(spec.action, s), actMs, signal, (): ActResult => {
+        timedOut = true;
+        return { status: "failed", error: `no answer from the tool after ${actMs} ms` };
+      });
     } catch (e) {
       result = { status: "failed", error: e instanceof Error ? e.message : String(e) };
     }
@@ -158,20 +162,24 @@ export async function performAction(ctx: ActionContext, spec: PerformSpec): Prom
     try {
       after = await readBack();
     } catch (e) {
+      if (timedOut) return fail("UNKNOWN_AFTER_ATTEMPT", `${result.error}; read-back failed: ${e instanceof Error ? e.message : e}`, attempt, { result });
       lastTruth = spec.external ? "UNKNOWN_AFTER_ATTEMPT" : "FAILED";
       lastReason = `read-back failed: ${e instanceof Error ? e.message : e}`;
       continue;
     }
-    const v = verify(spec.action, before, after, result, now());
+    // After a timeout the read-back alone decides: judge it as if the tool had answered.
+    const v = verify(spec.action, before, after, timedOut ? { status: "done" } : result, now());
     if (v.truth === "CONFIRMED") {
       // Undo data is bound to the page it was recorded on: after navigation it no longer applies.
+      const evidence = timedOut ? `${v.evidence} (seen after the tool timed out)` : v.evidence;
       kernel.dispatch({
-        type: "ActionVerified", actionId, evidence: v.evidence,
+        type: "ActionVerified", actionId, evidence,
         undo: result.undo ? { actionId, kind, data: { ...result.undo, pageId: kernel.state.page?.id } } : undefined,
       });
-      step("CONFIRMED", v.evidence);
-      return { actionId, truth: "CONFIRMED", evidence: v.evidence, result, after, attempts: attempt };
+      step("CONFIRMED", evidence);
+      return { actionId, truth: "CONFIRMED", evidence, result, after, attempts: attempt };
     }
+    if (timedOut) return fail("UNKNOWN_AFTER_ATTEMPT", `${result.error}; ${v.reason ?? "not seen in the read-back"}`, attempt, { result, after });
     lastTruth = v.truth;
     lastReason = v.reason ?? result.error ?? "read-back mismatch";
     if (v.unverifiable && !spec.external) {
