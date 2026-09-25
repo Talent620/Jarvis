@@ -29,10 +29,10 @@ Status: todo, in_progress, done, blocked, needs_hardware. Nothing is done withou
 | B-023 | npm run jarvis:acceptance | M6 | done | scripts/acceptance/ | accidental real send | --send guard tests | real desktop = needs_hardware |
 | B-024 | Linux AT-SPI, portal/libei, clipboard adapters | M7 | done | electron/, src/lib/env/linux/ | none | contract tests | needs_hardware for real session |
 | B-025 | BrowserBridge extension + loopback protocol | M8 | done | extension/, electron/ | token leakage | protocol tests | none |
-| B-026 | Windows UIA and Android node-tree adapters | M9 | todo | electron/, android/ | breaking platforms | contract tests | needs_hardware |
-| B-027 | Vision env, locator cache, Skill Compiler, status panel | M10 | todo | src/lib/env/vision.ts, src/lib/runtime/skills.ts | learning destructive actions | unit tests | none |
+| B-026 | Windows UIA and Android node-tree adapters | M9 | done | electron/, android/ | breaking platforms | contract tests | needs_hardware |
+| B-027 | Vision env, locator cache, Skill Compiler, status panel | M10 | done | src/lib/env/vision.ts, src/lib/runtime/skills.ts | learning destructive actions | unit tests | none |
 | B-028 | CI: concurrency groups, lint + typecheck + browser-on-fixtures jobs | CI | done | .github/workflows/test.yml | CI minutes | green run | none |
-| B-029 | Numbered overlay badges when a target is ambiguous, with "który?" question | M10 | todo | src/node/managedBrowser.ts, lanes | noisy UI | browser test | needs ambiguity from resolver |
+| B-029 | Numbered overlay badges when a target is ambiguous, with "który?" question | M10 | done | src/node/managedBrowser.ts, lanes | noisy UI | browser test | needs ambiguity from resolver |
 | B-030 | Real YouTube skill check (selectors on the live site) | M6 | needs_hardware | src/node/managedBrowser.ts | site changes | acceptance run on user machine | real site not reachable in CI by policy |
 | B-031 | Real Gmail send + Sent read-back on the user account | M6 | needs_hardware | src/lib/runtime/gmailService.ts, src/lib/google.ts | real mail leaves | acceptance with --send only | no Google account in cloud |
 | B-032 | Address book source for recipients (Google Contacts or local book) | M6 | needs_hardware | src/lib/runtime/contacts.ts, appRuntime.ts | wrong recipient | inflection tests exist; real book on user machine | no contacts in cloud |
@@ -41,3 +41,5 @@ Status: todo, in_progress, done, blocked, needs_hardware. Nothing is done withou
 | B-035 | Route "w mojej przeglądarce" and tab questions to the BrowserBridge env | M10 | todo | lanes/runtime.ts, electronRuntime.ts | wrong target browser | conversation tests | none |
 | B-036 | Firefox run of the bridge extension (web-ext) | M8 | needs_hardware | extension/browser-bridge | API differences | manual or web-ext run | no Firefox in this environment |
 | B-037 | RemoteDesktop portal + libei helper for Wayland input | M7 | needs_hardware | src/node/linux | consent UX | session on GNOME/KDE Wayland | no Wayland session here |
+| B-038 | Wire a real vision model (local or API) into EscalatingEnvironment with a screen capture and pointer in Electron | M10+ | todo | src/lib/runtime/env/vision.ts, electron | wrong clicks | fake-model tests exist; local acceptance | needs a model choice and cost limits |
+| B-039 | Skills UI: list, rename, delete remembered skills | M10+ | todo | src/components | none | render test | none |

@@ -1,6 +1,6 @@
 # Mission state
 
-Phase: M0 done (8a61178), M1 done (1d9b49a), M2 done (ddc05e3), M3 done (a01422e), M4 done on fixtures (301098a), M5 done (588e0a2), M6 done (ae1cc71), M7 next. Machine-readable status: `state.json`.
+Phase: all milestones done. M0 (8a61178), M1 (1d9b49a), M2 (ddc05e3), M3 (a01422e), M4 on fixtures (301098a), M5 (588e0a2), M6 (ae1cc71), M7 (3e79678), M8 (25b1173), M9 (13ebcbd), M10 (4599b20). Real hardware items are NEEDS_HARDWARE. Machine-readable status: `state.json`.
 
 ## Milestones
 
@@ -13,21 +13,22 @@ Phase: M0 done (8a61178), M1 done (1d9b49a), M2 done (ddc05e3), M3 done (a01422e
 | M4 | Mail, external effects exactly once, provenance, contacts | done (fixtures; real Gmail needs_hardware) |
 | M5 | Streaming voice runtime | done (real mic needs_hardware) |
 | M6 | Local acceptance command | done (real desktop runs needs_hardware) |
-| M7 | Linux adapters | in_progress |
-| M8 | BrowserBridge | todo |
-| M9 | Windows and Android adapters | todo |
-| M10 | Vision, Skill Compiler, visibility, docs, final review | todo |
+| M7 | Linux adapters | done (Xvfb in CI; Wayland portal needs_hardware) |
+| M8 | BrowserBridge | done (Chromium extension; Firefox needs_hardware) |
+| M9 | Windows and Android adapters | done (contract tests, APK builds; devices needs_hardware) |
+| M10 | Vision, Skill Compiler, visibility, docs, final review | done (no real vision model wired) |
 
-## Gates at last measurement (commit ae1cc71)
+## Gates at last measurement (commit 4599b20)
 
 - tsc -b, eslint, npm run build (web + electron/gen/runtime.cjs), scan:secrets: pass.
-- vitest: 3204/3204 (353 files).
-- Browser suite (npm run test:browser, 15 tests): golden 1-7 x10, golden 1-8 x10 with mock
-  Gmail, variant without data-comment-id, conversations, ManagedBrowser hardening, voice-driven
-  golden 1-8.
-- Acceptance: `npm run jarvis:acceptance -- --runs=10` fixture mode published as
-  reports/acceptance-2026-09-25T00-01-55-607Z.md (verdict PARTIAL: no microphone here).
-- CI: Tests (test + browser), Ubuntu build, Android APK green on 588e0a2.
+- vitest: 3282/3282 (361 files).
+- Browser suite (npm run test:browser): 17/17 (golden 1-7 x10, golden 1-8 x10 with mock Gmail,
+  conversations incl. numbered badges, ManagedBrowser hardening, voice golden, bridge extension).
+- Desktop suite (npm run test:desktop, real Xvfb): 8/8.
+- Acceptance: fixture x10 report reports/acceptance-2026-09-25T01-36-38-962Z.md (PARTIAL: no
+  microphone, no display here).
+- CI: Tests (test + browser + desktop), Ubuntu build, Android APK green on 13ebcbd; see
+  CONTINUE.md for the latest run.
 
 ## Runtime (src/lib/runtime) after M1
 
@@ -43,7 +44,11 @@ M3 added lanes/ (reflex, conversation, runtime = JarvisRuntime). M4 added contac
 (isolated summaries), permission classes (permissionClasses.ts) and the untrusted-context gate
 in permissions.ts. The app runs the full JarvisRuntime (appRuntime.ts).
 M5 added voice/ (catalog, adapters, session, latency, browserAudio); M6 added
-src/node/acceptance/ and scripts/acceptance/run.ts.
+src/node/acceptance/ and scripts/acceptance/run.ts. M7 added src/node/linux/ and
+compositeEnvironment.ts; M8 src/node/bridge/ and extension/browser-bridge; M9
+src/node/windows/uia.ts and env/android.ts (+ Java accessibility service); M10 locatorCache.ts,
+env/vision.ts, skills.ts, diagnostics.ts and components/RuntimeStatusPanel.tsx. Overview:
+docs/JARVIS-ARCHITECTURE.md; what works: docs/JARVIS-CAPABILITIES.md.
 
 ## Known risks
 

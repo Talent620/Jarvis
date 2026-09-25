@@ -143,10 +143,20 @@
     },
     {
       "id": "M10",
-      "status": "in_progress",
-      "evidence": [],
-      "last_commit": "",
-      "next_action": "Vision environment, locator cache, Skill Compiler, 'what am I doing' panel, diagnostics export, architecture and capability docs, final adversarial review."
+      "status": "done",
+      "evidence": [
+        "tests/runtime/skillsVision.test.ts 15/15: LocatorCache (verified only, age, layout signature, failures), EscalatingEnvironment (semantic first, cached box, vision with a realistic pointer: one click on a video link CONFIRMED by the URL read-back; unsure, NaN, malformed, out-of-image answers never clicked; wrong box refused and not cached; a focus is never turned into a click), Skill Compiler (golden 1-7 remembered and replayed after a restart, each step verified again; a send stops at the user's consent; real failure disables, precondition and stop do not)",
+        "tests/runtime/statusDiagnostics.test.ts 5/5: 'co robię' view (goal, step, target, environment, place, time, verification, pending consent), PAUZA/WZNÓW/STOP through the same control path as speech, panel render with Polish labels, redacted diagnostics export (no address, clipboard, mail body or video title)",
+        "tests/runtime/ambiguity.test.ts 7/7 and tests/browser/conversations.test.ts (Chromium): 'komentarz o Łodzi' with two matches draws numbered badges, asks 'Który?', 'drugi' picks, focus CONFIRMED, badges removed",
+        "tests/runtime/timeoutsBrokenModels.test.ts 9/9 (red before the fix): hung tool never retried and UNKNOWN, late effect CONFIRMED by read-back, stop kills child processes, hung or broken conversation and summary models never spoken or acted on",
+        "final adversarial review (reviewer subagent on 9849da1..2881577): 1 high, 4 medium, 5 low found; all fixed in 4599b20 with tests/runtime/reviewFixesFinal.test.ts 8/8, bridge origin test, rewritten vision tests (D-032)",
+        "docs/JARVIS-ARCHITECTURE.md and docs/JARVIS-CAPABILITIES.md (only what works, with evidence; NEEDS_HARDWARE listed)",
+        "after 4599b20: vitest 361 files / 3282 tests exit 0; browser 6 files / 17 tests exit 0; desktop (Xvfb) 8/8; tsc -b, eslint ., npm run build, scan:secrets exit 0",
+        "golden 1-8 on the YouTube fixture 10 consecutive green runs (tests/browser/golden18.test.ts: 1620, 1481, 1441, 1478, 1404, 1382, 1308, 1369, 1432, 1434 ms); acceptance fixture x10 report reports/acceptance-2026-09-25T01-36-38-962Z.md",
+        "real vision model: none wired in the app (capability reads missing); real hardware items NEEDS_HARDWARE"
+      ],
+      "last_commit": "4599b20",
+      "next_action": "Done. On the user machine: npm run jarvis:acceptance -- --mode=local-desktop; wire a vision model only after local acceptance."
     }
   ]
 }

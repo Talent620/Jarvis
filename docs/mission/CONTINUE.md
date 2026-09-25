@@ -3,25 +3,29 @@
 - GAŁĄŹ SESJI: `claude/intelligent-brahmagupta-jq7jqj`
   (local test: `git fetch origin claude/intelligent-brahmagupta-jq7jqj && git checkout claude/intelligent-brahmagupta-jq7jqj`)
 - PR: https://github.com/Talent620/Jarvis/pull/7 (draft)
-- OSTATNI ZIELONY COMMIT: `588e0a2` in CI (M5); `ae1cc71` (M6) and `b5a026a` (published
-  acceptance report) green locally, CI pending at the time of writing.
-- BIEŻĄCY KAMIEŃ: M7 (Linux adapters). M0-M6 done (M4 on fixtures, M5/M6 real hardware items
-  NEEDS_HARDWARE).
-- STAN TESTÓW: vitest 3204/3204 (353 files); browser suite 15/15; acceptance fixture mode
-  reports/acceptance-2026-09-25T00-01-55-607Z.md.
-- OSTATNIA ZWERYFIKOWANA FUNKCJA: `npm run jarvis:acceptance -- --runs=10`: golden 1-7 x10 and
-  full 1-8 confirmed on Chromium, report committed and pushed alone (b5a026a).
-- DOKŁADNA NASTĘPNA AKCJA: M7. Linux ComputerEnvironment adapters behind the same contract:
-  AT-SPI (accessibility tree via a python3/gi bridge or D-Bus), input through the RemoteDesktop
-  portal / libei with ydotool/xdotool fallback, system clipboard (wl-clipboard/xclip), active
-  window, primary selection, basic window list. Contract tests with injected command runners;
-  anything needing a real session is NEEDS_HARDWARE. Then M8 BrowserBridge, M9 Windows/Android,
-  M10 vision, Skill Compiler, status panel, docs, final review, final report.
+- OSTATNI ZIELONY COMMIT: `4599b20` locally (all gates exit 0); CI green on `13ebcbd` (Tests with
+  test, browser and desktop jobs; Android APK; Ubuntu build). CI for the M10 commits: check the
+  latest run of the branch.
+- BIEŻĄCY KAMIEŃ: none. M0-M10 done (state.json); what is left needs the user's machine.
+- STAN TESTÓW (after 4599b20): vitest 3282/3282 (361 files); browser 17/17; desktop on Xvfb 8/8;
+  tsc -b, eslint ., npm run build, npm run scan:secrets exit 0. Golden 1-8 on the fixture 10
+  consecutive green runs (1.3-1.6 s each). Acceptance fixture x10:
+  reports/acceptance-2026-09-25T01-36-38-962Z.md.
+- OSTATNIA ZWERYFIKOWANA FUNKCJA: final adversarial review fixes (D-032): vision only for real
+  clicks, tool timeouts never retried and UNKNOWN unless the read-back proves them, desktop
+  selection read from the desktop, bridge tokens bound to the Origin extension id.
+- DOKŁADNA NASTĘPNA AKCJA: on the user machine run
+  `npm ci && npm run jarvis:acceptance -- --mode=local-desktop`, then
+  `--mode=managed-browser` (real YouTube). Read the newest reports/acceptance-*.md before the
+  backlog. Then B-034 (voice toggle in the UI), B-035 (route "w mojej przeglądarce" to the
+  bridge), B-038 (a real vision model), B-039 (skills UI).
 - LOCAL RUN: `npm ci && npm run test:browser && npm run jarvis:acceptance`.
-- POZYCJE NEEDS_HARDWARE: B-030 real YouTube selectors, B-031 real Gmail send + Sent read-back,
-  B-032 address book source, B-033 voice on a real microphone. Run on the user machine:
-  `npm run jarvis:acceptance -- --mode=managed-browser` and `--mode=local-desktop`.
-- POZYCJE BLOCKED: none (YouTube is blocked only from the cloud session by network policy).
+- POZYCJE NEEDS_HARDWARE: B-030 real YouTube selectors, B-031 real Gmail send + Sent read-back
+  (`--send` only), B-032 address book source, B-033 voice on a real microphone, B-036 Firefox
+  run of the bridge extension, B-037 Wayland input through the RemoteDesktop portal, Windows
+  desktop run, Android phone run.
+- POZYCJE BLOCKED: none (YouTube and ai.google.dev are blocked only from the cloud session by
+  network policy; the gemini-3.8-live id is unverified, D-026).
 - OWNER ACTION: set `JARVIS_RELEASE_STORE_PASSWORD` / `JARVIS_RELEASE_KEY_PASSWORD` secrets before
   the next release (release.yml refuses to publish without them, docs/JARVIS-SECURITY.md).
 
