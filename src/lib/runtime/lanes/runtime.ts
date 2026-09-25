@@ -15,6 +15,8 @@ import { TERMINAL_TASK } from "../types";
 import { CONVERSATION_SYSTEM, isStatusQuestion, statusReply, type ConversationModel, type ConversationTurn } from "./conversation";
 import { focusedContent, isSummaryRequest, summarizeUntrusted, type IsolatedModel } from "../untrusted";
 import { classifyReflex, isStrictConsent, tier0FromPartial, DEFAULT_PARTIAL_POLICY, type PartialPolicy } from "./reflex";
+import { parseRememberSkill, parseRunSkill, type SkillLibrary, type SkillRunner } from "../skills";
+import { normalizeUtterance } from "../util";
 
 /** Voice output. cancel() must stop audio immediately (barge-in). */
 export interface Speaker {
@@ -23,7 +25,7 @@ export interface Speaker {
   cancel(): void;
 }
 
-export type Route = "control" | "action" | "amend" | "answer" | "side_chat" | "summary" | "status" | "ignored" | "duplicate";
+export type Route = "control" | "action" | "amend" | "answer" | "side_chat" | "summary" | "status" | "skill" | "ignored" | "duplicate";
 
 export interface RuntimeTurn {
   utteranceId: string;
@@ -44,6 +46,8 @@ export interface RuntimeOptions {
   speaker?: Speaker;
   session?: SessionOptions;
   partialPolicy?: PartialPolicy;
+  /** Named, replayable sequences of confirmed commands (M10). */
+  skills?: SkillLibrary;
   now?: () => number;
 }
 
@@ -58,6 +62,8 @@ export class JarvisRuntime {
   private readonly model?: ConversationModel;
   private readonly summarizer?: IsolatedModel;
   private readonly policy: PartialPolicy;
+  private readonly skills?: SkillLibrary;
+  private readonly envId: string;
   private readonly now: () => number;
   private actionQueue: Promise<void> = Promise.resolve();
   private generation = 0;
@@ -72,6 +78,9 @@ export class JarvisRuntime {
   private runningUtteranceId: string | null = null;
   /** The consent whose question the user actually heard: "tak" answers that one only. */
   private announcedConsentId: string | null = null;
+  /** Resolves when a queued action turn has finished or was dropped. */
+  private settles = new WeakMap<RuntimeTurn, Promise<void>>();
+  private replaying: string | null = null;
 
   constructor(opts: RuntimeOptions) {
     this.kernel = opts.kernel;
@@ -79,6 +88,8 @@ export class JarvisRuntime {
     this.model = opts.model;
     this.summarizer = opts.summarizer;
     this.policy = opts.partialPolicy ?? DEFAULT_PARTIAL_POLICY;
+    this.skills = opts.skills;
+    this.envId = opts.env.id;
     this.now = opts.now ?? (() => Date.now());
     this.session = new ActionSession(opts.kernel, opts.env, {
       ...opts.session,
@@ -136,6 +147,7 @@ export class JarvisRuntime {
     }
     if (isStatusQuestion(text)) return live;
     if (isSummaryRequest(text)) return !!focusedContent(this.kernel.state);
+    if (this.skillIntent(text)) return true;
     return reflex.kind === "action" && routeAction(reflex.command);
   }
 
@@ -195,6 +207,8 @@ export class JarvisRuntime {
       this.kernel.dispatch({ type: "ConversationIntent", intent: "CONFIRM", text, utteranceId });
       return this.log({ utteranceId, text, route: "answer" });
     }
+    const skill = this.skillIntent(text);
+    if (skill) return skill.kind === "remember" ? this.rememberSkill(utteranceId, text, skill.name) : this.replaySkill(utteranceId, text, skill.name);
     const reflex = classifyReflex(text);
     if (reflex.kind === "control") {
       // "dalej": resume a paused task, otherwise it means "the next item".
@@ -280,7 +294,7 @@ export class JarvisRuntime {
     return undefined;
   }
 
-  private queue(fn: () => Promise<void>): void {
+  private queue(fn: () => Promise<void>): Promise<void> {
     const gen = this.generation;
     this.pendingActions++;
     this.actionQueue = this.actionQueue
@@ -290,13 +304,14 @@ export class JarvisRuntime {
       })
       .catch(() => undefined)
       .finally(() => { this.pendingActions--; });
+    return this.actionQueue;
   }
 
   private enqueueAction(utteranceId: string, text: string, command: Command): RuntimeTurn {
     const k = this.kernel;
     const turn = this.log({ utteranceId, text, route: "action" });
     this.queuedTexts.push(text);
-    this.queue(async () => {
+    const settled = this.queue(async () => {
       this.queuedTexts.splice(this.queuedTexts.indexOf(text), 1);
       // Decided when the command runs, not when it was heard: "nie ten, następny" / "poprzedni" /
       // "wróćmy do" refine the last item-choosing task instead of starting a new goal.
@@ -312,6 +327,71 @@ export class JarvisRuntime {
       turn.say = r.say;
       if (k.state.tasks[r.taskId ?? ""]?.status !== "cancelled") this.say(r.say, "runtime", utteranceId);
     });
+    this.settles.set(turn, settled);
+    return turn;
+  }
+
+  // ---------------------------------------------------------------- skills (M10)
+
+  private skillIntent(text: string): { kind: "remember" | "run"; name: string } | null {
+    if (!this.skills) return null;
+    const norm = normalizeUtterance(text);
+    const remember = parseRememberSkill(norm);
+    if (remember) return { kind: "remember", name: remember };
+    const run = parseRunSkill(norm);
+    return run && this.skills.has(run) ? { kind: "run", name: run } : null;
+  }
+
+  /** "zapamiętaj to jako X": the confirmed commands just done become a named skill. */
+  private rememberSkill(utteranceId: string, text: string, name: string): RuntimeTurn {
+    this.kernel.dispatch({ type: "ConversationIntent", intent: "SIDE_CHAT", text, utteranceId });
+    const r = this.skills!.compile(name, this.turns, this.envId);
+    const say = r.ok
+      ? `Zapamiętałem: ${name}. ${r.skill.steps.length} ${r.skill.steps.length === 1 ? "krok" : r.skill.steps.length < 5 ? "kroki" : "kroków"}${r.skill.external ? ", wysyłkę zawsze potwierdzasz ty" : ""}.`
+      : r.reason === "no confirmed steps to remember" ? "Nie mam potwierdzonych kroków do zapamiętania." : "Tego ciągu nie umiem odtworzyć, więc go nie zapamiętam.";
+    this.say(say, "runtime", utteranceId);
+    return this.log({ utteranceId, text, route: "skill", say });
+  }
+
+  /** "powtórz X": every step goes through the action lane again and is verified again. */
+  private replaySkill(utteranceId: string, text: string, name: string): RuntimeTurn {
+    this.kernel.dispatch({ type: "ConversationIntent", intent: "NEW_TASK", text, utteranceId });
+    const turn = this.log({ utteranceId, text, route: "skill" });
+    if (this.replaying) {
+      turn.say = "Już wykonuję umiejętność. Powiedz stop, jeśli mam przerwać.";
+      this.say(turn.say, "runtime", utteranceId);
+      return turn;
+    }
+    const gen = this.generation;
+    let step = 0;
+    const runner: SkillRunner = {
+      run: async (stepText) => {
+        if (gen !== this.generation) return { stopped: true };
+        const t = this.enqueueAction(`${utteranceId}-s${++step}`, stepText, parseCommand(stepText));
+        await this.settles.get(t);
+        const task = t.result?.taskId ? this.kernel.state.tasks[t.result.taskId] : undefined;
+        return { result: t.result, stopped: gen !== this.generation || !t.result || task?.status === "cancelled" };
+      },
+      submit: (stepText) => {
+        if (gen === this.generation) this.enqueueAction(`${utteranceId}-s${++step}`, stepText, parseCommand(stepText));
+      },
+    };
+    this.replaying = name;
+    const p = (async () => {
+      try {
+        const r = await this.skills!.replay(runner, name);
+        turn.say =
+          r.truth === "CONFIRMED" ? `Zrobione: ${name}. Każdy krok potwierdzony.`
+          : r.truth === "WAITING_CONSENT" || r.truth === "STOPPED" ? undefined
+          : r.truth === "FAILED" ? `Umiejętność ${name} tu już nie działa, więc ją wyłączyłem.`
+          : `Nie mogę teraz dokończyć: ${name}.`;
+      } finally {
+        this.replaying = null;
+      }
+      if (turn.say && gen === this.generation) this.say(turn.say, "runtime", utteranceId);
+    })();
+    this.sideChats.add(p);
+    void p.catch(() => undefined).finally(() => this.sideChats.delete(p));
     return turn;
   }
 

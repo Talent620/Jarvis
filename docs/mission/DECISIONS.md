@@ -190,3 +190,18 @@ the SystemActions plugin. Android lets only the foreground app read the clipboar
 in another app ends ATTEMPTED with that reason; in general an action whose read-back cannot be
 read at all is ATTEMPTED (unverifiable), not FAILED. Both run behind the same ComputerEnvironment
 contract; real runs need the devices (NEEDS_HARDWARE here), the APK build compiles the Java side.
+
+## D-030 Vision is a last resort, confirmed by the same read-back; skills replay intents
+`EscalatingEnvironment` wraps the semantic environment: semantic first, then a verified cached
+locator, then a vision model on a screenshot, then the honest not found. Only pointer targets
+(open, focus) escalate; selection and copy stay semantic, because a pixel drag cannot be verified
+as precisely. The model's box is untrusted: used only with confidence >= 0.6 and fully inside the
+image, and a click is cached only after the runtime's own postcondition confirms it. Vision
+locators die on the first failure or a changed layout signature. No vision model is wired in the
+app yet (the capability reads `missing`); tests use a fake model and a fake pointer.
+The Skill Compiler remembers the confirmed tail of the last commands (at most 12, broken by any
+unconfirmed step or a pause over 15 minutes) as Polish utterances, not coordinates: replay sends
+each one through the action lane again, so every step is resolved and verified anew. A real
+failure disables the skill; a missing precondition or "stop" does not. A send step is handed over
+and the replay ends there: the consent question is the user's, a skill never answers it. Skills
+live in local storage (`jarvis.skills.v1`); malformed entries are ignored.

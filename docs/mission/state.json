@@ -105,28 +105,45 @@
     },
     {
       "id": "M7",
-      "status": "in_progress",
-      "evidence": [],
-      "last_commit": "",
-      "next_action": "Linux adapters: AT-SPI, RemoteDesktop portal/libei, clipboard, active window, selection; contract tests."
+      "status": "done",
+      "evidence": [
+        "tests/desktop/linuxDesktop.test.ts 8/8 on a real Xvfb session (npm run test:desktop): X11 clipboard write/read-back, active window and window list (xdotool/wmctrl), window.activate confirmed by read-back, primary selection, keys/type through xdotool, AT-SPI focused text and selection in a GTK entry",
+        "tests/runtime/linuxAdapters.test.ts 14/14: scripted command runner (no shell, argv only), Wayland/X11 detection, missing tools -> NEEDS_CAPABILITY, no display -> NEEDS_HARDWARE, CompositeEnvironment routes browser vs desktop actions",
+        "CI job 'desktop' green: Tests run 36078045573 (25b1173) and run 36078764550 (13ebcbd, job 107895789869)",
+        "local acceptance --mode=local-desktop in this container: report reports/acceptance-*.md (commit 3e79678) PARTIAL 6/8 PASS; microphone and real user desktop NEEDS_HARDWARE",
+        "RemoteDesktop portal/libei input on a real Wayland session: NEEDS_HARDWARE (adapter reports capability missing, never fakes input)"
+      ],
+      "last_commit": "3e79678",
+      "next_action": "Done. Real GNOME/KDE Wayland session: npm run jarvis:acceptance -- --mode=local-desktop on the user machine."
     },
     {
       "id": "M8",
-      "status": "todo",
-      "evidence": [],
-      "last_commit": "",
-      "next_action": "BrowserBridge WebExtension with loopback, session token, pairing; protocol tests."
+      "status": "done",
+      "evidence": [
+        "tests/runtime/bridgeProtocol.test.ts 8/8: loopback only, extension origins only (web page origin cannot open the socket), 6-digit one-time pairing, token stored as SHA-256 and compared with timingSafeEqual, bad version/message closes, silence before hello closes, reconnect with token",
+        "tests/browser/bridgeExtension.test.ts on Chromium: the MV3 extension in extension/browser-bridge is loaded, paired, and drives the user's tab (navigate confirmed by host+path read-back, selection and copy)",
+        "Electron main starts the bridge host on 127.0.0.1:47823 with tokens in jarvis-bridge-tokens.json (mode 600); IPC jarvis:bridge pair/status/revoke",
+        "CI green on 25b1173: Tests run 36078045573 (test + browser + desktop)",
+        "user's own Chrome/Edge/Firefox profile: NEEDS_HARDWARE (docs/JARVIS-BROWSER-BRIDGE.md)"
+      ],
+      "last_commit": "25b1173",
+      "next_action": "Done. Install the extension in the user's browser and pair it (docs/JARVIS-BROWSER-BRIDGE.md)."
     },
     {
       "id": "M9",
-      "status": "todo",
-      "evidence": [],
-      "last_commit": "",
-      "next_action": "Windows UIA and Android node-tree adapters behind ComputerEnvironment contract."
+      "status": "done",
+      "evidence": [
+        "tests/runtime/platformAdapters.test.ts 8/8: Windows UIA helper through a scripted PowerShell runner (user text only inside base64 JSON of -EncodedCommand, SendKeys escaping, select/copy/window switch CONFIRMED by read-back) and Android accessibility through a fake device (permission off -> NEEDS_PERMISSION path, select/copy/type CONFIRMED, background clipboard ATTEMPTED not FAILED)",
+        "Android Java (JarvisAccessibilityService, SystemActionsPlugin) compiles: Build Android APK run 36078764532 success on 13ebcbd",
+        "CI green on 13ebcbd: Tests run 36078764550 (test, browser, desktop), Build Ubuntu run 36078767949",
+        "real Windows desktop and a real Android phone: NEEDS_HARDWARE"
+      ],
+      "last_commit": "13ebcbd",
+      "next_action": "Done in cloud. Windows: run acceptance on a Windows machine; Android: enable the JARVIS accessibility service on a phone."
     },
     {
       "id": "M10",
-      "status": "todo",
+      "status": "in_progress",
       "evidence": [],
       "last_commit": "",
       "next_action": "Vision environment, locator cache, Skill Compiler, 'what am I doing' panel, diagnostics export, architecture and capability docs, final adversarial review."

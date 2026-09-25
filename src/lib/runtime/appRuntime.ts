@@ -11,6 +11,8 @@ import type { KernelState } from "./reducer";
 import { GmailMailService } from "./gmailService";
 import { JarvisRuntime, type RuntimeTurn, type Speaker } from "./lanes/runtime";
 import type { SessionOptions } from "./session";
+import { SkillLibrary, parseRememberSkill, parseRunSkill, type Skill, type SkillStore } from "./skills";
+import { normalizeUtterance } from "./util";
 import { BatchSTT, DeepgramSTT, FallbackSTT } from "./voice/adapters";
 import { AppTTS, MicInput, pcm16ToWav } from "./voice/browserAudio";
 import { VoiceSession, type VoiceSessionEvent } from "./voice/session";
@@ -74,13 +76,25 @@ export function shouldRoute(cmd: Command, state: KernelState | undefined): boole
   }
 }
 
+const SKILLS_KEY = "jarvis.skills.v1";
+
+/** Skills survive a restart in local storage; unreadable storage means an empty library. */
+export const localSkillStore: SkillStore = {
+  load: () => {
+    try { return JSON.parse(globalThis.localStorage?.getItem(SKILLS_KEY) ?? "[]") as Skill[]; } catch { return []; }
+  },
+  save: (skills) => {
+    try { globalThis.localStorage?.setItem(SKILLS_KEY, JSON.stringify(skills)); } catch { /* full or blocked: kept for this session */ }
+  },
+};
+
 /** Build the app runtime once; a failed start closes what it opened so a retry starts clean. */
 export async function createAppRuntime(bridge = desktopEnvBridge(), speaker: Speaker = forwardingSpeaker, session: SessionOptions = {}): Promise<AppRuntime> {
   if (!bridge) throw new Error("runtime is only available in the desktop app");
   const journal = hasIndexedDb() ? new DexieJournal() : undefined;
   try {
     const kernel = journal ? await Kernel.restore(journal) : new Kernel();
-    const rt = new JarvisRuntime({ kernel, env: new IpcEnvironment("managed-browser", bridge), speaker, session });
+    const rt = new JarvisRuntime({ kernel, env: new IpcEnvironment("managed-browser", bridge), speaker, session, skills: new SkillLibrary(localSkillStore) });
     await rt.start();
     return { kernel, runtime: rt };
   } catch (e) {
@@ -111,8 +125,11 @@ export function getAppRuntime(): Promise<AppRuntime> {
 export async function tryRuntimeText(text: string, onClaimed?: () => void): Promise<RuntimeTurn | null> {
   if (!runtimeAvailable()) return null;
   const quick = parseCommand(text);
+  const norm = normalizeUtterance(text);
+  const run = parseRunSkill(norm);
+  const skill = !!parseRememberSkill(norm) || (!!run && new SkillLibrary(localSkillStore).has(run));
   // Do not start the browser session for plain chat: only a command, or a runtime already up.
-  if (quick.type === "unknown" && !runtime) return null;
+  if (quick.type === "unknown" && !skill && !runtime) return null;
   const { runtime: rt } = await getAppRuntime();
   if (!rt.claims(text, (cmd) => shouldRoute(cmd, rt.kernel.state))) return null;
   onClaimed?.(); // e.g. show the user's words before anything the runtime says
