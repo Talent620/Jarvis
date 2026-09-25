@@ -211,6 +211,22 @@ export class ManagedBrowser implements ComputerEnvironment {
     }];
   }
 
+  /** Save a screenshot of the current page (acceptance reports, on failures only). */
+  async screenshot(path: string): Promise<boolean> {
+    const p = this.page;
+    if (!p || p.isClosed()) return false;
+    // Right after a failed navigation the error page may still be committing: one retry.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await p.screenshot({ path, fullPage: false });
+        return true;
+      } catch {
+        await sleep(250);
+      }
+    }
+    return false;
+  }
+
   async close(): Promise<void> {
     const c = this.context;
     this.context = null;

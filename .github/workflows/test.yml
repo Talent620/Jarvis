@@ -67,3 +67,6 @@ jobs:
 
       - name: Browser tests on fixtures (golden steps, 10 consecutive runs)
         run: npm run test:browser
+
+      - name: Local acceptance on fixtures (report only, never publishes from CI)
+        run: npm run jarvis:acceptance -- --mode=fixture --runs=3 --no-publish
