@@ -10,6 +10,7 @@ import { createEnvHost, type EnvHost } from "./envHost";
 import { ManagedBrowser } from "./managedBrowser";
 import { CompositeEnvironment } from "./compositeEnvironment";
 import { LinuxDesktopEnvironment } from "./linux/environment";
+import { WindowsDesktopEnvironment } from "./windows/uia";
 import type { EnvEvent } from "../lib/runtime/env/types";
 
 export interface ManagedBrowserHost extends EnvHost {
@@ -32,8 +33,10 @@ export function createManagedBrowserHost(opts: ManagedBrowserHostOptions): Manag
     headless: opts.headless ?? false,
     readClipboard: opts.readClipboard,
   });
-  // On Linux the same runtime also reaches the desktop (clipboard, windows, input, AT-SPI).
-  const env = process.platform === "linux" ? new CompositeEnvironment(browser, new LinuxDesktopEnvironment({ pollMs: 1000 })) : browser;
+  // The same runtime also reaches the desktop: AT-SPI and X11/Wayland tools on Linux, UI
+  // Automation on Windows. Elsewhere desktop actions are NEEDS_CAPABILITY.
+  const desktop = process.platform === "linux" ? new LinuxDesktopEnvironment({ pollMs: 1000 }) : process.platform === "win32" ? new WindowsDesktopEnvironment() : null;
+  const env = desktop ? new CompositeEnvironment(browser, desktop) : browser;
   const host = createEnvHost(env);
   return { ...host, onEvent: (l) => env.onEvent(l) };
 }

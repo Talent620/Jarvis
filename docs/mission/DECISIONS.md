@@ -180,3 +180,13 @@ browser, and the bridge is `browser.bridge` for tasks aimed at the user's own br
 those utterances is backlog B-035). Without a connected extension bridge commands are
 NEEDS_CAPABILITY. Firefox shares the MV3 manifest (`background.scripts`) but is only exercised
 through the protocol tests here.
+
+## D-029 Windows and Android: semantic primitives through the platform accessibility APIs
+Windows uses UI Automation through a PowerShell helper (focused element, TextPattern selection,
+windows, clipboard, SendKeys); parameters are base64 JSON inside `-EncodedCommand`, so user text is
+never code. Android extends the existing JARVIS accessibility service with the focused node,
+ACTION_SET_SELECTION, ACTION_COPY, append, scroll, windows and a bounded node tree, exposed through
+the SystemActions plugin. Android lets only the foreground app read the clipboard, so a copy made
+in another app ends ATTEMPTED with that reason; in general an action whose read-back cannot be
+read at all is ATTEMPTED (unverifiable), not FAILED. Both run behind the same ComputerEnvironment
+contract; real runs need the devices (NEEDS_HARDWARE here), the APK build compiles the Java side.

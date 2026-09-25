@@ -1,5 +1,8 @@
 package net.serwer256.jarvis;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -60,6 +63,106 @@ public class SystemActionsPlugin extends Plugin {
         JarvisAccessibilityService s = JarvisAccessibilityService.get();
         String action = call.getString("action", "back");
         okResult(call, s != null && s.global(action));
+    }
+
+    // ------------------------------------------------------------------ semantic primitives (M9)
+
+    private JarvisAccessibilityService serviceOrReject(PluginCall call) {
+        JarvisAccessibilityService s = JarvisAccessibilityService.get();
+        if (s == null) call.reject("accessibility service is off (Settings > Accessibility > JARVIS)", "NEEDS_PERMISSION");
+        return s;
+    }
+
+    @PluginMethod
+    public void focused(PluginCall call) {
+        JarvisAccessibilityService s = serviceOrReject(call);
+        if (s != null) call.resolve(s.describeFocused());
+    }
+
+    @PluginMethod
+    public void activeWindow(PluginCall call) {
+        JarvisAccessibilityService s = serviceOrReject(call);
+        if (s != null) call.resolve(s.activeWindow());
+    }
+
+    @PluginMethod
+    public void windows(PluginCall call) {
+        JarvisAccessibilityService s = serviceOrReject(call);
+        if (s == null) return;
+        JSObject r = new JSObject();
+        r.put("windows", s.windowList());
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void select(PluginCall call) {
+        JarvisAccessibilityService s = serviceOrReject(call);
+        if (s == null) return;
+        Integer start = call.getInt("start");
+        Integer end = call.getInt("end");
+        okResult(call, start != null && end != null && s.selectText(start, end));
+    }
+
+    @PluginMethod
+    public void copy(PluginCall call) {
+        JarvisAccessibilityService s = serviceOrReject(call);
+        if (s != null) okResult(call, s.copySelection());
+    }
+
+    @PluginMethod
+    public void appendText(PluginCall call) {
+        JarvisAccessibilityService s = serviceOrReject(call);
+        if (s != null) okResult(call, s.appendText(call.getString("text", "")));
+    }
+
+    @PluginMethod
+    public void scroll(PluginCall call) {
+        JarvisAccessibilityService s = serviceOrReject(call);
+        if (s != null) okResult(call, s.scroll(call.getBoolean("forward", true)));
+    }
+
+    @PluginMethod
+    public void tree(PluginCall call) {
+        JarvisAccessibilityService s = serviceOrReject(call);
+        if (s == null) return;
+        JSObject r = new JSObject();
+        r.put("nodes", s.tree(Math.max(1, Math.min(500, call.getInt("max", 150)))));
+        call.resolve(r);
+    }
+
+    /** Android 10+ lets only the foreground app read the clipboard: a refusal is reported. */
+    @PluginMethod
+    public void getClipboard(PluginCall call) {
+        JSObject r = new JSObject();
+        try {
+            ClipboardManager cm = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = cm == null ? null : cm.getPrimaryClip();
+            if (clip == null || clip.getItemCount() == 0) {
+                r.put("ok", false);
+                r.put("error", "clipboard not readable now (Android allows it only for the app in the foreground)");
+            } else {
+                CharSequence t = clip.getItemAt(0).coerceToText(getContext());
+                r.put("ok", true);
+                r.put("text", t == null ? "" : t.toString());
+            }
+        } catch (Exception e) {
+            r.put("ok", false);
+            r.put("error", e.getMessage());
+        }
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void setClipboard(PluginCall call) {
+        boolean ok = false;
+        try {
+            ClipboardManager cm = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null) {
+                cm.setPrimaryClip(ClipData.newPlainText("JARVIS", call.getString("text", "")));
+                ok = true;
+            }
+        } catch (Exception ignored) { }
+        okResult(call, ok);
     }
 
     @PluginMethod

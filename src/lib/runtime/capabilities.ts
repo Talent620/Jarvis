@@ -42,7 +42,7 @@ export type Requirement = CapabilityId[][];
 
 /** What each action kind needs. Unknown kinds need nothing extra (pure reasoning steps). */
 const BROWSER: CapabilityId[] = ["browser.managed.semantic", "browser.bridge"];
-const DESKTOP_INPUT: CapabilityId[] = ["linux.input.portal", "linux.input.authorized", "linux.input.ydotool", "linux.input.xdotool", "windows.uia"];
+const DESKTOP_INPUT: CapabilityId[] = ["linux.input.portal", "linux.input.authorized", "linux.input.ydotool", "linux.input.xdotool", "windows.uia", "android.accessibility.tree"];
 const TEXT_ENVS: CapabilityId[] = ["browser.managed.semantic", "browser.bridge", "linux.atspi", "windows.uia", "android.accessibility.tree"];
 
 export const ACTION_REQUIREMENTS: Record<string, Requirement> = {
@@ -50,7 +50,7 @@ export const ACTION_REQUIREMENTS: Record<string, Requirement> = {
   "browser.navigate": [BROWSER],
   "browser.consent": [BROWSER],
   "browser.open": [BROWSER],
-  "browser.scroll": [[...BROWSER, "linux.atspi", "windows.uia"]],
+  "browser.scroll": [[...BROWSER, "linux.atspi", "windows.uia", "android.accessibility.tree"]],
   "browser.scrollTo": [[...BROWSER, "linux.atspi", "windows.uia"]],
   "browser.findCollection": [BROWSER],
   "browser.focus": [BROWSER],

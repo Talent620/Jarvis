@@ -15,6 +15,36 @@ export interface SystemActionsPlugin {
   openApp(opts: { name: string }): Promise<{ ok: boolean; detail?: string }>;
   openSettings(opts: { section?: string }): Promise<{ ok: boolean }>;
   launch(opts: { uri: string }): Promise<{ ok: boolean }>;
+  // Semantic primitives (M9) behind the ComputerEnvironment contract (runtime/env/android.ts).
+  focused(): Promise<AndroidFocused>;
+  activeWindow(): Promise<{ found: boolean; id?: string; title?: string; app?: string }>;
+  windows(): Promise<{ windows: { id: string; title: string; app: string; active: boolean }[] }>;
+  select(opts: { start: number; end: number }): Promise<{ ok: boolean }>;
+  copy(): Promise<{ ok: boolean }>;
+  appendText(opts: { text: string }): Promise<{ ok: boolean }>;
+  scroll(opts: { forward: boolean }): Promise<{ ok: boolean }>;
+  tree(opts: { max: number }): Promise<{ nodes: AndroidNode[] }>;
+  getClipboard(): Promise<{ ok: boolean; text?: string; error?: string }>;
+  setClipboard(opts: { text: string }): Promise<{ ok: boolean }>;
+}
+
+export interface AndroidFocused {
+  found: boolean;
+  text?: string | null;
+  role?: string;
+  app?: string;
+  name?: string;
+  editable?: boolean;
+  selectionStart?: number;
+  selectionEnd?: number;
+  selection?: string;
+}
+
+export interface AndroidNode { cls: string; text: string; desc: string; id: string; clickable: boolean; editable: boolean; scrollable: boolean; bounds: string }
+
+/** The accessibility plugin as the Android environment's device (null outside the Android app). */
+export function androidDevice(): SystemActionsPlugin | null {
+  return systemActionsAvailable() ? SA : null;
 }
 
 const SA = registerPlugin<SystemActionsPlugin>("SystemActions");

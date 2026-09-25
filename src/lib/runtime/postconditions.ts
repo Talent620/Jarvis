@@ -127,24 +127,24 @@ export function verify(a: EnvAction, before: ReadResult | undefined, after: Read
     }
     case "clipboard.copy": {
       const c = after as ClipboardRead;
-      if (!c.ok) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: `clipboard unreadable: ${c.error ?? "unknown"}` };
+      if (!c.ok) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: `clipboard unreadable: ${c.error ?? "unknown"}`, unverifiable: result.status === "done" };
       return ladder(result, { text: a.expected }, { text: c.text }, `clipboard "${preview(c.text ?? "", 40)}"`, now);
     }
     case "clipboard.write": {
       const c = after as ClipboardRead;
-      if (!c.ok) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: `clipboard unreadable: ${c.error ?? "unknown"}` };
+      if (!c.ok) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: `clipboard unreadable: ${c.error ?? "unknown"}`, unverifiable: result.status === "done" };
       return ladder(result, { text: a.text }, { text: c.text }, `clipboard "${preview(c.text ?? "", 40)}"`, now);
     }
     case "desktop.keys": {
       // Keys have no read-back of their own; with an expected clipboard they do (ctrl+c).
       if (a.expectClipboard === undefined) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: "keys sent, no read-back declared", unverifiable: result.status === "done" };
       const c = after as ClipboardRead;
-      if (!c.ok) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: `clipboard unreadable: ${c.error ?? "unknown"}` };
+      if (!c.ok) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: `clipboard unreadable: ${c.error ?? "unknown"}`, unverifiable: result.status === "done" };
       return ladder(result, { text: a.expectClipboard }, { text: c.text }, `${a.keys} -> clipboard "${preview(c.text ?? "", 40)}"`, now);
     }
     case "desktop.type": {
       const f = after as FocusedRead;
-      if (!f.found || typeof f.text !== "string") return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: "focused text unreadable" };
+      if (!f.found || typeof f.text !== "string") return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: "focused text unreadable", unverifiable: result.status === "done" };
       const typed = f.text.normalize("NFC").includes(a.text.normalize("NFC"));
       return ladder(result, { typed: true }, { typed }, `focused ${f.role ?? "element"} now contains "${preview(a.text, 30)}"`, now);
     }
