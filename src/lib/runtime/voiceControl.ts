@@ -1,8 +1,9 @@
 // Voice control of the computer (B-034): one switch in Settings starts the streaming voice
 // session on the app runtime (startAppVoice) and holds the microphone through the app's voice
-// arbiter, so the chat wake word, headset mode or Live cannot listen at the same time. Another
-// owner taking the microphone stops this session; failures (no microphone, no recognizer) become
-// a status the UI shows, never an exception and never a silent "listening".
+// arbiter (owners that use it: the chat microphone and wake word, headset mode, permissions).
+// Another owner taking the microphone stops this session and says so in the status; failures
+// (no microphone, the recognizer chain gave up) become a status the UI shows, never an exception
+// and never a silent "listening".
 
 import type { VoiceOwner } from "../voiceSession";
 
@@ -13,8 +14,8 @@ export type VoiceControlStatus =
   | { state: "error"; message: string };
 
 export interface VoiceControlDeps {
-  /** Starts the session; resolves with a stopper (see appRuntime.startAppVoice). */
-  start: () => Promise<{ stop: () => Promise<void>; recognizer: string }>;
+  /** Starts the session; resolves with a stopper and the live recognizer name. */
+  start: () => Promise<{ stop: () => Promise<void>; recognizer: () => string }>;
   acquire: (owner: VoiceOwner, onRelease: () => void) => void;
   release: (owner: VoiceOwner) => void;
 }
@@ -30,8 +31,17 @@ export class VoiceControl {
 
   constructor(private readonly deps: VoiceControlDeps) {}
 
+  private recognizer: (() => string) | null = null;
+
+  /** The status; while listening the recognizer name is read live (it changes on fallback). */
   get current(): VoiceControlStatus {
-    return this.status;
+    return this.status.state === "listening" && this.recognizer ? { state: "listening", recognizer: this.recognizer() } : this.status;
+  }
+
+  /** Recognizer errors from the voice session: a fatal one ends listening with the reason. */
+  report(e: { type: string; error?: string; fatal?: boolean }): void {
+    if (e.type !== "stt_error" || !e.fatal || !this.running) return;
+    void this.stop("failed", e.error ?? "the recognizer stopped");
   }
 
   subscribe(fn: (s: VoiceControlStatus) => void): () => void {
@@ -48,7 +58,7 @@ export class VoiceControl {
     if (this.running || this.status.state === "starting") return this.status;
     const epoch = ++this.epoch;
     this.set({ state: "starting" });
-    // Taking the microphone preempts the chat wake word, headset mode and Live.
+    // Taking the microphone preempts the chat microphone and wake word and headset mode.
     this.deps.acquire(OWNER, () => { void this.stop("preempted"); });
     try {
       const s = await this.deps.start();
@@ -57,7 +67,8 @@ export class VoiceControl {
         return this.status;
       }
       this.running = s;
-      this.set({ state: "listening", recognizer: s.recognizer });
+      this.recognizer = s.recognizer;
+      this.set({ state: "listening", recognizer: s.recognizer() });
     } catch (e) {
       if (epoch === this.epoch) {
         this.deps.release(OWNER);
@@ -67,13 +78,20 @@ export class VoiceControl {
     return this.status;
   }
 
-  /** `preempted`: another owner already holds the microphone, so it is not released here. */
-  async stop(reason: "user" | "preempted" = "user"): Promise<void> {
+  /**
+   * `user`: switched off. `preempted`: another owner took the microphone (not released here, it
+   * is theirs now). `failed`: the recognizer gave up. The last two leave an error status, so the
+   * panel shows that voice control stopped instead of hiding it.
+   */
+  async stop(reason: "user" | "preempted" | "failed" = "user", detail?: string): Promise<void> {
     this.epoch++;
     const r = this.running;
     this.running = null;
-    if (reason === "user") this.deps.release(OWNER);
-    if (this.status.state !== "error" || reason === "user") this.set({ state: "off" });
+    this.recognizer = null;
+    if (reason !== "preempted") this.deps.release(OWNER);
+    if (reason === "user") this.set({ state: "off" });
+    else if (reason === "preempted") this.set({ state: "error", message: "mikrofon przejął inny tryb głosowy" });
+    else this.set({ state: "error", message: detail ?? "rozpoznawanie mowy przestało działać" });
     if (r) await r.stop().catch(() => undefined);
   }
 }

@@ -405,7 +405,7 @@ export class JarvisRuntime {
   /** "zapamiętaj to jako X": the confirmed commands just done become a named skill. */
   private rememberSkill(utteranceId: string, text: string, name: string): RuntimeTurn {
     this.kernel.dispatch({ type: "ConversationIntent", intent: "SIDE_CHAT", text, utteranceId });
-    const r = this.skills!.compile(name, this.turns, this.envId);
+    const r = this.skills!.compile(name, this.turns, this.envId, this.session.browserTarget);
     const say = r.ok
       ? `Zapamiętałem: ${name}. ${r.skill.steps.length} ${r.skill.steps.length === 1 ? "krok" : r.skill.steps.length < 5 ? "kroki" : "kroków"}${r.skill.external ? ", wysyłkę zawsze potwierdzasz ty" : ""}.`
       : r.reason === "no confirmed steps to remember" ? "Nie mam potwierdzonych kroków do zapamiętania." : "Tego ciągu nie umiem odtworzyć, więc go nie zapamiętam.";
@@ -432,6 +432,7 @@ export class JarvisRuntime {
         const task = t.result?.taskId ? this.kernel.state.tasks[t.result.taskId] : undefined;
         return { result: t.result, stopped: gen !== this.generation || !t.result || task?.status === "cancelled" };
       },
+      browser: () => this.session.browserTarget,
       submit: (stepText) => {
         if (gen === this.generation) this.enqueueAction(`${utteranceId}-s${++step}`, stepText, parseCommand(stepText));
       },

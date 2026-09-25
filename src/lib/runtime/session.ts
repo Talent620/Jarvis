@@ -211,8 +211,23 @@ export class ActionSession {
       taskId = k.id("task");
       k.dispatch({ type: "TaskCreated", taskId, goal, kind: command.type });
     }
+    const switchTo = this.switchFirst;
+    this.switchFirst = null;
     try {
-      const r = await fn(taskId);
+      let r: Omit<TurnResult, "command" | "taskId">;
+      if (switchTo) {
+        const sw = await this.useBrowser(taskId, switchTo);
+        if (sw.truth !== "CONFIRMED") {
+          r = sw;
+        } else {
+          // Paused meanwhile: wait for "wznów"; stopped: TaskAbortedError, handled below.
+          await k.waitRunnable(taskId);
+          const main = await fn(taskId);
+          r = { ...main, say: `${sw.say} ${main.say}` };
+        }
+      } else {
+        r = await fn(taskId);
+      }
       const status = r.truth === "CONFIRMED" ? "done" : isPrecondition(r.truth) ? "blocked" : "failed";
       // Stopped while running: an action that was already confirmed stays confirmed (it happened).
       if (k.state.tasks[taskId]?.status === "cancelled" && r.truth !== "CONFIRMED") return { ...r, command: command.type, taskId, truth: "FAILED", say: "Przerwałem." };
@@ -237,15 +252,18 @@ export class ActionSession {
   async handle(text: string, opts: { amendTaskId?: string; command?: Command } = {}): Promise<TurnResult> {
     const cmd = opts.command ?? parseCommand(text);
     // "Wejdź na YouTube w mojej przeglądarce": switch browsers first; the command only runs there.
+    // It is the first step of the command's own task, so "stop" and "pauza" apply to both.
     const choice = browserChoice(text);
-    if (choice && cmd.type !== "browser.use" && cmd.type !== "unknown") {
-      const sw = await this.runTask(text, { type: "browser.use", target: choice }, (t) => this.useBrowser(t, choice));
-      if (sw.truth !== "CONFIRMED") return sw;
-      const r = await this.dispatch(text, cmd, opts);
-      return { ...r, say: `${sw.say} ${r.say}` };
+    this.switchFirst = choice && cmd.type !== "browser.use" && cmd.type !== "unknown" ? choice : null;
+    try {
+      return await this.dispatch(text, cmd, opts);
+    } finally {
+      this.switchFirst = null;
     }
-    return this.dispatch(text, cmd, opts);
   }
+
+  /** Set by handle() for "... w mojej przeglądarce"; consumed by the next runTask. */
+  private switchFirst: "managed" | "user" | null = null;
 
   private async dispatch(text: string, cmd: Command, opts: { amendTaskId?: string }): Promise<TurnResult> {
     if (opts.amendTaskId && cmd.type === "focusItem") return this.runTask(text, cmd, (t) => this.focusItem(t, cmd.query), opts.amendTaskId);
@@ -287,10 +305,14 @@ export class ActionSession {
 
   private undone = new Set<string>();
 
+  /** The browser browser actions go to, as last confirmed by a read-back (JARVIS's by default). */
+  browserTarget: "managed" | "user" = "managed";
+
   /** Drive JARVIS's own browser or the user's (BrowserBridge); confirmed by the page read-back. */
   private async useBrowser(taskId: string, target: "managed" | "user") {
     const r = await this.act(taskId, { kind: "browser.use", target }, "use-browser");
     if (r.truth === "CONFIRMED") {
+      this.browserTarget = target;
       await this.syncPage();
       return { truth: r.truth, say: target === "user" ? "Dobrze, pracuję w Twojej przeglądarce." : "Dobrze, pracuję w swojej przeglądarce.", evidence: r.evidence };
     }

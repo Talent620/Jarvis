@@ -602,7 +602,8 @@ export class ManagedBrowser implements ComputerEnvironment {
     if (!this.page || this.page.isClosed()) {
       if (q.kind === "page") return { open: false } satisfies PageRead;
       if (q.kind === "selection") return { text: "", visible: false } satisfies SelectionRead;
-      if (q.kind === "clipboard") return { ok: false, error: "browser is not running" } satisfies ClipboardRead;
+      // The system clipboard (Electron) does not need a page; the page's own clipboard does.
+      if (q.kind === "clipboard" && !this.opts.readClipboard) return { ok: false, error: "browser is not running" } satisfies ClipboardRead;
       if (q.kind === "element") return { found: false } satisfies ElementRead;
       if (q.kind === "collection") return { count: 0, items: [] } satisfies CollectionRead;
     }

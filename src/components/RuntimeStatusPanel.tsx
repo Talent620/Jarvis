@@ -3,7 +3,7 @@
 // export. Presentation only: the view comes from statusView() over the kernel state, so the panel
 // can never show more certainty than the runtime has.
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { StatusView } from "../lib/runtime/diagnostics";
 import type { VoiceControlStatus } from "../lib/runtime/voiceControl";
 import type { Skill } from "../lib/runtime/skills";
@@ -57,6 +57,8 @@ const btn: React.CSSProperties = { fontSize: 12, padding: "4px 12px", minHeight:
 interface Props {
   view: StatusView;
   voice?: VoiceControlStatus | null;
+  /** Start listening again after voice control stopped (preempted or failed). */
+  onVoiceRetry?: () => void;
   skills?: Skill[];
   onForgetSkill?: (name: string) => void;
   onPause?: () => void;
@@ -66,7 +68,7 @@ interface Props {
   onClose?: () => void;
 }
 
-export const RuntimeStatusPanel: React.FC<Props> = ({ view, voice, skills, onForgetSkill, onPause, onResume, onStop, onExport, onClose }) => (
+export const RuntimeStatusPanel: React.FC<Props> = ({ view, voice, onVoiceRetry, skills, onForgetSkill, onPause, onResume, onStop, onExport, onClose }) => (
   <section aria-label="Co robię" role="status" aria-live="polite" style={{ border: "1px solid var(--line, #234)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 6, background: "var(--panel, #0b1620)" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
       <strong style={{ fontSize: 14 }}>Co robię: {STATE_LABEL[view.state]}</strong>
@@ -76,7 +78,12 @@ export const RuntimeStatusPanel: React.FC<Props> = ({ view, voice, skills, onFor
     {view.step && <Row label="Krok">{view.step}{view.stepIndex && view.stepCount ? ` (${view.stepIndex} z ${view.stepCount})` : ""}</Row>}
     {view.target && <Row label="Na czym">{view.target}</Row>}
     <Row label="Gdzie">{view.environment}{view.place ? `, ${view.place}` : ""}</Row>
-    {voiceLine(voice) && <Row label="Głos">{voiceLine(voice)}</Row>}
+    {voiceLine(voice) && (
+      <Row label="Głos">
+        {voiceLine(voice)}
+        {voice?.state === "error" && onVoiceRetry && <> <button type="button" onClick={onVoiceRetry} style={btn}>Słuchaj ponownie</button></>}
+      </Row>
+    )}
     {view.model && <Row label="Model">{view.model}</Row>}
     {typeof view.elapsedMs === "number" && <Row label="Czas">{formatElapsed(view.elapsedMs)}</Row>}
     {view.verification && <Row label="Sprawdzenie">{view.verification}</Row>}
@@ -132,6 +139,7 @@ const RuntimeStatusDock: React.FC = () => {
   const [open, setOpen] = useState(true);
   const [ctl, setCtl] = useState<import("../lib/runtime/appRuntime").AppRuntimeControls | null>(null);
   const [voice, setVoice] = useState<VoiceControlStatus | null>(null);
+  const voiceRef = useRef<import("../lib/runtime/voiceControl").VoiceControl | null>(null);
   useEffect(() => {
     let off = () => undefined as void;
     let cancelled = false;
@@ -141,8 +149,12 @@ const RuntimeStatusDock: React.FC = () => {
       const attach = () => {
         const vc = peekVoiceControl();
         if (!vc) return false;
+        voiceRef.current = vc;
         setVoice(vc.current);
-        off = vc.subscribe(setVoice);
+        const unsub = vc.subscribe(() => setVoice(vc.current));
+        // The recognizer can change on fallback: refresh the line every second.
+        const tick = setInterval(() => setVoice(vc.current), 1000);
+        off = () => { unsub(); clearInterval(tick); };
         return true;
       };
       if (attach()) return;
@@ -181,6 +193,7 @@ const RuntimeStatusDock: React.FC = () => {
       <RuntimeStatusPanel
         view={view}
         voice={voice}
+        onVoiceRetry={() => { void voiceRef.current?.start(); }}
         skills={ctl.skills()}
         onForgetSkill={(name) => { ctl.forgetSkill(name); setView(ctl.view()); }}
         onPause={() => ctl.press("pause")}

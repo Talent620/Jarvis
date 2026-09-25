@@ -49,12 +49,17 @@ function getEnvHost() {
 }
 
 // BrowserBridge (M8): loopback WebSocket for the JARVIS extension in the user's own browser.
+// One host for the app's lifetime: the runtime keeps a reference to its environment, so a failed
+// start (port busy) is retried on the same host instead of replacing it with a new one.
 let bridgeHost = null;
+let bridgeStarting = null;
 function getBridgeHost() {
   if (!bridgeHost) {
     const { createBridgeHost } = require("./gen/runtime.cjs");
     bridgeHost = createBridgeHost({ userDataPath: app.getPath("userData") });
-    bridgeHost.start().catch(() => { bridgeHost = null; });
+  }
+  if (!bridgeStarting) {
+    bridgeStarting = bridgeHost.start().catch(() => { bridgeStarting = null; });
   }
   return bridgeHost;
 }

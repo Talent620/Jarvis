@@ -261,3 +261,19 @@ stays the mission PR, its description is updated and a comment records this deci
   connected extension it is NEEDS_CAPABILITY and the command runs nowhere. Events of the browser
   that is not selected are dropped.
 - The status panel lists remembered skills (steps, send, disabled) with a remove button.
+
+## D-035 Review of the voice switch and browser choice
+- The browser switch in "... w mojej przeglądarce" is the first step of the command's own task,
+  so "stop" or "pauza" during the switch applies to the command too.
+- Only instructions choose a browser: a preposition form ("w mojej przeglądarce") or a switch or
+  open verb; questions, negations and remarks never do, and "przeglądarkę, Jarvis" is not a
+  choice. "Otwórz swoją/moją przeglądarkę" is a launch there, not a bare switch.
+- The switch is confirmed only when the chosen browser answers the page read-back (the user's
+  browser with a tab open); every switch announces the new page or "closed", so references from
+  the other browser are invalidated. Clipboard reads always use the system clipboard (the bridge
+  cannot read it; the managed browser reads it without a page when Electron provides it).
+- Skills remember the browser they were recorded in and replay switches there first.
+- Voice control stopped by another owner or a fatal recognizer error shows an error with a
+  "Słuchaj ponownie" button; the recognizer name is read live; a failed start stops the mic.
+- The Deepgram key is covered by encryption at rest like the other keys.
+- One BrowserBridge host for the app's lifetime; a failed start is retried on the same server.

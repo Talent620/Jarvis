@@ -227,6 +227,8 @@ export async function startAppVoice(io: AppVoiceIO): Promise<{ session: VoiceSes
     await mic.start((f) => session.pushAudio(f));
   } catch (e) {
     voiceSpeaker = null;
+    // getUserMedia may have succeeded before the failure: never leave the microphone live.
+    await mic.stop().catch(() => undefined);
     await session.stop().catch(() => undefined);
     throw e;
   }
@@ -254,8 +256,10 @@ export function appVoiceControl(io: () => AppVoiceIO): VoiceControl {
   if (!voiceControl) {
     voiceControl = new VoiceControl({
       start: async () => {
-        const r = await startAppVoice(io());
-        return { stop: r.stop, recognizer: r.recognizer() };
+        const base = io();
+        // Recognizer errors reach the controller: a fatal one is shown, not hidden as "listening".
+        const r = await startAppVoice({ ...base, onEvent: (e) => { base.onEvent?.(e); voiceControl?.report(e); } });
+        return { stop: r.stop, recognizer: r.recognizer };
       },
       acquire: acquireVoice,
       release: releaseVoice,

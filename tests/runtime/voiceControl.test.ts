@@ -7,14 +7,15 @@ import { voiceLine } from "../../src/components/RuntimeStatusPanel";
 
 function fakeStart(o: { fail?: string; delayMs?: number } = {}) {
   const sessions: { stopped: boolean }[] = [];
+  let name = "deepgram-nova-3";
   const start = async () => {
     if (o.delayMs) await new Promise((r) => setTimeout(r, o.delayMs));
     if (o.fail) throw new Error(o.fail);
     const s = { stopped: false };
     sessions.push(s);
-    return { recognizer: "deepgram-nova-3", stop: async () => { s.stopped = true; } };
+    return { recognizer: () => name, stop: async () => { s.stopped = true; } };
   };
-  return { start, sessions };
+  return { start, sessions, fallback: (n: string) => { name = n; } };
 }
 
 describe("voice control switch", () => {
@@ -33,16 +34,35 @@ describe("voice control switch", () => {
     expect(seen).toEqual(["starting", "listening", "off"]);
   });
 
-  it("another voice mode taking the microphone stops the session and keeps its ownership", async () => {
+  it("another voice mode taking the microphone stops the session, says so, and a retry works", async () => {
     const f = fakeStart();
     const vc = new VoiceControl({ start: f.start, acquire: acquireVoice, release: releaseVoice });
     await vc.start();
-    acquireVoice("headset");
+    acquireVoice("main");
     await new Promise((r) => setTimeout(r, 0));
     expect(f.sessions[0].stopped).toBe(true);
-    expect(vc.current.state).toBe("off");
-    expect(currentVoiceOwner()).toBe("headset");
-    releaseVoice("headset");
+    expect(vc.current).toEqual({ state: "error", message: "mikrofon przejął inny tryb głosowy" });
+    expect(voiceLine(vc.current)).toBe("nie działa: mikrofon przejął inny tryb głosowy");
+    expect(currentVoiceOwner()).toBe("main");
+    await vc.start(); // "Słuchaj ponownie"
+    expect(vc.current.state).toBe("listening");
+    expect(currentVoiceOwner()).toBe("computer");
+    await vc.stop();
+  });
+
+  it("the recognizer name is live, and a fatal recognizer error ends listening visibly", async () => {
+    const f = fakeStart();
+    const vc = new VoiceControl({ start: f.start, acquire: acquireVoice, release: releaseVoice });
+    await vc.start();
+    f.fallback("groq-whisper");
+    expect(vc.current).toEqual({ state: "listening", recognizer: "groq-whisper" });
+    vc.report({ type: "stt_error", error: "all recognizers failed", fatal: false });
+    expect(vc.current.state).toBe("listening");
+    vc.report({ type: "stt_error", error: "all recognizers failed", fatal: true });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(vc.current).toEqual({ state: "error", message: "all recognizers failed" });
+    expect(f.sessions[0].stopped).toBe(true);
+    expect(currentVoiceOwner()).toBeNull();
   });
 
   it("no microphone: an error state the panel shows, the microphone is released", async () => {

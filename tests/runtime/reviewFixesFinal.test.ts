@@ -165,3 +165,27 @@ describe("final review #9: a crash inside a step is an audible FAILED, and a ski
     expect(skills.has("start")).toBe(false);
   });
 });
+
+describe("review of the voice switch and browser choice", () => {
+  it("#5 the Deepgram key is a secret at rest like the other keys", async () => {
+    const { blankSensitive } = await import("../../src/lib/secretsVault");
+    const { store } = await import("../../src/lib/store");
+    const out = blankSensitive({ ...store.settings, deepgramApiKey: "dg-secret-123" });
+    expect(out.deepgramApiKey).toBe("");
+  });
+
+  it("#8 the bridge server can be started again after a failed start and on the same object", async () => {
+    const { BridgeServer } = await import("../../src/node/bridge/server");
+    const { Pairing, TokenStore } = await import("../../src/node/bridge/protocol");
+    const a = new BridgeServer({ tokens: new TokenStore(), pairing: new Pairing() });
+    const port = await a.start();
+    expect(await a.start()).toBe(port); // idempotent while listening
+    const b = new BridgeServer({ tokens: new TokenStore(), pairing: new Pairing(), port });
+    const env = b.env;
+    await expect(b.start()).rejects.toThrow();
+    await a.close();
+    expect(await b.start()).toBe(port);
+    expect(b.env).toBe(env); // the runtime's reference stays valid
+    await b.close();
+  });
+});

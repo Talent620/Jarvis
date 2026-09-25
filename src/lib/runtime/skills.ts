@@ -15,6 +15,8 @@ export interface Skill {
   steps: string[];
   /** Contains an external effect (mail): replay stops at the consent question. */
   external: boolean;
+  /** The browser the steps ran in; replay switches there first (never into the user's tab by accident). */
+  browser?: "managed" | "user";
   compiledAt: number;
   runs: number;
   lastOkAt?: number;
@@ -32,7 +34,15 @@ export interface SkillRunner {
   run(text: string): Promise<{ result?: TurnResult; stopped: boolean }>;
   /** Queue a step and return at once (the send step: its consent question is the user's). */
   submit(text: string): void;
+  /** The browser browser actions go to right now. */
+  browser?(): "managed" | "user";
 }
+
+/** The spoken switch a replay runs first when the skill was recorded in the other browser. */
+export const BROWSER_SWITCH_STEP: Record<"managed" | "user", string> = {
+  managed: "Pracuj w swojej przeglądarce.",
+  user: "Użyj mojej przeglądarki.",
+};
 
 export interface ReplayResult {
   truth: Truth | "WAITING_CONSENT" | "STOPPED";
@@ -52,7 +62,11 @@ export class SkillLibrary {
     let saved: unknown = [];
     try { saved = store?.load() ?? []; } catch { saved = []; }
     for (const s of Array.isArray(saved) ? saved : []) {
-      if (s && typeof s.name === "string" && Array.isArray(s.steps) && s.steps.length && s.steps.every((x: unknown) => typeof x === "string")) this.skills.set(normName(s.name), s as Skill);
+      if (s && typeof s.name === "string" && Array.isArray(s.steps) && s.steps.length && s.steps.every((x: unknown) => typeof x === "string")) {
+        const k = s as Skill;
+        if (k.browser !== undefined && k.browser !== "managed" && k.browser !== "user") delete k.browser;
+        this.skills.set(normName(k.name), k);
+      }
     }
   }
 
@@ -64,7 +78,7 @@ export class SkillLibrary {
    * The confirmed commands at the end of the conversation, back to the last one that was not
    * confirmed (side chat in between is skipped). Nothing unconfirmed is ever compiled.
    */
-  compile(name: string, turns: RuntimeTurn[], scope: string): { ok: true; skill: Skill } | { ok: false; reason: string } {
+  compile(name: string, turns: RuntimeTurn[], scope: string, browser?: "managed" | "user"): { ok: true; skill: Skill } | { ok: false; reason: string } {
     const steps: string[] = [];
     let later: number | undefined;
     for (let i = turns.length - 1; i >= 0 && steps.length < MAX_STEPS; i--) {
@@ -78,7 +92,7 @@ export class SkillLibrary {
     if (!steps.length) return { ok: false, reason: "no confirmed steps to remember" };
     const types = steps.map((s) => parseCommand(s).type);
     if (types.some((t) => !COMPILABLE.has(t))) return { ok: false, reason: "a step cannot be replayed" };
-    const skill: Skill = { name: name.trim(), scope, steps, external: types.includes("send"), compiledAt: this.now(), runs: 0 };
+    const skill: Skill = { name: name.trim(), scope, steps, external: types.includes("send"), compiledAt: this.now(), runs: 0, browser };
     this.skills.set(normName(name), skill);
     this.persist();
     return { ok: true, skill };
@@ -117,7 +131,8 @@ export class SkillLibrary {
     skill.runs++;
     const done: ReplayResult["steps"] = [];
     const finish = (r: ReplayResult): ReplayResult => { this.persist(); return r; };
-    for (const text of skill.steps) {
+    const pin = skill.browser && runner.browser && runner.browser() !== skill.browser ? [BROWSER_SWITCH_STEP[skill.browser]] : [];
+    for (const text of [...pin, ...skill.steps]) {
       if (parseCommand(text).type === "send") {
         // The runtime now asks for consent; the user answers, never the skill.
         runner.submit(text);

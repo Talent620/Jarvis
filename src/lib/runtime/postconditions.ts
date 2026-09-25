@@ -179,8 +179,12 @@ export function verify(a: EnvAction, before: ReadResult | undefined, after: Read
       return ladder(result, { active: true }, { active }, `active window ${w.window?.id ?? "?"} "${preview(w.window?.title ?? "", 40)}"`, now);
     }
     case "browser.use": {
+      // The browser that answered the page read-back must be the one asked for; the user's own
+      // browser must also have a tab open (a disconnected bridge answers "not open").
       const p = after as PageRead;
-      return ladder(result, { browser: a.target }, { browser: p.browser ?? "managed" }, `browser actions go to the ${a.target === "user" ? "user's own browser" : "managed browser"}`, now);
+      const expect = a.target === "user" ? { browser: "user", open: true } : { browser: "managed" };
+      const seen = a.target === "user" ? { browser: p.browser, open: p.open } : { browser: p.browser };
+      return ladder(result, expect, seen, `browser actions go to the ${a.target === "user" ? "user's own browser" : "managed browser"}`, now);
     }
     default:
       return { truth: "ATTEMPTED", evidence: "", reason: "no postcondition", unverifiable: result.status === "done" };

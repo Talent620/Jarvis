@@ -46,16 +46,24 @@ export class SelectableBrowser implements ComputerEnvironment {
     const was = this.target;
     this.target = action.target;
     if (was !== this.target) {
-      // The page the runtime knew belongs to the other browser: announce the current one.
+      // The page the runtime knew belongs to the other browser: always announce the current one
+      // (or that none is open), so references from the other browser are invalidated.
       const p = (await this.current.read({ kind: "page" }).catch(() => ({ open: false }))) as PageRead;
       if (p.open && p.pageId && p.url) this.emit({ type: "navigation", pageId: p.pageId, url: p.url, title: p.title ?? "" });
+      else this.emit({ type: "closed" });
     }
     return { status: "done", data: { browser: this.target } };
   }
 
   async read(q: ReadQuery): Promise<ReadResult> {
+    // The system clipboard is read in the main process (the bridge cannot read it), whichever
+    // browser copied the text.
+    if (q.kind === "clipboard") return this.managed.read(q);
     const r = await this.current.read(q);
-    return q.kind === "page" ? { ...(r as PageRead), browser: this.target } : r;
+    if (q.kind !== "page") return r;
+    const p = r as PageRead;
+    // Only a page the user's browser really returned says "user"; a silent bridge proves nothing.
+    return this.target === "managed" || p.open ? { ...p, browser: this.target } : p;
   }
 
   snapshot(maxChars?: number): Promise<string> {

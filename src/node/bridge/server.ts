@@ -166,13 +166,16 @@ export class BridgeServer {
 
   /** Listen on 127.0.0.1 only; resolves with the port. */
   start(): Promise<number> {
+    const running = this.wss?.address();
+    if (running && typeof running === "object") return Promise.resolve(running.port);
     return new Promise((resolve, reject) => {
       const wss = new WebSocketServer({
         host: "127.0.0.1", port: this.o.port ?? 0, path: "/bridge", maxPayload: 64 * 1024,
         verifyClient: (info: { origin: string; req: { socket: { remoteAddress?: string } } }) => isLoopback(info.req.socket.remoteAddress) && originAllowed(info.origin, this.o.allowedIds),
       });
       this.wss = wss;
-      wss.on("error", reject);
+      // A failed start (port in use) leaves nothing behind, so the host can simply retry.
+      wss.on("error", (e) => { if (this.wss === wss) this.wss = null; wss.close(); reject(e); });
       wss.on("listening", () => resolve((wss.address() as { port: number }).port));
       wss.on("connection", (ws, req) => this.accept(ws, extensionIdOf(req.headers.origin)));
     });

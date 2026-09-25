@@ -46,25 +46,38 @@ function isNavigationRequest(norm: string): boolean {
   return NAV_VERB.test(norm);
 }
 
-const USER_BROWSER = /\b(?:(?:w|na|do|z|we) )?(?:moj(?:a|ej|ego|e)?|moim) (?:przegladar\w*|chrom\w*|firefox\w*|edge\w*)|\bprzegladar\w* uzytkownika\b/;
-const MANAGED_BROWSER = /\b(?:(?:w|na|do|z|we) )?(?:przegladar\w* jarvis\w*|(?:osobn|zarzadzan|swoj|twoj|twoi)\w* przegladar\w*)/;
+// "w mojej przeglądarce" / "moim Chromie" (the user's own browser, through the bridge) and "w swojej
+// przeglądarce" / "w przeglądarce Jarvisa" (JARVIS's managed one). A bare "przeglądarka, Jarvis"
+// is not a choice: the managed form needs a preposition before "przeglądarce Jarvisa".
+const USER_BROWSER = /\b(?:(?:w|we|na|do|z) )?(?:moj(?:a|ej|ego|e)?|moim) (?:przegladar\w*|chrom\w*|firefox\w*|edge\w*)|\bprzegladar\w* uzytkownika\b/;
+const MANAGED_BROWSER = /\b(?:w|we|na|do|z) przegladar\w* jarvis(?:a|owej|owa)?\b|\b(?:(?:w|we|na|do|z) )?(?:osobn|zarzadzan|swoj|twoj|twoi)\w* przegladar\w*/;
+const PREPOSITION_FORM = /\b(?:w|we|na|do|z) (?:moj|moim|swoj|twoj|twoi|osobn|zarzadzan|przegladar)/;
+/** Verbs that make "moja przeglądarka" an instruction rather than a remark. */
+const SWITCH_VERB = /\b(uzyj\w*|pracuj\w*|przelacz\w*|korzystaj\w*|dzialaj|zostan|otworz\w*|otwieraj|uruchom\w*|odpal\w*|wlacz\w*|wroc\w*)\b/;
+const OPEN_VERB = /\b(otworz\w*|otwieraj|uruchom\w*|odpal\w*|wlacz\w*)\b/;
 
-/** "w mojej przeglądarce" -> the user's own browser (bridge); "w swojej przeglądarce" -> JARVIS's. */
+/**
+ * "w mojej przeglądarce" -> the user's own browser; "w swojej przeglądarce" -> JARVIS's. Only an
+ * instruction counts: a question, a negation ("nie używaj mojej przeglądarki") or a remark
+ * ("moja przeglądarka jest wolna") never switches browsers.
+ */
 export function browserChoice(text: string): "user" | "managed" | undefined {
   const norm = normalizeUtterance(text);
-  if (USER_BROWSER.test(norm)) return "user";
-  if (MANAGED_BROWSER.test(norm)) return "managed";
-  return undefined;
+  if (QUESTION.test(norm) || /^(?:jarvis )?nie\b/.test(norm)) return undefined;
+  const which = USER_BROWSER.test(norm) ? "user" : MANAGED_BROWSER.test(norm) ? "managed" : undefined;
+  if (!which) return undefined;
+  return PREPOSITION_FORM.test(norm) || SWITCH_VERB.test(norm) ? which : undefined;
 }
 
 export function parseCommand(text: string): Command {
   const choice = browserChoice(text);
   if (choice) {
     // "Wejdź na YouTube w mojej przeglądarce": the command itself, the session switches first.
-    // "Użyj mojej przeglądarki" alone: only the switch.
+    // "Otwórz swoją przeglądarkę": a launch there. "Użyj mojej przeglądarki": only the switch.
     const norm0 = normalizeUtterance(text);
     const rest = parseCommand(norm0.replace(choice === "user" ? USER_BROWSER : MANAGED_BROWSER, " ").replace(/\s+/g, " ").trim());
-    return rest.type === "unknown" || rest.type === "browser.launch" ? { type: "browser.use", target: choice } : rest;
+    if (rest.type !== "unknown") return rest;
+    return OPEN_VERB.test(norm0) ? { type: "browser.launch" } : { type: "browser.use", target: choice };
   }
   const norm = normalizeUtterance(text);
   const verb = parseVerb(text);
