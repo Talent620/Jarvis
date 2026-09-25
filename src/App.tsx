@@ -1,4 +1,4 @@
-import { lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { CommandItem } from "./lib/commandPalette";
 import type { GrowthContext } from "./lib/growthContext";
 import type { SettingsTab } from "./lib/settingsModel";
@@ -14,6 +14,7 @@ const Journal = lazy(() => import("./components/Journal"));
 const SalesCrm = lazy(() => import("./components/SalesCrm"));
 const GrowthDayPanel = lazy(() => import("./components/GrowthDayPanel"));
 const GoalStatusPanel = lazy(() => import("./components/GoalStatusPanel"));
+const RuntimeStatusDock = lazy(() => import("./components/RuntimeStatusPanel"));
 const MoneyHub = lazy(() => import("./components/MoneyHub"));
 const FinancialDashboard = lazy(() => import("./components/FinancialDashboard"));
 const Help = lazy(() => import("./components/Help"));
@@ -112,6 +113,7 @@ import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, che
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
 import ScreenBoundary from "./components/ScreenBoundary";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { getWeather } from "./lib/weather";
 import { buildChiefBriefing, formatBriefing } from "./lib/chiefOfStaff";
 import { maybePrewarm, warmNow } from "./lib/prewarm";
@@ -1507,6 +1509,8 @@ export default function App() {
       {/* ⬢ Szef zawsze w zasięgu — centralny agent głosowy, jedno tknięcie z każdego ekranu.
           Ikonę można przeciągać (drag) — pozycja jest zapamiętywana. */}
       <BossFab onOpen={() => setShowBoss(true)} />
+      {/* JARVIS runtime (desktop): "co robię" with PAUZA / WZNÓW / STOP once it has work. */}
+      {runtimeAvailable() && (<ErrorBoundary label="Panel co robię"><Suspense fallback={null}><RuntimeStatusDock /></Suspense></ErrorBoundary>)}
 
       {showVoice && (<ScreenBoundary><HeadsetMode onClose={() => { releaseVoice("headset"); setShowVoice(false); }} /></ScreenBoundary>)}
       {showAdmin && (

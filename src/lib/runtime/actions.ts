@@ -14,6 +14,35 @@ export interface ActionContext {
   kernel: Kernel;
   env: ComputerEnvironment;
   now?: () => number;
+  /** A hung tool is given up after this long (the read-back still decides what happened). */
+  actTimeoutMs?: number;
+  readTimeoutMs?: number;
+}
+
+export const DEFAULT_ACT_TIMEOUT_MS = 30_000;
+export const DEFAULT_READ_TIMEOUT_MS = 10_000;
+
+/** Run `fn` with its own abort signal (linked to `parent`); after `ms` abort it and return `onTimeout()`. */
+async function bounded<T>(fn: (signal: AbortSignal) => Promise<T>, ms: number, parent: AbortSignal | undefined, onTimeout: () => T): Promise<T> {
+  const ac = new AbortController();
+  const relay = () => ac.abort();
+  if (parent?.aborted) ac.abort();
+  else parent?.addEventListener("abort", relay, { once: true });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      fn(ac.signal),
+      new Promise<T>((resolve, reject) => {
+        timer = setTimeout(() => {
+          ac.abort();
+          try { resolve(onTimeout()); } catch (e) { reject(e); }
+        }, ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+    parent?.removeEventListener("abort", relay);
+  }
 }
 
 export interface PerformSpec {
@@ -71,6 +100,9 @@ export async function performAction(ctx: ActionContext, spec: PerformSpec): Prom
 
   const signal = spec.signal ?? kernel.signal(spec.taskId);
   const query = readQueryFor(spec.action);
+  const actMs = ctx.actTimeoutMs ?? DEFAULT_ACT_TIMEOUT_MS;
+  const readMs = ctx.readTimeoutMs ?? DEFAULT_READ_TIMEOUT_MS;
+  const readBack = () => bounded(() => env.read(query), readMs, undefined, () => { throw new Error(`read-back timed out after ${readMs} ms`); });
   const maxAttempts = spec.external || NOT_REPEATABLE.has(kind) ? 1 : Math.max(1, spec.maxAttempts ?? 2);
   const gate = async () => {
     // Pause gate: a paused task waits here before the next micro-action; stop rejects it.
@@ -92,7 +124,7 @@ export async function performAction(ctx: ActionContext, spec: PerformSpec): Prom
     await gate();
     if (signal.aborted) return fail("FAILED", "cancelled", 0);
     try {
-      before = await env.read(query);
+      before = await readBack();
     } catch (e) {
       return fail("FAILED", `read-back before action failed: ${e instanceof Error ? e.message : e}`, 0);
     }
@@ -109,7 +141,9 @@ export async function performAction(ctx: ActionContext, spec: PerformSpec): Prom
     // then restores as UNKNOWN_AFTER_ATTEMPT, never as a clean failure.
     if (spec.external) kernel.dispatch({ type: "ActionAttempted", actionId, evidence: `attempt ${attempt} dispatched` });
     try {
-      result = await env.act(spec.action, signal);
+      // A hung tool is aborted and reported as failed; for a local action the read-back below
+      // still decides (it may have happened late), for an external one it is UNKNOWN.
+      result = await bounded((s) => env.act(spec.action, s), actMs, signal, (): ActResult => ({ status: "failed", error: `no answer from the tool after ${actMs} ms` }));
     } catch (e) {
       result = { status: "failed", error: e instanceof Error ? e.message : String(e) };
     }
@@ -122,7 +156,7 @@ export async function performAction(ctx: ActionContext, spec: PerformSpec): Prom
     }
     if (!spec.external && result.status === "done") kernel.dispatch({ type: "ActionAttempted", actionId, evidence: `attempt ${attempt}` });
     try {
-      after = await env.read(query);
+      after = await readBack();
     } catch (e) {
       lastTruth = spec.external ? "UNKNOWN_AFTER_ATTEMPT" : "FAILED";
       lastReason = `read-back failed: ${e instanceof Error ? e.message : e}`;

@@ -48,7 +48,33 @@ export interface RuntimeOptions {
   partialPolicy?: PartialPolicy;
   /** Named, replayable sequences of confirmed commands (M10). */
   skills?: SkillLibrary;
+  /** A conversation or summary model that does not answer in time is given up. */
+  modelTimeoutMs?: number;
   now?: () => number;
+}
+
+const MAX_REPLY_CHARS = 600;
+
+/** A model reply fit to be spoken: a non-empty string that is not a JSON or tool-call blob. */
+function speakable(reply: unknown): string | null {
+  if (typeof reply !== "string") return null;
+  const t = reply.trim();
+  if (!t || /^[[{]/.test(t) || /^```/.test(t)) return null;
+  return Array.from(t).slice(0, MAX_REPLY_CHARS).join("");
+}
+
+/** Resolve with `p`, or reject after `ms` and abort the call. */
+async function withDeadline<T>(ms: number, run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const ac = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      run(ac.signal),
+      new Promise<T>((_, reject) => { timer = setTimeout(() => { ac.abort(); reject(new Error("model timeout")); }, ms); }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 const SILENT: Speaker = { say: () => undefined, cancel: () => undefined };
@@ -64,6 +90,7 @@ export class JarvisRuntime {
   private readonly policy: PartialPolicy;
   private readonly skills?: SkillLibrary;
   private readonly envId: string;
+  private readonly modelTimeoutMs: number;
   private readonly now: () => number;
   private actionQueue: Promise<void> = Promise.resolve();
   private generation = 0;
@@ -90,6 +117,7 @@ export class JarvisRuntime {
     this.policy = opts.partialPolicy ?? DEFAULT_PARTIAL_POLICY;
     this.skills = opts.skills;
     this.envId = opts.env.id;
+    this.modelTimeoutMs = opts.modelTimeoutMs ?? 15_000;
     this.now = opts.now ?? (() => Date.now());
     this.session = new ActionSession(opts.kernel, opts.env, {
       ...opts.session,
@@ -108,6 +136,22 @@ export class JarvisRuntime {
 
   stop(): void {
     this.session.stop();
+  }
+
+  /** The environment the action lane drives (for the status panel and diagnostics). */
+  get environmentId(): string {
+    return this.envId;
+  }
+
+  /** Remembered skills (M10), for the status panel and diagnostics. */
+  listSkills() {
+    return this.skills?.list() ?? [];
+  }
+
+  /** A PAUZA / WZNÓW / STOP button: the same control path as the spoken word. */
+  press(control: "pause" | "resume" | "stop"): RuntimeTurn {
+    const words = { pause: "pauza", resume: "wznów", stop: "stop" } as const;
+    return this.control(`ui-${++this.seq}-${this.now()}`, words[control], control, control === "resume" ? 1 : 0);
   }
 
   /** An action is running or queued. */
@@ -409,10 +453,10 @@ export class JarvisRuntime {
     const gen = this.generation;
     const p = (async () => {
       try {
-        const s = await summarizeUntrusted(summarizer, content);
+        const s = await withDeadline(this.modelTimeoutMs, (signal) => summarizeUntrusted(summarizer, content, signal));
         turn.say = s.value ? `W skrócie: ${s.value}` : "Nie udało mi się tego streścić.";
-      } catch {
-        turn.say = "Nie udało mi się tego streścić.";
+      } catch (e) {
+        turn.say = e instanceof Error && e.message === "model timeout" ? "Streszczenie trwa za długo, odpuszczam." : "Nie udało mi się tego streścić.";
       }
       if (gen === this.generation) this.say(turn.say, "runtime", utteranceId);
     })();
@@ -434,11 +478,15 @@ export class JarvisRuntime {
     const gen = this.generation;
     const p = (async () => {
       try {
-        const reply = await model.reply({ system: CONVERSATION_SYSTEM, snapshot, utterance: text, history: this.history.slice(-8) });
+        const history = this.history.slice(-8);
+        const raw = await withDeadline(this.modelTimeoutMs, (signal) => model.reply({ system: CONVERSATION_SYSTEM, snapshot, utterance: text, history }, signal));
+        // A broken reply (not text, empty, a JSON or tool-call blob) is never spoken or acted on.
+        const reply = speakable(raw);
+        if (!reply) throw new Error("unusable reply");
         turn.say = reply;
         if (gen === this.generation) this.say(reply, "model", utteranceId); // "stop" silences a late answer too
-      } catch {
-        turn.say = "Nie udało mi się teraz odpowiedzieć.";
+      } catch (e) {
+        turn.say = e instanceof Error && e.message === "model timeout" ? "Nie zdążyłem odpowiedzieć, spróbuj jeszcze raz." : "Nie udało mi się teraz odpowiedzieć.";
         if (gen === this.generation) this.say(turn.say, "runtime", utteranceId);
       }
     })();

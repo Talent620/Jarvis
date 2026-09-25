@@ -35,6 +35,9 @@ export interface SessionOptions {
   onQuestion?: (text: string, consentId?: string) => void;
   /** How long a task waits for consent or an answer before giving up. */
   answerTimeoutMs?: number;
+  /** A tool (env.act / env.read) that does not answer in time is given up (defaults in actions.ts). */
+  actTimeoutMs?: number;
+  readTimeoutMs?: number;
 }
 
 export interface TurnResult {
@@ -103,7 +106,7 @@ export class ActionSession {
   // ---------------------------------------------------------------- helpers
 
   private act(taskId: string, action: EnvAction, stepId?: string): Promise<PerformResult> {
-    return performAction({ kernel: this.kernel, env: this.env, now: this.now }, { taskId, action, stepId });
+    return performAction({ kernel: this.kernel, env: this.env, now: this.now, actTimeoutMs: this.opts.actTimeoutMs, readTimeoutMs: this.opts.readTimeoutMs }, { taskId, action, stepId });
   }
 
   /** Make sure the kernel knows the page the environment is on (navigation events are async). */

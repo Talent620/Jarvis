@@ -49,6 +49,7 @@ export async function summarizeUntrusted(model: IsolatedModel, content: Tagged<s
   const origin: Provenance = content.provenance;
   const data = `DANE (${isUntrusted(origin) ? "niezaufane" : "lokalne"}, ${origin}):\n${quoteData(content.value, MAX_DATA_CHARS)}`;
   const out = await model.complete({ system: SUMMARY_SYSTEM, data, maxTokens: 160 }, signal);
-  const clean = String(out ?? "").replace(/\s+/g, " ").trim();
+  // Anything but text (an object, a JSON blob) is not a summary.
+  const clean = typeof out === "string" && !/^\s*[[{]/.test(out) ? out.replace(/\s+/g, " ").trim() : "";
   return { value: Array.from(clean).slice(0, MAX_SUMMARY_CHARS).join(""), provenance: "TOOL_OUTPUT" };
 }

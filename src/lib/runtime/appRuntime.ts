@@ -11,6 +11,7 @@ import type { KernelState } from "./reducer";
 import { GmailMailService } from "./gmailService";
 import { JarvisRuntime, type RuntimeTurn, type Speaker } from "./lanes/runtime";
 import type { SessionOptions } from "./session";
+import { exportDiagnostics, statusView, type Diagnostics, type StatusView } from "./diagnostics";
 import { SkillLibrary, parseRememberSkill, parseRunSkill, type Skill, type SkillStore } from "./skills";
 import { normalizeUtterance } from "./util";
 import { BatchSTT, DeepgramSTT, FallbackSTT } from "./voice/adapters";
@@ -24,6 +25,49 @@ interface AppRuntime {
 }
 
 let runtime: Promise<AppRuntime> | null = null;
+let current: AppRuntime | null = null;
+type Watcher = (c: AppRuntimeControls) => (() => void) | void;
+/** Watchers still waiting for the runtime, and cleanups of those already called. */
+const waiting = new Set<Watcher>();
+const cleanups = new Map<Watcher, (() => void) | void>();
+
+/** What the status panel may do with the runtime: look, press a control, export diagnostics. */
+export interface AppRuntimeControls {
+  view(): StatusView;
+  subscribe(fn: () => void): () => void;
+  press(control: "pause" | "resume" | "stop"): void;
+  diagnostics(): Diagnostics;
+}
+
+const ACTION_MODEL = "polecenia bez modelu (gramatyka PL), odczyt zwrotny";
+
+function controlsOf(a: AppRuntime): AppRuntimeControls {
+  const rt = a.runtime;
+  return {
+    view: () => statusView(a.kernel.state, { now: Date.now(), environment: rt.environmentId, model: ACTION_MODEL }),
+    subscribe: (fn) => a.kernel.subscribe(() => fn()),
+    press: (c) => { rt.press(c); },
+    diagnostics: () => exportDiagnostics({
+      state: a.kernel.state, turns: rt.turns, skills: rt.listSkills(), environment: rt.environmentId, now: Date.now(),
+      latency: voiceSpeaker ? voiceSpeaker.latency.summary() : undefined,
+    }),
+  };
+}
+
+/**
+ * Call `fn` once the app runtime exists (at once if it already does). It never starts the runtime
+ * itself: the panel appears only after the user gave the runtime something to do.
+ */
+export function whenAppRuntime(fn: Watcher): () => void {
+  if (current) cleanups.set(fn, fn(controlsOf(current)));
+  else waiting.add(fn);
+  return () => {
+    waiting.delete(fn);
+    const cleanup = cleanups.get(fn);
+    cleanups.delete(fn);
+    if (typeof cleanup === "function") cleanup();
+  };
+}
 let uiSpeaker: Speaker | null = null;
 let voiceSpeaker: VoiceSession | null = null;
 
@@ -110,7 +154,10 @@ export function getAppRuntime(): Promise<AppRuntime> {
       // address book yet: recipients come from the user's words ("na adres ...") until one exists.
       const { gmailTransport } = await import("../google");
       const transport = gmailTransport();
-      return createAppRuntime(desktopEnvBridge(), forwardingSpeaker, { mail: transport ? new GmailMailService(transport) : undefined });
+      const app = await createAppRuntime(desktopEnvBridge(), forwardingSpeaker, { mail: transport ? new GmailMailService(transport) : undefined });
+      current = app;
+      for (const fn of [...waiting]) { waiting.delete(fn); cleanups.set(fn, fn(controlsOf(app))); }
+      return app;
     })();
     runtime.catch(() => { runtime = null; });
   }

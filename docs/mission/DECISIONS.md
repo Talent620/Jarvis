@@ -205,3 +205,17 @@ each one through the action lane again, so every step is resolved and verified a
 failure disables the skill; a missing precondition or "stop" does not. A send step is handed over
 and the replay ends there: the consent question is the user's, a skill never answers it. Skills
 live in local storage (`jarvis.skills.v1`); malformed entries are ignored.
+
+## D-031 Status panel, diagnostics export, tool and model deadlines
+The "co robię" panel is a pure view of the kernel state (`statusView`): goal, step, target,
+environment, place, time, the last read-back evidence and pending consent, with PAUZA / WZNÓW /
+STOP going through `JarvisRuntime.press`, the same control path as the spoken words. It appears in
+the desktop app only after the runtime exists; it never starts the runtime. The diagnostics export
+is a local JSON download: mail addresses, phone numbers, keys and URL secrets are masked, quoted
+screen text (selection, clipboard, mail body inside evidence) becomes its length, what JARVIS said
+is reduced to its length, the page is reduced to its host. Nothing is uploaded.
+Every `env.act` and read-back now has a deadline (30 s and 10 s by default): a hung tool is
+aborted through its signal; a local step then ends FAILED unless the read-back proves it, an
+external one ends UNKNOWN_AFTER_ATTEMPT and is not retried. Conversation and summary models get a
+15 s deadline; a reply that is not usable text (not a string, empty, a JSON or tool-call blob) is
+neither spoken nor parsed, and is clipped to 600 characters otherwise.
