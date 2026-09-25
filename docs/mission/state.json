@@ -162,6 +162,33 @@
       ],
       "last_commit": "4599b20",
       "next_action": "Done. On the user machine: npm run jarvis:acceptance -- --mode=local-desktop; wire a vision model only after local acceptance."
+    },
+    {
+      "id": "M11",
+      "status": "done",
+      "evidence": [
+        "tests/coder/executor.test.ts 22/22 on fake Codex and Claude CLIs that speak the real JSONL protocols (tests/fixtures/coder): 1 Codex detection (ready, needs_auth from `codex login status`, unavailable), 2 fallback AUTO -> Claude -> local -> NEEDS_CAPABILITY, 3-7 start, streamed events, file change, test command, completion CONFIRMED by the repo's own `npm run test`, 8 agent says done but test red -> FAILED, partial, no checks -> ATTEMPTED, 9 stop kills agent and grandchild even when SIGINT is ignored (no orphan), 10 restart -> INTERRUPTED_AFTER_RESTART and the old process terminated, 11 dirty repo kept, listed to the agent, overlaps reported, 12 write outside the workspace -> BLOCKED, 13 force push / reset --hard / push without permission -> BLOCKED, 14 malicious README is data, 15 secrets redacted in events, history and result, agent env allow-listed, 16 timeout, 17 crash -> UNKNOWN_AFTER_ATTEMPT with validation, 24 one writer per workspace and one agent per task id, Claude instruction delivered now, Codex instruction as next turn via `exec resume <thread>`, 'nie rób release' enforced, pause via SIGSTOP, local backend patch via `git apply --check` CONFIRMED and a non-patch answer FAILED",
+        "tests/coder/units.test.ts 9/9: parsers (Codex item and legacy msg events, Claude stream-json, junk ignored), command classes, test counts (vitest, jest, pytest, cargo), guard (17 forbidden commands, allowed ones, constraints), paths, redaction (keys, tokens, passwords, URL credentials, PEM; SHAs kept), env allow-list, project detection (never invented), workspace lookup by Polish forms, home/root refused, lock, verdict table",
+        "Codex CLI 0.157.0 checked in a scratch folder (no login, no model call): `codex exec --json`, `exec resume`, `-s`, `-C`, `login status` exit codes and event names from the binary",
+        "vitest 365 files / 3331 tests exit 0; tsc -b, eslint ., npm run build, scan:secrets exit 0; desktop suite 8/8 after the shared runner change",
+        "real Codex / Claude login and a real task on the user's machine: NEEDS_HARDWARE (M13 acceptance --mode=codex)"
+      ],
+      "last_commit": "",
+      "next_action": "Done. M12: coding task in the kernel and UI."
+    },
+    {
+      "id": "M12",
+      "status": "in_progress",
+      "evidence": [],
+      "last_commit": "",
+      "next_action": "Coding task in the kernel, IPC host, live store, RuntimeStatusPanel CODER, CODE UI, voice stop/amend/status/resume, restart recovery."
+    },
+    {
+      "id": "M13",
+      "status": "todo",
+      "evidence": [],
+      "last_commit": "",
+      "next_action": "Roles through agentRun/agentPipeline, cost router, reviewer loop, jarvis:coder:acceptance, final adversarial review."
     }
   ]
 }

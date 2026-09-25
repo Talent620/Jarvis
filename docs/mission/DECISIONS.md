@@ -277,3 +277,32 @@ stays the mission PR, its description is updated and a comment records this deci
   "Słuchaj ponownie" button; the recognizer name is read live; a failed start stops the mic.
 - The Deepgram key is covered by encryption at rest like the other keys.
 - One BrowserBridge host for the app's lifetime; a failed start is retried on the same server.
+
+## D-036 Coding agents: CLIs in the main process, structured output, JARVIS decides the truth
+- The CoderExecutor lives in the Electron main process (`src/node/coder/`, pure Node, thin IPC
+  later) because it spawns processes. Codex runs as `codex exec --json` (JSONL item events; the
+  older `msg` events are parsed too), Claude Code as `claude -p --output-format stream-json
+  --input-format stream-json`; nothing depends on colored terminal text. The prompt goes through
+  stdin, never argv. Codex 0.157.0 was installed only into the session scratch folder to read
+  `--help`, `login status` and the event names from the binary; no login, no model call (the
+  proxy refuses api.openai.com anyway).
+- Processes run in their own process group with an allow-listed environment (PATH, HOME, locale,
+  proxy, and only the backend's own login variables). Stop is SIGINT, then SIGTERM, then SIGKILL
+  of the group. Pause is SIGSTOP/SIGCONT of the group on POSIX; on Windows pause is unsupported.
+- Instructions while working: Claude Code takes them now (stream-json input); Codex exec cannot,
+  so they run as the next turn of the same thread (`codex exec resume <thread>`). Constraints
+  ("nie rób release") are enforced by the guard at once for every backend.
+- The guard stops a task on force push, reset --hard, clean -f, rebase, amend, discarding
+  changes, deleting branches, any push without permission, push to main/master, publishing,
+  releases, deploys, reading secrets, and files outside the workspace or inside .git. The agent's
+  own sandbox (Codex workspace-write without network, Claude's disallowed tools) is the first wall.
+- Truth: `decideVerdict` in `src/lib/runtime/coder/verdict.ts`. CONFIRMED only when the repo's own
+  checks (package.json scripts, Makefile targets, Cargo, pytest, go; never invented) all pass after
+  the task and history is intact; some passing is FAILED+partial; no checks is ATTEMPTED; a
+  read-only role is CONFIRMED only if nothing changed.
+- Files dirty before the task are hashed; they count as changed only if their content changed, and
+  such overlaps are reported (never auto-committed).
+- The local backend (Ollama) only proposes a unified diff that must pass `git apply --check`; it
+  runs no commands.
+- Windows: spawning `codex.cmd` without a shell is not supported by Node; the Codex adapter on
+  Windows is NEEDS_HARDWARE until tested there.
