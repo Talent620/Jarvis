@@ -3,7 +3,7 @@
 // Progressive local acceptance (mission M6). Writes reports/acceptance-<time>.md and .json and,
 // on a mission branch (claude/*), commits and pushes only those report files.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs, publishPlan, renderMarkdown, reportStem, runSteps, verdictOf, type AcceptanceReport } from "../../src/node/acceptance/core";
@@ -11,6 +11,7 @@ import { probeCapabilities } from "../../src/node/acceptance/capabilities";
 import { acceptanceSteps } from "../../src/node/acceptance/steps";
 import { backendGmailTransport } from "../../src/node/acceptance/gmailBackend";
 import { ManagedBrowser } from "../../src/node/managedBrowser";
+import { LinuxDesktopEnvironment } from "../../src/node/linux/environment";
 import { resolveBrowserExecutable } from "../../src/node/browserExecutable";
 import { GmailMailService } from "../../src/lib/runtime/gmailService";
 import { MockMail } from "../../tests/helpers/mockMail";
@@ -29,7 +30,7 @@ async function main(): Promise<number> {
   mkdirSync("reports", { recursive: true });
   const chromium = resolveBrowserExecutable();
   const capabilities = await probeCapabilities({
-    mode: args.mode, env: process.env, platform: process.platform, nodeVersion: process.version, chromium, which,
+    mode: args.mode, env: process.env, platform: process.platform, nodeVersion: process.version, chromium, which, exists: existsSync,
     reach: async (url) => {
       // Only a real answer from the site counts; a proxy refusal (403/407) means blocked.
       try { const r = await fetch(url, { method: "HEAD", redirect: "manual", signal: AbortSignal.timeout(5000) }); return r.status >= 200 && r.status < 400; } catch { return false; }
@@ -63,6 +64,7 @@ async function main(): Promise<number> {
     },
     shotPath: (id) => `${stem}-${id}.png`,
     readSystemClipboard,
+    desktop: process.platform === "linux" ? () => new LinuxDesktopEnvironment() : undefined,
   });
   const results = await runSteps(steps);
   for (const p of profiles) rmSync(p, { recursive: true, force: true });

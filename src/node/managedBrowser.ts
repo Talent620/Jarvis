@@ -559,9 +559,15 @@ export class ManagedBrowser implements ComputerEnvironment {
       if (q.kind === "selection") return { text: "", visible: false } satisfies SelectionRead;
       if (q.kind === "clipboard") return { ok: false, error: "browser is not running" } satisfies ClipboardRead;
       if (q.kind === "element") return { found: false } satisfies ElementRead;
-      return { count: 0, items: [] } satisfies CollectionRead;
+      if (q.kind === "collection") return { count: 0, items: [] } satisfies CollectionRead;
     }
     switch (q.kind) {
+      // Desktop reads belong to the desktop environment, not to the managed browser.
+      case "window":
+      case "focused":
+        return { found: false, error: "not a desktop environment" };
+      case "windows":
+        return { windows: [], error: "not a desktop environment" };
       case "page": {
         const info = await this.iso(() => ({
           url: location.href,

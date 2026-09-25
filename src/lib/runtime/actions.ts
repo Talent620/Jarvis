@@ -38,7 +38,7 @@ export interface PerformResult {
 }
 
 /** A second attempt would repeat the effect (scroll twice, open another item), not retry it. */
-const NOT_REPEATABLE = new Set<EnvAction["kind"]>(["browser.open", "browser.scroll"]);
+const NOT_REPEATABLE = new Set<EnvAction["kind"]>(["browser.open", "browser.scroll", "desktop.type", "desktop.keys"]);
 
 type FailTruth ="SIMULATED" | "UNKNOWN_AFTER_ATTEMPT" | "FAILED" | "BLOCKED" | "NEEDS_PERMISSION" | "NEEDS_HARDWARE" | "NEEDS_CAPABILITY";
 
@@ -140,6 +140,11 @@ export async function performAction(ctx: ActionContext, spec: PerformSpec): Prom
     }
     lastTruth = v.truth;
     lastReason = v.reason ?? result.error ?? "read-back mismatch";
+    if (v.unverifiable && !spec.external) {
+      // Done, and nothing can prove or disprove it: ATTEMPTED is the honest end state.
+      step("ATTEMPTED", lastReason);
+      return { actionId, truth: "ATTEMPTED", evidence: "", reason: lastReason, result, after, attempts: attempt };
+    }
     if (isPrecondition(v.truth)) break;
   }
   // Local action not confirmed after the attempts: FAILED. An external one may have happened.

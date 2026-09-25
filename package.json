@@ -38,7 +38,8 @@
     "quality": "node scripts/quality-gate.mjs",
     "quality:all": "node scripts/quality-gate.mjs --sales",
     "perf:store": "vite-node scripts/perf/store-bench.ts",
-    "jarvis:acceptance": "vite-node scripts/acceptance/run.ts --"
+    "jarvis:acceptance": "vite-node scripts/acceptance/run.ts --",
+    "test:desktop": "vitest run --config vitest.desktop.config.ts"
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",

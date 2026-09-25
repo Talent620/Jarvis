@@ -25,7 +25,12 @@ export type EnvAction =
   | { kind: "browser.focus"; target: ElementTarget }
   | { kind: "text.select"; target: ElementTarget; start: number; end: number; expected: string }
   | { kind: "clipboard.copy"; expected: string; reselect?: { target: ElementTarget; start: number; end: number } }
-  | { kind: "browser.scrollTo"; y: number };
+  | { kind: "browser.scrollTo"; y: number }
+  // Desktop (Linux adapters, M7; Windows UIA later). Key combos like "ctrl+c".
+  | { kind: "desktop.keys"; keys: string; expectClipboard?: string }
+  | { kind: "desktop.type"; text: string }
+  | { kind: "window.activate"; windowId: string }
+  | { kind: "clipboard.write"; text: string };
 
 export type EnvActionKind = EnvAction["kind"];
 
@@ -59,7 +64,10 @@ export type ReadQuery =
   | { kind: "selection" }
   | { kind: "clipboard" }
   | { kind: "element"; target: ElementTarget }
-  | { kind: "collection"; itemKind: string };
+  | { kind: "collection"; itemKind: string }
+  | { kind: "window" }
+  | { kind: "windows" }
+  | { kind: "focused" };
 
 export interface PageRead {
   open: boolean;
@@ -99,7 +107,36 @@ export interface CollectionRead {
   items: ElementInfo[];
 }
 
-export type ReadResult = PageRead | SelectionRead | ClipboardRead | ElementRead | CollectionRead;
+/** A top-level window of the desktop. */
+export interface WindowInfo {
+  id: string;
+  title: string;
+  app?: string;
+  pid?: number;
+}
+
+export interface WindowRead {
+  found: boolean;
+  window?: WindowInfo;
+  error?: string;
+}
+
+export interface WindowListRead {
+  windows: WindowInfo[];
+  error?: string;
+}
+
+/** The element with keyboard focus (accessibility tree). */
+export interface FocusedRead {
+  found: boolean;
+  app?: string;
+  role?: string;
+  name?: string;
+  text?: string;
+  error?: string;
+}
+
+export type ReadResult = PageRead | SelectionRead | ClipboardRead | ElementRead | CollectionRead | WindowRead | WindowListRead | FocusedRead;
 
 /** Perception events pushed by the environment (no screenshot polling). */
 export type EnvEvent =
@@ -107,6 +144,7 @@ export type EnvEvent =
   | { type: "dom"; pageId: string; change: "append" | "rerender" | "major"; detail?: string }
   | { type: "scroll"; pageId: string; scrollY: number }
   | { type: "selection"; pageId: string; text: string }
+  | { type: "window"; windowId: string; title: string; app?: string }
   | { type: "closed" };
 
 export interface ComputerEnvironment {

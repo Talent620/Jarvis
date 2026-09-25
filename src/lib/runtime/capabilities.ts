@@ -13,8 +13,11 @@ export const KNOWN_CAPABILITIES = [
   "linux.input.portal",
   "linux.input.authorized",
   "linux.input.ydotool",
+  "linux.input.xdotool",
   "desktop.clipboard",
+  "desktop.primary_selection",
   "desktop.active_window",
+  "desktop.window_list",
   "windows.uia",
   "android.accessibility.tree",
   "voice.mic",
@@ -39,6 +42,7 @@ export type Requirement = CapabilityId[][];
 
 /** What each action kind needs. Unknown kinds need nothing extra (pure reasoning steps). */
 const BROWSER: CapabilityId[] = ["browser.managed.semantic", "browser.bridge"];
+const DESKTOP_INPUT: CapabilityId[] = ["linux.input.portal", "linux.input.authorized", "linux.input.ydotool", "linux.input.xdotool", "windows.uia"];
 const TEXT_ENVS: CapabilityId[] = ["browser.managed.semantic", "browser.bridge", "linux.atspi", "windows.uia", "android.accessibility.tree"];
 
 export const ACTION_REQUIREMENTS: Record<string, Requirement> = {
@@ -53,7 +57,10 @@ export const ACTION_REQUIREMENTS: Record<string, Requirement> = {
   "text.select": [TEXT_ENVS],
   "clipboard.copy": [["browser.managed.semantic", "desktop.clipboard"]],
   "mail.send": [["mail.send"], ["mail.sent_readback"]],
-  "desktop.type": [["linux.input.portal", "linux.input.authorized", "linux.input.ydotool", "windows.uia"]],
+  "desktop.type": [DESKTOP_INPUT],
+  "desktop.keys": [DESKTOP_INPUT],
+  "window.activate": [["desktop.active_window"]],
+  "clipboard.write": [["desktop.clipboard", "browser.managed.semantic"]],
   "voice.listen": [["voice.mic"], ["voice.streaming_stt", "voice.batch_stt"]],
 };
 

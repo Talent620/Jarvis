@@ -98,7 +98,7 @@ describe("acceptance steps on the in-memory site", () => {
     const r = await runSteps(acceptanceSteps({ args: parseArgs(["--runs=2"]), capabilities: caps, startSite: site, makeBrowser: browser, mail: () => mail, shotPath: (id) => `reports/acceptance-t-${id}.png` }));
     expect(r.map((x) => [x.id, x.status])).toEqual([
       ["capabilities", "PASS"], ["browser", "PASS"], ["golden-1-7", "PASS"], ["selection-clipboard", "PASS"],
-      ["voice", "SIMULATED"], ["full-1-8", "PASS"], ["cleanup", "PASS"],
+      ["voice", "SIMULATED"], ["full-1-8", "PASS"], ["desktop", "SKIP"], ["cleanup", "PASS"],
     ]);
     expect(mail.sent).toHaveLength(1);
   });
@@ -115,6 +115,30 @@ describe("acceptance steps on the in-memory site", () => {
   it("--send without a recipient or a Gmail backend is BLOCKED, not attempted", async () => {
     const r = await runSteps(acceptanceSteps({ args: parseArgs(["--mode=managed-browser", "--send"]), capabilities: caps, startSite: site, makeBrowser: browser, mail: () => { throw new Error("must not be built"); }, shotPath: (id) => id }));
     expect(r.find((x) => x.id === "full-1-8")).toMatchObject({ status: "BLOCKED" });
+  });
+
+  it("local-desktop: the clipboard round trip passes and the user's clipboard is restored", async () => {
+    let clip = "user text";
+    const writes: string[] = [];
+    const desktop = {
+      id: "desk",
+      capabilities: async () => [{ id: "desktop.clipboard", status: "available" as const, checkedAt: 0 }, { id: "linux.atspi", status: "needs_permission" as const, checkedAt: 0 }],
+      act: async (a: { kind: string; text?: string }) => { if (a.kind === "clipboard.write") { writes.push(a.text!); clip = a.text!; } return { status: "done" as const }; },
+      read: async (q: { kind: string }) => (q.kind === "clipboard" ? { ok: true, text: clip } : { found: true, window: { id: "0x1", title: "Terminal", app: "foot" } }),
+      onEvent: () => () => undefined, close: async () => undefined,
+    };
+    const r = await runSteps(acceptanceSteps({ args: parseArgs(["--mode=local-desktop"]), capabilities: caps, startSite: site, makeBrowser: browser, mail: () => new MockMail(), shotPath: (id) => id, desktop: () => desktop as never }));
+    const step = r.find((x) => x.id === "desktop")!;
+    expect(step.status).toBe("PASS");
+    expect(step.evidence).toMatch(/clipboard round trip ok \(restored\); active window "Terminal" \(foot\); not available: linux.atspi=needs_permission/);
+    expect(clip).toBe("user text");
+    expect(writes).toHaveLength(2);
+  });
+
+  it("local-desktop without a display: the desktop step is NEEDS_HARDWARE", async () => {
+    const desktop = { id: "d", capabilities: async () => [{ id: "desktop.clipboard", status: "needs_hardware" as const, checkedAt: 0 }], act: async () => ({ status: "done" as const }), read: async () => ({ ok: false }), onEvent: () => () => undefined, close: async () => undefined };
+    const r = await runSteps(acceptanceSteps({ args: parseArgs(["--mode=local-desktop"]), capabilities: caps, startSite: site, makeBrowser: browser, mail: () => new MockMail(), shotPath: (id) => id, desktop: () => desktop as never }));
+    expect(r.find((x) => x.id === "desktop")?.status).toBe("NEEDS_HARDWARE");
   });
 
   it("the draft-only mail refuses to send", async () => {

@@ -10,6 +10,8 @@ export interface ProbeDeps {
   nodeVersion: string;
   chromium: string | null;
   which: (bin: string) => boolean;
+  /** File presence (helpers outside PATH, e.g. /usr/libexec/at-spi-bus-launcher). */
+  exists?: (path: string) => boolean;
   /** Network reachability of a URL (only used in managed-browser mode). */
   reach?: (url: string) => Promise<boolean>;
 }
@@ -30,7 +32,8 @@ export async function probeCapabilities(d: ProbeDeps): Promise<Capability[]> {
     add("clipboard.system", clip ? "available" : "needs_hardware", clip ?? "wl-clipboard or xclip");
     const input = ["ydotool", "xdotool"].find((b) => d.which(b));
     add("input.synthetic", input ? "available" : "needs_hardware", input ?? "ydotool (Wayland) or xdotool (X11); portal/libei in M7");
-    add("accessibility.atspi", d.env.AT_SPI_BUS_ADDRESS || d.which("at-spi-bus-launcher") ? "available" : "needs_hardware", "AT-SPI bus (M7 adapter)");
+    const atspi = !!d.env.AT_SPI_BUS_ADDRESS || d.which("at-spi-bus-launcher") || ["/usr/libexec/at-spi-bus-launcher", "/usr/lib/at-spi2-core/at-spi-bus-launcher"].some((p) => d.exists?.(p));
+    add("accessibility.atspi", atspi ? "available" : "needs_hardware", "AT-SPI bus (screen reader support)");
     add("audio.microphone", d.which("arecord") || d.which("pw-record") ? "available" : "needs_hardware", "presence of a capture tool only; the device is checked in the voice step");
   } else {
     add("desktop.adapters", "needs_hardware", `${d.platform}: Windows UIA / macOS adapters are M9`);

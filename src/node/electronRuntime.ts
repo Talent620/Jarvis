@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { resolveBrowserExecutable } from "./browserExecutable";
 import { createEnvHost, type EnvHost } from "./envHost";
 import { ManagedBrowser } from "./managedBrowser";
+import { CompositeEnvironment } from "./compositeEnvironment";
+import { LinuxDesktopEnvironment } from "./linux/environment";
 import type { EnvEvent } from "../lib/runtime/env/types";
 
 export interface ManagedBrowserHost extends EnvHost {
@@ -27,6 +29,8 @@ export function createManagedBrowserHost(opts: ManagedBrowserHostOptions): Manag
     headless: opts.headless ?? false,
     readClipboard: opts.readClipboard,
   });
-  const host = createEnvHost(browser);
-  return { ...host, onEvent: (l) => browser.onEvent(l) };
+  // On Linux the same runtime also reaches the desktop (clipboard, windows, input, AT-SPI).
+  const env = process.platform === "linux" ? new CompositeEnvironment(browser, new LinuxDesktopEnvironment({ pollMs: 1000 })) : browser;
+  const host = createEnvHost(env);
+  return { ...host, onEvent: (l) => env.onEvent(l) };
 }

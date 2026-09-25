@@ -94,6 +94,9 @@ export class ActionSession {
       case "closed":
         k.dispatch({ type: "ObservationReceived", env: this.env.id, kind: "navigation", page: { id: "closed", url: "about:closed", title: "" } });
         return;
+      case "window":
+        k.dispatch({ type: "WindowFocused", windowId: e.windowId, app: e.app ?? "", title: e.title });
+        return;
     }
   };
 

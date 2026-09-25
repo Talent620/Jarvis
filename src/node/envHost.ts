@@ -44,6 +44,10 @@ const ACTIONS: Record<EnvAction["kind"], (a: Record<string, unknown>) => boolean
   "text.select": (a) => target(a.target) && int(a.start, 0, MAX_OFFSET) && int(a.end, 0, MAX_OFFSET) && (a.end as number) >= (a.start as number) && str(a.expected, MAX_TEXT),
   "clipboard.copy": (a) => str(a.expected, MAX_TEXT) && (a.reselect === undefined || (isObj(a.reselect) && target(a.reselect.target) && int(a.reselect.start, 0, MAX_OFFSET) && int(a.reselect.end, 0, MAX_OFFSET))),
   "browser.scrollTo": (a) => typeof a.y === "number" && Number.isFinite(a.y) && a.y >= 0 && a.y <= 10_000_000,
+  "desktop.keys": (a) => str(a.keys, 40) && /^[a-z0-9]+(\+[a-z0-9]+)*$/i.test(a.keys as string) && optStr(a.expectClipboard, MAX_TEXT),
+  "desktop.type": (a) => str(a.text, 2000) && (a.text as string).length > 0,
+  "window.activate": (a) => str(a.windowId, 100) && (a.windowId as string).length > 0,
+  "clipboard.write": (a) => str(a.text, MAX_TEXT),
 };
 
 const READS: Record<ReadQuery["kind"], (q: Record<string, unknown>) => boolean> = {
@@ -52,6 +56,9 @@ const READS: Record<ReadQuery["kind"], (q: Record<string, unknown>) => boolean> 
   clipboard: () => true,
   element: (q) => target(q.target),
   collection: (q) => str(q.itemKind, 40),
+  window: () => true,
+  windows: () => true,
+  focused: () => true,
 };
 
 export function validateEnvRequest(req: unknown): EnvRequest {

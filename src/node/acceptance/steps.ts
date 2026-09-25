@@ -32,6 +32,8 @@ export interface AcceptanceDeps {
   shotPath: (stepId: string) => string;
   /** The OS clipboard (local-desktop), when a tool for it exists. */
   readSystemClipboard?: () => Promise<string | null>;
+  /** The desktop adapter (local-desktop on Linux). */
+  desktop?: () => ComputerEnvironment;
 }
 
 /** Mail service for draft mode: any send attempt is a bug, so it throws. */
@@ -168,9 +170,11 @@ export function acceptanceSteps(d: AcceptanceDeps): StepSpec[] {
         if (!copy || !select) return { status: "FAIL", error: "selection or copy not confirmed" };
         const evidence = `${select.evidence}; ${copy.evidence}`;
         if (d.args.mode !== "local-desktop") return { status: "PASS", evidence };
-        if (!d.readSystemClipboard) return { status: "NEEDS_HARDWARE", evidence: `${evidence}; system clipboard tool missing (wl-clipboard or xclip)` };
-        const sys = await d.readSystemClipboard();
-        return sys === "Łódź" ? { status: "PASS", evidence: `${evidence}; system clipboard "Łódź"` } : { status: "FAIL", error: `system clipboard is ${JSON.stringify(sys)}` };
+        // In local-desktop the copy read-back already came from the OS clipboard, while the
+        // browser that owns the X11 selection was still open (without a clipboard manager the
+        // content disappears when it closes, so a later read would prove nothing).
+        if (!d.readSystemClipboard) return { status: "NEEDS_HARDWARE", evidence: `${evidence}; system clipboard tool missing (wl-clipboard or xclip), browser clipboard used` };
+        return { status: "PASS", evidence: `${evidence} (read from the system clipboard during the run)` };
       },
     },
     {
@@ -212,7 +216,35 @@ export function acceptanceSteps(d: AcceptanceDeps): StepSpec[] {
       },
     },
     {
-      id: "cleanup", title: "7. Cleanup",
+      id: "desktop", title: "7. Desktop adapters (clipboard round trip, active window)", needs: ["capabilities"],
+      run: async () => {
+        if (d.args.mode !== "local-desktop") return { status: "SKIP", evidence: "local-desktop mode only" };
+        if (!d.desktop) return { status: "NEEDS_HARDWARE", evidence: "no desktop adapter for this platform (Linux only; Windows and Android are M9)" };
+        const env = d.desktop();
+        try {
+          const caps = await env.capabilities();
+          const missing = caps.filter((c) => c.status !== "available").map((c) => `${c.id}=${c.status}`);
+          const clipOk = caps.find((c) => c.id === "desktop.clipboard")?.status === "available";
+          if (!clipOk) return { status: "NEEDS_HARDWARE", evidence: `desktop capabilities: ${missing.join(", ")}` };
+          // Round trip on the real clipboard, then put back what was there.
+          const before = (await env.read({ kind: "clipboard" })) as { ok: boolean; text?: string };
+          const probe = `JARVIS acceptance ${Date.now()}`;
+          await env.act({ kind: "clipboard.write", text: probe });
+          const after = (await env.read({ kind: "clipboard" })) as { ok: boolean; text?: string };
+          if (before.ok && before.text !== undefined) await env.act({ kind: "clipboard.write", text: before.text });
+          if (!after.ok || after.text !== probe) return { status: "FAIL", error: `clipboard read back ${JSON.stringify(after.text)}` };
+          const win = (await env.read({ kind: "window" })) as { found: boolean; window?: { title: string; app?: string } };
+          return {
+            status: "PASS",
+            evidence: `clipboard round trip ok (restored); active window ${win.found ? `"${win.window?.title}" (${win.window?.app ?? "?"})` : "unreadable"}${missing.length ? `; not available: ${missing.join(", ")}` : ""}`,
+          };
+        } finally {
+          await env.close();
+        }
+      },
+    },
+    {
+      id: "cleanup", title: "8. Cleanup",
       run: async () => {
         await (site as { close: () => Promise<void> } | null)?.close().catch(() => undefined);
         return { status: "PASS", evidence: "site and browsers closed" };

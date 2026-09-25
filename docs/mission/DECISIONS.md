@@ -157,3 +157,16 @@ Barge-in: a non-echo user partial (stability >= 0.5, not a backchannel like "mhm
 stops speech at once. Deepgram authenticates with the documented browser subprotocol; OpenAI
 Realtime needs an ephemeral token from a backend, so the app chain is Deepgram (when a key
 exists) then Whisper.
+
+## D-027 Linux adapters: command-line tools and an AT-SPI helper, portal reported not faked
+The Linux desktop environment (`src/node/linux/`) drives wl-clipboard or xclip/xsel, xdotool and
+wmctrl (X11), swaymsg or hyprctl (Wayland), ydotool, and AT-SPI through a small Python helper on
+gi Atspi 2.0, always as argv arrays with timeouts. GNOME and KDE on Wayland expose no active
+window without a shell extension: reported missing, not guessed. Wayland input through the
+RemoteDesktop portal needs the user's consent and a libei helper: reported NEEDS_PERMISSION
+until that helper exists; ydotool is "degraded" (needs ydotoold and /dev/uinput). A desktop key
+combo without a declared read-back ends ATTEMPTED, never CONFIRMED or FAILED. On X11 the
+clipboard belongs to the app that copied: without a clipboard manager it is gone when that app
+exits, so acceptance proves the system clipboard during the run, not afterwards. Real tests run
+on a throwaway Xvfb session with openbox, the AT-SPI bus and a GTK app (`npm run test:desktop`,
+CI job `desktop`).

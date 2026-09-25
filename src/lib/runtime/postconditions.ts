@@ -5,7 +5,7 @@
 import { climbLadder } from "../horizon/truthLadder";
 import type { Truth } from "./truth";
 import type {
-  ActResult, ClipboardRead, CollectionRead, ElementRead, EnvAction, PageRead, ReadQuery, ReadResult, SelectionRead,
+  ActResult, ClipboardRead, CollectionRead, ElementRead, EnvAction, FocusedRead, PageRead, ReadQuery, ReadResult, SelectionRead, WindowRead,
 } from "./env/types";
 import { preview } from "./util";
 
@@ -13,6 +13,8 @@ export interface Verification {
   truth: Truth;
   evidence: string;
   reason?: string;
+  /** The action has no read-back at all: done means ATTEMPTED, never FAILED or CONFIRMED. */
+  unverifiable?: boolean;
 }
 
 /** Which read-back proves the action's end condition. */
@@ -22,6 +24,10 @@ export function readQueryFor(a: EnvAction): ReadQuery {
     case "browser.focus": return { kind: "element", target: a.target };
     case "text.select": return { kind: "selection" };
     case "clipboard.copy": return { kind: "clipboard" };
+    case "clipboard.write": return { kind: "clipboard" };
+    case "desktop.keys": return a.expectClipboard !== undefined ? { kind: "clipboard" } : { kind: "window" };
+    case "desktop.type": return { kind: "focused" };
+    case "window.activate": return { kind: "window" };
     default: return { kind: "page" };
   }
 }
@@ -123,7 +129,30 @@ export function verify(a: EnvAction, before: ReadResult | undefined, after: Read
       if (!c.ok) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: `clipboard unreadable: ${c.error ?? "unknown"}` };
       return ladder(result, { text: a.expected }, { text: c.text }, `clipboard "${preview(c.text ?? "", 40)}"`, now);
     }
+    case "clipboard.write": {
+      const c = after as ClipboardRead;
+      if (!c.ok) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: `clipboard unreadable: ${c.error ?? "unknown"}` };
+      return ladder(result, { text: a.text }, { text: c.text }, `clipboard "${preview(c.text ?? "", 40)}"`, now);
+    }
+    case "desktop.keys": {
+      // Keys have no read-back of their own; with an expected clipboard they do (ctrl+c).
+      if (a.expectClipboard === undefined) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: "keys sent, no read-back declared", unverifiable: result.status === "done" };
+      const c = after as ClipboardRead;
+      if (!c.ok) return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: `clipboard unreadable: ${c.error ?? "unknown"}` };
+      return ladder(result, { text: a.expectClipboard }, { text: c.text }, `${a.keys} -> clipboard "${preview(c.text ?? "", 40)}"`, now);
+    }
+    case "desktop.type": {
+      const f = after as FocusedRead;
+      if (!f.found || typeof f.text !== "string") return { truth: result.status === "done" ? "ATTEMPTED" : "FAILED", evidence: "", reason: "focused text unreadable" };
+      const typed = f.text.normalize("NFC").includes(a.text.normalize("NFC"));
+      return ladder(result, { typed: true }, { typed }, `focused ${f.role ?? "element"} now contains "${preview(a.text, 30)}"`, now);
+    }
+    case "window.activate": {
+      const w = after as WindowRead;
+      const active = w.found && w.window?.id === a.windowId;
+      return ladder(result, { active: true }, { active }, `active window ${w.window?.id ?? "?"} "${preview(w.window?.title ?? "", 40)}"`, now);
+    }
     default:
-      return { truth: "ATTEMPTED", evidence: "", reason: "no postcondition" };
+      return { truth: "ATTEMPTED", evidence: "", reason: "no postcondition", unverifiable: result.status === "done" };
   }
 }

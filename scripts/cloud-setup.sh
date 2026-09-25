@@ -99,4 +99,18 @@ else
   log "xvfb: present"
 fi
 
+# 4. Linux desktop adapter test tools (npm run test:desktop): X11 tools, AT-SPI, GTK.
+DESKTOP_PKGS="dbus-x11 openbox xdotool xclip wmctrl at-spi2-core gir1.2-atspi-2.0 gir1.2-gtk-3.0 python3-gi"
+if ! command -v xdotool >/dev/null 2>&1 || ! command -v openbox >/dev/null 2>&1 || [ ! -x /usr/libexec/at-spi-bus-launcher ]; then
+  if command -v apt-get >/dev/null 2>&1 && [ "$(id -u)" = "0" ]; then
+    # shellcheck disable=SC2086
+    { timeout 300 apt-get install -y -qq --no-install-recommends $DESKTOP_PKGS || { timeout 120 apt-get update -qq && timeout 300 apt-get install -y -qq --no-install-recommends $DESKTOP_PKGS; }; } >/dev/null 2>&1 \
+      && log "desktop tools: installed" || log "WARN desktop tools: install failed (desktop tests will skip locally)"
+  else
+    log "WARN desktop tools: missing and cannot install"
+  fi
+else
+  log "desktop tools: present"
+fi
+
 exit 0
