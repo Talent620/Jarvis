@@ -24,6 +24,10 @@ export interface CoderIntentContext {
   any: boolean;
   /** A coding task was interrupted by a restart and can be continued. */
   interrupted: boolean;
+  /** The task in focus is a coding task (so "dodaj jeszcze ..." is about it). */
+  focusedCode?: boolean;
+  /** The words are also a screen command ("jeszcze niżej", "wyślij to"): never the agent's. */
+  screenCommand?: boolean;
 }
 
 const WRITE_VERBS = /\b(napraw\w*|popraw\w*|zrefaktor\w*|refaktor\w*|zaimplementuj\w*|implementuj\w*|dodaj (?:funkcj\w*|obslug\w*|testy?|endpoint\w*|opcj\w*|walidacj\w*)|zdebuguj\w*|usun (?:blad|bug\w*)|napisz (?:testy?|funkcj\w*|kod)|zaktualizuj zaleznosci|przepisz)\b/;
@@ -46,29 +50,47 @@ function backendOf(n: string): BackendChoice | undefined {
   return undefined;
 }
 
-/** The words after "dodaj jeszcze", "i jeszcze", "przy okazji", with the user's own spelling. */
+const EDIT_VERB = "(?:dodaj|dopisz|zmień|zmien|popraw|zrób|zrob|napraw|usuń|usun|zaktualizuj|przenieś|przenies|napisz|uzupełnij|uzupelnij)";
+/** "dodaj jeszcze X", "i przy okazji popraw X": an editing verb is required, bare "jeszcze" is not. */
+const TO_AGENT = "(?:(?:codex\\w*|claude\\w*|agenc\\w*|agent\\w*)[,:]?\\s+)?";
+const INSTRUCTION_A = new RegExp(`^\\s*${TO_AGENT}(?:(?:i|a|oraz)\\s+)?${EDIT_VERB}\\s+(?:jeszcze|przy okazji|dodatkowo)\\s+(.{3,})$`, "i");
+const INSTRUCTION_B = new RegExp(`^\\s*${TO_AGENT}(?:(?:i|a|oraz)\\s+)?(?:jeszcze|przy okazji|dodatkowo)\\s+(${EDIT_VERB}\\s+.{3,})$`, "i");
+
+/** The instruction in the user's own spelling. */
 function instructionOf(text: string): string | null {
-  const m = /^\s*(?:(?:i|a|oraz)\s+)?(?:(?:dodaj|dopisz|zmień|zmien|popraw|zrób|zrob|napraw)\s+)?(?:jeszcze|przy okazji|dodatkowo)\s+(.{3,})$/i.exec(text);
+  const m = INSTRUCTION_A.exec(text) ?? INSTRUCTION_B.exec(text);
   return m ? m[1].trim().replace(/[.!]+$/, "") : null;
 }
+
+/** Words that make a "nie ruszaj X" about code, not about an e-mail or a page. */
+const CODE_THING = /\b(plik\w*|kod\w*|test\w*|funkcj\w*|modul\w*|katalog\w*|folder\w*|klas\w*|konfiguracj\w*|zaleznosc\w*|api|schemat\w*|migracj\w*|\w+ (?:ts|js|tsx|py|json|md|css|yml|yaml))\b/;
 
 export function parseCoderIntent(text: string, ctx: CoderIntentContext): CoderIntent | null {
   const n = normalizeUtterance(text);
   if (!n) return null;
   const aboutAgent = /\b(codex\w*|agent\w*|claude\w*|kodowani\w*|programist\w*)\b/.test(n);
 
+  // A change to the running agent only when it is about the agent or its code, never a command
+  // for the screen or a chat sentence said while the agent works.
+  const forAgent = aboutAgent || !!ctx.focusedCode;
   if (ctx.live) {
-    for (const [re, constraint] of CONSTRAINTS) if (re.test(n)) return { kind: "constraint", constraint };
-    const nieRuszaj = /^(?:i\s+)?nie (?:ruszaj|zmieniaj|dotykaj) (.{2,})$/.exec(n);
-    if (nieRuszaj) return { kind: "constraint", constraint: `nie zmieniaj ${nieRuszaj[1]}` };
-    const extra = instructionOf(text);
+    if (!ctx.screenCommand) {
+      for (const [re, constraint] of CONSTRAINTS) if (re.test(n)) return { kind: "constraint", constraint };
+      const nieRuszaj = /^(?:i\s+)?nie (?:ruszaj|zmieniaj|dotykaj) (.{2,})$/.exec(n);
+      if (nieRuszaj && forAgent && CODE_THING.test(nieRuszaj[1])) return { kind: "constraint", constraint: `nie zmieniaj ${nieRuszaj[1]}` };
+    }
+    // "dodaj jeszcze komentarz w add.js" also parses as a screen command (a YouTube comment); an
+    // editing verb with "jeszcze" while the coding task is in focus is the agent's.
+    const extra = forAgent ? instructionOf(text) : null;
     if (extra) return { kind: "instruction", instruction: extra };
     if (aboutAgent && /\b(zatrzymaj|przerwij|stop|anuluj|zakoncz)\b/.test(n)) return { kind: "stop" };
     if (aboutAgent && /\b(wstrzymaj|pauza|zapauzuj)\b/.test(n)) return { kind: "pause" };
     if (aboutAgent && /\b(wznow|odpauzuj)\b/.test(n)) return { kind: "resume" };
   }
   if ((ctx.live || ctx.any) && (/\b(co (?:teraz )?robi|jak (?:idzie|mu idzie|tam idzie)|na jakim (?:jest )?etapie|jaki (?:jest )?postep|ile (?:testow|plikow))\b/.test(n) && aboutAgent)) return { kind: "status" };
-  if ((ctx.live || ctx.any) && /\b(pokaz|wyswietl|otworz) (?:mi )?(?:diff\w*|zmiany|roznice|co zmienil\w*)\b|\bco (?:on |agent |codex )?zmienil\w*/.test(n)) return { kind: "diff" };
+  if ((ctx.live || ctx.any) && !ctx.screenCommand && (/\b(pokaz|wyswietl|otworz) (?:mi )?diff\w*\b/.test(n)
+    || ((aboutAgent || ctx.focusedCode) && /\b(pokaz|wyswietl|otworz) (?:mi )?(?:zmiany|roznice)\b/.test(n))
+    || /\bco (?:agent|codex|claude)\w* zmienil\w*/.test(n))) return { kind: "diff" };
   if (ctx.interrupted && !ctx.live && /^(?:dobra |ok |okej )?(kontynuuj|dokoncz|wznow|rob dalej)(?: (?:to|zadanie|kodowanie|prace|programowanie|to zadanie))?$/.test(n)) return { kind: "continue" };
 
   const write = WRITE_VERBS.test(n);

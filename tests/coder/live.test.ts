@@ -10,7 +10,8 @@ import { WorkspaceRegistry } from "../../src/node/coder/workspace";
 import type { CoderEvent, CoderEventKind } from "../../src/lib/runtime/coder/types";
 
 const idle = { live: false, any: false, interrupted: false };
-const live = { live: true, any: true, interrupted: false };
+const live = { live: true, any: true, interrupted: false, focusedCode: true };
+const liveElsewhere = { live: true, any: true, interrupted: false, focusedCode: false };
 
 describe("coding grammar", () => {
   it("starts: write and read verbs, the backend named in words", () => {
@@ -40,6 +41,20 @@ describe("coding grammar", () => {
     expect(parseCoderIntent("pokaż zmiany", live)).toEqual({ kind: "diff" });
     expect(parseCoderIntent("kontynuuj", { ...idle, interrupted: true })).toEqual({ kind: "continue" });
     expect(parseCoderIntent("kontynuuj", idle)).toBeNull();
+  });
+
+  it("while an agent works, screen commands and chat stay with the rest of JARVIS", () => {
+    // Review H4: none of these may reach the agent.
+    for (const t of ["jeszcze raz", "jeszcze niżej", "i jeszcze wyślij to do Marcina", "a przy okazji jaka jest pogoda", "nie zmieniaj tematu maila", "co zmieniłeś?"]) {
+      expect(parseCoderIntent(t, live), t).toBeNull();
+    }
+    expect(parseCoderIntent("dodaj jeszcze test do add", liveElsewhere)).toBeNull(); // the browser task is in focus
+    expect(parseCoderIntent("niech codex doda jeszcze test", liveElsewhere)).toBeNull();
+    expect(parseCoderIntent("codex, dodaj jeszcze test do add", liveElsewhere)).toEqual({ kind: "instruction", instruction: "test do add" });
+    expect(parseCoderIntent("pokaż zmiany", liveElsewhere)).toBeNull();
+    expect(parseCoderIntent("pokaż diff", liveElsewhere)).toEqual({ kind: "diff" });
+    expect(parseCoderIntent("co codex zmienił?", liveElsewhere)).toEqual({ kind: "diff" });
+    expect(parseCoderIntent("nie rób release", { ...live, screenCommand: true })).toBeNull();
   });
 
   it("project names: generic words do not decide", () => {

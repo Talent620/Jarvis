@@ -139,6 +139,8 @@ export interface ValidationResult {
   /** Files that were already dirty before the task and are changed again (never auto-committed). */
   overlapsUserChanges: string[];
   historyIntact: boolean;
+  /** Files that define the checks (scripts, test config) the agent changed: no CONFIRMED then. */
+  checksChanged?: string[];
 }
 
 export interface CoderResult {
@@ -155,6 +157,8 @@ export interface CoderResult {
   violations: string[];
   reason?: string;
   sessionId?: string;
+  /** How the agent's run ended (completed, crashed, timeout, ...), apart from the verdict. */
+  ended?: "completed" | "cancelled" | "crashed" | "timeout" | "unavailable" | "needs_auth" | "blocked";
 }
 
 /** Persisted per task (checkpoints), with process metadata but no secrets. */
@@ -179,6 +183,10 @@ export interface CoderTaskRecord {
   lastStage?: string;
   lastTests?: { passed: number; failed: number };
   pid?: number;
+  /** When that process started (Linux /proc), so a reused pid is never killed after a restart. */
+  pidStart?: string;
+  /** Fingerprint of how the repo checks itself (scripts, test config) when the task started. */
+  checksPrint?: string;
   sessionId?: string;
   constraints: string[];
   /** The task that continued this one after an interruption (it is not offered again). */

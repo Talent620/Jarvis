@@ -108,7 +108,7 @@ export function parseReview(summary: string | undefined): { approve: boolean; fi
   }
 }
 
-const passed = (v: ValidationResult | undefined | null): boolean => !!v && v.ran && !v.noChecks && v.historyIntact && v.checks.length > 0 && v.checks.every((c) => c.ok);
+const passed = (v: ValidationResult | undefined | null): boolean => !!v && v.ran && !v.noChecks && v.historyIntact && !v.checksChanged?.length && v.checks.length > 0 && v.checks.every((c) => c.ok);
 const failures = (v: ValidationResult | undefined | null): string =>
   (v?.checks ?? []).filter((c) => !c.ok).map((c) => `${c.name} (${c.command}) failed with exit ${c.exitCode}:\n${c.tail}`).join("\n\n");
 const roleOf = (execId: string): string => (execId.split(".")[1] ?? "").split("-")[0];
@@ -117,8 +117,9 @@ const roleOf = (execId: string): string => (execId.split(".")[1] ?? "").split("-
 export function doneRoles(taskId: string, history: readonly CoderTaskRecord[], interrupted?: string): { planner?: CoderTaskRecord; coder?: CoderTaskRecord } {
   const mine = history.filter((r) => r.taskId.startsWith(`${taskId}.`) && r.taskId !== interrupted && r.state !== "interrupted_after_restart");
   const planner = mine.find((r) => roleOf(r.taskId) === "planner" && r.result?.truth === "CONFIRMED");
-  // The coder finished its run (tests are the tester's job): never run it again.
-  const coder = mine.find((r) => roleOf(r.taskId) === "coder" && (r.state === "completed" || r.state === "failed") && !r.result?.violations.length);
+  // The coder really finished its run (tests are the tester's job): never run it again. A crash,
+  // a timeout or a stop is not a finished run.
+  const coder = mine.find((r) => roleOf(r.taskId) === "coder" && r.result?.ended === "completed" && !r.result.violations.length);
   return { planner, coder };
 }
 
@@ -157,6 +158,8 @@ export async function runFactory(ctx: CoderRunContext): Promise<CoderResult> {
     const stepId = name.startsWith("fix") ? "reviewer" : role === "debugger" ? "tester" : role;
     kernel.dispatch({ type: "TaskStepChanged", taskId: P, stepId, status: "running", evidence: name });
     const result = await coderCall(port, { method: "start", spec: { ...spec, ...s, taskId: execId, role, resumeOf } });
+    // JARVIS is closing: the whole task stays resumable, whatever role was running.
+    if (result.state === "interrupted_after_restart") final = result;
     return { execId, result };
   };
 
@@ -202,8 +205,8 @@ export async function runFactory(ctx: CoderRunContext): Promise<CoderResult> {
         const r = await runRole("coder", "coder", coderSpec(goal));
         lastWrite = r;
         validation = r.result.validation;
-        const ended = r.result.state === "completed" || r.result.state === "failed";
-        if (!ended || r.result.violations.length || r.result.truth === "UNKNOWN_AFTER_ATTEMPT") { final = r.result; return { outcome: failed(r.result.reason ?? r.result.state) }; }
+        // Only a run the agent finished counts; a crash, timeout or stop is the task's end result.
+        if (r.result.ended !== "completed" || r.result.violations.length) { final = r.result; return { outcome: failed(r.result.reason ?? r.result.state) }; }
         // The agent finished its run; whether the code is right is the tester's call.
         return { outcome: confirmed({ source: r.execId, message: "agent run finished; the tests decide" }) };
       }
@@ -211,9 +214,15 @@ export async function runFactory(ctx: CoderRunContext): Promise<CoderResult> {
         if (!validation?.ran && lastWrite) validation = await coderCall(port, { method: "validate", taskId: lastWrite.execId });
         await testAndDebug(1);
         if (final) return { outcome: failed(final.reason) };
-        if (passed(validation)) return { outcome: confirmed({ source: "repository checks", message: validation!.checks.map((c) => `${c.name} PASS`).join(", ") }) };
         if (validation?.noChecks) return { outcome: attempted("repository checks", "the repository has no checks to prove the change") };
-        return { outcome: failed(`${(validation?.checks ?? []).filter((c) => !c.ok).map((c) => c.name).join(", ") || "checks"} still failing after ${route.debugRounds} fix round(s)`) };
+        // A red check is a failure first; green checks still prove nothing if the agent changed
+        // nothing or changed the checks themselves.
+        if (!validation?.ran || validation.checks.some((c) => !c.ok) || !validation.historyIntact) {
+          return { outcome: failed(`${(validation?.checks ?? []).filter((c) => !c.ok).map((c) => c.name).join(", ") || "checks"} still failing after ${route.debugRounds} fix round(s)`) };
+        }
+        if (validation.checksChanged?.length) return { outcome: attempted("repository checks", `the agent changed how the project is checked (${validation.checksChanged.join(", ")})`) };
+        if (!validation.changedFiles.length) return { outcome: attempted("repository checks", "the agent changed nothing") };
+        return { outcome: confirmed({ source: "repository checks", message: validation.checks.map((c) => `${c.name} PASS`).join(", ") }) };
       }
       case "coder.review": {
         for (let round = 1; round <= 2 && !ctx.signal.aborted; round++) {

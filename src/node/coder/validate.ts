@@ -3,11 +3,11 @@
 // task started and checks that history was not rewritten. Output is redacted and clipped.
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import * as path from "node:path";
 import type { CheckResult, ValidationResult } from "../../lib/runtime/coder/types";
 import { execRunner, type Run } from "../linux/runner";
-import { agentEnv, redactSecrets, secretEnvValues } from "./guard";
+import { agentEnv, gitArgs, gitEnv, redactSecrets, secretEnvValues } from "./guard";
 import { testCounts } from "./parse";
 import type { CheckCommand } from "./workspace";
 
@@ -43,7 +43,7 @@ export function hashDirty(root: string, dirty: string[]): Record<string, string>
 }
 
 export async function gitChanges(root: string, startHead: string | undefined, run: Run = execRunner): Promise<{ files: string[]; stat: string; historyIntact: boolean }> {
-  const git = (args: string[]) => run("git", ["-C", root, ...args], { timeoutMs: 20_000 });
+  const git = (args: string[]) => run("git", gitArgs(root, args), { timeoutMs: 20_000, env: gitEnv() });
   const inside = await git(["rev-parse", "--is-inside-work-tree"]);
   if (inside.code !== 0) return { files: [], stat: "", historyIntact: true };
   const files = new Set<string>();
@@ -101,4 +101,31 @@ export async function validateWorkspace(o: ValidateOptions): Promise<ValidationR
     overlapsUserChanges: g.overlaps,
     historyIntact: g.historyIntact,
   };
+}
+
+/** Files that decide how a project checks itself (scripts, test runners, linters, build). */
+const CHECK_CONFIG = /^(?:package\.json|Makefile|Cargo\.toml|pyproject\.toml|pytest\.ini|setup\.cfg|tox\.ini|go\.mod|tsconfig(?:\.[\w-]+)?\.json|(?:vitest|vite|jest|playwright|karma|mocha|ava|eslint|babel|webpack|rollup)\.config\.[cm]?[jt]s|\.eslintrc(?:\.\w+)?|\.mocharc(?:\.\w+)?|jest\.config\.json|conftest\.py)$/;
+
+/** A fingerprint of the check definitions: file name -> content hash (package.json: scripts only). */
+export function checksFingerprint(root: string): string {
+  const out: Record<string, string> = {};
+  let names: string[] = [];
+  try { names = readdirSync(root).filter((f) => CHECK_CONFIG.test(f)).sort(); } catch { names = []; }
+  for (const f of names) {
+    try {
+      const text = readFileSync(path.join(root, f), "utf8");
+      const body = f === "package.json" ? JSON.stringify((JSON.parse(text) as { scripts?: unknown }).scripts ?? {}) : text;
+      out[f] = createHash("sha1").update(body).digest("hex");
+    } catch { out[f] = "unreadable"; }
+  }
+  return JSON.stringify(out);
+}
+
+/** Which check definitions differ between two fingerprints. */
+export function changedChecks(before: string | undefined, after: string): string[] {
+  if (!before) return [];
+  let a: Record<string, string> = {};
+  let b: Record<string, string> = {};
+  try { a = JSON.parse(before) as Record<string, string>; b = JSON.parse(after) as Record<string, string>; } catch { return []; }
+  return [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((k) => a[k] !== b[k]).sort();
 }

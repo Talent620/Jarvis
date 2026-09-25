@@ -32,7 +32,13 @@ export function decideVerdict(i: VerdictInput): Pick<CoderResult, "truth" | "par
   if (!v || !v.ran) return { state: "failed", truth: "ATTEMPTED", reason: "not validated" };
   if (v.noChecks) return { state: "completed", truth: "ATTEMPTED", reason: "the repository has no test, lint, typecheck or build command to prove the change" };
   const ok = v.checks.filter((c) => c.ok).length;
-  if (ok === v.checks.length) return { state: "completed", truth: "CONFIRMED" };
+  if (ok === v.checks.length) {
+    // The agent changed what judges it (a test script, a test config): passing proves nothing.
+    if (v.checksChanged?.length) return { state: "completed", truth: "ATTEMPTED", reason: `the agent changed how the project is checked (${v.checksChanged.join(", ")})` };
+    // Nothing changed: green checks only show the project was already green.
+    if (!changed) return { state: "completed", truth: "ATTEMPTED", reason: "the agent changed nothing" };
+    return { state: "completed", truth: "CONFIRMED" };
+  }
   const failed = v.checks.filter((c) => !c.ok).map((c) => c.name).join(", ");
   const why = i.agentSaysDone ? `the agent said it was done, but ${failed} failed` : `${failed} failed`;
   return { state: "failed", truth: "FAILED", partial: ok > 0, reason: why };

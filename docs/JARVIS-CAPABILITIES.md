@@ -56,6 +56,18 @@ acceptance run (`npm run jarvis:acceptance`) is how it gets verified on the user
 | Android | accessibility focused node, selection, copy, append, scroll, windows | Contract tests with a fake device; Java compiles in the APK build; real phone NEEDS_HARDWARE |
 | Vision fallback | escalation after semantic and cache | Works with a fake model; no vision model wired in the app yet (capability reads `missing`) |
 
+## Coding agents (M11-M13)
+
+| Capability | Status | Evidence |
+| --- | --- | --- |
+| Codex CLI, Claude Code CLI, local Ollama model behind one contract (probe, start, stream, stop, pause, resume, instruction) | Verified on fake CLIs speaking the real JSONL; real Codex NEEDS_HARDWARE | `tests/coder/executor.test.ts` |
+| A coding command is a kernel task: "stop", "pauza", "wznów", "co teraz robi codex?", "nie rób release", "dodaj jeszcze X", "pokaż zmiany", "kontynuuj" | Verified | `tests/coder/runtime.test.ts`, `review.test.ts` |
+| CONFIRMED only when the repo's own checks pass after the task, something changed and the checks were not edited | Verified | `units.test.ts`, `review.test.ts` |
+| Guard: force push, reset --hard, clean, rewrite, push to main, release, deploy, secrets, paths outside the project | Verified | `units.test.ts`, `review.test.ts` |
+| Software factory: planner, coder, tester, debugger, reviewer (second backend) through agentRun, cost router TANIO / NORMALNIE / MAKSIMUM | Verified | `tests/coder/factory.test.ts` |
+| KOD screen and CODER section in "co robię" | Render tests | `tests/coder/live.test.ts` |
+| `npm run jarvis:coder:acceptance -- --mode=fake|local|codex` | fake PASS in CI; codex on the user machine | `tests/coder/acceptance.test.ts` |
+
 ## Not available
 
 No real vision model, no Wayland input through the portal, no address book import beyond the

@@ -97,6 +97,8 @@ class ProcessRun implements BackendRun {
   ) {
     this.graceMs = opts.graceMs;
     this.child = spawn(cmd, args, { cwd: opts.cwd, env: opts.env, shell: false, windowsHide: true, detached: process.platform !== "win32", stdio: ["pipe", "pipe", "pipe"] });
+    // An agent that exits before reading its input (EPIPE) must never crash the main process.
+    this.child.stdin?.on("error", () => undefined);
     if (opts.stdin !== undefined) this.child.stdin?.write(opts.stdin);
     if (!opts.keepStdin) this.child.stdin?.end();
     this.child.stdout?.on("data", (d) => this.feed(String(d)));
@@ -110,6 +112,9 @@ class ProcessRun implements BackendRun {
         this.buf = "";
         this.state = "ended";
         if (error) this.stderr += `\n${error}`;
+        // Anything the agent left behind in its process group (a dev server started with "&", a
+        // watcher) goes with it: no orphan after a stop or a normal end.
+        if (process.platform !== "win32" && this.child.pid) { try { process.kill(-this.child.pid, "SIGKILL"); } catch { /* group already gone */ } }
         const ended: BackendEnd["ended"] = this.cancelled ? "cancelled" : code === 0 && this.end !== "failure" ? "completed" : "crashed";
         resolve({ ended, exitCode: code, agentSaysDone: this.end === "success", final: this.final, sessionId: this.sessionId, model: this.model, stderrTail: this.stderr.split("\n").slice(-6).join("\n") });
       };
@@ -147,7 +152,9 @@ class ProcessRun implements BackendRun {
   }
 
   writeStdin(text: string): boolean {
-    if (this.state === "ended" || !this.child.stdin || this.child.stdin.destroyed) return false;
+    // Once input is closed (Claude's final result arrived) an instruction is not delivered: the
+    // caller queues it as the next turn instead of telling the user it was passed on.
+    if (this.state === "ended" || !this.child.stdin || this.child.stdin.destroyed || this.child.stdin.writableEnded) return false;
     this.child.stdin.write(text);
     return true;
   }
@@ -313,7 +320,13 @@ export class ClaudeBackend implements CoderBackend {
   start(task: BackendTask, onEvent: (e: ParsedEvent) => void): BackendRun {
     const bin = this.bin() ?? "claude";
     const readOnly = ["Edit", "MultiEdit", "Write", "NotebookEdit", "Bash"];
-    const denied = ["Bash(git push:*)", "Bash(git reset --hard:*)", "Bash(git clean:*)", "Bash(git rebase:*)", "Bash(npm publish:*)", "Bash(gh release:*)", ...(task.access === "read" ? readOnly : [])];
+    // Prefix rules: git's global options (-C, -c, --git-dir, --no-pager) would hide a push or reset
+    // from them, so those forms are denied as a whole; JARVIS's own guard checks every command too.
+    const denied = [
+      "Bash(git push:*)", "Bash(git reset --hard:*)", "Bash(git clean:*)", "Bash(git rebase:*)", "Bash(git update-ref:*)", "Bash(git branch -f:*)",
+      "Bash(git -C:*)", "Bash(git -c:*)", "Bash(git --git-dir:*)", "Bash(git --work-tree:*)", "Bash(git --no-pager:*)",
+      "Bash(npm publish:*)", "Bash(gh release:*)", ...(task.access === "read" ? readOnly : []),
+    ];
     const args = [
       "-p", "--output-format", "stream-json", "--input-format", "stream-json", "--verbose",
       "--permission-mode", task.access === "write" ? "acceptEdits" : "plan",

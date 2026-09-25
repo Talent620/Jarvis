@@ -60,6 +60,8 @@ export class CoderLiveStore {
   private logs = new Map<string, CoderEvent[]>();
   private results = new Map<string, CoderResult>();
   private diffs = new Map<string, string>();
+  /** Kernel task -> the executor task seen running for it (after a renderer reload). */
+  private execs = new Map<string, string>();
   private shownDiff: string | null = null;
   private lastSeq = new Map<string, number>();
   private listeners = new Set<() => void>();
@@ -86,7 +88,11 @@ export class CoderLiveStore {
   /** Authoritative live states from the host (on connect, after a renderer reload). */
   seed(states: CoderLiveState[]): void {
     // Executor tasks ("code_x.coder") are shown under their kernel task ("code_x").
-    for (const s of states) { const id = s.taskId.split(".")[0]; this.live.set(id, { ...s, taskId: id, changedFiles: [...s.changedFiles] }); }
+    for (const s of states) {
+      const id = s.taskId.split(".")[0];
+      this.live.set(id, { ...s, taskId: id, changedFiles: [...s.changedFiles] });
+      this.execs.set(id, s.taskId);
+    }
     this.trim();
     this.changed();
   }
@@ -101,6 +107,7 @@ export class CoderLiveStore {
       this.lastSeq.set(e.taskId, e.seq);
       // A role's events ("code_x.coder") belong to the kernel task ("code_x").
       const key = this.live.has(e.taskId) ? e.taskId : e.taskId.split(".")[0];
+      if (key !== e.taskId) this.execs.set(key, e.taskId);
       let log = this.logs.get(key);
       if (!log) { log = []; this.logs.set(key, log); }
       log.push(e);
@@ -127,6 +134,11 @@ export class CoderLiveStore {
     this.diffs.set(taskId, diff);
     this.shownDiff = taskId;
     this.changed();
+  }
+
+  /** The executor task last seen for a kernel task. */
+  execOf(taskId: string): string | undefined {
+    return this.execs.get(taskId);
   }
 
   diff(taskId: string): string | undefined {
@@ -182,6 +194,8 @@ export class CoderLiveStore {
       this.logs.delete(t.taskId);
       this.results.delete(t.taskId);
       this.diffs.delete(t.taskId);
+      this.execs.delete(t.taskId);
+      for (const k of [...this.lastSeq.keys()]) if (k === t.taskId || k.startsWith(`${t.taskId}.`)) this.lastSeq.delete(k);
     }
   }
 

@@ -4,10 +4,12 @@
 // and a lock: at most one writing task per workspace at a time.
 
 import { existsSync, readFileSync, writeFileSync, realpathSync, statSync, mkdirSync, unlinkSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import * as path from "node:path";
 import { execRunner, type Run } from "../linux/runner";
 import type { GitSnapshot } from "../../lib/runtime/coder/types";
 import { matchWorkspace } from "../../lib/runtime/coder/match";
+import { gitArgs, gitEnv } from "./guard";
 
 export interface Workspace {
   id: string;
@@ -58,6 +60,9 @@ export class WorkspaceRegistry {
     if (!root || !existsSync(root) || !statSync(root).isDirectory()) throw new Error("that folder does not exist");
     const real = realpathSync(root);
     if (real === path.parse(real).root || real === realpathSync(process.env.HOME || "/")) throw new Error("the whole disk or home folder cannot be a workspace");
+    // A folder inside a bigger repository would make every git step act on that repository.
+    const top = gitTopLevel(real);
+    if (top && top !== real) throw new Error(`this folder is inside the repository ${top}; add that repository's root folder`);
     const existing = this.list.find((w) => w.root === real);
     if (existing) return existing;
     const base = name?.trim() || path.basename(real);
@@ -121,7 +126,7 @@ export class WorkspaceRegistry {
   // ------------------------------------------------------------------------------ git state
 
   private async git(root: string, args: string[], raw = false): Promise<string | null> {
-    const r = await this.run("git", ["-C", root, ...args], { timeoutMs: 15_000 });
+    const r = await this.run("git", gitArgs(root, args), { timeoutMs: 15_000, env: gitEnv() });
     // `status --short` lines start with a space (" M file"): never trim those.
     return r.code === 0 ? (raw ? r.stdout : r.stdout.trim()) : null;
   }
@@ -204,6 +209,15 @@ export function detectProject(root: string): { packageManager?: WorkspaceProfile
   const order = ["typecheck", "lint", "test", "build", "secrets"];
   checks.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
   return { packageManager: pm, checks, kind };
+}
+
+function gitTopLevel(dir: string): string | null {
+  try {
+    const out = execFileSync("git", gitArgs(dir, ["rev-parse", "--show-toplevel"]), { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], env: gitEnv(), timeout: 10_000 }).trim();
+    return out ? realpathSync(out) : null;
+  } catch {
+    return null; // not a repository: fine, git steps are skipped
+  }
 }
 
 export function ensureDir(p: string): void {

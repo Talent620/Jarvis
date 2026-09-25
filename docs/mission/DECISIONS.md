@@ -346,3 +346,33 @@ stays the mission PR, its description is updated and a comment records this deci
 - After a restart, roles already done (planner CONFIRMED, coder run finished) are read from the
   executor's records and seeded into runPlan; the interrupted role resumes its own agent session.
 - `jarvis:coder:acceptance --mode=codex` refuses to run when `CI` is set.
+
+## D-039 Review of M11-M13: fixes
+
+Adversarial review: 4 high, 10 medium, 7 low. All fixed, regression tests in
+`tests/coder/review.test.ts` (and grammar cases in `live.test.ts`).
+- H1: a crashed or timed-out coder is never "a finished run" (`CoderResult.ended`); the factory
+  and the resume seed use it. M1: a write task that changed nothing is ATTEMPTED.
+- H2: a stop during snapshot or branch switch finishes the task before the agent starts; a stop
+  that races the spawn cancels the new process at once.
+- H3: "kontynuuj" is the coder's when the only paused kernel task is a coding task (the journal
+  restore brings it back paused). M10: after a renderer reload a stop reaches the executor task
+  remembered from the live events.
+- H4: changing a running agent needs an editing verb and a coding task in focus (or the agent's
+  name); screen commands and chat stay with the rest of JARVIS; "pokaż zmiany" only when the
+  coding task is in focus, "pokaż diff" and "co codex zmienił" always.
+- M2: the check definitions (package.json scripts, Makefile, test/lint/build configs) are
+  fingerprinted at the start; if the agent changed them, green checks give ATTEMPTED.
+- M3: git global options are stripped before matching; more forms of clean, branch -f,
+  update-ref, checkout -- ., rm of paths outside; Claude's deny list covers `git -C` and friends.
+- M4: the agent's process group is killed after every end, not only on stop. M5: validation
+  commands are stopped by stop and quit. M6: JARVIS's own git calls run with an allow-listed
+  environment, fsmonitor off and no hooks. M7: stdin errors never crash the main process and an
+  instruction after input closed is queued, not reported as delivered. M8: after a restart only
+  the same process (pid and start time) is signalled. M9: quitting in any role keeps the task
+  resumable.
+- Low: interrupted tasks older than 3 days are not offered to "kontynuuj", duplicate
+  "kontynuuj" takes nothing; stderr and stages redacted; finished tasks and records pruned in
+  memory; resume and baseline only from the same project; the tester's revalidation takes the
+  workspace lock; paused time does not count against the limit; a folder inside a bigger
+  repository is refused.

@@ -8,6 +8,8 @@ import type { Kernel } from "../kernel";
 import type { TaskStatus } from "../types";
 import { TERMINAL_TASK } from "../types";
 import { hashArgs, preview } from "../util";
+import { parseCommand } from "../commands";
+import { focusedTaskId } from "../reducer";
 import { parseCoderIntent, type CoderIntent } from "./intent";
 import { CoderLiveStore } from "./live";
 import { matchWorkspace } from "./match";
@@ -99,6 +101,7 @@ export class CoderController {
   /** Kernel task id -> the executor task that ran last (for the diff after the end). */
   private lastExec = new Map<string, string>();
   private lastStatus = new Map<string, TaskStatus>();
+  private cancelSent = new Set<string>();
   private pending = new Set<Promise<void>>();
   private unsubscribe: (() => void)[] = [];
   readonly ready: Promise<void>;
@@ -129,7 +132,9 @@ export class CoderController {
     if (ws.ok) this.workspaces = ws.value;
     if (hist.ok) {
       this.historyCache = hist.value;
-      this.interrupted = hist.value.filter((r) => r.state === "interrupted_after_restart" && !r.resumedBy);
+      // Only recent ones: an old interrupted task is not started again by a casual "kontynuuj".
+      const recent = this.now() - 3 * 24 * 3600_000;
+      this.interrupted = hist.value.filter((r) => r.state === "interrupted_after_restart" && !r.resumedBy && r.updatedAt >= recent);
     }
     if (live.ok) this.store.seed(live.value);
   }
@@ -139,28 +144,39 @@ export class CoderController {
     while (this.pending.size) await Promise.allSettled([...this.pending]);
   }
 
-  private ctx() {
+  private ctx(text: string) {
     const cur = this.store.current();
-    return { live: !!cur && this.runs.has(cur.taskId), any: !!this.store.latest(), interrupted: this.interrupted.length > 0 };
+    const s = this.kernel.state;
+    const focused = focusedTaskId(s);
+    const focusedTask = focused ? s.tasks[focused] : undefined;
+    const newest = s.taskOrder.length ? s.tasks[s.taskOrder[s.taskOrder.length - 1]] : undefined;
+    // "dodaj jeszcze", "pokaż zmiany" are about the agent only when a coding task is in focus, or
+    // nothing else is and the newest task was a coding one.
+    const focusedCode = focusedTask ? focusedTask.kind === "code" : newest?.kind === "code";
+    return {
+      live: !!cur && this.runs.has(cur.taskId), any: !!this.store.latest(), interrupted: this.interrupted.length > 0,
+      focusedCode, screenCommand: parseCommand(text).type !== "unknown",
+    };
   }
 
   /** Would the runtime give this utterance to the coder (no side effects)? */
   claims(text: string): boolean {
-    const i = parseCoderIntent(text, this.ctx());
+    const i = parseCoderIntent(text, this.ctx(text));
     if (!i) return false;
     if (i.kind === "continue") return !this.pausedKernelTask();
     if (i.kind !== "start") return true;
     return !!matchWorkspace(this.workspaces, text) || i.explicit;
   }
 
+  /** A paused task that "kontynuuj" would resume in the kernel (coding tasks are resumed here). */
   private pausedKernelTask(): boolean {
-    return Object.values(this.kernel.state.tasks).some((t) => t.status === "paused");
+    return Object.values(this.kernel.state.tasks).some((t) => t.status === "paused" && t.kind !== "code");
   }
 
   /** Route one utterance; null leaves it to the rest of the runtime. */
   handle(utteranceId: string, text: string): CoderTurn | null {
     if (!this.claims(text)) return null;
-    const i = parseCoderIntent(text, this.ctx())!;
+    const i = parseCoderIntent(text, this.ctx(text))!;
     const cur = this.store.current();
     switch (i.kind) {
       case "start": return this.start(utteranceId, text, i);
@@ -199,6 +215,9 @@ export class CoderController {
    * the agent's own session resumed from the current repository state.
    */
   private continueInterrupted(utteranceId: string, text: string): CoderTurn {
+    // A repeated final of the same "kontynuuj" must not take the next interrupted task.
+    const key = `code:${utteranceId}`;
+    if (this.kernel.state.idempotency[key]) return { route: "coder", intent: "continue" };
     const prior = this.interrupted[0];
     const ws = this.workspaces.find((w) => w.id === prior.workspaceId);
     if (!ws) return this.reply("continue", utteranceId, "Projekt przerwanego zadania nie jest już dodany do JARVIS-a.");
@@ -278,7 +297,17 @@ export class CoderController {
   // --------------------------------------------------------------------- kernel -> process
 
   /** Carry the kernel's status of a coding task (stop, pause, resume) to the agent process. */
-  private onKernel(tasks: Record<string, { status: TaskStatus }>): void {
+  private onKernel(tasks: Record<string, { status: TaskStatus; kind: string }>): void {
+    // After a renderer reload the agent may still work in the main process with no run here:
+    // a stop of its kernel task still reaches it.
+    for (const [taskId, t] of Object.entries(tasks)) {
+      if (t.kind !== "code" || t.status !== "cancelled" || this.runs.has(taskId) || this.cancelSent.has(taskId)) continue;
+      const execId = this.store.execOf(taskId);
+      const live = this.store.get(taskId);
+      if (!execId || !live || !LIVE_CODER_STATES.has(live.state)) continue;
+      this.cancelSent.add(taskId);
+      void this.port.call({ method: "cancel", taskId: execId });
+    }
     for (const [taskId, run] of this.runs) {
       const now = tasks[taskId]?.status;
       const before = this.lastStatus.get(taskId);
@@ -384,7 +413,7 @@ export class CoderController {
 
   /** The executor task behind a kernel coding task (the one running now, or the last one). */
   private execOf(taskId: string): string {
-    return this.runs.get(taskId)?.execId ?? this.lastExec.get(taskId) ?? `${taskId}.agent`;
+    return this.runs.get(taskId)?.execId ?? this.lastExec.get(taskId) ?? this.store.execOf(taskId) ?? `${taskId}.agent`;
   }
 
   // --------------------------------------------------------------------------- status, diff
