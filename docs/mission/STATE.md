@@ -1,6 +1,6 @@
 # Mission state
 
-Phase: all milestones done. M0 (8a61178), M1 (1d9b49a), M2 (ddc05e3), M3 (a01422e), M4 on fixtures (301098a), M5 (588e0a2), M6 (ae1cc71), M7 (3e79678), M8 (25b1173), M9 (13ebcbd), M10 (4599b20). Real hardware items are NEEDS_HARDWARE. Machine-readable status: `state.json`.
+Phase: all milestones done. M0 (8a61178), M1 (1d9b49a), M2 (ddc05e3), M3 (a01422e), M4 on fixtures (301098a), M5 (588e0a2), M6 (ae1cc71), M7 (3e79678), M8 (25b1173), M9 (13ebcbd), M10 (4599b20); continuation 6c8f803..67efac2 (voice switch, browser choice, skills list, second review, desktop CI flake). Real hardware items are NEEDS_HARDWARE. Machine-readable status: `state.json`.
 
 ## Milestones
 
@@ -18,16 +18,16 @@ Phase: all milestones done. M0 (8a61178), M1 (1d9b49a), M2 (ddc05e3), M3 (a01422
 | M9 | Windows and Android adapters | done (contract tests, APK builds; devices needs_hardware) |
 | M10 | Vision, Skill Compiler, visibility, docs, final review | done (no real vision model wired) |
 
-## Gates at last measurement (commit 4599b20)
+## Gates at last measurement (commit 67efac2)
 
 - tsc -b, eslint, npm run build (web + electron/gen/runtime.cjs), scan:secrets: pass.
-- vitest: 3282/3282 (361 files).
+- vitest: 3300/3300 (363 files).
 - Browser suite (npm run test:browser): 17/17 (golden 1-7 x10, golden 1-8 x10 with mock Gmail,
   conversations incl. numbered badges, ManagedBrowser hardening, voice golden, bridge extension).
 - Desktop suite (npm run test:desktop, real Xvfb): 8/8.
 - Acceptance: fixture x10 report reports/acceptance-2026-09-25T01-36-38-962Z.md (PARTIAL: no
   microphone, no display here).
-- CI: Tests (test + browser + desktop), Ubuntu build, Android APK green on 13ebcbd; see
+- CI: Tests (test + browser + desktop), Ubuntu build, Android APK green on 7ad1620; see
   CONTINUE.md for the latest run.
 
 ## Runtime (src/lib/runtime) after M1

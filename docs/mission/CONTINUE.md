@@ -2,23 +2,25 @@
 
 - GAŁĄŹ SESJI: `claude/intelligent-brahmagupta-jq7jqj`
   (local test: `git fetch origin claude/intelligent-brahmagupta-jq7jqj && git checkout claude/intelligent-brahmagupta-jq7jqj`)
-- PR: https://github.com/Talent620/Jarvis/pull/7 (draft)
-- OSTATNI ZIELONY COMMIT: `4599b20` (all local gates exit 0; CI Tests run 36082709566 green:
-  test, browser, desktop). Later commits only touch docs and reports; check the latest run of
-  the branch for the Android APK and Ubuntu builds.
-- BIEŻĄCY KAMIEŃ: none. M0-M10 done (state.json); what is left needs the user's machine.
-- STAN TESTÓW (after 4599b20): vitest 3282/3282 (361 files); browser 17/17; desktop on Xvfb 8/8;
-  tsc -b, eslint ., npm run build, npm run scan:secrets exit 0. Golden 1-8 on the fixture 10
-  consecutive green runs (1.3-1.6 s each). Acceptance fixture x10:
+- PR: https://github.com/Talent620/Jarvis/pull/7 (draft). The continuation round works on the
+  same branch, so #7 stays the mission PR (D-033).
+- OSTATNI ZIELONY COMMIT: `67efac2` with all local gates exit 0 (vitest, tsc, eslint, build,
+  scan:secrets, browser, desktop). CI fully green on `7ad1620` (Tests with test, browser,
+  desktop; Android APK; Ubuntu build). Check the latest run of the branch for `67efac2`.
+- BIEŻĄCY KAMIEŃ: none. M0-M10 done (state.json); the continuation closed B-034, B-035, B-039 and
+  a desktop CI flake. What is left needs the user's machine.
+- STAN TESTÓW (after 67efac2): vitest 3300/3300 (363 files); browser 17/17; desktop on Xvfb 8/8;
+  golden 1-8 on the fixture 10 consecutive green runs (1.5-1.7 s each). Acceptance fixture x10:
   reports/acceptance-2026-09-25T01-36-38-962Z.md.
-- OSTATNIA ZWERYFIKOWANA FUNKCJA: final adversarial review fixes (D-032): vision only for real
-  clicks, tool timeouts never retried and UNKNOWN unless the read-back proves them, desktop
-  selection read from the desktop, bridge tokens bound to the Origin extension id.
+- OSTATNIA ZWERYFIKOWANA FUNKCJA: second review fixes (D-035): the browser switch is a step of the
+  command's own task, only instructions choose a browser, the switch needs the chosen browser to
+  answer, skills replay in their browser, voice control shows preemption and recognizer failures.
 - DOKŁADNA NASTĘPNA AKCJA: on the user machine run
   `npm ci && npm run jarvis:acceptance -- --mode=local-desktop`, then
-  `--mode=managed-browser` (real YouTube). Read the newest reports/acceptance-*.md before the
-  backlog. Then B-034 (voice toggle in the UI), B-035 (route "w mojej przeglądarce" to the
-  bridge), B-038 (a real vision model), B-039 (skills UI).
+  `--mode=managed-browser` (real YouTube). Then switch on "Sterowanie komputerem głosem" in
+  Settings and say the golden scenario; pair the browser extension and try "Wejdź na YouTube w
+  mojej przeglądarce". Read the newest reports/acceptance-*.md before the backlog. Cloud work
+  left: B-038 (a real vision model, needs a model choice and cost limits).
 - LOCAL RUN: `npm ci && npm run test:browser && npm run jarvis:acceptance`.
 - POZYCJE NEEDS_HARDWARE: B-030 real YouTube selectors, B-031 real Gmail send + Sent read-back
   (`--send` only), B-032 address book source, B-033 voice on a real microphone, B-036 Firefox

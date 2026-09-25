@@ -30,7 +30,9 @@ acceptance run (`npm run jarvis:acceptance`) is how it gets verified on the user
 | Hung tool or model given up; broken model replies never spoken or acted on | Verified | `timeoutsBrokenModels.test.ts` |
 | Restart during a task: running tasks come back paused, external ones UNKNOWN | Verified | `kernel.test.ts` |
 | "zapamiętaj to jako X" / "powtórz X" (skills), each step verified again | Verified | `skillsVision.test.ts` |
-| "Co robię" panel with PAUZA / WZNÓW / STOP, redacted diagnostics export | Verified (render and runtime tests) | `statusDiagnostics.test.ts` |
+| "Co robię" panel with PAUZA / WZNÓW / STOP, redacted diagnostics export, skills list | Verified (render and runtime tests) | `statusDiagnostics.test.ts` |
+| "Sterowanie komputerem głosem" switch (Settings, desktop), optional Deepgram key | Verified with a fake session; real microphone NEEDS_HARDWARE | `voiceControl.test.ts` |
+| "w mojej przeglądarce" / "w swojej przeglądarce" choose the user's or JARVIS's browser | Verified with two in-memory browsers; the real extension pairing NEEDS_HARDWARE | `browserChoice.test.ts` |
 
 ## Safety
 
