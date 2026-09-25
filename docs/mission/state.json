@@ -188,15 +188,21 @@
         "vitest 367 files / 3351 tests, tsc -b, eslint ., npm run build, scan:secrets exit 0",
         "real Codex on the user's machine: NEEDS_HARDWARE (M13 acceptance --mode=codex)"
       ],
-      "last_commit": "",
+      "last_commit": "7359e3a",
       "next_action": "Done. M13: software factory."
     },
     {
       "id": "M13",
-      "status": "in_progress",
-      "evidence": [],
+      "status": "done",
+      "evidence": [
+        "tests/coder/factory.test.ts 10/10: classes from words (SIMPLE..CODE_CRITICAL), router table (small = one agent + tests even with two backends; TANIO prefers the local model; planner and reviewer only for hard/critical or MAKSIMUM; reviewer on a second backend, same backend fresh session only for critical/max; branch for hard+), reviewer verdict = last JSON line only; roles run through agentRun.runPlan as separate executor tasks <kernel id>.<role>: small fix one Codex run and zero Claude runs; 21 test -> fail -> debugger (fresh session, failing output quoted as data) -> test -> pass, changedFiles counted from the coder's baseline; 21b debugger fails -> FAILED, spoken as not done; 22 reviewer on Claude finds a regression -> fix round -> tests -> second review approves -> CONFIRMED (planner read-only sandbox, plan passed as data, hard task on a jarvis/ branch); 22b reviewer still rejects -> FAILED; 23 restart during the coder -> 'kontynuuj' keeps the confirmed planner (it ran once), resumes the coder's Codex session (exec resume), then tester and reviewer, same kernel task; stop during a role stops the factory, no further role starts",
+        "tests/coder/acceptance.test.ts 2/2 and `npm run jarvis:coder:acceptance` (fake: 5/5 PASS, reports/coder-acceptance-2026-09-25T03-44-02-877Z.md; local in the cloud: Codex not installed NEEDS_HARDWARE, Claude Code 2.1.282 needs login NEEDS_PERMISSION, Ollama not running NEEDS_HARDWARE, this repo's checks listed, reports/coder-acceptance-2026-09-25T03-44-10-902Z.md; codex mode refused in CI)",
+        "Fixed on the way: `git status --short` output was trimmed as a whole, so the first ' M file' line lost its path (regression test in tests/coder/units.test.ts)",
+        "vitest 370 files / 3364 tests, tsc -b, eslint ., npm run build, scan:secrets exit 0",
+        "real Codex task on the user's machine: NEEDS_HARDWARE (`npm run jarvis:coder:acceptance -- --mode=codex`)"
+      ],
       "last_commit": "",
-      "next_action": "Roles through agentRun/agentPipeline, cost router, reviewer loop, jarvis:coder:acceptance, final adversarial review."
+      "next_action": "Done. Final adversarial review of M11-M13."
     }
   ]
 }

@@ -120,9 +120,10 @@ export class WorkspaceRegistry {
 
   // ------------------------------------------------------------------------------ git state
 
-  private async git(root: string, args: string[]): Promise<string | null> {
+  private async git(root: string, args: string[], raw = false): Promise<string | null> {
     const r = await this.run("git", ["-C", root, ...args], { timeoutMs: 15_000 });
-    return r.code === 0 ? r.stdout.trim() : null;
+    // `status --short` lines start with a space (" M file"): never trim those.
+    return r.code === 0 ? (raw ? r.stdout : r.stdout.trim()) : null;
   }
 
   async snapshot(root: string): Promise<GitSnapshot> {
@@ -133,7 +134,7 @@ export class WorkspaceRegistry {
       this.git(root, ["rev-parse", "HEAD"]),
       this.git(root, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]),
       this.git(root, ["remote", "get-url", "origin"]),
-      this.git(root, ["status", "--short"]),
+      this.git(root, ["status", "--short"], true),
     ]);
     return {
       isRepo: true,
@@ -142,7 +143,7 @@ export class WorkspaceRegistry {
       upstream: upstream ?? undefined,
       // A remote URL may carry credentials: keep the host and path only.
       remote: remote ? remote.replace(/\/\/[^@/]+@/, "//") : undefined,
-      dirty: (status ?? "").split("\n").filter(Boolean),
+      dirty: (status ?? "").split("\n").map((l) => l.trimEnd()).filter(Boolean),
     };
   }
 

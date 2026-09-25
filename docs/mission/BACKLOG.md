@@ -46,5 +46,5 @@ Status: todo, in_progress, done, blocked, needs_hardware. Nothing is done withou
 | B-040 | CoderExecutor: Codex CLI, Claude Code CLI, local backend behind one contract | M11 | done | src/node/coder/ | fake success | fake CLIs speaking the real JSONL | real Codex login = needs_hardware |
 | B-041 | WorkspaceRegistry, snapshot, lock, policy guard, independent validation | M11 | done | src/node/coder/ | destroying user changes | dirty repo, escape, force push tests | none |
 | B-042 | Coding task in the kernel, live store, panel, voice controls, restart | M12 | done | src/lib/runtime/, src/components/ | store churn | 10 000 events, voice tests | none |
-| B-043 | Software factory roles, cost router, reviewer loop, coder acceptance | M13 | todo | src/node/coder/, scripts/ | paying twice | fake roles, acceptance fake/local | codex mode = needs_hardware |
+| B-043 | Software factory roles, cost router, reviewer loop, coder acceptance | M13 | done | src/node/coder/, scripts/ | paying twice | fake roles, acceptance fake/local | codex mode = needs_hardware |
 

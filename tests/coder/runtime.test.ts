@@ -41,7 +41,7 @@ async function world(s: Record<string, unknown>, o: { userData?: string; root?: 
   const codeTasks = () => Object.values(kernel.state.tasks).filter((t) => t.kind === "code");
   const running = () => vi.waitFor(() => {
     const t = codeTasks().at(-1);
-    expect(t && host.executor.record(t.id)?.pid).toBeTruthy();
+    expect(t && host.executor.record(`${t.id}.agent`)?.pid).toBeTruthy();
   }, { timeout: 8000, interval: 20 });
   return { dir, userData, root, argv, host, rt, kernel, said, codeTasks, running };
 }
@@ -117,7 +117,7 @@ describe("M12 live control by voice", () => {
     await w.running();
     const id = w.codeTasks()[0].id;
     await vi.waitFor(() => expect(w.rt.coder!.store.get(id)?.tests).toBeTruthy(), { timeout: 8000, interval: 20 });
-    const pid = w.host.executor.record(id)!.pid!;
+    const pid = w.host.executor.record(`${id}.agent`)!.pid!;
     const turn = w.rt.onText("co teraz robi codex?");
     expect(turn.route).toBe("coder");
     expect(turn.say).toMatch(/^Codex pracuje: „napraw test w mini projekcie” w Mini Projekt \(gałąź main\)\./);
@@ -128,7 +128,7 @@ describe("M12 live control by voice", () => {
     expect(general.route).toBe("status");
     expect(general.say).toMatch(/^Codex pracuje/);
     expect(alive(pid)).toBe(true);
-    expect(w.host.executor.record(id)!.pid).toBe(pid);
+    expect(w.host.executor.record(`${id}.agent`)!.pid).toBe(pid);
     await w.rt.idle();
     expect(w.codeTasks()[0].status).toBe("done");
   });
@@ -139,13 +139,13 @@ describe("M12 live control by voice", () => {
     await w.running();
     const id = w.codeTasks()[0].id;
     await vi.waitFor(() => expect(w.rt.coder!.store.get(id)?.changedFiles).toEqual(["add.js"]), { timeout: 5000, interval: 20 });
-    const pid = w.host.executor.record(id)!.pid!;
+    const pid = w.host.executor.record(`${id}.agent`)!.pid!;
     const before = w.said.length;
     w.rt.onText("stop");
     await w.rt.idle();
     expect(w.kernel.state.tasks[id].status).toBe("cancelled");
     expect(alive(pid)).toBe(false);
-    expect(w.host.executor.record(id)!.state).toBe("cancelled");
+    expect(w.host.executor.record(`${id}.agent`)!.state).toBe("cancelled");
     expect(w.said.length).toBe(before);
     expect(read(w.root, "add.js")).toBe(FIXED); // nothing is reverted behind the user's back
   });
@@ -156,9 +156,9 @@ describe("M12 live control by voice", () => {
     await w.running();
     const id = w.codeTasks()[0].id;
     w.rt.onText("pauza");
-    await vi.waitFor(() => expect(w.host.executor.record(id)!.state).toBe("paused"), { timeout: 5000, interval: 20 });
+    await vi.waitFor(() => expect(w.host.executor.record(`${id}.agent`)!.state).toBe("paused"), { timeout: 5000, interval: 20 });
     expect(w.kernel.state.tasks[id].status).toBe("paused");
-    const pid = w.host.executor.record(id)!.pid!;
+    const pid = w.host.executor.record(`${id}.agent`)!.pid!;
     // Stopped by SIGSTOP (the signal lands asynchronously under load).
     await vi.waitFor(() => expect(readFileSync(`/proc/${pid}/stat`, "utf8").split(" ")[2]).toBe("T"), { timeout: 3000, interval: 10 });
     w.rt.onText("wznów");
@@ -176,7 +176,7 @@ describe("M12 live control by voice", () => {
     await w.rt.idle();
     expect(w.said).toContain("Dobrze: nie rób release. Pilnuję tego do końca zadania.");
     expect(w.kernel.state.tasks[id].statusReason ?? "").not.toBe("");
-    expect(w.host.executor.record(id)!.result).toMatchObject({ truth: "BLOCKED", violations: ["tagging a release"] });
+    expect(w.host.executor.record(`${id}.agent`)!.result).toMatchObject({ truth: "BLOCKED", violations: ["tagging a release"] });
     expect(w.said.at(-1)).toBe("Zatrzymałem agenta, bo próbował zrobić coś zabronionego: tagging a release.");
 
     const w2 = await world({ steps: [{ type: "sleep", ms: 700 }, ...FIX], resumeSteps: [{ type: "message", text: "comment added" }] });
@@ -216,12 +216,12 @@ describe("M12 restart", () => {
     w.rt.onText("napraw test w mini projekcie");
     await w.running();
     const id = w.codeTasks()[0].id;
-    await vi.waitFor(() => expect(w.host.executor.record(id)?.sessionId).toBe("thread-42"), { timeout: 5000, interval: 20 });
-    const pid = w.host.executor.record(id)!.pid!;
+    await vi.waitFor(() => expect(w.host.executor.record(`${id}.agent`)?.sessionId).toBe("thread-42"), { timeout: 5000, interval: 20 });
+    const pid = w.host.executor.record(`${id}.agent`)!.pid!;
     await w.host.close();
     hosts.splice(hosts.indexOf(w.host), 1);
     expect(alive(pid)).toBe(false);
-    expect(w.host.executor.record(id)!.state).toBe("interrupted_after_restart");
+    expect(w.host.executor.record(`${id}.agent`)!.state).toBe("interrupted_after_restart");
     expect(read(w.root, "add.js")).toBe(BUGGY);
 
     // A new app start: new host from the same userData, a new runtime.
@@ -235,8 +235,9 @@ describe("M12 restart", () => {
     expect(calls[1].args).toEqual(expect.arrayContaining(["exec", "resume", "thread-42"]));
     expect(calls[1].prompt).toContain("This continues an interrupted task");
     const [task] = w2.codeTasks();
+    expect(task.id).toBe(id); // the same kernel task continues
     expect(task.status).toBe("done");
-    expect(w2.host.executor.record(id)!.resumedBy).toBe(task.id);
+    expect(w2.host.executor.record(`${id}.agent`)!.resumedBy).toBe(`${id}.agent-r`);
     // Not offered again.
     expect(w2.rt.claims("kontynuuj", () => false)).toBe(false);
   });

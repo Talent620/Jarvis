@@ -327,3 +327,22 @@ stays the mission PR, its description is updated and a comment records this deci
   the current repository state; the old record is marked `resumedBy` and not offered again.
 - A read-only task that changed files is caught (changes are read for every task, not only for
   validated ones) and FAILS.
+
+## D-038 Software factory through agentRun, priced by a router
+
+- Roles run through the existing `agentRun.runPlan` (dependencies, AbortSignal, pause gate, seed),
+  not a new orchestrator. Each role is its own executor task `<kernel task id>.<role>` with its own
+  agent session: planner (read-only), coder (write), tester (the repo's checks, no model),
+  debugger (write, fresh session, the failing output quoted as data), reviewer (read-only).
+- Router (`routeCodingTask`): the tester always runs and costs nothing; a planner or a reviewer is
+  a second paid agent and runs only for CODE_HARD / CODE_CRITICAL or in MAKSIMUM for CODE_NORMAL.
+  TANIO prefers the local model for small and normal work and gets one debugger round (two
+  otherwise). The reviewer is a different backend than the coder when one is usable; the same
+  backend in a fresh session only for critical work or MAKSIMUM; otherwise no review.
+- The reviewer's verdict is only the last `{"approve": ..., "findings": [...]}` line; findings go to
+  one fix round, then the tests, then a second review. Still rejected: FAILED.
+- A debugger or a fix measures changes from the coder's baseline (`baseOf`), so the result lists
+  every file the task changed and still tells the user's own edits apart.
+- After a restart, roles already done (planner CONFIRMED, coder run finished) are read from the
+  executor's records and seeded into runPlan; the interrupted role resumes its own agent session.
+- `jarvis:coder:acceptance --mode=codex` refuses to run when `CI` is set.

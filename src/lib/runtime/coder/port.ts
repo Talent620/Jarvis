@@ -2,7 +2,7 @@
 // process (M12): JSON requests over IPC ("jarvis:coder") and batched event streams back
 // ("jarvis:coder-events"). Tests plug the Node host in directly with the same shape.
 
-import type { BackendProbe, CoderEvent, CoderLiveState, CoderResult, CoderTaskRecord, CoderTaskSpec } from "./types";
+import type { BackendProbe, CoderEvent, CoderLiveState, CoderResult, CoderTaskRecord, CoderTaskSpec, ValidationResult } from "./types";
 
 export interface WorkspaceInfo {
   id: string;
@@ -39,7 +39,9 @@ export type CoderRequest =
   | { method: "log"; taskId: string; limit?: number }
   | { method: "history" }
   | { method: "result"; taskId: string }
-  | { method: "diff"; taskId: string };
+  | { method: "diff"; taskId: string }
+  /** The tester role: the repo's own checks again, against the task's baseline. */
+  | { method: "validate"; taskId: string };
 
 /** What each method answers with. */
 export interface CoderReplies {
@@ -61,6 +63,7 @@ export interface CoderReplies {
   history: CoderTaskRecord[];
   result: CoderResult | null;
   diff: string;
+  validate: ValidationResult | null;
 }
 
 export type CoderResponse<M extends CoderRequest["method"] = CoderRequest["method"]> =

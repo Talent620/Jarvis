@@ -27,6 +27,7 @@ const TRUTH_LABEL: Record<string, string> = {
 const AVAIL_LABEL: Record<BackendProbe["availability"], string> = {
   ready: "gotowy", unknown_auth: "zainstalowany, logowanie niepotwierdzone", needs_auth: "wymaga zalogowania", unavailable: "niedostępny", available: "dostępny",
 };
+const ROLE_LABEL: Record<string, string> = { planner: "planista", coder: "programista", tester: "tester", debugger: "debugger", reviewer: "recenzent" };
 const BACKEND_LABEL: Record<string, string> = { codex: "Codex CLI", claude: "Claude Code", local: "Lokalny model", fake: "Agent testowy" };
 
 const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
@@ -53,6 +54,7 @@ export const CoderLiveCard: React.FC<{
       <Row label="Agent">{BACKEND_LABEL[task.backend] ?? task.backend}{task.model ? ` (${task.model})` : ""}: {CODER_STATE_LABEL[task.state] ?? task.state}</Row>
       <Row label="Cel">{task.goal}</Row>
       <Row label="Projekt">{task.workspace}{task.branch ? `, gałąź ${task.branch}` : ""}</Row>
+      {task.role && live && <Row label="Rola">{ROLE_LABEL[task.role] ?? task.role}</Row>}
       {task.stage && <Row label="Etap">{task.stage}</Row>}
       {live && task.currentFile && <Row label="Plik">{task.currentFile}</Row>}
       {live && task.currentCommand && <Row label="Polecenie"><code>{task.currentCommand}</code></Row>}

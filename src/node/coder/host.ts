@@ -42,7 +42,8 @@ class Invalid extends Error {}
 function spec(v: unknown): CoderTaskSpec {
   if (!isObj(v)) throw new Invalid("spec");
   if (!id(v.taskId)) throw new Invalid("taskId");
-  if (!str(v.goal, 4000)) throw new Invalid("goal");
+  if (!str(v.goal, 8000)) throw new Invalid("goal");
+  if (v.title !== undefined && !str(v.title, 2000)) throw new Invalid("title");
   if (!id(v.workspaceId)) throw new Invalid("workspaceId");
   if (typeof v.backend !== "string" || !BACKENDS.includes(v.backend as BackendChoice)) throw new Invalid("backend");
   const constraints = v.constraints === undefined ? undefined : Array.isArray(v.constraints) && v.constraints.length <= 20 && v.constraints.every((c) => str(c, 300)) ? (v.constraints as string[]) : null;
@@ -50,11 +51,12 @@ function spec(v: unknown): CoderTaskSpec {
   if (v.access !== undefined && v.access !== "read" && v.access !== "write") throw new Invalid("access");
   if (v.branch !== undefined && typeof v.branch !== "boolean") throw new Invalid("branch");
   if (v.resumeOf !== undefined && !id(v.resumeOf)) throw new Invalid("resumeOf");
+  if (v.baseOf !== undefined && !id(v.baseOf)) throw new Invalid("baseOf");
   if (v.role !== undefined && !(ROLES as readonly string[]).includes(v.role as string)) throw new Invalid("role");
   if (v.timeoutMs !== undefined && !(typeof v.timeoutMs === "number" && Number.isFinite(v.timeoutMs))) throw new Invalid("timeoutMs");
   return {
-    taskId: v.taskId, goal: v.goal, workspaceId: v.workspaceId, backend: v.backend as BackendChoice, constraints,
-    access: v.access as CoderTaskSpec["access"], branch: v.branch as boolean | undefined, resumeOf: v.resumeOf as string | undefined,
+    taskId: v.taskId, goal: v.goal, title: v.title as string | undefined, workspaceId: v.workspaceId, backend: v.backend as BackendChoice, constraints,
+    access: v.access as CoderTaskSpec["access"], branch: v.branch as boolean | undefined, resumeOf: v.resumeOf as string | undefined, baseOf: v.baseOf as string | undefined,
     role: v.role as CoderTaskSpec["role"],
     // Between one minute and four hours: a renderer cannot make an agent run forever.
     timeoutMs: v.timeoutMs === undefined ? undefined : Math.min(4 * 3600_000, Math.max(60_000, v.timeoutMs as number)),
@@ -102,6 +104,7 @@ export function createCoderHost(o: CoderHostOptions = {}): CoderHost {
       case "history": return executor.history();
       case "result": return executor.result(req.taskId) ?? null;
       case "diff": return executor.diff(req.taskId);
+      case "validate": return (await executor.revalidate(req.taskId)) ?? null;
       default: throw new Invalid("desktop-only method");
     }
   };
@@ -123,7 +126,7 @@ export function createCoderHost(o: CoderHostOptions = {}): CoderHost {
         return { method: "findWorkspace", words: r.words };
       case "start":
         return { method: "start", spec: spec(r.spec) };
-      case "cancel": case "pause": case "resume": case "result": case "diff":
+      case "cancel": case "pause": case "resume": case "result": case "diff": case "validate":
         if (!id(r.taskId)) throw new Invalid("taskId");
         return { method: r.method, taskId: r.taskId };
       case "log":

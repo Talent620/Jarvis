@@ -35,7 +35,10 @@ export interface CoderControllerOptions {
   runTask?: (ctx: CoderRunContext) => Promise<CoderResult>;
 }
 
-/** What a task run gets: the spec, the port and a way to report progress into the kernel. */
+/**
+ * What a task run gets. `spec.taskId` is the kernel task id; every agent run inside it gets its own
+ * executor task id `<kernel task id>.<role>` (separate context, separate record).
+ */
 export interface CoderRunContext {
   spec: CoderTaskSpec;
   port: CoderPort;
@@ -43,6 +46,21 @@ export interface CoderRunContext {
   kernel: Kernel;
   /** The kernel task was cancelled (stop). */
   signal: AbortSignal;
+  /** The executor task that stop / pause / "dodaj jeszcze" / diff should reach now. */
+  setActive(execId: string): void;
+  /** Continue after a restart: the interrupted executor record and everything done before it. */
+  resume?: { prior: CoderTaskRecord; history: CoderTaskRecord[] };
+}
+
+/** Kernel task id of an executor task id ("code_x.coder" -> "code_x"). */
+export const parentTaskId = (execId: string): string => execId.split(".")[0];
+
+/** One agent run with independent validation: the task without the software factory. */
+export async function plainRun(ctx: CoderRunContext): Promise<CoderResult> {
+  const execId = ctx.resume ? `${ctx.resume.prior.taskId}-r` : `${ctx.spec.taskId}.agent`;
+  ctx.setActive(execId);
+  const r = await coderCall(ctx.port, { method: "start", spec: { ...ctx.spec, taskId: execId, resumeOf: ctx.resume?.prior.taskId } });
+  return { ...r, taskId: ctx.spec.taskId };
 }
 
 export interface CoderTurn {
@@ -57,6 +75,7 @@ const STATE_PL: Record<string, string> = {
   queued: "czeka", starting: "startuje", running: "pracuje", paused: "jest wstrzymany", validating: "sprawdzam wynik niezależnie",
   completed: "skończył", failed: "skończył z błędem", cancelled: "przerwany", blocked: "zablokowany", interrupted_after_restart: "przerwany restartem",
 };
+const ROLE_PL: Record<string, string> = { planner: "planista", coder: "programista", tester: "tester", debugger: "debugger", reviewer: "recenzent" };
 const STAGE_PL: Record<string, string> = {
   "choosing a backend": "wybieram agenta", "agent started": "agent zaczął", "running tests": "uruchamia testy", "editing files": "edytuje pliki",
   building: "buduje", "searching the code": "przeszukuje kod", "reading files": "czyta pliki", validating: "niezależna walidacja",
@@ -74,8 +93,11 @@ export class CoderController {
   private readonly now: () => number;
   private workspaces: WorkspaceInfo[] = [];
   private interrupted: CoderTaskRecord[] = [];
+  private historyCache: CoderTaskRecord[] = [];
   /** Kernel task id -> its coding run. */
-  private runs = new Map<string, { actionId: string; utteranceId: string; ws: WorkspaceInfo; controller: AbortController }>();
+  private runs = new Map<string, { actionId: string; utteranceId: string; ws: WorkspaceInfo; controller: AbortController; execId: string }>();
+  /** Kernel task id -> the executor task that ran last (for the diff after the end). */
+  private lastExec = new Map<string, string>();
   private lastStatus = new Map<string, TaskStatus>();
   private pending = new Set<Promise<void>>();
   private unsubscribe: (() => void)[] = [];
@@ -105,7 +127,10 @@ export class CoderController {
       this.port.call({ method: "workspaces" }), this.port.call({ method: "history" }), this.port.call({ method: "live" }),
     ]);
     if (ws.ok) this.workspaces = ws.value;
-    if (hist.ok) this.interrupted = hist.value.filter((r) => r.state === "interrupted_after_restart" && !r.resumedBy);
+    if (hist.ok) {
+      this.historyCache = hist.value;
+      this.interrupted = hist.value.filter((r) => r.state === "interrupted_after_restart" && !r.resumedBy);
+    }
     if (live.ok) this.store.seed(live.value);
   }
 
@@ -169,24 +194,35 @@ export class CoderController {
     return this.launch(utteranceId, text, { goal: i.goal, ws, backend, access: i.access });
   }
 
+  /**
+   * "kontynuuj" after a restart: the same kernel task (restored from the journal, or recreated),
+   * the agent's own session resumed from the current repository state.
+   */
   private continueInterrupted(utteranceId: string, text: string): CoderTurn {
     const prior = this.interrupted[0];
     const ws = this.workspaces.find((w) => w.id === prior.workspaceId);
     if (!ws) return this.reply("continue", utteranceId, "Projekt przerwanego zadania nie jest już dodany do JARVIS-a.");
     this.interrupted = this.interrupted.slice(1);
     const backend: BackendChoice = prior.backend === "fake" ? "auto" : prior.backend;
-    return this.launch(utteranceId, text, { goal: prior.goal, ws, backend, access: "write", resumeOf: prior.taskId, constraints: prior.constraints });
+    const goal = this.kernel.state.tasks[parentTaskId(prior.taskId)]?.goal ?? prior.title ?? prior.goal;
+    return this.launch(utteranceId, text, { goal, ws, backend, access: "write", resume: prior, constraints: prior.constraints, taskId: parentTaskId(prior.taskId) });
   }
 
-  private launch(utteranceId: string, text: string, t: { goal: string; ws: WorkspaceInfo; backend: BackendChoice; access: "read" | "write"; resumeOf?: string; constraints?: string[] }): CoderTurn {
+  private launch(utteranceId: string, text: string, t: { goal: string; ws: WorkspaceInfo; backend: BackendChoice; access: "read" | "write"; resume?: CoderTaskRecord; constraints?: string[]; taskId?: string }): CoderTurn {
     const k = this.kernel;
     // One run per utterance, even if the same words arrive twice.
     const key = `code:${utteranceId}`;
     if (k.state.idempotency[key]) return { route: "coder", intent: "start", taskId: k.state.actions[k.state.idempotency[key]]?.taskId };
-    const taskId = k.id("code");
+    const taskId = t.taskId ?? k.id("code");
     const actionId = k.id("act");
-    k.dispatch({ type: "ConversationIntent", intent: "NEW_TASK", text, utteranceId, taskId });
-    k.dispatch({ type: "TaskCreated", taskId, goal: t.goal, kind: "code", steps: [{ id: "agent", intent: "agent pracuje w projekcie" }, { id: "validate", intent: "niezależna walidacja" }] });
+    k.dispatch({ type: "ConversationIntent", intent: t.resume ? "RESUME" : "NEW_TASK", text, utteranceId, taskId });
+    const existing = k.state.tasks[taskId];
+    if (existing && !TERMINAL_TASK.has(existing.status)) {
+      // Restored from the journal (paused after the restart): the user's "kontynuuj" resumes it.
+      if (existing.status === "paused") k.dispatch({ type: "TaskStatusChanged", taskId, status: "running", reason: "control:resume", control: true });
+    } else {
+      k.dispatch({ type: "TaskCreated", taskId, goal: t.goal, kind: "code", steps: [{ id: "agent", intent: "agent pracuje w projekcie" }, { id: "validate", intent: "niezależna walidacja" }] });
+    }
     const started = k.dispatch({ type: "ActionStarted", actionId, taskId, stepId: "agent", kind: "coder.run", argsHash: hashArgs({ goal: t.goal, ws: t.ws.id }), idempotencyKey: key });
     if (!started.accepted) {
       k.dispatch({ type: "TaskCancelled", taskId, reason: "duplicate command" });
@@ -194,18 +230,21 @@ export class CoderController {
     }
     k.dispatch({ type: "TaskStepChanged", taskId, stepId: "agent", status: "running" });
     const controller = new AbortController();
-    this.runs.set(taskId, { actionId, utteranceId, ws: t.ws, controller });
-    this.lastStatus.set(taskId, "running");
+    const run = { actionId, utteranceId, ws: t.ws, controller, execId: `${taskId}.agent` };
+    this.runs.set(taskId, run);
+    this.lastStatus.set(taskId, k.state.tasks[taskId]?.status ?? "running");
     this.store.begin({ taskId, goal: t.goal, backend: t.backend === "auto" ? "codex" : t.backend, workspace: t.ws.name, state: "starting", changedFiles: [], startedAt: this.now(), dirty: 0, stage: "choosing a backend" });
-    const spec: CoderTaskSpec = { taskId, goal: t.goal, workspaceId: t.ws.id, backend: t.backend, access: t.access, resumeOf: t.resumeOf, constraints: t.constraints };
-    const say = t.resumeOf
+    const spec: CoderTaskSpec = { taskId, goal: t.goal, title: t.goal, workspaceId: t.ws.id, backend: t.backend, access: t.access, constraints: t.constraints };
+    const say = t.resume
       ? `Wracam do „${preview(t.goal, 60)}” w ${t.ws.name}. Zaczynam od obecnego stanu repozytorium, nie powtarzam tego, co już zrobione.`
       : `Zaczynam w ${t.ws.name}: „${preview(t.goal, 60)}”. ${t.access === "read" ? "Tylko czytam, nic nie zmieniam." : "Po pracy agenta sam sprawdzę testy."}`;
     this.o.say(say, utteranceId);
-    const run = this.o.runTask
-      ? this.o.runTask({ spec, port: this.port, settings: this.settings(), kernel: k, signal: controller.signal })
-      : coderCall(this.port, { method: "start", spec });
-    const p = run
+    const ctx: CoderRunContext = {
+      spec, port: this.port, settings: this.settings(), kernel: k, signal: controller.signal,
+      setActive: (execId) => { run.execId = execId; this.lastExec.set(taskId, execId); },
+      resume: t.resume ? { prior: t.resume, history: this.historyCache } : undefined,
+    };
+    const p = (this.o.runTask ?? plainRun)(ctx)
       .then((r) => this.finish(taskId, r))
       .catch((e) => this.finish(taskId, { taskId, state: "failed", truth: "FAILED", backend: "codex", agentSaysDone: false, violations: [], reason: e instanceof Error ? e.message : String(e) }))
       .finally(() => { this.pending.delete(p); });
@@ -220,8 +259,10 @@ export class CoderController {
     this.store.setResult(r);
     const k = this.kernel;
     const evidence = checksLine(r);
-    k.dispatch({ type: "TaskStepChanged", taskId, stepId: "agent", status: r.agentSaysDone ? "ATTEMPTED" : r.truth === "CONFIRMED" ? "CONFIRMED" : r.truth, evidence: r.agentSummary ? preview(r.agentSummary, 200) : undefined });
-    if (r.validation?.ran) k.dispatch({ type: "TaskStepChanged", taskId, stepId: "validate", status: r.truth === "CONFIRMED" ? "CONFIRMED" : "FAILED", evidence });
+    // The plain run's two steps; the factory reports its role steps itself.
+    const has = (id: string) => !!k.state.tasks[taskId]?.steps.some((x) => x.id === id);
+    if (has("agent")) k.dispatch({ type: "TaskStepChanged", taskId, stepId: "agent", status: r.agentSaysDone ? "ATTEMPTED" : r.truth === "CONFIRMED" ? "CONFIRMED" : r.truth, evidence: r.agentSummary ? preview(r.agentSummary, 200) : undefined });
+    if (has("validate") && r.validation?.ran) k.dispatch({ type: "TaskStepChanged", taskId, stepId: "validate", status: r.truth === "CONFIRMED" ? "CONFIRMED" : "FAILED", evidence });
     if (r.truth === "CONFIRMED") k.dispatch({ type: "ActionVerified", actionId: run.actionId, evidence: evidence || "read-only report received, no file changed" });
     else if (r.truth === "ATTEMPTED") k.dispatch({ type: "ActionAttempted", actionId: run.actionId, evidence: r.reason });
     else k.dispatch({ type: "ActionFailed", actionId: run.actionId, reason: r.reason ?? r.state, truth: r.truth });
@@ -245,16 +286,16 @@ export class CoderController {
       this.lastStatus.set(taskId, now);
       if (now === "cancelled") {
         run.controller.abort();
-        void this.port.call({ method: "cancel", taskId });
+        void this.port.call({ method: "cancel", taskId: run.execId });
       } else if (now === "paused") {
-        void this.port.call({ method: "pause", taskId }).then((r) => {
+        void this.port.call({ method: "pause", taskId: run.execId }).then((r) => {
           if (r.ok && r.value) return;
           // This agent cannot be paused: say so and keep the task honest (still running).
           this.kernel.dispatch({ type: "TaskStatusChanged", taskId, status: "running", reason: "the agent cannot pause", control: true });
           this.o.say("Tego agenta nie da się wstrzymać, pracuje dalej. Powiedz stop, jeśli mam go przerwać.", run.utteranceId);
         });
       } else if (now === "running" && before === "paused") {
-        void this.port.call({ method: "resume", taskId });
+        void this.port.call({ method: "resume", taskId: run.execId });
       }
     }
   }
@@ -267,7 +308,7 @@ export class CoderController {
     this.kernel.dispatch({ type: "ConversationIntent", intent: "AMEND_TASK", text, utteranceId, taskId: cur.taskId });
     this.kernel.dispatch({ type: "TaskAmended", taskId: cur.taskId, change: i.kind === "constraint" ? i.constraint : i.instruction });
     const turn: CoderTurn = { route: "coder", intent: i.kind, taskId: cur.taskId };
-    const p = coderCall(this.port, { method: "amend", taskId: cur.taskId, ...change })
+    const p = coderCall(this.port, { method: "amend", taskId: this.execOf(cur.taskId), ...change })
       .then((r) => {
         turn.say = !r.ok ? "Zadanie już się skończyło, nie mam czego zmienić."
           : i.kind === "constraint" ? `Dobrze: ${i.constraint}. Pilnuję tego do końca zadania.`
@@ -298,7 +339,7 @@ export class CoderController {
 
   /** POKAŻ ZMIANY for one task. */
   async loadDiff(taskId: string): Promise<string> {
-    const d = await coderCall(this.port, { method: "diff", taskId });
+    const d = await coderCall(this.port, { method: "diff", taskId: this.execOf(taskId) });
     this.store.setDiff(taskId, d);
     return d;
   }
@@ -341,6 +382,11 @@ export class CoderController {
     return r.ok && r.value;
   }
 
+  /** The executor task behind a kernel coding task (the one running now, or the last one). */
+  private execOf(taskId: string): string {
+    return this.runs.get(taskId)?.execId ?? this.lastExec.get(taskId) ?? `${taskId}.agent`;
+  }
+
   // --------------------------------------------------------------------------- status, diff
 
   /** "Co teraz robi?": built from the live state the agent's own events produced, never guessed. */
@@ -359,7 +405,7 @@ export class CoderController {
     const t = this.store.current() ?? this.store.latest();
     if (!t) return this.reply("diff", utteranceId, "Nie mam żadnych zmian do pokazania.");
     const turn: CoderTurn = { route: "coder", intent: "diff", taskId: t.taskId };
-    const p = coderCall(this.port, { method: "diff", taskId: t.taskId })
+    const p = coderCall(this.port, { method: "diff", taskId: this.execOf(t.taskId) })
       .then((d) => {
         this.store.setDiff(t.taskId, d);
         const n = t.changedFiles.length;
@@ -376,6 +422,7 @@ export class CoderController {
 function describe(t: CoderLiveState, now: number): string {
   const who = BACKEND_NAME[t.backend] ?? t.backend;
   const parts = [`${who} ${STATE_PL[t.state] ?? t.state}: „${preview(t.goal, 50)}” w ${t.workspace}${t.branch ? ` (gałąź ${t.branch})` : ""}.`];
+  if (t.role && LIVE_CODER_STATES.has(t.state)) parts.push(`Rola: ${ROLE_PL[t.role] ?? t.role}.`);
   if (t.stage && LIVE_CODER_STATES.has(t.state)) parts.push(`Etap: ${STAGE_PL[t.stage] ?? `«${preview(t.stage, 60)}»`}.`);
   if (LIVE_CODER_STATES.has(t.state)) {
     if (t.currentCommand && (t.stage === "running tests" || t.stage === "building" || t.state === "validating")) parts.push(`Polecenie: ${preview(t.currentCommand, 50)}.`);

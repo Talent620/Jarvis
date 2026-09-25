@@ -39,6 +39,7 @@
     "quality:all": "node scripts/quality-gate.mjs --sales",
     "perf:store": "vite-node scripts/perf/store-bench.ts",
     "jarvis:acceptance": "vite-node scripts/acceptance/run.ts --",
+    "jarvis:coder:acceptance": "vite-node scripts/acceptance/coder.ts --",
     "test:desktop": "vitest run --config vitest.desktop.config.ts"
   },
   "dependencies": {

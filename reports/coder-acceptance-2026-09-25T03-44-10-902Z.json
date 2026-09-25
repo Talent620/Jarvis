@@ -1,0 +1,36 @@
+{
+  "mode": "local",
+  "startedAt": "2026-09-25T03:44:10.902Z",
+  "platform": "linux x64",
+  "node": "v22.22.2",
+  "checks": [
+    {
+      "name": "local: codex backend",
+      "status": "NEEDS_HARDWARE",
+      "detail": "unavailable, codex is not installed (npm i -g @openai/codex)"
+    },
+    {
+      "name": "local: claude backend",
+      "status": "NEEDS_PERMISSION",
+      "detail": "needs_auth, 2.1.282 (Claude Code), no login found (run: claude, then /login)"
+    },
+    {
+      "name": "local: local backend",
+      "status": "NEEDS_HARDWARE",
+      "detail": "unavailable, Ollama is not running"
+    },
+    {
+      "name": "local: this repository's own checks (what JARVIS would run)",
+      "status": "PASS",
+      "detail": "lint: npm run lint (package.json scripts.lint); test: npm run test (package.json scripts.test); build: npm run build (package.json scripts.build); secrets: npm run scan:secrets (package.json scripts.scan:secrets)",
+      "ms": 1
+    },
+    {
+      "name": "local: git snapshot of this repository (read-only)",
+      "status": "PASS",
+      "detail": "branch claude/intelligent-brahmagupta-jq7jqj, 19 uncommitted file(s)",
+      "ms": 33
+    }
+  ],
+  "verdict": "PARTIAL"
+}

@@ -159,12 +159,12 @@ export class CoderExecutor {
     const at = this.now();
     const w = this.o.registry.get(spec.workspaceId);
     const record: CoderTaskRecord = {
-      taskId: spec.taskId, goal: redactSecrets(spec.goal, this.secrets), backend: "codex", workspaceId: spec.workspaceId, root: w?.root ?? "",
+      taskId: spec.taskId, goal: redactSecrets(spec.goal, this.secrets), title: spec.title ? redactSecrets(spec.title, this.secrets) : undefined, backend: "codex", workspaceId: spec.workspaceId, root: w?.root ?? "",
       state: "queued", startedAt: at, updatedAt: at, dirtyBefore: [], changedFiles: [], constraints: [...(spec.constraints ?? [])],
     };
     const a: Active = {
       spec, record, followUps: [], violations: [], seq: 0, log: [], cancelled: false, listeners: new Set(onEvent ? [onEvent] : []),
-      live: { taskId: spec.taskId, goal: record.goal, backend: "codex", workspace: w?.name ?? spec.workspaceId, state: "queued", changedFiles: [], startedAt: at, dirty: 0, role: spec.role },
+      live: { taskId: spec.taskId, goal: record.title ?? record.goal, backend: "codex", workspace: w?.name ?? spec.workspaceId, state: "queued", changedFiles: [], startedAt: at, dirty: 0, role: spec.role },
       promise: Promise.resolve(null as unknown as CoderResult),
     };
     this.tasks.set(spec.taskId, a);
@@ -173,7 +173,7 @@ export class CoderExecutor {
   }
 
   private emit(a: Active, kind: CoderEventKind, text: string, extra: Partial<CoderEvent> = {}): CoderEvent {
-    const e: CoderEvent = { taskId: a.spec.taskId, seq: ++a.seq, at: this.now(), kind, text: redactSecrets(text, this.secrets).slice(0, 600), ...extra };
+    const e: CoderEvent = { taskId: a.spec.taskId, seq: ++a.seq, at: this.now(), kind, text: redactSecrets(text, this.secrets).slice(0, 600), ...(a.spec.role ? { role: a.spec.role } : {}), ...extra };
     if (e.command) e.command = redactSecrets(e.command, this.secrets).slice(0, 300);
     a.log.push(e);
     const cap = this.o.logLimit ?? 2000;
@@ -213,12 +213,15 @@ export class CoderExecutor {
       const snap = await this.o.registry.snapshot(w.root);
       const prior = spec.resumeOf ? this.records.get(spec.resumeOf) : undefined;
       if (prior) { prior.resumedBy = spec.taskId; prior.updatedAt = this.now(); }
-      a.record.startHead = prior?.startHead ?? snap.head;
-      a.record.dirtyBefore = prior?.dirtyBefore ?? snap.dirty;
-      a.record.dirtyHashes = prior?.dirtyHashes ?? hashDirty(w.root, snap.dirty);
+      // The baseline: the interrupted task's, another role's (a debugger counts the coder's changes
+      // too), or this moment's.
+      const base = prior ?? (spec.baseOf ? this.records.get(spec.baseOf) : undefined);
+      a.record.startHead = base?.startHead ?? snap.head;
+      a.record.dirtyBefore = base?.dirtyBefore ?? snap.dirty;
+      a.record.dirtyHashes = base?.dirtyHashes ?? hashDirty(w.root, snap.dirty);
       a.record.branch = a.live.branch = snap.branch;
       a.live.dirty = snap.dirty.length;
-      if (spec.branch && snap.isRepo && access === "write" && !prior) {
+      if (spec.branch && snap.isRepo && access === "write" && !prior && !spec.baseOf) {
         const name = `jarvis/${spec.taskId.slice(0, 12)}-${slug(spec.goal)}`;
         const r = await this.run("git", ["-C", w.root, "switch", "-c", name], { timeoutMs: 15_000 });
         if (r.code === 0) { a.record.branch = a.live.branch = name; this.emit(a, "GIT_OPERATION", `working on branch ${name}`); }
@@ -344,7 +347,8 @@ export class CoderExecutor {
       ...(spec.constraints?.length ? [`- Additional constraints from the user: ${spec.constraints.join("; ")}`] : []),
     ];
     if (spec.role === "planner") lines.push("", "Only analyse and write a short numbered plan. Do not change files.");
-    if (spec.role === "reviewer") lines.push("", 'Only review. Do not change files. End with one line of JSON: {"approve": true|false, "findings": ["..."]}.');
+    if (spec.role === "reviewer") lines.push("", "Only review the uncommitted changes (git diff, git status) against the task. Do not change files.", 'Look for regressions, broken behaviour and missing tests. End with one line of JSON: {"approve": true|false, "findings": ["..."]}.');
+    if (spec.role === "debugger") lines.push("", "An earlier attempt did not pass. Fix only what the failure below needs; keep the earlier correct changes.");
     if (prior) {
       lines.push("", "This continues an interrupted task. Do not redo what is already done; look at the current state first.",
         `Already done (last checkpoint): ${prior.lastStage ?? "unknown"}.`,
@@ -375,6 +379,18 @@ export class CoderExecutor {
     await Promise.all(live.map((a) => a.run?.cancel()));
     await Promise.allSettled(live.map((a) => a.promise));
     this.persist();
+  }
+
+  /**
+   * The tester role: run the repository's own checks again against a task's baseline (after a
+   * restart, when the last validation is not in memory). Deterministic, no agent, no model.
+   */
+  async revalidate(taskId: string): Promise<ValidationResult | undefined> {
+    const r = this.records.get(taskId);
+    const w = r ? this.o.registry.get(r.workspaceId) : undefined;
+    if (!r || !w) return undefined;
+    const validate = this.o.validate ?? validateWorkspace;
+    return validate({ root: w.root, checks: detectProject(w.root).checks, startHead: r.startHead, dirtyBefore: r.dirtyBefore, dirtyHashes: r.dirtyHashes, run: this.run });
   }
 
   /** The persisted result of a finished task (after a restart too). */

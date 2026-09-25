@@ -22,6 +22,7 @@ import { acquireVoice, releaseVoice } from "../voiceSession";
 import { desktopCoderPort } from "./coder/port";
 import { mightBeCoding } from "./coder/intent";
 import { loadCoderSettings } from "./coder/settings";
+import { runFactory } from "./coder/factory";
 import type { CoderController } from "./coder/controller";
 import type { ListenMode, SocketLike, StreamingSTT } from "./voice/types";
 
@@ -160,7 +161,7 @@ export async function createAppRuntime(bridge = desktopEnvBridge(), speaker: Spe
     const port = desktopCoderPort();
     const rt = new JarvisRuntime({
       kernel, env: new IpcEnvironment("managed-browser", bridge), speaker, session, skills: new SkillLibrary(localSkillStore),
-      coder: port ? { port, settings: loadCoderSettings } : undefined,
+      coder: port ? { port, settings: loadCoderSettings, runTask: runFactory } : undefined,
     });
     await rt.start();
     return { kernel, runtime: rt };

@@ -7,20 +7,19 @@
 - OSTATNI ZIELONY COMMIT: `67efac2` with all local gates exit 0 (vitest, tsc, eslint, build,
   scan:secrets, browser, desktop). CI fully green on `7ad1620` (Tests with test, browser,
   desktop; Android APK; Ubuntu build). Check the latest run of the branch for `67efac2`.
-- BIEŻĄCY KAMIEŃ: M13 (software factory). M0-M12 done (state.json). Mission extended with
-  M11-M13 (MISSION.md section 11): JARVIS as the operator of coding agents.
+- BIEŻĄCY KAMIEŃ: final adversarial review of M11-M13. M0-M13 done (state.json).
 - STAN TESTÓW (after 67efac2): vitest 3300/3300 (363 files); browser 17/17; desktop on Xvfb 8/8;
   golden 1-8 on the fixture 10 consecutive green runs (1.5-1.7 s each). Acceptance fixture x10:
   reports/acceptance-2026-09-25T01-36-38-962Z.md.
 - OSTATNIA ZWERYFIKOWANA FUNKCJA: second review fixes (D-035): the browser switch is a step of the
   command's own task, only instructions choose a browser, the switch needs the chosen browser to
   answer, skills replay in their browser, voice control shows preemption and recognizer failures.
-- DOKŁADNA NASTĘPNA AKCJA: M13: roles (planner, coder, tester, reviewer, debugger) through
-  agentRun, cost router (SIMPLE..CODE_CRITICAL, TANIO/NORMALNIE/MAKSIMUM), reviewer loop,
-  `npm run jarvis:coder:acceptance` (fake, local, codex), then the final adversarial review of
-  M11-M13. On the user machine after that: `npm run jarvis:coder:acceptance -- --mode=codex`, and
-  `npm run jarvis:acceptance -- --mode=local-desktop` / `--mode=managed-browser` for M6.
-  Read the newest reports/acceptance-*.md before the backlog. Cloud work left: B-038.
+- DOKŁADNA NASTĘPNA AKCJA: fix the findings of the M11-M13 review. Then on the user machine:
+  `npm ci && npm run jarvis:coder:acceptance -- --mode=codex` (Codex installed and logged in; it
+  works on a throwaway project in the temp folder), and for M6
+  `npm run jarvis:acceptance -- --mode=local-desktop` / `--mode=managed-browser`. Read the newest
+  reports/coder-acceptance-*.md and reports/acceptance-*.md before the backlog. Cloud work left:
+  B-038.
 - LOCAL RUN: `npm ci && npm run test:browser && npm run jarvis:acceptance`.
 - POZYCJE NEEDS_HARDWARE: B-030 real YouTube selectors, B-031 real Gmail send + Sent read-back
   (`--send` only), B-032 address book source, B-033 voice on a real microphone, B-036 Firefox

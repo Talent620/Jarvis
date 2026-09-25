@@ -38,7 +38,17 @@ if (scenario.grandchild) {
   writeFileSync(scenario.grandchild, String(g.pid));
 }
 
-const steps = resume ? scenario.resumeSteps ?? scenario.steps ?? [] : scenario.steps ?? [];
+// "runs": a different script per new session (planner, coder, debugger ... in order).
+let run = {};
+if (Array.isArray(scenario.runs) && !resume) {
+  const counter = `${scenarioFile}.runs`;
+  let n = 0;
+  try { n = Number(readFileSync(counter, "utf8")) || 0; } catch { n = 0; }
+  writeFileSync(counter, String(n + 1));
+  run = scenario.runs[Math.min(n, scenario.runs.length - 1)] ?? {};
+}
+if (run.final) scenario.final = run.final;
+const steps = resume ? scenario.resumeSteps ?? scenario.steps ?? [] : run.steps ?? scenario.steps ?? [];
 out({ type: "thread.started", thread_id: scenario.threadId ?? "thread-fake-1" });
 out({ type: "turn.started" });
 let n = 0;

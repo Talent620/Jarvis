@@ -16,6 +16,7 @@ export interface CoderStoreSnapshot {
 export function applyCoderEvent(live: CoderLiveState, e: CoderEvent): void {
   if (e.model) live.model = e.model;
   if (e.backend) live.backend = e.backend;
+  if (e.role) live.role = e.role;
   if (e.branch) live.branch = e.branch;
   if (e.file) live.currentFile = e.file;
   if (e.command) live.currentCommand = e.command;
@@ -33,8 +34,11 @@ export function applyCoderEvent(live: CoderLiveState, e: CoderEvent): void {
     case "WAITING_USER": if (e.text === "paused") live.state = "paused"; break;
     case "POLICY_VIOLATION": live.stage = e.text.slice(0, 120); break;
     case "WARNING": if (e.text.startsWith("interrupted")) live.state = "interrupted_after_restart"; break;
-    case "TASK_CANCELLED": live.state = "cancelled"; live.stage = "stopped"; break;
+    case "TASK_CANCELLED":
+      if (e.role) { live.stage = `${e.role}: stopped`; break; } // one role of the factory, not the task
+      live.state = "cancelled"; live.stage = "stopped"; break;
     case "TASK_COMPLETED": {
+      if (e.role) { live.stage = `${e.role}: ${e.text.slice(0, 120)}`; live.lastCheckpoint = live.stage; break; }
       const truth = e.text.split(":")[0];
       live.state = truthState(truth);
       live.stage = e.text.slice(0, 160);
@@ -81,7 +85,8 @@ export class CoderLiveStore {
 
   /** Authoritative live states from the host (on connect, after a renderer reload). */
   seed(states: CoderLiveState[]): void {
-    for (const s of states) this.live.set(s.taskId, { ...s, changedFiles: [...s.changedFiles] });
+    // Executor tasks ("code_x.coder") are shown under their kernel task ("code_x").
+    for (const s of states) { const id = s.taskId.split(".")[0]; this.live.set(id, { ...s, taskId: id, changedFiles: [...s.changedFiles] }); }
     this.trim();
     this.changed();
   }
@@ -94,11 +99,13 @@ export class CoderLiveStore {
       const last = this.lastSeq.get(e.taskId) ?? 0;
       if (e.seq <= last) continue;
       this.lastSeq.set(e.taskId, e.seq);
-      let log = this.logs.get(e.taskId);
-      if (!log) { log = []; this.logs.set(e.taskId, log); }
+      // A role's events ("code_x.coder") belong to the kernel task ("code_x").
+      const key = this.live.has(e.taskId) ? e.taskId : e.taskId.split(".")[0];
+      let log = this.logs.get(key);
+      if (!log) { log = []; this.logs.set(key, log); }
       log.push(e);
       if (log.length > cap * 2) log.splice(0, log.length - cap); // amortized trim
-      const live = this.live.get(e.taskId);
+      const live = this.live.get(key);
       if (live) applyCoderEvent(live, e);
       this.applied++;
     }

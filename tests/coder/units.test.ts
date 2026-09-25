@@ -115,3 +115,16 @@ describe("verdict", () => {
     expect(v({ access: "read", validation: val([]) }).truth).toBe("FAILED");
   });
 });
+
+describe("workspace snapshot", () => {
+  it("keeps the leading space of `git status --short` (' M file' is file, not 'ile')", async () => {
+    const { miniProject } = await import("./helpers");
+    const root = miniProject();
+    writeFileSync(path.join(root, "add.js"), "changed\n");
+    writeFileSync(path.join(root, "new.txt"), "x\n");
+    const snap = await new WorkspaceRegistry().snapshot(root);
+    expect(snap.dirty).toEqual([" M add.js", "?? new.txt"]);
+    const { statusPath } = await import("../../src/node/coder/validate");
+    expect(snap.dirty.map(statusPath)).toEqual(["add.js", "new.txt"]);
+  });
+});

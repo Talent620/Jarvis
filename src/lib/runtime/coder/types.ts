@@ -56,6 +56,8 @@ export interface CoderEvent {
   /** The agent's own session id (Codex thread, Claude session), for resume. */
   sessionId?: string;
   model?: string;
+  /** The factory role of the task that produced the event (M13). */
+  role?: string;
   /** On JARVIS's own TASK_STARTED: the backend really chosen and the branch it works on. */
   backend?: CoderBackendId;
   branch?: string;
@@ -83,6 +85,8 @@ export interface CoderTaskSpec {
   /** Stable id (the kernel task id): the same id twice is the same task (dedup). */
   taskId: string;
   goal: string;
+  /** The user's own words for the whole task (a role's goal adds a plan or a failure to it). */
+  title?: string;
   workspaceId: string;
   backend: BackendChoice;
   /** "no release", "run the tests first": enforced by the guard and told to the agent. */
@@ -93,6 +97,11 @@ export interface CoderTaskSpec {
   branch?: boolean;
   /** Resume from the current repo state after an interruption. */
   resumeOf?: string;
+  /**
+   * Measure changes from another task's starting point (its HEAD and the user's dirty files), in
+   * a fresh agent session: a debugger or a fix after review counts the whole factory's changes.
+   */
+  baseOf?: string;
   /** Role inside the software factory (M13); plain tasks are "coder". */
   role?: "planner" | "coder" | "tester" | "reviewer" | "debugger";
   timeoutMs?: number;
@@ -152,6 +161,8 @@ export interface CoderResult {
 export interface CoderTaskRecord {
   taskId: string;
   goal: string;
+  /** The user's words for the whole task (what "kontynuuj" continues). */
+  title?: string;
   backend: CoderBackendId;
   workspaceId: string;
   root: string;

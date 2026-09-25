@@ -12,6 +12,14 @@ const out = (o) => process.stdout.write(`${JSON.stringify(o)}\n`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 if (args[0] === "--version") { console.log("2.1.282 (Claude Code)"); process.exit(0); }
 
+// "runs": a different script per session (e.g. the reviewer's first and second look).
+if (Array.isArray(scenario.runs)) {
+  const counter = `${process.env.JARVIS_FAKE_CODER_SCRIPT}.runs`;
+  let n = 0;
+  try { n = Number(readFileSync(counter, "utf8")) || 0; } catch { n = 0; }
+  writeFileSync(counter, String(n + 1));
+  Object.assign(scenario, scenario.runs[Math.min(n, scenario.runs.length - 1)] ?? {});
+}
 out({ type: "system", subtype: "init", session_id: "claude-session-1", model: "claude-test-model", tools: ["Read", "Edit", "Bash"] });
 const rl = createInterface({ input: process.stdin });
 let turn = 0;
