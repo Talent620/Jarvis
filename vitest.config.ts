@@ -7,6 +7,6 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     // Real-browser tests need Chromium and run separately (npm run test:browser).
-    exclude: [...configDefaults.exclude, "tests/browser/**"],
+    exclude: [...configDefaults.exclude, "tests/browser/**", "tests/desktop/**"],
   },
 });

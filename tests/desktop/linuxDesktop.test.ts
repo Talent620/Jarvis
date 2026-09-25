@@ -8,8 +8,8 @@ import { LinuxDesktopEnvironment } from "../../src/node/linux/environment";
 import type { FocusedRead, SelectionRead, WindowListRead, WindowRead } from "../../src/lib/runtime/env/types";
 import { DESKTOP_TOOLS_READY, startXSession, type XSession } from "./xsession";
 
-it("in CI the desktop tools are installed, so the suite below cannot silently skip", () => {
-  if (process.env.CI) expect(DESKTOP_TOOLS_READY).toBe(true);
+it("in the CI desktop job the tools are installed, so the suite below cannot silently skip", () => {
+  if (process.env.JARVIS_DESKTOP_CI) expect(DESKTOP_TOOLS_READY).toBe(true);
 });
 
 describe.skipIf(!DESKTOP_TOOLS_READY)("Linux desktop adapters on Xvfb (X11, openbox, AT-SPI, GTK)", () => {

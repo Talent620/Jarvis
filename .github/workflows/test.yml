@@ -96,3 +96,5 @@ jobs:
 
       - name: Linux desktop adapter tests on Xvfb
         run: npm run test:desktop
+        env:
+          JARVIS_DESKTOP_CI: "1"

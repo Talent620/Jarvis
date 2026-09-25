@@ -49,6 +49,11 @@ export default tseslint.config(
       "prefer-const": "warn",
     },
   },
+  // --- WebExtension (BrowserBridge, M8): browser + service worker, plain scripts ---
+  {
+    files: ["extension/**/*.js"],
+    languageOptions: { sourceType: "script", globals: { ...globals.browser, ...globals.serviceworker, chrome: "readonly", browser: "readonly" } },
+  },
   // --- Node (CommonJS): powłoka desktopowa Electron + skrypty .cjs ---
   {
     files: ["electron/**/*.cjs", "scripts/**/*.cjs"],

@@ -12,7 +12,7 @@ await build({
   platform: "node",
   format: "cjs",
   target: "node20",
-  external: ["playwright-core", "electron"],
+  external: ["playwright-core", "electron", "bufferutil", "utf-8-validate"],
   sourcemap: false,
   legalComments: "none",
   logLevel: "warning",

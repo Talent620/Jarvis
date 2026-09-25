@@ -68,7 +68,8 @@ export function verify(a: EnvAction, before: ReadResult | undefined, after: Read
       const p = after as PageRead;
       const want = urlParts(a.url);
       const got = urlParts(p.url);
-      const arrived = p.open === true && (got.host === want.host || (!!p.consentWall && CONSENT_HOSTS.test(got.host)));
+      // Same host and path (query aside), or a consent wall in between (same host or consent.*).
+      const arrived = p.open === true && ((got.host === want.host && (got.path === want.path || !!p.consentWall)) || (!!p.consentWall && CONSENT_HOSTS.test(got.host)));
       return ladder(result, { arrived: true }, { arrived }, `url ${p.url}${p.consentWall ? " (consent wall)" : ""}`, now);
     }
     case "browser.consent": {

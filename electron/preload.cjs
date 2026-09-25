@@ -14,6 +14,10 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
       return () => ipcRenderer.removeListener("jarvis:env-event", handler);
     },
   },
+  // BrowserBridge pairing and status (the extension itself talks to 127.0.0.1 directly).
+  bridge: {
+    call: (req) => ipcRenderer.invoke("jarvis:bridge", req),
+  },
   // Bezpieczna warstwa narzędzi systemowych (MCP-style): zawsze przez jeden kontrolowany IPC.
   agentTool: (tool, input = {}) => ipcRenderer.invoke("jarvis:agent-tool", { tool: String(tool || ""), input }),
   mcpStdioConnect: (config) => ipcRenderer.invoke("jarvis:mcp-stdio-connect", config),

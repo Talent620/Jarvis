@@ -46,6 +46,17 @@ function getEnvHost() {
   return envHost;
 }
 
+// BrowserBridge (M8): loopback WebSocket for the JARVIS extension in the user's own browser.
+let bridgeHost = null;
+function getBridgeHost() {
+  if (!bridgeHost) {
+    const { createBridgeHost } = require("./gen/runtime.cjs");
+    bridgeHost = createBridgeHost({ userDataPath: app.getPath("userData") });
+    bridgeHost.start().catch(() => { bridgeHost = null; });
+  }
+  return bridgeHost;
+}
+
 function siteOsPaths() {
   const base = path.join(app.getPath("userData"), "site-os");
   return {
@@ -347,6 +358,19 @@ function registerDesktopControl() {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     return stdioMcp.close(String(payload?.server || ""));
   });
+  ipcMain.handle("jarvis:bridge", async (event, req) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    try {
+      const host = getBridgeHost();
+      const method = String(req?.method || "");
+      if (method === "pair") return { ok: true, code: host.pair(), status: host.status() };
+      if (method === "status") return { ok: true, status: host.status() };
+      if (method === "revoke") { host.revoke(String(req?.extensionId || "")); return { ok: true, status: host.status() }; }
+      return { ok: false, error: "unknown method" };
+    } catch (e) {
+      return { ok: false, error: e && e.message ? String(e.message) : String(e) };
+    }
+  });
   ipcMain.handle("jarvis:env", async (event, req) => {
     if (!isTrustedIpc(event)) return { status: "failed", error: "forbidden" };
     try {
@@ -596,6 +620,8 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    // A paired JARVIS extension reconnects on its own once the loopback bridge listens.
+    try { getBridgeHost(); } catch { /* runtime bundle missing in a bare dev checkout */ }
     // Mikrofon/kamera (rozmowa na żywo, HUD) — tylko media; inne prośby odrzucamy.
     const ALLOWED_PERMISSIONS = new Set(["media", "audioCapture", "videoCapture", "mediaKeySystem", "speaker-selection"]);
     session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(ALLOWED_PERMISSIONS.has(perm)));
@@ -666,6 +692,7 @@ if (!gotLock) {
 
   app.on("will-quit", () => {
     if (envHost) void envHost.handle({ method: "close", callId: "quit" }).catch(() => undefined);
+    if (bridgeHost) void bridgeHost.close().catch(() => undefined);
     globalShortcut.unregisterAll();
     setClipWatch(false);
     if (siteOsProcess && siteOsProcess.exitCode === null) siteOsProcess.kill();

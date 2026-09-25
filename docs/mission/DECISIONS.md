@@ -170,3 +170,13 @@ clipboard belongs to the app that copied: without a clipboard manager it is gone
 exits, so acceptance proves the system clipboard during the run, not afterwards. Real tests run
 on a throwaway Xvfb session with openbox, the AT-SPI bus and a GTK app (`npm run test:desktop`,
 CI job `desktop`).
+
+## D-028 BrowserBridge: loopback WebSocket, pairing code then token, managed browser stays default
+The extension talks to a loopback-only WebSocket (`ws`, bundled into the Electron runtime) that
+accepts only extension origins; pairing uses a 6-digit one-time code, then a random token stored
+by JARVIS as a hash. The bridge observes the user's current tab and runs four commands. It does
+not replace the managed browser: the golden scenario and the action lane keep the managed
+browser, and the bridge is `browser.bridge` for tasks aimed at the user's own browser (routing
+those utterances is backlog B-035). Without a connected extension bridge commands are
+NEEDS_CAPABILITY. Firefox shares the MV3 manifest (`background.scripts`) but is only exercised
+through the protocol tests here.
