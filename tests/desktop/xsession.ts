@@ -29,12 +29,38 @@ export interface XSession {
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Poll until `check` passes: fixed sleeps raced a slow CI runner (Xvfb not up yet). */
+async function until(check: () => boolean, ms: number, what: string): Promise<void> {
+  const t0 = Date.now();
+  while (!check()) {
+    if (Date.now() - t0 > ms) throw new Error(`${what} not ready after ${ms} ms`);
+    await wait(100);
+  }
+}
+
+const displayUp = (env: Record<string, string>) => () => {
+  try { execFileSync("xdotool", ["getdisplaygeometry"], { env, stdio: "ignore", timeout: 2000 }); return true; } catch { return false; }
+};
+
+/** Start the GTK app; resolves on its "ready" line, rejects with its stderr if it exits first. */
+function startApp(env: Record<string, string>, procs: ChildProcess[], ms: number): Promise<void> {
+  const app = spawn(PYTHON_GTK!, ["-c", APP], { env, stdio: ["ignore", "pipe", "pipe"] });
+  procs.push(app);
+  let err = "";
+  app.stderr!.on("data", (d) => { err += String(d); });
+  return new Promise<void>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`GTK app did not start in ${ms} ms: ${err.trim().split("\n").pop() ?? ""}`)), ms);
+    app.stdout!.on("data", (d) => { if (String(d).includes("ready")) { clearTimeout(t); resolve(); } });
+    app.on("exit", (code) => { clearTimeout(t); reject(new Error(`GTK app exited (${code}) before ready: ${err.trim().split("\n").pop() ?? ""}`)); });
+  });
+}
+
 export async function startXSession(display = ":87"): Promise<XSession> {
   const procs: ChildProcess[] = [];
   const env: Record<string, string> = { ...process.env as Record<string, string>, DISPLAY: display, NO_AT_BRIDGE: "0", GTK_MODULES: "gail:atk-bridge" };
   delete env.WAYLAND_DISPLAY;
   procs.push(spawn("Xvfb", [display, "-screen", "0", "1280x800x24", "-nolisten", "tcp"], { stdio: "ignore" }));
-  await wait(400);
+  await until(displayUp(env), 15_000, `X display ${display}`);
   const dbus = execFileSync("dbus-launch", ["--sh-syntax"], { env, encoding: "utf8" });
   const addr = /DBUS_SESSION_BUS_ADDRESS='([^']+)'/.exec(dbus)?.[1];
   const pid = /DBUS_SESSION_BUS_PID=(\d+)/.exec(dbus)?.[1];
@@ -43,12 +69,14 @@ export async function startXSession(display = ":87"): Promise<XSession> {
   procs.push(spawn("/usr/libexec/at-spi-bus-launcher", ["--launch-immediately"], { env, stdio: "ignore" }));
   procs.push(spawn("openbox", [], { env, stdio: "ignore" }));
   await wait(600);
-  const app = spawn(PYTHON_GTK!, ["-c", APP], { env, stdio: ["ignore", "pipe", "ignore"] });
-  procs.push(app);
-  await new Promise<void>((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error("GTK app did not start")), 10_000);
-    app.stdout!.on("data", (d) => { if (String(d).includes("ready")) { clearTimeout(t); resolve(); } });
-  });
+  // A cold python + gi import on a busy runner can take long; one more start if it died early.
+  try {
+    await startApp(env, procs, 30_000);
+  } catch (e) {
+    if (!/exited/.test(String(e))) throw e;
+    await wait(1000);
+    await startApp(env, procs, 30_000);
+  }
   await wait(800);
   return {
     env,
