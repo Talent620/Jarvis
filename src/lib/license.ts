@@ -90,11 +90,24 @@ export function normalizeKey(s: string): string {
 /** Zweryfikuj klucz licencyjny (podpis + ewentualny termin ważności). */
 export async function verifyLicense(token: string): Promise<LicenseInfo> {
   try {
+    return await verifyLicenseWithKey(token, await publicKey());
+  } catch {
+    return { valid: false };
+  }
+}
+
+/**
+ * Verify a token against an explicit ECDSA P-256 public key. verifyLicense() always binds
+ * this to the embedded PUBLIC_JWK; tests inject a freshly generated key pair so no private
+ * key ever has to live in the repository.
+ */
+export async function verifyLicenseWithKey(token: string, key: CryptoKey): Promise<LicenseInfo> {
+  try {
     const [data, sigB64] = normalizeKey(token).split(".");
     if (!data || !sigB64) return { valid: false };
     const ok = await crypto.subtle.verify(
       { name: "ECDSA", hash: "SHA-256" },
-      await publicKey(),
+      key,
       bs(b64urlToBytes(sigB64)),
       bs(new TextEncoder().encode(data)),
     );

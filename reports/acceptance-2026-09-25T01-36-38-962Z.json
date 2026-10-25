@@ -1,0 +1,164 @@
+{
+  "startedAt": "2026-09-25T01:36:38.962Z",
+  "finishedAt": "2026-09-25T01:36:56.821Z",
+  "mode": "fixture",
+  "args": {
+    "mode": "fixture",
+    "send": false,
+    "publish": false,
+    "runs": 10,
+    "headless": true,
+    "to": "unset"
+  },
+  "host": {
+    "platform": "linux-x64",
+    "node": "v22.22.2",
+    "branch": "claude/intelligent-brahmagupta-jq7jqj",
+    "commit": "4599b20"
+  },
+  "capabilities": [
+    {
+      "id": "node",
+      "status": "available",
+      "detail": "v22.22.2"
+    },
+    {
+      "id": "browser.chromium",
+      "status": "available",
+      "detail": "opt/pw-browsers/chromium"
+    },
+    {
+      "id": "display",
+      "status": "missing",
+      "detail": "no DISPLAY or WAYLAND_DISPLAY (headless browser only)"
+    },
+    {
+      "id": "clipboard.system",
+      "status": "available",
+      "detail": "xclip"
+    },
+    {
+      "id": "input.synthetic",
+      "status": "available",
+      "detail": "xdotool"
+    },
+    {
+      "id": "accessibility.atspi",
+      "status": "available",
+      "detail": "AT-SPI bus (screen reader support)"
+    },
+    {
+      "id": "audio.microphone",
+      "status": "needs_hardware",
+      "detail": "presence of a capture tool only; the device is checked in the voice step"
+    },
+    {
+      "id": "mail.gmail",
+      "status": "needs_hardware",
+      "detail": "set JARVIS_SYNC_URL and JARVIS_SYNC_TOKEN for --send"
+    }
+  ],
+  "steps": [
+    {
+      "id": "capabilities",
+      "title": "1. Capabilities detected",
+      "ms": 1,
+      "status": "PASS",
+      "evidence": "not available: display=missing, audio.microphone=needs_hardware, mail.gmail=needs_hardware"
+    },
+    {
+      "id": "browser",
+      "title": "2. Real browser starts and reaches the site",
+      "ms": 598,
+      "status": "PASS",
+      "evidence": "http://127.0.0.1:44591/ (Zanim przejdziesz do YouTube)"
+    },
+    {
+      "id": "golden-1-7",
+      "title": "3. Golden steps 1-7 (10 runs)",
+      "ms": 14541,
+      "status": "PASS",
+      "evidence": "every step CONFIRMED by read-back; run ms: 1651, 1505, 1452, 1511, 1403, 1421, 1420, 1450, 1375, 1353",
+      "latency": {
+        "command_to_confirmed": {
+          "count": 80,
+          "p50": 138,
+          "p95": 366
+        }
+      }
+    },
+    {
+      "id": "selection-clipboard",
+      "title": "4. Selection and clipboard read back",
+      "ms": 0,
+      "status": "PASS",
+      "evidence": "selection \"Łódź\" visible=true; clipboard \"Łódź\""
+    },
+    {
+      "id": "voice",
+      "title": "5. Voice session latency (scripted recognizer)",
+      "ms": 1163,
+      "status": "SIMULATED",
+      "evidence": "5 actions confirmed by voice; no microphone here",
+      "latency": {
+        "final_to_intent": {
+          "count": 5,
+          "p50": 0,
+          "p95": 1
+        },
+        "final_to_action_start": {
+          "count": 5,
+          "p50": 1,
+          "p95": 4
+        },
+        "final_to_verified": {
+          "count": 5,
+          "p50": 81,
+          "p95": 327
+        },
+        "final_to_first_reply": {
+          "count": 5,
+          "p50": 211,
+          "p95": 327
+        },
+        "final_to_first_audio": {
+          "count": 5,
+          "p50": 211,
+          "p95": 327
+        },
+        "partial_to_cancel": {
+          "count": 0,
+          "p50": 0,
+          "p95": 0
+        },
+        "speech_start_to_first_partial": {
+          "count": 5,
+          "p50": 0,
+          "p95": 0
+        }
+      }
+    },
+    {
+      "id": "full-1-8",
+      "title": "6. Full scenario 1-8 with mail",
+      "ms": 1413,
+      "status": "PASS",
+      "evidence": "Wysłać mail do Marcin Kubicki <marcin.kubicki@example.com> z treścią «Łódź»? -> in Sent: msg-1 to marcin.kubicki@example.com, \"Łódź\""
+    },
+    {
+      "id": "desktop",
+      "title": "7. Desktop adapters (clipboard round trip, active window)",
+      "ms": 0,
+      "status": "SKIP",
+      "evidence": "local-desktop mode only"
+    },
+    {
+      "id": "cleanup",
+      "title": "8. Cleanup",
+      "ms": 0,
+      "status": "PASS",
+      "evidence": "site and browsers closed"
+    }
+  ],
+  "verdict": "PARTIAL"
+}

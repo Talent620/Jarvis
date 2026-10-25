@@ -1,5 +1,6 @@
 import { store } from "./store";
 import { fetchTimeout } from "./http";
+import type { GmailTransport } from "./runtime/gmailService";
 
 function base(): string | null {
   const u = store.settings.syncUrl?.trim();
@@ -270,4 +271,28 @@ export async function gcalAdd(summary: string, start: string, end?: string, loca
   const r = await call("/v1/gcal/add", payload);
   if (r.error) return autoConnect(r.error) || r.error;
   return `Dodano do Kalendarza Google: „${summary.trim()}".`;
+}
+
+/**
+ * Transport for the runtime's exactly-once mail (src/lib/runtime/gmailService.ts): the desktop
+ * bridge when it is connected, else the backend. Null when neither is configured.
+ */
+export function gmailTransport(): GmailTransport | null {
+  const b = deskGoogle();
+  if (b?.gmailSend && b.gmailList) {
+    const desk = b as Required<Pick<DesktopGoogle, "gmailSend" | "gmailList">> & DesktopGoogle;
+    return {
+      id: "desktop",
+      connected: () => deskConnected(desk),
+      send: (m) => desk.gmailSend({ to: m.to, subject: m.subject, body: m.body }),
+      list: (o) => desk.gmailList({ query: o.query, max: o.max }),
+    };
+  }
+  if (!googleBackendReady()) return null;
+  return {
+    id: "backend",
+    connected: async () => googleBackendReady(),
+    send: (m) => call("/v1/gmail/send", { to: m.to, subject: m.subject, body: m.body }),
+    list: (o) => call("/v1/gmail/list", { query: o.query, max: o.max }),
+  };
 }

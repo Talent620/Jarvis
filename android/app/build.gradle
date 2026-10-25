@@ -4,6 +4,25 @@ apply plugin: 'com.android.application'
 // Fallback 56 — pierwszy bezpieczny build po wycieku w buildach <= 55.
 def buildNo = (System.getenv("JARVIS_BUILD_NUMBER") ?: System.getenv("GITHUB_RUN_NUMBER") ?: "56").toInteger()
 
+// Release signing secrets. JARVIS_RELEASE_STORE_FILE switches production signing on; the other
+// three values are then mandatory, so a half-configured CI fails loudly instead of silently
+// signing with another identity.
+def releaseSecret = { String name ->
+    def v = System.getenv(name) ?: project.findProperty(name)
+    return (v == null || v.toString().isBlank()) ? null : v.toString()
+}
+def releaseStoreFile = releaseSecret("JARVIS_RELEASE_STORE_FILE")
+def hasReleaseSigning = releaseStoreFile != null
+if (hasReleaseSigning) {
+    ["JARVIS_RELEASE_STORE_PASSWORD", "JARVIS_RELEASE_KEY_ALIAS", "JARVIS_RELEASE_KEY_PASSWORD"].each { name ->
+        if (releaseSecret(name) == null) {
+            throw new GradleException("JARVIS_RELEASE_STORE_FILE is set but " + name + " is missing.")
+        }
+    }
+} else {
+    logger.warn("JARVIS: no release signing secrets, building a NON-PRODUCTION release APK signed with the debug key.")
+}
+
 android {
     namespace "net.serwer256.jarvis"
     compileSdk rootProject.ext.compileSdkVersion
@@ -20,29 +39,28 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    // Klucz podpisujący: najpierw zmienne środowiskowe / gradle.properties (sekrety CI),
-    // a w razie ich braku fallback na lokalny klucz dev. Nie trzymaj realnych sekretów w repo —
-    // ustaw JARVIS_RELEASE_* w GitHub Actions secrets (patrz README, sekcja podpisywanie).
+    // Release signing comes only from secrets (env or gradle.properties). Without them the
+    // release build is signed with the local debug key and marked "-nonprod", so it can never
+    // be mistaken for (or published as) an update to the production APK. See docs/JARVIS-SECURITY.md.
     signingConfigs {
-        release {
-            def envStoreFile = System.getenv("JARVIS_RELEASE_STORE_FILE") ?: project.findProperty("JARVIS_RELEASE_STORE_FILE")
-            if (envStoreFile != null && !envStoreFile.toString().isBlank()) {
-                storeFile file(envStoreFile)
-                storePassword System.getenv("JARVIS_RELEASE_STORE_PASSWORD") ?: project.findProperty("JARVIS_RELEASE_STORE_PASSWORD")
-                keyAlias System.getenv("JARVIS_RELEASE_KEY_ALIAS") ?: project.findProperty("JARVIS_RELEASE_KEY_ALIAS")
-                keyPassword System.getenv("JARVIS_RELEASE_KEY_PASSWORD") ?: project.findProperty("JARVIS_RELEASE_KEY_PASSWORD")
-            } else {
-                // Fallback dev (lokalny klucz). Zalecane: rotacja klucza i przeniesienie do sekretów.
-                storeFile file("../keystore/jarvis.jks")
-                storePassword "jarvis2026"
-                keyAlias "jarvis"
-                keyPassword "jarvis2026"
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseSecret("JARVIS_RELEASE_STORE_PASSWORD")
+                keyAlias releaseSecret("JARVIS_RELEASE_KEY_ALIAS")
+                keyPassword releaseSecret("JARVIS_RELEASE_KEY_PASSWORD")
             }
         }
     }
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+                versionNameSuffix "-nonprod"
+            }
+            resValue "bool", "jarvis_production_signing", hasReleaseSigning ? "true" : "false"
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

@@ -22,6 +22,7 @@ export default tseslint.config(
       "public",
       "ios",
       "android",
+      "electron/gen", // built by scripts/build-electron-runtime.mjs
     ],
   },
   js.configs.recommended,
@@ -48,6 +49,11 @@ export default tseslint.config(
       "prefer-const": "warn",
     },
   },
+  // --- WebExtension (BrowserBridge, M8): browser + service worker, plain scripts ---
+  {
+    files: ["extension/**/*.js"],
+    languageOptions: { sourceType: "script", globals: { ...globals.browser, ...globals.serviceworker, chrome: "readonly", browser: "readonly" } },
+  },
   // --- Node (CommonJS): powłoka desktopowa Electron + skrypty .cjs ---
   {
     files: ["electron/**/*.cjs", "scripts/**/*.cjs"],
@@ -71,6 +77,15 @@ export default tseslint.config(
     },
   },
   // --- Site OS: osobny lokalny serwer + aplikacja przeglądarkowa bez bundlera ---
+  // Test fixtures: a local Node server (.mjs) and the page script it serves (.js).
+  {
+    files: ["tests/fixtures/**/*.mjs"],
+    languageOptions: { sourceType: "module", globals: { ...globals.node } },
+  },
+  {
+    files: ["tests/fixtures/**/*.js"],
+    languageOptions: { sourceType: "script", globals: { ...globals.browser } },
+  },
   {
     files: ["site-os/public/**/*.js"],
     languageOptions: { sourceType: "script", globals: { ...globals.browser } },

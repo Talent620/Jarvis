@@ -1,0 +1,20 @@
+body { font-family: Roboto, Arial, sans-serif; margin: 0; background: #fff; color: #0f0f0f; }
+#masthead { display: flex; gap: 16px; align-items: center; padding: 8px 16px; position: sticky; top: 0; background: #fff; z-index: 2; border-bottom: 1px solid #eee; }
+#logo { font-weight: 700; color: #f00; text-decoration: none; }
+main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.video-card { display: block; padding: 12px 0; border-bottom: 1px solid #eee; }
+#player { height: 480px; background: #000; display: flex; align-items: center; justify-content: center; }
+#player button { font-size: 32px; background: none; color: #fff; border: 0; }
+#description { min-height: 600px; background: #f2f2f2; padding: 12px; border-radius: 12px; }
+#related { min-height: 300px; }
+#comments { display: block; margin-top: 24px; }
+.comment-thread, .reply { display: block; padding: 12px 0; line-height: 1.5; }
+.reply { margin-left: 48px; }
+#author-text { font-weight: 500; margin-right: 8px; color: #0f0f0f; text-decoration: none; }
+#content-text { display: block; font-size: 16px; }
+.pinned { font-size: 12px; color: #606060; }
+#continuation { min-height: 40px; padding: 16px 0; }
+#page-end { padding: 400px 0 40px; color: #909090; }
+.consent { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.consent-box { max-width: 560px; padding: 24px; border: 1px solid #ddd; border-radius: 12px; }

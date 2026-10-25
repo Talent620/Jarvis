@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "JARVIS Bridge",
+  "version": "0.1.0",
+  "description": "Lets the JARVIS desktop app see and act on your current tab. Talks only to 127.0.0.1 and only after pairing.",
+  "permissions": ["tabs", "storage", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    { "matches": ["http://*/*", "https://*/*"], "js": ["content.js"], "run_at": "document_idle" }
+  ],
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "action": { "default_title": "JARVIS Bridge", "default_popup": "options.html" },
+  "browser_specific_settings": { "gecko": { "id": "jarvis-bridge@jarvis.local", "strict_min_version": "121.0" } }
+}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ConversationLoop, type LoopState } from "../lib/voiceLoop";
 import { speak, stopSpeaking, activeVoiceLabel } from "../lib/voice";
 import { store } from "../lib/store";
+import { useStoreSelector } from "../hooks/useStore";
 import { keepAwake, releaseAwake } from "../lib/wakeLock";
 import { subscribeLevel } from "../lib/audioLevel";
 import { setAutoConsent } from "../lib/permissions";
@@ -32,6 +33,8 @@ const LABEL: Record<LoopState, string> = {
  * dowolnym skonfigurowanym modelem. Akcje nieodwracalne i tak proszą o potwierdzenie.
  */
 export default function BossMode({ onClose }: { onClose: () => void }) {
+  // Re-render when the open-task count changes (the root no longer re-renders on data changes).
+  useStoreSelector(() => (store.data.tasks || []).filter((t) => !t.done).length);
   useEscape(onClose);
   const [state, setState] = useState<LoopState>("listening");
   const [caption, setCaption] = useState("Tryb Szefa online. Wydaj rozkaz głosem.");

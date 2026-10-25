@@ -1,5 +1,5 @@
 // Główny proces Electrona — JARVIS na komputer (Windows .exe), pełna wersja.
-const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification } = require("electron");
+const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
@@ -31,6 +31,52 @@ let mainWindow = null;
 let siteOsProcess = null;
 let stdioMcp = null;
 let closingStdioMcp = false;
+// JARVIS runtime environment (managed browser). Logic lives in electron/gen/runtime.cjs, built
+// from src/node by scripts/build-electron-runtime.mjs; this file is only the IPC adapter.
+let envHost = null;
+function getEnvHost() {
+  if (!envHost) {
+    const { createManagedBrowserHost } = require("./gen/runtime.cjs");
+    // The copy read-back uses the real system clipboard, not the page's view of it.
+    let userBrowser;
+    try { userBrowser = getBridgeHost()?.env; } catch { userBrowser = undefined; }
+    envHost = createManagedBrowserHost({ userDataPath: app.getPath("userData"), readClipboard: () => clipboard.readText(), userBrowser });
+    envHost.onEvent((ev) => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("jarvis:env-event", ev);
+    });
+  }
+  return envHost;
+}
+
+// BrowserBridge (M8): loopback WebSocket for the JARVIS extension in the user's own browser.
+// One host for the app's lifetime: the runtime keeps a reference to its environment, so a failed
+// start (port busy) is retried on the same host instead of replacing it with a new one.
+let bridgeHost = null;
+let bridgeStarting = null;
+function getBridgeHost() {
+  if (!bridgeHost) {
+    const { createBridgeHost } = require("./gen/runtime.cjs");
+    bridgeHost = createBridgeHost({ userDataPath: app.getPath("userData") });
+  }
+  if (!bridgeStarting) {
+    bridgeStarting = bridgeHost.start().catch(() => { bridgeStarting = null; });
+  }
+  return bridgeHost;
+}
+
+// Coding agents (M11-M13): Codex CLI / Claude Code / local model driven by JARVIS. The executor
+// lives in electron/gen/runtime.cjs; events reach the window in batches.
+let coderHost = null;
+function getCoderHost() {
+  if (!coderHost) {
+    const { createCoderHost } = require("./gen/runtime.cjs");
+    coderHost = createCoderHost({ userDataPath: app.getPath("userData") });
+    coderHost.onEvents((batch) => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("jarvis:coder-events", batch);
+    });
+  }
+  return coderHost;
+}
 
 function siteOsPaths() {
   const base = path.join(app.getPath("userData"), "site-os");
@@ -333,6 +379,50 @@ function registerDesktopControl() {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     return stdioMcp.close(String(payload?.server || ""));
   });
+  ipcMain.handle("jarvis:bridge", async (event, req) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    try {
+      const host = getBridgeHost();
+      const method = String(req?.method || "");
+      if (method === "pair") return { ok: true, code: host.pair(), status: host.status() };
+      if (method === "status") return { ok: true, status: host.status() };
+      if (method === "revoke") { host.revoke(String(req?.extensionId || "")); return { ok: true, status: host.status() }; }
+      return { ok: false, error: "unknown method" };
+    } catch (e) {
+      return { ok: false, error: e && e.message ? String(e.message) : String(e) };
+    }
+  });
+  ipcMain.handle("jarvis:env", async (event, req) => {
+    if (!isTrustedIpc(event)) return { status: "failed", error: "forbidden" };
+    try {
+      return await getEnvHost().handle(req);
+    } catch (e) {
+      return { status: "failed", error: e && e.message ? String(e.message) : String(e) };
+    }
+  });
+  ipcMain.handle("jarvis:coder", async (event, req) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    const method = String(req?.method || "");
+    try {
+      // Adding a project goes through the system folder picker: the renderer never names a path.
+      if (method === "pickWorkspace") {
+        const r = await dialog.showOpenDialog(mainWindow, { properties: ["openDirectory"], title: "Projekt dla JARVIS-a" });
+        if (r.canceled || !r.filePaths[0]) return { ok: false, error: "cancelled" };
+        return await getCoderHost().handle({ method: "addWorkspace", root: r.filePaths[0] });
+      }
+      if (method === "addWorkspace") return { ok: false, error: "use pickWorkspace" };
+      if (method === "openWorkspace") {
+        const ws = await getCoderHost().handle({ method: "workspaces" });
+        const w = ws.ok ? ws.value.find((x) => x.id === String(req?.id || "")) : null;
+        if (!w) return { ok: false, error: "unknown workspace" };
+        const err = await shell.openPath(w.root);
+        return err ? { ok: false, error: err } : { ok: true, value: true };
+      }
+      return await getCoderHost().handle(req);
+    } catch (e) {
+      return { ok: false, error: e && e.message ? String(e.message) : String(e) };
+    }
+  });
   ipcMain.handle("jarvis:hardware-info", async (event) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     try {
@@ -574,6 +664,8 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    // A paired JARVIS extension reconnects on its own once the loopback bridge listens.
+    try { getBridgeHost(); } catch { /* runtime bundle missing in a bare dev checkout */ }
     // Mikrofon/kamera (rozmowa na żywo, HUD) — tylko media; inne prośby odrzucamy.
     const ALLOWED_PERMISSIONS = new Set(["media", "audioCapture", "videoCapture", "mediaKeySystem", "speaker-selection"]);
     session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(ALLOWED_PERMISSIONS.has(perm)));
@@ -636,13 +728,18 @@ if (!gotLock) {
   });
 
   app.on("before-quit", (event) => {
-    if (!stdioMcp || closingStdioMcp) return;
+    if ((!stdioMcp && !coderHost) || closingStdioMcp) return;
     event.preventDefault();
     closingStdioMcp = true;
-    void stdioMcp.closeAll().finally(() => app.quit());
+    // Coding agents are stopped with their whole process group before the app exits (no orphans),
+    // bounded so a stuck agent cannot keep JARVIS from closing.
+    const coderClosed = coderHost ? Promise.race([coderHost.close(), new Promise((r) => setTimeout(r, 8000))]) : Promise.resolve();
+    void Promise.allSettled([stdioMcp ? stdioMcp.closeAll() : Promise.resolve(), coderClosed]).finally(() => app.quit());
   });
 
   app.on("will-quit", () => {
+    if (envHost) void envHost.handle({ method: "close", callId: "quit" }).catch(() => undefined);
+    if (bridgeHost) void bridgeHost.close().catch(() => undefined);
     globalShortcut.unregisterAll();
     setClipWatch(false);
     if (siteOsProcess && siteOsProcess.exitCode === null) siteOsProcess.kill();

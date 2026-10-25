@@ -1,0 +1,39 @@
+{
+  "mode": "fake",
+  "startedAt": "2026-09-25T04:08:15.188Z",
+  "platform": "linux x64",
+  "node": "v22.22.2",
+  "checks": [
+    {
+      "name": "fake: Codex detected (version, login)",
+      "status": "PASS",
+      "detail": "codex-cli 0.157.0, logged in",
+      "ms": 103
+    },
+    {
+      "name": "fake: 'Napraw projekt tak, żeby test przeszedł' -> CONFIRMED by the repo's test",
+      "status": "PASS",
+      "detail": "status answer: «Codex pracuje: „Napraw projekt tak, żeby test przeszedł” w Projekt (gałąź main). Rola: programista. Etap: edytuje pliki.»; end: «Gotowe i sprawdzone w Projekt: test PASS (1/1). Zmienione: 1 plik.»",
+      "ms": 1161
+    },
+    {
+      "name": "fake: agent says done, test stays red -> never 'gotowe'",
+      "status": "PASS",
+      "detail": "end: «Codex mówi, że skończył, ale test nie przechodzi. Nie uznaję tego za gotowe.»",
+      "ms": 1681
+    },
+    {
+      "name": "fake: 'stop' kills the agent, no process left",
+      "status": "PASS",
+      "detail": "pid gone, task cancelled",
+      "ms": 469
+    },
+    {
+      "name": "fake: a force push attempt is stopped (BLOCKED)",
+      "status": "PASS",
+      "detail": "end: «Zatrzymałem agenta, bo próbował zrobić coś zabronionego: force push.»",
+      "ms": 499
+    }
+  ],
+  "verdict": "PASS"
+}

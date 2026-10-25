@@ -16,7 +16,7 @@ import { getWeather } from "./weather";
 import { scheduleReminder, scheduleTimer } from "./notifications";
 import { addEvent, listUpcoming } from "./deviceCalendar";
 import { callContact, textContact } from "./deviceContacts";
-import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
+import { requestConsent, emitStep, audit, captureUndo, markUntrustedContext, outputIsUntrusted } from "./permissions";
 import { gmailSearch, gmailRead, gmailReply, gmailUnreadSummary, gcalList, gcalDay, gcalAdd } from "./google";
 import { rememberFact } from "./memory";
 import { generateCards } from "./cards";
@@ -1907,6 +1907,8 @@ export async function runTool(name: string, input: unknown): Promise<string> {
   emitStep(name);
   try {
     const out = await fn(input);
+    // Outside content entered the conversation: later external effects need a fresh question.
+    if (outputIsUntrusted(name) || dynamicTools.has(name)) markUntrustedContext(name);
     audit({
       tool: name,
       input,

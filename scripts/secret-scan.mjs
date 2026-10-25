@@ -23,6 +23,7 @@ const PATTERNS = [
   { name: "Groq", re: /gsk_[A-Za-z0-9]{40,}/ },
   { name: "OpenAI", re: /sk-(?:proj-)?[A-Za-z0-9]{40,}/ },
   { name: "Bearer token", re: /Bearer\s+[A-Za-z0-9._-]{30,}/ },
+  { name: "Hardcoded keystore password", re: /\b(?:store|key)Password\s*[=(]?\s*["'][^"'$]+["']/ },
 ];
 // Pliki, w których wzorce są CELOWO (testy/skan/detekcja) — nie skanujemy ich treści.
 const SKIP = [/scripts\/secret-scan\.mjs$/, /tests\//, /SECURITY\.md$/, /\.githooks\//];

@@ -32,6 +32,18 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      # Never publish a debug-signed "-nonprod" APK as 'latest': it would silently change the
+      # signing identity and break updates for every installed copy (docs/JARVIS-SECURITY.md).
+      - name: Require production signing secrets
+        env:
+          JARVIS_RELEASE_STORE_PASSWORD: ${{ secrets.JARVIS_RELEASE_STORE_PASSWORD }}
+          JARVIS_RELEASE_KEY_PASSWORD: ${{ secrets.JARVIS_RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$JARVIS_RELEASE_STORE_PASSWORD" ] || [ -z "$JARVIS_RELEASE_KEY_PASSWORD" ]; then
+            echo "::error::JARVIS_RELEASE_STORE_PASSWORD and JARVIS_RELEASE_KEY_PASSWORD secrets are required to publish. See docs/JARVIS-SECURITY.md."
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
 
       - name: Setup Node
@@ -48,6 +60,10 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # The legacy "tools" package no longer exists in current cmdline-tools; the default
+          # "tools platform-tools" makes sdkmanager exit 1 on today's runners.
+          packages: "platform-tools"
 
       - name: Install dependencies
         run: npm ci
@@ -78,7 +94,22 @@ jobs:
 
       - name: Build signed release APK
         working-directory: android
+        env:
+          JARVIS_RELEASE_STORE_PASSWORD: ${{ secrets.JARVIS_RELEASE_STORE_PASSWORD }}
+          JARVIS_RELEASE_KEY_PASSWORD: ${{ secrets.JARVIS_RELEASE_KEY_PASSWORD }}
+          JARVIS_RELEASE_KEY_ALIAS: ${{ secrets.JARVIS_RELEASE_KEY_ALIAS || 'jarvis' }}
+          JARVIS_RELEASE_KEYSTORE_B64: ${{ secrets.JARVIS_RELEASE_KEYSTORE_B64 }}
         run: |
+          # Production signing only when secrets exist; otherwise Gradle builds a "-nonprod"
+          # APK signed with the debug key (docs/JARVIS-SECURITY.md).
+          if [ -n "$JARVIS_RELEASE_STORE_PASSWORD" ]; then
+            if [ -n "$JARVIS_RELEASE_KEYSTORE_B64" ]; then
+              printf '%s' "$JARVIS_RELEASE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+              export JARVIS_RELEASE_STORE_FILE="$RUNNER_TEMP/release.jks"
+            else
+              export JARVIS_RELEASE_STORE_FILE="$GITHUB_WORKSPACE/android/keystore/jarvis.jks"
+            fi
+          fi
           chmod +x ./gradlew
           ./gradlew assembleRelease --no-daemon
 

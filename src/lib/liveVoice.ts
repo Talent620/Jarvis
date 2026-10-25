@@ -1,12 +1,20 @@
 // Rozmowa głosowa na żywo przez Gemini Live API (WebSocket, audio↔audio).
 // Mikrofon → PCM16 16 kHz → Gemini; odpowiedź PCM16 24 kHz → głośnik.
 
-// Model głosu na żywo. NATIVE = natywne audio z „affective dialog" (czuje ton rozmowy,
-// odpowiada z emocją, sam dopytuje) — brzmi najbardziej po ludzku. STABLE = pewny half-cascade,
-// fallback gdy klucz nie ma dostępu do preview natywnego audio.
-const LIVE_MODEL_NATIVE = "models/gemini-2.5-flash-preview-native-audio-dialog";
-const LIVE_MODEL_STABLE = "models/gemini-2.0-flash-live-001";
+// Live voice models come from the provider catalog (src/lib/runtime/voice/catalog.ts): ids are
+// data, and the dead gemini-2.0-flash-live-001 is never used. NATIVE = native audio with
+// affective dialog (preview). STABLE = the catalog's default low-latency Live model, which can
+// call functions without blocking the conversation (NON_BLOCKING).
+import { catalogEntry, liveResource, resolveLiveModel } from "./runtime/voice/catalog";
+const LIVE_DEFAULT = resolveLiveModel();
+const LIVE_MODEL_NATIVE = liveResource(catalogEntry("gemini-live-native-audio") ?? LIVE_DEFAULT);
+const LIVE_MODEL_STABLE = liveResource(LIVE_DEFAULT);
 export { LIVE_MODEL_NATIVE, LIVE_MODEL_STABLE };
+
+/** Does this Live model keep talking while a function runs? */
+export function liveNonBlocking(model: string): boolean {
+  return resolveLiveModel(model).functionCalling === "NON_BLOCKING";
+}
 
 import { setLevel } from "./audioLevel";
 import { micAudioConstraints } from "./mic";
@@ -50,6 +58,8 @@ export interface LiveToolDecl {
   name: string;
   description: string;
   parameters: Record<string, unknown>;
+  /** Asynchronous function calling: the model keeps the conversation going meanwhile. */
+  behavior?: "NON_BLOCKING";
 }
 
 /** Definicja narzędzia (kształt z tools.ts) — minimalny, by uniknąć zależności cyklicznej. */
@@ -67,10 +77,19 @@ export function liveToolDeclarations(
   defs: ToolDefLike[],
   riskOf: (name: string) => "read" | "write" | "outbound",
   allowOutbound = false,
+  nonBlocking = false,
 ): LiveToolDecl[] {
   return defs
     .filter((d) => allowOutbound || d.name.startsWith("mcp_") || riskOf(d.name) !== "outbound")
-    .map((d) => ({ name: d.name, description: d.description, parameters: d.input_schema }));
+    .map((d) => ({ name: d.name, description: d.description, parameters: d.input_schema, ...(nonBlocking ? { behavior: "NON_BLOCKING" as const } : {}) }));
+}
+
+/**
+ * Function response for the Live API. With non-blocking calls the result is delivered when the
+ * model is idle, so it does not cut the user or itself off mid-sentence.
+ */
+export function liveFunctionResponse(call: { id?: string; name: string }, result: string, nonBlocking: boolean) {
+  return { id: call.id, name: call.name, response: nonBlocking ? { result, scheduling: "WHEN_IDLE" as const } : { result } };
 }
 
 // Styl mówiony (flagowy) — żeby rozmowa na żywo brzmiała jak człowiek, nie jak czytany
@@ -256,8 +275,8 @@ export class LiveSession {
 
   // Wykonaj narzędzia zażądane przez model i odeślij wyniki (toolResponse).
   private async handleToolCall(calls: Array<{ id?: string; name: string; args?: unknown }>): Promise<void> {
-    const responses: Array<{ id?: string; name: string; response: { result: string } }> = [];
-    for (const c of calls) {
+    const nonBlocking = liveNonBlocking(this.model);
+    const run = async (c: { id?: string; name: string; args?: unknown }) => {
       let result = "Narzędzie niedostępne w trybie live.";
       if (this.runTool) {
         try {
@@ -266,11 +285,19 @@ export class LiveSession {
           result = `Błąd narzędzia: ${e instanceof Error ? e.message : String(e)}`;
         }
       }
-      responses.push({ id: c.id, name: c.name, response: { result } });
+      return liveFunctionResponse(c, result, nonBlocking);
+    };
+    const send = (responses: ReturnType<typeof liveFunctionResponse>[]) => {
+      if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ toolResponse: { functionResponses: responses } }));
+    };
+    if (nonBlocking) {
+      // Each result goes back as soon as it is ready; the conversation never waited for it.
+      await Promise.all(calls.map(async (c) => send([await run(c)])));
+      return;
     }
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ toolResponse: { functionResponses: responses } }));
-    }
+    const responses: ReturnType<typeof liveFunctionResponse>[] = [];
+    for (const c of calls) responses.push(await run(c));
+    send(responses);
   }
 
   // Włącz kamerę: strumień wideo → klatki JPEG → Gemini Live (model „widzi"). Domyślnie tylna

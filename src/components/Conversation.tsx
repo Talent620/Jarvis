@@ -3,6 +3,7 @@ import type { ChatMessage } from "../types";
 import TypeText from "./TypeText";
 import { speak } from "../lib/voice";
 import { store } from "../lib/store";
+import { useStoreSelector } from "../hooks/useStore";
 import { isDesktop } from "../lib/desktop";
 import { isNearBottom, starterSuggestions } from "../lib/chatUx";
 import { detectLang, t } from "../lib/i18n";
@@ -157,6 +158,9 @@ export default function Conversation({
   onVoice?: () => void;
   tasksToday?: number;
 }) {
+  // The start screen is built from store.data: keep it fresh while visible. With messages on
+  // screen the selector is constant, so data changes do not re-render the chat.
+  useStoreSelector(() => (messages.length || interim ? 0 : store.version));
   const endRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true); // czy użytkownik jest na dole (czytalny bez re-renderu)

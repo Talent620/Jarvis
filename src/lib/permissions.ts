@@ -1,5 +1,6 @@
 import { store, uid } from "./store";
 import type { AuditEntry } from "../types";
+import { DEFAULT_POLICIES, decidePolicy, type ActionClass, type Policy, type PermissionContext } from "./permissionClasses";
 
 // --- Klasyfikacja ryzyka narzędzi ---
 export type Risk = "read" | "write" | "outbound";
@@ -59,13 +60,38 @@ const RISK: Record<string, Risk> = {
   make_call: "outbound", send_sms: "outbound", smart_home: "outbound", run_scene: "outbound",
   open_service: "outbound", navigate_to: "outbound", call_contact: "outbound", text_contact: "outbound",
   open_url: "outbound",
-  // sterowanie komputerem (Windows) — wymaga zgody
+  // sterowanie komputerem (Windows) — wymaga zgody. Volume and media are local and reversible
+  // (mission 5.11: they must not share a class with shutting the computer down).
   desktop_launch_app: "outbound", desktop_open: "outbound", desktop_power: "outbound",
-  desktop_volume: "outbound", desktop_media: "outbound", desktop_type: "outbound", desktop_hotkey: "outbound",
+  desktop_volume: "write", desktop_media: "write", desktop_type: "outbound", desktop_hotkey: "outbound",
   // pełne sterowanie telefonem (Android, usługa Dostępności) — wymaga zgody
   android_type: "outbound", android_tap: "outbound", android_global: "outbound",
   android_open_app: "outbound", android_open_settings: "outbound",
 };
+
+// --- Action classes and policies (mission 5.11); pure definitions live in permissionClasses.ts
+// so the runtime can use them without importing the app store.
+export { DEFAULT_POLICIES, decidePolicy, type ActionClass, type Policy, type PermissionContext };
+
+const CLASS: Record<string, ActionClass> = {
+  desktop_volume: "LOCAL_REVERSIBLE", desktop_media: "LOCAL_REVERSIBLE",
+  desktop_open: "NAVIGATE", desktop_launch_app: "NAVIGATE", open_url: "NAVIGATE", open_service: "NAVIGATE",
+  android_open_app: "NAVIGATE", android_open_settings: "NAVIGATE", android_global: "NAVIGATE",
+  desktop_type: "LOCAL_WRITE", desktop_hotkey: "LOCAL_WRITE", android_type: "LOCAL_WRITE", android_tap: "LOCAL_WRITE",
+  desktop_power: "DESTRUCTIVE", clear_tally: "DESTRUCTIVE", forget_fact: "DESTRUCTIVE",
+  // Runtime micro-actions (src/lib/runtime).
+  "browser.launch": "NAVIGATE", "browser.navigate": "NAVIGATE", "browser.open": "NAVIGATE", "browser.consent": "LOCAL_REVERSIBLE",
+  "browser.scroll": "LOCAL_REVERSIBLE", "browser.scrollTo": "LOCAL_REVERSIBLE", "browser.focus": "LOCAL_REVERSIBLE",
+  "browser.findCollection": "READ", "text.select": "LOCAL_REVERSIBLE", "clipboard.copy": "LOCAL_REVERSIBLE",
+  "mail.send": "EXTERNAL_SIDE_EFFECT", "sms.send": "EXTERNAL_SIDE_EFFECT", "desktop.type": "LOCAL_WRITE",
+};
+
+export function classOf(tool: string): ActionClass {
+  const c = CLASS[tool];
+  if (c) return c;
+  const r = riskOf(tool);
+  return r === "read" ? "READ" : r === "write" ? "LOCAL_WRITE" : "EXTERNAL_SIDE_EFFECT";
+}
 
 /** Czy narzędzie ma JAWNĄ klasyfikację ryzyka (a nie tylko fail-safe outbound)? */
 export function isClassified(tool: string): boolean {
@@ -169,14 +195,57 @@ export function undoAction(entry: AuditEntry): string {
   return `Cofnięto: ${entry.tool}.`;
 }
 
+// --- Untrusted context (mission 5.12) ---
+// Once untrusted content (web page, e-mail, MCP or research output) has entered the agent's
+// context, an external effect may have been suggested by that content. Until the taint expires,
+// outbound tools always get a fresh question: no remembered consent, no auto-consent, no scope.
+export const UNTRUSTED_CONTEXT_MS = 10 * 60 * 1000;
+/** Read tools whose output is outside content, not the user's own data or local state. */
+export const UNTRUSTED_OUTPUT_TOOLS: ReadonlySet<string> = new Set([
+  "web_research", "gmail_search", "gmail_read", "get_news", "local_research_agent", "find_leads", "preview_lead_candidates",
+]);
+let untrustedUntil = 0;
+let untrustedSource = "";
+export function markUntrustedContext(source: string, ttlMs = UNTRUSTED_CONTEXT_MS): void {
+  untrustedUntil = Math.max(untrustedUntil, Date.now() + Math.max(0, ttlMs));
+  untrustedSource = source;
+}
+export function clearUntrustedContext(): void { untrustedUntil = 0; untrustedSource = ""; }
+export function untrustedContext(): string | null {
+  return Date.now() < untrustedUntil ? untrustedSource : null;
+}
+/** Does this tool bring outside content into the context? MCP tools always do. */
+export const outputIsUntrusted = (tool: string): boolean => UNTRUSTED_OUTPUT_TOOLS.has(tool) || tool.startsWith("mcp_");
+
 /**
  * Bramka uprawnień: dla narzędzi read przepuszcza; dla write/outbound pyta UI
  * (chyba że użytkownik zapamiętał zgodę). Zwraca true, jeśli można wykonać.
  */
 export async function requestConsent(tool: string, input: unknown): Promise<boolean> {
   const risk = riskOf(tool);
-  // Pytamy tylko o akcje zewnętrzne/nieodwracalne; lokalne zapisy idą automatycznie.
-  if (risk !== "outbound") return true;
+  const cls = classOf(tool);
+  // Known external effects (mail, SMS, calls, posts) after outside content entered the context.
+  // Unclassified plugin/MCP tools already ask per tool; forcing a prompt on each of their calls
+  // made multi-step plugins unusable (DECISIONS D-025).
+  const tainted = untrustedContext() !== null && risk === "outbound" && isClassified(tool);
+  const policy = decidePolicy(cls, { untrustedContent: tainted }, (store.settings as { permissionPolicies?: Partial<Record<ActionClass, Policy>> }).permissionPolicies);
+  if (policy === "DENY") return false;
+  if (policy === "AUTO") return true;
+  // Outside content is in play: an explicit, one-time question, fail-closed without a UI.
+  if (tainted) {
+    const r = await askConsentUI({ tool, input, risk });
+    return !!r?.allow;
+  }
+  // DESTRUCTIVE: always a fresh, explicit question (no remembered consent, no auto-consent).
+  if (cls === "DESTRUCTIVE") {
+    const r = await askConsentUI({ tool, input, risk });
+    return !!r?.allow;
+  }
+  // ASK for a non-outbound class (user set LOCAL_WRITE or NAVIGATE to ASK): ask the UI.
+  if (risk !== "outbound") {
+    const r = await askConsentUI({ tool, input, risk });
+    return !!r?.allow;
+  }
   // Tryb Szefa „pełny dostęp": globalna zgoda na outbound, z auto-wygaśnięciem.
   if (isAutoConsent()) return true;
   // Jawny, ograniczony zakres sesyjny (Live/headless) — sankcjonowana droga bez UI.

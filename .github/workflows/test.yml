@@ -11,6 +11,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -25,12 +29,72 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
 
       - name: Skan sekretów (blokuje wyciek kluczy)
         run: npm run scan:secrets
+
+      - name: Lint
+        run: npx eslint .
 
       - name: Run tests
         run: npm test
 
       - name: Type-check + build
         run: npm run build
+
+  browser:
+    # Real Chromium against local fixtures only (no external sites, no AI calls).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+      - name: Install Chromium for the pinned Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests on fixtures (golden steps, 10 consecutive runs)
+        run: npm run test:browser
+
+      - name: Local acceptance on fixtures (report only, never publishes from CI)
+        run: npm run jarvis:acceptance -- --mode=fixture --runs=3 --no-publish
+
+  desktop:
+    # Linux adapters (M7) on a throwaway X11 session: Xvfb, openbox, AT-SPI, a GTK test app.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+      - name: Desktop tools (X11, accessibility, GTK)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends xvfb dbus-x11 openbox xdotool xclip wmctrl at-spi2-core gir1.2-atspi-2.0 gir1.2-gtk-3.0 python3-gi
+
+      - name: Linux desktop adapter tests on Xvfb
+        run: npm run test:desktop
+        env:
+          JARVIS_DESKTOP_CI: "1"

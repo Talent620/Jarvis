@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, BarChart3, BrainCircuit, Check, Clock3, Download, Mail, PanelsTopLeft, PlugZap, RefreshCw, ShieldCheck } from "lucide-react";
 import { store } from "../lib/store";
+import { runtimeAvailable } from "../lib/runtime/appRuntime";
 import { SETTINGS_TAB_META, DEFAULT_SETTINGS_GROUP, groupOfTab, GOOGLE_PLACES_KEY_WARNING, type SettingsGroup, type SettingsTab } from "../lib/settingsModel";
 import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, resolveVoiceMode, type NativeVoiceInfo, type VoiceMode } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED, modelBadges } from "../lib/providers/registry";
@@ -2126,6 +2127,31 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 </span>
                 <Toggle on={s.voiceModeWake} onClick={() => set({ voiceModeWake: !s.voiceModeWake })} />
               </div>
+              {runtimeAvailable() && (
+                <>
+                  <div className="row">
+                    <span>
+                      🖥 Sterowanie komputerem głosem
+                      <br />
+                      <span className="muted">
+                        „Jarvis, uruchom przeglądarkę", potem kolejne polecenia bez słowa „Jarvis".
+                        Każdy krok JARVIS sprawdza i mówi, co zrobił; „stop" przerywa od razu.
+                        Przejmuje mikrofon (nasłuch słowa „Jarvis" w czacie jest wtedy wyłączony).
+                      </span>
+                    </span>
+                    <Toggle on={!!s.computerVoice} onClick={() => set({ computerVoice: !s.computerVoice })} />
+                  </div>
+                  <div className="field">
+                    <label>Klucz Deepgram (rozpoznawanie mowy na żywo, opcjonalnie)</label>
+                    <input
+                      type="password"
+                      value={s.deepgramApiKey ?? ""}
+                      placeholder="bez klucza: Groq Whisper po zakończeniu zdania"
+                      onChange={(e) => set({ deepgramApiKey: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
               <div className="row">
                 <span>Słuchaj od razu po otwarciu (i zapytaj „o co chodzi?")</span>
                 <Toggle on={s.autoListenOnOpen} onClick={() => set({ autoListenOnOpen: !s.autoListenOnOpen })} />

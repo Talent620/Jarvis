@@ -8,7 +8,7 @@
 //  • Odzyskiwalność: zapomniane hasło = po prostu wpisujesz klucze ponownie (są odtwarzalne
 //    z konsoli dostawcy) — to NIE jest nieodwracalna utrata danych.
 //
-// Pola wrażliwe: `keys` (per-dostawca), `studioKeys`.
+// Pola wrażliwe: `keys` (per-dostawca), `studioKeys`, `deepgramApiKey`.
 
 import { store, setSettingsPersistTransform } from "./store";
 import { encryptText, decryptText } from "./cipher";
@@ -43,12 +43,12 @@ export function hasBlob(): boolean {
 
 /** Wytnij pola wrażliwe z kopii ustawień (do zapisu na dysk). Czysta. */
 export function blankSensitive(s: Settings): Settings {
-  return { ...s, keys: { ...emptyKeys }, studioKeys: "" };
+  return { ...s, keys: { ...emptyKeys }, studioKeys: "", deepgramApiKey: "" };
 }
 
 /** Serializowalny zrzut pól wrażliwych. */
 function sensitivePayload(): string {
-  return JSON.stringify({ keys: store.settings.keys, studioKeys: store.settings.studioKeys || "" });
+  return JSON.stringify({ keys: store.settings.keys, studioKeys: store.settings.studioKeys || "", deepgramApiKey: store.settings.deepgramApiKey || "" });
 }
 
 /** Zapisz (zaszyfruj) bieżące pola wrażliwe do blobu. Wymaga hasła sesji. */
@@ -89,11 +89,12 @@ export async function unlock(pass: string): Promise<boolean> {
   if (!p || !hasBlob()) return false;
   try {
     const json = await decryptText(localStorage.getItem(BLOB_KEY)!, p);
-    const data = JSON.parse(json) as { keys?: Record<string, string>; studioKeys?: string };
+    const data = JSON.parse(json) as { keys?: Record<string, string>; studioKeys?: string; deepgramApiKey?: string };
     // Wgraj do pamięci (zapis na dysk i tak wymaże te pola, dopóki at-rest jest włączone).
     store.setSettings({
       keys: { ...emptyKeys, ...(data.keys || {}) },
       studioKeys: data.studioKeys || "",
+      deepgramApiKey: typeof data.deepgramApiKey === "string" ? data.deepgramApiKey : "",
     });
     sessionPass = p;
     unlocked = true;
