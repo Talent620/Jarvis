@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
+import { afterAll, beforeAll, describe, it, expect, vi } from "vitest";
 import { verifyLicense, deviceId, normalizeKey, licenseStatus, licenseExpiryNudge } from "../src/lib/license";
 
 describe("licenseStatus + licenseExpiryNudge — trial i licencja czasowa", () => {
@@ -28,12 +28,20 @@ describe("licenseStatus + licenseExpiryNudge — trial i licencja czasowa", () =
   });
 });
 
-// Ważny klucz testowy (fixture) podpisany kluczem prywatnym właściciela pod kluczem
-// publicznym wbudowanym w aplikację. Klucza nie da się podrobić bez prywatnego.
-const MASTER =
-  "eyJuIjoiRklYVFVSRSBURVNUT1dZIiwidCI6InBlcnBldHVhbCIsImlhdCI6MTc4MTIyMTkzMDQwM30.ThGeY2Iw7qNJ31oQz32SImiVICML-4TM8N5lRtHvO1J728d9B4lvTSnIX8x8t61sNUFbLqqEPLHulVa-8zmc5A";
-
 describe("Licencja — weryfikacja ECDSA", () => {
+  // Prawdziwy podpis i weryfikacja, ale osobna, efemeryczna para testowa.
+  // Rotacja klucza wydawcy nie powinna unieważniać testów ani wymagać jego sekretu.
+  let MASTER: string;
+  beforeAll(async () => {
+    const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+    const data = Buffer.from(JSON.stringify({ n: "FIXTURE TESTOWY", t: "perpetual", iat: Date.now() })).toString("base64url");
+    const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, pair.privateKey, new TextEncoder().encode(data));
+    MASTER = `${data}.${Buffer.from(signature).toString("base64url")}`;
+    // Podmieniamy wyłącznie źródło klucza; subtle.verify wykonuje prawdziwą kryptografię.
+    vi.spyOn(crypto.subtle, "importKey").mockResolvedValue(pair.publicKey);
+  });
+  afterAll(() => vi.restoreAllMocks());
+
   it("akceptuje ważny klucz właściciela i czyta dane", async () => {
     const r = await verifyLicense(MASTER);
     expect(r.valid).toBe(true);

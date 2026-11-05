@@ -1,105 +1,111 @@
-// === Runtime trwałych celów (goalRuntime) ===
-// Spina wykonawcę (agentRun) z trwałością (goalState): uruchamiając plan, tworzymy REKORD celu w
-// IndexedDB, zapisujemy postęp PO KAŻDYM kroku (przeżywa restart) i finalizujemy status z werdyktu.
-// Dzięki temu każde uruchomione działanie jest śledzone i widoczne w panelu celu. Kanoniczne wejście
-// dla UI (Plan dnia, panel celu). Bez chain-of-thought. S9-safe.
-
 import { makeDefaultExecTool, type RunResult, type StepResult } from "./agentRun";
 import { runAgentPipeline } from "./agentPipeline";
 import { newGoal, recordStepOutcome, loadGoals, upsertGoal, resumableGoals, type GoalRecord, type GoalStatus, type GoalStorage } from "./goalState";
+import { attempted } from "./actionOutcome";
 import type { AgentPlan } from "./agentPlanner";
 import { runTool, toolDefs } from "./tools";
 import { riskOf } from "./permissions";
+import { classifyError, decideRecovery } from "./recoveryPolicy";
 
-const toolExists = (n: string) => toolDefs.some((d) => d.name === n);
+const toolExists = (name: string) => toolDefs.some((tool) => tool.name === name);
+const active = new Set<string>();
+export const isGoalRunning = (id: string): boolean => active.has(id);
 
-/** Pure: końcowy status trwałego celu z werdyktu wykonania. */
 function finalStatus(run: RunResult): GoalStatus {
   if (run.verdict.canClaimSuccess) return "completed";
+  if (run.steps.some((step) => step.outcome.state === "ATTEMPTED")) return "waiting_user";
   if (run.status === "failed") return "failed";
-  if (run.status === "blocked") return "waiting_consent"; // wstrzymane na zgodzie/zależności
   if (run.status === "stopped") return "paused";
-  return "running";
+  if (run.steps.some((step) => step.outcome.state === "DRAFT" && /zgod/.test(step.outcome.evidence?.message || ""))) return "waiting_consent";
+  if (run.status === "blocked") return "waiting_consent";
+  return "waiting_user";
 }
 
 export interface StartGoalInput {
   goal: string;
   plan: AgentPlan;
-  correlationId: string;   // stabilny id (dedup działań zewnętrznych) — z zewnątrz
+  correlationId: string;
   now: number;
   onStatus?: (s: string) => void;
   onStep?: (r: StepResult) => void;
 }
 
-/**
- * Uruchom cel jako TRWAŁY: utwórz rekord, zapisz, wykonaj plan na prawdziwych narzędziach (bramka
- * zgód przez runTool), zapisując postęp po każdym kroku, i utrwal finalny status. Zwraca rekord + wynik.
- */
 export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStorage): Promise<{ record: GoalRecord; result: RunResult }> {
-  let record: GoalRecord = { ...newGoal(input.goal, input.plan, input.correlationId, input.now), status: "running" };
-  await upsertGoal(record, storage);
-
-  const pipeline = await runAgentPipeline(input.plan, {
-    toolExists,
-    riskOf,
-    execTool: makeDefaultExecTool(runTool, riskOf),
-    onStatus: input.onStatus,
-    onStep: async (r) => {
-      record = recordStepOutcome(record, r.id, r.outcome, input.now);
-      await upsertGoal(record, storage);
-      input.onStep?.(r);
-    },
-  });
-  const result = pipeline.run;
-
-  record = { ...record, status: finalStatus(result), updatedAt: input.now };
-  await upsertGoal(record, storage);
-  return { record, result };
+  if (active.has(input.correlationId)) throw new Error("Ten cel jest już wykonywany.");
+  const existing = (await loadGoals(storage)).find((goal) => goal.id === input.correlationId);
+  const record = existing || newGoal(input.goal, input.plan, input.correlationId, input.now);
+  if (!existing) await upsertGoal(record, storage);
+  return resumeAndRunGoal(record, input, storage);
 }
 
-/**
- * WZNÓW I DOKOŃCZ trwały cel: dograj pozostałe kroki, POMIJAJĄC już potwierdzone (i nie ponawiając
- * ATTEMPTED — bez podwójnych działań). Wcześniejsze wyniki idą jako seed do wykonawcy; postęp znów
- * zapisujemy po każdym kroku. Zwraca zaktualizowany rekord + wynik.
- */
 export async function resumeAndRunGoal(
   record: GoalRecord,
   opts: { now: number; onStatus?: (s: string) => void; onStep?: (r: StepResult) => void },
   storage?: GoalStorage,
 ): Promise<{ record: GoalRecord; result: RunResult }> {
-  const steps = record.plan.steps || [];
-  const seed: StepResult[] = steps
-    .filter((s) => record.results[s.id])
-    .map((s) => ({ id: s.id, intent: s.intent, tool: s.tool, outcome: record.results[s.id] }));
-
-  let rec: GoalRecord = { ...record, status: "running", updatedAt: opts.now };
-  await upsertGoal(rec, storage);
-
-  const pipeline = await runAgentPipeline(record.plan, {
-    toolExists,
-    riskOf,
-    execTool: makeDefaultExecTool(runTool, riskOf),
-    seed,
-    onStatus: opts.onStatus,
-    onStep: async (r) => {
-      rec = recordStepOutcome(rec, r.id, r.outcome, opts.now);
+  if (active.has(record.id)) throw new Error("Ten cel jest już wykonywany.");
+  active.add(record.id);
+  let rec = record;
+  const latest = async () => (await loadGoals(storage)).find((goal) => goal.id === record.id);
+  try {
+    rec = { ...(await latest() || record), status: "running", error: undefined, updatedAt: Date.now() };
+    await upsertGoal(rec, storage);
+    const seed: StepResult[] = rec.plan.steps.filter((step) => rec.results[step.id]).map((step) => ({
+      id: step.id, intent: step.intent, tool: step.tool, outcome: rec.results[step.id], output: rec.outputs?.[step.id],
+    }));
+    const stopped = async () => {
+      const current = await latest();
+      return !current || current.status === "paused" || current.error === "anulowane przez użytkownika";
+    };
+    const pipeline = await runAgentPipeline(rec.plan, {
+      toolExists, riskOf, execTool: makeDefaultExecTool(runTool, riskOf), seed,
+      shouldStop: stopped,
+      recover: (error, risk, attempt) => decideRecovery({ kind: classifyError(error), risk: risk === "read" ? "read" : "outbound", attempt }),
+      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+      onStatus: opts.onStatus,
+      execAnalysis: async (step, context) => {
+        const { askModel } = await import("./brain");
+        const previous = context.filter((item) => step.dependsOn?.includes(item.id))
+          .map((item) => `${item.intent}:\n${(item.output || "Brak wyniku").slice(0, 12000)}`).join("\n\n");
+        return askModel({ system: "Wykonaj analizę na podstawie podanych wyników. Podaj konkretny rezultat po polsku. Nie twierdź, że wykonałeś akcje systemowe.", history: [{ role: "user", content: `Cel: ${rec.goal}\nZadanie: ${step.intent}\n${previous}` }], heavy: true });
+      },
+      beforeTool: async (step, risk) => {
+        if (risk === "read") return;
+        const current = await latest();
+        if (!current) throw new Error("Cel usunięto.");
+        rec = { ...current, results: { ...current.results, [step.id]: attempted(step.tool, "Rozpoczęto operację; po przerwaniu sprawdź jej wynik przed ponowieniem.") }, updatedAt: Date.now() };
+        await upsertGoal(rec, storage);
+      },
+      onStep: async (step) => {
+        const current = await latest();
+        if (!current) return;
+        const paused = current.status === "paused" || current.error === "anulowane przez użytkownika";
+        rec = recordStepOutcome(current, step.id, step.outcome, Date.now());
+        rec.outputs = { ...current.outputs, ...(step.output ? { [step.id]: step.output.slice(0, 40000) } : {}) };
+        if (paused) rec.status = current.status;
+        await upsertGoal(rec, storage);
+        opts.onStep?.(step);
+      },
+    });
+    const result = pipeline.run;
+    const current = await latest();
+    if (current) {
+      const paused = current.status === "paused" || current.error === "anulowane przez użytkownika";
+      rec = { ...current, status: paused ? current.status : finalStatus(result), updatedAt: Date.now(),
+        error: current.error || (result.verdict.canClaimSuccess ? undefined : result.steps.find((step) => step.outcome.state === "FAILED")?.outcome.evidence?.message) };
       await upsertGoal(rec, storage);
-      opts.onStep?.(r);
-    },
-  });
-  const result = pipeline.run;
-
-  rec = { ...rec, status: finalStatus(result), updatedAt: opts.now };
-  await upsertGoal(rec, storage);
-  return { record: rec, result };
+    }
+    return { record: rec, result };
+  } catch (error) {
+    const current = await latest();
+    if (current) await upsertGoal({ ...current, status: "failed", error: error instanceof Error ? error.message : "Błąd wykonania", updatedAt: Date.now() }, storage);
+    throw error;
+  } finally { active.delete(record.id); }
 }
 
-/** Wczytaj cele posortowane od najnowszych (do panelu). */
 export async function loadGoalsNewestFirst(storage?: GoalStorage): Promise<GoalRecord[]> {
-  return (await loadGoals(storage)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  return (await loadGoals(storage)).sort((a, b) => b.updatedAt - a.updatedAt);
 }
-
-/** Cele warte wznowienia po restarcie (do podpowiedzi „wznów cel"). */
 export async function resumableGoalsNewestFirst(storage?: GoalStorage): Promise<GoalRecord[]> {
   return resumableGoals(await loadGoalsNewestFirst(storage));
 }

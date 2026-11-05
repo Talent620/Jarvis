@@ -182,7 +182,6 @@ function pickVoice(settings: Settings): SpeechSynthesisVoice | undefined {
 
 let currentAudio: HTMLAudioElement | null = null;
 let levelCtx: AudioContext | null = null;
-let levelRaf = 0;
 
 /** Krzywa zniekształcenia (waveshaper) — im większy „amount", tym ostrzejszy charkot. Czyste. */
 export function makeDistortionCurve(amount: number, n = 8192): Float32Array {
@@ -218,31 +217,44 @@ function kapitanFxChain(ctx: AudioContext, src: AudioNode): AudioNode {
 // Odtwórz URL audio i napędzaj poziom głośności (orb „mówi" w rytm dźwięku).
 // Web Audio jest opcjonalne — przy jakimkolwiek błędzie zwykłe odtwarzanie działa.
 // fx="kapitan" → przepuść przez efekt zniekształcenia (głos Kapitana Bomby) i zaniż wysokość.
-async function playUrlWithLevel(url: string, fx?: boolean): Promise<void> {
+async function playUrlWithLevel(url: string, fx?: boolean, token = speakToken): Promise<void> {
+  if (token !== speakToken) { URL.revokeObjectURL(url); return; }
   const audio = new Audio(url);
   currentAudio = audio;
   if (fx) audio.playbackRate = 0.84; // głębiej i ciężej
   let srcNode: MediaElementAudioSourceNode | null = null;
   let analyserNode: AnalyserNode | null = null;
   let fxOut: AudioNode | null = null;
+  let raf = 0;
+  let done = false;
+  let releasePlayback: (() => void) | null = null;
   // Sprzątanie: odłącz węzły Web Audio — inaczej akumulują się na współdzielonym
   // levelCtx przy każdym premium-TTS (wyciek pamięci + CPU w wątku audio).
   const cleanup = () => {
+    if (done) return;
+    done = true;
+    audio.onplaying = audio.onended = audio.onerror = audio.onpause = null;
+    audio.pause();
+    releasePlayback?.();
     try { srcNode?.disconnect(); } catch { /* ignore */ }
     try { fxOut?.disconnect(); } catch { /* ignore */ }
     try { analyserNode?.disconnect(); } catch { /* ignore */ }
-    cancelAnimationFrame(levelRaf);
-    setLevel(0);
-  };
-  audio.onended = () => {
+    cancelAnimationFrame(raf);
     URL.revokeObjectURL(url);
-    cleanup();
+    if (currentAudio === audio) currentAudio = null;
+    if (interruptPlayback === cleanup) interruptPlayback = null;
+    if (token === speakToken) setLevel(0);
   };
-  audio.onerror = () => cleanup();
+  interruptPlayback = cleanup;
+  audio.onplaying = () => {
+    if (!done && token === speakToken && !releasePlayback) releasePlayback = beginPlayback(token);
+  };
+  audio.onended = audio.onerror = audio.onpause = cleanup;
   try {
     levelCtx = levelCtx || new (window.AudioContext || (window as any).webkitAudioContext)();
     const ctx = levelCtx;
     if (ctx.state === "suspended") await ctx.resume().catch(() => {});
+    if (done || token !== speakToken) { cleanup(); return; }
     srcNode = ctx.createMediaElementSource(audio);
     const head: AudioNode = fx ? kapitanFxChain(ctx, srcNode) : srcNode; // efekt KB (lub czysto)
     fxOut = fx ? head : null;
@@ -253,6 +265,7 @@ async function playUrlWithLevel(url: string, fx?: boolean): Promise<void> {
     head.connect(analyser); // odczep do pomiaru poziomu (bez dalszego routingu)
     const data = new Uint8Array(analyser.frequencyBinCount);
     const tick = () => {
+      if (done || token !== speakToken) return;
       analyser.getByteTimeDomainData(data);
       let sum = 0;
       for (const v of data) {
@@ -260,19 +273,20 @@ async function playUrlWithLevel(url: string, fx?: boolean): Promise<void> {
         sum += c * c;
       }
       setLevel(Math.min(1, Math.sqrt(sum / data.length) * 3));
-      levelRaf = requestAnimationFrame(tick);
+      raf = requestAnimationFrame(tick);
     };
     tick();
   } catch {
     /* Web Audio niedostępne — odtwarzaj normalnie, bez wizualizacji */
   }
-  await audio.play();
+  if (done || token !== speakToken) { cleanup(); return; }
+  try { await audio.play(); } catch (error) { cleanup(); throw error; }
 }
 
-async function playFromResponse(res: Response, fx?: boolean): Promise<boolean> {
+async function playFromResponse(res: Response, fx?: boolean, token = speakToken): Promise<boolean> {
   if (!res.ok) return false;
   const blob = await res.blob();
-  await playUrlWithLevel(URL.createObjectURL(blob), fx);
+  await playUrlWithLevel(URL.createObjectURL(blob), fx, token);
   return true;
 }
 
@@ -282,8 +296,53 @@ let speakToken = 0;
 // Czy JARVIS aktualnie mówi (odtwarza TTS). Nasłuch mowy (whisperListener) wycisza wtedy
 // wejście, by nie rozpoznawać własnego głosu (koniec echa/samowyzwalania — dług z AUDIT.md).
 let speakingDepth = 0;
+const activePlayback = new Set<symbol>();
+const speakingSubscribers = new Set<(speaking: boolean) => void>();
+
+/** Actual output, separate from isSpeaking()'s preparation/echo guard.
+ * Android's current NativeTTS bridge has no playback events, so it cannot report this signal. */
+export function isPlaybackActive(): boolean {
+  return activePlayback.size > 0;
+}
+
+/** Subscribe to real playback start/end. Delivers the current snapshot immediately. */
+export function subscribeSpeaking(fn: (speaking: boolean) => void): () => void {
+  speakingSubscribers.add(fn);
+  try { fn(isPlaybackActive()); } catch { /* a visual observer must not interrupt audio */ }
+  return () => { speakingSubscribers.delete(fn); };
+}
+
+function publishSpeaking(): void {
+  const active = isPlaybackActive();
+  speakingSubscribers.forEach((fn) => {
+    try { fn(active); } catch { /* isolate visual observers */ }
+  });
+}
+
+function beginPlayback(token: number): () => void {
+  if (token !== speakToken) return () => {};
+  const wasActive = isPlaybackActive();
+  const id = Symbol("tts-playback");
+  activePlayback.add(id);
+  if (!wasActive) publishSpeaking();
+  return () => {
+    if (activePlayback.delete(id) && !isPlaybackActive()) publishSpeaking();
+  };
+}
+
+function holdSpeaking(token: number): () => void {
+  if (token !== speakToken) return () => {};
+  speakingDepth++;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    if (token === speakToken) speakingDepth = Math.max(0, speakingDepth - 1);
+  };
+}
+
 export function isSpeaking(): boolean {
-  return speakingDepth > 0;
+  return speakingDepth > 0 || isPlaybackActive();
 }
 // Jawne przerwanie bieżącego odtwarzania (ustawiane przez playUrlEnded).
 // Pewniejsze niż zdarzenie „pause", które bywa odpalane także przy końcu utworu.
@@ -313,41 +372,57 @@ export function splitForSpeech(text: string, max = 200): string[] {
 }
 
 /** Odtwórz URL i rozwiąż, gdy SKOŃCZY (albo przerwano). Napędza poziom orba. */
-function playUrlEnded(url: string): Promise<boolean> {
+function playUrlEnded(url: string, token = speakToken): Promise<boolean> {
   return new Promise((resolve) => {
+    if (token !== speakToken) { URL.revokeObjectURL(url); resolve(false); return; }
     const audio = new Audio(url);
     currentAudio = audio;
     let done = false;
     let srcNode: MediaElementAudioSourceNode | null = null;
+    let analyserNode: AnalyserNode | null = null;
+    let raf = 0;
+    let releasePlayback: (() => void) | null = null;
     const finish = (ok: boolean) => {
       if (done) return;
       done = true;
-      interruptPlayback = null;
+      audio.onplaying = audio.onended = audio.onerror = audio.onpause = null;
+      audio.pause();
+      releasePlayback?.();
+      if (interruptPlayback === interrupt) interruptPlayback = null;
+      if (currentAudio === audio) currentAudio = null;
       try { srcNode?.disconnect(); } catch { /* ignore */ }
+      try { analyserNode?.disconnect(); } catch { /* ignore */ }
       URL.revokeObjectURL(url);
-      cancelAnimationFrame(levelRaf);
-      setLevel(0);
+      cancelAnimationFrame(raf);
+      if (token === speakToken) setLevel(0);
       resolve(ok);
     };
-    interruptPlayback = () => finish(false); // wywoła to stopSpeaking()
+    const interrupt = () => finish(false);
+    interruptPlayback = interrupt; // wywoła to stopSpeaking()
+    audio.onplaying = () => {
+      if (!done && token === speakToken && !releasePlayback) releasePlayback = beginPlayback(token);
+    };
     audio.onended = () => finish(true);
     audio.onerror = () => finish(false);
+    audio.onpause = () => finish(audio.ended);
     try {
       levelCtx = levelCtx || new (window.AudioContext || (window as any).webkitAudioContext)();
       const ctx = levelCtx;
       if (ctx.state === "suspended") void ctx.resume().catch(() => {});
       srcNode = ctx.createMediaElementSource(audio);
       const analyser = ctx.createAnalyser();
+      analyserNode = analyser;
       analyser.fftSize = 256;
       srcNode.connect(ctx.destination);
       srcNode.connect(analyser);
       const data = new Uint8Array(analyser.frequencyBinCount);
       const tick = () => {
+        if (done || token !== speakToken) return;
         analyser.getByteTimeDomainData(data);
         let sum = 0;
         for (const v of data) { const c = (v - 128) / 128; sum += c * c; }
         setLevel(Math.min(1, Math.sqrt(sum / data.length) * 3));
-        levelRaf = requestAnimationFrame(tick);
+        raf = requestAnimationFrame(tick);
       };
       tick();
     } catch {
@@ -393,13 +468,19 @@ function pcmToWavUrl(b64: string, sampleRate: number): string {
 // Darmowy głos wysokiej jakości przez Gemini TTS (wymaga klucza Gemini).
 // Wielojęzyczny i naturalny — mówi w języku tekstu (też ukraiński/polski),
 // działa na każdej platformie (chmura), więc świetny do Trybu Tłumacza.
-export async function geminiSpeak(text: string, voiceName?: string): Promise<boolean> {
+export async function geminiSpeak(text: string, voiceName?: string, ownerToken?: number): Promise<boolean> {
   const key = primaryKey("gemini");
   if (!key || !text.trim()) return false;
   const voice = voiceName?.trim() || "Charon";
   const chunks = splitForSpeech(text);
   if (!chunks.length) return false;
-  const token = ++speakToken; // przejmij „mówienie"; stopSpeaking() je unieważni
+  // A nested Gemini path belongs to its caller's turn; replacing its token here
+  // would strand the parent's echo guard and invalidate fallback handling.
+  if (ownerToken === undefined) stopSpeaking();
+  const token = ownerToken ?? speakToken;
+  if (token !== speakToken) return true;
+  const releaseGuard = holdSpeaking(token);
+  try {
 
   // Synteza JEDNEGO kawałka → URL audio (albo null). Bez odtwarzania.
   const synth = async (chunk: string): Promise<string | null> => {
@@ -436,15 +517,24 @@ export async function geminiSpeak(text: string, voiceName?: string): Promise<boo
   let next = synth(chunks[0]);
   for (let i = 0; i < chunks.length; i++) {
     const url = await next;
-    if (token !== speakToken) return true; // przerwano (stopSpeaking)
+    if (token !== speakToken) {
+      if (url) URL.revokeObjectURL(url);
+      return true;
+    }
     if (i === 0 && !url) return false; // pierwszy kawałek padł → fallback (głos systemowy), bez zbędnej syntezy
     next = i + 1 < chunks.length ? synth(chunks[i + 1]) : Promise.resolve(null);
     if (url) {
-      const ok = await playUrlEnded(url);
-      if (!ok || token !== speakToken) return true; // przerwane odtwarzanie
+      const ok = await playUrlEnded(url, token);
+      if (!ok || token !== speakToken) {
+        void next.then((unused) => { if (unused) URL.revokeObjectURL(unused); });
+        return true;
+      }
     }
   }
   return true;
+  } finally {
+    releaseGuard();
+  }
 }
 
 // Głosy premium Gemini TTS — kilka naturalnych, z czytelnymi opisami.
@@ -458,8 +548,8 @@ export const TTS_VOICES: { id: string; label: string }[] = [
   { id: "Orus", label: "Orus — męski, głęboki" },
 ];
 
-async function geminiTts(text: string, settings: Settings): Promise<boolean> {
-  return geminiSpeak(text, settings.geminiVoice?.trim() || "Charon");
+async function geminiTts(text: string, settings: Settings, token: number): Promise<boolean> {
+  return geminiSpeak(text, settings.geminiVoice?.trim() || "Charon", token);
 }
 
 export type VoiceMode = "system" | "gemini" | "eleven" | "fish" | "local";
@@ -520,6 +610,30 @@ export function setVoiceUnavailableHandler(fn: ((info: VoiceUnavailableInfo) => 
   voiceUnavailableHandler = fn;
 }
 
+function playUtterance(synth: SpeechSynthesis, utterance: SpeechSynthesisUtterance, token: number): void {
+  if (token !== speakToken) return;
+  const releaseGuard = holdSpeaking(token);
+  let releasePlayback: (() => void) | null = null;
+  let ended = false;
+  const start = () => {
+    if (!ended && token === speakToken && !releasePlayback) releasePlayback = beginPlayback(token);
+  };
+  const pause = () => { releasePlayback?.(); releasePlayback = null; };
+  const finish = () => {
+    if (ended) return;
+    ended = true;
+    pause();
+    releaseGuard();
+    if (interruptPlayback === finish) interruptPlayback = null;
+    utterance.onstart = utterance.onresume = utterance.onpause = utterance.onend = utterance.onerror = null;
+  };
+  interruptPlayback = finish;
+  utterance.onstart = utterance.onresume = start;
+  utterance.onpause = pause;
+  utterance.onend = utterance.onerror = finish;
+  try { synth.speak(utterance); } catch (error) { finish(); throw error; }
+}
+
 export async function speak(text: string, settings: Settings, opts: { systemOverride?: boolean } = {}): Promise<void> {
   if (!settings.speak) return;
   const originalText = text; // do ewentualnego „Ponów" tym samym głosem (bez podwójnego czyszczenia)
@@ -527,7 +641,7 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
   if (!text.trim()) return;
   stopSpeaking();
   const myToken = speakToken; // bieżąca „tura mówienia"; nowszy speak()/stop unieważni
-  speakingDepth++;
+  const releaseGuard = holdSpeaking(myToken);
   const fx = settings.voiceFx === "kapitan"; // efekt zniekształcenia (głos Kapitana Bomby) na audio buforowym
   try {
   // JEDEN jednoznaczny wybór silnika (voiceMode) — koniec „walki flag". Każdy premium tor
@@ -544,7 +658,7 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
     try {
       const blob = await synthLocal(text);
       if (myToken !== speakToken) return; // nowsza tura przejęła w czasie syntezy
-      if (blob) { await playUrlWithLevel(URL.createObjectURL(blob), fx); return; }
+      if (blob) { await playUrlWithLevel(URL.createObjectURL(blob), fx, myToken); return; }
     } catch {
       /* fallback do głosów chmurowych/systemowych niżej */
     }
@@ -563,7 +677,7 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
         body: JSON.stringify({ text, reference_id: settings.fishAudioVoiceId, format: "mp3" }),
       }, 30000);
       if (myToken !== speakToken) return; // nowsza tura przejęła w czasie pobierania
-      if (await playFromResponse(res, fx)) return;
+      if (await playFromResponse(res, fx, myToken)) return;
     } catch {
       /* fallback niżej */
     }
@@ -596,7 +710,7 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
         30000,
       );
       if (myToken !== speakToken) return; // nowsza tura przejęła w czasie pobierania
-      if (await playFromResponse(res, fx)) return;
+      if (await playFromResponse(res, fx, myToken)) return;
     } catch {
       /* fallback do systemowego TTS */
     }
@@ -604,8 +718,9 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
 
   // Darmowy, wysokiej jakości głos przez Gemini TTS (gdy wybrany i jest klucz).
   if (mode === "gemini" && primaryKey("gemini")) {
-    if (await geminiTts(text, settings)) return;
+    if (await geminiTts(text, settings, myToken)) return;
   }
+  if (myToken !== speakToken) return;
 
   // Wybrany głos (premium/local) NIE zabrzmiał. Zamiast po cichu przełączyć na systemowy —
   // uszanuj politykę: „ask" (domyślnie) → zapytaj i NIE zmieniaj przypiętego głosu.
@@ -636,6 +751,7 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
   if (!synth) return;
   // Na Androidzie lista głosów bywa pusta przy starcie — poczekaj na nią.
   if (!cachedVoices.length) await loadVoices();
+  if (myToken !== speakToken) return;
   const u = new SpeechSynthesisUtterance(text);
   const v = pickVoice(settings);
   if (v) u.voice = v;
@@ -647,18 +763,21 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
   } catch {
     /* ignore */
   }
-  synth.speak(u);
+  playUtterance(synth, u, myToken);
   } finally {
     // Zmniejsz licznik mówienia TYLKO, jeśli ta tura wciąż „posiada" mówienie (myToken aktualny).
     // Inaczej, przy nakładających się speak(), starsza tura wyzerowałaby licznik należący do nowszej
     // → isSpeaking()=false mimo grającego TTS → nasłuch łapałby własny głos JARVISA (echo/self-trigger).
-    if (myToken === speakToken) speakingDepth = Math.max(0, speakingDepth - 1);
+    releaseGuard();
   }
 }
 
 export function stopSpeaking(): void {
   speakToken++; // przerwij trwające potokowe czytanie (Gemini, po kawałkach)
   speakingDepth = 0; // już nie mówimy — odblokuj nasłuch
+  const wasPlaying = isPlaybackActive();
+  activePlayback.clear();
+  if (wasPlaying) publishSpeaking();
   interruptPlayback?.(); // natychmiast rozwiąż bieżące odtwarzanie kawałka
   try {
     window.speechSynthesis?.cancel();
@@ -670,7 +789,6 @@ export function stopSpeaking(): void {
     currentAudio.pause();
     currentAudio = null;
   }
-  cancelAnimationFrame(levelRaf);
   setLevel(0);
 }
 
@@ -682,11 +800,13 @@ export function stopSpeaking(): void {
 export async function speakLang(text: string, ttsLang: string, opts?: { voice?: string; premium?: boolean }): Promise<void> {
   if (!text.trim()) return;
   stopSpeaking();
+  const myToken = speakToken;
   // Głos PREMIUM (Gemini TTS) — naturalny, wielojęzyczny, działa wszędzie.
   // Idealny do tłumacza: ukraiński/polski brzmią jak żywy człowiek.
   if (opts?.premium !== false && primaryKey("gemini")) {
-    if (await geminiSpeak(text, opts?.voice)) return;
+    if (await geminiSpeak(text, opts?.voice, myToken)) return;
   }
+  if (myToken !== speakToken) return;
   if (Capacitor.getPlatform?.() === "android") {
     try {
       await NativeTTS.speak({ text, pitch: 1, rate: 1, lang: ttsLang });
@@ -698,6 +818,7 @@ export async function speakLang(text: string, ttsLang: string, opts?: { voice?: 
   const synth = window.speechSynthesis;
   if (!synth) return;
   if (!cachedVoices.length) await loadVoices();
+  if (myToken !== speakToken) return;
   const u = new SpeechSynthesisUtterance(text);
   const pref = ttsLang.slice(0, 2).toLowerCase();
   const v = cachedVoices.find((x) => x.lang.toLowerCase() === ttsLang.toLowerCase())
@@ -705,7 +826,7 @@ export async function speakLang(text: string, ttsLang: string, opts?: { voice?: 
   if (v) u.voice = v;
   u.lang = v?.lang || ttsLang;
   try { synth.resume(); } catch { /* ignore */ }
-  synth.speak(u);
+  playUtterance(synth, u, myToken);
 }
 
 // --- Rozpoznawanie mowy (STT) ---

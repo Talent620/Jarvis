@@ -1,0 +1,133 @@
+.hologram {
+  --holo-ink: #a9e6eb;
+  --holo-accent: #6edee9;
+  --holo-rgb: 110 222 233;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 720px);
+  min-width: 0;
+  margin: 0 auto;
+  padding: 0;
+  color: var(--holo-ink);
+  font: inherit;
+  text-align: center;
+  background: transparent;
+  border: 0;
+  border-radius: 20px;
+  isolation: isolate;
+}
+
+.hologram--accent-violet { --holo-ink: #c9ceff; --holo-accent: #b8b9ff; --holo-rgb: 184 185 255; }
+.hologram--accent-amber { --holo-ink: #f2d5a8; --holo-accent: #efc486; --holo-rgb: 239 196 134; }
+.hologram--thinking { --holo-ink: #e5c999; --holo-accent: #d7b679; --holo-rgb: 215 182 121; }
+.hologram--accent-amber.hologram--thinking { --holo-ink: #f7e6c1; --holo-accent: #f7e6c1; --holo-rgb: 247 230 193; }
+.hologram__stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.4;
+  max-height: 480px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: radial-gradient(ellipse at 50% 49%, rgb(var(--holo-rgb) / 4%), transparent 64%);
+}
+
+.hologram__canvas { display: block; width: 100%; height: 100%; }
+.hologram__eyebrow {
+  position: absolute;
+  inset: 18px 22px auto;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font: 500 9px/1.4 var(--font-mono, "SFMono-Regular", Consolas, monospace);
+  letter-spacing: 0.16em;
+  color: #7f9aa7;
+  pointer-events: none;
+}
+
+.hologram__mode { display: inline-flex; align-items: center; gap: 7px; color: var(--holo-ink); }
+.hologram__mode i, .hologram__status-dot {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--holo-accent);
+  box-shadow: 0 0 8px rgb(var(--holo-rgb) / 25%);
+}
+
+.hologram__coordinate {
+  position: absolute;
+  top: 43%;
+  color: #a9bcc7;
+  font: 400 10px/1.9 var(--font-mono, "SFMono-Regular", Consolas, monospace);
+  letter-spacing: 0.13em;
+  text-align: left;
+  pointer-events: none;
+}
+
+.hologram__coordinate span { color: #7b94a1; font-size: 8px; line-height: 1.6; }
+.hologram__coordinate--left { left: 23px; }
+.hologram__coordinate--right { right: 23px; text-align: right; }
+.hologram__corner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: solid rgb(var(--holo-rgb) / 24%);
+  pointer-events: none;
+}
+
+.hologram__corner--tl { top: 8px; left: 8px; border-width: 1px 0 0 1px; }
+.hologram__corner--tr { top: 8px; right: 8px; border-width: 1px 1px 0 0; }
+.hologram__corner--bl { bottom: 8px; left: 8px; border-width: 0 0 1px 1px; }
+.hologram__corner--br { bottom: 8px; right: 8px; border-width: 0 1px 1px 0; }
+.hologram__status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  max-width: 100%;
+  min-height: 30px;
+  margin: 4px 0 0;
+  padding: 0 14px;
+  color: var(--holo-ink);
+  font-size: 12px;
+  line-height: 1.55;
+  letter-spacing: 0.025em;
+  overflow-wrap: anywhere;
+}
+
+.hologram--idle .hologram__status { color: #a2b4c0; }
+.hologram--interactive { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.hologram--interactive:focus-visible { outline: 2px solid var(--holo-accent); outline-offset: 5px; }
+.hologram--interactive .hologram__corner { transition: border-color 180ms ease; }
+.hologram--interactive:hover .hologram__corner { border-color: rgb(var(--holo-rgb) / 70%); }
+.hologram--interactive:active { background: rgb(var(--holo-rgb) / 4%); }
+
+.hologram--compact { width: min(100%, 320px); }
+.hologram--compact .hologram__stage { aspect-ratio: 1.3; }
+.hologram--compact .hologram__coordinate { display: none; }
+.hologram--compact .hologram__eyebrow { inset: 10px 13px auto; font-size: 7px; letter-spacing: 0.09em; }
+.hologram--compact .hologram__corner { width: 7px; height: 7px; }
+.hologram--compact .hologram__status { font-size: 11px; margin-top: 0; }
+
+@media (max-width: 599px) {
+  .hologram__stage { max-height: 260px; }
+  .hologram__eyebrow { inset: 16px 17px auto; font-size: 8px; letter-spacing: 0.08em; }
+  .hologram__coordinate--left { left: 18px; }
+  .hologram__coordinate--right { right: 18px; }
+  .hologram__coordinate { font-size: 9px; }
+  .hologram__coordinate span { font-size: 7px; }
+  .hologram__status { font-size: 11px; }
+  .hologram--compact { width: min(100%, 200px); }
+  .hologram--compact .hologram__stage { aspect-ratio: 1.5; max-height: 140px; }
+  .hologram--compact .hologram__eyebrow { inset: 8px 10px auto; font-size: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hologram *, .hologram *::before, .hologram *::after { animation: none !important; transition: none !important; }
+}
+
+.low-power .hologram__mode i, .low-power .hologram__status-dot { box-shadow: none; }

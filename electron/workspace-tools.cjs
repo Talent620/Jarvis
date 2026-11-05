@@ -52,7 +52,7 @@ function run(command, args, options = {}) {
       cwd: options.cwd,
       shell: false,
       windowsHide: true,
-      env: { ...process.env, ...options.env },
+      env: { ...process.env, ...(command === process.execPath && process.versions.electron ? { ELECTRON_RUN_AS_NODE: "1" } : {}), ...options.env },
     });
     let stdout = "";
     let stderr = "";
@@ -94,8 +94,10 @@ function createWorkspaceTools(options) {
   };
 
   const available = (command) => {
-    const probe = spawnSync(command, ["--version"], { shell: false, windowsHide: true, timeout: 10_000 });
-    return !probe.error;
+    const probe = spawnSync(command, ["--version"], { shell: false, windowsHide: true, timeout: 10_000,
+      env: { ...process.env, ...(command === process.execPath && process.versions.electron ? { ELECTRON_RUN_AS_NODE: "1" } : {}) },
+    });
+    return !probe.error && probe.status === 0;
   };
 
   async function call(tool, rawInput = {}) {
@@ -128,7 +130,8 @@ function createWorkspaceTools(options) {
       } else if (tool === "terminal") {
         const command = String(input.command || "").toLowerCase();
         if (!SAFE_COMMANDS.has(command)) throw new Error(`Polecenie „${command}” nie znajduje się na allowliście.`);
-        result = await run(command, safeArgs(input.args), { cwd: inside(root, input.cwd), timeout: 120_000 });
+        // Node jest dołączony do Electrona — działa również bez systemowej instalacji node.
+        result = await run(command === "node" ? process.execPath : command, safeArgs(input.args), { cwd: inside(root, input.cwd), timeout: 120_000 });
       } else if (tool === "docker") {
         result = await run("docker", safeArgs(input.args || ["version"]), { cwd: inside(root, input.cwd), timeout: 60_000 });
       } else if (tool === "database") {

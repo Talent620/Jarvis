@@ -56,6 +56,7 @@ import { useEscape } from "../hooks/useEscape";
 import { listPlugins } from "../plugins/PluginRegistry";
 import { hourlyActivity, resetAdaptive } from "../lib/usage";
 import Toggle from "./Toggle";
+import InterfaceModeSwitch from "./InterfaceModeSwitch";
 
 // Mini-wykres aktywności: słupki per godzina z ostatnich 7 dni (Adaptive UI).
 function UsageChart() {
@@ -106,6 +107,7 @@ const SETTINGS_INDEX: { label: string; tab: Tab; anchor?: string; keys: string }
   { label: "💸 Automat sprzedaży / leady", tab: "behavior", anchor: "set-sales", keys: "sprzedaz leady prospekting oferty firmy" },
   { label: "🌍 Język interfejsu (PL/EN)", tab: "interface", anchor: "set-language", keys: "jezyk language english polski angielski lang i18n" },
   { label: "🎨 Motyw / wygląd", tab: "interface", anchor: "set-theme", keys: "motyw kolor wyglad interfejs hud theme" },
+  { label: "Classic / PRO NEW — układ i hologram", tab: "interface", anchor: "set-interface-mode", keys: "classic pro new hologram 3d wyglad interfejs" },
   { label: "🔗 Centrum połączeń", tab: "integrations", anchor: "set-connections", keys: "integracje polaczenia google kalendarz mcp salesos poczta ai pamiec sync" },
   { label: "📈 AI Sales OS", tab: "integrations", anchor: "set-salesos", keys: "sales os ai sales sprzedaz crm token klucz polaczenia" },
   { label: "▣ JARVIS Site OS", tab: "integrations", anchor: "set-siteos", keys: "site os kreator stron edytor tunel publikacja parowanie" },
@@ -2546,6 +2548,15 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
           {/* ============ 🎨 INTERFEJS ============ */}
           {tab === "interface" && (
             <>
+              <h3 id="set-interface-mode">Classic / PRO NEW</h3>
+              <p className="muted">PRO NEW: boczna nawigacja, czytelne panele i hologram reagujący na rozmowę. Classic: dotychczasowy HUD. Zmiana zapisuje się od razu.</p>
+              <InterfaceModeSwitch mode={s.interfaceMode} onChange={(interfaceMode) => set({ interfaceMode })} />
+              <h3>Paleta PRO NEW</h3>
+              <div className="quick-settings-palette" role="group" aria-label="Kolor interfejsu PRO">
+                {([{ id: "violet", label: "Indygo" }, { id: "cyan", label: "Cyjan" }, { id: "amber", label: "Bursztyn" }] as const).map(({ id, label }) => (
+                  <button key={id} className={`chip${(s.proAccent || "violet") === id ? " on is-active" : ""}`} aria-pressed={(s.proAccent || "violet") === id} onClick={() => set({ proAccent: id })}>{label}</button>
+                ))}
+              </div>
               <h3 id="set-language">🌍 {t("settings.language", uiLang)}</h3>
               <div className="chips" style={{ marginBottom: 10 }}>
                 {(["pl", "en"] as const).map((lg) => (
@@ -2559,7 +2570,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 ))}
               </div>
               <h3 id="set-theme">Motyw HUD</h3>
-              <p className="muted">Kolor akcentów całego interfejsu.</p>
+              <p className="muted">Kolor akcentów w Classic. Paletę PRO NEW wybierzesz powyżej.</p>
               <div className="chips" style={{ marginBottom: 8 }}>
                 {[
                   { id: "aurora", l: "Aurora ✨" },

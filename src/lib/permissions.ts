@@ -5,6 +5,8 @@ import type { AuditEntry } from "../types";
 export type Risk = "read" | "write" | "outbound";
 
 const RISK: Record<string, Risk> = {
+  workspace_status: "read", workspace_list: "read", workspace_read: "read",
+  workspace_write: "write", workspace_terminal: "outbound",
   // read — wykonują się automatycznie
   list_tasks: "read", list_notes: "read", list_shopping: "read", list_calendar: "read",
   list_scenes: "read", get_weather: "read", daily_briefing: "read", web_research: "read",

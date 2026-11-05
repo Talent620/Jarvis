@@ -5,6 +5,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { toast } from "./lib/toast";
 import { logError } from "./lib/errorLog";
 import "./styles/index.css";
+import "./styles/pro-interface.css";
 import { initPlugins } from "./plugins";
 import { installSecretsVault } from "./lib/secretsVault";
 import { applyPerformanceProfile } from "./lib/performanceProfile";
@@ -13,10 +14,10 @@ import { initSystemMcp } from "./lib/systemMcp";
 
 // Opcjonalny, OPT-IN podgląd „Neural Interface" pod hash-route `#neural` — ładowany leniwie,
 // więc framer-motion/Tailwind nie wchodzą do głównego bundla zwykłych użytkowników.
-// Domyślnie (bez hasha) renderujemy klasyczny <App/> — zero zmian w produkcyjnym przepływie.
+// Bez hasha działa produkcyjny <App/> z zapamiętanym wyborem Classic / PRO NEW.
 const NeuralInterface = React.lazy(() => import("./components/jarvis-ui/NeuralInterface"));
 const isNeural = typeof location !== "undefined" && location.hash.replace(/^#\/?/, "") === "neural";
-window.addEventListener("hashchange", () => location.reload()); // przełączanie #neural ⇄ klasyczny
+window.addEventListener("hashchange", () => location.reload()); // przełączanie prototypu #neural i głównej aplikacji
 
 installSecretsVault(); // szyfrowanie kluczy w spoczynku (no-op, gdy wyłączone)
 initPlugins();

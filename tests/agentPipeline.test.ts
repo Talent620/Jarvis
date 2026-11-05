@@ -12,7 +12,7 @@ describe("agent pipeline", () => {
 
   it("kończy zatwierdzeniem tylko po potwierdzeniu wszystkich kroków", async () => {
     const result = await runAgentPipeline(
-      { goal: "zmiana", steps: [{ id: "code", intent: "napisz kod" }, { id: "test", intent: "uruchom testy", dependsOn: ["code"] }] },
+      { goal: "zmiana", steps: [{ id: "code", intent: "napisz kod", tool: "workspace_write" }, { id: "test", intent: "uruchom testy", tool: "workspace_terminal", dependsOn: ["code"] }] },
       { toolExists: () => true, riskOf: () => "read", execTool: async () => ({ outcome: confirmed() }), now: () => 1 },
     );
     expect(result.approved).toBe(true);

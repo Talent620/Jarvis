@@ -46,6 +46,9 @@ export interface RunDeps {
   onStatus?: (msg: string) => void;
   /** Wołane po KAŻDYM kroku (z jego wynikiem) — pozwala trwale zapisać postęp (durable goals). */
   onStep?: (result: StepResult) => void | Promise<void>;
+  shouldStop?: () => boolean | Promise<boolean>;
+  beforeTool?: (step: PlanStep, risk: Risk) => void | Promise<void>;
+  execAnalysis?: (step: PlanStep, context: StepResult[]) => Promise<string>;
   now?: () => number;
   maxSteps?: number;
   maxToolCalls?: number;
@@ -60,8 +63,8 @@ export interface RunDeps {
   seed?: StepResult[];
 }
 
-const DEFAULT_MAX_STEPS = 12;
-const DEFAULT_MAX_TOOL_CALLS = 8;
+const DEFAULT_MAX_STEPS = 40;
+const DEFAULT_MAX_TOOL_CALLS = 80;
 
 /** Pure: porządek wykonania wg dependsOn (Kahn). Cykl/niespójność → resztę w kolejności wejścia. */
 export function topoOrder(steps: PlanStep[]): PlanStep[] {
@@ -113,7 +116,7 @@ function needsConsent(risk: Risk, step: PlanStep): boolean {
 export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult> {
   const maxSteps = deps.maxSteps ?? DEFAULT_MAX_STEPS;
   const maxToolCalls = deps.maxToolCalls ?? DEFAULT_MAX_TOOL_CALLS;
-  const steps = (plan.steps || []).slice(0, maxSteps);
+  const steps = plan.steps || [];
   const order = topoOrder(steps);
   const total = order.length;
   const results = new Map<string, StepResult>();
@@ -121,17 +124,50 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
   for (const s of deps.seed || []) results.set(s.id, s);
   let toolCalls = 0;
   let stoppedByLimit = false;
+  let processed = 0;
 
   const depConfirmed = (step: PlanStep): boolean =>
     (step.dependsOn || []).every((d) => results.get(d)?.outcome.state === "CONFIRMED");
 
+  const resolveValue = (value: unknown, step: PlanStep): unknown => {
+    if (Array.isArray(value)) return value.map((item) => resolveValue(item, step));
+    if (!value || typeof value !== "object") return value;
+    const obj = value as Record<string, unknown>;
+    if (typeof obj.$result === "string") {
+      if (!step.dependsOn?.includes(obj.$result)) throw new Error("Wynik musi pochodzić z jawnej zależności kroku.");
+      const output = results.get(obj.$result)?.output;
+      if (output === undefined) throw new Error("Brak wyniku poprzedniego kroku.");
+      if (!obj.path) return output;
+      let parsed: unknown = JSON.parse(output);
+      for (const part of String(obj.path).split(".")) {
+        if (!parsed || typeof parsed !== "object" || !Object.prototype.hasOwnProperty.call(parsed, part)) throw new Error("Brak wymaganego pola w wyniku kroku.");
+        parsed = (parsed as Record<string, unknown>)[part];
+      }
+      return parsed;
+    }
+    return Object.fromEntries(Object.entries(obj).map(([key, item]) => [key, resolveValue(item, step)]));
+  };
+
   // Policz jeden krok do StepResult (mutuje toolCalls/stoppedByLimit przez domknięcie).
   const evalStep = async (step: PlanStep): Promise<StepResult> => {
     const base = { id: step.id, intent: step.intent, tool: step.tool };
+    if (await deps.shouldStop?.() || processed >= maxSteps) {
+      stoppedByLimit = true;
+      return { ...base, outcome: draft("Wstrzymano — można kontynuować od tego kroku."), skipped: true, reason: "wstrzymano" };
+    }
+    processed += 1;
     // Zależności muszą być POTWIERDZONE (nie FAILED/ATTEMPTED/SIMULATED/DRAFT).
     if (!depConfirmed(step)) return { ...base, outcome: draft("zależność niepotwierdzona"), skipped: true, reason: "zależność niepotwierdzona" };
     // Krok czysto myślowy (bez narzędzia) → uznaj za wewnętrznie wykonany.
-    if (!step.tool) return { ...base, outcome: confirmed({ source: "wewnętrzny", message: "krok analityczny" }) };
+    if (!step.tool) {
+      if (!deps.execAnalysis) return { ...base, outcome: draft("Brak wykonawcy analizy."), skipped: true };
+      try {
+        const output = await deps.execAnalysis(step, [...results.values()]);
+        return { ...base, outcome: output.trim() ? confirmed({ source: "analiza", message: "Zapisano wynik analizy." }) : failed("Model nie zwrócił wyniku."), output };
+      } catch (error) {
+        return { ...base, outcome: failed(error instanceof Error ? error.message : "Błąd analizy.") };
+      }
+    }
     if (!deps.toolExists(step.tool)) return { ...base, outcome: failed(`nieznane narzędzie: ${step.tool}`), reason: "nieznane narzędzie" };
 
     const risk = deps.riskOf(step.tool);
@@ -151,9 +187,16 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
     let attempt = 0;
     let lastReason: string | undefined;
     for (;;) {
+      if (await deps.shouldStop?.()) {
+        stoppedByLimit = true;
+        return { ...base, outcome: draft("Wstrzymano przed wykonaniem."), skipped: true };
+      }
+      // Zapis checkpointu musi się udać PRZED efektem ubocznym.
+      await deps.beforeTool?.(step, risk);
       try {
         toolCalls += 1;
-        const { outcome, output } = await deps.execTool(step.tool, step.arguments, step);
+        const args = resolveValue(step.arguments, step) as Record<string, unknown> | undefined;
+        const { outcome, output } = await deps.execTool(step.tool, args, step);
         return { ...base, outcome, output, reason: lastReason };
       } catch (e) {
         if (!deps.recover) return { ...base, outcome: failed(e instanceof Error ? e.message : "błąd narzędzia"), reason: "błąd narzędzia" };
@@ -210,6 +253,20 @@ export function makeDefaultExecTool(runTool: (name: string, input: unknown) => P
     if (/^Nieznane narzędzie/i.test(text)) return { outcome: failed(`nieznane narzędzie: ${name}`), output: text };
     if (/^Anulowano/i.test(text)) return { outcome: draft("brak zgody użytkownika"), output: text };
     const risk = riskOf(name);
+    let structured: { ok?: boolean; error?: string; code?: number } | null = null;
+    try { structured = JSON.parse(text); } catch { /* starsze narzędzia zwracają tekst */ }
+    const error = structured?.ok === false
+      ? structured.error || text
+      : /^(?:Błąd\b|Error\b|err:|❌|Nie udało się|Ta akcja działa tylko)/i.test(text.trim()) ? text : "";
+    if (error) {
+      // Tylko odczyty są bezpieczne do automatycznego ponowienia.
+      if (risk === "read" && ["transient_network", "quota_429"].includes(classifyError(error))) throw new Error(error);
+      return { outcome: failed(error, name), output: text };
+    }
+    if (!text.trim()) return { outcome: draft("Narzędzie nie zwróciło wyniku."), output: text };
+    if (name === "workspace_terminal" && structured?.ok === true && structured.code === 0) {
+      return { outcome: confirmed({ source: name, message: "Polecenie zakończyło się kodem 0; wynik zapisany poniżej." }), output: text };
+    }
     if (risk === "outbound") return { outcome: attempted(name, "wykonano — czekam na potwierdzenie dostarczenia"), output: text };
     return { outcome: confirmed({ source: name, message: "wykonano lokalnie" }), output: text };
   };

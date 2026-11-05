@@ -11,6 +11,7 @@ export default tseslint.config(
     ignores: [
       "dist",
       "dist-studio",
+      "release-desktop/**",
       "node_modules",
       "**/node_modules/**",
       "node_modules_incomplete/**",

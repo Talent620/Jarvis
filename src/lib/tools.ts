@@ -1,4 +1,5 @@
 import { store, uid } from "./store";
+import { workspaceAgentTools } from "./workspaceAgentTools";
 import { fetchTimeout } from "./http";
 import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
 import { saType, saTap, saGlobal, saOpenApp, saOpenSettings } from "./systemActions";
@@ -80,6 +81,7 @@ interface Tool {
 }
 
 const tools: Tool[] = [
+  ...workspaceAgentTools,
   {
     def: {
       name: "add_task",

@@ -3,9 +3,13 @@ import type { CommandItem } from "./lib/commandPalette";
 import type { GrowthContext } from "./lib/growthContext";
 import type { SettingsTab } from "./lib/settingsModel";
 import Orb, { type OrbState } from "./components/Orb";
+import Hologram from "./components/Hologram";
+import InterfaceModeSwitch from "./components/InterfaceModeSwitch";
+import ProNavigation from "./components/ProNavigation";
 import Conversation from "./components/Conversation";
 import Composer from "./components/Composer";
 const SettingsPanel = lazy(() => import("./components/Settings"));
+const QuickSettings = lazy(() => import("./components/QuickSettings"));
 const Panels = lazy(() => import("./components/Panels"));
 import LiveOverlay from "./components/LiveOverlay";
 const ChatHistory = lazy(() => import("./components/ChatHistory"));
@@ -47,6 +51,7 @@ import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
 import { runProactiveNotifications } from "./lib/proactiveNotify";
 import { runPredictionCycleOnStore } from "./lib/predictionCycle";
 import { refreshResumableGoals } from "./lib/goalResume";
+import { startGoalQueue } from "./lib/goalQueue";
 import { recordActiveDay } from "./lib/habit";
 import { nextTip, recordTipShown, contextualTipNow, dailyDigestNow, recordDigestShown, type Tip } from "./lib/tips";
 import TipBubble from "./components/TipBubble";
@@ -108,7 +113,7 @@ import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
 import { processPendingSiteOsCommands } from "./lib/siteOs";
 import { currentBrainMode } from "./lib/brainMode";
-import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, checkPinnedVoice, setVoiceUnavailableHandler, type VoiceListener, type VoiceUnavailableInfo } from "./lib/voice";
+import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, subscribeSpeaking, checkPinnedVoice, setVoiceUnavailableHandler, type VoiceListener, type VoiceUnavailableInfo } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
 import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
 import ScreenBoundary from "./components/ScreenBoundary";
@@ -126,7 +131,7 @@ import { useStore } from "./hooks/useStore";
 import type { ChatMessage } from "./types";
 
 type PendingImage = { data: string; mediaType: string } | null;
-type SettingsRouteContext = { tab?: SettingsTab; anchor?: string };
+type SettingsRouteContext = { tab?: SettingsTab; anchor?: string; advanced?: boolean };
 
 // Lokalne proaktywne powitanie (bez API) — pora dnia + krótki raport.
 function buildGreeting(): string {
@@ -176,7 +181,17 @@ const initialChat = (() => {
 
 export default function App() {
   const { settings } = useStore();
+  const isPro = settings.interfaceMode !== "classic";
+  const proAccent = settings.proAccent === "cyan" || settings.proAccent === "amber" ? settings.proAccent : "violet";
+  const [playingSpeech, setPlayingSpeech] = useState(false);
+  useEffect(() => subscribeSpeaking(setPlayingSpeech), []);
+  useEffect(() => {
+    document.body.classList.toggle("interface-pro", isPro);
+    document.body.classList.add(`pro-accent-${proAccent}`);
+    return () => document.body.classList.remove("interface-pro", `pro-accent-${proAccent}`);
+  }, [isPro, proAccent]);
   const [messages, setMessages] = useState<ChatMessage[]>(initialChat?.messages ?? []);
+  const hasConversation = messages.some((message) => message.role === "user");
   const [activeId, setActiveId] = useState<string>(initialChat?.id ?? uid());
   // JEDNA nawigacja: wszystkie „zwykłe" ekrany mają jeden aktywny stan (route) + historię „Wstecz".
   // Stare flagi showX/setShowX są WYPROWADZANE z routera (adapter) — kod wywołujący działa bez zmian,
@@ -368,6 +383,11 @@ export default function App() {
   const [licInfo, setLicInfo] = useState<LicenseInfo | null>(null); // do statusu trialu/wygaśnięcia
   const [licNudgeOff, setLicNudgeOff] = useState(false); // schowano baner na tę sesję
   const [showRelicense, setShowRelicense] = useState(false); // wpisanie nowego klucza (przedłużenie)
+
+  useEffect(() => {
+    if (!licensed || onboarding) return;
+    return startGoalQueue((message) => toast(message));
+  }, [licensed, onboarding]);
 
   useEffect(() => {
     if (licenseRequired()) checkActivation().then((r) => { setLicensed(r.valid); setLicInfo(r); });
@@ -713,7 +733,6 @@ export default function App() {
       }
 
       if (store.settings.speak) {
-        setOrb("speaking");
         await speak(reply.text, store.settings);
       }
     } catch (e) {
@@ -940,7 +959,6 @@ export default function App() {
       setMessages((m) => [...m, { id, role: "assistant", text, tools: ["briefing"], createdAt: Date.now() }]);
       notify("JARVIS — poranny raport", text.replace(/\s+/g, " ").slice(0, 140));
       if (st.speak) {
-        setOrb("speaking");
         void speak(text, st).catch(() => {});
       }
     }, 30000);
@@ -1165,7 +1183,10 @@ export default function App() {
   const nowCard = pickNowCard({ consent: !!pendingConsent, decision: !!decision, suggestion: !!(tip && store.settings.tips !== false) });
 
   return (
-    <div className={`app${messages.length ? " chatting" : ""}`}>
+    <div className={`app${isPro ? " app-pro" : ""}${messages.length ? " chatting" : ""}${canGoBack(route) ? " has-route-history" : ""}`}>
+      {isPro && <ProNavigation screen={route.screen} onNavigate={(screen) => dispatch(screen ? { type: "open", screen } : { type: "reset" })}
+        onSearch={() => setShowCmd(true)} online={online} autonomous={settings.autonomousQueue !== false} />}
+      <div className={isPro ? "pro-workspace" : undefined} style={isPro ? undefined : { display: "contents" }}>
       {booting && <Boot onDone={() => setBooting(false)} />}
       {clipSuggest && (
         <div className="clip-widget">
@@ -1229,6 +1250,13 @@ export default function App() {
           );
         })()}
         <div className="spacer" />
+        <InterfaceModeSwitch mode={settings.interfaceMode} onChange={(interfaceMode) => store.setSettings({ interfaceMode })} />
+        {!isPro && <button className="icon-btn queue-launcher" onClick={() => setShowGoalStatus(true)} aria-label="Kolejka zadań" title="Kolejka, postęp i wyniki pracy">☷ Kolejka</button>}
+        {isPro && <button className="pro-voice-action" onClick={() => { stopSpeaking(); listenerRef.current?.stop(); setShowVoice(true); }}>Głos</button>}
+        <details className={isPro ? "pro-chat-actions" : undefined} open={isPro ? undefined : true} style={isPro ? undefined : { display: "contents" }}>
+        <summary hidden={!isPro} aria-label="Więcej opcji rozmowy">•••</summary>
+        <div className={isPro ? "chat-actions-content" : undefined} style={isPro ? undefined : { display: "contents" }}
+          onClick={(event) => { if (isPro && (event.target as HTMLElement).closest("button")) event.currentTarget.closest("details")?.removeAttribute("open"); }}>
         <button
           className="icon-btn"
           onClick={() => setShowGuardian(true)}
@@ -1288,12 +1316,14 @@ export default function App() {
             </button>
           );
         })()}
-        <button className="icon-btn" onClick={() => setShowMore(true)} title="Centrum — wszystkie funkcje" aria-label="Centrum funkcji">
+        <button className={`icon-btn${isPro ? " pro-legacy-action" : ""}`} onClick={() => setShowMore(true)} title="Centrum — wszystkie funkcje" aria-label="Centrum funkcji">
           ⋯
         </button>
-        <button className="icon-btn" onClick={() => setShowSettings(true)} title="Ustawienia" aria-label="Ustawienia">
+        <button className={`icon-btn${isPro ? " pro-legacy-action" : ""}`} onClick={() => setShowSettings(true)} title="Ustawienia" aria-label="Ustawienia">
           ⚙
         </button>
+        </div>
+        </details>
       </div>
 
       {(() => {
@@ -1316,12 +1346,22 @@ export default function App() {
         );
       })()}
 
-      {(messages.length === 0 || orb !== "idle") && (
+      <div className={isPro ? `pro-dialogue${hasConversation ? " pro-dialogue--active" : ""}` : undefined} style={isPro ? undefined : { display: "contents" }}>
+      {isPro && !hasConversation && (
+        <div className="pro-intro"><span>JARVIS / PRO NEW</span><h1>Od pomysłu do działania.</h1><p>Porozmawiaj, zleć cel i śledź wykonanie w kolejce.</p></div>
+      )}
+      {isPro ? !route.screen && !showVoice && !showLive && !showBoss && !showHud && !showCmd && !pendingConsent && (
+        <Hologram state={playingSpeech ? "speaking" : orb} compact={hasConversation} accent={proAccent}
+          label={councilStep || (step && busy ? `Wykonuję: ${step}` : undefined)}
+          onActivate={toggleMic} actionLabel={micOn ? "Wyłącz mikrofon JARVIS-a" : "Włącz mikrofon JARVIS-a"} />
+      ) : (messages.length === 0 || orb !== "idle" || playingSpeech) && (
         <div onClick={onOrbTap}>
-          <Orb state={orb} label={councilStep || (step && busy ? `⚙ ${step}…` : undefined)} />
+          <Orb state={playingSpeech ? "speaking" : orb} label={councilStep || (step && busy ? `⚙ ${step}…` : undefined)} />
         </div>
       )}
 
+      <div className={isPro ? "pro-chat-pane" : undefined} style={isPro ? undefined : { display: "contents" }}>
+      {isPro && <div className="pro-chat-heading"><span>Rozmowa</span><small>{busy ? "JARVIS pracuje…" : playingSpeech ? "JARVIS mówi…" : micOn ? "Mikrofon włączony" : "Twoja przestrzeń dialogu"}</small></div>}
       {(() => {
         // Trial / licencja czasowa — pasek z liczbą dni i przyciskiem przedłużenia (monetyzacja).
         const nudge = licNudgeOff ? null : licenseExpiryNudge(licenseStatus(licInfo));
@@ -1361,6 +1401,8 @@ export default function App() {
         onVoice={() => setShowVoice(true)}
         tasksToday={(store.data.tasks || []).filter((t) => !t.done && (t.due || "").slice(0, 10) === new Date().toISOString().slice(0, 10)).length}
       />
+      </div>
+      </div>
 
       {tip && store.settings.tips !== false && nowCard === "suggestion" && (
         <TipBubble tip={tip} onAction={onTipAction} onDismiss={() => setTip(null)} />
@@ -1470,7 +1512,7 @@ export default function App() {
 
       {/* ⬢ Szef zawsze w zasięgu — centralny agent głosowy, jedno tknięcie z każdego ekranu.
           Ikonę można przeciągać (drag) — pozycja jest zapamiętywana. */}
-      <BossFab onOpen={() => setShowBoss(true)} />
+      {!isPro && <BossFab onOpen={() => setShowBoss(true)} />}
 
       {showVoice && (<ScreenBoundary><HeadsetMode onClose={() => { releaseVoice("headset"); setShowVoice(false); }} /></ScreenBoundary>)}
       {showAdmin && (
@@ -1530,7 +1572,10 @@ export default function App() {
       )}
       {showSettings && (
         <ScreenBoundary name="Ustawienia" onBack={closeSettings}>
-          <SettingsPanel initialTab={settingsRoute?.tab} initialAnchor={settingsRoute?.anchor} onClose={closeSettings} />
+          {isPro && !settingsRoute?.advanced && !settingsRoute?.tab ? (
+            <QuickSettings onClose={closeSettings} onQueue={() => setShowGoalStatus(true)}
+              onAdvanced={(tab, anchor) => dispatch({ type: "open", screen: "settings", ctx: { advanced: true, tab, anchor } satisfies SettingsRouteContext })} />
+          ) : <SettingsPanel initialTab={settingsRoute?.tab} initialAnchor={settingsRoute?.anchor} onClose={closeSettings} />}
         </ScreenBoundary>
       )}
       {showPanels && (<ScreenBoundary><Panels onClose={() => setShowPanels(false)} /></ScreenBoundary>)}
@@ -1762,6 +1807,7 @@ export default function App() {
           }}
         />
       )}
+      </div>
     </div>
   );
 }

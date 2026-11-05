@@ -92,7 +92,7 @@ const MessageBubble = memo(
         {m.tools && m.tools.length > 0 && (
           <div className="tools">
             {m.tools.map((t) => (
-              <span className="tag" key={t}>{t}</span>
+              <span className="tag" key={t}>{t === "proactive" ? "Powitanie" : t === "briefing" ? "Raport dnia" : t}</span>
             ))}
           </div>
         )}

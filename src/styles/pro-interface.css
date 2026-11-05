@@ -1,0 +1,900 @@
+/* PRO NEW is an independent presentation layer. Classic keeps its original HUD.
+   All selectors are scoped to the interface preference, including legacy themes. */
+body.interface-pro,
+body.interface-pro.pro-accent-violet {
+  --pro-accent: #c1b5ff;
+  --pro-accent-bright: #ded5ff;
+  --pro-accent-dim: #9385d2;
+  --pro-accent-rgb: 193, 181, 255;
+  --pro-on-accent: #201a38;
+  --pro-active-bg: #35314d;
+  --pro-active-line: #746a9b;
+  --pro-active-text: #ece5ff;
+  --pro-wash: #252238;
+  --pro-hover: #30354b;
+  --pro-input: #11141e;
+  --pro-rail-bg: #131620;
+  --pro-scroll: #50566e;
+  --pro-pane: rgba(23, 26, 38, 0.9);
+  --bg: #101118;
+  --bg-2: #171a25;
+  --bg-3: #222638;
+  --surface: #1b1e2c;
+  --surface-2: #292d42;
+  --cyan: var(--pro-accent);
+  --cyan-dim: var(--pro-accent-dim);
+  --gold: #e9c28c;
+  --text: #f5f1ed;
+  --text-dim: #b3b4c8;
+  --muted: var(--text-dim);
+  --line: rgba(192, 187, 216, 0.16);
+  --line-strong: rgba(192, 187, 216, 0.34);
+  --danger: #ff9a9a;
+  --ok: #82dfb3;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --shadow-1: 0 8px 20px rgba(0, 0, 0, 0.16), inset 0 1px rgba(255, 255, 255, 0.035);
+  --shadow-2: 0 28px 90px rgba(0, 0, 0, 0.5), inset 0 1px rgba(255, 255, 255, 0.07);
+  --accent-grad: linear-gradient(135deg, var(--pro-accent-bright), var(--pro-accent));
+  --pro-rail: 224px;
+  font-family: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text);
+  color-scheme: dark;
+  background: radial-gradient(ellipse at 72% 0, var(--pro-wash) 0, transparent 54%), var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Change a complete palette, keeping status colours and text contrast stable. */
+body.interface-pro.pro-accent-cyan {
+  --pro-accent: #7de1ed;
+  --pro-accent-bright: #b1f0f4;
+  --pro-accent-dim: #40b4c4;
+  --pro-accent-rgb: 125, 225, 237;
+  --pro-on-accent: #09242c;
+  --pro-active-bg: #244654;
+  --pro-active-line: #568591;
+  --pro-active-text: #e1fbff;
+  --pro-wash: #152834;
+  --pro-hover: #243d4c;
+  --pro-input: #0b151f;
+  --pro-rail-bg: #0d1720;
+  --pro-scroll: #456072;
+  --pro-pane: rgba(15, 28, 39, 0.9);
+  --bg: #080e15;
+  --bg-2: #101b25;
+  --bg-3: #152330;
+  --surface: #14232e;
+  --surface-2: #1a2b38;
+  --text: #eef4f8;
+  --text-dim: #a9bbc9;
+  --line: rgba(172, 199, 218, 0.16);
+  --line-strong: rgba(172, 199, 218, 0.34);
+}
+body.interface-pro.pro-accent-amber {
+  --pro-accent: #ecc58f;
+  --pro-accent-bright: #f7dfb6;
+  --pro-accent-dim: #bd955f;
+  --pro-accent-rgb: 236, 197, 143;
+  --pro-on-accent: #2a1e11;
+  --pro-active-bg: #44382a;
+  --pro-active-line: #9b7d56;
+  --pro-active-text: #fff0d8;
+  --pro-wash: #332a1f;
+  --pro-hover: #3a3329;
+  --pro-input: #16130f;
+  --pro-rail-bg: #1a1713;
+  --pro-scroll: #685b48;
+  --pro-pane: rgba(28, 26, 23, 0.9);
+  --bg: #14120f;
+  --bg-2: #1c1a17;
+  --bg-3: #292620;
+  --surface: #211e19;
+  --surface-2: #302b23;
+  --text: #f8f1e6;
+  --text-dim: #c4b9a7;
+  --line: rgba(216, 199, 173, 0.16);
+  --line-strong: rgba(216, 199, 173, 0.34);
+}
+
+body.interface-pro::before,
+body.interface-pro::after { content: none; }
+body.interface-pro #root { position: relative; isolation: isolate; }
+body.interface-pro ::selection { background: var(--pro-active-bg); color: #fff; }
+body.interface-pro button,
+body.interface-pro input,
+body.interface-pro select,
+body.interface-pro textarea { font-family: inherit; }
+body.interface-pro button { -webkit-tap-highlight-color: transparent; }
+body.interface-pro :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+body.interface-pro a { color: var(--cyan); text-underline-offset: 3px; }
+body.interface-pro .app.app-pro {
+  width: 100%;
+  max-width: 1560px;
+  min-width: 0;
+  padding: max(var(--sat), 18px) max(var(--sar), 28px) max(var(--sab), 18px) calc(var(--pro-rail) + 40px);
+}
+body.interface-pro .pro-workspace {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  position: relative;
+}
+
+/* Persistent navigation: a quiet desktop rail, a scrollable strip on phones. */
+body.interface-pro .pro-nav {
+  position: fixed;
+  inset: 0 auto 0 max(0px, calc((100vw - 1560px) / 2));
+  z-index: 10;
+  width: var(--pro-rail);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: max(var(--sat), 30px) 16px max(var(--sab), 24px) 22px;
+  border-right: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--pro-rail-bg), var(--bg));
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pro-scroll) transparent;
+}
+body.interface-pro .pro-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px 14px;
+  color: var(--text);
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+body.interface-pro .pro-nav-brand svg { flex-shrink: 0; color: var(--cyan); }
+body.interface-pro .pro-nav-brand > span { color: var(--cyan); font-size: 32px; font-weight: 400; }
+body.interface-pro .pro-nav-brand > div { min-width: 0; }
+body.interface-pro .pro-nav-brand strong { font-size: 18px; }
+body.interface-pro .pro-nav-brand small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-dim);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+body.interface-pro .pro-nav-group { display: grid; gap: 6px; min-width: 0; }
+body.interface-pro .pro-nav-heading {
+  margin: 0 12px 6px;
+  color: var(--pro-accent);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+body.interface-pro .pro-nav-secondary { padding-top: 18px; border-top: 1px solid var(--line); }
+body.interface-pro .pro-nav-secondary .pro-nav-heading { color: var(--text-dim); }
+body.interface-pro .pro-nav-search { background: var(--surface); border-color: var(--line); }
+body.interface-pro .pro-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  position: relative;
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 13px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--text-dim);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+body.interface-pro .pro-nav-item svg { flex: 0 0 auto; width: 18px; height: 18px; }
+body.interface-pro .pro-nav-item kbd { margin-left: auto; padding: 3px 4px; color: var(--text-dim); border: 1px solid var(--line); border-radius: 4px; font-size: 9px; white-space: nowrap; }
+body.interface-pro .pro-nav-item :is(.count, .badge) {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  margin-left: auto;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 11px;
+}
+body.interface-pro .pro-nav-item:is(.is-active, .active, [aria-current="page"], [aria-current="true"]) {
+  color: var(--pro-active-text);
+  background: var(--pro-active-bg);
+  border-color: rgba(var(--pro-accent-rgb), 0.22);
+  box-shadow: inset 3px 0 var(--cyan);
+}
+body.interface-pro .pro-nav-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+}
+body.interface-pro .pro-nav-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 8px 12px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.5;
+}
+body.interface-pro .pro-nav-status svg { width: 15px; height: 15px; color: var(--ok); }
+body.interface-pro .pro-nav-status small { color: var(--text-dim); font-size: 10px; }
+
+body.interface-pro .interface-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--pro-input);
+}
+body.interface-pro .interface-switch button {
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+body.interface-pro .interface-switch button.is-active { color: var(--pro-active-text); background: var(--pro-active-bg); border-color: var(--pro-active-line); }
+body.interface-pro .pro-legacy-action { display: none; }
+body.interface-pro .pro-voice-action {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 11px;
+  background: var(--pro-active-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+body.interface-pro .pro-chat-actions { position: relative; flex: 0 0 auto; }
+body.interface-pro .pro-chat-actions > summary {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text-dim);
+  list-style: none;
+  cursor: pointer;
+  letter-spacing: 2px;
+}
+body.interface-pro .pro-chat-actions > summary::-webkit-details-marker { display: none; }
+body.interface-pro .pro-chat-actions[open] { z-index: 30; }
+body.interface-pro .pro-chat-actions[open] > summary { background: var(--pro-hover); border-color: var(--line-strong); color: var(--text); }
+body.interface-pro .chat-actions-content {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 9px);
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 44px);
+  gap: 8px;
+  width: max-content;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 15px;
+  background: var(--surface);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.5);
+}
+body.interface-pro .pro-intro { flex: 0 0 auto; padding: 22px 4px 4px; text-align: center; }
+body.interface-pro .pro-intro > span { color: var(--gold); font-size: 10px; font-weight: 650; letter-spacing: 0.16em; }
+body.interface-pro .pro-intro h1 { margin: 10px 0 0; color: var(--text); font-size: clamp(26px, 3vw, 38px); font-weight: 600; line-height: 1.15; letter-spacing: -0.045em; }
+body.interface-pro .pro-intro p { margin: 10px 0 0; color: var(--text-dim); font-size: 13px; line-height: 1.6; }
+body.interface-pro .pro-shortcuts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 4px 0 12px; }
+body.interface-pro .pro-shortcuts button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 10px 16px; background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 10px; color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
+
+/* Existing header controls remain available and have proper touch targets. */
+body.interface-pro .topbar {
+  gap: 8px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  flex-wrap: wrap;
+}
+body.interface-pro .brand {
+  color: var(--text);
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-shadow: none;
+}
+body.interface-pro .brand small {
+  margin-top: 5px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+body.interface-pro .icon-btn {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 12px;
+  color: var(--text-dim);
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: none;
+}
+body.interface-pro .icon-btn.active { color: var(--cyan); background: var(--pro-active-bg); border-color: var(--line-strong); }
+body.interface-pro .queue-launcher { width: auto; padding-inline: 13px; color: var(--text); font-weight: 600; }
+body.interface-pro .level-badge {
+  min-height: 44px;
+  padding: 9px 12px;
+  border-color: var(--line);
+  border-radius: 10px;
+  font-family: inherit;
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 600;
+}
+body.interface-pro .status-deck { justify-content: flex-start; padding: 10px 0 4px; gap: 8px; }
+body.interface-pro .status-flag { min-height: 44px; border-radius: 8px; padding: 7px 10px; letter-spacing: 0; }
+
+/* The avatar and the dialogue are peers on desktop. On smaller screens this
+   region can scroll independently, so the composer always remains reachable. */
+body.interface-pro .pro-dialogue {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  gap: 16px;
+  padding: 18px 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pro-scroll) transparent;
+}
+body.interface-pro .pro-dialogue > .hologram { flex: 0 0 auto; }
+body.interface-pro .pro-dialogue > .hologram:not(.hologram--compact) { width: min(100%, 450px); }
+body.interface-pro .pro-dialogue .pro-intro { padding-top: 4px; }
+body.interface-pro .pro-chat-pane {
+  display: flex;
+  flex: 1 0 180px;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 180px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--pro-pane);
+}
+body.interface-pro .pro-chat-heading {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--line);
+}
+body.interface-pro .pro-chat-heading > span { color: var(--text); font-size: 13px; font-weight: 600; }
+body.interface-pro .pro-chat-heading > small { color: var(--text-dim); font-size: 11px; }
+body.interface-pro .pro-chat-pane .convo { padding: 20px; }
+body.interface-pro .pro-chat-pane .bubble { max-width: 96%; font-size: 14px; }
+body.interface-pro .pro-dialogue--active .pro-chat-pane { min-height: 120px; flex: 1 1 auto; }
+@media (min-width: 1100px) {
+  body.interface-pro .pro-dialogue {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: 28px;
+    row-gap: 24px;
+    overflow: hidden;
+    padding: 26px 0 12px;
+  }
+  body.interface-pro .pro-dialogue .pro-intro { grid-column: 1 / -1; padding: 0; text-align: left; }
+  body.interface-pro .pro-dialogue .pro-intro h1 { font-size: 32px; }
+  body.interface-pro .pro-dialogue > .hologram,
+  body.interface-pro .pro-dialogue > .hologram:not(.hologram--compact) {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+    justify-self: center;
+    width: 100%;
+    max-width: 720px;
+    min-height: 0;
+  }
+  body.interface-pro .pro-dialogue > .hologram .hologram__stage { aspect-ratio: 1.3; max-height: min(480px, 52vh); }
+  body.interface-pro .pro-dialogue .hologram--compact .hologram__coordinate { display: block; }
+  body.interface-pro .pro-dialogue .hologram--compact .hologram__eyebrow { inset: 18px 22px auto; font-size: 9px; letter-spacing: 0.12em; }
+  body.interface-pro .pro-dialogue .hologram--compact .hologram__corner { width: 12px; height: 12px; }
+  body.interface-pro .pro-dialogue .hologram--compact .hologram__status { margin-top: 4px; font-size: 12px; }
+  body.interface-pro .pro-chat-pane { grid-column: 2; grid-row: 2; min-height: 0; }
+  body.interface-pro .pro-dialogue--active { grid-template-rows: minmax(0, 1fr); }
+  body.interface-pro .pro-dialogue--active > .hologram,
+  body.interface-pro .pro-dialogue--active > .pro-chat-pane { grid-row: 1; min-height: 0; }
+}
+
+/* Readable conversation, real whitespace, and one unambiguous primary action. */
+body.interface-pro .convo {
+  gap: 18px;
+  padding: 18px 6px 20px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pro-scroll) transparent;
+}
+body.interface-pro .convo::-webkit-scrollbar { display: block; width: 5px; }
+body.interface-pro .convo::-webkit-scrollbar-thumb { background: var(--pro-scroll); border-radius: 4px; }
+body.interface-pro .bubble {
+  max-width: min(88%, 820px);
+  padding: 17px 20px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.75;
+  border-radius: 18px;
+  box-shadow: none;
+}
+body.interface-pro .bubble.assistant { background: var(--surface); border-color: var(--line); border-bottom-left-radius: 5px; }
+body.interface-pro .bubble.user { background: var(--pro-active-bg); border-color: var(--pro-active-line); border-bottom-right-radius: 5px; color: var(--pro-active-text); }
+body.interface-pro .bubble :is(pre, code) { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+body.interface-pro .bubble pre { max-width: 100%; overflow-x: auto; white-space: pre; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+body.interface-pro .bubble .tools { gap: 6px; margin-top: 12px; }
+body.interface-pro .tag { padding: 4px 8px; color: var(--text-dim); background: var(--surface-2); letter-spacing: 0; }
+body.interface-pro .msg-actions { flex-wrap: wrap; margin-top: 12px; gap: 7px; }
+body.interface-pro .msg-actions button { min-height: 44px; min-width: 44px; padding: 8px 12px; border-radius: 8px; }
+body.interface-pro .citations { margin-top: 16px; padding-top: 12px; }
+body.interface-pro .cit-head { font-family: inherit; font-weight: 600; font-size: 11px; letter-spacing: 0; text-transform: none; }
+body.interface-pro .cit { padding: 7px 0; line-height: 1.5; }
+body.interface-pro .empty { width: min(100%, 740px); margin: auto; font-size: 16px; line-height: 1.7; color: var(--text); }
+body.interface-pro .empty > .muted { color: var(--text-dim); }
+body.interface-pro .pillars { margin: 20px 0 12px; }
+body.interface-pro .pillars-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+body.interface-pro .pillar { min-width: 0; min-height: 112px; padding: 18px; border-radius: 14px; background: var(--surface); border-color: var(--line); box-shadow: var(--shadow-1); }
+body.interface-pro .pillar b { color: var(--text); font-size: 15px; }
+body.interface-pro .pillar small { font-size: 12px; }
+body.interface-pro .pillars-tag { color: var(--text-dim); font-size: 13px; }
+body.interface-pro .composer-tools { padding: 10px 3px 6px; gap: 8px; }
+body.interface-pro .composer-tools .mic { width: 44px; height: 44px; border-radius: 10px; }
+body.interface-pro .composer { padding: 0; gap: 9px; align-items: flex-end; }
+body.interface-pro .composer textarea {
+  min-width: 0;
+  min-height: 54px;
+  max-height: 160px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  font-size: 15px;
+  line-height: 1.4;
+  box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.12);
+}
+body.interface-pro .composer textarea:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(var(--pro-accent-rgb), 0.12); }
+body.interface-pro .send,
+body.interface-pro .mic { width: 54px; height: 54px; border-radius: 15px; }
+body.interface-pro .mic { background: var(--surface); color: var(--text-dim); }
+body.interface-pro .send { background: var(--accent-grad); color: var(--pro-on-accent); border-color: transparent; box-shadow: 0 4px 16px rgba(var(--pro-accent-rgb), 0.12); }
+body.interface-pro .send.stop { background: #43292e; color: #ffc4c4; border-color: #8c515a; }
+body.interface-pro .mic.on { background: #2b413d; color: #b3f8dc; border-color: #598e7e; animation: none; }
+body.interface-pro .img-x { width: 44px; height: 44px; top: -12px; right: -14px; }
+
+/* One panel system for settings, tasks, sales, memory and every feature sheet. */
+body.interface-pro .sheet { background: rgba(3, 8, 13, 0.76); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 24px; align-items: center; }
+body.interface-pro .panel {
+  max-width: 900px;
+  max-height: calc(100vh - 48px - var(--sat) - var(--sab));
+  border: 1px solid var(--line-strong);
+  border-radius: 22px;
+  background: var(--bg-2);
+  color: var(--text);
+  box-shadow: var(--shadow-2);
+}
+@supports (height: 100dvh) {
+  body.interface-pro .panel { max-height: calc(100dvh - 48px - var(--sat) - var(--sab)); }
+}
+body.interface-pro .panel::after { content: none; }
+body.interface-pro :is(.panel, .bubble, .journal-card, .value-card) { backdrop-filter: none; -webkit-backdrop-filter: none; }
+body.interface-pro .panel-head { padding: 22px 28px 18px; background: var(--bg-3); border-bottom: 1px solid var(--line); }
+body.interface-pro .grabber { display: none; }
+body.interface-pro .panel-body { padding: 24px 28px; line-height: 1.65; scrollbar-width: thin; scrollbar-color: var(--pro-scroll) transparent; }
+body.interface-pro .panel-foot { padding: 16px 28px calc(16px + var(--sab)); background: var(--surface); border-top: 1px solid var(--line); }
+body.interface-pro .panel h2 { margin: 0; padding: 0; background: none; font-family: inherit; color: var(--text); font-size: 23px; font-weight: 650; letter-spacing: -0.025em; line-height: 1.3; text-shadow: none; }
+body.interface-pro .panel h3 { color: var(--text); font-size: 15px; font-weight: 650; line-height: 1.5; text-transform: none; letter-spacing: -0.01em; margin: 24px 0 10px; }
+body.interface-pro .panel-body > h3:first-child { margin-top: 0; }
+body.interface-pro .panel button:not(.switch) { min-height: 44px; }
+body.interface-pro .muted,
+body.interface-pro .status-detail { color: var(--text-dim); font-size: 13px; line-height: 1.6; }
+body.interface-pro .panel-body :is(p, li) { overflow-wrap: anywhere; }
+body.interface-pro .panel-body :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+body.interface-pro .panel-head input,
+body.interface-pro .ta {
+  min-height: 46px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--pro-input);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+}
+body.interface-pro input::placeholder,
+body.interface-pro textarea::placeholder { color: var(--text-dim); opacity: 1; }
+body.interface-pro .panel :is(input, select, textarea):focus-visible { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(var(--pro-accent-rgb), 0.12); }
+body.interface-pro .field { margin-bottom: 18px; }
+body.interface-pro .field label { margin-bottom: 7px; color: var(--text); font-size: 13px; font-weight: 550; letter-spacing: 0; }
+body.interface-pro .row { gap: 18px; padding: 15px 0; }
+body.interface-pro .row > :first-child { min-width: 0; }
+body.interface-pro input:is([type="checkbox"], [type="radio"], [type="range"]) { accent-color: var(--cyan); }
+body.interface-pro .switch { background: var(--surface-2); border-color: var(--pro-active-line); }
+body.interface-pro .switch::after { background: var(--text); }
+body.interface-pro .switch.on { background: var(--pro-accent); border-color: var(--pro-accent); }
+body.interface-pro .switch.on::after { background: var(--pro-on-accent); }
+body.interface-pro .panel details > summary { min-height: 44px; padding-block: 10px; cursor: pointer; color: var(--text); line-height: 1.5; }
+body.interface-pro .panel-body table { width: 100%; border-collapse: collapse; color: var(--text); font-size: 13px; }
+body.interface-pro .panel-body :is(th, td) { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; }
+body.interface-pro .panel-body th { background: var(--surface-2); color: var(--text); font-weight: 600; }
+body.interface-pro .panel-body tr:nth-child(even) td { background: rgba(151, 184, 207, 0.03); }
+body.interface-pro .panel-body pre { max-width: 100%; padding: 16px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Buttons and tabs are shared by all the existing feature components. */
+body.interface-pro .btn,
+body.interface-pro .chip,
+body.interface-pro .tab {
+  min-height: 44px;
+  padding: 10px 15px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.5;
+  letter-spacing: 0;
+  box-shadow: none;
+  text-shadow: none;
+}
+body.interface-pro .btn.primary { background: var(--accent-grad); color: var(--pro-on-accent); border-color: transparent; font-weight: 650; box-shadow: 0 4px 12px rgba(var(--pro-accent-rgb), 0.12); }
+body.interface-pro .chip.on,
+body.interface-pro .tab.active { background: var(--pro-active-bg); border-color: var(--pro-active-line); color: var(--pro-active-text); box-shadow: inset 0 -2px var(--pro-accent); }
+body.interface-pro .chips { padding: 5px 2px 4px; gap: 8px; }
+body.interface-pro .panel-head .chips { scrollbar-width: thin; scrollbar-color: var(--pro-scroll) transparent; padding-bottom: 7px; }
+body.interface-pro .panel-head .chips::-webkit-scrollbar { display: block; height: 3px; }
+body.interface-pro .panel-head .chips::-webkit-scrollbar-thumb { border-radius: 4px; background: var(--pro-scroll); }
+body.interface-pro .tabs { gap: 8px; margin-bottom: 18px; }
+body.interface-pro .journal-card,
+body.interface-pro .card,
+body.interface-pro .status-row,
+body.interface-pro .value-card {
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-1);
+}
+body.interface-pro .journal-card { padding: 17px 18px; margin-bottom: 12px; }
+body.interface-pro .journal-card:hover { transform: none; box-shadow: var(--shadow-1); }
+body.interface-pro .journal-card .chip { min-height: 44px; padding: 9px 12px; font-size: 12px; cursor: pointer; }
+body.interface-pro .status-row { padding: 16px; margin: 10px 0; }
+body.interface-pro .status-title { color: var(--text); font-size: 14px; }
+body.interface-pro .notice { color: #f2d7b0; background: #2b261f; border-color: #66523b; padding: 14px 16px; font-size: 13px; line-height: 1.6; }
+body.interface-pro .x,
+body.interface-pro .list-item .x { min-height: 44px; min-width: 44px; border-radius: 8px; }
+body.interface-pro .list-item { padding: 12px 0; }
+
+/* Feature directory: descriptions remain visible instead of being clipped. */
+body.interface-pro .menu-search { min-height: 48px; background: var(--pro-input); border-color: var(--line-strong); }
+body.interface-pro .menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+body.interface-pro .panel .menu-sec { margin: 26px 0 12px; color: var(--text-dim); font-size: 13px; font-weight: 600; }
+body.interface-pro .menu-tile { min-width: 0; min-height: 136px; gap: 8px; padding: 18px; border-radius: 13px; background: var(--surface); border-color: var(--line); box-shadow: var(--shadow-1); }
+body.interface-pro .menu-tile .ic { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; font-size: 23px; background: var(--pro-hover); }
+body.interface-pro .menu-tile .nm { color: var(--text); font-size: 14px; line-height: 1.4; }
+body.interface-pro .menu-tile .ds { display: block; color: var(--text-dim); font-size: 12px; line-height: 1.55; -webkit-line-clamp: unset; }
+
+/* Work queue and sales connections use the same visual hierarchy. */
+body.interface-pro .work-queue { max-width: 960px; }
+body.interface-pro .queue-summary { padding: 0 0 20px; border-bottom: 1px solid var(--line); }
+body.interface-pro .queue-summary h3 { margin: 8px 0; font-size: 26px; color: var(--text); }
+body.interface-pro .queue-eyebrow { color: var(--cyan); font-size: 11px; letter-spacing: 0.1em; }
+body.interface-pro .queue-label { margin-top: 24px; font-size: 14px; }
+body.interface-pro .queue-card { padding: 22px; background: var(--surface); box-shadow: var(--shadow-1); }
+body.interface-pro .queue-card h3 { margin: 0; font-size: 16px; }
+body.interface-pro .queue-card progress { height: 6px; }
+body.interface-pro .queue-state { padding: 6px 10px; font-weight: 600; background: var(--surface-2); }
+body.interface-pro .queue-state.state-running { color: var(--pro-active-text); border-color: var(--pro-active-line); background: var(--pro-active-bg); }
+body.interface-pro .queue-state.state-completed { color: #a0edc5; border-color: #39795b; background: #1c352d; }
+body.interface-pro .queue-state:is(.state-failed, .state-blocked) { color: #ffb6b6; border-color: #81555b; background: #37262d; }
+body.interface-pro .queue-state.state-paused { color: var(--gold); border-color: #77603e; background: #302b23; }
+body.interface-pro .queue-empty { padding: 28px; background: var(--surface); }
+body.interface-pro .queue-steps li { padding: 14px 0; border-bottom: 1px solid var(--line); }
+body.interface-pro .queue-steps li:last-child { border-bottom: 0; }
+body.interface-pro .connection-hub { padding-bottom: 20px; margin-bottom: 24px; }
+body.interface-pro .connection-grid { gap: 12px; }
+body.interface-pro .connection-card { padding: 15px; gap: 11px; border-radius: 12px; background: var(--surface); }
+body.interface-pro .connection-card-copy p { font-size: 12px; line-height: 1.6; }
+body.interface-pro .connection-card-title { font-size: 13px; }
+body.interface-pro .connection-state { font-size: 10px; }
+body.interface-pro .connection-action,
+body.interface-pro .connection-strip-action,
+body.interface-pro .update-full-link { min-height: 44px; font-size: 12px; }
+body.interface-pro .connection-strip { margin-bottom: 18px; padding: 13px 15px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+body.interface-pro .sales-os-actions { gap: 10px; margin-bottom: 20px; }
+body.interface-pro .update-center { padding: 22px; background: var(--surface); border-color: var(--line-strong); border-radius: 16px; }
+body.interface-pro .update-center h3 { margin-top: 0; }
+body.interface-pro .toast { background: var(--surface-2); color: var(--text); border-color: var(--pro-active-line); font-family: inherit; font-size: 13px; line-height: 1.5; letter-spacing: 0; box-shadow: var(--shadow-2); }
+
+/* Simple settings expose the four daily decisions before advanced controls. */
+body.interface-pro .quick-settings { max-width: 960px; }
+body.interface-pro .quick-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+body.interface-pro .quick-settings-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.025);
+}
+body.interface-pro .quick-settings-heading { display: flex; align-items: center; gap: 11px; margin-bottom: 18px; }
+body.interface-pro .quick-settings-heading svg { flex: 0 0 auto; color: var(--pro-accent); }
+body.interface-pro .quick-settings-heading h3 { margin: 0; color: var(--text); font-size: 16px; font-weight: 650; }
+body.interface-pro .quick-settings-description { margin: 8px 0; color: var(--text-dim); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+body.interface-pro .quick-settings .panel-body > .quick-settings-description { margin-top: 0; font-size: 14px; }
+body.interface-pro .quick-settings-card > strong { color: var(--text); font-size: 21px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.4; overflow-wrap: anywhere; }
+body.interface-pro .quick-settings-card > .btn:last-child { margin-top: auto; }
+body.interface-pro .quick-settings-card > .muted { margin: 12px 0 18px; font-size: 12px; }
+body.interface-pro .quick-settings-card .row { padding-top: 6px; margin-bottom: 4px; color: var(--text); font-size: 14px; line-height: 1.6; }
+body.interface-pro .quick-settings-card [role="status"] { margin: 0 0 18px; padding: 10px 12px; color: var(--pro-active-text); border-radius: 8px; background: var(--pro-active-bg); font-size: 12px; }
+body.interface-pro .quick-settings-presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+body.interface-pro .quick-settings-presets .btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 66px;
+  margin: 0;
+  padding: 13px 12px;
+  text-align: left;
+  white-space: normal;
+  background: var(--bg-2);
+  color: var(--text-dim);
+  border-color: var(--line-strong);
+  line-height: 1.5;
+  font-size: 12px;
+}
+body.interface-pro .quick-settings-presets .btn::before {
+  content: "";
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--text-dim);
+  border-radius: 50%;
+}
+body.interface-pro .quick-settings-presets .btn.primary { color: var(--pro-active-text); background: var(--pro-active-bg); border-color: var(--pro-accent); box-shadow: none; }
+body.interface-pro .quick-settings-presets .btn.primary::before { background: var(--pro-accent); border-color: var(--pro-accent); box-shadow: inset 0 0 0 3px var(--pro-active-bg); }
+body.interface-pro .quick-settings .interface-switch { align-self: flex-start; margin: 0 0 12px; }
+body.interface-pro .quick-settings-palette { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 4px; }
+body.interface-pro .quick-settings-palette button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 74px;
+  padding: 10px 6px;
+  font-size: 11px;
+  background: var(--bg-2);
+  color: var(--text-dim);
+}
+body.interface-pro .quick-settings-palette button.is-active { background: var(--pro-active-bg); color: var(--pro-active-text); border-color: var(--pro-accent); box-shadow: inset 0 -2px var(--pro-accent); }
+body.interface-pro .quick-settings-palette button > span { width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.22); }
+body.interface-pro .quick-settings-palette button[data-accent="violet"] > span { background: #c1b5ff; }
+body.interface-pro .quick-settings-palette button[data-accent="cyan"] > span { background: #7de1ed; }
+body.interface-pro .quick-settings-palette button[data-accent="amber"] > span { background: #ecc58f; }
+body.interface-pro .quick-settings-actions { display: flex; justify-content: flex-end; gap: 12px; }
+body.interface-pro .quick-settings-actions .btn { width: auto; min-width: 148px; margin: 0; }
+
+@media (hover: hover) {
+  body.interface-pro .pro-nav-item:hover { background: var(--surface-2); color: var(--text); }
+  body.interface-pro .icon-btn:hover { background: var(--pro-hover); color: var(--text); border-color: var(--line-strong); box-shadow: none; transform: none; }
+  body.interface-pro .btn:hover,
+  body.interface-pro .chip:hover,
+  body.interface-pro .tab:hover { background: var(--pro-hover); border-color: var(--pro-active-line); filter: none; }
+  body.interface-pro .btn.primary:hover { background: var(--pro-accent-bright); color: var(--pro-on-accent); box-shadow: 0 5px 18px rgba(var(--pro-accent-rgb), 0.22); }
+  body.interface-pro .menu-tile:hover,
+  body.interface-pro .pillar:hover { transform: translateY(-2px); background: var(--pro-hover); border-color: var(--pro-active-line); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22); }
+}
+
+/* The two nostalgic Classic themes contain !important declarations. Restrict
+   these counter-rules to those combinations; normal PRO styles stay overridable. */
+body.interface-pro:is(.theme-retro, .theme-xp) { background: radial-gradient(ellipse at 72% 0, var(--pro-wash) 0, transparent 54%), var(--bg) !important; }
+body.interface-pro:is(.theme-retro, .theme-xp) :is(.panel, .journal-card, .card, .status-row, .bubble) {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-1) !important;
+}
+body.interface-pro:is(.theme-retro, .theme-xp) .panel { background: var(--bg-2) !important; border-radius: 22px !important; box-shadow: var(--shadow-2) !important; }
+body.interface-pro:is(.theme-retro, .theme-xp) .bubble.user { background: var(--pro-active-bg) !important; border-color: var(--pro-active-line) !important; }
+body.interface-pro:is(.theme-retro, .theme-xp) :is(.btn, .chip, .icon-btn) {
+  background: var(--surface-2) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+body.interface-pro:is(.theme-retro, .theme-xp) .btn.primary { background: var(--accent-grad) !important; color: var(--pro-on-accent) !important; border-color: transparent !important; }
+body.interface-pro:is(.theme-retro, .theme-xp) .chip.on { background: var(--pro-active-bg) !important; border-color: var(--pro-active-line) !important; color: var(--pro-active-text) !important; }
+body.interface-pro:is(.theme-retro, .theme-xp) :is(input, textarea, select) { background: var(--pro-input) !important; color: var(--text) !important; border: 1px solid var(--line-strong) !important; border-radius: 10px !important; }
+body.interface-pro:is(.theme-retro, .theme-xp) h2 { background: none !important; padding: 0 !important; color: var(--text) !important; border-radius: 0 !important; text-shadow: none !important; }
+body.interface-pro:is(.theme-retro, .theme-xp) h3 { color: var(--text) !important; }
+body.interface-pro:is(.theme-retro, .theme-xp) :is(.muted, .status-detail) { color: var(--text-dim) !important; }
+body.interface-pro:is(.theme-retro, .theme-xp) .topbar { background: transparent !important; border-bottom: 1px solid var(--line) !important; }
+
+@media (max-width: 1099px) {
+  body.interface-pro .app.app-pro { max-width: 980px; padding: max(var(--sat), 12px) max(var(--sar), 20px) max(var(--sab), 14px) max(var(--sal), 20px); }
+  body.interface-pro .pro-nav {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    min-height: 58px;
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 0 0 10px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    scrollbar-width: thin;
+    scrollbar-color: var(--pro-scroll) transparent;
+  }
+  body.interface-pro .pro-nav-brand,
+  body.interface-pro .pro-nav-heading,
+  body.interface-pro .pro-nav-status,
+  body.interface-pro .pro-nav .pro-nav-secondary,
+  body.interface-pro .pro-nav-search { display: none; }
+  body.interface-pro .pro-nav-group,
+  body.interface-pro .pro-nav-footer { display: flex; gap: 6px; flex: 0 0 auto; margin: 0; padding: 0; border: 0; }
+  body.interface-pro .pro-nav-item { flex: 0 0 auto; width: auto; white-space: nowrap; min-height: 44px; gap: 8px; padding: 10px 12px; }
+  body.interface-pro .pro-nav-item:is(.is-active, .active, [aria-current="page"], [aria-current="true"]) { box-shadow: inset 0 -2px var(--cyan); }
+  body.interface-pro .topbar { padding-bottom: 12px; }
+}
+@media (max-width: 599px) {
+  body.interface-pro .app.app-pro { padding: max(var(--sat), 10px) max(var(--sar), 12px) max(var(--sab), 12px) max(var(--sal), 12px); }
+  body.interface-pro .pro-nav { margin-bottom: 10px; min-height: 56px; }
+  body.interface-pro .pro-nav-item { font-size: 12px; }
+  body.interface-pro .topbar { gap: 6px; row-gap: 8px; }
+  body.interface-pro .brand { flex: 1 1 auto; font-size: 18px; }
+  body.interface-pro .brand small { font-size: 9px; }
+  body.interface-pro .topbar .spacer { display: none; }
+  body.interface-pro .topbar .icon-btn { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+  body.interface-pro .topbar .queue-launcher { width: auto; }
+  body.interface-pro .level-badge { font-size: 10px; padding: 8px 9px; }
+  body.interface-pro .interface-switch { margin-left: auto; }
+  body.interface-pro .interface-switch button { padding-inline: 9px; font-size: 10px; }
+  body.interface-pro .pro-intro { padding: 14px 2px 0; }
+  body.interface-pro .pro-intro > span { font-size: 9px; }
+  body.interface-pro .pro-intro h1 { margin-top: 7px; font-size: 25px; letter-spacing: -0.04em; }
+  body.interface-pro .pro-intro p { margin-top: 7px; font-size: 12px; }
+  body.interface-pro .pro-voice-action { padding-inline: 12px; }
+  body.interface-pro .pro-shortcuts { gap: 6px; }
+  body.interface-pro .pro-shortcuts button { padding-inline: 12px; font-size: 11px; }
+  body.interface-pro .pro-dialogue { gap: 10px; padding: 12px 0; }
+  body.interface-pro .pro-chat-heading { padding: 12px 14px; }
+  body.interface-pro .pro-chat-heading > small { font-size: 10px; }
+  body.interface-pro .pro-chat-pane { border-radius: 14px; }
+  body.interface-pro .pro-chat-pane .convo { padding: 12px; }
+  body.interface-pro .pro-chat-pane .bubble { padding: 12px; font-size: 13px; }
+  body.interface-pro .status-deck { gap: 6px; padding-top: 8px; }
+  body.interface-pro .convo { padding: 12px 0; gap: 12px; }
+  body.interface-pro .bubble { max-width: 95%; padding: 14px; font-size: 14px; line-height: 1.7; }
+  body.interface-pro .empty { font-size: 14px; }
+  body.interface-pro .pillars-row { gap: 6px; }
+  body.interface-pro .pillar { min-height: 100px; padding: 13px 6px; gap: 6px; border-radius: 11px; }
+  body.interface-pro .pillar b { font-size: 13px; }
+  body.interface-pro .pillar small { font-size: 10px; line-height: 1.4; }
+  body.interface-pro .composer { gap: 6px; }
+  body.interface-pro .composer textarea { padding: 14px 12px; font-size: 16px; min-height: 50px; }
+  body.interface-pro .send,
+  body.interface-pro .mic { width: 46px; height: 50px; border-radius: 12px; }
+  body.interface-pro .composer-tools { padding-top: 8px; }
+  body.interface-pro .sheet { padding: 12px 8px max(var(--sab), 8px); }
+  body.interface-pro .panel { max-height: calc(100vh - 20px - var(--sat) - var(--sab)); border-radius: 18px; }
+  body.interface-pro .panel-head { padding: 18px 16px 14px; }
+  body.interface-pro .panel h2 { font-size: 20px; }
+  body.interface-pro .panel-body { padding: 18px 16px; }
+  body.interface-pro .panel-foot { padding: 12px 16px calc(12px + var(--sab)); }
+  body.interface-pro .panel-head .chips { gap: 6px; }
+  body.interface-pro .panel :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]) { font-size: 16px; }
+  body.interface-pro .btn,
+  body.interface-pro .chip,
+  body.interface-pro .tab { padding-inline: 12px; font-size: 12px; }
+  body.interface-pro .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+  body.interface-pro .menu-tile { padding: 14px 12px; min-height: 150px; }
+  body.interface-pro .menu-tile .nm { font-size: 13px; }
+  body.interface-pro .menu-tile .ds { font-size: 11px; }
+  body.interface-pro .connection-grid { grid-template-columns: 1fr; }
+  body.interface-pro .connection-card { grid-template-columns: 32px minmax(0, 1fr); }
+  body.interface-pro .connection-strip { align-items: flex-start; flex-wrap: wrap; }
+  body.interface-pro .queue-summary h3 { font-size: 23px; }
+  body.interface-pro .queue-card { padding: 16px; }
+  body.interface-pro .queue-card-head { align-items: flex-start; gap: 10px; }
+  body.interface-pro .queue-actions .btn { flex: 1 1 130px; white-space: normal; }
+  body.interface-pro .queue-tabs { gap: 6px; }
+  body.interface-pro .row { gap: 12px; }
+  body.interface-pro .update-center { padding: 16px; }
+  body.interface-pro .panel-body :is(th, td) { padding: 10px 8px; }
+  body.interface-pro .quick-settings-grid { grid-template-columns: 1fr; gap: 12px; margin-top: 16px; }
+  body.interface-pro .quick-settings-card { padding: 18px; }
+  body.interface-pro .quick-settings-heading { margin-bottom: 16px; }
+  body.interface-pro .quick-settings-heading h3 { font-size: 15px; }
+  body.interface-pro .quick-settings-presets .btn { min-height: 68px; padding-inline: 10px; font-size: 11px; }
+  body.interface-pro .quick-settings-actions { gap: 8px; }
+  body.interface-pro .quick-settings-actions .btn { flex: 1; min-width: 0; }
+  body.interface-pro:is(.theme-retro, .theme-xp) .panel { border-radius: 18px !important; }
+  @supports (height: 100dvh) {
+    body.interface-pro .panel { max-height: calc(100dvh - 20px - var(--sat) - var(--sab)); }
+  }
+}
+@media (max-width: 359px) {
+  body.interface-pro .app.app-pro { padding-inline: 9px; }
+  body.interface-pro .panel-head,
+  body.interface-pro .panel-body,
+  body.interface-pro .panel-foot { padding-inline: 12px; }
+  body.interface-pro .composer textarea { padding-inline: 10px; }
+  body.interface-pro .send,
+  body.interface-pro .mic { width: 44px; }
+  body.interface-pro .menu-tile { padding-inline: 10px; }
+}
+@media (max-width: 599px) and (max-height: 740px) {
+  body.interface-pro .pro-intro { padding-top: 10px; }
+  body.interface-pro .pro-intro p { display: none; }
+  body.interface-pro .pro-intro h1 { font-size: 23px; }
+}
+
+/* Ambient depth is decorative; low-power and motion preferences take priority. */
+html.low-power body.interface-pro .sheet { backdrop-filter: none; -webkit-backdrop-filter: none; }
+html.low-power body.interface-pro :is(.panel, .journal-card, .menu-tile, .pillar) { box-shadow: none; }
+html.low-power body.interface-pro *,
+html.app-hidden body.interface-pro * { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  body.interface-pro *,
+  body.interface-pro *::before,
+  body.interface-pro *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  body.interface-pro .menu-tile:hover,
+  body.interface-pro .pillar:hover { transform: none; }
+}

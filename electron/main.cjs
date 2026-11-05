@@ -313,7 +313,7 @@ function registerDesktopControl() {
     return url.startsWith("file://");
   };
   const workspaceTools = createWorkspaceTools({
-    root: path.join(app.getPath("documents"), "JARVIS Workspace"),
+    root: process.env.JARVIS_WORKSPACE_DIR || path.join(app.getPath("documents"), "JARVIS Workspace"),
     openExternal: (url) => shell.openExternal(url),
   });
   stdioMcp = createStdioMcpManager({ root: workspaceTools.root });

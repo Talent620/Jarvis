@@ -22,6 +22,19 @@ JARVIS desktop działa na Windows oraz Ubuntu. Dla Ubuntu dostępne są dwa wari
 - `JARVIS.deb` — zwykła instalacja w Ubuntu/Debian.
 - `JARVIS.AppImage` — pojedynczy, przenośny plik uruchamiany bez instalacji.
 
+Uruchomienie z kodu na Linuksie (terminal w sesji graficznej):
+
+```bash
+npm ci
+npm run desktop:linux
+```
+
+Polecenie najpierw buduje aktualny interfejs, następnie otwiera okno Electron.
+Lokalny start i pakiety tworzone przez `npm run desktop:ubuntu` domyślnie nie wymagają
+aktywacji licencji. Dla własnej dystrybucji licencjonowanej użyj
+`JARVIS_LICENSE_REQUIRED=true npm run desktop:ubuntu`.
+Przy pracy przez SSH bez pulpitu uruchom wersję webową: `npm run dev`.
+
 Tworzenie pakietów lokalnie: `npm run desktop:ubuntu`. GitHub Actions publikuje oba
 pliki przy aktualizacji gałęzi `main`.
 
@@ -117,6 +130,32 @@ wybiera dostawcę z najwyższym priorytetem, dla którego podano klucz.
 > ani do publicznych miejsc; jeśli to zrobisz — natychmiast je zresetuj.
 
 ## Uruchomienie lokalne (web)
+
+### Samodzielna praca i kolejka
+
+Przycisk **Kolejka** na górze aplikacji otwiera zadania, postęp każdego kroku,
+zapisane wyniki, pauzę i kontynuację. Nowe profile domyślnie używają trybu inteligencji
+**maximum** i włączonej kolejki. Istniejące ustawienia modelu pozostają zachowane.
+Planowanie celów wymaga podłączonego modelu AI; „Przegląd moich zadań” działa lokalnie.
+
+Kolejka działa przy otwartej aplikacji. Po restarcie podejmuje oczekujące zadania,
+pomija potwierdzone kroki i nie powtarza automatycznie operacji o nieznanym wyniku.
+Chwilowe błędy odczytu są ponawiane; błędy narzędzi nie są przedstawiane jako sukces.
+Pauza obowiązuje przed następnym krokiem, nie cofa rozpoczętej operacji.
+
+Model w wersji desktopowej ma dostęp do plików i terminala przez narzędzia `workspace_*`.
+Domyślny katalog to `Dokumenty/JARVIS Workspace`. Własny projekt można wskazać przy starcie:
+
+```bash
+JARVIS_WORKSPACE_DIR="/pełna/ścieżka/do/projektu" npm run desktop:linux
+```
+
+Rozwiązanie korzysta z istniejącego IndexedDB. Wzorce trwałego stanu, jawnych wyników
+i kontrolowanego wznawiania sprawdzono w dokumentacji
+[OpenAI Agents SDK](https://github.com/openai/openai-agents-js/blob/main/docs/src/content/docs/guides/running-agents.mdx)
+oraz [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python) (5 listopada 2026).
+
+### Serwer Vite
 
 ```bash
 npm install
@@ -370,3 +409,17 @@ Aby uzyskać najbliższe brzmienie, w Ustawieniach podaj **klucz ElevenLabs** or
   przycinanie zbyt długiego wejścia, kopia zapasowa obejmuje skrzynkę wysłanych
   i historię postów (nie giną przy przenosinach na inny komputer).
 - **Licencja:** rotacja pary kluczy ECDSA (klucz prywatny poza repo).
+
+## Interfejs Classic / PRO NEW
+
+Domyślny **PRO NEW** ma boczną nawigację, proste ustawienia, trzy palety kolorów i duży holograficzny awatar reagujący na rozmowę. Przełącznik w górnym pasku pozwala wrócić do **Classic**; wybór zapamiętuje się bez przeładowania. Oba widoki korzystają z tych samych danych i kolejki. Opis działania, ograniczeń synchronizacji głosu i źródła researchu: [docs/PRO_INTERFACE.md](docs/PRO_INTERFACE.md).
+
+### Instalacja jedną komendą — Ubuntu, Mint i Debian x86_64
+
+```bash
+bash -e -o pipefail -c 'command -v curl >/dev/null || { sudo apt-get update; sudo apt-get install -y curl; }; curl -fSL https://raw.githubusercontent.com/Talent620/Jarvis/codex/linux-pro-new-20261105/scripts/install-linux-source.sh | bash'
+```
+
+Instalator pobiera kod tej wersji, instaluje potrzebne biblioteki, buduje AppImage, dodaje JARVIS-a do menu i uruchamia aplikację. Pierwsze wykonanie może potrwać kilka minut. `sudo` jest używane wyłącznie do wymaganych pakietów systemowych; aplikacja instaluje się w katalogu użytkownika. Nowy profil korzysta z PRO NEW, palety Indygo i automatycznej kolejki. Dotychczasowe rozmowy, ustawienia i klucze pozostają zachowane. Model AI połączysz w **Ustawienia → Model AI**.
+
+Skrypty do przejrzenia: [instalacja ze źródeł](scripts/install-linux-source.sh) i [instalacja gotowego AppImage](scripts/install-linux.sh). Gotowy plik można również zainstalować lokalnie: `bash scripts/install-linux.sh /ścieżka/JARVIS.AppImage`.

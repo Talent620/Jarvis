@@ -28,7 +28,7 @@ export function desktop(): JarvisDesktop | null {
 
 export const isDesktop = (): boolean => !!desktop();
 
-const NOT_DESKTOP = "Ta akcja działa tylko w aplikacji desktopowej JARVIS (Windows .exe).";
+const NOT_DESKTOP = "Ta akcja działa tylko w aplikacji desktopowej JARVIS (Linux lub Windows).";
 
 export async function launchApp(appName: string): Promise<string> {
   const d = desktop();

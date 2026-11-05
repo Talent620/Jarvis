@@ -622,6 +622,8 @@ export interface Settings {
   responseLength: "concise" | "balanced" | "detailed";
   /** Tryb inteligencji: economy (szybko/tanio) · balanced (domyślny) · maximum (najmocniejszy model). */
   intelligenceMode?: "economy" | "balanced" | "maximum";
+  /** Kolejka wykonuje zapisane zadania, kiedy aplikacja jest uruchomiona. */
+  autonomousQueue?: boolean;
   /** Zezwól na modele Gemini preview/experimental (niestabilne) — domyślnie nie. */
   geminiAllowPreview?: boolean;
   /** Styl rozmowy — ciepło/serdeczność 0..1 (0.5 = neutralnie, bez zmian). */
@@ -665,6 +667,10 @@ export interface Settings {
   activeProjectId: string;
   /** Motyw HUD: default | gold | green | red | purple. */
   theme: string;
+  /** Zapamiętany układ; PRO NEW jest domyślny, Classic zachowuje dotychczasowy HUD. */
+  interfaceMode?: "classic" | "pro";
+  /** Paleta PRO NEW, niezależna od klasycznego motywu HUD. */
+  proAccent?: "violet" | "cyan" | "amber";
   /** Język interfejsu (pl|en). Pusty = autodetekcja z przeglądarki. */
   lang?: "pl" | "en";
   /** Imię użytkownika, którym zwraca się JARVIS. */

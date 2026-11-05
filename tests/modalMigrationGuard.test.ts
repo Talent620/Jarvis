@@ -14,7 +14,7 @@ const CANONICAL = new Set(["Modal.tsx", "ScreenSkeleton.tsx"]);
 // Istniejące ręczne modale w chwili wprowadzenia strażnika (do migracji z czasem — NIE powiększać bez powodu).
 const LEGACY_MANUAL = new Set([
   "AdStudio.tsx", "AdminPanel.tsx", "BargainHunter.tsx", "BrandKit.tsx", "Cards.tsx", "ChatHistory.tsx",
-  "CostPanel.tsx", "FinancialDashboard.tsx", "Gadgets.tsx", "GoalStatusPanel.tsx", "GrowthDayPanel.tsx",
+  "CostPanel.tsx", "FinancialDashboard.tsx", "Gadgets.tsx", "GrowthDayPanel.tsx",
   "Guardian.tsx", "Help.tsx", "Journal.tsx", "LeadCandidatesPanel.tsx", "LeadDetail.tsx", "MailCompose.tsx",
   "MarketingWorkspace.tsx", "MoneyHub.tsx", "More.tsx", "Panels.tsx", "PermissionDialog.tsx", "Projects.tsx", "SalesCrm.tsx",
   "SalesDashboard.tsx", "SalesPlan.tsx", "Settings.tsx", "Studio.tsx", "TaskHub.tsx",

@@ -30,6 +30,7 @@ export interface GoalRecord {
   correlationId: string;
   /** Wyniki per krok (po id). CONFIRMED = wykonane i potwierdzone. */
   results: Record<string, ActionOutcome>;
+  outputs?: Record<string, string>;
   /** Id następnego bezpiecznego kroku (do wznowienia / panelu). */
   nextSafeStep?: string;
   error?: string;
@@ -132,6 +133,7 @@ export function normalizeGoal(raw: Partial<GoalRecord> & { id: string; goal: str
     stepIndex: typeof raw.stepIndex === "number" ? raw.stepIndex : 0,
     correlationId: raw.correlationId || raw.id,
     results: raw.results || {},
+    outputs: raw.outputs || {},
     nextSafeStep: raw.nextSafeStep,
     error: raw.error,
     createdAt: raw.createdAt || now,
@@ -148,22 +150,44 @@ export async function loadGoals(storage: GoalStorage = idbStorage): Promise<Goal
 }
 
 export async function saveGoals(goals: GoalRecord[], storage: GoalStorage = idbStorage): Promise<boolean> {
-  return storage.set(GOALS_KEY, goals);
+  const saved = await storage.set(GOALS_KEY, goals);
+  if (!saved) throw new Error("Nie można zapisać kolejki. Sprawdź miejsce na dysku i dostęp do pamięci aplikacji.");
+  for (const listener of listeners) listener();
+  return saved;
+}
+
+const listeners = new Set<() => void>();
+export function subscribeGoals(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+const writes = new WeakMap<GoalStorage, Promise<unknown>>();
+function serialize<T>(storage: GoalStorage, operation: () => Promise<T>): Promise<T> {
+  const pending = (writes.get(storage) || Promise.resolve()).catch(() => undefined).then(async (): Promise<T> => {
+    if (storage === idbStorage && typeof navigator !== "undefined" && navigator.locks) return await navigator.locks.request("jarvis-goal-write", operation);
+    return operation();
+  });
+  writes.set(storage, pending);
+  return pending;
 }
 
 /** Wstaw/zaktualizuj jeden cel (zachowuje pozostałe). */
-export async function upsertGoal(rec: GoalRecord, storage: GoalStorage = idbStorage): Promise<GoalRecord[]> {
+export function upsertGoal(rec: GoalRecord, storage: GoalStorage = idbStorage): Promise<GoalRecord[]> {
+  return serialize(storage, async () => {
   const goals = await loadGoals(storage);
   const idx = goals.findIndex((g) => g.id === rec.id);
   if (idx >= 0) goals[idx] = rec; else goals.push(rec);
   await saveGoals(goals, storage);
   return goals;
+  });
 }
 
-export async function removeGoal(id: string, storage: GoalStorage = idbStorage): Promise<GoalRecord[]> {
+export function removeGoal(id: string, storage: GoalStorage = idbStorage): Promise<GoalRecord[]> {
+  return serialize(storage, async () => {
   const goals = (await loadGoals(storage)).filter((g) => g.id !== id);
   await saveGoals(goals, storage);
   return goals;
+  });
 }
 
 /** Krótki, jawny opis celu do panelu (bez chain-of-thought). */

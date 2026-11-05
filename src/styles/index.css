@@ -330,6 +330,37 @@ textarea,
   -webkit-user-select: text;
 }
 
+.interface-switch {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.interface-switch button {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--text-dim);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.interface-switch button.is-active {
+  color: var(--cyan);
+  border-color: var(--line-strong);
+  background: var(--cyan-faint, rgba(108,231,255,.08));
+}
+.interface-switch button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+@media (max-width: 600px) {
+  .app.has-route-history .panel-head { padding-left: 60px; }
+}
+
 .app {
   display: flex;
   flex-direction: column;
@@ -2762,4 +2793,41 @@ html.low-power * {
 /* Gdy aplikacja schowana (inna karta/ekran zgaszony) — wstrzymaj animacje (bateria/CPU). */
 html.app-hidden * {
   animation-play-state: paused !important;
+}
+
+/* Trwała kolejka pracy: czytelna także na wąskich ekranach. */
+.work-queue { max-width: 780px; }
+.queue-summary, .queue-card-head, .queue-progress-label { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.queue-summary { padding: 8px 0 16px; }
+.queue-summary h3 { margin: 6px 0; font-size: 22px; letter-spacing: -.4px; }
+.queue-summary p, .queue-empty p { margin: 5px 0; color: var(--muted); font-size: 13px; }
+.queue-eyebrow { color: var(--cyan); font-size: 10px; letter-spacing: 2px; font-weight: 700; }
+.queue-hint { font-size: 12px; line-height: 1.6; }
+.queue-label { display: block; font-weight: 600; margin: 18px 0 8px; }
+.work-queue textarea { min-height: 96px; width: 100%; }
+.queue-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.queue-actions .btn { width: auto; min-height: 44px; margin-top: 8px; font-size: 13px; }
+.queue-tabs { display: flex; gap: 8px; margin: 24px 0 14px; flex-wrap: wrap; }
+.queue-empty { padding: 28px 20px; border: 1px dashed var(--line); border-radius: 12px; }
+.queue-card { border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 12px 0; background: rgba(120,150,180,.035); }
+.queue-card h3 { font-size: 15px; margin: 0; overflow-wrap: anywhere; flex: 1; min-width: 140px; }
+.queue-state { font-size: 11px; padding: 5px 9px; border-radius: 20px; border: 1px solid var(--line); color: var(--muted); }
+.state-running, .state-completed { color: var(--cyan); border-color: var(--cyan); }
+.state-failed, .state-waiting_consent { color: var(--gold); }
+.queue-progress-label { font-size: 11px; color: var(--muted); margin: 14px 0 6px; }
+.queue-card progress { appearance: none; border: 0; height: 4px; width: 100%; border-radius: 4px; background: var(--line); accent-color: var(--cyan); }
+.queue-card progress::-webkit-progress-bar { background: var(--line); border-radius: 4px; }
+.queue-card progress::-webkit-progress-value { background: var(--cyan); border-radius: 4px; }
+.queue-steps { list-style: none; padding: 0; margin: 16px 0 0; }
+.queue-steps li { display: flex; gap: 10px; padding: 9px 0; font-size: 13px; }
+.queue-steps li > div { min-width: 0; flex: 1; }
+.queue-steps p { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 5px 0; overflow-wrap: anywhere; }
+.queue-steps summary { cursor: pointer; color: var(--cyan); padding: 8px 0; }
+.queue-steps pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; font-size: 12px; padding: 12px; background: rgba(0,0,0,.15); border-radius: 8px; }
+.queue-launcher { width: auto; padding: 0 10px; gap: 5px; font-size: 12px; }
+@media (max-width: 600px) {
+  .topbar { flex-wrap: wrap; row-gap: 7px; }
+  .topbar .brand { flex: 1 1 calc(100% - 90px); min-width: 0; }
+  .topbar .spacer { display: none; }
+  .topbar .icon-btn { flex: 0 0 auto; min-height: 40px; min-width: 36px; }
 }
