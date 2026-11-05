@@ -9,7 +9,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 function args(argv = process.argv.slice(2)) {
   const out = {};
   for (let i = 0; i < argv.length; i++) {
-    if (!['--ollama-url', '--model', '--settings-file', '--chromium'].includes(argv[i]) || !argv[i + 1]) throw Error(`Unknown or incomplete option: ${argv[i]}`);
+    if (!['--ollama-url', '--model', '--settings-file', '--chromium', '--license-file'].includes(argv[i]) || !argv[i + 1] || argv[i + 1].startsWith('--')) throw Error(`Unknown or incomplete option: ${argv[i]}`);
     out[argv[i].slice(2)] = argv[++i];
   }
   return out;
@@ -42,6 +42,21 @@ function command(file, argv) {
   catch { return null; }
 }
 function which(name) { return command('which', [name]); }
+function dependencySnapshot() {
+  const packages = {};
+  for (const name of ['vite', 'playwright', 'electron']) {
+    try { packages[name] = { available: true, version: require(`${name}/package.json`).version }; }
+    catch { packages[name] = { available: false, action: 'Run npm ci in the transferred repository (Node >=20). No system installation is performed by QA.' }; }
+  }
+  let electronBinary = null;
+  try { const file = require('electron'); if (typeof file === 'string' && fs.existsSync(file)) electronBinary = file; } catch { /* reported as dependency */ }
+  return { node_supported: Number(process.versions.node.split('.')[0]) >= 20, packages, electron_binary: electronBinary };
+}
+function resultExitCode(results, required = ['A', 'B', 'C']) {
+  if (results.some(r => r.status === 'FAIL')) return 1;
+  if (required.some(id => !results.some(r => r.id === id && r.status === 'PASS')) || results.some(r => ['BLOCKED', 'NOT_RUN'].includes(r.status))) return 2;
+  return 0;
+}
 function newRun(kind) {
   const id = `${new Date().toISOString().replace(/[:.]/g, '-')}-${kind}-${randomUUID().slice(0, 8)}`;
   const dir = path.join(root, 'QA/runs', id);
@@ -60,7 +75,8 @@ function newRun(kind) {
   return { id, dir, write, results, source, record(result) { results.push(result); write('results.json', results); }, finish(extra = {}) {
     const report = { run_id: id, kind, finished_at: new Date().toISOString(), source, results, ...extra };
     write('report.json', report);
-    write('REPORT.md', `# JARVIS QA ${id}\n\nVersion ${source.app_version}, ${source.branch}@${source.commit}. Uncommitted source is identified in source.json.\n\n` + results.map(x => `- **${x.id} ${x.status}** [${x.level}] ${x.detail || ''} Evidence: ${(x.evidence || []).join(', ') || 'report.json'}.` + (x.blocker ? ` Unblock: ${x.blocker.action}` : '')).join('\n') + '\n\nModel fixtures: none. User desktop: not inferred from Chromium or Electron tests.\n');
+    const summary = extra.required_scenarios ? `Runner completed: ${extra.runner_completed}. Required tests passed: ${extra.required_tests_passed}. Exit code: ${extra.exit_code}.\nMode: ${extra.mode}. Ollama: ${extra.ollama_origin || 'not reachable / not selected'}; model: ${extra.ollama_model || 'not selected'}.\n\n` : '';
+    write('REPORT.md', `# JARVIS QA ${id}\n\nVersion ${source.app_version}, ${source.branch}@${source.commit}. Uncommitted source is identified in source.json.\n\n` + summary + results.map(x => `- **${x.id} ${x.status}** [${x.level}] ${x.detail || ''} Evidence: ${(x.evidence || []).join(', ') || 'report.json'}.` + (x.blocker ? ` Unblock: ${x.blocker.action}` : '')).join('\n') + '\n\nModel fixtures: none. User desktop: not inferred from Chromium or Electron tests.\n');
     console.log(`QA report: ${path.join(dir, 'REPORT.md')}`);
     return report;
   } };
@@ -73,7 +89,7 @@ function environment() {
     session_present: Object.fromEntries(['DISPLAY', 'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR', 'DBUS_SESSION_BUS_ADDRESS', 'XDG_SESSION_TYPE'].map(k => [k, !!process.env[k]])),
     session_bus_socket: !!(process.env.XDG_RUNTIME_DIR && fs.existsSync(path.join(process.env.XDG_RUNTIME_DIR, 'bus'))),
     tools: Object.fromEntries(['chromium', 'chromium-browser', 'Xvfb', 'xvfb-run', 'Xorg', 'xdotool', 'ollama'].map(x => [x, which(x)])),
-    electron_version: require('electron/package.json').version,
+    electron_version: dependencySnapshot().packages.electron.version || null,
     actual_user_installation: 'Not inspected. This is the current test machine, not assumed to be /home/qw/Jarvis-GitHub.',
   };
 }
@@ -126,4 +142,4 @@ async function stop(child) {
   for (let i = 0; i < 20 && child.exitCode === null && !child.signalCode; i++) await pause(100);
   if (child.exitCode === null && !child.signalCode) child.kill('SIGKILL');
 }
-module.exports = { fs, path, root, args, configuration, newRun, environment, inspectOllama, modelBlocker, jsonRequest, which, pause, ownedProcess, stop };
+module.exports = { fs, path, root, args, configuration, newRun, environment, inspectOllama, modelBlocker, jsonRequest, which, pause, ownedProcess, stop, dependencySnapshot, resultExitCode };

@@ -25,7 +25,21 @@ Alternatywa: `--settings-file /ścieżka/settings.json`. Obsługiwany jest obiek
 - S1 [B/D]: jeżeli istnieje API i jawnie wybrany zainstalowany model: rzeczywista generacja, normalna rozmowa w UI, sprawdzenie odpowiedzi, pochodzenia i zapisanej historii. Osobny D2 sprawdza rzeczywisty dobór `add_task` przez model i jego efekt. Samo HTTP 200 nie zalicza tych etapów.
 - S2–S8: ten smoke nie ma jeszcze pełnych wykonawców/orakli tych scenariuszy; zapisuje NOT_RUN. Wyniki testów jednostkowych i D1 nie zastępują brakującego pokrycia.
 
-`qa:desktop` próbuje uruchomić prawdziwy Electron. Bez sesji sprawdza Xvfb; jeśli jest dostępny, uruchamia własny serwer przez `-displayfd` bez zgadywania DISPLAY. Bez obu zależności zapisuje stderr rzeczywistej próby startu. W działającej sesji buduje własne dwa bundle poza dist: normalny z bramką licencji i testowy bez licencji. Sprawdza normalną bramkę, następnie rzeczywistą komendę lokalną w Electron. Izolację zachowuje przez `JARVIS_PROFILE_DIR`, `JARVIS_WORKSPACE_DIR` i wyłącznie deweloperski `JARVIS_QA_RENDERER_DIR`. Wariant z działającym ekranem nie został potwierdzony w środowisku chmurowym bez ekranu.
+`qa:desktop` jest wspólnym wejściem dla niezależnych testów UI oraz istniejących scenariuszy z rzeczywistym modelem. `qa:agent:real` jest teraz jego aliasem. Definicja w package.json: `node scripts/qa/desktop.cjs`.
+
+```bash
+npm run qa:desktop
+npm run qa:desktop -- --ollama-url http://127.0.0.1:11435 --model NAZWA_JUZ_ZAINSTALOWANEGO_MODELU
+npm run qa:desktop -- --settings-file /sciezka/minimalne-ustawienia.json
+```
+
+Brak modelu nie blokuje odrębnego testu Chromium: normalna aktywacja z tymczasowym wystawcą, komenda lokalna, zmiana ustawienia przez UI i odtworzenie tego samego zadania, audytu oraz historii po zamknięciu całego procesu przeglądarki. To rzeczywisty lokalny zapis przez JARVIS-a, ale nie dowód działania modelu lub pulpitu. Licencja pozostaje wymagana. Testowy klucz i profil są tylko w ignorowanym katalogu przebiegu; ustawienia produkcyjne, plik wystawcy użytkownika i jego licencja nie są zmieniane.
+
+Następnie runner próbuje uruchomić prawdziwy Electron z sandboxem. Nie instaluje ani nie uruchamia Xvfb i nie ustawia wymyślonego DISPLAY. Bez sesji zapisuje rzeczywisty stderr i etap awarii. W dostępnej sesji buduje normalnie licencjonowany testowy bundle poza dist, aktywuje go, sprawdza komendy lokalne i restart Electron. Domyślnie używa tymczasowego wystawcy testowego; opcjonalne `--license-file PLIK` używa dostarczonego tokenu i zwykłej konfiguracji wystawcy. Token nie jest wypisywany w raporcie. Izolacja: `JARVIS_PROFILE_DIR`, `JARVIS_WORKSPACE_DIR`, deweloperski `JARVIS_QA_RENDERER_DIR`.
+
+A wymaga prawdziwej Ollamy, zwykłego composera, zapisu i odczytu pliku przez narzędzia JARVIS-a i osobnego sprawdzenia dysku. B obejmuje STOP rzeczywistego żądania, obserwację wyciszenia wykonawcy, rozliczenie wcześniejszych efektów, nową generację i nowy plik ze świeżą zgodą. Logi wiążą żądania z poleceniem, nie tylko z chwilą nadejścia odpowiedzi. Moment zatrzymania kernela modelu nie jest wywodzony z anulowania HTTP. C, pełne zaznaczenie/schowek/fokus/edytor, nadal nie ma kompletnej automatyzacji i orakla. Bez pulpitu ma konkretny blocker; w dostępnej sesji pozostaje NOT_RUN.
+
+Raport rozdziela `runner_completed` od `required_tests_passed`. Kod 2 oznacza, że główne A–C nie zostały wszystkie zaliczone, nawet jeśli testy niezależne mają PASS. Kod 1 oznacza FAIL. Raport powstaje także przy brakujących zależnościach, blokadzie startu, błędzie flag i przerwaniu. Natywnego wariantu z działającym ekranem i modelem nie potwierdzono w tej chmurze. Wymagane: Node >=20, `npm ci`, Chromium dla testów webowych, poprawnie zainstalowany Electron z bibliotekami i sandboxem oraz autoryzowana sesja graficzna dla natywnych. Runner nie pobiera modeli i nie przełącza się na chmurę.
 
 Po zakończeniu runner zamyka własne procesy. Logi i profile pozostają do inspekcji i są ignorowane przez Git. Usuwać można wyłącznie wybrany katalog danego przebiegu po zachowaniu potrzebnych dowodów. Instalacja systemowa i naprawa systemowego helpera sandboxa wymagają decyzji administratora; runner ich nie wykonuje.
 
