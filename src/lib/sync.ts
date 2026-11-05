@@ -1,4 +1,4 @@
-import { store } from "./store";
+import { store, mergeMemoryDeletedIds } from "./store";
 import { fetchTimeout } from "./http";
 import type { AppData } from "../types";
 
@@ -12,7 +12,8 @@ const COLLECTIONS: (keyof AppData)[] = [
  * Scal dwie listy po `id`, zachowując NOWSZY wpis (po `updatedAt`, w razie braku
  * `createdAt`). Suma obu stron — edycje lokalne nowsze niż w chmurze nie giną
  * (poprzednio pull hurtowo nadpisywał, kasując zmiany z tego urządzenia).
- * Uwaga: bez tombstone'ów usunięcia mogą „wrócić" — i tak lepsze niż utrata edycji.
+ * Usunięcia faktów pamięci rozstrzyga osobny zbiór memoryDeletedIds; pozostałe
+ * kolekcje zachowują dotychczasową semantykę sumy rekordów.
  * Czysta, testowalna.
  */
 export function mergeById<T extends { id?: string; updatedAt?: number; createdAt?: number }>(local: T[], remote: T[]): T[] {
@@ -60,6 +61,7 @@ export async function pushSync(): Promise<string> {
   if (!url) return "Najpierw uzupełnij adres i token synchronizacji.";
   const data: Record<string, unknown> = {};
   for (const c of COLLECTIONS) data[c] = store.data[c];
+  data.memoryDeletedIds = mergeMemoryDeletedIds(store.data.memoryDeletedIds);
   try {
     const res = await fetchTimeout(url, {
       method: "POST",
@@ -86,6 +88,7 @@ export async function pullSync(): Promise<string> {
     const { data } = await res.json();
     if (!data) return "Brak danych w chmurze.";
     store.setData((d) => {
+      d.memoryDeletedIds = mergeMemoryDeletedIds(d.memoryDeletedIds, data.memoryDeletedIds);
       // Twardo waliduj: bierzemy tylko tablice, by uszkodzone dane z chmury nie
       // skorumpowały lokalnego store. Scalamy po id (nowsze wygrywa) zamiast nadpisywać,
       // żeby nie gubić lokalnych edycji nowszych niż w chmurze.

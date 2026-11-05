@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { startGeneration, cancelGeneration, isCurrent, resetGeneration } from "../src/lib/generation";
+import { startGeneration, cancelGeneration, generationSignal, isCurrent, resetGeneration } from "../src/lib/generation";
 
 beforeEach(() => resetGeneration());
 
@@ -17,9 +17,13 @@ describe("strażnik generowania (Stop)", () => {
 
   it("nowa generacja unieważnia poprzednią", () => {
     const a = startGeneration();
+    const oldSignal = generationSignal(a);
     const b = startGeneration();
     expect(isCurrent(a)).toBe(false);
     expect(isCurrent(b)).toBe(true);
+    expect(oldSignal.aborted).toBe(true);
+    expect(generationSignal(a).aborted).toBe(true);
+    expect(generationSignal(b).aborted).toBe(false);
   });
 
   it("po anulowaniu kolejna generacja znów jest aktualna", () => {

@@ -5,7 +5,7 @@
 import { describe, it, expect } from "vitest";
 import {
   newGoal, recordStepOutcome, nextRunnableStep, isStepDone, attemptedSteps, resumableGoals,
-  pauseGoal, resumeGoal, cancelGoal, normalizeGoal, loadGoals, upsertGoal, removeGoal,
+  pauseGoal, resumeGoal, cancelGoal, normalizeGoal, loadGoals, upsertGoal, mutateGoal, removeGoal,
   type GoalStorage, type GoalRecord,
 } from "../src/lib/goalState";
 import type { AgentPlan } from "../src/lib/agentPlanner";
@@ -21,7 +21,7 @@ const plan: AgentPlan = { goal: "lead → oferta → mail", steps: [
 // Prosty backend in-memory spełniający kontrakt GoalStorage (≈ IndexedDB w przeglądarce).
 function memStore(): GoalStorage & { dump(): Map<string, unknown> } {
   const m = new Map<string, unknown>();
-  return { get: async (k) => (m.has(k) ? (m.get(k) as never) : null), set: async (k, v) => { m.set(k, v); return true; }, dump: () => m };
+  return { get: async (k) => (m.has(k) ? structuredClone(m.get(k)) as never : null), set: async (k, v) => { m.set(k, structuredClone(v)); return true; }, dump: () => m };
 }
 
 describe("goalState — postęp i brak podwójnego wykonania", () => {
@@ -113,5 +113,53 @@ describe("goalState — kompatybilność wstecz", () => {
     expect(n.results).toEqual({});
     expect(n.correlationId).toBe("OLD");
     expect(nextRunnableStep(n)?.id).toBe("a");
+  });
+});
+
+describe("goalState — współbieżne zmiany istniejącego celu", () => {
+  it("pauza nie kasuje checkpointu wysyłki; wznowienie nie ponawia ATTEMPTED", async () => {
+    const storage = memStore();
+    const mail = { goal: "mail", steps: [{ id: "send", intent: "wyślij", tool: "gmail_send" }] };
+    const initial = newGoal("mail", mail, "concurrent-mail", NOW);
+    await upsertGoal(initial, storage);
+    const uiSnapshot = (await loadGoals(storage))[0];
+    await Promise.all([
+      mutateGoal(initial.id, (current) => ({
+        ...recordStepOutcome(current, "send", attempted("gmail_send"), NOW + 1),
+        outputs: { ...current.outputs, send: "identyfikator próby" },
+      }), storage),
+      mutateGoal(uiSnapshot.id, (current) => pauseGoal(current, NOW + 2), storage),
+    ]);
+    const paused = (await loadGoals(storage))[0];
+    expect(paused.status).toBe("paused");
+    expect(paused.results.send.state).toBe("ATTEMPTED");
+    expect(paused.outputs?.send).toBe("identyfikator próby");
+    const resumed = await mutateGoal(initial.id, (current) => resumeGoal(current, NOW + 3), storage);
+    expect(resumed?.status).toBe("waiting_user");
+    expect(nextRunnableStep(resumed!)).toBeNull();
+  });
+
+  it("późny wynik zachowuje anulowanie oraz dowód ukończonej operacji", async () => {
+    const storage = memStore();
+    await upsertGoal(newGoal("x", plan, "cancel-race", NOW), storage);
+    await Promise.all([
+      mutateGoal("cancel-race", (current) => cancelGoal(current, NOW + 1), storage),
+      mutateGoal("cancel-race", (current) => recordStepOutcome(current, "a", confirmed({ message: "operacja zakończyła się po anulowaniu" }), NOW + 2), storage),
+    ]);
+    const saved = (await loadGoals(storage))[0];
+    expect(saved.status).toBe("failed");
+    expect(saved.error).toBe("anulowane przez użytkownika");
+    expect(saved.results.a.state).toBe("CONFIRMED");
+  });
+
+  it("opóźniona aktualizacja nie odtwarza usuniętego celu", async () => {
+    const storage = memStore();
+    await upsertGoal(newGoal("x", plan, "removed-race", NOW), storage);
+    const [, updated] = await Promise.all([
+      removeGoal("removed-race", storage),
+      mutateGoal("removed-race", (current) => pauseGoal(current, NOW + 1), storage),
+    ]);
+    expect(updated).toBeNull();
+    expect(await loadGoals(storage)).toEqual([]);
   });
 });

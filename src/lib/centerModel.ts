@@ -16,7 +16,7 @@ export interface CenterGoal {
 export const CENTER_GOALS: CenterGoal[] = [
   { id: "today", icon: "📅", label: "Dziś", desc: "Co dziś najbardziej ruszy biznes", opens: "growthDay" },
   { id: "clients", icon: "🧲", label: "Klienci", desc: "Kandydaci, kontakt, CRM, sprzedaż", opens: "sales" },
-  { id: "work", icon: "✅", label: "Praca", desc: "Zadania, projekty, dziennik", opens: "tasks" },
+  { id: "work", icon: "✅", label: "Praca", desc: "Kolejka, analizy i moja lista", opens: "goalStatus" },
   { id: "marketing", icon: "📣", label: "Marketing", desc: "Treści, reklamy, marka, strony", opens: "content" },
   { id: "finance", icon: "💰", label: "Finanse", desc: "Projekty, zysk, koszty, zarabianie", opens: "finance" },
   { id: "jarvis", icon: "🧠", label: "JARVIS", desc: "Umysł, cele, sterowanie głosem", opens: "mind" },
@@ -27,11 +27,11 @@ export const CENTER_GOALS: CenterGoal[] = [
 export const CENTER_GROUPS: { title: string; ids: string[] }[] = [
   { title: "📈 Sprzedaż i biznes", ids: ["growthDay", "candidates", "sales", "finance", "mail", "sent", "money"] },
   { title: "📣 Marketing", ids: ["content", "ads", "brand", "web"] },
-  { title: "✅ Praca i organizacja", ids: ["tasks", "projects", "journal", "cards"] },
+  { title: "✅ Praca i organizacja", ids: ["goalStatus", "runtime", "tasks", "projects", "journal", "cards"] },
   { title: "🛒 Zakupy i okazje", ids: ["bargain", "wheretobuy", "shoppinglist"] },
-  { title: "🎙 Narzędzia AI", ids: ["translator", "transcribe", "hud", "screen", "studio"] },
+  { title: "🎙 Narzędzia AI", ids: ["goal", "translator", "transcribe", "hud", "screen", "studio"] },
   { title: "🧠 Ja i pamięć", ids: ["mind", "profile", "memory"] },
-  { title: "⬢ Szef i sterowanie", ids: ["boss", "command", "recall", "goal", "goalStatus"] },
+  { title: "⬢ Szef i sterowanie", ids: ["boss", "command", "recall"] },
   { title: "⚙️ System, dane i pomoc", ids: ["notifications", "status", "guardian", "history", "data", "audit", "costs", "gadgets", "helpfaq", "admin"] },
 ];
 

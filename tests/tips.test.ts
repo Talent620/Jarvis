@@ -37,6 +37,7 @@ describe("tips — pickTip (rotacja + warunki)", () => {
 describe("tips — contextualTip (mądrzejsze: dopasowane do treści)", () => {
   it("zaplanuj → Zleć cel; przerób zdjęcie → Studio; zapamiętaj → memory; najtaniej → bargain", () => {
     expect(contextualTip("zaplanuj mi wejście na rynek", [])?.id).toBe("goal");
+    expect(contextualTip("zaplanuj mi wejście na rynek", [])?.actionId).toBe("goalStatus");
     expect(contextualTip("przerób to zdjęcie i usuń tło", [])?.id).toBe("studio");
     expect(contextualTip("zapamiętaj, że mam spotkanie", [])?.id).toBe("memory");
     expect(contextualTip("gdzie kupię najtaniej wiertarkę", [])?.id).toBe("bargain");

@@ -1,4 +1,5 @@
-import { runTool } from "../tools";
+import { executeProviderTool } from "./execution";
+import { abortable, throwIfAborted } from "../requestCancellation";
 import { fetchTimeout, appTokenHeader } from "../http";
 import { OAIStreamAccumulator, drainSSE } from "../stream";
 import type { AskCtx, JarvisReply } from "./types";
@@ -16,6 +17,7 @@ export function makeOpenAICompatible(
   opts: { extraHeaders?: Record<string, string>; onlineSuffix?: boolean; extraBody?: Record<string, unknown> } = {},
 ) {
   return async function ask(ctx: AskCtx): Promise<JarvisReply> {
+    throwIfAborted(ctx.signal);
     const url = ctx.proxyUrl ? `${ctx.proxyUrl}/openai?u=${encodeURIComponent(endpoint)}` : endpoint;
 
     // OpenRouter potrafi włączyć web search przez sufiks ":online".
@@ -68,7 +70,7 @@ export function makeOpenAICompatible(
 
     // Pełna odpowiedź (bez strumienia) — ścieżka klasyczna / fallback.
     const requestFull = async (): Promise<OAIMessage> => {
-      const res = await fetchTimeout(url, { method: "POST", headers, body: JSON.stringify(body()) }, 120000);
+      const res = await fetchTimeout(url, { method: "POST", headers, body: JSON.stringify(body()), signal: ctx.signal }, 120000);
       // Brama/proxy może oddać HTML zamiast JSON — parsuj bezpiecznie i dołącz kod statusu.
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
@@ -82,7 +84,7 @@ export function makeOpenAICompatible(
     const requestStream = async (): Promise<OAIMessage> => {
       const res = await fetchTimeout(
         url,
-        { method: "POST", headers, body: JSON.stringify({ ...body(), stream: true, stream_options: { include_usage: true } }) },
+        { method: "POST", headers, body: JSON.stringify({ ...body(), stream: true, stream_options: { include_usage: true } }), signal: ctx.signal },
         120000,
       );
       if (!res.ok) {
@@ -95,7 +97,7 @@ export function makeOpenAICompatible(
       const acc = new OAIStreamAccumulator();
       let buf = "";
       for (;;) {
-        const { done, value } = await reader.read();
+        const { done, value } = await abortable(reader.read(), ctx.signal);
         if (done) break;
         buf += dec.decode(value, { stream: true });
         const { events, rest } = drainSSE(buf);
@@ -120,6 +122,7 @@ export function makeOpenAICompatible(
     };
 
     while (guard++ < 8) {
+      throwIfAborted(ctx.signal);
       let msg: OAIMessage;
       try {
         msg = canStream ? await requestStream() : await requestFull();
@@ -150,7 +153,7 @@ export function makeOpenAICompatible(
           } catch {
             /* puste argumenty */
           }
-          const out = await runTool(tc.function.name, args);
+          const out = await executeProviderTool(ctx, tc.function.name, args);
           messages.push({ role: "tool", tool_call_id: tc.id, content: out });
         }
         continue;

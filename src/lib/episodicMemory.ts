@@ -111,10 +111,12 @@ export function recordEpisode(kind: EpisodeKind, topic: string, ref?: string): v
   save(all);
 }
 
-export function clearEpisodes(): void {
+/** Usuń wyłącznie lokalne epizody; sukces wymaga potwierdzenia odczytem z magazynu. */
+export function clearEpisodes(): boolean {
   try {
     localStorage.removeItem(KEY);
+    return localStorage.getItem(KEY) === null;
   } catch {
-    /* ignore */
+    return false;
   }
 }

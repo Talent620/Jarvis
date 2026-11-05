@@ -1,0 +1,32 @@
+.memory-center .memory-intro { margin-top: 0; }
+.memory-scope { font-size: 13px; line-height: 1.6; }
+.memory-center .ta { min-width: 0; min-height: 0; padding: 8px 10px; }
+.memory-add { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; align-items: end; gap: 10px; margin: 20px 0 14px; }
+.memory-add label, .memory-search { display: grid; gap: 6px; min-width: 0; font-size: 13px; }
+.memory-search { margin-bottom: 12px; }
+.memory-add .btn, .memory-actions .btn, .memory-source-list .btn { margin: 0; width: auto; white-space: normal; }
+.memory-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.memory-actions .icon-btn { min-width: 40px; min-height: 40px; }
+.memory-fact { align-items: flex-start; }
+.memory-fact .memory-actions { flex-shrink: 0; }
+.memory-fact .status-title, .memory-fact .status-detail { overflow-wrap: anywhere; }
+.memory-edit { display: grid; gap: 8px; margin-top: 6px; }
+.memory-sources { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 10px; }
+.memory-sources p { font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.memory-episodes { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.memory-episodes summary { cursor: pointer; font-size: 14px; font-weight: 600; line-height: 1.5; }
+.memory-episode-list { max-height: 280px; overflow-y: auto; padding-left: 24px; margin-bottom: 0; }
+.memory-episode-list li { padding: 7px 0; }
+.memory-episode-list p { margin: 0 0 3px; }
+.memory-source-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.memory-source-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.memory-source-list strong { font-size: 14px; }
+.memory-source-list p { margin: 4px 0 0; }
+@media (max-width: 520px) {
+  .memory-add, .memory-source-list li { grid-template-columns: minmax(0, 1fr); }
+  .memory-add .btn { justify-self: start; }
+  .memory-fact { flex-wrap: wrap; }
+  .memory-fact .status-main { flex-basis: 100%; }
+  .memory-fact > .memory-actions { margin-left: auto; }
+  .memory-source-list .btn { justify-self: start; }
+}

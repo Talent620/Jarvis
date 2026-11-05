@@ -71,10 +71,10 @@ export const MANUAL: ManualEntry[] = [
     keywords: "leady crm sprzedaż klienci oferty teczka audyt scoring osm firmy",
   },
   {
-    id: "goal", icon: "🎯", title: "Zleć cel (wieloetapowy)", category: "Sprzedaż i biznes",
-    how: `${PALETTE} → „Zleć cel”.`,
-    what: "Opisujesz cel, a JARVIS rozbija go na kroki i prowadzi projekt wieloetapowo (do-it-for-me).",
-    keywords: "cel projekt plan wieloetapowe do-for-me zlecenie autopilot",
+    id: "goal", icon: "🎯", title: "Plan wieloetapowy", category: "Sprzedaż i biznes",
+    how: `${PALETTE} → „Plan wieloetapowy”.`,
+    what: "Model dzieli problem na podproblemy i przygotowuje tekstową analizę. Ten tryb nie uruchamia narzędzi. Do wykonania i śledzenia działań służy Kolejka zadań.",
+    keywords: "plan analiza wieloetapowa strategia",
   },
   {
     id: "money", icon: "💰", title: "Zarabianie", category: "Sprzedaż i biznes",

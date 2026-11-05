@@ -29,7 +29,8 @@ describe("commandPalette — rankCommands", () => {
   const items = [
     cmd("settings", "Ustawienia"),
     cmd("voice", "Głos", "mowa audio"),
-    cmd("goal", "🎯 Zleć cel", "do-for-me cel projekt"),
+    cmd("goalStatus", "Kolejka zadań — zleć cel", "do-for-me cel projekt"),
+    cmd("goal", "Plan wieloetapowy", "tekstowa analiza strategia"),
     cmd("sales", "Pulpit Sprzedaży", "leady crm"),
     cmd("studio", "Studio Obrazów", "zdjecia edycja"),
   ];
@@ -37,10 +38,11 @@ describe("commandPalette — rankCommands", () => {
   it("trafia po tytule i po słowach kluczowych", () => {
     expect(rankCommands("glos", items)[0].id).toBe("voice");
     expect(rankCommands("leady", items)[0].id).toBe("sales"); // tylko w keywords
-    expect(rankCommands("cel", items)[0].id).toBe("goal");
+    expect(rankCommands("zlec cel", items)[0].id).toBe("goalStatus");
+    expect(rankCommands("plan wieloetapowy", items)[0].id).toBe("goal");
   });
   it("puste zapytanie → naturalna kolejność, ucięte do limitu", () => {
-    expect(rankCommands("", items, 3).map((c) => c.id)).toEqual(["settings", "voice", "goal"]);
+    expect(rankCommands("", items, 3).map((c) => c.id)).toEqual(["settings", "voice", "goalStatus"]);
   });
   it("brak trafień → pusto", () => {
     expect(rankCommands("zzzz", items)).toEqual([]);

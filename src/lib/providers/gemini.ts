@@ -1,4 +1,5 @@
-import { runTool } from "../tools";
+import { executeProviderTool } from "./execution";
+import { abortable, throwIfAborted } from "../requestCancellation";
 import { fetchTimeout, appTokenHeader } from "../http";
 import { GeminiStreamAccumulator, drainSSE } from "../stream";
 import type { AskCtx, JarvisReply } from "./types";
@@ -51,6 +52,7 @@ interface Content {
 
 // Adapter Google Gemini (AI Studio) — format contents/parts + functionDeclarations.
 export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
+  throwIfAborted(ctx.signal);
   // Bez proxy klucz idzie w URL — pusty/niepełny klucz daje mylący błąd Google
   // („Expected OAuth 2 access token"). Złap to od razu, z czytelnym komunikatem.
   if (!ctx.proxyUrl && !ctx.apiKey?.trim()) {
@@ -102,7 +104,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
 
   // Pełna odpowiedź — ścieżka klasyczna / fallback.
   const requestFull = async (): Promise<Part[]> => {
-    const res = await fetchTimeout(base, { method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
+    const res = await fetchTimeout(base, { method: "POST", headers, body: JSON.stringify(buildBody()), signal: ctx.signal }, 120000);
     const data = await res.json().catch(() => null);
     if (!res.ok) {
       const message = typeof data?.error === "string" ? data.error : data?.error?.message || "Błąd API";
@@ -123,7 +125,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
   // Strumieniowanie (SSE, tylko bezpośrednio) — tekst leci deltami; functionCall składamy.
   const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${ctx.model}:streamGenerateContent?alt=sse&key=${ctx.apiKey.trim()}`;
   const requestStream = async (): Promise<Part[]> => {
-    const res = await fetchTimeout(streamUrl, { method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
+    const res = await fetchTimeout(streamUrl, { method: "POST", headers, body: JSON.stringify(buildBody()), signal: ctx.signal }, 120000);
     if (!res.ok) {
       const data = await res.json().catch(() => null);
       throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
@@ -134,7 +136,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
     const acc = new GeminiStreamAccumulator();
     let buf = "";
     for (;;) {
-      const { done, value } = await reader.read();
+      const { done, value } = await abortable(reader.read(), ctx.signal);
       if (done) break;
       buf += dec.decode(value, { stream: true });
       const { events, rest } = drainSSE(buf);
@@ -158,6 +160,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
 
   const seenCalls = new Set<string>(); // tożsamości wywołań (nazwa+argumenty) — anty-zapętlenie
   while (guard++ < 8) {
+    throwIfAborted(ctx.signal);
     let parts: Part[];
     try {
       parts = canStream ? await requestStream() : await requestFull();
@@ -182,7 +185,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
         }
         seenCalls.add(sig);
         used.add(name);
-        const out = await runTool(name, c.functionCall!.args || {});
+        const out = await executeProviderTool(ctx, name, c.functionCall!.args || {});
         const rp: Part = { functionResponse: { name, response: { result: out } } };
         if (c.functionCall!.id) rp.functionResponse!.id = c.functionCall!.id; // dopasuj odpowiedź do wywołania
         responseParts.push(rp);

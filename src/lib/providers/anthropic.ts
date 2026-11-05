@@ -1,4 +1,5 @@
-import { runTool } from "../tools";
+import { executeProviderTool } from "./execution";
+import { abortable, throwIfAborted } from "../requestCancellation";
 import { fetchTimeout, appTokenHeader } from "../http";
 import { AnthStreamAccumulator, drainSSE } from "../stream";
 import type { AskCtx, JarvisReply } from "./types";
@@ -22,6 +23,7 @@ type AnthMsg = { role: "user" | "assistant"; content: any };
 
 // Natywny adapter Claude — pełny tool-use + serwerowe wyszukiwanie w sieci.
 export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
+  throwIfAborted(ctx.signal);
   const endpoint = ctx.proxyUrl ? `${ctx.proxyUrl}/anthropic` : API_URL;
   const tools: any[] = ctx.tools.map((d) => ({
     name: d.name,
@@ -65,7 +67,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
 
   // Pełna odpowiedź (bez strumienia) — ścieżka klasyczna / fallback.
   const requestFull = async (): Promise<{ content: Block[]; stop_reason: string }> => {
-    const res = await fetchTimeout(endpoint, { method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
+    const res = await fetchTimeout(endpoint, { method: "POST", headers, body: JSON.stringify(buildBody()), signal: ctx.signal }, 120000);
     const data = (await res.json().catch(() => null)) as Resp | null;
     if (!res.ok || !data) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
     if (data.usage) { inTok += data.usage.input_tokens || 0; outTok += data.usage.output_tokens || 0; }
@@ -74,7 +76,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
 
   // Strumieniowanie (SSE) — tekst leci deltami przez ctx.onToken; tool_use składamy z fragmentów.
   const requestStream = async (): Promise<{ content: Block[]; stop_reason: string }> => {
-    const res = await fetchTimeout(endpoint, { method: "POST", headers, body: JSON.stringify({ ...buildBody(), stream: true }) }, 120000);
+    const res = await fetchTimeout(endpoint, { method: "POST", headers, body: JSON.stringify({ ...buildBody(), stream: true }), signal: ctx.signal }, 120000);
     if (!res.ok) {
       const data = (await res.json().catch(() => null)) as Resp | null;
       throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
@@ -85,7 +87,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
     const acc = new AnthStreamAccumulator();
     let buf = "";
     for (;;) {
-      const { done, value } = await reader.read();
+      const { done, value } = await abortable(reader.read(), ctx.signal);
       if (done) break;
       buf += dec.decode(value, { stream: true });
       const { events, rest } = drainSSE(buf);
@@ -99,6 +101,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
   };
 
   while (guard++ < 8) {
+    throwIfAborted(ctx.signal);
     let data: { content: Block[]; stop_reason: string };
     try {
       data = canStream ? await requestStream() : await requestFull();
@@ -126,7 +129,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
     if (data.stop_reason === "tool_use" && toolUses.length) {
       const results = [];
       for (const tu of toolUses) {
-        const out = await runTool(tu.name!, tu.input ?? {});
+        const out = await executeProviderTool(ctx, tu.name!, tu.input ?? {});
         results.push({ type: "tool_result", tool_use_id: tu.id, content: out });
       }
       messages.push({ role: "user", content: results });

@@ -171,7 +171,7 @@ function serialize<T>(storage: GoalStorage, operation: () => Promise<T>): Promis
   return pending;
 }
 
-/** Wstaw/zaktualizuj jeden cel (zachowuje pozostałe). */
+/** Wstaw/zastąp rekord. Zmiany istniejącego celu wykonuj przez mutateGoal, bez starego snapshotu. */
 export function upsertGoal(rec: GoalRecord, storage: GoalStorage = idbStorage): Promise<GoalRecord[]> {
   return serialize(storage, async () => {
   const goals = await loadGoals(storage);
@@ -179,6 +179,25 @@ export function upsertGoal(rec: GoalRecord, storage: GoalStorage = idbStorage): 
   if (idx >= 0) goals[idx] = rec; else goals.push(rec);
   await saveGoals(goals, storage);
   return goals;
+  });
+}
+
+/** Odczyt, transformacja i zapis pod wspólną blokadą; usuniętego celu nie odtwarzamy. */
+export function mutateGoal(
+  id: string,
+  update: (current: GoalRecord) => GoalRecord,
+  storage: GoalStorage = idbStorage,
+): Promise<GoalRecord | null> {
+  return serialize(storage, async () => {
+    const goals = await loadGoals(storage);
+    const idx = goals.findIndex((goal) => goal.id === id);
+    if (idx < 0) return null;
+    const current = goals[idx];
+    const next = update(current);
+    if (next === current) return current;
+    goals[idx] = next;
+    await saveGoals(goals, storage);
+    return next;
   });
 }
 

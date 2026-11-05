@@ -1823,6 +1823,12 @@ button:disabled {
   position: fixed;
   left: 50%;
   bottom: calc(96px + var(--sab));
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  max-height: min(30vh, 200px);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
   transform: translateX(-50%) translateY(8px);
   background: var(--bg-2);
   color: var(--text);
@@ -2796,6 +2802,10 @@ html.app-hidden * {
 }
 
 /* Trwała kolejka pracy: czytelna także na wąskich ekranach. */
+.sheet:has(> .work-queue), .sheet:has(> .personal-task-list) { animation: none; }
+/* Task dialogs must keep text separate from the conversation underneath,
+   including Classic Aurora with its translucent gradient and low-power mode. */
+body .panel:is(.work-queue, .personal-task-list) { background-color: var(--bg); animation: none; }
 .work-queue { max-width: 780px; }
 .queue-summary, .queue-card-head, .queue-progress-label { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .queue-summary { padding: 8px 0 16px; }

@@ -73,7 +73,7 @@ export default function QuickSettings({ onClose, onAdvanced, onQueue, onRuntime 
             : "Przycisk „Autonomicznie” włącza również pełną analizę i sprawdzanie trudnych odpowiedzi."}</p>
           <p className="quick-settings-description" role="status">{queueError ? "Nie udało się odczytać kolejki." : queue ? `W kolejce: ${queue.queued} · W trakcie: ${queue.running}` : "Odczytuję kolejkę…"}</p>
           <button className="btn" onClick={onQueue}>Otwórz kolejkę i wyniki</button>
-          {onRuntime && <button className="btn" onClick={onRuntime}>Serwer lokalny — analizy w tle</button>}
+          {onRuntime && <button className="btn" onClick={onRuntime}>Analizy w tle</button>}
         </section>
 
         <section className="quick-settings-card" aria-labelledby="quick-voice">

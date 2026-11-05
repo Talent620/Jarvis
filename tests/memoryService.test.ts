@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   resolveNamespace, memoriesToBlock, parseMemories,
-  addMemory, searchMemory, getAllMemories, updateMemory, deleteMemory, memoryServiceAvailable, memoryContextBlock,
+  addMemory, searchMemory, getAllMemories, updateMemory, deleteMemory, memoryServiceAvailable, memoryContextBlock, probeMemoryService,
 } from "../src/lib/memoryService";
 import { store } from "../src/lib/store";
 
@@ -98,5 +98,25 @@ describe("MemoryService — sieć (mock) + graceful degradation", () => {
     const all = await getAllMemories("personal");
     expect(all).toHaveLength(1);
     expect(all[0].memory).toBe("fakt");
+  });
+
+  it("probe odróżnia pustą pamięć od błędu HTTP i błędnej odpowiedzi", async () => {
+    store.setSettings({ memoryServiceUrl: "http://mem.local" });
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json({ results: [] }))
+      .mockResolvedValueOnce(Response.json({}, { status: 503 }))
+      .mockResolvedValueOnce(Response.json({ status: "ok" }));
+    vi.stubGlobal("fetch", fetcher);
+    expect(await probeMemoryService()).toEqual({ ok: true, count: 0 });
+    expect(await probeMemoryService()).toMatchObject({ ok: false, error: expect.stringContaining("503") });
+    expect(await probeMemoryService()).toMatchObject({ ok: false, error: expect.stringContaining("listy") });
+  });
+
+  it("probe nie udaje połączenia po błędzie sieci i nie wysyła żądań w trybie on-device", async () => {
+    store.setSettings({ memoryServiceUrl: "http://mem.local" });
+    const fetcher = vi.fn().mockRejectedValue(new TypeError("network error")); vi.stubGlobal("fetch", fetcher);
+    expect(await probeMemoryService()).toMatchObject({ ok: false });
+    store.setSettings({ onDeviceOnly: true });
+    expect(await probeMemoryService()).toMatchObject({ ok: false });
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });

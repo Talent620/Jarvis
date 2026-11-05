@@ -36,16 +36,42 @@ import { conversationStyleDirectives } from "./conversationStyle";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
 import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
-import type { JarvisReply, Msg, ProviderId, FallbackReasonKind } from "./providers/types";
+import type { AskCtx, JarvisReply, Msg, ProviderId, FallbackReasonKind } from "./providers/types";
+import { abortable, isAbortError, requestScope, throwIfAborted } from "./requestCancellation";
+import { canRetainConversation, isMemoryToolBlocked, type ConversationOptions } from "./conversationPrivacy";
 
 // Retry przy chwilowym błędzie sieci — z WYKŁADNICZYM backoffem + jitterem (do 2 ponowień).
 // Ponawiamy TYLKO błędy sieciowe (nie błędy klucza/limitu — te idą do rotacji/fallbacku wyżej).
-async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, signal?: AbortSignal, canRetry: () => boolean = () => true): Promise<T> {
   return withBackoff(fn, {
     retries: 2,
     baseMs: 600,
-    shouldRetry: (e) => isNetworkError(e instanceof Error ? e.message : String(e)),
+    shouldRetry: (e) => !signal?.aborted && !isAbortError(e) && canRetry() && isNetworkError(e instanceof Error ? e.message : String(e)),
   });
+}
+
+interface ToolExecutionState { tools: Set<string>; owner?: symbol }
+function uncertainExecution(state: ToolExecutionState): Error {
+  return new Error(`Rozpoczęto narzędzia: ${[...state.tools].join(", ")}. Nie ponawiam ich automatycznie po przerwaniu odpowiedzi. Sprawdź wynik w historii działań przed ponowieniem.`);
+}
+function providerAttempt(provider: ProviderId, ctx: AskCtx, execution: ToolExecutionState) {
+  const scope = requestScope(ctx.signal);
+  const owner = Symbol(provider);
+  const scoped: AskCtx = {
+    ...ctx, signal: scope.signal,
+    onToken: ctx.onToken ? (delta) => { if (!scope.signal.aborted) ctx.onToken!(delta); } : undefined,
+    onToolExecution: (name) => {
+      throwIfAborted(scope.signal);
+      if (execution.owner && execution.owner !== owner) throw uncertainExecution(execution);
+      execution.owner = owner;
+      execution.tools.add(name);
+    },
+  };
+  const promise = abortable(withRetry(() => {
+    throwIfAborted(scope.signal);
+    return PROVIDERS[provider].impl(scoped);
+  }, scope.signal, () => execution.tools.size === 0), scope.signal).finally(scope.close);
+  return { promise, cancel: scope.close };
 }
 
 /**
@@ -79,9 +105,9 @@ export function makeStallWatchdog(
 ): { promise: Promise<never>; cancel: () => void } {
   const timers: ReturnType<typeof setTimeout>[] = [];
   const promise = new Promise<never>((_resolve, reject) => {
-    timers.push(setTimeout(() => { if (!getSettled()) reject(new Error("Dostawca AI nie odpowiada — przełączam na kolejny mózg.")); }, hardMs));
+    timers.push(setTimeout(() => { if (!getSettled()) reject(new Error("Dostawca AI nie odpowiada — przełączam na kolejny mózg (timeout).")); }, hardMs));
     if (hasStream) {
-      timers.push(setTimeout(() => { if (!getSettled() && !getProgressed()) reject(new Error("Dostawca AI milczy — przełączam na kolejny mózg.")); }, firstMs));
+      timers.push(setTimeout(() => { if (!getSettled() && !getProgressed()) reject(new Error("Dostawca AI milczy — przełączam na kolejny mózg (timeout).")); }, firstMs));
     }
   });
   return { promise, cancel: () => { for (const t of timers) clearTimeout(t); } };
@@ -515,7 +541,8 @@ const CORRECTIONS_KEY = "jarvis.corrections.v1";
 
 // Tania bramka: ekstrakcję uruchamiamy tylko, gdy wypowiedź wygląda na niosącą
 // trwałą informację o użytkowniku (oszczędza limity API) — PERSONAL_CUES z aiHelpers.
-async function learnFromExchange(userText: string, replyText: string): Promise<void> {
+async function learnFromExchange(userText: string, replyText: string, options: ConversationOptions = {}): Promise<void> {
+  if (!canRetainConversation(options)) return;
   if (store.settings.interpreterMode) return; // w trybie tłumacza nie zapamiętujemy
   const text = (userText || "").trim();
   if (text.length < 12) return; // za mało treści, by warto było analizować
@@ -548,6 +575,7 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
 
   try {
     const reply = await PROVIDERS[r.provider].impl({
+      ...options,
       system,
       webSearch: false,
       tools: [],
@@ -557,6 +585,7 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
       proxyUrl: store.settings.proxyUrl?.trim() || undefined,
     });
     const raw = reply.text || "";
+    if (!canRetainConversation(options)) return;
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return;
     const parsed = JSON.parse(match[0]) as { facts?: { key?: string; value?: string }[] };
@@ -595,8 +624,11 @@ async function askModelReply(params: {
   tools?: typeof toolDefs;
   /** Preferuj MOCNIEJSZY model (jakość > szybkość) — oferty, strony, teczki, treści. */
   heavy?: boolean;
-}): Promise<JarvisReply> {
+} & ConversationOptions): Promise<JarvisReply> {
+  throwIfAborted(params.signal);
+  const execution: ToolExecutionState = { tools: new Set() };
   const baseCtx = {
+    signal: params.signal, memoryPolicy: params.memoryPolicy,
     system: params.system,
     webSearch: !!params.webSearch,
     tools: params.tools || [],
@@ -625,9 +657,11 @@ async function askModelReply(params: {
     for (let j = 0; j < keys.length; j++) {
       const apiKey = keys[j];
       try {
-        const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model: useModel }));
+        const reply = await providerAttempt(provider, { ...baseCtx, apiKey, model: useModel }, execution).promise;
         return reply;
       } catch (e) {
+        throwIfAborted(params.signal);
+        if (execution.tools.size) throw uncertainExecution(execution);
         providerErr = e;
         lastErr = e;
         const msg = e instanceof Error ? e.message : String(e);
@@ -657,7 +691,13 @@ export async function askModelRich(params: Parameters<typeof askModelReply>[0]):
   return { text: (r.text || "").trim(), finishReason: r.finishReason };
 }
 
-export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }): Promise<JarvisReply> {
+export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }, options: ConversationOptions = {}): Promise<JarvisReply> {
+  throwIfAborted(options.signal);
+  return abortable(askJarvisRequest(history, onToken, onStatus, extraSystem, prefer, options), options.signal);
+}
+
+async function askJarvisRequest(history: Msg[], onToken: ((fullText: string) => void) | undefined, onStatus: ((s: string | null) => void) | undefined, extraSystem: string | undefined, prefer: { provider: ProviderId; model: string } | undefined, options: ConversationOptions): Promise<JarvisReply> {
+  const execution: ToolExecutionState = { tools: new Set() };
   // Ta sama ścieżka co główna odpowiedź: lokalny model/BFF nie wymagają klucza w UI.
   // Również przygotowawcze deepThink musi respektować onDeviceOnly.
   const initialRoute = routeOrder(history).find((o) => requestKeys(o.provider).length > 0);
@@ -688,11 +728,12 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // na pobieranie pamięci, zamiast dokładać swój czas na początku tury.
   const deepThinkWanted = store.settings.deepThink && !store.settings.interpreterMode && needsDeepThink(lastUserContent);
   const [, mem0Block, journalRank, deepAnalysis] = await Promise.all([
-    prepareMemoryContext(lastUserContent),
-    memoryContextBlock(lastUserContent, memNamespace).catch(() => ""),
-    rankJournal(lastUserContent).catch(() => null),
+    canRetainConversation(options) ? prepareMemoryContext(lastUserContent) : Promise.resolve(),
+    canRetainConversation(options) ? memoryContextBlock(lastUserContent, memNamespace).catch(() => "") : Promise.resolve(""),
+    canRetainConversation(options) ? rankJournal(lastUserContent).catch(() => null) : Promise.resolve(null),
     deepThinkWanted
       ? PROVIDERS[resolved.provider].impl({
+          ...options,
           system: REASONING_SYSTEM,
           webSearch: false,
           tools: [],
@@ -703,6 +744,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         }).then((a) => (a.text || "").slice(0, 1500)).catch(() => "")
       : Promise.resolve(""),
   ]);
+  throwIfAborted(options.signal);
 
   // Wszczepiona wiedza ekspercka: dobierz pasujące modele mentalne (offline, za darmo).
   const currentKnowledge = store.settings.expertKnowledge !== false ? retrieveKnowledge(lastUserContent) : "";
@@ -725,7 +767,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // learningLoop (produkcyjne wywołanie): wykryj korektę użytkownika i utrwal. Aktywne reguły
   // (po powtórzeniu i akceptacji) doklejamy do promptu — JARVIS stosuje trwałe „nigdy/zawsze/wolę".
   let corrections = loadJson<Correction[]>(CORRECTIONS_KEY, []);
-  if (lastUser?.content && !store.settings.interpreterMode) {
+  if (canRetainConversation(options) && lastUser?.content && !store.settings.interpreterMode) {
     const lc = learnFromUserMessage(corrections, lastUser.content, { id: uid(), source: "czat", now: Date.now() });
     if (lc.learned) { corrections = lc.rules; saveJson(CORRECTIONS_KEY, corrections); }
   }
@@ -740,12 +782,13 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // jest TEN SAM dla WSZYSTKICH dostawców, w tym Ollamy/WebLLM. Mały model lokalny odpowiada z
   // Twoim kontekstem; bez Mem0 degraduje do lokalnego profilu/faktów (zero zależności sieciowych).
   const baseCtx = {
-    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock, curatedBlock }) + (rulesBlock ? `\n\n${rulesBlock}` : "") + (extraSystem ? `\n\n${extraSystem}` : ""),
+    ...options,
+    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock, curatedBlock }) + (rulesBlock ? `\n\n${rulesBlock}` : "") + (extraSystem ? `\n\n${extraSystem}` : "") + (options.memoryPolicy === "private" ? "\nRozmowa prywatna: nie zapisuj faktów ani wspomnień i nie używaj remember_fact lub forget_fact." : ""),
     // Tryb on-device wyłącza web-search (zero egres do sieci — pełna prywatność/offline).
     webSearch: store.settings.onDeviceOnly ? false : store.settings.webSearch,
     // Dobór narzędzi wg intencji: mniej definicji na turę (szybciej/taniej). Bezpiecznie —
     // przy niejasnej intencji selectToolsForIntent zwraca pełny zestaw (nigdy nie gorzej).
-    tools: selectToolsForIntent(lastUser?.content || "", toolDefs),
+    tools: selectToolsForIntent(lastUser?.content || "", toolDefs).filter((tool) => !isMemoryToolBlocked(tool.name, options)),
     history: trimmed,
     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
     // Adaptacyjne myślenie: profil z kontrolera poznawczego (trudne/cele → głębiej, proste → szybko).
@@ -781,19 +824,20 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         const localModel = order.find((o) => o.provider === "ollama")?.model || TASK_MODELS.ollama.complex;
         const cortexKey = requestKeys(cortex.provider)[0];
         const res = await speculativeAnswer({
-          runLocal: (ot) => withRetry(() => PROVIDERS.ollama.impl({ ...baseCtx, apiKey: "local", model: localModel, onToken: ot })),
-          runCortex: () => withRetry(() => PROVIDERS[cortex.provider].impl({ ...baseCtx, apiKey: cortexKey, model: cortex.model })),
+          runLocal: (ot) => providerAttempt("ollama", { ...baseCtx, apiKey: "local", model: localModel, onToken: ot }, execution).promise,
+          runCortex: () => providerAttempt(cortex.provider, { ...baseCtx, apiKey: cortexKey, model: cortex.model }, execution).promise,
           onToken,
           threshold: 0.5,
         });
+        throwIfAborted(options.signal);
         logRouteDecision({
           provider: res.reply.via || cortex.provider, model: res.corrected ? cortex.model : localModel, kind: "complex",
           reason: res.corrected ? "spekulacja: korekta korą" : res.usedCortex ? "spekulacja: draft potwierdzony" : "spekulacja: draft (kora padła)",
           fellBack: res.corrected,
         });
-        if (lastUser?.content) { recordEpisode("chat", lastUser.content); recordWorld(lastUser.content); }
-        void learnFromExchange(lastUser?.content || "", res.reply.text);
-        if (memoryServiceAvailable() && lastUser?.content && res.reply.text) {
+        if (canRetainConversation(options) && lastUser?.content) { recordEpisode("chat", lastUser.content); recordWorld(lastUser.content); }
+        void learnFromExchange(lastUser?.content || "", res.reply.text, options);
+        if (canRetainConversation(options) && memoryServiceAvailable() && lastUser?.content && res.reply.text) {
           void addMemory([{ role: "user", content: lastUser.content }, { role: "assistant", content: res.reply.text }], memNamespace).catch(() => {});
         }
         if (res.reply.usage && (res.reply.usage.inputTokens || res.reply.usage.outputTokens)) {
@@ -802,6 +846,8 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         }
         return res.reply;
       } catch {
+        throwIfAborted(options.signal);
+        if (execution.tools.size) throw uncertainExecution(execution);
         /* spekulacja padła całkowicie — przejdź do zwykłej pętli failoveru */
       }
     }
@@ -861,7 +907,8 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         // nie ucinać przedwcześnie wolnej, ale działającej odpowiedzi u kogoś z jednym dostawcą.
         const hasFailover = i < order.length - 1 || j < keys.length - 1;
         const wd = makeStallWatchdog(() => settled, () => progressed, !!onTok && hasFailover);
-        const attemptP = withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model, onToken: onTok }));
+        const attempt = providerAttempt(provider, { ...baseCtx, apiKey, model, onToken: onTok }, execution);
+        const attemptP = attempt.promise;
         attemptP.catch(() => {}); // jeśli przegra wyścig z watchdogiem, późne odrzucenie nie może być „unhandled"
         let reply: JarvisReply;
         try {
@@ -869,6 +916,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         } finally {
           settled = true;
           wd.cancel();
+          attempt.cancel();
         }
         providerBreaker.onSuccess(provider); // udało się — zamknij bezpiecznik
         recordLatency("provider:" + provider, Date.now() - t0, true, model);
@@ -876,7 +924,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         // Brama Pewności (Zadanie 8): niepewny refleks lokalny → eskaluj do Kory (mocniejszego
         // dostawcy dalej w łańcuchu), o ile jest sieć. Lokalną odpowiedź zachowujemy na wypadek,
         // gdyby eskalacja zawiodła. Side-effecty (pamięć/telemetria) liczymy dopiero dla FINALNEJ.
-        if (store.settings.confidenceGate && isKeyless(provider) && i < order.length - 1 && (typeof navigator === "undefined" || navigator.onLine !== false)) {
+        if (!execution.tools.size && store.settings.confidenceGate && isKeyless(provider) && i < order.length - 1 && (typeof navigator === "undefined" || navigator.onLine !== false)) {
           const k = classifyTask(lastUser?.content || "", !!lastUser?.image).kind;
           const conf = estimateConfidence(reply.text, k);
           // Router uczący się (Z12): próg eskalacji adaptuje się do skuteczności refleksu na tym kind.
@@ -899,7 +947,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
             onStatus?.("⟳ Sprawdzam kilka razy (spójność)…");
             const cons = await localSelfConsistency({
               first: reply,
-              run: () => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model }),
+              run: () => providerAttempt(provider, { ...baseCtx, tools: [], apiKey, model }, execution).promise,
             });
             if (cons.samples > 1) {
               reply = cons.reply;
@@ -915,12 +963,13 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
             onStatus?.("⟳ Dopracowuję odpowiedź lokalnie…");
             const refined = await localRefine({
               draft: reply,
-              runCritique: () => PROVIDERS[provider].impl({
+              runCritique: () => providerAttempt(provider, {
                 ...baseCtx,
+                tools: [],
                 apiKey,
                 model,
                 history: [...trimmed, { role: "assistant", content: reply.text }, { role: "user", content: critiqueInstruction() }],
-              }),
+              }, execution).promise,
             });
             if (refined.improved) {
               reply = refined.reply;
@@ -940,6 +989,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
           try {
             onStatus?.("⟳ Sprawdzam odpowiedź…");
             const v = await PROVIDERS[provider].impl({
+              ...options,
               system: VERIFY_SYSTEM,
               webSearch: false,
               tools: [],
@@ -957,12 +1007,13 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         }
 
         const citations = getCitations();
+        throwIfAborted(options.signal);
         // Ucz się w tle: wyłuskaj trwałe fakty z wymiany (nie blokuje odpowiedzi).
-        void learnFromExchange(lastUser?.content || "", reply.text);
+        void learnFromExchange(lastUser?.content || "", reply.text, options);
         // Pamięć epizodyczna (Faza 7): zapisz temat wymiany — z tego wyłaniamy wzorce/proaktywność.
-        if (lastUser?.content) { recordEpisode("chat", lastUser.content); recordWorld(lastUser.content); }
+        if (canRetainConversation(options) && lastUser?.content) { recordEpisode("chat", lastUser.content); recordWorld(lastUser.content); }
         // Pamięć długoterminowa (Mem0, Faza 1): add PO odpowiedzi (w tle, graceful).
-        if (memoryServiceAvailable() && lastUser?.content && reply.text) {
+        if (canRetainConversation(options) && memoryServiceAvailable() && lastUser?.content && reply.text) {
           void addMemory(
             [{ role: "user", content: lastUser.content }, { role: "assistant", content: reply.text }],
             memNamespace,
@@ -993,6 +1044,8 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         }
         return { ...reply, ...meta, ...(citations.length ? { citations } : {}) };
       } catch (e) {
+        throwIfAborted(options.signal);
+        if (execution.tools.size) throw uncertainExecution(execution);
         providerErr = e;
         lastErr = e;
         const msg = e instanceof Error ? e.message : String(e);

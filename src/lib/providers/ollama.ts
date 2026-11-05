@@ -1,5 +1,6 @@
 import { fetchTimeout } from "../http";
-import { runTool } from "../tools";
+import { executeProviderTool } from "./execution";
+import { throwIfAborted } from "../requestCancellation";
 import type { AskCtx, JarvisReply } from "./types";
 
 interface OllamaMessage {
@@ -33,9 +34,11 @@ export async function askOllamaNative(
   let useTools = tools.length > 0;
 
   for (let guard = 0; guard < 8; guard += 1) {
+    throwIfAborted(ctx.signal);
     const response = await fetchTimeout(`${config.base}/api/chat`, {
       method: "POST",
       headers: { "content-type": "application/json" },
+      signal: ctx.signal,
       body: JSON.stringify({
         model: ctx.model,
         messages,
@@ -75,7 +78,7 @@ export async function askOllamaNative(
         if (typeof args === "string") {
           try { args = JSON.parse(args); } catch { args = {}; }
         }
-        const output = await runTool(name, args);
+        const output = await executeProviderTool(ctx, name, args);
         messages.push({ role: "tool", tool_name: name, content: output });
       }
       continue;

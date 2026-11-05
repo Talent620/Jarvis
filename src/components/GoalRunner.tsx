@@ -2,7 +2,7 @@ import { useState } from "react";
 import { runGoal, type GoalStep } from "../lib/goalPlanner";
 import Modal from "./Modal";
 
-// „Zleć cel" — do-for-me: złożony cel → JARVIS rozkłada na kroki, wykonuje równolegle wg zależności
+// Plan wieloetapowy: złożony problem → JARVIS rozkłada na kroki, analizuje równolegle wg zależności
 // i syntetyzuje spójną odpowiedź. Wykonanie używa rozumowania modelu (bez akcji wychodzących).
 const STATUS_ICON: Record<string, string> = { pending: "○", start: "⏳", done: "✅", fail: "⚠", skip: "⤼" };
 
@@ -33,7 +33,7 @@ export default function GoalRunner({ onClose }: { onClose: () => void }) {
       setSteps(r.steps);
       setAnswer(r.answer || "Gotowe.");
     } catch {
-      setErr("Nie udało się zrealizować celu — sprawdź, czy mózg AI odpowiada (otwórz 🛡 Strażnika).");
+      setErr("Nie udało się przygotować analizy. Sprawdź połączenie z modelem w Ustawieniach.");
     } finally {
       setBusy(false);
     }
@@ -41,19 +41,20 @@ export default function GoalRunner({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal
-      title="🎯 Zleć cel"
+      title="Plan wieloetapowy"
       onClose={onClose}
       foot={<button className="btn" onClick={onClose}>Zamknij</button>}
     >
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-            Podaj złożony cel — JARVIS sam <b>rozłoży go na kroki</b>, wykona je równolegle (wg
-            zależności) i <b>zsyntetyzuje jedną spójną odpowiedź</b>. „Zrób za mnie", nie tylko „odpowiedz".
+            Przygotuj tekstowy plan lub analizę. Model rozłoży problem na kroki i połączy odpowiedzi.
+            Ten tryb nie uruchamia narzędzi ani nie dodaje zadań do kolejki. Wynik jest dostępny w tym oknie.
           </p>
           <div className="field">
             <textarea
               className="ta"
               style={{ minHeight: 80 }}
               value={goal}
+              aria-label="Problem do zaplanowania lub analizy"
               placeholder="np. Przygotuj plan wejścia na rynek z 3 kanałami, budżetem i pierwszymi krokami na 30 dni"
               onChange={(e) => setGoal(e.target.value)}
               disabled={busy}
@@ -67,7 +68,7 @@ export default function GoalRunner({ onClose }: { onClose: () => void }) {
             </div>
           )}
           <button className="btn primary" style={{ width: "100%" }} disabled={busy || !goal.trim()} onClick={() => void run()}>
-            {busy ? "⏳ Planuję i wykonuję…" : "🎯 Zleć cel"}
+            {busy ? "Przygotowuję analizę…" : "Przygotuj plan"}
           </button>
 
           {steps.length > 0 && (

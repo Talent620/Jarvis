@@ -1,4 +1,4 @@
-import { store } from "./store";
+import { store, mergeMemoryDeletedIds } from "./store";
 import { encryptText, decryptText } from "./cipher";
 import { loadChats, saveChats, type ChatSession } from "./chats";
 import type { AppData, Settings } from "../types";
@@ -103,6 +103,8 @@ export function applyParsed(parsed: any): string {
   if (!looksLikeBackup) return "❌ To nie wygląda na kopię zapasową JARVIS-a — nic nie zmieniono.";
   const d = (parsed.data ?? parsed) as Record<string, unknown>;
   store.setData((s) => {
+    // Restore content without reviving IDs explicitly forgotten on either side.
+    s.memoryDeletedIds = mergeMemoryDeletedIds(s.memoryDeletedIds, d.memoryDeletedIds);
     for (const c of COLLECTIONS) if (Array.isArray(d[c])) (s as any)[c] = d[c];
     // World Model (graf encji/relacji) to obiekt, nie tablica — przywróć osobno, gdy jest.
     if (d.world && typeof d.world === "object" && !Array.isArray(d.world)) (s as any).world = d.world;
@@ -163,8 +165,8 @@ export function importData(): Promise<string> {
 export const BACKUP_EXCLUDED: (keyof AppData)[] = [
   "audit", // dziennik audytu — lokalny ślad działań, nie przywracamy go między urządzeniami
 ];
-// Klucze obsługiwane specjalnie (obiekt, nie tablica) — poza pętlą COLLECTIONS.
-export const BACKUP_SPECIAL: (keyof AppData)[] = ["world"];
+// Pola obsługiwane osobno: graf oraz usunięcia scalane zamiast nadpisywania.
+export const BACKUP_SPECIAL: (keyof AppData)[] = ["world", "memoryDeletedIds"];
 
 // Zrzut danych (bez wektorów pamięci — odtworzą się po imporcie).
 function dataDump(): Record<string, unknown> {
@@ -176,6 +178,7 @@ function dataDump(): Record<string, unknown> {
   }
   // World Model (graf) — obiekt, dokładany do kopii, by kontekst nie zginął przy przenosinach.
   if (store.data.world) data.world = store.data.world;
+  data.memoryDeletedIds = mergeMemoryDeletedIds(store.data.memoryDeletedIds);
   return data;
 }
 

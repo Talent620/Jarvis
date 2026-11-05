@@ -47,21 +47,41 @@ export interface OllamaStatus {
  * Zamień surowy błąd fetch („Failed to fetch") na DZIAŁAJĄCĄ diagnozę: nazwij prawdopodobną
  * przyczynę (mixed-content / timeout / CORS-lub-nieosiągalny) i podaj konkretną naprawę. Czysta.
  */
-export function diagnoseOllamaError(url: string, err: unknown, pageHttps: boolean, isNative = false): string {
+export type OllamaPlatform = "linux" | "windows" | "mac" | "android" | "ios" | "web";
+
+function ollamaPlatform(): OllamaPlatform {
+  try {
+    const native = Capacitor.getPlatform?.();
+    if (native === "android" || native === "ios") return native;
+    const desktop = (window as unknown as { jarvisDesktop?: { platform?: string } }).jarvisDesktop?.platform;
+    if (desktop === "linux") return "linux";
+    if (desktop === "win32") return "windows";
+    if (desktop === "darwin") return "mac";
+  } catch { /* no desktop or native bridge */ }
+  return "web";
+}
+
+export function diagnoseOllamaError(url: string, err: unknown, pageHttps: boolean, isNative = false, platform: OllamaPlatform = ollamaPlatform()): string {
   const name = err instanceof Error ? err.name : "";
   const msg = err instanceof Error ? err.message : String(err);
   const isHttpUrl = /^http:\/\//i.test(url);
+  let loopback = false;
+  try { loopback = ["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname); } catch { /* invalid address */ }
   // Mixed-content (HTTPS-strona ↔ HTTP-serwer) blokuje TYLKO przeglądarka. W aplikacji (APK)
   // cleartext do sieci lokalnej i Tailscale jest dozwolony (network security config), więc tej
   // diagnozy tam NIE pokazujemy — błąd ma inną przyczynę (serwer, adres, CORS) niżej.
-  if (pageHttps && isHttpUrl && !isNative) {
-    return "Mieszana zawartość: w przeglądarce aplikacja działa po HTTPS, a adres Ollamy jest http:// — przeglądarka to blokuje. Zainstaluj APK (dopuszcza HTTP do sieci domowej i Tailscale 100.64.x.x) albo wystaw Ollamę po HTTPS.";
+  if (pageHttps && isHttpUrl && !loopback && !isNative) {
+    return "Przeglądarka blokuje HTTP ze strony HTTPS. Sprawdź bezpieczne połączenie z serwerem.";
   }
   if (name === "AbortError" || /abort|timeout|timed out/i.test(msg)) {
-    return "Serwer Ollama nie odpowiedział w czasie. Sprawdź, czy działa, czy adres jest poprawny i czy PC oraz telefon są w tej samej sieci (lub przez Tailscale).";
+    return "Ollama nie odpowiedziała w czasie. Sprawdź usługę i adres serwera.";
   }
   if (/failed to fetch|load failed|networkerror|fetch|connection/i.test(msg)) {
-    return "Nie udało się połączyć z Ollamą (\"failed to fetch\"). Najczęstsze przyczyny: (1) CORS — ustaw OLLAMA_ORIGINS=* i OLLAMA_HOST=0.0.0.0 i zrestartuj Ollamę; (2) zły adres lub inna sieć; (3) serwer nie działa. Najprościej: uruchom na PC plik JARVIS-Ollama-Server.exe — ustawia to wszystko sam.";
+    if (platform === "android" || platform === "ios") return "Nie mogę połączyć się z Ollamą. Sprawdź adres komputera i połączenie sieciowe.";
+    if (loopback && platform === "linux") return "Nie mogę połączyć się z Ollamą. Uruchom ją na Linuksie i sprawdź localhost:11434.";
+    if (loopback && platform === "windows") return "Nie mogę połączyć się z Ollamą. Uruchom ją na Windows i sprawdź localhost:11434.";
+    if (loopback && platform === "mac") return "Nie mogę połączyć się z Ollamą. Uruchom ją na Macu i sprawdź localhost:11434.";
+    return "Nie mogę połączyć się z Ollamą. Sprawdź usługę i adres serwera.";
   }
   return msg || "Nieznany błąd połączenia z Ollamą.";
 }
@@ -72,7 +92,7 @@ export async function detectOllama(rawUrl?: string): Promise<OllamaStatus> {
   try {
     const res = await fetchTimeout(`${url}/api/tags`, { method: "GET" }, 8000);
     if (!res.ok) {
-      const hint = res.status === 403 ? " (prawdopodobnie CORS — ustaw OLLAMA_ORIGINS=*)" : "";
+      const hint = res.status === 403 ? " (sprawdź uprawnienia i ustawienia połączenia)" : "";
       return { ok: false, url, models: [], error: `Serwer odpowiedział ${res.status}${hint}.` };
     }
     const d = await res.json();
@@ -105,7 +125,7 @@ export async function findOllamaServer(candidates?: string[]): Promise<OllamaSta
     ok: false,
     url: list[0] || "",
     models: [],
-    error: `Nie znalazłem serwera Ollama (próbowałem: ${tried.join(", ") || "localhost"}). Na PC uruchom JARVIS-Ollama-Server.exe; na telefonie włącz Tailscale (to samo konto) i podaj adres PC, NIE localhost.`,
+    error: "Nie znaleziono Ollamy. Uruchom usługę i sprawdź adres serwera w ustawieniach.",
     tried,
   };
 }

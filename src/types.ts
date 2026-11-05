@@ -178,6 +178,8 @@ export interface AppData {
   shopping: ShoppingItem[];
   calendar: CalendarEvent[];
   memory: MemoryFact[];
+  /** IDs explicitly forgotten by the user; retained across sync and older backups. */
+  memoryDeletedIds?: string[];
   scenes: Scene[];
   audit: AuditEntry[];
   projects: Project[];

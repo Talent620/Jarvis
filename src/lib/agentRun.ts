@@ -193,6 +193,11 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
       }
       // Zapis checkpointu musi się udać PRZED efektem ubocznym.
       await deps.beforeTool?.(step, risk);
+      // Pauza/anulowanie mogły zostać zapisane podczas oczekiwania na checkpoint.
+      if (await deps.shouldStop?.()) {
+        stoppedByLimit = true;
+        return { ...base, outcome: draft("Wstrzymano przed wykonaniem."), skipped: true };
+      }
       try {
         toolCalls += 1;
         const args = resolveValue(step.arguments, step) as Record<string, unknown> | undefined;

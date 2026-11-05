@@ -6,7 +6,7 @@ import { store } from "../src/lib/store";
 // Lista wszystkich kluczy AppData (jedno źródło — gdy dojdzie nowa kolekcja, ten test ma ZMUSIĆ
 // do świadomej decyzji backupowej: dołożyć do COLLECTIONS, SPECIAL albo EXCLUDED).
 const APPDATA_KEYS = [
-  "tasks", "notes", "reminders", "shopping", "calendar", "memory", "scenes", "audit",
+  "tasks", "notes", "reminders", "shopping", "calendar", "memory", "memoryDeletedIds", "scenes", "audit",
   "projects", "projectFiles", "tally", "journal", "leads", "flashcards", "bargainWatch",
   "sentMail", "contentPosts", "imageHistory", "siteProjects", "financeProjects", "world",
 ];

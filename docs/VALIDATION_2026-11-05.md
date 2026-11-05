@@ -6,7 +6,7 @@ Badana gałąź: `codex/linux-pro-new-20261105`. Środowisko testowe: Debian 13,
 
 | Zakres | Wynik | Granica dowodu |
 | --- | --- | --- |
-| `npm test` | 2929 PASS, 338 plików, 0 FAIL/SKIP | Przypadki testowe, nie miara inteligencji |
+| `npm test` | **3013 PASS, 349 plików, 0 FAIL/SKIP** | Przypadki testowe, nie miara inteligencji |
 | `npm run lint` | PASS, bez ostrzeżeń | Obejmuje teraz także `server/runtime` |
 | `JARVIS_LICENSE_REQUIRED=false npm run build` | PASS | Vite nadal zgłasza ostrzeżenie o dużych chunkach |
 | Runtime HTTP | 27 PASS, zawarte w wyniku Vitest | Prawdziwy serwer i zapis na dysku; model symulowany |
@@ -17,7 +17,9 @@ Badana gałąź: `codex/linux-pro-new-20261105`. Środowisko testowe: Debian 13,
 | Launcher instalowanej aplikacji | 19 sprawdzeń PASS | Start, ponowne użycie procesu, limit czasu i ikona |
 | Panel runtime w Chromium | PASS | Rzeczywisty backend HTTP, symulowana Ollama |
 | Electron i IPC runtime | PASS | Rzeczywisty proces Electron i prywatny plik połączenia |
-| AppImage: jedno uruchomienie | PASS | Gotowa paczka, `APPIMAGE_EXTRACT_AND_RUN=1`; model symulowany |
+| AppImage: jedno uruchomienie | **PASS** | Wersjonowany `npm run test:linux-runtime`; model symulowany |
+
+Końcowy zestaw po krytycznym audycie: 3013/3013, w tym 84 przypadki więcej niż wcześniejszy etap one-click (2929/338). Są to przypadki w 349 plikach `.test.ts` i `.test.tsx`, a nie suma kolejnych uruchomień.
 
 Nie znaleziono dowodu istnienia 10000 testów. Liczba bloków `describe` raportowana przez Vitest nie jest liczbą dodatkowych przypadków i nie została dodana do wyniku. Historyczne wyniki dotyczą wcześniejszych wersji kodu.
 
@@ -29,13 +31,28 @@ Test przeglądarkowy sprawdził wybór modelu, próbę odpowiedzi, zakończenie 
 
 W Electronie sprawdzono automatyczne odczytanie prywatnego połączenia, brak automatycznego zapisu tokena w localStorage, HTTP z pochodzenia `file://`, działanie dozwolonego narzędzia oraz odrzucenie nawigacji i IPC z innego lokalnego pliku HTML. Testowy kontener wymagał flagi `--no-sandbox`; instalator użytkownika jej nie dodaje. Dlatego ten test nie dowodzi działania sandboxa Chromium na docelowym Linuksie.
 
-Osobny test gotowego AppImage potwierdził start usługi bez ręcznych poleceń, automatyczny wybór istniejącego modelu, podłączenie go do pustego czatu i wykonanie próby odpowiedzi. Zadanie zakończyło się po wyjściu głównego procesu AppImage, również po usunięciu katalogu jego ekstrakcji. Ponowne uruchomienie zachowało PID serwera, token i wynik. Ollama była kontrolowaną symulacją HTTP; ten test nie mierzy jakości ani wydajności prawdziwego modelu.
+Końcowy wersjonowany test `npm run test:linux-runtime` na nowym AppImage potwierdził start usługi bez ręcznych poleceń, automatyczny wybór istniejącego modelu, podłączenie go do pustego czatu i wykonanie próby odpowiedzi. Zadanie zakończyło się po wyjściu głównego procesu AppImage. Ponowne uruchomienie zachowało PID serwera, token i wynik. Skrypt potwierdził sprzątnięcie własnych procesów i katalogów. Log: `/workspace/.jarvis-cloud/audit-final-appimage.log`. Wykonanie tego testu w CI pozostaje NOT_RUN. Ollama była kontrolowaną symulacją HTTP; ten test nie mierzy jakości ani wydajności prawdziwego modelu.
+
+## Weryfikacja poprawek audytu
+
+Wynik 3013 obejmuje nowe regresje anulowania żądania i przegranej próby dostawcy, braku ponowienia narzędzia po efekcie, prywatnego czatu, wyścigów pauzy/anulowania celu, rzeczywistych błędów mutatorów, synchronizacji usuniętych faktów, uszkodzonej pamięci, mikrofonu i kolejki zgód. Testy nie wykonują prawdziwych wysyłek ani płatności.
+
+- **STOP i zgody:** sprawdzono spóźnione narzędzie, timeout/fallback, anulowanie dialogu oraz FIFO dla czatu i celu. Osiem regresji kolejki zgód obejmuje rzeczywisty komponent PermissionDialog i jego reset między prośbami. STOP nie wycofuje już rozpoczętej operacji.
+- **Prywatność i dane:** prywatna rozmowa pomija automatyczne zapisy pamięci, epizodów, grafu i Mem0. Usunięcia faktów mają identyfikatory zachowane podczas synchronizacji i importu. Chromium potwierdził brak powrotu usuniętej aktywnej rozmowy po kolejnym poleceniu; testy obejmują odmowę magazynu.
+- **Głos:** jednostkowe scenariusze start–stop–start, opóźnionej zgody mikrofonu, błędu AudioContext i pętli błędów. Chromium z symulowanym mikrofonem potwierdził brak startu po Stop i prawidłowy stan po zakończeniu rozpoznawania. Fizyczny mikrofon i jakość STT/TTS pozostają NOT_RUN.
+- **Interfejs:** testy i Chromium potwierdziły nawigację do kolejki, obsługę klawiatury i natychmiastowe pojawienie się/ukończenie zadania w Mojej liście. Obejrzano kolejkę i listę w Classic/PRO przy 320 px; nie stwierdzono poziomego przepełnienia ani błędów JS. Historię sprawdzono przy 320/390/1440 px, izolowany panel pamięci przy 320/1280 px. Nie sprawdzono każdej zakładki ani nie przeprowadzono badań z użytkownikami.
+- **Połączenia:** test Mem0 rozróżnia poprawną pustą odpowiedź od HTTP 503, awarii sieci i błędnego formatu. Nie potwierdza wszystkich operacji rzeczywistej usługi.
+- **Sekrety:** skan zakończył się komunikatem `Skan sekretów: czysto`. Nie zastępuje zewnętrznego audytu bezpieczeństwa.
+
+Pełne wyniki środowiskowe: `/workspace/.jarvis-cloud/audit-final-vitest.json`, `audit-final-lint.log`, `audit-final-build.log`. Mapa znalezisk, decyzji i ograniczeń: [AUDIT_COVERAGE_2026-11-05.md](AUDIT_COVERAGE_2026-11-05.md).
+
+## Paczki Linux
 
 Zbudowano także paczkę DEB. Nie instalowano jej na systemie użytkownika. Sumy finalnych plików:
 
 ```text
-004f8e63b31261b69154ca6ded70caf488d0c1c8b64cd063c9e94b8adf3cc3fb  JARVIS.AppImage
-81b31748191605fa1d53d5bc64eb87f1e387a3b8ab9ed1642f9c0d7d3670b2c6  JARVIS.deb
+a3c38eb199719f35f89364e9f91644934f4b66822baf41c7a1e979dedf30f599  JARVIS.AppImage
+5ea084a5d6420e5628873d41688c491831d57b14412e4122fe02fac5779931c2  JARVIS.deb
 ```
 
 ## Aktualność zależności

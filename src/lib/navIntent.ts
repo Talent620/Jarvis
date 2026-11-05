@@ -11,7 +11,7 @@ export interface ScreenDef {
 
 // Rejestr modułów dostępnych do otwarcia z czatu. Każdy ma id (= klucz w App.tsx), etykietę i aliasy PL.
 export const SCREENS: ScreenDef[] = [
-  { id: "runtime", label: "Serwer lokalny", aliases: ["serwer lokalny", "lokalne analizy", "runtime", "serwer jarvis"] },
+  { id: "runtime", label: "Analizy w tle", aliases: ["analizy w tle", "serwer lokalny", "lokalne analizy", "runtime", "serwer jarvis"] },
   { id: "finance", label: "Finanse", aliases: ["finanse", "finansowy", "pieniądze", "pieniadze", "budżet", "budzet", "zysk", "kpi", "zeszyt finansowy", "dashboard finansowy"] },
   { id: "studio", label: "Studio Obrazów", aliases: ["studio", "obraz", "obrazy", "zdjęcie", "zdjecie", "grafika", "generuj obraz", "edytuj zdjęcie"] },
   { id: "web", label: "Kreator stron", aliases: ["strona", "strony", "kreator", "kreator stron", "www", "landing", "sklep www"] },
@@ -24,7 +24,7 @@ export const SCREENS: ScreenDef[] = [
   { id: "sent", label: "Skrzynka wysłanych", aliases: ["wysłane", "wyslane", "skrzynka wysłanych", "wysłane maile"] },
   { id: "costs", label: "Koszty AI", aliases: ["koszty", "koszty ai", "wydatki ai", "ile wydałem na ai"] },
   { id: "memory", label: "Pamięć", aliases: ["pamięć", "pamiec", "wspomnienia", "centrum pamięci"] },
-  { id: "tasks", label: "Zadania", aliases: ["zadania", "todo", "lista zadań", "lista zadan"] },
+  { id: "tasks", label: "Moja lista", aliases: ["moja lista", "todo", "lista zadań", "lista zadan", "zadania ręczne", "zadania reczne"] },
   { id: "cards", label: "Fiszki", aliases: ["fiszki", "nauka", "powtórki"] },
   { id: "translator", label: "Tłumacz", aliases: ["tłumacz", "tlumacz", "translator", "tłumaczenie"] },
   { id: "transcribe", label: "Transkrypcja", aliases: ["transkrypcja", "transkrybuj", "nagranie na tekst", "audio na tekst"] },
@@ -40,7 +40,8 @@ export const SCREENS: ScreenDef[] = [
   { id: "status", label: "Status systemu", aliases: ["status", "diagnostyka", "stan systemu"] },
   { id: "gadgets", label: "Gadżety", aliases: ["gadżety", "gadzety"] },
   { id: "hud", label: "HUD / Wizja", aliases: ["hud", "wizja", "kamera ai"] },
-  { id: "goal", label: "Zleć cel", aliases: ["cel", "zleć cel", "zlec cel", "do-for-me", "zrób za mnie", "zrob za mnie"] },
+  { id: "goal", label: "Plan wieloetapowy", aliases: ["plan wieloetapowy", "analiza wieloetapowa", "rozpisz plan"] },
+  { id: "goalStatus", label: "Kolejka zadań", aliases: ["zadania", "kolejka", "kolejka zadań", "kolejka zadan", "cele", "cel", "zleć cel", "zlec cel", "do-for-me", "zrób za mnie", "zrob za mnie"] },
   { id: "recall", label: "Recall — znajdź wszystko", aliases: ["recall", "znajdź wszystko", "znajdz wszystko", "szukaj w historii"] },
   { id: "guardian", label: "Diagnoza i naprawa", aliases: ["diagnoza", "napraw", "strażnik", "straznik", "przyspiesz"] },
   { id: "data", label: "Dane i kopia", aliases: ["dane", "kopia", "backup", "eksport danych", "kopia zapasowa"] },

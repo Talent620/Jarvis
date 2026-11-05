@@ -169,7 +169,7 @@ export default function LocalRuntimePanel({ onClose }: { onClose: () => void }) 
   const visibleJobs = jobs.filter((job) => history ? !["queued", "running"].includes(job.status) : ["queued", "running"].includes(job.status))
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 
-  return <Modal title="Serwer lokalny" onClose={onClose} className="runtime-panel" foot={<button className="btn" onClick={onClose}>Zamknij panel</button>}>
+  return <Modal title="Analizy w tle" onClose={onClose} className="runtime-panel" foot={<button className="btn" onClick={onClose}>Zamknij panel</button>}>
     <div className="runtime-intro"><Server size={18} aria-hidden="true" /><p>Analizy lokalnym modelem · zadania trwają po zamknięciu aplikacji, gdy usługa serwera działa.</p></div>
     {visibleError && <p className="notice" role="alert">{visibleError}</p>}
     {!online && canStartLocal && <section className="runtime-startup runtime-startup--automatic" aria-labelledby="runtime-startup-title" aria-busy={starting || discovering}>

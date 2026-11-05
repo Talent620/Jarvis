@@ -107,6 +107,20 @@ export async function getAllMemories(namespace: MemNamespace): Promise<Memory[]>
   }
 }
 
+/** Connection diagnostics must distinguish an empty memory from an unreachable service. */
+export async function probeMemoryService(): Promise<{ ok: boolean; count?: number; error?: string }> {
+  const url = baseUrl();
+  if (!url) return { ok: false, error: store.settings.onDeviceOnly ? "Pamięć zewnętrzna jest wyłączona w trybie on-device." : "Najpierw podaj adres usługi pamięci." };
+  try {
+    const response = await fetchTimeout(`${url}/memories?user_id=personal`, { headers: authHeaders() }, 12000);
+    if (!response.ok) return { ok: false, error: `Usługa pamięci zwróciła HTTP ${response.status}. Sprawdź adres i uprawnienia.` };
+    const data: unknown = await response.json();
+    const entries = Array.isArray(data) ? data : data && typeof data === "object" && "results" in data ? (data as { results: unknown }).results : null;
+    if (!Array.isArray(entries)) return { ok: false, error: "Usługa nie zwróciła oczekiwanej listy wspomnień. Sprawdź adres i zgodność API." };
+    return { ok: true, count: parseMemories(entries).length };
+  } catch { return { ok: false, error: "Nie udało się odczytać pamięci z serwera. Sprawdź połączenie i uruchomienie usługi." }; }
+}
+
 /** Zaktualizuj treść wspomnienia. Degraduje do false. */
 export async function updateMemory(id: string, text: string): Promise<boolean> {
   const url = baseUrl();

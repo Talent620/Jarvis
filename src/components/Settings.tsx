@@ -4,21 +4,18 @@ import { store } from "../lib/store";
 import { SETTINGS_TAB_META, DEFAULT_SETTINGS_GROUP, groupOfTab, GOOGLE_PLACES_KEY_WARNING, type SettingsGroup, type SettingsTab } from "../lib/settingsModel";
 import { listSpeechVoices, bestPlVoiceName, speak, activeVoiceLabel, resolveVoiceMode, type NativeVoiceInfo, type VoiceMode } from "../lib/voice";
 import { PROVIDER_LIST, PROVIDERS, autoPick, detectProvider, FREE_UNCENSORED, modelBadges } from "../lib/providers/registry";
-import { intelForModel, intelColor } from "../lib/modelIntel";
-import { runIqProbe, verdict, loadIqResult, loadIqResults, saveIqResult } from "../lib/iqProbe";
-import { leagueRanking } from "../lib/league";
+import { runIqProbe, loadIqResult, loadIqResults, saveIqResult } from "../lib/iqProbe";
 import { systemActionsAvailable, saOpenAccessibility } from "../lib/systemActions";
 import { FREE_STACK } from "../lib/freeMode";
 import { resetConsents } from "../lib/permissions";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, salesOsConfigured, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
 import { openSiteOs, pairSiteOs, siteOsConfigured, testSiteOs } from "../lib/siteOs";
-import { getAllMemories, memoryServiceAvailable } from "../lib/memoryService";
+import { probeMemoryService, memoryServiceAvailable } from "../lib/memoryService";
 import { mcpManager } from "../lib/mcp";
 import { enableAtRest, disableAtRest } from "../lib/secretsVault";
 import { googleStartUrl, gmailSearch, connectDesktopGoogle } from "../lib/google";
 import { hasUsableBrain, testApi, testProvider, resolveProvider } from "../lib/brain";
-import { activeBrainLabel } from "../lib/brainAdvisor";
 import { startBackgroundWake, stopBackgroundWake, wakeSupported } from "../lib/wakeword";
 import { exportData, exportFull, exportFullEncrypted, importData } from "../lib/backup";
 import { keyList, keyCount, isTavilyKey } from "../lib/keys";
@@ -818,15 +815,12 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 Ręczna kontrola. Nie chcesz wybierać? Użyj <b>🎛 Trybu pracy</b> wyżej — ustawi to za Ciebie. Większość zostawia <b>Auto</b>.
               </p>
               <p style={{ marginTop: 0, fontSize: 12 }}>
-                <span style={{ color: BRAIN_BLUE, fontWeight: 700 }}>🔵 Główny mózg</span>
-                <span className="muted"> = co teraz myśli za Ciebie · </span>
-                <span style={{ color: API_GREEN, fontWeight: 700 }}>🟢 API gotowe</span>
-                <span className="muted"> = klucz działa</span>
+                Wybrany model i zapisany klucz opisują konfigurację. Działanie potwierdza dopiero test odpowiedzi.
               </p>
               {/* 🔵 Realnie działający mózg — gdy wybrany dostawca nie ma klucza, pokaże „(zapasowo)". */}
               <div className="row" style={{ borderLeft: `3px solid ${BRAIN_BLUE}`, paddingLeft: 10, marginBottom: 6 }}>
                 <span style={{ fontSize: 13 }}>
-                  🔵 <b>Teraz myśli:</b> {activeBrainLabel(s.provider, s.model, providerReady, (id) => PROVIDERS[id as ProviderId]?.label || id)}
+                  {hasUsableBrain(s) ? "Konfiguracja modelu zapisana. Sprawdź odpowiedź modelu przed pracą." : "Brak konfiguracji modelu. Dodaj klucz dostawcy lub połącz Ollamę."}
                 </span>
               </div>
 
@@ -855,15 +849,15 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                   <option value="auto">⚡ Auto — najlepszy dostępny (zalecane)</option>
                   {PROVIDER_LIST.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {providerReady(p.id) ? "🟢 " : "🔑 "}{p.label}{providerReady(p.id) ? "" : " — brak klucza"}
+                      {providerReady(p.id) ? "● " : "○ "}{p.label}{providerReady(p.id) ? " — ustawiono" : " — brak konfiguracji"}
                     </option>
                   ))}
                 </select>
-                <span className="muted" style={{ fontSize: 12 }}>🟢 = gotowy (masz klucz/adres) · 🔑 = dodaj klucz w „🟢 Klucze API" niżej</span>
+                <span className="muted" style={{ fontSize: 12 }}>● = zapisany klucz lub adres · ○ = brak konfiguracji. Dostępność sprawdzisz testem odpowiedzi.</span>
               </div>
 
               {s.provider === "auto" ? (
-                !autoTarget && (
+                !autoTarget && !hasUsableBrain(s) && (
                   <p className="muted" style={{ color: "var(--gold)" }}>
                     ⚠ Brak kluczy — dodaj przynajmniej jeden w „🔑 Klucze API” niżej (albo użyj lokalnej Ollamy). Im wyżej klucz na liście, tym wyższy priorytet.
                   </p>
@@ -930,16 +924,16 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
               {/* 🧠 POZIOM INTELIGENCJI — jeden suwak jakość/koszt. Steruje doborem modelu Gemini
                   (geminiCapabilities.pickGeminiModel) i głębią rozumowania. Domyślnie „Zrównoważony".
                   Uczciwie: maksymalna = wolniej i drożej. Nie pokazujemy toku myślenia (chain-of-thought). */}
-              <h3 id="set-intelligence" style={{ marginTop: 18 }}>🧠 Poziom inteligencji</h3>
+              <h3 id="set-intelligence" style={{ marginTop: 18 }}>Sposób analizy</h3>
               <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-                Jeden wybór: szybciej i taniej czy mądrzej i dokładniej. JARVIS sam dobiera model Gemini i głębię rozumowania.
+                Wybierz koszt i zakres dodatkowego sprawdzania odpowiedzi. JARVIS dobiera model Gemini i ustawienia analizy.
               </p>
               <div className="field">
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {([
                     { id: "economy", label: "⚡ Oszczędny", desc: "Najtaniej i najszybciej. Proste odpowiedzi od ręki." },
                     { id: "balanced", label: "⚖ Zrównoważony", desc: "Domyślny. Dobry stosunek jakości do kosztu i szybkości." },
-                    { id: "maximum", label: "🧠 Maksymalna inteligencja", desc: "Najmądrzej, z dodatkową weryfikacją. Wolniej i drożej." },
+                    { id: "maximum", label: "Dokładna analiza", desc: "Dodatkowa weryfikacja. Może trwać dłużej i kosztować więcej." },
                   ] as { id: IntelligenceMode; label: string; desc: string }[]).map((m) => {
                     const active = (s.intelligenceMode || "balanced") === m.id;
                     return (
@@ -963,7 +957,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                   {(s.intelligenceMode || "balanced") === "economy"
                     ? "Najtaniej i najszybciej — proste odpowiedzi od ręki, mniej dodatkowych wywołań."
                     : (s.intelligenceMode || "balanced") === "maximum"
-                    ? "Najmądrzej — przy ważnych zadaniach dokłada krytykę/weryfikację. Uczciwie: bywa wolniej i drożej."
+                    ? "Przy trudnych zadaniach dodaje weryfikację odpowiedzi. Może trwać dłużej i kosztować więcej."
                     : "Zrównoważony — sensowny domyślny balans jakości, szybkości i kosztu."}
                 </span>
                 {activeGeminiModel && (
@@ -978,12 +972,9 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 </label>
               </div>
 
-              {/* 🔵 GŁÓWNY MÓZG — co teraz realnie odpowiada (niebieski). W środku: dymek
-                  inteligencji 🧠 % (orientacyjny), status 🟢 połączono (zielony) i pomiar 🔬. */}
+              {/* Wybrana konfiguracja oraz wynik konkretnego testu pytań — bez ocen inteligencji. */}
               {(() => {
                 if (!effModel) return null;
-                const intel = intelForModel(effModel);
-                if (intel.iq <= 0) return null;
                 const ready = effProvider ? providerReady(effProvider) : false;
                 const name = effProvider ? modelLabel(effProvider, effModel) : effModel;
                 void iqVer; // odczyt zapisanego wyniku zależy od bumpa po pomiarze
@@ -992,22 +983,17 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 return (
                   <div className="journal-card" style={{ margin: "8px 0", padding: "10px 12px", borderLeft: `4px solid ${BRAIN_BLUE}`, background: "rgba(91,140,255,0.06)" }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: BRAIN_BLUE, marginBottom: 6 }}>
-                      🧠 GŁÓWNY MÓZG {s.provider === "auto" ? "· auto" : ""}
+                      Wybrany model {s.provider === "auto" ? "· auto" : ""}
                     </div>
                     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                      <span style={{ background: intelColor(intel.iq), color: "#04130c", fontWeight: 800, borderRadius: 999, padding: "4px 10px", fontSize: 14, whiteSpace: "nowrap" }} title="0–100, gdzie 100% = najlepszy znany dziś agent/API">
-                        🧠 {intel.iq}%
-                      </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13 }}>
                           <b>{name}</b>{" "}
                           {ready
-                            ? <span style={{ color: API_GREEN, fontWeight: 700 }}>· 🟢 połączono</span>
-                            : <span style={{ color: "var(--gold)" }}>· ⚪ brak klucza</span>}
+                            ? <span className="muted">· konfiguracja zapisana</span>
+                            : <span className="muted">· brak konfiguracji</span>}
                         </div>
-                        <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{intel.official}</div>
-                        <div style={{ fontSize: 12, marginTop: 2 }}>💬 {intel.casual}</div>
-                        <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>100% = najlepszy znany dziś agent/API. Ocena orientacyjna (wiedza do 2026).</div>
+                        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Sama konfiguracja nie potwierdza dostępności ani jakości modelu.</div>
                       </div>
                     </div>
 
@@ -1016,13 +1002,10 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                       <div style={{ marginTop: 10, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
                         {measured && (
                           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 6 }}>
-                            <span style={{ background: intelColor(measured.pct), color: "#04130c", fontWeight: 800, borderRadius: 999, padding: "3px 9px", fontSize: 13, whiteSpace: "nowrap" }}>
-                              🔬 {measured.pct}%
-                            </span>
                             <span style={{ fontSize: 12 }}>
-                              Zmierzone u Ciebie: <b>{measured.correct}/{measured.total}</b> · ~{(measured.ms / 1000).toFixed(1)}s/odp.
+                              Poprawne odpowiedzi w tym teście: <b>{measured.correct}/{measured.total}</b> · ~{(measured.ms / 1000).toFixed(1)}s/odp.
                             </span>
-                            <span className="muted" style={{ fontSize: 12, flexBasis: "100%" }}>💬 {verdict(measured.pct, measured.ms)}</span>
+                            <span className="muted" style={{ fontSize: 12, flexBasis: "100%" }}>Wynik dotyczy tylko tego zestawu pytań. Nie jest oceną ogólnej inteligencji ani gwarancją wykonania innych zadań.</span>
                           </div>
                         )}
                         <button
@@ -1032,7 +1015,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                           onClick={() => void runIq()}
                           title="Krótki, samosprawdzalny test (6 pytań) — zużywa odrobinę limitu API"
                         >
-                          {iqBusy ? "⏳ Mierzę…" : measured ? "🔬 Zmierz ponownie" : "🔬 Zmierz inteligencję (test 6 pytań)"}
+                          {iqBusy ? "Sprawdzam odpowiedzi…" : measured ? "Powtórz test pytań" : "Sprawdź model na 6 pytaniach"}
                         </button>
                         {iqProg && <span className="muted" style={{ fontSize: 12, marginLeft: 8 }}>{iqProg}</span>}
                         {!ready && <span className="muted" style={{ fontSize: 12, display: "block", marginTop: 4, color: "var(--gold)" }}>Najpierw dodaj klucz tego dostawcy, by zmierzyć.</span>}
@@ -1100,27 +1083,27 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
               </details>
 
               <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px", borderLeft: `4px solid ${BRAIN_BLUE}` }}>
-                <summary style={{ cursor: "pointer", fontWeight: 600, color: BRAIN_BLUE }}>🏆 Liga modeli — który Twój mózg jest najlepszy</summary>
+                <summary style={{ cursor: "pointer", fontWeight: 600, color: BRAIN_BLUE }}>Porównaj wyniki testów modeli</summary>
                 <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                  Zmierzy bystrość WSZYSTKICH Twoich gotowych API (model domyślny każdego) krótkim
-                  testem i ułoży ranking — zobaczysz, co realnie wypada u Ciebie najlepiej. Zużywa trochę limitu.
+                  Sprawdza domyślne modele skonfigurowanych dostawców na tym samym krótkim zestawie pytań.
+                  Wyniki dotyczą tego testu; nie oceniają ogólnej inteligencji. Wywołania zużywają limit API.
                 </p>
                 <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 10px", fontSize: 13 }} disabled={leagueBusy} onClick={() => void runLeague()}>
-                  {leagueBusy ? "⏳ Mierzę…" : "🏆 Zmierz Ligę"}
+                  {leagueBusy ? "Sprawdzam modele…" : "Uruchom testy modeli"}
                 </button>
                 {leagueProg && <span className="muted" style={{ fontSize: 12, marginLeft: 8 }}>{leagueProg}</span>}
                 {(() => {
                   void leagueVer;
                   const inputs = PROVIDER_LIST.filter((p) => p.id !== "ollama").map((p) => ({ provider: p.id, model: p.defaultModel, label: p.label, ready: providerReady(p.id) }));
-                  const ranking = leagueRanking(inputs, loadIqResults());
+                  const results = loadIqResults();
                   return (
                     <div style={{ marginTop: 8 }}>
-                      {ranking.map((r, i) => {
-                        const medal = r.ready ? (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "•") : "🔑";
+                      {inputs.map((r) => {
+                        const measured = results[`${r.provider}:${r.model}`];
                         return (
                           <div key={r.provider} className="row" style={{ fontSize: 13, opacity: r.ready ? 1 : 0.5 }}>
-                            <span>{medal} {r.label} <span className="muted">· {modelLabel(r.provider as ProviderId, r.model)}</span></span>
-                            <span style={{ whiteSpace: "nowrap" }}>{r.measured !== undefined ? `🔬 ${r.measured}%` : `🧠 ${r.iq}%`}{r.ms ? ` · ${(r.ms / 1000).toFixed(1)}s` : ""}</span>
+                            <span>{r.label} <span className="muted">· {modelLabel(r.provider as ProviderId, r.model)}</span></span>
+                            <span style={{ whiteSpace: "nowrap" }}>{measured ? `${measured.correct}/${measured.total} poprawnych · ${(measured.ms / 1000).toFixed(1)}s` : "Brak pomiaru"}</span>
                           </div>
                         );
                       })}
@@ -1307,7 +1290,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                         ? "Czerwone pozycje wymagają Twojego ruchu — opis mówi dokładnie, co zrobić."
                         : health.some((h) => h.status === "warn")
                           ? "Żółte pozycje warto poprawić — większość naprawisz przyciskiem 🔧."
-                          : "Wszystko gra! JARVIS w pełnej gotowości. 🚀"}
+                          : "W tych sprawdzeniach nie wykryto problemów. Wyniki dotyczą wyłącznie pozycji z tej listy."}
                     </p>
                   )}
                 </div>
@@ -2766,8 +2749,10 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                   if (!memoryServiceAvailable()) { setMemMsg("Podaj adres serwera pamięci."); return; }
                   setMemBusy(true); setMemMsg("⏳ Sprawdzam połączenie…");
                   try {
-                    const mems = await getAllMemories("personal");
-                    setMemMsg(`✅ Połączono z pamięcią. Wspomnień (personal): ${mems.length}.`);
+                    const probe = await probeMemoryService();
+                    setMemMsg(probe.ok
+                      ? `Endpoint pamięci odpowiada. Odczytano ${probe.count ?? 0} wpisów personal. Test nie sprawdza zapisu ani jakości wyszukiwania.`
+                      : probe.error || "Serwer pamięci nie odpowiedział poprawnie.");
                   } catch { setMemMsg("❌ Brak połączenia z serwerem pamięci."); }
                   setMemBusy(false);
                 }}

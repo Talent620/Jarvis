@@ -104,9 +104,84 @@ function saveConsents(c: ConsentMap) {
 export function resetConsents() { saveConsents({}); }
 
 // --- Most do UI: handler zgody i emiter kroków ---
-export interface ConsentRequest { tool: string; input: unknown; risk: Risk; }
-let consentHandler: ((req: ConsentRequest) => Promise<{ allow: boolean; remember: boolean }>) | null = null;
-export function setConsentHandler(fn: typeof consentHandler) { consentHandler = fn; }
+export interface ConsentRequest { tool: string; input: unknown; risk: Risk; signal?: AbortSignal; }
+type ConsentDecision = { allow: boolean; remember: boolean };
+type ConsentHandler = (req: ConsentRequest) => Promise<ConsentDecision>;
+type QueuedConsent = { req: ConsentRequest; finish: (answer: ConsentDecision | null) => void };
+const DENIED: ConsentDecision = { allow: false, remember: false };
+let consentHandler: ConsentHandler | null = null;
+let activeConsent: QueuedConsent | null = null;
+const consentQueue: QueuedConsent[] = [];
+
+export function setConsentHandler(fn: ConsentHandler | null) {
+  if (consentHandler === fn) return;
+  // A detached/replaced presenter cannot leave its callers waiting indefinitely.
+  consentHandler = null;
+  const pending = [...(activeConsent ? [activeConsent] : []), ...consentQueue];
+  for (const item of pending) item.finish(null);
+  consentHandler = fn;
+}
+
+function presentNextConsent(): void {
+  if (activeConsent || !consentHandler) return;
+  const item = consentQueue.shift();
+  if (!item) return;
+  activeConsent = item;
+  try {
+    Promise.resolve(consentHandler(item.req)).then(item.finish, () => item.finish(null));
+  } catch { item.finish(null); }
+}
+
+/** Chat, goals and hard-boundary prompts share one FIFO dialog, never implicit approval. */
+function queueConsent(req: ConsentRequest): Promise<ConsentDecision | null> {
+  if (req.signal?.aborted) return Promise.resolve(DENIED);
+  if (!consentHandler) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const controller = new AbortController();
+    let settled = false;
+    const abort = () => item.finish(DENIED);
+    const item: QueuedConsent = {
+      req: { ...req, signal: controller.signal },
+      finish(answer) {
+        if (settled) return;
+        settled = true;
+        req.signal?.removeEventListener("abort", abort);
+        if (activeConsent === item) activeConsent = null;
+        else {
+          const index = consentQueue.indexOf(item);
+          if (index >= 0) consentQueue.splice(index, 1);
+        }
+        controller.abort(); // also closes this request's presentation, if still visible
+        resolve(answer);
+        queueMicrotask(presentNextConsent);
+      },
+    };
+    req.signal?.addEventListener("abort", abort, { once: true });
+    consentQueue.push(item);
+    presentNextConsent();
+  });
+}
+
+export interface PendingConsent { id: string; req: ConsentRequest; resolve: (answer: ConsentDecision) => void; }
+
+/** Identity-safe UI bridge: a late click/voice answer cannot dismiss the next request. */
+export function createConsentPresenter(update: (change: (current: PendingConsent | null) => PendingConsent | null) => void): ConsentHandler {
+  return (req) => new Promise((resolve) => {
+    let settled = false;
+    const finish = (answer: ConsentDecision) => {
+      if (settled) return;
+      settled = true;
+      req.signal?.removeEventListener("abort", abort);
+      update((current) => current?.req === req ? null : current);
+      resolve(answer);
+    };
+    const abort = () => finish(DENIED);
+    if (req.signal?.aborted) { abort(); return; }
+    req.signal?.addEventListener("abort", abort, { once: true });
+    const pending = { id: uid(), req, resolve: finish };
+    update(() => pending);
+  });
+}
 
 // Auto-zgoda: gdy WŁĄCZONA (tylko w otwartym Trybie Szefa z „pełnym dostępem"), akcje
 // WYCHODZĄCE przechodzą bez ekranu zgody — bramką jest głosowe „przewiduj i potwierdź".
@@ -175,7 +250,8 @@ export function undoAction(entry: AuditEntry): string {
  * Bramka uprawnień: dla narzędzi read przepuszcza; dla write/outbound pyta UI
  * (chyba że użytkownik zapamiętał zgodę). Zwraca true, jeśli można wykonać.
  */
-export async function requestConsent(tool: string, input: unknown): Promise<boolean> {
+export async function requestConsent(tool: string, input: unknown, signal?: AbortSignal): Promise<boolean> {
+  if (signal?.aborted) return false;
   const risk = riskOf(tool);
   // Pytamy tylko o akcje zewnętrzne/nieodwracalne; lokalne zapisy idą automatycznie.
   if (risk !== "outbound") return true;
@@ -188,8 +264,11 @@ export async function requestConsent(tool: string, input: unknown): Promise<bool
   // FAIL-CLOSED: brak UI zgody i brak jawnego zakresu → BLOKUJ akcję wychodzącą.
   // (Tryby bez ekranu muszą najpierw nadać grantOutboundScope — nie ma globalnego fail-open.)
   if (!consentHandler) return false;
-  const { allow, remember } = await consentHandler({ tool, input, risk });
-  if (allow && remember) { consents[tool] = "allow"; saveConsents(consents); }
+  const decision = await queueConsent({ tool, input, risk, signal });
+  if (!decision) return false;
+  const { allow, remember } = decision;
+  if (signal?.aborted) return false;
+  if (allow && remember) saveConsents({ ...loadConsents(), [tool]: "allow" });
   return allow;
 }
 
@@ -201,9 +280,8 @@ export async function requestConsent(tool: string, input: unknown): Promise<bool
  * po stronie wywołującego).
  */
 export async function askConsentUI(req: ConsentRequest): Promise<{ allow: boolean } | null> {
-  if (!consentHandler) return null;
-  const { allow } = await consentHandler(req);
-  return { allow };
+  const decision = await queueConsent(req);
+  return decision ? { allow: decision.allow } : null;
 }
 
 /** Po udanym dodaniu — zwróć payload undo (najnowszy element kolekcji). */

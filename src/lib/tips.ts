@@ -22,11 +22,11 @@ export interface Tip {
 export const TIPS: Tip[] = [
   { id: "cmdk", text: "💡 Naciśnij ⌘K (lub ⋯ → Szybkie polecenia), by błyskawicznie otworzyć cokolwiek.", cond: (c) => c.desktop },
   { id: "voice", text: "💡 Powiedz „Jarvis” albo dotknij Orbu — możesz mówić zamiast pisać.", actionId: "voicemode", actionLabel: "Włącz głos" },
-  { id: "goal", text: "💡 Masz złożone zadanie? Zleć cel — rozłożę je na kroki i zrobię za Ciebie.", actionId: "goal", actionLabel: "Zleć cel" },
+  { id: "goal", text: "💡 Zleć zadanie w kolejce, aby śledzić jego kroki i zapisane wyniki.", actionId: "goalStatus", actionLabel: "Zleć cel" },
   { id: "memory", text: "💡 Powiedz „zapamiętaj, że…” — będę o tym pamiętał. Zobacz, co już o Tobie wiem.", actionId: "memory", actionLabel: "Co wiem o Tobie" },
   { id: "private", text: "💡 Chcesz rozmowę, która NIE trafi do historii? Włącz 🕶 czat prywatny.", actionId: "private", actionLabel: "Czat prywatny" },
   { id: "studio", text: "💡 Studio Obrazów: dołącz zdjęcie i napisz, co zmienić — przerobię je.", actionId: "studio", actionLabel: "Otwórz Studio" },
-  { id: "goal2", text: "💡 „Zaplanuj…”, „Rozpisz strategię…” — daj cały cel, a poprowadzę go od początku do końca.", actionId: "goal", actionLabel: "Zleć cel" },
+  { id: "goal2", text: "💡 Rozpisz cel w kolejce. JARVIS zapisze postęp i pokaże, które kroki wymagają Twojego działania.", actionId: "goalStatus", actionLabel: "Zleć cel" },
   { id: "briefing", text: "💡 Włącz poranny briefing w ⚙ → Zachowanie — odezwę się rano sam, z planem dnia.", actionId: "settings", actionLabel: "Ustawienia" },
   { id: "bargain", text: "💡 Łowca Okazji znajdzie najtaniej — nowe i używane, z linkami.", actionId: "bargain", actionLabel: "Szukaj okazji" },
   { id: "research", text: "💡 Włącz 🔬 w polu pisania — zrobię research ze źródłami [1][2], a nie „z głowy”.", cond: (c) => c.messages > 0 },

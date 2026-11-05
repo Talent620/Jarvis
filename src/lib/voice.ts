@@ -841,6 +841,7 @@ interface SpeechRecognitionLike {
   abort(): void;
   onresult: ((e: any) => void) | null;
   onerror: ((e: any) => void) | null;
+  onstart: (() => void) | null;
   onend: (() => void) | null;
 }
 
@@ -895,6 +896,8 @@ export const isSpeechSupported = (): boolean =>
       : webSpeechExists();
 
 export interface ListenCallbacks {
+  /** Called only after microphone input has actually started. */
+  onStart?: () => void;
   onInterim?: (text: string) => void;
   onFinal: (text: string) => void;
   onWake?: () => void;
@@ -933,8 +936,13 @@ export class Listener {
 
   start(lang = "pl-PL") {
     if (this.active) return;
-    this.rec = createRecognition();
-    if (!this.rec) return;
+    try { this.rec = createRecognition(); } catch { this.rec = null; }
+    if (!this.rec) {
+      this.cb.onError?.("Rozpoznawanie mowy jest niedostępne na tym urządzeniu.");
+      this.cb.onEnd?.();
+      return;
+    }
+    const recognition = this.rec;
     this.active = true;
     this.rec.lang = lang;
     this.rec.continuous = Boolean(this.cb.wakeWord);
@@ -943,6 +951,7 @@ export class Listener {
     let armed = !this.cb.wakeWord; // bez wakeWord od razu zbieramy komendę
 
     this.rec.onresult = (e: any) => {
+      if (!this.active || this.rec !== recognition) return;
       this.gotResult = true; // produktywna sesja — zeruje licznik anty-stormu w onend
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -967,11 +976,17 @@ export class Listener {
       if (interim && armed) this.cb.onInterim?.(interim);
     };
 
-    this.rec.onerror = () => {
-      /* np. brak mowy — restart obsłuży onend */
+    this.rec.onstart = () => { if (this.active && this.rec === recognition) this.cb.onStart?.(); };
+    this.rec.onerror = (event: { error?: string }) => {
+      if (!this.active || this.rec !== recognition) return;
+      if (["not-allowed", "service-not-allowed", "audio-capture", "network"].includes(event.error || "")) {
+        this.active = false;
+        this.cb.onError?.(event.error === "network" ? "Nie działa połączenie z usługą rozpoznawania mowy." : "Brak dostępu do mikrofonu lub usługi rozpoznawania mowy.");
+      }
     };
 
     this.rec.onend = () => {
+      if (this.rec !== recognition) return;
       if (this.active && this.cb.wakeWord) {
         // Sesja produktywna (był wynik) → restart natychmiast i zeruj licznik.
         // Pusta, natychmiastowa (utrata mic/sieci) → backoff; po 8 z rzędu poddaj się,
@@ -999,6 +1014,8 @@ export class Listener {
       this.rec.start();
     } catch {
       this.active = false;
+      this.cb.onError?.("Nie udało się uruchomić rozpoznawania mowy. Sprawdź mikrofon i spróbuj ponownie.");
+      this.cb.onEnd?.();
     }
   }
 

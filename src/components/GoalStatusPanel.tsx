@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
 import { loadGoalsNewestFirst } from "../lib/goalRuntime";
-import { cancelGoal, loadGoals, newGoal, pauseGoal, subscribeGoals, upsertGoal, type GoalRecord, type GoalStatus } from "../lib/goalState";
+import { cancelGoal, mutateGoal, newGoal, pauseGoal, recordStepOutcome, subscribeGoals, upsertGoal, type GoalRecord, type GoalStatus } from "../lib/goalState";
 import { planAndEnqueueGoal } from "../lib/goalQueue";
 import { confirmed, outcomeIcon } from "../lib/actionOutcome";
 import { store, uid } from "../lib/store";
@@ -28,9 +28,10 @@ export default function GoalStatusPanel({ onClose, onRuntime }: { onClose: () =>
   }, []);
   const act = async (g: GoalRecord, action: "pause" | "resume" | "cancel") => {
     try {
-      const current = (await loadGoals()).find((item) => item.id === g.id);
-      if (!current) return;
-      await upsertGoal(action === "pause" ? pauseGoal(current, Date.now()) : action === "cancel" ? cancelGoal(current, Date.now()) : { ...current, status: "queued", error: undefined, updatedAt: Date.now() });
+      await mutateGoal(g.id, (current) => {
+        if (current.status === "completed" || current.error === "anulowane przez użytkownika") return current;
+        return action === "pause" ? pauseGoal(current, Date.now()) : action === "cancel" ? cancelGoal(current, Date.now()) : { ...current, status: "queued", error: undefined, updatedAt: Date.now() };
+      });
     } catch (e) { setError(e instanceof Error ? e.message : "Nie można zapisać zmiany."); }
   };
   const enqueue = async () => {
@@ -42,9 +43,11 @@ export default function GoalStatusPanel({ onClose, onRuntime }: { onClose: () =>
   };
   const confirmStep = async (g: GoalRecord, stepId: string) => {
     try {
-      const current = (await loadGoals()).find((item) => item.id === g.id);
-      if (!current || current.results[stepId]?.state !== "ATTEMPTED") return;
-      await upsertGoal({ ...current, status: "queued", updatedAt: Date.now(), results: { ...current.results, [stepId]: confirmed({ manual: true, confirmedAt: Date.now(), message: "Użytkownik sprawdził i potwierdził wykonanie." }) } });
+      await mutateGoal(g.id, (current) => {
+        if (current.results[stepId]?.state !== "ATTEMPTED") return current;
+        const next = recordStepOutcome(current, stepId, confirmed({ manual: true, confirmedAt: Date.now(), message: "Użytkownik sprawdził i potwierdził wykonanie." }), Date.now());
+        return { ...next, status: current.status === "paused" || current.status === "failed" ? current.status : "queued" };
+      });
     } catch (e) { setError(e instanceof Error ? e.message : "Nie można zapisać potwierdzenia."); }
   };
   const quickTask = async () => {

@@ -15,10 +15,10 @@ export function currentBrainMode(online: boolean): BrainMode {
   const s = store.settings;
 
   if (!online) {
-    return { kind: "offline", icon: "🛡", label: "Offline · lokalnie", title: "Brak sieci — JARVIS działa na modelu lokalnym (Refleks). Nic nie wychodzi do chmury." };
+    return { kind: "offline", icon: "🛡", label: "Brak sieci", title: "Połączenie z siecią jest niedostępne. Działanie modelu lokalnego wymaga osobnego sprawdzenia." };
   }
   if (s.onDeviceOnly) {
-    return { kind: "local", icon: "🛡", label: "Na urządzeniu", title: "Tryb on-device: wyłącznie model lokalny, nic nie opuszcza urządzenia." };
+    return { kind: "local", icon: "🛡", label: "Tryb lokalny", title: "Konfiguracja modeli dopuszcza wyłącznie lokalną ścieżkę. Działanie potwierdza test odpowiedzi." };
   }
 
   // Najwięcej prawdy niesie OSTATNIA realna decyzja routera.
@@ -26,14 +26,14 @@ export function currentBrainMode(online: boolean): BrainMode {
   if (last) {
     const tier = last.tier ?? (last.provider === "ollama" || last.provider === "webllm" ? "reflex" : "cortex");
     if (tier === "reflex") {
-      return { kind: "local", icon: "🛡", label: "Lokalnie (Refleks)", title: `Ostatnia odpowiedź lokalnie: ${last.provider}. Szybko i prywatnie.` };
+      return { kind: "local", icon: "🛡", label: "Trasa lokalna (Refleks)", title: `Ostatnia zarejestrowana trasa modelu: ${last.provider}. To nie jest bieżący test dostępności.` };
     }
-    return { kind: "cloud", icon: "☁", label: "Chmura (Kora)", title: `Ostatnia odpowiedź z chmury: ${last.provider}.` };
+    return { kind: "cloud", icon: "☁", label: "Trasa chmurowa (Kora)", title: `Ostatnia zarejestrowana trasa modelu: ${last.provider}. To nie jest bieżący test dostępności.` };
   }
 
   // Brak historii tras: pokaż skłonność wynikającą z konfiguracji.
   if (s.ollamaUrl?.trim() && (s.localFirstSimple || s.confidenceGate)) {
     return { kind: "local", icon: "🛡", label: "Lokalnie najpierw", title: "Proste pytania trafiają najpierw do modelu lokalnego (Refleks); chmura w rezerwie." };
   }
-  return { kind: "cloud", icon: "☁", label: "Chmura (Kora)", title: "Odpowiedzi z modeli w chmurze." };
+  return { kind: "cloud", icon: "☁", label: "Model według ustawień", title: "Model zostanie wybrany według konfiguracji. Nie zarejestrowano jeszcze próby odpowiedzi." };
 }

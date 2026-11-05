@@ -7,13 +7,20 @@
 > 🚨 **OSTRZEŻENIE BEZPIECZEŃSTWA:** Klucz OpenRouter `sk-or-v1-…` **wyciekł w buildach ≤ 55**
 > (był wpiekany do bundla). **Zrotuj go ręcznie** na https://openrouter.ai/keys — tego nie da się
 > cofnąć z poziomu kodu. Szczegóły i pełna lista kluczy do rotacji: **[SECURITY.md](./SECURITY.md)**.
-> Od teraz klucze trafiają wyłącznie do **BFF** (`proxy/`), nie do aplikacji.
+> Klucze nie są już wpiekane do bundla. Profil osobisty może używać własnego klucza,
+> a **BFF** (`proxy/`) może przechowywać sekret po stronie serwera.
 
 
-Agentowy asystent głosowy i tekstowy w stylu HUD, napędzany **Claude Opus 4.8**.
+Asystent głosowy i tekstowy z dostawcami chmurowymi oraz lokalnymi modelami.
 Aplikacja webowa (React + Vite) opakowana w Androida przez **Capacitor** — następca
 oryginalnego `JARVIS.apk`, tym razem z pełnym kodem źródłowym, który możesz dowolnie
 modyfikować i z którego zbudujesz nowy APK.
+
+Główny przepływ: polecenie → jawny przebieg → wynik narzędzia lub odpowiedź modelu → korekta.
+Odpowiedź modelu i wykonanie działania to osobne wyniki. „Stop” przerywa oczekiwanie
+i blokuje dalsze narzędzia danego żądania; nie cofa operacji już przyjętej przez zewnętrzną usługę.
+Aktualne dowody i granice: [walidacja](docs/VALIDATION_2026-11-05.md),
+[mapa audytu](docs/AUDIT_COVERAGE_2026-11-05.md).
 
 ## Desktop: Windows i Ubuntu
 
@@ -21,6 +28,11 @@ JARVIS desktop działa na Windows oraz Ubuntu. Dla Ubuntu dostępne są dwa wari
 
 - `JARVIS.deb` — zwykła instalacja w Ubuntu/Debian.
 - `JARVIS.AppImage` — pojedynczy, przenośny plik uruchamiany bez instalacji.
+
+Po instalacji na Linuksie jeden skrót otwiera aplikację i uruchamia lub odnajduje lokalny
+serwer analiz. Działająca Ollama z zainstalowanym modelem pozwala automatycznie przygotować
+pusty profil i czat. Program nie pobiera modeli ani nie zastępuje istniejącej konfiguracji.
+[Szczegóły startu i wymagania](docs/LOCAL_RUNTIME.md).
 
 Uruchomienie z kodu na Linuksie (terminal w sesji graficznej):
 
@@ -40,7 +52,11 @@ pliki przy aktualizacji gałęzi `main`.
 
 ## Co potrafi
 
-- **Wybór modelu z wielu dostawców** — Claude (Opus 4.8), Google Gemini, Groq,
+Poniżej są zaimplementowane obszary; ich dostępność zależy od platformy, podłączonych usług,
+modelu i uprawnień. Lista nie oznacza, że każda integracja została sprawdzona na fizycznym
+urządzeniu. Wyniki testów i scenariusze niewykonane podaje raport walidacji.
+
+- **Wybór modelu z wielu dostawców** — Anthropic Claude, Google Gemini, Groq,
   OpenRouter (35+ modeli), NVIDIA NIM, GitHub Models. Tryb **auto** sam dobiera
   najlepszy dostępny model na podstawie wpisanych kluczy.
 - **Agentowy mózg** — tool-use w każdym dostawcy (function calling): realnie
@@ -104,8 +120,9 @@ pliki przy aktualizacji gałęzi `main`.
 
 ## Konfiguracja
 
-Po pierwszym uruchomieniu wejdź w **⚙ Ustawienia**, wybierz **dostawcę** (lub zostaw
-„auto") i wpisz **przynajmniej jeden klucz API**:
+Na desktopie Linux pusty profil może zostać skonfigurowany z istniejącego lokalnego modelu.
+Alternatywnie w **Ustawieniach** podłącz BFF lub dostawcę chmurowego. Klucz API jest
+potrzebny przy bezpośrednim korzystaniu z dostawcy chmurowego:
 
 | Dostawca | Gdzie wziąć klucz |
 |---|---|
@@ -133,7 +150,7 @@ wybiera dostawcę z najwyższym priorytetem, dla którego podano klucz.
 
 ### Samodzielna praca i kolejka
 
-Przycisk **Kolejka** na górze aplikacji otwiera zadania, postęp każdego kroku,
+Przycisk **Kolejka zadań** otwiera zadania narzędziowe, postęp każdego kroku,
 zapisane wyniki, pauzę i kontynuację. Nowe profile domyślnie używają trybu inteligencji
 **maximum** i włączonej kolejki. Istniejące ustawienia modelu pozostają zachowane.
 Planowanie celów wymaga podłączonego modelu AI; „Przegląd moich zadań” działa lokalnie.
@@ -142,6 +159,11 @@ Kolejka działa przy otwartej aplikacji. Po restarcie podejmuje oczekujące zada
 pomija potwierdzone kroki i nie powtarza automatycznie operacji o nieznanym wyniku.
 Chwilowe błędy odczytu są ponawiane; błędy narzędzi nie są przedstawiane jako sukces.
 Pauza obowiązuje przed następnym krokiem, nie cofa rozpoczętej operacji.
+
+**Analizy w tle** to odrębna kolejka tekstowa lokalnego serwera: działa po zamknięciu okna,
+gdy proces serwera pozostaje uruchomiony. Nie wykonuje terminala ani narzędzi.
+**Moja lista** jest ręczną listą spraw użytkownika, a **Plan wieloetapowy** przygotowuje tekstowy
+plan bez wykonania działań. Te widoki nie są jedną wspólną kolejką ani dowodem pełnej autonomii.
 
 Model w wersji desktopowej ma dostęp do plików i terminala przez narzędzia `workspace_*`.
 Domyślny katalog to `Dokumenty/JARVIS Workspace`. Własny projekt można wskazać przy starcie:
@@ -420,6 +442,6 @@ Domyślny **PRO NEW** ma boczną nawigację, proste ustawienia, trzy palety kolo
 bash -e -o pipefail -c 'command -v curl >/dev/null || { sudo apt-get update; sudo apt-get install -y curl; }; curl -fSL https://raw.githubusercontent.com/Talent620/Jarvis/codex/linux-pro-new-20261105/scripts/install-linux-source.sh | bash'
 ```
 
-Instalator pobiera kod tej wersji, instaluje potrzebne biblioteki, buduje AppImage, dodaje JARVIS-a do menu i uruchamia aplikację. Pierwsze wykonanie może potrwać kilka minut. `sudo` jest używane wyłącznie do wymaganych pakietów systemowych; aplikacja instaluje się w katalogu użytkownika. Nowy profil korzysta z PRO NEW, palety Indygo i automatycznej kolejki. Dotychczasowe rozmowy, ustawienia i klucze pozostają zachowane. Model AI połączysz w **Ustawienia → Model AI**.
+Instalator pobiera opublikowany kod wskazanej gałęzi, instaluje potrzebne biblioteki, buduje AppImage, dodaje JARVIS-a do menu i uruchamia aplikację. Pierwsze wykonanie może potrwać kilka minut. `sudo` jest używane wyłącznie do wymaganych pakietów systemowych; aplikacja instaluje się w katalogu użytkownika. Nowy profil korzysta z PRO NEW, palety Indygo i automatycznej kolejki. Dotychczasowe rozmowy, ustawienia i klucze pozostają zachowane. Model AI połączysz w **Ustawienia → Model AI**.
 
 Skrypty do przejrzenia: [instalacja ze źródeł](scripts/install-linux-source.sh) i [instalacja gotowego AppImage](scripts/install-linux.sh). Gotowy plik można również zainstalować lokalnie: `bash scripts/install-linux.sh /ścieżka/JARVIS.AppImage`.

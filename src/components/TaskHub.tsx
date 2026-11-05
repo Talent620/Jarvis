@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { parseQuickTask, nextRepeat } from "../lib/taskParser";
 import { gcalEventUrl } from "../lib/glinks";
-import { useEscape } from "../hooks/useEscape";
+import Modal from "./Modal";
 import type { Task } from "../types";
 
 // Centrum Zadań w stylu Nozbe (GTD): Priorytet (dzisiejszy fokus), Dziś,
@@ -15,9 +15,8 @@ type View = "priority" | "today" | "inbox" | "projects" | "done";
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function TaskHub({ onClose }: { onClose: () => void }) {
-  useEscape(onClose);
   const { data } = useStore();
-  const tasks = useMemo(() => data.tasks || [], [data.tasks]);
+  const tasks = data.tasks || [];
   const projects = data.projects || [];
   const [view, setView] = useState<View>("priority");
   const [activeProject, setActiveProject] = useState<string>("");
@@ -64,23 +63,25 @@ export default function TaskHub({ onClose }: { onClose: () => void }) {
 
   const projName = (id?: string) => projects.find((p) => p.id === id)?.name;
 
-  const list = useMemo(() => {
+  // The store mutates task arrays in place. Recompute derived views on each
+  // store notification so additions and completion appear immediately.
+  const list = (() => {
     const open = tasks.filter((t) => !t.done);
     if (view === "priority") return open.filter((t) => t.priority);
     if (view === "today") return open.filter((t) => t.due && t.due.slice(0, 10) <= today);
     if (view === "inbox") return open.filter((t) => !t.projectId);
     if (view === "projects") return open.filter((t) => t.projectId === activeProject);
     return tasks.filter((t) => t.done).slice(0, 40);
-  }, [tasks, view, activeProject, today]);
+  })();
 
-  const counts = useMemo(() => {
+  const counts = (() => {
     const open = tasks.filter((t) => !t.done);
     return {
       priority: open.filter((t) => t.priority).length,
       today: open.filter((t) => t.due && t.due.slice(0, 10) <= today).length,
       inbox: open.filter((t) => !t.projectId).length,
     };
-  }, [tasks, today]);
+  })();
 
   const TABS: { id: View; label: string; n?: number }[] = [
     { id: "priority", label: "⭐ Priorytet", n: counts.priority },
@@ -95,12 +96,12 @@ export default function TaskHub({ onClose }: { onClose: () => void }) {
     return (
       <div className="journal-card" style={{ padding: "8px 10px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input type="checkbox" checked={t.done} onChange={() => toggle(t)} style={{ width: 18, height: 18 }} />
-          <span
+          <input type="checkbox" checked={t.done} aria-label={`Wykonane: ${t.title}`} onChange={() => toggle(t)} style={{ width: 18, height: 18 }} />
+          <button type="button" className="chip" aria-label={`Priorytet: ${t.title}`} aria-pressed={!!t.priority}
             onClick={() => patch(t.id, { priority: !t.priority })}
             title="Priorytet (gwiazdka)"
             style={{ cursor: "pointer", fontSize: 16, opacity: t.priority ? 1 : 0.3 }}
-          >⭐</span>
+          >⭐</button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ textDecoration: t.done ? "line-through" : "none", fontSize: 14 }}>{t.title}</div>
             <div className="muted" style={{ fontSize: 11, display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -111,7 +112,7 @@ export default function TaskHub({ onClose }: { onClose: () => void }) {
               {t.due && <span style={{ color: overdue ? "#e08558" : undefined }}>{overdue ? "⏰ " : "📅 "}{t.due.slice(0, 10)}</span>}
             </div>
           </div>
-          <button className="chip" onClick={() => setEditing(editing === t.id ? "" : t.id)}>⋯</button>
+          <button className="chip" aria-label={`Edytuj: ${t.title}`} aria-expanded={editing === t.id} onClick={() => setEditing(editing === t.id ? "" : t.id)}>⋯</button>
           {t.due && (
             <button className="chip" title="Do Kalendarza Google" onClick={() => window.open(gcalEventUrl(t.title, t.owner ? `Odpowiada: ${t.owner}` : "", t.due), "_blank", "noopener")}>📅</button>
           )}
@@ -148,23 +149,20 @@ export default function TaskHub({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head">
-          <div className="grabber" />
-          <h2>✅ Zadania Pro</h2>
-        </div>
-        <div className="panel-body">
+    <Modal title="Moja lista" className="personal-task-list" onClose={onClose} foot={<button className="btn" onClick={onClose}>Zamknij</button>}>
+          <p className="muted">Twoje zadania, terminy i priorytety do samodzielnego odhaczania. Zlecenia dla JARVIS-a znajdziesz w Kolejce zadań.</p>
           {/* Szybkie dodawanie */}
-          <div className="field" style={{ display: "flex", gap: 8 }}>
+          <div className="field" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8 }}>
             <input
               value={input}
+              aria-label="Dodaj zadanie do mojej listy"
               placeholder="Dodaj: Zadzwoń do klienta #Projekt @telefon ! jutro +Marek"
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && add()}
-              style={{ flex: 1 }}
+              style={{ minWidth: 0 }}
             />
-            <button className="btn primary" onClick={add}>➕</button>
+            <button className="btn primary" aria-label="Dodaj do mojej listy" onClick={add}
+              style={{ width: "auto", minWidth: 44, marginTop: 0 }}>➕</button>
           </div>
           <p className="muted" style={{ fontSize: 11, marginTop: -4 }}>
             <b>#</b> projekt · <b>@</b> kontekst · <b>+</b> osoba · <b>!</b> priorytet · <b>dziś/jutro/pon/12.08</b> termin · <b>*tydzień</b> powtarzanie
@@ -205,11 +203,6 @@ export default function TaskHub({ onClose }: { onClose: () => void }) {
           ) : (
             list.map((t) => <Row key={t.id} t={t} />)
           )}
-        </div>
-        <div className="panel-foot">
-          <button className="btn" onClick={onClose}>Zamknij</button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

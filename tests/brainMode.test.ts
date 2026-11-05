@@ -10,11 +10,13 @@ beforeEach(() => {
 });
 
 describe("brainMode — currentBrainMode", () => {
-  it("offline → tryb offline/lokalny (mocniejszy niż cokolwiek)", () => {
+  it("offline opisuje sieć i nie obiecuje działającego modelu lokalnego", () => {
     store.setSettings({ onDeviceOnly: false });
     const m = currentBrainMode(false);
     expect(m.kind).toBe("offline");
     expect(m.icon).toBe("🛡");
+    expect(m.label).toBe("Brak sieci");
+    expect(m.title).toContain("osobnego sprawdzenia");
   });
 
   it("on-device → lokalnie, nawet online", () => {

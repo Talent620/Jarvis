@@ -192,6 +192,24 @@ function read<T>(key: string, fallback: T): T {
   }
 }
 
+/** Union of opaque fact IDs; legacy snapshots have no deletion metadata. */
+export function mergeMemoryDeletedIds(...sources: unknown[]): string[] {
+  return [...new Set(sources.flatMap(source => Array.isArray(source) ? source.filter((id): id is string => typeof id === "string" && id.length > 0) : []))];
+}
+
+function applyMemoryDeletions(data: AppData): void {
+  // Imported/cache arrays are untrusted. Keep legacy fact fields intact, but
+  // reject entries without an object and stable ID before inspecting fact.id.
+  data.memory = Array.isArray(data.memory) ? data.memory.filter(fact =>
+    fact !== null && typeof fact === "object" && !Array.isArray(fact) &&
+    typeof fact.id === "string" && fact.id.length > 0,
+  ) : [];
+  if (!Array.isArray(data.memoryDeletedIds)) return;
+  data.memoryDeletedIds = mergeMemoryDeletedIds(data.memoryDeletedIds);
+  const forgotten = new Set(data.memoryDeletedIds);
+  if (forgotten.size) data.memory = data.memory.filter(fact => !forgotten.has(fact.id));
+}
+
 /**
  * Audyt #1: twardo znormalizuj wczytane dane — KAŻDA kolekcja MUSI być tablicą, a `world`
  * poprawnym obiektem. Uszkodzony/częściowy localStorage (np. `tasks:null`, `world` bez
@@ -209,6 +227,7 @@ export function normalizeData(d: AppData): AppData {
     if (!Array.isArray(w.entities)) w.entities = [];
     if (!Array.isArray(w.relations)) w.relations = [];
   }
+  applyMemoryDeletions(d);
   return d;
 }
 
@@ -417,6 +436,8 @@ export class Store {
         const cur = this.data as unknown as Record<string, unknown[]>;
         for (const c of IDB_COLLECTIONS) (fresh as unknown as Record<string, unknown[]>)[c] = cur[c] || [];
       }
+      fresh.memoryDeletedIds = mergeMemoryDeletedIds(this.data.memoryDeletedIds, fresh.memoryDeletedIds);
+      applyMemoryDeletions(fresh);
       this.data = fresh;
       this.emit();
     } catch { /* ignore — zostaje bieżący stan RAM */ }
@@ -511,6 +532,7 @@ export class Store {
         // Jeśli migracja nowej kolekcji do IDB się nie udała — NIE odchudzaj localStorage
         // (zostań na pełnym localStorage, zero utraty). Spróbujemy ponownie przy następnym starcie.
         if (!lateOk) return;
+        applyMemoryDeletions(this.data);
         this.idbReady = true; // dopiero teraz — hydratacja zakończona, można odchudzać do IDB
         this.emit();
       }
@@ -523,6 +545,7 @@ export class Store {
     // Audyt #5: mutator rzucający w połowie NIE może wywalić apki. Łapiemy, logujemy do konsoli
     // i kontynuujemy (zapis + emit bieżącego stanu), zamiast pozwolić wyjątkowi rozlać się po UI.
     try { mut(this.data); } catch (e) { try { console.error("[JARVIS] setData mutator error:", e); } catch { /* ignore */ } }
+    applyMemoryDeletions(this.data);
     capCollections(this.data); // utnij rozrośnięte logi (sentMail/contentPosts) przed zapisem
     this.persistData();
     this.emit();

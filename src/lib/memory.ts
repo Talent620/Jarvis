@@ -1,4 +1,4 @@
-import { store, uid } from "./store";
+import { store, uid, mergeMemoryDeletedIds } from "./store";
 import { primaryKey } from "./keys";
 import { fetchTimeout, appTokenHeader } from "./http";
 import { embedLocal, localEmbedUsable, LOCAL_EMBED_TAG } from "./localEmbed";
@@ -146,7 +146,11 @@ export async function ensureIndexed(): Promise<void> {
 /** Zapamiętaj/zaktualizuj fakt; po zmianie treści wektor jest przeliczany w tle. */
 /** Usuń pojedynczy fakt po id (Centrum Pamięci — kontrola użytkownika). */
 export function deleteFact(id: string): void {
-  store.setData((d) => { d.memory = d.memory.filter((m) => m.id !== id); });
+  store.setData((d) => {
+    d.memoryDeletedIds = mergeMemoryDeletedIds(d.memoryDeletedIds, [id]);
+    d.memory = d.memory.filter((m) => m.id !== id);
+  });
+  cachedFacts = null;
 }
 
 /** Przypnij/odepnij fakt (przypięte nie są kasowane przy limicie). */
@@ -276,9 +280,9 @@ export async function prepareMemoryContext(query: string): Promise<void> {
 /** Sformatowany blok faktów do wstrzyknięcia w prompt (semantyczny lub świeżościowy). */
 export function memoryBlock(): string {
   const pid = store.settings.activeProjectId || "";
-  const facts =
-    cachedFacts ??
-    sortByFreshness(store.data.memory.filter((m) => !m.projectId || m.projectId === pid)).slice(0, MAX_FACTS);
+  const present = new Set(store.data.memory.map(fact => fact.id));
+  const facts = (cachedFacts ?? sortByFreshness(store.data.memory.filter((m) => !m.projectId || m.projectId === pid)).slice(0, MAX_FACTS))
+    .filter(fact => present.has(fact.id));
   if (!facts.length) return "";
   return "\n\nZapamiętane fakty o użytkowniku:\n" + facts.map((m) => `- ${m.key}: ${m.value}`).join("\n");
 }

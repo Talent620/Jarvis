@@ -1,4 +1,6 @@
 import { store, uid } from "./store";
+import { abortable, isAbortError, throwIfAborted } from "./requestCancellation";
+import { isMemoryToolBlocked, redactConversationAudit, type ConversationOptions } from "./conversationPrivacy";
 import { workspaceAgentTools } from "./workspaceAgentTools";
 import { fetchTimeout } from "./http";
 import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
@@ -19,7 +21,7 @@ import { addEvent, listUpcoming } from "./deviceCalendar";
 import { callContact, textContact } from "./deviceContacts";
 import { requestConsent, emitStep, audit, captureUndo } from "./permissions";
 import { gmailSearch, gmailRead, gmailReply, gmailUnreadSummary, gcalList, gcalDay, gcalAdd } from "./google";
-import { rememberFact } from "./memory";
+import { deleteFact, rememberFact } from "./memory";
 import { generateCards } from "./cards";
 import { runAutomation } from "./n8n";
 import { getCrypto, getRate } from "./markets";
@@ -62,6 +64,12 @@ export interface ToolDef {
 }
 
 export type Executor = (input: any) => Promise<string> | string;
+
+/** Explicit non-execution from a mutator; never infer success from a nonempty explanation. */
+class ToolExecutionError extends Error {
+  readonly name = "ToolExecutionError";
+}
+function toolFailure(message: string): never { throw new ToolExecutionError(message); }
 
 const obj = (properties: Record<string, unknown>, required: string[] = []) => ({
   type: "object",
@@ -128,7 +136,8 @@ const tools: Tool[] = [
           hit = t.title;
         }
       });
-      return hit ? `Zadanie „${hit}” oznaczone jako wykonane.` : `Nie znalazłem aktywnego zadania pasującego do „${query}”.`;
+      if (!hit) toolFailure(`Nie znalazłem aktywnego zadania pasującego do „${query}”.`);
+      return `Zadanie „${hit}” oznaczone jako wykonane.`;
     },
   },
   {
@@ -299,13 +308,10 @@ const tools: Tool[] = [
       input_schema: obj({ key: str("Klucz faktu do usunięcia") }, ["key"]),
     },
     run: ({ key }) => {
-      let removed = false;
-      store.setData((d) => {
-        const before = d.memory.length;
-        d.memory = d.memory.filter((m) => m.key !== key);
-        removed = d.memory.length < before;
-      });
-      return removed ? `Usunąłem z pamięci: ${key}.` : `Nie znalazłem w pamięci klucza „${key}".`;
+      const ids = store.data.memory.filter((fact) => fact.key === key).map((fact) => fact.id);
+      if (!ids.length) toolFailure(`Nie znalazłem w pamięci klucza „${key}".`);
+      for (const id of ids) deleteFact(id);
+      return `Usunąłem z pamięci: ${key}.`;
     },
   },
   {
@@ -732,11 +738,11 @@ const tools: Tool[] = [
     },
     run: async ({ companies, niche, location }) => {
       const want = new Set((Array.isArray(companies) ? companies : []).map((c: string) => String(c).trim().toLowerCase()).filter(Boolean));
-      if (!want.size) return "Podaj nazwy firm do zapisania.";
+      if (!want.size) toolFailure("Podaj nazwy firm do zapisania.");
       const r = await discoverCandidates({ niche: (niche || "").trim() || undefined, location: (location || "").trim() || undefined });
-      if (r.error) return r.error;
+      if (r.error) toolFailure(r.error);
       const pick = r.candidates.filter((c) => want.has(c.company.trim().toLowerCase()));
-      if (!pick.length) return "Nie znalazłem wskazanych firm wśród kandydatów — sprawdź nazwy albo wyszukaj ponownie.";
+      if (!pick.length) toolFailure("Nie znalazłem wskazanych firm wśród kandydatów — sprawdź nazwy albo wyszukaj ponownie.");
       const added = importCandidates(store.data.leads, pick, { now: Date.now(), makeId: () => uid() });
       if (added.length) store.setData((d) => { d.leads.push(...added); });
       return `✅ Zapisałem do CRM ${added.length} z ${pick.length} wskazanych (reszta to duplikaty lub dane przykładowe). Są w Pulpicie Sprzedaży → „Do działania”.`;
@@ -1107,7 +1113,7 @@ const tools: Tool[] = [
         if (pin) { patch.voiceSystemPl = true; patch.speak = true; }
         changed.push(pin ? "stały głos JARVISA przypięty (bez podmian)" : "stały głos odpięty");
       }
-      if (!changed.length) return "Podaj, co zmienić w głosie: barwa (np. Charon), charakter (np. operator), tempo (slower/faster), speak true/false albo pin true (stały głos).";
+      if (!changed.length) toolFailure("Podaj, co zmienić w głosie: barwa (np. Charon), charakter (np. operator), tempo (slower/faster), speak true/false albo pin true (stały głos).");
       store.setSettings(patch);
       return `✅ Ustawienia głosu zmienione — ${changed.join(", ")}.`;
     },
@@ -1136,11 +1142,11 @@ const tools: Tool[] = [
         return "✅ Wybór mózgu AI: automatyczny (sam dobiorę najlepszy dostępny).";
       }
       if (!PROVIDERS[id as ProviderId]) {
-        return `Nie znam dostawcy „${provider}”. Dostępni z kluczem: ${available.join(", ") || "brak — dodaj klucz w ⚙ → AI"}${hasOllama ? ", ollama" : ""}.`;
+        toolFailure(`Nie znam dostawcy „${provider}”. Dostępni z kluczem: ${available.join(", ") || "brak — dodaj klucz w ⚙ → AI"}${hasOllama ? ", ollama" : ""}.`);
       }
       const ready = id === "ollama" ? hasOllama : !!primaryKey(id as ProviderId);
       if (!ready) {
-        return `Nie masz klucza do „${PROVIDERS[id as ProviderId].label}”. Dostępni teraz: ${available.join(", ") || "brak"}${hasOllama ? ", ollama" : ""}. Klucz dodasz w ⚙ → AI.`;
+        toolFailure(`Nie masz klucza do „${PROVIDERS[id as ProviderId].label}”. Dostępni teraz: ${available.join(", ") || "brak"}${hasOllama ? ", ollama" : ""}. Klucz dodasz w ⚙ → AI.`);
       }
       const meta = PROVIDERS[id as ProviderId];
       const m = model && String(model).trim() && String(model).toLowerCase() !== "auto" ? String(model).trim() : meta.defaultModel;
@@ -1166,7 +1172,7 @@ const tools: Tool[] = [
       ];
       const pick = FREE_PREF.find((p) => primaryKey(p.id));
       if (!pick) {
-        return "Aby ustawić STAŁY darmowy umysł, dodaj najpierw DARMOWY klucz Gemini z aistudio.google.com w ⚙ → AI. Wtedy włączę Gemini 2.5 Flash na stałe + premium głos JARVISA. (Działa też darmowy Groq/Cerebras/Mistral/OpenRouter, jeśli wolisz.)";
+        toolFailure("Aby ustawić STAŁY darmowy umysł, dodaj najpierw DARMOWY klucz Gemini z aistudio.google.com w ⚙ → AI. Wtedy włączę Gemini 2.5 Flash na stałe + premium głos JARVISA. (Działa też darmowy Groq/Cerebras/Mistral/OpenRouter, jeśli wolisz.)");
       }
       // UWAGA: voicePinned = stały głos JARVISA (to chcemy). voiceLock to OSOBNA funkcja
       // (biometria „tylko mój głos", wymaga nagranego profilu) — NIE ustawiamy jej tutaj.
@@ -1224,7 +1230,7 @@ const tools: Tool[] = [
         xp: "xp", "xp luna": "xp", luna: "xp", windowsxp: "xp", "windows xp": "xp",
       };
       const t = map[String(theme || "").trim().toLowerCase()];
-      if (!t) return "Dostępne motywy: cyan, złoty, bursztyn, zielony, ocean, czerwony, róż, fiolet, matrix, nord, sunset, retro, xp.";
+      if (!t) toolFailure("Dostępne motywy: cyan, złoty, bursztyn, zielony, ocean, czerwony, róż, fiolet, matrix, nord, sunset, retro, xp.");
       store.setSettings({ theme: t });
       return `✅ Motyw interfejsu zmieniony na ${theme}.`;
     },
@@ -1244,7 +1250,7 @@ const tools: Tool[] = [
         ollama: "ollama", lokalny: "ollama", lokalnie: "ollama", local: "ollama",
       };
       const m = map[String(mode || "").trim().toLowerCase()];
-      if (!m) return "Dostępne tryby: auto, online (chmura), offline (prywatnie), lokalny (Ollama).";
+      if (!m) toolFailure("Dostępne tryby: auto, online (chmura), offline (prywatnie), lokalny (Ollama).");
       applyBrainMode(m, []);
       const preset = BRAIN_MODES.find((b) => b.id === m);
       return `✅ Tryb pracy: ${preset?.title || m}. ${preset?.does || ""}`;
@@ -1393,7 +1399,7 @@ const tools: Tool[] = [
       if (name && String(name).trim()) { patch.userName = String(name).trim().slice(0, 40); changed.push(`zwracam się: ${patch.userName}`); }
       if (typeof web_search === "boolean") { patch.webSearch = web_search; changed.push(web_search ? "wyszukiwanie w sieci: włączone" : "wyszukiwanie w sieci: wyłączone"); }
       if (typeof adaptive_menu === "boolean") { patch.adaptiveUi = adaptive_menu; changed.push(adaptive_menu ? "adaptacyjne menu: włączone" : "adaptacyjne menu: wyłączone"); }
-      if (!changed.length) return "Podaj, co zmienić: imię (jak się zwracać), web_search true/false albo adaptive_menu true/false.";
+      if (!changed.length) toolFailure("Podaj, co zmienić: imię (jak się zwracać), web_search true/false albo adaptive_menu true/false.");
       store.setSettings(patch);
       return `✅ Preferencje zaktualizowane — ${changed.join(", ")}.`;
     },
@@ -1668,12 +1674,12 @@ const tools: Tool[] = [
     },
     run: ({ name, status, paid_amount }) => {
       const st = FINANCE_STATUSES.find((s) => s.id === status || s.label.toLowerCase() === String(status ?? "").toLowerCase());
-      if (!st) return `Nieznany status. Dostępne: ${FINANCE_STATUSES.map((s) => s.id).join(", ")}.`;
+      if (!st) toolFailure(`Nieznany status. Dostępne: ${FINANCE_STATUSES.map((s) => s.id).join(", ")}.`);
       // „oplacone" bez realnej kwoty wpłaty byłoby zgadywaniem przychodu — UI zawsze pyta o kwotę
       // (window.prompt + applyPayment); tu wymagamy tego samego dowodu zamiast cicho zakładać 100%.
       const amt = Number(paid_amount);
       if (st.id === "oplacone" && !(Number.isFinite(amt) && amt > 0)) {
-        return "Żeby oznaczyć projekt jako opłacony, potrzebuję realnie wpłaconej kwoty (paid_amount) — dopytaj użytkownika, ile wpłynęło, zanim wywołasz to narzędzie ponownie. Nie zakładam automatycznie pełnej kwoty.";
+        toolFailure("Żeby oznaczyć projekt jako opłacony, potrzebuję realnie wpłaconej kwoty (paid_amount) — dopytaj użytkownika, ile wpłynęło, zanim wywołasz to narzędzie ponownie. Nie zakładam automatycznie pełnej kwoty.");
       }
       const q = String(name ?? "").trim().toLowerCase();
       let hit = "";
@@ -1693,7 +1699,8 @@ const tools: Tool[] = [
           resultLabel = st.label;
         }
       });
-      return hit ? `✅ Projekt ${hit} → status ${resultLabel}.` : `Nie znalazłem projektu pasującego do "${name}".`;
+      if (!hit) toolFailure(`Nie znalazłem projektu pasującego do "${name}".`);
+      return `✅ Projekt ${hit} → status ${resultLabel}.`;
     },
   },
   {
@@ -1895,31 +1902,38 @@ export function unregisterTool(name: string): boolean {
   return true;
 }
 
-export async function runTool(name: string, input: unknown): Promise<string> {
+export async function runTool(name: string, input: unknown, options: ConversationOptions & { onExecution?: (name: string) => void } = {}): Promise<string> {
+  throwIfAborted(options.signal);
   const fn = executors[name];
   if (!fn) return `Nieznane narzędzie: ${name}`;
+  if (isMemoryToolBlocked(name, options)) return "Prywatna rozmowa — pamięć nie została zmieniona.";
 
   // Bramka uprawnień (write/outbound wymagają zgody; read przechodzi).
-  const allowed = await requestConsent(name, input);
+  const allowed = await abortable(requestConsent(name, input, options.signal), options.signal);
+  throwIfAborted(options.signal);
   if (!allowed) {
-    audit({ tool: name, input, status: "denied" });
+    audit({ tool: name, input: redactConversationAudit(input, options), status: "denied" });
     return "Anulowano — użytkownik nie wyraził zgody na tę akcję.";
   }
 
   emitStep(name);
   try {
+    throwIfAborted(options.signal);
+    options.onExecution?.(name);
     const out = await fn(input);
     audit({
       tool: name,
-      input,
-      output: typeof out === "string" ? out.slice(0, 300) : "",
+      input: redactConversationAudit(input, options),
+      output: options.memoryPolicy === "private" ? "[prywatna rozmowa]" : typeof out === "string" ? out.slice(0, 300) : "",
       status: "ok",
       undo: captureUndo(name),
     });
     return out;
   } catch (e) {
+    if (isAbortError(e)) throw e;
     const msg = e instanceof Error ? e.message : String(e);
-    audit({ tool: name, input, output: msg, status: "error" });
+    audit({ tool: name, input: redactConversationAudit(input, options), output: options.memoryPolicy === "private" ? "[prywatna rozmowa]" : msg, status: "error" });
+    if (e instanceof ToolExecutionError) return JSON.stringify({ ok: false, error: msg });
     return `Błąd narzędzia ${name}: ${msg}`;
   } finally {
     emitStep(null);

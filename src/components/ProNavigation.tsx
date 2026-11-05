@@ -1,14 +1,13 @@
-import { BookOpen, FolderOpen, LayoutGrid, ListTodo, MessageCircle, Plus, Settings2, Target, History, Search, Server } from "lucide-react";
+import { BookOpen, FolderOpen, LayoutGrid, ListTodo, MessageCircle, Settings2, Target, History, Search, Server } from "lucide-react";
 
 const PRIMARY = [
   { id: null, label: "Rozmowa", icon: MessageCircle },
   { id: "goalStatus", label: "Kolejka zadań", icon: ListTodo },
-  { id: "runtime", label: "Serwer lokalny", icon: Server },
-  { id: "goal", label: "Zleć cel", icon: Plus },
+  { id: "runtime", label: "Analizy w tle", icon: Server },
   { id: "more", label: "Centrum funkcji", icon: LayoutGrid },
 ];
 const WORKSPACE = [
-  { id: "tasks", label: "Plan i zadania", icon: Target },
+  { id: "tasks", label: "Moja lista", icon: Target },
   { id: "projects", label: "Projekty", icon: FolderOpen },
   { id: "memory", label: "Pamięć", icon: BookOpen },
   { id: "history", label: "Historia rozmów", icon: History },

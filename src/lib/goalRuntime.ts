@@ -1,6 +1,6 @@
 import { makeDefaultExecTool, type RunResult, type StepResult } from "./agentRun";
 import { runAgentPipeline } from "./agentPipeline";
-import { newGoal, recordStepOutcome, loadGoals, upsertGoal, resumableGoals, type GoalRecord, type GoalStatus, type GoalStorage } from "./goalState";
+import { newGoal, recordStepOutcome, loadGoals, upsertGoal, mutateGoal, resumableGoals, type GoalRecord, type GoalStatus, type GoalStorage } from "./goalState";
 import { attempted } from "./actionOutcome";
 import type { AgentPlan } from "./agentPlanner";
 import { runTool, toolDefs } from "./tools";
@@ -10,6 +10,7 @@ import { classifyError, decideRecovery } from "./recoveryPolicy";
 const toolExists = (name: string) => toolDefs.some((tool) => tool.name === name);
 const active = new Set<string>();
 export const isGoalRunning = (id: string): boolean => active.has(id);
+const userStopped = (record: GoalRecord): boolean => record.status === "paused" || record.error === "anulowane przez użytkownika";
 
 function finalStatus(run: RunResult): GoalStatus {
   if (run.verdict.canClaimSuccess) return "completed";
@@ -48,14 +49,16 @@ export async function resumeAndRunGoal(
   let rec = record;
   const latest = async () => (await loadGoals(storage)).find((goal) => goal.id === record.id);
   try {
-    rec = { ...(await latest() || record), status: "running", error: undefined, updatedAt: Date.now() };
-    await upsertGoal(rec, storage);
+    const claimed = await mutateGoal(record.id, (current) => userStopped(current) || current.status === "completed"
+      ? current : { ...current, status: "running", error: undefined, updatedAt: Date.now() }, storage);
+    if (!claimed) throw new Error("Cel usunięto.");
+    rec = claimed;
     const seed: StepResult[] = rec.plan.steps.filter((step) => rec.results[step.id]).map((step) => ({
       id: step.id, intent: step.intent, tool: step.tool, outcome: rec.results[step.id], output: rec.outputs?.[step.id],
     }));
     const stopped = async () => {
       const current = await latest();
-      return !current || current.status === "paused" || current.error === "anulowane przez użytkownika";
+      return !current || userStopped(current);
     };
     const pipeline = await runAgentPipeline(rec.plan, {
       toolExists, riskOf, execTool: makeDefaultExecTool(runTool, riskOf), seed,
@@ -71,34 +74,33 @@ export async function resumeAndRunGoal(
       },
       beforeTool: async (step, risk) => {
         if (risk === "read") return;
-        const current = await latest();
-        if (!current) throw new Error("Cel usunięto.");
-        rec = { ...current, results: { ...current.results, [step.id]: attempted(step.tool, "Rozpoczęto operację; po przerwaniu sprawdź jej wynik przed ponowieniem.") }, updatedAt: Date.now() };
-        await upsertGoal(rec, storage);
+        const checkpoint = await mutateGoal(record.id, (current) => {
+          if (userStopped(current) || current.results[step.id]?.state === "CONFIRMED") return current;
+          return { ...current, results: { ...current.results, [step.id]: attempted(step.tool, "Rozpoczęto operację; po przerwaniu sprawdź jej wynik przed ponowieniem.") }, updatedAt: Date.now() };
+        }, storage);
+        if (!checkpoint) throw new Error("Cel usunięto.");
+        rec = checkpoint;
       },
       onStep: async (step) => {
-        const current = await latest();
-        if (!current) return;
-        const paused = current.status === "paused" || current.error === "anulowane przez użytkownika";
-        rec = recordStepOutcome(current, step.id, step.outcome, Date.now());
-        rec.outputs = { ...current.outputs, ...(step.output ? { [step.id]: step.output.slice(0, 40000) } : {}) };
-        if (paused) rec.status = current.status;
-        await upsertGoal(rec, storage);
+        const saved = await mutateGoal(record.id, (current) => ({
+          ...recordStepOutcome(current, step.id, step.outcome, Date.now()),
+          outputs: { ...current.outputs, ...(step.output ? { [step.id]: step.output.slice(0, 40000) } : {}) },
+        }), storage);
+        if (!saved) return;
+        rec = saved;
         opts.onStep?.(step);
       },
     });
     const result = pipeline.run;
-    const current = await latest();
-    if (current) {
-      const paused = current.status === "paused" || current.error === "anulowane przez użytkownika";
-      rec = { ...current, status: paused ? current.status : finalStatus(result), updatedAt: Date.now(),
-        error: current.error || (result.verdict.canClaimSuccess ? undefined : result.steps.find((step) => step.outcome.state === "FAILED")?.outcome.evidence?.message) };
-      await upsertGoal(rec, storage);
-    }
+    const saved = await mutateGoal(record.id, (current) => ({
+      ...current, status: userStopped(current) ? current.status : finalStatus(result), updatedAt: Date.now(),
+      error: current.error || (result.verdict.canClaimSuccess ? undefined : result.steps.find((step) => step.outcome.state === "FAILED")?.outcome.evidence?.message),
+    }), storage);
+    if (saved) rec = saved;
     return { record: rec, result };
   } catch (error) {
-    const current = await latest();
-    if (current) await upsertGoal({ ...current, status: "failed", error: error instanceof Error ? error.message : "Błąd wykonania", updatedAt: Date.now() }, storage);
+    await mutateGoal(record.id, (current) => userStopped(current) ? current
+      : { ...current, status: "failed", error: error instanceof Error ? error.message : "Błąd wykonania", updatedAt: Date.now() }, storage);
     throw error;
   } finally { active.delete(record.id); }
 }

@@ -4,6 +4,7 @@ import { orderedKeys } from "./keys";
 import { memoryBlock, prepareMemoryContext } from "./memory";
 import type { Msg, JarvisReply, ProviderId } from "./providers/types";
 import { runDecisionCouncil, type DecisionInput, type DecisionResult, type RoleRunner } from "./decisionEngine";
+import { canRetainConversation, type ConversationOptions } from "./conversationPrivacy";
 
 // === Tryb Konsylium (Council Mode) — pionierska funkcja ===
 // Przy ważnych/złożonych pytaniach JARVIS nie pyta JEDNEGO modelu, tylko KILKU
@@ -55,15 +56,21 @@ const MEMBER_SYSTEM = (userName: string, facts: string): string =>
     .join("\n");
 
 const TIMEOUT_MS = 30_000;
-function withTimeout<T>(p: Promise<T>): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<T>((_, rej) => setTimeout(() => rej(new Error("timeout")), TIMEOUT_MS)),
-  ]);
+function withTimeout<T>(p: Promise<T>, signal?: AbortSignal): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const clear = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort); };
+    const abort = () => { clear(); reject(new DOMException("Przerwano rozmowę.", "AbortError")); };
+    const timer = setTimeout(() => { clear(); reject(new Error("timeout")); }, TIMEOUT_MS);
+    // Attach handlers even to an already-aborted request so late rejections
+    // from a provider cannot become unhandled promise rejections.
+    p.then(value => { clear(); resolve(value); }, error => { clear(); reject(error); });
+    if (signal?.aborted) abort(); else signal?.addEventListener("abort", abort, { once: true });
+  });
 }
 
 /** Zapytaj jednego członka konsylium (bez narzędzi — czyste rozumowanie). */
-async function askMember(m: CouncilMember, system: string, history: Msg[]): Promise<string | null> {
+async function askMember(m: CouncilMember, system: string, history: Msg[], options: ConversationOptions = {}): Promise<string | null> {
+  if (options.signal?.aborted) throw new DOMException("Przerwano rozmowę.", "AbortError");
   // Lokalni członkowie (Ollama/WebLLM) nie mają klucza — autoryzują się adresem serwera/WebGPU.
   const apiKey = m.provider === "ollama" || m.provider === "webllm" ? "local" : orderedKeys(m.provider)[0];
   if (!apiKey) return null;
@@ -77,10 +84,13 @@ async function askMember(m: CouncilMember, system: string, history: Msg[]): Prom
         apiKey,
         model: m.model,
         proxyUrl: store.settings.proxyUrl?.trim() || undefined,
+        ...options,
       }),
+      options.signal,
     );
     return (r.text || "").trim() || null;
   } catch {
+    if (options.signal?.aborted) throw new DOMException("Przerwano rozmowę.", "AbortError");
     return null; // jeden model padł — konsylium działa dalej z pozostałymi
   }
 }
@@ -112,18 +122,20 @@ function parseJudge(raw: string): { answer: string; consensus: CouncilReply["cou
  * poszczególnych modeli i ocenę zgodności. Gdy dostępny jest mniej niż 2
  * dostawców, degraduje do pojedynczej odpowiedzi (consensus: "single").
  */
-export async function askCouncil(history: Msg[]): Promise<CouncilReply> {
+export async function askCouncil(history: Msg[], options: ConversationOptions = {}): Promise<CouncilReply> {
+  if (options.signal?.aborted) throw new DOMException("Przerwano rozmowę.", "AbortError");
   const members = councilMembers(3);
   const userName = store.settings.userName || "Sir";
 
   const lastUser = [...history].reverse().find((m) => m.role === "user")?.content || "";
-  await prepareMemoryContext(lastUser).catch(() => {});
-  const memberSys = MEMBER_SYSTEM(userName, memoryBlock());
+  if (canRetainConversation(options)) await prepareMemoryContext(lastUser).catch(() => {});
+  if (options.signal?.aborted) throw new DOMException("Przerwano rozmowę.", "AbortError");
+  const memberSys = MEMBER_SYSTEM(userName, options.memoryPolicy === "private" ? "" : memoryBlock());
 
   // Mniej niż 2 modele → nie ma czego radzić; jeden ekspert = zwykła odpowiedź.
   if (members.length < 2) {
     const only = members[0];
-    const text = only ? await askMember(only, memberSys, history) : null;
+    const text = only ? await askMember(only, memberSys, history, options) : null;
     return {
       text: text || "Brak skonfigurowanego dostawcy AI. Dodaj klucz w ⚙ → AI.",
       tools: [],
@@ -132,7 +144,8 @@ export async function askCouncil(history: Msg[]): Promise<CouncilReply> {
   }
 
   // 1) Pytamy wszystkich równolegle.
-  const raw = await Promise.all(members.map((m) => askMember(m, memberSys, history)));
+  const raw = await Promise.all(members.map((m) => askMember(m, memberSys, history, options)));
+  if (options.signal?.aborted) throw new DOMException("Przerwano rozmowę.", "AbortError");
   const answers = members
     .map((m, i) => ({ label: m.label, text: raw[i] }))
     .filter((x): x is { label: string; text: string } => !!x.text);
@@ -155,7 +168,7 @@ export async function askCouncil(history: Msg[]): Promise<CouncilReply> {
         `\n\nZsyntezuj najlepszą odpowiedź i oceń zgodność. Zwróć sam JSON.`,
     },
   ];
-  const judgeRaw = await askMember(judge, JUDGE_SYSTEM, judgeHistory);
+  const judgeRaw = await askMember(judge, JUDGE_SYSTEM, judgeHistory, options);
   const parsed = judgeRaw ? parseJudge(judgeRaw) : null;
 
   if (!parsed) {

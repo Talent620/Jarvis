@@ -27,6 +27,7 @@
     "ubuntu:check": "bash scripts/bootstrap-ubuntu.sh --check",
     "ubuntu:setup": "bash scripts/bootstrap-ubuntu.sh --install",
     "test": "vitest run",
+    "test:linux-runtime": "node scripts/smoke-linux-runtime.mjs",
     "test:watch": "vitest",
     "salesos": "bash sales-os/start.sh",
     "lint": "eslint .",

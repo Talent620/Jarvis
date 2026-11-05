@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   topicOf,
   keywords,
@@ -47,7 +47,8 @@ describe("episodicMemory — czyste funkcje", () => {
 });
 
 describe("episodicMemory — trwałość", () => {
-  beforeEach(() => clearEpisodes());
+  beforeEach(() => { clearEpisodes(); });
+  afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
 
   it("recordEpisode zapisuje (najnowsze pierwsze) i pomija pusty temat", () => {
     recordEpisode("chat", "pierwszy temat");
@@ -57,5 +58,34 @@ describe("episodicMemory — trwałość", () => {
     expect(all).toHaveLength(2);
     expect(all[0].topic).toBe("drugi temat");
     expect(all[0].kind).toBe("tool");
+  });
+
+  it("potwierdza usunięcie epizodów bez kasowania faktów, grafu i historii rozmów", () => {
+    const data = JSON.stringify({ memory: [{ id: "fact", value: "zachowaj" }], world: { entities: [{ id: "person" }], relations: [] } });
+    const history = JSON.stringify([{ id: "chat", messages: [{ text: "zachowaj rozmowę" }] }]);
+    localStorage.setItem("jarvis.data.v2", data);
+    localStorage.setItem("jarvis.chats.v1", history);
+    recordEpisode("chat", "usuń tylko tę notatkę");
+
+    expect(clearEpisodes()).toBe(true);
+    expect(loadEpisodes()).toEqual([]);
+    expect(localStorage.getItem("jarvis.episodes.v1")).toBeNull();
+    expect(localStorage.getItem("jarvis.data.v2")).toBe(data);
+    expect(localStorage.getItem("jarvis.chats.v1")).toBe(history);
+  });
+
+  it("nie deklaruje sukcesu przy odmowie zapisu ani niepotwierdzonym odczycie", () => {
+    recordEpisode("chat", "ważna notatka");
+    const remove = vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => { throw new DOMException("Denied", "SecurityError"); });
+    expect(clearEpisodes()).toBe(false);
+    expect(loadEpisodes()).toHaveLength(1);
+
+    remove.mockImplementation(() => {}); // magazyn pozornie przyjął usunięcie
+    expect(clearEpisodes()).toBe(false);
+    expect(loadEpisodes()).toHaveLength(1);
+    remove.mockRestore();
+
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new DOMException("Denied", "SecurityError"); });
+    expect(clearEpisodes()).toBe(false);
   });
 });

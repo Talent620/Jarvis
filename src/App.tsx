@@ -47,7 +47,7 @@ import { valueToday, prettyMinutes } from "./lib/valueLog";
 import { rememberFact } from "./lib/memory";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
 import { notifySummary } from "./lib/notifyCenter";
-import { startGeneration, cancelGeneration, isCurrent } from "./lib/generation";
+import { startGeneration, cancelGeneration, isCurrent, generationSignal } from "./lib/generation";
 import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
 import { runProactiveNotifications } from "./lib/proactiveNotify";
 import { runPredictionCycleOnStore } from "./lib/predictionCycle";
@@ -83,12 +83,11 @@ const ShoppingList = lazy(() => import("./components/ShoppingList"));
 const Notifications = lazy(() => import("./components/Notifications"));
 import { loadChats, upsertChat, titleFrom, type ChatSession } from "./lib/chats";
 import { mcpManager } from "./lib/mcp";
-import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
+import { createConsentPresenter, setConsentHandler, setStepListener, type PendingConsent } from "./lib/permissions";
 import { startBackgroundWake } from "./lib/wakeword";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 
-type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
 import { askJarvis, resolveProvider, hasUsableBrain } from "./lib/brain";
 import { askCouncil, councilMembers, type CouncilReply } from "./lib/council";
 import { isActionRequest } from "./lib/aiHelpers";
@@ -231,6 +230,7 @@ export default function App() {
   const showPanels = route.screen === "panels"; const setShowPanels = screenSetter("panels");
   const [showLive, setShowLive] = useState(false);
   const [micOn, setMicOn] = useState(false);
+  const [micPending, setMicPending] = useState(false);
   const [liveId, setLiveId] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<PendingImage>(null);
   const [pendingConsent, setPendingConsent] = useState<PendingConsent | null>(null);
@@ -324,22 +324,22 @@ export default function App() {
       ({ id, title, icon, keywords, group: "Akcja", run: () => actionsRef.current[id]?.() });
     return [
       open("settings", "Ustawienia", "⚙", "klucze model glos motyw konto api"),
-      open("runtime", "Serwer lokalny", "◈", "offline lokalny model serwer analizy trwale"),
+      open("runtime", "Analizy w tle", "◈", "offline lokalny model serwer analizy trwale"),
       open("sales", "Pulpit Sprzedaży", "📈", "leady crm oferty klienci sprzedaz"),
       open("finance", "Finanse", "💰", "finanse projekty zysk marza cash flow kpi przychod faktury"),
       open("mail", "Wyślij e-mail", "✉", "mail email wyslij poczta oferta wiadomosc"),
       open("sent", "Wysłane", "📤", "wyslane maile skrzynka historia poczty"),
       open("brand", "Dusza Marki", "🎨", "marka brand ton kolory fonty styl spojnosc"),
-      open("goal", "🎯 Zleć cel", "🎯", "do-for-me projekt plan wieloetapowe cel"),
+      open("goal", "Plan wieloetapowy", "🎯", "tekstowy plan analiza wieloetapowa rozpisz plan"),
       open("growthDay", "📅 Plan dnia", "📅", "plan dnia rekomendacje roi wzrost co dzis zrobic orchestrator"),
       open("candidates", "🧲 Kandydaci leadów", "🧲", "kandydaci leady szukaj firmy osm import bez zapisu crm"),
-      open("goalStatus", "🎯 Cele (autonomia)", "🎯", "cele postep autonomia zatrzymaj wznow anuluj trwaly cel status"),
+      open("goalStatus", "Kolejka zadań — zleć cel", "🎯", "do-for-me zrob za mnie cel cele postep autonomia zatrzymaj wznow anuluj trwaly cel status"),
       open("studio", "Studio Obrazów", "🎨", "zdjecia edycja generuj obraz foto"),
       open("guardian", "Diagnoza i naprawa (dawny Strażnik)", "🩺", "napraw przyspiesz pomoc diagnoza strażnik"),
       open("mind", "Umysł JARVISA", "🧠", "odprawa pamiec swiat wzorce samoocena"),
-      open("memory", "Co JARVIS o mnie wie", "🧠", "pamiec fakty edytuj usun wiedza"),
+      open("memory", "Zapisane fakty", "🧠", "pamiec fakty edytuj usun wiedza"),
       open("profile", "Mój profil", "👤", "kim jestem profil"),
-      open("tasks", "Zadania", "✅", "gtd projekty priorytety todo"),
+      open("tasks", "Moja lista", "✅", "gtd projekty priorytety todo lista zadan reczne"),
       open("journal", "Dziennik", "📔", "przemyslenia notatki"),
       open("web", "Kreator stron", "🌐", "strona witryna www"),
       open("money", "Zarabianie", "💰", "dochod autopilot pieniadze"),
@@ -465,7 +465,7 @@ export default function App() {
     );
     if (store.settings.backgroundWake) startBackgroundWake();
     // Bramka zgód i podgląd kroków agenta.
-    setConsentHandler((req) => new Promise((resolve) => setPendingConsent({ req, resolve })));
+    setConsentHandler(createConsentPresenter(setPendingConsent));
     setStepListener((tool) => setStep(tool));
 
     // Autopilot sprzedaży — raz dziennie sam robi zadania z leadów (telefony,
@@ -496,6 +496,7 @@ export default function App() {
     return () => {
       clearTimeout(t);
       dispose();
+      setConsentHandler(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -518,7 +519,7 @@ export default function App() {
         return;
       }
       if (untouched) { finishOnboarding(); openScreen("runtime"); }
-      else if (result.message) toast(result.message, { label: "Serwer lokalny", onClick: () => openScreen("runtime") });
+      else if (result.message) toast(result.message, { label: "Analizy w tle", onClick: () => openScreen("runtime") });
     });
     return () => controller.abort();
   }, [openScreen, finishOnboarding]);
@@ -722,7 +723,8 @@ export default function App() {
         else if (!flushTimer) { flushTimer = setTimeout(flushStream, 40); }
       };
       try {
-        reply = useCouncil ? await askCouncil(history) : await askJarvis(history, onTok, setCouncilStep);
+        const conversationOptions = { signal: generationSignal(genToken), memoryPolicy: privateChat ? "private" as const : "normal" as const };
+        reply = useCouncil ? await askCouncil(history, conversationOptions) : await askJarvis(history, onTok, setCouncilStep, undefined, undefined, conversationOptions);
       } finally {
         setCouncilStep(null);
       }
@@ -785,14 +787,14 @@ export default function App() {
     }
   };
 
-  // Zatrzymanie generowania: ucisz głos, porzuć trwającą odpowiedź, odblokuj wejście.
-  const stopGeneration = () => {
+  // Stop odcina tę prośbę od kolejnych narzędzi; rozpoczętych działań nie da się cofnąć samym abortem.
+  const stopGeneration = (showNotice = true) => {
     cancelGeneration();
     stopSpeaking();
     setCouncilStep(null);
     setBusy(false);
     setOrb(listenerRef.current?.listening ? "listening" : "idle");
-    toast("⏹ Zatrzymano");
+    if (showNotice) toast("⏹ Zatrzymano dalsze kroki. Już rozpoczęte działania mogły się wykonać — sprawdź historię działań.");
   };
 
   sendRef.current = handleSend;
@@ -812,7 +814,7 @@ export default function App() {
   };
 
   const newChat = () => {
-    stopSpeaking();
+    stopGeneration(busy);
     setMessages([]); // bieżąca jest już zapisana w historii
     setActiveId(uid());
     setLiveId(null);
@@ -820,7 +822,7 @@ export default function App() {
   };
 
   const openChat = (s: ChatSession) => {
-    stopSpeaking();
+    stopGeneration(busy);
     setActiveId(s.id);
     setMessages(s.messages);
     setLiveId(null);
@@ -830,14 +832,14 @@ export default function App() {
 
   // Włącz/wyłącz czat prywatny. Wejście: czysta, nietrwała rozmowa (jak „Temporary chat").
   const togglePrivateChat = () => {
-    stopSpeaking();
+    stopGeneration(busy);
     setMessages([]);
     setActiveId(uid());
     setLiveId(null);
     setPrivateChat((p) => {
       const next = !p;
       toast(next
-        ? "🕶 Czat prywatny — ta rozmowa NIE trafi do historii."
+        ? "🕶 Czat prywatny — bez historii i automatycznego zapamiętywania."
         : "Czat prywatny wyłączony — wracam do normalnych, zapisywanych rozmów.");
       return next;
     });
@@ -845,12 +847,21 @@ export default function App() {
 
   // --- Sterowanie nasłuchem (z barge-in: nasłuch przerywa mówienie) ---
   const startListening = (wake: boolean) => {
-    if (!micSupported) return;
+    if (!micSupported) { toast("Rozpoznawanie mowy jest niedostępne na tym urządzeniu. Możesz wpisać polecenie."); return; }
     stopSpeaking();
-    listenerRef.current?.stop();
+    const previous = listenerRef.current;
+    listenerRef.current = null;
+    previous?.stop();
     const listener = createListener({
       wakeWord: wake,
+      onStart: () => {
+        if (listenerRef.current !== listener) return;
+        setMicPending(false);
+        setMicOn(true);
+        setOrb("listening");
+      },
       onWake: () => {
+        if (listenerRef.current !== listener) return;
         stopSpeaking();
         if (store.settings.voiceModeWake) {
           // Słowo „Jarvis" otwiera pełnoekranowy tryb głosowy (bez patrzenia).
@@ -860,36 +871,47 @@ export default function App() {
         }
         setOrb("listening");
       },
-      onInterim: (t) => setInterim(t),
+      onInterim: (t) => { if (listenerRef.current === listener) setInterim(t); },
       onFinal: (t) => {
+        if (listenerRef.current !== listener) return;
         setInterim("");
         if (t.trim()) handleSend(t);
       },
       onError: (msg) => {
+        if (listenerRef.current !== listener) return;
+        listenerRef.current = null;
+        listener.stop();
+        releaseVoice("main");
         setInterim("");
+        setMicPending(false);
         setMicOn(false);
         setOrb("idle");
         toast(msg);
       },
       onEnd: () => {
-        if (!wake) {
-          setMicOn(false);
-          setOrb("idle");
-        }
+        if (listenerRef.current !== listener) return;
+        listenerRef.current = null;
+        setMicPending(false);
+        setMicOn(false);
+        setOrb((current) => current === "listening" ? "idle" : current);
+        releaseVoice("main");
       },
     });
-    listener.start();
     listenerRef.current = listener;
-    setMicOn(true);
-    setOrb(wake ? "idle" : "listening");
+    setMicPending(true);
+    setMicOn(false);
+    setOrb("idle");
     // Główny mikrofon przejmuje arbitra; gdy ktoś inny (Słuchawki/Live/Szef) przejmie głos,
     // ten callback zatrzyma główny listener — koniec dwóch nasłuchów naraz.
-    acquireVoice("main", () => { listenerRef.current?.stop(); listenerRef.current = null; setMicOn(false); setInterim(""); setOrb("idle"); });
+    acquireVoice("main", () => { const current = listenerRef.current; listenerRef.current = null; current?.stop(); setMicPending(false); setMicOn(false); setInterim(""); setOrb("idle"); });
+    listener.start();
   };
 
   const stopListening = () => {
-    listenerRef.current?.stop();
+    const listener = listenerRef.current;
     listenerRef.current = null;
+    listener?.stop();
+    setMicPending(false);
     setMicOn(false);
     setInterim("");
     setOrb("idle");
@@ -897,7 +919,7 @@ export default function App() {
   };
 
   const toggleMic = () => {
-    if (micOn) stopListening();
+    if (micOn || micPending) stopListening();
     else startListening(settings.wakeWord);
   };
 
@@ -1271,10 +1293,10 @@ export default function App() {
               className="level-badge"
               style={{ borderColor: col, color: col }}
               onClick={() => setShowSettings(true)}
-              title={`Poziom JARVISA: ${lvl}% gotowości. Kliknij, by dokończyć konfigurację.`}
-              aria-label={`Poziom JARVISA ${lvl} procent`}
+              title={`Konfiguracja preferencji: ${lvl}%. To nie jest test działania modelu ani integracji.`}
+              aria-label={`Konfiguracja ${lvl} procent`}
             >
-              ⬢ {lvl}%
+              Konfiguracja {lvl}%
             </button>
           );
         })()}
@@ -1325,7 +1347,7 @@ export default function App() {
         <button
           className="icon-btn"
           onClick={togglePrivateChat}
-          title={privateChat ? "Czat prywatny WŁĄCZONY — nie zapisuję. Kliknij, by wyłączyć." : "Czat prywatny (tymczasowy — nie trafia do historii)"}
+          title={privateChat ? "Czat prywatny — bez historii i automatycznego zapamiętywania. Kliknij, by wyłączyć." : "Czat prywatny (bez historii i automatycznego zapamiętywania)"}
           style={privateChat ? { color: "var(--gold)", borderColor: "var(--gold)" } : undefined}
           aria-label="Czat prywatny"
           aria-pressed={privateChat}
@@ -1381,8 +1403,8 @@ export default function App() {
       )}
       {isPro ? !route.screen && !showVoice && !showLive && !showBoss && !showHud && !showCmd && !pendingConsent && (
         <Hologram state={playingSpeech ? "speaking" : orb} compact={hasConversation} accent={proAccent}
-          label={councilStep || (step && busy ? `Wykonuję: ${step}` : undefined)}
-          onActivate={toggleMic} actionLabel={micOn ? "Wyłącz mikrofon JARVIS-a" : "Włącz mikrofon JARVIS-a"} />
+          label={micPending ? "Oczekuję na mikrofon…" : micOn && settings.wakeWord ? "Nasłuchuję hasła aktywacji" : councilStep || (step && busy ? `Wykonuję: ${step}` : undefined)}
+          onActivate={toggleMic} actionLabel={micPending ? "Anuluj uruchamianie mikrofonu" : micOn ? "Wyłącz mikrofon JARVIS-a" : "Włącz mikrofon JARVIS-a"} />
       ) : (messages.length === 0 || orb !== "idle" || playingSpeech) && (
         <div onClick={onOrbTap}>
           <Orb state={playingSpeech ? "speaking" : orb} label={councilStep || (step && busy ? `⚙ ${step}…` : undefined)} />
@@ -1390,7 +1412,7 @@ export default function App() {
       )}
 
       <div className={isPro ? "pro-chat-pane" : undefined} style={isPro ? undefined : { display: "contents" }}>
-      {isPro && <div className="pro-chat-heading"><span>Rozmowa</span><small>{busy ? "JARVIS pracuje…" : playingSpeech ? "JARVIS mówi…" : micOn ? "Mikrofon włączony" : "Twoja przestrzeń dialogu"}</small></div>}
+      {isPro && <div className="pro-chat-heading"><span>Rozmowa</span><small>{micPending ? "Oczekuję na mikrofon…" : busy ? "JARVIS pracuje…" : playingSpeech ? "JARVIS mówi…" : micOn ? "Mikrofon włączony" : "Twoja przestrzeń dialogu"}</small></div>}
       {(() => {
         // Trial / licencja czasowa — pasek z liczbą dni i przyciskiem przedłużenia (monetyzacja).
         const nudge = licNudgeOff ? null : licenseExpiryNudge(licenseStatus(licInfo));
@@ -1411,7 +1433,7 @@ export default function App() {
           style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "6px 12px", margin: "0 8px 4px", fontSize: 12, color: "var(--gold)", border: "1px solid var(--gold)", borderRadius: 8, background: "rgba(0,0,0,0.15)" }}
           title="Ta rozmowa nie jest zapisywana w historii"
         >
-          🕶 Czat prywatny — nie zapisuję tej rozmowy.
+          🕶 Czat prywatny — bez historii i automatycznego zapamiętywania. Treść otrzymuje wybrany model; zlecone działania mogą zapisywać dane.
           <button className="chip" style={{ fontSize: 11, padding: "1px 8px" }} onClick={togglePrivateChat}>Wyłącz</button>
         </div>
       )}
@@ -1483,7 +1505,7 @@ export default function App() {
         onAttach={attachImage}
         onRemoveImage={() => setPendingImage(null)}
         imagePreview={pendingImage ? `data:${pendingImage.mediaType};base64,${pendingImage.data}` : null}
-        micOn={micOn}
+        micOn={micOn || micPending}
         busy={busy}
         micSupported={micSupported}
         councilAvailable={councilMembers(3).length >= 2}
@@ -1503,9 +1525,9 @@ export default function App() {
         return (
           <div className="journal-card" style={{ margin: "0 8px 8px", padding: "8px 10px", display: "flex", gap: 8, alignItems: "center", fontSize: 13, borderLeft: "3px solid #2bff88" }}>
             <span style={{ flex: 1, minWidth: 0 }}>
-              🚀 JARVIS w <b>{r.percent}%</b> — następny krok: <b>{step.title}</b>{step.patch ? " — Szef zrobi to sam" : ""}.
+              Konfiguracja <b>{r.percent}%</b> · opcjonalne ustawienie: <b>{step.title}</b>.
             </span>
-            <button className="chip on" onClick={apply}>{step.patch ? "Zrób" : "Otwórz"}</button>
+            <button className="chip on" onClick={apply}>{step.patch ? "Włącz" : "Otwórz"}</button>
             <button className="chip" onClick={() => setCompletionHidden(true)} title="Później">✕</button>
           </div>
         );
@@ -1610,7 +1632,7 @@ export default function App() {
       {showPanels && (<ScreenBoundary><Panels onClose={() => setShowPanels(false)} /></ScreenBoundary>)}
       {showLive && <LiveOverlay onClose={() => setShowLive(false)} />}
       {showHistory && (
-        <ScreenBoundary><ChatHistory activeId={activeId} onOpen={openChat} onClose={() => setShowHistory(false)} /></ScreenBoundary>
+        <ScreenBoundary><ChatHistory activeId={activeId} onOpen={openChat} onRemoved={(ids) => { if (ids.includes(activeId)) newChat(); }} onClose={() => setShowHistory(false)} /></ScreenBoundary>
       )}
       {showProjects && (<ScreenBoundary><Projects onClose={() => setShowProjects(false)} /></ScreenBoundary>)}
       {showJournal && (<ScreenBoundary><Journal onClose={() => setShowJournal(false)} /></ScreenBoundary>)}
@@ -1827,13 +1849,13 @@ export default function App() {
           <HudVision onClose={() => setShowHud(false)} />
         </ScreenBoundary>
       )}
-      {route.screen === "runtime" && <ScreenBoundary name="Serwer lokalny" onBack={() => dispatch({ type: "close" })}><LocalRuntimePanel onClose={() => dispatch({ type: "close" })} /></ScreenBoundary>}
+      {route.screen === "runtime" && <ScreenBoundary name="Analizy w tle" onBack={() => dispatch({ type: "close" })}><LocalRuntimePanel onClose={() => dispatch({ type: "close" })} /></ScreenBoundary>}
       {pendingConsent && (
         <PermissionDialog
+          key={pendingConsent.id}
           req={pendingConsent.req}
           onDecision={(allow, remember) => {
             pendingConsent.resolve({ allow, remember });
-            setPendingConsent(null);
           }}
         />
       )}

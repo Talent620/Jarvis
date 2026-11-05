@@ -27,6 +27,17 @@ describe("store — normalizeData (#1: odporność na uszkodzony localStorage)",
     const ok = normalizeData({ tasks: [{ id: "1" }], world: { entities: [], relations: [] } } as unknown as AppData);
     expect(ok.tasks).toHaveLength(1);
   });
+
+  it("pomija uszkodzone wpisy pamięci przed zastosowaniem usunięć przy starcie", () => {
+    const kept = { id: "kept", key: "miasto", value: "Gdańsk", createdAt: 1, pinned: true };
+    const bad = {
+      memory: [null, false, "tekst", 1, [], {}, { id: 1 }, { ...kept, id: "forgotten" }, kept],
+      memoryDeletedIds: ["forgotten"],
+    } as unknown as AppData;
+    expect(() => normalizeData(bad)).not.toThrow();
+    expect(bad.memory).toEqual([kept]);
+    expect(normalizeData(bad).memory).toEqual([kept]);
+  });
 });
 
 describe("store — emit izoluje błędy listenerów (#3)", () => {

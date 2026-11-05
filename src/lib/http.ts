@@ -14,10 +14,16 @@ export function appTokenHeader(): Record<string, string> {
 
 export async function fetchTimeout(url: string, opts: RequestInit = {}, ms = 8000): Promise<Response> {
   const ctrl = new AbortController();
+  const abort = () => ctrl.abort();
+  if (opts.signal?.aborted) abort();
+  else opts.signal?.addEventListener("abort", abort, { once: true });
+  // Native composition also keeps caller cancellation attached while a response body streams.
+  const signal = opts.signal && typeof AbortSignal.any === "function" ? AbortSignal.any([ctrl.signal, opts.signal]) : ctrl.signal;
   const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    return await fetch(url, { ...opts, signal: ctrl.signal });
+    return await fetch(url, { ...opts, signal });
   } finally {
     clearTimeout(t);
+    opts.signal?.removeEventListener("abort", abort);
   }
 }

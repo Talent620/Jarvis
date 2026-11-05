@@ -1,6 +1,6 @@
 # Lokalny serwer analiz JARVIS-a
 
-Ten etap dodaje usługę `server/runtime`, panel **Serwer lokalny** i trwałą kolejkę analiz tekstowych. Zadanie przyjęte przez serwer może pracować po zamknięciu okna JARVIS-a, gdy usługa nadal działa. Model generuje tekst; serwer nie wykonuje poleceń terminala, nie edytuje plików i nie uruchamia narzędzi modelu.
+Ten etap dodaje usługę `server/runtime`, panel **Analizy w tle** i trwałą kolejkę analiz tekstowych. Zadanie przyjęte przez serwer może pracować po zamknięciu okna JARVIS-a, gdy usługa nadal działa. Model generuje tekst; serwer nie wykonuje poleceń terminala, nie edytuje plików i nie uruchamia narzędzi modelu.
 
 ## Uruchamianie jednym kliknięciem
 
@@ -33,7 +33,7 @@ Instalacja ze źródeł JARVIS-a wywołuje również ten skrypt. Przełącznik `
 ## Wybór modelu i zlecanie zadania
 
 1. Przygotuj Ollamę z lokalnie zainstalowanym modelem, a następnie otwórz JARVIS-a.
-2. W aplikacji otwórz **Serwer lokalny**. Na desktopie połączenie jest odczytywane automatycznie z prywatnego pliku usługi.
+2. W aplikacji otwórz **Analizy w tle**. Na desktopie połączenie jest odczytywane automatycznie z prywatnego pliku usługi.
 3. W widoku **Konfiguracja** możesz zmienić automatycznie wybrany model. **Test lokalnego modelu** ponawia próbę odpowiedzi. Stan „Model odpowiada” wynika z odpowiedzi na rzeczywiste żądanie, a wynik po czasie wygasa.
 4. Wpisz treść do analizy, kliknij **Dodaj do kolejki serwera** i sprawdź status lub wynik w tym samym panelu. Możesz anulować oczekujące lub trwające zadanie.
 

@@ -46,6 +46,9 @@ export class WhisperListener implements VoiceListener {
   private noiseFloor = 0.0015;
 
   private active = false;
+  // A pending permission request is not yet an active stream, but can still be cancelled.
+  private pending = false;
+  private generation = 0;
   private armed: boolean;
   private lang = "pl";
 
@@ -58,7 +61,7 @@ export class WhisperListener implements VoiceListener {
   }
 
   start(lang = "pl-PL"): void {
-    if (this.active) return;
+    if (this.active || this.pending) return;
     this.lang = lang.slice(0, 2) || "pl";
     // Tor nagrywany działa, gdy mamy CZYM transkrybować: lokalny Whisper (on-device, za darmo,
     // offline) ALBO klucz Groq (darmowy Whisper w chmurze). Bez żadnego — jasna podpowiedź,
@@ -69,15 +72,20 @@ export class WhisperListener implements VoiceListener {
       return;
     }
     this.mime = pickMime();
-    void this.boot();
+    this.pending = true;
+    const generation = ++this.generation;
+    void this.boot(generation);
   }
 
-  private async boot(): Promise<void> {
+  private async boot(generation: number): Promise<void> {
+    let stream: MediaStream;
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         audio: micAudioConstraints({ channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }),
       });
     } catch (e) {
+      if (generation !== this.generation || !this.pending) return;
+      this.pending = false;
       const name = e instanceof DOMException ? e.name : "";
       this.cb.onError?.(
         name === "NotAllowedError"
@@ -91,14 +99,27 @@ export class WhisperListener implements VoiceListener {
       this.cb.onEnd?.();
       return;
     }
-    this.active = true;
-    this.ctx = new AudioContext();
-    const src = this.ctx.createMediaStreamSource(this.stream);
-    this.analyser = this.ctx.createAnalyser();
-    this.analyser.fftSize = 1024;
-    src.connect(this.analyser);
-    this.td = new Float32Array(this.analyser.fftSize);
-    this.timer = window.setInterval(() => this.tick(), FRAME_MS);
+    if (generation !== this.generation || !this.pending) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    this.stream = stream;
+    try {
+      this.ctx = new AudioContext();
+      const src = this.ctx.createMediaStreamSource(stream);
+      this.analyser = this.ctx.createAnalyser();
+      this.analyser.fftSize = 1024;
+      src.connect(this.analyser);
+      this.td = new Float32Array(this.analyser.fftSize);
+      this.active = true;
+      this.pending = false;
+      this.timer = window.setInterval(() => this.tick(), FRAME_MS);
+      this.cb.onStart?.();
+    } catch {
+      this.stop();
+      this.cb.onError?.("Nie udało się uruchomić przetwarzania dźwięku. Sprawdź urządzenie audio i spróbuj ponownie.");
+      this.cb.onEnd?.();
+    }
   }
 
   private tick(): void {
@@ -149,8 +170,9 @@ export class WhisperListener implements VoiceListener {
     } catch {
       this.rec = new MediaRecorder(this.stream);
     }
-    this.rec.ondataavailable = (e) => { if (e.data && e.data.size) this.chunks.push(e.data); };
-    this.rec.onstop = () => this.onSegmentReady();
+    const generation = this.generation;
+    this.rec.ondataavailable = (e) => { if (generation === this.generation && e.data && e.data.size) this.chunks.push(e.data); };
+    this.rec.onstop = () => { void this.onSegmentReady(generation); };
     try { this.rec.start(); this.recording = true; } catch { this.recording = false; }
   }
 
@@ -160,7 +182,8 @@ export class WhisperListener implements VoiceListener {
     try { this.rec?.stop(); } catch { this.busy = false; }
   }
 
-  private async onSegmentReady(): Promise<void> {
+  private async onSegmentReady(generation: number): Promise<void> {
+    if (!this.active || generation !== this.generation) return;
     const speechMs = this.speechMs;
     const blob = new Blob(this.chunks, { type: this.mime || "audio/webm" });
     this.chunks = [];
@@ -168,6 +191,7 @@ export class WhisperListener implements VoiceListener {
     if (speechMs < MIN_SPEECH_MS || blob.size < 1200) { this.busy = false; return; }
 
     const r = await transcribeAudio(blob, this.lang);
+    if (generation !== this.generation) return;
     this.busy = false;
     if (!this.active) return;
     if ("error" in r) { this.cb.onError?.(r.error); return; }
@@ -203,14 +227,16 @@ export class WhisperListener implements VoiceListener {
   }
 
   stop(): void {
-    if (!this.active && !this.timer) return;
+    ++this.generation;
+    if (!this.active && !this.pending && !this.timer && !this.stream) return;
+    this.pending = false;
     this.active = false;
     if (this.timer) { clearInterval(this.timer); this.timer = null; }
     try { if (this.recording) this.rec?.stop(); } catch { /* ignore */ }
     this.recording = false;
     this.busy = false;
     try { this.stream?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
-    try { void this.ctx?.close(); } catch { /* ignore */ }
+    try { void this.ctx?.close().catch(() => {}); } catch { /* ignore */ }
     this.ctx = null; this.analyser = null; this.stream = null;
     setLevel(0);
   }

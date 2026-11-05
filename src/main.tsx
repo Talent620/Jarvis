@@ -60,7 +60,7 @@ function softReport(msg: string): void {
 window.addEventListener("unhandledrejection", (e) => {
   console.error("[JARVIS] nieobs\u0142u\u017cony b\u0142\u0105d (promise):", e.reason);
   logError("global", e.reason, "unhandledrejection"); // zasil monitor niezawodno\u015bci (\u2699 \u2192 Umys\u0142)
-  softReport("Wykry\u0142em drobny problem w tle \u2014 obs\u0142u\u017cy\u0142em go, dzia\u0142am dalej.");
+  softReport("Wystąpił problem w tle. Sprawdź wynik ostatniej operacji; szczegóły zapisano w diagnostyce.");
   e.preventDefault();
 });
 window.addEventListener("error", (e) => {
@@ -68,7 +68,7 @@ window.addEventListener("error", (e) => {
   if (!e.error) return;
   console.error("[JARVIS] nieobs\u0142u\u017cony b\u0142\u0105d:", e.error);
   logError("global", e.error, "window.error"); // zasil monitor niezawodno\u015bci
-  softReport("Wykry\u0142em drobny problem w tle \u2014 obs\u0142u\u017cy\u0142em go, dzia\u0142am dalej.");
+  softReport("Wystąpił problem w tle. Sprawdź wynik ostatniej operacji; szczegóły zapisano w diagnostyce.");
 });
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

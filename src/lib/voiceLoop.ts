@@ -23,6 +23,8 @@ export class ConversationLoop {
   private closed = false;
   private processing = false;
   private wantListen = false; // czy wznawiać nasłuch (tryb głosowy); w trybie tekstowym false
+  private listenGeneration = 0;
+  private listenTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private onState: (s: LoopState, detail?: string) => void,
@@ -76,6 +78,7 @@ export class ConversationLoop {
       return;
     }
     this.wantListen = true;
+    if (this.listenTimer !== null) { clearTimeout(this.listenTimer); this.listenTimer = null; }
     this.listenOnce();
   }
 
@@ -89,24 +92,31 @@ export class ConversationLoop {
   }
 
   private listenOnce(): void {
-    if (this.closed) return;
+    if (this.closed || !this.wantListen) return;
+    const generation = ++this.listenGeneration;
     this.onState("listening");
     this.listener = createListener({
       wakeWord: false,
-      onInterim: (t) => { if (t) this.onCaption("🗣 " + t); },
+      onInterim: (t) => { if (!this.closed && this.wantListen && generation === this.listenGeneration && t) this.onCaption("🗣 " + t); },
       onFinal: (t) => {
-        if (this.closed || this.processing) return;
+        if (this.closed || !this.wantListen || generation !== this.listenGeneration || this.processing) return;
         if (t.trim()) {
           this.processing = true;
           void this.handle(t.trim());
         }
       },
       onError: (msg) => {
-        if (!this.closed) this.onState("error", msg);
+        if (this.closed || generation !== this.listenGeneration || !this.wantListen) return;
+        // A failed permission/device/backend needs explicit user retry, not an endless restart loop.
+        this.wantListen = false;
+        this.listener?.stop();
+        this.onState("error", msg);
       },
       onEnd: () => {
         // Cisza / koniec frazy bez treści — wznawiaj nasłuch.
-        if (!this.closed && !this.processing) setTimeout(() => this.listenOnce(), 300);
+        if (!this.closed && this.wantListen && generation === this.listenGeneration && !this.processing) {
+          this.listenTimer = setTimeout(() => { this.listenTimer = null; if (!this.closed && this.wantListen && generation === this.listenGeneration) this.listenOnce(); }, 300);
+        }
       },
     });
     this.listener.start();
@@ -217,6 +227,9 @@ export class ConversationLoop {
 
   stop(): void {
     this.closed = true;
+    this.wantListen = false;
+    this.listenGeneration++;
+    if (this.listenTimer !== null) { clearTimeout(this.listenTimer); this.listenTimer = null; }
     this.listener?.stop();
     stopSpeaking();
     this.onState("closed");

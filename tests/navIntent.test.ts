@@ -62,10 +62,17 @@ describe("navIntent — pełne pokrycie i klasyfikacja zgód", () => {
   });
 
   it("rozpoznaje nowo dodane ekrany sterowania (cel, recall, dane, historia)", () => {
-    expect(resolveScreen("zleć cel")?.id).toBe("goal");
+    expect(resolveScreen("zleć cel")?.id).toBe("goalStatus");
     expect(resolveScreen("recall")?.id).toBe("recall");
     expect(resolveScreen("kopia zapasowa")?.id).toBe("data");
     expect(resolveScreen("historia rozmów")?.id).toBe("history");
+  });
+
+  it("odróżnia zlecanie pracy od tekstowego planu, listy osobistej i analiz w tle", () => {
+    for (const query of ["zrób za mnie", "zadania", "kolejka zadań", "zlec cel"]) expect(resolveScreen(query)?.id).toBe("goalStatus");
+    for (const query of ["plan wieloetapowy", "analiza wieloetapowa"]) expect(resolveScreen(query)?.id).toBe("goal");
+    for (const query of ["moja lista", "lista zadań", "todo"]) expect(resolveScreen(query)?.id).toBe("tasks");
+    for (const query of ["analizy w tle", "serwer lokalny"]) expect(resolveScreen(query)?.id).toBe("runtime");
   });
 
   it("każdy ekran SCREENS ma unikalne id", () => {

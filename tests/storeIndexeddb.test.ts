@@ -114,4 +114,21 @@ describe("store ↔ IndexedDB — migracja i hydratacja", () => {
     const arr = await db.idbGet<{ id: string }[]>("sentMail");
     expect(arr?.[0]?.id).toBe("new1");
   });
+
+  it("does not hydrate forgotten IDs from an IndexedDB snapshot saved before deletion", async () => {
+    ls.setItem("jarvis.idb.migrated.v1", "1");
+    ls.setItem("jarvis.data.v2", JSON.stringify({ memory: [], memoryDeletedIds: ["forgotten"], tasks: [{ id: "forgotten", title: "Keep task" }] }));
+    const db = await import("../src/lib/db");
+    db.__resetDbForTests();
+    await db.idbSet("memory", [
+      { id: "forgotten", key: "secret", value: "removed", createdAt: 1 },
+      { id: "kept", key: "city", value: "Poznań", createdAt: 2 },
+    ]);
+    const { store } = await import("../src/lib/store");
+    await waitFor(() => store.version > 0);
+    expect(store.data.memory.map(item => item.id)).toEqual(["kept"]);
+    expect(store.data.memoryDeletedIds).toEqual(["forgotten"]);
+    expect(store.data.tasks[0].title).toBe("Keep task");
+    store.dispose();
+  });
 });

@@ -28,7 +28,7 @@ describe("centerModel — Wszystkie funkcje: bez duplikatów, wszystko osiągaln
       "growthDay", "candidates", "sales", "finance", "mail", "sent", "money",
       "content", "ads", "brand", "web", "tasks", "projects", "journal", "cards",
       "bargain", "wheretobuy", "shoppinglist", "translator", "transcribe", "hud", "studio",
-      "mind", "profile", "memory", "boss", "command", "recall", "goal", "goalStatus",
+      "mind", "profile", "memory", "boss", "command", "recall", "goal", "goalStatus", "runtime",
       "notifications", "status", "guardian", "history", "data", "audit", "costs", "gadgets", "helpfaq", "admin",
     ];
     expect(unreachableCenterIds(required)).toEqual([]);

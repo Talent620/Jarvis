@@ -1,4 +1,5 @@
 import type { ToolDef } from "../tools";
+import type { ConversationOptions } from "../conversationPrivacy";
 
 export type ProviderId = "anthropic" | "gemini" | "groq" | "cerebras" | "mistral" | "cohere" | "openrouter" | "nvidia" | "github" | "ollama" | "webllm";
 
@@ -49,7 +50,9 @@ export interface JarvisReply {
 }
 
 /** Kontekst pojedynczego zapytania przekazywany adapterowi dostawcy. */
-export interface AskCtx {
+export interface AskCtx extends ConversationOptions {
+  /** Called immediately before an actual tool executor starts, after consent. */
+  onToolExecution?: (name: string) => void;
   apiKey: string;
   model: string;
   system: string;

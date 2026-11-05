@@ -5,6 +5,6 @@ export default defineConfig({
   define: { __DEFAULT_KEYS__: "{}" },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.test.{ts,tsx}"],
   },
 });

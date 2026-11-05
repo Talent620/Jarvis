@@ -107,6 +107,21 @@ describe("agentRun — odporność", () => {
 });
 
 describe("agentRun — wznowienie (seed): potwierdzone kroki nie wykonują się ponownie", () => {
+  it("anulowanie podczas zapisu checkpointu zatrzymuje narzędzie przed efektem ubocznym", async () => {
+    let cancelled = false;
+    const execTool = vi.fn(okExec);
+    const beforeTool = vi.fn(async () => { cancelled = true; });
+    const plan: AgentPlan = { goal: "wyślij", steps: [{ id: "mail", intent: "mail", tool: "gmail_send" }] };
+    const run = await runPlan(plan, baseDeps({
+      riskOf: () => "outbound", execTool, beforeTool, shouldStop: () => cancelled,
+    }));
+    expect(beforeTool).toHaveBeenCalledOnce();
+    expect(execTool).not.toHaveBeenCalled();
+    expect(run.status).toBe("stopped");
+    expect(run.toolCalls).toBe(0);
+    expect(run.steps[0].outcome.state).toBe("DRAFT");
+  });
+
   it("krok z seeda CONFIRMED jest pomijany; zależny dograny — bez podwójnego działania", async () => {
     const execTool = vi.fn(async () => ({ outcome: confirmed({ source: "mock" }), output: "ok" }));
     const plan: AgentPlan = { goal: "x", steps: [
