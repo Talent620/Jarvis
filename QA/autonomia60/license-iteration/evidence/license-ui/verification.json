@@ -1,0 +1,21 @@
+{
+  "run_id": "2026-11-05T19-56-18-112Z-license-ui-f4a3bd8a",
+  "level": "B: real license UI and WebCrypto, not agent autonomy or native APK",
+  "license_required": true,
+  "test_issuer": true,
+  "wrong_issuer_rejected": true,
+  "independent_signature_valid": true,
+  "payload": {
+    "n": "QA Zażółć gęślą jaźń",
+    "t": "term",
+    "iat": 1793908586404,
+    "exp": 1796500586404
+  },
+  "token_sha256": "95092e1a9c9e4721552c87e8ee61e206daa1f59dc5297964493c0b70a7da74ef",
+  "private_key_persisted": false,
+  "activation_persisted": true,
+  "reload_activated": true,
+  "denied_origins": [
+    "https://fonts.googleapis.com"
+  ]
+}

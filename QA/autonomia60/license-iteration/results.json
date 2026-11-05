@@ -1,0 +1,128 @@
+{
+  "base_commit": "b3234ca906305712ade35363cffc3524c9a1b21a",
+  "preserved_previous_work_commit": "0320d50",
+  "branch": "codex/apk-license-qa-20261105",
+  "owner_choice": "Generate production issuer on user machine during local installation; do not install Xvfb in cloud",
+  "license_diagnosis": {
+    "baseline": "b3234ca906305712ade35363cffc3524c9a1b21a",
+    "node": "v24.22.1",
+    "current_public_key_import": "PASS",
+    "fixture_signature_valid_current": false,
+    "fixture_signature_valid_previous_worker": true,
+    "classification": "stale signed fixture after key rotation; not a new regression and not malformed production public key",
+    "diagnostic_correction": "The earlier ad hoc regex for y also matched kty. Correct field-boundary parsing and WebCrypto import/verify now identify the cause.",
+    "default_trust_restored_to_old_key": false
+  },
+  "checks": {
+    "unit_tests": {
+      "PASS": 2908,
+      "FAIL": 0,
+      "files": 356
+    },
+    "build": "PASS",
+    "owner_public_key_build": "PASS",
+    "lint": "PASS",
+    "secret_scan": "PASS",
+    "license_UI": "PASS B (licensed activation, real crypto, not native APK)"
+  },
+  "A_D": [
+    {
+      "id": "A",
+      "level": "C + D",
+      "status": "BLOCKED",
+      "detail": "Real local model prerequisite failed at the stage in ollama.json; no protocol fixture used.",
+      "evidence": [
+        "ollama.json"
+      ],
+      "blocker": {
+        "dependency": "reachable configured Ollama API",
+        "command": [
+          "GET http://127.0.0.1:11435/api/tags (3000ms)",
+          "GET http://127.0.0.1:11434/api/tags (3000ms)"
+        ],
+        "evidence": [
+          "ollama.json"
+        ],
+        "scenarios": [
+          "A",
+          "B",
+          "C"
+        ],
+        "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+      }
+    },
+    {
+      "id": "B",
+      "level": "C + D",
+      "status": "BLOCKED",
+      "detail": "Real local model prerequisite failed at the stage in ollama.json; no protocol fixture used.",
+      "evidence": [
+        "ollama.json"
+      ],
+      "blocker": {
+        "dependency": "reachable configured Ollama API",
+        "command": [
+          "GET http://127.0.0.1:11435/api/tags (3000ms)",
+          "GET http://127.0.0.1:11434/api/tags (3000ms)"
+        ],
+        "evidence": [
+          "ollama.json"
+        ],
+        "scenarios": [
+          "A",
+          "B",
+          "C"
+        ],
+        "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+      }
+    },
+    {
+      "id": "C",
+      "level": "C + D",
+      "status": "BLOCKED",
+      "detail": "Real local model prerequisite failed at the stage in ollama.json; no protocol fixture used.",
+      "evidence": [
+        "ollama.json"
+      ],
+      "blocker": {
+        "dependency": "reachable configured Ollama API",
+        "command": [
+          "GET http://127.0.0.1:11435/api/tags (3000ms)",
+          "GET http://127.0.0.1:11434/api/tags (3000ms)"
+        ],
+        "evidence": [
+          "ollama.json"
+        ],
+        "scenarios": [
+          "A",
+          "B",
+          "C"
+        ],
+        "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+      }
+    },
+    {
+      "id": "D",
+      "level": "E",
+      "status": "NOT_RUN",
+      "detail": "Complete browser selection, clipboard, editor focus and save oracle remains unimplemented. This is a capability/test gap; direct file writes do not substitute it.",
+      "evidence": [
+        "environment.json"
+      ]
+    }
+  ],
+  "native_apk": {
+    "status": "BLOCKED",
+    "dependency": "Android SDK/platform-tools absent in this cloud machine",
+    "command": "npm run install:local -- --apk --check",
+    "evidence": "evidence/apk-check.log",
+    "action": "Run the local installer with JDK >=17 and configured Android SDK; add --install only for an authorized connected phone"
+  },
+  "normal_native_Electron": "not rerun: no display, Xvfb installation declined; previous startup evidence remains valid",
+  "production_private_key_created_in_cloud": false,
+  "system_installation": false,
+  "merge_to_main": false,
+  "release_published": false,
+  "push_authorized": true,
+  "push_verification": "After publication compare local HEAD and git ls-remote origin refs/heads/codex/apk-license-qa-20261105; source branch only, no main merge or release."
+}

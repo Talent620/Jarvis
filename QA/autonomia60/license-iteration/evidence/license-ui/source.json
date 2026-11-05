@@ -1,0 +1,14 @@
+{
+  "repo": "/workspace/Jarvis",
+  "branch": "codex/apk-license-qa-20261105",
+  "commit": "0320d5098059434de5dae4cab53ceac94cb34381",
+  "local_changes": "M .gitignore\n M package.json\n M scripts/license.mjs\n M src/components/AdminPanel.tsx\n M src/components/LicenseGate.tsx\n M src/components/More.tsx\n M src/globals.d.ts\n M src/lib/license.ts\n M src/lib/licenseSign.ts\n M src/lib/liveUpdate.ts\n M src/lib/updater.ts\n M tests/license.test.ts\n M tests/licenseSign.test.ts\n M vite.config.ts\n?? docs/LICENCJE-APK.md\n?? scripts/install-local.cjs\n?? scripts/qa/agent-real.cjs\n?? scripts/qa/license-ui.cjs\n?? src/lib/licenseAuthority.ts\n?? tests/licenseCli.test.ts\n?? tests/licenseOwnerUpdates.test.ts",
+  "diff_sha256": "442c7ed16027ee29f3d798ba40dffbdcb1290c933c29a83c187417f2f933e5d3",
+  "new_source_sha256": {
+    "scripts/qa/agent-real.cjs": "81d781c9f241e81a96d962d348007b4acc0a90e8595effee4ed3cfaf52c6521f",
+    "scripts/qa/license-ui.cjs": "91cb9fedf5c71052203a15c4b27eab9d138a3d613ab83fceb19d8bb9068ad48f",
+    "src/lib/licenseAuthority.ts": "7d11640c4efa1b6076a32924730fe1bffe66b99e0219898e3d12e375ff6a439f"
+  },
+  "app_version": "2.0.0",
+  "app_entry": "electron/main.cjs -> dist/index.html"
+}

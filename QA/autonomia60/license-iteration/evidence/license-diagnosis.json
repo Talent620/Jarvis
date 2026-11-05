@@ -1,0 +1,10 @@
+{
+  "baseline": "b3234ca906305712ade35363cffc3524c9a1b21a",
+  "node": "v24.22.1",
+  "current_public_key_import": "PASS",
+  "fixture_signature_valid_current": false,
+  "fixture_signature_valid_previous_worker": true,
+  "classification": "stale signed fixture after key rotation; not a new regression and not malformed production public key",
+  "diagnostic_correction": "The earlier ad hoc regex for y also matched kty. Correct field-boundary parsing and WebCrypto import/verify now identify the cause.",
+  "default_trust_restored_to_old_key": false
+}

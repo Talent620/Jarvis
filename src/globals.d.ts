@@ -3,6 +3,8 @@
 declare const __DEFAULT_KEYS__: Record<string, string>;
 // Czy build wymaga aktywacji licencją (domyślnie true; można wyłączyć przez env).
 declare const __LICENSE_REQUIRED__: boolean;
+// Publiczny klucz właściciela wybrany przy budowie. Nigdy klucz prywatny.
+declare const __LICENSE_PUBLIC_JWK__: JsonWebKey | null;
 // Adres serwera licencji (Cloudflare Worker). Pusty = tryb offline (sam podpis).
 declare const __LICENSE_URL__: string;
 // Tryb rygorystyczny — wymaga udanej aktywacji online (limit urządzeń, unieważnianie).

@@ -1,5 +1,14 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
+import { beforeAll, describe, it, expect, vi } from "vitest";
+import { signLicense } from "../src/lib/licenseSign";
+const authority = vi.hoisted(() => ({ publicJwk: {} as JsonWebKey }));
+vi.mock("../src/lib/licenseAuthority", () => ({ PUBLIC_JWK: authority.publicJwk }));
+let MASTER: string;
+beforeAll(async () => {
+  const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  Object.assign(authority.publicJwk, await crypto.subtle.exportKey("jwk", pair.publicKey));
+  MASTER = await signLicense(await crypto.subtle.exportKey("jwk", pair.privateKey), "FIXTURE TESTOWY", 0);
+});
 import { verifyLicense, deviceId, normalizeKey, licenseStatus, licenseExpiryNudge } from "../src/lib/license";
 
 describe("licenseStatus + licenseExpiryNudge — trial i licencja czasowa", () => {
@@ -28,10 +37,7 @@ describe("licenseStatus + licenseExpiryNudge — trial i licencja czasowa", () =
   });
 });
 
-// Ważny klucz testowy (fixture) podpisany kluczem prywatnym właściciela pod kluczem
-// publicznym wbudowanym w aplikację. Klucza nie da się podrobić bez prywatnego.
-const MASTER =
-  "eyJuIjoiRklYVFVSRSBURVNUT1dZIiwidCI6InBlcnBldHVhbCIsImlhdCI6MTc4MTIyMTkzMDQwM30.ThGeY2Iw7qNJ31oQz32SImiVICML-4TM8N5lRtHvO1J728d9B4lvTSnIX8x8t61sNUFbLqqEPLHulVa-8zmc5A";
+// The test-only issuer is ephemeral. Production trust is never replaced to accept an old fixture.
 
 describe("Licencja — weryfikacja ECDSA", () => {
   it("akceptuje ważny klucz właściciela i czyta dane", async () => {
@@ -56,6 +62,7 @@ describe("Licencja — weryfikacja ECDSA", () => {
     expect((await verifyLicense("losowy-klucz")).valid).toBe(false);
     expect((await verifyLicense("")).valid).toBe(false);
     expect((await verifyLicense("a.b")).valid).toBe(false);
+    expect((await verifyLicense(MASTER + ".extra")).valid).toBe(false);
   });
 
   it("deviceId jest stabilny (limit urządzeń + podgląd kto korzysta)", () => {

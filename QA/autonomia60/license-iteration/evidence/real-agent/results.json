@@ -1,0 +1,86 @@
+[
+  {
+    "id": "A",
+    "level": "C + D",
+    "status": "BLOCKED",
+    "detail": "Real local model prerequisite failed at the stage in ollama.json; no protocol fixture used.",
+    "evidence": [
+      "ollama.json"
+    ],
+    "blocker": {
+      "dependency": "reachable configured Ollama API",
+      "command": [
+        "GET http://127.0.0.1:11435/api/tags (3000ms)",
+        "GET http://127.0.0.1:11434/api/tags (3000ms)"
+      ],
+      "evidence": [
+        "ollama.json"
+      ],
+      "scenarios": [
+        "A",
+        "B",
+        "C"
+      ],
+      "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+    }
+  },
+  {
+    "id": "B",
+    "level": "C + D",
+    "status": "BLOCKED",
+    "detail": "Real local model prerequisite failed at the stage in ollama.json; no protocol fixture used.",
+    "evidence": [
+      "ollama.json"
+    ],
+    "blocker": {
+      "dependency": "reachable configured Ollama API",
+      "command": [
+        "GET http://127.0.0.1:11435/api/tags (3000ms)",
+        "GET http://127.0.0.1:11434/api/tags (3000ms)"
+      ],
+      "evidence": [
+        "ollama.json"
+      ],
+      "scenarios": [
+        "A",
+        "B",
+        "C"
+      ],
+      "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+    }
+  },
+  {
+    "id": "C",
+    "level": "C + D",
+    "status": "BLOCKED",
+    "detail": "Real local model prerequisite failed at the stage in ollama.json; no protocol fixture used.",
+    "evidence": [
+      "ollama.json"
+    ],
+    "blocker": {
+      "dependency": "reachable configured Ollama API",
+      "command": [
+        "GET http://127.0.0.1:11435/api/tags (3000ms)",
+        "GET http://127.0.0.1:11434/api/tags (3000ms)"
+      ],
+      "evidence": [
+        "ollama.json"
+      ],
+      "scenarios": [
+        "A",
+        "B",
+        "C"
+      ],
+      "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+    }
+  },
+  {
+    "id": "D",
+    "level": "E",
+    "status": "NOT_RUN",
+    "detail": "Complete browser selection, clipboard, editor focus and save oracle remains unimplemented. This is a capability/test gap; direct file writes do not substitute it.",
+    "evidence": [
+      "environment.json"
+    ]
+  }
+]

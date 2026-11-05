@@ -1,7 +1,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { createPublicKey } from "node:crypto";
 
 // Realne metryki kodu (do wyceny w panelu admina) — liczone PRZY BUDOWANIU, nie w runtime
 // (zbudowany bundel nie ma dostępu do źródeł). Best-effort: błąd nie wywala builda.
@@ -33,6 +34,20 @@ function projectStats() {
 // klucze po stronie serwera. Klucze użytkownika dozwolone tylko w trybie „własny klucz"
 // (BYOK) i są szyfrowane lokalnie. __DEFAULT_KEYS__ pozostaje PUSTE (kompatybilność store).
 const env = process.env;
+const issuerFile = env.JARVIS_LICENSE_PUBLIC_KEY_FILE || "license-public.local.json";
+let licensePublicJwk: Record<string, unknown> | null = null;
+if (existsSync(issuerFile)) {
+  const candidate = JSON.parse(readFileSync(issuerFile, "utf8"));
+  if (candidate.kty !== "EC" || candidate.crv !== "P-256" || candidate.d || candidate.privateKey || candidate.keys) {
+    throw new Error("Plik wystawcy musi zawierać wyłącznie publiczny klucz EC P-256. Klucz prywatny nie może trafić do bundla.");
+  }
+  licensePublicJwk = { kty: "EC", crv: "P-256", x: candidate.x, y: candidate.y };
+  createPublicKey({ key: licensePublicJwk, format: "jwk" }); // validates the curve point, not just JSON shape
+} else if (env.JARVIS_LICENSE_PUBLIC_KEY_FILE) {
+  throw new Error("Nie znaleziono wskazanego publicznego klucza wystawcy.");
+} else {
+  console.info("[licencje] Używam domyślnego publicznego klucza aplikacji. Własny wystawca: npm run license:init.");
+}
 const DEFAULT_KEYS = {
   anthropic: "",
   gemini: "",
@@ -51,6 +66,7 @@ export default defineConfig({
     __DEFAULT_KEYS__: JSON.stringify(DEFAULT_KEYS),
     // Aktywacja licencją wymagana domyślnie; ustaw JARVIS_LICENSE_REQUIRED=false, by wyłączyć.
     __LICENSE_REQUIRED__: JSON.stringify(env.JARVIS_LICENSE_REQUIRED !== "false"),
+    __LICENSE_PUBLIC_JWK__: JSON.stringify(licensePublicJwk),
     // Adres serwera licencji (Cloudflare Worker). Pusty = tryb offline (sam podpis ECDSA).
     __LICENSE_URL__: JSON.stringify(env.JARVIS_LICENSE_URL || ""),
     // Tryb rygorystyczny: wymaga udanej aktywacji online (limit urządzeń, zdalne unieważnienie).

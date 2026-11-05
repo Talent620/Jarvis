@@ -1,0 +1,12 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/revoked.test.ts (3 tests) 5ms
+ ✓ tests/license.test.ts (11 tests) 13ms
+ ✓ tests/licenseSign.test.ts (13 tests) 38ms
+
+ Test Files  3 passed (3)
+      Tests  27 passed (27)
+   Start at  19:45:11
+   Duration  763ms (transform 149ms, setup 0ms, collect 192ms, tests 57ms, environment 682ms, prepare 339ms)
+

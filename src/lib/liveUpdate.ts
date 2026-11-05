@@ -11,6 +11,7 @@
 import { Capacitor } from "@capacitor/core";
 import { fetchTimeout } from "./http";
 import { currentBuild, isNewer } from "./updater";
+import { ownerManagedBuild, ownerUpdateMessage } from "./licenseAuthority";
 
 const REPO = "Talent620/Jarvis";
 const MANIFEST_URL = `https://github.com/${REPO}/releases/download/latest/bundle.json`;
@@ -34,6 +35,7 @@ export interface LiveCheck {
 
 /** Sprawdź, czy jest nowszy web-bundle (OTA). Tylko w aplikacji natywnej (Android/iOS). */
 export async function checkLiveUpdate(): Promise<LiveCheck> {
+  if (ownerManagedBuild) return { available: false, error: ownerUpdateMessage };
   if (!liveUpdateSupported()) {
     return { available: false, error: "Aktualizacja błyskawiczna działa tylko w aplikacji na telefonie." };
   }
@@ -50,6 +52,7 @@ export async function checkLiveUpdate(): Promise<LiveCheck> {
 
 /** Pobierz i zastosuj web-bundle — przeładuje aplikację do nowej wersji (bez instalatora). */
 export async function applyLiveUpdate(m: LiveManifest): Promise<{ ok: boolean; error?: string }> {
+  if (ownerManagedBuild) return { ok: false, error: ownerUpdateMessage };
   if (!liveUpdateSupported()) return { ok: false, error: "Tylko w aplikacji na telefonie." };
   try {
     const { CapacitorUpdater } = await import("@capgo/capacitor-updater");

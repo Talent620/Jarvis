@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, vi } from "vitest";
 import {
   parsePrivateJwk,
   privateMatchesApp,
@@ -12,8 +12,15 @@ import {
   saveLocalLicense,
   removeLocalLicense,
   type LicenseRecord,
+  verifyIssuerPrivateKey,
 } from "../src/lib/licenseSign";
 import { PUBLIC_JWK } from "../src/lib/license";
+const authority = vi.hoisted(() => ({ publicJwk: {} as JsonWebKey }));
+vi.mock("../src/lib/licenseAuthority", () => ({ PUBLIC_JWK: authority.publicJwk }));
+let appPrivate: JsonWebKey;
+beforeAll(async () => {
+  const pair = await genKeypair(); appPrivate = pair.priv; Object.assign(authority.publicJwk, pair.pub);
+});
 
 // Para kluczy testowych (NIE klucz aplikacji) — do round-tripu podpis→weryfikacja.
 async function genKeypair() {
@@ -87,8 +94,7 @@ describe("licenseSign — lokalny rejestr (kto · na ile)", () => {
   beforeEach(() => { try { localStorage.clear(); } catch { /* */ } });
 
   it("issueLocalLicense zapisuje rekord z właścicielem i tokenem", async () => {
-    const { priv } = await genKeypair();
-    const rec = await issueLocalLicense(priv, "tester młody", 30);
+    const rec = await issueLocalLicense(appPrivate, "tester młody", 30);
     expect(rec.owner).toBe("tester młody");
     expect(rec.token).toContain(".");
     expect(rec.exp).toBeGreaterThan(Date.now());
@@ -98,7 +104,7 @@ describe("licenseSign — lokalny rejestr (kto · na ile)", () => {
   });
 
   it("extendLocalLicense przedłuża TEN SAM wpis (to samo id, nowy token/exp)", async () => {
-    const { priv } = await genKeypair();
+    const priv = appPrivate;
     const rec = await issueLocalLicense(priv, "szef", 30);
     const before = rec.exp!;
     const up = await extendLocalLicense(priv, rec, 365);
@@ -108,7 +114,7 @@ describe("licenseSign — lokalny rejestr (kto · na ile)", () => {
   });
 
   it("przedłużenie na 0 dni → bezterminowy", async () => {
-    const { priv } = await genKeypair();
+    const priv = appPrivate;
     const rec = await issueLocalLicense(priv, "vip", 30);
     const up = await extendLocalLicense(priv, rec, 0);
     expect(up.type).toBe("perpetual");
@@ -116,7 +122,7 @@ describe("licenseSign — lokalny rejestr (kto · na ile)", () => {
   });
 
   it("removeLocalLicense usuwa z rejestru po id", async () => {
-    const { priv } = await genKeypair();
+    const priv = appPrivate;
     const a = await issueLocalLicense(priv, "A", 10);
     await issueLocalLicense(priv, "B", 10);
     removeLocalLicense(a.id);
@@ -125,11 +131,23 @@ describe("licenseSign — lokalny rejestr (kto · na ile)", () => {
   });
 
   it("saveLocalLicense robi upsert (po id), nie duplikuje", async () => {
-    const { priv } = await genKeypair();
+    const priv = appPrivate;
     const rec = await issueLocalLicense(priv, "X", 10);
     saveLocalLicense({ ...rec, owner: "X-zmienione" });
     const all = listLocalLicenses();
     expect(all).toHaveLength(1);
     expect(all[0].owner).toBe("X-zmienione");
   });
+});
+
+it("odrzuca obcego wystawcę i podmieniony sekret przed zapisem licencji", async () => {
+  localStorage.clear();
+  const other = await genKeypair();
+  await expect(issueLocalLicense(other.priv, "Nieautoryzowany", 30)).rejects.toThrow(/nie pasuje/);
+  expect(await verifyIssuerPrivateKey({ ...appPrivate, d: other.priv.d })).toBe(false);
+  expect(listLocalLicenses()).toHaveLength(0);
+});
+it("nie podpisuje pustego właściciela ani niepoprawnego terminu", async () => {
+  await expect(signLicense(appPrivate, " ", 30)).rejects.toThrow();
+  for (const days of [-1, NaN, Infinity, 0.5, 36501]) await expect(signLicense(appPrivate, "Tester", days)).rejects.toThrow();
 });

@@ -37,7 +37,12 @@
     "quality:all": "node scripts/quality-gate.mjs --sales",
     "qa:preflight": "node scripts/qa/preflight.cjs",
     "qa:agent:smoke": "node scripts/qa/agent-smoke.cjs",
-    "qa:desktop": "node scripts/qa/desktop.cjs"
+    "qa:desktop": "node scripts/qa/desktop.cjs",
+    "license": "node scripts/license.mjs",
+    "license:init": "node scripts/license.mjs init",
+    "install:local": "node scripts/install-local.cjs",
+    "qa:license": "node scripts/qa/license-ui.cjs",
+    "qa:agent:real": "node scripts/qa/agent-real.cjs"
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",

@@ -140,7 +140,7 @@ export default function More({
     { id: "gadgets", icon: "🧰", name: "Gadżety", desc: "Latarka, kompas, QR…", fn: onGadgets },
     // Pomoc i FAQ scalone w JEDNO wejście (mniej duplikatów). Otwiera szybki start; FAQ jest w środku.
     { id: "helpfaq", icon: "❓", name: "Pomoc i FAQ", desc: "Szybki start i do czego służy każda funkcja", fn: onHelp },
-    { id: "admin", icon: "🔐", name: "Administrator", desc: "Panel (licencje)", fn: onAdmin },
+    { id: "admin", icon: "🔐", name: "Licencje APK", desc: "Generator i panel właściciela", fn: onAdmin },
   ];
 
   // „Wszystkie funkcje" — pełna taksonomia z centerModel (jedno źródło prawdy, testowane: każde id

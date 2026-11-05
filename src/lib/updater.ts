@@ -108,6 +108,7 @@ export function humanizeUpdateError(msg: string): string {
 
 /** Sprawdź wydanie „latest" na GitHub i porównaj z bieżącym buildem. */
 export async function checkForUpdate(): Promise<UpdateInfo | { error: string }> {
+  if (ownerManagedBuild) return { error: ownerUpdateMessage };
   const p = platform();
   const url = `https://api.github.com/repos/${REPO}/releases/tags/latest`;
   // Jedna ponowna próba — na telefonie pierwszy strzał bywa ucinany (wolna sieć/abort).
@@ -174,6 +175,7 @@ export async function checkForUpdate(): Promise<UpdateInfo | { error: string }> 
 
 /** Zastosuj aktualizację: web → wyczyść cache i odśwież; telefon/PC → otwórz pobranie. */
 export async function applyUpdate(info: UpdateInfo): Promise<UpdateApplyResult> {
+  if (ownerManagedBuild) return { ok: false, message: ownerUpdateMessage };
   if (!info.assetAvailable) {
     return { ok: false, message: "Nowa wersja jest wykryta, ale instalator jeszcze się buduje. Spróbuj ponownie za kilka minut." };
   }
@@ -201,3 +203,4 @@ export async function applyUpdate(info: UpdateInfo): Promise<UpdateApplyResult> 
     }
   }
 }
+import { ownerManagedBuild, ownerUpdateMessage } from "./licenseAuthority";

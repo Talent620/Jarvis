@@ -17,6 +17,7 @@ import {
 import {
   parsePrivateJwk,
   privateMatchesApp,
+  verifyIssuerPrivateKey,
   issueLocalLicense,
   extendLocalLicense,
   listLocalLicenses,
@@ -34,6 +35,9 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
   const [phone, setPhone] = useState("");
   const [unlocked, setUnlocked] = useState(false);
+  const [keyUnlocked, setKeyUnlocked] = useState(false);
+  const [offBusy, setOffBusy] = useState(false);
+  const [offKey, setOffKey] = useState("");
   const [cfg, setCfg] = useState<AdminConfig>({ workerUrl: "", adminToken: "" });
   const [tab, setTab] = useState<"licenses" | "offline" | "keys" | "value">("licenses");
   const [rows, setRows] = useState<LicenseRow[] | null>(null);
@@ -74,25 +78,46 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     if (c?.adminToken) void refresh(c);
   };
 
+  const importIssuer = async (file?: File) => {
+    if (!file) return;
+    setOffBusy(true); setMsg("");
+    try {
+      if (file.size > 16384) throw new Error("Plik klucza jest zbyt duży.");
+      const text = await file.text(), jwk = parsePrivateJwk(text);
+      if (!jwk || !await verifyIssuerPrivateKey(jwk)) throw new Error("Ten klucz nie potwierdza własności wystawcy tej aplikacji. Użyj klucza z tej samej lokalnej instalacji co APK.");
+      setPriv(JSON.stringify(jwk)); setKeyUnlocked(true); setUnlocked(true); setTab("offline");
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Nie udało się odczytać klucza."); }
+    finally { setOffBusy(false); }
+  };
+
   // --- Offline-generator: podpis lokalny własnym kluczem prywatnym ---
   const genOffline = async () => {
     const jwk = parsePrivateJwk(priv);
     if (!jwk) { toast("Najpierw wklej poprawny klucz prywatny (EC P-256)."); return; }
     if (!offForm.owner.trim()) { toast('Podaj właściciela klucza (np. „tester młody”).'); return; }
-    const rec = await issueLocalLicense(jwk, offForm.owner.trim(), offForm.days ? Number(offForm.days) : 0);
-    setLocalRows(listLocalLicenses());
-    setOffForm({ owner: "", days: "30" });
-    copyWithToast(rec.token, "Podpisano i skopiowano ✓");
+    setOffBusy(true); setMsg("");
+    try {
+      const rec = await issueLocalLicense(jwk, offForm.owner.trim(), offForm.days ? Number(offForm.days) : 0);
+      setLocalRows(listLocalLicenses()); setOffKey(rec.token);
+      setOffForm({ owner: "", days: "30" });
+      copyWithToast(rec.token, "Licencja APK podpisana i skopiowana ✓");
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Nie udało się wydać licencji."); }
+    finally { setOffBusy(false); }
   };
   const extendOff = async (r: LicenseRecord, days: number) => {
     const jwk = parsePrivateJwk(priv);
     if (!jwk) { toast("Wklej klucz prywatny, by przedłużać."); return; }
-    const up = await extendLocalLicense(jwk, r, days);
-    setLocalRows(listLocalLicenses());
-    copyWithToast(up.token, `Przedłużono (${days ? days + " dni" : "bezterminowo"}) i skopiowano ✓`);
+    setOffBusy(true); setMsg("");
+    try {
+      const up = await extendLocalLicense(jwk, r, days);
+      setLocalRows(listLocalLicenses()); setOffKey(up.token);
+      copyWithToast(up.token, `Przedłużono (${days ? days + " dni" : "bezterminowo"}) i skopiowano ✓`);
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Nie udało się przedłużyć licencji."); }
+    finally { setOffBusy(false); }
   };
 
   const persist = async (next: AdminConfig) => {
+    if (keyUnlocked) { setMsg("W trybie importu klucz pozostaje tylko w pamięci tej sesji. Po zamknięciu panelu wybierz plik ponownie."); return; }
     setCfg(next);
     await saveAdminConfig(phone, next);
   };
@@ -152,6 +177,12 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
               </button>
             </div>
             {msg && <p className="muted">{msg}</p>}
+            <hr />
+            <h3>Licencje APK — własny wystawca</h3>
+            <p className="muted">Po lokalnej instalacji wybierz swój plik private.jwk.json. Aplikacja sprawdzi podpis. Klucz pozostaje w pamięci panelu do jego zamknięcia.</p>
+            <label className="field">Klucz prywatny właściciela
+              <input type="file" accept="application/json,.json" aria-label="Importuj klucz wystawcy" disabled={offBusy} onChange={e => { void importIssuer(e.target.files?.[0]); e.target.value = ""; }} />
+            </label>
           </div>
           <div className="panel-foot">
             <button className="btn" onClick={onClose}>Zamknij</button>
@@ -170,7 +201,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
           <h2>🔐 Panel administratora</h2>
           <div className="chips" style={{ marginTop: 10 }}>
             <button className={`chip ${tab === "licenses" ? "on" : ""}`} onClick={() => setTab("licenses")}>📋 Licencje</button>
-            <button className={`chip ${tab === "offline" ? "on" : ""}`} onClick={() => setTab("offline")}>🔏 Offline</button>
+            <button className={`chip ${tab === "offline" ? "on" : ""}`} onClick={() => setTab("offline")}>🔏 Licencje APK</button>
             <button className={`chip ${tab === "keys" ? "on" : ""}`} onClick={() => setTab("keys")}>🗝 Moje klucze</button>
             <button className={`chip ${tab === "value" ? "on" : ""}`} onClick={() => setTab("value")}>💎 Wycena</button>
           </div>
@@ -229,32 +260,40 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                   </p>
                 </div>
                 <Guide title="ℹ Jak to działa (offline — Twój własny klucz)" open>
-                  <p>Wklej swój <b>klucz prywatny</b> (zawartość pliku <i>license-private.json</i>). Zostaje <b>tylko u Ciebie</b>, zaszyfrowany Twoim numerem — nigdzie go nie wysyłamy. Podpisuje klucze <b>lokalnie</b>, bez serwera.</p>
+                  <p>Importowany <b>klucz prywatny</b> pozostaje tylko w pamięci panelu do jego zamknięcia. W trybie hasła możesz osobno zapisać go zaszyfrowanego. Licencje podpisujesz <b>lokalnie</b>, bez serwera.</p>
                   <p>Klucz musi pasować do <b>klucza publicznego tej wersji aplikacji</b> — inaczej wydane licencje się nie aktywują (każdy „szef" z własnym kluczem potrzebuje wersji z jego kluczem publicznym).</p>
                   <p>⚠ Offline nie śledzi użycia (ile urządzeń) — to widać tylko dla kluczy z serwera (zakładka „📋 Licencje"). Tu pokazujemy właściciela, termin i status.</p>
                 </Guide>
 
-                <div className="field">
+                {!keyUnlocked && <div className="field">
                   <label>Twój klucz prywatny (zawartość license-private.json)</label>
                   <textarea className="ta" value={priv} placeholder='{"kty":"EC","crv":"P-256","d":"…","x":"…","y":"…"}' onChange={(e) => setPriv(e.target.value)} style={{ minHeight: 70, fontFamily: "monospace", fontSize: 11 }} />
-                </div>
+                </div>}
                 {priv.trim() && (
                   !jwk ? (
                     <p className="muted" style={{ color: "#ff8585", fontSize: 13 }}>⚠ To nie jest poprawny klucz prywatny EC P-256.</p>
                   ) : privateMatchesApp(jwk) ? (
-                    <p className="muted" style={{ color: "var(--ok, #58e08a)", fontSize: 13 }}>✅ Pasuje do tej aplikacji — wydane klucze będą się aktywować.</p>
+                    <p className="muted" style={{ color: "var(--ok, #58e08a)", fontSize: 13 }}>Klucz publiczny jest zgodny. Podpis zostanie sprawdzony przed wydaniem licencji.</p>
                   ) : (
                     <p className="muted" style={{ color: "var(--gold)", fontSize: 13 }}>⚠ Ten klucz NIE pasuje do klucza publicznego tej wersji — wydane nim licencje się tu nie aktywują.</p>
                   )
                 )}
-                <button className="btn" onClick={async () => { await persist({ ...cfg, signerPriv: priv }); toast("Klucz prywatny zapisany (zaszyfrowany) ✓"); }}>💾 Zapamiętaj klucz prywatny</button>
+                {!keyUnlocked && <button className="btn" onClick={async () => { await persist({ ...cfg, signerPriv: priv }); toast("Klucz prywatny zapisany (zaszyfrowany) ✓"); }}>💾 Zapamiętaj klucz prywatny</button>}
+                {keyUnlocked && <p className="muted">Klucz tylko w pamięci sesji. Desktop i APK muszą być zbudowane z tym samym publicznym kluczem wystawcy.</p>}
 
                 <h3 style={{ marginTop: 16 }}>➕ Podpisz klucz dla kogoś</h3>
                 <div className="field" style={{ display: "flex", gap: 8 }}>
-                  <input value={offForm.owner} placeholder='Właściciel (np. „tester młody", „szef — ja")' onChange={(e) => setOffForm({ ...offForm, owner: e.target.value })} style={{ flex: 2 }} />
-                  <input type="number" min="0" value={offForm.days} placeholder="Dni (∞)" onChange={(e) => setOffForm({ ...offForm, days: e.target.value })} style={{ flex: 1 }} />
+                  <input aria-label="Właściciel licencji APK" value={offForm.owner} placeholder='Właściciel (np. „tester młody”, „szef — ja”)' onChange={(e) => setOffForm({ ...offForm, owner: e.target.value })} style={{ flex: 2 }} />
+                  <input aria-label="Ważność licencji w dniach" type="number" min="0" max="36500" step="1" value={offForm.days} placeholder="Dni (∞)" onChange={(e) => setOffForm({ ...offForm, days: e.target.value })} style={{ flex: 1 }} />
                 </div>
-                <button className="btn primary" onClick={genOffline}>🔏 Podpisz i skopiuj</button>
+                <p className="muted">0 dni = bezterminowo. Klucz aktywuje APK i desktop tego samego wystawcy.</p>
+                <button className="btn primary" disabled={offBusy || !jwk || !privateMatchesApp(jwk) || !offForm.owner.trim()} onClick={genOffline}>{offBusy ? "Podpisuję…" : "🔏 Generuj klucz licencyjny APK"}</button>
+                {offKey && <div className="field">
+                  <label>Gotowy klucz — skopiuj cały ciąg do ekranu aktywacji APK</label>
+                  <textarea aria-label="Wygenerowany klucz licencyjny APK" className="ta" value={offKey} readOnly spellCheck={false} onFocus={e => e.target.select()} style={{ minHeight: 100, fontFamily: "monospace", fontSize: 12 }} />
+                  <button className="btn" onClick={() => copyWithToast(offKey, "Klucz skopiowany ✓")}>📋 Kopiuj klucz APK</button>
+                </div>}
+                {msg && <p role="status" className="muted">{msg}</p>}
 
                 <h3 style={{ marginTop: 16 }}>📋 Wydane klucze (kto · na ile · status)</h3>
                 {localRows.length === 0 ? (

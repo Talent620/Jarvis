@@ -9,15 +9,11 @@
 
 import { fetchTimeout } from "./http";
 import { isRevoked } from "./revoked";
+import { PUBLIC_JWK } from "./licenseAuthority";
+export { PUBLIC_JWK } from "./licenseAuthority";
 
 // Eksportowany, bo offline-generator (licenseSign.ts) porównuje z nim wklejony klucz
 // prywatny — inaczej podpisane nim licencje nie aktywują się w tej wersji aplikacji.
-export const PUBLIC_JWK: JsonWebKey = {
-  kty: "EC",
-  crv: "P-256",
-  x: "cr_zxxKQMLPKsuGybJtd05h_z-m0H_xnhS7WiYtEmdU",
-  y: "a1Xl4CHImK2EAIXg19PVIFuagNCa4PQ2zatk4gysxzg",
-};
 
 const STORE_KEY = "jarvis.license.v1";
 
@@ -90,8 +86,9 @@ export function normalizeKey(s: string): string {
 /** Zweryfikuj klucz licencyjny (podpis + ewentualny termin ważności). */
 export async function verifyLicense(token: string): Promise<LicenseInfo> {
   try {
-    const [data, sigB64] = normalizeKey(token).split(".");
-    if (!data || !sigB64) return { valid: false };
+    const parts = normalizeKey(token).split(".");
+    const [data, sigB64] = parts;
+    if (parts.length !== 2 || !data || !sigB64) return { valid: false };
     const ok = await crypto.subtle.verify(
       { name: "ECDSA", hash: "SHA-256" },
       await publicKey(),
@@ -100,7 +97,7 @@ export async function verifyLicense(token: string): Promise<LicenseInfo> {
     );
     if (!ok) return { valid: false };
     const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(data))) as { n?: string; t?: string; iat?: number; exp?: number };
-    if (payload.exp && Date.now() > payload.exp) return { valid: false }; // licencja wygasła
+    if (payload.exp !== undefined && (!Number.isFinite(payload.exp) || Date.now() >= payload.exp)) return { valid: false };
     if (isRevoked(payload.n, payload.iat)) return { valid: false }; // unieważniony offline (kill-switch w aktualizacji)
     return { valid: true, name: payload.n, type: payload.t, exp: payload.exp };
   } catch {

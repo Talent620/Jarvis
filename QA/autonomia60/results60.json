@@ -289,12 +289,20 @@
     "user_interventions": null,
     "evidence_paths": [
       "baseline.json",
-      "evidence/electron-start.log"
+      "evidence/electron-start.log",
+      "license-iteration/evidence/real-agent/ollama.json"
     ],
     "bug": null,
     "patch": null,
     "rerun": null,
-    "blocker": "Brak sesji graficznej użytkownika. Próba Electron bez wyłączenia sandboxa zakończyła się brakiem X server/$DISPLAY."
+    "blocker": "Brak sesji graficznej użytkownika. Próba Electron bez wyłączenia sandboxa zakończyła się brakiem X server/$DISPLAY.",
+    "iteration_updates": [
+      {
+        "date": "2026-11-05",
+        "reference": "license-iteration/REPORT.md",
+        "result": "No full scenario newly passed. A–C real-model runner preflight BLOCKED (both local endpoints refused); desktop clipboard scenario D NOT_RUN; license UI PASS is separate B coverage."
+      }
+    ]
   },
   {
     "id": "JARVIS-10",
@@ -322,12 +330,20 @@
     "user_interventions": null,
     "evidence_paths": [
       "baseline.json",
-      "evidence/electron-start.log"
+      "evidence/electron-start.log",
+      "license-iteration/evidence/real-agent/ollama.json"
     ],
     "bug": null,
     "patch": null,
     "rerun": null,
-    "blocker": "Brak sesji graficznej użytkownika. Próba Electron bez wyłączenia sandboxa zakończyła się brakiem X server/$DISPLAY."
+    "blocker": "Brak sesji graficznej użytkownika. Próba Electron bez wyłączenia sandboxa zakończyła się brakiem X server/$DISPLAY.",
+    "iteration_updates": [
+      {
+        "date": "2026-11-05",
+        "reference": "license-iteration/REPORT.md",
+        "result": "No full scenario newly passed. A–C real-model runner preflight BLOCKED (both local endpoints refused); desktop clipboard scenario D NOT_RUN; license UI PASS is separate B coverage."
+      }
+    ]
   },
   {
     "id": "JARVIS-11",
@@ -355,12 +371,20 @@
     "user_interventions": null,
     "evidence_paths": [
       "baseline.json",
-      "evidence/electron-start.log"
+      "evidence/electron-start.log",
+      "license-iteration/evidence/real-agent/ollama.json"
     ],
     "bug": null,
     "patch": null,
     "rerun": null,
-    "blocker": "Brak sesji graficznej użytkownika. Próba Electron bez wyłączenia sandboxa zakończyła się brakiem X server/$DISPLAY."
+    "blocker": "Brak sesji graficznej użytkownika. Próba Electron bez wyłączenia sandboxa zakończyła się brakiem X server/$DISPLAY.",
+    "iteration_updates": [
+      {
+        "date": "2026-11-05",
+        "reference": "license-iteration/REPORT.md",
+        "result": "No full scenario newly passed. A–C real-model runner preflight BLOCKED (both local endpoints refused); desktop clipboard scenario D NOT_RUN; license UI PASS is separate B coverage."
+      }
+    ]
   },
   {
     "id": "JARVIS-12",
@@ -1233,12 +1257,20 @@
       "baseline.json",
       "evidence/electron-start.log",
       "evidence/model-availability.json",
-      "evidence/ollama-port.log"
+      "evidence/ollama-port.log",
+      "license-iteration/evidence/real-agent/ollama.json"
     ],
     "bug": null,
     "patch": null,
     "rerun": null,
-    "blocker": "Brak rzeczywistego lokalnego modelu oraz autoryzowanych danych/sesji dla pełnego przebiegu. Endpoint 11435 w tej maszynie nie odpowiada; to nie jest konfiguracja komputera użytkownika."
+    "blocker": "Brak rzeczywistego lokalnego modelu oraz autoryzowanych danych/sesji dla pełnego przebiegu. Endpoint 11435 w tej maszynie nie odpowiada; to nie jest konfiguracja komputera użytkownika.",
+    "iteration_updates": [
+      {
+        "date": "2026-11-05",
+        "reference": "license-iteration/REPORT.md",
+        "result": "No full scenario newly passed. A–C real-model runner preflight BLOCKED (both local endpoints refused); desktop clipboard scenario D NOT_RUN; license UI PASS is separate B coverage."
+      }
+    ]
   },
   {
     "id": "JARVIS-38",
@@ -1370,12 +1402,20 @@
     "evidence_paths": [
       "baseline.json",
       "evidence/electron-start.log",
-      "evidence/model-availability.json"
+      "evidence/model-availability.json",
+      "license-iteration/evidence/real-agent/ollama.json"
     ],
     "bug": null,
     "patch": null,
     "rerun": null,
-    "blocker": "Brak rzeczywistego lokalnego modelu oraz autoryzowanych danych/sesji dla pełnego przebiegu. Endpoint 11435 w tej maszynie nie odpowiada; to nie jest konfiguracja komputera użytkownika."
+    "blocker": "Brak rzeczywistego lokalnego modelu oraz autoryzowanych danych/sesji dla pełnego przebiegu. Endpoint 11435 w tej maszynie nie odpowiada; to nie jest konfiguracja komputera użytkownika.",
+    "iteration_updates": [
+      {
+        "date": "2026-11-05",
+        "reference": "license-iteration/REPORT.md",
+        "result": "No full scenario newly passed. A–C real-model runner preflight BLOCKED (both local endpoints refused); desktop clipboard scenario D NOT_RUN; license UI PASS is separate B coverage."
+      }
+    ]
   },
   {
     "id": "JARVIS-42",
@@ -1576,7 +1616,8 @@
       "evidence/stop-baseline.log",
       "evidence/stop-fixed.log",
       "evidence/stop-ui.json",
-      "evidence/stop-process.log"
+      "evidence/stop-process.log",
+      "license-iteration/evidence/real-agent/ollama.json"
     ],
     "bug": null,
     "patch": "Propagacja AbortSignal, bariery przed narzędziami i po zgodzie, STOP w czacie, anulowanie własnych procesów, status cancelled.",
@@ -1629,6 +1670,13 @@
         "variant": "desktop-live-model",
         "outcome": "BLOCKED",
         "reason": "no graphical session or real LLM"
+      }
+    ],
+    "iteration_updates": [
+      {
+        "date": "2026-11-05",
+        "reference": "license-iteration/REPORT.md",
+        "result": "No full scenario newly passed. A–C real-model runner preflight BLOCKED (both local endpoints refused); desktop clipboard scenario D NOT_RUN; license UI PASS is separate B coverage."
       }
     ]
   },
@@ -2080,11 +2128,19 @@
     "user_interventions": null,
     "evidence_paths": [
       "baseline.json",
-      "evidence/electron-start.log"
+      "evidence/electron-start.log",
+      "license-iteration/evidence/real-agent/ollama.json"
     ],
     "bug": null,
     "patch": null,
     "rerun": null,
-    "blocker": "Brak sesji graficznej użytkownika. Próba Electron bez wyłączenia sandboxa zakończyła się brakiem X server/$DISPLAY."
+    "blocker": "Brak sesji graficznej użytkownika. Próba Electron bez wyłączenia sandboxa zakończyła się brakiem X server/$DISPLAY.",
+    "iteration_updates": [
+      {
+        "date": "2026-11-05",
+        "reference": "license-iteration/REPORT.md",
+        "result": "No full scenario newly passed. A–C real-model runner preflight BLOCKED (both local endpoints refused); desktop clipboard scenario D NOT_RUN; license UI PASS is separate B coverage."
+      }
+    ]
   }
 ]

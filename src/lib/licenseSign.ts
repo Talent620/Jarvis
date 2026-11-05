@@ -7,7 +7,7 @@
 // nigdzie go nie wysyłamy. Wydane tokeny (NIE są sekretem) trzymamy w lokalnym rejestrze, by
 // pokazać kto · na ile · status i umożliwić przedłużenie jednym kliknięciem.
 
-import { PUBLIC_JWK } from "./license";
+import { PUBLIC_JWK, verifyLicense } from "./license";
 import { loadJson, saveJson } from "./lsJson";
 
 const REG_KEY = "jarvis.licenses.local.v1";
@@ -56,11 +56,26 @@ export function parsePrivateJwk(text: string): JsonWebKey | null {
 /** Czy ten klucz prywatny pasuje do KLUCZA PUBLICZNEGO tej aplikacji.
  *  Jeśli nie — licencje nim podpisane NIE aktywują się w tej wersji (inny klucz publiczny). */
 export function privateMatchesApp(jwk: JsonWebKey): boolean {
-  return !!jwk.x && !!jwk.y && jwk.x === PUBLIC_JWK.x && jwk.y === PUBLIC_JWK.y;
+  return jwk.kty === "EC" && jwk.crv === "P-256" && !!jwk.d && !!jwk.x && !!jwk.y && jwk.x === PUBLIC_JWK.x && jwk.y === PUBLIC_JWK.y;
+}
+
+/** Proves possession of the matching private scalar; copied public coordinates alone are insufficient. */
+export async function verifyIssuerPrivateKey(jwk: JsonWebKey): Promise<boolean> {
+  if (!privateMatchesApp(jwk)) return false;
+  try {
+    const privateKey = await crypto.subtle.importKey("jwk", jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+    const publicKey = await crypto.subtle.importKey("jwk", PUBLIC_JWK, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, privateKey, challenge);
+    return await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, publicKey, signature, challenge);
+  } catch { return false; }
 }
 
 /** Podpisz licencję lokalnie (ECDSA P-256). Zwraca token „data.sig" — zgodny z verifyLicense(). */
 export async function signLicense(jwk: JsonWebKey, name: string, days: number): Promise<string> {
+  name = name.trim();
+  if (!name || name.length > 200) throw new Error("Podaj właściciela licencji (1–200 znaków).");
+  if (!Number.isSafeInteger(days) || days < 0 || days > 36500) throw new Error("Podaj całkowitą liczbę dni od 0 do 36500. 0 oznacza bezterminowo.");
   const key = await crypto.subtle.importKey("jwk", jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
   const iat = Date.now();
   const payload: LicensePayload = { n: name, t: days ? "term" : "perpetual", iat };
@@ -85,7 +100,7 @@ export function decodeLicense(token: string): LicensePayload | null {
 export function licenseStatus(exp: number | null, now = Date.now()): { label: string; tone: "ok" | "warn" | "err" } {
   if (!exp) return { label: "bezterminowy", tone: "ok" };
   const days = Math.ceil((exp - now) / DAY_MS);
-  if (days < 0) return { label: `wygasł ${Math.abs(days)} dni temu`, tone: "err" };
+  if (exp <= now) return { label: `wygasł ${Math.abs(days)} dni temu`, tone: "err" };
   if (days <= 7) return { label: `wygasa za ${days} dni`, tone: "warn" };
   return { label: `aktywny · ${days} dni`, tone: "ok" };
 }
@@ -105,7 +120,9 @@ export function removeLocalLicense(id: string): void {
 
 /** Podpisz NOWY klucz dla właściciela i dopisz do rejestru. */
 export async function issueLocalLicense(jwk: JsonWebKey, owner: string, days: number): Promise<LicenseRecord> {
+  if (!await verifyIssuerPrivateKey(jwk)) throw new Error("Klucz prywatny nie pasuje do wystawcy tej aplikacji. Zbuduj desktop i APK z tym samym kluczem publicznym.");
   const token = await signLicense(jwk, owner, days);
+  if (!(await verifyLicense(token)).valid) throw new Error("Wygenerowany token nie przeszedł weryfikacji aplikacji. Nie zapisano licencji.");
   const p = decodeLicense(token);
   const iat = p?.iat ?? Date.now();
   const rec: LicenseRecord = {
@@ -122,7 +139,9 @@ export async function issueLocalLicense(jwk: JsonWebKey, owner: string, days: nu
 
 /** Przedłuż klucz danego właściciela — ten sam wpis, nowy termin (days=0 → bezterminowy). */
 export async function extendLocalLicense(jwk: JsonWebKey, rec: LicenseRecord, days: number): Promise<LicenseRecord> {
+  if (!await verifyIssuerPrivateKey(jwk)) throw new Error("Nieprawidłowy klucz wystawcy tej aplikacji.");
   const token = await signLicense(jwk, rec.owner, days);
+  if (!(await verifyLicense(token)).valid) throw new Error("Przedłużona licencja nie przeszła weryfikacji. Rejestr pozostaje bez zmian.");
   const p = decodeLicense(token);
   const updated: LicenseRecord = { ...rec, type: p?.t || "term", iat: p?.iat ?? Date.now(), exp: p?.exp ?? null, token };
   saveLocalLicense(updated);

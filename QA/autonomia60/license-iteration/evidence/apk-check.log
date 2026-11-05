@@ -1,0 +1,15 @@
+
+> jarvis-ai-assistant@2.0.0 install:local
+> node scripts/install-local.cjs --apk --check
+
+{
+  "mode": "APK",
+  "requirements": {
+    "node": true,
+    "npm": true,
+    "java": true,
+    "android_sdk": false,
+    "adb": null,
+    "graphical_session": null
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "ephemeral_test_key": true,
+  "private_scalar_in_bundle": false,
+  "js_assets_checked": 71,
+  "public_configuration_validated_by_build": true,
+  "license_required": true
+}

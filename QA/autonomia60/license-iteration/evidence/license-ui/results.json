@@ -1,0 +1,12 @@
+[
+  {
+    "id": "license-issue-activate",
+    "level": "B",
+    "status": "PASS",
+    "detail": "Normal licensed gate → owner import proof → real local signature → independent verification → normal activation → reload. No license bypass.",
+    "evidence": [
+      "verification.json",
+      "issued-license.png"
+    ]
+  }
+]

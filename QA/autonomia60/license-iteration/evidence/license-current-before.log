@@ -1,0 +1,55 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ❯ tests/license.test.ts (11 tests | 2 failed) 25ms
+   × Licencja — weryfikacja ECDSA > akceptuje ważny klucz właściciela i czyta dane 14ms
+     → expected false to be true // Object.is equality
+   × Licencja — weryfikacja ECDSA > akceptuje ważny klucz mimo brudnego wklejenia (spacje + zero-width) 2ms
+     → expected false to be true // Object.is equality
+ ✓ tests/licenseSign.test.ts (11 tests) 29ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/license.test.ts > Licencja — weryfikacja ECDSA > akceptuje ważny klucz właściciela i czyta dane
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/license.test.ts:39:21
+     37|   it("akceptuje ważny klucz właściciela i czyta dane", async () => {
+     38|     const r = await verifyLicense(MASTER);
+     39|     expect(r.valid).toBe(true);
+       |                     ^
+     40|     expect(r.name).toBe("FIXTURE TESTOWY");
+     41|     expect(r.type).toBe("perpetual");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/license.test.ts > Licencja — weryfikacja ECDSA > akceptuje ważny klucz mimo brudnego wklejenia (spacje + zero-width)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/license.test.ts:77:48
+     75|   it("akceptuje ważny klucz mimo brudnego wklejenia (spacje + zero-wid…
+     76|     const dirty = "  " + MASTER.slice(0, 20) + "​ \n" + MASTER.slice(2…
+     77|     expect((await verifyLicense(dirty)).valid).toBe(true);
+       |                                                ^
+     78|   });
+     79| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  2 failed | 20 passed (22)
+   Start at  19:38:12
+   Duration  1.10s (transform 92ms, setup 0ms, collect 136ms, tests 54ms, environment 1.41s, prepare 152ms)
+

@@ -20,6 +20,8 @@ tsconfig.tsbuildinfo
 
 # Klucz prywatny licencji — NIGDY nie commitować
 license-private.json
+license-public.local.json
+license-issuer/
 
 # Sekrety BFF (lokalny dev) — NIGDY do repo
 proxy/.dev.vars

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { activateLicense, saveLicense, normalizeKey } from "../lib/license";
+const AdminPanel = lazy(() => import("./AdminPanel"));
 
 // Brama aktywacji: bez ważnego klucza licencyjnego aplikacja się nie uruchamia.
 // Klucz wydaje wyłącznie autor (Artur Józefczak). Kopia bez klucza jest bezużyteczna.
@@ -7,6 +8,7 @@ export default function LicenseGate({ onActivated, onClose }: { onActivated: (na
   const [key, setKey] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [ownerPanel, setOwnerPanel] = useState(false);
 
   const activate = async (raw?: string) => {
     const t = normalizeKey(raw ?? key);
@@ -72,7 +74,9 @@ export default function LicenseGate({ onActivated, onClose }: { onActivated: (na
           <b> za zgodą autora</b>. Skontaktuj się, aby wykupić dostęp.
         </p>
         <div className="muted" style={{ fontSize: 11, marginTop: 14 }}>© 2026 Artur Józefczak · Wszelkie prawa zastrzeżone</div>
+        <button className="btn" onClick={() => setOwnerPanel(true)}>🔏 Panel właściciela — klucze APK</button>
       </div>
+      {ownerPanel && <Suspense fallback={<p role="status">Otwieram panel…</p>}><AdminPanel onClose={() => setOwnerPanel(false)} /></Suspense>}
     </div>
   );
 }
