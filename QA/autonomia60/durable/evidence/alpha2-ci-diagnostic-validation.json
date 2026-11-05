@@ -1,0 +1,34 @@
+{
+  "workflow": ".github/workflows/test.yml",
+  "method": "Synthetic Bash pipeline and JSON/log fixtures only; runtime and assertions unchanged",
+  "results": [
+    {
+      "case": "tee-pipestatus-0",
+      "status": "PASS"
+    },
+    {
+      "case": "tee-pipestatus-7",
+      "status": "PASS"
+    },
+    {
+      "case": "tee-pipestatus-137",
+      "status": "PASS"
+    },
+    {
+      "case": "all-assertions-passed-but-process-failed",
+      "status": "PASS"
+    },
+    {
+      "case": "missing-json-unhandled-context",
+      "status": "PASS"
+    },
+    {
+      "case": "known-assertion-does-not-emit-unrelated-stderr",
+      "status": "PASS"
+    },
+    {
+      "case": "no-process-marker-explicit",
+      "status": "PASS"
+    }
+  ]
+}

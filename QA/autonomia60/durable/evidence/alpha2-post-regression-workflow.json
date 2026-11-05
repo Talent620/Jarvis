@@ -1,0 +1,10 @@
+{
+  "recorded_at": "2026-11-05T23:30:03.997462+00:00",
+  "validated_runtime_commit": "9f5f9afc868421a0b80197c6d1dd84483833de85",
+  "runtime_changed": false,
+  "test_assertions_changed": false,
+  "workflow_sha256": "6a2aa417b8767276e709bfea474280c446760c1586abf9eb45528fc2e18aa23a",
+  "diagnostics": "Vitest JSON plus bounded redacted public assertions or process errors; original exit code preserved through tee",
+  "validation": "7/7 synthetic workflow cases PASS; YAML parsed and diff checked",
+  "ci_failure_note": "Previous Tests run failed with empty public annotations; reason unknown, not declared fixed by diagnostics."
+}

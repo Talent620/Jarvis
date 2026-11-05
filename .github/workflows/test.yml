@@ -30,14 +30,82 @@ jobs:
         run: npm run scan:secrets
 
       - name: Run tests
-        run: npm test
+        id: tests
+        run: |
+          mkdir -p QA/runs
+          set +e
+          npm test -- --reporter=default --reporter=json --outputFile=QA/runs/ci-vitest.json 2>&1 | tee QA/runs/ci-vitest.log
+          test_exit=${PIPESTATUS[0]}
+          set -e
+          printf 'exit_code=%s\n' "$test_exit" >> "$GITHUB_OUTPUT"
+          exit "$test_exit"
+
+      - name: Report original test outcome and bounded failures
+        if: always()
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+          TEST_EXIT_CODE: ${{ steps.tests.outputs.exit_code }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const outcome = ['success', 'failure', 'cancelled', 'skipped'].includes(process.env.TEST_OUTCOME) ? process.env.TEST_OUTCOME : 'not-started';
+          const exitCode = /^\d{1,3}$/.test(process.env.TEST_EXIT_CODE || '') ? process.env.TEST_EXIT_CODE : 'unavailable';
+          const secrets = Object.entries(process.env).filter(([key, value]) => /TOKEN|PASSWORD|SECRET|CREDENTIAL|(?:^|_)KEY(?:_|$)/i.test(key) && value?.length >= 4).map(([, value]) => value);
+          const sanitize = value => {
+            let text = String(value || '').replace(/\u001b\[[0-9;]*m/g, '');
+            for (const secret of secrets) text = text.split(secret).join('[REDACTED]');
+            return text.replace(/(https?:\/\/)[^\s/@]+:[^\s/@]+@/gi, '$1[REDACTED]@')
+              .replace(/\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, '[REDACTED]')
+              .replace(/((?:api[_-]?key|access[_-]?token|token|secret|password|authorization)\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;}]+)/gi, '$1[REDACTED]')
+              .replace(/\b(?:sk-[\w-]{12,}|gh[pousr]_[\w]{12,}|github_pat_[\w]{12,}|AKIA[A-Z0-9]{16})\b/g, '[REDACTED]')
+              .split(/\r?\n/).find(line => line.trim())?.slice(0, 600) || '(no failure message)';
+          };
+          const escape = text => text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+          const annotation = (level, message) => console.log(`::${level} title=Vitest diagnostics::${escape(sanitize(message))}`);
+          const processFailureContext = () => {
+            let lines;
+            try { lines = fs.readFileSync('QA/runs/ci-vitest.log', 'utf8').split(/\r?\n/); }
+            catch { annotation('error', 'Original test process log is unavailable.'); return; }
+            let start = -1;
+            const marker = /Unhandled Errors?|Unhandled Rejection|Uncaught Exception|FATAL ERROR|worker[^\r\n]*exited|\bKilled\b/i;
+            for (let index = 0; index < lines.length; index++) if (marker.test(lines[index])) start = index;
+            if (start < 0) { annotation('error', 'No unhandled, fatal, exited-worker or killed section found in the original process log. Inspect the uploaded log.'); return; }
+            for (const line of lines.slice(start).filter(line => line.trim()).slice(0, 3)) annotation('error', `Process log: ${line}`);
+          };
+          const original = `Original Run tests outcome=${outcome}; exit_code=${exitCode}.`;
+          annotation('notice', original);
+          if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${original}\n\n`);
+          let report;
+          try { report = JSON.parse(fs.readFileSync('QA/runs/ci-vitest.json', 'utf8')); if (!Array.isArray(report.testResults)) throw new Error('Invalid testResults'); }
+          catch { annotation(outcome === 'failure' ? 'error' : 'warning', `Vitest JSON report missing or invalid. ${original} Full test output remains in the original step.`); if (outcome === 'failure') processFailureContext(); process.exit(0); }
+          let emitted = 0, failures = 0;
+          for (const suite of report.testResults) {
+            const assertions = (suite.assertionResults || []).filter(test => test.status === 'failed');
+            if (suite.status === 'failed' && !assertions.length) assertions.push({ fullName: '(suite setup or worker)', status: 'failed', failureMessages: [suite.message] });
+            for (const test of assertions) {
+              failures++;
+              if (emitted++ >= 20) continue;
+              const file = path.relative(process.cwd(), String(suite.name || '(unknown file)')).slice(0, 160);
+              annotation('error', `${sanitize(file)} | ${sanitize(test.fullName || test.title).slice(0, 180)} | status=failed | ${sanitize(test.failureMessages?.[0]).slice(0, 240)}`);
+            }
+          }
+          if (failures > 20) annotation('notice', `${failures - 20} additional failures retained in the JSON artifact.`);
+          if (outcome === 'failure' && failures === 0) {
+            annotation('error', `Run tests failed without a failed assertion in JSON. ${original} Inspect the original step for process or unhandled errors.`);
+            processFailureContext();
+          }
+          NODE
 
       - name: Preserve browser sandbox prerequisite evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: browser-sandbox-prerequisite-tests
-          path: QA/runs/browser-session/precondition.json
+          path: |
+            QA/runs/browser-session/precondition.json
+            QA/runs/ci-vitest.json
+            QA/runs/ci-vitest.log
           if-no-files-found: warn
 
       - name: Type-check + build

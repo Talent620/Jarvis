@@ -1,0 +1,152 @@
+{
+  "recordedAt": "2026-11-05T23:24:02.085Z",
+  "expectedCommit": "9f5f9afc868421a0b80197c6d1dd84483833de85",
+  "artifactStructureStatus": "PASS",
+  "nativeLaunch": {
+    "status": "BLOCKED",
+    "exitCode": null,
+    "signal": "SIGSEGV",
+    "errorCode": null,
+    "userId": 1000,
+    "displayPresent": false,
+    "sandboxEnabled": true,
+    "systemInstallation": false,
+    "xvfbInstalled": false,
+    "profile": "<isolated-profile>",
+    "workspace": "<isolated-workspace>",
+    "blocker": "Missing X server / DISPLAY",
+    "rawLogSha256": "1b556b9ff1d85d59b2b0c9c14d6382084f11b707de783ae729519d8256aea4c7",
+    "log": "jarvis-alpha2-packages-9f5f9af-native.log"
+  },
+  "scope": "Independent actual Debian/AppImage extraction, integrity and packaged component loading. No system installation or claim of agent autonomy.",
+  "checksums": {
+    "JARVIS.AppImage": {
+      "expected": "58df21b263a738df51647c0798524feff315c819b773f34d1e4a98eab898af2b",
+      "actual": "58df21b263a738df51647c0798524feff315c819b773f34d1e4a98eab898af2b",
+      "matches": true
+    },
+    "JARVIS.deb": {
+      "expected": "5c5529a1c69a32a0851cd90765401b315f5094a6f5a4a51aeab1acaea976ffb1",
+      "actual": "5c5529a1c69a32a0851cd90765401b315f5094a6f5a4a51aeab1acaea976ffb1",
+      "matches": true
+    },
+    "PROVENANCE.json": {
+      "expected": "59a95721c23fce6033c61873f51dbb9e45ad5ab2cd210b8992a25d4955da48ca",
+      "actual": "59a95721c23fce6033c61873f51dbb9e45ad5ab2cd210b8992a25d4955da48ca",
+      "matches": true
+    }
+  },
+  "metadata": {
+    "schemaVersion": 1,
+    "version": "2.1.0-alpha.2",
+    "commit": "9f5f9afc868421a0b80197c6d1dd84483833de85",
+    "build": "2026-11-05 23:20",
+    "licenseRequired": true,
+    "issuer": "application-default"
+  },
+  "packageVersion": "2.1.0-alpha.2",
+  "archives": {
+    "identical": true,
+    "sha256": {
+      "deb": "29a807fd6c82da802648aeadd57f04438e2d93a48a83babe6a6d4673f2b3c024",
+      "appimage": "29a807fd6c82da802648aeadd57f04438e2d93a48a83babe6a6d4673f2b3c024"
+    },
+    "entryCount": 9347
+  },
+  "privatePathScan": {
+    "status": "PASS",
+    "forbiddenPaths": [],
+    "scope": "Known private/configuration paths and signing containers; not exhaustive secret scanning"
+  },
+  "requiredModules": {
+    "electron/main.cjs": true,
+    "electron/preload.cjs": true,
+    "electron/skill-manager.cjs": true,
+    "electron/skill-isolation.cjs": true,
+    "electron/workspace-tools.cjs": true,
+    "electron/browser-session.cjs": true,
+    "electron/monitor-connectors.cjs": true,
+    "electron/mcp-stdio.cjs": true,
+    "electron/goal-service.cjs": true,
+    "electron/local-ollama.cjs": true,
+    "electron/local-siteos.cjs": true
+  },
+  "nativeBinaries": {
+    "sha256": {
+      "deb": "ee99780b5878638df40bf577cfcdbc3c157b0b3581ada099a13db446f1af84d8",
+      "appimage": "ee99780b5878638df40bf577cfcdbc3c157b0b3581ada099a13db446f1af84d8"
+    },
+    "identical": true
+  },
+  "unpackedResources": {
+    "identical": true,
+    "files": 4,
+    "inventorySha256": "dd7fc37fb800b89094296ab5a49c3169044873d95595c9420dbceded03c90e40"
+  },
+  "debian": {
+    "version": "2.1.0~alpha.2",
+    "licenseField": "unknown",
+    "helperReceipt": {
+      "algorithm": "md5",
+      "expected": "19dc521280eb82ee664a348b0296b464",
+      "actual": "19dc521280eb82ee664a348b0296b464",
+      "matches": true
+    },
+    "postinstSha256": "3e38b342dad0d1661bc435fc7e635a749737abf49ce65826017e89b979368cd4",
+    "guardsPresent": [
+      "chrome-sandbox differs from installed package",
+      "group/world-writable path",
+      "chmod 4755",
+      "0:0:4755",
+      "hard-linked sandbox helper refused"
+    ],
+    "systemInstall": "NOT_EXECUTED",
+    "unsafeSandboxFlags": false
+  },
+  "dependencies": {
+    "js-yaml": {
+      "declared": "4.3.2",
+      "packagedVersion": "4.3.2",
+      "exists": true
+    },
+    "playwright-core": {
+      "declared": "1.62.1",
+      "packagedVersion": "1.62.1",
+      "exists": true
+    },
+    "@modelcontextprotocol/sdk": {
+      "declared": "1.32.2",
+      "packagedVersion": "1.32.2",
+      "exists": true
+    }
+  },
+  "componentSmoke": {
+    "status": "PASS",
+    "scope": "Extracted actual production dependencies and modules loaded by Node; no GUI/model claim"
+  },
+  "overallAcceptance": "BLOCKED: graphical environment unavailable",
+  "packagedBrowserPatch": {
+    "status": "PASS",
+    "file": "electron/browser-session.cjs",
+    "expectedSha256": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2",
+    "actualSha256": {
+      "deb": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2",
+      "appimage": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2",
+      "checkedOutSource": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2"
+    },
+    "archiveHashesMatchedPriorExtraction": true
+  },
+  "repositoryLogs": [
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha2-packages-9f5f9af.log",
+      "rawSha256": "5c7128c4066d9beb93602c66f208b9bffbc4bd5543643647f74435a905a2941d",
+      "storedSha256": "5c7128c4066d9beb93602c66f208b9bffbc4bd5543643647f74435a905a2941d"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha2-packages-9f5f9af-native.log",
+      "rawSha256": "1b556b9ff1d85d59b2b0c9c14d6382084f11b707de783ae729519d8256aea4c7",
+      "storedSha256": "1b556b9ff1d85d59b2b0c9c14d6382084f11b707de783ae729519d8256aea4c7"
+    }
+  ],
+  "logNormalization": "Trailing whitespace/empty EOF lines only"
+}
