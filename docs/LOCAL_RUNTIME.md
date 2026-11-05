@@ -26,7 +26,7 @@ Po pobraniu źródeł instalacja runtime w katalogu użytkownika wygląda tak:
 bash scripts/install-runtime.sh
 ```
 
-Gdy dostępna jest sesja `systemd --user`, instalator tworzy i uruchamia usługę `jarvis-runtime.service`. Gdy jej nie ma, wyświetla polecenie ręcznego startu w osobnym terminalu. Działanie usługi po wylogowaniu zależy od konfiguracji systemu; instalator nie włącza `linger`.
+Gdy dostępna jest sesja `systemd --user`, instalator tworzy i uruchamia usługę `jarvis-runtime.service`. Gdy jej nie ma, uruchamia odłączony proces w tle i sprawdza działającą wersję. Działanie usługi po wylogowaniu zależy od konfiguracji systemu; instalator nie włącza `linger`.
 
 Instalacja ze źródeł JARVIS-a wywołuje również ten skrypt. Przełącznik `--no-start` instaluje usługę bez uruchamiania; `--no-launch` w instalatorze ze źródeł nie uruchamia ani aplikacji, ani usługi.
 
@@ -38,6 +38,18 @@ Instalacja ze źródeł JARVIS-a wywołuje również ten skrypt. Przełącznik `
 4. Wpisz treść do analizy, kliknij **Dodaj do kolejki serwera** i sprawdź status lub wynik w tym samym panelu. Możesz anulować oczekujące lub trwające zadanie.
 
 Lista obejmuje modele zgłoszone przez Ollamę jako GGUF, po odfiltrowaniu rozpoznanych metadanych zdalnego wykonania. To nie dowód faktycznej lokalności przetwarzania: loopback i metadane nie blokują ruchu wychodzącego Ollamy. Nie wykonano testu usług AI przy odciętym dostępie do sieci.
+
+## Gdy wysłanie analizy zostanie przerwane
+
+Przed wysłaniem klient zapisuje lokalnie treść oraz identyfikator zgłoszenia, przypisane do adresu i konkretnej instancji serwera. Dzięki temu zamknięcie panelu lub przeładowanie aplikacji po utracie odpowiedzi nie wymaga tworzenia nowego zadania. Ten tymczasowy zapis nie zawiera tokena połączenia; zawiera jednak treść polecenia na tym urządzeniu do chwili potwierdzenia przyjęcia albo świadomego usunięcia kopii.
+
+Po ponownym połączeniu aplikacja sprawdza, czy zadanie zostało przyjęte. Samo otwarcie panelu nie wysyła nowego zlecenia. Jeżeli przyjęcia nie potwierdzono, możesz ponowić **to samo zgłoszenie**, z zachowanym identyfikatorem. Jeśli serwer już je posiada, zwraca dotychczasowe zadanie. Dotyczy to także zadania przeniesionego do archiwum.
+
+Zmiana instancji serwera pod tym samym adresem blokuje takie ponowienie. Nie przenosi się automatycznie polecenia do nowego serwera. Odmowa lokalnego magazynu również blokuje wysłanie, aby aplikacja nie traciła możliwości bezpiecznego ponowienia. Usunięcie lokalnej kopii zgłoszenia nie anuluje zadania na serwerze — anulowanie pozostaje osobną akcją przy zadaniu.
+
+Starsza wersja usługi może nie obsługiwać sprawdzania przyjęcia ani odczytu archiwum. Panel sygnalizuje wtedy brak tej możliwości; nie przedstawia nieznanego wyniku jako potwierdzonego niewykonania.
+
+Te funkcje są dostępne w runtime 0.2.0. Aktualizacja samego okna aplikacji nie zastępuje już działającego procesu starego serwera. Instalację ze źródeł aktualizuj aktualnym `scripts/install-runtime.sh` lub pełnym `scripts/install-linux-source.sh` ([zasady aktualizacji i rollbacku](RUNTIME_UPGRADE.md)); nie usuwaj katalogu danych, aby zachować kolejkę i tożsamość serwera. Panel pokazuje instrukcję aktualizacji i pozostawia bieżące wyniki dostępne, zamiast przyjmować nowe zgłoszenia bez wymaganej ochrony.
 
 ## Polecenia i diagnoza
 
@@ -70,7 +82,11 @@ Przy ręcznym uruchomieniu w terminalu zakończ proces kombinacją Ctrl+C. `~/.l
 
 Domyślny katalog danych to `~/.local/share/jarvis/runtime/`, a przy ustawionym `XDG_DATA_HOME` — `$XDG_DATA_HOME/jarvis/runtime/`. Zawiera profil, stan i wyniki kolejki oraz plik połączenia z tokenem. Token daje dostęp do zadań, dlatego przechowuj i udostępniaj kopie wyłącznie osobom uprawnionym.
 
-`state.json` zawiera bieżące zadania. Przy osiągnięciu 500 rekordów serwer najpierw zapisuje zakończone, nieudane i anulowane analizy w katalogu `archive/`, a dopiero po trwałym zapisie usuwa je z bieżącej listy. Możesz wykonać tę operację wcześniej poleceniem `~/.local/bin/jarvis-runtime archive`. Archiwum zawiera osobne pliki JSON z pełną treścią zadań i wyników; nazwy są skrótami identyfikatorów żądania. Pliki mają uprawnienia `0600`. Archiwalne wpisy nie są obecnie wyświetlane w panelu; możesz je odczytać lokalnie w edytorze. `status` podaje ich liczbę.
+`state.json` zawiera bieżące zadania. Przy osiągnięciu 500 rekordów serwer najpierw zapisuje zakończone, nieudane i anulowane analizy w katalogu `archive/`, a dopiero po trwałym zapisie usuwa je z bieżącej listy. Możesz wykonać tę operację wcześniej poleceniem `~/.local/bin/jarvis-runtime archive`. Archiwum zawiera osobne pliki JSON z pełną treścią zadań i wyników; nazwy są skrótami identyfikatorów żądania. Pliki mają uprawnienia `0600`.
+
+W panelu **Analizy w tle → Wyniki i historia** możesz otworzyć archiwum. Lista pobiera kolejne porcje wpisów, a pełne polecenie i wynik dopiero po wybraniu wpisu. Błąd odczytu jest pokazywany jako błąd, nie jako puste archiwum. Przeglądanie nie uruchamia ponownie modelu i nie zmienia zapisanych zadań. `status` nadal podaje liczbę zarchiwizowanych wpisów.
+
+Stronicowanie ogranicza wielkość odpowiedzi HTTP. Serwer nadal skanuje pliki archiwum przy pobieraniu strony lub szczegółu; nie ma indeksu bazy danych. Odczyt treści odbywa się poza blokadą zapisu kolejki, ale koszt dyskowy rośnie z liczbą wpisów. Nie wykonano pomiaru wydajności bardzo dużego archiwum. Nowo zarchiwizowane wyniki mogą wymagać odświeżenia listy.
 
 Ponowne zgłoszenie tego samego identyfikatora i polecenia zwraca poprzedni wynik również po archiwizacji lub restarcie. Inne polecenie z tym samym identyfikatorem jest odrzucane. Nie usuwaj archiwum, jeśli chcesz zachować tę gwarancję. Historia nie ma automatycznego terminu usuwania, więc z czasem zajmuje więcej miejsca na dysku. Brak miejsca lub uszkodzenie danych jest zgłaszane jako błąd; serwer nie zastępuje wtedy stanu pustą kolejką.
 

@@ -19,7 +19,13 @@ JARVIS_LICENSE_REQUIRED=false npm run build
 npx electron-builder --linux AppImage --publish never
 ```
 
-Smoke nie wstrzykuje aktywacji ani nie zmienia licencji gotowej paczki. Domyślny workflow Ubuntu buduje paczkę licencjonowaną, dlatego ten smoke **nie jest obecnie automatycznym krokiem CI**. Wykonanie CI: **NOT_RUN**. Dodanie bramki wymaga osobnego osobistego artefaktu testowego, bez zastępowania paczki wydawniczej.
+Smoke nie wstrzykuje aktywacji ani nie zmienia licencji gotowej paczki. Workflow [Build Ubuntu](../.github/workflows/ubuntu.yml) ma osobny job `runtime-smoke`: buduje osobisty AppImage z `JARVIS_LICENSE_REQUIRED=false`, instaluje przypięty Playwright 1.57.0 poza projektem i uruchamia test pod Xvfb z sandboxem Electron. Brak obsługi sandboxa powoduje błąd testu; workflow nie przełącza się automatycznie na `--no-sandbox`.
+
+Job `build` zależy od powodzenia smoke i buduje paczki wydawnicze w osobnym środowisku, z dotychczasową domyślną licencją. Job `publish` zależy od `build` i działa tylko dla push do `main`. Uprawnienie `contents: write` ma wyłącznie job publikacji. PR do `main` także przechodzi bramkę smoke; zmiany runtime, skryptów i lockfile uruchamiają ją również przy push do `main`.
+
+Bramka sprawdza zachowanie osobistej paczki z tego samego commita. Nie uruchamia dokładnej paczki licencjonowanej publikowanej przez job `publish` ani jej aktywacji; ten zakres nadal wymaga osobnego testu wydania.
+
+Log i opcjonalny zrzut ekranu sukcesu lub błędu są dostępne przez 7 dni jako artefakt `jarvis-linux-runtime-smoke`. Artefakt nie zawiera katalogu profilu, tokenu ani danych runtime. Wykonanie nowej konfiguracji na GitHub Actions: **NOT_RUN** w tej sesji; poprawność działania konkretnego runnera musi potwierdzić jego pierwszy przebieg. Lokalny test AppImage i walidacja workflow nie zastępują tego wyniku.
 
 Test tworzy prywatny katalog tymczasowy dla profilu aplikacji, danych runtime, XDG i workspace. Izoluje adres sesji D-Bus, aby nie uruchamiać usługi systemd rzeczywistego użytkownika. Po teście zamyka GUI, zatrzymuje własny runtime i usuwa dane tymczasowe; awaryjny sygnał procesu wymaga zgodności jego polecenia i unikalnego katalogu danych. Nie zmienia `HOME`.
 

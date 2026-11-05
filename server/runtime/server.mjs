@@ -1,10 +1,11 @@
 import http from 'node:http';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
-import { mkdir, readFile, writeFile, rename, open, unlink, chmod, rmdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rename, open, unlink, chmod, rmdir, readdir, link } from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 export const defaultDataDir = () => process.env.JARVIS_RUNTIME_DATA_DIR || path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local/share'), 'jarvis/runtime');
 const now = () => new Date().toISOString();
 const terminal = new Set(['completed', 'failed', 'cancelled']);
@@ -12,6 +13,9 @@ const MAX_JOBS = 500;
 const MAX_PROMPT = 24000;
 const MAX_BODY = 128 * 1024;
 const MAX_OUTPUT = 200000;
+const MAX_ARCHIVE_BYTES = 2_000_000;
+const REQUEST_KEY = /^[A-Za-z0-9_.:-]{8,128}$/;
+const JOB_ID = /^[a-f0-9-]{36}$/;
 export class RuntimeError extends Error {
   constructor(message, code = 'INVALID_REQUEST', status = 400) { super(message); this.code = code; this.status = status; }
 }
@@ -45,7 +49,21 @@ async function readJson(file, fallback) {
 }
 async function takeFileLock(lockFile) {
   const identity = randomUUID();
-  const take = () => writeFile(lockFile, JSON.stringify({ pid: process.pid, identity }), { flag: 'wx', mode: 0o600 });
+  const take = async () => {
+    const temporary = `${lockFile}.${identity}.tmp`;
+    let handle, created = false;
+    try {
+      handle = await open(temporary, 'wx', 0o600); created = true;
+      await handle.writeFile(JSON.stringify({ pid: process.pid, identity }));
+      await handle.sync(); await handle.close(); handle = null;
+      // link() publishes a complete inode without replacing an existing owner.
+      // Direct writeFile(flag: wx) exposed empty/partial JSON to competitors.
+      await link(temporary, lockFile);
+    } finally {
+      await handle?.close();
+      if (created) await unlink(temporary).catch(() => {});
+    }
+  };
   try { await take(); }
   catch (error) {
     if (error.code !== 'EEXIST') throw error;
@@ -87,6 +105,30 @@ function validJob(job) {
   if (job.result !== undefined && (typeof job.result !== 'string' || job.result.length > MAX_OUTPUT)) return false;
   if (job.error !== undefined && (typeof job.error !== 'string' || job.error.length > 2000)) return false;
   try { validateProfile({ model: job.model, ollamaUrl: job.ollamaUrl, version: job.profileVersion }); return true; } catch { return false; }
+}
+function archivePosition(job) { return { time: Date.parse(job.createdAt), id: job.id }; }
+function compareArchivePosition(a, b) { return b.time - a.time || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0); }
+function archiveSummary(job) {
+  const { id, idempotencyKey, status, createdAt, updatedAt, model, profileVersion, attempt, execution } = job;
+  return { id, idempotencyKey, status, createdAt, updatedAt, model, profileVersion, attempt, execution,
+    promptPreview: job.prompt.slice(0, 240), hasResult: typeof job.result === 'string', hasError: typeof job.error === 'string' };
+}
+function archivePageOptions(params) {
+  if ([...params.keys()].some(key => !['limit', 'cursor'].includes(key)) || params.getAll('limit').length > 1 || params.getAll('cursor').length > 1) throw new RuntimeError('Nieprawidłowe parametry archiwum.');
+  const rawLimit = params.get('limit') ?? '25';
+  if (!/^[1-9]\d{0,2}$/.test(rawLimit) || Number(rawLimit) > 100) throw new RuntimeError('Limit archiwum musi wynosić od 1 do 100.');
+  let cursor = null;
+  if (params.has('cursor')) {
+    try {
+      const raw = params.get('cursor');
+      if (!/^[A-Za-z0-9_-]{1,200}$/.test(raw)) throw new Error();
+      const decoded = Buffer.from(raw, 'base64url');
+      if (decoded.toString('base64url') !== raw) throw new Error();
+      cursor = JSON.parse(decoded.toString('utf8'));
+      if (!cursor || Object.keys(cursor).sort().join(',') !== 'id,time' || typeof cursor.id !== 'string' || !JOB_ID.test(cursor.id) || !Number.isSafeInteger(cursor.time) || Math.abs(cursor.time) > 8.64e15) throw new Error();
+    } catch { throw new RuntimeError('Nieprawidłowy kursor archiwum.'); }
+  }
+  return { limit: Number(rawLimit), cursor };
 }
 export async function configureRuntime(dataDir, patch) {
   await mkdir(dataDir, { recursive: true, mode: 0o700 });
@@ -166,6 +208,99 @@ export async function createRuntime(options = {}) {
       const operation = mutation.then(async () => { const next = structuredClone(state); const result = await fn(next); await atomicJson(stateFile, next); state = next; return result; });
       mutation = operation.catch(() => {}); return operation;
     };
+    // A read joins the same ordering as durable writes, without rewriting state.
+    // This avoids a false missing result while an accepted POST is committing.
+    const inspect = fn => {
+      const operation = mutation.then(() => fn(state));
+      mutation = operation.then(() => {}, () => {}); return operation;
+    };
+    const corruptArchive = () => new RuntimeError('Nie można odczytać archiwum. Zachowano pliki do diagnostyki.', 'CORRUPT_STATE', 503);
+    const readArchivedJob = async (file, missingAllowed = false) => {
+      let handle;
+      try {
+        // Archive paths are generated internally, and symlinks must not expose
+        // unrelated local files through this authenticated read API.
+        handle = await open(file, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK);
+        const info = await handle.stat();
+        if (!info.isFile() || info.size > MAX_ARCHIVE_BYTES) throw corruptArchive();
+        const buffer = Buffer.alloc(info.size + 1);
+        let length = 0;
+        while (length < buffer.length) {
+          const { bytesRead } = await handle.read(buffer, length, buffer.length - length, length);
+          if (!bytesRead) break;
+          length += bytesRead;
+        }
+        if (length > info.size) throw corruptArchive(); // The file changed while reading; do not accept a partial record.
+        const job = JSON.parse(buffer.subarray(0, length).toString('utf8'));
+        if (!validJob(job) || !terminal.has(job.status) || path.basename(file) !== path.basename(archiveFile(job.idempotencyKey))) throw corruptArchive();
+        return job;
+      } catch (error) {
+        if (missingAllowed && error.code === 'ENOENT') return null;
+        throw corruptArchive();
+      } finally { await handle?.close(); }
+    };
+    // Capture the committed filenames and immutable state together. File contents
+    // are read afterwards: O(n) archive I/O must not hold up cancel/enqueue.
+    const archiveSnapshot = () => inspect(async snapshot => {
+      try { return { snapshot, files: await readdir(archiveDir, { withFileTypes: true }) }; }
+      catch { throw corruptArchive(); }
+    });
+    const scanArchive = async ({ snapshot, files }, visit) => {
+      const liveIds = new Map(snapshot.jobs.map(job => [job.id, job.idempotencyKey]));
+      const liveKeys = new Map(snapshot.jobs.map(job => [job.idempotencyKey, job.id]));
+      const seenIds = new Set();
+      for (const file of files) {
+        if (!file.name.endsWith('.json')) continue; // Interrupted atomic-write .tmp files are not committed records.
+        if (!/^[a-f0-9]{64}\.json$/.test(file.name) || !file.isFile()) throw corruptArchive();
+        const job = await readArchivedJob(path.join(archiveDir, file.name));
+        if (seenIds.has(job.id)) throw corruptArchive();
+        seenIds.add(job.id);
+        if (liveIds.has(job.id) || liveKeys.has(job.idempotencyKey)) {
+          if (liveIds.get(job.id) !== job.idempotencyKey || liveKeys.get(job.idempotencyKey) !== job.id) throw corruptArchive();
+          continue; // Crash before state commit: the authoritative live record wins.
+        }
+        visit(job);
+      }
+    };
+    const listArchive = params => {
+      const { limit, cursor } = archivePageOptions(params);
+      return archiveSnapshot().then(async captured => {
+        let total = 0;
+        const page = [];
+        await scanArchive(captured, job => {
+          total++;
+          const position = archivePosition(job);
+          if (cursor && compareArchivePosition(position, cursor) <= 0) return;
+          page.push({ position, summary: archiveSummary(job) });
+          page.sort((a, b) => compareArchivePosition(a.position, b.position));
+          if (page.length > limit + 1) page.pop();
+        });
+        const hasMore = page.length > limit;
+        if (hasMore) page.pop();
+        return { jobs: page.map(item => item.summary), total,
+          nextCursor: hasMore ? Buffer.from(JSON.stringify(page.at(-1).position)).toString('base64url') : null };
+      });
+    };
+    const getArchivedJob = id => {
+      if (!JOB_ID.test(id)) throw new RuntimeError('Nieprawidłowy identyfikator zadania.');
+      return archiveSnapshot().then(async captured => {
+        let found;
+        await scanArchive(captured, job => { if (job.id === id) found = job; });
+        if (!found) throw new RuntimeError('Nie znaleziono zadania w archiwum.', 'JOB_NOT_FOUND', 404);
+        return { job: found, archived: true };
+      });
+    };
+    const findRequest = key => {
+      if (!REQUEST_KEY.test(key)) throw new RuntimeError('Nieprawidłowy identyfikator żądania.');
+      return inspect(async snapshot => {
+        const live = snapshot.jobs.find(job => job.idempotencyKey === key);
+        if (live) return { job: live, archived: false };
+        const job = await readArchivedJob(archiveFile(key), true);
+        if (!job) throw new RuntimeError('Nie znaleziono zadania dla tego żądania.', 'JOB_NOT_FOUND', 404);
+        if (job.idempotencyKey !== key) throw corruptArchive();
+        return { job, archived: true };
+      });
+    };
     const updateReadiness = (ok, reason) => { readiness = { state: ok ? 'READY' : active.model ? 'DEGRADED' : 'SETUP', checkedAt: now(), expiresAt: new Date(Date.now() + ttl).toISOString(), reason }; };
     const modelRequest = async (endpoint, payload, signal, profile = active) => {
       const response = await fetch(`${profile.ollamaUrl}${endpoint}`, { method: payload === undefined ? 'GET' : 'POST', redirect: 'error', headers: { 'Content-Type': 'application/json' }, ...(payload === undefined ? {} : { body: JSON.stringify(payload) }), signal });
@@ -239,7 +374,7 @@ export async function createRuntime(options = {}) {
       if (readiness.state === 'READY' && Date.now() > Date.parse(readiness.expiresAt)) return { ...current, state: 'NEEDS_ACTION', reason: 'Wynik testu wygasł. Sprawdź model ponownie.' };
       return current;
     };
-    const getStatus = async () => ({ name: 'JARVIS Runtime', version: VERSION, serverId: state.serverId, profileVersion: active.version, policy: active.policy, readiness: await currentReadiness(), queue: Object.fromEntries(['queued','running',...terminal].map(status => [status, state.jobs.filter(job => job.status === status).length])), archive: { count: state.archivedCount || 0 }, capabilities: { localAnalysis: true, coding: false, voice: false, processSandbox: false } });
+    const getStatus = async () => ({ name: 'JARVIS Runtime', version: VERSION, serverId: state.serverId, profileVersion: active.version, policy: active.policy, readiness: await currentReadiness(), queue: Object.fromEntries(['queued','running',...terminal].map(status => [status, state.jobs.filter(job => job.status === status).length])), archive: { count: state.archivedCount || 0 }, capabilities: { localAnalysis: true, archivedResults: true, requestLookup: true, serverIdentityGuard: true, coding: false, voice: false, processSandbox: false } });
     const listModels = async () => {
       try {
         const data = await modelRequest('/api/tags', undefined, AbortSignal.timeout(10000));
@@ -319,11 +454,13 @@ export async function createRuntime(options = {}) {
       if (!active.model) throw new RuntimeError('Najpierw wybierz lokalny model w panelu runtime.', 'MODEL_NOT_CONFIGURED', 422);
       if (typeof input.prompt !== 'string' || !input.prompt.trim() || input.prompt.length > MAX_PROMPT) throw new RuntimeError(`Polecenie musi mieć od 1 do ${MAX_PROMPT} znaków.`);
       if (typeof input.idempotencyKey !== 'string' || !/^[A-Za-z0-9_.:-]{8,128}$/.test(input.idempotencyKey)) throw new RuntimeError('Wymagany identyfikator żądania: 8–128 znaków.');
+      if (input.expectedServerId !== undefined && (typeof input.expectedServerId !== 'string' || !input.expectedServerId || input.expectedServerId.length > 128)) throw new RuntimeError('Nieprawidłowy identyfikator oczekiwanego serwera.');
       const prompt = input.prompt.trim();
       const result = await change(async next => {
+        if (input.expectedServerId !== undefined && input.expectedServerId !== next.serverId) throw new RuntimeError('Pod tym adresem działa inny runtime. Nie utworzono ani nie ponowiono zadania.', 'SERVER_CHANGED', 409);
         const existing = next.jobs.find(job => job.idempotencyKey === input.idempotencyKey);
         if (existing) { if (existing.prompt !== prompt) throw new RuntimeError('Identyfikator został już użyty dla innego polecenia.', 'IDEMPOTENCY_CONFLICT', 409); return { job: existing, reused: true }; }
-        const archived = await readJson(archiveFile(input.idempotencyKey), null);
+        const archived = await readArchivedJob(archiveFile(input.idempotencyKey), true);
         if (archived) {
           if (!validJob(archived) || !terminal.has(archived.status) || archived.idempotencyKey !== input.idempotencyKey) throw new RuntimeError('Nieprawidłowy rekord archiwum; dane zachowano.', 'CORRUPT_STATE', 503);
           if (archived.prompt !== prompt) throw new RuntimeError('Identyfikator został już użyty dla innego polecenia.', 'IDEMPOTENCY_CONFLICT', 409);
@@ -361,13 +498,20 @@ export async function createRuntime(options = {}) {
         const supplied = Buffer.from(String(req.headers.authorization || '')); const expected = Buffer.from(`Bearer ${token}`);
         if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) throw new RuntimeError('Połącz aplikację z lokalnym runtime.', 'UNAUTHORIZED', 401);
         if (stopping) throw new RuntimeError('Runtime zatrzymuje pracę.', 'STOPPING', 503);
-        const pathname = new URL(req.url, 'http://127.0.0.1').pathname;
+        const requestUrl = new URL(req.url, 'http://127.0.0.1');
+        const pathname = requestUrl.pathname;
         if (req.method === 'GET' && pathname === '/v1/status') return reply(200, await getStatus());
         if (req.method === 'GET' && pathname === '/v1/profile') return reply(200, { requested: validateProfile(await readJson(profileFile, active)), active, readiness: await currentReadiness() });
         if (req.method === 'GET' && pathname === '/v1/models') return reply(200, await listModels());
         if (req.method === 'PUT' && pathname === '/v1/profile') return reply(200, await setProfile(await readBody(req)));
         if (req.method === 'GET' && pathname === '/v1/jobs') return reply(200, { jobs: state.jobs });
         if (req.method === 'POST' && pathname === '/v1/jobs') { const result = await enqueue(await readBody(req)); return reply(result.reused ? 200 : 201, result); }
+        if (req.method === 'GET' && pathname === '/v1/jobs/archive') return reply(200, await listArchive(requestUrl.searchParams));
+        if (req.method === 'GET' && pathname.startsWith('/v1/jobs/archive/')) return reply(200, await getArchivedJob(pathname.slice('/v1/jobs/archive/'.length)));
+        if (req.method === 'GET' && pathname.startsWith('/v1/jobs/request/')) {
+          let key; try { key = decodeURIComponent(pathname.slice('/v1/jobs/request/'.length)); } catch { throw new RuntimeError('Nieprawidłowy identyfikator żądania.'); }
+          return reply(200, await findRequest(key));
+        }
         if (req.method === 'POST' && pathname === '/v1/jobs/archive') return reply(200, await archive());
         const matched = pathname.match(/^\/v1\/jobs\/([a-f0-9-]+)\/cancel$/);
         if (req.method === 'POST' && matched) return reply(200, { job: await cancel(matched[1]) });

@@ -14,7 +14,7 @@ export interface RuntimeStatus {
   policy: string;
   readiness: RuntimeReadiness;
   queue: { queued: number; running: number; completed: number; failed: number; cancelled: number };
-  capabilities: { localAnalysis: boolean; coding: boolean; voice: boolean; processSandbox: boolean };
+  capabilities: { localAnalysis: boolean; coding: boolean; voice: boolean; processSandbox: boolean; archivedResults?: boolean; requestLookup?: boolean; serverIdentityGuard?: boolean };
 }
 export interface RuntimeProfile {
   requested: { version: number; policy: string; ollamaUrl: string; model: string };
@@ -29,10 +29,32 @@ export interface RuntimeJob {
   createdAt: string;
   updatedAt: string;
   attempt: number;
+  model?: string;
+  profileVersion?: number;
   result?: string;
   error?: string;
 }
 export interface RuntimeModel { name: string }
+export interface RuntimeArchivedJob {
+  id: string;
+  idempotencyKey: string;
+  status: RuntimeJob["status"];
+  createdAt: string;
+  updatedAt: string;
+  attempt: number;
+  model?: string;
+  profileVersion?: number;
+  promptPreview: string;
+  hasResult: boolean;
+  hasError: boolean;
+}
+export interface RuntimeArchivePage { jobs: RuntimeArchivedJob[]; nextCursor: string | null; total: number }
+
+export class RuntimeHttpError extends Error {
+  constructor(message: string, public readonly status: number, public readonly code: string) {
+    super(message); this.name = "RuntimeHttpError";
+  }
+}
 
 const CONNECTION_KEY = "jarvis.local-runtime.connection.v1";
 export const DEFAULT_RUNTIME_URL = "http://127.0.0.1:3211";
@@ -138,10 +160,10 @@ export function displayedRuntimeState(readiness: RuntimeReadiness | undefined, o
 
 /** This client only communicates with the selected service; HTTP success is not model readiness. */
 export async function runtimeRequest<T>(connection: RuntimeConnection, path: string, options: {
-  method?: "GET" | "POST" | "PUT"; body?: unknown; signal?: AbortSignal; timeoutMs?: number;
+  method?: "GET" | "POST" | "PUT"; body?: unknown; signal?: AbortSignal; timeoutMs?: number; query?: Record<string, string | number>;
 } = {}): Promise<T> {
   const base = normalizeRuntimeUrl(connection.url);
-  if (!/^\/v1\/[a-zA-Z0-9/_-]+$/.test(path)) throw new Error("Nieprawidłowa operacja serwera.");
+  if (!/^\/v1\/[a-zA-Z0-9/_.:-]+$/.test(path) || path.split("/").some(segment => segment === "." || segment === "..")) throw new Error("Nieprawidłowa operacja serwera.");
   const controller = new AbortController();
   let timedOut = false;
   const abort = () => controller.abort();
@@ -149,16 +171,18 @@ export async function runtimeRequest<T>(connection: RuntimeConnection, path: str
   else options.signal?.addEventListener("abort", abort, { once: true });
   const timer = setTimeout(() => { timedOut = true; controller.abort(); }, options.timeoutMs ?? 15_000);
   try {
-    const response = await fetch(`${base}${path}`, {
+    const query = new URLSearchParams(Object.entries(options.query || {}).map(([key, value]) => [key, String(value)]));
+    const response = await fetch(`${base}${path}${query.size ? `?${query}` : ""}`, {
       method: options.method || "GET", signal: controller.signal, credentials: "omit", redirect: "error", cache: "no-store",
       headers: { Authorization: `Bearer ${connection.token}`, ...(options.body === undefined ? {} : { "Content-Type": "application/json" }) },
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
     });
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) throw new Error("Serwer odmówił dostępu. Sprawdź token i dozwolone połączenia w konfiguracji usługi.");
+      const code = typeof data?.error?.code === "string" ? data.error.code : "HTTP_ERROR";
+      if (response.status === 401 || response.status === 403) throw new RuntimeHttpError("Serwer odmówił dostępu. Sprawdź token i dozwolone połączenia w konfiguracji usługi.", response.status, code);
       const message = typeof data?.error?.message === "string" ? data.error.message : `Serwer zwrócił błąd ${response.status}.`;
-      throw new Error(connection.token ? message.split(connection.token).join("[ukryto token]") : message);
+      throw new RuntimeHttpError(connection.token ? message.split(connection.token).join("[ukryto token]") : message, response.status, code);
     }
     if (!data || typeof data !== "object") throw new Error("Serwer zwrócił nieprawidłową odpowiedź.");
     return data as T;

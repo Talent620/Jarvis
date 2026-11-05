@@ -4,7 +4,7 @@
 
 To mapa sprawdzonych ścieżek oraz granic dostępnych dowodów, a nie deklaracja przeglądu każdego pliku. Prześledzono wejścia aplikacji, czat, wykonywanie narzędzi, cele, nowy serwer lokalny, przechowywanie pamięci, integracje desktopowe i konfigurację weryfikacji. Dla pozostałych obszarów odczytano wskazane kontrakty, konfigurację lub reprezentatywne moduły. Liczba plików i nazwa funkcji nie dowodzą jej poprawności.
 
-Punktem odniesienia jest stan roboczy gałęzi o bazie `ca8cda7`, wraz ze zmianami one-click i wynikami z 2026-11-05. Poniższa mapa zachowuje dowody etapu one-click (2929 testów); końcowy zestaw po naprawach audytu to **3013/3013 w 349 plikach, 0 FAIL/SKIP**, z poprawnym lintem i buildem. Granice nowych kontroli opisuje [walidacja końcowa](VALIDATION_2026-11-05.md). Numery linii znalezisk wskazują miejsce w chwili ich zgłoszenia i mogą przesunąć się po naprawie.
+Punktem odniesienia jest stan roboczy gałęzi o bazie `ca8cda7`, wraz ze zmianami one-click i wynikami z 2026-11-05. Poniższa mapa zachowuje dowody etapu one-click (2929 testów); zestaw po naprawach audytu to 3013/3013 w 349 plikach, a po kontynuacji **3042/3042 w 350 plikach, 0 FAIL/SKIP**, z poprawnym lintem i buildem. Granice nowych kontroli opisuje [walidacja końcowa](VALIDATION_2026-11-05.md). Numery linii znalezisk wskazują miejsce w chwili ich zgłoszenia i mogą przesunąć się po naprawie.
 
 - **Fakt statyczny**: ustalony przez odczyt wywołań, implementacji lub konfiguracji.
 - **Dowód wykonania**: istniejący wynik testu, smoke testu albo uruchomienia aplikacji; jawnie podano użycie atrap usług.
@@ -34,7 +34,7 @@ Na pierwszym planie powinny pozostać: rozmowa, lista aktualnych prac i wyniki. 
 | Bezpieczeństwo / sekrety / uprawnienia | `permissions.ts`, `secretsVault.ts`, `privateMode.ts`, `electron/trusted-renderer.cjs`, `runtime-connection.cjs`, `proxy/worker.js` | Dokładna granica własnego dokumentu IPC, główna ramka/okno, zgody narzędzi, bearer i prywatne pliki runtime; odczyt wybranych kontraktów sekretów | Testy odrzucenia obcego dokumentu, origin/token i odzyskiwanego zewnętrznego endpointu; wcześniejsze reprodukcje znalezionych błędów runtime | Pełny pentest, wszystkie powierzchnie prompt injection, cały model zagrożeń wieloużytkownikowego hosta, niezależny audyt kryptografii, świeże CVE |
 | Produkty towarzyszące | `site-os/`, `sales-os/`, `kompas/`, osobne `package.json` i workflow | Osobne aplikacje i cykle życia; Site OS HTTP, Sales OS Next/Prisma, Kompas osobny frontend; nie są jednym backendem JARVIS-a | Site OS izolowany API smoke PASS; Kompas **18/18 E2E PASS**, 0 failed/skipped, na systemowym Chromium | Sales OS lokalny build/API smoke NOT_RUN w tej sesji; połączenie z produkcyjną bazą i pocztą; Site OS osobny wizualny smoke NOT_RUN w inwentaryzacji |
 | Mobile / inne systemy | `android/`, `ios/`, `capacitor.config.ts`, natywne pluginy, `.github/workflows/{android,ios,windows}*` | Konfiguracja i wybrane mostki, rozdział web/desktop/mobile; poprawiony identyfikator szablonowego testu Androida | Obecność workflow budowania; to nie jest dowód ich ostatniego sukcesu | Android/iOS/Windows na rzeczywistym sprzęcie, podpisywanie i dystrybucja w tej sesji; Android ma tylko 2 źródłowe testy szablonowe, nie pełny zestaw produktu |
-| Testy / CI / artefakty | `vitest.config.ts`, `tests/`, `.github/workflows/`, `scripts/quality-gate.mjs`, osobne zestawy podproduktów | Granice głównego Vitest: `tests/**/*.test.ts`; oddzielne buildy i smoke podproduktów; ścieżki budowania paczek | **2929/2929 PASS, 338 plików, 0 failed/skipped** w zestawie one-click; osobno Kompas i smoke | Nie jest to pokrycie wszystkich ścieżek ani 10000 testów; AppImage E2E środowiska nie jest jeszcze stałą bramką repo — F5 |
+| Testy / CI / artefakty | `vitest.config.ts`, `tests/`, `.github/workflows/`, `scripts/quality-gate.mjs`, osobne zestawy podproduktów | Granice głównego Vitest: `tests/**/*.test.ts`; oddzielne buildy i smoke podproduktów; ścieżki budowania paczek | **2929/2929 PASS, 338 plików, 0 failed/skipped** w zestawie one-click; osobno Kompas i smoke | Nie jest to pokrycie wszystkich ścieżek ani 10000 testów; AppImage smoke dodano do CI w kontynuacji; uruchomienie workflow pozostaje NOT_RUN — F5 |
 | Zależności / aktualność | `package.json`, `package-lock.json`, osobne manifesty podproduktów | Wersje przypięte i publiczne metadane trzech głównych pakietów | Odczyt publicznych `react/latest`, `vite/latest`, `electron/latest` bez wysłania manifestu | **`npm audit` NOT_RUN**: automatyczny review odrzucił wysłanie metadanych zależności do rejestru; brak odpowiedzi na prośbę o zgodę. Nie ustalono obecnej liczby critical/high |
 | Eksperymenty / infrastruktura opcjonalna | `src/lib/horizon/`, `src/components/jarvis-ui/`, `src/plugins/`, `server/docker-compose.yml`, `server/lora/`, `server/sd/`, `tools/`, `demo-przempol/` | Sprawdzono reprezentatywne wejścia i konfigurację. `mission_demo` używa jawnego emulatora; `#neural` to osobny opt-in widok | Testy czystych funkcji / emulatorów w głównym zestawie; nie dowód fizycznego urządzenia | Realne ESP32/RPi, trening LoRA, generowanie obrazu, wszystkie pluginy i demonstracyjne projekty |
 
@@ -108,7 +108,7 @@ Poniższe punkty opisują stan wykryty podczas przeglądu. **Dowody zgłoszenia 
 
 ### F5 — Najważniejszy dowód desktopowy wymaga powtarzalnego skryptu
 
-- **Status wdrożenia:** dodano wersjonowany `scripts/smoke-linux-runtime.mjs`, `npm run test:linux-runtime` i [instrukcję](LINUX_RUNTIME_SMOKE.md). Skrypt używa osobistego AppImage i izolowanych danych. Nie włączono go do CI budującego licencjonowany artefakt; wymaga to odrębnej paczki testowej. Końcowy wynik wykonania jest w [raporcie walidacji](VALIDATION_2026-11-05.md).
+- **Status wdrożenia:** dodano wersjonowany `scripts/smoke-linux-runtime.mjs`, `npm run test:linux-runtime` i [instrukcję](LINUX_RUNTIME_SMOKE.md). Skrypt używa osobistego AppImage i izolowanych danych. Dodano osobny job CI budujący osobisty artefakt testowy; od jego powodzenia zależą build wydawniczy i publikacja. Uruchomienie na GitHub Actions pozostaje NOT_RUN. Końcowy wynik wykonania jest w [raporcie walidacji](VALIDATION_2026-11-05.md).
 - **Kategoria / priorytet:** luka w ochronie przed regresją, P1.
 - **Dowód:** `.github/workflows/ubuntu.yml:32` buduje i pakuje, następnie publikuje artefakt; `.github/workflows/test.yml:32` uruchamia Vitest i build. Zestaw AppImage przeżycia GUI znajduje się w środowisku pod `/workspace/.jarvis-cloud/one-click-appimage.mjs`. Nie jest to wersjonowany skrypt testowy projektu.
 - **Skutek:** bieżący sukces nie gwarantuje, że następny pakiet zachowa uruchamianie usługi, prywatne discovery i pracę po zamknięciu okna.
@@ -121,6 +121,7 @@ Artefakty poniżej są lokalne dla tej sesji, poza repozytorium; nie są publicz
 
 | Dowód | Wynik i ograniczenie | Artefakt |
 | --- | --- | --- |
+| Końcowy Vitest po kontynuacji | **3042/3042 PASS, 350 plików, 0 FAIL/SKIP**. Lint i build PASS. | `/workspace/.jarvis-cloud/recovery-final-vitest.json`, `recovery-final-lint.log`, `recovery-final-build.log` |
 | Końcowy Vitest po audycie | **3013/3013 PASS, 349 plików, 0 FAIL/SKIP**. Lint, TypeScript i produkcyjny build również PASS. | `/workspace/.jarvis-cloud/audit-final-vitest.json`, `audit-final-lint.log`, `audit-final-build.log` |
 | Wersjonowany AppImage smoke po audycie | **PASS**: start, konfiguracja, wynik po zamknięciu GUI, ponowne użycie procesu/tokena i cleanup. Model symulowany. CI NOT_RUN. | `scripts/smoke-linux-runtime.mjs`; `/workspace/.jarvis-cloud/audit-final-appimage.log` |
 | Pełny główny Vitest one-click | 2929 PASS, 338 plików, 0 FAIL, 0 skipped. 1134 suites opisuje strukturę zestawu, w tym grupy `describe`, nie dodatkowe przypadki. | `/workspace/.jarvis-cloud/one-click-final-vitest.json` |
@@ -155,13 +156,18 @@ Poniżej wynik pracy nad głównymi przepływami, poza pięcioma znaleziskami ar
 
 Wybrano naprawę kontraktów wykonania i przechowywania, zamiast migracji całego stanu do nowego backendu w jednym kroku. Zachowano działające integracje i formaty danych, dodając zgodne wstecz metadane usunięć. Uproszczenie nawigacji pozostawia dostęp do dotychczasowego planera, lecz nie przedstawia jego tekstu jako wykonanych działań.
 
+## Kontynuacja po audycie
+
+Runtime 0.2.0 dodaje odzyskiwanie zgłoszenia po utracie odpowiedzi i podgląd archiwum. Zlikwidowano wyścig usuwania lokalnej kopii między kartami oraz odczyt częściowego pliku blokady. Instalator sprawdza działającą wersję, koordynuje wymianę starego procesu i rollback. Zestaw końcowy: **3042/3042**, lint i build PASS; niezależny browser oraz AppImage smoke PASS z symulowanym modelem. Instalator: 10/10 scenariuszy z prawdziwymi procesami i symulowanym systemd.
+
+Trwały klucz ponowienia wdrożono w kontynuacji: osobny zapis każdej intencji, odczyt stanu po ponownym otwarciu i kontrola instancji serwera. Archiwalne wyniki są dostępne w panelu. Szczegóły wykonanych testów: [walidacja](VALIDATION_2026-11-05.md).
+
 ## Co pozostaje propozycją
 
 - Jeden wykonawca narzędzi i wspólny stan urządzeń: wymaga migracji, odtwarzania po awarii i jasnego kontraktu efektów zewnętrznych. Obecny runtime nadal wykonuje tylko tekstowe analizy.
 - Silna izolacja narzędzi i zgody egzekwowane przez proces główny: własny zaufany renderer ma dostęp do bridge IPC; przejęcie jego JavaScript nie jest ograniczone samą bramką UI. Nie odtworzono w tej sesji takiego przejęcia przez prompt.
 - Niezależny weryfikator efektów: role planner/coder/tester/reviewer są etapami, a istniejący `resultVerifier` ocenia statusy. Nie testuje semantycznie wszystkich kryteriów sukcesu.
-- Jednolite usunięcie informacji ze wszystkich źródeł, przeglądanie/usuwanie archiwum analiz i rozwiązywanie konfliktów synchronizacji po stronie serwera. Archiwum przechowuje pełne polecenia i wyniki; nie ma automatycznego okresu retencji.
-- Trwały klucz ponowienia w kliencie analiz: serwer ma idempotencję, ale po utracie odpowiedzi i zamknięciu panelu klient może utracić swój niezakończony klucz. Przed ręcznym ponowieniem trzeba sprawdzić kolejkę.
+- Jednolite usunięcie informacji ze wszystkich źródeł, usuwanie archiwum analiz i rozwiązywanie konfliktów synchronizacji po stronie serwera. Archiwum przechowuje pełne polecenia i wyniki; nie ma automatycznego okresu retencji.
 - Pomiar jakości polskiego głosu, realnej inferencji, działania offline i porównania z konkurencją na wspólnym zbiorze zadań. Bez takich wyników nie ma podstaw do obietnicy bezbłędności.
 
 ## Aktualność zależności i granice dalszych wniosków

@@ -6,10 +6,10 @@ Badana gałąź: `codex/linux-pro-new-20261105`. Środowisko testowe: Debian 13,
 
 | Zakres | Wynik | Granica dowodu |
 | --- | --- | --- |
-| `npm test` | **3013 PASS, 349 plików, 0 FAIL/SKIP** | Przypadki testowe, nie miara inteligencji |
+| `npm test` | **3042 PASS, 350 plików, 0 FAIL/SKIP** | Przypadki testowe, nie miara inteligencji |
 | `npm run lint` | PASS, bez ostrzeżeń | Obejmuje teraz także `server/runtime` |
 | `JARVIS_LICENSE_REQUIRED=false npm run build` | PASS | Vite nadal zgłasza ostrzeżenie o dużych chunkach |
-| Runtime HTTP | 27 PASS, zawarte w wyniku Vitest | Prawdziwy serwer i zapis na dysku; model symulowany |
+| Runtime HTTP | 35 PASS, zawarte w wyniku Vitest | Prawdziwy serwer i zapis na dysku; model symulowany |
 | Kompas E2E | 18 PASS | Osobny podprojekt, test w Chromium |
 | Site OS API smoke | PASS | Nie obejmuje pełnego wizualnego smoke Electron |
 | Workspace tools | 10 PASS, 2 NOT_RUN | SQLite i PostgreSQL nie zostały sprawdzone |
@@ -19,11 +19,11 @@ Badana gałąź: `codex/linux-pro-new-20261105`. Środowisko testowe: Debian 13,
 | Electron i IPC runtime | PASS | Rzeczywisty proces Electron i prywatny plik połączenia |
 | AppImage: jedno uruchomienie | **PASS** | Wersjonowany `npm run test:linux-runtime`; model symulowany |
 
-Końcowy zestaw po krytycznym audycie: 3013/3013, w tym 84 przypadki więcej niż wcześniejszy etap one-click (2929/338). Są to przypadki w 349 plikach `.test.ts` i `.test.tsx`, a nie suma kolejnych uruchomień.
+Po krytycznym audycie przeszło 3013 przypadków w 349 plikach. Po dalszych poprawkach odzyskiwania, archiwum i blokad: **3042/3042 w 350 plikach**, czyli 29 dodatkowych przypadków. Nie sumujemy kolejnych uruchomień ani zagnieżdżonych grup testów.
 
 Nie znaleziono dowodu istnienia 10000 testów. Liczba bloków `describe` raportowana przez Vitest nie jest liczbą dodatkowych przypadków i nie została dodana do wyniku. Historyczne wyniki dotyczą wcześniejszych wersji kodu.
 
-Testy runtime obejmują idempotencję, anulowanie, timeout, wygaśnięcie gotowości, odmowę modelu chmurowego, restart i `SIGKILL` osobnego procesu, brak nowej inferencji po zatrzymaniu, odrzucenie zewnętrznego adresu odzyskiwanego ze stanu, archiwizację z zachowaniem idempotencji i wykonanie 501. zadania. Archiwum zachowuje wyniki poza bieżącym widokiem historii.
+Testy runtime obejmują idempotencję, anulowanie, timeout, wygaśnięcie gotowości, odmowę modelu chmurowego, restart i `SIGKILL` osobnego procesu, brak nowej inferencji po zatrzymaniu, odrzucenie zewnętrznego adresu odzyskiwanego ze stanu, archiwizację z zachowaniem idempotencji i wykonanie 501. zadania. Archiwum zachowuje starsze wyniki; panel udostępnia teraz ich stronicowany podgląd.
 
 Dodatkowe testy startu obejmują wybór już zainstalowanego modelu, automatyczny test odpowiedzi, pierwszeństwo kolejki, blokadę profilu i odzyskanie jej po awarii oraz ochronę wyboru użytkownika przed równoległym CLI/API. Testy konfiguracji czatu sprawdzają zachowanie istniejących kluczy i dostawców, zmian podczas oczekiwania, ręcznie wybranego modelu oraz ograniczenie czasu także dla zawieszonego IPC.
 
@@ -31,7 +31,7 @@ Test przeglądarkowy sprawdził wybór modelu, próbę odpowiedzi, zakończenie 
 
 W Electronie sprawdzono automatyczne odczytanie prywatnego połączenia, brak automatycznego zapisu tokena w localStorage, HTTP z pochodzenia `file://`, działanie dozwolonego narzędzia oraz odrzucenie nawigacji i IPC z innego lokalnego pliku HTML. Testowy kontener wymagał flagi `--no-sandbox`; instalator użytkownika jej nie dodaje. Dlatego ten test nie dowodzi działania sandboxa Chromium na docelowym Linuksie.
 
-Końcowy wersjonowany test `npm run test:linux-runtime` na nowym AppImage potwierdził start usługi bez ręcznych poleceń, automatyczny wybór istniejącego modelu, podłączenie go do pustego czatu i wykonanie próby odpowiedzi. Zadanie zakończyło się po wyjściu głównego procesu AppImage. Ponowne uruchomienie zachowało PID serwera, token i wynik. Skrypt potwierdził sprzątnięcie własnych procesów i katalogów. Log: `/workspace/.jarvis-cloud/audit-final-appimage.log`. Wykonanie tego testu w CI pozostaje NOT_RUN. Ollama była kontrolowaną symulacją HTTP; ten test nie mierzy jakości ani wydajności prawdziwego modelu.
+Końcowy wersjonowany test `npm run test:linux-runtime` na nowym AppImage potwierdził start usługi bez ręcznych poleceń, automatyczny wybór istniejącego modelu, podłączenie go do pustego czatu i wykonanie próby odpowiedzi. Zadanie zakończyło się po wyjściu głównego procesu AppImage. Ponowne uruchomienie zachowało PID serwera, token i wynik. Skrypt potwierdził sprzątnięcie własnych procesów i katalogów. Log: `/workspace/.jarvis-cloud/recovery-final-appimage.log`. Wykonanie tego testu w CI pozostaje NOT_RUN. Ollama była kontrolowaną symulacją HTTP; ten test nie mierzy jakości ani wydajności prawdziwego modelu.
 
 ## Weryfikacja poprawek audytu
 
@@ -44,15 +44,27 @@ Wynik 3013 obejmuje nowe regresje anulowania żądania i przegranej próby dosta
 - **Połączenia:** test Mem0 rozróżnia poprawną pustą odpowiedź od HTTP 503, awarii sieci i błędnego formatu. Nie potwierdza wszystkich operacji rzeczywistej usługi.
 - **Sekrety:** skan zakończył się komunikatem `Skan sekretów: czysto`. Nie zastępuje zewnętrznego audytu bezpieczeństwa.
 
-Pełne wyniki środowiskowe: `/workspace/.jarvis-cloud/audit-final-vitest.json`, `audit-final-lint.log`, `audit-final-build.log`. Mapa znalezisk, decyzji i ograniczeń: [AUDIT_COVERAGE_2026-11-05.md](AUDIT_COVERAGE_2026-11-05.md).
+Końcowe wyniki środowiskowe: `/workspace/.jarvis-cloud/recovery-final-vitest.json`, `recovery-final-lint.log`, `recovery-final-build.log`. Mapa znalezisk, decyzji i ograniczeń: [AUDIT_COVERAGE_2026-11-05.md](AUDIT_COVERAGE_2026-11-05.md).
+
+## Kontynuacja: odzyskiwanie, archiwum i aktualizacja 0.2.0
+
+- **Zgłoszenia:** osobny trwały zapis każdej intencji przed POST, przypisanie do adresu i `serverId`, brak tokenu w kopii, ponowienie tym samym kluczem wyłącznie po kliknięciu. Spóźnione ACK z innej karty usuwa tylko własny rekord. Wykrycie dawnego wspólnego formatu wstrzymuje wysyłkę bez automatycznej migracji/usuwania. Helper i klient: 33/33 PASS, zawarte w głównym zestawie. Dodatkowy Chromium sprawdził faktyczne kliknięcie „Ponów” po utracie POST przed backendem oraz ACK po przyjęciu: ten sam klucz, jedno zadanie, jedno wykonanie modelu, usunięcie kopii po potwierdzeniu; 0 błędów strony.
+- **Archiwum:** uwierzytelniona paginacja i odczyt wyniku na żądanie, lookup identyfikatora zgłoszenia, kontrola oczekiwanego serwera przy zapisie, ochrona przed symlinkami i wadliwymi rekordami. Wszystkie testy backendu: 35/35 PASS, zawarte w głównym zestawie. Odczyt archiwum nadal kosztuje O(n) operacji na plikach; parsowanie zawartości nie trzyma blokady mutacji kolejki.
+- **Blokada profilu:** równoległy zapis nie widzi już częściowego JSON. Deterministyczna próba z zatrzymanym writerem odtworzyła `CORRUPT_STATE` starej wersji; publikacja gotowego pliku przez atomowy link pozwala obu zapisom poprawnie nadać kolejne wersje. Nie zmniejszono zakresu testu ani nie zamaskowano błędu ponawianiem.
+- **Chromium:** rzeczywista lokalna strona HTTP i runtime, symulowana Ollama. Utrata odpowiedzi po przyjęciu POST → przeładowanie → ten sam wynik i jedno wykonanie modelu; odzysk działa również po archiwizacji. Potwierdzono strony 20+2, wynik pobierany na żądanie, zachowanie nowej intencji przy późnym ACK drugiej karty, odmowę zapisu przed POST, starszy serwer bez nowych możliwości i brak przenoszenia tokenu do innego adresu. Zrzuty 320/1440 obejrzane, brak poziomego przepełnienia i błędów strony. Jest to test izolowanego rzeczywistego komponentu, nie fizycznego sprzętu.
+- **Czytelność:** poprawiono globalne tło hover przycisku głównego w Classic. Chromium i obejrzane zrzuty potwierdziły cztery stany: Classic/PRO × 320/1440 px, przycisk aktywny i widoczny, 0 błędów strony. Kontrast obliczony przed filtrem jasności: Classic 6,90:1, PRO 11,90:1. Log: `/workspace/.jarvis-cloud/runtime-primary-hover-browser.log`.
+- **Instalator:** 10/10 odrębnych scenariuszy rzeczywistego przejścia runtime 0.1.0 (`857def1`) → 0.2.0, zachowania tokenu/profilu/zadań, `--no-start`, rollbacku i odmowy zatrzymania obcej instancji. `systemctl` był atrapą, model nie był używany. Test: `npm run test:runtime-upgrade`; źródła starej wersji są wymagane, brak źródeł kończy się jawnym błędem. Zasady i ograniczenia: [RUNTIME_UPGRADE.md](RUNTIME_UPGRADE.md).
+- **CI:** przygotowano zależności `runtime-smoke → build → publish`. Osobisty testowy AppImage nie zastępuje paczki licencjonowanej. YAML, komendy Bash i kontrakt zależności sprawdzono lokalnie. Przebieg na GitHub Actions oraz sandbox tamtego runnera: **NOT_RUN**. W lokalnym kontenerze finalny AppImage smoke przeszedł z jawnym testowym `--no-sandbox`.
+
+Logi przeglądarki: `/workspace/.jarvis-cloud/runtime-recovery-browser.log`, `runtime-retry-browser.log`; paczki: `recovery-final-package.log`; AppImage: `recovery-final-appimage.log`. Żaden z tych wyników nie potwierdza jakości prawdziwego modelu.
 
 ## Paczki Linux
 
 Zbudowano także paczkę DEB. Nie instalowano jej na systemie użytkownika. Sumy finalnych plików:
 
 ```text
-a3c38eb199719f35f89364e9f91644934f4b66822baf41c7a1e979dedf30f599  JARVIS.AppImage
-5ea084a5d6420e5628873d41688c491831d57b14412e4122fe02fac5779931c2  JARVIS.deb
+e8a331c67067c4f3bb37da2c5042165d441c55164112d4ac12e9f22d221e18be  JARVIS.AppImage
+434c2ab71da29d0050187ae4d8cf61f0df8d7626915d2974fbf75146ab42e2e3  JARVIS.deb
 ```
 
 ## Aktualność zależności

@@ -10,16 +10,71 @@ on:
       - "electron/**"
       - "src/**"
       - "site-os/**"
+      - "server/runtime/**"
+      - "scripts/**"
+      - "public/**"
       - "electron-builder.json"
       - "package.json"
+      - "package-lock.json"
+      - "vite.config.*"
+      - "tsconfig*.json"
       - ".github/workflows/ubuntu.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build:
+  runtime-smoke:
+    name: AppImage runtime smoke (simulated Ollama)
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install desktop test prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgtk-3-0 libnss3 libasound2 libgbm1
+      - name: Install project dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build isolated personal test application
+        env:
+          JARVIS_LICENSE_REQUIRED: "false"
+        run: npm run build
+      - name: Package personal AppImage for smoke only
+        run: npx electron-builder --linux AppImage --publish never
+      - name: Install pinned Electron test driver outside the project
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+        run: npm install --prefix "$RUNNER_TEMP/jarvis-playwright" --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.57.0
+      - name: Verify packaged runtime with Electron sandbox enabled
+        env:
+          JARVIS_PLAYWRIGHT_MODULE: ${{ runner.temp }}/jarvis-playwright/node_modules/playwright/index.mjs
+          JARVIS_SMOKE_SCREENSHOT: ${{ runner.temp }}/jarvis-linux-smoke/screenshot.png
+          JARVIS_SMOKE_NO_SANDBOX: "0"
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/jarvis-linux-smoke"
+          set -o pipefail
+          xvfb-run --auto-servernum --server-args="-screen 0 1440x1000x24" npm run test:linux-runtime -- ./release-desktop/JARVIS.AppImage 2>&1 | tee "$RUNNER_TEMP/jarvis-linux-smoke/smoke.log"
+      - name: Retain smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-linux-runtime-smoke
+          path: ${{ runner.temp }}/jarvis-linux-smoke/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  build:
+    needs: runtime-smoke
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,7 +83,7 @@ jobs:
           cache: npm
       - name: Check native Ubuntu environment
         run: bash scripts/bootstrap-ubuntu.sh --check
-      - run: npm ci
+      - run: npm ci --no-audit --no-fund
       - name: Build application
         run: npm run build
       - name: Package Ubuntu
@@ -37,11 +92,24 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jarvis-linux
+          if-no-files-found: error
           path: |
             release-desktop/JARVIS.AppImage
             release-desktop/JARVIS.deb
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified release packages
+        uses: actions/download-artifact@v4
+        with:
+          name: jarvis-linux
+          path: release-desktop
       - name: Publish rolling Linux release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest

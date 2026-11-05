@@ -1581,6 +1581,7 @@ button:disabled {
     filter: brightness(1.08);
   }
   .btn.primary:hover {
+    background: var(--accent-grad);
     box-shadow: 0 8px 26px rgba(108, 231, 255, 0.42);
     filter: brightness(1.05);
   }

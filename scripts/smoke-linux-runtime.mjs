@@ -22,6 +22,7 @@ See docs/LINUX_RUNTIME_SMOKE.md for personal-build and driver setup.`);
   process.exit(0);
 }
 assert.equal(process.platform, 'linux', 'This AppImage smoke requires Linux.');
+assert(process.getuid() !== 0 || process.env.JARVIS_SMOKE_NO_SANDBOX === '1', 'Run as a non-root user: Playwright otherwise disables the Electron sandbox implicitly.');
 assert(process.env.DISPLAY || process.env.WAYLAND_DISPLAY, 'No display. Use xvfb-run -a npm run test:linux-runtime.');
 assert(process.argv.length <= 3, 'Expected at most one AppImage path; see --help.');
 const executable = path.resolve(process.argv[2] || path.join(root, 'release-desktop/JARVIS.AppImage'));
@@ -45,7 +46,7 @@ const runtimeDir = path.join(dir, 'runtime');
 const model = 'qwen2.5:1.5b';
 const task = 'Zadanie po zamknięciu AppImage';
 const simulatedResult = 'SYMULOWANY WYNIK PO ZAMKNIĘCIU';
-let app, connection, calls = 0, releaseJob, succeeded = false;
+let app, page, connection, calls = 0, releaseJob, succeeded = false;
 const pendingJob = new Promise((resolve) => { releaseJob = resolve; });
 const cleanupFailures = [];
 
@@ -140,6 +141,13 @@ async function stopRuntime() {
   }
 }
 
+async function captureScreenshot() {
+  if (!process.env.JARVIS_SMOKE_SCREENSHOT || !page || page.isClosed()) return;
+  const screenshot = path.resolve(process.env.JARVIS_SMOKE_SCREENSHOT);
+  await mkdir(path.dirname(screenshot), { recursive: true });
+  await page.screenshot({ path: screenshot, timeout: 5000 });
+}
+
 try {
   await mkdir(path.join(dir, 'session'), { mode: 0o700 });
   await chmod(dir, 0o700);
@@ -163,7 +171,7 @@ try {
   }
   const launch = () => driver.launch({ executablePath: executable, args, env, timeout: 45000 });
   app = await launch();
-  let page = await app.firstWindow();
+  page = await app.firstWindow();
   await page.waitForLoadState('domcontentloaded');
   console.log('Real AppImage launched; model backend is a SIMULATED Ollama HTTP fixture.');
   try {
@@ -198,16 +206,16 @@ try {
   const discovered = await page.evaluate(() => globalThis.jarvisDesktop.runtimeConnection());
   const secondConnection = await readConnection();
   assert.equal(secondConnection.pid, firstPid, 'Reopening must reuse the worker.');
-  assert.equal(discovered.token, connection.token, 'Reopening must preserve authentication.');
+  // Boolean assertion avoids printing authentication tokens when this check fails in CI.
+  assert(discovered?.token === connection.token, 'Reopening must preserve authentication.');
   await page.getByRole('button', { name: 'Analizy w tle', exact: true }).click();
   await page.getByRole('button', { name: 'Wyniki i historia', exact: true }).click();
   await page.getByText(simulatedResult, { exact: true }).waitFor();
-  if (process.env.JARVIS_SMOKE_SCREENSHOT) {
-    const screenshot = path.resolve(process.env.JARVIS_SMOKE_SCREENSHOT);
-    await mkdir(path.dirname(screenshot), { recursive: true });
-    await page.screenshot({ path: screenshot });
-  }
+  await captureScreenshot();
   succeeded = true;
+} catch (error) {
+  try { await captureScreenshot(); } catch { /* diagnostics must not hide the original failure */ }
+  throw error;
 } finally {
   releaseJob();
   try { await closeApp(true); } catch (error) { cleanupFailures.push(error.message); }
@@ -223,5 +231,5 @@ try {
 if (succeeded && !cleanupFailures.length) {
   console.log(JSON.stringify({ actualAppImage: true, automaticServer: true, automaticChatConfiguration: true,
     automaticProbe: true, survivesAppImageClose: true, reusesPidAndToken: true, persistedResult: true,
-    cleanup: true, model: 'SIMULATED_OLLAMA_HTTP_FIXTURE', modelCalls: calls }));
+    cleanup: true, noSandboxOptIn: process.env.JARVIS_SMOKE_NO_SANDBOX === '1', model: 'SIMULATED_OLLAMA_HTTP_FIXTURE', modelCalls: calls }));
 }

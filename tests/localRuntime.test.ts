@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import http from 'node:http';
-import { mkdtemp, readFile, rm, stat, writeFile, readdir } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
+import { mkdtemp, readFile, rm, stat, writeFile, readdir, symlink, truncate } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import process from 'node:process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 // @ts-expect-error Runtime is standalone Node ESM, intentionally usable without TS compilation.
 import { configureRuntime, createRuntime, validateProfile } from '../server/runtime/server.mjs';
 
@@ -55,6 +56,13 @@ async function until(fn: () => Promise<boolean>, limit = 3000) {
   while (Date.now() < end) { if (await fn()) return; await new Promise(resolve => setTimeout(resolve, 20)); }
   throw new Error('condition timed out');
 }
+function archivedFixture(index: number) {
+  return { id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`, idempotencyKey: `archive-fixture-${index}`,
+    prompt: `Polecenie ${index}: ${'szczegóły '.repeat(40)}`, result: `Pełny wynik ${index}`, status: 'completed',
+    createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:01:00.000Z', attempt: 1,
+    profileVersion: 1, model: 'local-fixture', ollamaUrl: 'http://127.0.0.1:11434', execution: 'local-analysis' };
+}
+function archivePath(dataDir: string, key: string) { return path.join(dataDir, 'archive', `${createHash('sha256').update(key).digest('hex')}.json`); }
 
 describe('local durable runtime', () => {
   it('requires authentication, restricts browser origins and keeps token files private', async () => {
@@ -236,11 +244,95 @@ describe('local durable runtime', () => {
     // Simulate a crash after archive fsync, before removing the old queue entry.
     await writeFile(path.join(app.dataDir, 'state.json'), before);
     const recovered = await runtime({ dataDir: app.dataDir });
+    expect((await recovered.call('/v1/jobs/archive')).body).toEqual({ jobs: [], total: 0, nextCursor: null });
+    expect((await recovered.call(`/v1/jobs/request/${input.idempotencyKey}`)).body.archived).toBe(false);
     expect((await recovered.call('/v1/jobs', 'POST', input)).body.reused).toBe(true);
     expect((await recovered.call('/v1/jobs/archive', 'POST')).body).toEqual({ archived: 1, total: 1 });
     const replayed = await recovered.call('/v1/jobs', 'POST', input);
     expect(replayed.body).toMatchObject({ reused: true, job: { status: 'completed', result: 'Odpowiedź local-model: Zachowaj wynik' } });
     expect((await recovered.call('/v1/jobs', 'POST', { ...input, prompt: 'Inny prompt' })).status).toBe(409);
+    expect(model.chats).toHaveLength(1);
+  });
+
+  it('reads legacy archive records in stable pages and loads full results only on demand without modifying files', async () => {
+    const app = await runtime();
+    for (let index = 1; index <= 5; index++) {
+      const job = archivedFixture(index);
+      await writeFile(archivePath(app.dataDir, job.idempotencyKey), JSON.stringify(job));
+    }
+    await writeFile(path.join(app.dataDir, 'archive', 'unfinished.tmp'), '{');
+    const before = await readFile(path.join(app.dataDir, 'state.json'), 'utf8');
+    const first = await app.call('/v1/jobs/archive?limit=2');
+    expect(first.status).toBe(200);
+    expect(first.body.total).toBe(5);
+    expect(first.body.jobs.map((job: { id: string }) => job.id)).toEqual([archivedFixture(5).id, archivedFixture(4).id]);
+    expect(first.body.jobs[0]).toMatchObject({ promptPreview: archivedFixture(5).prompt.slice(0, 240), hasResult: true, hasError: false });
+    expect(first.body.jobs[0]).not.toHaveProperty('prompt');
+    expect(first.body.jobs[0]).not.toHaveProperty('result');
+    // A newer insert between pages does not shift the cursor or repeat older entries.
+    const later = { ...archivedFixture(6), createdAt: '2026-02-01T00:00:00.000Z' };
+    await writeFile(archivePath(app.dataDir, later.idempotencyKey), JSON.stringify(later));
+    const second = await app.call(`/v1/jobs/archive?limit=2&cursor=${first.body.nextCursor}`);
+    expect(second.body.jobs.map((job: { id: string }) => job.id)).toEqual([archivedFixture(3).id, archivedFixture(2).id]);
+    const third = await app.call(`/v1/jobs/archive?limit=2&cursor=${second.body.nextCursor}`);
+    expect(third.body.jobs.map((job: { id: string }) => job.id)).toEqual([archivedFixture(1).id]);
+    expect(third.body.nextCursor).toBeNull();
+    expect((await app.call(`/v1/jobs/archive/${later.id}`)).body).toEqual({ job: later, archived: true });
+    expect((await app.call(`/v1/jobs/request/${later.idempotencyKey}`)).body).toEqual({ job: later, archived: true });
+    expect((await app.call('/v1/status')).body.capabilities).toMatchObject({ archivedResults: true, requestLookup: true, serverIdentityGuard: true });
+    expect(await readFile(path.join(app.dataDir, 'state.json'), 'utf8')).toBe(before);
+    expect(await readFile(archivePath(app.dataDir, later.idempotencyKey), 'utf8')).toBe(JSON.stringify(later));
+  });
+
+  it('authenticates archive and lookup, validates cursor and path inputs, and distinguishes missing jobs from unknown routes', async () => {
+    const app = await runtime();
+    for (const endpoint of ['/v1/jobs/archive', `/v1/jobs/archive/${archivedFixture(1).id}`, '/v1/jobs/request/missing-request']) {
+      expect((await fetch(app.url + endpoint)).status).toBe(401);
+    }
+    for (const endpoint of ['/v1/jobs/archive?limit=0', '/v1/jobs/archive?limit=101', '/v1/jobs/archive?limit=2&limit=3', '/v1/jobs/archive?cursor=bad', '/v1/jobs/archive?cursor=', '/v1/jobs/archive?offset=1', '/v1/jobs/archive/not-a-uuid', '/v1/jobs/archive/..%2Fstate.json', '/v1/jobs/request/..%2Fstate.json', '/v1/jobs/request/%GG', '/v1/jobs/request/short']) {
+      expect((await app.call(endpoint)).status, endpoint).toBe(400);
+    }
+    expect((await app.call('/v1/jobs/request/missing-request'))).toMatchObject({ status: 404, body: { error: { code: 'JOB_NOT_FOUND' } } });
+    expect((await app.call(`/v1/jobs/archive/${archivedFixture(1).id}`))).toMatchObject({ status: 404, body: { error: { code: 'JOB_NOT_FOUND' } } });
+    expect((await app.call('/v1/unknown'))).toMatchObject({ status: 404, body: { error: { code: 'NOT_FOUND' } } });
+  });
+
+  it.each(['invalid-json', 'wrong-key', 'oversize', 'symlink'])('reports %s archive records instead of silently returning an empty history', async kind => {
+    const app = await runtime();
+    const job = archivedFixture(1);
+    const file = archivePath(app.dataDir, job.idempotencyKey);
+    if (kind === 'symlink') {
+      const outside = path.join(app.dataDir, 'outside-secret.json');
+      await writeFile(outside, JSON.stringify(job));
+      await symlink(outside, file);
+    } else {
+      await writeFile(file, kind === 'invalid-json' ? '{' : JSON.stringify(kind === 'wrong-key' ? { ...job, idempotencyKey: 'different-request' } : job));
+      if (kind === 'oversize') await truncate(file, 2_000_001);
+    }
+    for (const endpoint of ['/v1/jobs/archive', `/v1/jobs/archive/${job.id}`, `/v1/jobs/request/${job.idempotencyKey}`]) {
+      const response = await app.call(endpoint);
+      expect(response).toMatchObject({ status: 503, body: { error: { code: 'CORRUPT_STATE' } } });
+      expect(JSON.stringify(response.body)).not.toContain(job.result);
+    }
+  });
+
+  it('rejects retry on another server before creating work and looks up the accepted original without running it twice', async () => {
+    const model = await modelServer({ delay: 60 });
+    const app = await runtime({ model: 'local-model', ollamaUrl: model.url });
+    const input = { prompt: 'Odzyskaj potwierdzenie', idempotencyKey: 'request-with-server', expectedServerId: randomUUID() };
+    expect(await app.call('/v1/jobs', 'POST', input)).toMatchObject({ status: 409, body: { error: { code: 'SERVER_CHANGED' } } });
+    expect((await app.call('/v1/jobs')).body.jobs).toEqual([]);
+    expect(model.requests).toEqual([]);
+    const serverId = (await app.call('/v1/status')).body.serverId;
+    const submission = app.enqueue({ ...input, expectedServerId: serverId });
+    const lookup = await app.call(`/v1/jobs/request/${input.idempotencyKey}`);
+    const accepted = await submission;
+    expect(lookup).toMatchObject({ status: 200, body: { archived: false, job: { id: accepted.job.id } } });
+    await until(async () => (await app.call(`/v1/jobs/request/${input.idempotencyKey}`)).body.job.status === 'completed');
+    await app.call('/v1/jobs/archive', 'POST');
+    const found = await app.call(`/v1/jobs/request/${input.idempotencyKey}`);
+    expect(found.body).toMatchObject({ archived: true, job: { id: accepted.job.id, result: 'Odpowiedź local-model: Odzyskaj potwierdzenie' } });
+    expect((await app.call('/v1/jobs', 'POST', { ...input, expectedServerId: serverId })).body.reused).toBe(true);
     expect(model.chats).toHaveLength(1);
   });
 
@@ -393,5 +485,58 @@ describe('local durable runtime', () => {
     const persisted = JSON.parse(await readFile(path.join(dir, 'profile.json'), 'utf8'));
     expect(persisted.version).toBe(9);
     expect((await readdir(dir)).some(name => name.endsWith('.lock') || name.endsWith('.recovery'))).toBe(false);
+  });
+
+  it('does not expose a partially written lock to a concurrent profile writer', async () => {
+    const dir = await directory();
+    // Isolate an actual filesystem write barrier in a child process. It pauses
+    // the first lock-content write after its inode exists, while a second real
+    // configureRuntime call tries to acquire the same lock.
+    const script = `
+      import fs from 'node:fs/promises';
+      import { syncBuiltinESMExports } from 'node:module';
+      const originalOpen = fs.open, originalWrite = fs.writeFile;
+      let signalPaused, resume, armed = true;
+      const paused = new Promise(resolve => { signalPaused = resolve; });
+      const resumed = new Promise(resolve => { resume = resolve; });
+      const isLock = file => String(file).includes('profile.lock');
+      const pause = async () => { armed = false; signalPaused(); await resumed; };
+      fs.writeFile = async (file, content, options) => {
+        if (isLock(file) && armed) {
+          await originalWrite(file, '', options);
+          await pause();
+          return originalWrite(file, content, { ...options, flag: 'w' });
+        }
+        return originalWrite(file, content, options);
+      };
+      fs.open = async (...args) => {
+        const handle = await originalOpen(...args);
+        if (isLock(args[0]) && armed) {
+          const write = handle.writeFile.bind(handle);
+          handle.writeFile = async (...values) => { await pause(); return write(...values); };
+        }
+        return handle;
+      };
+      syncBuiltinESMExports();
+      const { configureRuntime } = await import(${JSON.stringify(pathToFileURL(path.resolve('server/runtime/server.mjs')).href)});
+      const dir = ${JSON.stringify(dir)};
+      const watchdog = setTimeout(() => { console.error('write barrier timed out'); process.exit(2); }, 2500);
+      const first = configureRuntime(dir, { model: 'paused-writer' });
+      await paused;
+      const exposed = await fs.readFile(dir + '/profile.lock', 'utf8').then(() => true, error => { if (error.code === 'ENOENT') return false; throw error; });
+      const second = await configureRuntime(dir, { model: 'concurrent-writer' }).then(value => ({ version: value.version }), error => ({ error: error.code }));
+      resume();
+      const completed = await first;
+      clearTimeout(watchdog);
+      console.log(JSON.stringify({ exposed, first: completed.version, second }));
+    `;
+    const child = spawn(process.execPath, ['--input-type=module', '-e', script], { stdio: ['ignore', 'pipe', 'pipe'] });
+    cleanups.push(async () => { if (child.exitCode === null && child.signalCode === null) { const exit = once(child, 'exit'); child.kill('SIGKILL'); await exit; } });
+    let stdout = '', stderr = '';
+    child.stdout.on('data', chunk => { stdout += chunk; }); child.stderr.on('data', chunk => { stderr += chunk; });
+    const [code] = await once(child, 'close'); // stdout may finish after the process exit event.
+    expect(code, stderr).toBe(0);
+    expect(JSON.parse(stdout)).toEqual({ exposed: false, first: 2, second: { version: 1 } });
+    expect((await readdir(dir)).some(name => name.endsWith('.lock') || name.endsWith('.tmp') || name.endsWith('.recovery'))).toBe(false);
   });
 });

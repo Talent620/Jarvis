@@ -32,7 +32,8 @@ JARVIS desktop działa na Windows oraz Ubuntu. Dla Ubuntu dostępne są dwa wari
 Po instalacji na Linuksie jeden skrót otwiera aplikację i uruchamia lub odnajduje lokalny
 serwer analiz. Działająca Ollama z zainstalowanym modelem pozwala automatycznie przygotować
 pusty profil i czat. Program nie pobiera modeli ani nie zastępuje istniejącej konfiguracji.
-[Szczegóły startu i wymagania](docs/LOCAL_RUNTIME.md).
+[Szczegóły startu, odzyskiwania zgłoszeń i archiwum](docs/LOCAL_RUNTIME.md).
+[Aktualizacja działającego serwera](docs/RUNTIME_UPGRADE.md) sprawdza jego rzeczywistą wersję, zachowuje kolejkę i umożliwia powrót do poprzedniego kodu po błędzie startu.
 
 Uruchomienie z kodu na Linuksie (terminal w sesji graficznej):
 

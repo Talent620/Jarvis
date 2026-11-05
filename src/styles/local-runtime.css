@@ -55,6 +55,16 @@
 .runtime-panel .runtime-job-status--failed { color: var(--gold); }
 .runtime-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; font: inherit; font-size: 13px; line-height: 1.65; }
 .runtime-panel .notice { overflow-wrap: anywhere; }
+.runtime-panel .runtime-pending, .runtime-panel .runtime-other-pending, .runtime-panel .runtime-archive { border: 1px solid var(--line-strong); border-radius: 12px; padding: 12px 14px; margin: 16px 0; }
+.runtime-panel .runtime-pending { border-left: 3px solid var(--gold); background: var(--surface); }
+.runtime-panel .runtime-pending h3 { margin: 0 0 8px; }
+.runtime-panel .runtime-pending p, .runtime-panel .runtime-other-pending p, .runtime-panel .runtime-archive p, .runtime-panel .runtime-retention { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.runtime-panel .runtime-other-pending > div + div { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+.runtime-panel .runtime-recovery-note { font-size: 12px; line-height: 1.6; }
+.runtime-panel .runtime-upgrade { border-left: 3px solid var(--gold); padding-left: 12px; margin: 16px 0; }
+.runtime-panel .runtime-upgrade h3 { margin-top: 0; }
+.runtime-panel .runtime-upgrade p, .runtime-panel .runtime-upgrade-steps p { font-size: 12px; line-height: 1.6; }
+.runtime-panel .runtime-archive .runtime-job { padding: 12px; }
 @media (max-width: 560px) {
   .runtime-panel .runtime-job { padding: 14px; }
   .runtime-panel .runtime-health { padding: 10px 12px 2px; }
