@@ -5,6 +5,15 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("jarvisDesktop", {
   platform: process.platform,
+  skillCommand: (request, taskId, allowNetwork, executionId) => ipcRenderer.invoke("jarvis:skill-command", { request, taskId, allowNetwork, executionId }),
+  browserCommand: (request) => ipcRenderer.invoke("jarvis:browser-command", request),
+  browserGrant: (request) => ipcRenderer.invoke("jarvis:browser-grant", request),
+  skillPolicy: (request) => ipcRenderer.invoke("jarvis:skill-policy", request),
+  skillCancel: (taskId, executionId) => ipcRenderer.invoke("jarvis:skill-cancel", { taskId, executionId }),
+  skillRelease: (taskId) => ipcRenderer.invoke("jarvis:skill-release", taskId),
+  monitorConnectorList: () => ipcRenderer.invoke("jarvis:monitor-connector-list"),
+  monitorConnectorConfigure: (request) => ipcRenderer.invoke("jarvis:monitor-connector-configure", request),
+  monitorConnectorRemove: (id) => ipcRenderer.invoke("jarvis:monitor-connector-remove", id),
   monitorReadEvent: (id) => ipcRenderer.invoke("jarvis:monitor-read-event", id),
   clipboardRead: () => ipcRenderer.invoke("jarvis:clipboard-read"),
   monitorCommand: (request) => ipcRenderer.invoke("jarvis:monitor-command", request),

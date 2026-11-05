@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-05T22:34:06.597738+00:00",
+  "codeBase": "fb17f9755faad72295cb125563ba2b0220d9319d",
+  "branch": "codex/skills-integration-20261105",
+  "mode": "adapter integration on controlled fixtures; no LLM or user desktop autonomy claim",
+  "command": "npx vitest run tests/browserSession.test.ts tests/mcpStdio.test.ts tests/mcp.test.ts",
+  "focusedResult": {
+    "status": "PASS",
+    "testsPassed": 25,
+    "testsSkipped": 0,
+    "filesPassed": 3,
+    "log": "QA/autonomia60/durable/evidence/browser-mcp-tests.log",
+    "logSha256": "2c4ea909bee9fce776e2b168cf36787295180eba1bb7ff6306d8843b5558ad37",
+    "rawLogSha256": "15289f263d52575ce75debf3add01f1195f1054004131cca104bc92e1c43dd42",
+    "normalization": "Trailing whitespace only; see evidence/closure-log-normalization.json"
+  },
+  "checks": {
+    "focusedEslint": "PASS",
+    "typescriptNoEmit": "PASS"
+  },
+  "fileSha256": {
+    "electron/browser-session.cjs": "32dfeeb9eacd6ff04e4af9fac2652e0788077dd832e548798e2a00315cfc028a",
+    "electron/mcp-stdio.cjs": "328a043b7fca37e8c1ce05d8c7ddf172c17f28884ff4225fe55399b214ca2a01",
+    "src/lib/mcp.ts": "62ee688266743c2f7a548b5011d657703cb2224365512154d51a5c45b53db494",
+    "tests/browserSession.test.ts": "49c9f555dfea69228425014b44ba17310e6b88579caaf13892542337cfabe18a",
+    "tests/mcpStdio.test.ts": "97d95d53ec24ac1956ffa3cf818511ce8357fdf928c968cbf2935d1c67cc553e",
+    "tests/mcp.test.ts": "29e12011eafc84b0c8890262c44bdc978a4ebeafddf56ec1f4372864ec06c42a"
+  },
+  "environment": {
+    "platform": "linux",
+    "chromiumExecutable": "/usr/bin/chromium",
+    "chromiumVersion": "Chromium 155.0.8059.79 built on Debian GNU/Linux 13 (trixie)",
+    "playwrightCore": "1.62.1",
+    "chromiumSandbox": true,
+    "headless": true,
+    "browserDownloaded": false,
+    "xvfbInstalled": false,
+    "graphicalSessionPresent": false
+  },
+  "evidence": [
+    {
+      "case": "browser controlled DOM/form/download",
+      "status": "PASS",
+      "mechanism": "Actual sandboxed Chromium opens fixture, reads DOM, fills without GET beacon or POST, exact actual POST requires native-approval callback, one approved POST reaches server; downloaded Polish text independently read from disk and SHA256 returned."
+    },
+    {
+      "case": "browser STOP during native approval",
+      "status": "PASS",
+      "mechanism": "Unresolved native approval is aborted immediately; late grant cannot dispatch previous request; fixture received zero POSTs."
+    },
+    {
+      "case": "browser STOP during startup DNS",
+      "status": "PASS",
+      "mechanism": "Deferred DNS and launch spy; STOP settles pending operation before DNS returns; late DNS produces zero launch calls. This is a startup regression unit test, not real-browser autonomy."
+    },
+    {
+      "case": "GET form mutation",
+      "status": "PASS",
+      "mechanism": "Real Chromium onclick changes form action and value. Native approval receives actual /mutated?target=changed GET. Denial produces no request to either original or changed destination."
+    },
+    {
+      "case": "download path symlink",
+      "status": "PASS",
+      "mechanism": "Real browser discovers link; symlink download directory is rejected; independently enumerated outside directory remains empty."
+    },
+    {
+      "case": "stdio MCP actual SDK server",
+      "status": "PASS",
+      "mechanism": "Own Node SDK fixture discovers/calls ping; stalled initialize times out and child PID exits; STOP aborts actual pending call, marks effect uncertain and closes own server PID."
+    },
+    {
+      "case": "HTTP MCP revoke and headers",
+      "status": "PASS",
+      "mechanism": "Mock transport regression proves remembered scopes and catalog removed, late response rejected, no extra call after revoke; arbitrary application token is not attached, redirects disabled, incorrect JSON-RPC id rejected."
+    },
+    {
+      "case": "STOP while Chromium launch is pending",
+      "status": "PASS",
+      "mechanism": "Deferred launch unit regression keeps busy/starting state and leaves STOP unfinished until owned browser resolves and closes. No false stopped:true while owned startup remains pending."
+    },
+    {
+      "case": "draft delayed GET after fragment navigation",
+      "status": "PASS",
+      "mechanism": "Actual Chromium fill schedules delayed GET. Subsequent open(#fragment) destroys old browser while its traffic remains blocked, then creates clean isolated context. Server log contains no autosave or delayed draft GET."
+    }
+  ],
+  "limitations": [
+    "No real model routed these tasks through the normal JARVIS chat field. These results do not satisfy full user-agent browser/desktop acceptance gates.",
+    "Public internet browser interaction was not tested in this pass. Domain-scoped local fixture browser interaction was real.",
+    "Browser download adapter requires Linux /proc/self/fd anchoring; other platforms explicitly report PLATFORM_UNAVAILABLE for download.",
+    "Browser uses an isolated ephemeral context and only an already installed configured Chromium executable; no imported user cookies or model/browser downloads.",
+    "Interactive pages may need additional exact origins. Draft filling deliberately blocks network side effects, including autosave GET requests; clicks require approval for actual outgoing requests.",
+    "MCP JSON HTTP transport rejects SSE endpoints explicitly. Stdio uses the pinned MCP SDK.",
+    "STOP cannot roll back a remote side effect already sent. Stdio cleanup controls its direct owned server process, not arbitrary daemon descendants created by that server.",
+    "No system-wide service, Cua Driver or Xvfb installed.",
+    "Opening another URL after fill/click creates a fresh isolated browser context to prevent old-document draft disclosure; temporary login/session state is not preserved across that reset."
+  ],
+  "cuaDriver": {
+    "status": "BLOCKED",
+    "sourceCommit": "0f7a3846b190e31a71ce03a0d7274cfa5e67c8f8",
+    "license": "MIT for Cua Driver; optional cua-perception has separate AGPL/non-MIT terms and was not installed",
+    "sources": [
+      {
+        "url": "https://github.com/trycua/cua/blob/0f7a3846b190e31a71ce03a0d7274cfa5e67c8f8/libs/cua-driver/README.md",
+        "sha256": "5665cbac85504417ec14dc184993b66774f6c77a3b8a696d4b90ba827644e8fc"
+      },
+      {
+        "url": "https://github.com/trycua/cua/blob/0f7a3846b190e31a71ce03a0d7274cfa5e67c8f8/libs/cua-driver/docs/linux-desktop-validation.md",
+        "sha256": "14c98a6700b8cf2b0edd6a5422ef63c8a71484d2a742f503baba417a0087b1a1"
+      },
+      {
+        "url": "https://github.com/trycua/cua/blob/0f7a3846b190e31a71ce03a0d7274cfa5e67c8f8/libs/cua-driver/docs/mcp-protocol-and-skills.md",
+        "sha256": "1ac96fb101c7a4982c5fe9ef64c3bb58f60af0e814e8c88c3da0eeeb2fa989d1"
+      }
+    ],
+    "observed": "cua-driver executable absent; no target authorized graphical session and no reviewed bounded capability manifest",
+    "compatibility": "Current Driver supports stdio MCP modern 2026-07-28 and legacy 2025-06-18, which installed MCP SDK can negotiate. Driver default standard mode is promptless; integration must use reviewed bounded mode rather than unrestricted.",
+    "platformEvidence": "Upstream GNOME requires Wayland user session, WinRects helper and portal grant; shared renderers/video remain open. KDE requires Plasma6, no full accepted behavioral matrix. Real Xorg /dev/uinput behavior is listed not yet validated.",
+    "decision": "Keep existing native X11 backend with its concrete X11/DISPLAY prerequisites; do not pretend Wayland or Cua execution. Do not admit unreviewed cua-driver command or run deprecated insecure cuabot. Installed Driver, owner-reviewed bounded manifest and target desktop remain prerequisites."
+  }
+}

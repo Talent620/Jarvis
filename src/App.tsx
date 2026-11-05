@@ -44,7 +44,7 @@ import { detectDecision, decisionKey, decisionValue, type DecisionCandidate } fr
 import { isBossSummon } from "./lib/boss";
 import { completionReport } from "./lib/completion";
 import { useWatchdog } from "./hooks/useWatchdog";
-import { valueToday, prettyMinutes } from "./lib/valueLog";
+import { valueToday } from "./lib/valueLog";
 import { rememberFact } from "./lib/memory";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
 import { notifySummary } from "./lib/notifyCenter";
@@ -774,6 +774,7 @@ export default function App() {
   const stopGeneration = () => {
     cancelGeneration();
     stopAllGoalRuns();
+    void mcpManager.stopAll().catch(() => toast("Nie potwierdzono zatrzymania integracji MCP."));
     void desktop()?.monitorCommand?.({ action: "stop_all" }).then((result) => {
       if (!result.ok) toast("Nie potwierdzono zatrzymania monitorów: " + (result.error || "brak odpowiedzi"));
     }).catch(() => toast("Nie potwierdzono zatrzymania monitorów."));
@@ -1279,17 +1280,16 @@ export default function App() {
           </small>
         </div>
         {(() => {
-          const lvl = completionReport(store.settings).percent;
-          const col = lvl >= 90 ? "#2fbf71" : lvl >= 60 ? "#28c0c8" : "var(--gold)";
+          const configuration = completionReport(store.settings);
           return (
             <button
               className="level-badge"
-              style={{ borderColor: col, color: col }}
+              style={{ borderColor: "var(--cyan)", color: "var(--cyan)" }}
               onClick={() => setShowSettings(true)}
-              title={`Poziom JARVISA: ${lvl}% gotowości. Kliknij, by dokończyć konfigurację.`}
-              aria-label={`Poziom JARVISA ${lvl} procent`}
+              title={`${configuration.done} z ${configuration.total} pozycji listy ustawień i preferencji jest włączonych lub uzupełnionych. Dostępność funkcji sprawdzisz w diagnostyce.`}
+              aria-label={`Ustawienia i preferencje: ${configuration.done} z ${configuration.total}. Otwórz ustawienia.`}
             >
-              ⬢ {lvl}%
+              ⚙ {configuration.done}/{configuration.total}
             </button>
           );
         })()}
@@ -1485,23 +1485,23 @@ export default function App() {
         councilAvailable={councilMembers(3).length >= 2}
       />
 
-      {/* 🚀 Droga do 100% — Szef proponuje następny krok; auto-kroki robi po „Zrób". */}
+      {/* Lista ustawień i preferencji; licznik opisuje konfigurację. */}
       {(() => {
         if (completionHidden) return null;
         const r = completionReport(store.settings);
-        if (!r.next || r.percent >= 100) return null;
+        if (!r.next || r.done >= r.total) return null;
         const step = r.next;
         const apply = () => {
-          if (step.patch) { store.setSettings(step.patch); toast(`Zrobione: ${step.title} ✓`); }
+          if (step.patch) { store.setSettings(step.patch); toast(`Zapisano ustawienie: ${step.title}`); }
           else if (step.openScreen === "profile") setShowProfile(true);
           else setShowSettings(true);
         };
         return (
           <div className="journal-card" style={{ margin: "0 8px 8px", padding: "8px 10px", display: "flex", gap: 8, alignItems: "center", fontSize: 13, borderLeft: "3px solid #2bff88" }}>
             <span style={{ flex: 1, minWidth: 0 }}>
-              🚀 JARVIS w <b>{r.percent}%</b> — następny krok: <b>{step.title}</b>{step.patch ? " — Szef zrobi to sam" : ""}.
+              ⚙ Ustawienia i preferencje: <b>{r.done}/{r.total}</b>. Propozycja: <b>{step.title}</b>.
             </span>
-            <button className="chip on" onClick={apply}>{step.patch ? "Zrób" : "Otwórz"}</button>
+            <button className="chip on" onClick={apply}>{step.patch ? "Zmień ustawienie" : "Otwórz"}</button>
             <button className="chip" onClick={() => setCompletionHidden(true)} title="Później">✕</button>
           </div>
         );
@@ -1524,13 +1524,13 @@ export default function App() {
         );
       })()}
 
-      {/* ✨ Wartość dnia — co JARVIS realnie zrobił za Ciebie (z audytu). Etyczny haczyk. */}
+      {/* Dziennik wywołań narzędzi; wynik zadania wymaga osobnej weryfikacji. */}
       {(() => {
         const v = valueToday(store.data.audit || []);
         if (v.actions < 1) return null;
         return (
-          <div className="value-card" onClick={() => setShowAudit(true)} title="Zobacz, co JARVIS zrobił (dziennik działań)">
-            ✨ Dziś JARVIS zrobił za Ciebie <b>{v.actions}</b> {v.actions === 1 ? "rzecz" : v.actions < 5 ? "rzeczy" : "rzeczy"} — oszczędził Ci {prettyMinutes(v.minutes)}.
+          <div className="value-card" onClick={() => setShowAudit(true)} title="Otwórz dziennik wywołań i sprawdź ich wyniki.">
+            Zarejestrowane dziś wywołania narzędzi: <b>{v.actions}</b> (status „ok”).
           </div>
         );
       })()}

@@ -1,5 +1,5 @@
 // Główny proces Electrona — JARVIS na komputer (Windows .exe), pełna wersja.
-const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification, dialog } = require("electron");
+const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification, dialog, safeStorage } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { spawn, exec } = require("child_process");
@@ -16,6 +16,10 @@ const { createConfiguredLocalOllamaManager } = require("./local-ollama.cjs");
 const { createLocalSiteOsManager } = require("./local-siteos.cjs");
 const localOllama = createConfiguredLocalOllamaManager();
 const { createGoalService } = require("./goal-service.cjs");
+const { createSkillManager } = require("./skill-manager.cjs");
+const { createSkillIsolation } = require("./skill-isolation.cjs");
+const { createMonitorConnectors } = require("./monitor-connectors.cjs");
+const { createBrowserSession } = require("./browser-session.cjs");
 
 if (process.env.JARVIS_PROFILE_DIR) app.setPath("userData", path.resolve(process.env.JARVIS_PROFILE_DIR));
 
@@ -43,6 +47,15 @@ let siteOsManager = null;
 let stdioMcp = null;
 let closingStdioMcp = false;
 let monitorService = null;
+let monitorConnectorService = null;
+let skillService = null;
+let skillSandbox = null;
+let browserService = null;
+const skillOperations = new Map();
+const skillReleaseRequests = new Set();
+const cancelledSkillTasks = new Set();
+const cancelledSkillExecutions = new Set();
+let ownerConsentEpoch = 0;
 let monitorConsentPending = 0;
 async function confirmMonitorScope(options) {
   monitorConsentPending++;
@@ -57,6 +70,7 @@ try { backgroundMonitoring = JSON.parse(fs.readFileSync(MONITOR_SETTINGS_FILE, "
 function monitors() {
   if (!monitorService) monitorService = createGoalService({
     directory: path.join(app.getPath("userData"), "goals"),
+    connectors: connectors(),
     notify: async (event) => {
       if (!Notification.isSupported()) return { accepted: false };
       const reason = typeof event.reason === "string" ? event.reason : [event.reason?.contains, event.reason?.variant, event.reason?.condition].filter(Boolean).join(" · ");
@@ -72,6 +86,40 @@ function monitors() {
     },
   });
   return monitorService;
+}
+
+function connectors() {
+  if (!monitorConnectorService) monitorConnectorService = createMonitorConnectors({
+    directory: path.join(app.getPath("userData"), "connectors"),
+    encrypt: value => {
+      if (!safeStorage.isEncryptionAvailable() || safeStorage.getSelectedStorageBackend?.() === "basic_text") throw new Error("Brak bezpiecznego magazynu kluczy systemu. Konfiguracja nie została zapisana.");
+      return safeStorage.encryptString(value);
+    },
+    decrypt: value => {
+      if (!safeStorage.isEncryptionAvailable() || safeStorage.getSelectedStorageBackend?.() === "basic_text") throw new Error("Bezpieczny magazyn kluczy jest niedostępny.");
+      return safeStorage.decryptString(value);
+    },
+  });
+  return monitorConnectorService;
+}
+function skills() {
+  if (!skillService) {
+    skillSandbox = createSkillIsolation();
+    skillService = createSkillManager({ directory: path.join(app.getPath("userData"), "skills"), sandbox: skillSandbox });
+  }
+  return skillService;
+}
+function cancelSkillTask(taskId, executionId) {
+  const cancelled = executionId ? cancelledSkillExecutions : cancelledSkillTasks;
+  cancelled.add(executionId ? `${taskId}:${executionId}` : taskId);
+  // IDs are random and never reused. Bound cancelled-task retention independently of pins.
+  if (cancelled.size > 2000) cancelled.delete(cancelled.values().next().value);
+  for (const controller of skillOperations.get(taskId) || []) if (!executionId || controller.executionId === executionId) controller.abort();
+}
+function stopNativeSkills() {
+  for (const taskId of skillOperations.keys()) cancelSkillTask(taskId);
+  skillService?.stopAll();
+  return skillSandbox?.cancelAll();
 }
 
 
@@ -333,18 +381,119 @@ function registerDesktopControl() {
   const workspaceTools = createWorkspaceTools({
     root: process.env.JARVIS_WORKSPACE_DIR ? path.resolve(process.env.JARVIS_WORKSPACE_DIR) : path.join(app.getPath("documents"), "JARVIS Workspace"),
     openExternal: (url) => shell.openExternal(url),
+    generatedTool: async request => {
+      const taskId = `skill-generated-${require("node:crypto").randomUUID()}`;
+      const controller = new AbortController(); skillOperations.set(taskId, new Set([controller]));
+      try { return await skills().command({ action: "author", files: request.files }, { taskId, signal: controller.signal }); }
+      finally { skillOperations.delete(taskId); }
+    },
   });
   app.once("before-quit", () => workspaceTools.cancelAll());
-  ipcMain.handle("jarvis:stop-workspace-processes", (event) => {
+  ipcMain.handle("jarvis:stop-workspace-processes", async (event) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    ownerConsentEpoch++;
+    stopNativeSkills();
+    await Promise.allSettled([browserService?.stop(), stdioMcp?.abortAll()]);
     return workspaceTools.cancelAll();
   });
   let monitorStopVersion = 0;
   const monitorActions = new Set(["list", "create", "pause", "resume", "cancel", "update", "revoke", "mute", "stop_all"]);
   const trustedMonitorSender = (event) => isTrustedIpc(event) && event.sender === mainWindow?.webContents && event.senderFrame === mainWindow?.webContents.mainFrame;
+  const skillActions = new Set(["list", "search", "scan", "inspect", "stage", "test", "activate", "disable", "revoke", "remove", "rollback", "resource", "run", "update", "assert_task", "author"]);
+  ipcMain.handle("jarvis:skill-command", async (event, envelope) => {
+    if (!trustedMonitorSender(event) || !skillActions.has(envelope?.request?.action)) return { ok: false, error: "forbidden" };
+    const taskId = String(envelope.taskId || "");
+    const executionId = String(envelope.executionId || taskId);
+    if (!/^[a-zA-Z0-9-]{1,100}$/.test(taskId) || !/^[a-zA-Z0-9-]{1,100}$/.test(executionId) || cancelledSkillTasks.has(taskId) || cancelledSkillExecutions.has(`${taskId}:${executionId}`)) return { ok: false, error: "Zadanie lub próba anulowana albo identyfikator jest nieprawidłowy." };
+    const controller = new AbortController();
+    controller.executionId = executionId;
+    if (!skillOperations.has(taskId)) skillOperations.set(taskId, new Set());
+    skillOperations.get(taskId).add(controller);
+    try {
+      const { trustedUserAction: _trusted, signal: _signal, taskId: _task, ...request } = envelope.request;
+      const result = await skills().command(request, { taskId, signal: controller.signal, allowNetwork: envelope.allowNetwork !== false });
+      if (controller.signal.aborted) return { ok: false, error: "STOP: nie potwierdzono wyniku operacji." };
+      return { ...result, ok: result?.ok !== false };
+    } catch (error) { return { ok: false, error: error.message, code: error.code }; }
+    finally {
+      const pending = skillOperations.get(taskId); pending?.delete(controller);
+      if (!pending?.size) {
+        skillOperations.delete(taskId);
+        if (skillReleaseRequests.delete(taskId)) await skills().command({ action: "release_task" }, { taskId }).catch(() => {});
+      }
+    }
+  });
+  ipcMain.handle("jarvis:skill-release", async (event, taskId) => {
+    if (!trustedMonitorSender(event) || !/^[a-zA-Z0-9-]{1,100}$/.test(String(taskId))) return { ok: false };
+    if (skillOperations.has(taskId)) { skillReleaseRequests.add(taskId); return { ok: true, deferred: true }; }
+    try { await skills().command({ action: "release_task" }, { taskId }); return { ok: true }; }
+    catch (error) { return { ok: false, error: error.message }; }
+  });
+  ipcMain.handle("jarvis:skill-cancel", (event, payload) => {
+    const taskId = typeof payload === "string" ? payload : payload?.taskId;
+    const executionId = typeof payload === "object" ? payload?.executionId : undefined;
+    if (!trustedMonitorSender(event) || !/^[a-zA-Z0-9-]{1,100}$/.test(String(taskId)) || (executionId && !/^[a-zA-Z0-9-]{1,100}$/.test(executionId))) return { ok: false };
+    cancelSkillTask(taskId, executionId); return { ok: true };
+  });
+  ipcMain.handle("jarvis:skill-policy", async (event, payload) => {
+    if (!trustedMonitorSender(event)) return { ok: false, error: "forbidden" };
+    const epoch = ownerConsentEpoch;
+    if (typeof payload?.source !== "string" || payload.source.length > 2048 || !Array.isArray(payload.codeKinds) || !Array.isArray(payload.permissions) || !Array.isArray(payload.licenses)) return { ok: false, error: "Wymagane dokładne źródło, rodzaje kodu, uprawnienia i licencje." };
+    const policy = { source: payload.source, codeKinds: payload.codeKinds, permissions: payload.permissions, licenses: payload.licenses, enabled: payload.enabled !== false };
+    const choice = await confirmMonitorScope({ type: "question", title: "Polityka umiejętności JARVIS", message: policy.enabled ? "Zezwolić na umiejętności z tego źródła w podanym zakresie?" : "Cofnąć politykę tego źródła?",
+      detail: `Źródło: ${policy.source}\nKod: ${policy.codeKinds.join(", ")}\nUprawnienia: ${policy.permissions.join(", ") || "brak"}\nLicencje: ${policy.licenses.join(", ")}\nZgoda nie omija uprawnień narzędzi ani izolacji kodu. Nowa wersja musi osobno przejść test.`, buttons: ["Anuluj", "Potwierdź"], defaultId: 0, cancelId: 0 });
+    if (choice.response !== 1 || epoch !== ownerConsentEpoch || !trustedMonitorSender(event)) return { ok: false, error: "Zgoda anulowana." };
+    try { return { ...(await skills().command({ ...policy, action: "policy" }, { trustedUserAction: true })), ok: true }; }
+    catch (error) { return { ok: false, error: error.message }; }
+  });
+  ipcMain.handle("jarvis:monitor-connector-list", async event => {
+    if (!trustedMonitorSender(event)) return { ok: false, error: "forbidden" };
+    try { return { ok: true, connectors: await connectors().list() }; } catch (error) { return { ok: false, error: error.message }; }
+  });
+  ipcMain.handle("jarvis:monitor-connector-configure", async (event, payload) => {
+    if (!trustedMonitorSender(event)) return { ok: false, error: "forbidden" };
+    const epoch = ownerConsentEpoch;
+    if (!["changedetection", "ntfy"].includes(payload?.kind) || typeof payload.baseUrl !== "string" || payload.baseUrl.length > 2048) return { ok: false, error: "Wymagany typ i adres integracji." };
+    let target; try { target = new URL(payload.baseUrl); if (target.username || target.password || target.search || target.hash) throw new Error(); } catch { return { ok: false, error: "Podaj adres bez danych logowania i parametrów." }; }
+    const choice = await confirmMonitorScope({ type: "question", title: "Konfiguracja integracji", message: `Połączyć ${payload.kind} z JARVIS-em?`, detail: `Adres: ${target.href}\nDostęp loopback: ${payload.allowLocal === true ? "tak" : "nie"}\n${payload.kind === "ntfy" ? `Temat: ${String(payload.topic || "").slice(0, 256)}\nPowiadomienia będą przekazywane temu serwerowi. Zgoda na temat publiczny: ${payload.publicTopicConsent === true ? "tak" : "nie"}.` : "JARVIS będzie odczytywał wskazane obserwacje."}\nDane logowania pozostaną zaszyfrowane w profilu aplikacji.`, buttons: ["Anuluj", "Zapisz"], defaultId: 0, cancelId: 0 });
+    if (choice.response !== 1 || epoch !== ownerConsentEpoch || !trustedMonitorSender(event)) return { ok: false, error: "Konfiguracja anulowana." };
+    try { return { ...(await connectors().configure(payload, { trustedUserAction: true })), ok: true }; } catch (error) { return { ok: false, error: error.message }; }
+  });
+  ipcMain.handle("jarvis:monitor-connector-remove", async (event, id) => {
+    if (!trustedMonitorSender(event)) return { ok: false, error: "forbidden" };
+    try { await connectors().remove(String(id), { trustedUserAction: true }); return { ok: true }; } catch (error) { return { ok: false, error: error.message }; }
+  });
+  function browser() {
+    if (!browserService) browserService = createBrowserSession({
+      directory: path.join(app.getPath("userData"), "browser"), downloadDirectory: path.join(workspaceTools.root, "browser-downloads"),
+      // Browser executable is deployment configuration, never a model argument.
+      executablePath: process.env.JARVIS_BROWSER_EXECUTABLE || undefined,
+      approveMutation: async request => {
+        const epoch = ownerConsentEpoch;
+        const choice = await confirmMonitorScope({ type: "question", title: "Wysłanie danych z przeglądarki", message: "Zatwierdzić tę konkretną operację?", detail: `${request.method} ${request.url}\nTreść:\n${request.bodyPreview}\nSkrót treści: ${request.bodyHash}\nZgoda dotyczy jednego żądania.`, buttons: ["Anuluj", "Wyślij"], defaultId: 0, cancelId: 0 });
+        return choice.response === 1 && epoch === ownerConsentEpoch;
+      },
+    });
+    return browserService;
+  }
+  const browserActions = new Set(["status", "open", "read", "fill", "click", "download", "revoke", "stop"]);
+  ipcMain.handle("jarvis:browser-command", async (event, payload) => {
+    if (!trustedMonitorSender(event) || !browserActions.has(payload?.action)) return { ok: false, error: "forbidden" };
+    if (payload.action === "stop") ownerConsentEpoch++;
+    try { const result = await browser().command(payload); return { ...result, ok: result?.ok !== false }; } catch (error) { return { ok: false, error: error.message }; }
+  });
+  ipcMain.handle("jarvis:browser-grant", async (event, payload) => {
+    if (!trustedMonitorSender(event)) return { ok: false, error: "forbidden" };
+    const epoch = ownerConsentEpoch;
+    let target; try { target = new URL(payload?.origin); if (target.username || target.password || !["http:", "https:"].includes(target.protocol) || target.origin !== payload.origin) throw new Error(); } catch { return { ok: false, error: "Podaj dokładne origin, np. https://example.org." }; }
+    if (!Array.isArray(payload.actions) || !payload.actions.length || payload.actions.some(action => !["read", "interact", "download"].includes(action))) return { ok: false, error: "Wybierz zakres działań." };
+    const choice = await confirmMonitorScope({ type: "question", title: "Dostęp przeglądarki", message: "Zezwolić na działania w tym serwisie?", detail: `Serwis: ${target.origin}\nDziałania: ${payload.actions.join(", ")}\nLokalny serwis: ${payload.allowLocal === true ? "tak" : "nie"}\nKatalog pobrań: ${path.join(workspaceTools.root, "browser-downloads")}\nWysyłanie formularzy wymaga zatwierdzenia konkretnego żądania. Profil jest oddzielony od prywatnej przeglądarki.`, buttons: ["Anuluj", "Zezwól"], defaultId: 0, cancelId: 0 });
+    if (choice.response !== 1 || epoch !== ownerConsentEpoch || !trustedMonitorSender(event)) return { ok: false, error: "Zgoda anulowana." };
+    try { return { ...(await browser().command({ action: "grant", origin: target.origin, actions: payload.actions, allowLocal: payload.allowLocal === true }, { trustedUserAction: true })), ok: true }; } catch (error) { return { ok: false, error: error.message }; }
+  });
   ipcMain.handle("jarvis:monitor-command", async (event, payload) => {
     if (!trustedMonitorSender(event) || !monitorActions.has(payload?.action)) return { ok: false, error: "forbidden" };
-    if (payload.action === "stop_all") monitorStopVersion++;
+    if (payload.action === "stop_all") { monitorStopVersion++; ownerConsentEpoch++; }
     try { return { ok: true, ...(await monitors().command(payload)) }; }
     catch (error) { return { ok: false, error: error.message }; }
   });
@@ -358,13 +507,21 @@ function registerDesktopControl() {
     if (!trustedMonitorSender(event)) return { ok: false, error: "forbidden" };
     const grantEpoch = monitorStopVersion;
     const source = payload?.source;
-    if (!source || !["json", "directory"].includes(source.kind)) return { ok: false, error: "Nieobsługiwane źródło." };
-    const resource = String(source.kind === "json" ? source.url || "" : source.path || "");
+    if (!source || !["json", "directory", "changedetection"].includes(source.kind)) return { ok: false, error: "Nieobsługiwane źródło." };
+    const resource = String(source.kind === "json" ? source.url || "" : source.kind === "directory" ? source.path || "" : `${source.connectorId || ""}/${source.watchId || ""}`);
     if (!resource || resource.length > 2048) return { ok: false, error: "Podaj konkretne źródło." };
-    const scope = { source, desktopNotification: payload.desktopNotification === true };
+    const scope = { source, desktopNotification: payload.desktopNotification === true, ...(payload.ntfyNotification ? { ntfyNotification: String(payload.ntfyNotification) } : {}) };
+    let connectorDetails = "";
+    if (source.kind === "changedetection" || scope.ntfyNotification) {
+      try {
+        const configured = await connectors().list();
+        const selected = configured.filter(item => item.id === source.connectorId || item.id === scope.ntfyNotification);
+        connectorDetails = selected.map(item => `${item.id}: ${item.label || item.kind} — ${item.baseUrl}`).join("\n");
+      } catch { return { ok: false, error: "Nie można odczytać konfiguracji integracji." }; }
+    }
     const decision = await confirmMonitorScope({ type: "question", title: "Zgoda na monitorowanie źródła",
       message: "Zezwolić na cykliczny odczyt tego źródła?",
-      detail: `${source.kind === "json" ? "Adres JSON" : "Katalog"}: ${resource}\nPowiadomienia systemowe: ${scope.desktopNotification ? "tak" : "nie"}.\nZgoda obowiązuje do jej cofnięcia w panelu Celów. Nie obejmuje zakupów, wysyłania wiadomości ani innych źródeł.`,
+      detail: `${source.kind}: ${resource}\n${connectorDetails}\nPowiadomienia systemowe: ${scope.desktopNotification ? "tak" : "nie"}.\nPrzekazywanie powiadomień do ntfy: ${scope.ntfyNotification || "nie"}.\nZgoda obowiązuje do jej cofnięcia w panelu Celów. Nie obejmuje zakupów, wysyłania wiadomości ani innych źródeł.`,
       buttons: ["Anuluj", "Zezwól"], defaultId: 0, cancelId: 0 });
     if (decision.response !== 1 || !trustedMonitorSender(event) || grantEpoch !== monitorStopVersion) return { ok: false, error: "Nie udzielono zgody lub żądanie anulowano przez STOP." };
     try { return { ok: true, ...(await monitors().command({ action: "grant", ...scope }, { trustedUserAction: true })) }; }
@@ -755,7 +912,8 @@ if (!gotLock) {
     if (closingStdioMcp) return;
     event.preventDefault();
     closingStdioMcp = true;
-    void Promise.allSettled([stdioMcp?.closeAll(), monitorService?.stop()]).finally(() => app.quit());
+    stopNativeSkills();
+    void Promise.allSettled([stdioMcp?.closeAll(), monitorService?.stop(), browserService?.stop()]).finally(() => app.quit());
   });
 
   app.on("will-quit", () => {

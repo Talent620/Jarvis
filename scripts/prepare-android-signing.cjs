@@ -4,6 +4,15 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const configurationKeys = ['JARVIS_RELEASE_KEYSTORE_BASE64', 'JARVIS_RELEASE_STORE_PASSWORD', 'JARVIS_RELEASE_KEY_ALIAS', 'JARVIS_RELEASE_KEY_PASSWORD', 'JARVIS_BUILD_NUMBER', 'JARVIS_PREVIOUS_VERSION_CODE', 'JARVIS_RELEASE_CERT_SHA256', 'RUNNER_TEMP', 'GITHUB_ENV'];
+
+function failureSummary(error) {
+  if (error.message?.startsWith('Missing signing configuration: ')) {
+    const missing = configurationKeys.filter((key) => error.message.includes(key));
+    return `Android release signing blocked: missing configuration names ${missing.join(', ')}. No development-key fallback.`;
+  }
+  return 'Android release signing verification failed. Inspect the signing step; existing signing identity remains required.';
+}
 
 function verifySigningCertificate(file, env, execute = execFileSync) {
   let details;
@@ -15,8 +24,7 @@ function verifySigningCertificate(file, env, execute = execFileSync) {
 }
 
 function prepare(env = process.env, verifyCertificate = verifySigningCertificate) {
-  const required = ['JARVIS_RELEASE_KEYSTORE_BASE64', 'JARVIS_RELEASE_STORE_PASSWORD', 'JARVIS_RELEASE_KEY_ALIAS', 'JARVIS_RELEASE_KEY_PASSWORD', 'JARVIS_BUILD_NUMBER', 'JARVIS_PREVIOUS_VERSION_CODE', 'JARVIS_RELEASE_CERT_SHA256', 'RUNNER_TEMP', 'GITHUB_ENV'];
-  const missing = required.filter((key) => !env[key]);
+  const missing = configurationKeys.filter((key) => !env[key]);
   if (missing.length) throw new Error(`Missing signing configuration: ${missing.join(', ')}. No development-key fallback.`);
   const next = Number(env.JARVIS_BUILD_NUMBER), previous = Number(env.JARVIS_PREVIOUS_VERSION_CODE);
   if (!Number.isSafeInteger(next) || !Number.isSafeInteger(previous) || next <= previous || previous < 1 || next > 2100000000) throw new Error('Release versionCode must be an integer greater than the previous installed versionCode.');
@@ -33,8 +41,16 @@ function prepare(env = process.env, verifyCertificate = verifySigningCertificate
   fs.appendFileSync(env.GITHUB_ENV, `JARVIS_RELEASE_STORE_FILE=${file}\nJARVIS_BUILD_NUMBER=${next}\nJARVIS_PREVIOUS_VERSION_CODE=${previous}\n`);
   return file;
 }
-module.exports = { prepare, verifySigningCertificate };
+module.exports = { prepare, verifySigningCertificate, failureSummary };
 if (require.main === module) {
   try { prepare(); console.log('Explicit release signing configured; identity must match the installed application.'); }
-  catch (error) { console.error(error.message); process.exitCode = 2; }
+  catch (error) {
+    const summary = failureSummary(error);
+    console.error(summary);
+    if (process.env.GITHUB_ACTIONS === 'true') {
+      console.error(`::error title=Android release signing::${summary}`);
+      if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary}\n\n`);
+    }
+    process.exitCode = 2;
+  }
 }

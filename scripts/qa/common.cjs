@@ -9,6 +9,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 function args(argv = process.argv.slice(2)) {
   const out = {};
   for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--skills-controlled') { out['skills-controlled'] = true; continue; }
     if (!['--ollama-url', '--model', '--settings-file', '--chromium', '--license-file'].includes(argv[i]) || !argv[i + 1] || argv[i + 1].startsWith('--')) throw Error(`Unknown or incomplete option: ${argv[i]}`);
     out[argv[i].slice(2)] = argv[++i];
   }
@@ -76,7 +77,7 @@ function newRun(kind) {
     const report = { run_id: id, kind, finished_at: new Date().toISOString(), source, results, ...extra };
     write('report.json', report);
     const summary = extra.required_scenarios ? `Runner completed: ${extra.runner_completed}. Required tests passed: ${extra.required_tests_passed}. Exit code: ${extra.exit_code}.\nMode: ${extra.mode}. Ollama: ${extra.ollama_origin || 'not reachable / not selected'}; model: ${extra.ollama_model || 'not selected'}.\n\n` : '';
-    write('REPORT.md', `# JARVIS QA ${id}\n\nVersion ${source.app_version}, ${source.branch}@${source.commit}. Uncommitted source is identified in source.json.\n\n` + summary + results.map(x => `- **${x.id} ${x.status}** [${x.level}] ${x.detail || ''} Evidence: ${(x.evidence || []).join(', ') || 'report.json'}.` + (x.blocker ? ` Unblock: ${x.blocker.action}` : '')).join('\n') + '\n\nModel fixtures: none. User desktop: not inferred from Chromium or Electron tests.\n');
+    write('REPORT.md', `# JARVIS QA ${id}\n\nVersion ${source.app_version}, ${source.branch}@${source.commit}. Uncommitted source is identified in source.json.\n\n` + summary + results.map(x => `- **${x.id} ${x.status}** [${x.level}] ${x.detail || ''} Evidence: ${(x.evidence || []).join(', ') || 'report.json'}.` + (x.blocker ? ` Unblock: ${x.blocker.action}` : '')).join('\n') + `\n\nModel fixtures: ${extra.model_fixtures || 'none'}. User desktop: not inferred from Chromium or Electron tests.\n`);
     console.log(`QA report: ${path.join(dir, 'REPORT.md')}`);
     return report;
   } };

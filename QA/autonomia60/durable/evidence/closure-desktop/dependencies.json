@@ -1,0 +1,18 @@
+{
+  "node_supported": true,
+  "packages": {
+    "vite": {
+      "available": true,
+      "version": "5.4.21"
+    },
+    "playwright": {
+      "available": true,
+      "version": "1.62.1"
+    },
+    "electron": {
+      "available": true,
+      "version": "33.4.11"
+    }
+  },
+  "electron_binary": "/workspace/Jarvis/node_modules/electron/dist/electron"
+}

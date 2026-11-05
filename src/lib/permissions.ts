@@ -6,6 +6,7 @@ import type { AuditEntry } from "../types";
 export type Risk = "read" | "write" | "outbound";
 
 const RISK: Record<string, Risk> = {
+  skill_search: "read", skill_manage: "write", skill_run: "write", browser_session: "write",
   // read — wykonują się automatycznie
   list_tasks: "read", list_notes: "read", list_shopping: "read", list_calendar: "read",
   list_scenes: "read", get_weather: "read", daily_briefing: "read", web_research: "read",
@@ -123,7 +124,7 @@ const ALWAYS_CONFIRM = new Set([
   "gmail_send", "gmail_reply", "send_test_email", "send_offers_all", "salesos_email", "salesos_flush_emails",
   "send_sms", "text_contact", "desktop_power", "desktop_click", "desktop_active_window", "desktop_type", "desktop_hotkey", "clear_tally",
   "salesos_push", "salesos_set_status", "gcal_add", "run_automation",
-  "system_terminal", "system_git", "system_docker", "system_http_request", "system_files_write", "system_generated_tool",
+  "system_terminal", "system_git", "system_docker", "system_http_request", "system_files_write", "system_generated_tool", "system_generate_tool",
 ]);
 export function requiresFreshConsent(tool: string): boolean {
   return ALWAYS_CONFIRM.has(tool) || store.settings.requireConsentAlways === true;
@@ -157,6 +158,13 @@ export function grantOutboundScope(tools: string[] | "*", ttlMs = AUTO_CONSENT_M
   scopeUntil = Date.now() + Math.max(0, ttlMs);
 }
 export function clearOutboundScope(): void { scopeTools = null; scopeUntil = 0; }
+/** Revoking an integration removes both persistent and named session grants. */
+export function revokeToolScopes(names: string[]): void {
+  for (const name of names) {
+    revokeConsent(name);
+    if (scopeTools instanceof Set) scopeTools.delete(name);
+  }
+}
 export function hasOutboundScope(tool: string): boolean {
   if (!scopeTools || Date.now() >= scopeUntil) return false;
   return scopeTools === "*" || scopeTools.has(tool);

@@ -36,6 +36,7 @@ import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkO
 import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromInstalled, ensureResearchAgent, ADDABLE_MODELS } from "../lib/ollamaMaestro";
 import { recommendLocalResearchAgent, type HardwareSnapshot } from "../lib/localResearchAgent";
 import { desktop } from "../lib/desktop";
+import { SkillsManager } from "./SkillsManager";
 import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
 import { detectSd, normalizeSdUrl } from "../lib/localImage";
 import { checkFalKey } from "../lib/images";
@@ -1305,7 +1306,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                         ? "Czerwone pozycje wymagają Twojego ruchu — opis mówi dokładnie, co zrobić."
                         : health.some((h) => h.status === "warn")
                           ? "Żółte pozycje warto poprawić — większość naprawisz przyciskiem 🔧."
-                          : "Wszystko gra! JARVIS w pełnej gotowości. 🚀"}
+                          : "Te kontrole diagnostyczne zakończyły się bez zgłoszonych problemów. Wykonanie pełnego zadania wymaga osobnej próby."}
                     </p>
                   )}
                 </div>
@@ -2765,6 +2766,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
               {memMsg && <p className="muted">{memMsg}</p>}
 
               </details>
+              <SkillsManager />
               <details className="journal-card" style={{ margin: "6px 0", padding: "6px 10px" }}>
               <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🔌 Serwery MCP (narzędzia)</summary>
               <p className="muted">

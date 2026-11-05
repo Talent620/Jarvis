@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 const require = createRequire(import.meta.url);
-const { validateBuild, validatePackagePaths } = require('../scripts/release-linux.cjs');
-const { prepare, verifySigningCertificate } = require('../scripts/prepare-android-signing.cjs');
+const { validateBuild, validatePackagePaths, validateDebianPostinstall } = require('../scripts/release-linux.cjs');
+const { prepare, verifySigningCertificate, failureSummary } = require('../scripts/prepare-android-signing.cjs');
 
 describe('Release provenance and private material boundaries', () => {
   const commit = 'a'.repeat(40);
@@ -20,8 +20,21 @@ describe('Release provenance and private material boundaries', () => {
     }
     expect(() => validatePackagePaths(['/dist/index.html', '/electron/main.cjs', '/node_modules/pkg/LICENSE'])).not.toThrow();
   });
+  it('requires the real deb control script to retain helper-integrity and permission guards', () => {
+    const current = readFileSync('scripts/linux-after-install.sh', 'utf8');
+    expect(() => validateDebianPostinstall(current)).not.toThrow();
+    expect(() => validateDebianPostinstall('if unshare --user true; then chmod 0755 chrome-sandbox; fi')).toThrow(/guard missing/);
+    expect(() => validateDebianPostinstall(current.replace('chmod 4755', 'chmod 0755'))).toThrow(/guard missing/);
+    expect(() => validateDebianPostinstall(current + '\nsysctl -w unsafe.setting=1')).toThrow(/disable isolation/);
+  });
   it('fails closed before writing without signing configuration', () => {
     expect(() => prepare({})).toThrow(/Missing signing configuration/);
+  });
+  it('reports missing Android configuration names without echoing secret values or arbitrary errors', () => {
+    const error = new Error('Missing signing configuration: JARVIS_RELEASE_STORE_PASSWORD, synthetic-password. No development-key fallback.');
+    expect(failureSummary(error)).toContain('JARVIS_RELEASE_STORE_PASSWORD');
+    expect(failureSummary(error)).not.toContain('synthetic-password');
+    expect(failureSummary(new Error('keytool echoed synthetic-secret'))).not.toContain('synthetic-secret');
   });
   it('requires the approved certificate and keeps passwords out of command arguments', () => {
     const env = { JARVIS_RELEASE_CERT_SHA256: 'ab'.repeat(32), JARVIS_RELEASE_KEY_ALIAS: 'synthetic', JARVIS_RELEASE_STORE_PASSWORD: 'synthetic-password' };

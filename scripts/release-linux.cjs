@@ -13,6 +13,13 @@ function validatePackagePaths(entries) {
   const forbidden = entries.filter((entry) => /(?:^|\/)(?:\.env(?:\..*)?|license-private\.json|license-public\.local\.json|license-issuer|\.git|QA\/runs)(?:\/|$)/.test(entry) || /\.(?:jks|keystore|p12|pfx)$/i.test(entry));
   if (forbidden.length) throw new Error(`Forbidden private/configuration paths in package: ${forbidden.join(', ')}`);
 }
+function validateDebianPostinstall(script) {
+  for (const required of ['chrome-sandbox differs from installed package', 'group/world-writable path', 'chmod 4755', '0:0:4755']) {
+    if (!script.includes(required)) throw new Error(`Debian sandbox installation guard missing: ${required}`);
+  }
+  const commands = script.split('\n').filter((line) => !line.trimStart().startsWith('#')).join('\n');
+  if (/unshare\s+--user|--no-sandbox|sysctl\s/.test(commands)) throw new Error('Debian installer must not infer user sandbox support from root or disable isolation.');
+}
 function dependencyLicenses(root) {
   const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
   return Object.entries(lock.packages).filter(([name, p]) => name && !p.dev).map(([name, p]) => ({
@@ -41,9 +48,13 @@ function main(root = path.resolve(__dirname, '..')) {
   const packagedMeta = JSON.parse(asar.extractFile(archive, 'dist/build-metadata.json').toString());
   const packagedPkg = JSON.parse(asar.extractFile(archive, 'package.json').toString());
   validateBuild(packagedMeta, packagedPkg, commit);
+  const controlArchive = run('dpkg-deb', ['--ctrl-tarfile', path.join(output, 'JARVIS.deb')], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const postinstall = run('tar', ['-xOf', '-', './postinst'], { input: controlArchive, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+  validateDebianPostinstall(postinstall);
   const provenance = { ...packagedMeta, source: 'https://github.com/Talent620/Jarvis', node: process.version,
     electron: require('electron/package.json').version, artifactVerification: 'archive structure, provenance, license flag, private-path exclusion',
     nativeLaunch: 'NOT_RUN: requires an authorized graphical session with working Electron sandbox',
+    debianSandboxInstaller: { checksumBeforePrivilege: true, expectedOwner: 'root:root', expectedMode: '4755', postinstallSha256: nodeCrypto.createHash('sha256').update(postinstall).digest('hex'), hostPolicyChanged: false },
     dependencyLicenses: dependencyLicenses(root) };
   fs.writeFileSync(path.join(output, 'PROVENANCE.json'), JSON.stringify(provenance, null, 2) + '\n');
   const names = ['JARVIS.AppImage', 'JARVIS.deb', 'PROVENANCE.json'];
@@ -58,7 +69,7 @@ function main(root = path.resolve(__dirname, '..')) {
   console.log(`Verified package structure and provenance: ${output}`);
   console.log('Native installation, upgrade, rollback and real-model acceptance still require their own evidence.');
 }
-module.exports = { validateBuild, validatePackagePaths, dependencyLicenses, main };
+module.exports = { validateBuild, validatePackagePaths, validateDebianPostinstall, dependencyLicenses, main };
 if (require.main === module) {
   try { main(); } catch (error) { console.error(`Release blocked: ${error.message}`); process.exitCode = 2; }
 }

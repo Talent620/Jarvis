@@ -1,0 +1,122 @@
+
+> jarvis-ai-assistant@2.1.0-alpha.2 build
+> tsc -b && vite build
+
+[licencje] Używam domyślnego publicznego klucza aplikacji. Własny wystawca: npm run license:init.
+vite v5.4.21 building for production...
+transforming...
+✓ 2421 modules transformed.
+rendering chunks...
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) /workspace/Jarvis/src/lib/store.ts is dynamically imported by /workspace/Jarvis/src/lib/voice.ts but also statically imported by /workspace/Jarvis/src/App.tsx, /workspace/Jarvis/src/components/AdStudio.tsx, /workspace/Jarvis/src/components/AuditLog.tsx, /workspace/Jarvis/src/components/BossMode.tsx, /workspace/Jarvis/src/components/Composer.tsx, /workspace/Jarvis/src/components/ContentStudio.tsx, /workspace/Jarvis/src/components/Conversation.tsx, /workspace/Jarvis/src/components/CostPanel.tsx, /workspace/Jarvis/src/components/FinancialDashboard.tsx, /workspace/Jarvis/src/components/FitnessPanel.tsx, /workspace/Jarvis/src/components/Gadgets.tsx, /workspace/Jarvis/src/components/Guardian.tsx, /workspace/Jarvis/src/components/HeadsetMode.tsx, /workspace/Jarvis/src/components/HudVision.tsx, /workspace/Jarvis/src/components/InterfaceSwitch.tsx, /workspace/Jarvis/src/components/Journal.tsx, /workspace/Jarvis/src/components/LeadCandidatesPanel.tsx, /workspace/Jarvis/src/components/LeadDetail.tsx, /workspace/Jarvis/src/components/LiveOverlay.tsx, /workspace/Jarvis/src/components/MailCompose.tsx, /workspace/Jarvis/src/components/MemoryCenter.tsx, /workspace/Jarvis/src/components/Mind.tsx, /workspace/Jarvis/src/components/More.tsx, /workspace/Jarvis/src/components/Onboarding.tsx, /workspace/Jarvis/src/components/Panels.tsx, /workspace/Jarvis/src/components/PermissionDialog.tsx, /workspace/Jarvis/src/components/Profile.tsx, /workspace/Jarvis/src/components/Projects.tsx, /workspace/Jarvis/src/components/SalesDashboard.tsx, /workspace/Jarvis/src/components/SalesPlan.tsx, /workspace/Jarvis/src/components/SentBox.tsx, /workspace/Jarvis/src/components/Settings.tsx, /workspace/Jarvis/src/components/ShoppingList.tsx, /workspace/Jarvis/src/components/Studio.tsx, /workspace/Jarvis/src/components/TaskHub.tsx, /workspace/Jarvis/src/components/Transcribe.tsx, /workspace/Jarvis/src/components/Translator.tsx, /workspace/Jarvis/src/components/jarvis-ui/NeuralInterface.tsx, /workspace/Jarvis/src/hooks/useStore.ts, /workspace/Jarvis/src/hooks/useWatchdog.ts, /workspace/Jarvis/src/lib/autoPlan.ts, /workspace/Jarvis/src/lib/backup.ts, /workspace/Jarvis/src/lib/bargainWatch.ts, /workspace/Jarvis/src/lib/benchmarkOllama.ts, /workspace/Jarvis/src/lib/brain.ts, /workspace/Jarvis/src/lib/brainMode.ts, /workspace/Jarvis/src/lib/brainModes.ts, /workspace/Jarvis/src/lib/brainReserve.ts, /workspace/Jarvis/src/lib/brand.ts, /workspace/Jarvis/src/lib/brandKit.ts, /workspace/Jarvis/src/lib/campaignRoi.ts, /workspace/Jarvis/src/lib/campaignStore.ts, /workspace/Jarvis/src/lib/capabilities.ts, /workspace/Jarvis/src/lib/cards.ts, /workspace/Jarvis/src/lib/contentStudio.ts, /workspace/Jarvis/src/lib/council.ts, /workspace/Jarvis/src/lib/desktop.ts, /workspace/Jarvis/src/lib/deviceCalendar.ts, /workspace/Jarvis/src/lib/deviceControl.ts, /workspace/Jarvis/src/lib/feedback.ts, /workspace/Jarvis/src/lib/fitness.ts, /workspace/Jarvis/src/lib/followUpAI.ts, /workspace/Jarvis/src/lib/google.ts, /workspace/Jarvis/src/lib/guardian.ts, /workspace/Jarvis/src/lib/guardianAgents.ts, /workspace/Jarvis/src/lib/habit.ts, /workspace/Jarvis/src/lib/healthCheck.ts, /workspace/Jarvis/src/lib/imageHistory.ts, /workspace/Jarvis/src/lib/images.ts, /workspace/Jarvis/src/lib/interfaceMode.ts, /workspace/Jarvis/src/lib/keys.ts, /workspace/Jarvis/src/lib/leadImport.ts, /workspace/Jarvis/src/lib/leadIntel.ts, /workspace/Jarvis/src/lib/leads.ts, /workspace/Jarvis/src/lib/localImage.ts, /workspace/Jarvis/src/lib/localResearchAgent.ts, /workspace/Jarvis/src/lib/mailer.ts, /workspace/Jarvis/src/lib/mcp.ts, /workspace/Jarvis/src/lib/memory.ts, /workspace/Jarvis/src/lib/memoryService.ts, /workspace/Jarvis/src/lib/mic.ts, /workspace/Jarvis/src/lib/n8n.ts, /workspace/Jarvis/src/lib/notifyCenter.ts, /workspace/Jarvis/src/lib/ollamaMaestro.ts, /workspace/Jarvis/src/lib/ollamaPull.ts, /workspace/Jarvis/src/lib/permissions.ts, /workspace/Jarvis/src/lib/predictionCycle.ts, /workspace/Jarvis/src/lib/prewarm.ts, /workspace/Jarvis/src/lib/privateMode.ts, /workspace/Jarvis/src/lib/proactive.ts, /workspace/Jarvis/src/lib/proactiveNotify.ts, /workspace/Jarvis/src/lib/proactivity.ts, /workspace/Jarvis/src/lib/prospect.ts, /workspace/Jarvis/src/lib/providers/registry.ts, /workspace/Jarvis/src/lib/recall.ts, /workspace/Jarvis/src/lib/research.ts, /workspace/Jarvis/src/lib/sales/siteAuditClient.ts, /workspace/Jarvis/src/lib/salesEngine.ts, /workspace/Jarvis/src/lib/salesOs.ts, /workspace/Jarvis/src/lib/secretsVault.ts, /workspace/Jarvis/src/lib/selfHeal.ts, /workspace/Jarvis/src/lib/signatures.ts, /workspace/Jarvis/src/lib/siteOs.ts, /workspace/Jarvis/src/lib/siteProjects.ts, /workspace/Jarvis/src/lib/status.ts, /workspace/Jarvis/src/lib/sync.ts, /workspace/Jarvis/src/lib/tools.ts, /workspace/Jarvis/src/lib/transcribe.ts, /workspace/Jarvis/src/lib/voiceEnroll.ts, /workspace/Jarvis/src/lib/voiceLoop.ts, /workspace/Jarvis/src/lib/whisperListener.ts, /workspace/Jarvis/src/lib/worldModel.ts, /workspace/Jarvis/src/plugins/PluginRegistry.ts, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) /workspace/Jarvis/src/lib/modelRouter.ts is dynamically imported by /workspace/Jarvis/src/lib/tools.ts but also statically imported by /workspace/Jarvis/src/App.tsx, /workspace/Jarvis/src/components/CostPanel.tsx, /workspace/Jarvis/src/components/Mind.tsx, /workspace/Jarvis/src/components/Settings.tsx, /workspace/Jarvis/src/lib/brain.ts, /workspace/Jarvis/src/lib/brainMode.ts, /workspace/Jarvis/src/lib/cognitiveController.ts, /workspace/Jarvis/src/lib/healthCheck.ts, /workspace/Jarvis/src/lib/routeView.ts, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) /workspace/Jarvis/src/lib/episodicMemory.ts is dynamically imported by /workspace/Jarvis/src/lib/tools.ts but also statically imported by /workspace/Jarvis/src/components/Mind.tsx, /workspace/Jarvis/src/components/jarvis-ui/NeuralInterface.tsx, /workspace/Jarvis/src/lib/brain.ts, /workspace/Jarvis/src/lib/contextFusion.ts, /workspace/Jarvis/src/lib/proactivity.ts, /workspace/Jarvis/src/lib/reflection.ts, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) /workspace/Jarvis/src/lib/errorLog.ts is dynamically imported by /workspace/Jarvis/src/lib/tools.ts but also statically imported by /workspace/Jarvis/src/components/ErrorBoundary.tsx, /workspace/Jarvis/src/components/Mind.tsx, /workspace/Jarvis/src/components/jarvis-ui/NeuralInterface.tsx, /workspace/Jarvis/src/lib/brain.ts, /workspace/Jarvis/src/lib/guardianAgents.ts, /workspace/Jarvis/src/lib/voice.ts, /workspace/Jarvis/src/main.tsx, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) /workspace/Jarvis/src/lib/brainModes.ts is dynamically imported by /workspace/Jarvis/src/lib/guardian.ts, /workspace/Jarvis/src/lib/guardian.ts but also statically imported by /workspace/Jarvis/src/components/Settings.tsx, /workspace/Jarvis/src/lib/tools.ts, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) /workspace/Jarvis/src/lib/voice.ts is dynamically imported by /workspace/Jarvis/src/App.tsx, /workspace/Jarvis/src/lib/guardian.ts but also statically imported by /workspace/Jarvis/src/App.tsx, /workspace/Jarvis/src/components/BossMode.tsx, /workspace/Jarvis/src/components/Composer.tsx, /workspace/Jarvis/src/components/Conversation.tsx, /workspace/Jarvis/src/components/Guardian.tsx, /workspace/Jarvis/src/components/HeadsetMode.tsx, /workspace/Jarvis/src/components/HudVision.tsx, /workspace/Jarvis/src/components/Onboarding.tsx, /workspace/Jarvis/src/components/PermissionDialog.tsx, /workspace/Jarvis/src/components/Settings.tsx, /workspace/Jarvis/src/components/Translator.tsx, /workspace/Jarvis/src/components/jarvis-ui/NeuralInterface.tsx, /workspace/Jarvis/src/hooks/useWatchdog.ts, /workspace/Jarvis/src/lib/guardianAgents.ts, /workspace/Jarvis/src/lib/healthCheck.ts, /workspace/Jarvis/src/lib/smartConversation.ts, /workspace/Jarvis/src/lib/voiceLoop.ts, /workspace/Jarvis/src/lib/whisperListener.ts, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) /workspace/Jarvis/src/lib/guardianAgents.ts is dynamically imported by /workspace/Jarvis/src/lib/tools.ts but also statically imported by /workspace/Jarvis/src/App.tsx, /workspace/Jarvis/src/components/Guardian.tsx, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) /workspace/Jarvis/src/lib/guardianHistory.ts is dynamically imported by /workspace/Jarvis/src/App.tsx, /workspace/Jarvis/src/App.tsx but also statically imported by /workspace/Jarvis/src/components/Guardian.tsx, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) /workspace/Jarvis/src/lib/reflection.ts is dynamically imported by /workspace/Jarvis/src/lib/tools.ts but also statically imported by /workspace/Jarvis/src/components/Mind.tsx, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) /workspace/Jarvis/src/lib/selfImprove.ts is dynamically imported by /workspace/Jarvis/src/lib/tools.ts but also statically imported by /workspace/Jarvis/src/components/Mind.tsx, dynamic import will not move module into another chunk.
+
+computing gzip size...
+dist/build-metadata.json                        0.19 kB │ gzip:   0.16 kB
+dist/assets/ttsWorker-Nisifgm2.js               0.82 kB
+dist/assets/whisperWorker-CPHBFtKt.js           0.87 kB
+dist/assets/webllmWorker-MbiRtkkR.js            0.90 kB
+dist/assets/embedWorker-C1PDpajh.js             0.91 kB
+dist/index.html                                 2.42 kB │ gzip:   1.08 kB
+dist/assets/pdf.worker.min-yatZIOMy.mjs     1,375.84 kB
+dist/assets/NeuralInterface-BV8o00uq.css       12.45 kB │ gzip:   2.72 kB
+dist/assets/index-DbEjRMND.css                 59.10 kB │ gzip:  12.84 kB
+dist/assets/pdf.worker.min-DgRcL-GR.js          0.09 kB │ gzip:   0.11 kB
+dist/assets/web-b0Q9SLOJ.js                     0.20 kB │ gzip:   0.19 kB
+dist/assets/web-rRca837v.js                     0.23 kB │ gzip:   0.19 kB
+dist/assets/simpleFlow-CgW45-Is.js              0.48 kB │ gzip:   0.30 kB
+dist/assets/web-DmMCZqUx.js                     0.64 kB │ gzip:   0.22 kB
+dist/assets/web-D1sqjljR.js                     0.71 kB │ gzip:   0.36 kB
+dist/assets/mail-D6XUjvVV.js                    0.77 kB │ gzip:   0.40 kB
+dist/assets/wakeLock-C8vQ3XOj.js                0.83 kB │ gzip:   0.47 kB
+dist/assets/SystemStatus-B0gtb9ix.js            1.40 kB │ gzip:   0.74 kB
+dist/assets/shield-check-D8NIEMiF.js            1.42 kB │ gzip:   0.64 kB
+dist/assets/createLucideIcon-M4KDMcwG.js        1.58 kB │ gzip:   0.66 kB
+dist/assets/usage-3MPoM3Nw.js                   1.62 kB │ gzip:   0.77 kB
+dist/assets/liveUpdate-DYwbHBzC.js              1.71 kB │ gzip:   0.81 kB
+dist/assets/localResearchAgent-BmALKZTA.js      1.85 kB │ gzip:   1.20 kB
+dist/assets/Profile-BjY9ojr6.js                 2.05 kB │ gzip:   1.15 kB
+dist/assets/campaignRoi-BO-_6m1g.js             2.09 kB │ gzip:   1.02 kB
+dist/assets/SentBox-B6CMdv9s.js                 2.38 kB │ gzip:   1.31 kB
+dist/assets/HudVision-Dn5x9uU8.js               2.54 kB │ gzip:   1.31 kB
+dist/assets/CommandPalette-C29qyu63.js          2.64 kB │ gzip:   1.39 kB
+dist/assets/Recall-U6evFd80.js                  2.70 kB │ gzip:   1.41 kB
+dist/assets/MemoryCenter-BFOGCyJU.js            2.74 kB │ gzip:   1.23 kB
+dist/assets/GoalRunner-Pk2DZ9jD.js              2.75 kB │ gzip:   1.52 kB
+dist/assets/AuditLog-l3Gr7unr.js                2.89 kB │ gzip:   1.50 kB
+dist/assets/web-D3mw1XM_.js                     3.41 kB │ gzip:   0.51 kB
+dist/assets/web-B7lf6EKf.js                     3.47 kB │ gzip:   1.12 kB
+dist/assets/Transcribe-XDr-kJy2.js              3.74 kB │ gzip:   1.80 kB
+dist/assets/web-Bg1RuJx0.js                     3.79 kB │ gzip:   1.02 kB
+dist/assets/Notifications-CaykxPWd.js           3.80 kB │ gzip:   1.66 kB
+dist/assets/voiceEnroll-lMXWVhMS.js             3.94 kB │ gzip:   1.88 kB
+dist/assets/ChatHistory-BJ3YJ0J5.js             3.96 kB │ gzip:   1.75 kB
+dist/assets/emailComposer-suuJZCix.js           4.06 kB │ gzip:   2.31 kB
+dist/assets/goalPlanner-CoEmjIPY.js             4.42 kB │ gzip:   2.27 kB
+dist/assets/index-D_7GaS0G.js                   4.47 kB │ gzip:   1.81 kB
+dist/assets/Projects-B1roEn5B.js                4.56 kB │ gzip:   2.03 kB
+dist/assets/ShoppingList-CNsquVDx.js            4.98 kB │ gzip:   2.38 kB
+dist/assets/MailCompose-BX7o5MA3.js             5.65 kB │ gzip:   2.31 kB
+dist/assets/bargain-BWOLvQGT.js                 5.85 kB │ gzip:   2.83 kB
+dist/assets/Cards-C8FWf0Dx.js                   6.42 kB │ gzip:   2.38 kB
+dist/assets/Panels-BT9ikIUD.js                  6.57 kB │ gzip:   2.13 kB
+dist/assets/league-D10Bi8kZ.js                  7.31 kB │ gzip:   3.36 kB
+dist/assets/CostPanel-LqrIfSgY.js               7.35 kB │ gzip:   2.91 kB
+dist/assets/MoneyHub-CAsz9-KU.js                7.47 kB │ gzip:   3.25 kB
+dist/assets/FinancialDashboard-CgoyYm28.js      7.71 kB │ gzip:   2.97 kB
+dist/assets/Journal-DMHeSsvj.js                 8.27 kB │ gzip:   3.49 kB
+dist/assets/FAQ-ByXjtJSs.js                     8.54 kB │ gzip:   3.96 kB
+dist/assets/More-B399Xw42.js                    8.69 kB │ gzip:   4.02 kB
+dist/assets/GrowthDayPanel-BxgM2bse.js          9.33 kB │ gzip:   3.78 kB
+dist/assets/TaskHub-C7zQbY2P.js                 9.72 kB │ gzip:   3.58 kB
+dist/assets/Translator-DoHkzUpe.js              9.78 kB │ gzip:   4.20 kB
+dist/assets/WhereToBuy-CA-7m9uk.js             10.24 kB │ gzip:   4.35 kB
+dist/assets/BossMode-CCMANaYc.js               10.67 kB │ gzip:   5.25 kB
+dist/assets/BargainHunter-Bo21R23X.js          12.09 kB │ gzip:   4.49 kB
+dist/assets/Help-Dk56dVQA.js                   12.25 kB │ gzip:   5.03 kB
+dist/assets/HeadsetMode-BjyRJKcq.js            13.64 kB │ gzip:   6.15 kB
+dist/assets/GoalStatusPanel-Bzs7z0nA.js        22.93 kB │ gzip:   7.68 kB
+dist/assets/AdminPanel-CsoeFQaF.js             23.62 kB │ gzip:   8.38 kB
+dist/assets/MarketingWorkspace-ClKkK3QN.js     23.97 kB │ gzip:   9.19 kB
+dist/assets/Studio-BQuIXNqz.js                 24.82 kB │ gzip:  10.19 kB
+dist/assets/WebStudio-Ix4ZogPS.js              35.84 kB │ gzip:  12.56 kB
+dist/assets/SalesCrm-BOSdSWj3.js               71.41 kB │ gzip:  22.91 kB
+dist/assets/NeuralInterface-sMJPFdMV.js       130.39 kB │ gzip:  43.42 kB
+dist/assets/react-vendor-CVqnBPLZ.js          142.15 kB │ gzip:  45.50 kB
+dist/assets/Gadgets-CBj-_ICn.js               181.79 kB │ gzip:  64.67 kB
+dist/assets/knowledge-index-C3Uyrusz.js       238.86 kB │ gzip:  55.58 kB
+dist/assets/Settings-BlRuCd6s.js              243.19 kB │ gzip:  85.30 kB
+dist/assets/pdf-6-IbJiBi.js                   365.67 kB │ gzip: 107.84 kB
+dist/assets/index-C62d2raN.js                 865.64 kB │ gzip: 320.98 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 8.72s

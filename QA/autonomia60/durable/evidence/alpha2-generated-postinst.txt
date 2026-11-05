@@ -1,0 +1,56 @@
+#!/bin/bash
+# Runs as part of the administrator-authorized installation of this Debian package.
+# A root `unshare --user` probe cannot establish whether desktop users may create
+# user namespaces (Ubuntu AppArmor rules can differ). Install Chromium's supported
+# SUID helper instead; do not disable Chromium sandboxing or change host policy.
+set -eu
+PATH='/usr/sbin:/usr/bin:/sbin:/bin'
+export PATH
+
+fail() { echo "JARVIS sandbox installation failed: $*" >&2; exit 1; }
+[[ "$(id -u)" == 0 ]] || fail 'package configuration requires root'
+
+app_dir='/opt/JARVIS'
+helper="$app_dir/chrome-sandbox"
+receipt='/var/lib/dpkg/info/jarvis-ai-assistant.md5sums'
+
+check_owned_path() {
+  local item="$1" mode
+  [[ ! -L "$item" ]] || fail "symlink refused: $item"
+  [[ "$(stat -c '%u' "$item")" == 0 ]] || fail "not owned by root: $item"
+  mode="$(stat -c '%a' "$item")"
+  (( (8#$mode & 0022) == 0 )) || fail "group/world-writable path: $item"
+}
+
+for parent in / /opt "$app_dir" /var /var/lib /var/lib/dpkg /var/lib/dpkg/info; do
+  [[ -d "$parent" ]] || fail "missing directory: $parent"
+  check_owned_path "$parent"
+done
+[[ ! -L "$helper" ]] || fail 'symlink sandbox helper refused'
+[[ -f "$helper" && -x "$helper" ]] || fail 'missing executable chrome-sandbox'
+check_owned_path "$helper"
+[[ "$(stat -c '%h' "$helper")" == 1 ]] || fail 'hard-linked sandbox helper refused'
+[[ -f "$receipt" ]] || fail 'missing installed package checksum receipt'
+check_owned_path "$receipt"
+
+# Match exactly one installed helper entry; never set SUID on modified content.
+# The receipt was installed by dpkg from the same administrator-approved package.
+checksum="$(awk '$2 == "opt/JARVIS/chrome-sandbox" { print $1 }' "$receipt")"
+[[ "$checksum" =~ ^[0-9a-fA-F]{32}$ ]] || fail 'missing or ambiguous helper checksum'
+actual="$(md5sum "$helper" | cut -d ' ' -f 1)"
+[[ "$checksum" == "$actual" ]] || fail 'chrome-sandbox differs from installed package'
+
+chown root:root "$helper"
+chmod 4755 "$helper"
+[[ "$(stat -c '%u:%g:%a' "$helper")" == '0:0:4755' ]] || fail 'sandbox permissions were not applied'
+
+if command -v update-alternatives >/dev/null 2>&1; then
+  if [[ -L '/usr/bin/jarvis-ai-assistant' && "$(readlink '/usr/bin/jarvis-ai-assistant')" != '/etc/alternatives/jarvis-ai-assistant' ]]; then
+    rm '/usr/bin/jarvis-ai-assistant'
+  fi
+  update-alternatives --install '/usr/bin/jarvis-ai-assistant' 'jarvis-ai-assistant' "$app_dir/jarvis-ai-assistant" 100 || ln -sf "$app_dir/jarvis-ai-assistant" '/usr/bin/jarvis-ai-assistant'
+else
+  ln -sf "$app_dir/jarvis-ai-assistant" '/usr/bin/jarvis-ai-assistant'
+fi
+if command -v update-mime-database >/dev/null 2>&1; then update-mime-database /usr/share/mime || true; fi
+if command -v update-desktop-database >/dev/null 2>&1; then update-desktop-database /usr/share/applications || true; fi

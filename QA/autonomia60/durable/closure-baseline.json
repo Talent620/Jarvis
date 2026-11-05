@@ -1,0 +1,19 @@
+{
+  "started_at": "2026-11-05T22:14:16.208169+00:00",
+  "base": "fb17f9755faad72295cb125563ba2b0220d9319d",
+  "branch": "codex/skills-integration-20261105",
+  "initial_worktree": "clean",
+  "previous_package": "2.1.0-alpha.1",
+  "user_install_observation": {
+    "package_upgrade": "completed 2.0.0 -> 2.1.0~alpha.1",
+    "launch": "FAIL",
+    "reason": "FATAL:setuid_sandbox_host.cc(163): /opt/JARVIS/chrome-sandbox requires root owner and mode4755",
+    "environment": "user Linux desktop; only supplied log available, no remote control",
+    "not_cause": "Vite size warning did not stop build"
+  },
+  "cloud_environment": {
+    "no_user_desktop_access": true,
+    "no_xvfb_installation": true,
+    "api_github_allowed": false
+  }
+}

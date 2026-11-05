@@ -44,13 +44,14 @@ function safeUrl(value) {
   return url.href;
 }
 async function normalizeSource(raw) {
+  if (raw?.kind === 'changedetection' && text(raw.connectorId, 100) && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw.watchId || '')) return { kind: 'changedetection', connectorId: raw.connectorId, watchId: raw.watchId };
   if (raw?.kind === 'json') return { kind: 'json', url: safeUrl(raw.url) };
   if (raw?.kind === 'directory' && text(raw.path, 4096) && path.isAbsolute(raw.path)) {
     const real = await fsp.realpath(raw.path);
     if (!(await fsp.stat(real)).isDirectory()) throw fail('Źródło plików musi być katalogiem.');
     return { kind: 'directory', path: real };
   }
-  throw fail('Dostępne źródła: publiczny kanał JSON lub jawnie wybrany katalog.');
+  throw fail('Dostępne źródła: publiczny JSON, wybrany katalog lub skonfigurowany watch changedetection.');
 }
 function normalizeCriteria(raw) {
   if (!text(raw?.contains, 500)) throw fail('Podaj kryterium tekstowe produktu lub pliku.');
@@ -69,7 +70,8 @@ function normalizeCriteria(raw) {
   return value;
 }
 function normalizeNotification(raw = {}) {
-  const out = { desktop: raw.desktop === true, muted: raw.muted === true };
+  if (raw.ntfy && (!text(raw.ntfy, 100) || raw.desktop === true)) throw fail('Wybierz jeden kanał zewnętrzny: desktop albo ntfy.');
+  const out = { desktop: raw.desktop === true, muted: raw.muted === true, ...(raw.ntfy ? { ntfy: raw.ntfy } : {}) };
   if (raw.quietHours) {
     const { start, end } = raw.quietHours;
     if (![start, end].every((v) => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v)) || start === end) throw fail('Cisza nocna wymaga dwóch różnych godzin HH:mm.');
@@ -87,10 +89,45 @@ function quietAt(timestamp, notification, timezone) {
 function dayKey(timestamp, timezone) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(timestamp);
 }
+function normalizeSchedule(raw) {
+  if (raw == null) return null;
+  if (!['daily', 'weekly', 'monthly'].includes(raw.kind) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(raw.time || '')) throw fail('Harmonogram wymaga daily/weekly/monthly oraz godziny HH:mm.');
+  const schedule = { kind: raw.kind, time: raw.time };
+  if (raw.kind === 'weekly') {
+    if (!Array.isArray(raw.weekdays) || raw.weekdays.length < 1 || raw.weekdays.length > 7 || raw.weekdays.some(day => !Number.isInteger(day) || day < 0 || day > 6)) throw fail('Tydzień wymaga dni 0–6 (0 = niedziela).');
+    schedule.weekdays = [...new Set(raw.weekdays)].sort();
+  }
+  if (raw.kind === 'monthly') {
+    if (!Number.isInteger(raw.day) || raw.day < 1 || raw.day > 31) throw fail('Miesiąc wymaga dnia 1–31.');
+    schedule.day = raw.day;
+  }
+  return schedule;
+}
+/** Wall-clock schedule: skip nonexistent spring times / missing month days, use only the
+ * first occurrence of a repeated autumn time. Resume catches up once, then picks the future. */
+function nextScheduledAt(schedule, after, timezone) {
+  const formatter = new Intl.DateTimeFormat('en-GB', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const parts = timestamp => Object.fromEntries(formatter.formatToParts(timestamp).filter(p => p.type !== 'literal').map(p => [p.type, Number(p.value)]));
+  const today = parts(after), [hour, minute] = schedule.time.split(':').map(Number);
+  for (let offset = 0; offset < 371; offset++) {
+    const date = new Date(Date.UTC(today.year, today.month - 1, today.day + offset));
+    if (schedule.kind === 'weekly' && !schedule.weekdays.includes(date.getUTCDay()) || schedule.kind === 'monthly' && schedule.day !== date.getUTCDate()) continue;
+    const wall = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), hour, minute);
+    const candidates = new Set();
+    for (const hours of [-36, 0, 36]) {
+      const sample = wall + hours * 3600000, local = parts(sample);
+      const zoneOffset = Date.UTC(local.year, local.month - 1, local.day, local.hour, local.minute) - sample;
+      const candidate = wall - zoneOffset, actual = parts(candidate);
+      if (actual.year === date.getUTCFullYear() && actual.month === date.getUTCMonth() + 1 && actual.day === date.getUTCDate() && actual.hour === hour && actual.minute === minute) candidates.add(candidate);
+    }
+    if (candidates.size) { const first = Math.min(...candidates); if (first > after) return first; }
+  }
+  throw fail('Nie znaleziono następnego terminu w ciągu roku.');
+}
 function money(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null; }
 function matched(item, criteria) {
-  const title = String(item.title || '').toLocaleLowerCase('pl');
-  if (!criteria.contains.toLocaleLowerCase('pl').split(/\s+/u).every((word) => title.includes(word))) return false;
+  const title = `${item.title || ''} ${item.text || ''}`.toLocaleLowerCase('pl');
+  if (criteria.contains !== '*' && !criteria.contains.toLocaleLowerCase('pl').split(/\s+/u).every((word) => title.includes(word))) return false;
   if (item.available !== true) return false;
   for (const key of ['variant', 'condition', 'currency']) if (criteria[key] && criteria[key] !== item[key]) return false;
   if (criteria.maxTotal !== undefined && (money(item.price) === null || money(item.shipping) === null || item.price + item.shipping > criteria.maxTotal)) return false;
@@ -190,6 +227,7 @@ function createGoalService(options) {
   const owner = `${process.pid}:${id()}`;
   let timer = null; let running = false; let closed = false; let tickActive = false;
   const active = new Map();
+  const activeNotifications = new Map();
   const fresh = () => ({ schemaVersion: SCHEMA, revision: 0, goals: [], grants: [], events: [], journal: [] });
   async function lock() {
     await fsp.mkdir(directory, { recursive: true, mode: 0o700 });
@@ -256,13 +294,13 @@ function createGoalService(options) {
     if (state.journal.length > 2000) state.journal.splice(0, state.journal.length - 2000);
   }
   function grantFor(state, goal) {
-    return state.grants.find((grant) => grant.id === goal.grantId && !grant.revokedAt && (!grant.expiresAt || grant.expiresAt > clock()) && hash(grant.source) === hash(goal.source) && (!goal.notification.desktop || grant.desktopNotification));
+    return state.grants.find((grant) => grant.id === goal.grantId && !grant.revokedAt && (!grant.expiresAt || grant.expiresAt > clock()) && hash(grant.source) === hash(goal.source) && (!goal.notification.desktop || grant.desktopNotification) && (!goal.notification.ntfy || grant.ntfyNotification === goal.notification.ntfy));
   }
   function validLease(state, claim) {
     const goal = state.goals.find((g) => g.id === claim.id);
     return goal && goal.state === 'RUNNING' && goal.criteriaVersion === claim.criteriaVersion && goal.lease?.token === claim.lease.token && goal.lease.until > clock() && grantFor(state, goal) ? goal : null;
   }
-  function abortGoal(goalId) { active.get(goalId)?.abort(); }
+  function abortGoal(goalId) { active.get(goalId)?.abort(); activeNotifications.get(goalId)?.abort(); }
   async function command(request, context = {}) {
     if (!request || typeof request.action !== 'string') throw fail('Brak działania.');
     const action = request.action;
@@ -274,9 +312,9 @@ function createGoalService(options) {
       if (action === 'list') return { goals: state.goals, events: state.events, grants: state.grants, runtime: { active: running, host: 'desktop-main-process', observationGap: 'Podczas uśpienia i wyłączenia hosta nie wykonuje się sprawdzeń.', schemaVersion: SCHEMA } };
       if (action === 'grant') {
         if (request.expiresAt !== undefined && (!Number.isFinite(request.expiresAt) || request.expiresAt <= now)) throw fail('Zgoda wymaga przyszłego terminu.');
-        const grant = { id: id(), source, desktopNotification: request.desktopNotification === true, createdAt: now, expiresAt: request.expiresAt || null, revokedAt: null };
+        const grant = { id: id(), source, desktopNotification: request.desktopNotification === true, ntfyNotification: text(request.ntfyNotification, 100), createdAt: now, expiresAt: request.expiresAt || null, revokedAt: null };
         state.grants.push(grant);
-        for (const goal of state.goals) if (goal.state === 'WAITING_APPROVAL' && hash(goal.source) === hash(source) && (!goal.notification.desktop || grant.desktopNotification)) goal.grantId = grant.id;
+        for (const goal of state.goals) if (goal.state === 'WAITING_APPROVAL' && hash(goal.source) === hash(source) && (!goal.notification.desktop || grant.desktopNotification) && (!goal.notification.ntfy || grant.ntfyNotification === goal.notification.ntfy)) goal.grantId = grant.id;
         log(state, null, 'GRANT', { id: grant.id, source }); return grant;
       }
       if (action === 'create') {
@@ -289,15 +327,17 @@ function createGoalService(options) {
         if (!Number.isSafeInteger(budgetPerDay) || budgetPerDay < 1 || budgetPerDay > 10000) throw fail('Budżet wymaga 1–10000 sprawdzeń na dzień.');
         const timezone = request.timezone || 'Europe/Warsaw';
         try { new Intl.DateTimeFormat('en', { timeZone: timezone }).format(now); } catch { throw fail('Niepoprawna strefa czasowa.'); }
+        const schedule = normalizeSchedule(request.schedule);
         const notification = normalizeNotification(request.notification);
-        const grant = state.grants.find((g) => !g.revokedAt && (!g.expiresAt || g.expiresAt > now) && hash(g.source) === hash(source) && (!notification.desktop || g.desktopNotification));
+        const grant = state.grants.find((g) => !g.revokedAt && (!g.expiresAt || g.expiresAt > now) && hash(g.source) === hash(source) && (!notification.desktop || g.desktopNotification) && (!notification.ntfy || g.ntfyNotification === notification.ntfy));
         if (!grant) throw fail('Źródło lub kanał wymaga zakresowej zgody użytkownika.', 'APPROVAL_REQUIRED');
-        const goal = { id: id(), title: request.title.trim(), originalCommand: request.originalCommand.trim(), type: 'monitor', state: 'WAITING_TIMER', source, criteria, criteriaVersion: 1, grantId: grant.id, intervalMs, budgetPerDay, budget: { day: dayKey(now, timezone), used: 0 }, timezone, notification, stopAfterFirst: request.stopAfterFirst !== false, createdAt: now, updatedAt: now, nextCheckAt: now, lastCheckAt: null, lastSuccessAt: null, lastResult: 'NOT_CHECKED', failures: 0, observations: {}, lease: null };
+        const goal = { id: id(), title: request.title.trim(), originalCommand: request.originalCommand.trim(), type: 'monitor', state: 'WAITING_TIMER', source, criteria, criteriaVersion: 1, grantId: grant.id, intervalMs, schedule, budgetPerDay, budget: { day: dayKey(now, timezone), used: 0 }, timezone, notification, stopAfterFirst: request.stopAfterFirst !== false, createdAt: now, updatedAt: now, nextCheckAt: schedule ? nextScheduledAt(schedule, now, timezone) : now, lastCheckAt: null, lastSuccessAt: null, lastResult: 'NOT_CHECKED', failures: 0, observations: {}, lease: null };
         state.goals.push(goal); log(state, goal, 'CREATED', { criteriaVersion: 1 }); return goal;
       }
       if (action === 'stop_all') {
         for (const goal of state.goals) if (!['COMPLETED', 'CANCELLED', 'FAILED'].includes(goal.state)) { goal.state = 'CANCELLED'; goal.lease = null; goal.nextCheckAt = null; goal.updatedAt = now; abortGoal(goal.id); log(state, goal, 'CANCELLED', 'global-stop'); }
         for (const event of state.events) if (['QUEUED', 'RETRY'].includes(event.state)) event.state = 'CANCELLED';
+        for (const controller of activeNotifications.values()) controller.abort();
         return { stopped: true };
       }
       if (action === 'revoke') {
@@ -306,6 +346,7 @@ function createGoalService(options) {
         grant.revokedAt = now;
         for (const goal of state.goals.filter((g) => g.grantId === grant.id && !['COMPLETED', 'CANCELLED', 'FAILED'].includes(g.state))) { goal.state = 'WAITING_APPROVAL'; goal.lease = null; goal.nextCheckAt = null; goal.updatedAt = now; abortGoal(goal.id); }
         for (const event of state.events) if (state.goals.some((g) => g.id === event.goalId && g.grantId === grant.id) && ['QUEUED', 'RETRY'].includes(event.state)) event.state = 'CANCELLED';
+        for (const goal of state.goals) if (goal.grantId === grant.id) activeNotifications.get(goal.id)?.abort();
         log(state, null, 'REVOKED', { id: grant.id }); return grant;
       }
       if (action === 'read_event') {
@@ -357,23 +398,30 @@ function createGoalService(options) {
     try {
       // Recheck after acquiring the lease and before I/O, including grants/criteria/cancel.
       if (!await transaction((state) => !!validLease(state, claim), false)) return;
-      const snapshot = await Promise.race([readSource(claim.source, { fetch: transport, signal: controller.signal, now: clock() }), new Promise((_, reject) => { timeout = setTimeout(() => { controller.abort(); reject(fail('Timeout źródła.', 'SOURCE_TIMEOUT')); }, checkTimeoutMs); timeout.unref?.(); })]);
+      const sourceRead = claim.source.kind === 'changedetection'
+        ? options.connectors ? options.connectors.readSource(claim.source, { signal: controller.signal, now: clock() }) : Promise.reject(fail('Integracja changedetection nie jest skonfigurowana.', 'SOURCE_AUTH'))
+        : readSource(claim.source, { fetch: transport, signal: controller.signal, now: clock() });
+      const snapshot = await Promise.race([sourceRead, new Promise((_, reject) => { timeout = setTimeout(() => { controller.abort(); reject(fail('Timeout źródła.', 'SOURCE_TIMEOUT')); }, checkTimeoutMs); timeout.unref?.(); })]);
       snapshot.observedAt = clock();
       await transaction((state) => {
         const goal = validLease(state, claim); if (!goal || controller.signal.aborted) return;
-        let matches = 0;
+        if (goal.source.kind === 'changedetection' && options.connectors?.isRevoked?.(goal.source.connectorId)) throw fail('Dostęp do integracji został odwołany.', 'SOURCE_AUTH');
+        let matches = 0; let changed = false;
+        const baseline = goal.source.kind === 'changedetection' && Object.keys(goal.observations).length === 0;
         for (const item of snapshot.items) {
           const previous = Object.hasOwn(goal.observations, item.id) ? goal.observations[item.id] : null;
           if (!previous && Object.keys(goal.observations).length >= 10000) throw fail('Limit pamięci obserwacji wymaga decyzji o retencji.', 'RESOURCE_LIMIT');
           const fingerprint = hash([item.id, item.available, item.price ?? null, item.shipping ?? null, item.currency ?? null, item.modifiedAt ?? null]);
           const changeRevision = previous ? (previous.changeRevision || 0) + (previous.fingerprint !== fingerprint || previous.available !== item.available ? 1 : 0) : 0;
           const generation = previous ? previous.generation + (previous.available === false && item.available === true ? 1 : 0) : 0;
-          if (matched(item, goal.criteria)) {
+          const isChange = goal.source.kind !== 'changedetection' || previous && previous.fingerprint !== fingerprint;
+          if (isChange) changed = true;
+          if (isChange && matched(item, goal.criteria)) {
             matches++;
             const eventId = hash([goal.id, goal.criteriaVersion, item.id, fingerprint, generation, changeRevision]);
             if (!state.events.some((e) => e.id === eventId)) {
               if (state.events.length >= MAX_EVENTS) throw fail('Centrum zdarzeń osiągnęło limit; wymagany eksport/retencja.', 'RESOURCE_LIMIT');
-              state.events.push({ id: eventId, goalId: goal.id, criteriaVersion: goal.criteriaVersion, sourceMode: snapshot.mode, title: item.title, url: item.url, price: money(item.price), shipping: money(item.shipping), total: money(item.price) !== null && money(item.shipping) !== null ? item.price + item.shipping : null, currency: typeof item.currency === 'string' && /^[A-Z]{3}$/.test(item.currency) ? item.currency : null, publishedAt: typeof item.publishedAt === 'string' && Number.isFinite(Date.parse(item.publishedAt)) ? item.publishedAt : null, observedAt: snapshot.observedAt, reason: goal.criteria, kind: !previous ? 'NEW_MATCH' : previous.available === false ? 'AVAILABLE_AGAIN' : 'CHANGED_MATCH', state: goal.notification.desktop ? 'QUEUED' : 'IN_APP', attempts: 0, nextAttemptAt: clock(), readAt: null, deliveredAt: null, acceptedAt: null });
+              state.events.push({ id: eventId, goalId: goal.id, criteriaVersion: goal.criteriaVersion, sourceMode: snapshot.mode, title: item.title, url: item.url, price: money(item.price), shipping: money(item.shipping), total: money(item.price) !== null && money(item.shipping) !== null ? item.price + item.shipping : null, currency: typeof item.currency === 'string' && /^[A-Z]{3}$/.test(item.currency) ? item.currency : null, publishedAt: typeof item.publishedAt === 'string' && Number.isFinite(Date.parse(item.publishedAt)) ? item.publishedAt : null, observedAt: snapshot.observedAt, reason: goal.criteria, kind: !previous ? 'NEW_MATCH' : previous.available === false ? 'AVAILABLE_AGAIN' : 'CHANGED_MATCH', state: goal.notification.desktop || goal.notification.ntfy ? 'QUEUED' : 'IN_APP', channel: goal.notification.ntfy ? 'ntfy' : 'desktop', connectorId: goal.notification.ntfy || null, sourceCheckedAt: item.sourceCheckedAt || null, attempts: 0, nextAttemptAt: clock(), readAt: null, deliveredAt: null, acceptedAt: null });
             }
           }
           Object.defineProperty(goal.observations, item.id, { value: { fingerprint, available: item.available, generation, changeRevision }, enumerable: true, configurable: true, writable: true });
@@ -381,9 +429,10 @@ function createGoalService(options) {
         // A complete snapshot omitting an earlier record establishes absence, not an invented price.
         const currentIds = new Set(snapshot.items.map((item) => item.id));
         for (const [itemId, observation] of Object.entries(goal.observations)) if (!currentIds.has(itemId)) observation.available = false;
-        goal.lastSuccessAt = clock(); goal.lastResult = matches ? 'MATCH' : 'NO_MATCH'; goal.lastError = null; goal.failures = 0; goal.lease = null;
+        goal.lastSourceCheckAt = snapshot.items.find(item => Number.isFinite(item.sourceCheckedAt))?.sourceCheckedAt || null;
+        goal.lastSuccessAt = clock(); goal.lastResult = matches ? 'MATCH' : baseline ? 'BASELINE_RECORDED' : goal.source.kind === 'changedetection' && !changed ? 'NO_CHANGE' : 'NO_MATCH'; goal.lastError = null; goal.failures = 0; goal.lease = null;
         goal.state = matches && goal.stopAfterFirst ? 'COMPLETED' : 'WAITING_TIMER';
-        goal.nextCheckAt = goal.state === 'COMPLETED' ? null : clock() + goal.intervalMs;
+        goal.nextCheckAt = goal.state === 'COMPLETED' ? null : goal.schedule ? nextScheduledAt(goal.schedule, clock(), goal.timezone) : clock() + goal.intervalMs;
         goal.updatedAt = clock(); log(state, goal, 'CHECK_FINISHED', { matches, result: goal.lastResult, sourceMode: snapshot.mode });
       });
     } catch (error) {
@@ -408,29 +457,30 @@ function createGoalService(options) {
         const goal = state.goals.find((g) => g.id === event.goalId);
         if (!goal || !grantFor(state, goal) || goal.state === 'CANCELLED' || goal.criteriaVersion !== event.criteriaVersion) { event.state = 'CANCELLED'; continue; }
         if (goal.notification.muted || goal.state === 'PAUSED' || quietAt(now, goal.notification, goal.timezone)) continue;
-        if (!notify) { event.state = 'BLOCKED'; event.lastError = 'Systemowy kanał powiadomień niedostępny; wynik pozostaje w centrum.'; continue; }
+        if (!(event.channel === 'ntfy' ? options.connectors?.notify : notify)) { event.state = 'BLOCKED'; event.lastError = 'Systemowy kanał powiadomień niedostępny; wynik pozostaje w centrum.'; continue; }
         event.state = 'SENDING'; event.attempts++; event.lease = { owner, token: id(), until: now + LEASE_MS }; return event;
       }
       return null;
     });
     if (!event) return;
+    const controller = new AbortController(); activeNotifications.set(event.goalId, controller);
     try {
       // Reconcile persisted identity immediately before the external side effect.
       if (!await transaction((state) => { const current = state.events.find((e) => e.id === event.id); const goal = state.goals.find((g) => g.id === event.goalId); return !!(current?.state === 'SENDING' && current.lease?.token === event.lease.token && current.lease.until > clock() && goal && grantFor(state, goal) && goal.state !== 'CANCELLED' && goal.criteriaVersion === event.criteriaVersion); }, false)) return;
       let timeout; let result;
-      try { result = await Promise.race([notify(clone(event)), new Promise((_, reject) => { timeout = setTimeout(() => reject(fail('Nieznany wynik powiadomienia.', 'NOTIFICATION_TIMEOUT')), notificationTimeoutMs); timeout.unref?.(); })]); }
+      try { result = await Promise.race([event.channel === 'ntfy' ? options.connectors.notify(clone(event), { signal: controller.signal }) : notify(clone(event), { signal: controller.signal }), new Promise((_, reject) => { timeout = setTimeout(() => { controller.abort(); reject(fail('Nieznany wynik powiadomienia.', 'NOTIFICATION_TIMEOUT')); }, notificationTimeoutMs); timeout.unref?.(); })]); }
       finally { clearTimeout(timeout); }
       await transaction((state) => {
         const current = state.events.find((e) => e.id === event.id);
         if (!current || current.lease?.token !== event.lease.token || current.state !== 'SENDING') return;
-        if (result?.accepted === true) { current.state = 'ACCEPTED'; current.acceptedAt = clock(); }
-        else if (result?.accepted === false && result?.retryable === true && current.attempts < 5) { current.state = 'RETRY'; current.nextAttemptAt = clock() + Math.min(3600000, 30000 * 2 ** current.attempts); }
+        if (result?.accepted === true) { current.state = 'ACCEPTED'; current.acceptedAt = clock(); current.providerId = typeof result.providerId === 'string' ? result.providerId.slice(0, 200) : null; }
+        else if (result?.accepted === false && result?.retryable === true && current.attempts < 5) { current.state = 'RETRY'; current.nextAttemptAt = Math.max(clock() + Math.min(3600000, 30000 * 2 ** current.attempts), Number.isFinite(result.retryAt) ? result.retryAt : 0); }
         else { current.state = result?.accepted === false ? 'BLOCKED' : 'UNCERTAIN'; }
         current.lease = null;
       });
     } catch {
       await transaction((state) => { const current = state.events.find((e) => e.id === event.id); if (current?.lease?.token === event.lease.token) { current.state = 'UNCERTAIN'; current.lease = null; } });
-    }
+    } finally { if (activeNotifications.get(event.goalId) === controller) activeNotifications.delete(event.goalId); }
   }
   async function tick() {
     if (closed || tickActive) return;
@@ -448,7 +498,8 @@ function createGoalService(options) {
   async function stop() {
     closed = true; running = false; if (timer) clearInterval(timer); timer = null;
     for (const controller of active.values()) controller.abort();
+    for (const controller of activeNotifications.values()) controller.abort();
   }
   return { command, tick, start, stop };
 }
-module.exports = { createGoalService, publicFetch, publicAddress, quietAt, retryAfter };
+module.exports = { createGoalService, publicFetch, publicAddress, quietAt, retryAfter, nextScheduledAt, normalizeSchedule };

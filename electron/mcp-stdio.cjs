@@ -36,14 +36,16 @@ function cleanConfig(root, raw = {}) {
   };
 }
 
-function withTimeout(promise, timeout, message) {
-  let timer;
+function withTimeout(promise, timeout, message, signal) {
+  let timer; let abort;
+  if (signal?.aborted) return Promise.reject(new Error("Operacja MCP anulowana."));
   return Promise.race([
     promise,
     new Promise((_, reject) => {
       timer = setTimeout(() => reject(new Error(message)), timeout);
     }),
-  ]).finally(() => clearTimeout(timer));
+    new Promise((_, reject) => { abort = () => reject(new Error("Operacja MCP anulowana; rozpoczęty skutek wymaga sprawdzenia.")); signal?.addEventListener("abort", abort, { once: true }); }),
+  ]).finally(() => { clearTimeout(timer); signal?.removeEventListener("abort", abort); });
 }
 
 function createStdioMcpManager(options) {
@@ -64,78 +66,96 @@ function createStdioMcpManager(options) {
     fs.appendFileSync(path.join(logDir, "mcp.jsonl"), JSON.stringify(record) + "\n");
   };
 
+  const tickets = new Map();
+  const connectTimeout = Math.min(options.connectTimeout || CONNECT_TIMEOUT, CONNECT_TIMEOUT);
+  const callTimeout = Math.min(options.callTimeout || CALL_TIMEOUT, CALL_TIMEOUT);
+  async function dispose(active) {
+    if (!active) return;
+    active.controller.abort();
+    // SDK transport closes only its own child, escalating SIGTERM to SIGKILL if needed.
+    await Promise.allSettled([active.client.close(), active.transport.close()]);
+  }
   async function close(name) {
-    const active = clients.get(name);
-    if (!active) return { ok: true };
-    clients.delete(name);
-    try {
-      await active.client.close();
-      audit("disconnect", name, true);
-      return { ok: true };
-    } catch (error) {
-      audit("disconnect", name, false, error?.message);
-      return { ok: false, error: error?.message || String(error) };
-    }
+    name = String(name || "");
+    tickets.delete(name); // Fences even an in-progress import/connect, before registration.
+    const active = clients.get(name); clients.delete(name);
+    await dispose(active);
+    audit("disconnect", name, true);
+    return { ok: true };
   }
 
   async function connect(rawConfig) {
-    let config;
+    let config; let active; let ticket;
     try {
       config = cleanConfig(root, rawConfig);
-      await close(config.name);
+      ticket = Symbol(config.name);
+      const previous = clients.get(config.name); clients.delete(config.name);
+      tickets.set(config.name, ticket);
+      await dispose(previous);
       const [{ Client }, { StdioClientTransport, getDefaultEnvironment }] = await Promise.all([
         import("@modelcontextprotocol/sdk/client/index.js"),
         import("@modelcontextprotocol/sdk/client/stdio.js"),
       ]);
-      const transport = new StdioClientTransport({
-        command: config.command,
-        args: config.args,
-        cwd: config.cwd,
-        env: { ...getDefaultEnvironment(), ...config.env },
-        stderr: "pipe",
-      });
-      const client = new Client({ name: "JARVIS", version: "2.0.0" }, { capabilities: {} });
-      await withTimeout(client.connect(transport), CONNECT_TIMEOUT, "Serwer MCP nie odpowiedział podczas łączenia.");
-      const listed = await withTimeout(client.listTools(), CONNECT_TIMEOUT, "Serwer MCP nie zwrócił listy narzędzi.");
-      clients.set(config.name, { client, transport });
-      const tools = Array.isArray(listed?.tools) ? listed.tools.map((tool) => ({
-        name: String(tool.name || ""),
-        description: String(tool.description || tool.name || ""),
-        inputSchema: tool.inputSchema && typeof tool.inputSchema === "object"
-          ? tool.inputSchema
-          : { type: "object", properties: {} },
+      if (tickets.get(config.name) !== ticket) throw new Error("Łączenie MCP anulowano.");
+      const transport = new StdioClientTransport({ command: config.command, args: config.args,
+        cwd: config.cwd, env: { ...getDefaultEnvironment(), ...config.env }, stderr: "pipe", maxBufferSize: 2 * 1024 * 1024 });
+      const client = new Client({ name: "JARVIS", version: "2.1" }, { capabilities: {} });
+      active = { client, transport, controller: new AbortController(), tools: new Set(), ready: false };
+      clients.set(config.name, active);
+      // Drain untrusted stderr without logging credentials or accumulating an unbounded pipe.
+      transport.stderr?.on("data", () => {});
+      await withTimeout(client.connect(transport), connectTimeout, "Serwer MCP nie odpowiedział podczas łączenia.", active.controller.signal);
+      const listed = await withTimeout(client.listTools({}, { signal: active.controller.signal, timeout: connectTimeout }), connectTimeout, "Serwer MCP nie zwrócił listy narzędzi.", active.controller.signal);
+      if (tickets.get(config.name) !== ticket || active.controller.signal.aborted) throw new Error("Łączenie MCP anulowano.");
+      const tools = Array.isArray(listed?.tools) ? listed.tools.slice(0, 100).filter(tool => typeof tool.name === "string" && tool.name.length <= 128 && (!tool.inputSchema || (typeof tool.inputSchema === "object" && !Array.isArray(tool.inputSchema) && JSON.stringify(tool.inputSchema).length <= 32000))).map((tool) => ({
+        name: tool.name, description: String(tool.description || tool.name || "").slice(0, 4096),
+        inputSchema: tool.inputSchema && typeof tool.inputSchema === "object" && JSON.stringify(tool.inputSchema).length <= 32000 ? tool.inputSchema : { type: "object", properties: {} },
       })) : [];
+      active.tools = new Set(tools.map(t => t.name)); active.ready = true;
       audit("connect", config.name, true, `${tools.length} tools`);
       return { ok: true, tools };
     } catch (error) {
-      if (config?.name) await close(config.name);
-      audit("connect", config?.name || String(rawConfig?.name || ""), false, error?.message);
-      return { ok: false, error: error?.message || String(error), tools: [] };
+      if (config?.name && clients.get(config.name) === active) clients.delete(config.name);
+      if (config?.name && tickets.get(config.name) === ticket) tickets.delete(config.name);
+      await dispose(active);
+      audit("connect", config?.name || "", false, "Połączenie nie zostało potwierdzone; proces klienta zamknięty.");
+      return { ok: false, error: error?.message || "Błąd połączenia MCP.", tools: [] };
     }
   }
 
-  async function call(server, tool, args) {
+  async function call(server, tool, args, execution = {}) {
     const active = clients.get(String(server || ""));
-    if (!active) return { ok: false, error: "Serwer MCP nie jest połączony." };
+    if (!active?.ready) return { ok: false, error: "Serwer MCP nie jest połączony." };
+    if (!active.tools.has(tool)) return { ok: false, error: "Narzędzie MCP nie należy do odkrytego katalogu." };
+    if (!args || typeof args !== "object" || Array.isArray(args) || JSON.stringify(args).length > 128000) return { ok: false, error: "Niepoprawne lub zbyt duże argumenty MCP." };
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    active.controller.signal.addEventListener("abort", abort, { once: true });
+    execution.signal?.addEventListener("abort", abort, { once: true });
+    if (active.controller.signal.aborted || execution.signal?.aborted) controller.abort();
     try {
-      const result = await withTimeout(
-        active.client.callTool({ name: String(tool || ""), arguments: args && typeof args === "object" ? args : {} }),
-        CALL_TIMEOUT,
-        "Narzędzie MCP przekroczyło limit czasu.",
-      );
-      audit("call", server, true, tool);
-      return { ok: true, result };
+      if (controller.signal.aborted) throw new Error("Anulowano MCP.");
+      const result = await withTimeout(active.client.callTool({ name: tool, arguments: args }, undefined, { signal: controller.signal, timeout: callTimeout }), callTimeout,
+        "Narzędzie MCP przekroczyło limit czasu; skutek wymaga sprawdzenia.", controller.signal);
+      if (clients.get(server) !== active || controller.signal.aborted) throw new Error("Odrzucono spóźniony wynik MCP.");
+      audit("call", server, !result?.isError, tool);
+      return { ok: !result?.isError, result, ...(result?.isError ? { error: "Serwer zgłosił błąd narzędzia." } : {}) };
     } catch (error) {
-      audit("call", server, false, `${tool}: ${error?.message || error}`);
-      return { ok: false, error: error?.message || String(error) };
+      controller.abort(); // propagate cancellation notification to cooperating MCP servers
+      audit("call", server, false, `${tool}: wywołanie przerwane lub niepotwierdzone`);
+      return { ok: false, error: error?.message || "Niepotwierdzony wynik MCP.", uncertain: true };
+    } finally {
+      active.controller.signal.removeEventListener("abort", abort);
+      execution.signal?.removeEventListener("abort", abort);
     }
   }
 
   async function closeAll() {
+    tickets.clear();
     await Promise.all([...clients.keys()].map(close));
   }
 
-  return { connect, call, close, closeAll };
+  return { connect, call, close, closeAll, abortAll: closeAll };
 }
 
 module.exports = { ALLOWED_COMMANDS, cleanConfig, createStdioMcpManager };

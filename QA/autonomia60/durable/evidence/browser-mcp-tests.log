@@ -1,0 +1,25 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+stderr | tests/mcp.test.ts > MCP — McpManager (mock JSON-RPC) > graceful: serwer niedostępny → brak narzędzi, bez wyjątku
+[mcp] Niepotwierdzone połączenie: down
+
+stderr | tests/mcp.test.ts > MCP — McpManager (mock JSON-RPC) > rejects a response with the wrong JSON-RPC id before registering any tool
+[mcp] Niepotwierdzone połączenie: wrong-id
+
+ ✓ tests/mcp.test.ts (12 tests) 60ms
+ ✓ tests/mcpStdio.test.ts (4 tests) 3011ms
+   ✓ MCP stdio > łączy lokalny serwer, odkrywa i wywołuje narzędzie 510ms
+   ✓ MCP stdio > cleans its spawned process after a real initialization timeout 2310ms
+ ✓ tests/browserSession.test.ts (9 tests) 4703ms
+   ✓ browser input validation > does not report STOP finished while an owned Chromium launch is still pending 396ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > reads DOM, fills a draft, asks separately for submission and verifies a bounded download 1392ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > STOP rejects late approval and blocks the external request 553ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > approves the actual mutated GET request and blocks denied query disclosure 521ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > refuses a download directory symlink and writes nothing outside its scope 516ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > keeps delayed draft requests blocked across a same-document open 1271ms
+
+ Test Files  3 passed (3)
+      Tests  25 passed (25)
+   Start at  22:33:14
+   Duration  5.09s (transform 1.07s, setup 0ms, collect 1.53s, tests 7.77s, environment 276ms, prepare 431ms)

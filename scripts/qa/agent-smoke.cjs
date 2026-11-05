@@ -19,7 +19,11 @@ async function send(page, text) {
   await input.fill(text); await input.press('Enter');
 }
 async function dismissSetup(page) {
-  const sheet = page.locator('.sheet').first();
+  // Suspense uses a visible .sheet skeleton without a dismissal handler. Wait for
+  // the actual Settings content, including after a Vite dependency reload.
+  const sheet = page.locator('.sheet:not([aria-busy="true"])').filter({
+    has: page.getByRole('heading', { name: '⚙ Ustawienia', exact: true }),
+  });
   await sheet.waitFor({ state: 'visible' });
   await sheet.click({ position: { x: 5, y: 5 } }); // normal backdrop dismissal, without rewriting model settings
   await sheet.waitFor({ state: 'hidden' });
@@ -42,6 +46,10 @@ async function main() {
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { void cleanup().finally(() => process.exit(130)); });
   try {
     const options = args();
+    if (options['skills-controlled']) {
+      await require('./skills-controlled.cjs').runControlledSkills({ run, options, send, stored, freePort });
+      return;
+    }
     run.write('environment.json', environment());
     const ollama = await inspectOllama(configuration(options), run);
     const port = await freePort();

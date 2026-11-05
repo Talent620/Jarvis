@@ -1,0 +1,4 @@
+[
+  "🔐 Zgoda na akcję\n\nJARVIS chce: system_files_write · akcja zewnętrzna\n\n{\"path\":\"qa-skill-output.txt\",\"content\":\"ZAŻÓŁĆ GĘŚLĄ JAŹŃ — AF74AA60\"}\n\nTa decyzja dotyczy tylko tej konkretnej akcji.\n\nOdmów\nZezwól",
+  "🔐 Zgoda na akcję\n\nJARVIS chce: system_files_read · akcja zewnętrzna\n\n{\"path\":\"qa-skill-output.txt\"}\nZapamiętaj zgodę dla tej akcji\nOdmów\nZezwól"
+]

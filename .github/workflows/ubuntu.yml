@@ -5,7 +5,9 @@ on:
   pull_request:
     branches: ["main"]
   push:
-    branches: ["main", "codex/durable-autonomy-*"]
+    branches: ["main", "codex/durable-autonomy-*", "codex/skills-integration-*"]
+    # Version tags use this same single Ubuntu build job; they do not move latest.
+    tags: ["v*"]
     paths:
       - "electron/**"
       - "src/**"
@@ -14,6 +16,7 @@ on:
       - "package.json"
       - "package-lock.json"
       - "scripts/release-linux.cjs"
+      - "scripts/linux-after-install.sh"
       - "vite.config.ts"
       - ".github/workflows/ubuntu.yml"
 
@@ -29,6 +32,21 @@ jobs:
         with:
           node-version: "20"
           cache: npm
+      - name: Validate prerelease tag against package version
+        if: github.ref_type == 'tag'
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const tag = process.env.RELEASE_TAG;
+          if (tag !== `v${version}` || !/^\d+\.\d+\.\d+-(?:alpha|beta|rc)(?:\.[0-9A-Za-z-]+)*$/.test(version)) {
+            console.error('Release blocked: tag must exactly match package.json and identify an alpha, beta or rc prerelease.');
+            process.exit(1);
+          }
+          console.log(`Validated prerelease ${tag}; publication still requires all source and package checks.`);
+          NODE
       - name: Check native Ubuntu environment
         run: bash scripts/bootstrap-ubuntu.sh --check
       - run: npm ci
@@ -61,3 +79,24 @@ jobs:
             release-desktop/*/JARVIS.AppImage
             release-desktop/*/JARVIS.deb
             linux.json
+      - name: Publish validated version prerelease
+        # A successful run still needs public release/asset/checksum verification.
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: JARVIS ${{ github.ref_name }}
+          prerelease: true
+          make_latest: "false"
+          fail_on_unmatched_files: true
+          body: |
+            Controlled Linux prerelease built from this version tag after source tests, lint and package validation.
+
+            Download SHA256SUMS and verify the selected package before installation. PROVENANCE.json records the packaged source commit, version and installer verification.
+
+            CI packaging does not establish successful native desktop launch, upgrade/rollback or real-model acceptance. Read the repository QA report for remaining blockers. This prerelease does not update the rolling latest release.
+          files: |
+            release-desktop/*/JARVIS.AppImage
+            release-desktop/*/JARVIS.deb
+            release-desktop/*/PROVENANCE.json
+            release-desktop/*/SHA256SUMS

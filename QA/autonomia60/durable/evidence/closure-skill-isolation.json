@@ -1,0 +1,64 @@
+{
+  "recordedAt": "2026-11-05T22:30:18.438Z",
+  "status": "PASS",
+  "scope": "Native skill OS sandbox and generated tool lifecycle component integration; no model/chat autonomy claim",
+  "sourceCommit": "fb17f9755faad72295cb125563ba2b0220d9319d",
+  "branch": "codex/skills-integration-20261105",
+  "sourceTree": "Working tree modifications and new files; hashes below identify tested sources",
+  "sourceHashes": {
+    "electron/skill-isolation.cjs": "e2a1c82d865b6dcc398c8299b7d7364513864dae08f1865bbb8ee8a30fbbc77d",
+    "electron/workspace-tools.cjs": "e2e250d5517f9b94df551bfc55cc51fc3106d463c31759b3ba7ec480952e0821",
+    "electron/skill-manager.cjs": "0745c09b7f79627c49039976167e67b529c5b39bf761045d52ba94c8abf60022",
+    "tests/skillIsolation.test.ts": "04409f0818d88f7d289105390b3ed35d4712a227c4b6b04f0ad81abb02362f99",
+    "tests/generatedToolIsolation.test.ts": "a4a897e11458447d304f70caf0ba14fafcc029f16ae08435d83c185517336b22"
+  },
+  "command": "JARVIS_TEST_SKILL_SANDBOX=1 npx vitest run tests/skillIsolation.test.ts tests/generatedToolIsolation.test.ts tests/workspaceTools.test.ts tests/stopWorkspaceProcess.test.ts",
+  "execution": {
+    "platform": "linux",
+    "arch": "x64",
+    "node": "v24.22.1",
+    "bubblewrap": "bubblewrap 0.12.0",
+    "outerToolSandbox": "required authorized elevated test execution because outer tool sandbox blocks NETLINK_ROUTE; bubblewrap isolation remained enabled"
+  },
+  "tests": {
+    "files": 4,
+    "passed": 23,
+    "failed": 0,
+    "skipped": 0,
+    "skillIsolation": 13,
+    "generatedToolIsolation": 5,
+    "workspaceTools": 4,
+    "stopWorkspaceProcess": 1,
+    "actualOSIsolationCases": 9
+  },
+  "evidenceLog": "closure-skill-isolation-tests.log",
+  "verified": [
+    "Actual Node execution in bubblewrap network/user/PID/IPC/UTS namespaces with seccomp and readonly snapshot",
+    "Unknown JSON-to-CSV task exact output assertion including Polish UTF-8; wrong expected output fails",
+    "Synthetic external file and inherited environment denied; immutable snapshot and readonly /dev writes denied; original host file unchanged",
+    "Child process creation denied by seccomp; network request denied by isolated network namespace",
+    "CPU RLIMIT_CPU and separate wall timeout; address-space RLIMIT_AS; individual file RLIMIT_FSIZE; aggregate tmpfs quota; bounded stdout/stderr",
+    "STOP cancellation terminates own group; fresh subsequent task executes",
+    "Path traversal, symlinks, hardlinks, root ancestor symlinks, oversized reads/packages and mutated content hash rejected",
+    "Legacy generated_tool authors a quarantined native skill; input cannot authorize itself or bypass expected-output test",
+    "Real generated code test -> explicit owner source/license policy -> activation -> run -> reuse with unseen numeric data -> revoke blocks run",
+    "Native addons cannot load (actual ERR_DLOPEN_DISABLED assertion); seccomp additionally denies anonymous shared-memory/queues and mount APIs"
+  ],
+  "limits": {
+    "timeoutMs": 5000,
+    "cpuSeconds": 2,
+    "memoryMb": 1024,
+    "fileBytes": 1048576,
+    "outputBytes": 131072,
+    "scratchBytes": 8388608
+  },
+  "remainingLimitations": [
+    "Linux x86_64 only; requires already installed bubblewrap, prlimit, trusted Node and usable unprivileged namespaces",
+    "Executable package only Node.js; no Python/bash/native executables or dependency installation",
+    "No network, child processes or host writable mounts; bounded input JSON through stdin and stdout output only",
+    "Packaged Electron uses existing /usr/bin/node or /usr/local/bin/node; absent runtime is EXTERNAL_BLOCKER",
+    "Memory limit is address-space RLIMIT_AS shared across threads, not measured resident memory",
+    "Without JARVIS_TEST_SKILL_SANDBOX=1, real sandbox tests are skipped explicitly; this evidence enabled the flag",
+    "Component integration uses direct native manager APIs; it is not a test of model tool selection or user desktop operation"
+  ]
+}

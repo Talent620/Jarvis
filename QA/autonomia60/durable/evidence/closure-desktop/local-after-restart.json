@@ -1,0 +1,78 @@
+{
+  "data": {
+    "tasks": [
+      {
+        "id": "5fvc7786vz6w",
+        "title": "Przekazanie local 2026-11-05T22-45-10-284Z-desktop-6f783a46 — Zażółć gęślą jaźń",
+        "done": false,
+        "priority": false,
+        "createdAt": 1793918719976
+      }
+    ],
+    "notes": [],
+    "reminders": [],
+    "shopping": [],
+    "calendar": [],
+    "memory": [],
+    "scenes": [],
+    "audit": [
+      {
+        "tool": "add_task",
+        "input": "{\"title\":\"Przekazanie local 2026-11-05T22-45-10-284Z-desktop-6f783a46 — Zażółć gęślą jaźń\"}",
+        "output": "Dodano zadanie: „Przekazanie local 2026-11-05T22-45-10-284Z-desktop-6f783a46 — Zażółć gęślą jaźń”.",
+        "status": "ok",
+        "undo": {
+          "collection": "tasks",
+          "id": "5fvc7786vz6w"
+        },
+        "id": "fbla96i4vz6x",
+        "at": 1793918719978
+      }
+    ],
+    "projects": [],
+    "projectFiles": [],
+    "tally": [],
+    "journal": [],
+    "leads": [],
+    "flashcards": [],
+    "bargainWatch": [],
+    "sentMail": [],
+    "contentPosts": [],
+    "imageHistory": [],
+    "siteProjects": [],
+    "financeProjects": [],
+    "world": {
+      "entities": [],
+      "relations": []
+    }
+  },
+  "chats": [
+    {
+      "id": "g8ar470nvxo7",
+      "title": "Dodaj zadanie: Przekazanie local 2026-11-05T22-4",
+      "messages": [
+        {
+          "id": "5785bd9xvz6j",
+          "role": "user",
+          "text": "Dodaj zadanie: Przekazanie local 2026-11-05T22-45-10-284Z-desktop-6f783a46 — Zażółć gęślą jaźń",
+          "createdAt": 1793918719963
+        },
+        {
+          "id": "hor585hxvz6z",
+          "role": "assistant",
+          "text": "Dodano zadanie: „Przekazanie local 2026-11-05T22-45-10-284Z-desktop-6f783a46 — Zażółć gęślą jaźń”.",
+          "tools": [
+            "add_task"
+          ],
+          "createdAt": 1793918719979
+        }
+      ],
+      "updatedAt": 1793918724228
+    }
+  ],
+  "settings": {
+    "interfaceMode": "modern",
+    "provider": "gemini",
+    "ollamaUrl": ""
+  }
+}

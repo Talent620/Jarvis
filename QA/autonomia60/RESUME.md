@@ -1,3 +1,7 @@
+# Aktualna kontynuacja alpha.2
+
+Czytaj `durable/REPORT.md`, `durable/RESUME.md` i wspólny `durable/requirements.json`. Baza `fb17f9755faad72295cb125563ba2b0220d9319d`, gałąź `codex/skills-integration-20261105`; poniższe wcześniejsze etapy pozostają historią. Aktualne polecenie autoryzuje commit/push dedykowanej gałęzi, PR, istniejący CI, tag i prerelease.
+
 # Stan wznowienia — autonomia i licencje APK
 
 **Bieżący etap trwałej autonomii:** czytaj `durable/REPORT.md`, `durable/RESUME.md` i `durable/requirements.json`. Baza to `f74705166e484f9fe76a9ecac7212a45376254ba`, gałąź integracyjna `codex/durable-autonomy-20261105`. Nowe polecenie użytkownika jawnie upoważnia commit, push na dedykowaną gałąź, PR, istniejące CI, tag i GitHub Release; wcześniejsze ograniczenia publikacji w poniższych historycznych notatkach nie dotyczą tego etapu. Zakaz Xvfb, force-push, obchodzenia zabezpieczeń i ujawniania sekretów pozostaje. Nie uznawać testów kontrolowanego monitora za test Allegro ani prawdziwego modelu. Status API publikacji jest w `durable/publication-access.json`.

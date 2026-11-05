@@ -1,0 +1,10 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/releasePackaging.test.ts (7 tests) 13ms
+ ✓ tests/linuxPackageSandbox.test.ts (5 tests) 244ms
+
+ Test Files  2 passed (2)
+      Tests  12 passed (12)
+   Start at  22:22:51
+   Duration  618ms (transform 65ms, setup 0ms, collect 98ms, tests 257ms, environment 0ms, prepare 113ms)

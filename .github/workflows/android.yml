@@ -17,18 +17,21 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Node
+        id: node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
       - name: Setup JDK 17
+        id: java
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
           java-version: "17"
 
       - name: Prepare explicitly configured release signing
+        id: signing
         env:
           JARVIS_RELEASE_KEYSTORE_BASE64: ${{ secrets.JARVIS_RELEASE_KEYSTORE_BASE64 }}
           JARVIS_RELEASE_STORE_PASSWORD: ${{ secrets.JARVIS_RELEASE_STORE_PASSWORD }}
@@ -40,19 +43,23 @@ jobs:
         run: node scripts/prepare-android-signing.cjs
 
       - name: Setup Android SDK
+        id: sdk
         uses: android-actions/setup-android@v3
 
       - name: Install dependencies
+        id: dependencies
         run: npm ci
 
       # Klucze NIE trafiają do bundla (model BYOK: użytkownik podaje własne, szyfrowane lokalnie;
       # produkcyjne klucze idą przez BFF). Wcześniejsze env JARVIS_*_KEY było martwe i mylące.
       - name: Build web + sync Capacitor
+        id: web
         run: |
           npm run build
           npx cap sync android
 
       - name: Build release APK with configured identity
+        id: apk
         working-directory: android
         env:
           JARVIS_RELEASE_STORE_PASSWORD: ${{ secrets.JARVIS_RELEASE_STORE_PASSWORD }}
@@ -63,8 +70,31 @@ jobs:
           ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK
+        id: upload
         uses: actions/upload-artifact@v4
         with:
           name: jarvis-release-apk
           path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+      - name: Report Android build stages
+        if: always()
+        env:
+          NODE_RESULT: ${{ steps.node.outcome }}
+          JAVA_RESULT: ${{ steps.java.outcome }}
+          SIGNING_RESULT: ${{ steps.signing.outcome }}
+          SDK_RESULT: ${{ steps.sdk.outcome }}
+          DEPENDENCIES_RESULT: ${{ steps.dependencies.outcome }}
+          WEB_RESULT: ${{ steps.web.outcome }}
+          APK_RESULT: ${{ steps.apk.outcome }}
+          UPLOAD_RESULT: ${{ steps.upload.outcome }}
+        run: |
+          printf '## Android release build stages\n\n| Stage | Result |\n| --- | --- |\n' >> "$GITHUB_STEP_SUMMARY"
+          for stage in NODE JAVA SIGNING SDK DEPENDENCIES WEB APK UPLOAD; do
+            variable="${stage}_RESULT"
+            result="${!variable}"
+            printf '| %s | %s |\n' "$stage" "${result:-not-started}" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$result" = failure ]; then
+              printf '::error title=Android build stage::%s failed. See the named step; no release is produced by a failed build.\n' "$stage"
+            fi
+          done

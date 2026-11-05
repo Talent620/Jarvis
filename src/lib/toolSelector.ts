@@ -7,11 +7,12 @@ import type { ToolDef } from "./tools";
 
 // Narzędzia ZAWSZE dostępne (nawigacja + uniwersalne) — niezależnie od intencji.
 const CORE_TOOLS = new Set<string>([
-  "open_screen", "project_knowledge", "calculate", "daily_briefing", "chief_of_staff", "web_research",
+  "open_screen", "project_knowledge", "calculate", "daily_briefing", "chief_of_staff", "web_research", "skill_search", "skill_manage", "skill_run",
 ]);
 
 // Grupy domenowe: nazwy narzędzi.
 const GROUP_TOOLS: Record<string, string[]> = {
+  skills: ["skill_search", "skill_manage", "skill_run"],
   sales: ["find_leads", "list_leads", "save_lead", "lead_dossier", "lead_followup", "sales_autopilot", "sales_plan",
     "salesos_open", "salesos_push", "salesos_email", "salesos_flush_emails", "salesos_set_status", "salesos_stats", "salesos_sync",
     "business_status", "business_next_step"],
@@ -26,7 +27,7 @@ const GROUP_TOOLS: Record<string, string[]> = {
     "list_scenes", "navigate_to", "open_service", "open_url", "run_automation"],
   desktop: ["desktop_launch_app", "desktop_open", "desktop_power", "desktop_volume", "desktop_media", "desktop_active_window", "desktop_list_windows", "desktop_focus_window", "desktop_clipboard_read", "desktop_click", "desktop_type", "desktop_hotkey"],
   monitoring: ["monitor_create", "monitor_status", "monitor_control"],
-  files: ["system_workspace_status", "system_files_list", "system_files_read", "system_files_write", "system_browser_read_public", "system_browser_open"],
+  files: ["system_workspace_status", "system_files_list", "system_files_read", "system_files_write", "system_browser_read_public", "system_browser_open", "browser_session"],
   android: ["android_type", "android_tap", "android_global", "android_open_app", "android_open_settings"],
   info: ["get_weather", "get_news", "get_markets"],
   system: ["set_mode", "set_preference", "set_theme", "set_voice", "switch_ai", "lock_assistant", "suggest_ai", "system_health", "self_check",
@@ -35,6 +36,7 @@ const GROUP_TOOLS: Record<string, string[]> = {
 
 // Słowa-wyzwalacze (PL) → grupa. Proste includes na małych literach (S9-safe).
 const GROUP_KEYWORDS: Record<string, string[]> = {
+  skills: ["skill", "umiejętno", "umiejetno", "adapter", "plugin", "nieznany format", "konwerter"],
   sales: ["lead", "leady", "klient", "klienci", "sprzedaż", "sprzedaz", "crm", "oferta", "oferty", "pulpit", "follow", "teczka", "sales os", "salesos"],
   finance: ["finans", "przychód", "przychod", "zysk", "marża", "marza", "faktur", "projekt finans", "zarobi", "kasa", "wpłat", "wplat", "opłac", "oplac", "pieniądz", "pieniadz", "kpi", "lejek", "płatnoś", "platnos"],
   mail: ["mail", "e-mail", "email", "poczta", "wyślij maila", "wyslij maila", "gmail", "wiadomość mailo", "wiadomosc mailo"],
@@ -84,7 +86,7 @@ export function selectToolsForIntent(query: string, defs: ToolDef[], limits: { m
   const maxTools = Math.max(0, Math.min(32, limits.maxTools ?? 24));
   const maxChars = Math.max(0, Math.min(32_000, limits.maxChars ?? 10_000));
   const ranked = defs.map((def, index) => ({ def, index, score: relevance(query, def) * 4 + (allowed.has(def.name) ? 12 : 0) + (CORE_TOOLS.has(def.name) ? 8 : 0) }))
-    .filter(({ score }) => score > 0).sort((a, b) => b.score - a.score || a.index - b.index);
+    .filter(({ def, score }) => score > 0 && (query.trim() || !def.name.startsWith("skill_"))).sort((a, b) => b.score - a.score || a.index - b.index);
   const selected: ToolDef[] = [];
   let chars = 0;
   for (const { def } of ranked) {

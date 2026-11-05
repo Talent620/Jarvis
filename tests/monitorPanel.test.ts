@@ -57,3 +57,42 @@ it("renders actual runtime error objects and match reasons, and explicit UI read
   await act(async () => { readButton!.click(); await new Promise((resolve) => setTimeout(resolve, 30)); });
   expect((await service.command({ action: "list" })).events[0].readAt).toBe(now);
 });
+
+it("uses existing panel form to pass exact changedetection and ntfy scopes, and clears the token field", async () => {
+  const calls: any[] = [];
+  const configured = [
+    { id: "cd-owner", kind: "changedetection", label: "Zmiany strony", baseUrl: "https://watch.example.org/", configured: true },
+    { id: "ntfy-owner", kind: "ntfy", label: "Mój kanał", baseUrl: "https://notify.example.org/", configured: true },
+  ];
+  (window as any).jarvisDesktop = {
+    monitorCommand: async (request: any) => { if (request.action === "create") calls.push(request); return { ok: true, goals: [], events: [], grants: [], runtime: { active: true } }; },
+    monitorGrant: async (request: any) => { calls.push({ action: "grant", ...request }); return { ok: true }; },
+    monitorSettings: async () => ({ ok: true, backgroundEnabled: false }),
+    monitorConnectorList: async () => ({ ok: true, connectors: configured }),
+    monitorConnectorConfigure: async (request: any) => { calls.push({ action: "configure", ...request }); return { ok: true }; },
+  };
+  (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div"); document.body.append(container); root = createRoot(container);
+  await act(async () => { root!.render(createElement(GoalStatusPanel, { onClose: () => {} })); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+  const byLabel = (text: string) => [...container.querySelectorAll("label")].find(label => label.textContent?.startsWith(text))!;
+  const changeSelect = async (label: string, value: string) => {
+    const input = byLabel(label).querySelector("select")!;
+    await act(async () => { input.value = value; input.dispatchEvent(new Event("change", { bubbles: true })); });
+  };
+  const field = (form: HTMLFormElement, name: string, value: string) => { (form.elements.namedItem(name) as HTMLInputElement).value = value; };
+  await changeSelect("Źródło", "changedetection");
+  await changeSelect("Dodatkowy kanał", "ntfy-owner");
+  const monitorForm = container.querySelector('input[name="contains"]')!.closest("form")!;
+  field(monitorForm, "title", "Obserwuj zmiany"); field(monitorForm, "sourceConnector", "cd-owner");
+  field(monitorForm, "source", "b8266333-03c2-4231-9c03-9870f2303c8b"); field(monitorForm, "contains", "*");
+  await act(async () => { monitorForm.requestSubmit(); await new Promise(resolve => setTimeout(resolve, 20)); });
+  expect(calls.find(call => call.action === "grant")).toMatchObject({ source: { kind: "changedetection", connectorId: "cd-owner" }, desktopNotification: false, ntfyNotification: "ntfy-owner" });
+  expect(calls.find(call => call.action === "create")).toMatchObject({ source: { kind: "changedetection", connectorId: "cd-owner" }, notification: { desktop: false, ntfy: "ntfy-owner" } });
+  const configForm = container.querySelector('input[name="token"]')!.closest("form")!;
+  field(configForm, "label", "Prywatny monitor"); field(configForm, "baseUrl", "https://watch.example.org/"); field(configForm, "token", "controlled-test-value");
+  await act(async () => { configForm.requestSubmit(); await new Promise(resolve => setTimeout(resolve, 20)); });
+  expect(calls.find(call => call.action === "configure")).toMatchObject({ kind: "changedetection", allowLocal: false });
+  expect((configForm.elements.namedItem("token") as HTMLInputElement).value).toBe("");
+  expect(container.textContent).not.toContain("controlled-test-value");
+});

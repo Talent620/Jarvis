@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "phase": "uncommitted-source-template-validation",
+  "sourceCommit": "fb17f9755faad72295cb125563ba2b0220d9319d",
+  "version": "2.1.0-alpha.2",
+  "builder": "25.1.8",
+  "method": "Executed installed FpmTarget.createScripts with project metadata and a temporary output directory; no installation",
+  "postinst": {
+    "path": "QA/autonomia60/durable/evidence/alpha2-generated-postinst.txt",
+    "sha256": "3e38b342dad0d1661bc435fc7e635a749737abf49ce65826017e89b979368cd4",
+    "bashSyntax": "PASS",
+    "templateExpansion": "PASS",
+    "helperPath": "/opt/JARVIS/chrome-sandbox",
+    "receiptPath": "/var/lib/dpkg/info/jarvis-ai-assistant.md5sums",
+    "receiptEntryFormat": "PASS: exact single helper entry confirmed in actual alpha.1 Debian control archive"
+  },
+  "desktopIntegration": {
+    "alternatives": "Preserved existing update-alternatives priority100 and fallback launcher symlink",
+    "mimeAndDesktop": "Preserved best-effort update-mime-database and update-desktop-database",
+    "removal": "PASS: generated after-remove identical to existing default"
+  },
+  "actualAlpha2Deb": "PENDING clean final commit and release:linux",
+  "nativeInstallAndLaunch": "BLOCKED: authorized user desktop unavailable; no system changes or Xvfb installation",
+  "android": {
+    "localBuild": "BLOCKED: no configured Android SDK; Java21 available, CI requests17",
+    "historicalFailureCause": "UNDETERMINED: previous public log evidence insufficient",
+    "workflowDiagnostics": "PASS: parsed all changed YAML; executed success/failure stage-summary paths with synthetic outcomes; no actual CI result claimed"
+  },
+  "regressionTests": {
+    "status": "PASS",
+    "count": 12,
+    "evidence": "QA/autonomia60/durable/evidence/alpha2-packaging-tests.log"
+  },
+  "productionDependencyAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "directDependencies": [
+    "js-yaml@4.3.2 (MIT)",
+    "playwright-core@1.62.1 (Apache-2.0)"
+  ],
+  "electronSecurity": "Existing Electron33.4.11 remains latest33.x in registry. Current45.2.3 requires major migration and native validation. Production-only audit excludes the packaged Electron runtime and does not establish a vulnerability-free application."
+}

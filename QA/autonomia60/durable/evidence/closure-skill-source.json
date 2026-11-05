@@ -1,0 +1,399 @@
+{
+  "at": "2026-11-05T22:27:16.689Z",
+  "directory": "/tmp/jarvis-native-source-u9sKTe",
+  "layer": "native manager, actual GitHub source; no model task success claim",
+  "initial": {
+    "skills": [],
+    "candidates": [],
+    "policies": [],
+    "sources": [
+      "obra/superpowers",
+      "jarvis:self"
+    ],
+    "taskPins": {}
+  },
+  "search": {
+    "candidates": [
+      {
+        "candidateId": "1588fb227064ed63bdcd0889b45a7d71",
+        "publisher": "obra",
+        "name": "receiving-code-review",
+        "version": "22f0b463e7a5",
+        "description": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation",
+        "source": {
+          "repo": "obra/superpowers",
+          "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "path": "skills/receiving-code-review"
+        },
+        "sourceNotice": null,
+        "skillHash": "091df1629510af1b92fc4abd6f96732ebedb4cb2c0f3457e8f2740b0504a2438",
+        "license": "MIT",
+        "licenseFile": {
+          "path": "LICENSE",
+          "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+        },
+        "permissions": [],
+        "dependencies": [],
+        "declaredAllowedTools": null,
+        "compatibility": null,
+        "platforms": [],
+        "state": "DISCOVERED",
+        "discoveredAt": 1793917640213,
+        "relevance": 1
+      },
+      {
+        "candidateId": "8b631f85427ca0a060b3d402174d57d7",
+        "publisher": "obra",
+        "name": "systematic-debugging",
+        "version": "22f0b463e7a5",
+        "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes",
+        "source": {
+          "repo": "obra/superpowers",
+          "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "path": "skills/systematic-debugging"
+        },
+        "sourceNotice": null,
+        "skillHash": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202",
+        "license": "MIT",
+        "licenseFile": {
+          "path": "LICENSE",
+          "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+        },
+        "permissions": [],
+        "dependencies": [],
+        "declaredAllowedTools": null,
+        "compatibility": null,
+        "platforms": [],
+        "state": "DISCOVERED",
+        "discoveredAt": 1793917641253,
+        "relevance": 1
+      },
+      {
+        "candidateId": "bb9c483986da17df816b0879fe4412ce",
+        "publisher": "obra",
+        "name": "verification-before-completion",
+        "version": "22f0b463e7a5",
+        "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+        "source": {
+          "repo": "obra/superpowers",
+          "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "path": "skills/verification-before-completion"
+        },
+        "sourceNotice": null,
+        "skillHash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+        "license": "MIT",
+        "licenseFile": {
+          "path": "LICENSE",
+          "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+        },
+        "permissions": [],
+        "dependencies": [],
+        "declaredAllowedTools": null,
+        "compatibility": null,
+        "platforms": [],
+        "state": "DISCOVERED",
+        "discoveredAt": 1793917642524,
+        "relevance": 1
+      }
+    ],
+    "failures": [],
+    "queryTransmitted": false,
+    "networkAllowed": true,
+    "scope": [
+      "obra/superpowers"
+    ]
+  },
+  "inspection": {
+    "candidate": {
+      "candidateId": "bb9c483986da17df816b0879fe4412ce",
+      "publisher": "obra",
+      "name": "verification-before-completion",
+      "version": "22f0b463e7a5",
+      "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+      "source": {
+        "repo": "obra/superpowers",
+        "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+        "path": "skills/verification-before-completion"
+      },
+      "sourceNotice": null,
+      "skillHash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+      "license": "MIT",
+      "licenseFile": {
+        "path": "LICENSE",
+        "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+      },
+      "permissions": [],
+      "dependencies": [],
+      "declaredAllowedTools": null,
+      "compatibility": null,
+      "platforms": [],
+      "state": "DISCOVERED",
+      "discoveredAt": 1793917642524
+    },
+    "resources": [
+      {
+        "path": "LICENSE.repository",
+        "size": 1070,
+        "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+      },
+      {
+        "path": "SKILL.md",
+        "size": 3646,
+        "hash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+      }
+    ],
+    "hash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+    "licenseText": "MIT License\n\nCopyright (c) 2025 Jesse Vincent\n\nPermission is hereby granted, free of charge, to any ",
+    "untrusted": true,
+    "instructionsSha256": "1f2b1bd6e6915f1c5f693a09ce16008c68af9345bd92d3291cd735b84e57e5b0",
+    "instructionsOmittedFromEvidence": "Public upstream instructions are linked by pinned source commit; not treated as governing instructions."
+  },
+  "staged": {
+    "candidateId": "bb9c483986da17df816b0879fe4412ce",
+    "publisher": "obra",
+    "name": "verification-before-completion",
+    "version": "22f0b463e7a5",
+    "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+    "source": {
+      "repo": "obra/superpowers",
+      "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+      "path": "skills/verification-before-completion"
+    },
+    "sourceNotice": null,
+    "skillHash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+    "license": "MIT",
+    "licenseFile": {
+      "path": "LICENSE",
+      "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+    },
+    "permissions": [],
+    "dependencies": [],
+    "declaredAllowedTools": null,
+    "compatibility": null,
+    "platforms": [],
+    "state": "QUARANTINED",
+    "discoveredAt": 1793917642524,
+    "inspectedHash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+    "inspectedAt": 1793917643201,
+    "id": "obra/verification-before-completion@22f0b463e7a5",
+    "hash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+    "codeKind": "instructions",
+    "resources": [
+      {
+        "path": "LICENSE.repository",
+        "size": 1070,
+        "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+      },
+      {
+        "path": "SKILL.md",
+        "size": 3646,
+        "hash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+      }
+    ],
+    "test": null,
+    "createdAt": 1793917643224,
+    "updatedAt": 1793917643224
+  },
+  "test": {
+    "candidateId": "bb9c483986da17df816b0879fe4412ce",
+    "publisher": "obra",
+    "name": "verification-before-completion",
+    "version": "22f0b463e7a5",
+    "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+    "source": {
+      "repo": "obra/superpowers",
+      "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+      "path": "skills/verification-before-completion"
+    },
+    "sourceNotice": null,
+    "skillHash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+    "license": "MIT",
+    "licenseFile": {
+      "path": "LICENSE",
+      "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+    },
+    "permissions": [],
+    "dependencies": [],
+    "declaredAllowedTools": null,
+    "compatibility": null,
+    "platforms": [],
+    "state": "VERIFIED",
+    "discoveredAt": 1793917642524,
+    "inspectedHash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+    "inspectedAt": 1793917643201,
+    "id": "obra/verification-before-completion@22f0b463e7a5",
+    "hash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+    "codeKind": "instructions",
+    "resources": [
+      {
+        "path": "LICENSE.repository",
+        "size": 1070,
+        "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+      },
+      {
+        "path": "SKILL.md",
+        "size": 3646,
+        "hash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+      }
+    ],
+    "test": {
+      "ok": true,
+      "status": "STATIC_ONLY",
+      "evidence": {
+        "hash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+        "kind": "metadata and resource integrity; no executable code and no task-success claim"
+      },
+      "hash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+      "at": 1793917643233
+    },
+    "createdAt": 1793917643224,
+    "updatedAt": 1793917643233
+  },
+  "active": {
+    "candidateId": "bb9c483986da17df816b0879fe4412ce",
+    "publisher": "obra",
+    "name": "verification-before-completion",
+    "version": "22f0b463e7a5",
+    "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+    "source": {
+      "repo": "obra/superpowers",
+      "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+      "path": "skills/verification-before-completion"
+    },
+    "sourceNotice": null,
+    "skillHash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+    "license": "MIT",
+    "licenseFile": {
+      "path": "LICENSE",
+      "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+    },
+    "permissions": [],
+    "dependencies": [],
+    "declaredAllowedTools": null,
+    "compatibility": null,
+    "platforms": [],
+    "state": "ACTIVE",
+    "discoveredAt": 1793917642524,
+    "inspectedHash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+    "inspectedAt": 1793917643201,
+    "id": "obra/verification-before-completion@22f0b463e7a5",
+    "hash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+    "codeKind": "instructions",
+    "resources": [
+      {
+        "path": "LICENSE.repository",
+        "size": 1070,
+        "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+      },
+      {
+        "path": "SKILL.md",
+        "size": 3646,
+        "hash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+      }
+    ],
+    "test": {
+      "ok": true,
+      "status": "STATIC_ONLY",
+      "evidence": {
+        "hash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+        "kind": "metadata and resource integrity; no executable code and no task-success claim"
+      },
+      "hash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+      "at": 1793917643233
+    },
+    "createdAt": 1793917643224,
+    "updatedAt": 1793917643240
+  },
+  "first": {
+    "kind": "instructions",
+    "id": "obra/verification-before-completion@22f0b463e7a5",
+    "hash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+    "resources": [
+      {
+        "path": "LICENSE.repository",
+        "size": 1070,
+        "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+      },
+      {
+        "path": "SKILL.md",
+        "size": 3646,
+        "hash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+      }
+    ],
+    "untrusted": true,
+    "taskId": "source-first",
+    "taskCompleted": false,
+    "instructionsSha256": "467c077c3a239d48e5bcd3a8742f1b654ee16285bec90dcdb8f0c97313e572e2",
+    "instructionsOmittedFromEvidence": "Public upstream instructions are linked by pinned source commit; not treated as governing instructions."
+  },
+  "second": {
+    "kind": "instructions",
+    "id": "obra/verification-before-completion@22f0b463e7a5",
+    "hash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+    "resources": [
+      {
+        "path": "LICENSE.repository",
+        "size": 1070,
+        "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+      },
+      {
+        "path": "SKILL.md",
+        "size": 3646,
+        "hash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+      }
+    ],
+    "untrusted": true,
+    "taskId": "source-second",
+    "taskCompleted": false,
+    "instructionsSha256": "467c077c3a239d48e5bcd3a8742f1b654ee16285bec90dcdb8f0c97313e572e2",
+    "instructionsOmittedFromEvidence": "Public upstream instructions are linked by pinned source commit; not treated as governing instructions."
+  },
+  "offline": {
+    "candidate": {
+      "candidateId": "bb9c483986da17df816b0879fe4412ce",
+      "publisher": "obra",
+      "name": "verification-before-completion",
+      "version": "22f0b463e7a5",
+      "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+      "source": {
+        "repo": "obra/superpowers",
+        "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+        "path": "skills/verification-before-completion"
+      },
+      "sourceNotice": null,
+      "skillHash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+      "license": "MIT",
+      "licenseFile": {
+        "path": "LICENSE",
+        "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+      },
+      "permissions": [],
+      "dependencies": [],
+      "declaredAllowedTools": null,
+      "compatibility": null,
+      "platforms": [],
+      "state": "DISCOVERED",
+      "discoveredAt": 1793917642524,
+      "inspectedHash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+      "inspectedAt": 1793917643201
+    },
+    "instructions": "# Verification Before Completion\n\n## Overview\n\n**Core principle:** Evidence before claims, always.\n\n**Violating the letter of this rule is violating the spirit of this rule.**\n\n## The Iron Law\n\n```\nNO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE\n```\n\nIf you haven't run the verification command in this message, you cannot claim it passes.\n\n## The Gate Function\n\n```\nBEFORE claiming any status or expressing satisfaction:\n\n1. IDENTIFY: What command proves this claim?\n2. RUN: Execute the FULL command (fresh, complete)\n3. READ: Full output, check exit code, count failures\n4. VERIFY: Does output confirm the claim?\n   - If NO: State actual status with evidence\n   - If YES: State claim WITH evidence\n5. ONLY THEN: Make the claim\n\nSkip any step = lying, not verifying\n```\n\n## Common Failures\n\n| Claim | Requires | Not Sufficient |\n|-------|----------|----------------|\n| Tests pass | Test command output: 0 failures | Previous run, \"should pass\" |\n| Linter clean | Linter output: 0 errors | Partial check, extrapolation |\n| Build succeeds | Build command: exit 0 | Linter passing, logs look good |\n| Bug fixed | Test original symptom: passes | Code changed, assumed fixed |\n| Regression test works | Red-green cycle verified | Test passes once |\n| Agent completed | VCS diff shows changes | Agent reports \"success\" |\n| Requirements met | Line-by-line checklist | Tests passing |\n\n## Red Flags - STOP\n\n- Using \"should\", \"probably\", \"seems to\"\n- Expressing satisfaction before verification (\"Great!\", \"Perfect!\", \"Done!\", etc.)\n- About to commit/push/PR without verification\n- Trusting agent success reports\n- Relying on partial verification\n- Thinking \"just this once\"\n- Tired and wanting work over\n- **ANY wording implying success without having run verification**\n\n## Rationalization Prevention\n\n| Excuse | Reality |\n|--------|---------|\n| \"Should work now\" | RUN the verification |\n| \"I'm confident\" | Confidence ≠ evidence |\n| \"Just this once\" | No exceptions |\n| \"Linter passed\" | Linter ≠ compiler |\n| \"Agent said success\" | Verify independently |\n| \"I'm tired\" | Exhaustion ≠ excuse |\n| \"Partial check is enough\" | Partial proves nothing |\n| \"Different words so rule doesn't apply\" | Spirit over letter |\n\n## Key Patterns\n\n**Tests:**\n```\n✅ [Run test command] [See: 34/34 pass] \"All tests pass\"\n❌ \"Should pass now\" / \"Looks correct\"\n```\n\n**Regression tests (TDD Red-Green):**\n```\n✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)\n❌ \"I've written a regression test\" (without red-green verification)\n```\n\n**Build:**\n```\n✅ [Run build] [See: exit 0] \"Build passes\"\n❌ \"Linter passed\" (linter doesn't check compilation)\n```\n\n**Requirements:**\n```\n✅ Re-read plan → Create checklist → Verify each → Report gaps or completion\n❌ \"Tests pass, phase complete\"\n```\n\n**Agent delegation:**\n```\n✅ Agent reports success → Check VCS diff → Verify changes → Report actual state\n❌ Trust agent report\n```\n\n## When To Apply\n\n**ALWAYS before:**\n- ANY variation of success/completion claims\n- ANY expression of satisfaction\n- ANY positive statement about work state\n- Committing, PR creation, task completion\n- Moving to next task\n- Delegating to agents\n\n**Rule applies to:**\n- Exact phrases\n- Paraphrases and synonyms\n- Implications of success\n- ANY communication suggesting completion/correctness",
+    "resources": [
+      {
+        "path": "LICENSE.repository",
+        "size": 1070,
+        "hash": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+      },
+      {
+        "path": "SKILL.md",
+        "size": 3646,
+        "hash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+      }
+    ],
+    "hash": "6dc1e623b49845b8c332dc6f4881adc866ef9e56adf9335c7821257ed38a52db",
+    "licenseText": "MIT License\n\nCopyright (c) 2025 Jesse Vincent\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n",
+    "untrusted": true
+  },
+  "result": "PASS_NATIVE_SOURCE_LIFECYCLE",
+  "not_model_acceptance": true
+}

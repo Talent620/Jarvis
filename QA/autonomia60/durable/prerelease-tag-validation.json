@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "workflow": ".github/workflows/ubuntu.yml",
+  "status": "SOURCE_VALIDATED_NOT_TRIGGERED",
+  "authorization": "Parent coordinates user-authorized version tag and GitHub prerelease using the existing CI workflow.",
+  "cost": "One existing ubuntu-22.04 job per matching version tag; same dependency installation, tests, lint and Linux package build. No new runner, service, network relay or workflow dispatch.",
+  "guard": {
+    "matchingAlpha": "PASS",
+    "matchingBeta": "PASS",
+    "matchingRc": "PASS",
+    "versionMismatch": "REJECTED",
+    "stableVersion": "REJECTED",
+    "shellMetacharacters": "REJECTED; tag is passed through environment, not interpolated shell code"
+  },
+  "publication": {
+    "action": "softprops/action-gh-release@v2",
+    "prerelease": true,
+    "makeLatest": false,
+    "assets": [
+      "JARVIS.AppImage",
+      "JARVIS.deb",
+      "PROVENANCE.json",
+      "SHA256SUMS"
+    ],
+    "existingMainRollingRelease": "unchanged",
+    "pushOrTagByThisAgent": false
+  },
+  "verificationStillRequired": [
+    "Observe actual successful Build Ubuntu run for exact tag/source commit",
+    "Confirm public GitHub tag and prerelease reference expected commit",
+    "Download public assets and verify SHA256SUMS plus provenance version/commit",
+    "Native installation and real-model tests retain their separately reported status"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "ok": true,
+  "available": true,
+  "status": "AVAILABLE",
+  "backend": "bubblewrap-seccomp-node",
+  "checkedAt": 1793918204894,
+  "expiresAt": 1793918264894,
+  "evidence": {
+    "backend": "bubblewrap-seccomp-node",
+    "hash": "e2f868a7d9af4ce9d06e432f6ef647ec713efd199e12332e74b914d76433cea6",
+    "entrypoint": "probe.cjs",
+    "taskId": null,
+    "started": true,
+    "code": 0,
+    "signal": null,
+    "error": null,
+    "elapsedMs": 52,
+    "limits": {
+      "timeoutMs": 5000,
+      "cpuSeconds": 2,
+      "memoryMb": 1024,
+      "fileBytes": 1048576,
+      "outputBytes": 131072,
+      "scratchBytes": 8388608
+    },
+    "network": "isolated namespace",
+    "hostWritableMounts": [],
+    "childProcesses": "denied by seccomp",
+    "memoryLimit": "RLIMIT_AS shared by all threads; not an RSS measurement"
+  },
+  "reason": null
+}

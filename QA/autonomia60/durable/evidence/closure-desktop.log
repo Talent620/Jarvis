@@ -1,0 +1,5 @@
+
+> jarvis-ai-assistant@2.1.0-alpha.2 qa:desktop
+> node scripts/qa/desktop.cjs --chromium /usr/bin/chromium
+
+QA report: /workspace/Jarvis/QA/runs/2026-11-05T22-43-33-751Z-desktop-3d0da2ee/REPORT.md

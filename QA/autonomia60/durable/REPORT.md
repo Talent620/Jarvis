@@ -1,4 +1,49 @@
-# Trwała autonomia — rejestr wdrożenia i dowodów
+# JARVIS — wdrożenie, odbiór i przekazanie
+
+## Bieżący etap 2.1.0-alpha.2
+
+Baza: `fb17f9755faad72295cb125563ba2b0220d9319d`. Gałąź: `codex/skills-integration-20261105`. Wszystkie wcześniejsze poprawki są zachowane. Aktualna specyfikacja: `SPEC-CLOSURE.md`; jeden rejestr możliwości, integracji, T01–T18 i G1–G10: `requirements.json`. Historyczne 60 testów i 80 przykładów nie zostały przepisane na PASS.
+
+**Pełna regresja: 3074/3074 PASS w 372 plikach, lint i build PASS.** Włączono rzeczywiste testy OS przez `JARVIS_TEST_SKILL_SANDBOX=1`. To wynik testów kodu i kontrolowanych integracji, nie 3074 zaliczonych zadań autonomicznego modelu. Źródła identyfikuje `evidence/closure-validation-source.json`. Początkowe 2 FAIL i nieobsłużone odrzucenie pozostają w `evidence/closure-integration-first.log`: niezgodny z Samsung S9 regex zastąpiono zgodnym; test STOP czeka teraz na rzeczywiste pytanie o zgodę, zachowując wszystkie asercje odmowy późnej akcji i zapamiętania zgody.
+
+Pełny cel nie jest ukończony i nie ma odbioru 10/10. Prawdziwy model, pulpit, kanały produkcyjne, komplet dokumentów i wszystkie ekrany mają oddzielne braki. Nowe pakiety i publikacja są weryfikowane po czystym commitcie; bieżący status przekazania dopisano niżej, gdy dostępny.
+
+### Konkretne zmiany
+
+- **Linux installer:** log użytkownika dowodzi instalacji alpha.1 i FAIL uruchomienia helpera. Źródłem była decyzja o trybie 0755 na podstawie próby `unshare` wykonanej jako root. Nowy Debian postinst kontroluje chronione katalogi, własność i sumę helpera przed ustawieniem root:root 4755. Nie wyłącza sandboxa/AppArmor ani nie zmienia sysctl. Testy 12/12 i rzeczywiste generowanie szablonu electron-builder: `sandbox-installation-alpha2.json`.
+- **Natywne Agent Skills:** katalogi źródeł, bezpieczny YAML, zasoby, kwarantanna, test, polityka właściciela, przypięte wersje/hash, rollback i revoke w istniejącym wykonawcy. Model nie nadaje polityki. Import lokalny używa przypiętych deskryptorów Linux, ogranicza rozmiar/głębokość i odrzuca symlinki/hardlinki. Aktualizacja nie zmienia wersji trwającego zadania. Zakończenie zwalnia przypięcia; trwałe cele zachowują ich tożsamość po wznowieniu.
+- **Kod umiejętności i generowane narzędzia:** bubblewrap+seccomp, stdin/stdout, bez sieci, sekretów, zapisów hosta, dodatków natywnych i potomnych procesów; limity czasu/CPU/pamięci/plików. Legacy generated_tool tworzy kwarantannę w tym samym menedżerze. Rzeczywiste próby utworzenia, testu, aktywacji, nowego wejścia i revoke: `evidence/closure-skill-isolation.json`. Backend wymaga Linux x86_64 i istniejących Node/bwrap/prlimit; nie wykonuje dowolnego Python/shell.
+- **Przeglądarka i MCP:** prawdziwy Playwright z odrębnym kontekstem, dokładnym origin, DOM, draft/fill, zgodą na faktyczne żądanie i ograniczonym pobraniem. STOP uwzględnia start przeglądarki i późne zgody; szkice nie wysyłają GET beaconów. Bezpieczne pobrania używają deskryptorów plików Linux. MCP odwołuje katalog/zgody, przerywa transporty i odrzuca późne wyniki. `browser-mcp.json` rozdziela rzeczywisty Chromium/stdio od mocków JSON HTTP i modelu. Cua Driver nie jest zainstalowany; dokumentację i ograniczenia oceniono, istniejący X11 jest osobną, wymagającą odbioru ścieżką.
+- **Trwałe monitory:** changedetection.io dla konkretnej istniejącej obserwacji oraz ntfy dla jawnie skonfigurowanego serwera/tematu. Tokeny pozostają w chronionym magazynie main. Usunięcie integracji odcina aktywne żądania i spóźnione wyniki; przerwany POST ma stan UNCERTAIN. W istniejącym schedulerze harmonogram dzienny/tygodniowy/miesięczny Europe/Warsaw, DST i pojedyncze nadrabianie po luce. `connector-tests.json`:38 PASS na kontrolowanych kontraktach HTTP, realnym magazynie i procesach; bez kontaktowania rzeczywistych odbiorców.
+- **UI i sterowanie:** Skills i przeglądarka w istniejących Ustawieniach, konektory w istniejącym panelu Celów. Zapytanie filtruje kandydatów, STOP pozostaje dostępny podczas pracy, zgoda jest sprawdzana również po oczekiwaniu. Ustawienia/preferencje nie są już procentem sprawności agenta; licznik audytu nie deklaruje ukończonych zadań ani niezmierzonych oszczędności czasu.
+
+### Dowód rozmowy i granice modeli
+
+`evidence/closure-composer/REPORT.md`: zwykłe pole rozmowy → istniejący brain/provider loop → search/inspect/stage/test/activate/run → rzeczywisty sandbox → zwykła zgoda → zapis/odczyt przez narzędzie JARVIS-a → niezależny odczyt dysku. Wynik PASS. Licencja była wymagana i normalnie aktywowana efemerycznym wystawcą QA; prywatny klucz nie został zapisany. Decyzje dostawcy są jawnie kontrolowane, a transport native w tym teście jest testowy. Nie jest to dowód autonomii rzeczywistej Ollamy ani natywnego IPC Electron.
+
+Osobny `evidence/closure-skill-source.json` potwierdza pobranie prawdziwego, wcześniej nieobecnego katalogu Superpowers, porównywalnych kandydatów, przypięty commit, licencję, zasoby, kwarantannę, politykę i ponowne użycie niezmiennej wersji. `STATIC_ONLY` jest kontrolą instrukcji, nie wykonaniem celu. Nie łączymy tych dwóch odrębnych prób w fikcyjny pełny PASS T01.
+
+Rzeczywisty `qa:desktop` zachowuje wymagania A–C i osobny wynik niezależnej licencji/komendy/ustawień/restartu. Pierwszy aktualny przebieg wykrył błąd oczekiwania testu na ekran ładowania zamiast właściwych Ustawień; został zachowany jako FAIL, a helper poprawiono bez przepisywania ustawień ani pomijania asercji. Końcowy run `2026-11-05T22-45-10-284Z-desktop-6f783a46`: niezależna komenda/ustawienia/restart oraz licencja PASS; A/B/C BLOCKED, kod 2. Dowody: `evidence/closure-desktop/REPORT.md`.
+
+### Nieukończone wymagania
+
+- Brak osiągalnej Ollamy w tej maszynie na sprawdzonych 11435/11434; brak potwierdzonego realnego routingu, nowych 12 parafraz i odbioru model → narzędzie → plik. Zestaw odbiorczy H01–H12 jest zapisany w rejestrze, bez reguł rozpoznających wyłącznie te frazy.
+- Brak autoryzowanej sesji użytkownika; nie wykonano jego pulpitu, schowka/fokusu, natywnej instalacji/migracji/rollback, telefonu ani głosu. Nie instalowano Xvfb.
+- Brak skonfigurowanych rzeczywistych changedetection/ntfy/kont. Kontrolowane usługi nie zaliczają ich produkcyjnego działania. Nadal brak pełnego adaptera rynku Allegro; `changedetection` nie jest takim adapterem.
+- Ogólne jednorazowe plany nadal wymagają renderera; nie wszystkie subskrypcje kont, dokumenty XLSX/DOCX/prezentacje/OCR, Wayland, globalne przejęcie pulpitu i istniejące ekrany mają implementację lub odbiór.
+- Cua jest opcjonalną, nieskonfigurowaną ścieżką. Hermes/OpenClaw/BrowserUse/OpenHands nie zostały uruchomione jako konkurencyjni agenci. Istniejący webhook n8n zachowano, ale nie zaliczono realnego workflow. Rejestr zawiera przypięte źródła, licencje i konkretne decyzje integracyjne.
+- Produkcyjny npm audit: 0, pełny: 32 (14 moderate, 15 high, 3 critical), w tym Electron 33 klasyfikowany jako dev, lecz dystrybuowany w aplikacji. Nie ogłaszamy pełnego audytu jako PASS. Większa migracja runtime nadal wymaga osobnej weryfikacji.
+
+### Uruchomienie i wycofanie
+
+Instrukcja `docs/WYDANIE-ALPHA.md` opisuje dokładny tag, odrębny checkout, budowanie/instalację z zachowaniem lokalnego wystawcy, QA, wymagania oraz wycofanie. Gotowe paczki CI używają wystawcy repozytorium; nie należy przedstawiać ich jako zgodnych z licencją podpisaną inną lokalną parą. Klucz prywatny i dane użytkownika nie są dołączane.
+
+Nie nadpisano lokalnego repozytorium ani danych użytkownika. Nie wykonano merge do main, force-push, instalacji usług, pobierania modeli ani testowych wysyłek do prawdziwych osób. Przeniesienie kodu, wyniki CI i adresy Release wymagają sprawdzenia rzeczywistych zdalnych artefaktów, a nie samej ścieżki `/workspace`.
+
+## Historia poprzedniego etapu alpha.1
+
+Poniższe zapisy opisują poprzedni etap i jego ówczesne ograniczenia. Stan aktualny znajduje się powyżej oraz w `requirements.json`.
+
 
 Stan: **częściowa implementacja zweryfikowana warstwowo; pełny cel nieukończony**. Pełna regresja: **2976 PASS / 0 FAIL, 364 pliki**, lint i build PASS. Obie paczki Linux z commitu `e295f95e3a867de67a8aedb94f1452e0b92cf21c` zbudowano i sprawdzono; natywny start pozostaje BLOCKED. Kod i tag `v2.1.0-alpha.1` są na GitHubie. CI Tests/Ubuntu PASS, Android/Android v2 FAIL bez ustalonej pełnej przyczyny. Utworzenie PR i Release blokuje API Forbidden — szczegóły w `delivery.json` i końcowym checkpointcie poniżej. Baza integracji to `f74705166e484f9fe76a9ecac7212a45376254ba`, gałąź `codex/durable-autonomy-20261105`. Baza zawiera wcześniejsze commity `0320d50`, `155a2e1`, `367f3d4` i `f747051`: STOP/anulowanie zgód, komendy lokalne, wyniki częściowe, model/status/nagłówek, trwałość celów, licencje właściciela/APK, lokalny instalator i wspólny runner QA. Nowsza specyfikacja autoryzuje push na dedykowaną gałąź, PR, CI, tag i Release. Nie autoryzuje force-push, wyłączenia zabezpieczeń, instalacji Xvfb, zakupów ani kontaktowania sprzedawców.
 

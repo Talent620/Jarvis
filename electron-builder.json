@@ -21,6 +21,9 @@
     "maintainer": "Talent620 <192472679+Talent620@users.noreply.github.com>",
     "artifactName": "JARVIS.${ext}"
   },
+  "deb": {
+    "afterInstall": "scripts/linux-after-install.sh"
+  },
   "nsis": {
     "oneClick": true,
     "perMachine": false,

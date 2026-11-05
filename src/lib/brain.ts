@@ -16,7 +16,8 @@ import { memoryContextBlock, addMemory, resolveNamespace, memoryServiceAvailable
 import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
 import { retrieveKnowledge } from "./knowledge";
 import { buildProfileBlock } from "./profile";
-import { isDesktop } from "./desktop";
+import { isDesktop, releaseNativeSkillTask, linkNativeSkillAttempt } from "./desktop";
+import { nativeSkillsContext } from "./skills";
 import { shouldFallback, isNetworkError, isKeyError, humanize, classifyFailoverReason, sanitizeFailReason, isActionRequest, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
 import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
@@ -414,7 +415,7 @@ export function curatedContextBlock(query: string, now = Date.now()): string {
 export function executeGoalPlan(plan: AgentPlan, onStatus?: (s: string) => void): Promise<RunResult> {
   const toolExists = (n: string) => toolDefs.some((d) => d.name === n);
   const control = beginGoalRun(`adhoc:${uid()}`);
-  return runPlan(plan, { toolExists, riskOf, execTool: makeDefaultExecTool((name, input) => runTool(name, input, { signal: control.signal }), riskOf), shouldStop: control.shouldStop, onStatus }).finally(control.finish);
+  return runPlan(plan, { toolExists, riskOf, execTool: makeDefaultExecTool((name, input) => runTool(name, input, { signal: control.signal }), riskOf), shouldStop: control.shouldStop, onStatus }).finally(async () => { control.finish(); await releaseNativeSkillTask(control.signal); });
 }
 
 /** Rozstrzyga, którego dostawcę i model użyć (uwzględnia tryb auto). */
@@ -640,6 +641,12 @@ export async function askModelRich(params: Parameters<typeof askModelReply>[0]):
 }
 
 export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }, signal?: AbortSignal): Promise<JarvisReply> {
+  const requestSignal = signal || new AbortController().signal;
+  try { return await askJarvisInternal(history, onToken, onStatus, extraSystem, prefer, requestSignal); }
+  finally { await releaseNativeSkillTask(requestSignal); }
+}
+
+async function askJarvisInternal(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }, signal?: AbortSignal): Promise<JarvisReply> {
   throwIfAborted(signal);
   const last = history[history.length - 1];
   const localReply = last?.role === "user" && !last.image ? applyInterfaceCommand(last.content) : null;
@@ -736,8 +743,9 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // Z11 — RAG dla modelu lokalnego: `baseCtx.system` (pamięć: fakty + profil + Mem0 + Szósty Zmysł)
   // jest TEN SAM dla WSZYSTKICH dostawców, w tym Ollamy/WebLLM. Mały model lokalny odpowiada z
   // Twoim kontekstem; bez Mem0 degraduje do lokalnego profilu/faktów (zero zależności sieciowych).
-  const currentSystem = systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock, curatedBlock }) + (rulesBlock ? `\n\n${rulesBlock}` : "") + (extraSystem ? `\n\n${extraSystem}` : "");
-  const localToolBudget = store.settings.provider === "ollama"
+  const skillContext = cognition.needsTools || isActionRequest(lastUserContent) ? await abortable(nativeSkillsContext(lastUserContent), signal) : "";
+  const currentSystem = systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock, curatedBlock }) + (rulesBlock ? `\n\n${rulesBlock}` : "") + (extraSystem ? `\n\n${extraSystem}` : "") + skillContext;
+  const localToolBudget = resolved.provider === "ollama" || store.settings.onDeviceOnly
     ? { maxChars: ollamaToolSchemaBudget(currentSystem, lastUserContent, store.settings.ollamaNumCtx ?? 4096, store.settings.ollamaNumPredict) }
     : undefined;
   const baseCtx = {
@@ -866,6 +874,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         const hasFailover = i < order.length - 1 || j < keys.length - 1;
         const wd = makeStallWatchdog(() => settled, () => progressed, !!onTok && hasFailover);
         const attemptController = new AbortController();
+        linkNativeSkillAttempt(signal, attemptController.signal);
         const stopAttempt = () => attemptController.abort();
         if (signal?.aborted) stopAttempt(); else signal?.addEventListener("abort", stopAttempt, { once: true });
         const attemptP = withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, signal: attemptController.signal, tools: provider === "ollama" && !lastUser?.image && isToolFreeGreeting(lastUser?.content || "") ? [] : baseCtx.tools, apiKey, model, onToken: onTok ? (delta) => { if (!attemptController.signal.aborted) onTok(delta); } : undefined }), attemptController.signal);

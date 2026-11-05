@@ -1,0 +1,7 @@
+{
+  "license_required": true,
+  "ephemeral_test_issuer": true,
+  "private_key_written": false,
+  "normal_activation": true,
+  "token_sha256": "64a38b615a11424ff5a7985ab47494e632d48dc806554fc70512a467ee6f12f8"
+}

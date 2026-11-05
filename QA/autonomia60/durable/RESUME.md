@@ -1,3 +1,15 @@
+# Bieżące wznowienie — alpha.2
+
+Baza `fb17f9755faad72295cb125563ba2b0220d9319d`, gałąź `codex/skills-integration-20261105`. Specyfikacja `SPEC-CLOSURE.md`, wspólny `requirements.json`, aktualna sekcja `REPORT.md`. Wszystkie wcześniejsze poprawki zachowane. Upoważnienie obejmuje commit i push dedykowanej gałęzi, PR, istniejący CI, tag i prerelease. Bez force-push ani merge do main, Xvfb, wyłączania sandboxa/licencji, usług systemowych, pobierania modeli i realnych testowych odbiorców.
+
+Kod zintegrowany: native Skills i rzeczywista izolacja bwrap/seccomp, przeglądarka Playwright, MCP STOP/revoke, changedetection/ntfy, kalendarz monitora, istniejący UI i helper SUID pakietu Debian. Finalna pełna regresja: 3074/3074, lint/buildPASS. Pierwsze2 FAIL zapisane i naprawione bez osłabienia asercji. Normalny licencjonowany composer z kontrolowanym modelem + realnym managerem/sandboxem/plikiem PASS, rzeczywisty źródło Superpowers PASS osobno. Nie twierdzić, że oba dowodzą pełnej autonomii Ollamy.
+
+Przed publikacją: dokończyć qa:desktop po poprawce oczekiwania na właściwe Settings, zapisać źródłowy manifest i rezultat; stage+pełny skan sekretów (w narzędziowym sandboxie spawnSync git może dać EPERM, autoryzowana eskalacja odczytu działa); commit; release:linux z czystego commitu; rzeczywiste paczki i sumy; push gałęzi i tagu. Istniejący Ubuntu CI publikuje tag prerelease po swoich bramkach i bez zmiany latest. Potwierdzić publiczne CI, Release i pobrane pliki. Bezpośrednie api.github.com nadal CONNECT 403 po restarcie środowiska; PR może pozostać BLOCKED, nie wnioskować o błędnym tokenie. Nie przepisywać tagów.
+
+Odbiór G1–G10 niezaliczony. Zachować braki implementacji/konfiguracji i próbyBLOCKED/NOT_RUN z rejestru; nie prezentować3074 testów unit/integration jako pełnych zadań. Artefakty nie mogą zawierać profili, prywatnych kluczy, licencji użytkownika ani keystore. Własny lokalny wystawca użytkownika wymaga budowania źródeł przez install:local z istniejącą parą; paczki CI mają wystawcę repozytorium.
+
+## Historia alpha.1
+
 # Wznowienie trwałej autonomii
 
 Gałąź integracyjna: `codex/durable-autonomy-20261105`; baza: `f74705166e484f9fe76a9ecac7212a45376254ba`. Nie wracać do 155a2e1 ani b3234ca. Nie stosować reset/clean/stash; współdzielone drzewo zawiera prace kilku niezależnych agentów.

@@ -11,6 +11,7 @@ function harness() {
   const window = { webContents: { mainFrame: frame }, isDestroyed: () => false };
   const keyboard = { hotkey: vi.fn(async () => "ok"), type: vi.fn(async () => "ok"), click: vi.fn(async () => "ok"), focusWindow: vi.fn(async () => ({ ok: true })) };
   const command = vi.fn(async () => ({}));
+  const skillCommand = vi.fn(async () => ({}));
   let resolve!: (result: { response: number }) => void;
   let reject!: (error: Error) => void;
   const showMessageBox = vi.fn(() => new Promise((yes, no) => { resolve = yes; reject = no; }));
@@ -24,18 +25,21 @@ function harness() {
     "./linux-keyboard.cjs": { createLinuxKeyboard: () => keyboard },
     "./local-ollama.cjs": { createConfiguredLocalOllamaManager: () => ({}) },
     "./workspace-tools.cjs": { createWorkspaceTools: () => ({ root: "/tmp/fixture", cancelAll: vi.fn() }) },
-    "./mcp-stdio.cjs": { createStdioMcpManager: () => ({}) },
+    "./mcp-stdio.cjs": { createStdioMcpManager: () => ({ abortAll: vi.fn() }) },
     "./goal-service.cjs": { createGoalService: () => ({ command }) },
+    "./monitor-connectors.cjs": { createMonitorConnectors: () => ({ list: async () => [] }) },
+    "./skill-isolation.cjs": { createSkillIsolation: () => ({ cancelAll: vi.fn() }) },
+    "./skill-manager.cjs": { createSkillManager: () => ({ command: skillCommand, stopAll: vi.fn() }) },
   };
   const filename = fileURLToPath(new URL("../electron/main.cjs", import.meta.url));
   runInNewContext(readFileSync(filename, "utf8") + "\nmainWindow = testWindow; registerDesktopControl();", {
     require: (name: string) => dependencies[name] ?? (name.startsWith("./") ? {} : require(name)),
     __dirname: fileURLToPath(new URL("../electron", import.meta.url)),
-    process: { platform: "linux", env: {}, pid: 99 }, Buffer, setTimeout, clearTimeout, setInterval, clearInterval,
+    process: { platform: "linux", env: {}, pid: 99 }, Buffer, AbortController, URL, setTimeout, clearTimeout, setInterval, clearInterval,
     testWindow: window,
   });
   const event = { sender: window.webContents, senderFrame: frame };
-  return { invoke: (name: string, payload?: unknown) => handlers.get(`jarvis:${name}`)!(event, payload), keyboard, command, showMessageBox, accept: () => resolve({ response: 1 }), fail: () => reject(new Error("dialog failed")) };
+  return { invoke: (name: string, payload?: unknown) => handlers.get(`jarvis:${name}`)!(event, payload), keyboard, command, skillCommand, showMessageBox, accept: () => resolve({ response: 1 }), fail: () => reject(new Error("dialog failed")) };
 }
 
 describe("monitor source consent cannot be accepted by JARVIS desktop input tools", () => {
@@ -64,5 +68,42 @@ describe("monitor source consent cannot be accepted by JARVIS desktop input tool
     h.accept();
     expect(await background).toMatchObject({ ok: false, backgroundEnabled: false });
     expect(await h.invoke("monitor-settings")).toMatchObject({ ok: true, backgroundEnabled: false });
+  });
+
+  it("skill policy requires native owner consent, blocks synthetic input and rejects late STOP approval", async () => {
+    const h = harness();
+    expect(await h.invoke("skill-command", { request: { action: "policy", trustedUserAction: true }, taskId: "task1" })).toMatchObject({ ok: false });
+    expect(h.skillCommand).not.toHaveBeenCalled();
+    const policy = { source: "owner/repo", codeKinds: ["instructions"], permissions: ["files.read"], licenses: ["MIT"], enabled: true };
+    const pending = h.invoke("skill-policy", policy);
+    expect(h.showMessageBox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ defaultId: 0, detail: expect.stringContaining("owner/repo") }));
+    expect(await h.invoke("hotkey", { combo: "enter" })).toBe("err:owner-confirmation-pending");
+    await h.invoke("stop-workspace-processes");
+    h.accept(); expect(await pending).toMatchObject({ ok: false });
+    expect(h.skillCommand).not.toHaveBeenCalled();
+    const accepted = h.invoke("skill-policy", policy); h.accept();
+    expect(await accepted).toMatchObject({ ok: true });
+    expect(h.skillCommand).toHaveBeenCalledWith({ ...policy, action: "policy" }, { trustedUserAction: true });
+  });
+
+  it("uses envelope task identity and rejects cancelled old task without poisoning a new one", async () => {
+    const h = harness();
+    await h.invoke("skill-cancel", "old-task");
+    expect(await h.invoke("skill-command", { request: { action: "run", id: "p/x@v" }, taskId: "old-task" })).toMatchObject({ ok: false });
+    expect(h.skillCommand).not.toHaveBeenCalled();
+    expect(await h.invoke("skill-command", { request: { action: "list", taskId: "stolen", trustedUserAction: true }, taskId: "new-task", allowNetwork: false })).toMatchObject({ ok: true });
+    expect(h.skillCommand).toHaveBeenCalledWith({ action: "list" }, expect.objectContaining({ taskId: "new-task", allowNetwork: false }));
+  });
+  it("attempt cancellation fences late work while a new provider attempt retains logical task pins", async () => {
+    const h = harness();
+    let resolve!: (value: object) => void;
+    h.skillCommand.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+    const first = h.invoke("skill-command", { request: { action: "run", id: "p/x@v" }, taskId: "goal-one", executionId: "attempt-one" });
+    await h.invoke("skill-cancel", { taskId: "goal-one", executionId: "attempt-one" });
+    resolve({ result: "late" }); expect(await first).toMatchObject({ ok: false });
+    expect(await h.invoke("skill-command", { request: { action: "list" }, taskId: "goal-one", executionId: "attempt-one" })).toMatchObject({ ok: false });
+    expect(await h.invoke("skill-command", { request: { action: "list" }, taskId: "goal-one", executionId: "attempt-two" })).toMatchObject({ ok: true });
+    await h.invoke("skill-cancel", { taskId: "goal-one" });
+    expect(await h.invoke("skill-command", { request: { action: "list" }, taskId: "goal-one", executionId: "attempt-three" })).toMatchObject({ ok: false });
   });
 });

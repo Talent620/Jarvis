@@ -1,12 +1,23 @@
 // Most do sterowania komputerem (Windows/desktop) wystawiony przez Electron preload.
 // Na Androidzie/web window.jarvisDesktop nie istnieje — funkcje zwracają komunikat.
+import { store } from "./store";
+import { abortable } from "./abort";
 
 export interface JarvisDesktop {
   platform: string;
+  skillCommand?(request: Record<string, unknown>, taskId?: string, allowNetwork?: boolean, executionId?: string): Promise<NativeSkillResponse>;
+  skillPolicy?(request: Record<string, unknown>): Promise<NativeSkillResponse>;
+  skillCancel?(taskId: string, executionId?: string): Promise<{ ok: boolean }>;
+  skillRelease?(taskId: string): Promise<{ ok: boolean }>;
+  browserCommand?(request: Record<string, unknown>): Promise<{ ok: boolean; error?: string; [key: string]: unknown }>;
+  browserGrant?(request: { origin: string; actions: string[]; allowLocal: boolean }): Promise<{ ok: boolean; error?: string; [key: string]: unknown }>;
+  monitorConnectorList?(): Promise<{ ok: boolean; connectors?: Array<{ id: string; kind: string; label: string; baseUrl: string; configured: boolean }>; error?: string }>;
+  monitorConnectorConfigure?(request: Record<string, unknown>): Promise<{ ok: boolean; error?: string; [key: string]: unknown }>;
+  monitorConnectorRemove?(id: string): Promise<{ ok: boolean; error?: string }>;
   monitorReadEvent?(id: string): Promise<MonitorResponse>;
   clipboardRead?(): Promise<{ ok: boolean; text?: string; truncated?: boolean; error?: string }>;
   monitorCommand?(request: Record<string, unknown>): Promise<MonitorResponse>;
-  monitorGrant?(request: { source: MonitorSource; desktopNotification: boolean }): Promise<MonitorResponse>;
+  monitorGrant?(request: { source: MonitorSource; desktopNotification: boolean; ntfyNotification?: string }): Promise<MonitorResponse>;
   monitorSettings?(request?: { backgroundEnabled?: boolean }): Promise<{ ok: boolean; backgroundEnabled?: boolean; error?: string }>;
   listWindows?(): Promise<{ ok: boolean; windows?: { id: string; title: string }[]; truncated?: boolean; error?: string }>;
   focusWindow?(id: string, title: string): Promise<{ ok: boolean; id?: string; title?: string; error?: string }>;
@@ -39,6 +50,76 @@ export function desktop(): JarvisDesktop | null {
 }
 
 export const isDesktop = (): boolean => !!desktop();
+
+export interface NativeSkillRecord {
+  id: string; publisher: string; name: string; version: string; description: string;
+  state: string; hash: string; license: string; permissions: string[]; codeKind: string;
+  source: { kind?: string; repo?: string; commit?: string; localRoot?: string; path?: string };
+  test?: unknown;
+}
+export interface NativeSkillResponse {
+  ok: boolean; error?: string; skills?: NativeSkillRecord[]; candidates?: Array<Record<string, unknown>>;
+  policies?: Array<Record<string, unknown>>; sources?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+const skillTasks = new WeakMap<AbortSignal, string>();
+const skillTaskParents = new WeakMap<AbortSignal, AbortSignal>();
+const skillExecutions = new WeakMap<AbortSignal, string>();
+const skillTaskChildren = new WeakMap<AbortSignal, Set<AbortSignal>>();
+export function linkNativeSkillAttempt(parent: AbortSignal | undefined, child: AbortSignal): void {
+  if (!parent) return;
+  skillTaskParents.set(child, parent);
+  if (!skillTaskChildren.has(parent)) skillTaskChildren.set(parent, new Set());
+  skillTaskChildren.get(parent)!.add(child);
+}
+/** Goal identity comes from the persisted executor, never from model tool input. */
+export async function bindNativeSkillGoal(signal: AbortSignal, goalId: string): Promise<void> {
+  if (!desktop()?.skillCommand) return;
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(goalId)));
+  skillTasks.set(signal, `skill-goal-${Array.from(hash, byte => byte.toString(16).padStart(2, "0")).join("")}`);
+}
+const skillActions = new Set(["list", "search", "scan", "inspect", "stage", "test", "activate", "disable", "revoke", "remove", "rollback", "resource", "run", "update", "assert_task", "author"]);
+function skillTask(signal?: AbortSignal): string {
+  if (!signal) return `skill-single-${crypto.randomUUID()}`;
+  let id = skillTasks.get(signal);
+  if (!id) { const parent = skillTaskParents.get(signal); id = parent ? skillTask(parent) : `skill-task-${crypto.randomUUID()}`; skillTasks.set(signal, id); }
+  return id;
+}
+export async function nativeSkillCommand(request: Record<string, unknown>, signal?: AbortSignal): Promise<NativeSkillResponse> {
+  if (!skillActions.has(String(request.action))) throw new Error("Zgody umiejętności nadaje właściciel w ustawieniach.");
+  if (signal?.aborted) throw new DOMException("Zatrzymano zadanie", "AbortError");
+  const bridge = desktop();
+  if (!bridge?.skillCommand) return { ok: false, error: "Menedżer umiejętności wymaga aktualnej aplikacji desktopowej." };
+  const taskId = skillTask(signal);
+  let executionId = signal ? skillExecutions.get(signal) : undefined;
+  if (!executionId) { executionId = `skill-exec-${crypto.randomUUID()}`; if (signal) skillExecutions.set(signal, executionId); }
+  const cancel = () => { void bridge.skillCancel?.(taskId, executionId).catch(() => {}); };
+  signal?.addEventListener("abort", cancel, { once: true });
+  try {
+    // The model cannot supply trusted context or steal another task's pin.
+    const { taskId: _task, trustedUserAction: _trusted, signal: _signal, ...safe } = request;
+    const result = await abortable(bridge.skillCommand(safe, taskId, !store.settings.onDeviceOnly, executionId), signal);
+    if (signal?.aborted) throw new DOMException("Zatrzymano zadanie", "AbortError");
+    if (!result.ok) throw new Error(result.error || "Operacja umiejętności nie została potwierdzona.");
+    return result;
+  } finally { signal?.removeEventListener("abort", cancel); }
+}
+export async function assertNativeSkillTask(signal?: AbortSignal): Promise<void> {
+  if (!signal || !desktop()?.skillCommand) return;
+  let current: AbortSignal | undefined = signal;
+  while (current && !skillTasks.has(current)) current = skillTaskParents.get(current);
+  if (current) await nativeSkillCommand({ action: "assert_task" }, signal);
+}
+export async function releaseNativeSkillTask(signal?: AbortSignal): Promise<void> {
+  if (!signal) return;
+  const taskId = skillTasks.get(signal);
+  const forget = (current: AbortSignal) => {
+    for (const child of skillTaskChildren.get(current) || []) forget(child);
+    skillTasks.delete(current); skillTaskChildren.delete(current); skillTaskParents.delete(current); skillExecutions.delete(current);
+  };
+  forget(signal);
+  if (taskId) await desktop()?.skillRelease?.(taskId).catch(() => {});
+}
 
 const NOT_DESKTOP = "Ta akcja działa tylko w aplikacji desktopowej JARVIS (Windows .exe).";
 
@@ -188,12 +269,13 @@ export async function hotkey(combo: string, window?: string): Promise<string> {
 }
 
 
-export type MonitorSource = { kind: "json"; url: string } | { kind: "directory"; path: string };
+export type MonitorSource = { kind: "json"; url: string } | { kind: "directory"; path: string } | { kind: "changedetection"; connectorId: string; watchId: string };
 export interface MonitorRecord {
   id: string; title: string; state: string; source: MonitorSource;
   criteria: { contains: string; variant?: string; condition?: string; maxTotal?: number; currency?: string };
-  criteriaVersion: number; nextCheckAt?: number; lastCheckAt?: number; lastSuccessAt?: number;
+  criteriaVersion: number; nextCheckAt?: number; lastCheckAt?: number; lastSuccessAt?: number; lastSourceCheckAt?: number;
   lastResult?: string; lastError?: { code: string; at: number; message: string } | null; error?: string; intervalMs: number;
+  schedule?: { kind: "daily" | "weekly" | "monthly"; time: string; weekdays?: number[]; day?: number } | null;
 }
 export interface MonitorEvent {
   id: string; goalId: string; title: string; state: string; reason?: string | Record<string, unknown>; url?: string;

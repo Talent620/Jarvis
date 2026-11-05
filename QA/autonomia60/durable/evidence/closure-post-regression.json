@@ -1,0 +1,7 @@
+{
+  "at": "2026-11-05T22:46:58.483549+00:00",
+  "changed_after_full_suite": {
+    "scripts/qa/agent-smoke.cjs": "73963613a19d363cfce404ab77ab8814191479a73a3bcb4fc547709b0f68e2d1"
+  },
+  "verification": "QA-only loaded Settings wait; direct existing desktop runner independently licensed local checks PASS, required A/B/C BLOCKED. No runtime code changed."
+}

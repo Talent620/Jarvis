@@ -1,0 +1,40 @@
+{
+  "operation": "Only trailing spaces and final blank lines removed; test assertions, failures and warnings preserved. Raw checksums retained below.",
+  "files": [
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha2-packaging-tests.log",
+      "raw_sha256": "48280e29963c599ee17fa2732d3a6fbded709c5308625eaf11a05cd551874aaa",
+      "stored_sha256": "445979eaa0e2e6d5b2d7e638ebfe48b81ff140b671f77e7a0835944a1da75fd7"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/browser-mcp-tests.log",
+      "raw_sha256": "15289f263d52575ce75debf3add01f1195f1054004131cca104bc92e1c43dd42",
+      "stored_sha256": "2c4ea909bee9fce776e2b168cf36787295180eba1bb7ff6306d8843b5558ad37"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/closure-full-build.log",
+      "raw_sha256": "fc27e036b10858f6d1a6030b1da85a115c9b4719577a647a91b64edfd5667f16",
+      "stored_sha256": "469bfec23399db2c5a9cf4e4253468e51cafa9097f98228c64b5410ac2e6de30"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/closure-full-lint.log",
+      "raw_sha256": "b4c2ee00bb419fbee44d11ab5d63b1c90955e9bd218478caec9ed3d76e53776b",
+      "stored_sha256": "ed83997f58536158478c4bba7a38b334d5a513d6e6083c1ff374e8963719b4cc"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/closure-full-tests.log",
+      "raw_sha256": "d8ea83e175a36725eee2599ff2e985a18e23e1a3e23c8913076ff485b6521293",
+      "stored_sha256": "8db1b7b73fdcde7a93375651c1d3420b85a567ae592d23f70568b819ebf9db1c"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/closure-integration-first.log",
+      "raw_sha256": "b2d515e0b13c2f79be5317ee6e495776b2dec59abc746a7826f7246d0396e0ce",
+      "stored_sha256": "7d04fc06b43abfd0b08b9d4cd1f467614fada17923f1a9d67a7b5ef189f7b149"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/closure-skill-isolation-tests.log",
+      "raw_sha256": "51dce5627ff084a645ab853c4b4365793c80e2ec8d436c5400a7faec8a4bc550",
+      "stored_sha256": "950ee6fb48a87c921518de55812b599ce085dc49434a2477197a65974243ceb7"
+    }
+  ]
+}

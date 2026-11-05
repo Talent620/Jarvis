@@ -12,6 +12,7 @@ import { runTool, toolDefs } from "./tools";
 import { riskOf } from "./permissions";
 import { attempted } from "./actionOutcome";
 import { beginGoalRun } from "./goalControl";
+import { bindNativeSkillGoal, releaseNativeSkillTask } from "./desktop";
 
 const toolExists = (n: string) => toolDefs.some((d) => d.name === n);
 
@@ -40,7 +41,9 @@ export interface StartGoalInput {
  */
 export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStorage): Promise<{ record: GoalRecord; result: RunResult }> {
   const control = beginGoalRun(input.correlationId);
+  let releasePins = false;
   try {
+  await bindNativeSkillGoal(control.signal, input.correlationId);
   if ((await loadGoals(storage)).some((g) => g.id === input.correlationId)) throw new Error("Cel o tym identyfikatorze już istnieje — wznów zapisany cel.");
   let record: GoalRecord = { ...newGoal(input.goal, input.plan, input.correlationId, input.now), status: "running" };
   await upsertGoal(record, storage);
@@ -64,9 +67,10 @@ export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStora
   const result = pipeline.run;
 
   record = { ...record, status: control.wasStopped() ? "cancelled" : finalStatus(result), updatedAt: input.now };
+  releasePins = record.status === "completed" || record.status === "cancelled";
   await upsertGoal(record, storage);
   return { record, result };
-  } finally { control.finish(); }
+  } finally { control.finish(); if (releasePins) await releaseNativeSkillTask(control.signal); }
 }
 
 /**
@@ -80,7 +84,9 @@ export async function resumeAndRunGoal(
   storage?: GoalStorage,
 ): Promise<{ record: GoalRecord; result: RunResult }> {
   const control = beginGoalRun(record.id);
+  let releasePins = false;
   try {
+  await bindNativeSkillGoal(control.signal, record.id);
   const saved = (await loadGoals(storage)).find((goal) => goal.id === record.id);
   if (!saved) throw new Error("Nie znaleziono zapisanego celu — nie można bezpiecznie go wznowić.");
   if (saved.status === "cancelled") throw new Error("Cel zatrzymano poleceniem STOP. Nie wznowiono go automatycznie.");
@@ -112,9 +118,10 @@ export async function resumeAndRunGoal(
   const result = pipeline.run;
 
   rec = { ...rec, status: control.wasStopped() ? "cancelled" : finalStatus(result), updatedAt: opts.now };
+  releasePins = rec.status === "completed" || rec.status === "cancelled";
   await upsertGoal(rec, storage);
   return { record: rec, result };
-  } finally { control.finish(); }
+  } finally { control.finish(); if (releasePins) await releaseNativeSkillTask(control.signal); }
 }
 
 /** Wczytaj cele posortowane od najnowszych (do panelu). */

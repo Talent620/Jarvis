@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { spawn, spawnSync } = require("child_process");
+const nodeCrypto = require("node:crypto");
 const { createPublicPageReader } = require("./public-page.cjs");
 const { extractPage } = require("./page-extract.cjs");
 
@@ -183,11 +184,34 @@ function createWorkspaceTools(options) {
         await options.openExternal(url.toString());
         result = { ok: true, url: url.toString() };
       } else if (tool === "generated_tool") {
-        // Node's process, timeout and --check are not a sandbox: code can read the
-        // user's files, environment and network. Until a verified OS-level sandbox
-        // is available, do not execute or install a generated candidate.
-        result = { ok: false, accepted: false, blocked: true,
-          error: "Test i instalacja wygenerowanego narzędzia są niedostępne: brak zweryfikowanego izolowanego środowiska. Kod nie został uruchomiony ani zapisany." };
+        // This legacy entrypoint only authors a quarantined native skill. Testing,
+        // activation and execution use the same manager, hash and owner policy.
+        // No code executes in this workspace adapter, even when asked to activate.
+        if (typeof options.generatedTool !== "function") {
+          result = { ok: false, accepted: false, blocked: true,
+            error: "Test i instalacja wygenerowanego narzędzia są niedostępne: brak zweryfikowanego izolowanego środowiska. Kod nie został uruchomiony ani zapisany." };
+        } else {
+          const name = input.name, code = input.code;
+          if (typeof name !== "string" || name.length > 64 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) throw new Error("Nazwa narzędzia wymaga 1–64 małych liter, cyfr i łączników.");
+          if (typeof code !== "string" || !code.trim() || Buffer.byteLength(code) > 128 * 1024) throw new Error("Kod Node.js wymaga 1–128 KiB.");
+          const description = input.description ?? `Własne narzędzie ${name}; wykonanie Node.js w izolacji bez sieci.`;
+          if (typeof description !== "string" || !description.trim() || description.length > 1024) throw new Error("Opis wymaga 1–1024 znaków.");
+          if (typeof input.expectedOutput !== "string" || Buffer.byteLength(input.expectedOutput) > 4096) throw new Error("Wymagany konkretny wynik testu expectedOutput, do 4 KiB.");
+          const inputJson = JSON.stringify(input.input ?? null);
+          if (Buffer.byteLength(inputJson) > 4096) throw new Error("Wejście testowe przekracza 4 KiB.");
+          const version = nodeCrypto.createHash("sha256").update(JSON.stringify({ name, code, description, inputJson, expectedOutput: input.expectedOutput })).digest("hex").slice(0, 24);
+          const metadata = { name, description, license: "LicenseRef-Owner-Generated", metadata: { version, jarvis: { permissions: [], platforms: ["linux"], entrypoint: "scripts/run.cjs", test: { entrypoint: "scripts/run.cjs", inputJson, expectedOutput: input.expectedOutput } } } };
+          const header = JSON.stringify(metadata, null, 2);
+          if (header.length > 15000) throw new Error("Metadane testowe przekraczają limit nagłówka.");
+          const record = await options.generatedTool({ action: "author", files: {
+            "SKILL.md": `---\n${header}\n---\nPrzetwarzaj wyłącznie jawne wejście JSON ze stdin i zwracaj wynik na stdout. Test oraz aktywacja są odrębnymi krokami; samo utworzenie pakietu nie oznacza wykonania zadania.\n`,
+            "scripts/run.cjs": code,
+          } });
+          if (!record?.id || !record.hash || !record.state) throw new Error("Menedżer nie potwierdził utworzenia umiejętności.");
+          result = { ok: true, accepted: false, executed: false, staged: record.state === "QUARANTINED", status: record.state, id: record.id, hash: record.hash,
+            nextActions: record.state === "ACTIVE" ? ["skill_run"] : ["skill_test", "skill_activate", "skill_run"],
+            note: "Zapisano pakiet w menedżerze umiejętności. Test wymaga działającej izolacji OS; aktywacja wymaga zakresowej zgody właściciela dla jarvis:self i LicenseRef-Owner-Generated." };
+        }
       } else if (tool === "status") {
         result = {
           ok: true,
@@ -198,6 +222,7 @@ function createWorkspaceTools(options) {
             sqlite: available("sqlite3"), postgres: available("psql"), browser: typeof options.openExternal === "function",
           },
           safety: { workspaceBoundary: true, workspaceBoundaryScope: "file adapters only", processSandbox: false, generatedToolSandbox: false, commandAllowlist: [...SAFE_COMMANDS], backups: true, auditLog: true },
+          generatedSkillStaging: typeof options.generatedTool === "function",
         };
       } else throw new Error(`Nieznane narzędzie systemowe: ${tool}`);
     } catch (error) {

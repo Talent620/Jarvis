@@ -1,0 +1,26 @@
+[
+  {
+    "id": "SKILL-COMPOSER",
+    "level": "controlled provider + real registry + real OS sandbox + actual workspace file",
+    "status": "PASS",
+    "detail": "Normal composer → existing brain/provider loop → search/inspect/stage/test/activate/run → normal user consent → file write/read. Independent disk oracle passed; completed task pins released. Provider decisions are fixtures, not evidence of model autonomy or native Electron IPC.",
+    "evidence": [
+      "controlled-mode.json",
+      "controlled-provider.json",
+      "native-operations.json",
+      "isolation.json",
+      "independent-oracle.json",
+      "controlled-composer.png",
+      "ui-consents.json"
+    ]
+  },
+  {
+    "id": "REAL-MODEL",
+    "level": "actual model",
+    "status": "BLOCKED",
+    "detail": "This explicit controlled mode does not connect to an actual Ollama model. Run qa:desktop with the existing configured model in the authorized local session.",
+    "evidence": [
+      "controlled-mode.json"
+    ]
+  }
+]
