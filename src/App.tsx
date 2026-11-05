@@ -1,3 +1,5 @@
+import InterfaceSwitch from "./components/InterfaceSwitch";
+import { applyInterfaceCommand } from "./lib/interfaceMode";
 import { lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { CommandItem } from "./lib/commandPalette";
 import type { GrowthContext } from "./lib/growthContext";
@@ -541,6 +543,16 @@ export default function App() {
     setInterim("");
     stopSpeaking();
     buzz(14); // subtelna haptyka przy wysłaniu
+
+    const reply = applyInterfaceCommand(text);
+    if (reply) {
+      const userId = uid();
+      const replyId = uid();
+      setLiveId(replyId);
+      setMessages((m) => [...m, { id: userId, role: "user", text, createdAt: Date.now() }, { id: replyId, role: "assistant", text: reply, tools: ["interfejs"], createdAt: Date.now() }]);
+      if (store.settings.speak) void speak(reply, store.settings).catch(() => {});
+      return;
+    }
 
     // ⬢ „Szef" (wpisane lub wypowiedziane) → przywołaj pełnoekranowego agenta głosowego.
     if (isBossSummon(text)) { setShowBoss(true); return; }
@@ -1165,7 +1177,7 @@ export default function App() {
   const nowCard = pickNowCard({ consent: !!pendingConsent, decision: !!decision, suggestion: !!(tip && store.settings.tips !== false) });
 
   return (
-    <div className={`app${messages.length ? " chatting" : ""}`}>
+    <div className={`app${messages.length ? " chatting" : ""}${settings.interfaceMode === "modern" ? " interface-modern" : ""}`}>
       {booting && <Boot onDone={() => setBooting(false)} />}
       {clipSuggest && (
         <div className="clip-widget">
@@ -1229,6 +1241,7 @@ export default function App() {
           );
         })()}
         <div className="spacer" />
+        <InterfaceSwitch />
         <button
           className="icon-btn"
           onClick={() => setShowGuardian(true)}

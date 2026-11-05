@@ -2763,3 +2763,21 @@ html.low-power * {
 html.app-hidden * {
   animation-play-state: paused !important;
 }
+
+/* Wspólna kontrolka oraz alternatywna powłoka bez montowania czatu od nowa. */
+.interface-switch { display: inline-flex; align-items: center; gap: 3px; padding: 3px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--bg-2); color: var(--text-dim); flex: 0 0 auto; }
+.interface-switch span { padding: 0 5px; font-size: 12px; }
+.interface-switch button { min-height: 36px; padding: 0 9px; border: 0; border-radius: 8px; color: var(--text); background: transparent; cursor: pointer; }
+.interface-switch button[aria-pressed="true"] { color: var(--bg); background: var(--cyan); font-weight: 700; }
+.interface-switch button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.interface-modern { max-width: 1200px; padding: max(var(--sat), 14px) max(var(--sar), 22px) max(var(--sab), 14px) max(var(--sal), 22px); }
+.interface-modern .topbar { background: var(--bg-3); border: 1px solid var(--line); border-radius: 18px; padding: 12px; box-shadow: var(--shadow-1); }
+.interface-modern .convo { margin: 12px 0; padding: 20px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 20px; }
+.interface-modern .bubble { border-radius: 18px; box-shadow: none; }
+.interface-modern .composer { padding: 8px; border: 1px solid var(--line); border-radius: 18px; background: var(--bg-3); }
+@media (max-width: 850px) {
+  .topbar { flex-wrap: wrap; }
+  .topbar .interface-switch { order: 2; }
+  .interface-modern { padding-left: 10px; padding-right: 10px; }
+  .interface-modern .convo { padding: 12px; }
+}

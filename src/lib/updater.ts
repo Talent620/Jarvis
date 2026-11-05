@@ -3,20 +3,22 @@
 // otwiera pobranie najnowszej wersji (1 klik → instalacja); w przeglądarce odświeża do najnowszej.
 import { Capacitor } from "@capacitor/core";
 import { fetchTimeout } from "./http";
-import { isDesktop } from "./desktop";
+import { desktop } from "./desktop";
 import { openUrl } from "./deviceControl";
 
 const REPO = "Talent620/Jarvis";
-export type Plat = "android" | "ios" | "windows" | "web";
+export type Plat = "android" | "ios" | "windows" | "linux" | "web";
 
-const ASSET: Record<Plat, string> = { android: "jarvis.apk", ios: "JARVIS.ipa", windows: "JARVIS.exe", web: "web-bundle.zip" };
-const MANIFEST: Record<Plat, string> = { android: "bundle.json", ios: "ios.json", windows: "windows.json", web: "bundle.json" };
+const ASSET: Record<Plat, string> = { android: "jarvis.apk", ios: "JARVIS.ipa", windows: "JARVIS.exe", linux: "JARVIS.AppImage", web: "web-bundle.zip" };
+const MANIFEST: Record<Plat, string> = { android: "bundle.json", ios: "ios.json", windows: "windows.json", linux: "linux.json", web: "bundle.json" };
 
 export function platform(): Plat {
   const p = Capacitor.getPlatform?.();
   if (p === "ios") return "ios";
   if (p === "android" || Capacitor.isNativePlatform?.()) return "android";
-  if (isDesktop()) return "windows";
+  const d = desktop();
+  if (d?.platform === "linux") return "linux";
+  if (d) return "windows";
   return "web";
 }
 
@@ -84,6 +86,7 @@ export interface UpdateApplyResult {
 
 export function platformLabel(p: Plat): string {
   if (p === "windows") return "Windows";
+  if (p === "linux") return "Linux";
   if (p === "android") return "Android";
   if (p === "ios") return "iPhone / iPad";
   return "Przeglądarka / PWA";
@@ -129,6 +132,9 @@ export async function checkForUpdate(): Promise<UpdateInfo | { error: string }> 
     // WGRANIA pliku na release. Czas wgrania jest zawsze parę minut po buildzie → ten sam build był
     // wiecznie widziany jako „nowsza wersja". bundle.json.iso to dokładnie ta sama minuta co build.
     const assets: { name?: string; updated_at?: string; browser_download_url?: string; size?: number }[] = Array.isArray(d.assets) ? d.assets : [];
+    if (p === "linux" && !assets.some((a) => a.name === ASSET.linux) && !assets.some((a) => a.name === MANIFEST.linux)) {
+      return { error: "W wydaniu nie ma jeszcze aktualizacji dla Linuksa." };
+    }
     let latestISO = "";
     let verifiedBuild = false;
     const manifest = assets.find((a) => a.name === MANIFEST[p]);

@@ -1,3 +1,4 @@
+import { applyInterfaceCommand } from "./interfaceMode";
 import { store, uid } from "./store";
 import { brand } from "./brand";
 import { toolDefs, resetCitations, getCitations, runTool } from "./tools";
@@ -626,6 +627,9 @@ export async function askModelRich(params: Parameters<typeof askModelReply>[0]):
 }
 
 export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }): Promise<JarvisReply> {
+  const last = history[history.length - 1];
+  const localReply = last?.role === "user" && !last.image ? applyInterfaceCommand(last.content) : null;
+  if (localReply) return { text: localReply, tools: ["interfejs"] };
   const resolved = resolveProvider();
   if (!resolved) {
     throw new Error(

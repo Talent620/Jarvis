@@ -1,3 +1,4 @@
+import InterfaceSwitch from "./InterfaceSwitch";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, BarChart3, BrainCircuit, Check, Clock3, Download, Mail, PanelsTopLeft, PlugZap, RefreshCw, ShieldCheck } from "lucide-react";
 import { store } from "../lib/store";
@@ -214,7 +215,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
   // Każda zmiana ustawienia utrwala się OD RAZU (koniec gubienia zmian po zamknięciu bez „Zapisz").
   // Zachowujemy normalizację dostawca/model (gdy model nie pasuje do dostawcy → domyślny).
   const set = (patch: Partial<Settings>) => {
-    const merged = { ...s, ...patch };
+    const merged = { ...s, interfaceMode: store.settings.interfaceMode, ...patch };
     if (merged.provider !== "auto") {
       const meta = PROVIDERS[merged.provider as ProviderId];
       if (meta && merged.model !== "auto" && !meta.models.some((m) => m.id === merged.model)) merged.model = meta.defaultModel;
@@ -253,7 +254,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
     // Klucz Tavily (research) ma pewny prefiks — zapisz go do slotu research jednym wklejeniem.
     if (isTavilyKey(key)) {
       const next = { ...s, tavilyApiKey: key, webSearch: true };
-      setS(next); store.setSettings(next); setQuickKey("");
+      setS(next); store.setSettings({ ...next, interfaceMode: store.settings.interfaceMode }); setQuickKey("");
       setQuickMsg("✓ Rozpoznano klucz Tavily (research) — zapisany i włączono wyszukiwanie w sieci.");
       return;
     }
@@ -269,7 +270,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
     const note = existing.length && !existing.includes(key) ? ` (dodano jako ${merged.length}. klucz — rotacja)` : "";
     const next = { ...s, keys: { ...s.keys, [prov]: merged.join("\n") } };
     setS(next);
-    store.setSettings(next);
+    store.setSettings({ ...next, interfaceMode: store.settings.interfaceMode });
     setQuickMsg(`✓ Rozpoznano: ${PROVIDERS[prov].label}${note}. Sprawdzam połączenie…`);
     setQuickKey("");
     setQuickMsg(`${PROVIDERS[prov].label}${note} → ${await testProvider(prov, key)}`);
@@ -569,7 +570,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
         next.model = meta.defaultModel;
       }
     }
-    store.setSettings(next);
+    store.setSettings({ ...next, interfaceMode: store.settings.interfaceMode });
     onClose();
   };
 
@@ -717,7 +718,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 className="btn"
                 disabled={diagBusy}
                 onClick={async () => {
-                  store.setSettings(s);
+                  store.setSettings({ ...s, interfaceMode: store.settings.interfaceMode });
                   setDiagBusy(true);
                   setDiag(["⏳ Uruchamiam diagnostykę…"]);
                   try {
@@ -789,7 +790,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                         unfilteredLocal: true,
                       };
                       setS(next);
-                      store.setSettings(next);
+                      store.setSettings({ ...next, interfaceMode: store.settings.interfaceMode });
                       setQuickMsg(`⏳ Włączam czat bez cenzury (Dolphin)…`);
                       setQuickMsg(`Czat bez cenzury → ${await testProvider(FREE_UNCENSORED.provider, s.keys.openrouter, FREE_UNCENSORED.model)}`);
                     } else {
@@ -1132,7 +1133,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                   className="btn"
                   style={{ flex: 1 }}
                   onClick={async () => {
-                    store.setSettings(s);
+                    store.setSettings({ ...s, interfaceMode: store.settings.interfaceMode });
                     setApiMsg("⏳ Sprawdzam…");
                     setApiMsg(await testApi());
                   }}
@@ -1144,7 +1145,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                   style={{ flex: 1 }}
                   disabled={statusBusy}
                   onClick={async () => {
-                    store.setSettings(s);
+                    store.setSettings({ ...s, interfaceMode: store.settings.interfaceMode });
                     setStatusBusy(true);
                     setApiMsg("⏳ Sprawdzam status i zużycie wszystkich API…");
                     await checkAllApis((map) => setApiStatus(map));
@@ -1163,7 +1164,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                       setApiMsg("Brak wpisanych kluczy do przetestowania.");
                       return;
                     }
-                    store.setSettings(s);
+                    store.setSettings({ ...s, interfaceMode: store.settings.interfaceMode });
                     setApiMsg("⏳ Testuję wszystkie klucze…");
                     const lines: string[] = [];
                     for (const p of withKeys) {
@@ -2546,6 +2547,8 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
           {/* ============ 🎨 INTERFEJS ============ */}
           {tab === "interface" && (
             <>
+              <h3>Wygląd — układ interfejsu</h3>
+              <InterfaceSwitch />
               <h3 id="set-language">🌍 {t("settings.language", uiLang)}</h3>
               <div className="chips" style={{ marginBottom: 10 }}>
                 {(["pl", "en"] as const).map((lg) => (
@@ -2600,7 +2603,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 <Toggle on={s.adaptiveUi !== false} onClick={() => set({ adaptiveUi: s.adaptiveUi === false })} />
               </div>
               <UsageChart />
-              <button className="btn" onClick={() => { resetAdaptive(); store.setSettings(s); }}>
+              <button className="btn" onClick={() => { resetAdaptive(); store.setSettings({ ...s, interfaceMode: store.settings.interfaceMode }); }}>
                 ↺ Resetuj układ do domyślnego
               </button>
 
@@ -3321,6 +3324,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                   • <b>Telefon (APK)</b> i <b>Windows (EXE)</b>: system bezpieczeństwa nie pozwala aplikacji
                   zainstalować się <i>sama po cichu</i> — zawsze potwierdzasz instalację jednym kliknięciem (to
                   celowa ochrona Androida/Windows).<br />
+                  • <b>Linux</b>: pobierz nowy AppImage z GitHub i uruchom go ręcznie; pakiet .deb jest również dostępny w wydaniu.<br />
                   • <b>iPhone (iOS)</b>: najprościej dodać JARVISA do ekranu początkowego z Safari (Udostępnij →
                   „Do ekranu początkowego") — działa jak aplikacja i sam się odświeża. Pełna aplikacja iOS wymaga
                   konta Apple Developer (App Store) albo sideloadu (AltStore/Sideloadly).<br />

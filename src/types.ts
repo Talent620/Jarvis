@@ -520,6 +520,8 @@ export interface Signature {
 }
 
 export interface Settings {
+  /** Układ aplikacji; brak wartości oznacza klasyczny. */
+  interfaceMode?: "classic" | "modern";
   /** Biblioteka podpisów e-mail (aktywny = emailSignature). Puste = działa jak dotąd. */
   signatures?: Signature[];
   /** Dusza Marki — opcjonalna, wstrzykiwana do generacji dla spójności (puste = bez zmian). */
