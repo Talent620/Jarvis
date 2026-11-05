@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { createPublicKey } from "node:crypto";
+import { execFileSync } from "node:child_process";
 
 // Realne metryki kodu (do wyceny w panelu admina) — liczone PRZY BUDOWANIU, nie w runtime
 // (zbudowany bundel nie ma dostępu do źródeł). Best-effort: błąd nie wywala builda.
@@ -34,6 +35,14 @@ function projectStats() {
 // klucze po stronie serwera. Klucze użytkownika dozwolone tylko w trybie „własny klucz"
 // (BYOK) i są szyfrowane lokalnie. __DEFAULT_KEYS__ pozostaje PUSTE (kompatybilność store).
 const env = process.env;
+const appVersion = JSON.parse(readFileSync("package.json", "utf8")).version;
+let appCommit = "unknown";
+try { appCommit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim(); } catch { /* source archives have no .git */ }
+if (env.APP_COMMIT) {
+  if (!/^[0-9a-f]{40}$/.test(env.APP_COMMIT)) throw new Error("APP_COMMIT must be a full Git SHA.");
+  if (appCommit !== "unknown" && appCommit !== env.APP_COMMIT) throw new Error("APP_COMMIT does not match the checked out source.");
+  appCommit = env.APP_COMMIT;
+}
 const issuerFile = env.JARVIS_LICENSE_PUBLIC_KEY_FILE || "license-public.local.json";
 let licensePublicJwk: Record<string, unknown> | null = null;
 if (existsSync(issuerFile)) {
@@ -64,6 +73,8 @@ export default defineConfig({
   base: "./",
   define: {
     __DEFAULT_KEYS__: JSON.stringify(DEFAULT_KEYS),
+    __APP_VERSION__: JSON.stringify(appVersion),
+    __APP_COMMIT__: JSON.stringify(appCommit),
     // Aktywacja licencją wymagana domyślnie; ustaw JARVIS_LICENSE_REQUIRED=false, by wyłączyć.
     __LICENSE_REQUIRED__: JSON.stringify(env.JARVIS_LICENSE_REQUIRED !== "false"),
     __LICENSE_PUBLIC_JWK__: JSON.stringify(licensePublicJwk),
@@ -78,7 +89,16 @@ export default defineConfig({
     // Metryki kodu (moduły/komponenty/testy/LOC) — do wyceny projektu w panelu admina.
     __PROJECT_STATS__: JSON.stringify(projectStats()),
   },
-  plugins: [react()],
+  plugins: [react(), {
+    name: "jarvis-build-provenance",
+    generateBundle() {
+      this.emitFile({ type: "asset", fileName: "build-metadata.json", source: JSON.stringify({
+        schemaVersion: 1, version: appVersion, commit: appCommit,
+        build: env.APP_BUILD || "local", licenseRequired: env.JARVIS_LICENSE_REQUIRED !== "false",
+        issuer: licensePublicJwk ? "explicit-public-key" : "application-default",
+      }, null, 2) + "\n" });
+    },
+  }],
   // Workery (np. embeddingi on-device) dynamicznie importują ciężkie biblioteki —
   // wymaga formatu ES (iife nie wspiera code-splittingu w workerze).
   worker: { format: "es" },

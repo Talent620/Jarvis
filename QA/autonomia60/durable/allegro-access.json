@@ -1,0 +1,10 @@
+{
+  "id": "ALLEGRO-DOCS",
+  "target": "https://developer.allegro.pl/documentation/",
+  "method": "curl via configured HTTP proxy; TLS verification preserved",
+  "result": "BLOCKED",
+  "exit_code": 56,
+  "actual": "CONNECT tunnel failed, response 403",
+  "scope": "Nie udało się odczytać bieżących docs. Nie sprawdzono OAuth, konta, GET /offers/listing ani natywnych ulubionych wyszukiwań. Nie obchodzono odmowy.",
+  "evidence": "QA/autonomia60/durable/allegro-access.json"
+}

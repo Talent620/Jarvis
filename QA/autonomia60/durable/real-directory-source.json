@@ -1,0 +1,35 @@
+{
+  "id": "D-REAL-DIRECTORY",
+  "status": "PASS",
+  "level": "backend integration with actual read-only filesystem source",
+  "startedAt": "2026-11-05T21:49:16.573Z",
+  "finishedAt": "2026-11-05T21:49:16.636Z",
+  "source": "existing repository root; match existing package.json",
+  "sourceMode": "directory-names-only",
+  "model": null,
+  "normalConversation": false,
+  "grant": "test harness invokes trusted user grant explicitly; no production grant",
+  "injectedFetch": false,
+  "injectedClock": false,
+  "sourceWrittenByTest": false,
+  "independentChecks": [
+    "persisted goals-v1.json read independently",
+    "package.json digest unchanged",
+    "exactly one event after service re-instantiation and tick"
+  ],
+  "packageJsonSha256": "2dfd6d7c92d2167cbe3506bb10d3b2af92847da4b856f484dc640627ae8ab67e",
+  "goalServiceSha256": "99b61227d1da54048d6be7f3377778e8ba72d849a0f079067887ee8708e4f8d1",
+  "observed": {
+    "goalState": "COMPLETED",
+    "eventState": "IN_APP",
+    "eventCount": 1,
+    "title": "package.json",
+    "observedAt": 1793915356626
+  },
+  "limitations": [
+    "Not a natural-language/model autonomy test",
+    "Not Allegro or any commerce source",
+    "Does not read PDF or parse file contents",
+    "In-app event is not desktop/remote delivery"
+  ]
+}

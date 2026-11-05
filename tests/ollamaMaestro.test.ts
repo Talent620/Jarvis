@@ -3,14 +3,17 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 vi.mock("../src/lib/privateMode", () => ({ detectOllama: vi.fn() }));
 vi.mock("../src/lib/ollamaPull", () => ({ pullOllamaModel: vi.fn() }));
+vi.mock("../src/lib/providers/ollama", () => ({ probeOllamaTools: vi.fn() }));
 
 import { recommendedOverrides, requiredModels, missingModels, applyPremiumSetup, applyFastSetup, ensurePremiumModels, PREMIUM_CATALOG, paramB, autoAssignRoles, applyAutoFromInstalled, ADDABLE_MODELS } from "../src/lib/ollamaMaestro";
+import { probeOllamaTools } from "../src/lib/providers/ollama";
 import { detectOllama } from "../src/lib/privateMode";
 import { pullOllamaModel } from "../src/lib/ollamaPull";
 import { store } from "../src/lib/store";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(probeOllamaTools).mockImplementation(async (_base, model) => ({ model, installed: true, loadedBeforeProbe: false, advertised: model === "llava:7b" ? ["vision", "tools"] : ["tools"], tools: "passed", checkedAt: 0, expiresAt: 600000, latencyMs: 100 }));
   store.setSettings({
     ollamaUrl: "http://localhost:11434", provider: "auto", model: "auto",
     ollamaModelSimple: "", ollamaModelComplex: "", ollamaModelVision: "", ollamaModelUncensored: "",
@@ -135,15 +138,32 @@ describe("ollamaMaestro — paramB + autoAssignRoles", () => {
 });
 
 describe("ollamaMaestro — applyAutoFromInstalled", () => {
+  it("nie zmienia ustawień na podstawie nazwy modelu lub samej odpowiedzi tekstowej", async () => {
+    vi.mocked(detectOllama).mockResolvedValue({ ok: true, url: "http://127.0.0.1:11435", models: ["vision-agent-tools:4b"] });
+    vi.mocked(probeOllamaTools).mockResolvedValue({ model: "vision-agent-tools:4b", installed: true, loadedBeforeProbe: true, advertised: ["tools", "vision"], tools: "failed", checkedAt: 0, expiresAt: 30000 });
+    const before = { ...store.settings };
+    const result = await applyAutoFromInstalled();
+    expect(result.ok).toBe(false);
+    expect(store.settings).toEqual(before);
+    expect(probeOllamaTools).toHaveBeenCalledWith("http://127.0.0.1:11435", "vision-agent-tools:4b");
+    expect(pullOllamaModel).not.toHaveBeenCalled();
+  });
+  it("próbuje najwyżej sześć modeli kolejno i nie pobiera brakujących", async () => {
+    vi.mocked(detectOllama).mockResolvedValue({ ok: true, url: "http://127.0.0.1:11435", models: Array.from({ length: 20 }, (_, i) => `custom-${i}`) });
+    expect((await applyAutoFromInstalled()).ok).toBe(true);
+    expect(probeOllamaTools).toHaveBeenCalledTimes(6);
+    expect(pullOllamaModel).not.toHaveBeenCalled();
+  });
   it("konfiguruje role z zainstalowanych i włącza routing", async () => {
     vi.mocked(detectOllama).mockResolvedValue({ ok: true, url: "u", models: ["qwen3:1.7b", "qwen3.5:4b", "llava:7b"] });
     const r = await applyAutoFromInstalled();
     expect(r.ok).toBe(true);
     expect(store.settings.ollamaModelSimple).toBe("qwen3:1.7b");
-    expect(store.settings.ollamaModelComplex).toBe("qwen3.5:4b");
+    expect(store.settings.ollamaModelComplex).toBe("qwen3:1.7b");
     expect(store.settings.ollamaModelVision).toBe("llava:7b");
     expect(store.settings.localFirstSimple).toBe(true);
-    expect(store.settings.localRefine).toBe(true);
+    expect(probeOllamaTools).toHaveBeenCalledTimes(3);
+    expect(store.settings.prewarmLocal).toBe(false);
   });
   it("brak modeli → błąd, nie konfiguruje na ślepo", async () => {
     vi.mocked(detectOllama).mockResolvedValue({ ok: true, url: "u", models: [] });

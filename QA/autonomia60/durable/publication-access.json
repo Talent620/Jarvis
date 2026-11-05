@@ -1,0 +1,27 @@
+{
+  "checked_at": "2026-11-05T21:40:37.272394+00:00",
+  "git_read": {
+    "status": "PASS",
+    "main": "b3234ca906305712ade35363cffc3524c9a1b21a",
+    "handoff": "f74705166e484f9fe76a9ecac7212a45376254ba"
+  },
+  "github_api": {
+    "status": "BLOCKED",
+    "operation": "GET https://api.github.com/repos/Talent620/Jarvis",
+    "observed": "proxy CONNECT 403 Forbidden; also gh REST and GraphQL Forbidden",
+    "credential_validity": "not established; proxy denial is not proof of invalid token"
+  },
+  "configuration": {
+    "draft_saved": true,
+    "requires_publish": true,
+    "added_domains": [
+      "api.github.com",
+      "uploads.github.com",
+      "developer.allegro.pl",
+      "api.allegro.pl"
+    ],
+    "runtime_applied": false
+  },
+  "release_published": false,
+  "pr_opened": false
+}

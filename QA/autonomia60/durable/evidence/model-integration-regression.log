@@ -1,0 +1,14 @@
+
+> jarvis-ai-assistant@2.1.0-alpha.1 test
+> vitest run --run tests/intelligenceEvals.test.ts tests/ollamaCapabilityProbe.test.ts
+
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/ollamaCapabilityProbe.test.ts (6 tests) 19ms
+ ✓ tests/intelligenceEvals.test.ts (11 tests) 34ms
+
+ Test Files  2 passed (2)
+      Tests  17 passed (17)
+   Start at  21:46:51
+   Duration  1.72s (transform 1.04s, setup 0ms, collect 2.44s, tests 53ms, environment 0ms, prepare 540ms)

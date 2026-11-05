@@ -23,6 +23,7 @@ const PATTERNS = [
   { name: "Groq", re: /gsk_[A-Za-z0-9]{40,}/ },
   { name: "OpenAI", re: /sk-(?:proj-)?[A-Za-z0-9]{40,}/ },
   { name: "Bearer token", re: /Bearer\s+[A-Za-z0-9._-]{30,}/ },
+  { name: "Private key", re: /-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----/ },
 ];
 // Pliki, w których wzorce są CELOWO (testy/skan/detekcja) — nie skanujemy ich treści.
 const SKIP = [/scripts\/secret-scan\.mjs$/, /tests\//, /SECURITY\.md$/, /\.githooks\//];
@@ -34,6 +35,10 @@ try {
     const files = git(["ls-files", "-z"]).split("\0").filter(Boolean);
     for (const f of files) {
       if (SKIP.some((re) => re.test(f))) continue;
+      if (/\.(?:jks|keystore|p12|pfx)$/i.test(f)) {
+        console.error(`secret-scan: prywatny materiał podpisu jest śledzony: ${f}`);
+        process.exit(1);
+      }
       let body = "";
       try { body = readFileSync(f, "utf8"); } catch { continue; }
       body.split("\n").forEach((text, i) => lines.push({ file: f, n: i + 1, text }));
@@ -48,8 +53,8 @@ try {
     }
   }
 } catch (e) {
-  console.error("secret-scan: nie udało się odczytać gita:", e.message);
-  process.exit(0); // nie blokuj, gdy brak gita (np. CI bez historii)
+  console.error("secret-scan: nie udało się odczytać repozytorium; kontrola nie została wykonana.");
+  process.exit(1);
 }
 
 const hits = [];
@@ -57,13 +62,13 @@ for (const { file, n, text } of lines) {
   if (SKIP.some((re) => re.test(file))) continue;
   if (/secret-scan-allow/.test(text)) continue;
   for (const p of PATTERNS) {
-    if (p.re.test(text)) hits.push({ file, n, name: p.name, text: text.trim().slice(0, 100) });
+    if (p.re.test(text)) hits.push({ file, n, name: p.name });
   }
 }
 
 if (hits.length) {
   console.error("\n🚫 SKAN SEKRETÓW: wykryto potencjalne klucze API — commit zablokowany.\n");
-  for (const h of hits) console.error(`  • [${h.name}] ${h.file}${h.n ? ":" + h.n : ""}\n      ${h.text}`);
+  for (const h of hits) console.error(`  • [${h.name}] ${h.file}${h.n ? ":" + h.n : ""} (wartość ukryta)`);
   console.error("\nUsuń sekret z kodu (użyj env/sekretów BFF). Jeśli to fałszywy alarm, dopisz w linii: secret-scan-allow\n");
   process.exit(1);
 }

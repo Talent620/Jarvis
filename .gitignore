@@ -36,3 +36,7 @@ tools/generated/*.candidate.cjs
 
 # Isolated QA profiles, test data and per-run evidence (may contain local configuration).
 QA/runs/
+
+# Signing material stays local; releases require explicitly configured signing.
+*.jks
+*.keystore

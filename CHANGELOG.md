@@ -1,5 +1,33 @@
 # CHANGELOG — JARVIS
 
+## 2.1.0-alpha.1 — kandydat, 2026-11-05
+
+- Zachowano całość zmian do `f747051`, w tym STOP, komendy lokalne, zapis zadań,
+  status modelu, interfejsy, lokalny instalator i licencje właściciela/APK.
+- Dodano trwałe monitory autoryzowanych kanałów JSON i katalogów Linux, zegar
+  w procesie głównym, atomowy magazyn, dzierżawy, wersje kryteriów i outbox.
+  Brak dopasowania pozostawia monitor aktywny; zmiany ceny i powrót dostępności
+  mają osobne zdarzenia. Wynik niepewnej wysyłki nie jest ślepo ponawiany.
+- Istniejący panel Celów obsługuje konfigurację, zakresowe zgody, sterowanie
+  oraz centrum powiadomień. Praca po zamknięciu okna wymaga jawnego włączenia.
+- Ollama ma funkcjonalną próbę narzędzia, cache możliwości i kontrolę budżetu
+  kontekstu; selektor nie wysyła całego katalogu dla niejasnego polecenia.
+- Dodano wybór okna X11 i pełną ścieżkę QA kopiowania przez schowek do edytora.
+  Rzeczywisty model oraz natywny pulpit pozostają osobnymi, niezaliczonymi bramkami.
+- Linux ma pakowanie z pełnym SHA, kontrolą licencji i sumami artefaktów.
+  Android wymaga jawnego zgodnego podpisu, bez fallbacku na klucz deweloperski.
+- Skorygowano kompatybilne zależności i skaner sekretów. Pełny audyt nadal
+  wykazuje 32 podatności, również w dystrybuowanym Electron; nie jest czysty.
+
+To częściowe wdrożenie, nie potwierdzenie wszystkich 80 przykładów. Brakuje
+m.in. adaptera rynku Allegro, harmonogramów kalendarzowych ogólnych planów,
+samodzielnego wykonania tych planów bez renderera, pełnego Wayland, sandboxa
+generowanych narzędzi i sparowanych alertów telefonu. Aktualne dowody i status
+publikacji: `QA/autonomia60/durable/REPORT.md` oraz `requirements.json`.
+
+Poniższe sekcje są historyczne; ich wcześniejsze deklaracje nie zastępują
+bieżących wyników testów ani zakresu opisanej wersji alpha.
+
 Format wg [Keep a Changelog]. Sekcja „Unreleased" = bieżący branch
 `claude/functionality-modification-access-z9kod1` (PR #1 → main).
 

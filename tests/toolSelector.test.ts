@@ -28,19 +28,20 @@ describe("toolSelector — dobór narzędzi wg intencji", () => {
     expect(n).toContain("add_task");
   });
 
-  it("niejasna intencja → PEŁNY zestaw (bezpieczny fallback)", () => {
+  it("niejasna intencja → ograniczony zestaw, bez pełnego katalogu", () => {
     const sel = selectToolsForIntent("opowiedz mi dowcip", toolDefs);
-    expect(sel.length).toBe(toolDefs.length);
+    expect(sel.length).toBeLessThan(toolDefs.length);
+    expect(toolsetSize(sel).chars).toBeLessThanOrEqual(10000);
   });
 
-  it("puste zapytanie → pełny zestaw", () => {
-    expect(selectToolsForIntent("", toolDefs).length).toBe(toolDefs.length);
+  it("puste zapytanie → tylko rdzeń w budżecie", () => {
+    expect(selectToolsForIntent("", toolDefs).length).toBeLessThanOrEqual(6);
   });
 
-  it("narzędzia dynamiczne (nieznane/pluginy) zawsze przechodzą", () => {
+  it("nieznane pluginy nie wypełniają kontekstu bez związku z poleceniem", () => {
     const fake = [...toolDefs, { name: "plugin_xyz", description: "x", input_schema: { type: "object", properties: {} } } as any];
     const n = names(selectToolsForIntent("ile zarobiłem", fake));
-    expect(n).toContain("plugin_xyz");
+    expect(n).not.toContain("plugin_xyz");
   });
 
   it("matchedGroups wykrywa właściwe domeny", () => {

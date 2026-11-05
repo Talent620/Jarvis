@@ -1,0 +1,1154 @@
+{
+  "historical_base": "b3234ca906305712ade35363cffc3524c9a1b21a",
+  "integration_base": "f74705166e484f9fe76a9ecac7212a45376254ba",
+  "included_predecessors": [
+    "0320d5098059434de5dae4cab53ceac94cb34381",
+    "155a2e146bab33239951c1a7ae5ad8a1b043f6f9",
+    "367f3d45571a4ab8bfc6b4824f34fff09418e450",
+    "f74705166e484f9fe76a9ecac7212a45376254ba"
+  ],
+  "version": "2.1.0-alpha.1",
+  "branch": "codex/durable-autonomy-20261105",
+  "files": [
+    {
+      "status": "M",
+      "path": ".github/workflows/android-v2.yml",
+      "sha256": "999ceda32349c7cb5b1d3ab0fba0b6e208e6ceb288ec8ef06bba5c9b049b2402"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/android.yml",
+      "sha256": "37a1e6b225dde54d016187f49b6175e874dcda33f358be72e64af84d5ac3faea"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/release.yml",
+      "sha256": "fa962e3eef19cfc1c054f64749ac78f93b9d3f162766352165fd6ad32186db00"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/ubuntu.yml",
+      "sha256": "5e42cbfc57f673b02e4428822cf314c2ad78fc5ced78a258429c3c9f41fb5838"
+    },
+    {
+      "status": "M",
+      "path": ".gitignore",
+      "sha256": "038a3fbe56dcdd3b20267f25aa1101c91a29b670d5b94be3381b8f3a42824665"
+    },
+    {
+      "status": "M",
+      "path": "CHANGELOG.md",
+      "sha256": "14efef67c63f2c48e53d3c551e63fd3228dcd7cde043721c6afb5df21494abf8"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/REPORT.md",
+      "sha256": "9fc62a20f40d4a444bf8b3b0ac7fce879266f5bf4dea8e1da24186988ea04c86"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/RESULTS_60.md",
+      "sha256": "30a5736aa9dc68ddfbfe76d3f51656afdd1efa1d51f747115c0cfd240d34840a"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/RESUME.md",
+      "sha256": "c2e0ec1b250e90ac42f56e0e3a54b0c85186e050fa411a6b027ff91352e38ef2"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/baseline.json",
+      "sha256": "edc3e9ee4638ee32f5a695e35a26245c490f0dc45f618b9e0c2c510d2e36c0fc"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/REPORT.md",
+      "sha256": "dbc47710959da3df78d833fb055c5380d3cbb00a0308d42a5a1a57c6044f9089"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/all-tests.log",
+      "sha256": "2384e96180e387b55ea758c49b72dd27063d4edac9a8ed7058c3d4206c8df7a9"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/build.log",
+      "sha256": "b0737165df70a1131895fcc28739958fb1971d708be92bdf915a81bda43c9689"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/cleanup.json",
+      "sha256": "51cd8a752830d53dd5d905c8edefb8af7050fcedf122bee049a24a03370d7f3f"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/controls-after.log",
+      "sha256": "30053dbc0ef3ce48ade0a736a4129b655f5aea5c983222635b9c89e4e5d932a6"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/controls-before.log",
+      "sha256": "9eb8e53b5688ad4615001a8098798d74c092d8c83d4855f967e73e1e856766f4"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/desktop/REPORT.md",
+      "sha256": "acf1cc23308ddc57bd78e67bedf0599f19b940ff81e9591f0bc5d60fb96f3013"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/desktop/electron-exit.json",
+      "sha256": "6809d51dcb83bae374d984a70fe0bde74e8af63e9a1bf60c0d51804714bd452c"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/desktop/electron-stderr.log",
+      "sha256": "d263036bb766dde09047f05d4c3641a4ea04e594d02d58a501251e89937f313e"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/desktop/environment.json",
+      "sha256": "a5bdfab3d2ae79583ed3698a2c10e55f2543e91466f85ade950f84d573aaaf44"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/desktop/launch.json",
+      "sha256": "212d2a70ebb18fd9686d236e41f413677438eca2e18a6bb567676cf96076654a"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/desktop/report.json",
+      "sha256": "ab74cd6ddbb9a03bf5c6f8df5fa49deae5b1823387457467052222dcacc9e931"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/desktop/source.json",
+      "sha256": "dc5f3040df5443d123dcde62a37e15b09e8b7d600f5af5de1228dcd3e8675240"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/headless/electron-stderr.log",
+      "sha256": "1aa2b38d6b470876c0b036712d0ca1cb4b6ef1804dbfcbedfdc754ce17dcdfbc"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/headless/report.json",
+      "sha256": "a8dbf062a8ffccae1aaee394e50b02b609a488834bf4837955eb8c6c9b334bb6"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/lint.log",
+      "sha256": "f03bd7931a02ca72704634e4ca79eb1930220b1e8b19395d44eaab5024f3c0d9"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/preflight/REPORT.md",
+      "sha256": "44bfeac834d838134c9ef6f748b8122ba5709384605fc8f4de2961dec3a2a1f2"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/preflight/environment.json",
+      "sha256": "3b4ec1177b9829fc8e880462f5167b5e35378213bcc8b481b2b2642446195966"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/preflight/ollama.json",
+      "sha256": "622d1b04ac29e4955df4c8256bf5b761831b9ee3a234fee2134d7f7d3a369452"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/preflight/report.json",
+      "sha256": "0aa914d9e25ab271890f9e9974bb3a54d67b23aa8f6eae9181768aa178a68e37"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/preflight/results.json",
+      "sha256": "aa87e60ce83e8d159f5b90be3c8d71bcee810e3a3f5b844a065b0cbb4d228fb3"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/preflight/source.json",
+      "sha256": "fbcf8c226d9692310dde6ab176e7288a2da2d778ecbd338b899654b5afc8d49d"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/regression.log",
+      "sha256": "f1baeefbe39b12dbfa2e5d8e2a08b086a053158392db0308631d81944da0fdb4"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/runner-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/D1-after-restart.json",
+      "sha256": "55a807c65711ca1e18bc9201f1f9926e6000a5be56682388a585a37fd0abf929"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/D1-before-restart.json",
+      "sha256": "70d0e6a96e1964bde7e4114a0d13362f3b739d520a86e04be5a8d847a02727fa"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/D1-layout.json",
+      "sha256": "9d3586cf55ba49691234a457321f1fda2a46cd524578ab10f987fac4ef29f279"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/D1-ui.png",
+      "sha256": "2db807c4680a3bffac05342ecbc70c4504647e95f16146190e20a5118a3dac98"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/REPORT.md",
+      "sha256": "b21d13a734de878a6de75603112d9f53e5b2b179fad2dc699c1538fb706d809c"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/effective-app-settings.json",
+      "sha256": "b2e369db71d32d3e6b388585962081964af3982e96991694b307874b9a4735a4"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/environment.json",
+      "sha256": "3b4ec1177b9829fc8e880462f5167b5e35378213bcc8b481b2b2642446195966"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/launch.json",
+      "sha256": "c9864b4c64bbd3e6fbbd13ba8de9e97a1d7aea69bdfd61f6bc6e569ecef4bc60"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/model-requests.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/ollama.json",
+      "sha256": "622d1b04ac29e4955df4c8256bf5b761831b9ee3a234fee2134d7f7d3a369452"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/report.json",
+      "sha256": "080cb08414f55453f4f079a09e0f17c2241fd9f5ecfd5f72949246d0254a1ddc"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/results.json",
+      "sha256": "2103f66f86f009e8dc0d34c135f74948cf48a2990ae814b454345193efca297b"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/source.json",
+      "sha256": "32e46d6269dd325f79c2770ff9b2f6931f4df6b3e9e3b6537cd94763793caa57"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/smoke/vite.log",
+      "sha256": "4a8b057fc4e7c248b6f2f39c80fc0541d51c0a66ba8c7511b24f28bbd30bec20"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/swiftshader/electron-stderr.log",
+      "sha256": "33fdf7d15d89e0a4946cab31b757f5eb210fbd11fb324ce27fb2336a67528da8"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/evidence/swiftshader/report.json",
+      "sha256": "6fa2f3827b9d3ca3436c97792f84cc601f5bbe31ee1e1fdf9105c00d282cac8f"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/iteration-files.txt",
+      "sha256": "78dbe149c71b9ecc5b09a9c5e78af45f66856a1b95b5070ddae1f843bc7a2d02"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/iteration.patch",
+      "sha256": "284a1612c7181ac651caf1ee5661e3f9642ae9775d0fa0ad5eeb9da939e7d993"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/results.json",
+      "sha256": "1a1517f4dc28b5f85c0c56e5baf3c9867a9768532dca0f3ea0042268117aa017"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/continuation/rollback-check.txt",
+      "sha256": "52282b039ddeb71abe9db6066bf28c722a382b776ce393a9dc8166d41e9d6844"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/REPORT.md",
+      "sha256": "f653d5ee931c28182da337fdcebf54a4165389cd990cede4481bedc33f468fa8"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/RESUME.md",
+      "sha256": "0b848a1a2cf64de4e25e466929dc0318bfe56a1cf4fe4ba62ba928a91693a979"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/SPEC.md",
+      "sha256": "4808121cd4ae44403da995b01dfb26fc6323bc546ab38d35e50ea7014ea5f054"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/allegro-access.json",
+      "sha256": "592ca4a3106e30213f5e3acb387cf56ff3bab64fc00990955213ddef0135446b"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/desktop.json",
+      "sha256": "efb8fa23c817841529f072b8fa75570e129d8bd4a2939fa73ad48452a140dbbc"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/bridge.log",
+      "sha256": "372891da25d116ba0ffb486d5ed88463d4a080134f1419ffa2681e982822241c"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/full-build.log",
+      "sha256": "49454b8ed9d11840ead283db8db19de115f413ae3624ce747388321becf8235c"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/full-lint.log",
+      "sha256": "11e00097b42e74347fb17e32d567c3211ca066c319c7c0ec47d7ce595ffc1ac1"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/full-tests.log",
+      "sha256": "72fc0564ca55d49c2695e11e8f2aad2c370551a3b86ef98c2be8b0b2d0ed8453"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/goal-service-lint.log",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/goal-service-tests.log",
+      "sha256": "cbae0ff198a9fa4aacd4e8853eaf4ab82ef83260c9b31318af48ec93cad98ea5"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/integration-first.log",
+      "sha256": "e4518ff8b877bfff5ccd7e0eba6c6394fc84458dd9db90fb8d2384e1727d1d85"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/model-capabilities-tests.log",
+      "sha256": "1e80d8519b8228ef5f03b9ff647d596edfec0bcf80cd5ca90525eb4db187cd4a"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/model-integration-regression.log",
+      "sha256": "5928a1928119c7d64196424485763b50b2ff84629f9d131aed83e68d4832c0ff"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/secret-scan-baseline.json",
+      "sha256": "e43105329faf6b5170726afc653668346a91d004a9dc78673b7d9464728b0612"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/model-capabilities.md",
+      "sha256": "5e6b711c939fe5c5e68ac71ad5e95984fe729df8a57fa7fd1d122212e598ece7"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/packaging-audit-all.json",
+      "sha256": "70c322a7fdf9f2a428de0aa7fdb6f19da601ea0afeb9cd28c67f1705757f5967"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/packaging-audit-production.json",
+      "sha256": "6bbc9da47fbdb78969ae35311e8b4984c749a771b1cc37b9013105fc628ca2b1"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/packaging-tests.log",
+      "sha256": "e7be657e90005fc64631af57e5984dca8e548e2fdae3d8ef36a26ca720502b3a"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/packaging.json",
+      "sha256": "eef8a3f61de294d92c108134d8404b9384be8386455bfdfdce25dc9c03cccaf3"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/publication-access.json",
+      "sha256": "e04a59738b391e5900c9684673c0283d32a848e0c9d68e5fd7eb65dcdc543602"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/real-directory-source.json",
+      "sha256": "e584a084df9842ab5961b07088cdd379d68669b7f8ed3bf566e3459e1e8e38d5"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/requirements.json",
+      "sha256": "bc2648bd1049f52de2803a935595ae0ef3cb658ffdc071e63d468a7d18650035"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/electron-start.log",
+      "sha256": "0bbc0489b3c3f34e20b0f18f10f4891ad9e9f96e42fa7f2f787dc027ec9ddc5a"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/final-http.log",
+      "sha256": "a41419c31b2066467c41f89c398be6d3f28803a62947e1df8199ae04b79970b8"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/model-availability.json",
+      "sha256": "bf8f2243d679b08dce1ae7071f4da653174aa58f26d73b9ebf6466a94af2e4a2"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/ollama-port.log",
+      "sha256": "b7c92ed4ab0c8d913ae4e38d1e9f2da92db353426ba4643172406337a152f959"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/stop-barriers.log",
+      "sha256": "41c1d03bac4a84f3190dfca3cfc3d3b316bdf0f76a3581fda3f941903ecf4f2e"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/stop-baseline.log",
+      "sha256": "1d6552a575fd68dfde565209b88c5157f050a54b6d056086ec137b4244df61ab"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/stop-capability.log",
+      "sha256": "685d0b45f046e5d0cbc121b5f61f19f57deffab7a766f1aba19f05dac90424bd"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/stop-fixed.log",
+      "sha256": "e4b369d985cbdf130ed04cad125e6237f92feba5a91d88cf7b0eac38f3532d9b"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/stop-goals.log",
+      "sha256": "6e2f868cdc676d961d669b1c092562ba8b99924e39db79c7575a7478ffb41226"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/stop-process.log",
+      "sha256": "982be1cd558ea3ad3d6d5b1f5aaa860835156ad4673354ddee625f4412a8e985"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/stop-providers.log",
+      "sha256": "466c1f9624dd5e014316fa4216aa8f7b99e0fa42f5a5d17b958618281d9ceb66"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/stop-regression.log",
+      "sha256": "e717602ae86963bfc7b233d25e647459a2c4873a2d254a930f50bd86d580bb0a"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/stop-ui-final.log",
+      "sha256": "86368faceba645c7723071ef8fe58326136c21c26d0cc8bd7c33dfb735b36dbd"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/stop-ui.cjs",
+      "sha256": "4b8e0e1dfcd6d2210b2d6b84f2fc6ea1325f99af31090bcc671897e915fa7dc8"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/stop-ui.json",
+      "sha256": "f44f2c1d51b5857f3b94781bedb4b48f3f634b75090f6bc3aca877f80b88216a"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/stop-ui.log",
+      "sha256": "baed6a8a3890321051882ea408d8470701763e10cd8b95ad9b9a18f1d93852c9"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/transport-regression.log",
+      "sha256": "576133c9c6fcc0a950c51c0be837c93045f431aa03de8e5a492ce4945b06cbbc"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/unknown-tool-baseline.log",
+      "sha256": "80565c873e904ef7a5a02423bb7df3d4787dc9b03ea80665010cf10b5dc95298"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/evidence/unknown-tool-fixed.log",
+      "sha256": "9034b4d8a07b046a8d8670d05e273d822883b851c322d268e3039913509743ae"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/implementation.patch",
+      "sha256": "1b60591736f93eb73ca675bcd7e2b5c3b1572b98fe306625ca8fdfd1ca8b3949"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/REPORT.md",
+      "sha256": "4253129e7cc0abe2dd1cc771d09a0c096aa89c482cf3ebfa0acb5fcab2da1ac1"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/checkpoint-manifest.json",
+      "sha256": "8a52178ee719a1b688ec6740b934344f22ec693e7cc5f10aa70832857f1294db"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/checkpoint-verification.json",
+      "sha256": "5558536d79923b7d13c0e2856fc6b9334ac7c0e10cf0f5fe32b0ac6b308f2705"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/all-tests.log",
+      "sha256": "063db817d9ccc36b161823c579c62c92d9851a88305f98033f3f22768d22280e"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/apk-check.log",
+      "sha256": "09276a264cd88faadaf76d7b645605e6c5e941e6aba53788119393201646a2a3"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/build.log",
+      "sha256": "fbaec06cd19b0e125e672481a00849022ce3e545b5dfa15155c639e649ecd427"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/bundle-secrecy.json",
+      "sha256": "54cd2dbba7ce43eaa353cd07f2847176087fff2f8a9f19b5c57b90beb6215389"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/cleanup.json",
+      "sha256": "a8d9a047515cd476d91cdc40769eca7f37579943d43042ecc72e2a52d918c1c8"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/final-targeted.log",
+      "sha256": "dbe53cd654b2786766b8d939153d2befe60c44ca045790d9a2e2f178e525fc4c"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/license-after.log",
+      "sha256": "e264b6174fad67cfb1c0213c6c2be7fc4d5a55ffb3a94b388ee2c5a949c879bf"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/license-baseline-before.log",
+      "sha256": "d81e28929736ccad3b2b085df3bb7a4ecf5377838da762192c331288978296b7"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/license-current-before.log",
+      "sha256": "6600268a3eb91a74d18a2895837b95e4c839d3c3b9d8e7d7e3b887789c15b42a"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/license-diagnosis.json",
+      "sha256": "fa6075dd6853ecb0178ac116441e582d942157f21dd70174dc7a855d3f4ebed4"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/license-ui/REPORT.md",
+      "sha256": "f11377b4b924dc2461574d66c1928a649bd690fbb915ca927a63f09527c3ac6e"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/license-ui/issued-license.png",
+      "sha256": "f66592682860e829584db3ac4c6ed1220311d03a6077900c73857fca7464f079"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/license-ui/report.json",
+      "sha256": "c4c1d1d862cddf63b3f3d4c724103f34a09e6737df0fd2d074cc4b490764315c"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/license-ui/results.json",
+      "sha256": "355c653b1c07bf8b3f3407b6d6598dd367c0790666a659385702b93a3301ccd2"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/license-ui/source.json",
+      "sha256": "3f049da4471d1ec065019ab0bfd0adc87adc71153bb4fb3adae825c2ad664da5"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/license-ui/verification.json",
+      "sha256": "4bde5a88062497638e16b6d0d34302ad0daf31011d9b842c677cefaee22ee9d2"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/license-ui/vite.log",
+      "sha256": "2a599e12afeea50892ca4092c18bf86e73e74ff03c6498f4f42852dee9c523d3"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/lint.log",
+      "sha256": "f03bd7931a02ca72704634e4ca79eb1930220b1e8b19395d44eaab5024f3c0d9"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/owner-build.log",
+      "sha256": "f38665eeddd0c0585da0a50564a0e7ebd97ba98623a0afbfd6904ddc46d6cbfe"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/real-agent/REPORT.md",
+      "sha256": "16795b4095cd3bb24ae9724ad73e0fb623f7b4245b0893b8cff66d4b3fbd33ce"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/real-agent/consents.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/real-agent/environment.json",
+      "sha256": "3b4ec1177b9829fc8e880462f5167b5e35378213bcc8b481b2b2642446195966"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/real-agent/network.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/real-agent/ollama.json",
+      "sha256": "622d1b04ac29e4955df4c8256bf5b761831b9ee3a234fee2134d7f7d3a369452"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/real-agent/report.json",
+      "sha256": "316d5cc4348812f091b0663cb8fa2b0246784e1992037699c8f3db732fd5f8dd"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/real-agent/results.json",
+      "sha256": "d4eba86d76c032a78ae7fe0ca395e08bf602f67fc56206ca95d1757037418fce"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/real-agent/source.json",
+      "sha256": "3f049da4471d1ec065019ab0bfd0adc87adc71153bb4fb3adae825c2ad664da5"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/regression.log",
+      "sha256": "15c0971b7ce2b709adab26fe99eea08c84357ce139ea03241349fcb8877c3099"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/evidence/secret-scan.log",
+      "sha256": "12a4aa6d0ae1fb2119adba9c60fa8ba583a2987276a64707443f921d09f51f6f"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/license-iteration/results.json",
+      "sha256": "26c4d09aad42fadd235d00047c4d7bcd5a73bec922a22fdc190dc1688cf1a24c"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/results60.json",
+      "sha256": "7e397079ff78de169213828d80b68034904faff7feb972f3c8654eda8a28f036"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/validation-summary.json",
+      "sha256": "a087f4441cbdb9cf1b041b0b94cc9ba599779955267aca67a67fb7a89468cd35"
+    },
+    {
+      "status": "M",
+      "path": "android/app/build.gradle",
+      "sha256": "134144f7ce8930df061890b9cbaed14a959d99f2fa03d992a22c7d24dd3c1784"
+    },
+    {
+      "status": "D",
+      "path": "android/keystore/jarvis.jks"
+    },
+    {
+      "status": "A",
+      "path": "docs/LICENCJE-APK.md",
+      "sha256": "4c1014b08f9c93b30850f2cc89cdc790a5ae28b6933d3c9be14202bec0a4a440"
+    },
+    {
+      "status": "A",
+      "path": "docs/WYDANIE-ALPHA.md",
+      "sha256": "ffe0b6d87529bca9f5ddd4bec043fe061ac78316d729988dd52219bab554cced"
+    },
+    {
+      "status": "A",
+      "path": "electron/goal-service.cjs",
+      "sha256": "99b61227d1da54048d6be7f3377778e8ba72d849a0f079067887ee8708e4f8d1"
+    },
+    {
+      "status": "M",
+      "path": "electron/linux-keyboard.cjs",
+      "sha256": "bf7d23809ca158682fed43b8c0b31eed30728c83a318ffae16be423a40be81b0"
+    },
+    {
+      "status": "M",
+      "path": "electron/local-ollama.cjs",
+      "sha256": "898e61038ea6431b4bf74c40f67ae21a1b99f50bb734c3c94fe363a679765bb3"
+    },
+    {
+      "status": "M",
+      "path": "electron/main.cjs",
+      "sha256": "07ae343cd95d9e006af94652bb7a63926993ca3991b5efd74b44c91dcef4ebc6"
+    },
+    {
+      "status": "M",
+      "path": "electron/preload.cjs",
+      "sha256": "714e8d583eea2aa18d8c56befc52067873ebadcf4734bb2f93f6014d23ad5ec2"
+    },
+    {
+      "status": "M",
+      "path": "electron/workspace-tools.cjs",
+      "sha256": "3e79ebcad8d44a0aebcb21b49f8e1e5d601f0abab8202ea2505cc5c1ff9e5e14"
+    },
+    {
+      "status": "M",
+      "path": "eslint.config.js",
+      "sha256": "5d1da4c69be36caa608dd6d9e1eb2aac49e0758da98bb70611e6daab00ccfa63"
+    },
+    {
+      "status": "M",
+      "path": "package-lock.json",
+      "sha256": "cdbde2a36fef4c73c4625417a37e40520f99406615910973ec7b13d6b16289c2"
+    },
+    {
+      "status": "M",
+      "path": "package.json",
+      "sha256": "2dfd6d7c92d2167cbe3506bb10d3b2af92847da4b856f484dc640627ae8ab67e"
+    },
+    {
+      "status": "A",
+      "path": "scripts/install-local.cjs",
+      "sha256": "dbdb280b2d38ab3f1fc75b68623fe97d3226b2a307a872c4c1704e2920a0d2e2"
+    },
+    {
+      "status": "M",
+      "path": "scripts/license.mjs",
+      "sha256": "affe0359c39368c76caacbd362dad6a1ac7cdac6090b5fc0f259b45be7acfe18"
+    },
+    {
+      "status": "A",
+      "path": "scripts/prepare-android-signing.cjs",
+      "sha256": "03ebefdfa8c1465399159042d89a1dcbfaf62b53757b91c8d27cc4cf65b357ed"
+    },
+    {
+      "status": "A",
+      "path": "scripts/qa/README.md",
+      "sha256": "d1fea848ec06c4f9f4bfb60abf19e80c2a3a9b0f913b13ffe0afdfe11513e021"
+    },
+    {
+      "status": "A",
+      "path": "scripts/qa/agent-real.cjs",
+      "sha256": "a4a3a41f2076cf74f1fa1f6c6d991b0b0206c4b37634767cee0f1270032b7d2b"
+    },
+    {
+      "status": "A",
+      "path": "scripts/qa/agent-smoke.cjs",
+      "sha256": "2a1f54e0a8a726aab7a09fa9ed38b25d61aa2a88ad747724d733c5fb8e0674c0"
+    },
+    {
+      "status": "A",
+      "path": "scripts/qa/common.cjs",
+      "sha256": "54beae153f096e5408a0742b5ef5e4118d026fc08526b24acadc095bdeabef2e"
+    },
+    {
+      "status": "A",
+      "path": "scripts/qa/desktop.cjs",
+      "sha256": "43965544fa30f53f5811c86854d1d1c55e480ee96a5557964b92f6df841f33bb"
+    },
+    {
+      "status": "A",
+      "path": "scripts/qa/license-ui.cjs",
+      "sha256": "6a9333b75d467c447ba34af5e40bbc3beac7d425cce2dfb1f5dde3b990ea9465"
+    },
+    {
+      "status": "A",
+      "path": "scripts/qa/preflight.cjs",
+      "sha256": "536a06bbf4d2e4ec38a8866553ae60626132b5989211f3677de6a3aa086795d3"
+    },
+    {
+      "status": "A",
+      "path": "scripts/release-linux.cjs",
+      "sha256": "2265e1f1f015f576a63bd80a08116aec20b4caa3c7277d7f5376af342e58bbcc"
+    },
+    {
+      "status": "M",
+      "path": "scripts/secret-scan.mjs",
+      "sha256": "399c88c978fda69be97d26865252f81bc15b323cf116a740524005070fd87dd1"
+    },
+    {
+      "status": "M",
+      "path": "src/App.tsx",
+      "sha256": "6513c596e6dd00d2faf5bdad76d94b3c294d9e9abad0801b2742ec8558342714"
+    },
+    {
+      "status": "M",
+      "path": "src/components/AdminPanel.tsx",
+      "sha256": "6c1dcbd369d731337e7542251e254ddddec4bfbe685a62e58e009f0be0a6500a"
+    },
+    {
+      "status": "M",
+      "path": "src/components/Composer.tsx",
+      "sha256": "6b0b0e15364a25ad87f968c00d4dcea62ba6fae8320dcc136b1d0f92213b88ca"
+    },
+    {
+      "status": "M",
+      "path": "src/components/GoalStatusPanel.tsx",
+      "sha256": "71231dca6ad8cccd4655d156db4882a3535ae9fc06741ce59ed4f0da60fb80ec"
+    },
+    {
+      "status": "M",
+      "path": "src/components/LicenseGate.tsx",
+      "sha256": "d6fe62d0a99ae59746ad055c08ec3b27081f352810e0d142aa8bb9668136b379"
+    },
+    {
+      "status": "M",
+      "path": "src/components/More.tsx",
+      "sha256": "c8d534e7c77a2aa4af7ff4ecd190f09c5caa57eadd5da85ba9cfb0564540d220"
+    },
+    {
+      "status": "M",
+      "path": "src/components/Settings.tsx",
+      "sha256": "f26e64a9be2bd0a78084223d43504c9a5e15eb04761922f5e6e0c75dd8bc8ff2"
+    },
+    {
+      "status": "M",
+      "path": "src/globals.d.ts",
+      "sha256": "5c1f56fb342bc04cf5d56ebfbe41eeb6f0ea5fa729ebe1d959197e8fed2777e7"
+    },
+    {
+      "status": "A",
+      "path": "src/lib/abort.ts",
+      "sha256": "3bbdec2bc8d1c205554226a25a6269c923dd703afdf7fe4ce3d0c90c1aabf6d7"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/brain.ts",
+      "sha256": "2712bb33819258084bebbc554b3e5f662bce3e09c15dc52addc2c81569f317ac"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/cognitiveStatus.ts",
+      "sha256": "b1ad13dd2d6f7640c02aa00243019981a2035fc6b2a90a37ba871789f1cba720"
+    },
+    {
+      "status": "A",
+      "path": "src/lib/controlCommand.ts",
+      "sha256": "99acd11d2d9cdc10a1c3893054f0792ebc2e58a14d8523c6ad0058d4f8ebdde4"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/council.ts",
+      "sha256": "6de3b1c5fd3b8257871c712b365bc60e7ac1f0ea0dd249443c7e5718cec38746"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/desktop.ts",
+      "sha256": "d7756bb021cd149ba1876a0904c1cde77b27168e353b09bf696c3132574341c0"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/generation.ts",
+      "sha256": "ed7dbda1b4571380ca32241ad3c7abbcc5ab1c0497edadf384fee884bf99fd22"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/goalControl.ts",
+      "sha256": "12d69984bef087fee12bac0223c8ce9c5b19c2d33c43aff25c3cb519d579e507"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/goalProgress.ts",
+      "sha256": "9d48a62e9729cfd6af93991e7451341969687a8fc204a6b5f342c9b1ae495a89"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/goalRuntime.ts",
+      "sha256": "27c7f4aa65943e261fe99bf17d55e5ac84711f09cef230c5615566f3fa4d1499"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/goalState.ts",
+      "sha256": "e715541650fe3a031e7ddaadd3469836a2a9678051e3432c57396456f32c2693"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/http.ts",
+      "sha256": "f9a1f4297aef0957c7087c703498cd61d1397e0d90bb934e98eed719ac5576b2"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/license.ts",
+      "sha256": "14c9edb49a6502d5fb2959a3b0ae15cc25b8d88e72bb3e7b2ea663c37a5fbc82"
+    },
+    {
+      "status": "A",
+      "path": "src/lib/licenseAuthority.ts",
+      "sha256": "7d11640c4efa1b6076a32924730fe1bffe66b99e0219898e3d12e375ff6a439f"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/licenseSign.ts",
+      "sha256": "4a4166fe0519a327dc80137e9619846c18285569fa5f3eca2084b50550a41045"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/liveUpdate.ts",
+      "sha256": "47b3c2339d8a115904790f0f988282ea74a21223f0d128a9c1bfde30ddc56251"
+    },
+    {
+      "status": "A",
+      "path": "src/lib/localToolCommands.ts",
+      "sha256": "5d1d3b62143d75642fb30cc8da294eedb9eecf15aeed620dcb4c1bfa6f0ec1c0"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/ollamaMaestro.ts",
+      "sha256": "0d43762e67220a113440125b63adb441dcce48ace612f1e1b9df9bc227420cfa"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/permissions.ts",
+      "sha256": "0af5cc96f56c3daccfb84a366b65ef8cee01725cc7f5a4ff18b9a9dc1731ca2a"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/providers/anthropic.ts",
+      "sha256": "d55fe49f45da31189201354050da27332768bca0a7d106ac816da533ff156eb1"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/providers/gemini.ts",
+      "sha256": "721f66d87129fc44024e38a7378f4a45af2c3d2d11adf989a621311ee415673a"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/providers/ollama.ts",
+      "sha256": "bb81cabc340caa5693f628bb62ddba4a003f25b25e00de636b026970290a83ed"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/providers/openai.ts",
+      "sha256": "9e8a7fe32e57d2dd6593d36aed8691a03498abb7a1e0d96c68cb64bf22e30b89"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/providers/types.ts",
+      "sha256": "3b0cf62fb804f3dc04de99fb69ff67325ce9a87eb820984faa5e5c335600c873"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/providers/webllm.ts",
+      "sha256": "a89da78a859bf6f84d8cdf5518726331c7efa02c8f5708862c5077b0d0699632"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/toolSelector.ts",
+      "sha256": "1935de583b74f835000621ad5a92580d57c3fdfecc5b5ada6494b5c67d4b8140"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/tools.ts",
+      "sha256": "f95a3bbdc5909335e992143901c8d6654492b9f00c1d2d1216347e65b45c09f3"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/updater.ts",
+      "sha256": "f797a3103890a9285f0223ac5bf8ac52de4d0ac116fca8b1fb8c1d00c8a6e64e"
+    },
+    {
+      "status": "M",
+      "path": "src/styles/index.css",
+      "sha256": "a1711841f3901a8ee52f203cb967ad05d242ab9fd8b59ff39cfa04ef9b3ee4db"
+    },
+    {
+      "status": "A",
+      "path": "tests/configuredOllamaPort.test.ts",
+      "sha256": "f31e8bfcd0fa5ec5f6181ce03c1d6a74195ac8cc1a3bef887402a94681c5c97f"
+    },
+    {
+      "status": "A",
+      "path": "tests/fetchCancellation.test.ts",
+      "sha256": "a78c9a225a5760d765d0f4c2e4b32632a6e5aa406b224a0569430681d5bb32a5"
+    },
+    {
+      "status": "M",
+      "path": "tests/goalRuntime.test.ts",
+      "sha256": "505d191b58f5baa4cccfdc997c06c0c5151ac9762f60974165f5558a744d8514"
+    },
+    {
+      "status": "A",
+      "path": "tests/goalService.test.ts",
+      "sha256": "04d1cbddbc98a7ea62a3b98fb859f85aa3023fd0814bf8338b9947b3384f6923"
+    },
+    {
+      "status": "M",
+      "path": "tests/intelligenceEvals.test.ts",
+      "sha256": "e38318a654d0d845e3f04722864bbf5a370d13a74a9aa88e8667832fb2e634ed"
+    },
+    {
+      "status": "M",
+      "path": "tests/license.test.ts",
+      "sha256": "80e2c721f546148e8ae79870e94f2c12191f89d62de4d1a765bab2c417c91687"
+    },
+    {
+      "status": "A",
+      "path": "tests/licenseCli.test.ts",
+      "sha256": "b527ca386a1e87c82700ea7ac3775096858f2edb50d496dca3c9aa71a7053b8b"
+    },
+    {
+      "status": "A",
+      "path": "tests/licenseOwnerUpdates.test.ts",
+      "sha256": "70ef5458a896f3f3f3d0faec11cb29ca801e0dfcf98066119990c1ede0eae71e"
+    },
+    {
+      "status": "M",
+      "path": "tests/licenseSign.test.ts",
+      "sha256": "238b1febf7d14eebaed3523c1a80e62dc4de56f9fbfbec9d1571606edffc00f0"
+    },
+    {
+      "status": "M",
+      "path": "tests/linuxKeyboard.test.ts",
+      "sha256": "05d3b96c2301883ef4f908eedd35f1c5694ff656be712e3d8a0e3b48bfce2ce2"
+    },
+    {
+      "status": "A",
+      "path": "tests/localToolCommands.test.ts",
+      "sha256": "0b3a199b8634c3d9526cb710c22d5e40c8f7fb28a836f82287facaffb2a5d81b"
+    },
+    {
+      "status": "M",
+      "path": "tests/mcp.test.ts",
+      "sha256": "d47482cd6e909fb53c9e1f1729a662b7e62479546e3024c42a719b5db8dfd3d1"
+    },
+    {
+      "status": "A",
+      "path": "tests/monitorBridge.test.ts",
+      "sha256": "14a17862a8452aa23f8499bb9f5de64c10b7a0d4897d7d719c27165d9409f1c5"
+    },
+    {
+      "status": "A",
+      "path": "tests/monitorConsentIpc.test.ts",
+      "sha256": "4c49ce61c45a0e86f2407404cd10a81a529bf847702e8e1c59846c556fc1313c"
+    },
+    {
+      "status": "A",
+      "path": "tests/monitorPanel.test.ts",
+      "sha256": "7c2f19123511659bd9ab92be3e0719e6cbbe26fdf6812ab38b84cb2252bb50a9"
+    },
+    {
+      "status": "A",
+      "path": "tests/ollamaActionCapability.test.ts",
+      "sha256": "48fd9948aaa97c1ebe78a1e7270be83d89ae7b49da021aff964ba85d961ad3e6"
+    },
+    {
+      "status": "A",
+      "path": "tests/ollamaCapabilityProbe.test.ts",
+      "sha256": "c135f05efc08b42c1d5dee4f77a4f7ef2477f90b4e972748914f021886586ad8"
+    },
+    {
+      "status": "M",
+      "path": "tests/ollamaContext.test.ts",
+      "sha256": "5864acbd0cc5afb9024d471562840bb0da968ce86fb50ec6489faa85725a39be"
+    },
+    {
+      "status": "M",
+      "path": "tests/ollamaMaestro.test.ts",
+      "sha256": "d48fa30c54e431d465369f83426d4180a219750d0527ec6c44a1665a3d281cc2"
+    },
+    {
+      "status": "M",
+      "path": "tests/plugins.test.ts",
+      "sha256": "3ebcf79cbc27e55d13689775cea9d7a3d46581ab71a8d42fac78368cb4ad97ce"
+    },
+    {
+      "status": "A",
+      "path": "tests/providerStop.test.ts",
+      "sha256": "ce1fd5338e70478a23ea2f161fa6b4495aad279a30dca9389a48adf001bd42a9"
+    },
+    {
+      "status": "A",
+      "path": "tests/qaConfiguration.test.ts",
+      "sha256": "f53e63b53631797c89bbcd37ade89fe8548f0136c405a67af6db7c43ff8d83ab"
+    },
+    {
+      "status": "A",
+      "path": "tests/qaDiscoveredControls.test.ts",
+      "sha256": "4ca28797c8bbe1e335a2cb64543907e2657e29c03403e0f267302728372f37c0"
+    },
+    {
+      "status": "A",
+      "path": "tests/releasePackaging.test.ts",
+      "sha256": "a628466984b211a9fcd51c71d38f482736a236c0d6b4393023938286ac04342e"
+    },
+    {
+      "status": "A",
+      "path": "tests/secretScan.test.ts",
+      "sha256": "eecd845458caf22ff68c79ab9452e4b5c350b226f26b67e8d8c1ff379523d8f1"
+    },
+    {
+      "status": "A",
+      "path": "tests/stopConsent.test.ts",
+      "sha256": "3e0b7c4d87891f6d9e3a0542e354e8d7ab0bca387072bf7bce08b8a92309fd75"
+    },
+    {
+      "status": "A",
+      "path": "tests/stopExecution.test.ts",
+      "sha256": "e59c73000e755ca72e399bdf97d15d7a994aec11362da358bb57c78b4992fd1e"
+    },
+    {
+      "status": "A",
+      "path": "tests/stopWorkspaceProcess.test.ts",
+      "sha256": "5212b870898a55f36815d1c18e79665f58e8079bc0c9bbd9f0301e066919a895"
+    },
+    {
+      "status": "A",
+      "path": "tests/toolSelectionComposition.test.ts",
+      "sha256": "b317387518d6ff0a4850d48bb15d58609de40c8d5510f11c5c9a53ea24f503c1"
+    },
+    {
+      "status": "M",
+      "path": "tests/toolSelector.test.ts",
+      "sha256": "ec2deb64111111d8bd870f9f3f04abb8821dfe7e3145328e5bc06e088668571f"
+    },
+    {
+      "status": "A",
+      "path": "tests/unknownToolConsent.test.ts",
+      "sha256": "3b868e77218c26b385bd39547e0df582ba21caa0fbe829796b209ab55c101bd3"
+    },
+    {
+      "status": "A",
+      "path": "tests/webllmCapabilityGuard.test.ts",
+      "sha256": "b4533b291b4f0794b81eb65668736c5e8b215349e8321bf10e84d4ceb4c45f47"
+    },
+    {
+      "status": "M",
+      "path": "vite.config.ts",
+      "sha256": "d31754b253dbd11b3b4a24450147211beb501d7eb0d807392b970a53df0df746"
+    }
+  ],
+  "self_reference": {
+    "path": "QA/autonomia60/durable/provenance-manifest.json",
+    "hash": "see Git object/packaged PROVENANCE; not self-hashed"
+  },
+  "private_signing_material": "untracked locally, excluded from new commit; history not rewritten",
+  "evidence_formatting": "Terminal trailing whitespace/empty EOF lines normalized; test outcomes unchanged; raw logs retained in /tmp for this session."
+}

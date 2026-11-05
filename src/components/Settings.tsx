@@ -413,14 +413,13 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
     if (maestroBusy) return;
     if (!store.settings.ollamaUrl?.trim()) { toast("Najpierw wpisz adres Ollamy (pole niżej)."); return; }
     setMaestroBusy(true);
-    setMaestroMsg("Dobieram role z Twoich modeli…");
+    setMaestroMsg("Sprawdzam narzędzia w maksymalnie 6 zainstalowanych modelach (kolejno)…");
     const r = await applyAutoFromInstalled();
     setMaestroBusy(false);
     if (r.ok && r.overrides) {
       setS((prev) => ({ ...prev, ...store.settings }));
       const o = r.overrides;
-      setMaestroMsg(`✅ Dobrane: ${o.simple || "—"} (szybki) · ${o.complex || "—"} (mądry)${o.vision ? ` · ${o.vision} (wizja)` : ""}${o.uncensored ? ` · ${o.uncensored} (bez cenzury)` : ""}. Włączony inteligentny routing.`);
-      void warmNow();
+      setMaestroMsg(`✅ Próba narzędzi: ${o.simple} (najkrótsza zmierzona próba) · ${o.complex} (zadania).${o.vision ? ` ${o.vision}: wizja deklarowana przez API, jakość obrazu nieprzetestowana.` : ""} ${r.evidence?.map((entry) => `${entry.model}: zainstalowany=${entry.installed === null ? "nieznane" : entry.installed ? "tak" : "nie"}, załadowany przed próbą=${entry.loadedBeforeProbe === null ? "nieznane" : entry.loadedBeforeProbe ? "tak" : "nie"}, narzędzia=${entry.tools}`).join("; ") || ""}. To test protokołu, nie pełnego agenta.`);
       toast("⚙ Skonfigurowano z Twoich modeli.");
     } else {
       setMaestroMsg(`❌ ${r.error}`);
@@ -3254,10 +3253,12 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                     </div>
 
                     <div className="update-meta">
-                      <div><span>Twoja wersja</span><b>{localTime || localBuild || "deweloperska"}</b></div>
+                      <div><span>Twoja wersja</span><b>{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "deweloperska"}</b><small>{localTime || localBuild}</small></div>
                       <div><span>Urządzenie</span><b>{platformLabel(activePlatform)}</b></div>
                       <div><span>Ostatnie sprawdzenie</span><b>{checkedAt ? new Date(checkedAt).toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "short" }) : "Jeszcze nie"}</b></div>
                     </div>
+
+                    <details style={{ marginTop: 8 }}><summary>Identyfikator kodu</summary><code style={{ overflowWrap: "anywhere" }}>{typeof __APP_COMMIT__ !== "undefined" ? __APP_COMMIT__ : "unknown"}</code></details>
 
                     {updBusy && <div className="update-progress" aria-label="Sprawdzanie aktualizacji"><span /></div>}
                     {updMsg && <p className="update-message">{updMsg}</p>}

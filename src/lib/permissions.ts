@@ -51,6 +51,7 @@ const RISK: Record<string, Risk> = {
   add_shopping_item: "write", add_calendar_event: "write", remember_fact: "write",
   create_scene: "write", set_timer: "write", add_tally_item: "write", add_journal_entry: "write",
   create_flashcards: "write",
+  monitor_status: "read", monitor_create: "write", monitor_control: "write",
   // outbound — zewnętrzne lub nieodwracalne (wymaga zgody)
   gmail_send: "outbound", gmail_reply: "outbound", gcal_add: "outbound", clear_tally: "outbound", run_automation: "outbound",
   send_test_email: "outbound", send_offers_all: "outbound",
@@ -63,6 +64,8 @@ const RISK: Record<string, Risk> = {
   // sterowanie komputerem (Windows) — wymaga zgody
   desktop_launch_app: "outbound", desktop_open: "outbound", desktop_power: "outbound",
   desktop_volume: "outbound", desktop_media: "outbound", desktop_type: "outbound", desktop_hotkey: "outbound",
+  desktop_clipboard_read: "outbound",
+  desktop_list_windows: "outbound", desktop_focus_window: "outbound",
   desktop_click: "outbound", desktop_active_window: "outbound", system_browser_read_public: "outbound",
   // pełne sterowanie telefonem (Android, usługa Dostępności) — wymaga zgody
   android_type: "outbound", android_tap: "outbound", android_global: "outbound",

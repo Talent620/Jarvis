@@ -1,0 +1,66 @@
+{
+  "scope": "Existing qa:desktop and native Linux X11 window targeting; no replacement agent",
+  "implementation": {
+    "C_runner": "IMPLEMENTED",
+    "C_native_execution": "BLOCKED",
+    "Wayland_input": "MISSING_IMPLEMENTATION",
+    "Linux_discovery_focus": "IMPLEMENTED",
+    "consent_focus_restore": "IMPLEMENTED; only explicit verified target from trusted JARVIS window; user takeover fails closed"
+  },
+  "owned_files_sha256": {
+    "electron/linux-keyboard.cjs": "bf7d23809ca158682fed43b8c0b31eed30728c83a318ffae16be423a40be81b0",
+    "scripts/qa/common.cjs": "54beae153f096e5408a0742b5ef5e4118d026fc08526b24acadc095bdeabef2e",
+    "scripts/qa/desktop.cjs": "43965544fa30f53f5811c86854d1d1c55e480ee96a5557964b92f6df841f33bb",
+    "tests/linuxKeyboard.test.ts": "05d3b96c2301883ef4f908eedd35f1c5694ff656be712e3d8a0e3b48bfce2ce2",
+    "tests/qaConfiguration.test.ts": "f53e63b53631797c89bbcd37ade89fe8548f0136c405a67af6db7c43ff8d83ab"
+  },
+  "validation": {
+    "command": "npx vitest run tests/linuxKeyboard.test.ts tests/qaConfiguration.test.ts",
+    "tests_pass": 17,
+    "tests_fail": 0,
+    "level": "unit/controlled native command protocol; not actual desktop",
+    "scoped_eslint": "PASS"
+  },
+  "real_runner": {
+    "run_id": "2026-11-05T21-41-56-138Z-desktop-9540d1ef",
+    "exit_code": 2,
+    "independent_local": "PASS",
+    "license_issue_activate": "PASS",
+    "A": "BLOCKED",
+    "B": "BLOCKED",
+    "C": "BLOCKED",
+    "ollama_11435": "ECONNREFUSED",
+    "ollama_11434": "ECONNREFUSED",
+    "native_start": "SIGSEGV after Missing X server/$DISPLAY",
+    "xdotool": "not installed",
+    "Mousepad": "installed",
+    "Xvfb": "neither installed nor started",
+    "source_note": "Run preceded final consent-focus restoration and matching-reply oracle patches; changed branches subsequently covered by unit tests. Root final regression must run after integration."
+  },
+  "oracle": {
+    "requires": [
+      "trusted actual source copy event and exact second paragraph selection",
+      "actual clipboard matching expected text",
+      "owned native editor focus observed immediately after paste tool completion",
+      "successful paste/save/read audit entries",
+      "independent saved file bytes",
+      "real model response matching task request",
+      "matching saved assistant reply"
+    ],
+    "denies": [
+      "direct file/terminal write",
+      "typing paragraph content instead of copying",
+      "native input outside own source/editor/dialog windows"
+    ],
+    "fixtures": [
+      "visible sandboxed BrowserWindow source page",
+      "real Mousepad process with --disable-server and isolated XDG dirs"
+    ],
+    "cleanup": "owned source window and editor child only; no clipboard writes or restoration"
+  },
+  "remaining": [
+    "Native C was not executed with a real model and desktop here; callback/selection behavior needs target X11 acceptance.",
+    "Wayland input adapter is not implemented.",
+    "No actual user installation or clipboard was accessed."
+  ]
+}

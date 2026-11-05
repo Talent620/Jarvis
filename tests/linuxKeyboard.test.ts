@@ -73,4 +73,51 @@ describe("klawiatura Linux X11", () => {
     const run = vi.fn(async () => { throw Object.assign(new Error("missing"), { code: "ENOENT" }); });
     expect(await createLinuxKeyboard({ env, run }).hotkey("ctrl+s", "Edytor")).toBe("err:linux-xdotool-missing");
   });
+  it("odkrywa widoczne okna i potwierdza fokus po aktywacji konkretnego identyfikatora", async () => {
+    let active = "7";
+    const run = vi.fn(async (args: string[]) => {
+      if (args[0] === "search") return "42\n7\n42\ninvalid";
+      if (args[0] === "getwindowname") return args[1] === "42" ? "Dokument ORION" : "JARVIS";
+      if (args[0] === "windowactivate") { active = args[2]; return ""; }
+      if (args[0] === "getactivewindow") return active;
+      return "";
+    });
+    const keyboard = createLinuxKeyboard({ env, run });
+    expect(await keyboard.listWindows()).toEqual({ ok: true, windows: [{ id: "42", title: "Dokument ORION" }, { id: "7", title: "JARVIS" }], truncated: false });
+    expect(await keyboard.focusWindow("42", "ORION")).toEqual({ ok: true, id: "42", title: "Dokument ORION" });
+    expect(run).toHaveBeenCalledWith(["windowactivate", "--sync", "42"]);
+    run.mockClear();
+    expect(await keyboard.focusWindow("42", "inny dokument")).toEqual({ ok: false, error: "err:linux-window-mismatch" });
+    expect(await keyboard.focusWindow("42; rm", "ORION")).toEqual({ ok: false, error: "err:linux-no-window" });
+    expect(run.mock.calls.every(([args]) => args[0] !== "windowactivate")).toBe(true);
+  });
+  it("nie potwierdza fokusu kiedy system go nie przyznał lub tytuł zmienił się podczas aktywacji", async () => {
+    const run = vi.fn(async (args: string[]) => args[0] === "getactivewindow" ? "7" : args[0] === "getwindowname" ? "ORION" : "");
+    expect(await createLinuxKeyboard({ env, run }).focusWindow("42", "ORION")).toEqual({ ok: false, error: "err:linux-window-mismatch" });
+    expect(await createLinuxKeyboard({ env: { ...env, XDG_SESSION_TYPE: "wayland" }, run }).listWindows()).toEqual({ ok: false, error: "err:linux-session" });
+  });
+  it("przywraca wyłącznie jawnie wybrane okno po zgodzie w JARVIS-ie, a oddaje kontrolę innej aplikacji", async () => {
+    let active = "7", title = "Edytor ORION";
+    const run = vi.fn(async (args: string[]) => {
+      if (args[0] === "getactivewindow") return active;
+      if (args[0] === "getwindowname") return args[1] === "42" ? title : "JARVIS";
+      if (args[0] === "windowactivate") { active = args[2]; return ""; }
+      return "";
+    });
+    const keyboard = createLinuxKeyboard({ env, run, consentWindowId: () => "7" });
+    expect(await keyboard.hotkey("ctrl+v", "ORION")).toBe("err:linux-window-mismatch");
+    expect(run.mock.calls.some(([args]) => args[0] === "windowactivate")).toBe(false);
+    expect((await keyboard.focusWindow("42", "ORION")).ok).toBe(true);
+    active = "7"; // The trusted consent window temporarily received OS focus.
+    expect(await keyboard.hotkey("ctrl+v", "ORION")).toBe("ok");
+    expect(active).toBe("42");
+    active = "99"; run.mockClear(); // User works in an unrelated window.
+    expect(await keyboard.hotkey("ctrl+v", "ORION")).toBe("err:linux-window-mismatch");
+    expect(run.mock.calls.some(([args]) => ["windowactivate", "key"].includes(args[0]))).toBe(false);
+    active = "7";
+    expect(await keyboard.hotkey("ctrl+v", "ORION")).toBe("err:linux-window-mismatch");
+    await keyboard.focusWindow("42", "ORION"); active = "7"; title = "Inny dokument"; run.mockClear();
+    expect(await keyboard.hotkey("ctrl+v", "ORION")).toBe("err:linux-window-mismatch");
+    expect(run.mock.calls.some(([args]) => ["windowactivate", "key"].includes(args[0]))).toBe(false);
+  });
 });

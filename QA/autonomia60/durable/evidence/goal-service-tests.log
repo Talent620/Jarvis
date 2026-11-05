@@ -1,0 +1,10 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/goalService.test.ts (20 tests) 4449ms
+   ✓ durable monitor: real file store, controlled clock/provider > 08:00 to 14:00: persists NO_MATCH through restart, then atomically records exactly one match/outbox event 3675ms
+
+ Test Files  1 passed (1)
+      Tests  20 passed (20)
+   Start at  21:48:38
+   Duration  4.94s (transform 68ms, setup 0ms, collect 79ms, tests 4.45s, environment 0ms, prepare 256ms)

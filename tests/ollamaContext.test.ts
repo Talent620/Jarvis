@@ -44,6 +44,13 @@ describe("Ollama — budżet kontekstu", () => {
     { base: "http://localhost:11434", think: false, options: { num_ctx: 4096 } }))
       .rejects.toThrow(/Ollama odrzuciła zapytanie: przekroczono kontekst modelu/);
   });
+  it("nie wysyła trwale zbyt dużej bieżącej tury i nie próbuje rozgrzewania", async () => {
+    const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
+    await expect(askOllamaNative({ apiKey: "local", model: "local", system: "s", webSearch: false,
+      history: [{ role: "user", content: "Zażółć ".repeat(3000) }], tools: [] },
+    { base: "http://127.0.0.1:11435", think: false, options: { num_ctx: 4096 } })).rejects.toThrow(/szacowany budżet kontekstu/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it("rozpoznaje tylko jednoznaczne powitania, a nie prośby o wykonanie akcji", () => {
     expect(isToolFreeGreeting("Cześć JARVIS, przedstaw swoje możliwości.")).toBe(true);
     expect(isToolFreeGreeting("Dzień dobry!")).toBe(true);

@@ -45,3 +45,21 @@ it('does not accept a user echo, an earlier answer, or a late extra answer as th
   expect(verifiedReply([{ messages: [user, answer] }], user.text, answer.text)).toBe(true);
   expect(verifiedReply([{ messages: [user, answer, { role: 'assistant', text: 'late old result' }] }], user.text, answer.text)).toBe(false);
 });
+it('requires real selection/copy, clipboard and editor focus, native paste/save, model response and matching disk bytes for C', () => {
+  const { clipboardOracle } = require('../scripts/qa/desktop.cjs');
+  const fixture = {
+    expected: 'Drugi akapit: zażółć', file: 'Drugi akapit: zażółć', modelResponse: true, assistantReply: true,
+    copies: [{ trusted: true, focused: true, text: 'Drugi akapit: zażółć' }],
+    pasteObservations: [{ editor_focused: true, clipboard: 'Drugi akapit: zażółć', source_copy_observed: true }],
+    audit: [{ tool: 'desktop_hotkey', status: 'ok', input: JSON.stringify({ combo: 'ctrl+v' }) }, { tool: 'desktop_hotkey', status: 'ok', input: { combo: 'ctrl+s' } }, { tool: 'system_files_read', status: 'ok', input: {}, output: 'Drugi akapit: zażółć' }],
+  };
+  expect(clipboardOracle(fixture).passed).toBe(true);
+  expect(clipboardOracle({ ...fixture, copies: [] }).passed).toBe(false);
+  expect(clipboardOracle({ ...fixture, copies: [{ trusted: false, focused: true, text: fixture.expected }] }).passed).toBe(false);
+  expect(clipboardOracle({ ...fixture, pasteObservations: [{ editor_focused: false, clipboard: fixture.expected, source_copy_observed: true }] }).passed).toBe(false);
+  expect(clipboardOracle({ ...fixture, file: 'Pierwszy akapit' }).passed).toBe(false);
+  expect(clipboardOracle({ ...fixture, modelResponse: false }).passed).toBe(false);
+  expect(clipboardOracle({ ...fixture, assistantReply: false }).passed).toBe(false);
+  expect(clipboardOracle({ ...fixture, audit: [] }).passed).toBe(false);
+  expect(clipboardOracle({ ...fixture, audit: [...fixture.audit, { tool: 'system_files_write', status: 'ok', input: {} }] }).passed).toBe(false);
+});

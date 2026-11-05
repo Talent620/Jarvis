@@ -88,7 +88,7 @@ function environment() {
     container_markers: { dockerenv: fs.existsSync('/.dockerenv'), containerenv: fs.existsSync('/run/.containerenv') }, cwd: root, uid: process.getuid?.(),
     session_present: Object.fromEntries(['DISPLAY', 'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR', 'DBUS_SESSION_BUS_ADDRESS', 'XDG_SESSION_TYPE'].map(k => [k, !!process.env[k]])),
     session_bus_socket: !!(process.env.XDG_RUNTIME_DIR && fs.existsSync(path.join(process.env.XDG_RUNTIME_DIR, 'bus'))),
-    tools: Object.fromEntries(['chromium', 'chromium-browser', 'Xvfb', 'xvfb-run', 'Xorg', 'xdotool', 'ollama'].map(x => [x, which(x)])),
+    tools: Object.fromEntries(['chromium', 'chromium-browser', 'Xvfb', 'xvfb-run', 'Xorg', 'xdotool', 'mousepad', 'ollama'].map(x => [x, which(x)])),
     electron_version: dependencySnapshot().packages.electron.version || null,
     actual_user_installation: 'Not inspected. This is the current test machine, not assumed to be /home/qw/Jarvis-GitHub.',
   };

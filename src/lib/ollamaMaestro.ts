@@ -6,6 +6,7 @@
 import { store } from "./store";
 import { detectOllama } from "./privateMode";
 import { pullOllamaModel } from "./ollamaPull";
+import { probeOllamaTools, type OllamaCapabilityEvidence } from "./providers/ollama";
 
 export interface RoleModel {
   role: "reflex" | "balanced" | "vision" | "uncensored";
@@ -134,24 +135,33 @@ export function autoAssignRoles(installed: string[]): PremiumOverrides {
  * Skonfiguruj się SAM z modeli już obecnych na serwerze: dobierz role + włącz premium-routing,
  * bez pobierania czegokolwiek. Idealne, gdy masz już jakieś modele. Czyta sieć (detectOllama).
  */
-export async function applyAutoFromInstalled(): Promise<{ ok: boolean; overrides?: PremiumOverrides; error?: string }> {
+export async function applyAutoFromInstalled(): Promise<{ ok: boolean; overrides?: PremiumOverrides; evidence?: OllamaCapabilityEvidence[]; error?: string }> {
   const det = await detectOllama(store.settings.ollamaUrl);
   if (!det.ok) return { ok: false, error: det.error || "Nie połączono z Ollamą — sprawdź adres serwera." };
   if (!det.models.length) return { ok: false, error: "Brak modeli na serwerze — najpierw pobierz przynajmniej jeden." };
-  const o = autoAssignRoles(det.models);
+  // Explicit UI action: bounded, sequential protocol probes. Never pull or restart a service.
+  // Prefer the already configured model; installed names are not capability evidence.
+  const selected = store.settings.model;
+  const candidates = [...new Set([...(det.models.includes(selected) ? [selected] : []), ...det.models])].slice(0, 6);
+  const evidence: OllamaCapabilityEvidence[] = [];
+  for (const model of candidates) evidence.push(await probeOllamaTools(det.url, model));
+  const proven = evidence.filter((entry) => entry.installed && entry.tools === "passed");
+  if (!proven.length) return { ok: false, evidence, error: "Nie potwierdzono obsługi narzędzi w sprawdzonych modelach. Ustawienia pozostały bez zmian; odpowiedź tekstowa nie dowodzi sprawności agenta." };
+  const fastest = [...proven].sort((a, b) => (a.latencyMs ?? Infinity) - (b.latencyMs ?? Infinity))[0];
+  const chosen = proven.find((entry) => entry.model === selected) || fastest;
+  const o: PremiumOverrides = { simple: fastest.model, complex: chosen.model, vision: proven.find((entry) => entry.advertised.includes("vision"))?.model || "", uncensored: "" };
   store.setSettings({
     provider: "ollama",
+    model: "auto",
     ollamaModelSimple: o.simple,
     ollamaModelComplex: o.complex,
     ollamaModelVision: o.vision,
     ollamaModelUncensored: o.uncensored,
     localFirstSimple: true,
     confidenceGate: true,
-    prewarmLocal: true,
     adaptiveRouter: true,
-    localRefine: true,
   });
-  return { ok: true, overrides: o };
+  return { ok: true, overrides: o, evidence };
 }
 
 /**

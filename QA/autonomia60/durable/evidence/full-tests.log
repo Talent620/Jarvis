@@ -1,0 +1,446 @@
+
+> jarvis-ai-assistant@2.1.0-alpha.1 test
+> vitest run
+
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/horizonMissionRelay.test.ts (19 tests) 11ms
+ ✓ tests/predictionLedger.test.ts (48 tests) 1160ms
+   ✓ predictionLedger — narzędzie czatu (prediction_ledger_status) > jest w toolDefs i sklasyfikowane read 1127ms
+ ✓ tests/predictionLedgerBenchmark.test.ts (11 tests) 984ms
+   ✓ Benchmark Dziennika Predykcji — scenariusz v2 (2026-07), 10 klientów × 90 dni > 8) narzędzia/zgody: prediction_ledger_status jest read i NIGDY nie rusza leads/finance 530ms
+ ✓ tests/foundationInvariants.test.ts (23 tests) 105ms
+ ✓ tests/agentRun.test.ts (21 tests) 16ms
+ ✓ tests/cognitiveOrganism.test.ts (18 tests) 22ms
+ ✓ tests/predictionLedgerAdversarial.test.ts (17 tests) 239ms
+ ✓ tests/linuxKeyboard.test.ts (11 tests) 14ms
+ ✓ tests/businessSimulator.test.ts (15 tests) 209ms
+ ✓ tests/registry.test.ts (26 tests) 12ms
+ ✓ tests/goalRuntime.test.ts (8 tests) 23ms
+ ✓ tests/bargain.test.ts (22 tests) 13ms
+ ✓ tests/leadScoring.test.ts (12 tests) 7ms
+ ✓ tests/finance.test.ts (15 tests) 9ms
+ ✓ tests/intelligenceEvals.test.ts (11 tests) 25ms
+ ✓ tests/growthOrganism.test.ts (9 tests) 26ms
+ ✓ tests/stream.test.ts (12 tests) 8ms
+ ✓ tests/manual.test.ts (19 tests) 15ms
+ ✓ tests/goalState.test.ts (9 tests) 9ms
+ ✓ tests/predictionLedgerPerf.test.ts (5 tests) 501ms
+   ✓ Wydajność S9 — tysiące leadów i rekordów, realny czas wykonania > 30 kolejnych cykli (miesiąc życia aplikacji) na 1000 leadów nie rozdyma dziennika ponad sufit 440ms
+ ✓ tests/aiHelpers.test.ts (18 tests) 8ms
+stderr | tests/storeIndexeddb.test.ts > store ↔ IndexedDB — migracja i hydratacja > hydratuje duże kolekcje z IDB do RAM przy kolejnym starcie
+Another connection wants to delete database 'jarvis'. Closing db now to resume the delete request.
+
+stderr | tests/storeIndexeddb.test.ts > store ↔ IndexedDB — migracja i hydratacja > nowo dodana kolekcja (projectFiles) migruje do IDB u już-zmigrowanego usera, bez utraty
+Another connection wants to delete database 'jarvis'. Closing db now to resume the delete request.
+
+stderr | tests/storeIndexeddb.test.ts > store ↔ IndexedDB — migracja i hydratacja > setData zapisuje duże kolekcje do IDB (debounce)
+Another connection wants to delete database 'jarvis'. Closing db now to resume the delete request.
+
+ ✓ tests/contextFusion.test.ts (12 tests) 18ms
+ ✓ tests/financeChat.test.ts (9 tests) 167ms
+ ✓ tests/storeIndexeddb.test.ts (4 tests) 564ms
+   ✓ store ↔ IndexedDB — migracja i hydratacja > setData zapisuje duże kolekcje do IDB (debounce) 430ms
+ ✓ tests/qaConfiguration.test.ts (6 tests) 8ms
+ ✓ tests/recoveryPolicy.test.ts (12 tests) 9ms
+ ✓ tests/localSiteOsStart.test.ts (6 tests) 171ms
+ ✓ tests/boss.test.ts (18 tests) 10ms
+ ✓ tests/decisionEngine.test.ts (10 tests) 10ms
+ ✓ tests/businessFlow.test.ts (13 tests) 228ms
+ ✓ tests/publicPage.test.ts (7 tests) 162ms
+ ✓ tests/goalService.test.ts (20 tests) 6637ms
+   ✓ durable monitor: real file store, controlled clock/provider > 08:00 to 14:00: persists NO_MATCH through restart, then atomically records exactly one match/outbox event 5801ms
+ ✓ tests/learningLoop.test.ts (8 tests) 9ms
+ ✓ tests/fitness.test.ts (9 tests) 12ms
+ ✓ tests/goalGraph.test.ts (10 tests) 8ms
+ ✓ tests/localOllamaStart.test.ts (5 tests) 145ms
+ ✓ tests/monitorConsentIpc.test.ts (2 tests) 11ms
+ ✓ tests/workflowLearning.test.ts (9 tests) 10ms
+ ✓ tests/cognitiveController.test.ts (13 tests) 14ms
+ ✓ tests/modelRouter.test.ts (15 tests) 16ms
+ ✓ tests/geminiCapabilities.test.ts (9 tests) 7ms
+ ✓ tests/siteBlueprintDrive.test.ts (5 tests) 8ms
+ ✓ tests/brainContext.test.ts (7 tests) 26ms
+ ✓ tests/workerSecurity.test.ts (14 tests) 6ms
+ ✓ tests/proactiveOoda.test.ts (9 tests) 6ms
+ ✓ tests/siteRepair.test.ts (11 tests) 10ms
+ ✓ tests/dogfoodFlow.test.ts (2 tests) 6ms
+ ✓ tests/clientFlowE2E.test.ts (2 tests) 4ms
+ ✓ tests/goalDurability.test.ts (5 tests) 11ms
+ ✓ tests/webllm.test.ts (6 tests) 8ms
+ ✓ tests/resilience.test.ts (11 tests) 18ms
+ ✓ tests/runtimeVerification.test.ts (9 tests) 9ms
+ ✓ tests/taskParser.test.ts (12 tests) 5ms
+ ✓ tests/socialStatusPolicy.test.ts (11 tests) 8ms
+ ✓ tests/leadCandidates.test.ts (7 tests) 7ms
+ ✓ tests/places.test.ts (14 tests) 6ms
+ ✓ tests/ollamaContext.test.ts (6 tests) 16ms
+ ✓ tests/proactiveNotify.test.ts (12 tests) 6ms
+ ✓ tests/leadPolicyEnforcement.test.ts (7 tests) 6ms
+ ✓ tests/navIntent.test.ts (12 tests) 244ms
+ ✓ tests/googlePlaces.test.ts (8 tests) 6ms
+ ✓ tests/projectKnowledge.test.ts (10 tests) 232ms
+ ✓ tests/siteBlueprint.test.ts (7 tests) 9ms
+ ✓ tests/cognitiveStatus.test.ts (6 tests) 4ms
+ ✓ tests/glinksSignature.test.ts (12 tests) 9ms
+ ✓ tests/campaignEngine.test.ts (9 tests) 7ms
+ ✓ tests/growthOrchestrator.test.ts (5 tests) 4ms
+ ✓ tests/cognitiveRuntime.test.ts (7 tests) 11ms
+ ✓ tests/agentPlanner.test.ts (9 tests) 7ms
+ ✓ tests/rag.test.ts (10 tests) 5ms
+ ✓ tests/ollamaCapabilityProbe.test.ts (6 tests) 17ms
+ ✓ tests/chiefOfStaff.test.ts (10 tests) 18ms
+ ✓ tests/proactivity.test.ts (7 tests) 28ms
+ ✓ tests/platformCapabilities.test.ts (9 tests) 6ms
+ ✓ tests/adCampaign.test.ts (8 tests) 6ms
+ ✓ tests/conversionUpload.test.ts (7 tests) 7ms
+ ✓ tests/speculative.test.ts (11 tests) 9ms
+ ✓ tests/predict.test.ts (8 tests) 7ms
+ ✓ tests/releasePackaging.test.ts (5 tests) 13ms
+ ✓ tests/growthHandoff.test.ts (6 tests) 5ms
+ ✓ tests/brainAdvisor.test.ts (11 tests) 339ms
+   ✓ suggest_ai — narzędzie czatu > zarejestrowane i sklasyfikowane jako read 333ms
+ ✓ tests/cleanForSpeech.test.ts (13 tests) 9ms
+ ✓ tests/routeView.test.ts (12 tests) 10ms
+ ✓ tests/nextBestAction.test.ts (7 tests) 23ms
+ ✓ tests/siteValidator.test.ts (9 tests) 11ms
+ ✓ tests/errorLog.test.ts (9 tests) 6ms
+ ✓ tests/tips.test.ts (11 tests) 9ms
+ ✓ tests/s9RegexGuard.test.ts (3 tests) 914ms
+   ✓ Kontrakt S9 — skaner regexów (literały, bez komentarzy) > żaden plik src nie używa /u, \p{...} ani lookbehind 912ms
+ ✓ tests/leadSourcePolicy.test.ts (8 tests) 3ms
+ ✓ tests/adQuality.test.ts (8 tests) 8ms
+ ✓ tests/updater.test.ts (13 tests) 6ms
+ ✓ tests/siteGenerationIntegrity.test.ts (7 tests) 8ms
+ ✓ tests/toolSelectionComposition.test.ts (3 tests) 51ms
+ ✓ tests/licenseCli.test.ts (2 tests) 673ms
+   ✓ inicjalizuje lokalnego wystawcę, nie nadpisuje sekretu, wydaje i niezależnie weryfikuje token 496ms
+ ✓ tests/uiRoute.test.ts (8 tests) 6ms
+ ✓ tests/web3dPolicy.test.ts (9 tests) 4ms
+ ✓ tests/voiceCognitiveParity.test.ts (7 tests) 8ms
+ ✓ tests/localRefine.test.ts (7 tests) 6ms
+ ✓ tests/recall.test.ts (8 tests) 7ms
+ ✓ tests/web3dGeneration.test.ts (4 tests) 8ms
+ ✓ tests/liveVoice.test.ts (10 tests) 4ms
+ ✓ tests/bossInsight.test.ts (10 tests) 9ms
+ ✓ tests/growthAttribution.test.ts (6 tests) 4ms
+ ✓ tests/loraExport.test.ts (8 tests) 8ms
+ ✓ tests/memoryScore.test.ts (8 tests) 5ms
+ ✓ tests/livingPulse.test.ts (7 tests) 4ms
+ ✓ tests/resultVerifier.test.ts (7 tests) 7ms
+ ✓ tests/adaptiveRouter.test.ts (6 tests) 7ms
+ ✓ tests/modeCommands.test.ts (8 tests) 6ms
+ ✓ tests/localEmbed.test.ts (5 tests) 44ms
+ ✓ tests/actionOutcome.test.ts (7 tests) 12ms
+ ✓ tests/campaignStore.test.ts (5 tests) 6ms
+ ✓ tests/contextCurator.test.ts (6 tests) 7ms
+ ✓ tests/keys.test.ts (7 tests) 8ms
+ ✓ tests/webllmManager.test.ts (4 tests) 39ms
+ ✓ tests/reflection.test.ts (6 tests) 8ms
+ ✓ tests/ideaCollider.test.ts (5 tests) 4ms
+ ✓ tests/selfImprove.test.ts (6 tests) 5ms
+ ✓ tests/mcpStdio.test.ts (2 tests) 412ms
+   ✓ MCP stdio > łączy lokalny serwer, odkrywa i wywołuje narzędzie 406ms
+ ✓ tests/commandPalette.test.ts (9 tests) 5ms
+ ✓ tests/skills.test.ts (5 tests) 6ms
+ ✓ tests/lowPowerCss.test.ts (3 tests) 3ms
+ ✓ tests/contactActions.test.ts (7 tests) 6ms
+ ✓ tests/toolSelector.test.ts (8 tests) 23ms
+ ✓ tests/growthContext.test.ts (5 tests) 6ms
+ ✓ tests/geminiVision.test.ts (7 tests) 5ms
+ ✓ tests/clientJourney.test.ts (6 tests) 7ms
+ ✓ tests/seoPreview.test.ts (5 tests) 8ms
+ ✓ tests/iqProbe.test.ts (8 tests) 7ms
+ ✓ tests/stallWatchdog.test.ts (6 tests) 9ms
+ ✓ tests/contentStudio.test.ts (7 tests) 7ms
+ ✓ tests/modalMigrationGuard.test.ts (2 tests) 3ms
+ ✓ tests/mailerIndex.test.ts (6 tests) 6ms
+ ✓ tests/localConsensus.test.ts (6 tests) 5ms
+ ✓ tests/modalA11y.test.ts (8 tests) 7ms
+ ✓ tests/verify.test.ts (8 tests) 7ms
+ ✓ tests/centerModel.test.ts (6 tests) 7ms
+ ✓ tests/conversionAi.test.ts (5 tests) 10ms
+ ✓ tests/guardianHistory.test.ts (7 tests) 5ms
+ ✓ tests/generatedToolIsolation.test.ts (2 tests) 38ms
+ ✓ tests/lifeEntropy.test.ts (4 tests) 5ms
+ ✓ tests/siteSeoFiles.test.ts (6 tests) 7ms
+ ✓ tests/growthDayPanel.test.ts (3 tests) 4ms
+ ✓ tests/mic.test.ts (8 tests) 6ms
+ ✓ tests/workspaceTools.test.ts (4 tests) 9ms
+ ✓ tests/salesViewModel.test.ts (5 tests) 5ms
+ ✓ tests/goalPlanner.test.ts (7 tests) 5ms
+ ✓ tests/leadSources.test.ts (5 tests) 6ms
+ ✓ tests/faqReachability.test.ts (5 tests) 46ms
+ ✓ tests/selfHeal.test.ts (7 tests) 3ms
+ ✓ tests/campaignRoi.test.ts (3 tests) 5ms
+ ✓ tests/useStoreSelector.test.ts (7 tests) 3ms
+ ✓ tests/geminiThinking.test.ts (7 tests) 5ms
+ ✓ tests/context.test.ts (4 tests) 5ms
+ ✓ tests/screenBoundary.test.ts (7 tests) 3ms
+ ✓ tests/utm.test.ts (7 tests) 7ms
+ ✓ tests/shoppingPersist.test.ts (5 tests) 5ms
+ ✓ tests/freeMode.test.ts (5 tests) 4ms
+ ✓ tests/translate.test.ts (7 tests) 4ms
+ ✓ tests/localTts.test.ts (5 tests) 38ms
+ ✓ tests/habit.test.ts (8 tests) 4ms
+ ✓ tests/uiQualityGuard.test.ts (3 tests) 14ms
+ ✓ tests/emailDeliverability.test.ts (5 tests) 6ms
+ ✓ tests/chatUx.test.ts (8 tests) 4ms
+ ✓ tests/notifications.test.ts (6 tests) 6ms
+ ✓ tests/chats.test.ts (5 tests) 4ms
+ ✓ tests/secretScan.test.ts (3 tests) 219ms
+ ✓ tests/storeAtomicity.test.ts (5 tests) 6ms
+ ✓ tests/marketingWorkspace.test.ts (4 tests) 3ms
+ ✓ tests/modelIntel.test.ts (6 tests) 6ms
+ ✓ tests/adStudio.test.ts (7 tests) 5ms
+ ✓ tests/leadSuppression.test.ts (4 tests) 4ms
+ ✓ tests/voiceSession.test.ts (5 tests) 5ms
+ ✓ tests/cipher.test.ts (4 tests) 287ms
+ ✓ tests/speechStream.test.ts (7 tests) 8ms
+ ✓ tests/projectValue.test.ts (6 tests) 23ms
+ ✓ tests/confidence.test.ts (8 tests) 6ms
+ ✓ tests/voiceToolParity.test.ts (5 tests) 4ms
+ ✓ tests/basket.test.ts (7 tests) 7ms
+ ✓ tests/socialFit.test.ts (7 tests) 5ms
+ ✓ tests/openrouterGateway.test.ts (3 tests) 5ms
+ ✓ tests/league.test.ts (5 tests) 4ms
+ ✓ tests/settingsModel.test.ts (6 tests) 5ms
+ ✓ tests/centrumDiscoverability.test.ts (5 tests) 4ms
+ ✓ tests/decisions.test.ts (5 tests) 8ms
+ ✓ tests/endpoint.test.ts (8 tests) 4ms
+ ✓ tests/ollamaVisionCheck.test.ts (2 tests) 9ms
+ ✓ tests/i18n.test.ts (7 tests) 3ms
+ ✓ tests/completion.test.ts (4 tests) 4ms
+ ✓ tests/followups.test.ts (5 tests) 7ms
+ ✓ tests/agentPipeline.test.ts (3 tests) 4ms
+ ✓ tests/voiceprint.test.ts (3 tests) 4ms
+ ✓ tests/geminiGrounding.test.ts (4 tests) 3ms
+ ✓ tests/webStudioFlow.test.ts (4 tests) 4ms
+ ✓ tests/auditView.test.ts (5 tests) 4ms
+ ✓ tests/simpleFlow.test.ts (4 tests) 3ms
+ ✓ tests/interactiveSemantics.test.ts (10 tests) 9ms
+ ✓ tests/valueLog.test.ts (4 tests) 5ms
+ ✓ tests/salesOsGates.test.ts (2 tests) 3ms
+ ✓ tests/financeUndo.test.ts (5 tests) 3ms
+ ✓ tests/liveText.test.ts (5 tests) 6ms
+ ✓ tests/homeViewModel.test.ts (4 tests) 5ms
+ ✓ tests/ppg.test.ts (4 tests) 8ms
+ ✓ tests/eslintConfigGuard.test.ts (2 tests) 3ms
+ ✓ tests/crmBuckets.test.ts (3 tests) 4ms
+ ✓ tests/calc.test.ts (5 tests) 4ms
+ ✓ tests/conversationStyle.test.ts (6 tests) 6ms
+ ✓ tests/workerAuth.test.ts (4 tests) 4ms
+ ✓ tests/leadNotes.test.ts (5 tests) 4ms
+ ✓ tests/stopWorkspaceProcess.test.ts (1 test) 55ms
+ ✓ tests/primaryProvider.test.ts (4 tests) 2ms
+ ✓ tests/configuredOllamaPort.test.ts (2 tests) 33ms
+ ✓ tests/liveThread.test.ts (5 tests) 5ms
+ ✓ tests/leadContact.test.ts (4 tests) 8ms
+ ✓ tests/knowledge.test.ts (4 tests) 7ms
+ ✓ tests/voiceFallbackPolicy.test.ts (4 tests) 3ms
+ ✓ tests/voiceConsent.test.ts (6 tests) 5ms
+ ✓ tests/agentPlan.test.ts (7 tests) 6ms
+ ✓ tests/performanceProfile.test.ts (6 tests) 5ms
+ ✓ tests/desktopGoogleOAuth.test.ts (2 tests) 5ms
+ ✓ tests/brainReserve.test.ts (4 tests) 3ms
+ ✓ tests/profile.test.ts (3 tests) 4ms
+ ✓ tests/adAngles.test.ts (3 tests) 5ms
+ ✓ tests/toggleA11y.test.ts (2 tests) 6ms
+ ✓ tests/permissionsCompleteness.test.ts (3 tests) 9ms
+ ✓ tests/goalProgress.test.ts (2 tests) 4ms
+ ✓ tests/virality.test.ts (3 tests) 6ms
+ ✓ tests/imagePrompt.test.ts (4 tests) 3ms
+ ✓ tests/fetchCancellation.test.ts (2 tests) 7ms
+ ✓ tests/headset.test.ts (3 tests) 4ms
+ ✓ tests/voicePersona.test.ts (4 tests) 4ms
+ ✓ tests/watchdog.test.ts (3 tests) 5ms
+ ✓ tests/openrouterBalance.test.ts (3 tests) 3ms
+ ✓ tests/generation.test.ts (4 tests) 4ms
+ ✓ tests/db.test.ts (4 tests) 19ms
+ ✓ tests/emailComposer.test.ts (3 tests) 5ms
+ ✓ tests/leadCandidatesDiscover.test.ts (1 test) 4ms
+ ✓ tests/geminiTools.test.ts (4 tests) 3ms
+ ✓ tests/exportChat.test.ts (3 tests) 21ms
+ ✓ tests/capabilities.test.ts (4 tests) 4ms
+ ✓ tests/revoked.test.ts (3 tests) 3ms
+ ✓ tests/ollamaNative.test.ts (1 test) 8ms
+ ✓ tests/localResearchAgent.test.ts (3 tests) 2ms
+ ✓ tests/touchTargets.test.ts (73 tests) 35ms
+ ✓ tests/localWhisper.test.ts (3 tests) 2ms
+ ✓ tests/linuxLaunch.test.ts (3 tests) 10ms
+ ✓ tests/buildLocalTime.test.ts (3 tests) 24ms
+ ✓ tests/selfVerify.test.ts (2 tests) 4ms
+ ✓ tests/dirtyClose.test.ts (3 tests) 4ms
+ ✓ tests/goalControl.test.ts (1 test) 4ms
+ ✓ tests/webllmCapabilityGuard.test.ts (2 tests) 4ms
+ ✓ tests/bootPlan.test.ts (2 tests) 2ms
+ ✓ tests/salesEngine.test.ts (29 tests) 16ms
+ ✓ tests/personalBenchmarks.test.ts (15 tests) 18ms
+stderr | tests/mailer.test.ts > wybór kanału wysyłki e-maila > backend zwraca błąd → przekazany czytelnie
+Error: Not implemented: window.open
+    at module.exports (/workspace/Jarvis/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at /workspace/Jarvis/node_modules/jsdom/lib/jsdom/browser/Window.js:960:7
+    at startGoogleAuth (/workspace/Jarvis/src/lib/google.ts:48:17)
+    at autoConnect (/workspace/Jarvis/src/lib/google.ts:95:5)
+    at Module.gmailSend (/workspace/Jarvis/src/lib/google.ts:163:23)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at Module.sendOfferEmail (/workspace/Jarvis/src/lib/mailer.ts:243:15)
+    at /workspace/Jarvis/tests/mailer.test.ts:39:15
+    at file:///workspace/Jarvis/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///workspace/Jarvis/node_modules/@vitest/runner/dist/index.js:1056:11) undefined
+
+ ✓ tests/mailer.test.ts (38 tests) 59ms
+ ✓ tests/tools.test.ts (257 tests) 258ms
+ ✓ tests/ollamaMaestro.test.ts (26 tests) 14ms
+ ✓ tests/salesOs.test.ts (29 tests) 22ms
+ ✓ tests/images.test.ts (21 tests) 24ms
+ ✓ tests/leadEngine.test.ts (18 tests) 24ms
+ ✓ tests/webgen.test.ts (23 tests) 33ms
+ ✓ tests/predictionBehavior.test.ts (12 tests) 196ms
+ ✓ tests/guardianAgents.test.ts (21 tests) 25ms
+stderr | tests/googleGmail.test.ts > gmailReply — odpowiedź w wątku > gdy Google niepołączone → autonomicznie uruchamia łączenie (a nie suchy błąd)
+Error: Not implemented: window.open
+    at module.exports (/workspace/Jarvis/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at /workspace/Jarvis/node_modules/jsdom/lib/jsdom/browser/Window.js:960:7
+    at startGoogleAuth (/workspace/Jarvis/src/lib/google.ts:48:17)
+    at autoConnect (/workspace/Jarvis/src/lib/google.ts:95:5)
+    at Module.gmailReply (/workspace/Jarvis/src/lib/google.ts:177:23)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /workspace/Jarvis/tests/googleGmail.test.ts:32:12
+    at file:///workspace/Jarvis/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///workspace/Jarvis/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///workspace/Jarvis/node_modules/@vitest/runner/dist/index.js:1205:15) undefined
+
+ ✓ tests/googleGmail.test.ts (18 tests) 19ms
+ ✓ tests/brainFailover.test.ts (13 tests) 57ms
+ ✓ tests/licenseSign.test.ts (13 tests) 40ms
+ ✓ tests/localImage.test.ts (20 tests) 16ms
+ ✓ tests/guardian.test.ts (18 tests) 18ms
+ ✓ tests/bargainWatch.test.ts (22 tests) 8ms
+ ✓ tests/horizonHandoffConsent.test.ts (6 tests) 4ms
+ ✓ tests/horizonMcpDevice.test.ts (5 tests) 13ms
+ ✓ tests/horizonMissionUndo.test.ts (5 tests) 9ms
+stderr | tests/mcp.test.ts > MCP — McpManager (mock JSON-RPC) > odrzuca serwer spoza allowlisty (nie ładuje narzędzi, nie woła sieci)
+[mcp] serwer poza allowlistą — pomijam: https://evil.example/mcp
+
+stderr | tests/mcp.test.ts > MCP — McpManager (mock JSON-RPC) > graceful: serwer niedostępny → brak narzędzi, bez wyjątku
+[mcp] nie udało się załadować down: ECONNREFUSED
+
+ ✓ tests/mcp.test.ts (8 tests) 14ms
+ ✓ tests/translatorVoice.test.ts (14 tests) 8ms
+ ✓ tests/healthCheck.test.ts (13 tests) 14ms
+ ✓ tests/privateMode.test.ts (17 tests) 13ms
+ ✓ tests/autoPlan.test.ts (8 tests) 9ms
+ ✓ tests/toast.test.ts (13 tests) 19ms
+ ✓ tests/goalResume.test.ts (8 tests) 6ms
+ ✓ tests/leadIntel.test.ts (12 tests) 10ms
+ ✓ tests/permissions.test.ts (10 tests) 6ms
+ ✓ tests/memoryService.test.ts (8 tests) 11ms
+ ✓ tests/license.test.ts (11 tests) 12ms
+ ✓ tests/research.test.ts (9 tests) 12ms
+ ✓ tests/horizonMissionWhy.test.ts (6 tests) 6ms
+ ✓ tests/prospect.test.ts (5 tests) 7ms
+ ✓ tests/routeOrder.test.ts (9 tests) 7ms
+ ✓ tests/worldModel.test.ts (11 tests) 10ms
+ ✓ tests/brainModes.test.ts (14 tests) 6ms
+ ✓ tests/ollamaPull.test.ts (10 tests) 11ms
+ ✓ tests/backupCrypto.test.ts (6 tests) 404ms
+ ✓ tests/leadPipeline.test.ts (5 tests) 4016ms
+   ✓ rurociąg leadów end-to-end (realne kształty odpowiedzi API) > kolejność: firma BEZ strony i z telefonem przed firmą ze stroną 1000ms
+   ✓ rurociąg leadów end-to-end (realne kształty odpowiedzi API) > buildDossier bez klucza AI: audyt strony + scoring zapisane w leadzie 1005ms
+   ✓ rurociąg leadów end-to-end (realne kształty odpowiedzi API) > teczka leada BEZ strony: score gorący, bez audytu 1000ms
+   ✓ rurociąg leadów end-to-end (realne kształty odpowiedzi API) > smsDraft: zaczepka dopasowana do sytuacji firmy 1001ms
+ ✓ tests/monitorPanel.test.ts (1 test) 231ms
+ ✓ tests/prewarm.test.ts (9 tests) 16ms
+ ✓ tests/monitorBridge.test.ts (5 tests) 14ms
+ ✓ tests/lock.test.ts (10 tests) 880ms
+ ✓ tests/ollamaChatPath.test.ts (3 tests) 69ms
+ ✓ tests/nativeVoice.test.ts (5 tests) 8ms
+ ✓ tests/backupSafeSettings.test.ts (5 tests) 6ms
+ ✓ tests/leadDedup.test.ts (12 tests) 13ms
+ ✓ tests/voiceLoop.test.ts (5 tests) 16ms
+ ✓ tests/secretsVault.test.ts (7 tests) 267ms
+ ✓ tests/council.test.ts (8 tests) 10ms
+ ✓ tests/usageTelemetry.test.ts (9 tests) 10ms
+ ✓ tests/vault.test.ts (6 tests) 499ms
+ ✓ tests/orchestrator.test.ts (8 tests) 72ms
+ ✓ tests/anthropicResilience.test.ts (4 tests) 15ms
+ ✓ tests/memoryEmbed.test.ts (3 tests) 20ms
+ ✓ tests/interfaceMode.test.ts (10 tests) 53ms
+ ✓ tests/memory.test.ts (10 tests) 132ms
+ ✓ tests/proactive.test.ts (7 tests) 6ms
+ ✓ tests/stopExecution.test.ts (2 tests) 15ms
+ ✓ tests/siteProjects.test.ts (7 tests) 10ms
+ ✓ tests/horizonMissionTools.test.ts (4 tests) 8ms
+ ✓ tests/sync.test.ts (6 tests) 9ms
+ ✓ tests/plugins.test.ts (5 tests) 14ms
+ ✓ tests/cards.test.ts (8 tests) 7ms
+ ✓ tests/benchmarkOllama.test.ts (6 tests) 10ms
+stderr | tests/storeAudit.test.ts > store — setData nie wywala apki przy rzucającym mutatorze (#5) > wyjątek w mutatorze jest złapany, apka działa dalej
+[JARVIS] setData mutator error: Error: boom
+    at /workspace/Jarvis/tests/storeAudit.test.ts:46:46
+    at Store.setData (/workspace/Jarvis/src/lib/store.ts:522:11)
+    at /workspace/Jarvis/tests/storeAudit.test.ts:46:24
+    at Proxy.assertThrows (file:///workspace/Jarvis/node_modules/chai/index.js:2767:5)
+    at Proxy.methodWrapper (file:///workspace/Jarvis/node_modules/chai/index.js:1686:25)
+    at Proxy.<anonymous> (file:///workspace/Jarvis/node_modules/@vitest/expect/dist/index.js:1029:16)
+    at Proxy.overwritingMethodWrapper (file:///workspace/Jarvis/node_modules/chai/index.js:1735:33)
+    at Proxy.<anonymous> (file:///workspace/Jarvis/node_modules/@vitest/expect/dist/index.js:1509:21)
+    at Proxy.<anonymous> (file:///workspace/Jarvis/node_modules/@vitest/expect/dist/index.js:972:17)
+    at Proxy.methodWrapper (file:///workspace/Jarvis/node_modules/chai/index.js:1686:25)
+
+ ✓ tests/storeAudit.test.ts (5 tests) 9ms
+ ✓ tests/backupCompleteness.test.ts (4 tests) 169ms
+ ✓ tests/emailFallback.test.ts (3 tests) 8ms
+ ✓ tests/notifyCenter.test.ts (4 tests) 5ms
+ ✓ tests/desktopVoice.test.ts (5 tests) 5ms
+ ✓ tests/ollamaActionCapability.test.ts (4 tests) 13ms
+ ✓ tests/providerStop.test.ts (6 tests) 16ms
+ ✓ tests/storeLeak.test.ts (2 tests) 4ms
+ ✓ tests/ragLocal.test.ts (2 tests) 48ms
+ ✓ tests/brandKit.test.ts (8 tests) 6ms
+ ✓ tests/lockAssistant.test.ts (5 tests) 7ms
+ ✓ tests/backupSanitize.test.ts (5 tests) 5ms
+ ✓ tests/transcribeLocal.test.ts (3 tests) 11ms
+ ✓ tests/brainMode.test.ts (7 tests) 8ms
+ ✓ tests/leadImport.test.ts (6 tests) 10ms
+ ✓ tests/ollamaToolsFallback.test.ts (2 tests) 11ms
+ ✓ tests/episodicMemory.test.ts (5 tests) 9ms
+ ✓ tests/ollamaModelPick.test.ts (6 tests) 8ms
+ ✓ tests/updaterLinux.test.ts (3 tests) 11ms
+ ✓ tests/usage.test.ts (4 tests) 6ms
+stderr | tests/chatsDegrade.test.ts > chats — brak cichej degradacji > gdy wszystkie próby padają → ok=false i warning o pełnej pamięci
+[chats] Nie udało się zapisać historii czatu — pamięć (localStorage) pełna.
+
+ ✓ tests/chatsDegrade.test.ts (3 tests) 7ms
+ ✓ tests/qaDiscoveredControls.test.ts (2 tests) 33ms
+ ✓ tests/status.test.ts (3 tests) 8ms
+ ✓ tests/signatures.test.ts (4 tests) 4ms
+ ✓ tests/followUpAI.test.ts (4 tests) 6ms
+ ✓ tests/localToolCommands.test.ts (3 tests) 7ms
+ ✓ tests/contentStatus.test.ts (4 tests) 4ms
+ ✓ tests/leads.test.ts (4 tests) 4ms
+ ✓ tests/imageHistory.test.ts (4 tests) 5ms
+ ✓ tests/desktopParity.test.ts (4 tests) 5ms
+ ✓ tests/zip.test.ts (4 tests) 5ms
+ ✓ tests/admin.test.ts (4 tests) 296ms
+ ✓ tests/bossMemory.test.ts (4 tests) 19ms
+ ✓ tests/safeUrl.test.ts (3 tests) 8ms
+ ✓ tests/speechChunk.test.ts (4 tests) 4ms
+ ✓ tests/onDevice.test.ts (3 tests) 9ms
+ ✓ tests/systemActions.test.ts (3 tests) 5ms
+ ✓ tests/apiStatus.test.ts (3 tests) 3ms
+ ✓ tests/stopConsent.test.ts (1 test) 6ms
+ ✓ tests/consentManager.test.ts (1 test) 30ms
+ ✓ tests/journal.test.ts (2 tests) 5ms
+ ✓ tests/integrations.test.ts (3 tests) 15ms
+ ✓ tests/licenseOwnerUpdates.test.ts (1 test) 4ms
+ ✓ tests/music.test.ts (2 tests) 3ms
+ ✓ tests/brand.test.ts (4 tests) 3ms
+ ✓ tests/unknownToolConsent.test.ts (1 test) 2ms
+
+ Test Files  364 passed (364)
+      Tests  2976 passed (2976)
+   Start at  21:49:09
+   Duration  56.98s (transform 6.25s, setup 0ms, collect 32.62s, tests 25.39s, environment 38.33s, prepare 21.31s)

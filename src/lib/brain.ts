@@ -9,6 +9,7 @@ import { riskOf } from "./permissions";
 import { runPlan, makeDefaultExecTool, type RunResult } from "./agentRun";
 import type { AgentPlan } from "./agentPlanner";
 import { isToolFreeGreeting, selectToolsForIntent } from "./toolSelector";
+import { ollamaToolSchemaBudget } from "./providers/ollama";
 import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed, rankJournal } from "./memory";
 import { memoryContextBlock, addMemory, resolveNamespace, memoryServiceAvailable } from "./memoryService";
@@ -735,14 +736,17 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // Z11 — RAG dla modelu lokalnego: `baseCtx.system` (pamięć: fakty + profil + Mem0 + Szósty Zmysł)
   // jest TEN SAM dla WSZYSTKICH dostawców, w tym Ollamy/WebLLM. Mały model lokalny odpowiada z
   // Twoim kontekstem; bez Mem0 degraduje do lokalnego profilu/faktów (zero zależności sieciowych).
+  const currentSystem = systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock, curatedBlock }) + (rulesBlock ? `\n\n${rulesBlock}` : "") + (extraSystem ? `\n\n${extraSystem}` : "");
+  const localToolBudget = store.settings.provider === "ollama"
+    ? { maxChars: ollamaToolSchemaBudget(currentSystem, lastUserContent, store.settings.ollamaNumCtx ?? 4096, store.settings.ollamaNumPredict) }
+    : undefined;
   const baseCtx = {
     signal,
-    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock, curatedBlock }) + (rulesBlock ? `\n\n${rulesBlock}` : "") + (extraSystem ? `\n\n${extraSystem}` : ""),
+    system: currentSystem,
     // Tryb on-device wyłącza web-search (zero egres do sieci — pełna prywatność/offline).
     webSearch: store.settings.onDeviceOnly ? false : store.settings.webSearch,
-    // Dobór narzędzi wg intencji: mniej definicji na turę (szybciej/taniej). Bezpiecznie —
-    // przy niejasnej intencji selectToolsForIntent zwraca pełny zestaw (nigdy nie gorzej).
-    tools: selectToolsForIntent(lastUser?.content || "", toolDefs),
+    // Bounded retrieval; the native adapter verifies remaining context before generation.
+    tools: selectToolsForIntent(lastUser?.content || "", toolDefs, localToolBudget),
     history: trimmed,
     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
     // Adaptacyjne myślenie: profil z kontrolera poznawczego (trudne/cele → głębiej, proste → szybko).

@@ -21,21 +21,26 @@ function estimateTokens(value: unknown): number {
   return Math.ceil(bytes / 2.5);
 }
 
+function promptCost(messages: OllamaMessage[], tools: unknown[]): number {
+  let images = 0;
+  const text = messages.map(({ images: imgs, ...rest }) => { images += imgs?.length || 0; return rest; });
+  return estimateTokens(text) + estimateTokens(tools) + images * 1024 + messages.length * 8;
+}
+
+function promptBudget(numCtx: number, numPredict?: number): number {
+  const context = Number.isFinite(numCtx) && numCtx > 0 ? Math.floor(numCtx) : 4096;
+  const reserve = Math.min(Math.max(256, numPredict && numPredict > 0 ? numPredict : 512), Math.floor(context / 2));
+  return Math.max(0, context - reserve);
+}
+
 /** Usuwa wyłącznie najstarsze pełne tury, nigdy bieżącej wiadomości ani wywołań narzędzi. */
 export function fitOllamaHistory(
   messages: OllamaMessage[], tools: unknown[], numCtx: number, numPredict?: number,
 ): OllamaMessage[] {
-  const context = Number.isFinite(numCtx) && numCtx > 0 ? Math.floor(numCtx) : 4096;
-  const reserve = Math.min(Math.max(256, numPredict && numPredict > 0 ? numPredict : 512), Math.floor(context / 2));
-  const budget = Math.max(0, context - reserve);
+  const budget = promptBudget(numCtx, numPredict);
   const out = messages.slice();
-  const cost = () => {
-    let images = 0;
-    const textOnly = out.map(({ images: imgs, ...rest }) => { images += imgs?.length || 0; return rest; });
-    return estimateTokens(textOnly) + estimateTokens(tools) + images * 1024 + out.length * 8;
-  };
   // Po systemie zostawiamy ostatnią turę użytkownika wraz z odpowiedziami narzędzi.
-  while (cost() > budget) {
+  while (promptCost(out, tools) > budget) {
     const latestUser = out.reduce((last, m, i) => m.role === "user" ? i : last, -1);
     if (latestUser <= 1) break;
     const nextUser = out.findIndex((m, i) => i > 1 && m.role === "user");
@@ -45,12 +50,102 @@ export function fitOllamaHistory(
   return out;
 }
 
+/** A conservative estimate: never send a known oversized current turn or silently cut it. */
+export function assertOllamaContext(messages: OllamaMessage[], tools: unknown[], numCtx: number, numPredict?: number): void {
+  const estimated = promptCost(messages, tools);
+  const budget = promptBudget(numCtx, numPredict);
+  if (estimated > budget) throw new Error(`Przekroczono szacowany budżet kontekstu Ollamy (${estimated} > ${budget} tokenów wejścia). Ogranicz kontekst projektu lub zestaw narzędzi. Nie wysłano niepełnego polecenia ani nie rozgrzewano modelu.`);
+}
+
+/** Approximate schema allowance for retrieval; the adapter rechecks the exact wire payload. */
+export function ollamaToolSchemaBudget(system: string, currentUser: string, numCtx: number, numPredict?: number): number {
+  const input = promptCost([{ role: "system", content: system }, { role: "user", content: currentUser }], []);
+  // Room for response framing/tool-call wrappers and multilingual UTF-8 descriptions.
+  return Math.max(0, Math.floor((promptBudget(numCtx, numPredict) - input - 256) * 1.5));
+}
+
+export interface OllamaCapabilityEvidence {
+  model: string;
+  installed: boolean | null;
+  loadedBeforeProbe: boolean | null;
+  advertised: string[];
+  tools: "passed" | "failed" | "unknown";
+  checkedAt: number;
+  expiresAt: number;
+  latencyMs?: number;
+  reason?: string;
+}
+const capabilityCache = new Map<string, OllamaCapabilityEvidence>();
+const cacheKey = (base: string, model: string) => `${base.replace(/\/+$/, "")}\n${model}`;
+export function clearOllamaCapabilityCache(): void { capabilityCache.clear(); }
+export function cachedOllamaCapabilities(base: string, model: string, now = Date.now()): OllamaCapabilityEvidence | null {
+  const entry = capabilityCache.get(cacheKey(base, model));
+  return entry && entry.expiresAt > now ? { ...entry, advertised: [...entry.advertised] } : null;
+}
+
+/** Explicit diagnostic, called by auto-configuration. No user data or real tools are sent.
+ * A returned greeting is not proof: the model must emit exactly the bounded echo tool call.
+ * The result measures this protocol test only, not overall reasoning/vision quality.
+ */
+export async function probeOllamaTools(base: string, model: string, options: { signal?: AbortSignal; now?: () => number; force?: boolean } = {}): Promise<OllamaCapabilityEvidence> {
+  base = base.replace(/\/+$/, "");
+  const now = options.now || Date.now;
+  throwIfAborted(options.signal);
+  const cached = cachedOllamaCapabilities(base, model, now());
+  if (cached && !options.force) return cached;
+  const started = now();
+  const evidence: OllamaCapabilityEvidence = { model, installed: null, loadedBeforeProbe: null, advertised: [], tools: "unknown", checkedAt: started, expiresAt: started + 30_000 };
+  const json = async (path: string, body?: unknown, timeout = 8000) => {
+    const response = await fetchTimeout(`${base}${path}`, { signal: options.signal, ...(body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {}) }, timeout);
+    if (!response.ok) throw new Error(`Ollama ${path}: HTTP ${response.status}`);
+    return response.json();
+  };
+  try {
+    const tags = await json("/api/tags");
+    const canonical = (name: string) => name.includes(":") ? name : `${name}:latest`;
+    evidence.installed = Array.isArray(tags.models) && tags.models.some((m: { name?: string; model?: string }) => canonical(m.name || m.model || "") === canonical(model));
+    if (!evidence.installed) { evidence.reason = "Model nie jest zainstalowany; nie pobrano go automatycznie."; return evidence; }
+    try {
+      const ps = await json("/api/ps");
+      if (Array.isArray(ps.models)) evidence.loadedBeforeProbe = ps.models.some((m: { name?: string; model?: string }) => canonical(m.name || m.model || "") === canonical(model));
+    } catch { throwIfAborted(options.signal); /* older service: loaded unknown */ }
+    const metadata = await json("/api/show", { model });
+    evidence.advertised = Array.isArray(metadata.capabilities) ? metadata.capabilities.filter((v: unknown): v is string => typeof v === "string") : [];
+    const nonce = `qa-${crypto.randomUUID()}`;
+    const result = await json("/api/chat", {
+      model, stream: false, think: false,
+      options: { temperature: 0, num_ctx: 2048, num_predict: 128 },
+      messages: [{ role: "user", content: `Call jarvis_capability_echo exactly once with value ${JSON.stringify(nonce)}. Do not reply with prose.` }],
+      tools: [{ type: "function", function: { name: "jarvis_capability_echo", description: "Return the supplied value; no effects.", parameters: { type: "object", properties: { value: { type: "string" } }, required: ["value"], additionalProperties: false } } }],
+    }, 30_000);
+    throwIfAborted(options.signal);
+    const calls = result.message?.tool_calls;
+    let args = calls?.[0]?.function?.arguments;
+    if (typeof args === "string") { try { args = JSON.parse(args); } catch { args = null; } }
+    evidence.tools = calls?.length === 1 && calls[0]?.function?.name === "jarvis_capability_echo" && args?.value === nonce && Object.keys(args).length === 1 ? "passed" : "failed";
+    evidence.reason = evidence.tools === "passed" ? "Potwierdzono izolowane wywołanie narzędzia; nie jest to test całego agenta." : "Model nie zwrócił wymaganego wywołania narzędzia.";
+    evidence.expiresAt = now() + (evidence.tools === "passed" ? 10 * 60_000 : 30_000);
+  } catch {
+    throwIfAborted(options.signal);
+    evidence.reason = "Próba możliwości nie została ukończona (usługa, protokół lub timeout).";
+  } finally {
+    evidence.latencyMs = Math.max(0, now() - started);
+    evidence.checkedAt = now();
+    if (!options.signal?.aborted) {
+      if (capabilityCache.size >= 64) capabilityCache.delete(capabilityCache.keys().next().value!);
+      capabilityCache.set(cacheKey(base, model), { ...evidence, advertised: [...evidence.advertised] });
+    }
+  }
+  return evidence;
+}
+
 /** Natywne API Ollamy: respektuje think=false i zachowuje prawidłowe wywołania narzędzi. */
 export async function askOllamaNative(
   ctx: AskCtx,
   config: { base: string; think: boolean; options: Record<string, number> },
 ): Promise<JarvisReply> {
   throwIfAborted(ctx.signal);
+  if (ctx.requiresTools && !ctx.tools.length) throw new Error("Brak narzędzia dobranego do polecenia w dostępnym budżecie kontekstu. Nie wykonano działania; doprecyzuj zasób lub sprawdź konfigurację narzędzi.");
   // Metadane modelu muszą potwierdzać obsługę obrazu. Bez tego model tekstowy
   // mógłby odpowiedzieć na podstawie samej historii i udawać analizę ekranu.
   if (ctx.history.some((message) => !!message.image)) {
@@ -87,13 +182,15 @@ export async function askOllamaNative(
   throwIfAborted(ctx.signal);
   for (let guard = 0; guard < 8; guard += 1) {
     throwIfAborted(ctx.signal);
+    const fitted = fitOllamaHistory(messages, useTools ? tools : [], config.options.num_ctx ?? 4096, config.options.num_predict);
+    assertOllamaContext(fitted, useTools ? tools : [], config.options.num_ctx ?? 4096, config.options.num_predict);
     const response = await fetchTimeout(`${config.base}/api/chat`, {
       signal: ctx.signal,
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         model: ctx.model,
-        messages: fitOllamaHistory(messages, useTools ? tools : [], config.options.num_ctx ?? 4096, config.options.num_predict),
+        messages: fitted,
         stream: false,
         think: config.think,
         keep_alive: "30m",
@@ -137,8 +234,9 @@ export async function askOllamaNative(
         used.add(name);
         let args: unknown = call.function.arguments || {};
         if (typeof args === "string") {
-          try { args = JSON.parse(args); } catch { args = {}; }
+          try { args = JSON.parse(args); } catch { throw new Error(`Niepoprawny JSON argumentów narzędzia ${name}. Nie wykonano działania.`); }
         }
+        if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error(`Niepoprawne argumenty narzędzia ${name}. Nie wykonano działania.`);
         const output = await runTool(name, args, { signal: ctx.signal });
         messages.push({ role: "tool", tool_name: name, content: output });
       }

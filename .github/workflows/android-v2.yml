@@ -38,7 +38,7 @@ jobs:
 
       - name: Build web + sync Capacitor
         env:
-          JARVIS_LICENSE_REQUIRED: "false" # wersja TESTOWA v2 — bez ekranu aktywacji/klucza
+          JARVIS_LICENSE_REQUIRED: "true"
         run: |
           npm run build
           npx cap sync android
@@ -51,16 +51,16 @@ jobs:
           sed -i 's#<string name="title_activity_main">JARVIS</string>#<string name="title_activity_main">JARVIS v2</string>#' android/app/src/main/res/values/strings.xml
           echo "appId/app_name ustawione na v2:"; grep applicationId android/app/build.gradle
 
-      # RELEASE (stały klucz jarvis.jks) — spójny podpis, aktualizacje v2 też instalują się bez odinstalowywania.
-      - name: Build release APK (stały klucz)
+      # Separate debug application; never distribute as the production APK.
+      - name: Build separately identified debug APK
         working-directory: android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK v2
         uses: actions/upload-artifact@v4
         with:
-          name: jarvis-v2-release-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          name: jarvis-v2-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error

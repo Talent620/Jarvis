@@ -3,7 +3,7 @@
 // KONKRETNĄ, mierzalną własność komponentów inteligencji. Zero prawdziwego API. Bez danych prywatnych.
 import { describe, it, expect } from "vitest";
 import { classifyTask, reasoningProfileFor } from "../src/lib/modelRouter";
-import { selectToolsForIntent } from "../src/lib/toolSelector";
+import { selectToolsForIntent, toolsetSize } from "../src/lib/toolSelector";
 import { looksMultiStep, validatePlan } from "../src/lib/agentPlanner";
 import { curateContext } from "../src/lib/contextCurator";
 import { verifyResult } from "../src/lib/resultVerifier";
@@ -34,9 +34,21 @@ describe("intelligence evals — reasoning i dobór narzędzi", () => {
     expect(names).not.toContain("desktop_power"); // brak nadmiarowych narzędzi spoza domeny
   });
 
-  it("6. niejednoznaczne polecenie → minimalny/krótki profil, pełny zestaw narzędzi (bezpiecznie)", () => {
-    const names = selectToolsForIntent("zrób to", toolDefs);
-    expect(names.length).toBe(toolDefs.length); // niejasne → pełny zestaw (nigdy nie gorzej)
+  it("6. niejednoznaczne polecenie → ograniczony katalog bez rozszerzania zakresu działania", () => {
+    const before = JSON.stringify(toolDefs);
+    const selected = selectToolsForIntent("zrób to", toolDefs);
+    const names = selected.map((definition) => definition.name);
+    expect(names).toEqual(expect.arrayContaining(["open_screen", "calculate"]));
+    expect(names).not.toContain("desktop_power");
+    expect(names).not.toContain("gmail_send");
+    expect(selected.length).toBeLessThanOrEqual(24);
+    expect(selected.length).toBeLessThan(toolDefs.length);
+    expect(toolsetSize(selected).chars).toBeLessThanOrEqual(10000);
+    // Complete existing schemas are retained; retrieval neither edits definitions nor
+    // creates authority to run new tools just because the user's request is ambiguous.
+    expect(selected.every((definition) => toolDefs.includes(definition))).toBe(true);
+    expect(JSON.stringify(toolDefs)).toBe(before);
+    expect(selectToolsForIntent("zrób to", toolDefs)).toEqual(selected);
   });
 });
 

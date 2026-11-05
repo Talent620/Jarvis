@@ -3,6 +3,13 @@
 
 export interface JarvisDesktop {
   platform: string;
+  monitorReadEvent?(id: string): Promise<MonitorResponse>;
+  clipboardRead?(): Promise<{ ok: boolean; text?: string; truncated?: boolean; error?: string }>;
+  monitorCommand?(request: Record<string, unknown>): Promise<MonitorResponse>;
+  monitorGrant?(request: { source: MonitorSource; desktopNotification: boolean }): Promise<MonitorResponse>;
+  monitorSettings?(request?: { backgroundEnabled?: boolean }): Promise<{ ok: boolean; backgroundEnabled?: boolean; error?: string }>;
+  listWindows?(): Promise<{ ok: boolean; windows?: { id: string; title: string }[]; truncated?: boolean; error?: string }>;
+  focusWindow?(id: string, title: string): Promise<{ ok: boolean; id?: string; title?: string; error?: string }>;
   stopWorkspaceProcesses?(): Promise<{ ok: boolean; requested?: number; error?: string }>;
   ensureLocalSiteOs?(url: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; error?: string }>;
   ensureLocalOllama?(url: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; error?: string }>;
@@ -111,6 +118,7 @@ export async function captureScreen(): Promise<{ data: string; mediaType: string
 
 function linuxInputError(r: string): string | null {
   const labels: Record<string, string> = {
+    "err:owner-confirmation-pending": "Właściciel podejmuje decyzję o zakresie zgody. Automatyczne sterowanie pulpitem czeka na zamknięcie tego okna.",
     "err:linux-session": "Sterowanie klawiaturą wymaga sesji X11. Sesja Wayland wymaga portalu i zgody systemowej; ta funkcja nie jest tu jeszcze dostępna.",
     "err:linux-window-required": "Podaj fragment tytułu aktywnego okna docelowego.",
     "err:linux-window-mismatch": "Aktywne okno nie odpowiada wskazanemu tytułowi lub fokus się zmienił. Nie wysłano zdarzenia.",
@@ -177,4 +185,45 @@ export async function hotkey(combo: string, window?: string): Promise<string> {
   if (detail) return detail;
   if (r === "err:unknown") return `Nie rozpoznałem skrótu „${combo}".`;
   return `Nie udało się wysłać skrótu (${r}).`;
+}
+
+
+export type MonitorSource = { kind: "json"; url: string } | { kind: "directory"; path: string };
+export interface MonitorRecord {
+  id: string; title: string; state: string; source: MonitorSource;
+  criteria: { contains: string; variant?: string; condition?: string; maxTotal?: number; currency?: string };
+  criteriaVersion: number; nextCheckAt?: number; lastCheckAt?: number; lastSuccessAt?: number;
+  lastResult?: string; lastError?: { code: string; at: number; message: string } | null; error?: string; intervalMs: number;
+}
+export interface MonitorEvent {
+  id: string; goalId: string; title: string; state: string; reason?: string | Record<string, unknown>; url?: string;
+  total?: number; currency?: string; observedAt: number; readAt?: number;
+}
+export interface MonitorGrant { id: string; source: MonitorSource; revokedAt?: number; expiresAt?: number }
+export interface MonitorResponse {
+  ok: boolean; error?: string; goals?: MonitorRecord[]; events?: MonitorEvent[];
+  grants?: MonitorGrant[]; runtime?: Record<string, unknown>; goal?: MonitorRecord;
+}
+
+/** Only scoped commands are available to model tools. Grants have a separate native UI. */
+export async function monitorCommand(request: Record<string, unknown>): Promise<MonitorResponse> {
+  const command = desktop()?.monitorCommand;
+  if (!command) return { ok: false, error: "Trwały monitoring wymaga aktualnej aplikacji desktopowej. Web i telefon nie uruchamiają wykonawcy w tle." };
+  if (!["list", "create", "pause", "resume", "cancel", "update", "revoke", "mute", "stop_all"].includes(String(request.action)))
+    return { ok: false, error: "Niedozwolona komenda monitora. Zgody nadaje właściciel w panelu Celów." };
+  return command(request);
+}
+
+export async function listWindowsOnPc(): Promise<string> {
+  const result = await desktop()?.listWindows?.();
+  return result ? JSON.stringify(result) : "Lista okien wymaga aktualnego JARVIS Desktop i sesji X11.";
+}
+export async function focusWindowOnPc(id: string, title: string): Promise<string> {
+  const result = await desktop()?.focusWindow?.(id, title);
+  return result ? JSON.stringify(result) : "Wybór okna wymaga aktualnego JARVIS Desktop i sesji X11.";
+}
+
+export async function readClipboardOnPc(): Promise<string> {
+  const result = await desktop()?.clipboardRead?.();
+  return result ? JSON.stringify(result) : "Odczyt schowka wymaga aplikacji desktopowej.";
 }

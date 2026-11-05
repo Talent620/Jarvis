@@ -1,17 +1,21 @@
 // Główny proces Electrona — JARVIS na komputer (Windows .exe), pełna wersja.
-const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification } = require("electron");
+const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { spawn, exec } = require("child_process");
 const os = require("os");
 const { launchLinux } = require("./launch-app.cjs");
 const { createLinuxKeyboard } = require("./linux-keyboard.cjs");
-const linuxKeyboard = createLinuxKeyboard();
+const linuxKeyboard = createLinuxKeyboard({
+  consentWindowId: () => mainWindow && !mainWindow.isDestroyed()
+    ? String(mainWindow.getNativeWindowHandle().readUInt32LE(0)) : null,
+});
 const { createWorkspaceTools } = require("./workspace-tools.cjs");
 const { createStdioMcpManager } = require("./mcp-stdio.cjs");
 const { createConfiguredLocalOllamaManager } = require("./local-ollama.cjs");
 const { createLocalSiteOsManager } = require("./local-siteos.cjs");
 const localOllama = createConfiguredLocalOllamaManager();
+const { createGoalService } = require("./goal-service.cjs");
 
 if (process.env.JARVIS_PROFILE_DIR) app.setPath("userData", path.resolve(process.env.JARVIS_PROFILE_DIR));
 
@@ -38,6 +42,38 @@ let mainWindow = null;
 let siteOsManager = null;
 let stdioMcp = null;
 let closingStdioMcp = false;
+let monitorService = null;
+let monitorConsentPending = 0;
+async function confirmMonitorScope(options) {
+  monitorConsentPending++;
+  try { return await dialog.showMessageBox(mainWindow, options); }
+  finally { monitorConsentPending--; }
+}
+
+const MONITOR_SETTINGS_FILE = path.join(app.getPath("userData"), "monitor-settings.json");
+let backgroundMonitoring = false;
+try { backgroundMonitoring = JSON.parse(fs.readFileSync(MONITOR_SETTINGS_FILE, "utf8")).backgroundEnabled === true; } catch { /* default opt-out */ }
+
+function monitors() {
+  if (!monitorService) monitorService = createGoalService({
+    directory: path.join(app.getPath("userData"), "goals"),
+    notify: async (event) => {
+      if (!Notification.isSupported()) return { accepted: false };
+      const reason = typeof event.reason === "string" ? event.reason : [event.reason?.contains, event.reason?.variant, event.reason?.condition].filter(Boolean).join(" · ");
+      const notification = new Notification({ title: `JARVIS — ${event.title || "dopasowanie"}`,
+        body: `${reason}\n${event.total != null ? `${event.total} ${event.currency || ""} · ` : ""}${event.url || ""}\nSprawdzono: ${new Date(event.observedAt).toLocaleString("pl-PL", { timeZone: "Europe/Warsaw" })}\nCel: ${event.goalId} · zdarzenie: ${event.id}` });
+      notification.on("click", summonWindow);
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => resolve({}), 3000); // unknown OS result; outbox retains UNCERTAIN
+        notification.once("show", () => { clearTimeout(timer); resolve({ accepted: true }); });
+        notification.once("failed", () => { clearTimeout(timer); resolve({ accepted: false }); });
+        try { notification.show(); } catch { clearTimeout(timer); resolve({}); }
+      }); // OS show event; no claim of delivery to or reading by the user.
+    },
+  });
+  return monitorService;
+}
+
 
 function siteOsPaths() {
   const base = path.join(app.getPath("userData"), "site-os");
@@ -104,6 +140,7 @@ function setClipWatch(enabled) {
 }
 
 function createWindow() {
+  monitors().start();
   const st = loadState();
   mainWindow = new BrowserWindow({
     width: st.width || 1100,
@@ -301,6 +338,57 @@ function registerDesktopControl() {
   ipcMain.handle("jarvis:stop-workspace-processes", (event) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     return workspaceTools.cancelAll();
+  });
+  let monitorStopVersion = 0;
+  const monitorActions = new Set(["list", "create", "pause", "resume", "cancel", "update", "revoke", "mute", "stop_all"]);
+  const trustedMonitorSender = (event) => isTrustedIpc(event) && event.sender === mainWindow?.webContents && event.senderFrame === mainWindow?.webContents.mainFrame;
+  ipcMain.handle("jarvis:monitor-command", async (event, payload) => {
+    if (!trustedMonitorSender(event) || !monitorActions.has(payload?.action)) return { ok: false, error: "forbidden" };
+    if (payload.action === "stop_all") monitorStopVersion++;
+    try { return { ok: true, ...(await monitors().command(payload)) }; }
+    catch (error) { return { ok: false, error: error.message }; }
+  });
+  ipcMain.handle("jarvis:monitor-read-event", async (event, id) => {
+    if (!trustedMonitorSender(event)) return { ok: false, error: "forbidden" };
+    try { return { ok: true, ...(await monitors().command({ action: "read_event", id: String(id) }, { trustedUserAction: true })) }; }
+    catch (error) { return { ok: false, error: error.message }; }
+  });
+  // No model tool exposes grant. A native dialog confirms the exact source scope.
+  ipcMain.handle("jarvis:monitor-grant", async (event, payload) => {
+    if (!trustedMonitorSender(event)) return { ok: false, error: "forbidden" };
+    const grantEpoch = monitorStopVersion;
+    const source = payload?.source;
+    if (!source || !["json", "directory"].includes(source.kind)) return { ok: false, error: "Nieobsługiwane źródło." };
+    const resource = String(source.kind === "json" ? source.url || "" : source.path || "");
+    if (!resource || resource.length > 2048) return { ok: false, error: "Podaj konkretne źródło." };
+    const scope = { source, desktopNotification: payload.desktopNotification === true };
+    const decision = await confirmMonitorScope({ type: "question", title: "Zgoda na monitorowanie źródła",
+      message: "Zezwolić na cykliczny odczyt tego źródła?",
+      detail: `${source.kind === "json" ? "Adres JSON" : "Katalog"}: ${resource}\nPowiadomienia systemowe: ${scope.desktopNotification ? "tak" : "nie"}.\nZgoda obowiązuje do jej cofnięcia w panelu Celów. Nie obejmuje zakupów, wysyłania wiadomości ani innych źródeł.`,
+      buttons: ["Anuluj", "Zezwól"], defaultId: 0, cancelId: 0 });
+    if (decision.response !== 1 || !trustedMonitorSender(event) || grantEpoch !== monitorStopVersion) return { ok: false, error: "Nie udzielono zgody lub żądanie anulowano przez STOP." };
+    try { return { ok: true, ...(await monitors().command({ action: "grant", ...scope }, { trustedUserAction: true })) }; }
+    catch (error) { return { ok: false, error: error.message }; }
+  });
+  ipcMain.handle("jarvis:monitor-settings", async (event, payload) => {
+    if (!trustedMonitorSender(event)) return { ok: false, error: "forbidden" };
+    if (typeof payload?.backgroundEnabled === "boolean") {
+      const settingsEpoch = monitorStopVersion;
+      if (payload.backgroundEnabled && !backgroundMonitoring) {
+        const decision = await confirmMonitorScope({ type: "question", title: "Praca po zamknięciu okna",
+          message: "Pozostawić JARVIS-a uruchomionego po zamknięciu okna?",
+          detail: "Monitory działają tylko przy uruchomionym komputerze. Wyjście z menu JARVIS kończy proces. Ctrl+Alt+J przywołuje okno. To ustawienie nie włącza autostartu.",
+          buttons: ["Anuluj", "Włącz"], defaultId: 0, cancelId: 0 });
+        if (decision.response !== 1 || settingsEpoch !== monitorStopVersion) return { ok: false, error: "Nie włączono pracy w tle lub żądanie anulowano przez STOP.", backgroundEnabled: backgroundMonitoring };
+      }
+      const next = payload.backgroundEnabled;
+      fs.mkdirSync(path.dirname(MONITOR_SETTINGS_FILE), { recursive: true });
+      const temporary = `${MONITOR_SETTINGS_FILE}.${process.pid}.tmp`;
+      fs.writeFileSync(temporary, JSON.stringify({ schemaVersion: 1, backgroundEnabled: next }), { mode: 0o600 });
+      fs.renameSync(temporary, MONITOR_SETTINGS_FILE);
+      backgroundMonitoring = next;
+    }
+    return { ok: true, backgroundEnabled: backgroundMonitoring, autostart: false };
   });
   stdioMcp = createStdioMcpManager({ root: workspaceTools.root });
   ipcMain.handle("jarvis:agent-tool", async (event, payload) => {
@@ -544,6 +632,7 @@ function registerDesktopControl() {
   // Współrzędne wymagają aktywnego okna i osobnej zgody w warstwie narzędzi.
   ipcMain.handle("jarvis:click", async (event, payload) => {
     if (!isTrustedIpc(event)) return "err:forbidden";
+    if (monitorConsentPending) return "err:owner-confirmation-pending";
     if (process.platform !== "linux") return "err:unsupported";
     return linuxKeyboard.click(payload?.x, payload?.y, payload?.window);
   });
@@ -551,6 +640,7 @@ function registerDesktopControl() {
   // Pisanie tekstu (opcjonalnie do okna o podanym tytule).
   ipcMain.handle("jarvis:type", async (event, payload) => {
     if (!isTrustedIpc(event)) return "err:forbidden";
+    if (monitorConsentPending) return "err:owner-confirmation-pending";
     const { text, window } = payload || {};
     if (process.platform === "linux") return linuxKeyboard.type(text, window);
     if (process.platform !== "win32") return "err:unsupported";
@@ -559,9 +649,27 @@ function registerDesktopControl() {
     return "ok";
   });
 
+  ipcMain.handle("jarvis:clipboard-read", async (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    try { const text = clipboard.readText(); return { ok: true, text: text.slice(0, 8000), truncated: text.length > 8000 }; }
+    catch { return { ok: false, error: "Schowek jest niedostępny." }; }
+  });
+  ipcMain.handle("jarvis:list-windows", async (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    if (process.platform !== "linux") return { ok: false, error: "err:unsupported" };
+    return linuxKeyboard.listWindows();
+  });
+  ipcMain.handle("jarvis:focus-window", async (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    if (monitorConsentPending) return { ok: false, error: "err:owner-confirmation-pending" };
+    if (process.platform !== "linux") return { ok: false, error: "err:unsupported" };
+    return linuxKeyboard.focusWindow(payload?.id, payload?.title);
+  });
+
   // Skrót klawiszowy (opcjonalnie do okna o podanym tytule).
   ipcMain.handle("jarvis:hotkey", async (event, payload) => {
     if (!isTrustedIpc(event)) return "err:forbidden";
+    if (monitorConsentPending) return "err:owner-confirmation-pending";
     const { combo, window } = payload || {};
     if (process.platform === "linux") return linuxKeyboard.hotkey(combo, window);
     if (process.platform !== "win32") return "err:unsupported";
@@ -577,12 +685,7 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on("second-instance", () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
-    }
-  });
+  app.on("second-instance", summonWindow);
 
   app.whenReady().then(() => {
     // Mikrofon/kamera (rozmowa na żywo, HUD) — tylko media; inne prośby odrzucamy.
@@ -643,14 +746,16 @@ if (!gotLock) {
   });
 
   app.on("window-all-closed", () => {
+    if (backgroundMonitoring) return;
+    if (monitorService) void monitorService.stop();
     if (process.platform !== "darwin") app.quit();
   });
 
   app.on("before-quit", (event) => {
-    if (!stdioMcp || closingStdioMcp) return;
+    if (closingStdioMcp) return;
     event.preventDefault();
     closingStdioMcp = true;
-    void stdioMcp.closeAll().finally(() => app.quit());
+    void Promise.allSettled([stdioMcp?.closeAll(), monitorService?.stop()]).finally(() => app.quit());
   });
 
   app.on("will-quit", () => {

@@ -1,0 +1,2265 @@
+{
+  "schema_version": 1,
+  "purpose": "Jeden rejestr wymagań aktualnego rozszerzenia, warstw dowodów i mapowania 80 przykładów; historyczne results60 zachowuje stabilne ID i oryginalne wyniki.",
+  "request_sha256": "4808121cd4ae44403da995b01dfb26fc6323bc546ab38d35e50ea7014ea5f054",
+  "integration_base": "f74705166e484f9fe76a9ecac7212a45376254ba",
+  "integration_branch": "codex/durable-autonomy-20261105",
+  "current_state": "PARTIAL_IMPLEMENTATION_VERIFIED_PUBLICATION_BLOCKED",
+  "release": {
+    "sha": null,
+    "tag": null,
+    "url": null,
+    "ci": null,
+    "version": "2.1.0-alpha.1",
+    "status": "BUILD_AND_PUBLICATION_AWAITED",
+    "provenance": "Final code SHA and artifact checksums belong to generated release PROVENANCE after clean commit; no release URL exists yet."
+  },
+  "status_rules": {
+    "PASS": "Pełne potwierdzenie scenariusza na określonym poziomie.",
+    "FAIL": "Wykonano i wynik nie spełnił wymagań.",
+    "BLOCKED": "Wykazana zewnętrzna przeszkoda; nie oznacza zaimplementowanej funkcji.",
+    "NOT_RUN": "Nie wykonano.",
+    "MISSING_IMPLEMENTATION": "Brak wymaganej funkcji; niezależne od statusu jej testu.",
+    "IN_PROGRESS": "Prace trwają; bez zaliczenia."
+  },
+  "legacy_results": {
+    "path": "QA/autonomia60/results60.json",
+    "sha256": "7e397079ff78de169213828d80b68034904faff7feb972f3c8654eda8a28f036",
+    "count": 60,
+    "ids": [
+      "JARVIS-01",
+      "JARVIS-02",
+      "JARVIS-03",
+      "JARVIS-04",
+      "JARVIS-05",
+      "JARVIS-06",
+      "JARVIS-07",
+      "JARVIS-08",
+      "JARVIS-09",
+      "JARVIS-10",
+      "JARVIS-11",
+      "JARVIS-12",
+      "JARVIS-13",
+      "JARVIS-14",
+      "JARVIS-15",
+      "JARVIS-16",
+      "JARVIS-17",
+      "JARVIS-18",
+      "JARVIS-19",
+      "JARVIS-20",
+      "JARVIS-21",
+      "JARVIS-22",
+      "JARVIS-23",
+      "JARVIS-24",
+      "JARVIS-25",
+      "JARVIS-26",
+      "JARVIS-27",
+      "JARVIS-28",
+      "JARVIS-29",
+      "JARVIS-30",
+      "JARVIS-31",
+      "JARVIS-32",
+      "JARVIS-33",
+      "JARVIS-34",
+      "JARVIS-35",
+      "JARVIS-36",
+      "JARVIS-37",
+      "JARVIS-38",
+      "JARVIS-39",
+      "JARVIS-40",
+      "JARVIS-41",
+      "JARVIS-42",
+      "JARVIS-43",
+      "JARVIS-44",
+      "JARVIS-45",
+      "JARVIS-46",
+      "JARVIS-47",
+      "JARVIS-48",
+      "JARVIS-49",
+      "JARVIS-50",
+      "JARVIS-51",
+      "JARVIS-52",
+      "JARVIS-53",
+      "JARVIS-54",
+      "JARVIS-55",
+      "JARVIS-56",
+      "JARVIS-57",
+      "JARVIS-58",
+      "JARVIS-59",
+      "JARVIS-60"
+    ],
+    "preserved": true
+  },
+  "capabilities": [
+    {
+      "id": "goals",
+      "title": "Wykonywanie i checkpointy celów",
+      "source_paths": [
+        "src/lib/agentPlanner.ts",
+        "src/lib/agentPipeline.ts",
+        "src/lib/agentRun.ts",
+        "src/lib/goalRuntime.ts",
+        "src/lib/goalState.ts",
+        "src/lib/goalControl.ts"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Jednorazowy wykonawca nadal zależy od renderera; trwały monitor nie dowodzi trwałego wykonania dowolnego planu. goalPlanner.ts tworzy odpowiedzi modelu; nie utożsamiać tego z wykonaniem narzędzi.",
+      "evidence": [],
+      "legacy_scenario_ids": [
+        "JARVIS-43",
+        "JARVIS-44",
+        "JARVIS-45"
+      ]
+    },
+    {
+      "id": "monitor",
+      "title": "Trwały monitor do warunku",
+      "source_paths": [
+        "electron/goal-service.cjs",
+        "electron/main.cjs",
+        "src/lib/tools.ts",
+        "src/components/GoalStatusPanel.tsx"
+      ],
+      "implemented": "IMPLEMENTED_SUBSET",
+      "configured": "ISOLATED_TEST_ONLY",
+      "authorized": "ISOLATED_TEST_SOURCE_ONLY",
+      "tested": "PASS_CONTROLLED_BACKEND",
+      "available": "BACKEND_AVAILABLE",
+      "limitations": "Wykonano realny backend monitora katalogu, zapis i wznowienie; nie wykonano polecenia normalną rozmową przez model. Jednorazowy ogólny wykonawca nie został przeniesiony do hosta.",
+      "evidence": [
+        "QA/autonomia60/durable/real-directory-source.json",
+        "QA/autonomia60/durable/evidence/goal-service-tests.log"
+      ],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "schedule",
+      "title": "Harmonogram monitorów",
+      "source_paths": [
+        "electron/goal-service.cjs"
+      ],
+      "implemented": "IMPLEMENTED_SUBSET",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "PASS_CONTROLLED_BACKEND",
+      "available": "UNVERIFIED",
+      "limitations": "Obsługiwane interwały, daty kolejnego sprawdzenia, jedna próba po luce, budżet dzienny i cisza nocna Europe/Warsaw z DST. MISSING_IMPLEMENTATION: cykle tygodniowe/miesięczne, webhook/event streaming, harmonogram dowolnego planu.",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/goal-service-tests.log"
+      ],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "source_json",
+      "title": "Adapter JSON źródła",
+      "source_paths": [
+        "electron/goal-service.cjs"
+      ],
+      "implemented": "IMPLEMENTED_SUBSET",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "PASS_CONTROLLED_BACKEND",
+      "available": "UNVERIFIED",
+      "limitations": "Jawnie autoryzowany publiczny JSON {items:[{id,title,url,available,price?,shipping?,currency?,variant?,condition?}]} lub tablica; brak cookies/auth, redirectów i prywatnych adresów. Kontrolowany provider, brak live Allegro.",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/goal-service-tests.log"
+      ],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "source_directory",
+      "title": "Adapter katalogu",
+      "source_paths": [
+        "electron/goal-service.cjs"
+      ],
+      "implemented": "IMPLEMENTED_SUBSET",
+      "configured": "ISOLATED_TEST_ONLY",
+      "authorized": "ISOLATED_TEST_SOURCE_ONLY",
+      "tested": "PASS_CONTROLLED_BACKEND",
+      "available": "BACKEND_AVAILABLE",
+      "limitations": "Rzeczywisty Linux descriptor katalogu /proc/self/fd: nazwy/stat, bez treści/PDF/OCR. Inne OS jawnie SOURCE_BLOCKED, nie deklarować cross-platform adaptera.",
+      "evidence": [
+        "QA/autonomia60/durable/real-directory-source.json",
+        "QA/autonomia60/durable/evidence/goal-service-tests.log"
+      ],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "source_allegro",
+      "title": "Oficjalne źródło Allegro / autoryzowana alternatywa",
+      "source_paths": [
+        "src/lib/bargain.ts",
+        "src/lib/bargainWatch.ts"
+      ],
+      "implemented": "MISSING_IMPLEMENTATION",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "BLOCKED_NETWORK_AND_ACCOUNT",
+      "limitations": "Istnieją linki wyszukiwania i ręczny tracker ceny. Brak aktywnego adaptera rynku, konta i potwierdzenia aktualnych uprawnień API. Próba oficjalnych docs CONNECT 403.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "source_accounts",
+      "title": "Źródła poczty, kalendarza, przesyłek i zdarzeń",
+      "source_paths": [
+        "src/lib/google.ts",
+        "src/lib/mailer.ts",
+        "electron/google.cjs"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "BLOCKED_ACCOUNT",
+      "limitations": "Istnieją integracje Google i wysyłki; brak dowiedzionych trwałych subskrypcji poczty/przesyłek/kalendarza pod nowy monitor.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "offers",
+      "title": "Weryfikacja ofert, wariant, cena z dostawą",
+      "source_paths": [
+        "src/lib/bargain.ts",
+        "src/lib/research.ts",
+        "electron/page-extract.cjs"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Brak kompletnej automatycznej weryfikacji zgodności części, dostępności, terminów dostawy i pełnego kosztu na rzeczywistych źródłach.",
+      "evidence": [],
+      "legacy_scenario_ids": [
+        "JARVIS-19",
+        "JARVIS-20",
+        "JARVIS-21",
+        "JARVIS-22",
+        "JARVIS-23",
+        "JARVIS-24"
+      ]
+    },
+    {
+      "id": "notify_desktop",
+      "title": "Trwałe centrum zdarzeń i desktop outbox",
+      "source_paths": [
+        "electron/goal-service.cjs",
+        "electron/main.cjs",
+        "src/components/GoalStatusPanel.tsx"
+      ],
+      "implemented": "IMPLEMENTED_SUBSET",
+      "configured": "NOT_CONFIGURED_FOR_USER",
+      "authorized": "NATIVE_SOURCE_GRANT_REQUIRED",
+      "tested": "PASS_CONTROLLED_BACKEND",
+      "available": "BACKEND_AVAILABLE_NATIVE_UNVERIFIED",
+      "limitations": "Centrum zdarzeń w istniejącym panelu Cele, osobny jawny read ack użytkownika. Desktop acceptance nie oznacza delivered/read; telefon/e-mail nowego monitora brak.",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/goal-service-tests.log"
+      ],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "notify_remote",
+      "title": "Alert na telefon, e-mail lub komunikator",
+      "source_paths": [
+        "src/lib/notifications.ts",
+        "src/lib/sync.ts"
+      ],
+      "implemented": "MISSING_IMPLEMENTATION",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Brak potwierdzonego adaptera powiadomień nowego monitora do telefonu/e-mail/komunikatora. Istniejące lokalne przypomnienia i SMTP nie dowodzą tej integracji.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "models",
+      "title": "Wybór i funkcjonalna diagnostyka modeli",
+      "source_paths": [
+        "src/lib/providers/ollama.ts",
+        "src/lib/modelRouter.ts",
+        "src/lib/toolSelector.ts",
+        "src/lib/contextCurator.ts"
+      ],
+      "implemented": "IMPLEMENTED_SUBSET",
+      "configured": "EXPLICIT_EXISTING_SETTINGS_ACTION_REQUIRED",
+      "authorized": "EXISTING_MODEL_ENDPOINT_ONLY",
+      "tested": "PASS_CONTROLLED_PROTOCOL_AND_RETRIEVAL",
+      "available": "BLOCKED_BOTH_LOCAL_ENDPOINTS_ECONNREFUSED",
+      "limitations": "Probe tool-call echo +TTL10min sukces/30s brak potwierdzenia, installed/loaded/advertised osobno, maks6 kandydatów. Heurystyczny dobór schematów i przybliżenie UTF8 kontekstu. Brak realnej próby modelu, osobnych funkcjonalnych vision/code/embedding/voice i modelowego discovery. 12 parafraz to jeden unit retrieval, nie LLM generalizacja.",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/model-capabilities-tests.log",
+        "QA/autonomia60/durable/model-capabilities.md"
+      ],
+      "legacy_scenario_ids": [
+        "JARVIS-37",
+        "JARVIS-38",
+        "JARVIS-39",
+        "JARVIS-40",
+        "JARVIS-41",
+        "JARVIS-42"
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Pamięć i pochodzenie informacji",
+      "source_paths": [
+        "src/lib/memory.ts",
+        "src/lib/memoryService.ts",
+        "src/lib/memoryScore.ts",
+        "src/lib/contextCurator.ts"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Istnieją magazyny i retrievel; pełny model konfliktów/retencji/pochodzenia wymaga dalszej weryfikacji.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "skills",
+      "title": "Rejestr i ponowne użycie umiejętności",
+      "source_paths": [
+        "src/lib/skills.ts"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Wersja manifestu i rejestr w pamięci nie stanowią trwałego, sprawdzonego katalogu wygenerowanych procedur z ponowną walidacją po aktualizacji aplikacji.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "desktop",
+      "title": "Uruchamianie aplikacji, okna, fokus, klawisze i schowek",
+      "source_paths": [
+        "src/lib/desktop.ts",
+        "electron/main.cjs",
+        "electron/launch-app.cjs",
+        "electron/linux-keyboard.cjs"
+      ],
+      "implemented": "IMPLEMENTED_SUBSET",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "PASS_UNIT_NATIVE_ACCEPTANCE_BLOCKED",
+      "available": "BLOCKED_DISPLAY_XDOTOOL_AND_MODEL",
+      "limitations": "Runner C zaimplementowany: model→widoczny akapit→zaznaczenie/kopia→Mousepad→zapis; niezależne orakle schowka/fokusu/pliku. Native C nie wykonano. Linux X11 discovery/focus wspierany; Wayland input MISSING_IMPLEMENTATION. Globalna kontrola fizycznej myszy nadal brakująca.",
+      "evidence": [
+        "QA/autonomia60/durable/desktop.json"
+      ],
+      "legacy_scenario_ids": [
+        "JARVIS-05",
+        "JARVIS-06",
+        "JARVIS-07",
+        "JARVIS-08",
+        "JARVIS-09",
+        "JARVIS-10",
+        "JARVIS-11",
+        "JARVIS-12"
+      ]
+    },
+    {
+      "id": "desktop_lock",
+      "title": "Współdzielony pulpit i oddanie kontroli",
+      "source_paths": [
+        "src/lib/goalControl.ts"
+      ],
+      "implemented": "MISSING_IMPLEMENTATION",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Brak dowiedzionej globalnej dzierżawy pulpitu z wykryciem fizycznego przejęcia myszy i pełnym zwalnianiem klawiszy.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "browser",
+      "title": "Odczyt stron i sterowanie przeglądarką",
+      "source_paths": [
+        "electron/public-page.cjs",
+        "electron/page-extract.cjs",
+        "electron/workspace-tools.cjs",
+        "src/lib/research.ts"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Publiczny odczyt/otwieranie są zaimplementowane; pełne DOM, paginacja, formularze i niezależne weryfikacje nie są dowiedzione.",
+      "evidence": [],
+      "legacy_scenario_ids": [
+        "JARVIS-13",
+        "JARVIS-14",
+        "JARVIS-15",
+        "JARVIS-16",
+        "JARVIS-17",
+        "JARVIS-18"
+      ]
+    },
+    {
+      "id": "documents",
+      "title": "Odczyt dokumentów i przetwarzanie danych",
+      "source_paths": [
+        "src/lib/documents.ts",
+        "electron/workspace-tools.cjs"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Jest ekstrakcja PDF z warstwą tekstową i tekst/CSV/JSON. Brak kompletnej warstwy XLSX, DOCX, prezentacji, zachowania layoutu i OCR skanów.",
+      "evidence": [],
+      "legacy_scenario_ids": [
+        "JARVIS-29",
+        "JARVIS-30"
+      ]
+    },
+    {
+      "id": "communication",
+      "title": "Szkic i autoryzowana wysyłka",
+      "source_paths": [
+        "src/lib/emailComposer.ts",
+        "src/lib/mailer.ts",
+        "src/lib/permissions.ts",
+        "electron/smtp.cjs",
+        "electron/google.cjs"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "BLOCKED_ACCOUNT",
+      "limitations": "Istnieją szkice/SMTP/Gmail; brak bieżącego odbioru na koncie testowym i trwałego harmonogramu dowolnej autoryzowanej wysyłki.",
+      "evidence": [],
+      "legacy_scenario_ids": [
+        "JARVIS-25",
+        "JARVIS-26",
+        "JARVIS-27",
+        "JARVIS-28"
+      ]
+    },
+    {
+      "id": "generated_tools",
+      "title": "Izolowane tworzenie i wykonywanie narzędzi",
+      "source_paths": [
+        "electron/workspace-tools.cjs",
+        "src/lib/skills.ts"
+      ],
+      "implemented": "MISSING_IMPLEMENTATION",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "generated_tool jawnie odmawia wykonania: nie ma zweryfikowanego sandboxa OS. Katalog workspace i allowlista terminala nie są sandboxem.",
+      "evidence": [],
+      "legacy_scenario_ids": [
+        "JARVIS-31",
+        "JARVIS-32",
+        "JARVIS-33",
+        "JARVIS-34",
+        "JARVIS-35",
+        "JARVIS-36"
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Pliki, procesy, Git, odtwarzanie danych",
+      "source_paths": [
+        "electron/workspace-tools.cjs",
+        "src/lib/tools.ts"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Istnieją adaptery plików i procesów; backup/rename/restart usług wymagają konkretnego zakresu i testu efektu. Nie są pełnym bezpiecznym uruchamianiem arbitralnego kodu.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "recovery",
+      "title": "Retry, weryfikacja efektów i wznowienie",
+      "source_paths": [
+        "src/lib/recoveryPolicy.ts",
+        "src/lib/resultVerifier.ts",
+        "src/lib/goalResume.ts",
+        "src/lib/goalRuntime.ts"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Checkpoint ATTEMPTED nie jest automatycznym dowodem skutku; wymagane uzgodnienie niepewnych działań. Nie wszystkie zewnętrzne API mają klucz idempotencji.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "control",
+      "title": "STOP, pauza i zmiana kryteriów",
+      "source_paths": [
+        "src/lib/generation.ts",
+        "src/lib/goalControl.ts",
+        "src/lib/goalProgress.ts",
+        "src/lib/goalRuntime.ts"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Zachowane bariery wcześniejszych etapów. Pełna propagacja do wszystkich MCP/workera i rozliczanie wcześniej rozpoczętych skutków wymaga testów; monitor ma własną trwałą kontrolę przez ten sam interfejs.",
+      "evidence": [],
+      "legacy_scenario_ids": [
+        "JARVIS-46",
+        "JARVIS-47",
+        "JARVIS-48"
+      ]
+    },
+    {
+      "id": "permissions",
+      "title": "Zakresowe zgody i prompt injection",
+      "source_paths": [
+        "src/lib/permissions.ts",
+        "electron/main.cjs",
+        "electron/public-page.cjs"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "PASS_MONITOR_GRANTS_CONTROLLED_ONLY",
+      "available": "UNVERIFIED",
+      "limitations": "Nowe granty monitora nie rozszerzają automatycznie zakresu wszystkich istniejących narzędzi. Treść źródeł pozostaje niezaufana.",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/bridge.log",
+        "QA/autonomia60/durable/evidence/goal-service-tests.log"
+      ],
+      "legacy_scenario_ids": [
+        "JARVIS-49",
+        "JARVIS-50",
+        "JARVIS-51",
+        "JARVIS-52",
+        "JARVIS-53",
+        "JARVIS-54"
+      ]
+    },
+    {
+      "id": "crm",
+      "title": "CRM i raporty projektów",
+      "source_paths": [
+        "src/components/SalesCrm.tsx",
+        "src/lib/crmBuckets.ts",
+        "src/lib/leads.ts",
+        "src/components/Projects.tsx"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Istnieje kod i dane aplikacji; brak bieżących pełnych poleceń modelu na syntetycznym CRM.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "finance",
+      "title": "Finanse i obliczenia",
+      "source_paths": [
+        "src/lib/finance.ts",
+        "src/components/FinancialDashboard.tsx",
+        "src/components/MoneyHub.tsx"
+      ],
+      "implemented": "IMPLEMENTED_SUBSET",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Czyste obliczenia istnieją; automatyczny import/odczyt faktur i raport miesięczny to oddzielne wymagania.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "siteos",
+      "title": "Site OS i strony",
+      "source_paths": [
+        "src/lib/siteOs.ts",
+        "src/lib/siteProjects.ts",
+        "src/components/WebStudio.tsx",
+        "site-os/server.mjs"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "UNVERIFIED",
+      "limitations": "Istniejący serwer i UI; brak pełnego testu nowej strony utworzonej przez rzeczywisty model w tej iteracji.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "voice",
+      "title": "Polskie polecenia i odczyt głosowy",
+      "source_paths": [
+        "src/lib/voice.ts",
+        "src/lib/transcribe.ts",
+        "src/lib/voiceConsent.ts",
+        "src/components/Transcribe.tsx"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "BLOCKED_HARDWARE",
+      "limitations": "Wymaga skonfigurowanego rozpoznawania, mikrofonu/głośnika i zgody; brak testu fizycznego sprzętu.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "mobile",
+      "title": "Android i telefon jako klient hosta",
+      "source_paths": [
+        "android/app/src/main/java/net/serwer256/jarvis/MainActivity.java",
+        "android/app/src/main/java/net/serwer256/jarvis/JarvisAccessibilityService.java",
+        "src/lib/sync.ts"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "NOT_RUN",
+      "available": "BLOCKED_DEVICE",
+      "limitations": "Kod natywny nie dowodzi nieprzerwanego monitoringu w tle ani sparowanego kanału alertów nowego monitora.",
+      "evidence": [],
+      "legacy_scenario_ids": []
+    },
+    {
+      "id": "ui",
+      "title": "Istniejące interfejsy, ustawienia i dostępność",
+      "source_paths": [
+        "src/App.tsx",
+        "src/components/TaskHub.tsx",
+        "src/components/GoalStatusPanel.tsx",
+        "src/components/Settings.tsx",
+        "src/components/InterfaceSwitch.tsx"
+      ],
+      "implemented": "PARTIAL",
+      "configured": "NOT_CONFIGURED",
+      "authorized": "NOT_GRANTED",
+      "tested": "PASS_MONITOR_PANEL_CONTROLLED_ONLY",
+      "available": "UNVERIFIED",
+      "limitations": "Monitoring zintegrowany w istniejącym panelu Cele. Testy React/kontrolowany IPC z rzeczywistą bazą obejmują panel, nie wszystkie sekcje ani natywny Electron.",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/bridge.log"
+      ],
+      "legacy_scenario_ids": [
+        "JARVIS-01",
+        "JARVIS-02",
+        "JARVIS-03",
+        "JARVIS-04",
+        "JARVIS-06",
+        "JARVIS-59"
+      ]
+    },
+    {
+      "id": "release",
+      "title": "Wersja, aktualizacje, instalatory i publikacja",
+      "source_paths": [
+        "package.json",
+        "electron-builder.json",
+        "vite.config.ts",
+        "src/lib/updater.ts",
+        "scripts/install-local.cjs",
+        ".github/workflows/ubuntu.yml",
+        ".github/workflows/android.yml"
+      ],
+      "implemented": "IMPLEMENTED_SUBSET",
+      "configured": "LINUX_PREPARATION_ONLY",
+      "authorized": "USER_AUTHORIZED_BRANCH_PR_TAG_RELEASE",
+      "tested": "PASS_PACKAGING_UNIT_ONLY",
+      "available": "PUBLICATION_API_BLOCKED",
+      "limitations": "Wersja2.1.0-alpha.1 i helper z pochodzeniem licencjonowanych paczek. Finalne pakiety oczekują commitu. APK brak SDK/istniejącego podpisu; GitHubAPI CONNECT403. npm --omit=dev0, pełny32; Electron jest sklasyfikowany dev, lecz jest dystrybuowany w aplikacji.",
+      "evidence": [
+        "QA/autonomia60/durable/packaging.json",
+        "QA/autonomia60/durable/packaging-tests.log",
+        "QA/autonomia60/durable/publication-access.json"
+      ],
+      "legacy_scenario_ids": [
+        "JARVIS-60"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "EX-01",
+      "command": "Szukaj produktu X na Allegro aż ktoś go wystawi i daj znać.",
+      "capabilities": [
+        "monitor",
+        "source_allegro",
+        "offers",
+        "browser",
+        "permissions",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-02",
+      "command": "Obserwuj ten produkt i powiadom, gdy cena z dostawą spadnie poniżej 500 zł.",
+      "capabilities": [
+        "monitor",
+        "source_allegro",
+        "offers",
+        "browser",
+        "permissions",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-03",
+      "command": "Znajdź zgodną lewą lampę do Leona III z 2014 roku i ustal brakujący wariant.",
+      "capabilities": [
+        "monitor",
+        "source_allegro",
+        "offers",
+        "browser",
+        "permissions",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-04",
+      "command": "Porównaj cenę, kompletność, dostawę i termin w znalezionych sklepach.",
+      "capabilities": [
+        "monitor",
+        "source_allegro",
+        "offers",
+        "browser",
+        "permissions",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-05",
+      "command": "Oddziel części nowe, używane, uszkodzone i niekompletne.",
+      "capabilities": [
+        "monitor",
+        "source_allegro",
+        "offers",
+        "browser",
+        "permissions",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-06",
+      "command": "Poinformuj o nowej zgodnej ofercie wskazanego sprzedawcy.",
+      "capabilities": [
+        "monitor",
+        "source_allegro",
+        "offers",
+        "browser",
+        "permissions",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-07",
+      "command": "Znajdź ofertę z potwierdzonym najszybszym doręczeniem.",
+      "capabilities": [
+        "monitor",
+        "source_allegro",
+        "offers",
+        "browser",
+        "permissions",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-08",
+      "command": "Sprawdź numer części zamiast zakładać zgodność na podstawie samej nazwy.",
+      "capabilities": [
+        "monitor",
+        "source_allegro",
+        "offers",
+        "browser",
+        "permissions",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-09",
+      "command": "Usuń duplikaty ofert i pokaż najtańsze potwierdzone opcje.",
+      "capabilities": [
+        "monitor",
+        "source_allegro",
+        "offers",
+        "browser",
+        "permissions",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-10",
+      "command": "Zamień jednorazowe wyszukiwanie w monitor, zachowując kryteria.",
+      "capabilities": [
+        "monitor",
+        "source_allegro",
+        "offers",
+        "browser",
+        "permissions",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-11",
+      "command": "Powiadom mnie, gdy zmieni się wskazana sekcja strony.",
+      "capabilities": [
+        "monitor",
+        "schedule",
+        "source_json",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-12",
+      "command": "Co poniedziałek przygotuj raport z projektów.",
+      "capabilities": [
+        "goals",
+        "schedule",
+        "documents",
+        "crm",
+        "finance"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-13",
+      "command": "Daj znać, gdy na autoryzowaną skrzynkę przyjdzie odpowiedź w tym wątku.",
+      "capabilities": [
+        "monitor",
+        "schedule",
+        "source_accounts",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-14",
+      "command": "Gdy pojawi się plik PDF w wybranym katalogu, odczytaj go i skataloguj.",
+      "capabilities": [
+        "monitor",
+        "source_directory",
+        "documents",
+        "workspace"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-15",
+      "command": "Monitoruj moją usługę i ostrzegaj o utrzymującej się awarii.",
+      "capabilities": [
+        "monitor",
+        "schedule",
+        "source_json",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-16",
+      "command": "Na koniec miesiąca zestaw udostępnione faktury.",
+      "capabilities": [
+        "goals",
+        "schedule",
+        "documents",
+        "crm",
+        "finance"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-17",
+      "command": "Śledź status wskazanej przesyłki i informuj tylko o ważnych zmianach.",
+      "capabilities": [
+        "monitor",
+        "schedule",
+        "source_accounts",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-18",
+      "command": "Po przyjściu zaproszenia sprawdź kolizję w autoryzowanym kalendarzu.",
+      "capabilities": [
+        "monitor",
+        "schedule",
+        "source_accounts",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-19",
+      "command": "Obserwuj publikację nowej wersji wskazanego programu.",
+      "capabilities": [
+        "monitor",
+        "schedule",
+        "source_json",
+        "notify_desktop"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-20",
+      "command": "Gdy wróci internet, wznów przerwany dozwolony transfer.",
+      "capabilities": [
+        "monitor",
+        "schedule",
+        "recovery",
+        "workspace"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-21",
+      "command": "Otwórz kalkulator i sprawdź, czy rzeczywiście działa.",
+      "capabilities": [
+        "desktop",
+        "browser",
+        "workspace",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-22",
+      "command": "Otwórz dokument we właściwej aplikacji.",
+      "capabilities": [
+        "desktop",
+        "browser",
+        "workspace",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-23",
+      "command": "Zaznacz drugi akapit, skopiuj go i wklej do edytora.",
+      "capabilities": [
+        "desktop",
+        "browser",
+        "workspace",
+        "permissions",
+        "desktop_lock"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-24",
+      "command": "Przenieś tabelę ze strony do arkusza, zachowując wartości.",
+      "capabilities": [
+        "desktop",
+        "browser",
+        "workspace",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-25",
+      "command": "Przełącz do właściwego okna i zapisz dokument.",
+      "capabilities": [
+        "desktop",
+        "browser",
+        "workspace",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-26",
+      "command": "Znajdź przemieszczony przycisk zamiast klikać stare współrzędne.",
+      "capabilities": [
+        "desktop",
+        "browser",
+        "workspace",
+        "permissions",
+        "models"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-27",
+      "command": "Wypełnij formularz danymi z podanego pliku, bez wysyłania.",
+      "capabilities": [
+        "desktop",
+        "browser",
+        "workspace",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-28",
+      "command": "Pobierz wskazany dokument i sprawdź, czy nie pobrano strony błędu.",
+      "capabilities": [
+        "desktop",
+        "browser",
+        "workspace",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-29",
+      "command": "Wydrukuj zatwierdzony dokument na skonfigurowanej drukarce.",
+      "capabilities": [
+        "desktop",
+        "browser",
+        "workspace",
+        "permissions",
+        "documents"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-30",
+      "command": "Porównaj dwa aktualne widoki i wskaż rzeczywiste różnice.",
+      "capabilities": [
+        "desktop",
+        "browser",
+        "workspace",
+        "permissions",
+        "models"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-31",
+      "command": "Połącz arkusze, uporządkuj kolumny i sprawdź sumy.",
+      "capabilities": [
+        "documents",
+        "workspace",
+        "models"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-32",
+      "command": "Zrób raport kosztów z danych testowych i pokaż obliczenia.",
+      "capabilities": [
+        "documents",
+        "workspace",
+        "models"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-33",
+      "command": "Streść dokument, podając miejsca uzasadniające wnioski.",
+      "capabilities": [
+        "documents",
+        "workspace",
+        "models"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-34",
+      "command": "Stwórz i przetestuj konwerter JSON na CSV.",
+      "capabilities": [
+        "documents",
+        "workspace",
+        "models",
+        "generated_tools"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-35",
+      "command": "Przetłumacz dokument, zachowując układ i nazwy własne.",
+      "capabilities": [
+        "documents",
+        "workspace",
+        "models"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-36",
+      "command": "Przygotuj prezentację i zweryfikuj, czy zawartość mieści się na slajdach.",
+      "capabilities": [
+        "documents",
+        "workspace",
+        "models"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-37",
+      "command": "Odczytaj pola faktury, odróżniając pewne dane od nieczytelnych.",
+      "capabilities": [
+        "documents",
+        "workspace",
+        "models"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-38",
+      "command": "Porównaj wersje umowy i pokaż zmienione fragmenty bez udawania porady prawnej.",
+      "capabilities": [
+        "documents",
+        "workspace",
+        "models"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-39",
+      "command": "Zaproponuj porządek nazw plików i zastosuj zatwierdzony plan odwracalnie.",
+      "capabilities": [
+        "documents",
+        "workspace",
+        "models",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-40",
+      "command": "Odczytaj dane ze skanu, gdy nie ma dostępnej warstwy tekstowej.",
+      "capabilities": [
+        "documents",
+        "workspace",
+        "models"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-41",
+      "command": "Napisz wiadomość do konkretnego ogłoszenia na podstawie jego treści.",
+      "capabilities": [
+        "communication",
+        "source_accounts",
+        "permissions",
+        "offers"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-42",
+      "command": "Wstaw przygotowany szkic do właściwego formularza bez wysyłki.",
+      "capabilities": [
+        "communication",
+        "source_accounts",
+        "permissions",
+        "browser"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-43",
+      "command": "Wyślij zatwierdzoną treść wskazanemu odbiorcy i sprawdź wynik.",
+      "capabilities": [
+        "communication",
+        "source_accounts",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-44",
+      "command": "Zaplanuj konkretną autoryzowaną wiadomość na podaną godzinę.",
+      "capabilities": [
+        "communication",
+        "source_accounts",
+        "permissions",
+        "schedule"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-45",
+      "command": "Posegreguj autoryzowane wiadomości i wyodrębnij wymagające odpowiedzi.",
+      "capabilities": [
+        "communication",
+        "source_accounts",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-46",
+      "command": "Przygotuj odpowiedź uwzględniającą cały wskazany wątek.",
+      "capabilities": [
+        "communication",
+        "source_accounts",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-47",
+      "command": "Przypomnij mi o braku odpowiedzi, zamiast automatycznie spamować adresata.",
+      "capabilities": [
+        "communication",
+        "source_accounts",
+        "permissions",
+        "monitor"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-48",
+      "command": "Zapisz wskazane załączniki w odpowiednich katalogach.",
+      "capabilities": [
+        "communication",
+        "source_accounts",
+        "permissions",
+        "workspace"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-49",
+      "command": "Utwórz prostą stronę projektu, uruchom ją i sprawdź.",
+      "capabilities": [
+        "workspace",
+        "generated_tools",
+        "skills",
+        "goals",
+        "siteos"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-50",
+      "command": "Odtwórz błąd aplikacji, napraw i dodaj test regresji.",
+      "capabilities": [
+        "workspace",
+        "generated_tools",
+        "skills",
+        "goals"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-51",
+      "command": "Napisz narzędzie masowej zmiany nazw i przetestuj na kopii danych.",
+      "capabilities": [
+        "workspace",
+        "generated_tools",
+        "skills",
+        "goals"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-52",
+      "command": "Przygotuj plugin, sprawdź jego zakres dostępu i testy przed aktywacją.",
+      "capabilities": [
+        "workspace",
+        "generated_tools",
+        "skills",
+        "goals"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-53",
+      "command": "Zbuduj lokalny panel do analizy dostarczonego zestawu danych.",
+      "capabilities": [
+        "workspace",
+        "generated_tools",
+        "skills",
+        "goals",
+        "siteos"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-54",
+      "command": "Wyjaśnij błąd zależności i napraw go bez niepotrzebnej przebudowy.",
+      "capabilities": [
+        "workspace",
+        "generated_tools",
+        "skills",
+        "goals"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-55",
+      "command": "Przejrzyj zmiany w repozytorium i opisz rzeczywiste ryzyka.",
+      "capabilities": [
+        "workspace",
+        "generated_tools",
+        "skills",
+        "goals"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-56",
+      "command": "Zbuduj pakiet, sprawdź zawartość i przygotuj instrukcję uruchomienia.",
+      "capabilities": [
+        "workspace",
+        "generated_tools",
+        "skills",
+        "goals",
+        "release"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-57",
+      "command": "Zrestartuj wyłącznie wskazaną usługę użytkownika w przyznanym zakresie.",
+      "capabilities": [
+        "workspace",
+        "recovery",
+        "goals",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-58",
+      "command": "Wykonaj kopię testowych plików i sprawdź możliwość odtworzenia.",
+      "capabilities": [
+        "workspace",
+        "recovery",
+        "goals",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-59",
+      "command": "Znajdź duże pliki i zaproponuj porządki bez automatycznego kasowania.",
+      "capabilities": [
+        "workspace",
+        "recovery",
+        "goals",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-60",
+      "command": "Wznów zadanie od ostatniego potwierdzonego kroku.",
+      "capabilities": [
+        "workspace",
+        "recovery",
+        "goals",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-61",
+      "command": "Po odzyskaniu połączenia ponów bezpieczny odczyt, nie podwójną wysyłkę.",
+      "capabilities": [
+        "workspace",
+        "recovery",
+        "goals",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-62",
+      "command": "Wykonuj dwa niezależne researchy bez walki o wspólny pulpit.",
+      "capabilities": [
+        "workspace",
+        "recovery",
+        "goals",
+        "permissions",
+        "desktop_lock"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-63",
+      "command": "Przy niedoborze pamięci ogranicz współbieżność i zachowaj postęp.",
+      "capabilities": [
+        "workspace",
+        "recovery",
+        "goals",
+        "permissions",
+        "models"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-64",
+      "command": "Ustal, czy operacja wykonana przed timeoutem faktycznie doszła do skutku.",
+      "capabilities": [
+        "workspace",
+        "recovery",
+        "goals",
+        "permissions",
+        "communication"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-65",
+      "command": "Zrób analizę testowego CRM bez wymyślania danych.",
+      "capabilities": [
+        "crm",
+        "finance",
+        "goals",
+        "documents"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-66",
+      "command": "Zestaw udostępnione przychody i koszty, sprawdzając arytmetykę.",
+      "capabilities": [
+        "crm",
+        "finance",
+        "goals",
+        "documents"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-67",
+      "command": "Porównaj oferty dostawców według konkretnych kryteriów.",
+      "capabilities": [
+        "crm",
+        "finance",
+        "goals",
+        "documents",
+        "offers"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-68",
+      "command": "Rozpisz projekt, wykonaj dozwolone kroki i aktualizuj prawdziwe statusy.",
+      "capabilities": [
+        "crm",
+        "finance",
+        "goals",
+        "documents"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-69",
+      "command": "Przygotuj raport z wykonania na podstawie dowodów, nie samego planu.",
+      "capabilities": [
+        "crm",
+        "finance",
+        "goals",
+        "documents"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-70",
+      "command": "Pokaż projekty wymagające mojej decyzji i wyjaśnij jakiej.",
+      "capabilities": [
+        "crm",
+        "finance",
+        "goals",
+        "documents",
+        "control"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-71",
+      "command": "Przyjmij polskie polecenie głosowe i pokaż rozpoznaną treść.",
+      "capabilities": [
+        "voice",
+        "models",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-72",
+      "command": "Odczytaj wynik na głos bez ujawniania wrażliwych treści bez potrzeby.",
+      "capabilities": [
+        "voice",
+        "models",
+        "permissions"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-73",
+      "command": "Wyślij alert o znalezionej ofercie do sparowanej aplikacji na telefonie.",
+      "capabilities": [
+        "mobile",
+        "notify_remote",
+        "permissions",
+        "monitor"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-74",
+      "command": "Przyjmij autoryzowane polecenie z telefonu do mojego działającego hosta.",
+      "capabilities": [
+        "mobile",
+        "notify_remote",
+        "permissions",
+        "monitor"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-75",
+      "command": "Oddaj mi kontrolę nad pulpitem, gdy zacznę sam pracować.",
+      "capabilities": [
+        "desktop",
+        "desktop_lock",
+        "control"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-76",
+      "command": "Pozwól sterować interfejsem klawiaturą i opisanymi kontrolkami.",
+      "capabilities": [
+        "ui"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-77",
+      "command": "Pospiesz się i pokaż już zweryfikowane wyniki.",
+      "capabilities": [
+        "control",
+        "monitor",
+        "goals",
+        "schedule"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-78",
+      "command": "Wstrzymaj ten cel do jutra, nie przerywając innych monitorów.",
+      "capabilities": [
+        "control",
+        "monitor",
+        "goals",
+        "schedule"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-79",
+      "command": "Zmień kryteria aktywnego zadania i odrzuć spóźnione wyniki starej wersji.",
+      "capabilities": [
+        "control",
+        "monitor",
+        "goals",
+        "schedule"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    },
+    {
+      "id": "EX-80",
+      "command": "Wykonaj nowe, wcześniej nieprzewidziane zadanie przez dostępne narzędzia lub przetestowaną nową umiejętność.",
+      "capabilities": [
+        "goals",
+        "models",
+        "skills",
+        "generated_tools"
+      ],
+      "acceptance_status": "NOT_RUN",
+      "level": "normal_command_end_to_end",
+      "evidence": [],
+      "note": "Mapowanie wymagań, nie osobna funkcja rozpoznająca tę frazę ani dowód wykonania."
+    }
+  ],
+  "current_checks": [
+    {
+      "id": "D-REAL-DIRECTORY",
+      "status": "PASS",
+      "level": "backend integration with actual read-only filesystem source",
+      "evidence": [
+        "QA/autonomia60/durable/real-directory-source.json"
+      ],
+      "normal_conversation": false,
+      "real_model": false,
+      "code_sha256": "99b61227d1da54048d6be7f3377778e8ba72d849a0f079067887ee8708e4f8d1"
+    },
+    {
+      "id": "D-PACKAGING-UNIT",
+      "status": "PASS",
+      "level": "unit",
+      "tests_passed": 5,
+      "evidence": [
+        "QA/autonomia60/durable/packaging-tests.log"
+      ]
+    },
+    {
+      "id": "D-DEPENDENCY-AUDIT",
+      "status": "FAIL",
+      "level": "dependency-advisories",
+      "production_advisories": 0,
+      "full_advisories": 32,
+      "note": "npm audit --omit=dev0; pełny audit32 (14moderate15high3critical). Kategoria dev obejmuje Electron dystrybuowany jako runtime. Nie jest to dowód aplikacji bez podatności.",
+      "evidence": [
+        "QA/autonomia60/durable/packaging-audit-production.json",
+        "QA/autonomia60/durable/packaging-audit-all.json"
+      ]
+    },
+    {
+      "id": "D-PUBLICATION-API",
+      "status": "BLOCKED",
+      "level": "external-service",
+      "actual": "GitHub REST/GraphQL proxyCONNECT403; git read działa. Draft polityki wymaga aktywacji.",
+      "evidence": [
+        "QA/autonomia60/durable/publication-access.json"
+      ]
+    },
+    {
+      "id": "D-MONITOR-CONTROLLED",
+      "status": "PASS",
+      "level": "controlled source/clock with actual file store and child processes",
+      "tests_passed": 20,
+      "normal_conversation": false,
+      "real_model": false,
+      "evidence": [
+        "QA/autonomia60/durable/evidence/goal-service-tests.log"
+      ],
+      "scope": "08–14 361checks/restart, two processes leases, stale results/cancel/revoke, full cost/dedup/price/availability, outbox uncertainty SIGKILL,429/403,budgets/WarsawDST,directory/source security. Also20s source deadline/abort and15s uncertain notification deadline, test-only shortened constructor timeouts."
+    },
+    {
+      "id": "D-MODEL-PROTOCOL",
+      "status": "PASS",
+      "level": "unit and controlled HTTP integration",
+      "tests_passed": 56,
+      "real_model": false,
+      "evidence": [
+        "QA/autonomia60/durable/evidence/model-capabilities-tests.log"
+      ],
+      "scope": "Tool protocol capability probe+cache; schema/context budgets and malformed args. 12new task phrasings in one selector unit test; no LLM generalization claim."
+    },
+    {
+      "id": "D-MONITOR-BRIDGE",
+      "status": "PASS",
+      "level": "React controlled IPC + real file store and unit",
+      "tests_passed": 28,
+      "real_model": false,
+      "native_electron": false,
+      "evidence": [
+        "QA/autonomia60/durable/evidence/bridge.log"
+      ],
+      "scope": "React+real store, STOP/goalRuntime/Linux keyboard, actual main IPC VM blocks model input while native grant open and fences late approval after STOP. Not actual native Electron."
+    },
+    {
+      "id": "D-DESKTOP-RUNNER",
+      "status": "BLOCKED",
+      "level": "actual qa:desktop process with independent Chromium and attempted native Electron",
+      "run_id": "2026-11-05T21-41-56-138Z-desktop-9540d1ef",
+      "exit_code": 2,
+      "independent_licensed_ui": "PASS",
+      "A": "BLOCKED",
+      "B": "BLOCKED",
+      "C": "BLOCKED",
+      "blockers": [
+        "Ollama11435 and11434 ECONNREFUSED",
+        "Electron SIGSEGV after Missing X/$DISPLAY",
+        "xdotool absent"
+      ],
+      "evidence": [
+        "QA/autonomia60/durable/desktop.json"
+      ],
+      "note": "Run precedes final focus/reply guards. Final integration run pending. C runner now IMPLEMENTED; no native acceptance claimed."
+    },
+    {
+      "id": "D-DESKTOP-UNIT",
+      "status": "PASS",
+      "level": "unit/controlled native command protocol",
+      "tests_passed": 17,
+      "evidence": [
+        "QA/autonomia60/durable/desktop.json"
+      ],
+      "note": "Overlaps linuxKeyboard/qaConfiguration in full suite. Not actual desktop."
+    },
+    {
+      "id": "D-INTEGRATION-FIRST",
+      "status": "FAIL",
+      "level": "initial whole-suite integration",
+      "tests_failed": 4,
+      "evidence": [
+        "QA/autonomia60/durable/evidence/integration-first.log"
+      ],
+      "resolution": "Stare oczekiwanie całego katalogu zastąpiono wymaganymi limitami/niezmiennością schematów; trzy próby diagnostyki trafiły na niespójną nazwę pola podczas integracji, przywrócono kontrakt. Zachowano asercje installed/loadedBeforeProbe i wykluczeń. Finalna pełna regresja2976PASS/0FAIL."
+    },
+    {
+      "id": "D-FULL-REGRESSION",
+      "status": "PASS",
+      "level": "full unit/integration suite",
+      "tests_passed": 2976,
+      "tests_failed": 0,
+      "test_files_passed": 364,
+      "command": "npm test",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/full-tests.log"
+      ],
+      "note": "Includes controlled fixtures and unit tests; not80end-to-end acceptance successes."
+    },
+    {
+      "id": "D-FULL-LINT",
+      "status": "PASS",
+      "level": "static analysis",
+      "command": "npm run lint",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/full-lint.log",
+        "QA/autonomia60/durable/evidence/goal-service-lint.log"
+      ],
+      "note": "Whole lint passed; later source-deadline constructor addition covered by focused runtime lint."
+    },
+    {
+      "id": "D-FULL-BUILD",
+      "status": "PASS",
+      "level": "TypeScript and Vite renderer build",
+      "command": "npm run build",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/full-build.log"
+      ],
+      "note": "Not a native package launch. Release helper rebuilds from final clean commit."
+    }
+  ],
+  "external_access": [
+    {
+      "id": "ALLEGRO-DOCS",
+      "target": "https://developer.allegro.pl/documentation/",
+      "method": "curl via configured HTTP proxy; TLS verification preserved",
+      "result": "BLOCKED",
+      "exit_code": 56,
+      "actual": "CONNECT tunnel failed, response 403",
+      "scope": "Nie udało się odczytać bieżących docs. Nie sprawdzono OAuth, konta, GET /offers/listing ani natywnych ulubionych wyszukiwań. Nie obchodzono odmowy.",
+      "evidence": "QA/autonomia60/durable/allegro-access.json"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "R-01",
+      "requirement": "Zachowanie historii, gałąź integracyjna i inwentaryzacja",
+      "capabilities": [
+        "release",
+        "goals",
+        "ui"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-02",
+      "requirement": "Małe etapy, checkpointy, testy i autonomiczna kontynuacja",
+      "capabilities": [
+        "release"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-03",
+      "requirement": "Jeden wykonawca wielu typów celów i trwałe kontrakty",
+      "capabilities": [
+        "goals",
+        "monitor"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-04",
+      "requirement": "Trwały runtime, dzierżawy, harmonogram, restart i luka obserwacji",
+      "capabilities": [
+        "monitor",
+        "schedule",
+        "recovery"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-05",
+      "requirement": "Produkt aż do pojawienia się, weryfikacja źródła/zgodności/ceny",
+      "capabilities": [
+        "monitor",
+        "source_json",
+        "source_allegro",
+        "offers"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-06",
+      "requirement": "Outbox, deduplikacja, cisza nocna, retry i kanały",
+      "capabilities": [
+        "notify_desktop",
+        "notify_remote",
+        "monitor"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-07",
+      "requirement": "Naturalny język, kompozycja, nowe zadania i niezależne dowody",
+      "capabilities": [
+        "models",
+        "goals",
+        "skills",
+        "generated_tools"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-08",
+      "requirement": "Pamięć, umiejętności i faktyczne możliwości modeli",
+      "capabilities": [
+        "memory",
+        "skills",
+        "models"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-09",
+      "requirement": "Pulpit, przeglądarka, dokumenty i kontrakty integracji",
+      "capabilities": [
+        "desktop",
+        "desktop_lock",
+        "browser",
+        "documents",
+        "permissions"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-10",
+      "requirement": "Wytrwałość, samonaprawa, STOP, pauza i zmiana kryteriów",
+      "capabilities": [
+        "recovery",
+        "control",
+        "generated_tools"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-11",
+      "requirement": "Zakresowe odwoływalne zgody i niezaufane źródła",
+      "capabilities": [
+        "permissions"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-12",
+      "requirement": "Odbiór całego istniejącego UI",
+      "capabilities": [
+        "ui"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-13",
+      "requirement": "Mapowanie80 do wspólnych możliwości, bez reguł pod frazy",
+      "capabilities": [
+        "goals",
+        "models"
+      ],
+      "state": "MAPPED_NOT_ACCEPTED",
+      "acceptance_evidence": []
+    },
+    {
+      "id": "R-14",
+      "requirement": "Warstwowe testy, normalny kanał, kontrolowany08-14 i rzeczywiste próby",
+      "capabilities": [
+        "monitor",
+        "models",
+        "desktop",
+        "release"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": [
+        "D-MONITOR-CONTROLLED",
+        "D-REAL-DIRECTORY",
+        "D-MONITOR-BRIDGE",
+        "D-MODEL-PROTOCOL",
+        "D-DESKTOP-RUNNER",
+        "D-FULL-REGRESSION"
+      ]
+    },
+    {
+      "id": "R-15",
+      "requirement": "Spójne opublikowane wydanie i zweryfikowane instalatory",
+      "capabilities": [
+        "release"
+      ],
+      "state": "PARTIAL_PUBLICATION_BLOCKED",
+      "acceptance_evidence": [
+        "D-PACKAGING-UNIT",
+        "D-DEPENDENCY-AUDIT",
+        "D-PUBLICATION-API"
+      ]
+    },
+    {
+      "id": "R-16",
+      "requirement": "Uczciwy raport, rzeczywiste linki i kompletne kryterium końcowe",
+      "capabilities": [
+        "release"
+      ],
+      "state": "PARTIAL",
+      "acceptance_evidence": []
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-01",
+      "decision": "Integracja od najnowszego f747051; nie cofamy wcześniejszych zmian.",
+      "basis": "Git status clean na początku oraz git log; aktualne polecenie §1."
+    },
+    {
+      "id": "DEC-02",
+      "decision": "Trwały scheduler monitora w procesie głównym Electron; nie dodajemy alternatywnego planisty LLM.",
+      "basis": "Istniejący goalRuntime obsługuje działania; monitor potrzebuje zegara niezależnego od renderera. Implementacja w toku."
+    },
+    {
+      "id": "DEC-03",
+      "decision": "Źródła mają jawny kontrakt i grant; brak źródła Allegro pozostaje MISSING_IMPLEMENTATION.",
+      "basis": "Kod bazowy ma linki i ręczny tracker, docs publiczne CONNECT403; nie wolno pozorować strumienia rynku."
+    },
+    {
+      "id": "DEC-04",
+      "decision": "Brak środowiska nie usprawiedliwia braku kodu; testy kontrollowane nie są e2e prawdziwego modelu.",
+      "basis": "Aktualne polecenie §14, oddzielne facets i poziom current_checks."
+    },
+    {
+      "id": "DEC-05",
+      "decision": "Dopuszczony tylko prerelease jeśli krytyczne przebiegi nadal niepotwierdzone.",
+      "basis": "Aktualne polecenie §15; publikacja nie jest ukończeniem całej autonomii."
+    },
+    {
+      "id": "DEC-06",
+      "decision": "Nie instalować ani nie uruchamiać Xvfb, nie wyłączać sandboxa/licencji.",
+      "basis": "Aktualne polecenie §2 i §14 oraz utrzymana wcześniejsza decyzja użytkownika."
+    }
+  ],
+  "metrics": {
+    "end_to_end_task_success_rate": null,
+    "human_interventions": null,
+    "false_confirmations": null,
+    "time_to_first_verified_result_ms": null,
+    "detection_delay_ms": null,
+    "alert_delay_ms": null,
+    "external_cost": null,
+    "resource_load": null,
+    "duplicate_effects": null,
+    "stop_ack_ms": null,
+    "executor_quiescence_ms": null
+  },
+  "metrics_note": "Brak wartości oznacza niezmierzone; nie przenosimy historycznych pomiarów do bieżącego kodu. Pomiary konkretnego kontrolowanego testu mogą być zapisane wyłącznie z jego poziomem/próbką w current_checks.",
+  "environment": {
+    "host": "managed cloud /workspace/Jarvis",
+    "platform": "linux",
+    "arch": "x64",
+    "node": "v24.22.1",
+    "npm": "11.9.0",
+    "base_commit": "f74705166e484f9fe76a9ecac7212a45376254ba",
+    "final_commit": null,
+    "user_machine": "NOT_ACCESSED",
+    "user_installed_version": "UNKNOWN",
+    "scope": "isolated QA data only; no production profiles inspected"
+  },
+  "configuration_places": {
+    "monitors": "Istniejący panel Cele → Monitoring i powiadomienia",
+    "grants": "Formularz źródła i natywne potwierdzenie dokładnego zasobu; Cofnij zgodę przy grancie. Model nie nadaje zgód.",
+    "models": "Ustawienia → modele/Ollama; faktyczny endpoint użytkownika, bez zmiany na chmurę.",
+    "notifications": "Pole powiadomień systemowych i ciszy nocnej przy monitorze; zdarzenia w tym samym panelu; telefon/e-mail nie są kanałami monitora.",
+    "background": "Domyślnie wyłączony checkbox działania po zamknięciu okna; wymaga natywnego potwierdzenia, zapis monitor-settings.json profilu."
+  },
+  "lifecycle": {
+    "window_close_default": "Scheduler zatrzymuje się przy zamknięciu ostatniego okna.",
+    "window_close_opt_in": "Jawnie włączony tryb utrzymuje proces main i timer; Ctrl+Alt+J lub ponowne uruchomienie przywraca okno.",
+    "app_exit": "Wyjście z menu JARVIS zatrzymuje proces i monitor.",
+    "sleep_or_power_off": "Brak obserwacji; po powrocie ograniczone nadrabianie, bez wymyślania historii.",
+    "autostart": "Nie włączono.",
+    "general_one_shot_goals": "Nadal wykonuje renderer; tryb monitora nie utrwala w tle dowolnego planu."
+  },
+  "specification_path": "QA/autonomia60/durable/SPEC.md"
+}

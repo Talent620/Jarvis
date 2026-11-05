@@ -774,6 +774,9 @@ export default function App() {
   const stopGeneration = () => {
     cancelGeneration();
     stopAllGoalRuns();
+    void desktop()?.monitorCommand?.({ action: "stop_all" }).then((result) => {
+      if (!result.ok) toast("Nie potwierdzono zatrzymania monitorów: " + (result.error || "brak odpowiedzi"));
+    }).catch(() => toast("Nie potwierdzono zatrzymania monitorów."));
     void desktop()?.stopWorkspaceProcesses?.().catch(() => toast("Nie potwierdzono zatrzymania procesów narzędzi."));
     pendingConsent?.resolve({ allow: false, remember: false });
     setPendingConsent(null);

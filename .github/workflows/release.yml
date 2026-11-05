@@ -9,8 +9,7 @@ name: Release APK
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "claude/functionality-modification-access-z9kod1"]
-    tags: ["v*"]
+    branches: ["main"]
     paths:
       - "android/**"
       - "public/**"
@@ -33,6 +32,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Require main for rolling production publication
+        run: test "$GITHUB_REF" = refs/heads/main
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -45,6 +46,17 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "17"
+
+      - name: Prepare explicitly configured release signing
+        env:
+          JARVIS_RELEASE_KEYSTORE_BASE64: ${{ secrets.JARVIS_RELEASE_KEYSTORE_BASE64 }}
+          JARVIS_RELEASE_STORE_PASSWORD: ${{ secrets.JARVIS_RELEASE_STORE_PASSWORD }}
+          JARVIS_RELEASE_KEY_ALIAS: ${{ secrets.JARVIS_RELEASE_KEY_ALIAS }}
+          JARVIS_RELEASE_KEY_PASSWORD: ${{ secrets.JARVIS_RELEASE_KEY_PASSWORD }}
+          JARVIS_BUILD_NUMBER: ${{ vars.JARVIS_BUILD_NUMBER }}
+          JARVIS_PREVIOUS_VERSION_CODE: ${{ vars.JARVIS_PREVIOUS_VERSION_CODE }}
+          JARVIS_RELEASE_CERT_SHA256: ${{ vars.JARVIS_RELEASE_CERT_SHA256 }}
+        run: node scripts/prepare-android-signing.cjs
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -78,6 +90,10 @@ jobs:
 
       - name: Build signed release APK
         working-directory: android
+        env:
+          JARVIS_RELEASE_STORE_PASSWORD: ${{ secrets.JARVIS_RELEASE_STORE_PASSWORD }}
+          JARVIS_RELEASE_KEY_ALIAS: ${{ secrets.JARVIS_RELEASE_KEY_ALIAS }}
+          JARVIS_RELEASE_KEY_PASSWORD: ${{ secrets.JARVIS_RELEASE_KEY_PASSWORD }}
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease --no-daemon

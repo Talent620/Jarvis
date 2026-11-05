@@ -5,6 +5,11 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("jarvisDesktop", {
   platform: process.platform,
+  monitorReadEvent: (id) => ipcRenderer.invoke("jarvis:monitor-read-event", id),
+  clipboardRead: () => ipcRenderer.invoke("jarvis:clipboard-read"),
+  monitorCommand: (request) => ipcRenderer.invoke("jarvis:monitor-command", request),
+  monitorGrant: (request) => ipcRenderer.invoke("jarvis:monitor-grant", request),
+  monitorSettings: (request = {}) => ipcRenderer.invoke("jarvis:monitor-settings", request),
   stopWorkspaceProcesses: () => ipcRenderer.invoke("jarvis:stop-workspace-processes"),
   // Bezpieczna warstwa narzędzi systemowych (MCP-style): zawsze przez jeden kontrolowany IPC.
   agentTool: (tool, input = {}) => ipcRenderer.invoke("jarvis:agent-tool", { tool: String(tool || ""), input }),
@@ -42,6 +47,8 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   gcalList: (opts) => ipcRenderer.invoke("jarvis:gcal-list", opts),
   gmailSend: (msg) => ipcRenderer.invoke("jarvis:gmail-send", msg),
   gmailList: (opts) => ipcRenderer.invoke("jarvis:gmail-list", opts),
+  listWindows: () => ipcRenderer.invoke("jarvis:list-windows"),
+  focusWindow: (id, title) => ipcRenderer.invoke("jarvis:focus-window", { id, title }),
   activeWindow: () => ipcRenderer.invoke("jarvis:active-window"),
   // Klik X11: renderer przesyła współrzędne i wymagany tytuł aktywnego okna.
   click: (x, y, window) => ipcRenderer.invoke("jarvis:click", { x, y, window }),
