@@ -1,0 +1,10 @@
+{
+  "repo": "/workspace/Jarvis",
+  "branch": "codex/skills-integration-20261105",
+  "commit": "9f5f9afc868421a0b80197c6d1dd84483833de85",
+  "local_changes": "M .github/workflows/test.yml\n M QA/autonomia60/durable/RESUME.md\n?? QA/autonomia60/durable/evidence/alpha2-packages-9f5f9af-native.log\n?? QA/autonomia60/durable/evidence/alpha2-packages-9f5f9af.json\n?? QA/autonomia60/durable/evidence/alpha2-packages-9f5f9af.log",
+  "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "new_source_sha256": {},
+  "app_version": "2.1.0-alpha.2",
+  "app_entry": "electron/main.cjs -> dist/index.html"
+}

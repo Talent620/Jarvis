@@ -3,7 +3,7 @@
 // stare dane bez pola predictionLedger, ograniczony rozmiar dziennika i brak pracy przy renderze
 // (to ostatnie ma test zachowania w predictionBehavior.test.ts — tu ścieżka danych).
 import { describe, it, expect } from "vitest";
-import { runPredictionCycle, compactLedger, calibrationSummary, verdictOf, type CycleLeadInput } from "../src/lib/predictionLedger";
+import { runPredictionCycle, resolveDuePredictions, recordNeglectPrediction, compactLedger, calibrationSummary, verdictOf, type CycleLeadInput } from "../src/lib/predictionLedger";
 import type { PredictionRecord, AppData } from "../src/types";
 
 const DAY = 86_400_000;
@@ -84,6 +84,77 @@ describe("Wydajność S9 — tysiące leadów i rekordów, realny czas wykonania
     expect(ledger.filter((r) => !r.evidence).length).toBeLessThanOrEqual(1000); // maks. 1 pending per lead
     // rozstrzygnięte podlegają limitom kompakcji (nie rosną bez końca)
     expect(ledger.length).toBeLessThanOrEqual(1000 + 500);
+  });
+});
+
+describe("Indeksowanie historii — zachowanie dowodów i kolejności cyklu", () => {
+  const prediction = (id: string, entityId = "a"): PredictionRecord =>
+    recordNeglectPrediction(entityId, `Firma ${entityId}`, { id, now: NOW - 8 * DAY, records: [] });
+  const historical = (id: string, verdict: "correct" | "prevented" | "moot", observedAt: number, entityId = "a"): PredictionRecord => ({
+    ...prediction(id, entityId),
+    evidence: { observedAt, outcome: "wynik", evidence: [], verdict, reason: "historia", confidenceAfterResolution: 0.7 },
+  });
+
+  it("pewność dowodu uwzględnia tylko wcześniejsze rekordy tej encji, bez zmiany zapisanej historii", () => {
+    const disputed = historical("disputed", "prevented", NOW - 4 * DAY);
+    disputed.evidence!.disputedAt = NOW - 3 * DAY;
+    const ledger = [
+      prediction("first"),
+      historical("old", "correct", NOW - 2 * DAY),
+      historical("other", "prevented", NOW - 3 * DAY, "b"),
+      prediction("second"),
+      disputed,
+      historical("moot", "moot", NOW - 3 * DAY),
+      prediction("third"),
+      historical("later-in-ledger", "prevented", NOW - 3 * DAY),
+    ];
+    const original = JSON.stringify(ledger);
+    const resolved = resolveDuePredictions(ledger, NOW, { a: { status: "contacted" }, b: { status: "contacted" } });
+
+    expect(resolved.map((r) => r.id)).toEqual(ledger.map((r) => r.id));
+    expect([resolved[0], resolved[3], resolved[6]].map((r) => r.evidence!.confidenceAfterResolution)).toEqual([0.7, 0.82, 0.84]);
+    expect(JSON.stringify(ledger)).toBe(original);
+    for (let i = 0; i < ledger.length; i++) {
+      if (ledger[i].evidence) expect(resolved[i]).toBe(ledger[i]);
+      else {
+        const { evidence, ...unchangedPrediction } = resolved[i];
+        expect(evidence!.verdict).toBe("correct");
+        expect(unchangedPrediction).toEqual(ledger[i]);
+      }
+    }
+  });
+
+  it("nowa prognoza korzysta z historii swojego klienta, a duplikat leada nie tworzy drugiej", () => {
+    const ledger = [
+      historical("a-first", "prevented", NOW - 2 * DAY),
+      historical("b-first", "correct", NOW - 2 * DAY, "b"),
+      historical("a-second", "prevented", NOW - DAY),
+      historical("b-second", "correct", NOW - DAY, "b"),
+    ];
+    const original = JSON.stringify(ledger);
+    const leads: CycleLeadInput[] = [
+      { id: "a", company: "Pierwsza nazwa", status: "contacted", overdue: true },
+      { id: "b", company: "Inny klient", status: "contacted", overdue: true },
+      { id: "a", company: "Powtórzony wpis", status: "contacted", overdue: true },
+    ];
+    let ids = 0;
+    const result = runPredictionCycle({ ledger, leads, awaitingPaymentByLead: { a: 100 }, now: NOW,
+      learningEnabled: true, makeId: () => `new-${++ids}` });
+
+    expect(ids).toBe(2);
+    expect(result.created.map((r) => [r.id, r.entityId, r.entityLabel, r.confidence, r.checkAt - NOW])).toEqual([
+      ["new-1", "a", "Pierwsza nazwa", 0.51, 3 * DAY],
+      ["new-2", "b", "Inny klient", 0.78, 7 * DAY],
+    ]);
+    expect(result.resolvedNow).toEqual([]);
+    expect(result.ledger.map((r) => r.id)).toEqual([...ledger.map((r) => r.id), "new-1", "new-2"]);
+    expect(JSON.stringify(ledger)).toBe(original);
+    ledger.forEach((r, i) => expect(result.ledger[i]).toBe(r));
+    const repeated = runPredictionCycle({ ledger: result.ledger, leads, awaitingPaymentByLead: { a: 100 }, now: NOW,
+      learningEnabled: true, makeId: () => `new-${++ids}` });
+    expect(repeated.changed).toBe(false);
+    expect(repeated.ledger).toBe(result.ledger);
+    expect(ids).toBe(2);
   });
 });
 

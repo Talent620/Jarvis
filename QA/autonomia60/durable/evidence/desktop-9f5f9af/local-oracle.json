@@ -1,0 +1,51 @@
+{
+  "before": {
+    "tasks": [
+      {
+        "id": "jwk6rt67h6u2",
+        "title": "Przekazanie local 2026-11-05T23-29-40-272Z-desktop-f30481f7 — Zażółć gęślą jaźń",
+        "done": false,
+        "priority": false,
+        "createdAt": 1793921389274
+      }
+    ],
+    "audit": [
+      {
+        "tool": "add_task",
+        "status": "ok",
+        "input": {
+          "title": "Przekazanie local 2026-11-05T23-29-40-272Z-desktop-f30481f7 — Zażółć gęślą jaźń"
+        }
+      }
+    ],
+    "saved_assistant_reply": true
+  },
+  "after": {
+    "tasks": [
+      {
+        "id": "jwk6rt67h6u2",
+        "title": "Przekazanie local 2026-11-05T23-29-40-272Z-desktop-f30481f7 — Zażółć gęślą jaźń",
+        "done": false,
+        "priority": false,
+        "createdAt": 1793921389274
+      }
+    ],
+    "audit": [
+      {
+        "tool": "add_task",
+        "status": "ok",
+        "input": {
+          "title": "Przekazanie local 2026-11-05T23-29-40-272Z-desktop-f30481f7 — Zażółć gęślą jaźń"
+        }
+      }
+    ],
+    "saved_assistant_reply": true
+  },
+  "settings_after_restart": {
+    "interfaceMode": "modern",
+    "provider": "gemini",
+    "ollamaUrl": ""
+  },
+  "same_task_id": true,
+  "one_successful_audit": true
+}

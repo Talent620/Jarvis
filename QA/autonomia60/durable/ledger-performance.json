@@ -1,0 +1,200 @@
+{
+  "recordedAt": "2026-11-05T23:40:50.360Z",
+  "originalCiFailure": {
+    "runId": "42130379821",
+    "test": "tests/predictionLedgerPerf.test.ts:83",
+    "elapsedMs": 3201,
+    "strictLimitMs": 3000
+  },
+  "method": "Exact 30-day x 1000-lead perf fixture; one excluded warm-up per version; five paired sequential samples in alternating order; same Node process and resources. Output hashes include every cycle ledger, created, resolvedNow, changed. No model/network calls.",
+  "environment": {
+    "node": "v24.22.1",
+    "platform": "linux",
+    "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "availableParallelism": 4,
+    "cpuQuota": "400000 100000"
+  },
+  "sourceSha256": {
+    "baseline": "1c1e6d59d773a71b0119b8b6bd4cb0c42ff3802a0adf376b0cbf9c6f9cd0a130",
+    "candidate": "c8ac7dc843bb6bfd7d2c10dbf987d1229940d8d7964a241ca60bb035edfb83e2"
+  },
+  "warmup": {
+    "baseline": {
+      "elapsedMs": 385.567068,
+      "allCycleOutputsSha256": "42c4e24ff998868620577ebdc7217c19ad034eca366d120c5247d95002c5b704",
+      "recordsCreated": 5000,
+      "finalRecords": 1000,
+      "finalPending": 1000
+    },
+    "candidate": {
+      "elapsedMs": 38.28504699999996,
+      "allCycleOutputsSha256": "42c4e24ff998868620577ebdc7217c19ad034eca366d120c5247d95002c5b704",
+      "recordsCreated": 5000,
+      "finalRecords": 1000,
+      "finalPending": 1000
+    }
+  },
+  "samples": {
+    "baseline": [
+      {
+        "elapsedMs": 393.1053250000001,
+        "allCycleOutputsSha256": "42c4e24ff998868620577ebdc7217c19ad034eca366d120c5247d95002c5b704",
+        "recordsCreated": 5000,
+        "finalRecords": 1000,
+        "finalPending": 1000
+      },
+      {
+        "elapsedMs": 307.98269200000004,
+        "allCycleOutputsSha256": "42c4e24ff998868620577ebdc7217c19ad034eca366d120c5247d95002c5b704",
+        "recordsCreated": 5000,
+        "finalRecords": 1000,
+        "finalPending": 1000
+      },
+      {
+        "elapsedMs": 236.78353100000004,
+        "allCycleOutputsSha256": "42c4e24ff998868620577ebdc7217c19ad034eca366d120c5247d95002c5b704",
+        "recordsCreated": 5000,
+        "finalRecords": 1000,
+        "finalPending": 1000
+      },
+      {
+        "elapsedMs": 281.40680399999974,
+        "allCycleOutputsSha256": "42c4e24ff998868620577ebdc7217c19ad034eca366d120c5247d95002c5b704",
+        "recordsCreated": 5000,
+        "finalRecords": 1000,
+        "finalPending": 1000
+      },
+      {
+        "elapsedMs": 257.4292080000005,
+        "allCycleOutputsSha256": "42c4e24ff998868620577ebdc7217c19ad034eca366d120c5247d95002c5b704",
+        "recordsCreated": 5000,
+        "finalRecords": 1000,
+        "finalPending": 1000
+      }
+    ],
+    "candidate": [
+      {
+        "elapsedMs": 31.12457900000004,
+        "allCycleOutputsSha256": "42c4e24ff998868620577ebdc7217c19ad034eca366d120c5247d95002c5b704",
+        "recordsCreated": 5000,
+        "finalRecords": 1000,
+        "finalPending": 1000
+      },
+      {
+        "elapsedMs": 25.551330000000007,
+        "allCycleOutputsSha256": "42c4e24ff998868620577ebdc7217c19ad034eca366d120c5247d95002c5b704",
+        "recordsCreated": 5000,
+        "finalRecords": 1000,
+        "finalPending": 1000
+      },
+      {
+        "elapsedMs": 32.49385399999983,
+        "allCycleOutputsSha256": "42c4e24ff998868620577ebdc7217c19ad034eca366d120c5247d95002c5b704",
+        "recordsCreated": 5000,
+        "finalRecords": 1000,
+        "finalPending": 1000
+      },
+      {
+        "elapsedMs": 25.98025800000005,
+        "allCycleOutputsSha256": "42c4e24ff998868620577ebdc7217c19ad034eca366d120c5247d95002c5b704",
+        "recordsCreated": 5000,
+        "finalRecords": 1000,
+        "finalPending": 1000
+      },
+      {
+        "elapsedMs": 30.63609600000018,
+        "allCycleOutputsSha256": "42c4e24ff998868620577ebdc7217c19ad034eca366d120c5247d95002c5b704",
+        "recordsCreated": 5000,
+        "finalRecords": 1000,
+        "finalPending": 1000
+      }
+    ]
+  },
+  "summary": {
+    "baseline": {
+      "minMs": 236.78353100000004,
+      "medianMs": 281.40680399999974,
+      "maxMs": 393.1053250000001
+    },
+    "candidate": {
+      "minMs": 25.551330000000007,
+      "medianMs": 30.63609600000018,
+      "maxMs": 32.49385399999983
+    }
+  },
+  "note": "Local isolated timings vary and do not reproduce GitHub Ubuntu CI contention; CI original failure remains valid. Candidate CI must independently pass the unchanged 3000 ms test.",
+  "baselineCommit": "b43667836ab7492deba533423a6772f2f49ccf57",
+  "validation": {
+    "sourceFiles": [
+      "src/lib/predictionLedger.ts",
+      "tests/predictionLedgerPerf.test.ts"
+    ],
+    "performanceThresholds": "All original timing thresholds/assertions unchanged, including strict < 3000 ms for 30 cycles x 1000 leads.",
+    "focusedTests": {
+      "command": "npm test -- tests/predictionLedger.test.ts tests/predictionLedgerPerf.test.ts tests/predictionLedgerAdversarial.test.ts tests/predictionLedgerBenchmark.test.ts tests/predictionBehavior.test.ts --reporter=verbose",
+      "filesPassed": 5,
+      "testsPassed": 95,
+      "exitCode": 0,
+      "log": "/tmp/jarvis-ledger-after-test.log"
+    },
+    "typecheck": {
+      "command": "npx tsc -b --pretty false",
+      "exitCode": 0,
+      "log": "/tmp/jarvis-ledger-typecheck.log"
+    },
+    "baselinePerfTest": {
+      "testsPassed": 5,
+      "fixtureMs": 350,
+      "log": "/tmp/jarvis-ledger-before-test.log"
+    },
+    "originalProfile": "/tmp/jarvis-ledger-before.cpuprofile",
+    "originalProfileSummary": "/tmp/jarvis-ledger-before-profile.json",
+    "profileFinding": "Repeated whole-ledger learning/pending scans and growing-array copies dominate production frames; baseline profile also includes output JSON serialization/hashing outside the timed section.",
+    "benchmarkRunner": "/tmp/jarvis-ledger-bench.mjs",
+    "benchmarkRunnerSha256": "02ee42a8be19913033100d84e9ae6ffe7297b03be64a0cea6ed8d1deb53de3bf",
+    "testFileSha256": "1d184f0f60ad0f36f473ae0fcbad8c5811287770831f8a3e1d70ebc62e88d81a",
+    "differential": {
+      "fixturesPassed": 163,
+      "seed": "0x51a90f",
+      "script": "/tmp/jarvis-ledger-differential.mjs",
+      "scriptSha256": "da6c35f8b7ea4ec050e4b9d9687f1adcb5b00c9215c766d3696fe9832084e898",
+      "log": "/tmp/jarvis-ledger-differential.log",
+      "logSha256": "8430d19615ffbb30517ad90f1523f0db1fdd384939437922fc5febc3b7fd2353",
+      "note": "Independent agent compared baseline and candidate including frozen inputs, progressive/tied/out-of-order evidence, duplicate and prototype-like IDs, disputes, foreign kinds, learning on/off, checkpoint JSON round-trips, compaction."
+    }
+  },
+  "baseline_source_identical_to_integration_base": {
+    "commit": "fb17f9755faad72295cb125563ba2b0220d9319d",
+    "file": "src/lib/predictionLedger.ts",
+    "sha256": "1c1e6d59d773a71b0119b8b6bd4cb0c42ff3802a0adf376b0cbf9c6f9cd0a130",
+    "scope": "Source identity only; no assertion that baseline CI had the same wall-clock failure."
+  },
+  "logs": [
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-ledger-perf.log",
+      "rawSha256": "c7fc717fab22538d9be9c5abb7e81066b376e64b165259d0d0d7cc4fce40d768",
+      "storedSha256": "c7fc717fab22538d9be9c5abb7e81066b376e64b165259d0d0d7cc4fce40d768"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-ledger-before-test.log",
+      "rawSha256": "dfc3fb52a4a975c2afadcfd1b1723cba7a5f15d5258e143f3cc0abf0f4fab66f",
+      "storedSha256": "2e0bee70d96126f35fbb68e64e33a20d213598b580239f51626f2f577ed44be1"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-ledger-after-test.log",
+      "rawSha256": "ca3986531364d3dcf475c2bc3e29cec1c4777bf07bf33e734aaebeee1e5966d6",
+      "storedSha256": "a0b2ca9e63f41457a00312a7f90a0c1ddca1281ba49218706fd88bda26f37d12"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-ledger-typecheck.log",
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "storedSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-ledger-differential.log",
+      "rawSha256": "8430d19615ffbb30517ad90f1523f0db1fdd384939437922fc5febc3b7fd2353",
+      "storedSha256": "8430d19615ffbb30517ad90f1523f0db1fdd384939437922fc5febc3b7fd2353"
+    }
+  ],
+  "logNormalization": "Only trailing whitespace/empty EOF lines; diagnostic data retained"
+}

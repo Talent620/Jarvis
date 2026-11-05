@@ -1,0 +1,1 @@
+{"status":"PASS","seed":"0x51a90f","differentialFixtures":163,"checks":["mixed resolution","learning enabled/disabled","partial/full facts","out-of-order and tied observations","disputed/moot/foreign-kind records","duplicate lead IDs","empty/prototype-like entity IDs","input frozen","array/record identity","checkpoint round-trip","compaction order/limits"]}

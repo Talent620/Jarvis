@@ -1,0 +1,6 @@
+{
+  "exit_code": null,
+  "signal": "SIGSEGV",
+  "spawn_error": null,
+  "diagnosis": "missing graphical session"
+}

@@ -1,0 +1,721 @@
+{
+  "recorded_at": "2026-11-05T23:36:49.841361+00:00",
+  "base_commit": "fb17f9755faad72295cb125563ba2b0220d9319d",
+  "commit": "b43667836ab7492deba533423a6772f2f49ccf57",
+  "branch": "codex/skills-integration-20261105",
+  "tag": "v2.1.0-alpha.2",
+  "tag_object": "0bf32dfc8d0e1838cbd0fc5b8721ce62725534fb",
+  "remote": "https://github.com/Talent620/Jarvis.git",
+  "transfer_check": "Actual fresh shallow clone of the published tag",
+  "clean_checkout": true,
+  "git_fsck": "PASS",
+  "base_is_ancestor": true,
+  "tree": "fc35a95d08d5eb6f8852e03cb3c8412340dbbe82",
+  "version": "2.1.0-alpha.2",
+  "qa_desktop": "node scripts/qa/desktop.cjs",
+  "all_listed_changes_committed": true,
+  "files_count": 140,
+  "files": [
+    {
+      "status": "M",
+      "path": ".github/workflows/android-v2.yml",
+      "sha256": "e3af1c5b98eb57cc27fec91dc06da14b18f4b2892e3106b5cac0d0d8e56777b3"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/android.yml",
+      "sha256": "49b78b0cd99967b175cf3c60638fa31e21a7be4d61d0674352478285290a5636"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/test.yml",
+      "sha256": "6a2aa417b8767276e709bfea474280c446760c1586abf9eb45528fc2e18aa23a"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/ubuntu.yml",
+      "sha256": "3da443b9365609d3228eaef7ca6f178be3360e5470ca9adf4262c22951f6b7b1"
+    },
+    {
+      "status": "M",
+      "path": "QA/autonomia60/RESUME.md",
+      "sha256": "5dd52efeca5ae05d139e12ad6b933f06d31a323b38724258fee0777a2d4261e8"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/CONNECTORS.md",
+      "sha256": "e6af246ece7ee45ae226dd08c0642cafeffa4d8bea9ce810e2c8454c3979a68e"
+    },
+    {
+      "status": "M",
+      "path": "QA/autonomia60/durable/REPORT.md",
+      "sha256": "f8277dbd1e0a7283668765b1d89045c47a45702987030e60c72eafdbba9d2138"
+    },
+    {
+      "status": "M",
+      "path": "QA/autonomia60/durable/RESUME.md",
+      "sha256": "623e0d152fa3abb64d012ccdadd94cfde1855524f064d029d668551c1112228f"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/SPEC-CLOSURE.md",
+      "sha256": "90784301789c744c57e5144312083b04043200dfbb9fe26d83b4e76bfc04ac6e"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/browser-ci-precondition.json",
+      "sha256": "0c6bf05dcaf689eddd6b5165455172a1b849ba46509271f5541503452e724754"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/browser-mcp.json",
+      "sha256": "286963090b63affd3c43cdd5d109c00651e03a306f21120c6a7c13e0277510cd"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/browser-transaction-boundary.json",
+      "sha256": "b465b96d9e0a2dc6de508066e1fe37947eaa32b86f94abfb2c02785a10e9b7be"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/closure-baseline.json",
+      "sha256": "4cbed08268bf2b7d1b2909d7e2323d9c905150c5b183ea022d45c4baed051281"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/connector-tests.json",
+      "sha256": "435c52d1dbcae56d25e7e1d6a672f4a764f9397137a66b85f28f9f23cef546c8"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-ci-577e450.json",
+      "sha256": "6d3105664214bd2666fb0931aff75e45da7f47184a55132243c5d52165d8dbc4"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-ci-9f5f9af.json",
+      "sha256": "2a23691a0b332ddc2de63556a0de740a3d702b5be6e7d5c07f7f0929b9bc49b8"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-ci-diagnostic-validation.json",
+      "sha256": "5a6e069c20d6c43d3d836a0bcd6fb442f82e0a5089e998e01081d9ac81b964e5"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-ci-first.json",
+      "sha256": "21cacb446a30cdc776334641a0b29a7978a621cda2ee578ee2bed073615f2420"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-final-lint.log",
+      "sha256": "ed83997f58536158478c4bba7a38b334d5a513d6e6083c1ff374e8963719b4cc"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-final-tests.log",
+      "sha256": "2f634fbf6ba7baa0d8498c8adb49d55c4776d93bce9d5e6865249f0f4787bdf6"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-final-validation-source.json",
+      "sha256": "29380f6dc49e607ae4f64e80362c8977ffe0cd89b699279fdd25ce20e7045b82"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-generated-postinst.txt",
+      "sha256": "3e38b342dad0d1661bc435fc7e635a749737abf49ce65826017e89b979368cd4"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-install-command-review.json",
+      "sha256": "4be17407152106e4a72f6e79ce901cd115e8f7d2b21612255bdc979febfbfbdf"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-native-start-d280.log",
+      "sha256": "954c5174fbbb3967bc6c13555578b50540ff8b5d662e64acad8245f114fbfb5e"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-packages-9f5f9af-native.log",
+      "sha256": "1b556b9ff1d85d59b2b0c9c14d6382084f11b707de783ae729519d8256aea4c7"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-packages-9f5f9af.json",
+      "sha256": "51afe7527b1bda31ad4a6805bef181a66080dfc6456e0ffa715f276d83e1fa52"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-packages-9f5f9af.log",
+      "sha256": "5c7128c4066d9beb93602c66f208b9bffbc4bd5543643647f74435a905a2941d"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-packages-d280.json",
+      "sha256": "d50df7d8a07d62bdb8227df36c7838a913ec7099d82f8dca15f64b13f2393440"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-packages-d280.log",
+      "sha256": "d50df7d8a07d62bdb8227df36c7838a913ec7099d82f8dca15f64b13f2393440"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-packaging-ci-regression.log",
+      "sha256": "d0ca66ce4627aa05c67850759d91ab55956b5423f33f7f1817c5b7883032a184"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-packaging-tests.log",
+      "sha256": "445979eaa0e2e6d5b2d7e638ebfe48b81ff140b671f77e7a0835944a1da75fd7"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-post-regression-workflow.json",
+      "sha256": "fc9f7b157213c2eaa0393b6930473d97304730196e803346443d727492148381"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-release-lint.log",
+      "sha256": "ed83997f58536158478c4bba7a38b334d5a513d6e6083c1ff374e8963719b4cc"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-release-tests.log",
+      "sha256": "4d4b559cc64f3e4897a2171c3b63c95a439fe6263442ffbdbd31283874550e96"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/alpha2-release-validation-source.json",
+      "sha256": "082ea5b1b33d8f5860f4c5833929685689f6f651d403cab3f6efd9c547376000"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/browser-cross-origin-after.json",
+      "sha256": "d4d0013a96a86e2efe0e6afcad12e9f1a6fc37bc9a7c75f11d30b9d1897fa006"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/browser-cross-origin-before.json",
+      "sha256": "37f92f8b93bfb84a5f92437d9e38795b4c763b6b772dee381c2d3e6ac32b8d32"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/browser-draft-race-before.log",
+      "sha256": "a4a02b8d9faa7f8e4e9f5977195c1e8f35b2981997a8f7e709da5e2f7c99e412"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/browser-mcp-tests.log",
+      "sha256": "2c4ea909bee9fce776e2b168cf36787295180eba1bb7ff6306d8843b5558ad37"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/browser-owner-denial-before.json",
+      "sha256": "3c53c2e38cf10838578598d960f7156970dd6c73772ac4c892a13d1aeb9b35bc"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/browser-precondition-blocked.log",
+      "sha256": "235c25f27d4dba3dce9356df55d038cdd08fbb4cfe9c41ba5b952d8d63d2cbc5"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/browser-precondition-ready.log",
+      "sha256": "3a49d769c72a83494783e37e7a19676ef328b2e29f2187211e6712a055dfa9c1"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/browser-transaction-after.log",
+      "sha256": "67c111ca4cb5d4aa7899359b40b182853f22c56783de19d61e5c4f2579aa159a"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-audit-all.json",
+      "sha256": "dd066f2c4166c0d7884a7cc14ddf065bb4d5ae704f6bcd0a8c74f4eef219cd25"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-audit-production.json",
+      "sha256": "20639427638e45a9b897685a0555be2c35eebebc5112a32fe6dd753b9dc82142"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-composer/REPORT.md",
+      "sha256": "3865bac8f25195da77f9ae613bb4d10da1547cf2ff1f38ea82575ece121196d8"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-composer/controlled-composer.png",
+      "sha256": "4e5e37698210d1ca807e17d5e19506da1384b08fea2cf0f4416c6b3e71d849ec"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-composer/controlled-mode.json",
+      "sha256": "8f5422729a84370f5d6f0f4f8b6f39ff5e1b2b85ee6c497be39da451757bdb97"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-composer/controlled-provider.json",
+      "sha256": "d8854b0cf93cee5ea4a5fe59f5592273a2448c9ad20be2cef84a8719838f67c6"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-composer/independent-oracle.json",
+      "sha256": "93a3dc916adba6fa2327accebdeef9082de70240a0db9b4e7277c037c67fd5bc"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-composer/isolation.json",
+      "sha256": "da228aee3e35fefb22c3500982da9ad5b81c53528b3ae435dfbd70c1cc3ee375"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-composer/license-activation.json",
+      "sha256": "5f5253bf2b913ede3084091413cce4cdbac016da06cec64fda76b107f5ef260f"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-composer/native-operations.json",
+      "sha256": "a721df85fe334899e20c3118d4a5ed2ce7c619ba9534a24180cfae7281f186f3"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-composer/results.json",
+      "sha256": "80a97c248cae7869e7a38298ff1cf85cfb4463b4bb67b4e3a432e8b6b77b5774"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-composer/source.json",
+      "sha256": "b642f9fdaba9866fa9f568ca33c46ff922097de81e08111ea177e6ffc44e0765"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-composer/ui-consents.json",
+      "sha256": "e57748e238fdd2d296a053361c283d78c79a0b3d31d5e863e43baa511af2188e"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop-first-error.txt",
+      "sha256": "88b8380fa4c751e67fa95b2decbd52ea618cd49cc364270dc0d0587e3122c2ca"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop-first.md",
+      "sha256": "ae776d9593924f1860975ebb4aeac55bdaffa40a813a1bfe6759faaa67a9100f"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop.log",
+      "sha256": "85801e41707d2297ae235ca1a25b720883e02565f3d08323c0374754f9503bde"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md",
+      "sha256": "007da02762eb50063a4c44ee938e77f42a024e5e7111d0359e9d1adc0d522472"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/dependencies.json",
+      "sha256": "4243e315f59dccf4a56dbfb71ea0d6636190e81e67fd02b2991158265c201edc"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/electron-stderr.log",
+      "sha256": "0e8f95dcfd9f178c9bf0cdd339515ec785665c6de0745981b5bd30ff7f388b48"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/environment.json",
+      "sha256": "485b0243a8acfbe84f31bdc383313a2525a11a8db5a884f4f02125ad6563c7b5"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/local-after-restart.json",
+      "sha256": "22bfbb38552d8d7a1d286b6f2654be74c276a2b87d77b8fd339ab8b397e98b92"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/local-before-restart.json",
+      "sha256": "d3c0eebaac9cbf8885e20cb9c7f433cb5d6d8049f13a2ba6d0e819c8a2df8f88"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/local-restarted.png",
+      "sha256": "865d483b182d6fa0ccf8dfd961a5f85c3027045dcefb75c1f2cf4e1310b6fd79"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/native-exit.json",
+      "sha256": "1727c2226965e0da058e3873deaaef1c5cd621b27e250cfd2876b00705aacbb6"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/native-launch.json",
+      "sha256": "072c1164b83dc457280abe0b76f77906a2a92c1542d69c6c745c0a2de0092a31"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/ollama.json",
+      "sha256": "622d1b04ac29e4955df4c8256bf5b761831b9ee3a234fee2134d7f7d3a369452"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/results.json",
+      "sha256": "a2de9ac03aa7eb6167e355037538f12b029aca5dde7159f51a43afb1c49c305b"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/source.json",
+      "sha256": "417573d9e7914d9bcbcc724cdb110c17e05e61b71cf84d8f5c78e95ba7e67e78"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/test-config.json",
+      "sha256": "2186ed41b0c3f95de52bc592e1e684a10e301e01e9b4dc9d4e856a51e40f5726"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-desktop/verification.json",
+      "sha256": "07a22c01d2b232d7528b4e387b2db9f8086e6e18cb52e49ad240956fa681a740"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-full-build.log",
+      "sha256": "469bfec23399db2c5a9cf4e4253468e51cafa9097f98228c64b5410ac2e6de30"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-full-lint.log",
+      "sha256": "ed83997f58536158478c4bba7a38b334d5a513d6e6083c1ff374e8963719b4cc"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-full-tests.log",
+      "sha256": "8db1b7b73fdcde7a93375651c1d3420b85a567ae592d23f70568b819ebf9db1c"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-integration-first-source.json",
+      "sha256": "7e85d6dc42be7db5f17b3949225fdddc3443762d8186efb1de528e6759ddbdfc"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-integration-first.log",
+      "sha256": "7d04fc06b43abfd0b08b9d4cd1f467614fada17923f1a9d67a7b5ef189f7b149"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-log-normalization.json",
+      "sha256": "80d36e941ff177dbb0f7f0a83514d4a25865914a98779eb25d23876da0757869"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-post-regression.json",
+      "sha256": "24668f20dbdd3fc14e04a3360504183efa169b7df30926f74df5e4e845f62d69"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-secret-scan.log",
+      "sha256": "5f48ce533257e8ca1f765934cb23fb45b25ad92f39461369a57784c89edef0da"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-skill-isolation-tests.log",
+      "sha256": "950ee6fb48a87c921518de55812b599ce085dc49434a2477197a65974243ceb7"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-skill-isolation.json",
+      "sha256": "92c4787eb43e05cfb6163edb04656c94f5f7e871e948e4ef431357f99d236a2a"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-skill-source.json",
+      "sha256": "ab9ec3190ce3a6d9c8af636f0b8007b533baac258cf912ac0d334729aedbcbfd"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/evidence/closure-validation-source.json",
+      "sha256": "9f72d27da63b3061b0ddfe58e8a73dcd00cda5b227a7a42d8bb47195c4978213"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/prerelease-tag-validation.json",
+      "sha256": "f0501f68e91704d1e60848ac411eac0d4cc3f4068f577104eff191934e669326"
+    },
+    {
+      "status": "M",
+      "path": "QA/autonomia60/durable/requirements.json",
+      "sha256": "d24f21f7c2614a75b5570bec267aac7f94d46208b502d0e2b2cc67b31a1c10bd"
+    },
+    {
+      "status": "A",
+      "path": "QA/autonomia60/durable/sandbox-installation-alpha2.json",
+      "sha256": "c2dacdbbf7a72000f1ab87ddb02b94feea74cf061d9f47085ba11cb19a567f36"
+    },
+    {
+      "status": "M",
+      "path": "android/app/build.gradle",
+      "sha256": "76f7ce1bce2d154d3e64bbe367119b4c2904f5260fc284bebaf42eb846e95d41"
+    },
+    {
+      "status": "A",
+      "path": "docs/CHANGELOG-ALPHA2.md",
+      "sha256": "6084c3cd4dae0c9b7f89081c4e432152c622fc53bda1c27937d798d6a0fde1c2"
+    },
+    {
+      "status": "A",
+      "path": "docs/UMIEJETNOSCI-INTEGRACJE.md",
+      "sha256": "0511bbcf206a41d43d30c7a4fe32e60aa667beb0fc9941dfb2c415d9adf83fa8"
+    },
+    {
+      "status": "M",
+      "path": "docs/WYDANIE-ALPHA.md",
+      "sha256": "227a7da8cf7776b659c4e101de5614c414d34e6099bc183b5f10faac09338a93"
+    },
+    {
+      "status": "M",
+      "path": "electron-builder.json",
+      "sha256": "cc832e205ffb63d91d9c83698051b72e8f73bdbb1aa640a52bd05300f4a977d2"
+    },
+    {
+      "status": "A",
+      "path": "electron/browser-session.cjs",
+      "sha256": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2"
+    },
+    {
+      "status": "M",
+      "path": "electron/goal-service.cjs",
+      "sha256": "1c0e61605b5a043cd7f6ade1f09226baafee45e3f80964de199972e8aa36ca73"
+    },
+    {
+      "status": "M",
+      "path": "electron/main.cjs",
+      "sha256": "eeb1700ee15cb3cbcdc6fd43433ab0456271ec941fd6b34020cd60492cf8fde7"
+    },
+    {
+      "status": "M",
+      "path": "electron/mcp-stdio.cjs",
+      "sha256": "328a043b7fca37e8c1ce05d8c7ddf172c17f28884ff4225fe55399b214ca2a01"
+    },
+    {
+      "status": "A",
+      "path": "electron/monitor-connectors.cjs",
+      "sha256": "c3c38f621ec57aa5d8097932eaa3fd83a445646c5ba3585c5bd8ed661d192913"
+    },
+    {
+      "status": "M",
+      "path": "electron/preload.cjs",
+      "sha256": "9280fffbff153518d50657fd1856828bd63863366581a6e17023fd5e064c4f13"
+    },
+    {
+      "status": "A",
+      "path": "electron/skill-isolation.cjs",
+      "sha256": "e2a1c82d865b6dcc398c8299b7d7364513864dae08f1865bbb8ee8a30fbbc77d"
+    },
+    {
+      "status": "A",
+      "path": "electron/skill-manager.cjs",
+      "sha256": "6a59a4dd2b9c019b86a2ef0e5794f2ddedebe5f28470fdf353c45cfcf4301e0b"
+    },
+    {
+      "status": "M",
+      "path": "electron/workspace-tools.cjs",
+      "sha256": "e2e250d5517f9b94df551bfc55cc51fc3106d463c31759b3ba7ec480952e0821"
+    },
+    {
+      "status": "M",
+      "path": "package-lock.json",
+      "sha256": "66d79a6d27db27a12ee07af6ec8019fc477db5e9c966287e0a5fa5279b8954ac"
+    },
+    {
+      "status": "M",
+      "path": "package.json",
+      "sha256": "f3e32ccc39ee203a521b9fb4b65d4fa9b67696606603f23d5df2092d5c3f218c"
+    },
+    {
+      "status": "A",
+      "path": "scripts/linux-after-install.sh",
+      "sha256": "3c3ef644510404b1f4c59662b166f4bcd96fcbd60c2a0cab8cd08825b1cc266c"
+    },
+    {
+      "status": "M",
+      "path": "scripts/prepare-android-signing.cjs",
+      "sha256": "2bbf5c77375d0a3b14025f155282cfe076f8ce7bc2afd857e4f6f9fd78c21f22"
+    },
+    {
+      "status": "M",
+      "path": "scripts/qa/agent-smoke.cjs",
+      "sha256": "73963613a19d363cfce404ab77ab8814191479a73a3bcb4fc547709b0f68e2d1"
+    },
+    {
+      "status": "M",
+      "path": "scripts/qa/common.cjs",
+      "sha256": "e81e4115860aba63494f1a3d7f87f1f06917f1c3641bc4c1b4be95f1247aa99d"
+    },
+    {
+      "status": "A",
+      "path": "scripts/qa/skills-controlled.cjs",
+      "sha256": "3c6b8416467b3727928c2481e192a920882ee564b9e5cd74e47514ff1644aa3d"
+    },
+    {
+      "status": "M",
+      "path": "scripts/release-linux.cjs",
+      "sha256": "d1ac3c58574b649b4e41b85953468f37d37a57d2dc286774100280a47b2b92f2"
+    },
+    {
+      "status": "M",
+      "path": "src/App.tsx",
+      "sha256": "1cbabd08649f7da0a5512e833a6e97b35b3810d6227c7988a6631f3a1021ed78"
+    },
+    {
+      "status": "M",
+      "path": "src/components/GoalStatusPanel.tsx",
+      "sha256": "6c91f329423cf154eb3fc1cc6d135bb8933a627d734dd18684f4d52c47ad3153"
+    },
+    {
+      "status": "M",
+      "path": "src/components/Settings.tsx",
+      "sha256": "ac12ef3585fcb81a529c83dd316b6597883ad21504365dad34e8565f1dd799ed"
+    },
+    {
+      "status": "A",
+      "path": "src/components/SkillsManager.tsx",
+      "sha256": "1953b0986a7e295630291163d0c1b7131be489b6b8c3b63a625e7064eef9fa9f"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/brain.ts",
+      "sha256": "6b7b95a98c09840d4dfc434f765710cee2309d5766e3d1f42e3a44365dece00d"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/desktop.ts",
+      "sha256": "15e6b5585be04f3fddbbf9ba825caf7b850370c43233eb65a1c4978fa3a80157"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/goalRuntime.ts",
+      "sha256": "8496099c217dc922314260d84d0eb0b71cb73814683c38dc592140a911ad9c81"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/mcp.ts",
+      "sha256": "62ee688266743c2f7a548b5011d657703cb2224365512154d51a5c45b53db494"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/permissions.ts",
+      "sha256": "6b10759deb29ff88b78c4a57d2f8576f39854604bf6bdf8e8144a8d6de4b88ad"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/skills.ts",
+      "sha256": "f3ae8345f88f0368633a90f5e35607e53f838da1ca94fe46c07835398fa225a9"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/systemMcp.ts",
+      "sha256": "337316f2293c77bca49fd864f8bbdd356b73d96f05250cb35a191877bcc09e52"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/toolSelector.ts",
+      "sha256": "1f4e52444494b965fa38fbcae6d6cc6ebc02d0eb82944814c12aace45343b80b"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/tools.ts",
+      "sha256": "73f31d83e63bca69b9ea6bb7f2840c649f149bcf228be64d736d4d5b6ebf3299"
+    },
+    {
+      "status": "A",
+      "path": "tests/browserPrerequisite.test.ts",
+      "sha256": "e571cb057123ad8125550eab51c920f70d3ff93fcc7609dd9076c8c54303b35f"
+    },
+    {
+      "status": "A",
+      "path": "tests/browserSession.test.ts",
+      "sha256": "b1771dcf792ecdcb9c8f01892121e58a4385e148829e17b1e394600d0b8f1c61"
+    },
+    {
+      "status": "M",
+      "path": "tests/generatedToolIsolation.test.ts",
+      "sha256": "a4a897e11458447d304f70caf0ba14fafcc029f16ae08435d83c185517336b22"
+    },
+    {
+      "status": "A",
+      "path": "tests/helpers/browserPrerequisite.ts",
+      "sha256": "15c395b44092f8cb7cebf13a772214c474a00c330c01aa07d0ca0f273064bb82"
+    },
+    {
+      "status": "A",
+      "path": "tests/linuxPackageSandbox.test.ts",
+      "sha256": "1cf9c410f084a1683a7599f31185257cc68bfaa4abb7753938a7327712817fc5"
+    },
+    {
+      "status": "M",
+      "path": "tests/mcp.test.ts",
+      "sha256": "29e12011eafc84b0c8890262c44bdc978a4ebeafddf56ec1f4372864ec06c42a"
+    },
+    {
+      "status": "M",
+      "path": "tests/mcpStdio.test.ts",
+      "sha256": "97d95d53ec24ac1956ffa3cf818511ce8357fdf928c968cbf2935d1c67cc553e"
+    },
+    {
+      "status": "A",
+      "path": "tests/monitorConnectors.test.ts",
+      "sha256": "56712e29f7499d716eaa9a807d63a73a5219e5c0f49dbb213c4a0055a6f42200"
+    },
+    {
+      "status": "M",
+      "path": "tests/monitorConsentIpc.test.ts",
+      "sha256": "19958a43c0158ae0a5405993fa762d939ba4156dd6c237d980ee340b80531227"
+    },
+    {
+      "status": "M",
+      "path": "tests/monitorPanel.test.ts",
+      "sha256": "997cf51f34f93bcda64c6d8c993ba818095557ee6eb6a6640db8a741f02d1386"
+    },
+    {
+      "status": "A",
+      "path": "tests/monitorSchedule.test.ts",
+      "sha256": "8360121ea2e2dbd31fe549d8b39b8f15274fe5ef8eefd37fb0d6f816a7b1ec63"
+    },
+    {
+      "status": "A",
+      "path": "tests/nativeSkillBridge.test.ts",
+      "sha256": "20c3f624a763a285ff36e2ff41f6b1cd7d9231d5f326331e14bfcfa3e689f18e"
+    },
+    {
+      "status": "M",
+      "path": "tests/releasePackaging.test.ts",
+      "sha256": "99ebe4ca13e1113c61535b44b8353c2d89be848a89a05a67d3496dd62cd3c9d7"
+    },
+    {
+      "status": "A",
+      "path": "tests/skillIsolation.test.ts",
+      "sha256": "04409f0818d88f7d289105390b3ed35d4712a227c4b6b04f0ad81abb02362f99"
+    },
+    {
+      "status": "A",
+      "path": "tests/skillManager.test.ts",
+      "sha256": "8cad9e8bda8840a42d84f9c7cb8c1fb8195026d0933e03308de0a2cf6b61c571"
+    },
+    {
+      "status": "A",
+      "path": "tests/skillsManagerUi.test.ts",
+      "sha256": "84ef7c467a1ee14fb9b118a4df5d115228ace1fca026fd8d707f6033beb81ca3"
+    },
+    {
+      "status": "M",
+      "path": "tests/stopConsent.test.ts",
+      "sha256": "af09232914e72385c86345f2cecb418ea1cceefe7ee71fd3955773329ba720b0"
+    }
+  ],
+  "note": "Complete source tree; previous functionality is included through ancestry. No local user installation/model/GUI acceptance claimed."
+}

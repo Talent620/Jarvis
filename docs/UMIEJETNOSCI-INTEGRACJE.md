@@ -1,6 +1,6 @@
 # Umiejętności i integracje JARVIS
 
-Funkcje opisane poniżej wymagają aplikacji desktopowej z wersji 2.1.0-alpha.2. Ich stan i dowody odbioru są w `QA/autonomia60/durable/requirements.json`. Test kontrolowanego dostawcy nie potwierdza samodzielnego działania modelu użytkownika.
+Funkcje opisane poniżej wymagają aplikacji desktopowej z wersji 2.1.0-alpha.3. Ich stan i dowody odbioru są w `QA/autonomia60/durable/requirements.json`. Test kontrolowanego dostawcy nie potwierdza samodzielnego działania modelu użytkownika.
 
 ## Umiejętności
 

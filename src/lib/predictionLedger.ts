@@ -205,16 +205,26 @@ export function resolveDuePredictions(
   // Kalibracja per encja liczona narastająco W TRAKCIE przebiegu — evidence dostaje pewność
   // "po uwzględnieniu tego wyniku", spójną z kolejnością rozstrzygnięć.
   const out: PredictionRecord[] = [];
+  const visitedResolvedByEntity = new Map<string, PredictionRecord[]>();
+  const rememberResolved = (r: PredictionRecord): void => {
+    const history = visitedResolvedByEntity.get(r.entityId);
+    if (history) history.push(r);
+    else visitedResolvedByEntity.set(r.entityId, [r]);
+  };
   for (const r of list) {
-    if (r.evidence) { out.push(r); continue; } // zamknięta — nigdy nie otwiera się ponownie
+    if (r.evidence) { out.push(r); rememberResolved(r); continue; } // zamknięta — nigdy nie otwiera się ponownie
     const facts = factsByEntity[r.entityId];
     const finish = (verdict: PredictionEvidence["verdict"], outcome: string, reason: string, ev: string[]): void => {
-      const confidenceAfterResolution = calibratedConfidence(
-        [...out, { ...r, evidence: { observedAt: now, outcome, evidence: ev, verdict, reason, confidenceAfterResolution: 0 } }],
+      const finished = { ...r, evidence: { observedAt: now, outcome, evidence: ev, verdict, reason, confidenceAfterResolution: 0 } };
+      // Tylko już odwiedzona historia TEJ encji, bez skanowania/kopiowania całego prefiksu.
+      // Późniejsze rekordy nie mogą zmienić pewności zapisywanej przy tym rozstrzygnięciu.
+      rememberResolved(finished);
+      finished.evidence.confidenceAfterResolution = calibratedConfidence(
+        visitedResolvedByEntity.get(r.entityId)!,
         r.entityId,
         { learningEnabled: opts?.learningEnabled },
       );
-      out.push({ ...r, evidence: { observedAt: now, outcome, evidence: ev, verdict, reason, confidenceAfterResolution } });
+      out.push(finished);
       changed = true;
     };
     if (!facts) {
@@ -293,10 +303,10 @@ export function compactLedger(records: PredictionRecord[]): PredictionRecord[] {
     arr.push(r);
     resolvedByEntity.set(r.entityId, arr);
   }
-  let resolved: PredictionRecord[] = [];
+  const resolved: PredictionRecord[] = [];
   for (const arr of resolvedByEntity.values()) {
     arr.sort((a, b) => b.madeAt - a.madeAt);
-    resolved = resolved.concat(arr.slice(0, MAX_RESOLVED_PER_ENTITY));
+    resolved.push(...arr.slice(0, MAX_RESOLVED_PER_ENTITY));
   }
   resolved.sort((a, b) => b.madeAt - a.madeAt);
   const budget = Math.max(0, MAX_TOTAL_RECORDS - pending.length);
@@ -343,21 +353,30 @@ export function runPredictionCycle(input: {
   const resolved = resolveDuePredictions(before, input.now, facts, { factsComplete: true, learningEnabled: input.learningEnabled });
   const resolvedNow = resolved === before ? [] : resolved.filter((r, i) => r !== before[i]);
   const created: PredictionRecord[] = [];
-  let ledger = resolved;
+  const historyByEntity = new Map<string, PredictionRecord[]>();
+  const pendingEntities = new Set<string>();
+  for (const r of resolved) {
+    if (r.kind !== "relationship_neglect") continue;
+    if (!r.evidence) { pendingEntities.add(r.entityId); continue; }
+    const history = historyByEntity.get(r.entityId);
+    if (history) history.push(r);
+    else historyByEntity.set(r.entityId, [r]);
+  }
   for (const l of input.leads) {
-    if (!shouldRecordNeglectPrediction(ledger, l.id, l.overdue)) continue;
+    if (!l.overdue || pendingEntities.has(l.id)) continue;
     const rec = recordNeglectPrediction(l.id, l.company, {
       id: input.makeId(),
       now: input.now,
-      records: ledger,
+      records: historyByEntity.get(l.id) || [],
       lastContactedAt: l.lastContactedAt,
       leadStatus: l.status,
       awaitingPaymentAmount: input.awaitingPaymentByLead[l.id] || 0,
       learningEnabled: input.learningEnabled,
     });
-    ledger = [...ledger, rec];
     created.push(rec);
+    pendingEntities.add(l.id); // także duplikat leada w tym samym przebiegu widzi nową prognozę
   }
+  const ledger = created.length > 0 ? [...resolved, ...created] : resolved;
   const compacted = compactLedger(ledger);
   const changed = resolvedNow.length > 0 || created.length > 0 || compacted !== ledger;
   return { ledger: changed ? compacted : before, changed, created, resolvedNow };

@@ -1,0 +1,579 @@
+{
+  "schemaVersion": 1,
+  "commit": "b43667836ab7492deba533423a6772f2f49ccf57",
+  "observedAt": "2026-11-05T23:37:36.129262+00:00",
+  "source": "https://github.com/Talent620/Jarvis/actions",
+  "method": "Unauthenticated public HTML, exact commit match; no API/network-policy bypass or credentials",
+  "runs": [
+    {
+      "id": "42130379951",
+      "name": "Build Android APK v2 (test, niezależny)",
+      "workflowFilePath": ".github/workflows/android-v2.yml",
+      "runUrl": "https://github.com/Talent620/Jarvis/actions/runs/42130379951",
+      "state": {
+        "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+        "conclusion": "WORKFLOW_RUN_CONCLUSION_FAILURE"
+      },
+      "createdAt": {
+        "timestamp": "2026-11-05T23:34:15Z",
+        "isToday": true,
+        "isCurrentYear": true
+      },
+      "branch": {
+        "name": "refs/tags/v2.1.0-alpha.2",
+        "url": "/Talent620/Jarvis/tree/refs/tags/v2.1.0-alpha.2",
+        "title": "v2.1.0-alpha.2"
+      },
+      "publicAnnotations": [
+        "1 error, 2 warnings, and 1 notice",
+        "Android v2 build stage",
+        "SDK failed. See the named step; this job builds a separate debug application only.",
+        "build",
+        "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-java@v4, actions/setup-node@v4, android-actions/setup-android@v3. For more information see:",
+        "https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+        "build",
+        "setup-java v4 is deprecated and will no longer receive updates. Please migrate to actions/setup-java@v5.",
+        "build",
+        "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see",
+        "https://github.com/actions/runner-images/issues/14748",
+        "\""
+      ],
+      "snapshot": {
+        "path": "/tmp/jarvis-alpha2-tag-ci-html/run-42130379951.html",
+        "sha256": "cbf09e571b5b258665b884a3732247272dc3c02f4e100d8b4e6e5e8d0f845563"
+      },
+      "fullLogs": "BLOCKED: public page requires sign-in",
+      "jobs": [
+        {
+          "id": "127605183410",
+          "url": "https://github.com/Talent620/Jarvis/actions/runs/42130379951/job/127605183410",
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:19Z",
+              "completedAt": "2026-11-05T23:34:21Z"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:21Z",
+              "completedAt": "2026-11-05T23:34:23Z"
+            },
+            {
+              "name": "Setup Node",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:23Z",
+              "completedAt": "2026-11-05T23:34:28Z"
+            },
+            {
+              "name": "Setup JDK 17",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:28Z",
+              "completedAt": "2026-11-05T23:34:28Z"
+            },
+            {
+              "name": "Setup Android SDK",
+              "conclusion": "failure",
+              "startedAt": "2026-11-05T23:34:28Z",
+              "completedAt": "2026-11-05T23:34:34Z"
+            },
+            {
+              "name": "Install dependencies",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:34:34Z",
+              "completedAt": "2026-11-05T23:34:34Z"
+            },
+            {
+              "name": "Build web + sync Capacitor",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:34:34Z",
+              "completedAt": "2026-11-05T23:34:34Z"
+            },
+            {
+              "name": "Nadaj tożsamość v2 (appId + nazwa)",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:34:34Z",
+              "completedAt": "2026-11-05T23:34:34Z"
+            },
+            {
+              "name": "Build separately identified debug APK",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:34:34Z",
+              "completedAt": "2026-11-05T23:34:34Z"
+            },
+            {
+              "name": "Upload APK v2",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:34:34Z",
+              "completedAt": "2026-11-05T23:34:34Z"
+            },
+            {
+              "name": "Report Android v2 build stages",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:34Z",
+              "completedAt": "2026-11-05T23:34:34Z"
+            },
+            {
+              "name": "Post Setup JDK 17",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:34Z",
+              "completedAt": "2026-11-05T23:34:34Z"
+            },
+            {
+              "name": "Post Setup Node",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:34:34Z",
+              "completedAt": "2026-11-05T23:34:34Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:34Z",
+              "completedAt": "2026-11-05T23:34:34Z"
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:34Z",
+              "completedAt": "2026-11-05T23:34:34Z"
+            }
+          ],
+          "snapshot": {
+            "path": "/tmp/jarvis-alpha2-tag-ci-html/job-127605183410.html",
+            "sha256": "34e735928302192c53462223dbe1128871612e57d23cb6ee7d7e3afa2965eb87"
+          }
+        }
+      ]
+    },
+    {
+      "id": "42130379821",
+      "name": "Build Ubuntu",
+      "workflowFilePath": ".github/workflows/ubuntu.yml",
+      "runUrl": "https://github.com/Talent620/Jarvis/actions/runs/42130379821",
+      "state": {
+        "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+        "conclusion": "WORKFLOW_RUN_CONCLUSION_FAILURE"
+      },
+      "createdAt": {
+        "timestamp": "2026-11-05T23:34:15Z",
+        "isToday": true,
+        "isCurrentYear": true
+      },
+      "branch": {
+        "name": "refs/tags/v2.1.0-alpha.2",
+        "url": "/Talent620/Jarvis/tree/refs/tags/v2.1.0-alpha.2",
+        "title": "v2.1.0-alpha.2"
+      },
+      "publicAnnotations": [
+        "2 errors and 1 warning",
+        "build",
+        "Process completed with exit code 1.",
+        "tests/predictionLedgerPerf.test.ts > Wydajność S9 — tysiące leadów i rekordów, realny czas wykonania > 30 kolejnych cykli (miesiąc życia aplikacji) na 1000 leadów nie rozdyma dziennika ponad sufit:",
+        "tests/predictionLedgerPerf.test.ts#L83",
+        "AssertionError: 30 cykli × 1000 leadów: 3201 ms: expected 3201 to be less than 3000\n ❯ tests/predictionLedgerPerf.test.ts:83:52",
+        "build",
+        "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see:",
+        "https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+        "Artifacts",
+        "Produced during runtime",
+        "Name",
+        "Size",
+        "Digest",
+        "browser-sandbox-prerequisite-ubuntu",
+        "617 Bytes",
+        "sha256:54873eeacda672679e3a412cd139d3c0327805dc61ecb061d95cb667546cc7e9"
+      ],
+      "snapshot": {
+        "path": "/tmp/jarvis-alpha2-tag-ci-html/run-42130379821.html",
+        "sha256": "87dd2682c4c9553fa16b7f3392144a4b164d149bef7d1625ae4f99d7a364702f"
+      },
+      "fullLogs": "BLOCKED: public page requires sign-in",
+      "jobs": [
+        {
+          "id": "127605182552",
+          "url": "https://github.com/Talent620/Jarvis/actions/runs/42130379821/job/127605182552",
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:18Z",
+              "completedAt": "2026-11-05T23:34:19Z"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:19Z",
+              "completedAt": "2026-11-05T23:34:21Z"
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:21Z",
+              "completedAt": "2026-11-05T23:34:25Z"
+            },
+            {
+              "name": "Validate prerelease tag against package version",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:25Z",
+              "completedAt": "2026-11-05T23:34:25Z"
+            },
+            {
+              "name": "Check native Ubuntu environment",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:25Z",
+              "completedAt": "2026-11-05T23:34:26Z"
+            },
+            {
+              "name": "Run npm ci",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:34:26Z",
+              "completedAt": "2026-11-05T23:35:23Z"
+            },
+            {
+              "name": "Verify source",
+              "conclusion": "failure",
+              "startedAt": "2026-11-05T23:35:23Z",
+              "completedAt": "2026-11-05T23:36:57Z"
+            },
+            {
+              "name": "Preserve browser sandbox prerequisite evidence",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:36:57Z",
+              "completedAt": "2026-11-05T23:36:58Z"
+            },
+            {
+              "name": "Build and verify licensed Linux packages",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:36:58Z",
+              "completedAt": "2026-11-05T23:36:58Z"
+            },
+            {
+              "name": "Upload Linux packages",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:36:58Z",
+              "completedAt": "2026-11-05T23:36:58Z"
+            },
+            {
+              "name": "Utwórz manifest wersji Linux",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:36:58Z",
+              "completedAt": "2026-11-05T23:36:58Z"
+            },
+            {
+              "name": "Publish rolling Linux release",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:36:58Z",
+              "completedAt": "2026-11-05T23:36:58Z"
+            },
+            {
+              "name": "Publish validated version prerelease",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:36:58Z",
+              "completedAt": "2026-11-05T23:36:58Z"
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:36:58Z",
+              "completedAt": "2026-11-05T23:36:58Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:36:58Z",
+              "completedAt": "2026-11-05T23:36:58Z"
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:36:58Z",
+              "completedAt": "2026-11-05T23:36:58Z"
+            }
+          ],
+          "snapshot": {
+            "path": "/tmp/jarvis-alpha2-tag-ci-html/job-127605182552.html",
+            "sha256": "c7a58dd2865c77cfaee29d4d3fd4180c2de3f486315fb923f76916aeed71c9c3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "42129884345",
+      "name": "Build Android APK",
+      "workflowFilePath": ".github/workflows/android.yml",
+      "runUrl": "https://github.com/Talent620/Jarvis/actions/runs/42129884345",
+      "state": {
+        "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+        "conclusion": "WORKFLOW_RUN_CONCLUSION_FAILURE"
+      },
+      "createdAt": {
+        "timestamp": "2026-11-05T23:30:35Z",
+        "isToday": true,
+        "isCurrentYear": true
+      },
+      "branch": {
+        "name": "refs/heads/codex/skills-integration-20261105",
+        "url": "/Talent620/Jarvis/tree/refs/heads/codex/skills-integration-20261105",
+        "title": "codex/skills-integration-20261105"
+      },
+      "publicAnnotations": [
+        "3 errors, 2 warnings, and 1 notice",
+        "Android build stage",
+        "SIGNING failed. See the named step; no release is produced by a failed build.",
+        "build",
+        "Process completed with exit code 2.",
+        "Android release signing",
+        "Android release signing blocked: missing configuration names JARVIS_RELEASE_KEYSTORE_BASE64, JARVIS_RELEASE_STORE_PASSWORD, JARVIS_RELEASE_KEY_ALIAS, JARVIS_RELEASE_KEY_PASSWORD, JARVIS_BUILD_NUMBER, JARVIS_PREVIOUS_VERSION_CODE, JARVIS_RELEASE_CERT_SHA256. No development-key fallback.",
+        "build",
+        "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-java@v4, actions/setup-node@v4. For more information see:",
+        "https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+        "build",
+        "setup-java v4 is deprecated and will no longer receive updates. Please migrate to actions/setup-java@v5.",
+        "build",
+        "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see",
+        "https://github.com/actions/runner-images/issues/14748",
+        "\""
+      ],
+      "snapshot": {
+        "path": "/tmp/jarvis-alpha2-tag-ci-html/run-42129884345.html",
+        "sha256": "0e4981c9f5c4e6a331f50a78e5398d0b62e5c053d0965685409aef301e8512c0"
+      },
+      "fullLogs": "BLOCKED: public page requires sign-in",
+      "jobs": [
+        {
+          "id": "127603509722",
+          "url": "https://github.com/Talent620/Jarvis/actions/runs/42129884345/job/127603509722",
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:30:39Z",
+              "completedAt": "2026-11-05T23:30:41Z"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:30:41Z",
+              "completedAt": "2026-11-05T23:30:42Z"
+            },
+            {
+              "name": "Setup Node",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:30:42Z",
+              "completedAt": "2026-11-05T23:30:48Z"
+            },
+            {
+              "name": "Setup JDK 17",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:30:48Z",
+              "completedAt": "2026-11-05T23:30:48Z"
+            },
+            {
+              "name": "Prepare explicitly configured release signing",
+              "conclusion": "failure",
+              "startedAt": "2026-11-05T23:30:48Z",
+              "completedAt": "2026-11-05T23:30:49Z"
+            },
+            {
+              "name": "Setup Android SDK",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:30:49Z",
+              "completedAt": "2026-11-05T23:30:49Z"
+            },
+            {
+              "name": "Install dependencies",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:30:49Z",
+              "completedAt": "2026-11-05T23:30:49Z"
+            },
+            {
+              "name": "Build web + sync Capacitor",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:30:49Z",
+              "completedAt": "2026-11-05T23:30:49Z"
+            },
+            {
+              "name": "Build release APK with configured identity",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:30:49Z",
+              "completedAt": "2026-11-05T23:30:49Z"
+            },
+            {
+              "name": "Upload APK",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:30:49Z",
+              "completedAt": "2026-11-05T23:30:49Z"
+            },
+            {
+              "name": "Report Android build stages",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:30:49Z",
+              "completedAt": "2026-11-05T23:30:49Z"
+            },
+            {
+              "name": "Post Setup JDK 17",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:30:49Z",
+              "completedAt": "2026-11-05T23:30:49Z"
+            },
+            {
+              "name": "Post Setup Node",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-05T23:30:49Z",
+              "completedAt": "2026-11-05T23:30:49Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:30:49Z",
+              "completedAt": "2026-11-05T23:30:49Z"
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:30:49Z",
+              "completedAt": "2026-11-05T23:30:49Z"
+            }
+          ],
+          "snapshot": {
+            "path": "/tmp/jarvis-alpha2-tag-ci-html/job-127603509722.html",
+            "sha256": "a39b829eb1376f8db0d0fdad582e54464a2e696ab94613232e582c5d35af208e"
+          }
+        }
+      ]
+    },
+    {
+      "id": "42129884333",
+      "name": "Tests",
+      "workflowFilePath": ".github/workflows/test.yml",
+      "runUrl": "https://github.com/Talent620/Jarvis/actions/runs/42129884333",
+      "state": {
+        "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+        "conclusion": "WORKFLOW_RUN_CONCLUSION_SUCCESS"
+      },
+      "createdAt": {
+        "timestamp": "2026-11-05T23:30:35Z",
+        "isToday": true,
+        "isCurrentYear": true
+      },
+      "branch": {
+        "name": "refs/heads/codex/skills-integration-20261105",
+        "url": "/Talent620/Jarvis/tree/refs/heads/codex/skills-integration-20261105",
+        "title": "codex/skills-integration-20261105"
+      },
+      "publicAnnotations": [
+        "1 warning and 2 notices",
+        "test",
+        "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see:",
+        "https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+        "Vitest diagnostics",
+        "Original Run tests outcome=success; exit_code=0.",
+        "test",
+        "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see",
+        "https://github.com/actions/runner-images/issues/14748",
+        "\"",
+        "Artifacts",
+        "Produced during runtime",
+        "Name",
+        "Size",
+        "Digest",
+        "browser-sandbox-prerequisite-tests",
+        "169 KB",
+        "sha256:8e24e3b6fda30af7cf87823b7065b5205780970c96f6ae95e92c3db59acc2a92"
+      ],
+      "snapshot": {
+        "path": "/tmp/jarvis-alpha2-tag-ci-html/run-42129884333.html",
+        "sha256": "a40b120b905bee8e3b79ea43d01173ba195e0774bbe9037fde84c8a0ff785879"
+      },
+      "fullLogs": "BLOCKED: public page requires sign-in",
+      "jobs": [
+        {
+          "id": "127603509478",
+          "url": "https://github.com/Talent620/Jarvis/actions/runs/42129884333/job/127603509478",
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:30:38Z",
+              "completedAt": "2026-11-05T23:30:39Z"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:30:39Z",
+              "completedAt": "2026-11-05T23:30:40Z"
+            },
+            {
+              "name": "Setup Node",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:30:40Z",
+              "completedAt": "2026-11-05T23:30:46Z"
+            },
+            {
+              "name": "Install dependencies",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:30:46Z",
+              "completedAt": "2026-11-05T23:31:03Z"
+            },
+            {
+              "name": "Skan sekretów (blokuje wyciek kluczy)",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:31:03Z",
+              "completedAt": "2026-11-05T23:31:03Z"
+            },
+            {
+              "name": "Run tests",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:31:03Z",
+              "completedAt": "2026-11-05T23:32:39Z"
+            },
+            {
+              "name": "Report original test outcome and bounded failures",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:32:39Z",
+              "completedAt": "2026-11-05T23:32:39Z"
+            },
+            {
+              "name": "Preserve browser sandbox prerequisite evidence",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:32:39Z",
+              "completedAt": "2026-11-05T23:32:41Z"
+            },
+            {
+              "name": "Type-check + build",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:32:41Z",
+              "completedAt": "2026-11-05T23:33:04Z"
+            },
+            {
+              "name": "Post Setup Node",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:33:04Z",
+              "completedAt": "2026-11-05T23:33:04Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:33:04Z",
+              "completedAt": "2026-11-05T23:33:04Z"
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "startedAt": "2026-11-05T23:33:04Z",
+              "completedAt": "2026-11-05T23:33:04Z"
+            }
+          ],
+          "snapshot": {
+            "path": "/tmp/jarvis-alpha2-tag-ci-html/job-127603509478.html",
+            "sha256": "4e64b5653623b3748fa833648199427b8422ea3f303cb7aefe91e8bb1baaf510"
+          }
+        }
+      ]
+    }
+  ],
+  "discovery": "Exact commit found",
+  "workflowDispatched": false,
+  "gitMutated": false
+}

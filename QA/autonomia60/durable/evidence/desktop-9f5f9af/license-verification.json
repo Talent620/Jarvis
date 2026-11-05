@@ -1,0 +1,15 @@
+{
+  "run_id": "2026-11-05T23-29-40-272Z-desktop-f30481f7",
+  "level": "B: real license UI and WebCrypto, not agent autonomy or native APK",
+  "license_required": true,
+  "test_issuer": true,
+  "wrong_issuer_rejected": true,
+  "independent_signature_valid": true,
+  "token_sha256": "2d59b357eaf852ecc3cd51e3fc503c23e64254496953ca1b274b2b52f8d0d45e",
+  "private_key_persisted": false,
+  "activation_persisted": true,
+  "reload_activated": true,
+  "denied_origins": [
+    "https://fonts.googleapis.com"
+  ]
+}

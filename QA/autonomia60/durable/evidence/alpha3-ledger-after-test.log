@@ -1,0 +1,107 @@
+
+> jarvis-ai-assistant@2.1.0-alpha.3 test
+> vitest run tests/predictionLedger.test.ts tests/predictionLedgerPerf.test.ts tests/predictionLedgerAdversarial.test.ts tests/predictionLedgerBenchmark.test.ts tests/predictionBehavior.test.ts --reporter=verbose
+
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: dane sprzeczne, przestarzałe i z przyszłości > kontakt zapisany w PRZYSZŁOŚCI (zepsute dane) nie wysadza rozstrzygnięcia ani nie mówi absurdu
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: dane sprzeczne, przestarzałe i z przyszłości > sprzeczne źródła poprawione WSTECZ: pending zawsze liczy z NAJŚWIEŻSZEGO stanu, nie z cache
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: dane sprzeczne, przestarzałe i z przyszłości > cofnięty zegar urządzenia NIE odwraca zamkniętej prognozy i NIE tworzy fałszywego sukcesu
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: dane sprzeczne, przestarzałe i z przyszłości > zmiana statusu W POŁOWIE okna (won) → moot, nawet jeśli potem status wróciłby do aktywnego
+ ✓ tests/predictionLedger.test.ts > verdictOf — pending, dopóki nie ma DOWODU > brak evidence → pending; evidence → jego werdykt
+ ✓ tests/predictionLedger.test.ts > learnedWindowDays — uczone per encja, z bezpiecznikami > za mało próbek (<2) → domyślne 7 dni, bez zgadywania
+ ✓ tests/predictionLedger.test.ts > learnedWindowDays — uczone per encja, z bezpiecznikami > klient reagujący po ostrzeżeniu (większość prevented) → krótsze okno; krok ograniczony (-2)
+ ✓ tests/predictionLedger.test.ts > learnedWindowDays — uczone per encja, z bezpiecznikami > klient, u którego przerwy bywają (większość correct) → standard 7 dni
+ ✓ tests/predictionLedger.test.ts > learnedWindowDays — uczone per encja, z bezpiecznikami > nie miesza historii różnych klientów
+ ✓ tests/predictionLedger.test.ts > learnedWindowDays — uczone per encja, z bezpiecznikami > uczenie WYŁĄCZONE → zawsze domyślne, mimo pełnej historii
+ ✓ tests/predictionLedger.test.ts > learnedWindowDays — uczone per encja, z bezpiecznikami > Finanse podnoszą stawkę: czekająca płatność → okno krótsze o 2 dni (z twardym minimum)
+ ✓ tests/predictionLedger.test.ts > learnedWindowDays — uczone per encja, z bezpiecznikami > werdykty ZAKWESTIONOWANE (disputedAt) nie liczą się do uczenia
+ ✓ tests/predictionLedger.test.ts > calibratedConfidence — ograniczony krok, minimum obserwacji, wyłączalna > bez historii / za mało próbek → bazowe 0.7
+ ✓ tests/predictionLedger.test.ts > calibratedConfidence — ograniczony krok, minimum obserwacji, wyłączalna > seria correct podnosi pewność STOPNIOWO (nigdy skokowo po jednym przypadku)
+ ✓ tests/predictionLedger.test.ts > calibratedConfidence — ograniczony krok, minimum obserwacji, wyłączalna > seria błędów (prevented = ostrzeżenie nadgorliwe) OBNIŻA pewność, w granicach
+ ✓ tests/predictionLedger.test.ts > calibratedConfidence — ograniczony krok, minimum obserwacji, wyłączalna > moot nic nie mówi o trafności — pomijane
+ ✓ tests/predictionLedger.test.ts > calibratedConfidence — ograniczony krok, minimum obserwacji, wyłączalna > uczenie wyłączone → bazowa pewność
+ ✓ tests/predictionLedger.test.ts > shouldRecordNeglectPrediction — bez duplikatów, stare rekordy nie blokują nowych okresów > nie zaleca zapisu, gdy nie overdue
+ ✓ tests/predictionLedger.test.ts > shouldRecordNeglectPrediction — bez duplikatów, stare rekordy nie blokują nowych okresów > zaleca zapis, gdy overdue i brak czekającej prognozy
+ ✓ tests/predictionLedger.test.ts > shouldRecordNeglectPrediction — bez duplikatów, stare rekordy nie blokują nowych okresów > NIE duplikuje, gdy już jest pending dla tej encji
+ ✓ tests/predictionLedger.test.ts > shouldRecordNeglectPrediction — bez duplikatów, stare rekordy nie blokują nowych okresów > rozstrzygnięta prognoza NIE blokuje nowej na inny okres
+ ✓ tests/predictionLedger.test.ts > recordNeglectPrediction — kompletny, falsyfikowalny rekord (FABLE 5A) > zawiera WSZYSTKO: zamrożone wejście, kryterium, termin, pewność, założenia, źródła, wersję logiki
+ ✓ tests/predictionLedger.test.ts > recordNeglectPrediction — kompletny, falsyfikowalny rekord (FABLE 5A) > bez zapisanego kontaktu — przesłanka mówi to wprost, nie zmyśla daty
+ ✓ tests/predictionLedger.test.ts > recordNeglectPrediction — kompletny, falsyfikowalny rekord (FABLE 5A) > czekająca płatność (Finanse) trafia do wejścia, przesłanek i źródeł — i skraca okno
+ ✓ tests/predictionLedger.test.ts > resolveDuePredictions — DOWÓD osobno, prognoza nietknięta (FABLE 5B) > zostaje pending, gdy termin nie minął i brak kontaktu
+ ✓ tests/predictionLedger.test.ts > resolveDuePredictions — DOWÓD osobno, prognoza nietknięta (FABLE 5B) > prevented: kontakt w oknie — dowód z regułą, prognoza bajt w bajt nietknięta
+ ✓ tests/predictionLedger.test.ts > resolveDuePredictions — DOWÓD osobno, prognoza nietknięta (FABLE 5B) > correct: termin minął bez kontaktu — outcome faktograficzny
+ ✓ tests/predictionLedger.test.ts > resolveDuePredictions — DOWÓD osobno, prognoza nietknięta (FABLE 5B) > correct także przy kontakcie spóźnionym (po terminie)
+ ✓ tests/predictionLedger.test.ts > resolveDuePredictions — DOWÓD osobno, prognoza nietknięta (FABLE 5B) > moot, gdy sprawa zamknięta (won/lost) przed terminem
+ ✓ tests/predictionLedger.test.ts > resolveDuePredictions — DOWÓD osobno, prognoza nietknięta (FABLE 5B) > nieznana encja przy CZĘŚCIOWEJ wiedzy → pending (nie zgaduj)
+ ✓ tests/predictionLedger.test.ts > resolveDuePredictions — DOWÓD osobno, prognoza nietknięta (FABLE 5B) > nieznana encja przy PEŁNYM stanie (factsComplete) → moot „usunięty lead”
+ ✓ tests/predictionLedger.test.ts > resolveDuePredictions — DOWÓD osobno, prognoza nietknięta (FABLE 5B) > zamknięta prognoza NIGDY nie otwiera się ponownie ani nie zmienia werdyktu
+ ✓ tests/predictionLedger.test.ts > resolveDuePredictions — DOWÓD osobno, prognoza nietknięta (FABLE 5B) > cofnięty zegar NIE tworzy fałszywego sukcesu: przed checkAt nie ma „correct”
+ ✓ tests/predictionLedger.test.ts > resolveDuePredictions — DOWÓD osobno, prognoza nietknięta (FABLE 5B) > idempotencja: brak zmian → TA SAMA referencja tablicy (wołający nie zapisuje store)
+ ✓ tests/predictionLedger.test.ts > resolveDuePredictions — DOWÓD osobno, prognoza nietknięta (FABLE 5B) > duplikaty klientów (ta sama nazwa, różne ID) mają NIEZALEŻNE rozstrzygnięcia
+ ✓ tests/predictionLedger.test.ts > disputeEvidence — użytkownik oznacza dowód jako błędny (FABLE 5F) > ustawia disputedAt, zachowuje rekord i werdykt (audyt), wyklucza z uczenia
+ ✓ tests/predictionLedger.test.ts > disputeEvidence — użytkownik oznacza dowód jako błędny (FABLE 5F) > pending i już zakwestionowanych nie da się „zakwestionować” ponownie
+ ✓ tests/predictionLedger.test.ts > compactLedger — ograniczony rozmiar (S9), pending nietykalne > w granicach limitów → ta sama referencja (zero pracy)
+ ✓ tests/predictionLedger.test.ts > compactLedger — ograniczony rozmiar (S9), pending nietykalne > nadmiar rozstrzygniętych per encja → zostają najnowsze, pending nigdy nie wypada
+ ✓ tests/predictionLedger.test.ts > runPredictionCycle — pełny, idempotentny cykl (FABLE 5C) > overdue lead bez prognozy → tworzy JEDNĄ; drugi przebieg z tymi samymi danymi → zero zmian
+ ✓ tests/predictionLedger.test.ts > runPredictionCycle — pełny, idempotentny cykl (FABLE 5C) > nie-overdue → nic nie tworzy; pusty stan → zero zmian
+ ✓ tests/predictionLedger.test.ts > runPredictionCycle — pełny, idempotentny cykl (FABLE 5C) > czekająca płatność z Finansów zmienia treść prognozy (okno/przesłanki) — realna integracja, nie import
+ ✓ tests/predictionLedger.test.ts > runPredictionCycle — pełny, idempotentny cykl (FABLE 5C) > po terminie: cykl rozstrzyga i (nadal overdue) zakłada nową na NOWY okres
+ ✓ tests/predictionLedger.test.ts > runPredictionCycle — pełny, idempotentny cykl (FABLE 5C) > usunięty lead: prognoza rozstrzyga się jako moot (pełny stan danych), bez crasha
+ ✓ tests/predictionLedger.test.ts > calibrationSummary / calibrationText / explainLearning — uczciwe podsumowania > zero predykcji → jasny komunikat, nie zmyślona statystyka
+ ✓ tests/predictionLedger.test.ts > calibrationSummary / calibrationText / explainLearning — uczciwe podsumowania > liczy każdy werdykt; zakwestionowane OSOBNO
+ ✓ tests/predictionLedger.test.ts > calibrationSummary / calibrationText / explainLearning — uczciwe podsumowania > filtruje po entityId, gdy podane
+ ✓ tests/predictionLedger.test.ts > calibrationSummary / calibrationText / explainLearning — uczciwe podsumowania > explainLearning: mówi wprost, gdy za mało danych / uczenie wyłączone / czego się nauczył
+ ✓ tests/predictionLedgerBenchmark.test.ts > Benchmark Dziennika Predykcji — scenariusz v2 (2026-07), 10 klientów × 90 dni > 1) odsetek poprawnie rozwiązanych: KAŻDY klient zgodny z ground truth (wymagane 10/10)
+ ✓ tests/predictionLedgerBenchmark.test.ts > Benchmark Dziennika Predykcji — scenariusz v2 (2026-07), 10 klientów × 90 dni > 2) false-positive rate = 0: każde „prevented” ma REALNY kontakt w oknie (wprost z surowych danych)
+ ✓ tests/predictionLedgerBenchmark.test.ts > Benchmark Dziennika Predykcji — scenariusz v2 (2026-07), 10 klientów × 90 dni > 3) ZERO fałszywych „correct” — twardy próg regresji CI (kontakt w oknie wyklucza correct)
+ ✓ tests/predictionLedgerBenchmark.test.ts > Benchmark Dziennika Predykcji — scenariusz v2 (2026-07), 10 klientów × 90 dni > 4) ZERO duplikatów — twardy próg: unikalne ID, maks. jedna czekająca prognoza per klient
+ ✓ tests/predictionLedgerBenchmark.test.ts > Benchmark Dziennika Predykcji — scenariusz v2 (2026-07), 10 klientów × 90 dni > 5) zero nieaktualnego kontekstu: przesłanki każdej prognozy zgodne z surowymi danymi w chwili utworzenia
+ ✓ tests/predictionLedgerBenchmark.test.ts > Benchmark Dziennika Predykcji — scenariusz v2 (2026-07), 10 klientów × 90 dni > 6) szczegóły graniczne: F (na styk) prevented; G (godzinę po) correct-spóźniony; H krótsze okno z Finansów
+ ✓ tests/predictionLedgerBenchmark.test.ts > Benchmark Dziennika Predykcji — scenariusz v2 (2026-07), 10 klientów × 90 dni > 7) kalibracja: prognozy o wysokiej pewności trafniejsze niż o niskiej (twardy próg)
+ ✓ tests/predictionLedger.test.ts > predictionLedger — narzędzie czatu (prediction_ledger_status) > jest w toolDefs i sklasyfikowane read 903ms
+ ✓ tests/predictionLedger.test.ts > predictionLedger — narzędzie czatu (prediction_ledger_status) > bez zapisanych predykcji zwraca uczciwy komunikat, nie zmyśloną statystykę
+ ✓ tests/predictionLedger.test.ts > predictionLedger — narzędzie czatu (prediction_ledger_status) > liczy REALNE dane store + wyjaśnia uczenie dla klienta
+ ✓ tests/predictionLedger.test.ts > predictionLedger — narzędzie czatu (prediction_ledger_status) > nieznany klient → jasny komunikat, nie zerowe udawanie danych
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: duplikaty klientów (ta sama nazwa firmy, różne rekordy CRM) > narzędzie czatu NIE zgaduje, którego duplikatu dotyczy pytanie — mówi to wprost 936ms
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: duplikaty klientów (ta sama nazwa firmy, różne rekordy CRM) > silnik trzyma zupełnie niezależne rekordy per entityId, mimo identycznej etykiety
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: błędne/niekompletne daty > brak lastContactedAt nie crashuje i daje uczciwą przesłankę
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: błędne/niekompletne daty > kontakt „z przyszłości” przy tworzeniu (cofnięty zegar) nie daje ujemnych dni w przesłance
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: model NIE może fabrykować własnej historii trafności > żadne narzędzie czatu nie potrafi ZAPISAĆ do predictionLedger (odczyt to jedyna droga modelu)
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: model NIE może fabrykować własnej historii trafności > werdykt pochodzi z deterministycznej reguły — evidence.reason zawsze cytuje regułę
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: użytkownik zmienia zdanie / poprawia błędny dowód > po moot (sprawa zamknięta) i ponownym otwarciu klienta nowa zaległość znów jest przewidywalna
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: użytkownik zmienia zdanie / poprawia błędny dowód > oznaczenie dowodu jako błędnego ZMIENIA następną decyzję (okno wraca do domyślnego) — uczenie realnie reaguje
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: użytkownik zmienia zdanie / poprawia błędny dowód > wyczyszczenie historii zeruje uczenie (okno i pewność wracają do domyślnych)
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: uczenie nie oszaleje przy skrajnej liczbie próbek > dokładnie 2 próbki (minimalny próg) — bez wyjątku, w granicach
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: uczenie nie oszaleje przy skrajnej liczbie próbek > setki próbek (długoletni klient) — okno i pewność nadal w twardych granicach
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: częściowa wpłata i Finanse w prognozach > częściowa wpłata NIE zeruje stawki: nadal czekająca płatność → okno pozostaje skrócone
+ ✓ tests/predictionLedgerAdversarial.test.ts > Atak: częściowa wpłata i Finanse w prognozach > cykl produkcyjny: adapterowa mapa płatności wpływa na prognozę TYLKO dla właściwego leada
+ ✓ tests/predictionLedgerBenchmark.test.ts > Benchmark Dziennika Predykcji — scenariusz v2 (2026-07), 10 klientów × 90 dni > 8) narzędzia/zgody: prediction_ledger_status jest read i NIGDY nie rusza leads/finance 703ms
+ ✓ tests/predictionLedgerBenchmark.test.ts > Benchmark Dziennika Predykcji — scenariusz v2 (2026-07), 10 klientów × 90 dni > 9) czas lokalnego przetwarzania: pełny scenariusz (10 klientów × 90 dni, restarty, 2× cykle) < 250 ms
+ ✓ tests/predictionLedgerBenchmark.test.ts > Benchmark Dziennika Predykcji — scenariusz v2 (2026-07), 10 klientów × 90 dni > 10) koszt zero / offline: cały przebieg z ZATRUTYM fetch — silnik nie dotyka sieci ani modelu
+ ✓ tests/predictionLedgerBenchmark.test.ts > Benchmark Dziennika Predykcji — scenariusz v2 (2026-07), 10 klientów × 90 dni > baseline przed/po: przed zmianą JARVIS nie miał ŻADNEJ pamięci własnej celności; po — konkretne liczby
+ ✓ tests/predictionLedgerPerf.test.ts > Wydajność S9 — tysiące leadów i rekordów, realny czas wykonania > pierwszy cykl na 3000 leadów (600 nowych prognoz) < 300 ms; kolejny IDEMPOTENTNY cykl < 150 ms
+ ✓ tests/predictionLedgerPerf.test.ts > Wydajność S9 — tysiące leadów i rekordów, realny czas wykonania > dziennik z 5000 rozstrzygnięć: kompakcja trzyma twardy sufit i NIE gubi żadnej czekającej prognozy
+ ✓ tests/predictionLedgerPerf.test.ts > Wydajność S9 — tysiące leadów i rekordów, realny czas wykonania > 30 kolejnych cykli (miesiąc życia aplikacji) na 1000 leadów nie rozdyma dziennika ponad sufit
+ ✓ tests/predictionLedgerPerf.test.ts > Indeksowanie historii — zachowanie dowodów i kolejności cyklu > pewność dowodu uwzględnia tylko wcześniejsze rekordy tej encji, bez zmiany zapisanej historii
+ ✓ tests/predictionLedgerPerf.test.ts > Indeksowanie historii — zachowanie dowodów i kolejności cyklu > nowa prognoza korzysta z historii swojego klienta, a duplikat leada nie tworzy drugiej
+ ✓ tests/predictionLedgerPerf.test.ts > Kompatybilność wsteczna — stare dane bez nowego pola > AppData sprzed tej fali (bez predictionLedger) działa: cykl startuje od pustego dziennika
+ ✓ tests/predictionLedgerPerf.test.ts > Kompatybilność wsteczna — stare dane bez nowego pola > adapter store'a nie wybucha na braku pola i zapisuje je dopiero, gdy jest co zapisać
+ ✓ tests/predictionBehavior.test.ts > LeadDetail — teczka pokazuje właściwy stan prognozy (i NIE pisze do store przy renderze) > bez prognoz: żadnej wzmianki o prognozie (komunikat nie pojawia się w niewłaściwym stanie)
+ ✓ tests/predictionBehavior.test.ts > LeadDetail — teczka pokazuje właściwy stan prognozy (i NIE pisze do store przy renderze) > czekająca prognoza: treść + pewność + jasne „to prognoza, nie fakt”
+ ✓ tests/predictionBehavior.test.ts > LeadDetail — teczka pokazuje właściwy stan prognozy (i NIE pisze do store przy renderze) > prognoza ZMIENIA się na ekranie, gdy pojawia się dowód (realna subskrypcja store→render)
+ ✓ tests/predictionBehavior.test.ts > LeadDetail — teczka pokazuje właściwy stan prognozy (i NIE pisze do store przy renderze) > montaż teczki NIE wykonuje żadnego zapisu do store (S9: zero pracy zapisowej przy otwarciu)
+ ✓ tests/predictionBehavior.test.ts > Mind → sekcja Prognozy — pełna kontrola użytkownika działa KLIKNIĘCIEM > pokazuje aktywne prognozy z przesłankami i podsumowanie celności
+ ✓ tests/predictionBehavior.test.ts > Mind → sekcja Prognozy — pełna kontrola użytkownika działa KLIKNIĘCIEM > klik „Dowód błędny?” oznacza dowód i od razu pokazuje wykluczenie z uczenia
+ ✓ tests/predictionBehavior.test.ts > Mind → sekcja Prognozy — pełna kontrola użytkownika działa KLIKNIĘCIEM > klik „Wyczyść historię prognoz” (po potwierdzeniu) zeruje dziennik
+ ✓ tests/predictionBehavior.test.ts > Mind → sekcja Prognozy — pełna kontrola użytkownika działa KLIKNIĘCIEM > checkbox wyłącza uczenie (settings.predictionLearning=false)
+ ✓ tests/predictionBehavior.test.ts > Agent proaktywny — prognozy widoczne bez otwierania teczki, bez spamu, we właściwym stanie > świeża prognoza → jeden nudge z pewnością i zastrzeżeniem „to prognoza, nie fakt”, ekran sales
+ ✓ tests/predictionBehavior.test.ts > Agent proaktywny — prognozy widoczne bez otwierania teczki, bez spamu, we właściwym stanie > świeżo SPRAWDZONE ostrzeżenie ma pierwszeństwo i cytuje realny wynik
+ ✓ tests/predictionBehavior.test.ts > Agent proaktywny — prognozy widoczne bez otwierania teczki, bez spamu, we właściwym stanie > cooldown: po pokazaniu ten sam nudge nie wraca od razu (żadnego spamu co 90 s)
+ ✓ tests/predictionBehavior.test.ts > Agent proaktywny — prognozy widoczne bez otwierania teczki, bez spamu, we właściwym stanie > NIEWŁAŚCIWY stan = zero komunikatu: stare rekordy (>24 h), zakwestionowany dowód, wyłączony agent
+
+ Test Files  5 passed (5)
+      Tests  95 passed (95)
+   Start at  23:40:58
+   Duration  2.98s (transform 1.56s, setup 0ms, collect 1.26s, tests 3.29s, environment 319ms, prepare 408ms)

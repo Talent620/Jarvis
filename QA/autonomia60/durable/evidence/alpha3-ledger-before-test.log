@@ -1,0 +1,17 @@
+
+> jarvis-ai-assistant@2.1.0-alpha.2 test
+> vitest run tests/predictionLedgerPerf.test.ts --reporter=verbose
+
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/predictionLedgerPerf.test.ts > Wydajność S9 — tysiące leadów i rekordów, realny czas wykonania > pierwszy cykl na 3000 leadów (600 nowych prognoz) < 300 ms; kolejny IDEMPOTENTNY cykl < 150 ms
+ ✓ tests/predictionLedgerPerf.test.ts > Wydajność S9 — tysiące leadów i rekordów, realny czas wykonania > dziennik z 5000 rozstrzygnięć: kompakcja trzyma twardy sufit i NIE gubi żadnej czekającej prognozy
+ ✓ tests/predictionLedgerPerf.test.ts > Wydajność S9 — tysiące leadów i rekordów, realny czas wykonania > 30 kolejnych cykli (miesiąc życia aplikacji) na 1000 leadów nie rozdyma dziennika ponad sufit 350ms
+ ✓ tests/predictionLedgerPerf.test.ts > Kompatybilność wsteczna — stare dane bez nowego pola > AppData sprzed tej fali (bez predictionLedger) działa: cykl startuje od pustego dziennika
+ ✓ tests/predictionLedgerPerf.test.ts > Kompatybilność wsteczna — stare dane bez nowego pola > adapter store'a nie wybucha na braku pola i zapisuje je dopiero, gdy jest co zapisać
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  23:39:44
+   Duration  860ms (transform 122ms, setup 0ms, collect 66ms, tests 474ms, environment 0ms, prepare 166ms)

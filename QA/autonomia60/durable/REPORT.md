@@ -1,10 +1,10 @@
 # JARVIS — wdrożenie, odbiór i przekazanie
 
-## Bieżący etap 2.1.0-alpha.2
+## Bieżący etap 2.1.0-alpha.3
 
 Baza: `fb17f9755faad72295cb125563ba2b0220d9319d`. Gałąź: `codex/skills-integration-20261105`. Wszystkie wcześniejsze poprawki są zachowane. Aktualna specyfikacja: `SPEC-CLOSURE.md`; jeden rejestr możliwości, integracji, T01–T18 i G1–G10: `requirements.json`. Historyczne 60 testów i 80 przykładów nie zostały przepisane na PASS.
 
-**Końcowa regresja: 3089/3089 PASS w 373 plikach, lint PASS.** Ostatni build produkcyjny przeszedł; `release:linux` ponowi go z finalnego czystego commitu. Włączono rzeczywiste testy OS przez `JARVIS_TEST_SKILL_SANDBOX=1`. To wynik testów kodu i kontrolowanych integracji, nie 3089 zaliczonych zadań autonomicznego modelu. Źródła i pełny log końcowego przebiegu identyfikuje `evidence/alpha2-release-validation-source.json`. Przebieg 3082 sprzed poprawki granicy przeglądarki zachowano osobno. Poprzedni przebieg 3074 PASS zachowano w `evidence/closure-validation-source.json`. Początkowe 2 FAIL i nieobsłużone odrzucenie pozostają w `evidence/closure-integration-first.log`: niezgodny z Samsung S9 regex zastąpiono zgodnym; test STOP czeka teraz na rzeczywiste pytanie o zgodę, zachowując wszystkie asercje odmowy późnej akcji i zapamiętania zgody.
+**Końcowa regresja: 3091/3091 PASS w 373 plikach, lint PASS.** Ostatni build produkcyjny przeszedł; `release:linux` ponowi go z finalnego czystego commitu. Włączono rzeczywiste testy OS przez `JARVIS_TEST_SKILL_SANDBOX=1`. To wynik testów kodu i kontrolowanych integracji, nie 3091 zaliczonych zadań autonomicznego modelu. Źródła i pełny log końcowego przebiegu identyfikuje `evidence/alpha3-validation-source.json`. Poprzedni przebieg3089PASS zachowano osobno. Przebieg 3082 sprzed poprawki granicy przeglądarki zachowano osobno. Poprzedni przebieg 3074 PASS zachowano w `evidence/closure-validation-source.json`. Początkowe 2 FAIL i nieobsłużone odrzucenie pozostają w `evidence/closure-integration-first.log`: niezgodny z Samsung S9 regex zastąpiono zgodnym; test STOP czeka teraz na rzeczywiste pytanie o zgodę, zachowując wszystkie asercje odmowy późnej akcji i zapamiętania zgody.
 
 Pełny cel nie jest ukończony i nie ma odbioru 10/10. Prawdziwy model, pulpit, kanały produkcyjne, komplet dokumentów i wszystkie ekrany mają oddzielne braki. Nowe pakiety i publikacja są weryfikowane po czystym commitcie; bieżący status przekazania dopisano niżej, gdy dostępny.
 
@@ -49,6 +49,14 @@ CI dla `577e450` dało Ubuntu PASS (testy, pakowanie i artefakty), ale Tests FAI
 Poprawka rezerwuje przed oczekiwaniem na zgodę jedno żądanie nawigacji głównej ramki. Żądania w tle i ramki nie dziedziczą tej zgody. Rzeczywisty Chromium zatrzymuje odpowiedzi przekierowań przed przetworzeniem Location; jego DNS, TLS, cookies i sandbox pozostają aktywne. Stare callbacki są przypięte do własnej sesji. Odmowa zwraca `APPROVAL_DENIED`, a zatwierdzony POST z niepotwierdzonym skutkiem zwraca `BROWSER_EFFECT_UNCONFIRMED` i polecenie sprawdzenia stanu przed ponowieniem.
 
 Focused: 23/23 PASS, w tym 12 rzeczywistych scenariuszy Chromium. Niezależne liczniki serwerów potwierdzają brak szkicu GET i żądań do nieautoryzowanych celów, zero POST po odmowie oraz dokładnie jeden rozpoczęty POST w przypadku niepewnego skutku. Nie osłabiono pierwotnej asercji jednej zgody. `browser-transaction-boundary.json` zachowuje reprodukcje przed poprawką i wyniki po niej. Wysyłka SPA/fetch/XHR, iframe i automatyczne podążanie za przekierowaniami nie są obsługiwane przez tę ograniczoną ścieżkę; nie deklarujemy ogólnego rozwiązania wszystkich stron.
+
+### Bramka wydajności i alpha.3
+
+Tag `v2.1.0-alpha.2` pozostał niezmieniony. Jego UbuntuCI42130379821 zatrzymało publikację: 30 cykli prognoz dla1000leadów zajęło3201ms przy progu<3000ms. Pakowanie i publikacja tego runu zostały pominięte; GitHubReleasealpha.2 nie powstał. Próg i wszystkie wcześniejsze asercje zachowano.
+
+Dziennik wielokrotnie skanował globalną historię i kopiował rosnące tablice. Zastąpiono to indeksami historii poszczególnych klientów i śledzeniem oczekujących prognoz, zachowując kolejność dowodów i kompaktowania. Lokalny benchmark w tym samym procesie, z rozgrzewką i pięcioma naprzemiennymi parami, dał mediany281,4ms→30,6ms. Pełne wyniki każdego z30cykli miały identyczne hashe. Nie odtworzono lokalnie przekroczenia3000ms; lokalny baseline również przechodził. Kod bazowy modułu jest identyczny zfb17, lecz nie jest to dowód jego czasu na runnerzeCI.
+
+95testów predykcji,163kontrolowane porównania semantyczne i pełna regresja3091PASS zachowują dane, kolejność, rozstrzygnięcia, idempotencję i duplikaty. Dowód: `ledger-performance.json`. Nowe wydanie ma wersjęalpha.3, ponieważ nie przepisujemy istniejącego tagu. Rzeczywisty nowyCI i paczki są odrębnymi etapami odbioru.
 
 ### Uruchomienie i wycofanie
 

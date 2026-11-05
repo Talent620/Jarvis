@@ -1,0 +1,20 @@
+{
+  "output": "/tmp/jarvis-ledger-perf.json",
+  "sourceSha256": {
+    "baseline": "1c1e6d59d773a71b0119b8b6bd4cb0c42ff3802a0adf376b0cbf9c6f9cd0a130",
+    "candidate": "c8ac7dc843bb6bfd7d2c10dbf987d1229940d8d7964a241ca60bb035edfb83e2"
+  },
+  "summary": {
+    "baseline": {
+      "minMs": 236.78353100000004,
+      "medianMs": 281.40680399999974,
+      "maxMs": 393.1053250000001
+    },
+    "candidate": {
+      "minMs": 25.551330000000007,
+      "medianMs": 30.63609600000018,
+      "maxMs": 32.49385399999983
+    }
+  },
+  "identicalOutputs": true
+}

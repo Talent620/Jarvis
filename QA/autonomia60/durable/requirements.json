@@ -4,15 +4,14 @@
   "request_sha256": "90784301789c744c57e5144312083b04043200dfbb9fe26d83b4e76bfc04ac6e",
   "integration_base": "fb17f9755faad72295cb125563ba2b0220d9319d",
   "integration_branch": "codex/skills-integration-20261105",
-  "current_state": "CODE_VERIFIED_AWAITING_FINAL_CI_AND_RELEASE",
+  "current_state": "ALPHA3_CODE_VERIFIED_RELEASE_PREPARATION",
   "release": {
-    "version": "2.1.0-alpha.2",
+    "version": "2.1.0-alpha.3",
     "sha": null,
     "tag": null,
     "url": null,
-    "status": "NOT_PUBLISHED",
-    "ci": {},
-    "previous_release": "v2.1.0-alpha.1"
+    "status": "PREPARING_AFTER_PERFORMANCE_FIX",
+    "previous_unpublished_tag": "v2.1.0-alpha.2"
   },
   "status_rules": {
     "PASS": "Pełne potwierdzenie scenariusza na określonym poziomie.",
@@ -2243,6 +2242,58 @@
         "QA/autonomia60/durable/evidence/alpha2-release-tests.log"
       ],
       "note": "Actual OS sandbox and browser prerequisite required. This is code/component validation, not true-model acceptance."
+    },
+    {
+      "id": "C-DESKTOP-9F5F9AF",
+      "status": "BLOCKED",
+      "run_id": "2026-11-05T23-29-40-272Z-desktop-f30481f7",
+      "source_commit": "9f5f9afc868421a0b80197c6d1dd84483833de85",
+      "runtime_identical_to_release_commit": "b43667836ab7492deba533423a6772f2f49ccf57",
+      "independent_local": "PASS",
+      "license_issue_activate": "PASS",
+      "A": "BLOCKED",
+      "B": "BLOCKED",
+      "C": "BLOCKED",
+      "exit_code": 2,
+      "evidence": [
+        "QA/autonomia60/durable/evidence/desktop-9f5f9af/README.md",
+        "QA/autonomia60/durable/evidence/desktop-9f5f9af/summary.json"
+      ]
+    },
+    {
+      "id": "C-CI-B436678-TESTS",
+      "status": "PASS",
+      "url": "https://github.com/Talent620/Jarvis/actions/runs/42129884333",
+      "exit_code": 0,
+      "note": "Tests + build pass with added diagnostics. Previous9f5failure remains unexplained because public logs did not expose cause; no runtime or assertion change between runs.",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/alpha2-ci-b436678.json"
+      ]
+    },
+    {
+      "id": "C-ALPHA3-REGRESSION",
+      "status": "PASS",
+      "passed": 3091,
+      "failed": 0,
+      "skipped": 0,
+      "files": 373,
+      "lint": "PASS",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/alpha3-validation-source.json",
+        "QA/autonomia60/durable/evidence/alpha3-full-tests.log"
+      ]
+    },
+    {
+      "id": "C-LEDGER-PERFORMANCE",
+      "status": "PASS",
+      "scope": "Paired controlled CPU benchmark and data preservation, not agent benchmark",
+      "before_median_ms": 281.40680399999974,
+      "after_median_ms": 30.63609600000018,
+      "strict_ci_threshold_unchanged_ms": 3000,
+      "ci_retest": "PENDING",
+      "evidence": [
+        "QA/autonomia60/durable/ledger-performance.json"
+      ]
     }
   ],
   "external_access": [
@@ -3091,14 +3142,14 @@
         "id": "G9",
         "title": "Jakość",
         "status": "NOT_ACCEPTED",
-        "reason": "Full3089PASS/lint PASS; final clean build/CI follow separately. True-model/desktop acceptance blocked, full audit32 open.",
+        "reason": "Local3091PASS/lintPASS. Paired ledger benchmark9.19x median improvement with unchanged data/threshold. New releaseCI pending; full audit32/model/desktop acceptance open.",
         "evidence": []
       },
       {
         "id": "G10",
         "title": "Dostarczenie",
         "status": "NOT_ACCEPTED",
-        "reason": "Oczekuje cleancommit, rzeczywistych paczek, push/tagCI i pobrania Release.",
+        "reason": "Alpha2tag exists but releaseCI failed, publication skipped. Preparing alpha3; no published download claim until verification.",
         "evidence": []
       }
     ],
@@ -3200,5 +3251,21 @@
         "reason": "Actual model unavailable; not used to add phrase-specific dispatch rules"
       }
     ]
-  }
+  },
+  "release_attempts": [
+    {
+      "version": "2.1.0-alpha.2",
+      "sha": "b43667836ab7492deba533423a6772f2f49ccf57",
+      "tag": "v2.1.0-alpha.2",
+      "url": null,
+      "status": "TAG_CI_FAILED_NO_RELEASE",
+      "ci": {},
+      "previous_release": "v2.1.0-alpha.1",
+      "tag_object": "0bf32dfc8d0e1838cbd0fc5b8721ce62725534fb",
+      "failure": "predictionLedgerPerf: 30 cycles x1000 leads3201ms, required<3000ms. Sourceverification failed; artifactbuild/upload/publication skipped. Tag remains immutable.",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/alpha2-tag-ci-failed.json"
+      ]
+    }
+  ]
 }

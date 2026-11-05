@@ -1,3 +1,11 @@
+# Aktualizacja stanu — alpha.3
+
+Runtime alpha.3 jest gotowy do commitu i publikacji po rzeczywistych bramkach. Pełna regresja3091/3091PASS, lintPASS; source manifest evidence/alpha3-validation-source.json. Optymalizacja predictionLedger zachowuje dane (95testów i163porównania), lokalnie mediana281,4→30,6ms; nie zmieniono progu3000ms. Dowód ledger-performance.json. Wersje package/lock/Android oraz docs/workflow asset wskazująalpha.3.
+
+Tagalpha.2 ->b436 istnieje i NIE wolno go przepisywać. UbuntuCI42130379821FAIL3201ms>3000, brakRelease. BranchTestsb436PASS; wcześniejszy9fTestsFAIL bez znanej przyczyny jest zachowany. Teraz commit/pushalpha3, cleanreleasebuild, nowy rzeczywistyCI, nowytagalpha3 iRelease tylko po bramkach. Następnie pobrać9artefaktów i sprawdzić sumy/źródła/metadane. API GitHub403 nadal blokuje bezpośredni PR, nie obchodzić sieci. Nie publikować kluczy/profili ani wyłączać sandboxa. Ostatni qa:desktop9f PASS niezależne funkcje/licencja; A/B/C BLOCKED brakOllamy iDISPLAY. Wszystkie G1–G10 nadal mają jawne ograniczenia; nie deklarować ukończenia całego promptu.
+
+Poniższy checkpointalpha.2 pozostaje historią i nie zastępuje aktualizacji powyżej.
+
 # Bieżące wznowienie — alpha.2
 
 Baza `fb17f9755faad72295cb125563ba2b0220d9319d`, gałąź `codex/skills-integration-20261105`. Zamrożony commit runtime `9f5f9afc868421a0b80197c6d1dd84483833de85` został wysłany i potwierdzony przez ls-remote. Zachowane wszystkie wcześniejsze poprawki. Autoryzacja obejmuje commit/push dedykowanej gałęzi, PR, istniejące CI, tag i prerelease. Bez merge main/force-push/Xvfb/wyłączania sandboxa/licencji/usług systemowych/model downloads i realnych testowych odbiorców.
