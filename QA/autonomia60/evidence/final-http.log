@@ -1,0 +1,10 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/fetchCancellation.test.ts (2 tests) 7ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  19:07:31
+   Duration  345ms (transform 40ms, setup 0ms, collect 37ms, tests 7ms, environment 0ms, prepare 109ms)
+

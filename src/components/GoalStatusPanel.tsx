@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
-import { isGoalRunning, requestGoalPause } from "../lib/goalControl";
+import { isGoalRunning, requestGoalPause, requestGoalStop } from "../lib/goalControl";
 import { loadGoalsNewestFirst, resumeAndRunGoal } from "../lib/goalRuntime";
 import { pauseGoal, removeGoal, upsertGoal, describeGoal, type GoalRecord, type GoalStatus } from "../lib/goalState";
 import { outcomeIcon, outcomeLabel } from "../lib/actionOutcome";
@@ -13,7 +13,7 @@ import { emptyStateSuggestion } from "../lib/simpleFlow";
 
 const STATUS_LABEL: Record<GoalStatus, string> = {
   queued: "w kolejce", running: "w toku", waiting_consent: "czeka na zgodę",
-  waiting_user: "czeka na sprawdzenie", paused: "wstrzymany", completed: "ukończony", failed: "nieudany",
+  waiting_user: "czeka na sprawdzenie", paused: "wstrzymany", completed: "ukończony", failed: "nieudany", cancelled: "zatrzymany przez użytkownika",
 };
 const canStop = (s: GoalStatus) => s === "running" || s === "queued" || s === "waiting_consent" || s === "waiting_user";
 
@@ -125,8 +125,12 @@ export default function GoalStatusPanel({ onClose }: { onClose: () => void }) {
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
                   <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} aria-expanded={!!expanded[g.id]} onClick={() => setExpanded((prev) => ({ ...prev, [g.id]: !prev[g.id] }))}>{expanded[g.id] ? "Ukryj wyniki" : "Pokaż wyniki"}</button>
                   {canStop(g.status) && (
-                    <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} onClick={() => void doPause(g)}>⏸ Zatrzymaj</button>
+                    <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} onClick={() => void doPause(g)}>⏸ Pauza</button>
                   )}
+                  {canStop(g.status) && <button type="button" className="btn" style={{ width: "auto", marginTop: 0, minHeight: 44 }} onClick={() => {
+                    if (requestGoalStop(g.id)) setResumeMsg("STOP przyjęty. Bieżący skutek może wymagać sprawdzenia.");
+                    else void upsertGoal({ ...g, status: "cancelled", updatedAt: now() }).then(load).catch((e) => setResumeMsg(String(e)));
+                  }}>STOP</button>}
                   {canResume(g.status) && (
                     <button className="btn primary" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} disabled={busyId === g.id} onClick={() => void doResume(g)}>
                       {busyId === g.id ? "…" : "▶ Wznów i dokończ"}

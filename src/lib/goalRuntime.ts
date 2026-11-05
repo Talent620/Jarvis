@@ -48,7 +48,7 @@ export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStora
   const pipeline = await runAgentPipeline(input.plan, {
     toolExists,
     riskOf,
-    execTool: makeDefaultExecTool(runTool, riskOf),
+    execTool: makeDefaultExecTool((name, input) => runTool(name, input, { signal: control.signal }), riskOf),
     shouldStop: control.shouldStop,
     onStatus: input.onStatus,
     beforeTool: async (step) => {
@@ -63,7 +63,7 @@ export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStora
   });
   const result = pipeline.run;
 
-  record = { ...record, status: finalStatus(result), updatedAt: input.now };
+  record = { ...record, status: control.wasStopped() ? "cancelled" : finalStatus(result), updatedAt: input.now };
   await upsertGoal(record, storage);
   return { record, result };
   } finally { control.finish(); }
@@ -83,6 +83,7 @@ export async function resumeAndRunGoal(
   try {
   const saved = (await loadGoals(storage)).find((goal) => goal.id === record.id);
   if (!saved) throw new Error("Nie znaleziono zapisanego celu — nie można bezpiecznie go wznowić.");
+  if (saved.status === "cancelled") throw new Error("Cel zatrzymano poleceniem STOP. Nie wznowiono go automatycznie.");
   const steps = saved.plan.steps || [];
   const seed: StepResult[] = steps
     .filter((s) => saved.results[s.id])
@@ -94,7 +95,7 @@ export async function resumeAndRunGoal(
   const pipeline = await runAgentPipeline(saved.plan, {
     toolExists,
     riskOf,
-    execTool: makeDefaultExecTool(runTool, riskOf),
+    execTool: makeDefaultExecTool((name, input) => runTool(name, input, { signal: control.signal }), riskOf),
     seed,
     shouldStop: control.shouldStop,
     onStatus: opts.onStatus,
@@ -110,7 +111,7 @@ export async function resumeAndRunGoal(
   });
   const result = pipeline.run;
 
-  rec = { ...rec, status: finalStatus(result), updatedAt: opts.now };
+  rec = { ...rec, status: control.wasStopped() ? "cancelled" : finalStatus(result), updatedAt: opts.now };
   await upsertGoal(rec, storage);
   return { record: rec, result };
   } finally { control.finish(); }

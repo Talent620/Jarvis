@@ -1,3 +1,4 @@
+import { abortable, throwIfAborted } from "./abort";
 import { store } from "./store";
 import { PROVIDERS, PROVIDER_LIST } from "./providers/registry";
 import { orderedKeys } from "./keys";
@@ -63,13 +64,15 @@ function withTimeout<T>(p: Promise<T>): Promise<T> {
 }
 
 /** Zapytaj jednego członka konsylium (bez narzędzi — czyste rozumowanie). */
-async function askMember(m: CouncilMember, system: string, history: Msg[]): Promise<string | null> {
+async function askMember(m: CouncilMember, system: string, history: Msg[], signal?: AbortSignal): Promise<string | null> {
+  throwIfAborted(signal);
   // Lokalni członkowie (Ollama/WebLLM) nie mają klucza — autoryzują się adresem serwera/WebGPU.
   const apiKey = m.provider === "ollama" || m.provider === "webllm" ? "local" : orderedKeys(m.provider)[0];
   if (!apiKey) return null;
   try {
     const r = await withTimeout(
       PROVIDERS[m.provider].impl({
+        signal,
         system,
         webSearch: false,
         tools: [],
@@ -81,6 +84,7 @@ async function askMember(m: CouncilMember, system: string, history: Msg[]): Prom
     );
     return (r.text || "").trim() || null;
   } catch {
+    throwIfAborted(signal);
     return null; // jeden model padł — konsylium działa dalej z pozostałymi
   }
 }
@@ -112,7 +116,8 @@ function parseJudge(raw: string): { answer: string; consensus: CouncilReply["cou
  * poszczególnych modeli i ocenę zgodności. Gdy dostępny jest mniej niż 2
  * dostawców, degraduje do pojedynczej odpowiedzi (consensus: "single").
  */
-export async function askCouncil(history: Msg[]): Promise<CouncilReply> {
+export async function askCouncil(history: Msg[], signal?: AbortSignal): Promise<CouncilReply> {
+  throwIfAborted(signal);
   const members = councilMembers(3);
   const userName = store.settings.userName || "Sir";
 
@@ -123,7 +128,7 @@ export async function askCouncil(history: Msg[]): Promise<CouncilReply> {
   // Mniej niż 2 modele → nie ma czego radzić; jeden ekspert = zwykła odpowiedź.
   if (members.length < 2) {
     const only = members[0];
-    const text = only ? await askMember(only, memberSys, history) : null;
+    const text = only ? await askMember(only, memberSys, history, signal) : null;
     return {
       text: text || "Brak skonfigurowanego dostawcy AI. Dodaj klucz w ⚙ → AI.",
       tools: [],
@@ -132,7 +137,7 @@ export async function askCouncil(history: Msg[]): Promise<CouncilReply> {
   }
 
   // 1) Pytamy wszystkich równolegle.
-  const raw = await Promise.all(members.map((m) => askMember(m, memberSys, history)));
+  const raw = await abortable(Promise.all(members.map((m) => askMember(m, memberSys, history, signal))), signal);
   const answers = members
     .map((m, i) => ({ label: m.label, text: raw[i] }))
     .filter((x): x is { label: string; text: string } => !!x.text);
@@ -155,7 +160,7 @@ export async function askCouncil(history: Msg[]): Promise<CouncilReply> {
         `\n\nZsyntezuj najlepszą odpowiedź i oceń zgodność. Zwróć sam JSON.`,
     },
   ];
-  const judgeRaw = await askMember(judge, JUDGE_SYSTEM, judgeHistory);
+  const judgeRaw = await askMember(judge, JUDGE_SYSTEM, judgeHistory, signal);
   const parsed = judgeRaw ? parseJudge(judgeRaw) : null;
 
   if (!parsed) {

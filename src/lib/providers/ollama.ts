@@ -1,3 +1,4 @@
+import { throwIfAborted } from "../abort";
 import { fetchTimeout } from "../http";
 import { runTool } from "../tools";
 import type { AskCtx, JarvisReply } from "./types";
@@ -49,17 +50,19 @@ export async function askOllamaNative(
   ctx: AskCtx,
   config: { base: string; think: boolean; options: Record<string, number> },
 ): Promise<JarvisReply> {
+  throwIfAborted(ctx.signal);
   // Metadane modelu muszą potwierdzać obsługę obrazu. Bez tego model tekstowy
   // mógłby odpowiedzieć na podstawie samej historii i udawać analizę ekranu.
   if (ctx.history.some((message) => !!message.image)) {
     let capabilities: unknown;
     try {
       const r = await fetchTimeout(`${config.base}/api/show`, {
+        signal: ctx.signal,
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ model: ctx.model }),
       }, 15000);
       if (r.ok) capabilities = (await r.json() as { capabilities?: unknown }).capabilities;
-    } catch { /* brak potwierdzenia — nie przekazuj obrazu */ }
+    } catch { throwIfAborted(ctx.signal); /* brak potwierdzenia — nie przekazuj obrazu */ }
     if (!Array.isArray(capabilities) || !capabilities.includes("vision")) {
       throw new Error("Nie mogę potwierdzić obsługi obrazów przez ten model Ollamy. Wybierz zainstalowany model wizyjny i sprawdź jego możliwości w Ollamie.");
     }
@@ -81,8 +84,11 @@ export async function askOllamaNative(
   let outputTokens = 0;
   let useTools = tools.length > 0;
 
+  throwIfAborted(ctx.signal);
   for (let guard = 0; guard < 8; guard += 1) {
+    throwIfAborted(ctx.signal);
     const response = await fetchTimeout(`${config.base}/api/chat`, {
+      signal: ctx.signal,
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -108,7 +114,10 @@ export async function askOllamaNative(
         : rawError && typeof rawError === "object" && "message" in rawError
           ? String((rawError as { message?: unknown }).message || `Ollama HTTP ${response.status}`)
           : `Ollama HTTP ${response.status}`;
-      if (useTools && /does not support tools|tools?.*not support/i.test(error)) { useTools = false; continue; }
+      if (useTools && /does not support tools|tools?.*not support/i.test(error)) {
+        if (ctx.requiresTools) throw new Error("Ten model nie obsługuje narzędzi wymaganych do wykonania polecenia. Nie wykonano działania; wybierz zgodny model lokalny.");
+        useTools = false; continue;
+      }
       if (/(context (?:length|window|size).*(?:exceed|limit|too (?:long|large)|overflow)|(?:exceed|too (?:long|large)|overflow).*(?:context (?:length|window|size))|too many tokens)/i.test(error)) {
         throw new Error(`Ollama odrzuciła zapytanie: przekroczono kontekst modelu. Skróć polecenie lub ogranicz kontekst projektu; nie zmieniono modelu ani ustawień. Szczegóły: ${error}`);
       }
@@ -116,18 +125,21 @@ export async function askOllamaNative(
     }
     inputTokens += data.prompt_eval_count || 0;
     outputTokens += data.eval_count || 0;
+    throwIfAborted(ctx.signal);
     const message = data.message;
     messages.push(message);
+    throwIfAborted(ctx.signal);
     const calls = message.tool_calls || [];
     if (calls.length) {
       for (const call of calls) {
         const name = call.function.name;
+        if (!useTools || !ctx.tools.some((tool) => tool.name === name)) throw new Error(`Model zażądał narzędzia spoza udostępnionego zestawu: ${name}. Nie wykonano działania.`);
         used.add(name);
         let args: unknown = call.function.arguments || {};
         if (typeof args === "string") {
           try { args = JSON.parse(args); } catch { args = {}; }
         }
-        const output = await runTool(name, args);
+        const output = await runTool(name, args, { signal: ctx.signal });
         messages.push({ role: "tool", tool_name: name, content: output });
       }
       continue;

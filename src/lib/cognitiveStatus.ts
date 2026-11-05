@@ -38,7 +38,7 @@ export function redactSecret(s: string): string {
 
 const STATUS_LABEL: Record<GoalRecord["status"], string> = {
   queued: "w kolejce", running: "w toku", waiting_consent: "czeka na zgodę",
-  waiting_user: "czeka na sprawdzenie", paused: "wstrzymany", completed: "ukończony", failed: "nieudany",
+  waiting_user: "czeka na sprawdzenie", paused: "wstrzymany", completed: "ukończony", failed: "nieudany", cancelled: "zatrzymany przez użytkownika",
 };
 
 const uniq = (xs: string[]): string[] => [...new Set(xs.filter(Boolean))];

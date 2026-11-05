@@ -1,0 +1,13 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/stopExecution.test.ts (2 tests) 9ms
+ ✓ tests/ollamaActionCapability.test.ts (2 tests) 9ms
+ ✓ tests/ollamaToolsFallback.test.ts (2 tests) 14ms
+ ✓ tests/stopConsent.test.ts (1 test) 6ms
+
+ Test Files  4 passed (4)
+      Tests  7 passed (7)
+   Start at  18:54:57
+   Duration  2.26s (transform 880ms, setup 0ms, collect 2.98s, tests 38ms, environment 1.47s, prepare 321ms)
+

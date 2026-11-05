@@ -1,3 +1,4 @@
+import { abortable, throwIfAborted } from "./abort";
 import { store, uid } from "./store";
 import type { AuditEntry } from "../types";
 
@@ -126,7 +127,7 @@ export function requiresFreshConsent(tool: string): boolean {
 }
 
 // --- Most do UI: handler zgody i emiter kroków ---
-export interface ConsentRequest { tool: string; input: unknown; risk: Risk; freshOnly?: boolean; }
+export interface ConsentRequest { tool: string; input: unknown; risk: Risk; freshOnly?: boolean; signal?: AbortSignal; }
 let consentHandler: ((req: ConsentRequest) => Promise<{ allow: boolean; remember: boolean }>) | null = null;
 export function setConsentHandler(fn: typeof consentHandler) { consentHandler = fn; }
 
@@ -197,7 +198,8 @@ export function undoAction(entry: AuditEntry): string {
  * Bramka uprawnień: dla narzędzi read przepuszcza; dla write/outbound pyta UI
  * (chyba że użytkownik zapamiętał zgodę). Zwraca true, jeśli można wykonać.
  */
-export async function requestConsent(tool: string, input: unknown): Promise<boolean> {
+export async function requestConsent(tool: string, input: unknown, signal?: AbortSignal): Promise<boolean> {
+  throwIfAborted(signal);
   const risk = riskOf(tool);
   // Pytamy tylko o akcje zewnętrzne/nieodwracalne; lokalne zapisy idą automatycznie.
   if (risk !== "outbound") return true;
@@ -205,12 +207,14 @@ export async function requestConsent(tool: string, input: unknown): Promise<bool
   // Nieodwracalne wysyłki i ustawienie „zawsze pytaj” nie respektują szerokich
   // zgód sesyjnych ani zgód zapamiętanych dla samego typu narzędzia.
   if (!freshOnly) {
-    if (isAutoConsent()) return true;
-    if (hasOutboundScope(tool)) return true;
+    if (isClassified(tool) && isAutoConsent()) return true;
+    // A plugin discovered later cannot inherit wildcard consent. Named grants remain valid.
+    if (hasOutboundScope(tool) && (isClassified(tool) || scopeTools !== "*")) return true;
     if (loadConsents()[tool] === "allow") return true;
   }
   if (!consentHandler) return false;
-  const { allow, remember } = await consentHandler({ tool, input, risk, freshOnly });
+  const { allow, remember } = await abortable(consentHandler({ tool, input, risk, freshOnly, signal }), signal);
+  throwIfAborted(signal);
   if (allow && remember && !freshOnly) {
     const consents = loadConsents();
     consents[tool] = "allow";

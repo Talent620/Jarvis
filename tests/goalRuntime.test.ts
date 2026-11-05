@@ -3,7 +3,7 @@
 // zapisuje wynik i finalny status. Cel jest potem wczytywalny (przeżyłby restart). Zero płatnego API.
 import { describe, it, expect } from "vitest";
 import { startAndRunGoal, loadGoalsNewestFirst, resumableGoalsNewestFirst, resumeAndRunGoal } from "../src/lib/goalRuntime";
-import { isGoalRunning, requestGoalPause } from "../src/lib/goalControl";
+import { isGoalRunning, requestGoalPause, stopAllGoalRuns } from "../src/lib/goalControl";
 import { newGoal, recordStepOutcome, upsertGoal, type GoalStorage } from "../src/lib/goalState";
 import { confirmed } from "../src/lib/actionOutcome";
 import type { AgentPlan } from "../src/lib/agentPlanner";
@@ -110,3 +110,12 @@ describe("goalRuntime — bezpieczeństwo zapisu postępu", () => {
     expect(isGoalRunning("FAIL-CHECKPOINT")).toBe(false);
   });
 });
+
+ it("STOP zapisuje cancelled i nie uruchamia następnego kroku ani automatycznego wznowienia", async () => {
+    const storage = memStore();
+    const plan: AgentPlan = { goal: "STOP", steps: [{ id: "a", intent: "pierwszy", tool: "list_tasks" }, { id: "b", intent: "drugi", tool: "list_notes" }] };
+    const { record } = await startAndRunGoal({ goal: "STOP", plan, correlationId: "STOP_ORION", now: NOW, onStep: () => { stopAllGoalRuns(); } }, storage);
+    expect(record.status).toBe("cancelled");
+    expect(record.results.b).toBeUndefined();
+    await expect(resumeAndRunGoal(record, { now: NOW + 1 }, storage)).rejects.toThrow(/STOP/);
+ });

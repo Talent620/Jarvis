@@ -1,0 +1,106 @@
+[
+  {
+    "id": "D1-local-task",
+    "level": "B, deterministic tool",
+    "status": "PASS",
+    "detail": "Normal composer → askJarvis → requestConsent → real add_task → persisted Polish text and audit; browser process restarted, exactly one task and saved history. Not a model/desktop/resume test.",
+    "evidence": [
+      "D1-ui.png",
+      "D1-before-restart.json",
+      "D1-after-restart.json"
+    ]
+  },
+  {
+    "id": "S1",
+    "level": "D",
+    "status": "BLOCKED",
+    "detail": "No actual model generation could be attempted; exact discovery stage in ollama.json.",
+    "evidence": [
+      "ollama.json"
+    ],
+    "blocker": {
+      "dependency": "reachable configured Ollama API",
+      "command": [
+        "GET http://127.0.0.1:11435/api/tags (3000ms)",
+        "GET http://127.0.0.1:11434/api/tags (3000ms)"
+      ],
+      "evidence": [
+        "ollama.json"
+      ],
+      "scenarios": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6",
+        "S7",
+        "S8"
+      ],
+      "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+    }
+  },
+  {
+    "id": "S2",
+    "level": "D",
+    "status": "NOT_RUN",
+    "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+    "evidence": [
+      "ollama.json"
+    ]
+  },
+  {
+    "id": "S3",
+    "level": "D",
+    "status": "NOT_RUN",
+    "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+    "evidence": [
+      "ollama.json"
+    ]
+  },
+  {
+    "id": "S4",
+    "level": "C/D or E",
+    "status": "NOT_RUN",
+    "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+    "evidence": [
+      "ollama.json"
+    ]
+  },
+  {
+    "id": "S5",
+    "level": "C/D or E",
+    "status": "NOT_RUN",
+    "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+    "evidence": [
+      "ollama.json"
+    ]
+  },
+  {
+    "id": "S6",
+    "level": "D",
+    "status": "NOT_RUN",
+    "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+    "evidence": [
+      "ollama.json"
+    ]
+  },
+  {
+    "id": "S7",
+    "level": "D",
+    "status": "NOT_RUN",
+    "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+    "evidence": [
+      "ollama.json"
+    ]
+  },
+  {
+    "id": "S8",
+    "level": "D",
+    "status": "NOT_RUN",
+    "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+    "evidence": [
+      "ollama.json"
+    ]
+  }
+]

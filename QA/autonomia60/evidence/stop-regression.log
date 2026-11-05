@@ -1,0 +1,14 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/generation.test.ts (4 tests) 5ms
+ ✓ tests/goalControl.test.ts (1 test) 4ms
+ ✓ tests/permissions.test.ts (10 tests) 12ms
+ ✓ tests/goalRuntime.test.ts (7 tests) 12ms
+ ✓ tests/stopExecution.test.ts (1 test) 16ms
+
+ Test Files  5 passed (5)
+      Tests  23 passed (23)
+   Start at  18:53:01
+   Duration  2.26s (transform 2.12s, setup 0ms, collect 3.09s, tests 49ms, environment 698ms, prepare 591ms)
+

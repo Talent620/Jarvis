@@ -1,0 +1,76 @@
+{
+  "baseline_commit": "b3234ca906305712ade35363cffc3524c9a1b21a",
+  "full_regression": {
+    "passed": 2888,
+    "failed": 2,
+    "failed_file": "tests/license.test.ts",
+    "command": "npm test"
+  },
+  "provider_regression": {
+    "passed": 117,
+    "failed": 0
+  },
+  "final_guards": {
+    "passed": 14,
+    "failed": 0
+  },
+  "ui_fixture": {
+    "layer": "UI + protocol fixture",
+    "source": {
+      "base_commit": "b3234ca906305712ade35363cffc3524c9a1b21a",
+      "tracked_code_diff_sha256": "5076d9be61cd24b4dc7ddfcaf4e521390600d01e4cf06fc87d64fb1b97e8faef",
+      "test_build": "2026-11-05 18:56",
+      "browser": "155.0.8059.79",
+      "new_source_files": {
+        "src/lib/abort.ts": "3bbdec2bc8d1c205554226a25a6269c923dd703afdf7fe4ce3d0c90c1aabf6d7",
+        "src/lib/controlCommand.ts": "99acd11d2d9cdc10a1c3893054f0792ebc2e58a14d8523c6ad0058d4f8ebdde4"
+      }
+    },
+    "results": [
+      {
+        "trial": 1,
+        "variant": "global-button",
+        "outcome": "PASS",
+        "acknowledged_ms": 58,
+        "model": "controlled protocol fixture, not LLM",
+        "late_side_effects": 0,
+        "transport_aborted": true,
+        "continued_local_command": true
+      },
+      {
+        "trial": 2,
+        "variant": "typed-stop",
+        "outcome": "PASS",
+        "acknowledged_ms": 27,
+        "model": "controlled protocol fixture, not LLM",
+        "late_side_effects": 0,
+        "transport_aborted": true,
+        "continued_local_command": true
+      },
+      {
+        "trial": 3,
+        "variant": "global-button",
+        "outcome": "PASS",
+        "acknowledged_ms": 51,
+        "model": "controlled protocol fixture, not LLM",
+        "late_side_effects": 0,
+        "transport_aborted": true,
+        "continued_local_command": true
+      }
+    ]
+  },
+  "acceptance_60": {
+    "BLOCKED": 58,
+    "NOT_RUN": 2,
+    "PASS": 0,
+    "FAIL": 0,
+    "note": "Desktop-live acceptance only; baseline and fixed partial variants retain separate FAIL/PASS."
+  },
+  "build": "PASS: npm run build, including TypeScript; chunks warning remains",
+  "lint": "PASS: npm run lint, no errors or warnings",
+  "published": false,
+  "patch_sha256": "1b60591736f93eb73ca675bcd7e2b5c3b1572b98fe306625ca8fdfd1ca8b3949",
+  "secret_scan": "PASS for tracked repository files; no actual secrets read",
+  "rollback_patch_check": "PASS: git apply --check --reverse implementation.patch",
+  "desktop_package_execution": "BLOCKED: missing graphical session; previous package is not treated as this version"
+}

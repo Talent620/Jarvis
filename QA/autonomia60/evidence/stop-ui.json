@@ -1,0 +1,45 @@
+{
+  "layer": "UI + protocol fixture",
+  "source": {
+    "base_commit": "b3234ca906305712ade35363cffc3524c9a1b21a",
+    "tracked_code_diff_sha256": "5076d9be61cd24b4dc7ddfcaf4e521390600d01e4cf06fc87d64fb1b97e8faef",
+    "test_build": "2026-11-05 18:56",
+    "browser": "155.0.8059.79",
+    "new_source_files": {
+      "src/lib/abort.ts": "3bbdec2bc8d1c205554226a25a6269c923dd703afdf7fe4ce3d0c90c1aabf6d7",
+      "src/lib/controlCommand.ts": "99acd11d2d9cdc10a1c3893054f0792ebc2e58a14d8523c6ad0058d4f8ebdde4"
+    }
+  },
+  "results": [
+    {
+      "trial": 1,
+      "variant": "global-button",
+      "outcome": "PASS",
+      "acknowledged_ms": 58,
+      "model": "controlled protocol fixture, not LLM",
+      "late_side_effects": 0,
+      "transport_aborted": true,
+      "continued_local_command": true
+    },
+    {
+      "trial": 2,
+      "variant": "typed-stop",
+      "outcome": "PASS",
+      "acknowledged_ms": 27,
+      "model": "controlled protocol fixture, not LLM",
+      "late_side_effects": 0,
+      "transport_aborted": true,
+      "continued_local_command": true
+    },
+    {
+      "trial": 3,
+      "variant": "global-button",
+      "outcome": "PASS",
+      "acknowledged_ms": 51,
+      "model": "controlled protocol fixture, not LLM",
+      "late_side_effects": 0,
+      "transport_aborted": true,
+      "continued_local_command": true
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "environment",
+    "level": "A",
+    "status": "PASS",
+    "detail": "Recorded current checkout, source fingerprint and non-secret session/tool availability.",
+    "evidence": [
+      "environment.json",
+      "source.json"
+    ]
+  },
+  {
+    "id": "Ollama-discovery",
+    "level": "D prerequisite",
+    "status": "BLOCKED",
+    "detail": "Source: unresolved: no user profile available; bounded discovery of both known ports; selected: none. No generation claimed.",
+    "evidence": [
+      "ollama.json"
+    ],
+    "blocker": {
+      "dependency": "reachable configured Ollama API",
+      "command": [
+        "GET http://127.0.0.1:11435/api/tags (3000ms)",
+        "GET http://127.0.0.1:11434/api/tags (3000ms)"
+      ],
+      "evidence": [
+        "ollama.json"
+      ],
+      "scenarios": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6",
+        "S7",
+        "S8"
+      ],
+      "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+    }
+  }
+]

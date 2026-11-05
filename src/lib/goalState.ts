@@ -17,7 +17,8 @@ export type GoalStatus =
   | "waiting_user"    // czeka na sprawdzenie/decyzję użytkownika (np. ATTEMPTED)
   | "paused"          // zatrzymany przez użytkownika
   | "completed"       // wszystkie kroki potwierdzone
-  | "failed";         // trwały błąd / anulowany
+  | "failed"
+  | "cancelled";         // trwały błąd / anulowany
 
 export interface GoalRecord {
   id: string;
@@ -84,7 +85,7 @@ export function nextRunnableStep(rec: GoalRecord): PlanStep | null {
 
 /** Pure: status całości z wyników kroków (deterministyczny). */
 export function computeStatus(rec: GoalRecord): GoalStatus {
-  if (rec.status === "paused" || rec.status === "failed") return rec.status;
+  if (rec.status === "paused" || rec.status === "failed" || rec.status === "cancelled") return rec.status;
   const steps = rec.plan.steps || [];
   if (steps.length && steps.every((s) => isConfirmed(rec.results[s.id]))) return "completed";
   if (steps.some((s) => isAttempted(rec.results[s.id]))) return "waiting_user";
@@ -186,7 +187,7 @@ export function describeGoal(rec: GoalRecord): string {
   const done = steps.filter((s) => isConfirmed(rec.results[s.id])).length;
   const label: Record<GoalStatus, string> = {
     queued: "w kolejce", running: "w toku", waiting_consent: "czeka na zgodę",
-    waiting_user: "czeka na Twoje sprawdzenie", paused: "wstrzymany", completed: "ukończony", failed: "nieudany",
+    waiting_user: "czeka na Twoje sprawdzenie", paused: "wstrzymany", completed: "ukończony", failed: "nieudany", cancelled: "zatrzymany przez użytkownika",
   };
   return `Cel: ${rec.goal} — ${label[rec.status]} (${done}/${steps.length} kroków potwierdzonych)`;
 }

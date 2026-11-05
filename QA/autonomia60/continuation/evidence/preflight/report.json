@@ -1,0 +1,135 @@
+{
+  "run_id": "2026-11-05T19-34-05-927Z-preflight-e8615a3e",
+  "kind": "preflight",
+  "finished_at": "2026-11-05T19:34:06.016Z",
+  "source": {
+    "repo": "/workspace/Jarvis",
+    "branch": "work",
+    "commit": "b3234ca906305712ade35363cffc3524c9a1b21a",
+    "local_changes": "M .gitignore\n M electron/local-ollama.cjs\n M electron/main.cjs\n M electron/preload.cjs\n M electron/workspace-tools.cjs\n M eslint.config.js\n M package-lock.json\n M package.json\n M src/App.tsx\n M src/components/Composer.tsx\n M src/components/GoalStatusPanel.tsx\n M src/lib/brain.ts\n M src/lib/cognitiveStatus.ts\n M src/lib/council.ts\n M src/lib/desktop.ts\n M src/lib/generation.ts\n M src/lib/goalControl.ts\n M src/lib/goalProgress.ts\n M src/lib/goalRuntime.ts\n M src/lib/goalState.ts\n M src/lib/http.ts\n M src/lib/permissions.ts\n M src/lib/providers/anthropic.ts\n M src/lib/providers/gemini.ts\n M src/lib/providers/ollama.ts\n M src/lib/providers/openai.ts\n M src/lib/providers/types.ts\n M src/lib/providers/webllm.ts\n M src/lib/tools.ts\n M src/styles/index.css\n M tests/goalRuntime.test.ts\n M tests/mcp.test.ts\n M tests/plugins.test.ts\n?? QA/autonomia60/\n?? scripts/qa/\n?? src/lib/abort.ts\n?? src/lib/controlCommand.ts\n?? src/lib/localToolCommands.ts\n?? tests/configuredOllamaPort.test.ts\n?? tests/fetchCancellation.test.ts\n?? tests/localToolCommands.test.ts\n?? tests/ollamaActionCapability.test.ts\n?? tests/providerStop.test.ts\n?? tests/qaConfiguration.test.ts\n?? tests/qaDiscoveredControls.test.ts\n?? tests/stopConsent.test.ts\n?? tests/stopExecution.test.ts\n?? tests/stopWorkspaceProcess.test.ts\n?? tests/unknownToolConsent.test.ts\n?? tests/webllmCapabilityGuard.test.ts",
+    "diff_sha256": "4638c115cd35f6ca9dfc92ab9a315736661b3ec35f99b49596d72bbd229529cc",
+    "new_source_sha256": {
+      "scripts/qa/README.md": "ba2c28dac1f1e362789f92dc42bcdcf3ecc557c01911a96dcb9af072d7f038a2",
+      "scripts/qa/agent-smoke.cjs": "461971eb8e0e3577604e9baaba900ba4bc127eef00c8401e70b99232d5246373",
+      "scripts/qa/common.cjs": "1cef0a1fd3075d7ff4185f0158d2a9a9b9cf17f946455a8cd56df572d196a1a4",
+      "scripts/qa/desktop.cjs": "cc495749d84339659d6f69f9ca85201f85a35bb203c0df44624ec6afad9b56e3",
+      "scripts/qa/preflight.cjs": "536a06bbf4d2e4ec38a8866553ae60626132b5989211f3677de6a3aa086795d3",
+      "src/lib/abort.ts": "3bbdec2bc8d1c205554226a25a6269c923dd703afdf7fe4ce3d0c90c1aabf6d7",
+      "src/lib/controlCommand.ts": "99acd11d2d9cdc10a1c3893054f0792ebc2e58a14d8523c6ad0058d4f8ebdde4",
+      "src/lib/localToolCommands.ts": "5d1d3b62143d75642fb30cc8da294eedb9eecf15aeed620dcb4c1bfa6f0ec1c0"
+    },
+    "app_version": "2.0.0",
+    "app_entry": "electron/main.cjs -> dist/index.html"
+  },
+  "results": [
+    {
+      "id": "environment",
+      "level": "A",
+      "status": "PASS",
+      "detail": "Recorded current checkout, source fingerprint and non-secret session/tool availability.",
+      "evidence": [
+        "environment.json",
+        "source.json"
+      ]
+    },
+    {
+      "id": "Ollama-discovery",
+      "level": "D prerequisite",
+      "status": "BLOCKED",
+      "detail": "Source: unresolved: no user profile available; bounded discovery of both known ports; selected: none. No generation claimed.",
+      "evidence": [
+        "ollama.json"
+      ],
+      "blocker": {
+        "dependency": "reachable configured Ollama API",
+        "command": [
+          "GET http://127.0.0.1:11435/api/tags (3000ms)",
+          "GET http://127.0.0.1:11434/api/tags (3000ms)"
+        ],
+        "evidence": [
+          "ollama.json"
+        ],
+        "scenarios": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "S6",
+          "S7",
+          "S8"
+        ],
+        "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+      }
+    }
+  ],
+  "environment": {
+    "os": "6.18.57",
+    "platform": "linux",
+    "architecture": "x64",
+    "node": "v24.22.1",
+    "os_release": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.6\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n",
+    "container_markers": {
+      "dockerenv": false,
+      "containerenv": false
+    },
+    "cwd": "/workspace/Jarvis",
+    "uid": 1000,
+    "session_present": {
+      "DISPLAY": false,
+      "WAYLAND_DISPLAY": false,
+      "XDG_RUNTIME_DIR": false,
+      "DBUS_SESSION_BUS_ADDRESS": false,
+      "XDG_SESSION_TYPE": false
+    },
+    "session_bus_socket": false,
+    "tools": {
+      "chromium": "/usr/bin/chromium",
+      "chromium-browser": null,
+      "Xvfb": null,
+      "xvfb-run": null,
+      "Xorg": "/usr/bin/Xorg",
+      "xdotool": null,
+      "ollama": null
+    },
+    "electron_version": "33.4.11",
+    "actual_user_installation": "Not inspected. This is the current test machine, not assumed to be /home/qw/Jarvis-GitHub."
+  },
+  "ollama": {
+    "candidates": [
+      "http://127.0.0.1:11435",
+      "http://127.0.0.1:11434"
+    ],
+    "url_source": "unresolved: no user profile available; bounded discovery of both known ports",
+    "model": "",
+    "model_source": "not selected; supply --model from installed models",
+    "production_settings_changed": false,
+    "probes": [
+      {
+        "origin": "http://127.0.0.1:11435",
+        "command": "GET http://127.0.0.1:11435/api/tags (3000ms)",
+        "reachable": false,
+        "valid_model_list": false,
+        "error": "ECONNREFUSED",
+        "models": []
+      },
+      {
+        "origin": "http://127.0.0.1:11434",
+        "command": "GET http://127.0.0.1:11434/api/tags (3000ms)",
+        "reachable": false,
+        "valid_model_list": false,
+        "error": "ECONNREFUSED",
+        "models": []
+      }
+    ],
+    "selected_origin": null,
+    "stages": {
+      "tags": "BLOCKED",
+      "model": "NOT_RUN",
+      "capabilities": "NOT_RUN",
+      "generation": "NOT_RUN",
+      "jarvis_chat": "NOT_RUN",
+      "jarvis_tool": "NOT_RUN"
+    }
+  }
+}

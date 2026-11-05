@@ -1,0 +1,24 @@
+{
+  "viewport": {
+    "width": 1100,
+    "height": 820
+  },
+  "brand": {
+    "x": 186,
+    "y": 18,
+    "width": 180.78125,
+    "height": 36
+  },
+  "composer": {
+    "x": 186,
+    "y": 670,
+    "width": 620,
+    "height": 48
+  },
+  "stop": {
+    "x": 680.71875,
+    "y": 18,
+    "width": 61.28125,
+    "height": 36
+  }
+}

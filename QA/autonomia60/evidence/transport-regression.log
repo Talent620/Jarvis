@@ -1,0 +1,12 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/fetchCancellation.test.ts (2 tests) 16ms
+ ✓ tests/stopExecution.test.ts (2 tests) 22ms
+ ✓ tests/providerStop.test.ts (3 tests) 30ms
+
+ Test Files  3 passed (3)
+      Tests  7 passed (7)
+   Start at  19:04:29
+   Duration  3.22s (transform 1.66s, setup 0ms, collect 3.91s, tests 68ms, environment 1.42s, prepare 635ms)
+

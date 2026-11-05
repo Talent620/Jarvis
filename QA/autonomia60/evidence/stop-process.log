@@ -1,0 +1,10 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/stopWorkspaceProcess.test.ts (1 test) 43ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  18:58:30
+   Duration  331ms (transform 25ms, setup 0ms, collect 38ms, tests 43ms, environment 0ms, prepare 68ms)
+

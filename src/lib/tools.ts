@@ -1,3 +1,4 @@
+import { throwIfAborted } from "./abort";
 import { store, uid } from "./store";
 import { fetchTimeout } from "./http";
 import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
@@ -1909,12 +1910,14 @@ export function unregisterTool(name: string): boolean {
   return true;
 }
 
-export async function runTool(name: string, input: unknown): Promise<string> {
+export async function runTool(name: string, input: unknown, execution: { signal?: AbortSignal } = {}): Promise<string> {
+  throwIfAborted(execution.signal);
   const fn = executors[name];
   if (!fn) return `Nieznane narzędzie: ${name}`;
 
   // Bramka uprawnień (write/outbound wymagają zgody; read przechodzi).
-  const allowed = await requestConsent(name, input);
+  const allowed = await requestConsent(name, input, execution.signal);
+  throwIfAborted(execution.signal);
   if (!allowed) {
     audit({ tool: name, input, status: "denied" });
     return "Anulowano — użytkownik nie wyraził zgody na tę akcję.";

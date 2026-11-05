@@ -1,0 +1,238 @@
+{
+  "source_commit": "b3234ca906305712ade35363cffc3524c9a1b21a",
+  "branch": "work",
+  "app_version": "2.0.0",
+  "changes_pushed": false,
+  "layers": {
+    "A": {
+      "unit_tests": {
+        "PASS": 2901,
+        "FAIL": 2
+      },
+      "known_failures": "tests/license.test.ts",
+      "lint": "PASS",
+      "build": "PASS"
+    },
+    "B": {
+      "D1-local-task": "PASS",
+      "proof": "evidence/smoke/report.json"
+    },
+    "C": {
+      "status": "BLOCKED",
+      "proof": "evidence/desktop/electron-stderr.log",
+      "alternate_attempts": [
+        "evidence/headless/electron-stderr.log",
+        "evidence/swiftshader/electron-stderr.log"
+      ]
+    },
+    "D": {
+      "status": "BLOCKED",
+      "stage": "API connection",
+      "proof": "evidence/smoke/ollama.json"
+    },
+    "E": {
+      "status": "BLOCKED",
+      "dependency": "Access to actual user desktop/session is not available in this cloud executor",
+      "command": "environment_status and non-secret DISPLAY/WAYLAND/DBus availability inspection",
+      "proof": "evidence/smoke/environment.json",
+      "scenarios": [
+        "S4",
+        "S5"
+      ],
+      "action": "Run tests in the logged-in user desktop session; do not infer it from cloud Chromium."
+    }
+  },
+  "S1_S8": [
+    {
+      "id": "S1",
+      "level": "D",
+      "status": "BLOCKED",
+      "detail": "No actual model generation could be attempted; exact discovery stage in ollama.json.",
+      "evidence": [
+        "ollama.json"
+      ],
+      "blocker": {
+        "dependency": "reachable configured Ollama API",
+        "command": [
+          "GET http://127.0.0.1:11435/api/tags (3000ms)",
+          "GET http://127.0.0.1:11434/api/tags (3000ms)"
+        ],
+        "evidence": [
+          "ollama.json"
+        ],
+        "scenarios": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "S6",
+          "S7",
+          "S8"
+        ],
+        "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+      }
+    },
+    {
+      "id": "S2",
+      "level": "D",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    },
+    {
+      "id": "S3",
+      "level": "D",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    },
+    {
+      "id": "S4",
+      "level": "C/D or E",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    },
+    {
+      "id": "S5",
+      "level": "C/D or E",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    },
+    {
+      "id": "S6",
+      "level": "D",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    },
+    {
+      "id": "S7",
+      "level": "D",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    },
+    {
+      "id": "S8",
+      "level": "D",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    }
+  ],
+  "known_defects": [
+    {
+      "id": "G1",
+      "scenarios": [
+        "S2"
+      ],
+      "description": "Project creation exists indirectly through add_task(project), but no verified general project+README workflow or independent file oracle in the current smoke.",
+      "source": [
+        "src/lib/tools.ts:add_task",
+        "src/components/Projects.tsx",
+        "scripts/qa/agent-smoke.cjs"
+      ]
+    },
+    {
+      "id": "G2",
+      "scenarios": [
+        "S3"
+      ],
+      "description": "Browser adapter opens URL or reads public GET. It does not automate DOM click, controlled loopback access or selection.",
+      "source": [
+        "src/lib/systemMcp.ts",
+        "electron/workspace-tools.cjs"
+      ]
+    },
+    {
+      "id": "G3",
+      "scenarios": [
+        "S5"
+      ],
+      "description": "Linux keyboard path is X11/ASCII-limited; focus/consent and Polish clipboard/editor save remain unverified, with no complete smoke oracle.",
+      "source": [
+        "electron/linux-keyboard.cjs",
+        "src/lib/permissions.ts"
+      ]
+    },
+    {
+      "id": "G4",
+      "scenarios": [
+        "S6"
+      ],
+      "description": "Generated-tool execution fails closed: no isolated execution sandbox implemented. Generic terminal is not a substitute.",
+      "source": [
+        "electron/workspace-tools.cjs",
+        "src/lib/systemMcp.ts"
+      ]
+    },
+    {
+      "id": "G5",
+      "scenarios": [
+        "S7",
+        "S8"
+      ],
+      "description": "Control regressions are covered at A, persisted deterministic task at B. No real-model multistep STOP/restart effect oracle implemented in the current runner.",
+      "source": [
+        "scripts/qa/agent-smoke.cjs",
+        "tests/qaDiscoveredControls.test.ts"
+      ]
+    }
+  ],
+  "ollama": {
+    "candidates": [
+      "http://127.0.0.1:11435",
+      "http://127.0.0.1:11434"
+    ],
+    "url_source": "unresolved: no user profile available; bounded discovery of both known ports",
+    "model": "",
+    "model_source": "not selected; supply --model from installed models",
+    "production_settings_changed": false,
+    "probes": [
+      {
+        "origin": "http://127.0.0.1:11435",
+        "command": "GET http://127.0.0.1:11435/api/tags (3000ms)",
+        "reachable": false,
+        "valid_model_list": false,
+        "error": "ECONNREFUSED",
+        "models": []
+      },
+      {
+        "origin": "http://127.0.0.1:11434",
+        "command": "GET http://127.0.0.1:11434/api/tags (3000ms)",
+        "reachable": false,
+        "valid_model_list": false,
+        "error": "ECONNREFUSED",
+        "models": []
+      }
+    ],
+    "selected_origin": null,
+    "stages": {
+      "tags": "BLOCKED",
+      "model": "NOT_RUN",
+      "capabilities": "NOT_RUN",
+      "generation": "NOT_RUN",
+      "jarvis_chat": "NOT_RUN",
+      "jarvis_tool": "NOT_RUN"
+    }
+  },
+  "normal_startup": "Electron renderer never loaded; normal license path NOT_RUN. Development web license bypass was isolated to its own Vite child.",
+  "user_decision": "No Xvfb/system installation. User will run Electron locally."
+}

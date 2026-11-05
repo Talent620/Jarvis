@@ -56,7 +56,7 @@ describe("MCP — McpManager (mock JSON-RPC)", () => {
     const loaded = await mgr.loadAll([{ name: "test", url: "http://localhost:9100/mcp" }], ["localhost"]);
     expect(loaded.map((t) => t.toolName)).toContain("mcp_test_ping");
     expect(toolDefs.some((d) => d.name === "mcp_test_ping")).toBe(true); // zarejestrowane dla modelu
-    grantOutboundScope("*"); // narzędzie dynamiczne = fail-safe outbound; test bada wykonanie
+    grantOutboundScope(["mcp_test_ping"]); // narzędzie dynamiczne = fail-safe outbound; test bada wykonanie
     const out = await runTool("mcp_test_ping", {});
     expect(out).toBe("pong"); // wykonane przez serwer MCP
   });
@@ -95,7 +95,7 @@ describe("MCP — McpManager (mock JSON-RPC)", () => {
     const mgr = new McpManager();
     const loaded = await mgr.loadAll([{ name: "local-fixture", command: "node", args: ["server.mjs"] }]);
     expect(loaded.map((tool) => tool.toolName)).toContain("mcp_local_fixture_local_ping");
-    grantOutboundScope("*");
+    grantOutboundScope(["mcp_local_fixture_local_ping"]);
     await expect(runTool("mcp_local_fixture_local_ping", {})).resolves.toBe("local-pong");
     expect(mcpStdioConnect).toHaveBeenCalledOnce();
     expect(mcpStdioCall).toHaveBeenCalledWith("local-fixture", "local_ping", {});

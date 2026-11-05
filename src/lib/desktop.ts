@@ -3,6 +3,7 @@
 
 export interface JarvisDesktop {
   platform: string;
+  stopWorkspaceProcesses?(): Promise<{ ok: boolean; requested?: number; error?: string }>;
   ensureLocalSiteOs?(url: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; error?: string }>;
   ensureLocalOllama?(url: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; error?: string }>;
   agentTool?(tool: string, input?: Record<string, unknown>): Promise<{ ok: boolean; error?: string; [key: string]: unknown }>;

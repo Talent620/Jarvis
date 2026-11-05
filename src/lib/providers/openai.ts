@@ -1,3 +1,4 @@
+import { throwIfAborted } from "../abort";
 import { runTool } from "../tools";
 import { fetchTimeout, appTokenHeader } from "../http";
 import { OAIStreamAccumulator, drainSSE } from "../stream";
@@ -68,7 +69,7 @@ export function makeOpenAICompatible(
 
     // Pełna odpowiedź (bez strumienia) — ścieżka klasyczna / fallback.
     const requestFull = async (): Promise<OAIMessage> => {
-      const res = await fetchTimeout(url, { method: "POST", headers, body: JSON.stringify(body()) }, 120000);
+      const res = await fetchTimeout(url, { signal: ctx.signal, method: "POST", headers, body: JSON.stringify(body()) }, 120000);
       // Brama/proxy może oddać HTML zamiast JSON — parsuj bezpiecznie i dołącz kod statusu.
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
@@ -82,7 +83,7 @@ export function makeOpenAICompatible(
     const requestStream = async (): Promise<OAIMessage> => {
       const res = await fetchTimeout(
         url,
-        { method: "POST", headers, body: JSON.stringify({ ...body(), stream: true, stream_options: { include_usage: true } }) },
+        { signal: ctx.signal, method: "POST", headers, body: JSON.stringify({ ...body(), stream: true, stream_options: { include_usage: true } }) },
         120000,
       );
       if (!res.ok) {
@@ -95,7 +96,9 @@ export function makeOpenAICompatible(
       const acc = new OAIStreamAccumulator();
       let buf = "";
       for (;;) {
+        throwIfAborted(ctx.signal);
         const { done, value } = await reader.read();
+        throwIfAborted(ctx.signal);
         if (done) break;
         buf += dec.decode(value, { stream: true });
         const { events, rest } = drainSSE(buf);
@@ -120,14 +123,17 @@ export function makeOpenAICompatible(
     };
 
     while (guard++ < 8) {
+      throwIfAborted(ctx.signal);
       let msg: OAIMessage;
       try {
         msg = canStream ? await requestStream() : await requestFull();
       } catch (e) {
+        throwIfAborted(ctx.signal);
         const em = e instanceof Error ? e.message : String(e);
         // Model bez obsługi narzędzi (np. dolphin-mistral, wiele uncensored) → ponów BEZ tools,
         // zamiast wywalać całą turę błędem 400 „does not support tools".
         if (useTools && /does not support tools|tool.?use.*not support|not support.*tool|tools? (are )?not (yet )?support/i.test(em)) {
+          if (ctx.requiresTools) throw new Error("Ten model nie obsługuje narzędzi wymaganych do wykonania polecenia. Nie wykonano działania.");
           useTools = false;
           continue;
         }
@@ -139,10 +145,12 @@ export function makeOpenAICompatible(
           throw e;
         }
       }
+      throwIfAborted(ctx.signal);
       messages.push(msg);
 
       if (msg.tool_calls?.length) {
         for (const tc of msg.tool_calls) {
+          if (!useTools || !ctx.tools.some((tool) => tool.name === tc.function.name)) throw new Error(`Model zażądał narzędzia spoza udostępnionego zestawu: ${tc.function.name}. Nie wykonano działania.`);
           used.add(tc.function.name);
           let args: unknown = {};
           try {
@@ -150,7 +158,7 @@ export function makeOpenAICompatible(
           } catch {
             /* puste argumenty */
           }
-          const out = await runTool(tc.function.name, args);
+          const out = await runTool(tc.function.name, args, { signal: ctx.signal });
           messages.push({ role: "tool", tool_call_id: tc.id, content: out });
         }
         continue;

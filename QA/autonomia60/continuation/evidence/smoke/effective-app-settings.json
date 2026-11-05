@@ -1,0 +1,9 @@
+{
+  "provider": "ollama",
+  "model": "auto",
+  "ollamaUrl": "",
+  "onDeviceOnly": true,
+  "webllmEnabled": false,
+  "url_source": "unresolved: no user profile available; bounded discovery of both known ports",
+  "model_source": "not selected; supply --model from installed models"
+}

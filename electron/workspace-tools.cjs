@@ -56,6 +56,8 @@ function run(command, args, options = {}) {
       windowsHide: true,
       env: { ...process.env, ...options.env },
     });
+    const execution = { child, cancelled: false };
+    options.activeProcesses?.add(execution);
     let stdout = "";
     let stderr = "";
     const append = (key, chunk) => {
@@ -68,11 +70,13 @@ function run(command, args, options = {}) {
     const timer = setTimeout(() => child.kill(), options.timeout || 30_000);
     child.on("error", (error) => {
       clearTimeout(timer);
+      options.activeProcesses?.delete(execution);
       resolve({ ok: false, code: -1, stdout, stderr: error.message });
     });
     child.on("close", (code) => {
       clearTimeout(timer);
-      resolve({ ok: code === 0, code: code ?? -1, stdout, stderr });
+      options.activeProcesses?.delete(execution);
+      resolve({ ok: !execution.cancelled && code === 0, cancelled: execution.cancelled, code: code ?? -1, stdout, stderr });
     });
   });
 }
@@ -84,6 +88,21 @@ function safeArgs(input) {
 }
 
 function createWorkspaceTools(options) {
+  const activeProcesses = new Set();
+  const runOwned = (command, args, settings = {}) => run(command, args, { ...settings, activeProcesses });
+  const cancelAll = () => {
+    let requested = 0;
+    for (const execution of activeProcesses) {
+      const child = execution.child;
+      if (child.exitCode !== null || child.signalCode !== null) continue;
+      execution.cancelled = true;
+      child.kill(); requested++;
+      const force = setTimeout(() => { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); }, 1000);
+      force.unref();
+      child.once("exit", () => clearTimeout(force));
+    }
+    return { ok: true, requested };
+  };
   const root = path.resolve(options.root);
   const publicPageReader = createPublicPageReader();
   const logDir = path.join(root, ".jarvis", "logs");
@@ -127,21 +146,21 @@ function createWorkspaceTools(options) {
         fs.writeFileSync(target, content, "utf8");
         result = { ok: true, path: path.relative(root, target), bytes: Buffer.byteLength(content) };
       } else if (tool === "git") {
-        result = await run("git", safeArgs(input.args), { cwd: inside(root, input.cwd), timeout: 60_000 });
+        result = await runOwned("git", safeArgs(input.args), { cwd: inside(root, input.cwd), timeout: 60_000 });
       } else if (tool === "terminal") {
         const command = String(input.command || "").toLowerCase();
         if (!SAFE_COMMANDS.has(command)) throw new Error(`Polecenie „${command}” nie znajduje się na allowliście.`);
-        result = await run(command, safeArgs(input.args), { cwd: inside(root, input.cwd), timeout: 120_000 });
+        result = await runOwned(command, safeArgs(input.args), { cwd: inside(root, input.cwd), timeout: 120_000 });
       } else if (tool === "docker") {
-        result = await run("docker", safeArgs(input.args || ["version"]), { cwd: inside(root, input.cwd), timeout: 60_000 });
+        result = await runOwned("docker", safeArgs(input.args || ["version"]), { cwd: inside(root, input.cwd), timeout: 60_000 });
       } else if (tool === "database") {
         const engine = String(input.engine || "sqlite").toLowerCase();
         const query = String(input.query || "").trim();
         if (!/^(select|pragma|explain|with)\b/i.test(query)) throw new Error("Adapter bazy domyślnie zezwala tylko na bezpieczne zapytania odczytowe.");
         if (engine === "sqlite") {
-          result = await run("sqlite3", ["-json", inside(root, input.database), query], { cwd: root, timeout: 30_000 });
+          result = await runOwned("sqlite3", ["-json", inside(root, input.database), query], { cwd: root, timeout: 30_000 });
         } else if (engine === "postgres") {
-          result = await run("psql", [String(input.connection || ""), "-X", "-A", "-t", "-c", query], { cwd: root, timeout: 30_000 });
+          result = await runOwned("psql", [String(input.connection || ""), "-X", "-A", "-t", "-c", query], { cwd: root, timeout: 30_000 });
         } else throw new Error("Obsługiwane bazy: sqlite i postgres.");
       } else if (tool === "http") {
         const url = new URL(String(input.url || ""));
@@ -188,7 +207,7 @@ function createWorkspaceTools(options) {
     return result;
   }
 
-  return { call, root };
+  return { call, root, cancelAll };
 }
 
 module.exports = { createWorkspaceTools, inside, safeArgs, SAFE_COMMANDS };

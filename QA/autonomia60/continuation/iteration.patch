@@ -1,0 +1,832 @@
+diff --git a/.gitignore b/.gitignore
+--- a/.gitignore
++++ b/.gitignore
+@@ -31,3 +31,6 @@
+ 
+ # Kandydaci narzędzi generowanych przez agenta nigdy nie trafiają do repozytorium.
+ tools/generated/*.candidate.cjs
++
++# Isolated QA profiles, test data and per-run evidence (may contain local configuration).
++QA/runs/
+diff --git a/electron/main.cjs b/electron/main.cjs
+--- a/electron/main.cjs
++++ b/electron/main.cjs
+@@ -12,6 +12,8 @@
+ const { createConfiguredLocalOllamaManager } = require("./local-ollama.cjs");
+ const { createLocalSiteOsManager } = require("./local-siteos.cjs");
+ const localOllama = createConfiguredLocalOllamaManager();
++
++if (process.env.JARVIS_PROFILE_DIR) app.setPath("userData", path.resolve(process.env.JARVIS_PROFILE_DIR));
+ 
+ const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
+ 
+@@ -121,7 +123,10 @@
+     },
+   });
+ 
+-  mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
++  // QA builds stay outside dist and never replace the user's production bundle.
++  const rendererDir = !app.isPackaged && process.env.JARVIS_QA_RENDERER_DIR
++    ? path.resolve(process.env.JARVIS_QA_RENDERER_DIR) : path.join(__dirname, "../dist");
++  mainWindow.loadFile(path.join(rendererDir, "index.html"));
+ 
+   // Twarda blokada nawigacji: renderer nie może opuścić własnego file:// (inaczej
+   // wroga strona przejęłaby cały mostek jarvisDesktop — uruchamianie, klawiatura, tokeny).
+@@ -289,7 +294,7 @@
+     return url.startsWith("file://");
+   };
+   const workspaceTools = createWorkspaceTools({
+-    root: path.join(app.getPath("documents"), "JARVIS Workspace"),
++    root: process.env.JARVIS_WORKSPACE_DIR ? path.resolve(process.env.JARVIS_WORKSPACE_DIR) : path.join(app.getPath("documents"), "JARVIS Workspace"),
+     openExternal: (url) => shell.openExternal(url),
+   });
+   app.once("before-quit", () => workspaceTools.cancelAll());
+diff --git a/eslint.config.js b/eslint.config.js
+--- a/eslint.config.js
++++ b/eslint.config.js
+@@ -12,6 +12,7 @@
+       "dist",
+       "dist-studio",
+       "release-desktop/**", // wygenerowane pakiety, źródła są lintowane w electron/ i site-os/
++      "QA/runs/**", // isolated browser profiles and generated QA builds
+       "node_modules",
+       "**/node_modules/**",
+       "node_modules_incomplete/**",
+diff --git a/package-lock.json b/package-lock.json
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -46,6 +46,7 @@
+         "fake-indexeddb": "^6.2.5",
+         "globals": "^15.15.0",
+         "jsdom": "^25.0.1",
++        "playwright": "1.62.1",
+         "postcss": "^8.5.15",
+         "tailwindcss": "^3.4.19",
+         "typescript": "^5.6.3",
+@@ -9316,6 +9317,53 @@
+         "node": ">=16.20.0"
+       }
+     },
++    "node_modules/playwright": {
++      "version": "1.62.1",
++      "resolved": "https://registry.npmjs.org/playwright/-/playwright-1.62.1.tgz",
++      "integrity": "sha512-0M+L3LAD8/nm554LOla9Ayx0j0tmFZ0FBcoQ7F1VuVHpM/XpiC8RcDzBQB8W5+hA8L22THxELzeF+2WcUzvcLg==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "dependencies": {
++        "playwright-core": "1.62.1"
++      },
++      "bin": {
++        "playwright": "cli.js"
++      },
++      "engines": {
++        "node": ">=20"
++      },
++      "optionalDependencies": {
++        "fsevents": "2.3.2"
++      }
++    },
++    "node_modules/playwright-core": {
++      "version": "1.62.1",
++      "resolved": "https://registry.npmjs.org/playwright-core/-/playwright-core-1.62.1.tgz",
++      "integrity": "sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "bin": {
++        "playwright-core": "cli.js"
++      },
++      "engines": {
++        "node": ">=20"
++      }
++    },
++    "node_modules/playwright/node_modules/fsevents": {
++      "version": "2.3.2",
++      "resolved": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.2.tgz",
++      "integrity": "sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==",
++      "dev": true,
++      "hasInstallScript": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "darwin"
++      ],
++      "engines": {
++        "node": "^8.16.0 || ^10.6.0 || >=11.0.0"
++      }
++    },
+     "node_modules/plist": {
+       "version": "3.1.1",
+       "resolved": "https://registry.npmjs.org/plist/-/plist-3.1.1.tgz",
+diff --git a/package.json b/package.json
+--- a/package.json
++++ b/package.json
+@@ -34,7 +34,10 @@
+     "siteos:tunnel": "node site-os/server.mjs --tunnel",
+     "tools:verify": "node scripts/verify-workspace-tools.cjs",
+     "quality": "node scripts/quality-gate.mjs",
+-    "quality:all": "node scripts/quality-gate.mjs --sales"
++    "quality:all": "node scripts/quality-gate.mjs --sales",
++    "qa:preflight": "node scripts/qa/preflight.cjs",
++    "qa:agent:smoke": "node scripts/qa/agent-smoke.cjs",
++    "qa:desktop": "node scripts/qa/desktop.cjs"
+   },
+   "dependencies": {
+     "@capacitor-community/contacts": "^6.1.1",
+@@ -75,6 +78,7 @@
+     "fake-indexeddb": "^6.2.5",
+     "globals": "^15.15.0",
+     "jsdom": "^25.0.1",
++    "playwright": "1.62.1",
+     "postcss": "^8.5.15",
+     "tailwindcss": "^3.4.19",
+     "typescript": "^5.6.3",
+diff --git a/scripts/qa/README.md b/scripts/qa/README.md
+new file mode 100644
+--- /dev/null
++++ b/scripts/qa/README.md
+@@ -0,0 +1,32 @@
++# JARVIS QA — rzeczywiste działanie, oddzielone poziomy
++
++Wymagane: Node >=20, zależności projektu (`npm ci`), istniejący Chromium albo `--chromium /ścieżka/do/chromium`. Playwright jest przypięty w lockfile. Runner nie pobiera przeglądarki ani modelu, nie instaluje pakietów systemowych i nie publikuje zmian.
++
++```bash
++npm run qa:preflight
++npm run qa:agent:smoke
++npm run qa:desktop
++```
++
++Każdy przebieg tworzy prywatny katalog `QA/runs/<run-id>/`: report.json, REPORT.md, odcisk źródeł, logi i odrębne dane/profil. Kody wyjścia: 0 = wykonany zakres zaliczony, 1 = FAIL, 2 = BLOCKED lub NOT_RUN. `qa:desktop` zalicza wyłącznie własny zakres startu i komendy lokalnej, nie S1–S8.
++
++Adres i model można podać jawnie:
++
++```bash
++npm run qa:preflight -- --ollama-url http://127.0.0.1:11435 --model NAZWA_JUZ_ZAINSTALOWANEGO_MODELU
++npm run qa:agent:smoke -- --ollama-url http://127.0.0.1:11435 --model NAZWA_JUZ_ZAINSTALOWANEGO_MODELU
++```
++
++Alternatywa: `--settings-file /ścieżka/settings.json`. Obsługiwany jest obiekt ustawień, `{settings: ...}` albo eksport klucza `jarvis.settings.v2` (także string JSON). Runner odczytuje tylko adres i wybór modelu; nie przenosi kluczy, historii, CRM ani zgód do profilu testowego. Plik nie jest automatycznie tworzony z prywatnego profilu Electron. Kolejność wyboru: CLI > QA_OLLAMA_URL / QA_OLLAMA_MODEL > plik. Raportuje źródło ustawienia. Bez adresu sprawdza oba znane porty: 11435 i 11434. Nie zakłada 11434 na podstawie PATH. Model należy wybrać spośród rzeczywiście zainstalowanych; runner nie zgaduje modelu ani nie pobiera go.
++
++`qa:agent:smoke` uruchamia Vite tylko na loopback i Chromium z sandboxem. Przepuszcza niezmienione żądania do własnego UI i wybranego lokalnego API; inne kierunki blokuje. Nie podmienia odpowiedzi modelu. Wyłącza licencję jedynie dla tej izolowanej instancji deweloperskiej, nigdy w dist ani konfiguracji użytkownika.
++
++- D1 [B]: zwykły composer → `askJarvis` → istniejący `runTool/add_task` → rzeczywisty trwały zapis. Czyta bezpośrednio zapisane dane i audyt, zamyka proces Chromium, uruchamia nowy proces z tym samym własnym profilem i sprawdza brak duplikatu oraz historię. Komenda `Dodaj zadanie: ...` została dodana jako ogólna funkcja offline, bez specjalnych nazw QA. To nie zalicza S2 ani S8.
++- S1 [B/D]: jeżeli istnieje API i jawnie wybrany zainstalowany model: rzeczywista generacja, normalna rozmowa w UI, sprawdzenie odpowiedzi, pochodzenia i zapisanej historii. Osobny D2 sprawdza rzeczywisty dobór `add_task` przez model i jego efekt. Samo HTTP 200 nie zalicza tych etapów.
++- S2–S8: ten smoke nie ma jeszcze pełnych wykonawców/orakli tych scenariuszy; zapisuje NOT_RUN. Wyniki testów jednostkowych i D1 nie zastępują brakującego pokrycia.
++
++`qa:desktop` próbuje uruchomić prawdziwy Electron. Bez sesji sprawdza Xvfb; jeśli jest dostępny, uruchamia własny serwer przez `-displayfd` bez zgadywania DISPLAY. Bez obu zależności zapisuje stderr rzeczywistej próby startu. W działającej sesji buduje własne dwa bundle poza dist: normalny z bramką licencji i testowy bez licencji. Sprawdza normalną bramkę, następnie rzeczywistą komendę lokalną w Electron. Izolację zachowuje przez `JARVIS_PROFILE_DIR`, `JARVIS_WORKSPACE_DIR` i wyłącznie deweloperski `JARVIS_QA_RENDERER_DIR`. Wariant z działającym ekranem nie został potwierdzony w środowisku chmurowym bez ekranu.
++
++Po zakończeniu runner zamyka własne procesy. Logi i profile pozostają do inspekcji i są ignorowane przez Git. Usuwać można wyłącznie wybrany katalog danego przebiegu po zachowaniu potrzebnych dowodów. Instalacja systemowa i naprawa systemowego helpera sandboxa wymagają decyzji administratora; runner ich nie wykonuje.
++
++Pełny S4/S5 wymaga rzeczywistego okna, poprawnego fokusu, systemowego schowka i niezależnego odczytu pliku; wirtualny X11 nie dowodzi działania Wayland. S6 wymaga jeszcze izolowanego wykonawcy generowanego kodu. S7/S8 wymagają uruchomienia rzeczywistego zadania wieloetapowego i orakli efektów. Te luki pozostają defektami zakresu funkcjonalnego/testowego, a nie dowodami PASS.
+diff --git a/scripts/qa/agent-smoke.cjs b/scripts/qa/agent-smoke.cjs
+new file mode 100644
+--- /dev/null
++++ b/scripts/qa/agent-smoke.cjs
+@@ -0,0 +1,161 @@
++/* global localStorage */
++const { chromium } = require('playwright');
++const net = require('node:net');
++const { args, configuration, newRun, environment, inspectOllama, modelBlocker, jsonRequest, which, path, root, pause, ownedProcess, stop } = require('./common.cjs');
++async function freePort() {
++  const server = net.createServer();
++  await new Promise((resolve, reject) => { server.on('error', reject); server.listen(0, '127.0.0.1', resolve); });
++  const port = server.address().port;
++  await new Promise(resolve => server.close(resolve));
++  return port;
++}
++async function stored(page) {
++  // Independent read-only oracle: reads the persisted representation, never invokes a JARVIS tool or store mutator.
++  return page.evaluate(() => ({ data: JSON.parse(localStorage.getItem('jarvis.data.v2') || '{}'), chats: JSON.parse(localStorage.getItem('jarvis.chats.v1') || '[]') }));
++}
++async function send(page, text) {
++  const input = page.getByPlaceholder('Wydaj polecenie JARVIS-owi…');
++  await input.click(); // require the normal composer to be unobstructed, including by setup dialogs
++  await input.fill(text); await input.press('Enter');
++}
++async function dismissSetup(page) {
++  const sheet = page.locator('.sheet').first();
++  await sheet.waitFor({ state: 'visible' });
++  await sheet.click({ position: { x: 5, y: 5 } }); // normal backdrop dismissal, without rewriting model settings
++  await sheet.waitFor({ state: 'hidden' });
++}
++async function waitStored(page, title, timeout = 20000) {
++  await page.waitForFunction(title => {
++    const data = JSON.parse(localStorage.getItem('jarvis.data.v2') || '{}');
++    return data.tasks?.filter(t => t.title === title).length === 1 && data.audit?.some(a => {
++      let input;
++      try { input = typeof a.input === 'string' ? JSON.parse(a.input) : a.input; } catch { return false; }
++      return a.tool === 'add_task' && a.status === 'ok' && input?.title === title;
++    });
++  }, title, { timeout });
++}
++async function main() {
++  const run = newRun('agent-smoke');
++  let server, context;
++  let closed = false;
++  const cleanup = async () => { if (closed) return; closed = true; await context?.close().catch(() => {}); await stop(server); };
++  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { void cleanup().finally(() => process.exit(130)); });
++  try {
++    const options = args();
++    run.write('environment.json', environment());
++    const ollama = await inspectOllama(configuration(options), run);
++    const port = await freePort();
++    const origin = `http://127.0.0.1:${port}`;
++    run.write('launch.json', { run_id: run.id, origin, profile: path.join(run.dir, 'chromium-profile'), license_required: false, scope: 'isolated dev server only', app_build: run.id, model_fixtures: false });
++    server = ownedProcess(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { env: { ...process.env, JARVIS_LICENSE_REQUIRED: 'false', APP_BUILD: run.id } }, run, 'vite.log');
++    let ready = false;
++    for (let i = 0; i < 100; i++) {
++      if (server.qaError || server.exitCode !== null) throw Error(`Vite start failed: ${server.qaError || server.exitCode}; see vite.log`);
++      try { ready = (await fetch(origin, { signal: AbortSignal.timeout(500) })).ok; } catch { /* bounded readiness retry */ }
++      if (ready) break;
++      await pause(100);
++    }
++    if (!ready) throw Error('Vite readiness timeout; see vite.log');
++    const requests = [];
++    async function openProfile() {
++      const executablePath = options.chromium || process.env.QA_CHROMIUM || which('chromium') || which('chromium-browser');
++      context = await chromium.launchPersistentContext(path.join(run.dir, 'chromium-profile'), { ...(executablePath ? { executablePath } : {}), headless: true, chromiumSandbox: true, args: ['--disable-dev-shm-usage'], viewport: { width: 1100, height: 820 }, serviceWorkers: 'block' });
++      await context.route('**/*', route => {
++        const url = new URL(route.request().url());
++        // Requests pass to actual services unchanged; external destinations are denied, never fulfilled by fixtures.
++        return url.origin === origin || url.origin === ollama.selected_origin ? route.continue() : route.abort();
++      });
++      const page = context.pages()[0] || await context.newPage();
++      page.setDefaultTimeout(20000);
++      page.on('request', request => { if (request.url().includes('/api/chat')) requests.push({ run_id: run.id, at: new Date().toISOString(), event: 'request', url: request.url(), method: request.method() }); });
++      page.on('response', response => { if (response.url().includes('/api/chat')) requests.push({ run_id: run.id, at: new Date().toISOString(), event: 'response', url: response.url(), status: response.status() }); });
++      page.on('pageerror', error => { run.write('last-page-error.txt', error.stack || error.message); });
++      await page.goto(origin, { waitUntil: 'domcontentloaded' });
++      return page;
++    }
++    let page = await openProfile();
++    await page.evaluate(async ({ url, model }) => {
++      localStorage.setItem('jarvis.onboarded.v1', '1');
++      const { store } = await import('/src/lib/store.ts');
++      store.setSettings({ provider: 'ollama', model: model || 'auto', ollamaUrl: url || '', webllmEnabled: false, onDeviceOnly: true, deepThink: false, councilMode: false, confidenceGate: false, speculativeMode: false, prewarmLocal: false, memoryServiceUrl: '', speak: false, tips: false });
++    }, { url: ollama.selected_origin || (ollama.candidates.length === 1 ? ollama.candidates[0] : ''), model: ollama.model });
++    await page.reload({ waitUntil: 'domcontentloaded' });
++    await page.locator('.boot').waitFor({ state: 'hidden' });
++    const effectiveSettings = await page.evaluate(() => {
++      const s = JSON.parse(localStorage.getItem('jarvis.settings.v2') || '{}');
++      return { provider: s.provider, model: s.model, ollamaUrl: s.ollamaUrl, onDeviceOnly: s.onDeviceOnly, webllmEnabled: s.webllmEnabled };
++    });
++    run.write('effective-app-settings.json', { ...effectiveSettings, url_source: ollama.url_source, model_source: ollama.model_source });
++    if (!effectiveSettings.ollamaUrl) {
++      await dismissSetup(page);
++      await page.getByText('BRAK KONFIGURACJI AI', { exact: false }).first().waitFor();
++    }
++    const title = `ORION ${run.id} — sprawdź żółć, ąę i zapis`;
++    await send(page, `Dodaj zadanie: ${title}`);
++    await waitStored(page, title);
++    await page.locator('.bubble.assistant').filter({ hasText: title }).waitFor();
++    const brand = await page.locator('.topbar .brand').boundingBox();
++    if (!brand || brand.width < 160) throw Error('Header clips JARVIS brand/status');
++    await page.getByRole('button', { name: 'STOP — zatrzymaj działania', exact: true }).waitFor({ state: 'visible' });
++    const geometry = { viewport: page.viewportSize(), brand, composer: await page.getByPlaceholder('Wydaj polecenie JARVIS-owi…').boundingBox(), stop: await page.getByRole('button', { name: 'STOP — zatrzymaj działania', exact: true }).boundingBox() };
++    run.write('D1-layout.json', geometry);
++    if (!geometry.composer || geometry.composer.y < 0 || geometry.composer.y + geometry.composer.height > geometry.viewport.height) throw Error('Composer is outside the viewport after the task');
++    await page.screenshot({ path: path.join(run.dir, 'D1-ui.png') });
++    const before = await stored(page); run.write('D1-before-restart.json', before);
++    await context.close(); context = null;
++    page = await openProfile();
++    await page.locator('.boot').waitFor({ state: 'hidden' });
++    await waitStored(page, title);
++    const after = await stored(page); run.write('D1-after-restart.json', after);
++    if (after.data.tasks.filter(t => t.title === title).length !== 1 || !after.chats.some(c => c.messages.some(m => m.text.includes(title) && m.role === 'assistant'))) throw Error('D1 persisted task or assistant history missing after browser process restart');
++    if (requests.length) throw Error('D1 unexpectedly invoked a model');
++    run.record({ id: 'D1-local-task', level: 'B, deterministic tool', status: 'PASS', detail: 'Normal composer → askJarvis → requestConsent → real add_task → persisted Polish text and audit; browser process restarted, exactly one task and saved history. Not a model/desktop/resume test.', evidence: ['D1-ui.png', 'D1-before-restart.json', 'D1-after-restart.json'] });
++
++    if (ollama.stages.model !== 'PASS') {
++      run.record({ id: 'S1', level: 'D', status: 'BLOCKED', detail: 'No actual model generation could be attempted; exact discovery stage in ollama.json.', evidence: ['ollama.json'], blocker: modelBlocker(ollama) });
++    } else {
++      const direct = await jsonRequest(`${ollama.selected_origin}/api/chat`, { model: ollama.model, stream: false, think: false, messages: [{ role: 'user', content: `Oblicz 9 + 7. Odpowiedz krótko. Identyfikator testu ${run.id}.` }], options: { num_predict: 128 } }, 60000);
++      run.write('real-generation.json', direct);
++      ollama.stages.generation = direct.ok && direct.data?.message?.content?.includes('16') ? 'PASS' : 'FAIL';
++      const question = `Ile wynosi 9 + 7? Odpowiedz jednym zdaniem. Test ${run.id}.`;
++      await send(page, question);
++      try {
++        await page.waitForFunction(q => {
++          const chats = JSON.parse(localStorage.getItem('jarvis.chats.v1') || '[]');
++          return chats.some(c => { const i = c.messages.findIndex(m => m.role === 'user' && m.text === q); return i >= 0 && c.messages.slice(i + 1).some(m => m.role === 'assistant' && m.text.includes('16') && m.via?.toLowerCase().includes('ollama')); });
++        }, question, { timeout: 180000 });
++        if (!requests.some(r => r.event === 'response' && r.status === 200)) throw Error('No real model HTTP response observed');
++        run.write('S1-history.json', await stored(page));
++        ollama.stages.jarvis_chat = 'PASS';
++        run.record({ id: 'S1', level: 'B + D', status: 'PASS', detail: 'Real local model replied to a normal UI message; arithmetic, provider provenance and saved history verified independently.', evidence: ['real-generation.json', 'S1-history.json', 'model-requests.json'] });
++      } catch (e) { ollama.stages.jarvis_chat = 'FAIL'; run.record({ id: 'S1', level: 'B + D', status: 'FAIL', detail: e.message, evidence: ['real-generation.json', 'model-requests.json'] }); }
++      if (ollama.stages.jarvis_chat === 'PASS' && ollama.stages.capabilities === 'PASS') {
++        const modelTitle = `MODEL ${run.id} Żółć`;
++        await send(page, `Zapisz w moich zadaniach nowe zadanie o dokładnym tytule „${modelTitle}”. Użyj narzędzia add_task. Nie opisuj tylko instrukcji.`);
++        try {
++          await waitStored(page, modelTitle, 180000);
++          run.write('D2-real-model-tool.json', await stored(page));
++          ollama.stages.jarvis_tool = 'PASS';
++          run.record({ id: 'D2-model-tool', level: 'B + D', status: 'PASS', detail: 'Real model selected and called add_task; title and successful audit independently observed.', evidence: ['D2-real-model-tool.json', 'model-requests.json'] });
++        } catch (e) { ollama.stages.jarvis_tool = 'FAIL'; run.record({ id: 'D2-model-tool', level: 'B + D', status: 'FAIL', detail: e.message, evidence: ['model-requests.json'] }); }
++      }
++    }
++    for (const id of ['S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8']) {
++      run.record({ id, level: id === 'S4' || id === 'S5' ? 'C/D or E' : 'D', status: 'NOT_RUN', detail: 'Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.', evidence: ['ollama.json'] });
++    }
++    run.write('model-requests.json', requests); run.write('ollama.json', ollama);
++    run.finish({ license: 'disabled only for isolated development UI; normal startup not tested here' });
++    process.exitCode = run.results.some(x => x.status === 'FAIL') ? 1 : run.results.some(x => x.status === 'BLOCKED' || x.status === 'NOT_RUN') ? 2 : 0;
++  } catch (e) {
++    const page = context?.pages()[0];
++    if (page) {
++      await page.screenshot({ path: path.join(run.dir, 'failure-ui.png') }).catch(() => {});
++      await stored(page).then(data => run.write('failure-storage.json', data)).catch(() => {});
++      await page.locator('body').innerText().then(text => run.write('failure-ui.txt', text)).catch(() => {});
++    }
++    run.write('runner-error.txt', e.stack || e.message);
++    run.record({ id: 'runner', level: 'B', status: 'FAIL', detail: e.message, evidence: ['runner-error.txt', 'vite.log'] }); run.finish(); process.exitCode = 1;
++  } finally { await cleanup(); }
++}
++module.exports = { freePort, stored, send, dismissSetup };
++if (require.main === module) void main();
+diff --git a/scripts/qa/common.cjs b/scripts/qa/common.cjs
+new file mode 100644
+--- /dev/null
++++ b/scripts/qa/common.cjs
+@@ -0,0 +1,129 @@
++const fs = require('node:fs');
++const path = require('node:path');
++const os = require('node:os');
++const { randomUUID, createHash } = require('node:crypto');
++const { execFileSync, spawn } = require('node:child_process');
++const root = path.resolve(__dirname, '../..');
++const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
++
++function args(argv = process.argv.slice(2)) {
++  const out = {};
++  for (let i = 0; i < argv.length; i++) {
++    if (!['--ollama-url', '--model', '--settings-file', '--chromium'].includes(argv[i]) || !argv[i + 1]) throw Error(`Unknown or incomplete option: ${argv[i]}`);
++    out[argv[i].slice(2)] = argv[++i];
++  }
++  return out;
++}
++function localUrl(value) {
++  const u = new URL(value);
++  if (u.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname) || u.username || u.password || u.search || u.hash || u.pathname !== '/') {
++    throw Error('QA accepts only a local HTTP Ollama origin without credentials or paths.');
++  }
++  return u.origin;
++}
++function configuration(options, env = process.env) {
++  let settings = {};
++  if (options['settings-file']) {
++    const file = JSON.parse(fs.readFileSync(path.resolve(options['settings-file']), 'utf8'));
++    const raw = file['jarvis.settings.v2'] ?? file.settings ?? file;
++    settings = typeof raw === 'string' ? JSON.parse(raw) : raw;
++  }
++  const url = options['ollama-url'] || env.QA_OLLAMA_URL || settings.ollamaUrl;
++  const model = options.model || env.QA_OLLAMA_MODEL || (settings.provider === 'ollama' && settings.model !== 'auto' ? settings.model : '') || settings.ollamaModelSimple || '';
++  return {
++    candidates: url ? [localUrl(url)] : ['http://127.0.0.1:11435', 'http://127.0.0.1:11434'],
++    url_source: options['ollama-url'] ? 'CLI --ollama-url (isolated test override)' : env.QA_OLLAMA_URL ? 'QA_OLLAMA_URL (isolated test override)' : url ? 'settings-file: ollamaUrl' : 'unresolved: no user profile available; bounded discovery of both known ports',
++    model, model_source: options.model ? 'CLI --model' : env.QA_OLLAMA_MODEL ? 'QA_OLLAMA_MODEL' : model ? 'settings-file' : 'not selected; supply --model from installed models',
++    production_settings_changed: false,
++  };
++}
++function command(file, argv) {
++  try { return execFileSync(file, argv, { cwd: root, encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 8 * 1024 * 1024 }).trim(); }
++  catch { return null; }
++}
++function which(name) { return command('which', [name]); }
++function newRun(kind) {
++  const id = `${new Date().toISOString().replace(/[:.]/g, '-')}-${kind}-${randomUUID().slice(0, 8)}`;
++  const dir = path.join(root, 'QA/runs', id);
++  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
++  const write = (name, data) => fs.writeFileSync(path.join(dir, name), typeof data === 'string' ? data : JSON.stringify(data, null, 2) + '\n', { mode: 0o600 });
++  const untracked = (command('git', ['ls-files', '--others', '--exclude-standard']) || '').split('\n').filter(x => /^(src|electron|scripts\/qa)\//.test(x));
++  const source = {
++    repo: root, branch: command('git', ['branch', '--show-current']), commit: command('git', ['rev-parse', 'HEAD']),
++    local_changes: command('git', ['status', '--short']),
++    diff_sha256: createHash('sha256').update(command('git', ['diff', '--', 'src', 'electron', 'scripts', 'package.json', 'package-lock.json']) || '').digest('hex'),
++    new_source_sha256: Object.fromEntries(untracked.map(x => [x, createHash('sha256').update(fs.readFileSync(path.join(root, x))).digest('hex')])),
++    app_version: require('../../package.json').version, app_entry: 'electron/main.cjs -> dist/index.html',
++  };
++  write('source.json', source);
++  const results = [];
++  return { id, dir, write, results, source, record(result) { results.push(result); write('results.json', results); }, finish(extra = {}) {
++    const report = { run_id: id, kind, finished_at: new Date().toISOString(), source, results, ...extra };
++    write('report.json', report);
++    write('REPORT.md', `# JARVIS QA ${id}\n\nVersion ${source.app_version}, ${source.branch}@${source.commit}. Uncommitted source is identified in source.json.\n\n` + results.map(x => `- **${x.id} ${x.status}** [${x.level}] ${x.detail || ''} Evidence: ${(x.evidence || []).join(', ') || 'report.json'}.` + (x.blocker ? ` Unblock: ${x.blocker.action}` : '')).join('\n') + '\n\nModel fixtures: none. User desktop: not inferred from Chromium or Electron tests.\n');
++    console.log(`QA report: ${path.join(dir, 'REPORT.md')}`);
++    return report;
++  } };
++}
++function environment() {
++  return {
++    os: os.release(), platform: os.platform(), architecture: os.arch(), node: process.version,
++    os_release: fs.existsSync('/etc/os-release') ? fs.readFileSync('/etc/os-release', 'utf8') : null,
++    container_markers: { dockerenv: fs.existsSync('/.dockerenv'), containerenv: fs.existsSync('/run/.containerenv') }, cwd: root, uid: process.getuid?.(),
++    session_present: Object.fromEntries(['DISPLAY', 'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR', 'DBUS_SESSION_BUS_ADDRESS', 'XDG_SESSION_TYPE'].map(k => [k, !!process.env[k]])),
++    session_bus_socket: !!(process.env.XDG_RUNTIME_DIR && fs.existsSync(path.join(process.env.XDG_RUNTIME_DIR, 'bus'))),
++    tools: Object.fromEntries(['chromium', 'chromium-browser', 'Xvfb', 'xvfb-run', 'Xorg', 'xdotool', 'ollama'].map(x => [x, which(x)])),
++    electron_version: require('electron/package.json').version,
++    actual_user_installation: 'Not inspected. This is the current test machine, not assumed to be /home/qw/Jarvis-GitHub.',
++  };
++}
++async function jsonRequest(url, body, timeout = 3000) {
++  try {
++    const r = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(timeout), ...(body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}) });
++    const data = await r.json();
++    return { ok: r.ok, status: r.status, data };
++  } catch (e) { return { ok: false, error: e.cause?.code || e.name, message: String(e.message).slice(0, 200) }; }
++}
++async function inspectOllama(config, run) {
++  const probes = [];
++  let selected;
++  for (const origin of config.candidates) {
++    const response = await jsonRequest(`${origin}/api/tags`);
++    const models = response.data?.models;
++    const valid = response.ok && Array.isArray(models) && models.every(x => typeof x.name === 'string');
++    probes.push({ origin, command: `GET ${origin}/api/tags (3000ms)`, reachable: !!response.status, valid_model_list: valid, http_status: response.status, error: response.error, models: valid ? models.map(x => x.name) : [] });
++    if (valid && !selected) selected = origin;
++  }
++  const out = { ...config, probes, selected_origin: selected || null, stages: { tags: selected ? 'PASS' : 'BLOCKED', model: 'NOT_RUN', capabilities: 'NOT_RUN', generation: 'NOT_RUN', jarvis_chat: 'NOT_RUN', jarvis_tool: 'NOT_RUN' } };
++  if (selected) {
++    const names = probes.find(x => x.origin === selected).models;
++    out.stages.model = config.model && names.includes(config.model) ? 'PASS' : 'BLOCKED';
++    if (out.stages.model === 'PASS') {
++      const show = await jsonRequest(`${selected}/api/show`, { model: config.model });
++      out.capabilities = Array.isArray(show.data?.capabilities) ? show.data.capabilities : [];
++      out.context_lengths = Object.fromEntries(Object.entries(show.data?.model_info || {}).filter(([key]) => key.endsWith('.context_length')));
++      out.stages.capabilities = show.ok && out.capabilities.includes('tools') ? 'PASS' : 'BLOCKED';
++      out.show_http_status = show.status;
++    }
++  }
++  run.write('ollama.json', out);
++  return out;
++}
++function modelBlocker(ollama) {
++  return { dependency: !ollama.selected_origin ? 'reachable configured Ollama API' : 'explicit installed model', command: ollama.probes.map(x => x.command), evidence: ['ollama.json'], scenarios: ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'], action: !ollama.selected_origin ? 'Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test.' : 'Pass --model with an already installed model listed in ollama.json.' };
++}
++function ownedProcess(file, argv, options, run, logName) {
++  const fd = fs.openSync(path.join(run.dir, logName), 'a', 0o600);
++  const child = spawn(file, argv, { cwd: root, ...options, stdio: ['ignore', fd, fd] });
++  fs.closeSync(fd);
++  child.qaError = null;
++  child.on('error', e => { child.qaError = e.message; });
++  return child;
++}
++async function stop(child) {
++  if (!child || child.exitCode !== null || child.signalCode || child.qaError) return;
++  child.kill('SIGTERM');
++  for (let i = 0; i < 20 && child.exitCode === null && !child.signalCode; i++) await pause(100);
++  if (child.exitCode === null && !child.signalCode) child.kill('SIGKILL');
++}
++module.exports = { fs, path, root, args, configuration, newRun, environment, inspectOllama, modelBlocker, jsonRequest, which, pause, ownedProcess, stop };
+diff --git a/scripts/qa/desktop.cjs b/scripts/qa/desktop.cjs
+new file mode 100644
+--- /dev/null
++++ b/scripts/qa/desktop.cjs
+@@ -0,0 +1,89 @@
++/* global localStorage */
++const { _electron } = require('playwright');
++const { spawn } = require('node:child_process');
++const { fs, path, root, args, newRun, environment, which, pause, ownedProcess, stop } = require('./common.cjs');
++const { send, stored, dismissSetup } = require('./agent-smoke.cjs');
++async function main() {
++  const run = newRun('desktop');
++  let display, electron, build, app;
++  let cleaned = false;
++  async function cleanup() { if (cleaned) return; cleaned = true; await app?.close().catch(() => {}); await stop(electron); await stop(build); await stop(display); }
++  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { void cleanup().finally(() => process.exit(130)); });
++  try {
++    args(); // reject mistyped flags rather than silently use defaults
++    const env = environment(); run.write('environment.json', env);
++    const session = { ...process.env };
++    if (!session.DISPLAY && !session.WAYLAND_DISPLAY && which('Xvfb')) {
++      const log = fs.openSync(path.join(run.dir, 'xvfb.log'), 'a', 0o600);
++      display = spawn(which('Xvfb'), ['-nolisten', 'tcp', '-screen', '0', '1280x900x24', '-displayfd', '3'], { stdio: ['ignore', log, log, 'pipe'] });
++      fs.closeSync(log);
++      const number = await new Promise((resolve, reject) => {
++        const timer = setTimeout(() => reject(Error('Xvfb displayfd timeout')), 10000);
++        display.once('error', e => { clearTimeout(timer); reject(e); });
++        display.stdio[3].once('data', data => { clearTimeout(timer); resolve(data.toString().trim()); });
++        display.once('exit', code => { clearTimeout(timer); reject(Error(`Xvfb exited ${code}`)); });
++      });
++      if (!/^\d+$/.test(number)) throw Error('Invalid Xvfb displayfd response');
++      session.DISPLAY = `:${number}`;
++      run.write('display.json', { source: 'owned Xvfb displayfd; not a guessed user display', virtual: true });
++    }
++    if (!session.DISPLAY && !session.WAYLAND_DISPLAY) {
++      const launchEnv = { ...session, JARVIS_PROFILE_DIR: path.join(run.dir, 'normal-profile'), JARVIS_WORKSPACE_DIR: path.join(run.dir, 'workspace') };
++      fs.mkdirSync(launchEnv.JARVIS_PROFILE_DIR, { mode: 0o700 }); fs.mkdirSync(launchEnv.JARVIS_WORKSPACE_DIR, { mode: 0o700 });
++      run.write('launch.json', { command: 'node_modules/electron/dist/electron .', cwd: root, profile: launchEnv.JARVIS_PROFILE_DIR, workspace: launchEnv.JARVIS_WORKSPACE_DIR, timeout_ms: 8000, sandbox_disabled: false, renderer_loaded: false });
++      electron = ownedProcess(require('electron'), ['.'], { env: launchEnv }, run, 'electron-stderr.log');
++      for (let i = 0; i < 80 && electron.exitCode === null && !electron.signalCode && !electron.qaError; i++) await pause(100);
++      await stop(electron);
++      const stderr = fs.readFileSync(path.join(run.dir, 'electron-stderr.log'), 'utf8');
++      const missingDisplay = /Missing X server|\$DISPLAY|ozone.*platform.*failed|failed to initialize/i.test(stderr);
++      const sandbox = /SUID sandbox|No usable sandbox|setuid_sandbox_host/i.test(stderr);
++      const detail = sandbox ? 'Electron failed before renderer startup: sandbox helper configuration.' : missingDisplay ? 'Electron failed before renderer startup: no graphical session; Xvfb is not installed.' : 'Electron did not reach an observable renderer; inspect exact stderr, not assumed to be a DISPLAY error.';
++      run.write('electron-exit.json', { exit_code: electron.exitCode, signal: electron.signalCode, spawn_error: electron.qaError, diagnosis: detail });
++      run.record({ id: 'Electron-start', level: 'C', status: 'BLOCKED', detail, evidence: ['environment.json', 'launch.json', 'electron-stderr.log', 'electron-exit.json'], blocker: { dependency: sandbox ? 'working Electron sandbox helper' : 'accessible graphical session or existing Xvfb', command: 'node_modules/electron/dist/electron . (isolated profile, sandbox retained)', evidence: ['electron-stderr.log'], scenarios: ['S2', 'S3', 'S4', 'S5', 'S8'], action: sandbox ? 'Use a correctly installed Electron package/sandbox helper under the system administrator’s policy; retain sandbox.' : 'Run npm run qa:desktop in a logged-in desktop session, or authorize installing Xvfb in this test machine. Do not guess DISPLAY.' } });
++      run.record({ id: 'normal-license-startup', level: 'C', status: 'NOT_RUN', detail: 'Renderer never loaded; normal license activation path was not tested.' });
++      run.finish(); process.exitCode = 2; return;
++    }
++    for (const licensed of [true, false]) {
++      const kind = licensed ? 'normal' : 'isolated-dev';
++      const bundle = path.join(run.dir, `${kind}-dist`);
++      build = ownedProcess(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), 'build', '--outDir', bundle], { env: { ...process.env, JARVIS_LICENSE_REQUIRED: licensed ? 'true' : 'false', APP_BUILD: run.id } }, run, `${kind}-build.log`);
++      for (let i = 0; i < 1200 && build.exitCode === null && !build.qaError; i++) await pause(100);
++      if (build.exitCode !== 0) throw Error(`${kind} build failed or timed out; see build log`);
++      const profile = path.join(run.dir, `${kind}-profile`), workspace = path.join(run.dir, 'workspace');
++      fs.mkdirSync(profile, { mode: 0o700 }); fs.mkdirSync(workspace, { recursive: true, mode: 0o700 });
++      const launchEnv = { ...session, JARVIS_PROFILE_DIR: profile, JARVIS_WORKSPACE_DIR: workspace, JARVIS_QA_RENDERER_DIR: bundle };
++      // Playwright otherwise adds --no-sandbox on Linux. Explicitly retain Chromium's sandbox.
++      try { app = await _electron.launch({ executablePath: require('electron'), args: [root], cwd: root, env: launchEnv, chromiumSandbox: true, timeout: 30000 }); }
++      catch (e) {
++        run.write(`${kind}-electron-error.log`, e.message);
++        run.record({ id: `${kind}-Electron-start`, level: 'C', status: 'BLOCKED', detail: 'Actual Electron launch failed; see complete launch command and stderr.', evidence: [`${kind}-electron-error.log`], blocker: { dependency: 'usable Electron runtime in this graphical session', command: 'playwright._electron.launch({chromiumSandbox:true})', evidence: [`${kind}-electron-error.log`], scenarios: ['S2', 'S3', 'S4', 'S5', 'S8'], action: 'Resolve the concrete Electron startup error recorded in the log, keeping the sandbox enabled, then rerun qa:desktop.' } });
++        process.exitCode = 2; run.finish(); return;
++      }
++      run.write(`${kind}-runtime.json`, await app.evaluate(({ app, BrowserWindow }) => ({ version: app.getVersion(), userData: app.getPath('userData'), argv: process.argv, windows: BrowserWindow.getAllWindows().map(w => ({ title: w.getTitle(), webPreferences: w.webContents.getLastWebPreferences() })) })));
++      const page = await app.firstWindow(); page.setDefaultTimeout(20000);
++      await app.context().route('**/*', route => route.request().url().startsWith('file:') ? route.continue() : route.abort());
++      if (licensed) {
++        await page.getByRole('button', { name: 'Aktywuj', exact: true }).waitFor();
++        await page.screenshot({ path: path.join(run.dir, 'normal-license.png') });
++        run.record({ id: 'normal-license-startup', level: 'C', status: 'PASS', detail: 'Fresh isolated production-style build reached the normal license gate. No private license used.', evidence: ['normal-runtime.json', 'normal-license.png'] });
++      } else {
++        await page.evaluate(() => {
++          localStorage.setItem('jarvis.onboarded.v1', '1');
++          const settings = JSON.parse(localStorage.getItem('jarvis.settings.v2') || '{}');
++          localStorage.setItem('jarvis.settings.v2', JSON.stringify({ ...settings, provider: 'ollama', ollamaUrl: '', onDeviceOnly: true, webllmEnabled: false, speak: false, tips: false }));
++        });
++        await page.reload(); await page.locator('.boot').waitFor({ state: 'hidden' }); await dismissSetup(page);
++        const title = `Electron ${run.id} Żółć`;
++        await send(page, `Dodaj zadanie: ${title}`);
++        await page.waitForFunction(title => JSON.parse(localStorage.getItem('jarvis.data.v2') || '{}').tasks?.some(t => t.title === title), title);
++        run.write('electron-task.json', await stored(page));
++        await page.screenshot({ path: path.join(run.dir, 'electron-task.png') });
++        run.record({ id: 'D1-electron-task', level: 'C deterministic tool', status: 'PASS', detail: 'Actual sandboxed Electron, isolated development build, normal composer and real local tool. Not real-model or user-desktop proof.', evidence: ['isolated-dev-runtime.json', 'electron-task.json', 'electron-task.png'] });
++      }
++      await app.close(); app = null;
++    }
++    run.finish({ session: display ? 'owned virtual X11; not Wayland' : 'current graphical session; no clipboard test performed', S1_S8: 'not inferred from startup smoke' });
++  } catch (e) { run.write('runner-error.txt', e.stack || e.message); run.record({ id: 'runner', level: 'C', status: 'FAIL', detail: e.message, evidence: ['runner-error.txt'] }); run.finish(); process.exitCode = 1; }
++  finally { await cleanup(); }
++}
++void main();
+diff --git a/scripts/qa/preflight.cjs b/scripts/qa/preflight.cjs
+new file mode 100644
+--- /dev/null
++++ b/scripts/qa/preflight.cjs
+@@ -0,0 +1,18 @@
++const { args, configuration, newRun, environment, inspectOllama, modelBlocker } = require('./common.cjs');
++(async () => {
++  const run = newRun('preflight');
++  try {
++    const env = environment(); run.write('environment.json', env);
++    const ollama = await inspectOllama(configuration(args()), run);
++    run.record({ id: 'environment', level: 'A', status: 'PASS', detail: 'Recorded current checkout, source fingerprint and non-secret session/tool availability.', evidence: ['environment.json', 'source.json'] });
++    run.record({ id: 'Ollama-discovery', level: 'D prerequisite', status: ollama.selected_origin ? 'PASS' : 'BLOCKED', detail: `Source: ${ollama.url_source}; selected: ${ollama.selected_origin || 'none'}. No generation claimed.`, evidence: ['ollama.json'], ...(!ollama.selected_origin ? { blocker: modelBlocker(ollama) } : {}) });
++    if (ollama.selected_origin) {
++      run.record({ id: 'installed-model', level: 'D prerequisite', status: ollama.stages.model, detail: `Explicit model: ${ollama.model || 'none'}.`, evidence: ['ollama.json'], ...(ollama.stages.model !== 'PASS' ? { blocker: modelBlocker(ollama) } : {}) });
++      if (ollama.stages.model === 'PASS') run.record({ id: 'tool-capabilities', level: 'D prerequisite', status: ollama.stages.capabilities, detail: 'Installed model metadata must declare tools support; no tool execution claimed.', evidence: ['ollama.json'], ...(ollama.stages.capabilities !== 'PASS' ? { blocker: { dependency: 'confirmed tools capability in model metadata', command: `POST ${ollama.selected_origin}/api/show`, evidence: ['ollama.json'], scenarios: ['D2', 'S2', 'S3', 'S4', 'S5', 'S6'], action: 'Choose an already installed model declaring tools support, or resolve the concrete /api/show failure. No model download is performed.' } } : {}) });
++    }
++    run.finish({ environment: env, ollama });
++    process.exitCode = ollama.stages.model === 'PASS' && ollama.stages.capabilities === 'PASS' ? 0 : 2;
++  } catch (e) {
++    run.record({ id: 'preflight', level: 'A', status: 'FAIL', detail: e.message }); run.finish(); process.exitCode = 1;
++  }
++})();
+diff --git a/src/App.tsx b/src/App.tsx
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1258,13 +1258,13 @@
+       <div className="topbar">
+         <div className="brand">
+           {brand()}
+-          <small>
+-            {(resolveProvider()?.model || (hasUsableBrain() ? "LOKALNY" : "BRAK API")).toUpperCase()}
++          <small title={hasUsableBrain() ? "Wybrany model jest ustawieniem. Status sieci nie potwierdza dostępności modelu ani narzędzi." : "Brak konfiguracji modelu AI. Lokalne komendy nadal działają."}>
++            {hasUsableBrain() ? `WYBRANY: ${(resolveProvider()?.model || "LOKALNY").toUpperCase()}` : "BRAK KONFIGURACJI AI"}
+             {(() => {
+               const p = store.data.projects.find((x) => x.id === settings.activeProjectId);
+               return p ? ` · ${p.name.toUpperCase()}` : "";
+             })()}{" "}
+-            · {online ? "ONLINE" : "OFFLINE"}
++            · SIEĆ: {online ? "ONLINE" : "OFFLINE"}
+             {(() => {
+               const m = currentBrainMode(online);
+               return (
+diff --git a/src/components/Composer.tsx b/src/components/Composer.tsx
+--- a/src/components/Composer.tsx
++++ b/src/components/Composer.tsx
+@@ -1,4 +1,5 @@
+ import { isStopCommand } from "../lib/controlCommand";
++import { isGoalProgressRequest } from "../lib/goalProgress";
+ import { useEffect, useRef, useState } from "react";
+ import { anticipate, type RecallHit } from "../lib/recall";
+ import { store } from "../lib/store";
+@@ -62,6 +63,7 @@
+   const submit = () => {
+     const t = text.trim();
+     if (isStopCommand(t)) { onStop?.(); setText(""); return; }
++    if (isGoalProgressRequest(t)) { onSend(t); setText(""); return; }
+     if ((!t && !imagePreview) || busy) return;
+     onSend(t, { council: council && !imagePreview, research: research && !imagePreview });
+     setText("");
+diff --git a/src/lib/brain.ts b/src/lib/brain.ts
+--- a/src/lib/brain.ts
++++ b/src/lib/brain.ts
+@@ -1,3 +1,4 @@
++import { parseLocalToolCommand } from "./localToolCommands";
+ import { beginGoalRun } from "./goalControl";
+ import { abortable, throwIfAborted } from "./abort";
+ import { applyInterfaceCommand } from "./interfaceMode";
+@@ -435,16 +436,13 @@
+ }
+ 
+ /**
+- * Czy JARVIS ma JAKIKOLWIEK osiągalny mózg? Szersze niż resolveProvider: tryb „auto" z samą Ollamą
+- * (bez kluczy chmury) daje resolveProvider=null, ale lokalny model i tak odpowie. Używać do decyzji
+- * „czy wymusić konfigurację", by nie otwierać Ustawień użytkownikom korzystającym tylko z Ollamy/WebLLM.
++ * Czy konfiguracja pozwala podjąć próbę użycia modelu? Nie potwierdza dostępności API
++ * ani sprawności narzędzi. Sam wybór dostawcy/modelu bez adresu lub klucza nie wystarcza.
+  */
+ export function hasUsableBrain(s = store.settings): boolean {
+-  if (resolveProvider()) return true; // wybrany dostawca z kluczem / auto z kluczem
+-  if (s.ollamaUrl?.trim()) return true; // lokalny serwer (Ollama) — odpowie nawet w trybie auto
+-  if (PROVIDER_LIST.some((p) => p.id !== "ollama" && s.keys[p.id]?.trim())) return true; // klucz chmury
+-  if (s.webllmEnabled && webllmSupported()) return true; // mózg on-device (WebGPU)
+-  return false;
++  const localConfigured = !!s.ollamaUrl?.trim() || !!(s.webllmEnabled && webllmSupported());
++  if (s.onDeviceOnly || s.provider === "ollama" || s.provider === "webllm") return localConfigured;
++  return localConfigured || PROVIDER_LIST.some((p) => !isKeyless(p.id) && !!s.keys[p.id]?.trim());
+ }
+ 
+ /** Test konkretnego dostawcy + klucza (używane przy „wklej dowolny klucz"). */
+@@ -645,6 +643,12 @@
+   const last = history[history.length - 1];
+   const localReply = last?.role === "user" && !last.image ? applyInterfaceCommand(last.content) : null;
+   if (localReply) return { text: localReply, tools: ["interfejs"] };
++  const localTool = last?.role === "user" && !last.image ? parseLocalToolCommand(last.content) : null;
++  if (localTool) {
++    const text = await runTool(localTool.name, localTool.input, { signal });
++    throwIfAborted(signal);
++    return { text, tools: [localTool.name] };
++  }
+   const resolved = resolveForRequest(history);
+   if (!resolved) {
+     throw new Error(
+diff --git a/src/lib/goalProgress.ts b/src/lib/goalProgress.ts
+--- a/src/lib/goalProgress.ts
++++ b/src/lib/goalProgress.ts
+@@ -5,7 +5,7 @@
+ export function isGoalProgressRequest(text: string): boolean {
+   const q = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l")
+     .replace(/[,.!?]+/g, " ").replace(/\s+/g, " ").trim().replace(/^jarvis\s+/, "");
+-  return /^(pokaz (mi )?wyniki|daj (mi )?(to co juz znalazles|pierwsze wyniki)|pospiesz sie(?: potrzebuje (pierwszych )?wynikow)?)$/.test(q);
++  return /^(pokaz (mi )?(dotychczasowe )?wyniki|daj (mi )?(to co juz znalazles|pierwsze wyniki)|pospiesz sie(?: potrzebuje (pierwszych )?wynikow)?)$/.test(q);
+ }
+ 
+ /** Raportuje tylko zapisane rezultaty, bez wymyślania cen ani ukończonych kroków. */
+diff --git a/src/lib/localToolCommands.ts b/src/lib/localToolCommands.ts
+new file mode 100644
+--- /dev/null
++++ b/src/lib/localToolCommands.ts
+@@ -0,0 +1,8 @@
++/** Explicit local commands: everything after the colon is literal title/text, without inference. */
++export function parseLocalToolCommand(text: string): { name: "add_task" | "add_note"; input: { title: string } | { text: string } } | null {
++  const match = /^\s*(?:Jarvis[, ]+)?dodaj\s+(zadanie|notatk[ęe])\s*:\s*([^]+?)\s*$/i.exec(text);
++  if (!match || !match[2].trim() || match[2].length > 4000) return null;
++  return match[1].toLowerCase() === "zadanie"
++    ? { name: "add_task", input: { title: match[2].trim() } }
++    : { name: "add_note", input: { text: match[2].trim() } };
++}
+diff --git a/src/styles/index.css b/src/styles/index.css
+--- a/src/styles/index.css
++++ b/src/styles/index.css
+@@ -380,6 +380,7 @@
+ /* --- Nagłówek --- */
+ .topbar {
+   display: flex;
++  flex-wrap: wrap; /* klasyczny kontener jest węższy od viewportu także na desktopie */
+   align-items: center;
+   gap: 7px;
+   padding: 8px 2px 6px;
+@@ -405,8 +406,9 @@
+   font-size: 20px;
+   color: var(--cyan);
+   text-shadow: 0 0 18px rgba(108, 231, 255, 0.5);
+-  min-width: 0; /* pozwala skrócić podpis, by ikony się zmieściły (bez ucinania) */
+-  flex-shrink: 1;
++  min-width: 160px; /* nie ścinaj nazwy JARVIS do dwóch liter przy wielu kontrolkach */
++  flex: 1 0 160px;
++  max-width: 100%;
+   overflow: hidden;
+ }
+ .brand small {
+diff --git a/tests/localToolCommands.test.ts b/tests/localToolCommands.test.ts
+new file mode 100644
+--- /dev/null
++++ b/tests/localToolCommands.test.ts
+@@ -0,0 +1,30 @@
++// @vitest-environment jsdom
++import { afterEach, expect, it, vi } from "vitest";
++import { parseLocalToolCommand } from "../src/lib/localToolCommands";
++import { askJarvis } from "../src/lib/brain";
++import { store } from "../src/lib/store";
++afterEach(() => vi.unstubAllGlobals());
++it("przekazuje jawne polecenie do istniejącego narzędzia bez modelu", async () => {
++  const title = "Sprawdź żółć i nową linię";
++  const before = store.data.tasks.length;
++  const network = vi.fn(() => { throw Error("Model must not be called"); });
++  vi.stubGlobal("fetch", network);
++  const result = await askJarvis([{ role: "user", content: `Dodaj zadanie: ${title}` }]);
++  expect(result.tools).toEqual(["add_task"]);
++  expect(store.data.tasks.length).toBe(before + 1);
++  expect(store.data.tasks[0]?.title).toBe(title);
++  expect(store.data.audit[0]).toMatchObject({ tool: 'add_task', status: 'ok' });
++  expect(JSON.parse(store.data.audit[0].input as string).title).toBe(title);
++  expect(network).not.toHaveBeenCalled();
++});
++it("nie tworzy danych po wcześniejszym STOP", async () => {
++  const before = store.data.tasks.length;
++  const controller = new AbortController(); controller.abort();
++  await expect(askJarvis([{ role: 'user', content: 'Dodaj zadanie: Niedozwolony zapis po STOP' }], undefined, undefined, undefined, undefined, controller.signal)).rejects.toThrow();
++  expect(store.data.tasks.length).toBe(before);
++});
++it("nie przechwytuje niejawnych lub niejednoznacznych próśb", () => {
++  expect(parseLocalToolCommand("Jak dodać zadanie: przykład")).toBeNull();
++  expect(parseLocalToolCommand("Dodaj zadanie: ")).toBeNull();
++  expect(parseLocalToolCommand("Dodaj notatkę: Żółć")).toEqual({ name: "add_note", input: { text: "Żółć" } });
++});
+diff --git a/tests/qaConfiguration.test.ts b/tests/qaConfiguration.test.ts
+new file mode 100644
+--- /dev/null
++++ b/tests/qaConfiguration.test.ts
+@@ -0,0 +1,30 @@
++import { createRequire } from 'node:module';
++import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
++import { tmpdir } from 'node:os';
++import { join } from 'node:path';
++import { expect, it } from 'vitest';
++const require = createRequire(import.meta.url);
++const { args, configuration } = require('../scripts/qa/common.cjs');
++
++it('checks both known local ports if the actual profile is unavailable', () => {
++  expect(configuration({}, {}).candidates).toEqual(['http://127.0.0.1:11435', 'http://127.0.0.1:11434']);
++});
++it('honors the application endpoint and model, without returning credentials', () => {
++  const dir = mkdtempSync(join(tmpdir(), 'jarvis-qa-config-'));
++  try {
++    const file = join(dir, 'settings.json');
++    writeFileSync(file, JSON.stringify({ 'jarvis.settings.v2': JSON.stringify({ provider: 'ollama', model: 'installed:7b', ollamaUrl: 'http://127.0.0.1:11435', keys: { secret: 'DO_NOT_LOG_THIS' } }) }));
++    const result = configuration({ 'settings-file': file }, {});
++    expect(result.candidates).toEqual(['http://127.0.0.1:11435']);
++    expect(result.model).toBe('installed:7b');
++    expect(JSON.stringify(result)).not.toContain('DO_NOT_LOG_THIS');
++    expect(configuration({ 'settings-file': file, 'ollama-url': 'http://127.0.0.1:11436', model: 'other:4b' }, {}).candidates).toEqual(['http://127.0.0.1:11436']);
++    expect(configuration({ 'settings-file': file }, { QA_OLLAMA_URL: 'http://127.0.0.1:11437' }).candidates).toEqual(['http://127.0.0.1:11437']);
++  } finally { rmSync(dir, { recursive: true }); }
++});
++it('rejects cloud endpoints, credentials, paths and typoed flags', () => {
++  for (const url of ['https://ollama.example', 'http://secret@localhost:11435', 'http://127.0.0.1:11435/api/tags']) {
++    expect(() => configuration({ 'ollama-url': url }, {})).toThrow();
++  }
++  expect(() => args(['--no-sandbox'])).toThrow();
++});
+diff --git a/tests/qaDiscoveredControls.test.ts b/tests/qaDiscoveredControls.test.ts
+new file mode 100644
+--- /dev/null
++++ b/tests/qaDiscoveredControls.test.ts
+@@ -0,0 +1,33 @@
++// @vitest-environment jsdom
++import { afterEach, expect, it, vi } from 'vitest';
++import { createElement, act } from 'react';
++import { createRoot } from 'react-dom/client';
++import { Simulate } from 'react-dom/test-utils';
++import Composer from '../src/components/Composer';
++import { hasUsableBrain } from '../src/lib/brain';
++import { store } from '../src/lib/store';
++import { isGoalProgressRequest } from '../src/lib/goalProgress';
++
++afterEach(() => vi.unstubAllGlobals());
++it('nie myli wybranego modelu z konfiguracją zdolną go uruchomić', () => {
++  const settings = { ...store.settings, provider: 'ollama' as const, model: 'auto', ollamaUrl: '', onDeviceOnly: true, webllmEnabled: false };
++  expect(hasUsableBrain(settings)).toBe(false);
++  expect(hasUsableBrain({ ...settings, ollamaUrl: 'http://127.0.0.1:11435' })).toBe(true);
++});
++it('przepuszcza prośbę o dotychczasowe wyniki podczas pracy, blokując nowe zwykłe zadanie', async () => {
++  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
++  expect(isGoalProgressRequest('Pokaż dotychczasowe wyniki')).toBe(true);
++  const node = document.createElement('div'); document.body.append(node);
++  const root = createRoot(node), onSend = vi.fn(), onStop = vi.fn();
++  try {
++    await act(async () => root.render(createElement(Composer, { onSend, onStop, busy: true, onMic() {}, onAttach() {}, onRemoveImage() {}, imagePreview: null, micOn: false, micSupported: false })));
++    const area = node.querySelector('textarea')!;
++    const submit = async (text: string) => {
++      await act(async () => { area.value = text; Simulate.change(area); });
++      await act(async () => Simulate.keyDown(area, { key: 'Enter', shiftKey: false }));
++    };
++    await submit('Nowe zwykłe zadanie'); expect(onSend).not.toHaveBeenCalled();
++    await submit('Pokaż dotychczasowe wyniki'); expect(onSend).toHaveBeenCalledWith('Pokaż dotychczasowe wyniki');
++    await submit('Stop'); expect(onStop).toHaveBeenCalledOnce();
++  } finally { await act(async () => root.unmount()); node.remove(); }
++});

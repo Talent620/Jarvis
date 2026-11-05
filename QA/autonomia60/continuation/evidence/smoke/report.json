@@ -1,0 +1,131 @@
+{
+  "run_id": "2026-11-05T19-34-42-012Z-agent-smoke-38326065",
+  "kind": "agent-smoke",
+  "finished_at": "2026-11-05T19:34:54.769Z",
+  "source": {
+    "repo": "/workspace/Jarvis",
+    "branch": "work",
+    "commit": "b3234ca906305712ade35363cffc3524c9a1b21a",
+    "local_changes": "M .gitignore\n M electron/local-ollama.cjs\n M electron/main.cjs\n M electron/preload.cjs\n M electron/workspace-tools.cjs\n M eslint.config.js\n M package-lock.json\n M package.json\n M src/App.tsx\n M src/components/Composer.tsx\n M src/components/GoalStatusPanel.tsx\n M src/lib/brain.ts\n M src/lib/cognitiveStatus.ts\n M src/lib/council.ts\n M src/lib/desktop.ts\n M src/lib/generation.ts\n M src/lib/goalControl.ts\n M src/lib/goalProgress.ts\n M src/lib/goalRuntime.ts\n M src/lib/goalState.ts\n M src/lib/http.ts\n M src/lib/permissions.ts\n M src/lib/providers/anthropic.ts\n M src/lib/providers/gemini.ts\n M src/lib/providers/ollama.ts\n M src/lib/providers/openai.ts\n M src/lib/providers/types.ts\n M src/lib/providers/webllm.ts\n M src/lib/tools.ts\n M src/styles/index.css\n M tests/goalRuntime.test.ts\n M tests/mcp.test.ts\n M tests/plugins.test.ts\n?? QA/autonomia60/\n?? scripts/qa/\n?? src/lib/abort.ts\n?? src/lib/controlCommand.ts\n?? src/lib/localToolCommands.ts\n?? tests/configuredOllamaPort.test.ts\n?? tests/fetchCancellation.test.ts\n?? tests/localToolCommands.test.ts\n?? tests/ollamaActionCapability.test.ts\n?? tests/providerStop.test.ts\n?? tests/qaConfiguration.test.ts\n?? tests/qaDiscoveredControls.test.ts\n?? tests/stopConsent.test.ts\n?? tests/stopExecution.test.ts\n?? tests/stopWorkspaceProcess.test.ts\n?? tests/unknownToolConsent.test.ts\n?? tests/webllmCapabilityGuard.test.ts",
+    "diff_sha256": "4638c115cd35f6ca9dfc92ab9a315736661b3ec35f99b49596d72bbd229529cc",
+    "new_source_sha256": {
+      "scripts/qa/README.md": "ba2c28dac1f1e362789f92dc42bcdcf3ecc557c01911a96dcb9af072d7f038a2",
+      "scripts/qa/agent-smoke.cjs": "2a1f54e0a8a726aab7a09fa9ed38b25d61aa2a88ad747724d733c5fb8e0674c0",
+      "scripts/qa/common.cjs": "1cef0a1fd3075d7ff4185f0158d2a9a9b9cf17f946455a8cd56df572d196a1a4",
+      "scripts/qa/desktop.cjs": "cc495749d84339659d6f69f9ca85201f85a35bb203c0df44624ec6afad9b56e3",
+      "scripts/qa/preflight.cjs": "536a06bbf4d2e4ec38a8866553ae60626132b5989211f3677de6a3aa086795d3",
+      "src/lib/abort.ts": "3bbdec2bc8d1c205554226a25a6269c923dd703afdf7fe4ce3d0c90c1aabf6d7",
+      "src/lib/controlCommand.ts": "99acd11d2d9cdc10a1c3893054f0792ebc2e58a14d8523c6ad0058d4f8ebdde4",
+      "src/lib/localToolCommands.ts": "5d1d3b62143d75642fb30cc8da294eedb9eecf15aeed620dcb4c1bfa6f0ec1c0"
+    },
+    "app_version": "2.0.0",
+    "app_entry": "electron/main.cjs -> dist/index.html"
+  },
+  "results": [
+    {
+      "id": "D1-local-task",
+      "level": "B, deterministic tool",
+      "status": "PASS",
+      "detail": "Normal composer → askJarvis → requestConsent → real add_task → persisted Polish text and audit; browser process restarted, exactly one task and saved history. Not a model/desktop/resume test.",
+      "evidence": [
+        "D1-ui.png",
+        "D1-before-restart.json",
+        "D1-after-restart.json"
+      ]
+    },
+    {
+      "id": "S1",
+      "level": "D",
+      "status": "BLOCKED",
+      "detail": "No actual model generation could be attempted; exact discovery stage in ollama.json.",
+      "evidence": [
+        "ollama.json"
+      ],
+      "blocker": {
+        "dependency": "reachable configured Ollama API",
+        "command": [
+          "GET http://127.0.0.1:11435/api/tags (3000ms)",
+          "GET http://127.0.0.1:11434/api/tags (3000ms)"
+        ],
+        "evidence": [
+          "ollama.json"
+        ],
+        "scenarios": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "S6",
+          "S7",
+          "S8"
+        ],
+        "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+      }
+    },
+    {
+      "id": "S2",
+      "level": "D",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    },
+    {
+      "id": "S3",
+      "level": "D",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    },
+    {
+      "id": "S4",
+      "level": "C/D or E",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    },
+    {
+      "id": "S5",
+      "level": "C/D or E",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    },
+    {
+      "id": "S6",
+      "level": "D",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    },
+    {
+      "id": "S7",
+      "level": "D",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    },
+    {
+      "id": "S8",
+      "level": "D",
+      "status": "NOT_RUN",
+      "detail": "Full scenario not executed by this smoke runner. See continuation report for known capability defects and dependencies; D1 is not substituted for this scenario.",
+      "evidence": [
+        "ollama.json"
+      ]
+    }
+  ],
+  "license": "disabled only for isolated development UI; normal startup not tested here"
+}

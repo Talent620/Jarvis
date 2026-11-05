@@ -1,0 +1,7 @@
+[
+  {
+    "endpoint": "http://127.0.0.1:11435",
+    "status": "unavailable",
+    "error_type": "ConnectionRefusedError"
+  }
+]

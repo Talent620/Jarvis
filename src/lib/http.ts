@@ -13,11 +13,20 @@ export function appTokenHeader(): Record<string, string> {
 }
 
 export async function fetchTimeout(url: string, opts: RequestInit = {}, ms = 8000): Promise<Response> {
+  const external = opts.signal;
+  if (external?.aborted) throw new DOMException("Zatrzymano wykonanie.", "AbortError");
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), ms);
+  const cleanup = () => external?.removeEventListener("abort", stop);
+  const stop = () => { ctrl.abort(); clearTimeout(timer); cleanup(); };
+  // Keep cancellation connected while the caller consumes a streamed response.
+  // The deadline bounds listener lifetime even for an unread body.
+  const timer = setTimeout(stop, ms);
+  external?.addEventListener("abort", stop, { once: true });
   try {
-    return await fetch(url, { ...opts, signal: ctrl.signal });
-  } finally {
-    clearTimeout(t);
+    const response = await fetch(url, { ...opts, signal: ctrl.signal });
+    if (!external) clearTimeout(timer);
+    return response;
+  } catch (error) {
+    clearTimeout(timer); cleanup(); throw error;
   }
 }

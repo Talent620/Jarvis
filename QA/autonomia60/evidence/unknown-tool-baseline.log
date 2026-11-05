@@ -1,0 +1,33 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ❯ tests/unknownToolConsent.test.ts (1 test | 1 failed) 7ms
+   × nowe nieznane narzędzie nie dziedziczy wildcard ani globalnej zgody 6ms
+     → expected true to be false // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unknownToolConsent.test.ts > nowe nieznane narzędzie nie dziedziczy wildcard ani globalnej zgody
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/unknownToolConsent.test.ts:9:56
+      7|   store.setSettings({ requireConsentAlways: false });
+      8|   setConsentHandler(null); grantOutboundScope("*"); setAutoConsent(tru…
+      9|   expect(await requestConsent("mcp_unseen_ORION", {})).toBe(false);
+       |                                                        ^
+     10|   grantOutboundScope(["mcp_unseen_ORION"]);
+     11|   expect(await requestConsent("mcp_unseen_ORION", {})).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  19:01:28
+   Duration  679ms (transform 98ms, setup 0ms, collect 115ms, tests 7ms, environment 240ms, prepare 175ms)
+

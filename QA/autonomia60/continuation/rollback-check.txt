@@ -1,0 +1,3 @@
+PASS: git apply --check --reverse QA/autonomia60/continuation/iteration.patch
+Base: HEAD + preserved QA/autonomia60/implementation.patch
+SHA256 284a1612c7181ac651caf1ee5661e3f9642ae9775d0fa0ad5eeb9da939e7d993

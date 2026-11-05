@@ -1,0 +1,73 @@
+{
+  "data": {
+    "tasks": [
+      {
+        "id": "cb8jthgs2yt0",
+        "title": "ORION 2026-11-05T19-34-42-012Z-agent-smoke-38326065 — sprawdź żółć, ąę i zapis",
+        "done": false,
+        "priority": false,
+        "createdAt": 1793907288756
+      }
+    ],
+    "notes": [],
+    "reminders": [],
+    "shopping": [],
+    "calendar": [],
+    "memory": [],
+    "scenes": [],
+    "audit": [
+      {
+        "tool": "add_task",
+        "input": "{\"title\":\"ORION 2026-11-05T19-34-42-012Z-agent-smoke-38326065 — sprawdź żółć, ąę i zapis\"}",
+        "output": "Dodano zadanie: „ORION 2026-11-05T19-34-42-012Z-agent-smoke-38326065 — sprawdź żółć, ąę i zapis”.",
+        "status": "ok",
+        "undo": {
+          "collection": "tasks",
+          "id": "cb8jthgs2yt0"
+        },
+        "id": "l11wyrub2yt1",
+        "at": 1793907288757
+      }
+    ],
+    "projects": [],
+    "projectFiles": [],
+    "tally": [],
+    "journal": [],
+    "leads": [],
+    "flashcards": [],
+    "bargainWatch": [],
+    "sentMail": [],
+    "contentPosts": [],
+    "imageHistory": [],
+    "siteProjects": [],
+    "financeProjects": [],
+    "world": {
+      "entities": [],
+      "relations": []
+    }
+  },
+  "chats": [
+    {
+      "id": "vh4jasth2xgl",
+      "title": "Dodaj zadanie: ORION 2026-11-05T19-34-42-012Z-ag",
+      "messages": [
+        {
+          "id": "fjxgbbq02ysr",
+          "role": "user",
+          "text": "Dodaj zadanie: ORION 2026-11-05T19-34-42-012Z-agent-smoke-38326065 — sprawdź żółć, ąę i zapis",
+          "createdAt": 1793907288747
+        },
+        {
+          "id": "vymkyyzp2yt3",
+          "role": "assistant",
+          "text": "Dodano zadanie: „ORION 2026-11-05T19-34-42-012Z-agent-smoke-38326065 — sprawdź żółć, ąę i zapis”.",
+          "tools": [
+            "add_task"
+          ],
+          "createdAt": 1793907288759
+        }
+      ],
+      "updatedAt": 1793907288765
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "run_id": "2026-11-05T19-21-26-251Z-desktop-c1b62aae",
+  "kind": "desktop",
+  "finished_at": "2026-11-05T19:21:26.865Z",
+  "source": {
+    "repo": "/workspace/Jarvis",
+    "branch": "work",
+    "commit": "b3234ca906305712ade35363cffc3524c9a1b21a",
+    "local_changes": "M .gitignore\n M electron/local-ollama.cjs\n M electron/main.cjs\n M electron/preload.cjs\n M electron/workspace-tools.cjs\n M eslint.config.js\n M package-lock.json\n M package.json\n M src/App.tsx\n M src/components/Composer.tsx\n M src/components/GoalStatusPanel.tsx\n M src/lib/brain.ts\n M src/lib/cognitiveStatus.ts\n M src/lib/council.ts\n M src/lib/desktop.ts\n M src/lib/generation.ts\n M src/lib/goalControl.ts\n M src/lib/goalRuntime.ts\n M src/lib/goalState.ts\n M src/lib/http.ts\n M src/lib/permissions.ts\n M src/lib/providers/anthropic.ts\n M src/lib/providers/gemini.ts\n M src/lib/providers/ollama.ts\n M src/lib/providers/openai.ts\n M src/lib/providers/types.ts\n M src/lib/providers/webllm.ts\n M src/lib/tools.ts\n M tests/goalRuntime.test.ts\n M tests/mcp.test.ts\n M tests/plugins.test.ts\n?? QA/autonomia60/\n?? scripts/qa/\n?? src/lib/abort.ts\n?? src/lib/controlCommand.ts\n?? src/lib/localToolCommands.ts\n?? tests/configuredOllamaPort.test.ts\n?? tests/fetchCancellation.test.ts\n?? tests/localToolCommands.test.ts\n?? tests/ollamaActionCapability.test.ts\n?? tests/providerStop.test.ts\n?? tests/stopConsent.test.ts\n?? tests/stopExecution.test.ts\n?? tests/stopWorkspaceProcess.test.ts\n?? tests/unknownToolConsent.test.ts\n?? tests/webllmCapabilityGuard.test.ts",
+    "diff_sha256": "5e57be90061dc2387ac49db439369d3c4f81d11236e79436338c1c096bfb5fcf",
+    "new_source_sha256": {
+      "scripts/qa/agent-smoke.cjs": "2a46f49e76cd342182460e94a2463de4774af691a2db27e0d9ab39c0e21a299b",
+      "scripts/qa/common.cjs": "969b8def0151588f5a25784b4bb5b7a5b5730a5299c8df300338c407de5906aa",
+      "scripts/qa/desktop.cjs": "25f87b837fbd6febe4c41aa112907efdf1fece502c9c95c72d65a6dd54871916",
+      "scripts/qa/preflight.cjs": "38397774eaa5b45776cc359fe8cc8396efab8c9b61d9f6e923700f049ab92a7d",
+      "src/lib/abort.ts": "3bbdec2bc8d1c205554226a25a6269c923dd703afdf7fe4ce3d0c90c1aabf6d7",
+      "src/lib/controlCommand.ts": "99acd11d2d9cdc10a1c3893054f0792ebc2e58a14d8523c6ad0058d4f8ebdde4",
+      "src/lib/localToolCommands.ts": "09cb5c32ba2adce7721c0c4f0c22c196786beb46e4d88a7b29ac50eaf6ef5ae2"
+    },
+    "app_version": "2.0.0",
+    "app_entry": "electron/main.cjs -> dist/index.html"
+  },
+  "results": [
+    {
+      "id": "Electron-start",
+      "level": "C",
+      "status": "BLOCKED",
+      "detail": "Electron failed before renderer startup: no graphical session; Xvfb is not installed.",
+      "evidence": [
+        "environment.json",
+        "launch.json",
+        "electron-stderr.log",
+        "electron-exit.json"
+      ],
+      "blocker": {
+        "dependency": "accessible graphical session or existing Xvfb",
+        "command": "node_modules/electron/dist/electron . (isolated profile, sandbox retained)",
+        "evidence": [
+          "electron-stderr.log"
+        ],
+        "scenarios": [
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "S8"
+        ],
+        "action": "Run npm run qa:desktop in a logged-in desktop session, or authorize installing Xvfb in this test machine. Do not guess DISPLAY."
+      }
+    },
+    {
+      "id": "normal-license-startup",
+      "level": "C",
+      "status": "NOT_RUN",
+      "detail": "Renderer never loaded; normal license activation path was not tested."
+    }
+  ]
+}

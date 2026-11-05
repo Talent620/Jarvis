@@ -1,3 +1,4 @@
+import { throwIfAborted } from "../abort";
 import { runTool } from "../tools";
 import { fetchTimeout, appTokenHeader } from "../http";
 import { GeminiStreamAccumulator, drainSSE } from "../stream";
@@ -102,7 +103,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
 
   // Pełna odpowiedź — ścieżka klasyczna / fallback.
   const requestFull = async (): Promise<Part[]> => {
-    const res = await fetchTimeout(base, { method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
+    const res = await fetchTimeout(base, { signal: ctx.signal, method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
     // thoughtsTokenCount (tokeny myślenia) liczą się do kosztu — dolicz do output.
@@ -115,7 +116,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
   // Strumieniowanie (SSE, tylko bezpośrednio) — tekst leci deltami; functionCall składamy.
   const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${ctx.model}:streamGenerateContent?alt=sse&key=${ctx.apiKey.trim()}`;
   const requestStream = async (): Promise<Part[]> => {
-    const res = await fetchTimeout(streamUrl, { method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
+    const res = await fetchTimeout(streamUrl, { signal: ctx.signal, method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
     if (!res.ok) {
       const data = await res.json().catch(() => null);
       throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
@@ -126,7 +127,9 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
     const acc = new GeminiStreamAccumulator();
     let buf = "";
     for (;;) {
+      throwIfAborted(ctx.signal);
       const { done, value } = await reader.read();
+      throwIfAborted(ctx.signal);
       if (done) break;
       buf += dec.decode(value, { stream: true });
       const { events, rest } = drainSSE(buf);
@@ -150,10 +153,12 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
 
   const seenCalls = new Set<string>(); // tożsamości wywołań (nazwa+argumenty) — anty-zapętlenie
   while (guard++ < 8) {
+    throwIfAborted(ctx.signal);
     let parts: Part[];
     try {
       parts = canStream ? await requestStream() : await requestFull();
     } catch (e) {
+      throwIfAborted(ctx.signal);
       const em = e instanceof Error ? e.message : String(e);
       if (canStream && !/timeout|abort|failed to fetch|load failed|network/i.test(em)) {
         canStream = false; guard--; continue; // hiccup strumienia → pełna odpowiedź
@@ -162,11 +167,13 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
     }
     contents.push({ role: "model", parts });
 
+    throwIfAborted(ctx.signal);
     const calls = parts.filter((p) => p.functionCall);
     if (calls.length) {
       const responseParts: Part[] = [];
       for (const c of calls) {
         const name = c.functionCall!.name;
+        if (!ctx.tools.some((tool) => tool.name === name)) throw new Error(`Model zażądał narzędzia spoza udostępnionego zestawu: ${name}. Nie wykonano działania.`);
         const sig = callSignature(name, c.functionCall!.args);
         // Wykryj zapętlenie: IDENTYCZNE powtórzone wywołanie (ta sama nazwa+argumenty) → przerwij czytelnie.
         if (seenCalls.has(sig)) {
@@ -174,7 +181,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
         }
         seenCalls.add(sig);
         used.add(name);
-        const out = await runTool(name, c.functionCall!.args || {});
+        const out = await runTool(name, c.functionCall!.args || {}, { signal: ctx.signal });
         const rp: Part = { functionResponse: { name, response: { result: out } } };
         if (c.functionCall!.id) rp.functionResponse!.id = c.functionCall!.id; // dopasuj odpowiedź do wywołania
         responseParts.push(rp);

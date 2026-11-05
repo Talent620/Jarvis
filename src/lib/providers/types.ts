@@ -50,6 +50,10 @@ export interface JarvisReply {
 
 /** Kontekst pojedynczego zapytania przekazywany adapterowi dostawcy. */
 export interface AskCtx {
+  /** STOP for this request; must also be checked before each tool execution. */
+  signal?: AbortSignal;
+  /** The user requested a real action; text-only fallback cannot fulfill it. */
+  requiresTools?: boolean;
   apiKey: string;
   model: string;
   system: string;

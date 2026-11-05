@@ -1,3 +1,5 @@
+import { isStopCommand } from "./lib/controlCommand";
+import { stopAllGoalRuns } from "./lib/goalControl";
 import { formatGoalProgress, isGoalProgressRequest } from "./lib/goalProgress";
 import { loadGoalsNewestFirst } from "./lib/goalRuntime";
 import InterfaceSwitch from "./components/InterfaceSwitch";
@@ -46,7 +48,7 @@ import { valueToday, prettyMinutes } from "./lib/valueLog";
 import { rememberFact } from "./lib/memory";
 import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
 import { notifySummary } from "./lib/notifyCenter";
-import { startGeneration, cancelGeneration, isCurrent } from "./lib/generation";
+import { startGeneration, cancelGeneration, generationSignal, isCurrent } from "./lib/generation";
 import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
 import { runProactiveNotifications } from "./lib/proactiveNotify";
 import { runPredictionCycleOnStore } from "./lib/predictionCycle";
@@ -441,7 +443,12 @@ export default function App() {
     );
     if (store.settings.backgroundWake) startBackgroundWake();
     // Bramka zgód i podgląd kroków agenta.
-    setConsentHandler((req) => new Promise((resolve) => setPendingConsent({ req, resolve })));
+    setConsentHandler((req) => new Promise((resolve) => {
+      const stop = () => { resolve({ allow: false, remember: false }); setPendingConsent((prev) => prev?.req === req ? null : prev); };
+      if (req.signal?.aborted) { stop(); return; }
+      req.signal?.addEventListener("abort", stop, { once: true });
+      setPendingConsent({ req, resolve: (answer) => { req.signal?.removeEventListener("abort", stop); resolve(answer); } });
+    }));
     setStepListener((tool) => setStep(tool));
 
     // Autopilot sprzedaży — raz dziennie sam robi zadania z leadów (telefony,
@@ -542,6 +549,7 @@ export default function App() {
 
   // --- Wysłanie polecenia do JARVIS-a (agentowa pętla) ---
   const handleSend = async (text: string, opts?: { council?: boolean; research?: boolean }) => {
+    if (isStopCommand(text)) { stopGeneration(); return; }
     setInterim("");
     stopSpeaking();
     buzz(14); // subtelna haptyka przy wysłaniu
@@ -641,6 +649,7 @@ export default function App() {
     setBusy(true);
     setOrb("thinking");
     const genToken = startGeneration(); // do bezpiecznego „Stop"
+    let generationSucceeded = false;
 
     try {
       // Okno kontekstu: czysty dialog (bez komunikatów systemowych), ostatnie 30
@@ -696,7 +705,7 @@ export default function App() {
         else if (!flushTimer) { flushTimer = setTimeout(flushStream, 40); }
       };
       try {
-        reply = useCouncil ? await askCouncil(history) : await askJarvis(history, onTok, setCouncilStep);
+        reply = useCouncil ? await askCouncil(history, generationSignal(genToken)) : await askJarvis(history, onTok, setCouncilStep, undefined, undefined, generationSignal(genToken));
       } finally {
         setCouncilStep(null);
       }
@@ -705,6 +714,7 @@ export default function App() {
       // kolejnej odpowiedzi tego samego zapasu); metadane wiadomości (via/fellBack) zostają zawsze.
       // Użytkownik kliknął Stop (albo wysłał coś nowego) — porzuć spóźnioną odpowiedź.
       if (!isCurrent(genToken)) return;
+      generationSucceeded = true;
       const announceFallback = shouldAnnounceFallback(lastFallbackViaRef.current, reply);
       lastFallbackViaRef.current = reply.fellBack && reply.via ? reply.via : null;
       const notice = fallbackNotice(reply);
@@ -756,18 +766,23 @@ export default function App() {
         setOrb(listenerRef.current?.listening ? "listening" : "idle");
       }
       // Prewarm (Z13): po turze trzymaj model lokalny gorący na następną (opt-in, throttlowany).
-      void maybePrewarm();
+      if (generationSucceeded && isCurrent(genToken)) void maybePrewarm();
     }
   };
 
   // Zatrzymanie generowania: ucisz głos, porzuć trwającą odpowiedź, odblokuj wejście.
   const stopGeneration = () => {
     cancelGeneration();
+    stopAllGoalRuns();
+    void desktop()?.stopWorkspaceProcesses?.().catch(() => toast("Nie potwierdzono zatrzymania procesów narzędzi."));
+    pendingConsent?.resolve({ allow: false, remember: false });
+    setPendingConsent(null);
     stopSpeaking();
     setCouncilStep(null);
+    setStep(null);
     setBusy(false);
     setOrb(listenerRef.current?.listening ? "listening" : "idle");
-    toast("⏹ Zatrzymano");
+    toast("⏹ STOP przyjęty. Nie rozpocznę kolejnych działań; trwające może wymagać sprawdzenia.");
   };
 
   sendRef.current = handleSend;
@@ -1243,13 +1258,13 @@ export default function App() {
       <div className="topbar">
         <div className="brand">
           {brand()}
-          <small>
-            {(resolveProvider()?.model || (hasUsableBrain() ? "LOKALNY" : "BRAK API")).toUpperCase()}
+          <small title={hasUsableBrain() ? "Wybrany model jest ustawieniem. Status sieci nie potwierdza dostępności modelu ani narzędzi." : "Brak konfiguracji modelu AI. Lokalne komendy nadal działają."}>
+            {hasUsableBrain() ? `WYBRANY: ${(resolveProvider()?.model || "LOKALNY").toUpperCase()}` : "BRAK KONFIGURACJI AI"}
             {(() => {
               const p = store.data.projects.find((x) => x.id === settings.activeProjectId);
               return p ? ` · ${p.name.toUpperCase()}` : "";
             })()}{" "}
-            · {online ? "ONLINE" : "OFFLINE"}
+            · SIEĆ: {online ? "ONLINE" : "OFFLINE"}
             {(() => {
               const m = currentBrainMode(online);
               return (
@@ -1277,6 +1292,7 @@ export default function App() {
         })()}
         <div className="spacer" />
         <InterfaceSwitch />
+        <button type="button" className="icon-btn" onClick={stopGeneration} aria-label="STOP — zatrzymaj działania" title="STOP — zatrzymaj działania" style={{ width: "auto", minWidth: 44, padding: "0 8px" }}>STOP</button>
         <button
           className="icon-btn"
           onClick={() => setShowGuardian(true)}

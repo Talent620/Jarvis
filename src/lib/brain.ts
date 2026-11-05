@@ -1,3 +1,6 @@
+import { parseLocalToolCommand } from "./localToolCommands";
+import { beginGoalRun } from "./goalControl";
+import { abortable, throwIfAborted } from "./abort";
 import { applyInterfaceCommand } from "./interfaceMode";
 import { store, uid } from "./store";
 import { brand } from "./brand";
@@ -13,7 +16,7 @@ import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
 import { retrieveKnowledge } from "./knowledge";
 import { buildProfileBlock } from "./profile";
 import { isDesktop } from "./desktop";
-import { shouldFallback, isNetworkError, isKeyError, humanize, classifyFailoverReason, sanitizeFailReason, PERSONAL_CUES } from "./aiHelpers";
+import { shouldFallback, isNetworkError, isKeyError, humanize, classifyFailoverReason, sanitizeFailReason, isActionRequest, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
 import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
 import { classifyCognitionLocal } from "./cognitiveController";
@@ -41,12 +44,12 @@ import type { JarvisReply, Msg, ProviderId, FallbackReasonKind } from "./provide
 
 // Retry przy chwilowym błędzie sieci — z WYKŁADNICZYM backoffem + jitterem (do 2 ponowień).
 // Ponawiamy TYLKO błędy sieciowe (nie błędy klucza/limitu — te idą do rotacji/fallbacku wyżej).
-async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
-  return withBackoff(fn, {
+async function withRetry<T>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+  return abortable(withBackoff(() => { throwIfAborted(signal); return fn(); }, {
     retries: 2,
     baseMs: 600,
-    shouldRetry: (e) => isNetworkError(e instanceof Error ? e.message : String(e)),
-  });
+    shouldRetry: (e) => !signal?.aborted && isNetworkError(e instanceof Error ? e.message : String(e)),
+  }), signal);
 }
 
 /**
@@ -409,7 +412,8 @@ export function curatedContextBlock(query: string, now = Date.now()): string {
  */
 export function executeGoalPlan(plan: AgentPlan, onStatus?: (s: string) => void): Promise<RunResult> {
   const toolExists = (n: string) => toolDefs.some((d) => d.name === n);
-  return runPlan(plan, { toolExists, riskOf, execTool: makeDefaultExecTool(runTool, riskOf), onStatus });
+  const control = beginGoalRun(`adhoc:${uid()}`);
+  return runPlan(plan, { toolExists, riskOf, execTool: makeDefaultExecTool((name, input) => runTool(name, input, { signal: control.signal }), riskOf), shouldStop: control.shouldStop, onStatus }).finally(control.finish);
 }
 
 /** Rozstrzyga, którego dostawcę i model użyć (uwzględnia tryb auto). */
@@ -432,16 +436,13 @@ export function resolveProvider(): { provider: ProviderId; model: string; apiKey
 }
 
 /**
- * Czy JARVIS ma JAKIKOLWIEK osiągalny mózg? Szersze niż resolveProvider: tryb „auto" z samą Ollamą
- * (bez kluczy chmury) daje resolveProvider=null, ale lokalny model i tak odpowie. Używać do decyzji
- * „czy wymusić konfigurację", by nie otwierać Ustawień użytkownikom korzystającym tylko z Ollamy/WebLLM.
+ * Czy konfiguracja pozwala podjąć próbę użycia modelu? Nie potwierdza dostępności API
+ * ani sprawności narzędzi. Sam wybór dostawcy/modelu bez adresu lub klucza nie wystarcza.
  */
 export function hasUsableBrain(s = store.settings): boolean {
-  if (resolveProvider()) return true; // wybrany dostawca z kluczem / auto z kluczem
-  if (s.ollamaUrl?.trim()) return true; // lokalny serwer (Ollama) — odpowie nawet w trybie auto
-  if (PROVIDER_LIST.some((p) => p.id !== "ollama" && s.keys[p.id]?.trim())) return true; // klucz chmury
-  if (s.webllmEnabled && webllmSupported()) return true; // mózg on-device (WebGPU)
-  return false;
+  const localConfigured = !!s.ollamaUrl?.trim() || !!(s.webllmEnabled && webllmSupported());
+  if (s.onDeviceOnly || s.provider === "ollama" || s.provider === "webllm") return localConfigured;
+  return localConfigured || PROVIDER_LIST.some((p) => !isKeyless(p.id) && !!s.keys[p.id]?.trim());
 }
 
 /** Test konkretnego dostawcy + klucza (używane przy „wklej dowolny klucz"). */
@@ -637,10 +638,17 @@ export async function askModelRich(params: Parameters<typeof askModelReply>[0]):
   return { text: (r.text || "").trim(), finishReason: r.finishReason };
 }
 
-export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }): Promise<JarvisReply> {
+export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }, signal?: AbortSignal): Promise<JarvisReply> {
+  throwIfAborted(signal);
   const last = history[history.length - 1];
   const localReply = last?.role === "user" && !last.image ? applyInterfaceCommand(last.content) : null;
   if (localReply) return { text: localReply, tools: ["interfejs"] };
+  const localTool = last?.role === "user" && !last.image ? parseLocalToolCommand(last.content) : null;
+  if (localTool) {
+    const text = await runTool(localTool.name, localTool.input, { signal });
+    throwIfAborted(signal);
+    return { text, tools: [localTool.name] };
+  }
   const resolved = resolveForRequest(history);
   if (!resolved) {
     throw new Error(
@@ -679,6 +687,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
     rankJournal(lastUserContent).catch(() => null),
     deepThinkWanted
       ? PROVIDERS[resolved.provider].impl({
+          signal,
           system: REASONING_SYSTEM,
           webSearch: false,
           tools: [],
@@ -690,6 +699,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
       : Promise.resolve(""),
   ]);
 
+  throwIfAborted(signal);
   // Wszczepiona wiedza ekspercka: dobierz pasujące modele mentalne (offline, za darmo).
   const currentKnowledge = store.settings.expertKnowledge !== false ? retrieveKnowledge(lastUserContent) : "";
 
@@ -726,6 +736,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // jest TEN SAM dla WSZYSTKICH dostawców, w tym Ollamy/WebLLM. Mały model lokalny odpowiada z
   // Twoim kontekstem; bez Mem0 degraduje do lokalnego profilu/faktów (zero zależności sieciowych).
   const baseCtx = {
+    signal,
     system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock, curatedBlock }) + (rulesBlock ? `\n\n${rulesBlock}` : "") + (extraSystem ? `\n\n${extraSystem}` : ""),
     // Tryb on-device wyłącza web-search (zero egres do sieci — pełna prywatność/offline).
     webSearch: store.settings.onDeviceOnly ? false : store.settings.webSearch,
@@ -736,6 +747,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
     // Adaptacyjne myślenie: profil z kontrolera poznawczego (trudne/cele → głębiej, proste → szybko).
     reasoningProfile: cognition.reasoningProfile,
+    requiresTools: cognition.needsTools || isActionRequest(lastUserContent),
   };
 
   // Router dobiera dostawcę+model do zadania (prostota/złożoność/obraz) + fallback.
@@ -787,6 +799,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
           const price = priceFor(res.corrected ? cortex.model : localModel, parsePricingOverrides(store.settings.aiPricingOverrides));
           recordUsage({ at: Date.now(), provider: res.reply.via || cortex.provider, model: res.corrected ? cortex.model : localModel, inputTokens: res.reply.usage.inputTokens, outputTokens: res.reply.usage.outputTokens, costUsd: costOf(res.reply.usage, price) });
         }
+        throwIfAborted(signal);
         return res.reply;
       } catch {
         /* spekulacja padła całkowicie — przejdź do zwykłej pętli failoveru */
@@ -848,7 +861,10 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         // nie ucinać przedwcześnie wolnej, ale działającej odpowiedzi u kogoś z jednym dostawcą.
         const hasFailover = i < order.length - 1 || j < keys.length - 1;
         const wd = makeStallWatchdog(() => settled, () => progressed, !!onTok && hasFailover);
-        const attemptP = withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, tools: provider === "ollama" && !lastUser?.image && isToolFreeGreeting(lastUser?.content || "") ? [] : baseCtx.tools, apiKey, model, onToken: onTok }));
+        const attemptController = new AbortController();
+        const stopAttempt = () => attemptController.abort();
+        if (signal?.aborted) stopAttempt(); else signal?.addEventListener("abort", stopAttempt, { once: true });
+        const attemptP = withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, signal: attemptController.signal, tools: provider === "ollama" && !lastUser?.image && isToolFreeGreeting(lastUser?.content || "") ? [] : baseCtx.tools, apiKey, model, onToken: onTok ? (delta) => { if (!attemptController.signal.aborted) onTok(delta); } : undefined }), attemptController.signal);
         attemptP.catch(() => {}); // jeśli przegra wyścig z watchdogiem, późne odrzucenie nie może być „unhandled"
         let reply: JarvisReply;
         try {
@@ -856,6 +872,8 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         } finally {
           settled = true;
           wd.cancel();
+          stopAttempt(); // A losing watchdog attempt must never execute tools later.
+          signal?.removeEventListener("abort", stopAttempt);
         }
         providerBreaker.onSuccess(provider); // udało się — zamknij bezpiecznik
         recordLatency("provider:" + provider, Date.now() - t0, true, model);
@@ -978,8 +996,10 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
             costUsd: costOf(reply.usage, price),
           });
         }
+        throwIfAborted(signal);
         return { ...reply, ...meta, ...(citations.length ? { citations } : {}) };
       } catch (e) {
+        throwIfAborted(signal);
         providerErr = e;
         lastErr = e;
         const msg = e instanceof Error ? e.message : String(e);

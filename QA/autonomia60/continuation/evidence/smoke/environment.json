@@ -1,0 +1,32 @@
+{
+  "os": "6.18.57",
+  "platform": "linux",
+  "architecture": "x64",
+  "node": "v24.22.1",
+  "os_release": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.6\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n",
+  "container_markers": {
+    "dockerenv": false,
+    "containerenv": false
+  },
+  "cwd": "/workspace/Jarvis",
+  "uid": 1000,
+  "session_present": {
+    "DISPLAY": false,
+    "WAYLAND_DISPLAY": false,
+    "XDG_RUNTIME_DIR": false,
+    "DBUS_SESSION_BUS_ADDRESS": false,
+    "XDG_SESSION_TYPE": false
+  },
+  "session_bus_socket": false,
+  "tools": {
+    "chromium": "/usr/bin/chromium",
+    "chromium-browser": null,
+    "Xvfb": null,
+    "xvfb-run": null,
+    "Xorg": "/usr/bin/Xorg",
+    "xdotool": null,
+    "ollama": null
+  },
+  "electron_version": "33.4.11",
+  "actual_user_installation": "Not inspected. This is the current test machine, not assumed to be /home/qw/Jarvis-GitHub."
+}

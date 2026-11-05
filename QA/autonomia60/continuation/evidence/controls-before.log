@@ -1,0 +1,54 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ❯ tests/qaDiscoveredControls.test.ts (2 tests | 2 failed) 9ms
+   × nie myli wybranego modelu z konfiguracją zdolną go uruchomić 7ms
+     → expected true to be false // Object.is equality
+   × przepuszcza prośbę o dotychczasowe wyniki podczas pracy, blokując nowe zwykłe zadanie 1ms
+     → expected false to be true // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/qaDiscoveredControls.test.ts > nie myli wybranego modelu z konfiguracją zdolną go uruchomić
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/qaDiscoveredControls.test.ts:14:36
+     12| it('nie myli wybranego modelu z konfiguracją zdolną go uruchomić', () …
+     13|   const settings = { ...store.settings, provider: 'ollama' as const, m…
+     14|   expect(hasUsableBrain(settings)).toBe(false);
+       |                                    ^
+     15|   expect(hasUsableBrain({ ...settings, ollamaUrl: 'http://127.0.0.1:11…
+     16| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/qaDiscoveredControls.test.ts > przepuszcza prośbę o dotychczasowe wyniki podczas pracy, blokując nowe zwykłe zadanie
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/qaDiscoveredControls.test.ts:19:63
+     17| it('przepuszcza prośbę o dotychczasowe wyniki podczas pracy, blokując …
+     18|   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+     19|   expect(isGoalProgressRequest('Pokaż dotychczasowe wyniki')).toBe(tru…
+       |                                                               ^
+     20|   const node = document.createElement('div'); document.body.append(nod…
+     21|   const root = createRoot(node), onSend = vi.fn(), onStop = vi.fn();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  19:24:14
+   Duration  1.58s (transform 719ms, setup 0ms, collect 1.03s, tests 9ms, environment 264ms, prepare 99ms)
+

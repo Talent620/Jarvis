@@ -1,0 +1,19 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/permissions.test.ts (10 tests) 12ms
+ ✓ tests/unknownToolConsent.test.ts (1 test) 3ms
+ ✓ tests/plugins.test.ts (5 tests) 9ms
+stderr | tests/mcp.test.ts > MCP — McpManager (mock JSON-RPC) > odrzuca serwer spoza allowlisty (nie ładuje narzędzi, nie woła sieci)
+[mcp] serwer poza allowlistą — pomijam: https://evil.example/mcp
+
+stderr | tests/mcp.test.ts > MCP — McpManager (mock JSON-RPC) > graceful: serwer niedostępny → brak narzędzi, bez wyjątku
+[mcp] nie udało się załadować down: ECONNREFUSED
+
+ ✓ tests/mcp.test.ts (8 tests) 19ms
+
+ Test Files  4 passed (4)
+      Tests  24 passed (24)
+   Start at  19:01:45
+   Duration  1.76s (transform 998ms, setup 0ms, collect 2.29s, tests 43ms, environment 1.44s, prepare 259ms)
+

@@ -19,7 +19,7 @@ describe("Plugin API", () => {
   it("narzędzie wtyczki działa przez runTool (pełny cykl: start → status → koniec)", async () => {
     vi.useFakeTimers();
     loadPlugins([pomodoroPlugin]); // idempotentne — duplikat pominięty
-    grantOutboundScope("*"); // narzędzie wtyczki = fail-safe outbound; test bada wykonanie
+    grantOutboundScope(["pomodoro_start", "pomodoro_status"]); // narzędzie wtyczki = fail-safe outbound; test bada wykonanie
     expect(await runTool("pomodoro_start", { minutes: 1 })).toMatch(/1 minut/);
     expect(await runTool("pomodoro_status", {})).toMatch(/Zostało/);
     vi.advanceTimersByTime(61_000);

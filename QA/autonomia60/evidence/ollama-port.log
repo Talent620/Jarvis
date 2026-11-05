@@ -1,0 +1,11 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/configuredOllamaPort.test.ts (2 tests) 24ms
+ ✓ tests/localOllamaStart.test.ts (5 tests) 111ms
+
+ Test Files  2 passed (2)
+      Tests  7 passed (7)
+   Start at  18:59:18
+   Duration  463ms (transform 55ms, setup 0ms, collect 69ms, tests 134ms, environment 0ms, prepare 238ms)
+

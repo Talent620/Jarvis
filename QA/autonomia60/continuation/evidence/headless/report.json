@@ -1,0 +1,35 @@
+{
+  "run_id": "2026-11-05T19-28-06-941Z-electron-headless-probe-dfc4ed3a",
+  "kind": "electron-headless-probe",
+  "finished_at": "2026-11-05T19:28:07.357Z",
+  "source": {
+    "repo": "/workspace/Jarvis",
+    "branch": "work",
+    "commit": "b3234ca906305712ade35363cffc3524c9a1b21a",
+    "local_changes": "M .gitignore\n M electron/local-ollama.cjs\n M electron/main.cjs\n M electron/preload.cjs\n M electron/workspace-tools.cjs\n M eslint.config.js\n M package-lock.json\n M package.json\n M src/App.tsx\n M src/components/Composer.tsx\n M src/components/GoalStatusPanel.tsx\n M src/lib/brain.ts\n M src/lib/cognitiveStatus.ts\n M src/lib/council.ts\n M src/lib/desktop.ts\n M src/lib/generation.ts\n M src/lib/goalControl.ts\n M src/lib/goalProgress.ts\n M src/lib/goalRuntime.ts\n M src/lib/goalState.ts\n M src/lib/http.ts\n M src/lib/permissions.ts\n M src/lib/providers/anthropic.ts\n M src/lib/providers/gemini.ts\n M src/lib/providers/ollama.ts\n M src/lib/providers/openai.ts\n M src/lib/providers/types.ts\n M src/lib/providers/webllm.ts\n M src/lib/tools.ts\n M tests/goalRuntime.test.ts\n M tests/mcp.test.ts\n M tests/plugins.test.ts\n?? QA/autonomia60/\n?? scripts/qa/\n?? src/lib/abort.ts\n?? src/lib/controlCommand.ts\n?? src/lib/localToolCommands.ts\n?? tests/configuredOllamaPort.test.ts\n?? tests/fetchCancellation.test.ts\n?? tests/localToolCommands.test.ts\n?? tests/ollamaActionCapability.test.ts\n?? tests/providerStop.test.ts\n?? tests/qaConfiguration.test.ts\n?? tests/qaDiscoveredControls.test.ts\n?? tests/stopConsent.test.ts\n?? tests/stopExecution.test.ts\n?? tests/stopWorkspaceProcess.test.ts\n?? tests/unknownToolConsent.test.ts\n?? tests/webllmCapabilityGuard.test.ts",
+    "diff_sha256": "fe9c16a21eb5d8f274b49de477d14edae885900b4297db7f73bf8c6794152e5a",
+    "new_source_sha256": {
+      "scripts/qa/README.md": "ba2c28dac1f1e362789f92dc42bcdcf3ecc557c01911a96dcb9af072d7f038a2",
+      "scripts/qa/agent-smoke.cjs": "23aa6a25364cfe7da69122b6eca19f67d20a5558dc56fa22e2aaae16b17915bd",
+      "scripts/qa/common.cjs": "1cef0a1fd3075d7ff4185f0158d2a9a9b9cf17f946455a8cd56df572d196a1a4",
+      "scripts/qa/desktop.cjs": "effc327c99493179a11df252d3bb175db6b66cffb8f05159e58444cd304c5a79",
+      "scripts/qa/preflight.cjs": "38397774eaa5b45776cc359fe8cc8396efab8c9b61d9f6e923700f049ab92a7d",
+      "src/lib/abort.ts": "3bbdec2bc8d1c205554226a25a6269c923dd703afdf7fe4ce3d0c90c1aabf6d7",
+      "src/lib/controlCommand.ts": "99acd11d2d9cdc10a1c3893054f0792ebc2e58a14d8523c6ad0058d4f8ebdde4",
+      "src/lib/localToolCommands.ts": "5d1d3b62143d75642fb30cc8da294eedb9eecf15aeed620dcb4c1bfa6f0ec1c0"
+    },
+    "app_version": "2.0.0",
+    "app_entry": "electron/main.cjs -> dist/index.html"
+  },
+  "results": [
+    {
+      "id": "headless-Ozone-probe",
+      "status": "FAIL",
+      "level": "C diagnostic attempt",
+      "detail": "electron.launch: WebSocket error: socket hang up\nCall log:\n\u001b[2m  - <launching> /workspace/Jarvis/node_modules/electron/dist/electron --inspect=0 --remote-debugging-port=0 /workspac",
+      "evidence": [
+        "electron-stderr.log"
+      ]
+    }
+  ]
+}

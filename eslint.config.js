@@ -11,6 +11,8 @@ export default tseslint.config(
     ignores: [
       "dist",
       "dist-studio",
+      "release-desktop/**", // wygenerowane pakiety, źródła są lintowane w electron/ i site-os/
+      "QA/runs/**", // isolated browser profiles and generated QA builds
       "node_modules",
       "**/node_modules/**",
       "node_modules_incomplete/**",

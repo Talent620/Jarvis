@@ -1,0 +1,6 @@
+{
+  "exit_code": null,
+  "signal": "SIGSEGV",
+  "spawn_error": null,
+  "diagnosis": "Electron failed before renderer startup: no graphical session; Xvfb is not installed."
+}

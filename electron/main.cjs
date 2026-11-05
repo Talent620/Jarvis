@@ -9,9 +9,11 @@ const { createLinuxKeyboard } = require("./linux-keyboard.cjs");
 const linuxKeyboard = createLinuxKeyboard();
 const { createWorkspaceTools } = require("./workspace-tools.cjs");
 const { createStdioMcpManager } = require("./mcp-stdio.cjs");
-const { createLocalOllamaManager } = require("./local-ollama.cjs");
+const { createConfiguredLocalOllamaManager } = require("./local-ollama.cjs");
 const { createLocalSiteOsManager } = require("./local-siteos.cjs");
-const localOllama = createLocalOllamaManager();
+const localOllama = createConfiguredLocalOllamaManager();
+
+if (process.env.JARVIS_PROFILE_DIR) app.setPath("userData", path.resolve(process.env.JARVIS_PROFILE_DIR));
 
 const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
 
@@ -121,7 +123,10 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+  // QA builds stay outside dist and never replace the user's production bundle.
+  const rendererDir = !app.isPackaged && process.env.JARVIS_QA_RENDERER_DIR
+    ? path.resolve(process.env.JARVIS_QA_RENDERER_DIR) : path.join(__dirname, "../dist");
+  mainWindow.loadFile(path.join(rendererDir, "index.html"));
 
   // Twarda blokada nawigacji: renderer nie może opuścić własnego file:// (inaczej
   // wroga strona przejęłaby cały mostek jarvisDesktop — uruchamianie, klawiatura, tokeny).
@@ -289,8 +294,13 @@ function registerDesktopControl() {
     return url.startsWith("file://");
   };
   const workspaceTools = createWorkspaceTools({
-    root: path.join(app.getPath("documents"), "JARVIS Workspace"),
+    root: process.env.JARVIS_WORKSPACE_DIR ? path.resolve(process.env.JARVIS_WORKSPACE_DIR) : path.join(app.getPath("documents"), "JARVIS Workspace"),
     openExternal: (url) => shell.openExternal(url),
+  });
+  app.once("before-quit", () => workspaceTools.cancelAll());
+  ipcMain.handle("jarvis:stop-workspace-processes", (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    return workspaceTools.cancelAll();
   });
   stdioMcp = createStdioMcpManager({ root: workspaceTools.root });
   ipcMain.handle("jarvis:agent-tool", async (event, payload) => {

@@ -71,4 +71,32 @@ function createLocalOllamaManager({ port = 11434, start = spawn, timeoutMs = 120
   };
   return { ensure, close };
 }
-module.exports = { isDefaultLocalOllama, probeOllama, createLocalOllamaManager };
+// Production entry: read the configured endpoint, never infer its port.
+function configuredLocalPort(raw) {
+  try {
+    const url = new URL(String(raw || ""));
+    const port = Number(url.port);
+    if (!Number.isInteger(port) || port < 1024 || port > 65535 || !isDefaultLocalOllama(raw, port)) return null;
+    return port;
+  } catch { return null; }
+}
+function createConfiguredLocalOllamaManager(options = {}) {
+  let manager = null;
+  let currentPort = null;
+  let closed = false;
+  return {
+    ensure(url) {
+      const port = configuredLocalPort(url);
+      if (closed) return Promise.resolve({ ok: false, error: "Aplikacja jest zamykana." });
+      if (port === null) return Promise.resolve({ ok: false, skipped: true, error: "Automatyczny start wymaga jawnego lokalnego adresu HTTP i portu 1024–65535, bez ścieżki i danych logowania." });
+      if (port !== currentPort) {
+        manager?.close(); // Only a process owned by this app can be stopped here.
+        manager = createLocalOllamaManager({ ...options, port });
+        currentPort = port;
+      }
+      return manager.ensure(url);
+    },
+    close() { closed = true; manager?.close(); },
+  };
+}
+module.exports = { isDefaultLocalOllama, probeOllama, createLocalOllamaManager, configuredLocalPort, createConfiguredLocalOllamaManager };

@@ -5,7 +5,7 @@ import { outcomeLabel } from "./actionOutcome";
 export function isGoalProgressRequest(text: string): boolean {
   const q = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l")
     .replace(/[,.!?]+/g, " ").replace(/\s+/g, " ").trim().replace(/^jarvis\s+/, "");
-  return /^(pokaz (mi )?wyniki|daj (mi )?(to co juz znalazles|pierwsze wyniki)|pospiesz sie(?: potrzebuje (pierwszych )?wynikow)?)$/.test(q);
+  return /^(pokaz (mi )?(dotychczasowe )?wyniki|daj (mi )?(to co juz znalazles|pierwsze wyniki)|pospiesz sie(?: potrzebuje (pierwszych )?wynikow)?)$/.test(q);
 }
 
 /** Raportuje tylko zapisane rezultaty, bez wymyślania cen ani ukończonych kroków. */

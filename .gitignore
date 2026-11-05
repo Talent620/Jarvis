@@ -31,3 +31,6 @@ release-desktop
 
 # Kandydaci narzędzi generowanych przez agenta nigdy nie trafiają do repozytorium.
 tools/generated/*.candidate.cjs
+
+# Isolated QA profiles, test data and per-run evidence (may contain local configuration).
+QA/runs/

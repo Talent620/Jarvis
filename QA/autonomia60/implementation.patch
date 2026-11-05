@@ -1,0 +1,1495 @@
+diff --git a/electron/local-ollama.cjs b/electron/local-ollama.cjs
+index 55622c8..039922c 100644
+--- a/electron/local-ollama.cjs
++++ b/electron/local-ollama.cjs
+@@ -71,4 +71,32 @@ function createLocalOllamaManager({ port = 11434, start = spawn, timeoutMs = 120
+   };
+   return { ensure, close };
+ }
+-module.exports = { isDefaultLocalOllama, probeOllama, createLocalOllamaManager };
++// Production entry: read the configured endpoint, never infer its port.
++function configuredLocalPort(raw) {
++  try {
++    const url = new URL(String(raw || ""));
++    const port = Number(url.port);
++    if (!Number.isInteger(port) || port < 1024 || port > 65535 || !isDefaultLocalOllama(raw, port)) return null;
++    return port;
++  } catch { return null; }
++}
++function createConfiguredLocalOllamaManager(options = {}) {
++  let manager = null;
++  let currentPort = null;
++  let closed = false;
++  return {
++    ensure(url) {
++      const port = configuredLocalPort(url);
++      if (closed) return Promise.resolve({ ok: false, error: "Aplikacja jest zamykana." });
++      if (port === null) return Promise.resolve({ ok: false, skipped: true, error: "Automatyczny start wymaga jawnego lokalnego adresu HTTP i portu 1024–65535, bez ścieżki i danych logowania." });
++      if (port !== currentPort) {
++        manager?.close(); // Only a process owned by this app can be stopped here.
++        manager = createLocalOllamaManager({ ...options, port });
++        currentPort = port;
++      }
++      return manager.ensure(url);
++    },
++    close() { closed = true; manager?.close(); },
++  };
++}
++module.exports = { isDefaultLocalOllama, probeOllama, createLocalOllamaManager, configuredLocalPort, createConfiguredLocalOllamaManager };
+diff --git a/electron/main.cjs b/electron/main.cjs
+index 5f471bc..d49c89d 100644
+--- a/electron/main.cjs
++++ b/electron/main.cjs
+@@ -9,9 +9,9 @@ const { createLinuxKeyboard } = require("./linux-keyboard.cjs");
+ const linuxKeyboard = createLinuxKeyboard();
+ const { createWorkspaceTools } = require("./workspace-tools.cjs");
+ const { createStdioMcpManager } = require("./mcp-stdio.cjs");
+-const { createLocalOllamaManager } = require("./local-ollama.cjs");
++const { createConfiguredLocalOllamaManager } = require("./local-ollama.cjs");
+ const { createLocalSiteOsManager } = require("./local-siteos.cjs");
+-const localOllama = createLocalOllamaManager();
++const localOllama = createConfiguredLocalOllamaManager();
+ 
+ const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
+ 
+@@ -292,6 +292,11 @@ function registerDesktopControl() {
+     root: path.join(app.getPath("documents"), "JARVIS Workspace"),
+     openExternal: (url) => shell.openExternal(url),
+   });
++  app.once("before-quit", () => workspaceTools.cancelAll());
++  ipcMain.handle("jarvis:stop-workspace-processes", (event) => {
++    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
++    return workspaceTools.cancelAll();
++  });
+   stdioMcp = createStdioMcpManager({ root: workspaceTools.root });
+   ipcMain.handle("jarvis:agent-tool", async (event, payload) => {
+     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+diff --git a/electron/preload.cjs b/electron/preload.cjs
+index 24bd8fb..d8061a6 100644
+--- a/electron/preload.cjs
++++ b/electron/preload.cjs
+@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer } = require("electron");
+ 
+ contextBridge.exposeInMainWorld("jarvisDesktop", {
+   platform: process.platform,
++  stopWorkspaceProcesses: () => ipcRenderer.invoke("jarvis:stop-workspace-processes"),
+   // Bezpieczna warstwa narzędzi systemowych (MCP-style): zawsze przez jeden kontrolowany IPC.
+   agentTool: (tool, input = {}) => ipcRenderer.invoke("jarvis:agent-tool", { tool: String(tool || ""), input }),
+   mcpStdioConnect: (config) => ipcRenderer.invoke("jarvis:mcp-stdio-connect", config),
+diff --git a/electron/workspace-tools.cjs b/electron/workspace-tools.cjs
+index 376e302..d5eff40 100644
+--- a/electron/workspace-tools.cjs
++++ b/electron/workspace-tools.cjs
+@@ -56,6 +56,8 @@ function run(command, args, options = {}) {
+       windowsHide: true,
+       env: { ...process.env, ...options.env },
+     });
++    const execution = { child, cancelled: false };
++    options.activeProcesses?.add(execution);
+     let stdout = "";
+     let stderr = "";
+     const append = (key, chunk) => {
+@@ -68,11 +70,13 @@ function run(command, args, options = {}) {
+     const timer = setTimeout(() => child.kill(), options.timeout || 30_000);
+     child.on("error", (error) => {
+       clearTimeout(timer);
++      options.activeProcesses?.delete(execution);
+       resolve({ ok: false, code: -1, stdout, stderr: error.message });
+     });
+     child.on("close", (code) => {
+       clearTimeout(timer);
+-      resolve({ ok: code === 0, code: code ?? -1, stdout, stderr });
++      options.activeProcesses?.delete(execution);
++      resolve({ ok: !execution.cancelled && code === 0, cancelled: execution.cancelled, code: code ?? -1, stdout, stderr });
+     });
+   });
+ }
+@@ -84,6 +88,21 @@ function safeArgs(input) {
+ }
+ 
+ function createWorkspaceTools(options) {
++  const activeProcesses = new Set();
++  const runOwned = (command, args, settings = {}) => run(command, args, { ...settings, activeProcesses });
++  const cancelAll = () => {
++    let requested = 0;
++    for (const execution of activeProcesses) {
++      const child = execution.child;
++      if (child.exitCode !== null || child.signalCode !== null) continue;
++      execution.cancelled = true;
++      child.kill(); requested++;
++      const force = setTimeout(() => { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); }, 1000);
++      force.unref();
++      child.once("exit", () => clearTimeout(force));
++    }
++    return { ok: true, requested };
++  };
+   const root = path.resolve(options.root);
+   const publicPageReader = createPublicPageReader();
+   const logDir = path.join(root, ".jarvis", "logs");
+@@ -127,21 +146,21 @@ function createWorkspaceTools(options) {
+         fs.writeFileSync(target, content, "utf8");
+         result = { ok: true, path: path.relative(root, target), bytes: Buffer.byteLength(content) };
+       } else if (tool === "git") {
+-        result = await run("git", safeArgs(input.args), { cwd: inside(root, input.cwd), timeout: 60_000 });
++        result = await runOwned("git", safeArgs(input.args), { cwd: inside(root, input.cwd), timeout: 60_000 });
+       } else if (tool === "terminal") {
+         const command = String(input.command || "").toLowerCase();
+         if (!SAFE_COMMANDS.has(command)) throw new Error(`Polecenie „${command}” nie znajduje się na allowliście.`);
+-        result = await run(command, safeArgs(input.args), { cwd: inside(root, input.cwd), timeout: 120_000 });
++        result = await runOwned(command, safeArgs(input.args), { cwd: inside(root, input.cwd), timeout: 120_000 });
+       } else if (tool === "docker") {
+-        result = await run("docker", safeArgs(input.args || ["version"]), { cwd: inside(root, input.cwd), timeout: 60_000 });
++        result = await runOwned("docker", safeArgs(input.args || ["version"]), { cwd: inside(root, input.cwd), timeout: 60_000 });
+       } else if (tool === "database") {
+         const engine = String(input.engine || "sqlite").toLowerCase();
+         const query = String(input.query || "").trim();
+         if (!/^(select|pragma|explain|with)\b/i.test(query)) throw new Error("Adapter bazy domyślnie zezwala tylko na bezpieczne zapytania odczytowe.");
+         if (engine === "sqlite") {
+-          result = await run("sqlite3", ["-json", inside(root, input.database), query], { cwd: root, timeout: 30_000 });
++          result = await runOwned("sqlite3", ["-json", inside(root, input.database), query], { cwd: root, timeout: 30_000 });
+         } else if (engine === "postgres") {
+-          result = await run("psql", [String(input.connection || ""), "-X", "-A", "-t", "-c", query], { cwd: root, timeout: 30_000 });
++          result = await runOwned("psql", [String(input.connection || ""), "-X", "-A", "-t", "-c", query], { cwd: root, timeout: 30_000 });
+         } else throw new Error("Obsługiwane bazy: sqlite i postgres.");
+       } else if (tool === "http") {
+         const url = new URL(String(input.url || ""));
+@@ -188,7 +207,7 @@ function createWorkspaceTools(options) {
+     return result;
+   }
+ 
+-  return { call, root };
++  return { call, root, cancelAll };
+ }
+ 
+ module.exports = { createWorkspaceTools, inside, safeArgs, SAFE_COMMANDS };
+diff --git a/eslint.config.js b/eslint.config.js
+index e050fa8..49f82f9 100644
+--- a/eslint.config.js
++++ b/eslint.config.js
+@@ -11,6 +11,7 @@ export default tseslint.config(
+     ignores: [
+       "dist",
+       "dist-studio",
++      "release-desktop/**", // wygenerowane pakiety, źródła są lintowane w electron/ i site-os/
+       "node_modules",
+       "**/node_modules/**",
+       "node_modules_incomplete/**",
+diff --git a/src/App.tsx b/src/App.tsx
+index 114492b..8e17150 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1,3 +1,5 @@
++import { isStopCommand } from "./lib/controlCommand";
++import { stopAllGoalRuns } from "./lib/goalControl";
+ import { formatGoalProgress, isGoalProgressRequest } from "./lib/goalProgress";
+ import { loadGoalsNewestFirst } from "./lib/goalRuntime";
+ import InterfaceSwitch from "./components/InterfaceSwitch";
+@@ -46,7 +48,7 @@ import { valueToday, prettyMinutes } from "./lib/valueLog";
+ import { rememberFact } from "./lib/memory";
+ import { autoPlanDaily, autoPlanSummary } from "./lib/autoPlan";
+ import { notifySummary } from "./lib/notifyCenter";
+-import { startGeneration, cancelGeneration, isCurrent } from "./lib/generation";
++import { startGeneration, cancelGeneration, generationSignal, isCurrent } from "./lib/generation";
+ import { nextNudge, markShown, type NudgeScreen } from "./lib/proactive";
+ import { runProactiveNotifications } from "./lib/proactiveNotify";
+ import { runPredictionCycleOnStore } from "./lib/predictionCycle";
+@@ -441,7 +443,12 @@ export default function App() {
+     );
+     if (store.settings.backgroundWake) startBackgroundWake();
+     // Bramka zgód i podgląd kroków agenta.
+-    setConsentHandler((req) => new Promise((resolve) => setPendingConsent({ req, resolve })));
++    setConsentHandler((req) => new Promise((resolve) => {
++      const stop = () => { resolve({ allow: false, remember: false }); setPendingConsent((prev) => prev?.req === req ? null : prev); };
++      if (req.signal?.aborted) { stop(); return; }
++      req.signal?.addEventListener("abort", stop, { once: true });
++      setPendingConsent({ req, resolve: (answer) => { req.signal?.removeEventListener("abort", stop); resolve(answer); } });
++    }));
+     setStepListener((tool) => setStep(tool));
+ 
+     // Autopilot sprzedaży — raz dziennie sam robi zadania z leadów (telefony,
+@@ -542,6 +549,7 @@ export default function App() {
+ 
+   // --- Wysłanie polecenia do JARVIS-a (agentowa pętla) ---
+   const handleSend = async (text: string, opts?: { council?: boolean; research?: boolean }) => {
++    if (isStopCommand(text)) { stopGeneration(); return; }
+     setInterim("");
+     stopSpeaking();
+     buzz(14); // subtelna haptyka przy wysłaniu
+@@ -641,6 +649,7 @@ export default function App() {
+     setBusy(true);
+     setOrb("thinking");
+     const genToken = startGeneration(); // do bezpiecznego „Stop"
++    let generationSucceeded = false;
+ 
+     try {
+       // Okno kontekstu: czysty dialog (bez komunikatów systemowych), ostatnie 30
+@@ -696,7 +705,7 @@ export default function App() {
+         else if (!flushTimer) { flushTimer = setTimeout(flushStream, 40); }
+       };
+       try {
+-        reply = useCouncil ? await askCouncil(history) : await askJarvis(history, onTok, setCouncilStep);
++        reply = useCouncil ? await askCouncil(history, generationSignal(genToken)) : await askJarvis(history, onTok, setCouncilStep, undefined, undefined, generationSignal(genToken));
+       } finally {
+         setCouncilStep(null);
+       }
+@@ -705,6 +714,7 @@ export default function App() {
+       // kolejnej odpowiedzi tego samego zapasu); metadane wiadomości (via/fellBack) zostają zawsze.
+       // Użytkownik kliknął Stop (albo wysłał coś nowego) — porzuć spóźnioną odpowiedź.
+       if (!isCurrent(genToken)) return;
++      generationSucceeded = true;
+       const announceFallback = shouldAnnounceFallback(lastFallbackViaRef.current, reply);
+       lastFallbackViaRef.current = reply.fellBack && reply.via ? reply.via : null;
+       const notice = fallbackNotice(reply);
+@@ -756,18 +766,23 @@ export default function App() {
+         setOrb(listenerRef.current?.listening ? "listening" : "idle");
+       }
+       // Prewarm (Z13): po turze trzymaj model lokalny gorący na następną (opt-in, throttlowany).
+-      void maybePrewarm();
++      if (generationSucceeded && isCurrent(genToken)) void maybePrewarm();
+     }
+   };
+ 
+   // Zatrzymanie generowania: ucisz głos, porzuć trwającą odpowiedź, odblokuj wejście.
+   const stopGeneration = () => {
+     cancelGeneration();
++    stopAllGoalRuns();
++    void desktop()?.stopWorkspaceProcesses?.().catch(() => toast("Nie potwierdzono zatrzymania procesów narzędzi."));
++    pendingConsent?.resolve({ allow: false, remember: false });
++    setPendingConsent(null);
+     stopSpeaking();
+     setCouncilStep(null);
++    setStep(null);
+     setBusy(false);
+     setOrb(listenerRef.current?.listening ? "listening" : "idle");
+-    toast("⏹ Zatrzymano");
++    toast("⏹ STOP przyjęty. Nie rozpocznę kolejnych działań; trwające może wymagać sprawdzenia.");
+   };
+ 
+   sendRef.current = handleSend;
+@@ -1277,6 +1292,7 @@ export default function App() {
+         })()}
+         <div className="spacer" />
+         <InterfaceSwitch />
++        <button type="button" className="icon-btn" onClick={stopGeneration} aria-label="STOP — zatrzymaj działania" title="STOP — zatrzymaj działania" style={{ width: "auto", minWidth: 44, padding: "0 8px" }}>STOP</button>
+         <button
+           className="icon-btn"
+           onClick={() => setShowGuardian(true)}
+diff --git a/src/components/Composer.tsx b/src/components/Composer.tsx
+index acdfb29..aedd39a 100644
+--- a/src/components/Composer.tsx
++++ b/src/components/Composer.tsx
+@@ -1,3 +1,4 @@
++import { isStopCommand } from "../lib/controlCommand";
+ import { useEffect, useRef, useState } from "react";
+ import { anticipate, type RecallHit } from "../lib/recall";
+ import { store } from "../lib/store";
+@@ -60,6 +61,7 @@ export default function Composer({
+ 
+   const submit = () => {
+     const t = text.trim();
++    if (isStopCommand(t)) { onStop?.(); setText(""); return; }
+     if ((!t && !imagePreview) || busy) return;
+     onSend(t, { council: council && !imagePreview, research: research && !imagePreview });
+     setText("");
+diff --git a/src/components/GoalStatusPanel.tsx b/src/components/GoalStatusPanel.tsx
+index 70721cf..8265f7f 100644
+--- a/src/components/GoalStatusPanel.tsx
++++ b/src/components/GoalStatusPanel.tsx
+@@ -5,7 +5,7 @@
+ 
+ import { useEffect, useState } from "react";
+ import { useEscape } from "../hooks/useEscape";
+-import { isGoalRunning, requestGoalPause } from "../lib/goalControl";
++import { isGoalRunning, requestGoalPause, requestGoalStop } from "../lib/goalControl";
+ import { loadGoalsNewestFirst, resumeAndRunGoal } from "../lib/goalRuntime";
+ import { pauseGoal, removeGoal, upsertGoal, describeGoal, type GoalRecord, type GoalStatus } from "../lib/goalState";
+ import { outcomeIcon, outcomeLabel } from "../lib/actionOutcome";
+@@ -13,7 +13,7 @@ import { emptyStateSuggestion } from "../lib/simpleFlow";
+ 
+ const STATUS_LABEL: Record<GoalStatus, string> = {
+   queued: "w kolejce", running: "w toku", waiting_consent: "czeka na zgodę",
+-  waiting_user: "czeka na sprawdzenie", paused: "wstrzymany", completed: "ukończony", failed: "nieudany",
++  waiting_user: "czeka na sprawdzenie", paused: "wstrzymany", completed: "ukończony", failed: "nieudany", cancelled: "zatrzymany przez użytkownika",
+ };
+ const canStop = (s: GoalStatus) => s === "running" || s === "queued" || s === "waiting_consent" || s === "waiting_user";
+ 
+@@ -125,8 +125,12 @@ export default function GoalStatusPanel({ onClose }: { onClose: () => void }) {
+                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+                   <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} aria-expanded={!!expanded[g.id]} onClick={() => setExpanded((prev) => ({ ...prev, [g.id]: !prev[g.id] }))}>{expanded[g.id] ? "Ukryj wyniki" : "Pokaż wyniki"}</button>
+                   {canStop(g.status) && (
+-                    <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} onClick={() => void doPause(g)}>⏸ Zatrzymaj</button>
++                    <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} onClick={() => void doPause(g)}>⏸ Pauza</button>
+                   )}
++                  {canStop(g.status) && <button type="button" className="btn" style={{ width: "auto", marginTop: 0, minHeight: 44 }} onClick={() => {
++                    if (requestGoalStop(g.id)) setResumeMsg("STOP przyjęty. Bieżący skutek może wymagać sprawdzenia.");
++                    else void upsertGoal({ ...g, status: "cancelled", updatedAt: now() }).then(load).catch((e) => setResumeMsg(String(e)));
++                  }}>STOP</button>}
+                   {canResume(g.status) && (
+                     <button className="btn primary" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} disabled={busyId === g.id} onClick={() => void doResume(g)}>
+                       {busyId === g.id ? "…" : "▶ Wznów i dokończ"}
+diff --git a/src/lib/brain.ts b/src/lib/brain.ts
+index ee939e2..907e8c2 100644
+--- a/src/lib/brain.ts
++++ b/src/lib/brain.ts
+@@ -1,3 +1,5 @@
++import { beginGoalRun } from "./goalControl";
++import { abortable, throwIfAborted } from "./abort";
+ import { applyInterfaceCommand } from "./interfaceMode";
+ import { store, uid } from "./store";
+ import { brand } from "./brand";
+@@ -13,7 +15,7 @@ import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
+ import { retrieveKnowledge } from "./knowledge";
+ import { buildProfileBlock } from "./profile";
+ import { isDesktop } from "./desktop";
+-import { shouldFallback, isNetworkError, isKeyError, humanize, classifyFailoverReason, sanitizeFailReason, PERSONAL_CUES } from "./aiHelpers";
++import { shouldFallback, isNetworkError, isKeyError, humanize, classifyFailoverReason, sanitizeFailReason, isActionRequest, PERSONAL_CUES } from "./aiHelpers";
+ import { orderedKeys, primaryKey, coolDownKey } from "./keys";
+ import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
+ import { classifyCognitionLocal } from "./cognitiveController";
+@@ -41,12 +43,12 @@ import type { JarvisReply, Msg, ProviderId, FallbackReasonKind } from "./provide
+ 
+ // Retry przy chwilowym błędzie sieci — z WYKŁADNICZYM backoffem + jitterem (do 2 ponowień).
+ // Ponawiamy TYLKO błędy sieciowe (nie błędy klucza/limitu — te idą do rotacji/fallbacku wyżej).
+-async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+-  return withBackoff(fn, {
++async function withRetry<T>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> {
++  return abortable(withBackoff(() => { throwIfAborted(signal); return fn(); }, {
+     retries: 2,
+     baseMs: 600,
+-    shouldRetry: (e) => isNetworkError(e instanceof Error ? e.message : String(e)),
+-  });
++    shouldRetry: (e) => !signal?.aborted && isNetworkError(e instanceof Error ? e.message : String(e)),
++  }), signal);
+ }
+ 
+ /**
+@@ -409,7 +411,8 @@ export function curatedContextBlock(query: string, now = Date.now()): string {
+  */
+ export function executeGoalPlan(plan: AgentPlan, onStatus?: (s: string) => void): Promise<RunResult> {
+   const toolExists = (n: string) => toolDefs.some((d) => d.name === n);
+-  return runPlan(plan, { toolExists, riskOf, execTool: makeDefaultExecTool(runTool, riskOf), onStatus });
++  const control = beginGoalRun(`adhoc:${uid()}`);
++  return runPlan(plan, { toolExists, riskOf, execTool: makeDefaultExecTool((name, input) => runTool(name, input, { signal: control.signal }), riskOf), shouldStop: control.shouldStop, onStatus }).finally(control.finish);
+ }
+ 
+ /** Rozstrzyga, którego dostawcę i model użyć (uwzględnia tryb auto). */
+@@ -637,7 +640,8 @@ export async function askModelRich(params: Parameters<typeof askModelReply>[0]):
+   return { text: (r.text || "").trim(), finishReason: r.finishReason };
+ }
+ 
+-export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }): Promise<JarvisReply> {
++export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }, signal?: AbortSignal): Promise<JarvisReply> {
++  throwIfAborted(signal);
+   const last = history[history.length - 1];
+   const localReply = last?.role === "user" && !last.image ? applyInterfaceCommand(last.content) : null;
+   if (localReply) return { text: localReply, tools: ["interfejs"] };
+@@ -679,6 +683,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) =>
+     rankJournal(lastUserContent).catch(() => null),
+     deepThinkWanted
+       ? PROVIDERS[resolved.provider].impl({
++          signal,
+           system: REASONING_SYSTEM,
+           webSearch: false,
+           tools: [],
+@@ -690,6 +695,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) =>
+       : Promise.resolve(""),
+   ]);
+ 
++  throwIfAborted(signal);
+   // Wszczepiona wiedza ekspercka: dobierz pasujące modele mentalne (offline, za darmo).
+   const currentKnowledge = store.settings.expertKnowledge !== false ? retrieveKnowledge(lastUserContent) : "";
+ 
+@@ -726,6 +732,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) =>
+   // jest TEN SAM dla WSZYSTKICH dostawców, w tym Ollamy/WebLLM. Mały model lokalny odpowiada z
+   // Twoim kontekstem; bez Mem0 degraduje do lokalnego profilu/faktów (zero zależności sieciowych).
+   const baseCtx = {
++    signal,
+     system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock, curatedBlock }) + (rulesBlock ? `\n\n${rulesBlock}` : "") + (extraSystem ? `\n\n${extraSystem}` : ""),
+     // Tryb on-device wyłącza web-search (zero egres do sieci — pełna prywatność/offline).
+     webSearch: store.settings.onDeviceOnly ? false : store.settings.webSearch,
+@@ -736,6 +743,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) =>
+     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
+     // Adaptacyjne myślenie: profil z kontrolera poznawczego (trudne/cele → głębiej, proste → szybko).
+     reasoningProfile: cognition.reasoningProfile,
++    requiresTools: cognition.needsTools || isActionRequest(lastUserContent),
+   };
+ 
+   // Router dobiera dostawcę+model do zadania (prostota/złożoność/obraz) + fallback.
+@@ -787,6 +795,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) =>
+           const price = priceFor(res.corrected ? cortex.model : localModel, parsePricingOverrides(store.settings.aiPricingOverrides));
+           recordUsage({ at: Date.now(), provider: res.reply.via || cortex.provider, model: res.corrected ? cortex.model : localModel, inputTokens: res.reply.usage.inputTokens, outputTokens: res.reply.usage.outputTokens, costUsd: costOf(res.reply.usage, price) });
+         }
++        throwIfAborted(signal);
+         return res.reply;
+       } catch {
+         /* spekulacja padła całkowicie — przejdź do zwykłej pętli failoveru */
+@@ -848,7 +857,10 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) =>
+         // nie ucinać przedwcześnie wolnej, ale działającej odpowiedzi u kogoś z jednym dostawcą.
+         const hasFailover = i < order.length - 1 || j < keys.length - 1;
+         const wd = makeStallWatchdog(() => settled, () => progressed, !!onTok && hasFailover);
+-        const attemptP = withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, tools: provider === "ollama" && !lastUser?.image && isToolFreeGreeting(lastUser?.content || "") ? [] : baseCtx.tools, apiKey, model, onToken: onTok }));
++        const attemptController = new AbortController();
++        const stopAttempt = () => attemptController.abort();
++        if (signal?.aborted) stopAttempt(); else signal?.addEventListener("abort", stopAttempt, { once: true });
++        const attemptP = withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, signal: attemptController.signal, tools: provider === "ollama" && !lastUser?.image && isToolFreeGreeting(lastUser?.content || "") ? [] : baseCtx.tools, apiKey, model, onToken: onTok ? (delta) => { if (!attemptController.signal.aborted) onTok(delta); } : undefined }), attemptController.signal);
+         attemptP.catch(() => {}); // jeśli przegra wyścig z watchdogiem, późne odrzucenie nie może być „unhandled"
+         let reply: JarvisReply;
+         try {
+@@ -856,6 +868,8 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) =>
+         } finally {
+           settled = true;
+           wd.cancel();
++          stopAttempt(); // A losing watchdog attempt must never execute tools later.
++          signal?.removeEventListener("abort", stopAttempt);
+         }
+         providerBreaker.onSuccess(provider); // udało się — zamknij bezpiecznik
+         recordLatency("provider:" + provider, Date.now() - t0, true, model);
+@@ -978,8 +992,10 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) =>
+             costUsd: costOf(reply.usage, price),
+           });
+         }
++        throwIfAborted(signal);
+         return { ...reply, ...meta, ...(citations.length ? { citations } : {}) };
+       } catch (e) {
++        throwIfAborted(signal);
+         providerErr = e;
+         lastErr = e;
+         const msg = e instanceof Error ? e.message : String(e);
+diff --git a/src/lib/cognitiveStatus.ts b/src/lib/cognitiveStatus.ts
+index 72b298f..f0f256f 100644
+--- a/src/lib/cognitiveStatus.ts
++++ b/src/lib/cognitiveStatus.ts
+@@ -38,7 +38,7 @@ export function redactSecret(s: string): string {
+ 
+ const STATUS_LABEL: Record<GoalRecord["status"], string> = {
+   queued: "w kolejce", running: "w toku", waiting_consent: "czeka na zgodę",
+-  waiting_user: "czeka na sprawdzenie", paused: "wstrzymany", completed: "ukończony", failed: "nieudany",
++  waiting_user: "czeka na sprawdzenie", paused: "wstrzymany", completed: "ukończony", failed: "nieudany", cancelled: "zatrzymany przez użytkownika",
+ };
+ 
+ const uniq = (xs: string[]): string[] => [...new Set(xs.filter(Boolean))];
+diff --git a/src/lib/council.ts b/src/lib/council.ts
+index 7d2569f..1a0964d 100644
+--- a/src/lib/council.ts
++++ b/src/lib/council.ts
+@@ -1,3 +1,4 @@
++import { abortable, throwIfAborted } from "./abort";
+ import { store } from "./store";
+ import { PROVIDERS, PROVIDER_LIST } from "./providers/registry";
+ import { orderedKeys } from "./keys";
+@@ -63,13 +64,15 @@ function withTimeout<T>(p: Promise<T>): Promise<T> {
+ }
+ 
+ /** Zapytaj jednego członka konsylium (bez narzędzi — czyste rozumowanie). */
+-async function askMember(m: CouncilMember, system: string, history: Msg[]): Promise<string | null> {
++async function askMember(m: CouncilMember, system: string, history: Msg[], signal?: AbortSignal): Promise<string | null> {
++  throwIfAborted(signal);
+   // Lokalni członkowie (Ollama/WebLLM) nie mają klucza — autoryzują się adresem serwera/WebGPU.
+   const apiKey = m.provider === "ollama" || m.provider === "webllm" ? "local" : orderedKeys(m.provider)[0];
+   if (!apiKey) return null;
+   try {
+     const r = await withTimeout(
+       PROVIDERS[m.provider].impl({
++        signal,
+         system,
+         webSearch: false,
+         tools: [],
+@@ -81,6 +84,7 @@ async function askMember(m: CouncilMember, system: string, history: Msg[]): Prom
+     );
+     return (r.text || "").trim() || null;
+   } catch {
++    throwIfAborted(signal);
+     return null; // jeden model padł — konsylium działa dalej z pozostałymi
+   }
+ }
+@@ -112,7 +116,8 @@ function parseJudge(raw: string): { answer: string; consensus: CouncilReply["cou
+  * poszczególnych modeli i ocenę zgodności. Gdy dostępny jest mniej niż 2
+  * dostawców, degraduje do pojedynczej odpowiedzi (consensus: "single").
+  */
+-export async function askCouncil(history: Msg[]): Promise<CouncilReply> {
++export async function askCouncil(history: Msg[], signal?: AbortSignal): Promise<CouncilReply> {
++  throwIfAborted(signal);
+   const members = councilMembers(3);
+   const userName = store.settings.userName || "Sir";
+ 
+@@ -123,7 +128,7 @@ export async function askCouncil(history: Msg[]): Promise<CouncilReply> {
+   // Mniej niż 2 modele → nie ma czego radzić; jeden ekspert = zwykła odpowiedź.
+   if (members.length < 2) {
+     const only = members[0];
+-    const text = only ? await askMember(only, memberSys, history) : null;
++    const text = only ? await askMember(only, memberSys, history, signal) : null;
+     return {
+       text: text || "Brak skonfigurowanego dostawcy AI. Dodaj klucz w ⚙ → AI.",
+       tools: [],
+@@ -132,7 +137,7 @@ export async function askCouncil(history: Msg[]): Promise<CouncilReply> {
+   }
+ 
+   // 1) Pytamy wszystkich równolegle.
+-  const raw = await Promise.all(members.map((m) => askMember(m, memberSys, history)));
++  const raw = await abortable(Promise.all(members.map((m) => askMember(m, memberSys, history, signal))), signal);
+   const answers = members
+     .map((m, i) => ({ label: m.label, text: raw[i] }))
+     .filter((x): x is { label: string; text: string } => !!x.text);
+@@ -155,7 +160,7 @@ export async function askCouncil(history: Msg[]): Promise<CouncilReply> {
+         `\n\nZsyntezuj najlepszą odpowiedź i oceń zgodność. Zwróć sam JSON.`,
+     },
+   ];
+-  const judgeRaw = await askMember(judge, JUDGE_SYSTEM, judgeHistory);
++  const judgeRaw = await askMember(judge, JUDGE_SYSTEM, judgeHistory, signal);
+   const parsed = judgeRaw ? parseJudge(judgeRaw) : null;
+ 
+   if (!parsed) {
+diff --git a/src/lib/desktop.ts b/src/lib/desktop.ts
+index b9c754a..5c155d6 100644
+--- a/src/lib/desktop.ts
++++ b/src/lib/desktop.ts
+@@ -3,6 +3,7 @@
+ 
+ export interface JarvisDesktop {
+   platform: string;
++  stopWorkspaceProcesses?(): Promise<{ ok: boolean; requested?: number; error?: string }>;
+   ensureLocalSiteOs?(url: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; error?: string }>;
+   ensureLocalOllama?(url: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; error?: string }>;
+   agentTool?(tool: string, input?: Record<string, unknown>): Promise<{ ok: boolean; error?: string; [key: string]: unknown }>;
+diff --git a/src/lib/generation.ts b/src/lib/generation.ts
+index 3e9fee6..74ff777 100644
+--- a/src/lib/generation.ts
++++ b/src/lib/generation.ts
+@@ -4,15 +4,19 @@
+ // odrzucana, więc nie wskakuje do czatu po fakcie. Czyste i w pełni testowalne.
+ 
+ let current = 0;
++let controller = new AbortController();
+ 
+ /** Rozpocznij nową generację — zwraca jej token (zapamiętaj go na czas żądania). */
+ export function startGeneration(): number {
++  controller.abort();
++  controller = new AbortController();
+   return ++current;
+ }
+ 
+ /** Anuluj bieżącą generację (Stop) — każdy wcześniejszy token przestaje być aktualny. */
+ export function cancelGeneration(): void {
+   current++;
++  controller.abort();
+ }
+ 
+ /** Czy token nadal opisuje aktualną generację (czyli wynik wolno pokazać). */
+@@ -20,7 +24,15 @@ export function isCurrent(token: number): boolean {
+   return token === current;
+ }
+ 
++/** Cancellation signal for this generation; stale tokens receive an aborted signal. */
++export function generationSignal(token: number): AbortSignal {
++  if (isCurrent(token)) return controller.signal;
++  const stale = new AbortController(); stale.abort(); return stale.signal;
++}
++
+ /** Reset (do testów). */
+ export function resetGeneration(): void {
++  controller.abort();
++  controller = new AbortController();
+   current = 0;
+ }
+diff --git a/src/lib/goalControl.ts b/src/lib/goalControl.ts
+index 5d25374..9a457e0 100644
+--- a/src/lib/goalControl.ts
++++ b/src/lib/goalControl.ts
+@@ -1,12 +1,12 @@
+ // Sterowanie jedną instancją aplikacji. Pauza obowiązuje na granicy kroków, nie przerywa I/O.
+-interface ActiveGoal { pause: boolean }
++interface ActiveGoal { pause: boolean; stopped: boolean; controller: AbortController }
+ const active = new Map<string, ActiveGoal>();
+ 
+-export function beginGoalRun(id: string): { shouldStop: () => boolean; finish: () => void } {
++export function beginGoalRun(id: string): { shouldStop: () => boolean; finish: () => void; signal: AbortSignal; wasStopped: () => boolean } {
+   if (active.has(id)) throw new Error("Ten cel jest już wykonywany.");
+-  const state: ActiveGoal = { pause: false };
++  const state: ActiveGoal = { pause: false, stopped: false, controller: new AbortController() };
+   active.set(id, state);
+-  return { shouldStop: () => state.pause, finish: () => { if (active.get(id) === state) active.delete(id); } };
++  return { wasStopped: () => state.stopped, signal: state.controller.signal, shouldStop: () => state.pause, finish: () => { if (active.get(id) === state) active.delete(id); } };
+ }
+ export function requestGoalPause(id: string): boolean {
+   const state = active.get(id);
+@@ -15,3 +15,16 @@ export function requestGoalPause(id: string): boolean {
+   return true;
+ }
+ export function isGoalRunning(id: string): boolean { return active.has(id); }
++
++/** Emergency STOP for active goals in this renderer. In-flight side effects remain unconfirmed. */
++export function stopAllGoalRuns(): number {
++  for (const state of active.values()) { state.pause = true; state.stopped = true; state.controller.abort(); }
++  return active.size;
++}
++
++export function requestGoalStop(id: string): boolean {
++  const state = active.get(id);
++  if (!state) return false;
++  state.pause = true; state.stopped = true; state.controller.abort();
++  return true;
++}
+diff --git a/src/lib/goalRuntime.ts b/src/lib/goalRuntime.ts
+index 7cec389..04d68d9 100644
+--- a/src/lib/goalRuntime.ts
++++ b/src/lib/goalRuntime.ts
+@@ -48,7 +48,7 @@ export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStora
+   const pipeline = await runAgentPipeline(input.plan, {
+     toolExists,
+     riskOf,
+-    execTool: makeDefaultExecTool(runTool, riskOf),
++    execTool: makeDefaultExecTool((name, input) => runTool(name, input, { signal: control.signal }), riskOf),
+     shouldStop: control.shouldStop,
+     onStatus: input.onStatus,
+     beforeTool: async (step) => {
+@@ -63,7 +63,7 @@ export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStora
+   });
+   const result = pipeline.run;
+ 
+-  record = { ...record, status: finalStatus(result), updatedAt: input.now };
++  record = { ...record, status: control.wasStopped() ? "cancelled" : finalStatus(result), updatedAt: input.now };
+   await upsertGoal(record, storage);
+   return { record, result };
+   } finally { control.finish(); }
+@@ -83,6 +83,7 @@ export async function resumeAndRunGoal(
+   try {
+   const saved = (await loadGoals(storage)).find((goal) => goal.id === record.id);
+   if (!saved) throw new Error("Nie znaleziono zapisanego celu — nie można bezpiecznie go wznowić.");
++  if (saved.status === "cancelled") throw new Error("Cel zatrzymano poleceniem STOP. Nie wznowiono go automatycznie.");
+   const steps = saved.plan.steps || [];
+   const seed: StepResult[] = steps
+     .filter((s) => saved.results[s.id])
+@@ -94,7 +95,7 @@ export async function resumeAndRunGoal(
+   const pipeline = await runAgentPipeline(saved.plan, {
+     toolExists,
+     riskOf,
+-    execTool: makeDefaultExecTool(runTool, riskOf),
++    execTool: makeDefaultExecTool((name, input) => runTool(name, input, { signal: control.signal }), riskOf),
+     seed,
+     shouldStop: control.shouldStop,
+     onStatus: opts.onStatus,
+@@ -110,7 +111,7 @@ export async function resumeAndRunGoal(
+   });
+   const result = pipeline.run;
+ 
+-  rec = { ...rec, status: finalStatus(result), updatedAt: opts.now };
++  rec = { ...rec, status: control.wasStopped() ? "cancelled" : finalStatus(result), updatedAt: opts.now };
+   await upsertGoal(rec, storage);
+   return { record: rec, result };
+   } finally { control.finish(); }
+diff --git a/src/lib/goalState.ts b/src/lib/goalState.ts
+index ea3ed51..8a59d7b 100644
+--- a/src/lib/goalState.ts
++++ b/src/lib/goalState.ts
+@@ -17,7 +17,8 @@ export type GoalStatus =
+   | "waiting_user"    // czeka na sprawdzenie/decyzję użytkownika (np. ATTEMPTED)
+   | "paused"          // zatrzymany przez użytkownika
+   | "completed"       // wszystkie kroki potwierdzone
+-  | "failed";         // trwały błąd / anulowany
++  | "failed"
++  | "cancelled";         // trwały błąd / anulowany
+ 
+ export interface GoalRecord {
+   id: string;
+@@ -84,7 +85,7 @@ export function nextRunnableStep(rec: GoalRecord): PlanStep | null {
+ 
+ /** Pure: status całości z wyników kroków (deterministyczny). */
+ export function computeStatus(rec: GoalRecord): GoalStatus {
+-  if (rec.status === "paused" || rec.status === "failed") return rec.status;
++  if (rec.status === "paused" || rec.status === "failed" || rec.status === "cancelled") return rec.status;
+   const steps = rec.plan.steps || [];
+   if (steps.length && steps.every((s) => isConfirmed(rec.results[s.id]))) return "completed";
+   if (steps.some((s) => isAttempted(rec.results[s.id]))) return "waiting_user";
+@@ -186,7 +187,7 @@ export function describeGoal(rec: GoalRecord): string {
+   const done = steps.filter((s) => isConfirmed(rec.results[s.id])).length;
+   const label: Record<GoalStatus, string> = {
+     queued: "w kolejce", running: "w toku", waiting_consent: "czeka na zgodę",
+-    waiting_user: "czeka na Twoje sprawdzenie", paused: "wstrzymany", completed: "ukończony", failed: "nieudany",
++    waiting_user: "czeka na Twoje sprawdzenie", paused: "wstrzymany", completed: "ukończony", failed: "nieudany", cancelled: "zatrzymany przez użytkownika",
+   };
+   return `Cel: ${rec.goal} — ${label[rec.status]} (${done}/${steps.length} kroków potwierdzonych)`;
+ }
+diff --git a/src/lib/http.ts b/src/lib/http.ts
+index f69343f..dade7a5 100644
+--- a/src/lib/http.ts
++++ b/src/lib/http.ts
+@@ -13,11 +13,20 @@ export function appTokenHeader(): Record<string, string> {
+ }
+ 
+ export async function fetchTimeout(url: string, opts: RequestInit = {}, ms = 8000): Promise<Response> {
++  const external = opts.signal;
++  if (external?.aborted) throw new DOMException("Zatrzymano wykonanie.", "AbortError");
+   const ctrl = new AbortController();
+-  const t = setTimeout(() => ctrl.abort(), ms);
++  const cleanup = () => external?.removeEventListener("abort", stop);
++  const stop = () => { ctrl.abort(); clearTimeout(timer); cleanup(); };
++  // Keep cancellation connected while the caller consumes a streamed response.
++  // The deadline bounds listener lifetime even for an unread body.
++  const timer = setTimeout(stop, ms);
++  external?.addEventListener("abort", stop, { once: true });
+   try {
+-    return await fetch(url, { ...opts, signal: ctrl.signal });
+-  } finally {
+-    clearTimeout(t);
++    const response = await fetch(url, { ...opts, signal: ctrl.signal });
++    if (!external) clearTimeout(timer);
++    return response;
++  } catch (error) {
++    clearTimeout(timer); cleanup(); throw error;
+   }
+ }
+diff --git a/src/lib/permissions.ts b/src/lib/permissions.ts
+index 349a502..4b6e9b7 100644
+--- a/src/lib/permissions.ts
++++ b/src/lib/permissions.ts
+@@ -1,3 +1,4 @@
++import { abortable, throwIfAborted } from "./abort";
+ import { store, uid } from "./store";
+ import type { AuditEntry } from "../types";
+ 
+@@ -126,7 +127,7 @@ export function requiresFreshConsent(tool: string): boolean {
+ }
+ 
+ // --- Most do UI: handler zgody i emiter kroków ---
+-export interface ConsentRequest { tool: string; input: unknown; risk: Risk; freshOnly?: boolean; }
++export interface ConsentRequest { tool: string; input: unknown; risk: Risk; freshOnly?: boolean; signal?: AbortSignal; }
+ let consentHandler: ((req: ConsentRequest) => Promise<{ allow: boolean; remember: boolean }>) | null = null;
+ export function setConsentHandler(fn: typeof consentHandler) { consentHandler = fn; }
+ 
+@@ -197,7 +198,8 @@ export function undoAction(entry: AuditEntry): string {
+  * Bramka uprawnień: dla narzędzi read przepuszcza; dla write/outbound pyta UI
+  * (chyba że użytkownik zapamiętał zgodę). Zwraca true, jeśli można wykonać.
+  */
+-export async function requestConsent(tool: string, input: unknown): Promise<boolean> {
++export async function requestConsent(tool: string, input: unknown, signal?: AbortSignal): Promise<boolean> {
++  throwIfAborted(signal);
+   const risk = riskOf(tool);
+   // Pytamy tylko o akcje zewnętrzne/nieodwracalne; lokalne zapisy idą automatycznie.
+   if (risk !== "outbound") return true;
+@@ -205,12 +207,14 @@ export async function requestConsent(tool: string, input: unknown): Promise<bool
+   // Nieodwracalne wysyłki i ustawienie „zawsze pytaj” nie respektują szerokich
+   // zgód sesyjnych ani zgód zapamiętanych dla samego typu narzędzia.
+   if (!freshOnly) {
+-    if (isAutoConsent()) return true;
+-    if (hasOutboundScope(tool)) return true;
++    if (isClassified(tool) && isAutoConsent()) return true;
++    // A plugin discovered later cannot inherit wildcard consent. Named grants remain valid.
++    if (hasOutboundScope(tool) && (isClassified(tool) || scopeTools !== "*")) return true;
+     if (loadConsents()[tool] === "allow") return true;
+   }
+   if (!consentHandler) return false;
+-  const { allow, remember } = await consentHandler({ tool, input, risk, freshOnly });
++  const { allow, remember } = await abortable(consentHandler({ tool, input, risk, freshOnly, signal }), signal);
++  throwIfAborted(signal);
+   if (allow && remember && !freshOnly) {
+     const consents = loadConsents();
+     consents[tool] = "allow";
+diff --git a/src/lib/providers/anthropic.ts b/src/lib/providers/anthropic.ts
+index c7bcb23..9227117 100644
+--- a/src/lib/providers/anthropic.ts
++++ b/src/lib/providers/anthropic.ts
+@@ -1,3 +1,4 @@
++import { throwIfAborted } from "../abort";
+ import { runTool } from "../tools";
+ import { fetchTimeout, appTokenHeader } from "../http";
+ import { AnthStreamAccumulator, drainSSE } from "../stream";
+@@ -65,7 +66,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
+ 
+   // Pełna odpowiedź (bez strumienia) — ścieżka klasyczna / fallback.
+   const requestFull = async (): Promise<{ content: Block[]; stop_reason: string }> => {
+-    const res = await fetchTimeout(endpoint, { method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
++    const res = await fetchTimeout(endpoint, { signal: ctx.signal, method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
+     const data = (await res.json().catch(() => null)) as Resp | null;
+     if (!res.ok || !data) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
+     if (data.usage) { inTok += data.usage.input_tokens || 0; outTok += data.usage.output_tokens || 0; }
+@@ -74,7 +75,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
+ 
+   // Strumieniowanie (SSE) — tekst leci deltami przez ctx.onToken; tool_use składamy z fragmentów.
+   const requestStream = async (): Promise<{ content: Block[]; stop_reason: string }> => {
+-    const res = await fetchTimeout(endpoint, { method: "POST", headers, body: JSON.stringify({ ...buildBody(), stream: true }) }, 120000);
++    const res = await fetchTimeout(endpoint, { signal: ctx.signal, method: "POST", headers, body: JSON.stringify({ ...buildBody(), stream: true }) }, 120000);
+     if (!res.ok) {
+       const data = (await res.json().catch(() => null)) as Resp | null;
+       throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
+@@ -85,7 +86,9 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
+     const acc = new AnthStreamAccumulator();
+     let buf = "";
+     for (;;) {
++      throwIfAborted(ctx.signal);
+       const { done, value } = await reader.read();
++      throwIfAborted(ctx.signal);
+       if (done) break;
+       buf += dec.decode(value, { stream: true });
+       const { events, rest } = drainSSE(buf);
+@@ -99,10 +102,12 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
+   };
+ 
+   while (guard++ < 8) {
++    throwIfAborted(ctx.signal);
+     let data: { content: Block[]; stop_reason: string };
+     try {
+       data = canStream ? await requestStream() : await requestFull();
+     } catch (e) {
++      throwIfAborted(ctx.signal);
+       const em = e instanceof Error ? e.message : String(e);
+       // 400 o braku adaptacyjnego myślenia/effortu → ponów BEZ tych pól (oba tryby).
+       if (richThinking && /\(400\)/.test(em) && /thinking|adaptive|effort|output_config|budget/i.test(em)) {
+@@ -116,6 +121,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
+     }
+ 
+     messages.push({ role: "assistant", content: data.content });
++    throwIfAborted(ctx.signal);
+     for (const b of data.content) {
+       if ((b.type === "tool_use" || b.type === "server_tool_use") && b.name) used.add(b.name);
+     }
+@@ -126,7 +132,8 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
+     if (data.stop_reason === "tool_use" && toolUses.length) {
+       const results = [];
+       for (const tu of toolUses) {
+-        const out = await runTool(tu.name!, tu.input ?? {});
++        if (!ctx.tools.some((tool) => tool.name === tu.name)) throw new Error(`Model zażądał narzędzia spoza udostępnionego zestawu: ${tu.name}. Nie wykonano działania.`);
++        const out = await runTool(tu.name!, tu.input ?? {}, { signal: ctx.signal });
+         results.push({ type: "tool_result", tool_use_id: tu.id, content: out });
+       }
+       messages.push({ role: "user", content: results });
+diff --git a/src/lib/providers/gemini.ts b/src/lib/providers/gemini.ts
+index 4d9109d..ab44264 100644
+--- a/src/lib/providers/gemini.ts
++++ b/src/lib/providers/gemini.ts
+@@ -1,3 +1,4 @@
++import { throwIfAborted } from "../abort";
+ import { runTool } from "../tools";
+ import { fetchTimeout, appTokenHeader } from "../http";
+ import { GeminiStreamAccumulator, drainSSE } from "../stream";
+@@ -102,7 +103,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
+ 
+   // Pełna odpowiedź — ścieżka klasyczna / fallback.
+   const requestFull = async (): Promise<Part[]> => {
+-    const res = await fetchTimeout(base, { method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
++    const res = await fetchTimeout(base, { signal: ctx.signal, method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
+     const data = await res.json().catch(() => null);
+     if (!res.ok) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
+     // thoughtsTokenCount (tokeny myślenia) liczą się do kosztu — dolicz do output.
+@@ -115,7 +116,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
+   // Strumieniowanie (SSE, tylko bezpośrednio) — tekst leci deltami; functionCall składamy.
+   const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${ctx.model}:streamGenerateContent?alt=sse&key=${ctx.apiKey.trim()}`;
+   const requestStream = async (): Promise<Part[]> => {
+-    const res = await fetchTimeout(streamUrl, { method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
++    const res = await fetchTimeout(streamUrl, { signal: ctx.signal, method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
+     if (!res.ok) {
+       const data = await res.json().catch(() => null);
+       throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
+@@ -126,7 +127,9 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
+     const acc = new GeminiStreamAccumulator();
+     let buf = "";
+     for (;;) {
++      throwIfAborted(ctx.signal);
+       const { done, value } = await reader.read();
++      throwIfAborted(ctx.signal);
+       if (done) break;
+       buf += dec.decode(value, { stream: true });
+       const { events, rest } = drainSSE(buf);
+@@ -150,10 +153,12 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
+ 
+   const seenCalls = new Set<string>(); // tożsamości wywołań (nazwa+argumenty) — anty-zapętlenie
+   while (guard++ < 8) {
++    throwIfAborted(ctx.signal);
+     let parts: Part[];
+     try {
+       parts = canStream ? await requestStream() : await requestFull();
+     } catch (e) {
++      throwIfAborted(ctx.signal);
+       const em = e instanceof Error ? e.message : String(e);
+       if (canStream && !/timeout|abort|failed to fetch|load failed|network/i.test(em)) {
+         canStream = false; guard--; continue; // hiccup strumienia → pełna odpowiedź
+@@ -162,11 +167,13 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
+     }
+     contents.push({ role: "model", parts });
+ 
++    throwIfAborted(ctx.signal);
+     const calls = parts.filter((p) => p.functionCall);
+     if (calls.length) {
+       const responseParts: Part[] = [];
+       for (const c of calls) {
+         const name = c.functionCall!.name;
++        if (!ctx.tools.some((tool) => tool.name === name)) throw new Error(`Model zażądał narzędzia spoza udostępnionego zestawu: ${name}. Nie wykonano działania.`);
+         const sig = callSignature(name, c.functionCall!.args);
+         // Wykryj zapętlenie: IDENTYCZNE powtórzone wywołanie (ta sama nazwa+argumenty) → przerwij czytelnie.
+         if (seenCalls.has(sig)) {
+@@ -174,7 +181,7 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
+         }
+         seenCalls.add(sig);
+         used.add(name);
+-        const out = await runTool(name, c.functionCall!.args || {});
++        const out = await runTool(name, c.functionCall!.args || {}, { signal: ctx.signal });
+         const rp: Part = { functionResponse: { name, response: { result: out } } };
+         if (c.functionCall!.id) rp.functionResponse!.id = c.functionCall!.id; // dopasuj odpowiedź do wywołania
+         responseParts.push(rp);
+diff --git a/src/lib/providers/ollama.ts b/src/lib/providers/ollama.ts
+index f08a6cb..2c2eca5 100644
+--- a/src/lib/providers/ollama.ts
++++ b/src/lib/providers/ollama.ts
+@@ -1,3 +1,4 @@
++import { throwIfAborted } from "../abort";
+ import { fetchTimeout } from "../http";
+ import { runTool } from "../tools";
+ import type { AskCtx, JarvisReply } from "./types";
+@@ -49,17 +50,19 @@ export async function askOllamaNative(
+   ctx: AskCtx,
+   config: { base: string; think: boolean; options: Record<string, number> },
+ ): Promise<JarvisReply> {
++  throwIfAborted(ctx.signal);
+   // Metadane modelu muszą potwierdzać obsługę obrazu. Bez tego model tekstowy
+   // mógłby odpowiedzieć na podstawie samej historii i udawać analizę ekranu.
+   if (ctx.history.some((message) => !!message.image)) {
+     let capabilities: unknown;
+     try {
+       const r = await fetchTimeout(`${config.base}/api/show`, {
++        signal: ctx.signal,
+         method: "POST", headers: { "content-type": "application/json" },
+         body: JSON.stringify({ model: ctx.model }),
+       }, 15000);
+       if (r.ok) capabilities = (await r.json() as { capabilities?: unknown }).capabilities;
+-    } catch { /* brak potwierdzenia — nie przekazuj obrazu */ }
++    } catch { throwIfAborted(ctx.signal); /* brak potwierdzenia — nie przekazuj obrazu */ }
+     if (!Array.isArray(capabilities) || !capabilities.includes("vision")) {
+       throw new Error("Nie mogę potwierdzić obsługi obrazów przez ten model Ollamy. Wybierz zainstalowany model wizyjny i sprawdź jego możliwości w Ollamie.");
+     }
+@@ -81,8 +84,11 @@ export async function askOllamaNative(
+   let outputTokens = 0;
+   let useTools = tools.length > 0;
+ 
++  throwIfAborted(ctx.signal);
+   for (let guard = 0; guard < 8; guard += 1) {
++    throwIfAborted(ctx.signal);
+     const response = await fetchTimeout(`${config.base}/api/chat`, {
++      signal: ctx.signal,
+       method: "POST",
+       headers: { "content-type": "application/json" },
+       body: JSON.stringify({
+@@ -108,7 +114,10 @@ export async function askOllamaNative(
+         : rawError && typeof rawError === "object" && "message" in rawError
+           ? String((rawError as { message?: unknown }).message || `Ollama HTTP ${response.status}`)
+           : `Ollama HTTP ${response.status}`;
+-      if (useTools && /does not support tools|tools?.*not support/i.test(error)) { useTools = false; continue; }
++      if (useTools && /does not support tools|tools?.*not support/i.test(error)) {
++        if (ctx.requiresTools) throw new Error("Ten model nie obsługuje narzędzi wymaganych do wykonania polecenia. Nie wykonano działania; wybierz zgodny model lokalny.");
++        useTools = false; continue;
++      }
+       if (/(context (?:length|window|size).*(?:exceed|limit|too (?:long|large)|overflow)|(?:exceed|too (?:long|large)|overflow).*(?:context (?:length|window|size))|too many tokens)/i.test(error)) {
+         throw new Error(`Ollama odrzuciła zapytanie: przekroczono kontekst modelu. Skróć polecenie lub ogranicz kontekst projektu; nie zmieniono modelu ani ustawień. Szczegóły: ${error}`);
+       }
+@@ -116,18 +125,21 @@ export async function askOllamaNative(
+     }
+     inputTokens += data.prompt_eval_count || 0;
+     outputTokens += data.eval_count || 0;
++    throwIfAborted(ctx.signal);
+     const message = data.message;
+     messages.push(message);
++    throwIfAborted(ctx.signal);
+     const calls = message.tool_calls || [];
+     if (calls.length) {
+       for (const call of calls) {
+         const name = call.function.name;
++        if (!useTools || !ctx.tools.some((tool) => tool.name === name)) throw new Error(`Model zażądał narzędzia spoza udostępnionego zestawu: ${name}. Nie wykonano działania.`);
+         used.add(name);
+         let args: unknown = call.function.arguments || {};
+         if (typeof args === "string") {
+           try { args = JSON.parse(args); } catch { args = {}; }
+         }
+-        const output = await runTool(name, args);
++        const output = await runTool(name, args, { signal: ctx.signal });
+         messages.push({ role: "tool", tool_name: name, content: output });
+       }
+       continue;
+diff --git a/src/lib/providers/openai.ts b/src/lib/providers/openai.ts
+index a5a3301..8cb8b2e 100644
+--- a/src/lib/providers/openai.ts
++++ b/src/lib/providers/openai.ts
+@@ -1,3 +1,4 @@
++import { throwIfAborted } from "../abort";
+ import { runTool } from "../tools";
+ import { fetchTimeout, appTokenHeader } from "../http";
+ import { OAIStreamAccumulator, drainSSE } from "../stream";
+@@ -68,7 +69,7 @@ export function makeOpenAICompatible(
+ 
+     // Pełna odpowiedź (bez strumienia) — ścieżka klasyczna / fallback.
+     const requestFull = async (): Promise<OAIMessage> => {
+-      const res = await fetchTimeout(url, { method: "POST", headers, body: JSON.stringify(body()) }, 120000);
++      const res = await fetchTimeout(url, { signal: ctx.signal, method: "POST", headers, body: JSON.stringify(body()) }, 120000);
+       // Brama/proxy może oddać HTML zamiast JSON — parsuj bezpiecznie i dołącz kod statusu.
+       const data = await res.json().catch(() => null);
+       if (!res.ok || !data) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
+@@ -82,7 +83,7 @@ export function makeOpenAICompatible(
+     const requestStream = async (): Promise<OAIMessage> => {
+       const res = await fetchTimeout(
+         url,
+-        { method: "POST", headers, body: JSON.stringify({ ...body(), stream: true, stream_options: { include_usage: true } }) },
++        { signal: ctx.signal, method: "POST", headers, body: JSON.stringify({ ...body(), stream: true, stream_options: { include_usage: true } }) },
+         120000,
+       );
+       if (!res.ok) {
+@@ -95,7 +96,9 @@ export function makeOpenAICompatible(
+       const acc = new OAIStreamAccumulator();
+       let buf = "";
+       for (;;) {
++        throwIfAborted(ctx.signal);
+         const { done, value } = await reader.read();
++        throwIfAborted(ctx.signal);
+         if (done) break;
+         buf += dec.decode(value, { stream: true });
+         const { events, rest } = drainSSE(buf);
+@@ -120,14 +123,17 @@ export function makeOpenAICompatible(
+     };
+ 
+     while (guard++ < 8) {
++      throwIfAborted(ctx.signal);
+       let msg: OAIMessage;
+       try {
+         msg = canStream ? await requestStream() : await requestFull();
+       } catch (e) {
++        throwIfAborted(ctx.signal);
+         const em = e instanceof Error ? e.message : String(e);
+         // Model bez obsługi narzędzi (np. dolphin-mistral, wiele uncensored) → ponów BEZ tools,
+         // zamiast wywalać całą turę błędem 400 „does not support tools".
+         if (useTools && /does not support tools|tool.?use.*not support|not support.*tool|tools? (are )?not (yet )?support/i.test(em)) {
++          if (ctx.requiresTools) throw new Error("Ten model nie obsługuje narzędzi wymaganych do wykonania polecenia. Nie wykonano działania.");
+           useTools = false;
+           continue;
+         }
+@@ -139,10 +145,12 @@ export function makeOpenAICompatible(
+           throw e;
+         }
+       }
++      throwIfAborted(ctx.signal);
+       messages.push(msg);
+ 
+       if (msg.tool_calls?.length) {
+         for (const tc of msg.tool_calls) {
++          if (!useTools || !ctx.tools.some((tool) => tool.name === tc.function.name)) throw new Error(`Model zażądał narzędzia spoza udostępnionego zestawu: ${tc.function.name}. Nie wykonano działania.`);
+           used.add(tc.function.name);
+           let args: unknown = {};
+           try {
+@@ -150,7 +158,7 @@ export function makeOpenAICompatible(
+           } catch {
+             /* puste argumenty */
+           }
+-          const out = await runTool(tc.function.name, args);
++          const out = await runTool(tc.function.name, args, { signal: ctx.signal });
+           messages.push({ role: "tool", tool_call_id: tc.id, content: out });
+         }
+         continue;
+diff --git a/src/lib/providers/types.ts b/src/lib/providers/types.ts
+index 3a9bd91..4b7ef6b 100644
+--- a/src/lib/providers/types.ts
++++ b/src/lib/providers/types.ts
+@@ -50,6 +50,10 @@ export interface JarvisReply {
+ 
+ /** Kontekst pojedynczego zapytania przekazywany adapterowi dostawcy. */
+ export interface AskCtx {
++  /** STOP for this request; must also be checked before each tool execution. */
++  signal?: AbortSignal;
++  /** The user requested a real action; text-only fallback cannot fulfill it. */
++  requiresTools?: boolean;
+   apiKey: string;
+   model: string;
+   system: string;
+diff --git a/src/lib/providers/webllm.ts b/src/lib/providers/webllm.ts
+index effc095..76ff5fb 100644
+--- a/src/lib/providers/webllm.ts
++++ b/src/lib/providers/webllm.ts
+@@ -1,3 +1,4 @@
++import { throwIfAborted } from "../abort";
+ import type { AskCtx, JarvisReply } from "./types";
+ import { chatLocal, WEBLLM_DEFAULT_MODEL, type ChatMsg } from "../webllm";
+ 
+@@ -5,6 +6,9 @@ import { chatLocal, WEBLLM_DEFAULT_MODEL, type ChatMsg } from "../webllm";
+ // OpenAI-compatible (system/history → messages). UWAGA: małe modele lokalne nie prowadzą
+ // pętli narzędzi — zwracamy czystą odpowiedź tekstową (narzędzia obsługują adaptery chmurowe).
+ export async function askWebllm(ctx: AskCtx): Promise<JarvisReply> {
++  throwIfAborted(ctx.signal);
++  if (ctx.requiresTools) throw new Error("Ten adapter WebLLM nie wykonuje narzędzi wymaganych przez polecenie. Nie wykonano działania.");
++  if (ctx.history.some(message => !!message.image)) throw new Error("Ten adapter WebLLM nie obsługuje obrazu. Nie przeprowadzono analizy ekranu.");
+   const messages: ChatMsg[] = [];
+   if (ctx.system?.trim()) messages.push({ role: "system", content: ctx.system });
+   for (const m of ctx.history) {
+@@ -12,6 +16,7 @@ export async function askWebllm(ctx: AskCtx): Promise<JarvisReply> {
+     messages.push({ role: m.role, content: m.content });
+   }
+   const text = await chatLocal(ctx.model || WEBLLM_DEFAULT_MODEL, messages, { temperature: ctx.fast ? 0.5 : 0.7 });
++  throwIfAborted(ctx.signal);
+   if (text == null) {
+     throw new Error(
+       "Model on-device (WebLLM) niedostępny — wymaga przeglądarki z WebGPU. Włącz go w ⚙ → AI albo użyj modelu w chmurze.",
+diff --git a/src/lib/tools.ts b/src/lib/tools.ts
+index a315041..d50fdf8 100644
+--- a/src/lib/tools.ts
++++ b/src/lib/tools.ts
+@@ -1,3 +1,4 @@
++import { throwIfAborted } from "./abort";
+ import { store, uid } from "./store";
+ import { fetchTimeout } from "./http";
+ import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
+@@ -1909,12 +1910,14 @@ export function unregisterTool(name: string): boolean {
+   return true;
+ }
+ 
+-export async function runTool(name: string, input: unknown): Promise<string> {
++export async function runTool(name: string, input: unknown, execution: { signal?: AbortSignal } = {}): Promise<string> {
++  throwIfAborted(execution.signal);
+   const fn = executors[name];
+   if (!fn) return `Nieznane narzędzie: ${name}`;
+ 
+   // Bramka uprawnień (write/outbound wymagają zgody; read przechodzi).
+-  const allowed = await requestConsent(name, input);
++  const allowed = await requestConsent(name, input, execution.signal);
++  throwIfAborted(execution.signal);
+   if (!allowed) {
+     audit({ tool: name, input, status: "denied" });
+     return "Anulowano — użytkownik nie wyraził zgody na tę akcję.";
+diff --git a/tests/goalRuntime.test.ts b/tests/goalRuntime.test.ts
+index de16032..b011751 100644
+--- a/tests/goalRuntime.test.ts
++++ b/tests/goalRuntime.test.ts
+@@ -3,7 +3,7 @@
+ // zapisuje wynik i finalny status. Cel jest potem wczytywalny (przeżyłby restart). Zero płatnego API.
+ import { describe, it, expect } from "vitest";
+ import { startAndRunGoal, loadGoalsNewestFirst, resumableGoalsNewestFirst, resumeAndRunGoal } from "../src/lib/goalRuntime";
+-import { isGoalRunning, requestGoalPause } from "../src/lib/goalControl";
++import { isGoalRunning, requestGoalPause, stopAllGoalRuns } from "../src/lib/goalControl";
+ import { newGoal, recordStepOutcome, upsertGoal, type GoalStorage } from "../src/lib/goalState";
+ import { confirmed } from "../src/lib/actionOutcome";
+ import type { AgentPlan } from "../src/lib/agentPlanner";
+@@ -110,3 +110,12 @@ describe("goalRuntime — bezpieczeństwo zapisu postępu", () => {
+     expect(isGoalRunning("FAIL-CHECKPOINT")).toBe(false);
+   });
+ });
++
++ it("STOP zapisuje cancelled i nie uruchamia następnego kroku ani automatycznego wznowienia", async () => {
++    const storage = memStore();
++    const plan: AgentPlan = { goal: "STOP", steps: [{ id: "a", intent: "pierwszy", tool: "list_tasks" }, { id: "b", intent: "drugi", tool: "list_notes" }] };
++    const { record } = await startAndRunGoal({ goal: "STOP", plan, correlationId: "STOP_ORION", now: NOW, onStep: () => { stopAllGoalRuns(); } }, storage);
++    expect(record.status).toBe("cancelled");
++    expect(record.results.b).toBeUndefined();
++    await expect(resumeAndRunGoal(record, { now: NOW + 1 }, storage)).rejects.toThrow(/STOP/);
++ });
+diff --git a/tests/mcp.test.ts b/tests/mcp.test.ts
+index 3fd0f6e..8612eba 100644
+--- a/tests/mcp.test.ts
++++ b/tests/mcp.test.ts
+@@ -56,7 +56,7 @@ describe("MCP — McpManager (mock JSON-RPC)", () => {
+     const loaded = await mgr.loadAll([{ name: "test", url: "http://localhost:9100/mcp" }], ["localhost"]);
+     expect(loaded.map((t) => t.toolName)).toContain("mcp_test_ping");
+     expect(toolDefs.some((d) => d.name === "mcp_test_ping")).toBe(true); // zarejestrowane dla modelu
+-    grantOutboundScope("*"); // narzędzie dynamiczne = fail-safe outbound; test bada wykonanie
++    grantOutboundScope(["mcp_test_ping"]); // narzędzie dynamiczne = fail-safe outbound; test bada wykonanie
+     const out = await runTool("mcp_test_ping", {});
+     expect(out).toBe("pong"); // wykonane przez serwer MCP
+   });
+@@ -95,7 +95,7 @@ describe("MCP — McpManager (mock JSON-RPC)", () => {
+     const mgr = new McpManager();
+     const loaded = await mgr.loadAll([{ name: "local-fixture", command: "node", args: ["server.mjs"] }]);
+     expect(loaded.map((tool) => tool.toolName)).toContain("mcp_local_fixture_local_ping");
+-    grantOutboundScope("*");
++    grantOutboundScope(["mcp_local_fixture_local_ping"]);
+     await expect(runTool("mcp_local_fixture_local_ping", {})).resolves.toBe("local-pong");
+     expect(mcpStdioConnect).toHaveBeenCalledOnce();
+     expect(mcpStdioCall).toHaveBeenCalledWith("local-fixture", "local_ping", {});
+diff --git a/tests/plugins.test.ts b/tests/plugins.test.ts
+index f6ba3ec..6033b46 100644
+--- a/tests/plugins.test.ts
++++ b/tests/plugins.test.ts
+@@ -19,7 +19,7 @@ describe("Plugin API", () => {
+   it("narzędzie wtyczki działa przez runTool (pełny cykl: start → status → koniec)", async () => {
+     vi.useFakeTimers();
+     loadPlugins([pomodoroPlugin]); // idempotentne — duplikat pominięty
+-    grantOutboundScope("*"); // narzędzie wtyczki = fail-safe outbound; test bada wykonanie
++    grantOutboundScope(["pomodoro_start", "pomodoro_status"]); // narzędzie wtyczki = fail-safe outbound; test bada wykonanie
+     expect(await runTool("pomodoro_start", { minutes: 1 })).toMatch(/1 minut/);
+     expect(await runTool("pomodoro_status", {})).toMatch(/Zostało/);
+     vi.advanceTimersByTime(61_000);
+diff --git a/src/lib/abort.ts b/src/lib/abort.ts
+new file mode 100644
+index 0000000..45cc362
+--- /dev/null
++++ b/src/lib/abort.ts
+@@ -0,0 +1,15 @@
++/** Request-scoped cancellation. It never authorizes an operation or proves its outcome. */
++export function throwIfAborted(signal?: AbortSignal | null): void {
++  if (signal?.aborted) throw new DOMException("Zatrzymano wykonanie.", "AbortError");
++}
++
++/** Stop waiting even if an integration ignores AbortSignal. Callers must gate side effects too. */
++export function abortable<T>(work: Promise<T>, signal?: AbortSignal): Promise<T> {
++  if (!signal) return work;
++  return new Promise<T>((resolve, reject) => {
++    const stop = () => { cleanup(); reject(new DOMException("Zatrzymano wykonanie.", "AbortError")); };
++    const cleanup = () => signal.removeEventListener("abort", stop);
++    work.then(value => { cleanup(); if (signal.aborted) stop(); else resolve(value); }, error => { cleanup(); reject(error); });
++    if (signal.aborted) stop(); else signal.addEventListener("abort", stop, { once: true });
++  });
++}
+diff --git a/src/lib/controlCommand.ts b/src/lib/controlCommand.ts
+new file mode 100644
+index 0000000..e733622
+--- /dev/null
++++ b/src/lib/controlCommand.ts
+@@ -0,0 +1,6 @@
++/** Exact local controls, available even while the normal message queue is busy. */
++export function isStopCommand(text: string): boolean {
++  const q = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l")
++    .replace(/[,.!?]+/g, " ").replace(/\s+/g, " ").trim().replace(/^jarvis\s+/, "");
++  return /^(stop|zatrzymaj|zatrzymaj sie|zatrzymaj wszystko|przerwij|przerwij zadanie)$/.test(q);
++}
+diff --git a/tests/configuredOllamaPort.test.ts b/tests/configuredOllamaPort.test.ts
+new file mode 100644
+index 0000000..b561060
+--- /dev/null
++++ b/tests/configuredOllamaPort.test.ts
+@@ -0,0 +1,22 @@
++import { createRequire } from "node:module";
++import { createServer } from "node:http";
++import { expect, it, vi } from "vitest";
++const require = createRequire(import.meta.url);
++const { configuredLocalPort, createConfiguredLocalOllamaManager } = require("../electron/local-ollama.cjs");
++it("odczytuje port 11435 z konfiguracji i odrzuca hosty zdalne", () => {
++  expect(configuredLocalPort("http://localhost:11435")).toBe(11435);
++  for (const value of ["http://evil.test:11435", "http://localhost:11435/path", "http://user@localhost:11435", "http://localhost", "http://localhost:80"]) expect(configuredLocalPort(value)).toBeNull();
++});
++it("sprawdza faktycznie skonfigurowany port bez uruchamiania drugiej usługi", async () => {
++  const server = createServer((_req, res) => res.end(JSON.stringify({ models: [] })));
++  await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
++  const port = (server.address() as { port: number }).port;
++  const start = vi.fn();
++  const manager = createConfiguredLocalOllamaManager({ start });
++  try {
++    expect(await manager.ensure(`http://127.0.0.1:${port}`)).toMatchObject({ ok: true, started: false });
++    expect(start).not.toHaveBeenCalled();
++    manager.close();
++    expect(server.listening).toBe(true);
++  } finally { manager.close(); await new Promise<void>(resolve => server.close(() => resolve())); }
++});
+diff --git a/tests/fetchCancellation.test.ts b/tests/fetchCancellation.test.ts
+new file mode 100644
+index 0000000..3b0f488
+--- /dev/null
++++ b/tests/fetchCancellation.test.ts
+@@ -0,0 +1,17 @@
++import { afterEach, expect, it, vi } from "vitest";
++import { fetchTimeout } from "../src/lib/http";
++afterEach(() => vi.unstubAllGlobals());
++it("przenosi sygnał STOP do transportu również po odebraniu nagłówków", async () => {
++  let transportSignal!: AbortSignal;
++  vi.stubGlobal("fetch", vi.fn(async (_url, init) => { transportSignal = init.signal; return new Response("OK"); }));
++  const controller = new AbortController();
++  await fetchTimeout("http://fixture", { signal: controller.signal }, 30);
++  expect(transportSignal.aborted).toBe(false);
++  controller.abort();
++  expect(transportSignal.aborted).toBe(true);
++});
++it("nie rozpoczyna użytecznej odpowiedzi z wcześniej anulowanym sygnałem", async () => {
++  vi.stubGlobal("fetch", vi.fn(async (_url, init) => { if (init.signal.aborted) throw new DOMException("stop", "AbortError"); return new Response("bad"); }));
++  const controller = new AbortController(); controller.abort();
++  await expect(fetchTimeout("http://fixture", { signal: controller.signal }, 30)).rejects.toMatchObject({ name: "AbortError" });
++});
+diff --git a/tests/ollamaActionCapability.test.ts b/tests/ollamaActionCapability.test.ts
+new file mode 100644
+index 0000000..5d43019
+--- /dev/null
++++ b/tests/ollamaActionCapability.test.ts
+@@ -0,0 +1,18 @@
++// @vitest-environment jsdom
++import { afterEach, expect, it, vi } from "vitest";
++import { askOllamaNative } from "../src/lib/providers/ollama";
++import { store } from "../src/lib/store";
++const config = { base: "http://127.0.0.1:11435", think: false, options: { num_ctx: 4096 } };
++afterEach(() => vi.unstubAllGlobals());
++it("zadanie akcyjne nie degraduje do fikcyjnego wykonania bez narzędzi", async () => {
++  const fetch = vi.fn(async () => new Response(JSON.stringify({ error: "model does not support tools" }), { status: 400 }));
++  vi.stubGlobal("fetch", fetch);
++  await expect(askOllamaNative({ apiKey: "local", model: "fixture", system: "test", webSearch: false, history: [{ role: "user", content: "dodaj notatkę" }], tools: [{ name: "add_note", description: "notatka", input_schema: {} }], requiresTools: true }, config)).rejects.toThrow(/Nie wykonano działania/);
++  expect(fetch).toHaveBeenCalledTimes(1);
++});
++it("nie wykonuje narzędzia, którego nie udostępniono modelowi", async () => {
++  const before = store.data.notes.length;
++  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ message: { role: "assistant", tool_calls: [{ function: { name: "add_note", arguments: { text: "nieuprawniona" } } }] } }))));
++  await expect(askOllamaNative({ apiKey: "local", model: "fixture", system: "test", webSearch: false, history: [], tools: [] }, config)).rejects.toThrow(/spoza udostępnionego zestawu/);
++  expect(store.data.notes.length).toBe(before);
++});
+diff --git a/tests/providerStop.test.ts b/tests/providerStop.test.ts
+new file mode 100644
+index 0000000..842074f
+--- /dev/null
++++ b/tests/providerStop.test.ts
+@@ -0,0 +1,32 @@
++// @vitest-environment jsdom
++import { afterEach, expect, it, vi } from "vitest";
++import { askAnthropic } from "../src/lib/providers/anthropic";
++import { askGemini } from "../src/lib/providers/gemini";
++import { makeOpenAICompatible } from "../src/lib/providers/openai";
++import type { AskCtx } from "../src/lib/providers/types";
++import { store } from "../src/lib/store";
++afterEach(() => vi.unstubAllGlobals());
++const call = { name: "add_note", arguments: { text: "NIE_PO_STOP" } };
++const cases = [
++  { name: "OpenAI-compatible", impl: makeOpenAICompatible("https://fixture.invalid/chat"), data: { choices: [{ message: { role: "assistant", content: "", tool_calls: [{ id: "1", type: "function", function: { name: call.name, arguments: JSON.stringify(call.arguments) } }] } }] } },
++  { name: "Anthropic", impl: askAnthropic, data: { content: [{ type: "tool_use", id: "1", name: call.name, input: call.arguments }], stop_reason: "tool_use" } },
++  { name: "Gemini", impl: askGemini, data: { candidates: [{ content: { parts: [{ functionCall: { name: call.name, args: call.arguments } }] }, finishReason: "STOP" }] } },
++];
++it.each(cases)("$name nie wykonuje spóźnionego narzędzia po STOP", async ({ impl, data }) => {
++  const controller = new AbortController();
++  let deliver!: (r: Response) => void;
++  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(resolve => { deliver = resolve; })));
++  const before = store.data.notes.length;
++  const ctx: AskCtx = { model: "fixture", apiKey: "fixture", signal: controller.signal, system: "test", history: [{ role: "user", content: "dodaj notatkę" }], webSearch: false, tools: [{ name: call.name, description: "notatka", input_schema: { type: "object", properties: { text: { type: "string" } } } }] };
++  const pending = impl(ctx);
++  controller.abort(); deliver(new Response(JSON.stringify(data)));
++  await expect(pending).rejects.toMatchObject({ name: "AbortError" });
++  expect(store.data.notes.length).toBe(before);
++});
++
++it.each(cases)("$name nie wykonuje narzędzia spoza udostępnionego zestawu", async ({ impl, data }) => {
++  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(data))));
++  const before = store.data.notes.length;
++  await expect(impl({ model: "fixture", apiKey: "fixture", system: "test", history: [], webSearch: false, tools: [] })).rejects.toThrow(/spoza udostępnionego zestawu/);
++  expect(store.data.notes.length).toBe(before);
++});
+diff --git a/tests/stopConsent.test.ts b/tests/stopConsent.test.ts
+new file mode 100644
+index 0000000..7fc1e70
+--- /dev/null
++++ b/tests/stopConsent.test.ts
+@@ -0,0 +1,22 @@
++// @vitest-environment jsdom
++import { afterEach, expect, it, vi } from "vitest";
++import { runTool } from "../src/lib/tools";
++import { setConsentHandler, listRememberedConsents, resetConsents, setAutoConsent, clearOutboundScope } from "../src/lib/permissions";
++
++afterEach(() => { setConsentHandler(null); vi.unstubAllGlobals(); });
++it("STOP podczas pytania o zgodę blokuje nawet późniejsze zaakceptowanie", async () => {
++  resetConsents(); setAutoConsent(false); clearOutboundScope();
++  const controller = new AbortController();
++  let answer!: (value: { allow: boolean; remember: boolean }) => void;
++  setConsentHandler(() => new Promise(resolve => { answer = resolve; }));
++  const open = vi.fn(async () => "ok");
++  Object.assign(window, { jarvisDesktop: { platform: "linux", open } });
++  try {
++    const pending = runTool("desktop_open", { target: "/tmp/orion" }, { signal: controller.signal });
++    controller.abort();
++    answer({ allow: true, remember: true });
++    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
++    expect(open).not.toHaveBeenCalled();
++    expect(listRememberedConsents()).not.toContain("desktop_open");
++  } finally { delete (window as unknown as { jarvisDesktop?: unknown }).jarvisDesktop; }
++});
+diff --git a/tests/stopExecution.test.ts b/tests/stopExecution.test.ts
+new file mode 100644
+index 0000000..1d3a9c0
+--- /dev/null
++++ b/tests/stopExecution.test.ts
+@@ -0,0 +1,42 @@
++// @vitest-environment jsdom
++import { afterEach, describe, expect, it, vi } from "vitest";
++import { askOllamaNative } from "../src/lib/providers/ollama";
++import { store } from "../src/lib/store";
++import type { AskCtx } from "../src/lib/providers/types";
++
++afterEach(() => vi.unstubAllGlobals());
++
++describe("STOP: brak kolejnych efektów po anulowaniu", () => {
++  it("blokuje spóźnione tool_calls nawet gdy transport nie respektuje anulowania", async () => {
++    const ctrl = new AbortController();
++    let deliver!: (value: Response) => void;
++    const first = new Promise<Response>((resolve) => { deliver = resolve; });
++    const mock = vi.fn().mockImplementationOnce(() => first).mockResolvedValue(new Response(JSON.stringify({ message: { role: "assistant", content: "Gotowe" } })));
++    vi.stubGlobal("fetch", mock);
++    const before = store.data.notes.length;
++    const ctx: AskCtx & { signal: AbortSignal } = { apiKey: "local", model: "fixture", system: "test", history: [{ role: "user", content: "dodaj notatkę" }], tools: [{ name: "add_note", description: "Dodaj notatkę", input_schema: { type: "object", properties: { text: { type: "string" } } } }], webSearch: false, signal: ctrl.signal };
++    const result = askOllamaNative(ctx, { base: "http://127.0.0.1:11435", think: false, options: { num_ctx: 4096 } });
++    ctrl.abort();
++    deliver(new Response(JSON.stringify({ message: { role: "assistant", content: "", tool_calls: [{ function: { name: "add_note", arguments: { text: "STOP_ORION" } } }] } })));
++    await expect(result).rejects.toMatchObject({ name: "AbortError" });
++    expect(store.data.notes.length).toBe(before);
++    expect(mock).toHaveBeenCalledTimes(1);
++  });
++});
++
++describe("STOP: zgoda i paczka narzędzi", () => {
++  it("nie rozpoczyna następnego narzędzia po STOP wewnątrz paczki", async () => {
++    const ctrl = new AbortController();
++    const before = store.data.notes.length;
++    const unsubscribe = store.subscribe(() => { if (store.data.notes.length > before) ctrl.abort(); });
++    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ message: { role: "assistant", content: "", tool_calls: [
++      { function: { name: "add_note", arguments: { text: "ORION pierwszy" } } },
++      { function: { name: "add_note", arguments: { text: "ORION drugi NIE WOLNO" } } },
++    ] } }))));
++    try {
++      await expect(askOllamaNative({ apiKey: "local", model: "fixture", system: "test", history: [], tools: [{ name: "add_note", description: "Dodaj notatkę", input_schema: { type: "object", properties: { text: { type: "string" } } } }], webSearch: false, signal: ctrl.signal }, { base: "http://127.0.0.1:11435", think: false, options: { num_ctx: 4096 } })).rejects.toMatchObject({ name: "AbortError" });
++      expect(store.data.notes.length).toBe(before + 1);
++      expect(store.data.notes.some(n => n.text === "ORION drugi NIE WOLNO")).toBe(false);
++    } finally { unsubscribe(); }
++  });
++});
+diff --git a/tests/stopWorkspaceProcess.test.ts b/tests/stopWorkspaceProcess.test.ts
+new file mode 100644
+index 0000000..2f836a7
+--- /dev/null
++++ b/tests/stopWorkspaceProcess.test.ts
+@@ -0,0 +1,24 @@
++import { createRequire } from "node:module";
++import { mkdtempSync, existsSync, readFileSync, rmSync } from "node:fs";
++import { tmpdir } from "node:os";
++import path from "node:path";
++import { expect, it } from "vitest";
++const require = createRequire(import.meta.url);
++const { createWorkspaceTools } = require("../electron/workspace-tools.cjs");
++it("STOP kończy rzeczywisty proces zadania i nie zgłasza jego sukcesu", async () => {
++  const root = mkdtempSync(path.join(tmpdir(), "jarvis-stop-process-"));
++  const runtime = createWorkspaceTools({ root });
++  const marker = path.join(root, "ready.pid");
++  const code = `require('fs').writeFileSync(${JSON.stringify(marker)}, String(process.pid)); setInterval(()=>{},1000)`;
++  try {
++    const pending = runtime.call("terminal", { command: "node", args: ["-e", code] });
++    const deadline = Date.now() + 5000;
++    while (!existsSync(marker) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
++    expect(existsSync(marker)).toBe(true);
++    const pid = Number(readFileSync(marker, "utf8"));
++    expect(runtime.cancelAll()).toMatchObject({ requested: 1 });
++    expect(await pending).toMatchObject({ ok: false, cancelled: true });
++    expect(() => process.kill(pid, 0)).toThrow();
++    expect(runtime.cancelAll()).toMatchObject({ requested: 0 });
++  } finally { runtime.cancelAll(); rmSync(root, { recursive: true, force: true }); }
++});
+diff --git a/tests/unknownToolConsent.test.ts b/tests/unknownToolConsent.test.ts
+new file mode 100644
+index 0000000..25ec8db
+--- /dev/null
++++ b/tests/unknownToolConsent.test.ts
+@@ -0,0 +1,12 @@
++// @vitest-environment jsdom
++import { afterEach, expect, it } from "vitest";
++import { requestConsent, grantOutboundScope, clearOutboundScope, setAutoConsent, setConsentHandler } from "../src/lib/permissions";
++import { store } from "../src/lib/store";
++afterEach(() => { clearOutboundScope(); setAutoConsent(false); setConsentHandler(null); });
++it("nowe nieznane narzędzie nie dziedziczy wildcard ani globalnej zgody", async () => {
++  store.setSettings({ requireConsentAlways: false });
++  setConsentHandler(null); grantOutboundScope("*"); setAutoConsent(true);
++  expect(await requestConsent("mcp_unseen_ORION", {})).toBe(false);
++  grantOutboundScope(["mcp_unseen_ORION"]);
++  expect(await requestConsent("mcp_unseen_ORION", {})).toBe(true);
++});
+diff --git a/tests/webllmCapabilityGuard.test.ts b/tests/webllmCapabilityGuard.test.ts
+new file mode 100644
+index 0000000..a08428b
+--- /dev/null
++++ b/tests/webllmCapabilityGuard.test.ts
+@@ -0,0 +1,9 @@
++import { expect, it } from "vitest";
++import { askWebllm } from "../src/lib/providers/webllm";
++const base = { apiKey: "local", model: "fixture", system: "test", tools: [], history: [], webSearch: false };
++it("WebLLM nie udaje wykonania czynności narzędziowej", async () => {
++  await expect(askWebllm({ ...base, requiresTools: true })).rejects.toThrow(/Nie wykonano działania/);
++});
++it("WebLLM nie ignoruje po cichu dołączonego obrazu", async () => {
++  await expect(askWebllm({ ...base, history: [{ role: "user", content: "ekran", image: { data: "fixture", mediaType: "image/png" } }] })).rejects.toThrow(/Nie przeprowadzono analizy/);
++});

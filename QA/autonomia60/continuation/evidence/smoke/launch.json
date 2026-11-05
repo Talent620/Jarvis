@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-11-05T19-34-42-012Z-agent-smoke-38326065",
+  "origin": "http://127.0.0.1:46203",
+  "profile": "/workspace/Jarvis/QA/runs/2026-11-05T19-34-42-012Z-agent-smoke-38326065/chromium-profile",
+  "license_required": false,
+  "scope": "isolated dev server only",
+  "app_build": "2026-11-05T19-34-42-012Z-agent-smoke-38326065",
+  "model_fixtures": false
+}

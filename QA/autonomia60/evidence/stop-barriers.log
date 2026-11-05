@@ -1,0 +1,27 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ❯ tests/stopConsent.test.ts (1 test | 1 failed) 7ms
+   × STOP podczas pytania o zgodę blokuje nawet późniejsze zaakceptowanie 6ms
+     → revokeOutboundScope is not a function
+ ✓ tests/stopExecution.test.ts (2 tests) 15ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/stopConsent.test.ts > STOP podczas pytania o zgodę blokuje nawet późniejsze zaakceptowanie
+TypeError: revokeOutboundScope is not a function
+ ❯ tests/stopConsent.test.ts:8:43
+      6| afterEach(() => { setConsentHandler(null); vi.unstubAllGlobals(); });
+      7| it("STOP podczas pytania o zgodę blokuje nawet późniejsze zaakceptowan…
+      8|   resetConsents(); setAutoConsent(false); revokeOutboundScope();
+       |                                           ^
+      9|   const controller = new AbortController();
+     10|   let answer!: (value: { allow: boolean; remember: boolean }) => void;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 2 passed (3)
+   Start at  18:54:12
+   Duration  1.72s (transform 722ms, setup 0ms, collect 1.87s, tests 22ms, environment 899ms, prepare 226ms)
+

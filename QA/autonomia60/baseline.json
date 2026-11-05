@@ -1,0 +1,20 @@
+{
+  "recorded_at": "2026-11-05T18:51:03.295716+00:00",
+  "branch": "work",
+  "commit": "b3234ca906305712ade35363cffc3524c9a1b21a",
+  "changes": "",
+  "node": "v24.22.1",
+  "npm": "11.9.0",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "session_variables": {
+    "DISPLAY": false,
+    "WAYLAND_DISPLAY": false,
+    "XDG_SESSION_TYPE": false
+  },
+  "app_version": "2.0.0",
+  "app_entry": "electron/main.cjs -> dist/index.html",
+  "actual_user_installation": "not accessible; previous user log pointed at /home/qw/Jarvis-GitHub",
+  "runtime_model_endpoint": "not read from user profile; test profiles only; no default-port readiness assumed",
+  "system_installation": false,
+  "published": false
+}

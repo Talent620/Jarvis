@@ -1,3 +1,5 @@
+import { isStopCommand } from "../lib/controlCommand";
+import { isGoalProgressRequest } from "../lib/goalProgress";
 import { useEffect, useRef, useState } from "react";
 import { anticipate, type RecallHit } from "../lib/recall";
 import { store } from "../lib/store";
@@ -60,6 +62,8 @@ export default function Composer({
 
   const submit = () => {
     const t = text.trim();
+    if (isStopCommand(t)) { onStop?.(); setText(""); return; }
+    if (isGoalProgressRequest(t)) { onSend(t); setText(""); return; }
     if ((!t && !imagePreview) || busy) return;
     onSend(t, { council: council && !imagePreview, research: research && !imagePreview });
     setText("");
