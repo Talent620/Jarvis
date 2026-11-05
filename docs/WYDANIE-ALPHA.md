@@ -19,8 +19,10 @@ wystawcę i nie generuje nowej pary. Jeżeli używasz własnego wystawcy, wskaż
 zatwierdzony **publiczny** plik przez `JARVIS_LICENSE_PUBLIC_KEY_FILE`; nie
 rozprowadzaj takiego pakietu jako aktualizacji dla licencji innego wystawcy.
 
-`PROVENANCE.json` zawiera pełny commit, wersję, znacznik budowania i licencje
-zależności. `SHA256SUMS` pozwala sprawdzić pliki przez `sha256sum -c SHA256SUMS`.
+`PROVENANCE.json` zawiera pełny commit, wersję, znacznik budowania, licencje
+zależności oraz publiczny klucz i odcisk wystawcy. Pakowanie sprawdza poprawność
+punktu P-256 i zgodność odcisku przed oraz po utworzeniu archiwum; samo
+`licenseRequired:true` nie wystarcza. Nie zmienia to dotychczasowego wystawcy. `SHA256SUMS` pozwala sprawdzić pliki przez `sha256sum -c SHA256SUMS`.
 Kontrola archiwum odrzuca profile, lokalną konfigurację i pliki kluczy prywatnych.
 W aplikacji wersja oraz rozwijany pełny SHA są w Ustawienia → Dane.
 
@@ -113,7 +115,7 @@ sha256sum release-desktop/JARVIS.deb
 chmod 755 release-desktop
 chmod 644 release-desktop/JARVIS.deb
 sudo apt install --yes "$jarvis_source/release-desktop/JARVIS.deb"
-exec jarvis-ai-assistant
+exec /opt/JARVIS/jarvis-ai-assistant
 JARVIS_INSTALL
 ```
 

@@ -1,0 +1,53 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ❯ tests/releasePackaging.test.ts (9 tests | 2 failed) 13ms
+   × Release provenance and private material boundaries > refuses an enabled license gate with missing or invalid public authority 5ms
+     → expected [Function] to throw an error
+   × Release provenance and private material boundaries > rejects private or non-P256 authority even when licenseRequired is true 1ms
+     → expected [Function] to throw an error
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/releasePackaging.test.ts > Release provenance and private material boundaries > refuses an enabled license gate with missing or invalid public authority
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ tests/releasePackaging.test.ts:23:99
+     21|   it('refuses an enabled license gate with missing or invalid public a…
+     22|     const pkg = { version: licensedMetadata.version };
+     23|     expect(() => validateBuild({ ...licensedMetadata, issuerPublicJwk:…
+       |                                                                                                   ^
+     24|     // Reproduces the invalid repository default without restoring any…
+     25|     const invalid = { kty: 'EC', crv: 'P-256', x: 'cr_zxxKQMLPKsuGybJt…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/releasePackaging.test.ts > Release provenance and private material boundaries > rejects private or non-P256 authority even when licenseRequired is true
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ tests/releasePackaging.test.ts:32:124
+     30|     const pkg = { version: licensedMetadata.version };
+     31|     for (const extra of [{ d: '' }, { privateKey: {} }, { keys: [] }, …
+     32|       expect(() => validateBuild({ ...licensedMetadata, issuerPublicJw…
+       |                                                                                                                            ^
+     33|     }
+     34|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 7 passed (9)
+   Start at  23:51:32
+   Duration  362ms (transform 30ms, setup 0ms, collect 33ms, tests 13ms, environment 0ms, prepare 174ms)

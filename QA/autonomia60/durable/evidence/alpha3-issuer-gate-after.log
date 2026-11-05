@@ -1,0 +1,14 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/releasePackaging.test.ts (10 tests) 17ms
+ ✓ tests/licenseSign.test.ts (13 tests) 31ms
+ ✓ tests/license.test.ts (11 tests) 16ms
+ ✓ tests/licenseCli.test.ts (2 tests) 733ms
+   ✓ inicjalizuje lokalnego wystawcę, nie nadpisuje sekretu, wydaje i niezależnie weryfikuje token 533ms
+ ✓ tests/licenseOwnerUpdates.test.ts (1 test) 3ms
+
+ Test Files  5 passed (5)
+      Tests  37 passed (37)
+   Start at  23:52:35
+   Duration  1.44s (transform 246ms, setup 0ms, collect 370ms, tests 801ms, environment 1.01s, prepare 464ms)

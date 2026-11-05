@@ -1,0 +1,135 @@
+{
+  "mode": "desktop",
+  "requirements": {
+    "node": true,
+    "npm": true,
+    "java": null,
+    "android_sdk": null,
+    "adb": null,
+    "graphical_session": false
+  }
+}
+Klucz prywatny właściciela: <redacted-test-private-location>
+Wystawca SHA-256: d9eac8f5243c9bd28a20cced665a7c5e388adca001ae611f6514086c10b206fb
+vite v5.4.21 building for production...
+transforming...
+✓ 2421 modules transformed.
+rendering chunks...
+computing gzip size...
+../build/build-metadata.json                        0.47 kB │ gzip:   0.35 kB
+../build/assets/ttsWorker-Nisifgm2.js               0.82 kB
+../build/assets/whisperWorker-CPHBFtKt.js           0.87 kB
+../build/assets/webllmWorker-MbiRtkkR.js            0.90 kB
+../build/assets/embedWorker-C1PDpajh.js             0.91 kB
+../build/index.html                                 2.42 kB │ gzip:   1.08 kB
+../build/assets/pdf.worker.min-yatZIOMy.mjs     1,375.84 kB
+../build/assets/NeuralInterface-BV8o00uq.css       12.45 kB │ gzip:   2.72 kB
+../build/assets/index-DbEjRMND.css                 59.10 kB │ gzip:  12.84 kB
+../build/assets/pdf.worker.min-DgRcL-GR.js          0.09 kB │ gzip:   0.11 kB
+../build/assets/web-CtwXfe5w.js                     0.20 kB │ gzip:   0.19 kB
+../build/assets/web-prOAt0SD.js                     0.23 kB │ gzip:   0.20 kB
+../build/assets/simpleFlow-CgW45-Is.js              0.48 kB │ gzip:   0.30 kB
+../build/assets/web-8XsBTBXJ.js                     0.64 kB │ gzip:   0.22 kB
+../build/assets/web-dRFXSP_v.js                     0.71 kB │ gzip:   0.36 kB
+../build/assets/mail-D6XUjvVV.js                    0.77 kB │ gzip:   0.40 kB
+../build/assets/wakeLock-vSn4utc6.js                0.83 kB │ gzip:   0.48 kB
+../build/assets/SystemStatus-ILzofO5f.js            1.40 kB │ gzip:   0.74 kB
+../build/assets/shield-check-D8NIEMiF.js            1.42 kB │ gzip:   0.64 kB
+../build/assets/createLucideIcon-M4KDMcwG.js        1.58 kB │ gzip:   0.66 kB
+../build/assets/usage-3MPoM3Nw.js                   1.62 kB │ gzip:   0.77 kB
+../build/assets/liveUpdate-Cf1tB3Qf.js              1.79 kB │ gzip:   0.83 kB
+../build/assets/localResearchAgent-BSdWxdi0.js      1.85 kB │ gzip:   1.20 kB
+../build/assets/Profile-D2Y1XnlX.js                 2.05 kB │ gzip:   1.16 kB
+../build/assets/campaignRoi-TqxkcvdO.js             2.09 kB │ gzip:   1.02 kB
+../build/assets/SentBox-BlmbbEtQ.js                 2.38 kB │ gzip:   1.31 kB
+../build/assets/HudVision-bbKeiNqd.js               2.54 kB │ gzip:   1.31 kB
+../build/assets/CommandPalette-Bz4vMA1j.js          2.64 kB │ gzip:   1.39 kB
+../build/assets/Recall-WGt9NB4M.js                  2.70 kB │ gzip:   1.41 kB
+../build/assets/MemoryCenter-BUgsnZSL.js            2.74 kB │ gzip:   1.23 kB
+../build/assets/GoalRunner-BosIEiWy.js              2.75 kB │ gzip:   1.53 kB
+../build/assets/AuditLog-CyMP4uyl.js                2.89 kB │ gzip:   1.50 kB
+../build/assets/web-D8aoD7Wj.js                     3.41 kB │ gzip:   0.51 kB
+../build/assets/web-HmF07DEW.js                     3.47 kB │ gzip:   1.12 kB
+../build/assets/Transcribe-B15CwKx3.js              3.74 kB │ gzip:   1.80 kB
+../build/assets/web-cppHvUDC.js                     3.79 kB │ gzip:   1.02 kB
+../build/assets/Notifications-BqdjtLmS.js           3.80 kB │ gzip:   1.66 kB
+../build/assets/voiceEnroll-BIuwpv0V.js             3.94 kB │ gzip:   1.88 kB
+../build/assets/ChatHistory-D01dLrKI.js             3.96 kB │ gzip:   1.76 kB
+../build/assets/emailComposer-DY35JGMy.js           4.06 kB │ gzip:   2.32 kB
+../build/assets/goalPlanner-D_KxLuD5.js             4.42 kB │ gzip:   2.27 kB
+../build/assets/index-BHpRBBN7.js                   4.47 kB │ gzip:   1.81 kB
+../build/assets/Projects-5KtLhHOc.js                4.56 kB │ gzip:   2.03 kB
+../build/assets/ShoppingList-woVpdHIZ.js            4.98 kB │ gzip:   2.38 kB
+../build/assets/MailCompose-kcbLO8Sd.js             5.65 kB │ gzip:   2.31 kB
+../build/assets/bargain-DH1wYXBk.js                 5.85 kB │ gzip:   2.83 kB
+../build/assets/Cards-onQxxjKq.js                   6.42 kB │ gzip:   2.38 kB
+../build/assets/Panels-dhRGsRct.js                  6.57 kB │ gzip:   2.13 kB
+../build/assets/league-Cx4tKmkr.js                  7.31 kB │ gzip:   3.36 kB
+../build/assets/CostPanel-DX_dbMyo.js               7.35 kB │ gzip:   2.91 kB
+../build/assets/MoneyHub-BHnotRj8.js                7.47 kB │ gzip:   3.25 kB
+../build/assets/FinancialDashboard-DwRcNeXy.js      7.71 kB │ gzip:   2.97 kB
+../build/assets/Journal-Z2YhGV6Z.js                 8.27 kB │ gzip:   3.49 kB
+../build/assets/FAQ-D9RUl_Yr.js                     8.54 kB │ gzip:   3.96 kB
+../build/assets/More-CZM4qqsc.js                    8.69 kB │ gzip:   4.03 kB
+../build/assets/GrowthDayPanel-CbigVNYq.js          9.33 kB │ gzip:   3.79 kB
+../build/assets/TaskHub-ClYVWEkB.js                 9.72 kB │ gzip:   3.59 kB
+../build/assets/Translator-DCjiJd-c.js              9.78 kB │ gzip:   4.20 kB
+../build/assets/WhereToBuy-BsV7G6Ch.js             10.24 kB │ gzip:   4.35 kB
+../build/assets/BossMode-DimRF9yq.js               10.67 kB │ gzip:   5.24 kB
+../build/assets/BargainHunter-DfRD9Gw9.js          12.09 kB │ gzip:   4.49 kB
+../build/assets/Help-WB4-AFL9.js                   12.25 kB │ gzip:   5.03 kB
+../build/assets/HeadsetMode-Br_h6sPJ.js            13.64 kB │ gzip:   6.15 kB
+../build/assets/GoalStatusPanel-CltI07Fc.js        22.93 kB │ gzip:   7.68 kB
+../build/assets/AdminPanel-GSOR3LsK.js             23.62 kB │ gzip:   8.38 kB
+../build/assets/MarketingWorkspace-CUNHxOFi.js     23.97 kB │ gzip:   9.19 kB
+../build/assets/Studio-CRux8_FM.js                 24.82 kB │ gzip:  10.19 kB
+../build/assets/WebStudio-CfFtTvLh.js              35.84 kB │ gzip:  12.56 kB
+../build/assets/SalesCrm-DDbuRKvM.js               71.41 kB │ gzip:  22.91 kB
+../build/assets/NeuralInterface-D44IeICg.js       130.39 kB │ gzip:  43.42 kB
+../build/assets/react-vendor-CVqnBPLZ.js          142.15 kB │ gzip:  45.50 kB
+../build/assets/Gadgets-7F_4O9_V.js               181.79 kB │ gzip:  64.68 kB
+../build/assets/knowledge-index-C3Uyrusz.js       238.86 kB │ gzip:  55.58 kB
+../build/assets/Settings-Dt5HHalC.js              243.19 kB │ gzip:  85.30 kB
+../build/assets/pdf-6-IbJiBi.js                   365.67 kB │ gzip: 107.84 kB
+../build/assets/index-CSGgF7vI.js                 866.18 kB │ gzip: 321.30 kB
+✓ built in 5.21s
+Panel właściciela → import private.jwk.json → Generuj klucz licencyjny APK. Używaj tej samej pary przy kolejnych aktualizacjach.
+
+(!) outDir <isolated-owner-test>/build is not inside project root and will not be emptied.
+Use --emptyOutDir to override.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) <isolated-owner-test>/source/src/lib/store.ts is dynamically imported by <isolated-owner-test>/source/src/lib/voice.ts but also statically imported by <isolated-owner-test>/source/src/App.tsx, <isolated-owner-test>/source/src/components/AdStudio.tsx, <isolated-owner-test>/source/src/components/AuditLog.tsx, <isolated-owner-test>/source/src/components/BossMode.tsx, <isolated-owner-test>/source/src/components/Composer.tsx, <isolated-owner-test>/source/src/components/ContentStudio.tsx, <isolated-owner-test>/source/src/components/Conversation.tsx, <isolated-owner-test>/source/src/components/CostPanel.tsx, <isolated-owner-test>/source/src/components/FinancialDashboard.tsx, <isolated-owner-test>/source/src/components/FitnessPanel.tsx, <isolated-owner-test>/source/src/components/Gadgets.tsx, <isolated-owner-test>/source/src/components/Guardian.tsx, <isolated-owner-test>/source/src/components/HeadsetMode.tsx, <isolated-owner-test>/source/src/components/HudVision.tsx, <isolated-owner-test>/source/src/components/InterfaceSwitch.tsx, <isolated-owner-test>/source/src/components/Journal.tsx, <isolated-owner-test>/source/src/components/LeadCandidatesPanel.tsx, <isolated-owner-test>/source/src/components/LeadDetail.tsx, <isolated-owner-test>/source/src/components/LiveOverlay.tsx, <isolated-owner-test>/source/src/components/MailCompose.tsx, <isolated-owner-test>/source/src/components/MemoryCenter.tsx, <isolated-owner-test>/source/src/components/Mind.tsx, <isolated-owner-test>/source/src/components/More.tsx, <isolated-owner-test>/source/src/components/Onboarding.tsx, <isolated-owner-test>/source/src/components/Panels.tsx, <isolated-owner-test>/source/src/components/PermissionDialog.tsx, <isolated-owner-test>/source/src/components/Profile.tsx, <isolated-owner-test>/source/src/components/Projects.tsx, <isolated-owner-test>/source/src/components/SalesDashboard.tsx, <isolated-owner-test>/source/src/components/SalesPlan.tsx, <isolated-owner-test>/source/src/components/SentBox.tsx, <isolated-owner-test>/source/src/components/Settings.tsx, <isolated-owner-test>/source/src/components/ShoppingList.tsx, <isolated-owner-test>/source/src/components/Studio.tsx, <isolated-owner-test>/source/src/components/TaskHub.tsx, <isolated-owner-test>/source/src/components/Transcribe.tsx, <isolated-owner-test>/source/src/components/Translator.tsx, <isolated-owner-test>/source/src/components/jarvis-ui/NeuralInterface.tsx, <isolated-owner-test>/source/src/hooks/useStore.ts, <isolated-owner-test>/source/src/hooks/useWatchdog.ts, <isolated-owner-test>/source/src/lib/autoPlan.ts, <isolated-owner-test>/source/src/lib/backup.ts, <isolated-owner-test>/source/src/lib/bargainWatch.ts, <isolated-owner-test>/source/src/lib/benchmarkOllama.ts, <isolated-owner-test>/source/src/lib/brain.ts, <isolated-owner-test>/source/src/lib/brainMode.ts, <isolated-owner-test>/source/src/lib/brainModes.ts, <isolated-owner-test>/source/src/lib/brainReserve.ts, <isolated-owner-test>/source/src/lib/brand.ts, <isolated-owner-test>/source/src/lib/brandKit.ts, <isolated-owner-test>/source/src/lib/campaignRoi.ts, <isolated-owner-test>/source/src/lib/campaignStore.ts, <isolated-owner-test>/source/src/lib/capabilities.ts, <isolated-owner-test>/source/src/lib/cards.ts, <isolated-owner-test>/source/src/lib/contentStudio.ts, <isolated-owner-test>/source/src/lib/council.ts, <isolated-owner-test>/source/src/lib/desktop.ts, <isolated-owner-test>/source/src/lib/deviceCalendar.ts, <isolated-owner-test>/source/src/lib/deviceControl.ts, <isolated-owner-test>/source/src/lib/feedback.ts, <isolated-owner-test>/source/src/lib/fitness.ts, <isolated-owner-test>/source/src/lib/followUpAI.ts, <isolated-owner-test>/source/src/lib/google.ts, <isolated-owner-test>/source/src/lib/guardian.ts, <isolated-owner-test>/source/src/lib/guardianAgents.ts, <isolated-owner-test>/source/src/lib/habit.ts, <isolated-owner-test>/source/src/lib/healthCheck.ts, <isolated-owner-test>/source/src/lib/imageHistory.ts, <isolated-owner-test>/source/src/lib/images.ts, <isolated-owner-test>/source/src/lib/interfaceMode.ts, <isolated-owner-test>/source/src/lib/keys.ts, <isolated-owner-test>/source/src/lib/leadImport.ts, <isolated-owner-test>/source/src/lib/leadIntel.ts, <isolated-owner-test>/source/src/lib/leads.ts, <isolated-owner-test>/source/src/lib/localImage.ts, <isolated-owner-test>/source/src/lib/localResearchAgent.ts, <isolated-owner-test>/source/src/lib/mailer.ts, <isolated-owner-test>/source/src/lib/mcp.ts, <isolated-owner-test>/source/src/lib/memory.ts, <isolated-owner-test>/source/src/lib/memoryService.ts, <isolated-owner-test>/source/src/lib/mic.ts, <isolated-owner-test>/source/src/lib/n8n.ts, <isolated-owner-test>/source/src/lib/notifyCenter.ts, <isolated-owner-test>/source/src/lib/ollamaMaestro.ts, <isolated-owner-test>/source/src/lib/ollamaPull.ts, <isolated-owner-test>/source/src/lib/permissions.ts, <isolated-owner-test>/source/src/lib/predictionCycle.ts, <isolated-owner-test>/source/src/lib/prewarm.ts, <isolated-owner-test>/source/src/lib/privateMode.ts, <isolated-owner-test>/source/src/lib/proactive.ts, <isolated-owner-test>/source/src/lib/proactiveNotify.ts, <isolated-owner-test>/source/src/lib/proactivity.ts, <isolated-owner-test>/source/src/lib/prospect.ts, <isolated-owner-test>/source/src/lib/providers/registry.ts, <isolated-owner-test>/source/src/lib/recall.ts, <isolated-owner-test>/source/src/lib/research.ts, <isolated-owner-test>/source/src/lib/sales/siteAuditClient.ts, <isolated-owner-test>/source/src/lib/salesEngine.ts, <isolated-owner-test>/source/src/lib/salesOs.ts, <isolated-owner-test>/source/src/lib/secretsVault.ts, <isolated-owner-test>/source/src/lib/selfHeal.ts, <isolated-owner-test>/source/src/lib/signatures.ts, <isolated-owner-test>/source/src/lib/siteOs.ts, <isolated-owner-test>/source/src/lib/siteProjects.ts, <isolated-owner-test>/source/src/lib/status.ts, <isolated-owner-test>/source/src/lib/sync.ts, <isolated-owner-test>/source/src/lib/tools.ts, <isolated-owner-test>/source/src/lib/transcribe.ts, <isolated-owner-test>/source/src/lib/voiceEnroll.ts, <isolated-owner-test>/source/src/lib/voiceLoop.ts, <isolated-owner-test>/source/src/lib/whisperListener.ts, <isolated-owner-test>/source/src/lib/worldModel.ts, <isolated-owner-test>/source/src/plugins/PluginRegistry.ts, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) <isolated-owner-test>/source/src/lib/modelRouter.ts is dynamically imported by <isolated-owner-test>/source/src/lib/tools.ts but also statically imported by <isolated-owner-test>/source/src/App.tsx, <isolated-owner-test>/source/src/components/CostPanel.tsx, <isolated-owner-test>/source/src/components/Mind.tsx, <isolated-owner-test>/source/src/components/Settings.tsx, <isolated-owner-test>/source/src/lib/brain.ts, <isolated-owner-test>/source/src/lib/brainMode.ts, <isolated-owner-test>/source/src/lib/cognitiveController.ts, <isolated-owner-test>/source/src/lib/healthCheck.ts, <isolated-owner-test>/source/src/lib/routeView.ts, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) <isolated-owner-test>/source/src/lib/episodicMemory.ts is dynamically imported by <isolated-owner-test>/source/src/lib/tools.ts but also statically imported by <isolated-owner-test>/source/src/components/Mind.tsx, <isolated-owner-test>/source/src/components/jarvis-ui/NeuralInterface.tsx, <isolated-owner-test>/source/src/lib/brain.ts, <isolated-owner-test>/source/src/lib/contextFusion.ts, <isolated-owner-test>/source/src/lib/proactivity.ts, <isolated-owner-test>/source/src/lib/reflection.ts, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) <isolated-owner-test>/source/src/lib/errorLog.ts is dynamically imported by <isolated-owner-test>/source/src/lib/tools.ts but also statically imported by <isolated-owner-test>/source/src/components/ErrorBoundary.tsx, <isolated-owner-test>/source/src/components/Mind.tsx, <isolated-owner-test>/source/src/components/jarvis-ui/NeuralInterface.tsx, <isolated-owner-test>/source/src/lib/brain.ts, <isolated-owner-test>/source/src/lib/guardianAgents.ts, <isolated-owner-test>/source/src/lib/voice.ts, <isolated-owner-test>/source/src/main.tsx, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) <isolated-owner-test>/source/src/lib/brainModes.ts is dynamically imported by <isolated-owner-test>/source/src/lib/guardian.ts, <isolated-owner-test>/source/src/lib/guardian.ts but also statically imported by <isolated-owner-test>/source/src/components/Settings.tsx, <isolated-owner-test>/source/src/lib/tools.ts, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) <isolated-owner-test>/source/src/lib/voice.ts is dynamically imported by <isolated-owner-test>/source/src/App.tsx, <isolated-owner-test>/source/src/lib/guardian.ts but also statically imported by <isolated-owner-test>/source/src/App.tsx, <isolated-owner-test>/source/src/components/BossMode.tsx, <isolated-owner-test>/source/src/components/Composer.tsx, <isolated-owner-test>/source/src/components/Conversation.tsx, <isolated-owner-test>/source/src/components/Guardian.tsx, <isolated-owner-test>/source/src/components/HeadsetMode.tsx, <isolated-owner-test>/source/src/components/HudVision.tsx, <isolated-owner-test>/source/src/components/Onboarding.tsx, <isolated-owner-test>/source/src/components/PermissionDialog.tsx, <isolated-owner-test>/source/src/components/Settings.tsx, <isolated-owner-test>/source/src/components/Translator.tsx, <isolated-owner-test>/source/src/components/jarvis-ui/NeuralInterface.tsx, <isolated-owner-test>/source/src/hooks/useWatchdog.ts, <isolated-owner-test>/source/src/lib/guardianAgents.ts, <isolated-owner-test>/source/src/lib/healthCheck.ts, <isolated-owner-test>/source/src/lib/smartConversation.ts, <isolated-owner-test>/source/src/lib/voiceLoop.ts, <isolated-owner-test>/source/src/lib/whisperListener.ts, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) <isolated-owner-test>/source/src/lib/guardianAgents.ts is dynamically imported by <isolated-owner-test>/source/src/lib/tools.ts but also statically imported by <isolated-owner-test>/source/src/App.tsx, <isolated-owner-test>/source/src/components/Guardian.tsx, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) <isolated-owner-test>/source/src/lib/guardianHistory.ts is dynamically imported by <isolated-owner-test>/source/src/App.tsx, <isolated-owner-test>/source/src/App.tsx but also statically imported by <isolated-owner-test>/source/src/components/Guardian.tsx, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) <isolated-owner-test>/source/src/lib/reflection.ts is dynamically imported by <isolated-owner-test>/source/src/lib/tools.ts but also statically imported by <isolated-owner-test>/source/src/components/Mind.tsx, dynamic import will not move module into another chunk.
+
+[plugin:vite:reporter] [plugin vite:reporter]
+(!) <isolated-owner-test>/source/src/lib/selfImprove.ts is dynamically imported by <isolated-owner-test>/source/src/lib/tools.ts but also statically imported by <isolated-owner-test>/source/src/components/Mind.tsx, dynamic import will not move module into another chunk.
+
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

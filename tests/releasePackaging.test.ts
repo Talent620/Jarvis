@@ -3,16 +3,40 @@ import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
+import { createHash, generateKeyPairSync } from 'node:crypto';
+import { defaultPublicJwk } from '../src/lib/licenseAuthority';
 const require = createRequire(import.meta.url);
 const { validateBuild, validatePackagePaths, validateDebianPostinstall } = require('../scripts/release-linux.cjs');
 const { prepare, verifySigningCertificate, failureSummary } = require('../scripts/prepare-android-signing.cjs');
 
 describe('Release provenance and private material boundaries', () => {
   const commit = 'a'.repeat(40);
+  const issuerPublicJwk = generateKeyPairSync('ec', { namedCurve: 'P-256' }).publicKey.export({ format: 'jwk' });
+  const issuerFingerprint = createHash('sha256').update(JSON.stringify({ kty: issuerPublicJwk.kty, crv: issuerPublicJwk.crv, x: issuerPublicJwk.x, y: issuerPublicJwk.y })).digest('hex');
+  const licensedMetadata = { schemaVersion: 1, commit, version: '2.1.0-alpha.3', licenseRequired: true, issuerPublicJwk, issuerFingerprint };
+  it('retains the valid application issuer without replacing its trust root', () => {
+    const fingerprint = createHash('sha256').update(JSON.stringify({ kty: defaultPublicJwk.kty, crv: defaultPublicJwk.crv, x: defaultPublicJwk.x, y: defaultPublicJwk.y })).digest('hex');
+    expect(() => validateBuild({ ...licensedMetadata, issuerPublicJwk: defaultPublicJwk, issuerFingerprint: fingerprint }, { version: licensedMetadata.version }, commit)).not.toThrow();
+  });
   it('refuses unlicensed or different-source builds', () => {
-    expect(() => validateBuild({ schemaVersion: 1, commit, version: '2.1.0-alpha.1', licenseRequired: true }, { version: '2.1.0-alpha.1' }, commit)).not.toThrow();
+    expect(() => validateBuild(licensedMetadata, { version: licensedMetadata.version }, commit)).not.toThrow();
     expect(() => validateBuild({ schemaVersion: 1, commit, version: '2.1.0-alpha.1', licenseRequired: false }, { version: '2.1.0-alpha.1' }, commit)).toThrow(/license/);
     expect(() => validateBuild({ schemaVersion: 1, commit: 'b'.repeat(40), licenseRequired: true }, {}, commit)).toThrow(/commit/);
+  });
+  it('refuses an enabled license gate with missing or invalid public authority', () => {
+    const pkg = { version: licensedMetadata.version };
+    expect(() => validateBuild({ ...licensedMetadata, issuerPublicJwk: undefined }, pkg, commit)).toThrow(/issuer/i);
+    // Synthetically invalid point with a matching fingerprint: JSON shape alone is insufficient.
+    const invalid = { kty: 'EC', crv: 'P-256', x: 'A'.repeat(43), y: 'A'.repeat(43) };
+    const invalidFingerprint = createHash('sha256').update(JSON.stringify(invalid)).digest('hex');
+    expect(() => validateBuild({ ...licensedMetadata, issuerPublicJwk: invalid, issuerFingerprint: invalidFingerprint }, pkg, commit)).toThrow(/issuer is invalid/i);
+    expect(() => validateBuild({ ...licensedMetadata, issuerFingerprint: '0'.repeat(64) }, pkg, commit)).toThrow(/issuer/i);
+  });
+  it('rejects private or non-P256 authority even when licenseRequired is true', () => {
+    const pkg = { version: licensedMetadata.version };
+    for (const extra of [{ d: '' }, { privateKey: {} }, { keys: [] }, { crv: 'P-384' }]) {
+      expect(() => validateBuild({ ...licensedMetadata, issuerPublicJwk: { ...issuerPublicJwk, ...extra } }, pkg, commit)).toThrow(/issuer/i);
+    }
   });
   it('rejects signing keys, private issuer files and profiles inside packages', () => {
     for (const entry of ['/android/keystore/jarvis.jks', '/license-private.json', '/config/.env.local', '/QA/runs/session/profile']) {

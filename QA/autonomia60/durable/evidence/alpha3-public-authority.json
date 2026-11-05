@@ -1,0 +1,71 @@
+{
+  "recordedAt": "2026-11-05T23:51:55.470Z",
+  "status": "PASS_PUBLIC_KEY_VALIDITY",
+  "scope": "Independent public trust-root validation from pinned Git objects. No private material read, no license token generated, no network, package install, repository write or publication.",
+  "node": "v24.22.1",
+  "openssl": "3.5.9",
+  "currentCommit": "08e02d5791fd436defbc519bbfd131caf8dfe28b",
+  "baselineCommit": "fb17f9755faad72295cb125563ba2b0220d9319d",
+  "checks": [
+    {
+      "label": "current-pinned-source",
+      "commit": "08e02d5791fd436defbc519bbfd131caf8dfe28b",
+      "sourcePath": "src/lib/licenseAuthority.ts",
+      "sourceSha256": "7d11640c4efa1b6076a32924730fe1bffe66b99e0219898e3d12e375ff6a439f",
+      "publicJwkCanonicalSha256": "7462b7c6e039a0209142d6be7acbe640a6209dd69f25f654affecf56ecd46ec9",
+      "keyType": "EC",
+      "curve": "P-256",
+      "coordinateBytes": {
+        "x": 32,
+        "y": 32
+      },
+      "mathematicalP256": {
+        "coordinatesInField": true,
+        "equationSatisfied": true
+      },
+      "nodeCreatePublicKey": {
+        "status": "PASS",
+        "type": "ec"
+      },
+      "webCryptoImportKey": {
+        "status": "PASS"
+      },
+      "status": "VALID_PUBLIC_TRUST_ROOT"
+    },
+    {
+      "label": "baseline-pinned-source",
+      "commit": "fb17f9755faad72295cb125563ba2b0220d9319d",
+      "sourcePath": "src/lib/licenseAuthority.ts",
+      "sourceSha256": "7d11640c4efa1b6076a32924730fe1bffe66b99e0219898e3d12e375ff6a439f",
+      "publicJwkCanonicalSha256": "7462b7c6e039a0209142d6be7acbe640a6209dd69f25f654affecf56ecd46ec9",
+      "keyType": "EC",
+      "curve": "P-256",
+      "coordinateBytes": {
+        "x": 32,
+        "y": 32
+      },
+      "mathematicalP256": {
+        "coordinatesInField": true,
+        "equationSatisfied": true
+      },
+      "nodeCreatePublicKey": {
+        "status": "PASS",
+        "type": "ec"
+      },
+      "webCryptoImportKey": {
+        "status": "PASS"
+      },
+      "status": "VALID_PUBLIC_TRUST_ROOT"
+    }
+  ],
+  "samePublicTrustRoot": true,
+  "sameAuthoritySource": true,
+  "runtimeImplication": {
+    "sourcePath": "src/lib/license.ts",
+    "publicKeyImport": "crypto.subtle.importKey(\"jwk\", PUBLIC_JWK, ECDSA P-256, verify)",
+    "verifyLicense": "Imports the authority before signature verification; catch returns {valid:false} when import fails",
+    "activation": "activateLicense requires successful local verifyLicense before optional server activation",
+    "acceptance": "licenseRequired:true is only an enabled gate flag; it does not prove an importable issuer or successful license activation"
+  },
+  "finding": "The identical default public point is valid on NIST P-256 at baseline and current source. Both Node key construction and WebCrypto verify-key import accept it. This independently contradicts the reported ERR_CRYPTO_INVALID_JWK diagnosis for these exact source bytes; possession of a matching private issuer and successful activation remain separate unproven claims."
+}

@@ -8,6 +8,12 @@ const { execFileSync } = require('node:child_process');
 function validateBuild(metadata, pkg, expectedCommit) {
   if (metadata.schemaVersion !== 1 || metadata.commit !== expectedCommit || !/^[0-9a-f]{40}$/.test(expectedCommit)) throw new Error('Build provenance does not match the requested commit.');
   if (metadata.version !== pkg.version || metadata.licenseRequired !== true) throw new Error('Version mismatch or license gate disabled.');
+  const key = metadata.issuerPublicJwk;
+  if (!key || key.kty !== 'EC' || key.crv !== 'P-256' || ['d', 'privateKey', 'keys'].some(name => Object.hasOwn(key, name))) throw new Error('License issuer must be an explicit public EC P-256 key in build metadata.');
+  try { nodeCrypto.createPublicKey({ key, format: 'jwk' }); }
+  catch { throw new Error('License issuer is invalid; configure an approved public key before release.'); }
+  const fingerprint = nodeCrypto.createHash('sha256').update(JSON.stringify({ kty: key.kty, crv: key.crv, x: key.x, y: key.y })).digest('hex');
+  if (metadata.issuerFingerprint !== fingerprint) throw new Error('License issuer fingerprint does not match build metadata.');
 }
 function validatePackagePaths(entries) {
   const forbidden = entries.filter((entry) => /(?:^|\/)(?:\.env(?:\..*)?|license-private\.json|license-public\.local\.json|license-issuer|\.git|QA\/runs)(?:\/|$)/.test(entry) || /\.(?:jks|keystore|p12|pfx)$/i.test(entry));
@@ -35,9 +41,11 @@ function main(root = path.resolve(__dirname, '..')) {
   if (process.env.JARVIS_LICENSE_REQUIRED === 'false') throw new Error('Release packaging refuses a disabled license gate.');
   if (fs.existsSync(path.join(root, 'license-public.local.json')) && !process.env.JARVIS_LICENSE_PUBLIC_KEY_FILE) throw new Error('An implicit local issuer exists. Select an explicit approved public key before release.');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  const env = { ...process.env, APP_COMMIT: commit, APP_BUILD: new Date().toISOString().slice(0, 16).replace('T', ' '), JARVIS_LICENSE_REQUIRED: 'true' };
+  const env = { ...process.env, APP_COMMIT: commit, APP_BUILD: new Date().toISOString().slice(0, 16).replace('T', ' '), JARVIS_LICENSE_REQUIRED: 'true', JARVIS_RELEASE_BUILD: 'true' };
   run(process.execPath, ['scripts/secret-scan.mjs', '--all'], { env });
   run('npm', ['run', 'build'], { env });
+  const buildMeta = JSON.parse(fs.readFileSync(path.join(root, 'dist', 'build-metadata.json'), 'utf8'));
+  validateBuild(buildMeta, pkg, commit);
   // Artifact output remains ignored and contains only this invocation's packages.
   const output = path.join(root, 'release-desktop', `${pkg.version}-${commit.slice(0, 12)}`);
   if (fs.existsSync(output)) throw new Error(`Output already exists: ${output}. Preserve it and use a clean output before rebuilding.`);
@@ -48,11 +56,12 @@ function main(root = path.resolve(__dirname, '..')) {
   const packagedMeta = JSON.parse(asar.extractFile(archive, 'dist/build-metadata.json').toString());
   const packagedPkg = JSON.parse(asar.extractFile(archive, 'package.json').toString());
   validateBuild(packagedMeta, packagedPkg, commit);
+  if (packagedMeta.issuerFingerprint !== buildMeta.issuerFingerprint) throw new Error('Packaged license issuer differs from the verified build.');
   const controlArchive = run('dpkg-deb', ['--ctrl-tarfile', path.join(output, 'JARVIS.deb')], { stdio: ['ignore', 'pipe', 'pipe'] });
   const postinstall = run('tar', ['-xOf', '-', './postinst'], { input: controlArchive, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
   validateDebianPostinstall(postinstall);
   const provenance = { ...packagedMeta, source: 'https://github.com/Talent620/Jarvis', node: process.version,
-    electron: require('electron/package.json').version, artifactVerification: 'archive structure, provenance, license flag, private-path exclusion',
+    electron: require('electron/package.json').version, artifactVerification: 'archive structure, provenance, license flag, public issuer curve point and fingerprint, private-path exclusion',
     nativeLaunch: 'NOT_RUN: requires an authorized graphical session with working Electron sandbox',
     debianSandboxInstaller: { checksumBeforePrivilege: true, expectedOwner: 'root:root', expectedMode: '4755', postinstallSha256: nodeCrypto.createHash('sha256').update(postinstall).digest('hex'), hostPolicyChanged: false },
     dependencyLicenses: dependencyLicenses(root) };

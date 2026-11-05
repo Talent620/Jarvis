@@ -1,0 +1,146 @@
+{
+  "recordedAt": "2026-11-05T23:49:03.636Z",
+  "status": "PASS",
+  "scope": "Local prepublication packages bound to fresh remote branch source; no claim of published release or native GUI acceptance",
+  "expectedCommit": "08e02d5791fd436defbc519bbfd131caf8dfe28b",
+  "expectedVersion": "2.1.0-alpha.3",
+  "sourceDirectory": "/tmp/jarvis-alpha3-handoff-branch",
+  "sourceInventorySha256": "ab6e88539d361932eecc704ba4d08f03572c77b6f95acf6179f289248c39e7dd",
+  "structuralReportSha256": "0f78bc291a34fe7c1b62cdc6ff1b2a8e18c55bd6cdf6fe9d9ef5f34e11c1335f",
+  "metadata": {
+    "schemaVersion": 1,
+    "version": "2.1.0-alpha.3",
+    "commit": "08e02d5791fd436defbc519bbfd131caf8dfe28b",
+    "build": "2026-11-05 23:45",
+    "licenseRequired": true,
+    "issuer": "application-default"
+  },
+  "localArchiveSha256": "e734a872b5ab193c9ae1f4443be68f4ed44af77e427420b26b8ee105dfba7b15",
+  "identicalToBothIndependentlyExtractedLocalArchives": true,
+  "nativeModuleMatches": [
+    {
+      "path": "electron/browser-session.cjs",
+      "bytes": 24530,
+      "sha256": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2",
+      "matches": true
+    },
+    {
+      "path": "electron/goal-service.cjs",
+      "bytes": 38741,
+      "sha256": "1c0e61605b5a043cd7f6ade1f09226baafee45e3f80964de199972e8aa36ca73",
+      "matches": true
+    },
+    {
+      "path": "electron/google.cjs",
+      "bytes": 8557,
+      "sha256": "3ae5d2b4398476dcf6c63ca4137aaf7ce0b8efd4f04b1f7151f62c148e1e46b5",
+      "matches": true
+    },
+    {
+      "path": "electron/launch-app.cjs",
+      "bytes": 1853,
+      "sha256": "8ab6a260e39e9efd146880eb1cccca15bb2005ef7bbfdb06e9db48e67cf8e0fa",
+      "matches": true
+    },
+    {
+      "path": "electron/linux-keyboard.cjs",
+      "bytes": 9294,
+      "sha256": "bf7d23809ca158682fed43b8c0b31eed30728c83a318ffae16be423a40be81b0",
+      "matches": true
+    },
+    {
+      "path": "electron/local-ollama.cjs",
+      "bytes": 5236,
+      "sha256": "898e61038ea6431b4bf74c40f67ae21a1b99f50bb734c3c94fe363a679765bb3",
+      "matches": true
+    },
+    {
+      "path": "electron/local-siteos.cjs",
+      "bytes": 4335,
+      "sha256": "6a305ab605a8559c79f47dc009de1810e5307235cf6bb80dcf2c2dee946af7a1",
+      "matches": true
+    },
+    {
+      "path": "electron/main.cjs",
+      "bytes": 48436,
+      "sha256": "eeb1700ee15cb3cbcdc6fd43433ab0456271ec941fd6b34020cd60492cf8fde7",
+      "matches": true
+    },
+    {
+      "path": "electron/mcp-stdio.cjs",
+      "bytes": 8533,
+      "sha256": "328a043b7fca37e8c1ce05d8c7ddf172c17f28884ff4225fe55399b214ca2a01",
+      "matches": true
+    },
+    {
+      "path": "electron/monitor-connectors.cjs",
+      "bytes": 13329,
+      "sha256": "c3c38f621ec57aa5d8097932eaa3fd83a445646c5ba3585c5bd8ed661d192913",
+      "matches": true
+    },
+    {
+      "path": "electron/page-extract.cjs",
+      "bytes": 2253,
+      "sha256": "278fd1f77b7bc8b47d2d9a2e3aebf36a56a744c5aabf130d91513794e762eec4",
+      "matches": true
+    },
+    {
+      "path": "electron/preload.cjs",
+      "bytes": 5933,
+      "sha256": "9280fffbff153518d50657fd1856828bd63863366581a6e17023fd5e064c4f13",
+      "matches": true
+    },
+    {
+      "path": "electron/public-page.cjs",
+      "bytes": 4208,
+      "sha256": "9b29a0518b56fc88df838033c6b1a023717da188e40ab046c77abeb5f28147a5",
+      "matches": true
+    },
+    {
+      "path": "electron/skill-isolation.cjs",
+      "bytes": 17777,
+      "sha256": "e2a1c82d865b6dcc398c8299b7d7364513864dae08f1865bbb8ee8a30fbbc77d",
+      "matches": true
+    },
+    {
+      "path": "electron/skill-manager.cjs",
+      "bytes": 43879,
+      "sha256": "6a59a4dd2b9c019b86a2ef0e5794f2ddedebe5f28470fdf353c45cfcf4301e0b",
+      "matches": true
+    },
+    {
+      "path": "electron/smtp.cjs",
+      "bytes": 3401,
+      "sha256": "90b9688c8ff191015e776e3eddf3296e3558659bf762038558e44b370bc1dc93",
+      "matches": true
+    },
+    {
+      "path": "electron/workspace-tools.cjs",
+      "bytes": 13855,
+      "sha256": "e2e250d5517f9b94df551bfc55cc51fc3106d463c31759b3ba7ec480952e0821",
+      "matches": true
+    }
+  ],
+  "sourceLedger": {
+    "path": "src/lib/predictionLedger.ts",
+    "sha256": "c8ac7dc843bb6bfd7d2c10dbf987d1229940d8d7964a241ca60bb035edfb83e2",
+    "gitBlob": "ca61b8a739c549e0f5b7a44bdddc0db749c23a07",
+    "scope": "Tracked TypeScript at expected commit; compiled renderer attributed through build metadata"
+  },
+  "nativeLaunch": {
+    "status": "BLOCKED",
+    "exitCode": null,
+    "signal": "SIGSEGV",
+    "errorCode": null,
+    "userId": 1000,
+    "displayPresent": false,
+    "sandboxEnabled": true,
+    "systemInstallation": false,
+    "xvfbInstalled": false,
+    "profile": "<isolated-profile>",
+    "workspace": "<isolated-workspace>",
+    "blocker": "Missing X server / DISPLAY",
+    "rawLogSha256": "77556a77995fcb51805b1987ffab5f80d203190980532eafa7997b85f92bf8a4",
+    "log": "jarvis-alpha3-local-08e02-native.log"
+  }
+}

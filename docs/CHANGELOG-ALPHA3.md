@@ -11,9 +11,10 @@ Wydanie eksperymentalne. Nie ma jeszcze pełnego odbioru rzeczywistego modelu, p
 - Naprawiono przejmowanie zgody formularza przez żądania szkicu oraz przekierowania poza zakres. Odmowa i niepewny skutek wysyłki mają osobne wyniki; SPA/iframe pozostają jawnie ograniczone.
 - Dodano changedetection.io i ntfy do istniejącego monitora oraz harmonogramy kalendarzowe Europe/Warsaw.
 - Zintegrowano kontrolki w istniejących Ustawieniach i Celach. Usunięto mylące procenty gotowości i niezmierzone oszczędności czasu.
+- Pakowanie weryfikuje publiczny klucz licencji i jego odcisk przed oraz po budowaniu archiwum; wystawca pozostaje ten sam.
 - Zachowano wcześniejsze komendy lokalne, wyniki częściowe, zapis/odtwarzanie celów, oba interfejsy oraz licencje właściciela.
 
-Pełna regresja: 3091 testów PASS, lint PASS. Testy obejmują rzeczywiste sandboxy; nie zastępują odbioru prawdziwego modelu i pulpitu. Osobny licencjonowany test przez pole rozmowy użył kontrolowanych decyzji dostawcy, rzeczywistego sandboxa i niezależnego odczytu pliku. Nie zalicza on autonomii prawdziwego modelu.
+Pełna regresja: 3094 testy PASS, lint PASS. Testy obejmują rzeczywiste sandboxy; nie zastępują odbioru prawdziwego modelu i pulpitu. Osobny licencjonowany test przez pole rozmowy użył kontrolowanych decyzji dostawcy, rzeczywistego sandboxa i niezależnego odczytu pliku. Nie zalicza on autonomii prawdziwego modelu.
 
 Wymagania i ograniczenia: istniejące Chromium; dla kodu umiejętności Linux x86_64, Node, bubblewrap i prlimit; konfiguracja i zgody dla usług zewnętrznych. Rzeczywista Ollama i pulpit nie były dostępne w tej chmurze. Pełny audit npm nadal ma 32 zgłoszenia, w tym Electron dystrybuowany w aplikacji. Zmiana głównej wersji runtime pozostaje otwarta.
 

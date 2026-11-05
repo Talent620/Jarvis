@@ -1,3 +1,7 @@
+# Bieżące wznowienie — finalna kontrola alpha.3
+
+Przedcommitem08e02d5: Tests42131810647 iUbuntu42131810693 PASS. Nowe finalne zmiany (tylko kontrola pakowania/publiczny eksport metadanych) przeszły3094/3094 testów,373pliki,0skip orazlint. Źródła `evidence/alpha3-final-validation-source.json`. Domyślny publiczny JWK JEST POPRAWNY i ten sam co na bazie; błędny regex diagnostyczny odczytał kty zamiast y. Nie rotować klucza. Nowa bramka sprawdza publiczny punkt P-256/fingerprint i zgodność paczki; właściciel nadal buduje z własnym lokalnym kluczem. Dalej commit/push czystego kodu, CI, tagalpha3 tylko po bramkach, release przez istniejący workflow i pobranie/weryfikacja realnych artefaktów. Nie przepisywać tagaalpha2. Nadal A–C BLOCKED, braki modelu/grafiki/konfiguracji/implementacji mają odrębny status. Nie ogłaszać pełnego10/10 ani pracy po zakończeniu sesji.
+
 # Aktualizacja stanu — alpha.3
 
 Runtime alpha.3 jest gotowy do commitu i publikacji po rzeczywistych bramkach. Pełna regresja3091/3091PASS, lintPASS; source manifest evidence/alpha3-validation-source.json. Optymalizacja predictionLedger zachowuje dane (95testów i163porównania), lokalnie mediana281,4→30,6ms; nie zmieniono progu3000ms. Dowód ledger-performance.json. Wersje package/lock/Android oraz docs/workflow asset wskazująalpha.3.

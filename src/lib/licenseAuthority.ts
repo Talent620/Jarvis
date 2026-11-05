@@ -1,6 +1,6 @@
 // A public build-time trust root. Private issuer material is never bundled.
 // Preserve the existing application issuer; owner installations may provision their own pair.
-const defaultPublicJwk: JsonWebKey = {
+export const defaultPublicJwk: JsonWebKey = {
   kty: "EC", crv: "P-256",
   x: "cr_zxxKQMLPKsuGybJtd05h_z-m0H_xnhS7WiYtEmdU",
   y: "a1Xl4CHImK2EAIXg19PVIFuagNCa4PQ2zatk4gysxzg",

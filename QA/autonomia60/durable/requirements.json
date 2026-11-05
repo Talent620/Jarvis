@@ -4,7 +4,7 @@
   "request_sha256": "90784301789c744c57e5144312083b04043200dfbb9fe26d83b4e76bfc04ac6e",
   "integration_base": "fb17f9755faad72295cb125563ba2b0220d9319d",
   "integration_branch": "codex/skills-integration-20261105",
-  "current_state": "ALPHA3_CODE_VERIFIED_RELEASE_PREPARATION",
+  "current_state": "ALPHA3_FINAL_CODE_VERIFIED_RELEASE_PREPARATION",
   "release": {
     "version": "2.1.0-alpha.3",
     "sha": null,
@@ -2294,6 +2294,17 @@
       "evidence": [
         "QA/autonomia60/durable/ledger-performance.json"
       ]
+    },
+    {
+      "id": "alpha3_final_issuer_and_regression",
+      "status": "PASS_CODE_AND_CONTROLLED_INTEGRATION",
+      "passed": 3094,
+      "failed": 0,
+      "skipped": 0,
+      "files": 373,
+      "lint": "PASS",
+      "evidence": "QA/autonomia60/durable/evidence/alpha3-final-validation-source.json",
+      "limitation": "Not real-model/desktop acceptance. Default issuer valid and unchanged; user private key not available or needed for public-key validation."
     }
   ],
   "external_access": [

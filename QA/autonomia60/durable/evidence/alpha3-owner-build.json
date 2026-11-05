@@ -1,0 +1,68 @@
+{
+  "recordedAt": "2026-11-05T23:54:17.809Z",
+  "status": "PASS_OWNER_BUILD_AND_SYNTHETIC_CRYPTO",
+  "scope": "Synthetic ephemeral TEST issuer; isolated source snapshot and build-only owner workflow. No system/app installation, GUI activation, private issuer replacement, external message or publication.",
+  "privateMaterialReported": false,
+  "syntheticTokenReported": false,
+  "systemInstall": false,
+  "nativeLaunch": "NOT_RUN",
+  "source": {
+    "baseCommit": "08e02d5791fd436defbc519bbfd131caf8dfe28b",
+    "trackedFiles": 1566,
+    "worktreePatchSha256": "fd8593c0349d16c8b1532721e727b57b71f2492fc3be24f373e6f43ee9d71db3",
+    "patchedPaths": [
+      "scripts/release-linux.cjs",
+      "src/lib/licenseAuthority.ts",
+      "tests/releasePackaging.test.ts",
+      "vite.config.ts"
+    ],
+    "snapshotMode": "Tracked file copy with frozen uncommitted release-gate patch; APP_COMMIT identifies base commit, not a committed release of this patched snapshot",
+    "version": "2.1.0-alpha.3"
+  },
+  "issuer": {
+    "publicPointValidation": "PASS_NODE_AND_WEBCRYPTO",
+    "fingerprint": "d9eac8f5243c9bd28a20cced665a7c5e388adca001ae611f6514086c10b206fb",
+    "privateFileMode": "600",
+    "privateDirectoryMode": "700",
+    "ephemeralTestOnly": true
+  },
+  "build": {
+    "exitCode": 0,
+    "errorCode": null,
+    "flags": [
+      "--desktop",
+      "--build-only",
+      "--skip-deps",
+      "--key-dir <isolated-test>",
+      "--public-file <isolated-test>",
+      "--out-dir <isolated-test>"
+    ],
+    "logSha256": "f0a770ff14a01cbf859700bdcb7da5f41256ff4b44625aebce1df3d280b4957d",
+    "log": "/tmp/jarvis-owner-ephemeral-build.log",
+    "rootDistModified": false
+  },
+  "metadata": {
+    "schemaVersion": 1,
+    "version": "2.1.0-alpha.3",
+    "commit": "08e02d5791fd436defbc519bbfd131caf8dfe28b",
+    "build": "2026-11-05 23:54",
+    "licenseRequired": true,
+    "issuer": "explicit-public-key",
+    "issuerPublicJwk": "<valid-public-jwk-matches-isolated-test-issuer>",
+    "issuerFingerprint": "d9eac8f5243c9bd28a20cced665a7c5e388adca001ae611f6514086c10b206fb",
+    "publicJwkSha256": "d9eac8f5243c9bd28a20cced665a7c5e388adca001ae611f6514086c10b206fb"
+  },
+  "cryptographicAcceptance": {
+    "existingCliSign": "PASS",
+    "existingCliInspect": "PASS",
+    "verifyWithActualBuildMetadataPublicKey": "PASS",
+    "tamperedPayloadRejected": true,
+    "fixtureOwner": "SYNTHETIC OWNER QA",
+    "buildOutputPrivateScalarAndTokenScan": {
+      "status": "PASS",
+      "files": 82
+    },
+    "nativeActivation": "NOT_RUN"
+  },
+  "ephemeralPrivateAndTokenRemoved": true
+}

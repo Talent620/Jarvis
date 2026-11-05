@@ -1,0 +1,73 @@
+{
+  "recorded_at": "2026-11-05T23:54:59.619622+00:00",
+  "pre_commit": "08e02d5791fd436defbc519bbfd131caf8dfe28b",
+  "base_commit": "fb17f9755faad72295cb125563ba2b0220d9319d",
+  "version": "2.1.0-alpha.3",
+  "code_uncommitted": true,
+  "tests": {
+    "passed": 3094,
+    "failed": 0,
+    "skipped": 0,
+    "files": 373
+  },
+  "lint": "PASS",
+  "focused_license_and_packaging": {
+    "passed": 37,
+    "failed": 0
+  },
+  "hashes": {
+    "scripts/release-linux.cjs": "234aedc84429655ad9db700dfb37a89ed4772f13c012d276add83db758235760",
+    "vite.config.ts": "e121864348d875e682538cbbd0515e1f9133f311baf4aa409046ac61807852a9",
+    "src/lib/licenseAuthority.ts": "e0dc66a139b5e05f5371538c5f9dc8136900f7a43d1cce95644ffab9916e5d4a",
+    "tests/releasePackaging.test.ts": "c6cd04bba31f80935c9fb5b17538f8f6ebb199d9803479d760e55ca7b38c80f6",
+    "electron/browser-session.cjs": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2",
+    "src/lib/predictionLedger.ts": "c8ac7dc843bb6bfd7d2c10dbf987d1229940d8d7964a241ca60bb035edfb83e2",
+    "package.json": "39717902113b74c5e238792270f3375ef05739e4775b9743281fc1f0fa2a3d7d",
+    "package-lock.json": "0ecec259cf2a5fca1969f29d9ff4651f377b03d58e666f1614e374b19a25b802"
+  },
+  "logs": [
+    "evidence/alpha3-final-tests.log",
+    "evidence/alpha3-issuer-gate-after.log",
+    "evidence/alpha3-issuer-lint.log"
+  ],
+  "diagnostic_correction": {
+    "finding": "Default public trust root is valid and unchanged from baseline. Scratch regex for y matched the end of kty; this was a diagnostic mistake, not a product-key defect.",
+    "independent_proof": "evidence/alpha3-public-authority.json"
+  },
+  "release_gate_regression": {
+    "before": "Two new tests failed because old gate accepted missing/private authority metadata; this does not imply the actual default key was invalid.",
+    "after": "Valid default and ephemeral public issuers accepted; missing, private, noncurve and wrong-fingerprint metadata refused."
+  },
+  "log_integrity": [
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-final-tests.log",
+      "raw_sha256": "99f959d88af1a754c405b2424c5edb3090599d874514dbd7ba86f6cd82c66169",
+      "stored_sha256": "158653191cb385e8ed2343110dd00161cc20fd8fcc829fb98c5c54194df4b082",
+      "normalization": "trailing whitespace and final blank lines only"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-issuer-gate-after.log",
+      "raw_sha256": "ad0f136ba67e14e283915aaf72321b576578b37a406cfe7b44a2ec73f759ed30",
+      "stored_sha256": "b4633167a9b7e41db1f28e819d50c3b89c82ee0c306c01f444182e5cfbb0c9e6",
+      "normalization": "trailing whitespace and final blank lines only"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-issuer-gate-before.log",
+      "raw_sha256": "016a9fd880f59cb3b12057b4e075e798e608a5f7ad4bb8119186eff971c87ca6",
+      "stored_sha256": "1eecd27909c536603a68ae38a7af1f0b0eb035dd6bacda21e8085a329c812022",
+      "normalization": "trailing whitespace and final blank lines only"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-issuer-lint.log",
+      "raw_sha256": "324a94a22d82c61f958a93de450c1edc2d75b877349d09cf532fb71c07ab78ec",
+      "stored_sha256": "73385b151cd844d6db5676db4b1b0ca9653ebb2d1c07e87de53a330a740a8c33",
+      "normalization": "trailing whitespace and final blank lines only"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-owner-build.log",
+      "raw_sha256": "f0a770ff14a01cbf859700bdcb7da5f41256ff4b44625aebce1df3d280b4957d",
+      "stored_sha256": "ff05229f716231f2bc963eb267f0cdad2ec471a00b56873a897559cd702e369a",
+      "normalization": "trailing whitespace and final blank lines only"
+    }
+  ]
+}

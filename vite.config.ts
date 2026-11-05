@@ -2,8 +2,9 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { createPublicKey } from "node:crypto";
+import { createHash, createPublicKey } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { defaultPublicJwk } from "./src/lib/licenseAuthority";
 
 // Realne metryki kodu (do wyceny w panelu admina) — liczone PRZY BUDOWANIU, nie w runtime
 // (zbudowany bundel nie ma dostępu do źródeł). Best-effort: błąd nie wywala builda.
@@ -47,7 +48,7 @@ const issuerFile = env.JARVIS_LICENSE_PUBLIC_KEY_FILE || "license-public.local.j
 let licensePublicJwk: Record<string, unknown> | null = null;
 if (existsSync(issuerFile)) {
   const candidate = JSON.parse(readFileSync(issuerFile, "utf8"));
-  if (candidate.kty !== "EC" || candidate.crv !== "P-256" || candidate.d || candidate.privateKey || candidate.keys) {
+  if (candidate.kty !== "EC" || candidate.crv !== "P-256" || ["d", "privateKey", "keys"].some(key => Object.hasOwn(candidate, key))) {
     throw new Error("Plik wystawcy musi zawierać wyłącznie publiczny klucz EC P-256. Klucz prywatny nie może trafić do bundla.");
   }
   licensePublicJwk = { kty: "EC", crv: "P-256", x: candidate.x, y: candidate.y };
@@ -56,6 +57,16 @@ if (existsSync(issuerFile)) {
   throw new Error("Nie znaleziono wskazanego publicznego klucza wystawcy.");
 } else {
   console.info("[licencje] Używam domyślnego publicznego klucza aplikacji. Własny wystawca: npm run license:init.");
+}
+const issuerPublicJwk = licensePublicJwk || defaultPublicJwk;
+let issuerFingerprint: string | null = null;
+try {
+  createPublicKey({ key: issuerPublicJwk, format: "jwk" });
+  issuerFingerprint = createHash("sha256").update(JSON.stringify({ kty: issuerPublicJwk.kty, crv: issuerPublicJwk.crv, x: issuerPublicJwk.x, y: issuerPublicJwk.y })).digest("hex");
+} catch {
+  const message = "MISSING_CONFIGURATION: niepoprawny publiczny klucz wystawcy licencji. Ustaw JARVIS_LICENSE_PUBLIC_KEY_FILE na zatwierdzony publiczny klucz. Klucz prywatny pozostaje u właściciela.";
+  if (env.JARVIS_RELEASE_BUILD === "true") throw new Error(message);
+  console.warn(`[licencje] ${message} Build deweloperski nie nadaje się do dystrybucji.`);
 }
 const DEFAULT_KEYS = {
   anthropic: "",
@@ -96,6 +107,7 @@ export default defineConfig({
         schemaVersion: 1, version: appVersion, commit: appCommit,
         build: env.APP_BUILD || "local", licenseRequired: env.JARVIS_LICENSE_REQUIRED !== "false",
         issuer: licensePublicJwk ? "explicit-public-key" : "application-default",
+        issuerPublicJwk, issuerFingerprint,
       }, null, 2) + "\n" });
     },
   }],
