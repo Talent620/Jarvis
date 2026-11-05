@@ -3,6 +3,7 @@
 // zapisuje wynik i finalny status. Cel jest potem wczytywalny (przeżyłby restart). Zero płatnego API.
 import { describe, it, expect } from "vitest";
 import { startAndRunGoal, loadGoalsNewestFirst, resumableGoalsNewestFirst, resumeAndRunGoal } from "../src/lib/goalRuntime";
+import { isGoalRunning, requestGoalPause } from "../src/lib/goalControl";
 import { newGoal, recordStepOutcome, upsertGoal, type GoalStorage } from "../src/lib/goalState";
 import { confirmed } from "../src/lib/actionOutcome";
 import type { AgentPlan } from "../src/lib/agentPlanner";
@@ -61,5 +62,51 @@ describe("goalRuntime — trwały cel od uruchomienia do zapisu", () => {
     const { record, result } = await startAndRunGoal({ goal: "wysyłka", plan, correlationId: "G3", now: NOW }, store);
     expect(result.verdict.canClaimSuccess).toBe(false); // brak potwierdzenia → nie sukces
     expect(["waiting_consent", "failed", "running"]).toContain(record.status);
+  });
+});
+
+
+describe("goalRuntime — pauza i kontynuacja", () => {
+  it("utrwala wynik bieżącego kroku i wznawia bez ponowienia go", async () => {
+    const store = memStore();
+    const plan: AgentPlan = { goal: "odczyty", steps: [
+      { id: "a", intent: "zadania", tool: "list_tasks" },
+      { id: "b", intent: "leady", tool: "list_leads", dependsOn: ["a"] },
+    ] };
+    const { record, result } = await startAndRunGoal({ goal: "odczyty", plan, correlationId: "PAUSE1", now: NOW, onStep: () => { expect(requestGoalPause("PAUSE1")).toBe(true); } }, store);
+    expect(isGoalRunning("PAUSE1")).toBe(false);
+    expect(result.status).toBe("stopped");
+    expect(record.status).toBe("paused");
+    expect(record.results.a.state).toBe("CONFIRMED");
+    expect(record.results.b).toBeUndefined();
+    const saved = (await loadGoalsNewestFirst(store))[0];
+    const resumed = await resumeAndRunGoal(saved, { now: NOW + 1 }, store);
+    expect(resumed.record.status).toBe("completed");
+    expect(resumed.record.results.b.state).toBe("CONFIRMED");
+  });
+});
+
+describe("goalRuntime — bezpieczeństwo zapisu postępu", () => {
+  it("nie uruchamia celu, gdy nie można zapisać rekordu początkowego", async () => {
+    let calls = 0;
+    const storage: GoalStorage = { get: async () => null, set: async () => { calls++; return false; } };
+    const plan: AgentPlan = { goal: "zadania", steps: [{ id: "a", intent: "zadania", tool: "list_tasks" }] };
+    await expect(startAndRunGoal({ goal: "zadania", plan, correlationId: "FAIL-PERSIST", now: NOW, onStep: () => { throw new Error("krok nie powinien wystartować"); } }, storage)).rejects.toThrow(/Nie udało się zapisać/);
+    expect(calls).toBe(1);
+    expect(isGoalRunning("FAIL-PERSIST")).toBe(false);
+  });
+  it("zatrzymuje przed następnym krokiem, jeśli zapis wyniku się nie uda", async () => {
+    const backing = memStore();
+    let writes = 0;
+    const storage: GoalStorage = { get: backing.get, set: async (k, v) => { writes++; return writes === 1 ? backing.set(k, v) : false; } };
+    const plan: AgentPlan = { goal: "dwa odczyty", steps: [
+      { id: "a", intent: "zadania", tool: "list_tasks" },
+      { id: "b", intent: "leady", tool: "list_leads", dependsOn: ["a"] },
+    ] };
+    const executed: string[] = [];
+    await expect(startAndRunGoal({ goal: "dwa odczyty", plan, correlationId: "FAIL-CHECKPOINT", now: NOW, onStatus: (s) => executed.push(s) }, storage)).rejects.toThrow(/Nie udało się zapisać/);
+    expect(executed).toHaveLength(1);
+    expect(writes).toBe(2);
+    expect(isGoalRunning("FAIL-CHECKPOINT")).toBe(false);
   });
 });

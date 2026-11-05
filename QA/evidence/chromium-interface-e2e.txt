@@ -1,0 +1,2 @@
+PASS realny Chromium: ustawienie domyślne, przełączenie UI, komendy bez modelu, pełne zamknięcie/otwarcie profilu, zachowanie wyglądu i czatu
+PASS przełącznik mieści się w oknie 390x844 (pozostałe moduły niezweryfikowane)

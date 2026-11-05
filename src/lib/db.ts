@@ -67,6 +67,14 @@ export async function idbGet<T = unknown>(key: string): Promise<T | null> {
   }
 }
 
+/** Odczyt krytycznego checkpointu: błąd magazynu nigdy nie oznacza pustych danych. */
+export async function idbGetStrict<T = unknown>(key: string): Promise<T | null> {
+  const d = getDb();
+  if (!d) throw new Error("Magazyn celów jest niedostępny — wykonanie zostało zatrzymane.");
+  const row = await d.kv.get(key);
+  return row ? (row.v as T) : null;
+}
+
 /** Zapis kolekcji do IndexedDB. Zwraca false przy niedostępności/błędzie (caller może spaść do localStorage). */
 export async function idbSet(key: string, value: unknown): Promise<boolean> {
   const d = getDb();

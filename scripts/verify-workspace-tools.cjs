@@ -27,10 +27,11 @@ async function main() {
     await check("terminal", "terminal", { command: "node", args: ["--version"] });
     await check("http", "http", { url: `http://127.0.0.1:${port}/health`, method: "GET" }, (r) => r.ok && r.body === "jarvis-ok");
     await check("browser", "browser_open", { url: "https://example.com" }, (r) => r.ok && opened.length === 1);
-    await check("generated tool", "generated_tool", {
-      name: "self-check",
-      code: "if (process.argv.includes('--self-test')) { console.log('ok'); process.exit(0); }\n",
-    }, (r) => r.ok && r.accepted === true);
+    const generated = await runtime.call("generated_tool", {
+      name: "self-check", code: "if (process.argv.includes('--self-test')) process.exit(0);",
+    });
+    checks.push({ name: "generated tool: izolacja", ok: generated.ok === false && generated.blocked === true && generated.accepted === false, detail: "wykonanie wyłączone bez zweryfikowanego sandboxa" });
+
 
     if (status.dependencies && status.dependencies.docker) await check("docker", "docker", { args: ["version"] });
     else checks.push({ name: "docker", ok: null, detail: "brak klienta" });

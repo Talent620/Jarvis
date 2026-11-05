@@ -106,6 +106,11 @@ describe("routeOrder — łańcuch dostawców", () => {
     expect(order[order.length - 1].provider).toBe("ollama");
   });
 
+  it("jawny lokalny dostawca nie przełącza się na chmurę nawet gdy klucz istnieje", () => {
+    store.setSettings({ provider: "ollama", model: "qwen3:test", onDeviceOnly: false, ollamaUrl: "http://localhost:11434", keys: { ...noKeys, gemini: "g" } });
+    expect(routeOrder([{ role: "user", content: "x" }]).map(x => x.provider)).toEqual(["ollama"]);
+  });
+
   it("ręczny dostawca bez klucza nie wywala (null-safe) — zwraca dostępne mózgi", () => {
     store.setSettings({ provider: "anthropic", model: "auto", keys: { ...noKeys, groq: "k" } });
     const order = routeOrder([{ role: "user", content: "x" }]);

@@ -62,6 +62,7 @@ const RISK: Record<string, Risk> = {
   // sterowanie komputerem (Windows) — wymaga zgody
   desktop_launch_app: "outbound", desktop_open: "outbound", desktop_power: "outbound",
   desktop_volume: "outbound", desktop_media: "outbound", desktop_type: "outbound", desktop_hotkey: "outbound",
+  desktop_click: "outbound", desktop_active_window: "outbound", system_browser_read_public: "outbound",
   // pełne sterowanie telefonem (Android, usługa Dostępności) — wymaga zgody
   android_type: "outbound", android_tap: "outbound", android_global: "outbound",
   android_open_app: "outbound", android_open_settings: "outbound",
@@ -94,15 +95,38 @@ const UNDO_COLLECTION: Record<string, CollectionKey> = {
 const CONSENT_KEY = "jarvis.consents.v1";
 type ConsentMap = Record<string, "allow">;
 function loadConsents(): ConsentMap {
-  try { return JSON.parse(localStorage.getItem(CONSENT_KEY) || "{}"); } catch { return {}; }
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(CONSENT_KEY) || "{}");
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+    return Object.fromEntries(Object.entries(raw).filter(([name, value]) => name !== "__proto__" && value === "allow")) as ConsentMap;
+  } catch { return {}; }
 }
-function saveConsents(c: ConsentMap) {
-  try { localStorage.setItem(CONSENT_KEY, JSON.stringify(c)); } catch { /* ignore */ }
+function saveConsents(c: ConsentMap): boolean {
+  try { localStorage.setItem(CONSENT_KEY, JSON.stringify(c)); return true; } catch { return false; }
 }
-export function resetConsents() { saveConsents({}); }
+/** Dostęp do istniejących trwałych zgód bez wyświetlania danych wejściowych. */
+export function listRememberedConsents(): string[] { return Object.keys(loadConsents()).sort(); }
+export function revokeConsent(tool: string): boolean {
+  const saved = loadConsents();
+  delete saved[tool];
+  return saveConsents(saved);
+}
+export function resetConsents(): boolean { return saveConsents({}); }
+
+// Zatwierdzenie dotyczy konkretnej treści i adresata; trwała zgoda na typ narzędzia
+// albo ogólny zakres sesji nie mogą zastąpić decyzji dla następnej wysyłki.
+const ALWAYS_CONFIRM = new Set([
+  "gmail_send", "gmail_reply", "send_test_email", "send_offers_all", "salesos_email", "salesos_flush_emails",
+  "send_sms", "text_contact", "desktop_power", "desktop_click", "desktop_active_window", "desktop_type", "desktop_hotkey", "clear_tally",
+  "salesos_push", "salesos_set_status", "gcal_add", "run_automation",
+  "system_terminal", "system_git", "system_docker", "system_http_request", "system_files_write", "system_generated_tool",
+]);
+export function requiresFreshConsent(tool: string): boolean {
+  return ALWAYS_CONFIRM.has(tool) || store.settings.requireConsentAlways === true;
+}
 
 // --- Most do UI: handler zgody i emiter kroków ---
-export interface ConsentRequest { tool: string; input: unknown; risk: Risk; }
+export interface ConsentRequest { tool: string; input: unknown; risk: Risk; freshOnly?: boolean; }
 let consentHandler: ((req: ConsentRequest) => Promise<{ allow: boolean; remember: boolean }>) | null = null;
 export function setConsentHandler(fn: typeof consentHandler) { consentHandler = fn; }
 
@@ -177,17 +201,21 @@ export async function requestConsent(tool: string, input: unknown): Promise<bool
   const risk = riskOf(tool);
   // Pytamy tylko o akcje zewnętrzne/nieodwracalne; lokalne zapisy idą automatycznie.
   if (risk !== "outbound") return true;
-  // Tryb Szefa „pełny dostęp": globalna zgoda na outbound, z auto-wygaśnięciem.
-  if (isAutoConsent()) return true;
-  // Jawny, ograniczony zakres sesyjny (Live/headless) — sankcjonowana droga bez UI.
-  if (hasOutboundScope(tool)) return true;
-  const consents = loadConsents();
-  if (consents[tool] === "allow") return true;
-  // FAIL-CLOSED: brak UI zgody i brak jawnego zakresu → BLOKUJ akcję wychodzącą.
-  // (Tryby bez ekranu muszą najpierw nadać grantOutboundScope — nie ma globalnego fail-open.)
+  const freshOnly = requiresFreshConsent(tool);
+  // Nieodwracalne wysyłki i ustawienie „zawsze pytaj” nie respektują szerokich
+  // zgód sesyjnych ani zgód zapamiętanych dla samego typu narzędzia.
+  if (!freshOnly) {
+    if (isAutoConsent()) return true;
+    if (hasOutboundScope(tool)) return true;
+    if (loadConsents()[tool] === "allow") return true;
+  }
   if (!consentHandler) return false;
-  const { allow, remember } = await consentHandler({ tool, input, risk });
-  if (allow && remember) { consents[tool] = "allow"; saveConsents(consents); }
+  const { allow, remember } = await consentHandler({ tool, input, risk, freshOnly });
+  if (allow && remember && !freshOnly) {
+    const consents = loadConsents();
+    consents[tool] = "allow";
+    saveConsents(consents);
+  }
   return allow;
 }
 
@@ -200,7 +228,7 @@ export async function requestConsent(tool: string, input: unknown): Promise<bool
  */
 export async function askConsentUI(req: ConsentRequest): Promise<{ allow: boolean } | null> {
   if (!consentHandler) return null;
-  const { allow } = await consentHandler(req);
+  const { allow } = await consentHandler({ ...req, freshOnly: true });
   return { allow };
 }
 

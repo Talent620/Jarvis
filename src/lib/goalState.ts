@@ -8,7 +8,7 @@
 
 import type { AgentPlan, PlanStep } from "./agentPlanner";
 import type { ActionOutcome } from "./actionOutcome";
-import { idbGet, idbSet } from "./db";
+import { idbGetStrict, idbSet } from "./db";
 
 export type GoalStatus =
   | "queued"          // utworzony, jeszcze nie ruszył
@@ -44,7 +44,7 @@ export interface GoalStorage {
   get<T = unknown>(key: string): Promise<T | null>;
   set(key: string, value: unknown): Promise<boolean>;
 }
-const idbStorage: GoalStorage = { get: (k) => idbGet(k), set: (k, v) => idbSet(k, v) };
+const idbStorage: GoalStorage = { get: (k) => idbGetStrict(k), set: (k, v) => idbSet(k, v) };
 
 const isConfirmed = (o?: ActionOutcome): boolean => o?.state === "CONFIRMED";
 const isAttempted = (o?: ActionOutcome): boolean => o?.state === "ATTEMPTED";
@@ -143,27 +143,41 @@ export function normalizeGoal(raw: Partial<GoalRecord> & { id: string; goal: str
 
 export async function loadGoals(storage: GoalStorage = idbStorage): Promise<GoalRecord[]> {
   const raw = await storage.get<GoalRecord[]>(GOALS_KEY);
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((r) => r && r.id && r.plan).map((r) => normalizeGoal(r));
+  if (raw === null) return [];
+  if (!Array.isArray(raw)) throw new Error("Niepoprawny zapis celów — wykonanie zostało zatrzymane.");
+  if (raw.some((r) => !r || typeof r.id !== "string" || !r.id || typeof r.goal !== "string" || !r.plan || !Array.isArray(r.plan.steps))) throw new Error("Uszkodzony rekord celu — wykonanie zostało zatrzymane.");
+  return raw.map((r) => normalizeGoal(r));
 }
 
 export async function saveGoals(goals: GoalRecord[], storage: GoalStorage = idbStorage): Promise<boolean> {
   return storage.set(GOALS_KEY, goals);
 }
 
+// Serialize read-modify-write within this application instance to avoid lost goals.
+let goalMutationQueue: Promise<unknown> = Promise.resolve();
+function serializeGoalMutation<T>(fn: () => Promise<T>): Promise<T> {
+  const operation = goalMutationQueue.then(fn);
+  goalMutationQueue = operation.catch(() => {});
+  return operation;
+}
+
 /** Wstaw/zaktualizuj jeden cel (zachowuje pozostałe). */
 export async function upsertGoal(rec: GoalRecord, storage: GoalStorage = idbStorage): Promise<GoalRecord[]> {
-  const goals = await loadGoals(storage);
-  const idx = goals.findIndex((g) => g.id === rec.id);
-  if (idx >= 0) goals[idx] = rec; else goals.push(rec);
-  await saveGoals(goals, storage);
-  return goals;
+  return serializeGoalMutation(async () => {
+    const goals = await loadGoals(storage);
+    const idx = goals.findIndex((g) => g.id === rec.id);
+    if (idx >= 0) goals[idx] = rec; else goals.push(rec);
+    if (!(await saveGoals(goals, storage))) throw new Error("Nie udało się zapisać postępu celu — dalsze kroki zostały zatrzymane.");
+    return goals;
+  });
 }
 
 export async function removeGoal(id: string, storage: GoalStorage = idbStorage): Promise<GoalRecord[]> {
-  const goals = (await loadGoals(storage)).filter((g) => g.id !== id);
-  await saveGoals(goals, storage);
-  return goals;
+  return serializeGoalMutation(async () => {
+    const goals = (await loadGoals(storage)).filter((g) => g.id !== id);
+    if (!(await saveGoals(goals, storage))) throw new Error("Nie udało się usunąć celu z magazynu.");
+    return goals;
+  });
 }
 
 /** Krótki, jawny opis celu do panelu (bez chain-of-thought). */

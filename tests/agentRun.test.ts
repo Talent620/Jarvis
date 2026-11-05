@@ -148,3 +148,89 @@ describe("agentRun — REALNE wykonanie istniejącego narzędzia", () => {
     expect(r.steps[0].outcome.state).toBe("CONFIRMED");
   });
 });
+
+describe("agentRun — nie ogłasza sukcesu bez dowodu", () => {
+  it.each([
+    "Błąd narzędzia add_task: uszkodzony magazyn",
+    "Nie udało się zapisać pliku",
+    "Ta czynność jest zablokowana przez profil prywatności",
+  ])("wykrywa błąd: %s", async (output) => {
+    const exec = makeDefaultExecTool(async () => output, () => "write");
+    const result = await exec("add_task", {}, { id: "a", intent: "zapisz" });
+    expect(result.outcome.state).toBe("FAILED");
+  });
+  it("niepewne działanie wymaga sprawdzenia i nie uruchamia kolejnego kroku", async () => {
+    const exec = makeDefaultExecTool(async () => "Nie wiem, czy zapis się powiódł.", () => "write");
+    const plan: AgentPlan = { goal: "zapisz", steps: [
+      { id: "a", intent: "zapisz", tool: "custom_write" },
+      { id: "b", intent: "wyślij", tool: "gmail_send", dependsOn: ["a"] },
+    ] };
+    const r = await runPlan(plan, { toolExists: () => true, riskOf: () => "write", execTool: exec });
+    expect(r.status).toBe("waiting_user");
+    expect(r.verdict.canClaimSuccess).toBe(false);
+    expect(r.steps[0].outcome.state).toBe("ATTEMPTED");
+    expect(r.steps[1].skipped).toBe(true);
+  });
+  it("opis kroku analitycznego bez wykonawcy nie jest wykonaniem", async () => {
+    const plan: AgentPlan = { goal: "przeanalizuj", steps: [{ id: "a", intent: "zrób analizę" }] };
+    const r = await runPlan(plan, baseDeps());
+    expect(r.verdict.canClaimSuccess).toBe(false);
+    expect(r.steps[0].outcome.state).toBe("DRAFT");
+    expect(r.status).toBe("blocked");
+  });
+  it("nie ponawia automatycznie nieudanego działania po wznowieniu", async () => {
+    const execTool = vi.fn(okExec);
+    const plan: AgentPlan = { goal: "wyślij", steps: [{ id: "a", intent: "mail", tool: "gmail_send" }] };
+    const seed = [{ id: "a", intent: "mail", tool: "gmail_send", outcome: failed("brak potwierdzenia") }];
+    const result = await runPlan(plan, baseDeps({ riskOf: () => "outbound", execTool, seed }));
+    expect(execTool).not.toHaveBeenCalled();
+    expect(result.status).toBe("failed");
+  });
+  it("odmowa zgody nie jest potwierdzeniem", async () => {
+    const exec = makeDefaultExecTool(async () => "Anulowano — użytkownik nie wyraził zgody", () => "outbound");
+    expect((await exec("gmail_send", {}, { id: "a", intent: "wyślij" })).outcome.state).toBe("DRAFT");
+  });
+});
+
+describe("agentRun — bezpieczna pauza", () => {
+  it("pozwala zakończyć bieżący krok i nie rozpoczyna następnego", async () => {
+    const control = { paused: false };
+    let release!: () => void;
+    let started!: () => void;
+    const wait = new Promise<void>((resolve) => { release = resolve; });
+    const ready = new Promise<void>((resolve) => { started = resolve; });
+    const execTool = vi.fn(async () => { started(); await wait; return { outcome: confirmed({ source: "test" }) }; });
+    const plan: AgentPlan = { goal: "dwa kroki", steps: [
+      { id: "a", intent: "pierwszy", tool: "list_tasks" },
+      { id: "b", intent: "drugi", tool: "list_tasks", dependsOn: ["a"] },
+    ] };
+    const pending = runPlan(plan, baseDeps({ execTool, shouldStop: () => control.paused }));
+    await ready;
+    control.paused = true;
+    release();
+    const result = await pending;
+    expect(result.status).toBe("stopped");
+    expect(execTool).toHaveBeenCalledTimes(1);
+    expect(result.steps.map((s) => s.id)).toEqual(["a"]);
+    expect(result.verdict.canClaimSuccess).toBe(false);
+    const resumed = await runPlan(plan, baseDeps({ execTool: vi.fn(okExec), seed: result.steps }));
+    expect(resumed.verdict.canClaimSuccess).toBe(true);
+  });
+  it("nie wykonuje akcji po pauzie podczas oczekiwania na zgodę", async () => {
+    let release!: (ok: boolean) => void;
+    let started!: () => void;
+    let paused = false;
+    const ready = new Promise<void>((resolve) => { started = resolve; });
+    const consent = new Promise<boolean>((resolve) => { release = resolve; });
+    const execTool = vi.fn(okExec);
+    const plan: AgentPlan = { goal: "akcja", steps: [{ id: "a", intent: "wyślij", tool: "gmail_send" }] };
+    const pending = runPlan(plan, baseDeps({ execTool, riskOf: () => "outbound", requestConsent: async () => { started(); return consent; }, shouldStop: () => paused }));
+    await ready;
+    paused = true;
+    release(true);
+    const result = await pending;
+    expect(result.status).toBe("stopped");
+    expect(execTool).not.toHaveBeenCalled();
+    expect(result.verdict.canClaimSuccess).toBe(false);
+  });
+});

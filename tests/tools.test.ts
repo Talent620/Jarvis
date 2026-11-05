@@ -7,7 +7,7 @@
 //     komunikat zamiast wyjątku/żądania sieciowego).
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { toolDefs, runTool } from "../src/lib/tools";
-import { riskOf, grantOutboundScope } from "../src/lib/permissions";
+import { riskOf, grantOutboundScope, setConsentHandler } from "../src/lib/permissions";
 import { store } from "../src/lib/store";
 
 // Test hermetyczny: żadne narzędzie nie sięga do realnej sieci (np. daily_briefing
@@ -15,9 +15,11 @@ import { store } from "../src/lib/store";
 const realFetch = global.fetch;
 beforeEach(() => {
   global.fetch = vi.fn(() => Promise.reject(new Error("offline test"))) as any;
-  grantOutboundScope("*"); // testy badają ZACHOWANIE narzędzi (nie bramkę zgód) → udziel zakresu
+  grantOutboundScope("*"); // Testy badają zachowanie narzędzi; jednorazowe akcje wymagają osobnej zgody.
+  setConsentHandler(async () => ({ allow: true, remember: false }));
 });
 afterEach(() => {
+  setConsentHandler(null);
   global.fetch = realFetch;
 });
 

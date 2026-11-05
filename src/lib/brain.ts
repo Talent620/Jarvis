@@ -5,7 +5,7 @@ import { toolDefs, resetCitations, getCitations, runTool } from "./tools";
 import { riskOf } from "./permissions";
 import { runPlan, makeDefaultExecTool, type RunResult } from "./agentRun";
 import type { AgentPlan } from "./agentPlanner";
-import { selectToolsForIntent } from "./toolSelector";
+import { isToolFreeGreeting, selectToolsForIntent } from "./toolSelector";
 import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed, rankJournal } from "./memory";
 import { memoryContextBlock, addMemory, resolveNamespace, memoryServiceAvailable } from "./memoryService";
@@ -171,7 +171,7 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
 
   // Tryb on-device (Faza 8): TYLKO model lokalny — żadna chmura, nic nie opuszcza urządzenia.
   // Brak skonfigurowanej Ollamy → pusty łańcuch (caller pokaże instrukcję konfiguracji).
-  if (s.onDeviceOnly) return localTail;
+  if (s.onDeviceOnly || s.provider === "ollama" || s.provider === "webllm") return localTail;
 
   // Zadanie 3 — Refleks jako pełny POZIOM (local-first): proste zapytanie (gdy włączone) LUB
   // brak sieci → model lokalny NA POCZĄTEK łańcucha; chmura zostaje fallbackiem. Klasyfikujemy
@@ -492,7 +492,7 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
   lastLearnAt = now;
 
   const r = resolveProvider();
-  if (!r || !r.apiKey?.trim()) return;
+  if (!r || !r.apiKey?.trim() || (store.settings.onDeviceOnly && !isKeyless(r.provider))) return;
   // Do ekstrakcji bierzemy najtańszy model danego dostawcy.
   const model = TASK_MODELS[r.provider]?.simple || r.model;
 
@@ -554,6 +554,17 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
  * chwilowym błędzie (429/timeout), gdy inny dostawca/klucz odpowiedziałby.
  * Zwraca tekst odpowiedzi lub RZUCA czytelny błąd, gdy żaden dostawca nie zadziałał.
  */
+function resolveForRequest(history: Msg[]): { provider: ProviderId; model: string; apiKey: string } | null {
+  const resolved = resolveProvider();
+  const localOnly = store.settings.onDeviceOnly || store.settings.provider === "ollama" || store.settings.provider === "webllm";
+  if ((!resolved || !resolved.apiKey?.trim()) || (localOnly && !isKeyless(resolved.provider))) {
+    const local = routeOrder(history).find((item) => isKeyless(item.provider));
+    if (local) return { ...local, apiKey: "local" };
+    if (localOnly) return null;
+  }
+  return resolved;
+}
+
 async function askModelReply(params: {
   system: string;
   history: Msg[];
@@ -562,7 +573,7 @@ async function askModelReply(params: {
   /** Preferuj MOCNIEJSZY model (jakość > szybkość) — oferty, strony, teczki, treści. */
   heavy?: boolean;
 }): Promise<JarvisReply> {
-  const resolved = resolveProvider();
+  const resolved = resolveForRequest(params.history);
   if (!resolved) {
     throw new Error("Najpierw skonfiguruj dostawcę AI w ⚙ → AI (wklej klucz: Claude, Gemini, Groq, OpenRouter…).");
   }
@@ -630,7 +641,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   const last = history[history.length - 1];
   const localReply = last?.role === "user" && !last.image ? applyInterfaceCommand(last.content) : null;
   if (localReply) return { text: localReply, tools: ["interfejs"] };
-  const resolved = resolveProvider();
+  const resolved = resolveForRequest(history);
   if (!resolved) {
     throw new Error(
       "Brak skonfigurowanego dostawcy AI. Wejdź w ⚙ Ustawienia i wprowadź klucz API (Claude, Gemini, Groq, OpenRouter, NVIDIA lub GitHub).",
@@ -660,7 +671,8 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   const memNamespace = resolveNamespace(store.settings.activeProjectId);
   // Głębokie myślenie (opt-in): wewnętrzna analiza złożonych pytań — też niezależna, więc nakłada się
   // na pobieranie pamięci, zamiast dokładać swój czas na początku tury.
-  const deepThinkWanted = store.settings.deepThink && !store.settings.interpreterMode && needsDeepThink(lastUserContent);
+  const deepThinkWanted = store.settings.deepThink && !store.settings.interpreterMode && needsDeepThink(lastUserContent)
+    && (!(store.settings.onDeviceOnly || store.settings.provider === "ollama" || store.settings.provider === "webllm") || isKeyless(resolved.provider));
   const [, mem0Block, journalRank, deepAnalysis] = await Promise.all([
     prepareMemoryContext(lastUserContent),
     memoryContextBlock(lastUserContent, memNamespace).catch(() => ""),
@@ -730,7 +742,8 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   let order = routeOrder(trimmed);
   // Auto-router Szefa: jeśli wskazano najmocniejszy zmierzony mózg i ma klucz — na CZOŁO
   // łańcucha (reszta zostaje jako failover). Tak Szef zawsze rusza najlepszym dostępnym.
-  if (prefer && (prefer.provider === "ollama" ? !!store.settings.ollamaUrl?.trim() : !!store.settings.keys[prefer.provider]?.trim())) {
+  const localOnly = store.settings.onDeviceOnly || store.settings.provider === "ollama" || store.settings.provider === "webllm";
+  if (prefer && (!localOnly || isKeyless(prefer.provider)) && (prefer.provider === "ollama" ? !!store.settings.ollamaUrl?.trim() : prefer.provider === "webllm" ? !!store.settings.webllmEnabled : !!store.settings.keys[prefer.provider]?.trim())) {
     order = [prefer, ...order.filter((o) => !(o.provider === prefer.provider && o.model === prefer.model))];
   }
   if (!order.length) {
@@ -835,7 +848,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         // nie ucinać przedwcześnie wolnej, ale działającej odpowiedzi u kogoś z jednym dostawcą.
         const hasFailover = i < order.length - 1 || j < keys.length - 1;
         const wd = makeStallWatchdog(() => settled, () => progressed, !!onTok && hasFailover);
-        const attemptP = withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model, onToken: onTok }));
+        const attemptP = withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, tools: provider === "ollama" && !lastUser?.image && isToolFreeGreeting(lastUser?.content || "") ? [] : baseCtx.tools, apiKey, model, onToken: onTok }));
         attemptP.catch(() => {}); // jeśli przegra wyścig z watchdogiem, późne odrzucenie nie może być „unhandled"
         let reply: JarvisReply;
         try {

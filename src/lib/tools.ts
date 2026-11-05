@@ -37,7 +37,7 @@ import { openSalesOs, syncFromSalesOs, salesOsStatsText, pushLeadsToSalesOs, sal
 import { buildDossier, auditWeakPoints } from "./leadIntel";
 import { callNowList, followUpsDue, followUpMessage, pipelineForecast, openLabel } from "./salesEngine";
 import { syncSalesTasks, autoPlanSummary } from "./autoPlan";
-import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, hotkey as desktopHotkey } from "./desktop";
+import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, clickOnPc, activeWindowOnPc, hotkey as desktopHotkey } from "./desktop";
 import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
 import { primaryKey } from "./keys";
 import { exportData } from "./backup";
@@ -336,7 +336,7 @@ const tools: Tool[] = [
     def: {
       name: "desktop_launch_app",
       description:
-        "KOMPUTER (Windows): uruchom lokalny program. Podaj nazwę (np. notatnik, kalkulator, eksplorator, spotify, chrome, word, excel, ustawienia, menedzer zadań) lub ścieżkę/polecenie. Używaj, gdy użytkownik prosi o otwarcie programu na komputerze.",
+        "KOMPUTER (Windows/Linux): uruchom lokalny program. Podaj nazwę (np. notatnik, kalkulator, przeglądarka, pliki, chrome, firefox) lub ścieżkę. Uruchomienie procesu nie potwierdza otwarcia okna.",
       input_schema: obj({ app: str("Nazwa programu lub ścieżka") }, ["app"]),
     },
     run: ({ app }) => launchApp(app),
@@ -387,9 +387,25 @@ const tools: Tool[] = [
   },
   {
     def: {
+      name: "desktop_active_window",
+      description: "Odczytaj tytuł aktualnie aktywnego okna w sesji X11. Tytuł może zawierać prywatne dane, dlatego przed odczytem wymagana jest zgoda. Nie odczytuj go bez potrzeby.",
+      input_schema: obj({}),
+    },
+    run: () => activeWindowOnPc(),
+  },
+  {
+    def: {
+      name: "desktop_click",
+      description: "Kliknij lewym przyciskiem w aktualnie aktywnym oknie X11. Podaj współrzędne ekranu x/y ustalone po obejrzeniu aktualnego obrazu oraz fragment tytułu okna. Akcja wymaga każdorazowej zgody; zweryfikuj rezultat, bo sam klik nie dowodzi działania aplikacji.",
+      input_schema: obj({ x: num("Współrzędna pozioma na ekranie"), y: num("Współrzędna pionowa na ekranie"), window: str("Fragment tytułu aktywnego okna") }, ["x", "y", "window"]),
+    },
+    run: ({ x, y, window }) => clickOnPc(x, y, window),
+  },
+  {
+    def: {
       name: "desktop_type",
       description:
-        "KOMPUTER (Windows): wpisz tekst (jakbyś pisał na klawiaturze). Opcjonalnie podaj 'window' = fragment tytułu okna, do którego wpisać (np. 'Notatnik') — JARVIS aktywuje to okno przed pisaniem. Najpierw uruchom/aktywuj docelowy program.",
+        "KOMPUTER (Windows/X11): wpisz tekst (na X11 wyłącznie ASCII). Na X11 wymagany jest fragment tytułu już aktywnego okna; JARVIS nie aktywuje go sam. W Windows podanie tytułu jest opcjonalne. Uruchom i aktywuj docelowy program przed pisaniem.",
       input_schema: obj({ text: str("Tekst do wpisania"), window: str("Fragment tytułu okna docelowego (opcjonalnie)") }, ["text"]),
     },
     run: ({ text, window }) => typeText(text, window),
@@ -398,7 +414,7 @@ const tools: Tool[] = [
     def: {
       name: "desktop_hotkey",
       description:
-        "KOMPUTER (Windows): naciśnij skrót klawiszowy, np. 'ctrl+s', 'ctrl+shift+t', 'alt+f4', 'ctrl+c'. Opcjonalnie 'window' = fragment tytułu okna docelowego. (Klawisz Windows nie jest obsługiwany.)",
+        "KOMPUTER (Windows/X11): naciśnij skrót klawiszowy, np. 'ctrl+s', 'ctrl+shift+t', 'alt+f4', 'ctrl+c'. Na X11 wymagany 'window' = fragment tytułu aktualnie aktywnego okna. (Klawisz Windows nie jest obsługiwany.)",
       input_schema: obj({ combo: str("Skrót, np. ctrl+s"), window: str("Fragment tytułu okna (opcjonalnie)") }, ["combo"]),
     },
     run: ({ combo, window }) => desktopHotkey(combo, window),

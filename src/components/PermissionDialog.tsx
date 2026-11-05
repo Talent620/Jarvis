@@ -129,7 +129,7 @@ export default function PermissionDialog({
               🎙 Powiedz „<b>tak</b>" albo „<b>nie</b>" — lub użyj przycisków.
             </p>
           )}
-          <label className="row" style={{ cursor: "pointer" }}>
+          {!req.freshOnly && <label className="row" style={{ cursor: "pointer" }}>
             <span>Zapamiętaj zgodę dla tej akcji</span>
             <input
               type="checkbox"
@@ -137,7 +137,8 @@ export default function PermissionDialog({
               onChange={(e) => setRemember(e.target.checked)}
               style={{ width: 20, height: 20 }}
             />
-          </label>
+          </label>}
+          {req.freshOnly && <p className="muted">Ta decyzja dotyczy tylko tej konkretnej akcji.</p>}
         </div>
         <div className="panel-foot" style={{ display: "flex", gap: 8 }}>
           <button className="btn" style={{ flex: 1 }} onClick={() => finish(false, false)}>

@@ -39,7 +39,7 @@ export function isTerminal(o: ActionOutcome | null | undefined): boolean {
 const LABELS: Record<OutcomeState, string> = {
   DRAFT: "Szkic",
   SIMULATED: "Symulacja (nic nie wysłano)",
-  ATTEMPTED: "Wysłano — czekam na potwierdzenie",
+  ATTEMPTED: "Próba przygotowana lub wykonana — czekam na potwierdzenie",
   CONFIRMED: "Potwierdzone",
   FAILED: "Błąd",
 };

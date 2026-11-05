@@ -1,0 +1,1 @@
+PASS: Ustawienia → Zaawansowane → Interfejs → Nowy: wygląd aktywny

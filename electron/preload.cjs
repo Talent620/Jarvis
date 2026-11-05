@@ -11,8 +11,10 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   mcpStdioCall: (server, tool, input = {}) => ipcRenderer.invoke("jarvis:mcp-stdio-call", { server, tool, input }),
   mcpStdioDisconnect: (server) => ipcRenderer.invoke("jarvis:mcp-stdio-disconnect", { server }),
   hardwareInfo: () => ipcRenderer.invoke("jarvis:hardware-info"),
+  ensureLocalOllama: (url) => ipcRenderer.invoke("jarvis:ollama-ensure-local", String(url || "")),
   // Otwórz URL, plik lub folder w domyślnej aplikacji systemu.
   open: (target) => ipcRenderer.invoke("jarvis:open", String(target || "")),
+  ensureLocalSiteOs: (url) => ipcRenderer.invoke("jarvis:site-os-ensure-local", String(url || "")),
   // Uruchom dołączony kreator stron i otwórz go w domyślnej przeglądarce.
   siteOsStart: (tunnel = false) => ipcRenderer.invoke("jarvis:site-os-start", { tunnel: Boolean(tunnel) }),
   // Uruchom lokalny program (po nazwie znanej lub ścieżce/poleceniu).
@@ -39,6 +41,9 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   gcalList: (opts) => ipcRenderer.invoke("jarvis:gcal-list", opts),
   gmailSend: (msg) => ipcRenderer.invoke("jarvis:gmail-send", msg),
   gmailList: (opts) => ipcRenderer.invoke("jarvis:gmail-list", opts),
+  activeWindow: () => ipcRenderer.invoke("jarvis:active-window"),
+  // Klik X11: renderer przesyła współrzędne i wymagany tytuł aktywnego okna.
+  click: (x, y, window) => ipcRenderer.invoke("jarvis:click", { x, y, window }),
   // Pisanie tekstu / skróty (Windows), opcjonalnie do okna o tytule.
   type: (text, window) => ipcRenderer.invoke("jarvis:type", { text: String(text || ""), window: window || "" }),
   hotkey: (combo, window) => ipcRenderer.invoke("jarvis:hotkey", { combo: String(combo || ""), window: window || "" }),

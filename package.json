@@ -53,6 +53,7 @@
     "framer-motion": "^11.18.2",
     "jsqr": "^1.4.0",
     "lucide-react": "^0.460.0",
+    "parse5": "7.3.0",
     "pdfjs-dist": "^4.10.38",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",

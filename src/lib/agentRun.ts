@@ -24,7 +24,7 @@ export interface StepResult {
   reason?: string;
 }
 
-export type RunStatus = "completed" | "blocked" | "failed" | "stopped";
+export type RunStatus = "completed" | "blocked" | "failed" | "stopped" | "waiting_user";
 
 export interface RunResult {
   status: RunStatus;
@@ -43,10 +43,14 @@ export interface RunDeps {
   execTool: (name: string, args: Record<string, unknown> | undefined, step: PlanStep) => Promise<{ outcome: ActionOutcome; output?: string }>;
   /** Opcjonalny PRE-gate zgody (outbound / ryzykowny zapis). Brak → zgodę egzekwuje execTool/runTool. */
   requestConsent?: (step: PlanStep, risk: Risk) => Promise<boolean>;
+  /** Durable checkpoint przed uruchomieniem narzędzia; wyjątek blokuje wykonanie. */
+  beforeTool?: (step: PlanStep, risk: Risk) => Promise<void>;
   onStatus?: (msg: string) => void;
   /** Wołane po KAŻDYM kroku (z jego wynikiem) — pozwala trwale zapisać postęp (durable goals). */
   onStep?: (result: StepResult) => void | Promise<void>;
   now?: () => number;
+  /** Pauza nie przerywa trwającego działania; blokuje start kolejnego kroku lub próby. */
+  shouldStop?: () => boolean;
   maxSteps?: number;
   maxToolCalls?: number;
   /** Polityka samonaprawy: gdy krok rzuci błąd, decyduje o retry/replan/abort. Bez niej brak retry. */
@@ -55,7 +59,7 @@ export interface RunDeps {
   sleep?: (ms: number) => Promise<void>;
   /** Maks. prób wykonania JEDNEGO kroku (łącznie z pierwszą). Domyślnie 3. */
   maxToolAttempts?: number;
-  /** Wznowienie: wcześniejsze wyniki kroków. CONFIRMED/ATTEMPTED NIE są wykonywane ponownie
+  /** Wznowienie: wcześniejsze wyniki kroków. CONFIRMED/ATTEMPTED/FAILED NIE są wykonywane ponownie
    *  (bez podwójnych działań), ale liczą się jako spełnione/blokujące zależności. */
   seed?: StepResult[];
 }
@@ -117,21 +121,22 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
   const order = topoOrder(steps);
   const total = order.length;
   const results = new Map<string, StepResult>();
-  // Wznowienie: zaszczep wcześniejsze wyniki (kroki już CONFIRMED/ATTEMPTED nie ruszają ponownie).
+  // Wznowienie: zaszczep wcześniejsze wyniki (kroki już CONFIRMED/ATTEMPTED/FAILED nie ruszają ponownie).
   for (const s of deps.seed || []) results.set(s.id, s);
   let toolCalls = 0;
   let stoppedByLimit = false;
+  let stoppedByRequest = false;
 
   const depConfirmed = (step: PlanStep): boolean =>
     (step.dependsOn || []).every((d) => results.get(d)?.outcome.state === "CONFIRMED");
 
   // Policz jeden krok do StepResult (mutuje toolCalls/stoppedByLimit przez domknięcie).
-  const evalStep = async (step: PlanStep): Promise<StepResult> => {
+  const evalStep = async (step: PlanStep): Promise<StepResult | null> => {
     const base = { id: step.id, intent: step.intent, tool: step.tool };
     // Zależności muszą być POTWIERDZONE (nie FAILED/ATTEMPTED/SIMULATED/DRAFT).
     if (!depConfirmed(step)) return { ...base, outcome: draft("zależność niepotwierdzona"), skipped: true, reason: "zależność niepotwierdzona" };
-    // Krok czysto myślowy (bez narzędzia) → uznaj za wewnętrznie wykonany.
-    if (!step.tool) return { ...base, outcome: confirmed({ source: "wewnętrzny", message: "krok analityczny" }) };
+    // Plan opisujący analizę nie jest jej wykonaniem ani dowodem wyniku.
+    if (!step.tool) return { ...base, outcome: draft("brak wykonawcy tego kroku"), skipped: true, reason: "brak wykonawcy tego kroku" };
     if (!deps.toolExists(step.tool)) return { ...base, outcome: failed(`nieznane narzędzie: ${step.tool}`), reason: "nieznane narzędzie" };
 
     const risk = deps.riskOf(step.tool);
@@ -140,26 +145,34 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
       const ok = await deps.requestConsent(step, risk);
       if (!ok) return { ...base, outcome: draft("brak zgody użytkownika"), skipped: true, reason: "brak zgody" };
     }
+    if (deps.shouldStop?.()) { stoppedByRequest = true; return null; }
     // Limit wywołań narzędzi (anti-loop) — reszta kroków zostaje pominięta.
     if (toolCalls >= maxToolCalls) {
       stoppedByLimit = true;
       return { ...base, outcome: draft("limit wywołań narzędzi"), skipped: true, reason: "limit narzędzi" };
     }
-    // Wykonanie z bezpieczną samonaprawą: chwilowy błąd (nie-outbound) → retry z backoff.
+    // Checkpoint zapisuje się przed jakimkolwiek efektem ubocznym; jego błąd nie może być ponowiony jako błąd narzędzia.
+    if (deps.beforeTool) await deps.beforeTool(step, risk);
+    if (deps.shouldStop?.()) { stoppedByRequest = true; return null; }
+    // Wykonanie z bezpieczną samonaprawą: chwilowy błąd odczytu → retry z backoff.
     // Outbound NIGDY nie jest ponawiany automatycznie (recoveryPolicy zwróci wtedy ask_user).
     const maxAttempts = Math.max(1, deps.maxToolAttempts ?? 3);
     let attempt = 0;
     let lastReason: string | undefined;
     for (;;) {
+      if (deps.shouldStop?.()) { stoppedByRequest = true; return null; }
       try {
         toolCalls += 1;
         const { outcome, output } = await deps.execTool(step.tool, step.arguments, step);
-        return { ...base, outcome, output, reason: lastReason };
+        return { ...base, outcome, output, skipped: outcome.state === "DRAFT" || undefined, reason: outcome.state === "DRAFT" ? outcome.evidence?.message : lastReason };
       } catch (e) {
+        // Przy zapisie/akcji zewnętrznej wyjątek mógł wystąpić po efekcie ubocznym.
+        // Nie ponawiaj i nie twierdź, że działanie na pewno się nie powiodło.
+        if (risk !== "read") return { ...base, outcome: attempted(step.tool, "Wystąpił błąd po rozpoczęciu działania. Sprawdź wynik przed ponowieniem."), reason: "niepewny wynik" };
         if (!deps.recover) return { ...base, outcome: failed(e instanceof Error ? e.message : "błąd narzędzia"), reason: "błąd narzędzia" };
         const decision = deps.recover(e, risk, attempt);
         lastReason = decision.reason;
-        if (decision.action === "retry_backoff" && attempt + 1 < maxAttempts && toolCalls < maxToolCalls) {
+        if (risk === "read" && decision.action === "retry_backoff" && attempt + 1 < maxAttempts && toolCalls < maxToolCalls) {
           attempt += 1;
           if (decision.delayMs > 0 && deps.sleep) await deps.sleep(decision.delayMs);
           continue; // ponów ten sam krok
@@ -174,13 +187,15 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
 
   let pos = 0;
   for (const step of order) {
+    if (deps.shouldStop?.()) { stoppedByRequest = true; break; }
     pos += 1;
-    // Wznowienie: krok już potwierdzony lub rozpoczęty (ATTEMPTED) NIE wykonuje się ponownie —
+    // Wznowienie: krok już potwierdzony, rozpoczęty lub nieudany NIE wykonuje się ponownie —
     // brak podwójnych działań; jego wynik z seeda zostaje i liczy się do zależności.
     const seeded = results.get(step.id);
-    if (seeded && (seeded.outcome.state === "CONFIRMED" || seeded.outcome.state === "ATTEMPTED")) continue;
+    if (seeded && (seeded.outcome.state === "CONFIRMED" || seeded.outcome.state === "ATTEMPTED" || seeded.outcome.state === "FAILED")) continue;
     if (deps.onStatus) deps.onStatus(`${short(step.intent)} — krok ${pos} z ${total}`);
     const r = await evalStep(step);
+    if (!r) break;
     results.set(step.id, r);
     if (deps.onStep) await deps.onStep(r); // trwały zapis postępu (durable goals)
   }
@@ -188,29 +203,40 @@ export async function runPlan(plan: AgentPlan, deps: RunDeps): Promise<RunResult
   const ordered = order.map((s) => results.get(s.id)).filter(Boolean) as StepResult[];
   const anyFailed = ordered.some((r) => r.outcome.state === "FAILED");
   const anySkipped = ordered.some((r) => r.skipped);
-  const status: RunStatus = stoppedByLimit ? "stopped" : anyFailed ? "failed" : anySkipped ? "blocked" : "completed";
+  const anyAttempted = ordered.some((r) => r.outcome.state === "ATTEMPTED");
+  const status: RunStatus = stoppedByLimit || stoppedByRequest ? "stopped" : anyFailed ? "failed" : anyAttempted ? "waiting_user" : anySkipped ? "blocked" : "completed";
 
   // Werdykt końcowy ZAWSZE z weryfikatora — jedyne źródło uczciwego statusu (bez „Gotowe" bez dowodu).
-  const verdict = verifyRun({ goal: plan.goal, steps: ordered.map((r) => ({ id: r.id, intent: r.intent, outcome: r.outcome, skipped: r.skipped })) });
+  // Weryfikuj cały plan także po pauzie; wykonany prefiks nie jest ukończonym celem.
+  const verdict = verifyRun({ goal: plan.goal, steps: (plan.steps || []).map((step) => {
+    const result = results.get(step.id);
+    return { id: step.id, intent: step.intent, outcome: result?.outcome ?? draft("krok jeszcze nie wykonany"), skipped: result?.skipped ?? !result };
+  }) });
 
   return { status, steps: ordered, toolCalls, summary: verdict.summary, verdict };
 }
 
+/** Wbudowane odczyty wyłącznie z lokalnego store, bez usług zewnętrznych. */
+const VERIFIED_LOCAL_READS = new Set(["list_tasks", "list_notes", "list_shopping", "list_leads"]);
+
 /**
- * Domyślny wykonawca narzędzia dla RUNTIME — przez prawdziwy runTool (jedna bramka zgód + audyt).
- * Mapuje wynik na ActionOutcome zachowawczo: odczyt/zapis bez błędu → CONFIRMED (lokalny, dowodliwy),
- * outbound bez dowodu dostarczenia → ATTEMPTED (potwierdzenie domknie weryfikator/Task 5).
- * Odmowa zgody → DRAFT; nieznane narzędzie → FAILED.
+ * Legacy runTool zwraca tekst, nie ustrukturyzowany wynik i dowód. Nie można na jego
+ * podstawie uznać dowolnej akcji za potwierdzoną. Wynik niejednoznaczny zostaje jako
+ * ATTEMPTED, aby wznowienie nie wykonało go ponownie bez sprawdzenia użytkownika.
  */
 export function makeDefaultExecTool(runTool: (name: string, input: unknown) => Promise<string>, riskOf: (name: string) => Risk) {
   return async (name: string, args: Record<string, unknown> | undefined, _step: PlanStep): Promise<{ outcome: ActionOutcome; output?: string }> => {
     void _step;
     const out = await runTool(name, args ?? {});
     const text = typeof out === "string" ? out : "";
-    if (/^Nieznane narzędzie/i.test(text)) return { outcome: failed(`nieznane narzędzie: ${name}`), output: text };
-    if (/^Anulowano/i.test(text)) return { outcome: draft("brak zgody użytkownika"), output: text };
-    const risk = riskOf(name);
-    if (risk === "outbound") return { outcome: attempted(name, "wykonano — czekam na potwierdzenie dostarczenia"), output: text };
-    return { outcome: confirmed({ source: name, message: "wykonano lokalnie" }), output: text };
+    const trimmed = text.trim();
+    if (/^Anulowano/i.test(trimmed)) return { outcome: draft("brak zgody użytkownika"), output: text };
+    if (/^(?:Nieznane narzędzie|Błąd narzędzia|Błąd wyszukiwania|Nie udało się|Ta czynność jest zablokowana)/i.test(trimmed)) {
+      return { outcome: failed(trimmed, name), output: text };
+    }
+    if (riskOf(name) === "read" && VERIFIED_LOCAL_READS.has(name) && trimmed) {
+      return { outcome: confirmed({ source: name, message: "odczytano dane lokalne" }), output: text };
+    }
+    return { outcome: attempted(name, "Wynik wymaga sprawdzenia; brak jednoznacznego potwierdzenia."), output: text };
   };
 }

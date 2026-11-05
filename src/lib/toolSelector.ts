@@ -25,7 +25,7 @@ const GROUP_TOOLS: Record<string, string[]> = {
     "create_flashcards", "set_timer"],
   device: ["make_call", "send_sms", "call_contact", "text_contact", "smart_home", "run_scene", "create_scene",
     "list_scenes", "navigate_to", "open_service", "open_url", "run_automation"],
-  desktop: ["desktop_launch_app", "desktop_open", "desktop_power", "desktop_volume", "desktop_media", "desktop_type", "desktop_hotkey"],
+  desktop: ["desktop_launch_app", "desktop_open", "desktop_power", "desktop_volume", "desktop_media", "desktop_active_window", "desktop_click", "desktop_type", "desktop_hotkey"],
   android: ["android_type", "android_tap", "android_global", "android_open_app", "android_open_settings"],
   info: ["get_weather", "get_news", "get_markets"],
   system: ["set_mode", "set_preference", "set_theme", "set_voice", "switch_ai", "lock_assistant", "suggest_ai", "system_health", "self_check",
@@ -41,7 +41,7 @@ const GROUP_KEYWORDS: Record<string, string[]> = {
   memory: ["zapamiętaj", "zapamietaj", "pamięć", "pamiec", "zapomnij", "wiem o", "co wiesz", "fakt o"],
   productivity: ["zadani", "todo", "notat", "przypomnij", "przypomnien", "lista zakup", "zakupy", "dziennik", "fiszk", "minutnik", "stoper", "timer", "licznik"],
   device: ["zadzwoń", "zadzwon", "dzwoń", "dzwon", "sms", "nawiguj", "trasa", "dojazd", "scena", "dom", "światło", "swiatlo", "automatyzacj", "otwórz aplikacj", "otworz aplikacj"],
-  desktop: ["komputer", "pulpit windows", "desktop", "głośność", "glosnosc", "uruchom program", "wciśnij", "wcisnij"],
+  desktop: ["komputer", "pulpit windows", "desktop", "głośność", "glosnosc", "uruchom program", "wciśnij", "wcisnij", "kliknij", "myszk", "na ekranie"],
   android: ["telefon", "kliknij w", "wpisz na ekran", "ustawienia androida", "dostępnoś", "dostepnos"],
   info: ["pogoda", "wiadomości", "wiadomosci", "newsy", "kurs", "giełda", "gielda", "krypto", "bitcoin", "akcje"],
   system: ["motyw", "ustaw tryb", "przełącz ai", "przelacz ai", "głos jarvisa", "glos jarvisa", "kopia", "backup", "diagnoza", "stan systemu", "preferencj", "stały umysł", "staly umysl", "stały głos", "staly glos", "nie zmieniaj głosu", "nie zmieniaj glosu", "stały model", "staly model", "zablokuj mózg", "zablokuj mozg", "stały mózg", "staly mozg", "który ai", "ktory ai", "który model", "ktory model", "najlepszy ai", "co polecasz", "jaki mózg", "jaki mozg", "mądrzejszy", "madrzejszy"],
@@ -79,4 +79,11 @@ export function toolsetSize(defs: ToolDef[]): { count: number; chars: number } {
   let chars = 0;
   for (const d of defs) chars += JSON.stringify(d).length;
   return { count: defs.length, chars };
+}
+
+/** Wyłącznie jednoznaczne powitanie: brak akcji i potrzeby narzędzi w tej turze. */
+export function isToolFreeGreeting(query: string): boolean {
+  const q = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l")
+    .replace(/[,.!?]+/g, " ").replace(/\s+/g, " ").trim();
+  return /^(?:czesc|hej|witaj|dzien dobry)(?: jarvis)?(?: przedstaw (?:swoje|twoje) mozliwosci)?$/.test(q);
 }

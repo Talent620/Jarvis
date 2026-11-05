@@ -1,3 +1,5 @@
+import { formatGoalProgress, isGoalProgressRequest } from "./lib/goalProgress";
+import { loadGoalsNewestFirst } from "./lib/goalRuntime";
 import InterfaceSwitch from "./components/InterfaceSwitch";
 import { applyInterfaceCommand } from "./lib/interfaceMode";
 import { lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
@@ -112,7 +114,7 @@ import { processPendingSiteOsCommands } from "./lib/siteOs";
 import { currentBrainMode } from "./lib/brainMode";
 import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, checkPinnedVoice, setVoiceUnavailableHandler, type VoiceListener, type VoiceUnavailableInfo } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
-import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
+import { captureScreen, desktop, isDesktop, watchClipboard } from "./lib/desktop";
 import ScreenBoundary from "./components/ScreenBoundary";
 import { getWeather } from "./lib/weather";
 import { buildChiefBriefing, formatBriefing } from "./lib/chiefOfStaff";
@@ -551,6 +553,17 @@ export default function App() {
       setLiveId(replyId);
       setMessages((m) => [...m, { id: userId, role: "user", text, createdAt: Date.now() }, { id: replyId, role: "assistant", text: reply, tools: ["interfejs"], createdAt: Date.now() }]);
       if (store.settings.speak) void speak(reply, store.settings).catch(() => {});
+      return;
+    }
+
+    if (isGoalProgressRequest(text)) {
+      let report: string;
+      try { report = formatGoalProgress(await loadGoalsNewestFirst()); }
+      catch { report = "Nie udało się odczytać zapisanego postępu zadania."; }
+      const replyId = uid();
+      setLiveId(replyId);
+      setMessages((m) => [...m, { id: uid(), role: "user", text, createdAt: Date.now() }, { id: replyId, role: "assistant", text: report, tools: ["postęp"], createdAt: Date.now() }]);
+      if (store.settings.speak) void speak(report, store.settings).catch(() => {});
       return;
     }
 
@@ -1013,6 +1026,28 @@ export default function App() {
     const tick = setInterval(() => { void run(); }, 12000);
     return () => clearInterval(tick);
   }, []);
+
+  // Wznów tylko sparowaną lokalną usługę; nie uruchamiaj tunelu ani przeglądarki.
+  useEffect(() => {
+    if (!settings.siteOsToken?.trim() || !settings.siteOsUrl?.trim()) return;
+    const bridge = desktop();
+    if (!bridge?.ensureLocalSiteOs) return;
+    void bridge.ensureLocalSiteOs(settings.siteOsUrl).then((result) => {
+      if (result.ok && result.started) toast("Lokalny Site OS został uruchomiony. Sprawdź połączenie w ustawieniach.");
+      else if (!result.ok && !result.skipped) toast(`Site OS: ${result.error || "nie udało się uruchomić serwera"}`);
+    }).catch(() => toast("Nie udało się uruchomić lokalnego Site OS."));
+  }, [settings.siteOsUrl, settings.siteOsToken]);
+
+  // Uruchom tylko skonfigurowaną lokalną Ollamę; bez zmiany modelu ani dostawcy.
+  useEffect(() => {
+    if (store.settings.provider !== "ollama" || !store.settings.ollamaUrl?.trim()) return;
+    const bridge = desktop();
+    if (!bridge?.ensureLocalOllama) return;
+    void bridge.ensureLocalOllama(store.settings.ollamaUrl).then((result) => {
+      if (result.ok && result.started) toast("Lokalna Ollama została uruchomiona.");
+      else if (!result.ok && !result.skipped) toast(`Ollama: ${result.error || "nie udało się uruchomić serwera"}`);
+    }).catch(() => toast("Nie udało się uruchomić lokalnej Ollamy."));
+  }, [settings.provider, settings.ollamaUrl]);
 
   // Auto-wykrycie lokalnego serwera Ollama na DESKTOPIE (localhost = ten PC) — żeby nie trzeba
   // było wpisywać adresu. Tylko gdy nic nie skonfigurowano; ustawia adres (nie przejmuje providera).

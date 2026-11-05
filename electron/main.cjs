@@ -2,11 +2,16 @@
 const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const http = require("http");
 const { spawn, exec } = require("child_process");
 const os = require("os");
+const { launchLinux } = require("./launch-app.cjs");
+const { createLinuxKeyboard } = require("./linux-keyboard.cjs");
+const linuxKeyboard = createLinuxKeyboard();
 const { createWorkspaceTools } = require("./workspace-tools.cjs");
 const { createStdioMcpManager } = require("./mcp-stdio.cjs");
+const { createLocalOllamaManager } = require("./local-ollama.cjs");
+const { createLocalSiteOsManager } = require("./local-siteos.cjs");
+const localOllama = createLocalOllamaManager();
 
 const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
 
@@ -28,7 +33,7 @@ function saveState(win) {
 }
 
 let mainWindow = null;
-let siteOsProcess = null;
+let siteOsManager = null;
 let stdioMcp = null;
 let closingStdioMcp = false;
 
@@ -44,45 +49,16 @@ function siteOsPaths() {
   };
 }
 
-function siteOsReady(url) {
-  return new Promise((resolve) => {
-    const request = http.get(url + "/api/health", { timeout: 900 }, (response) => {
-      response.resume();
-      resolve(response.statusCode === 200);
-    });
-    request.on("timeout", () => { request.destroy(); resolve(false); });
-    request.on("error", () => resolve(false));
-  });
+function localSiteOs() {
+  if (!siteOsManager) siteOsManager = createLocalSiteOsManager({ paths: siteOsPaths() });
+  return siteOsManager;
 }
 
 async function startSiteOs({ tunnel = false } = {}) {
-  const url = "http://127.0.0.1:3210";
-  const paths = siteOsPaths();
-  if (!fs.existsSync(paths.script)) return { ok: false, error: "Brak modułu Site OS w instalacji." };
-
-  if (!(await siteOsReady(url)) && (!siteOsProcess || siteOsProcess.exitCode !== null)) {
-    siteOsProcess = spawn(process.execPath, [paths.script, ...(tunnel ? ["--tunnel"] : [])], {
-      env: {
-        ...process.env,
-        ELECTRON_RUN_AS_NODE: "1",
-        SITE_OS_DATA_DIR: paths.data,
-        SITE_OS_RUNTIME_DIR: paths.runtime,
-        SITE_OS_TOOLS_DIR: paths.tools,
-      },
-      stdio: "ignore",
-      windowsHide: true,
-    });
-    siteOsProcess.once("exit", () => { siteOsProcess = null; });
-  }
-
-  let ready = await siteOsReady(url);
-  for (let attempt = 0; !ready && attempt < 40; attempt += 1) {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    ready = await siteOsReady(url);
-  }
-  if (!ready) return { ok: false, error: "Site OS nie uruchomił się w ciągu 20 sekund." };
-  await shell.openExternal(url);
-  return { ok: true, url };
+  const result = await localSiteOs().ensure("http://127.0.0.1:3210", { tunnel });
+  if (!result.ok) return result;
+  await shell.openExternal(result.url);
+  return result;
 }
 
 // Przywołanie JARVIS-a nad każdą aplikacją (globalny skrót systemowy).
@@ -353,6 +329,14 @@ function registerDesktopControl() {
       return { ok: false, error: error && error.message ? error.message : String(error) };
     }
   });
+  ipcMain.handle("jarvis:ollama-ensure-local", async (event, url) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    return localOllama.ensure(url);
+  });
+  ipcMain.handle("jarvis:site-os-ensure-local", async (event, url) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    return localSiteOs().ensure(url);
+  });
   ipcMain.handle("jarvis:site-os-start", async (event, options) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     try {
@@ -458,8 +442,10 @@ function registerDesktopControl() {
 
   ipcMain.handle("jarvis:launch", async (event, name) => {
     if (!isTrustedIpc(event)) return "err:forbidden";
-    const key = String(name || "").toLowerCase().trim();
+    const raw = String(name || "").trim();
+    const key = raw.toLowerCase();
     if (!key) return "err:empty";
+    if (process.platform === "linux") return launchLinux(raw);
     const mapped = WIN_APPS[key] || key;
     if (process.platform === "win32") {
       // Protokoły (spotify:, ms-settings:) otwieramy przez powłokę.
@@ -539,11 +525,25 @@ function registerDesktopControl() {
     }
   });
 
+  ipcMain.handle("jarvis:active-window", async (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    if (process.platform !== "linux") return { ok: false, error: "err:unsupported" };
+    return linuxKeyboard.activeWindow();
+  });
+
+  // Współrzędne wymagają aktywnego okna i osobnej zgody w warstwie narzędzi.
+  ipcMain.handle("jarvis:click", async (event, payload) => {
+    if (!isTrustedIpc(event)) return "err:forbidden";
+    if (process.platform !== "linux") return "err:unsupported";
+    return linuxKeyboard.click(payload?.x, payload?.y, payload?.window);
+  });
+
   // Pisanie tekstu (opcjonalnie do okna o podanym tytule).
   ipcMain.handle("jarvis:type", async (event, payload) => {
     if (!isTrustedIpc(event)) return "err:forbidden";
-    if (process.platform !== "win32") return "err:unsupported";
     const { text, window } = payload || {};
+    if (process.platform === "linux") return linuxKeyboard.type(text, window);
+    if (process.platform !== "win32") return "err:unsupported";
     if (!text) return "err:empty";
     sendKeys(escapeSendKeys(text), window);
     return "ok";
@@ -552,8 +552,9 @@ function registerDesktopControl() {
   // Skrót klawiszowy (opcjonalnie do okna o podanym tytule).
   ipcMain.handle("jarvis:hotkey", async (event, payload) => {
     if (!isTrustedIpc(event)) return "err:forbidden";
-    if (process.platform !== "win32") return "err:unsupported";
     const { combo, window } = payload || {};
+    if (process.platform === "linux") return linuxKeyboard.hotkey(combo, window);
+    if (process.platform !== "win32") return "err:unsupported";
     const sk = buildHotkey(combo);
     if (!sk) return "err:unknown";
     sendKeys(sk, window);
@@ -644,7 +645,8 @@ if (!gotLock) {
 
   app.on("will-quit", () => {
     globalShortcut.unregisterAll();
+    localOllama.close();
     setClipWatch(false);
-    if (siteOsProcess && siteOsProcess.exitCode === null) siteOsProcess.kill();
+    if (siteOsManager) siteOsManager.close();
   });
 }

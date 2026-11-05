@@ -10,6 +10,8 @@ import { newGoal, recordStepOutcome, loadGoals, upsertGoal, resumableGoals, type
 import type { AgentPlan } from "./agentPlanner";
 import { runTool, toolDefs } from "./tools";
 import { riskOf } from "./permissions";
+import { attempted } from "./actionOutcome";
+import { beginGoalRun } from "./goalControl";
 
 const toolExists = (n: string) => toolDefs.some((d) => d.name === n);
 
@@ -17,7 +19,8 @@ const toolExists = (n: string) => toolDefs.some((d) => d.name === n);
 function finalStatus(run: RunResult): GoalStatus {
   if (run.verdict.canClaimSuccess) return "completed";
   if (run.status === "failed") return "failed";
-  if (run.status === "blocked") return "waiting_consent"; // wstrzymane na zgodzie/zależności
+  if (run.status === "waiting_user") return "waiting_user";
+  if (run.status === "blocked") return run.steps.some((step) => step.outcome.evidence?.message === "brak zgody użytkownika") ? "waiting_consent" : "waiting_user";
   if (run.status === "stopped") return "paused";
   return "running";
 }
@@ -36,6 +39,9 @@ export interface StartGoalInput {
  * zgód przez runTool), zapisując postęp po każdym kroku, i utrwal finalny status. Zwraca rekord + wynik.
  */
 export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStorage): Promise<{ record: GoalRecord; result: RunResult }> {
+  const control = beginGoalRun(input.correlationId);
+  try {
+  if ((await loadGoals(storage)).some((g) => g.id === input.correlationId)) throw new Error("Cel o tym identyfikatorze już istnieje — wznów zapisany cel.");
   let record: GoalRecord = { ...newGoal(input.goal, input.plan, input.correlationId, input.now), status: "running" };
   await upsertGoal(record, storage);
 
@@ -43,7 +49,12 @@ export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStora
     toolExists,
     riskOf,
     execTool: makeDefaultExecTool(runTool, riskOf),
+    shouldStop: control.shouldStop,
     onStatus: input.onStatus,
+    beforeTool: async (step) => {
+      record = { ...record, results: { ...record.results, [step.id]: attempted(step.tool, "Przygotowano próbę; po awarii sprawdź, czy działanie zostało wykonane.") } };
+      await upsertGoal(record, storage);
+    },
     onStep: async (r) => {
       record = recordStepOutcome(record, r.id, r.outcome, input.now);
       await upsertGoal(record, storage);
@@ -55,6 +66,7 @@ export async function startAndRunGoal(input: StartGoalInput, storage?: GoalStora
   record = { ...record, status: finalStatus(result), updatedAt: input.now };
   await upsertGoal(record, storage);
   return { record, result };
+  } finally { control.finish(); }
 }
 
 /**
@@ -67,20 +79,29 @@ export async function resumeAndRunGoal(
   opts: { now: number; onStatus?: (s: string) => void; onStep?: (r: StepResult) => void },
   storage?: GoalStorage,
 ): Promise<{ record: GoalRecord; result: RunResult }> {
-  const steps = record.plan.steps || [];
+  const control = beginGoalRun(record.id);
+  try {
+  const saved = (await loadGoals(storage)).find((goal) => goal.id === record.id);
+  if (!saved) throw new Error("Nie znaleziono zapisanego celu — nie można bezpiecznie go wznowić.");
+  const steps = saved.plan.steps || [];
   const seed: StepResult[] = steps
-    .filter((s) => record.results[s.id])
-    .map((s) => ({ id: s.id, intent: s.intent, tool: s.tool, outcome: record.results[s.id] }));
+    .filter((s) => saved.results[s.id])
+    .map((s) => ({ id: s.id, intent: s.intent, tool: s.tool, outcome: saved.results[s.id] }));
 
-  let rec: GoalRecord = { ...record, status: "running", updatedAt: opts.now };
+  let rec: GoalRecord = { ...saved, status: "running", updatedAt: opts.now };
   await upsertGoal(rec, storage);
 
-  const pipeline = await runAgentPipeline(record.plan, {
+  const pipeline = await runAgentPipeline(saved.plan, {
     toolExists,
     riskOf,
     execTool: makeDefaultExecTool(runTool, riskOf),
     seed,
+    shouldStop: control.shouldStop,
     onStatus: opts.onStatus,
+    beforeTool: async (step) => {
+      rec = { ...rec, results: { ...rec.results, [step.id]: attempted(step.tool, "Przygotowano próbę; po awarii sprawdź, czy działanie zostało wykonane.") } };
+      await upsertGoal(rec, storage);
+    },
     onStep: async (r) => {
       rec = recordStepOutcome(rec, r.id, r.outcome, opts.now);
       await upsertGoal(rec, storage);
@@ -92,6 +113,7 @@ export async function resumeAndRunGoal(
   rec = { ...rec, status: finalStatus(result), updatedAt: opts.now };
   await upsertGoal(rec, storage);
   return { record: rec, result };
+  } finally { control.finish(); }
 }
 
 /** Wczytaj cele posortowane od najnowszych (do panelu). */

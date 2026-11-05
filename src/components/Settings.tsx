@@ -10,7 +10,7 @@ import { runIqProbe, verdict, loadIqResult, loadIqResults, saveIqResult } from "
 import { leagueRanking } from "../lib/league";
 import { systemActionsAvailable, saOpenAccessibility } from "../lib/systemActions";
 import { FREE_STACK } from "../lib/freeMode";
-import { resetConsents } from "../lib/permissions";
+import ConsentManager from "./ConsentManager";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, salesOsConfigured, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
 import { openSiteOs, pairSiteOs, siteOsConfigured, testSiteOs } from "../lib/siteOs";
@@ -1955,9 +1955,9 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                   🔒 Tryb on-device (blokada chmury)
                   <br />
                   <span className="muted">
-                    Twarda blokada prywatności: JARVIS używa <b>wyłącznie</b> modelu lokalnego (Ollama),
-                    nigdy chmury, a web-search jest wyłączony. Nic nie opuszcza urządzenia. Wymaga
-                    skonfigurowanej Ollamy (adres poniżej); bez niej rozmowa zgłosi instrukcję.
+                    Tryb używa modeli Ollama/WebLLM i wyłącza wbudowane web-search. Adres Ollamy
+                    może wskazywać inny komputer. Narzędzia i inne usługi mogą łączyć się z siecią
+                    według własnych ustawień. Bez skonfigurowanego modelu rozmowa zgłosi błąd.
                   </span>
                 </span>
                 <Toggle on={s.onDeviceOnly} onClick={() => set({ onDeviceOnly: !s.onDeviceOnly })} />
@@ -1975,14 +1975,11 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
               </div>
               <div className="row" style={{ borderLeft: "3px solid #2bff88", paddingLeft: 10 }}>
                 <span>
-                  ⬢ Tryb Szefa — <b style={{ color: "#2bff88" }}>PEŁNY DOSTĘP</b> do wszystkiego
+                  ⬢ Tryb Szefa — <b style={{ color: "#2bff88" }}>rozszerzony dostęp</b>
                   <br />
                   <span className="muted">
-                    Pozwala agentowi głosowemu „Szef” używać <b>wszystkich</b> narzędzi i akcji (telefon,
-                    SMS, e-mail, otwieranie stron/aplikacji, kalendarz, zakupy…) <b>bez ekranów zgody</b> —
-                    bo Szef sam <b>przewiduje i potwierdza głosem</b> przed każdą nieodwracalną akcją
-                    („Wpisać: Artur?”, „dobrze usłyszałem?”). Działa <b>tylko</b> przy otwartym Trybie Szefa.
-                    Zostaw wyłączone, jeśli wolisz potwierdzać dotykiem.
+                    Pozwala agentowi głosowemu używać części narzędzi bez ekranów zgody, gdy Tryb Szefa
+                    jest otwarty. Wysyłka wiadomości, synchronizacja do Sales OS oraz sterowanie pulpitem wymagają osobnego potwierdzenia.
                   </span>
                 </span>
                 <Toggle on={!!s.bossFullAccess} onClick={() => set({ bossFullAccess: !s.bossFullAccess })} />
@@ -3429,13 +3426,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
               {pinMsg && <p className="muted">{pinMsg}</p>}
 
               <h3 id="set-privacy">Prywatność i zgody</h3>
-              <p className="muted">
-                Akcje (dzwonienie, SMS, smart home, zapisy) wymagają Twojej zgody. Możesz wyczyścić
-                zapamiętane zgody, by JARVIS znów pytał za każdym razem.
-              </p>
-              <button className="btn" onClick={() => resetConsents()}>
-                Zresetuj zapamiętane zgody
-              </button>
+              <ConsentManager />
 
               <h3>© O programie / Licencja</h3>
               <p className="muted" style={{ lineHeight: 1.6 }}>

@@ -5,9 +5,10 @@
 
 import { useEffect, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { isGoalRunning, requestGoalPause } from "../lib/goalControl";
 import { loadGoalsNewestFirst, resumeAndRunGoal } from "../lib/goalRuntime";
 import { pauseGoal, removeGoal, upsertGoal, describeGoal, type GoalRecord, type GoalStatus } from "../lib/goalState";
-import { outcomeIcon } from "../lib/actionOutcome";
+import { outcomeIcon, outcomeLabel } from "../lib/actionOutcome";
 import { emptyStateSuggestion } from "../lib/simpleFlow";
 
 const STATUS_LABEL: Record<GoalStatus, string> = {
@@ -22,13 +23,24 @@ export default function GoalStatusPanel({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [resumeMsg, setResumeMsg] = useState("");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const load = () => { setLoading(true); void loadGoalsNewestFirst().then((g) => { setGoals(g); setLoading(false); }); };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const timer = setInterval(load, 2500);
+    return () => clearInterval(timer);
+  }, []);
 
   const now = () => Date.now();
-  const doPause = async (g: GoalRecord) => { await upsertGoal(pauseGoal(g, now())); load(); };
-  const doCancel = async (g: GoalRecord) => { await removeGoal(g.id); load(); };
+  const doPause = async (g: GoalRecord) => {
+    if (requestGoalPause(g.id)) {
+      setResumeMsg("Pauza zlecona — bieżący krok może się zakończyć, kolejne nie ruszą.");
+      return;
+    }
+    await upsertGoal(pauseGoal(g, now())); load();
+  };
+  const doCancel = async (g: GoalRecord) => { if (isGoalRunning(g.id)) { setResumeMsg("Najpierw wstrzymaj i zaczekaj na zakończenie bieżącego kroku."); return; } await removeGoal(g.id); load(); };
   // Wznów i DOKOŃCZ — dograj pozostałe kroki (pomijając potwierdzone, bez podwójnych działań).
   const doResume = async (g: GoalRecord) => {
     setBusyId(g.id); setResumeMsg("");
@@ -94,17 +106,33 @@ export default function GoalStatusPanel({ onClose }: { onClose: () => void }) {
                   <div style={{ fontSize: 12 }}>✅ Ostatnio potwierdzone: {lastConfirmed.intent}</div>
                 )}
 
-                {busyId === g.id && resumeMsg && <div style={{ fontSize: 12 }}>⏳ {resumeMsg}</div>}
+                {expanded[g.id] && (
+                  <section aria-label="Wyniki zadania" style={{ padding: 10, border: "1px solid var(--line)", borderRadius: 8 }}>
+                    <strong>Dotychczasowe wyniki</strong>
+                    {steps.filter((step) => g.results[step.id]).length === 0 && <p className="muted">Brak zapisanych wyników.</p>}
+                    {steps.filter((step) => g.results[step.id]).map((step) => {
+                      const result = g.results[step.id];
+                      return <div key={step.id} style={{ marginTop: 6, fontSize: 12 }}>
+                        <b>{step.intent}</b> · {outcomeLabel(result)}
+                        {result.evidence?.message && <div>{result.evidence.message}</div>}
+                        {result.evidence?.source && <div className="muted">Źródło: {result.evidence.source}</div>}
+                      </div>;
+                    })}
+                    <p className="muted" style={{ marginBottom: 0 }}>Niepotwierdzone wyniki wymagają sprawdzenia.</p>
+                  </section>
+                )}
+                {resumeMsg && (busyId === g.id || isGoalRunning(g.id)) && <div style={{ fontSize: 12 }}>⏳ {resumeMsg}</div>}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+                  <button type="button" className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} aria-expanded={!!expanded[g.id]} onClick={() => setExpanded((prev) => ({ ...prev, [g.id]: !prev[g.id] }))}>{expanded[g.id] ? "Ukryj wyniki" : "Pokaż wyniki"}</button>
                   {canStop(g.status) && (
-                    <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} disabled={busyId === g.id} onClick={() => void doPause(g)}>⏸ Zatrzymaj</button>
+                    <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} onClick={() => void doPause(g)}>⏸ Zatrzymaj</button>
                   )}
                   {canResume(g.status) && (
                     <button className="btn primary" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} disabled={busyId === g.id} onClick={() => void doResume(g)}>
                       {busyId === g.id ? "…" : "▶ Wznów i dokończ"}
                     </button>
                   )}
-                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} disabled={busyId === g.id} onClick={() => void doCancel(g)}>🗑 Anuluj</button>
+                  <button className="btn" style={{ width: "auto", marginTop: 0, padding: "6px 12px", fontSize: 12, minHeight: 44 }} disabled={busyId === g.id || isGoalRunning(g.id)} onClick={() => void doCancel(g)}>🗑 Anuluj</button>
                 </div>
               </div>
             );

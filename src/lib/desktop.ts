@@ -3,6 +3,8 @@
 
 export interface JarvisDesktop {
   platform: string;
+  ensureLocalSiteOs?(url: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; error?: string }>;
+  ensureLocalOllama?(url: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; error?: string }>;
   agentTool?(tool: string, input?: Record<string, unknown>): Promise<{ ok: boolean; error?: string; [key: string]: unknown }>;
   mcpStdioConnect?(config: Record<string, unknown>): Promise<{ ok: boolean; error?: string; tools?: unknown[] }>;
   mcpStdioCall?(server: string, tool: string, input?: Record<string, unknown>): Promise<{ ok: boolean; error?: string; result?: unknown }>;
@@ -15,6 +17,8 @@ export interface JarvisDesktop {
   media(action: string): Promise<string>;
   screenshot(): Promise<string>;
   notify(title: string, body: string): Promise<string>;
+  activeWindow?(): Promise<{ ok: boolean; title?: string; error?: string }>;
+  click?(x: number, y: number, window: string): Promise<string>;
   type(text: string, window?: string): Promise<string>;
   hotkey(combo: string, window?: string): Promise<string>;
   clipWatch(enabled: boolean): Promise<boolean>;
@@ -104,12 +108,45 @@ export async function captureScreen(): Promise<{ data: string; mediaType: string
   return { data: r, mediaType: "image/png" };
 }
 
+function linuxInputError(r: string): string | null {
+  const labels: Record<string, string> = {
+    "err:linux-session": "Sterowanie klawiaturą wymaga sesji X11. Sesja Wayland wymaga portalu i zgody systemowej; ta funkcja nie jest tu jeszcze dostępna.",
+    "err:linux-window-required": "Podaj fragment tytułu aktywnego okna docelowego.",
+    "err:linux-window-mismatch": "Aktywne okno nie odpowiada wskazanemu tytułowi lub fokus się zmienił. Nie wysłano zdarzenia.",
+    "err:linux-no-window": "Nie udało się ustalić aktywnego okna.",
+    "err:linux-xdotool-missing": "Brakuje programu xdotool. Zainstaluj go w systemie, aby korzystać ze sterowania X11.",
+    "err:linux-text-unsupported": "Wpisywanie X11 obsługuje obecnie tylko zwykły tekst ASCII do 2000 znaków.",
+    "err:linux-pointer-mismatch": "Wskaźnik nie znajduje się nad wskazanym aktywnym oknem. Nie kliknięto.",
+    "err:linux-coordinates": "Nieprawidłowe współrzędne albo punkt poza aktywnym oknem. Nie kliknięto.",
+    "err:linux-input-failed": "Nie udało się wysłać zdarzenia klawiatury do okna X11.",
+  };
+  return labels[r] || null;
+}
+
+export async function activeWindowOnPc(): Promise<string> {
+  const d = desktop();
+  if (!d?.activeWindow) return "Odczyt aktywnego okna wymaga aplikacji desktopowej z obsługą X11.";
+  const r = await d.activeWindow().catch(() => ({ ok: false, error: "err:linux-input-failed" }));
+  if (r.ok && "title" in r && r.title) return `Aktywne okno: ${r.title}`;
+  return linuxInputError(r.error || "") || `Nie udało się odczytać aktywnego okna (${r.error || "brak odpowiedzi"}).`;
+}
+
+export async function clickOnPc(x: number, y: number, window: string): Promise<string> {
+  const d = desktop();
+  if (!d?.click) return "Klikanie przez tę funkcję jest dostępne w aplikacji desktopowej z obsługą X11.";
+  const r = await d.click(x, y, window).catch(() => "err:linux-input-failed");
+  if (r === "ok") return "Wysłano kliknięcie do wskazanego okna. Sprawdź rezultat na ekranie.";
+  return linuxInputError(r) || `Nie udało się kliknąć (${r}).`;
+}
+
 export async function typeText(text: string, window?: string): Promise<string> {
   const d = desktop();
   if (!d) return NOT_DESKTOP;
   const r = await d.type(text, window).catch((e) => `err:${e}`);
   if (r === "ok") return `Wpisuję tekst${window ? ` w „${window}"` : ""}.`;
-  if (r === "err:unsupported") return "Pisanie tekstu jest dostępne tylko na Windows.";
+  if (r === "err:unsupported") return "Pisanie tekstu jest dostępne tylko na Windows lub X11.";
+  const detail = linuxInputError(r);
+  if (detail) return detail;
   return `Nie udało się wpisać tekstu (${r}).`;
 }
 
@@ -134,7 +171,9 @@ export async function hotkey(combo: string, window?: string): Promise<string> {
   if (!d) return NOT_DESKTOP;
   const r = await d.hotkey(combo, window).catch((e) => `err:${e}`);
   if (r === "ok") return `Skrót: ${combo}${window ? ` w „${window}"` : ""}.`;
-  if (r === "err:unsupported") return "Skróty klawiszowe są dostępne tylko na Windows.";
+  if (r === "err:unsupported") return "Skróty klawiszowe są dostępne tylko na Windows lub X11.";
+  const detail = linuxInputError(r);
+  if (detail) return detail;
   if (r === "err:unknown") return `Nie rozpoznałem skrótu „${combo}".`;
   return `Nie udało się wysłać skrótu (${r}).`;
 }
