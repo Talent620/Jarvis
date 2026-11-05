@@ -90,7 +90,7 @@ głównej wersji pozostaje otwartą pracą; nie ogłaszaj pełnego audytu jako P
 
 Jeżeli wcześniejsza instalacja użyła `install:local`, zbuduj tę wersję z tą samą lokalną parą. Gotowe paczki CI używają wystawcy repozytorium i nie potwierdzą licencji wydanej inną parą. Poniższy przebieg tworzy odrębny checkout, zachowuje istniejący klucz właściciela, buduje `.deb`, aktualizuje zainstalowany pakiet i uruchamia aplikację.
 
-Wymagania: Ubuntu/Debian x86_64, Git, Node.js >=20, npm, sudo i własna działająca sesja graficzna. Zamknij poprzednie okno JARVIS-a przed aktualizacją. Pobranie zależności wymaga internetu. Polecenie nie instaluje Xvfb, Ollamy, modeli ani serwerów integracji.
+Wymagania: Ubuntu/Debian x86_64, Git, Node.js >=20, npm, sudo i własna działająca sesja graficzna. Zamknij poprzednie okno JARVIS-a przed aktualizacją. Pobranie zależności wymaga internetu. Polecenie nie instaluje Xvfb, Ollamy, modeli ani serwerów integracji. Wymaga istniejącego klucza właściciela w domyślnym katalogu. Jeśli poprzednio wybrano inny `--key-dir`, ustaw przed uruchomieniem `export JARVIS_OWNER_KEY_DIR='/właściwy/katalog'`. Brak klucza zatrzyma aktualizację, zamiast utworzyć niezgodnego wystawcę.
 
 ```bash
 bash <<'JARVIS_INSTALL'
@@ -100,13 +100,18 @@ for jarvis_tool in git node npm sudo; do
 done
 node -e 'if (Number(process.versions.node.split(".")[0]) < 20) { console.error("Wymagany Node.js >=20"); process.exit(1); }'
 [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] || { echo 'Uruchom w swojej sesji graficznej.' >&2; exit 1; }
-jarvis_source="$(mktemp -d "${TMPDIR:-/tmp}/jarvis-alpha2.XXXXXX")"
+jarvis_key_dir="${JARVIS_OWNER_KEY_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/jarvis/license-issuer}"
+[[ -r "$jarvis_key_dir/private.jwk.json" ]] || { echo 'Nie znaleziono klucza właściciela. Ustaw JARVIS_OWNER_KEY_DIR na katalog użyty poprzednio; nie twórz nowej pary podczas aktualizacji.' >&2; exit 1; }
+jarvis_key_dir="$(cd -- "$jarvis_key_dir" && pwd -P)"
+jarvis_source="$(mktemp -d /tmp/jarvis-alpha2.XXXXXX)"
 chmod 755 "$jarvis_source"
 git clone --depth 1 --branch v2.1.0-alpha.2 https://github.com/Talent620/Jarvis.git "$jarvis_source"
 cd "$jarvis_source"
-node scripts/install-local.cjs --desktop --build-only
+node scripts/install-local.cjs --desktop --build-only --key-dir "$jarvis_key_dir"
 ./node_modules/.bin/electron-builder --linux deb --publish never
 sha256sum release-desktop/JARVIS.deb
+chmod 755 release-desktop
+chmod 644 release-desktop/JARVIS.deb
 sudo apt install --yes "$jarvis_source/release-desktop/JARVIS.deb"
 exec jarvis-ai-assistant
 JARVIS_INSTALL

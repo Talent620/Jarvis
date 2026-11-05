@@ -2163,6 +2163,46 @@
         "QA/autonomia60/durable/evidence/closure-audit-production.json",
         "QA/autonomia60/durable/evidence/closure-audit-all.json"
       ]
+    },
+    {
+      "id": "C-ALPHA2-CI-FIRST",
+      "status": "FAIL",
+      "commit": "d28089e18a2b3c40f1c1c6580786902ef5a50829",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/alpha2-ci-first.json"
+      ],
+      "finding": "GitHub fixture depended on host /opt mode; CI Chromium sandbox prerequisite failed on Ubuntu-latest. Android signing configuration missing; Android v2 Setup Android SDK failed with detailed logs inaccessible.",
+      "resolution": "Installer fixtures now control ancestor modes and add refusal regression. Browser tests probe installed sandboxed backends and require successful precondition in CI. No production guard or sandbox is disabled. Subsequent CI is reported separately."
+    },
+    {
+      "id": "C-ALPHA2-PACKAGES-FIRST",
+      "status": "PASS",
+      "commit": "d28089e18a2b3c40f1c1c6580786902ef5a50829",
+      "level": "actual locally built Debian/AppImage archives, metadata, dependencies, helper script and checksums",
+      "native_acceptance": "BLOCKED: no X/DISPLAY",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/alpha2-packages-d280.json",
+        "QA/autonomia60/durable/evidence/alpha2-native-start-d280.log"
+      ],
+      "note": "Pre-final verification; final published assets need independent download and verification."
+    },
+    {
+      "id": "C-ALPHA2-FINAL-REGRESSION",
+      "status": "PASS",
+      "passed": 3082,
+      "failed": 0,
+      "skipped": 0,
+      "files": 373,
+      "command": "JARVIS_TEST_SKILL_SANDBOX=1 JARVIS_REQUIRE_BROWSER_TESTS=1 npm test",
+      "real_sandbox_tests": true,
+      "browser_precondition_required": true,
+      "lint": "PASS",
+      "build": "Last production build passed; release:linux will rebuild from final clean commit",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/alpha2-final-validation-source.json",
+        "QA/autonomia60/durable/evidence/alpha2-final-tests.log",
+        "QA/autonomia60/durable/browser-ci-precondition.json"
+      ]
     }
   ],
   "external_access": [

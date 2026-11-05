@@ -1,13 +1,34 @@
 import { createRequire } from "node:module";
 import { createServer, type Server } from "node:http";
-import { existsSync } from "node:fs";
-import { mkdtemp, mkdir, readFile, readdir, rm, symlink } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { probeSandboxedBrowser } from "./helpers/browserPrerequisite";
+import { execFileSync } from "node:child_process";
 const require = createRequire(import.meta.url);
 const { createBrowserSession, webUrl } = require("../electron/browser-session.cjs");
-const executablePath = ["/usr/bin/chromium", "/usr/bin/google-chrome", "/usr/bin/chromium-browser"].find(existsSync);
+const browserPrecondition = await probeSandboxedBrowser();
+const executablePath = browserPrecondition.selectedExecutable || undefined;
+const browserRequired = process.env.CI === "true" || process.env.JARVIS_REQUIRE_BROWSER_TESTS === "1";
+let commit: string | null = process.env.GITHUB_SHA || null;
+if (!commit) { try { commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(); } catch { /* packaged test copies may have no Git metadata */ } }
+const evidenceDirectory = join(process.cwd(), "QA", "runs", "browser-session");
+await mkdir(evidenceDirectory, { recursive: true });
+await writeFile(join(evidenceDirectory, "precondition.json"), JSON.stringify({
+  schemaVersion: 1, recordedAt: new Date().toISOString(), commit, platform: process.platform,
+  required: browserRequired, ...browserPrecondition,
+  integrationTestCount: 5,
+  integrationTests: browserPrecondition.status === "READY" ? "REQUIRED: see Vitest assertion results"
+    : browserPrecondition.status === "BLOCKED" ? "BLOCKED: not executed" : "NOT_RUN: prerequisite FAILED",
+  desktopAcceptance: "NOT_RUN", modelAcceptance: "NOT_RUN",
+}, null, 2) + "\n");
+const prerequisiteSummary = browserPrecondition.attempts.map(({ executable, code, reason }) => JSON.stringify({ executable: executable.slice(0, 500), code, reason })).join("; ");
+if (browserPrecondition.status !== "READY") console.warn(`[browser prerequisite] ${browserPrecondition.status}: ${browserPrecondition.attempts.map(a => `${a.executable}: ${a.code}`).join("; ")}. Evidence: QA/runs/browser-session/precondition.json`);
+it("requires a working sandboxed renderer in CI or explicitly required native runs", context => {
+  if (!browserRequired && browserPrecondition.status === "BLOCKED") return context.skip();
+  expect(browserPrecondition.status, `Sandboxed browser prerequisite ${browserPrecondition.status}: ${prerequisiteSummary}. Evidence: QA/runs/browser-session/precondition.json. No browser/desktop PASS is established.`).toBe("READY");
+});
 const temporary: string[] = [], servers: Server[] = [], clients: any[] = [];
 afterEach(async () => {
   await Promise.all(clients.splice(0).map(c => c.stop()));
@@ -28,7 +49,7 @@ async function fixture(approveMutation?: (request: any) => Promise<boolean>, ove
   });servers.push(server);
   await new Promise<void>(r => server.listen(0, "127.0.0.1", r));
   const origin = `http://127.0.0.1:${(server.address() as any).port}`;
-  const client = createBrowserSession({ directory: join(root, "state"), downloadDirectory: join(root, "downloads"), executablePath, headless: true, approveMutation, ...overrides }); clients.push(client);
+  const client = createBrowserSession({ directory: join(root, "state"), downloadDirectory: join(root, "downloads"), executablePath: overrides.launch ? process.execPath : executablePath, headless: true, approveMutation, ...overrides }); clients.push(client);
   return { client, root, origin, requests };
 }
 describe("browser input validation", () => {
@@ -78,8 +99,9 @@ describe("browser input validation", () => {
   });
 
 });
-// Real browser layer. Missing executable is an environment prerequisite, not a claimed PASS.
-describe.skipIf(!executablePath)("actual sandboxed Chromium with controlled website (not LLM)", () => {
+// The five assertions below are unchanged. An unavailable/failed prerequisite prevents execution;
+// CI still fails the prerequisite test, and never reports skipped native execution as success.
+describe.skipIf(browserPrecondition.status !== "READY")("actual sandboxed Chromium with controlled website (not LLM)", () => {
   it("reads DOM, fills a draft, asks separately for submission and verifies a bounded download", async () => {
     const approvals: any[] = [];
     const { client, origin, requests } = await fixture(async request => { approvals.push(request); return true; });

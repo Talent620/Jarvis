@@ -4,7 +4,7 @@
 
 Baza: `fb17f9755faad72295cb125563ba2b0220d9319d`. Gałąź: `codex/skills-integration-20261105`. Wszystkie wcześniejsze poprawki są zachowane. Aktualna specyfikacja: `SPEC-CLOSURE.md`; jeden rejestr możliwości, integracji, T01–T18 i G1–G10: `requirements.json`. Historyczne 60 testów i 80 przykładów nie zostały przepisane na PASS.
 
-**Pełna regresja: 3074/3074 PASS w 372 plikach, lint i build PASS.** Włączono rzeczywiste testy OS przez `JARVIS_TEST_SKILL_SANDBOX=1`. To wynik testów kodu i kontrolowanych integracji, nie 3074 zaliczonych zadań autonomicznego modelu. Źródła identyfikuje `evidence/closure-validation-source.json`. Początkowe 2 FAIL i nieobsłużone odrzucenie pozostają w `evidence/closure-integration-first.log`: niezgodny z Samsung S9 regex zastąpiono zgodnym; test STOP czeka teraz na rzeczywiste pytanie o zgodę, zachowując wszystkie asercje odmowy późnej akcji i zapamiętania zgody.
+**Końcowa regresja: 3082/3082 PASS w 373 plikach, lint PASS.** Ostatni build produkcyjny przeszedł; `release:linux` ponowi go z finalnego czystego commitu. Włączono rzeczywiste testy OS przez `JARVIS_TEST_SKILL_SANDBOX=1`. To wynik testów kodu i kontrolowanych integracji, nie 3082 zaliczonych zadań autonomicznego modelu. Źródła i pełny log końcowego przebiegu identyfikuje `evidence/alpha2-final-validation-source.json`. Poprzedni przebieg 3074 PASS zachowano w `evidence/closure-validation-source.json`. Początkowe 2 FAIL i nieobsłużone odrzucenie pozostają w `evidence/closure-integration-first.log`: niezgodny z Samsung S9 regex zastąpiono zgodnym; test STOP czeka teraz na rzeczywiste pytanie o zgodę, zachowując wszystkie asercje odmowy późnej akcji i zapamiętania zgody.
 
 Pełny cel nie jest ukończony i nie ma odbioru 10/10. Prawdziwy model, pulpit, kanały produkcyjne, komplet dokumentów i wszystkie ekrany mają oddzielne braki. Nowe pakiety i publikacja są weryfikowane po czystym commitcie; bieżący status przekazania dopisano niżej, gdy dostępny.
 
@@ -33,6 +33,14 @@ Rzeczywisty `qa:desktop` zachowuje wymagania A–C i osobny wynik niezależnej l
 - Ogólne jednorazowe plany nadal wymagają renderera; nie wszystkie subskrypcje kont, dokumenty XLSX/DOCX/prezentacje/OCR, Wayland, globalne przejęcie pulpitu i istniejące ekrany mają implementację lub odbiór.
 - Cua jest opcjonalną, nieskonfigurowaną ścieżką. Hermes/OpenClaw/BrowserUse/OpenHands nie zostały uruchomione jako konkurencyjni agenci. Istniejący webhook n8n zachowano, ale nie zaliczono realnego workflow. Rejestr zawiera przypięte źródła, licencje i konkretne decyzje integracyjne.
 - Produkcyjny npm audit: 0, pełny: 32 (14 moderate, 15 high, 3 critical), w tym Electron 33 klasyfikowany jako dev, lecz dystrybuowany w aplikacji. Nie ogłaszamy pełnego audytu jako PASS. Większa migracja runtime nadal wymaga osobnej weryfikacji.
+
+### Weryfikacja pakietów i rzeczywistego CI
+
+Z czystego `d28089e18a2b3c40f1c1c6580786902ef5a50829` zbudowano prawdziwe `.deb` i AppImage. Niezależne rozpakowanie potwierdziło identyczny `app.asar`, pliki natywne, pełny SHA, wersję, wymaganą licencję i obecność nowych zależności. Suma helpera pasuje do rachunku pakietu, a rzeczywisty postinst zawiera zabezpieczenia. Próba startu wyodrębnionej aplikacji z nowym profilem i sandboxem: BLOCKED po `Missing X server or $DISPLAY`. Nie wykonano instalacji systemowej. Dowód: `evidence/alpha2-packages-d280.json`; jest to sprawdzenie pierwszych lokalnych paczek, nie zastępstwo weryfikacji przyszłych opublikowanych plików.
+
+Pierwsze GitHub Actions dla tego commitu miały FAIL. Fixture instalatora przypadkowo korzystał z prawdziwych praw `/opt` runnera. Oddzielono kontrolowane przodki od prawdziwych plików tymczasowych i dodano test odmowy katalogu 0777; produkcyjny instalator pozostał bez zmian. Testy pakowania po poprawce: 13/13 PASS. Końcowa pełna regresja 3082 PASS objęła tę poprawkę i wymagane rzeczywiste testy sandboxa/przeglądarki. Testy prawdziwego Chromium wymagają próby uruchomienia rendererów dostępnych przeglądarek z sandboxem. Brak działającej trasy nadal kończy wymagany test CI błędem z raportem BLOCKED, a dowód jest zachowywany przez workflow. Nie usunięto pięciu asercji integracyjnych.
+
+Android release zgłosił brak siedmiu wymaganych sekretów/zmiennych, wymienionych w instrukcji wydania. Android v2 zakończył się w `Setup Android SDK`; publiczna strona nie udostępniła pełnego wyjątku, więc dokładna przyczyna pozostaje nieustalona. Dowód rzeczywistych uruchomień, adnotacji i poprawek: `evidence/alpha2-ci-first.json`. Nie traktować lokalnego braku SDK jako dowodu przyczyny awarii zdalnej.
 
 ### Uruchomienie i wycofanie
 

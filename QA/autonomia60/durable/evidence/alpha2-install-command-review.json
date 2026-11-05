@@ -1,0 +1,62 @@
+{
+  "recordedAt": "2026-11-05T22:56:37.632Z",
+  "scope": "Isolated actual issuer reuse and Vite build-configuration metadata; no complete owner-specific artifact build or system installation",
+  "keyReuse": {
+    "status": "PASS",
+    "samePrivateBytes": true,
+    "samePublicFingerprint": true,
+    "privateMode": "0600",
+    "publicOnly": true,
+    "pathsRule": "XDG_CONFIG_HOME/jarvis/license-issuer, otherwise homedir/.config/jarvis/license-issuer; --key-dir overrides",
+    "privateOutsideCheckout": true
+  },
+  "generatedPublicGitIgnored": true,
+  "checkoutStatusAfterIssuer": "clean",
+  "metadata": {
+    "schemaVersion": 1,
+    "version": "2.1.0-alpha.2",
+    "commit": "d28089e18a2b3c40f1c1c6580786902ef5a50829",
+    "build": "isolated-local-install-configuration-test",
+    "licenseRequired": true,
+    "issuer": "explicit-public-key"
+  },
+  "trackedSourceUnmodified": true,
+  "findings": [
+    {
+      "severity": "RESOLVED",
+      "topic": "Existing issuer in non-default directory",
+      "details": "Documentation upgrade command does not pass --key-dir. When its default directory lacks the previous private key, initIssuer intentionally creates a new issuer. Require the existing key path for an upgrade or describe initial installation separately.",
+      "resolution": "Applied in docs/WYDANIE-ALPHA.md: existing key required and canonicalized before cd, --key-dir explicit, /tmp checkout0755 and release-desktop0755/deb0644."
+    },
+    {
+      "severity": "RESOLVED",
+      "topic": "APT package file readability",
+      "details": "Observed built .deb mode0600. chmod755 checkout alone does not make the package readable for _apt; set package0644 and ensure traversable ancestors. A private TMPDIR ancestor may remain0711/0700 despite checkout0755.",
+      "resolution": "Applied in docs/WYDANIE-ALPHA.md: existing key required and canonicalized before cd, --key-dir explicit, /tmp checkout0755 and release-desktop0755/deb0644."
+    },
+    {
+      "severity": "LIMITATION",
+      "topic": "Commit identifier with arbitrary local edits",
+      "details": "Vite reads git rev-parse HEAD, not git dirty state. Ignored generated public key keeps tracked source clean. release:linux requires a clean tree; install-local itself allows dirty source, so its SHA alone is not proof of identical files."
+    },
+    {
+      "severity": "LIMITATION",
+      "topic": "Graphical profile migration",
+      "details": "Build-only and Debian postinst do not write user profile. Starting the application may update its existing data; migration and rollback still need target-system acceptance."
+    }
+  ],
+  "documentationReview": {
+    "bashSyntax": "PASS",
+    "tagAvailability": "Not executed; final tag not yet available. Missing tag stops before issuer/build/install.",
+    "sourceCheckout": "New mktemp directory; original checkout untouched",
+    "ownerKey": "Require existing private key and pass explicit key directory; canonicalize before changing directories",
+    "aptReadability": "Require directory0755 throughout package source path and package0644",
+    "protectedInstallAncestors": "Actual postinst rejects symlinks, non-root owners and group/world-writable installation/dpkg paths before privileged helper changes"
+  },
+  "regressionTests": {
+    "passed": 15,
+    "failed": 0,
+    "files": 3,
+    "scope": "license CLI, Debian installer fixture boundaries, release validation; no actual sudo/dpkg install"
+  }
+}

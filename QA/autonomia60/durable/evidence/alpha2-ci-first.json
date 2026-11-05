@@ -1,0 +1,476 @@
+{
+  "schemaVersion": 1,
+  "commit": "d28089e18a2b3c40f1c1c6580786902ef5a50829",
+  "branch": "codex/skills-integration-20261105",
+  "observedAt": "2026-11-05T22:52:57.946278+00:00",
+  "source": "https://github.com/Talent620/Jarvis/actions",
+  "method": "Unauthenticated public HTML; exact commit matched against embedded workflow run data. No API bypass.",
+  "runs": [
+    {
+      "name": "Build Android APK",
+      "id": "42124662841",
+      "workflow": ".github/workflows/android.yml",
+      "url": "https://github.com/Talent620/Jarvis/actions/runs/42124662841",
+      "state": {
+        "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+        "conclusion": "WORKFLOW_RUN_CONCLUSION_FAILURE"
+      },
+      "createdAt": "2026-11-05T22:49:04Z",
+      "jobUrl": "https://github.com/Talent620/Jarvis/actions/runs/42124662841/job/127585643918",
+      "publicAnnotations": [
+        "SIGNING failed. See the named step; no release is produced by a failed build.",
+        "Android release signing blocked: missing configuration names JARVIS_RELEASE_KEYSTORE_BASE64, JARVIS_RELEASE_STORE_PASSWORD, JARVIS_RELEASE_KEY_ALIAS, JARVIS_RELEASE_KEY_PASSWORD, JARVIS_BUILD_NUMBER, JARVIS_PREVIOUS_VERSION_CODE, JARVIS_RELEASE_CERT_SHA256. No development-key fallback."
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:08Z",
+          "completedAt": "2026-11-05T22:49:10Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:10Z",
+          "completedAt": "2026-11-05T22:49:11Z"
+        },
+        {
+          "name": "Setup Node",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:11Z",
+          "completedAt": "2026-11-05T22:49:15Z"
+        },
+        {
+          "name": "Setup JDK 17",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:15Z",
+          "completedAt": "2026-11-05T22:49:15Z"
+        },
+        {
+          "name": "Prepare explicitly configured release signing",
+          "conclusion": "failure",
+          "startedAt": "2026-11-05T22:49:15Z",
+          "completedAt": "2026-11-05T22:49:15Z"
+        },
+        {
+          "name": "Setup Android SDK",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:15Z",
+          "completedAt": "2026-11-05T22:49:15Z"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:15Z",
+          "completedAt": "2026-11-05T22:49:15Z"
+        },
+        {
+          "name": "Build web + sync Capacitor",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:15Z",
+          "completedAt": "2026-11-05T22:49:15Z"
+        },
+        {
+          "name": "Build release APK with configured identity",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:15Z",
+          "completedAt": "2026-11-05T22:49:15Z"
+        },
+        {
+          "name": "Upload APK",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:15Z",
+          "completedAt": "2026-11-05T22:49:15Z"
+        },
+        {
+          "name": "Report Android build stages",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:15Z",
+          "completedAt": "2026-11-05T22:49:15Z"
+        },
+        {
+          "name": "Post Setup JDK 17",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:15Z",
+          "completedAt": "2026-11-05T22:49:16Z"
+        },
+        {
+          "name": "Post Setup Node",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:16Z",
+          "completedAt": "2026-11-05T22:49:16Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:16Z",
+          "completedAt": "2026-11-05T22:49:16Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:16Z",
+          "completedAt": "2026-11-05T22:49:16Z"
+        }
+      ],
+      "fullLogs": "BLOCKED: public page explicitly says Sign in to view logs",
+      "snapshot": {
+        "run": "/tmp/jarvis-alpha2-run-42124662841.html",
+        "job": "/tmp/jarvis-alpha2-job-127585643918.html",
+        "runSha256": "2751359af5fcff34ab5de8615571ebf51c5af4b5778c005af1681c5439285e0f"
+      },
+      "reason": "FAIL: release signing configuration absent; exact missing variable names are proven by public annotation. No replacement key or identity generated."
+    },
+    {
+      "name": "Build Android APK v2 (test, niezależny)",
+      "id": "42124662827",
+      "workflow": ".github/workflows/android-v2.yml",
+      "url": "https://github.com/Talent620/Jarvis/actions/runs/42124662827",
+      "state": {
+        "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+        "conclusion": "WORKFLOW_RUN_CONCLUSION_FAILURE"
+      },
+      "createdAt": "2026-11-05T22:49:04Z",
+      "jobUrl": "https://github.com/Talent620/Jarvis/actions/runs/42124662827/job/127585643233",
+      "publicAnnotations": [
+        "SDK failed. See the named step; this job builds a separate debug application only."
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:08Z",
+          "completedAt": "2026-11-05T22:49:09Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:09Z",
+          "completedAt": "2026-11-05T22:49:10Z"
+        },
+        {
+          "name": "Setup Node",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:10Z",
+          "completedAt": "2026-11-05T22:49:15Z"
+        },
+        {
+          "name": "Setup JDK 17",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:15Z",
+          "completedAt": "2026-11-05T22:49:15Z"
+        },
+        {
+          "name": "Setup Android SDK",
+          "conclusion": "failure",
+          "startedAt": "2026-11-05T22:49:15Z",
+          "completedAt": "2026-11-05T22:49:25Z"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:25Z",
+          "completedAt": "2026-11-05T22:49:25Z"
+        },
+        {
+          "name": "Build web + sync Capacitor",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:25Z",
+          "completedAt": "2026-11-05T22:49:25Z"
+        },
+        {
+          "name": "Nadaj tożsamość v2 (appId + nazwa)",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:25Z",
+          "completedAt": "2026-11-05T22:49:25Z"
+        },
+        {
+          "name": "Build separately identified debug APK",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:25Z",
+          "completedAt": "2026-11-05T22:49:25Z"
+        },
+        {
+          "name": "Upload APK v2",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:25Z",
+          "completedAt": "2026-11-05T22:49:25Z"
+        },
+        {
+          "name": "Report Android v2 build stages",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:25Z",
+          "completedAt": "2026-11-05T22:49:25Z"
+        },
+        {
+          "name": "Post Setup JDK 17",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:25Z",
+          "completedAt": "2026-11-05T22:49:25Z"
+        },
+        {
+          "name": "Post Setup Node",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:25Z",
+          "completedAt": "2026-11-05T22:49:25Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:25Z",
+          "completedAt": "2026-11-05T22:49:26Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:26Z",
+          "completedAt": "2026-11-05T22:49:26Z"
+        }
+      ],
+      "fullLogs": "BLOCKED: public page explicitly says Sign in to view logs",
+      "snapshot": {
+        "run": "/tmp/jarvis-alpha2-run-42124662827.html",
+        "job": "/tmp/jarvis-alpha2-job-127585643233.html",
+        "runSha256": "9a31bb3386272258e9d1f56a9632e948617645f7c799b976a664b82ee38df572"
+      },
+      "reason": "FAIL: Setup Android SDK step. Underlying SDK exception unavailable in public summary; full logs require authentication. No cause beyond observed failing stage asserted."
+    },
+    {
+      "name": "Build Ubuntu",
+      "id": "42124662823",
+      "workflow": ".github/workflows/ubuntu.yml",
+      "url": "https://github.com/Talent620/Jarvis/actions/runs/42124662823",
+      "state": {
+        "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+        "conclusion": "WORKFLOW_RUN_CONCLUSION_FAILURE"
+      },
+      "createdAt": "2026-11-05T22:49:04Z",
+      "jobUrl": "https://github.com/Talent620/Jarvis/actions/runs/42124662823/job/127585642990",
+      "publicAnnotations": [
+        "tests/linuxPackageSandbox.test.ts > Debian package sandbox configuration > retains the launch-link fallback when update-alternatives fails:",
+        "tests/linuxPackageSandbox.test.ts#L54",
+        "AssertionError: JARVIS sandbox installation failed: group/world-writable path: /opt\n: expected 1 to be +0 // Object.is equality\n\n- Expected\n+ Received\n\n- 0\n+ 1\n\n ❯ tests/linuxPackageSandbox.test.ts:54:42",
+        "tests/linuxPackageSandbox.test.ts > Debian package sandbox configuration > sets the verified helper to 4755 even when root can create user namespaces:",
+        "tests/linuxPackageSandbox.test.ts#L48",
+        "AssertionError: JARVIS sandbox installation failed: group/world-writable path: /opt\n: expected 1 to be +0 // Object.is equality\n\n- Expected\n+ Received\n\n- 0\n+ 1\n\n ❯ tests/linuxPackageSandbox.test.ts:48:42"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:08Z",
+          "completedAt": "2026-11-05T22:49:10Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:10Z",
+          "completedAt": "2026-11-05T22:49:11Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:11Z",
+          "completedAt": "2026-11-05T22:49:16Z"
+        },
+        {
+          "name": "Validate prerelease tag against package version",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:49:16Z",
+          "completedAt": "2026-11-05T22:49:16Z"
+        },
+        {
+          "name": "Check native Ubuntu environment",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:16Z",
+          "completedAt": "2026-11-05T22:49:16Z"
+        },
+        {
+          "name": "Run npm ci",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:16Z",
+          "completedAt": "2026-11-05T22:50:13Z"
+        },
+        {
+          "name": "Verify source",
+          "conclusion": "failure",
+          "startedAt": "2026-11-05T22:50:13Z",
+          "completedAt": "2026-11-05T22:51:44Z"
+        },
+        {
+          "name": "Build and verify licensed Linux packages",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:51:44Z",
+          "completedAt": "2026-11-05T22:51:44Z"
+        },
+        {
+          "name": "Upload Linux packages",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:51:44Z",
+          "completedAt": "2026-11-05T22:51:44Z"
+        },
+        {
+          "name": "Utwórz manifest wersji Linux",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:51:44Z",
+          "completedAt": "2026-11-05T22:51:44Z"
+        },
+        {
+          "name": "Publish rolling Linux release",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:51:44Z",
+          "completedAt": "2026-11-05T22:51:44Z"
+        },
+        {
+          "name": "Publish validated version prerelease",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:51:44Z",
+          "completedAt": "2026-11-05T22:51:44Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:51:44Z",
+          "completedAt": "2026-11-05T22:51:44Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:51:44Z",
+          "completedAt": "2026-11-05T22:51:44Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:51:44Z",
+          "completedAt": "2026-11-05T22:51:44Z"
+        }
+      ],
+      "fullLogs": "BLOCKED: public page explicitly says Sign in to view logs",
+      "snapshot": {
+        "run": "/tmp/jarvis-alpha2-run-42124662823.html",
+        "job": "/tmp/jarvis-alpha2-job-127585642990.html",
+        "runSha256": "0ca970220712874d8bdb80ed70af518903871edb23f8d024ece1431c058a6654"
+      },
+      "reason": "FAIL: Verify source; two linuxPackageSandbox fixture success cases fail because host /opt is group/world-writable. Production guard rejects that host state correctly; synthetic tests leaked host permissions."
+    },
+    {
+      "name": "Tests",
+      "id": "42124662731",
+      "workflow": ".github/workflows/test.yml",
+      "url": "https://github.com/Talent620/Jarvis/actions/runs/42124662731",
+      "state": {
+        "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+        "conclusion": "WORKFLOW_RUN_CONCLUSION_FAILURE"
+      },
+      "createdAt": "2026-11-05T22:49:04Z",
+      "jobUrl": "https://github.com/Talent620/Jarvis/actions/runs/42124662731/job/127585643835",
+      "publicAnnotations": [
+        "tests/linuxPackageSandbox.test.ts > Debian package sandbox configuration > retains the launch-link fallback when update-alternatives fails:",
+        "tests/linuxPackageSandbox.test.ts#L54",
+        "AssertionError: JARVIS sandbox installation failed: group/world-writable path: /opt\n: expected 1 to be +0 // Object.is equality\n\n- Expected\n+ Received\n\n- 0\n+ 1\n\n ❯ tests/linuxPackageSandbox.test.ts:54:42",
+        "tests/linuxPackageSandbox.test.ts > Debian package sandbox configuration > sets the verified helper to 4755 even when root can create user namespaces:",
+        "tests/linuxPackageSandbox.test.ts#L48",
+        "AssertionError: JARVIS sandbox installation failed: group/world-writable path: /opt\n: expected 1 to be +0 // Object.is equality\n\n- Expected\n+ Received\n\n- 0\n+ 1\n\n ❯ tests/linuxPackageSandbox.test.ts:48:42",
+        "tests/browserSession.test.ts > actual sandboxed Chromium with controlled website (not LLM) > keeps delayed draft requests blocked across a same-document open:",
+        "tests/browserSession.test.ts#L143",
+        "Error: browserType.launch: Target page, context or browser has been closed\nBrowser logs:\nChromium sandboxing failed!\n================================\nTo avoid the sandboxing issue, do either of the following:\n  - (preferred): Configure your environment to support sandboxing\n  - (alternative): Launch Chromium without sandbox using 'chromiumSandbox: false' option\n================================\n\n",
+        "tests/browserSession.test.ts > actual sandboxed Chromium with controlled website (not LLM) > refuses a download directory symlink and writes nothing outside its scope:",
+        "tests/browserSession.test.ts#L135",
+        "Error: browserType.launch: Target page, context or browser has been closed\nBrowser logs:\nChromium sandboxing failed!\n================================\nTo avoid the sandboxing issue, do either of the following:\n  - (preferred): Configure your environment to support sandboxing\n  - (alternative): Launch Chromium without sandbox using 'chromiumSandbox: false' option\n================================\n\n",
+        "tests/browserSession.test.ts > actual sandboxed Chromium with controlled website (not LLM) > approves the actual mutated GET request and blocks denied query disclosure:",
+        "tests/browserSession.test.ts#L123",
+        "Error: browserType.launch: Target page, context or browser has been closed\nBrowser logs:\nChromium sandboxing failed!\n================================\nTo avoid the sandboxing issue, do either of the following:\n  - (preferred): Configure your environment to support sandboxing\n  - (alternative): Launch Chromium without sandbox using 'chromiumSandbox: false' option\n================================\n\n",
+        "tests/browserSession.test.ts > actual sandboxed Chromium with controlled website (not LLM) > STOP rejects late approval and blocks the external request:",
+        "tests/browserSession.test.ts#L110",
+        "tests/browserSession.test.ts > actual sandboxed Chromium with controlled website (not LLM) > reads DOM, fills a draft, asks separately for submission and verifies a bounded download:",
+        "tests/browserSession.test.ts#L87"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:08Z",
+          "completedAt": "2026-11-05T22:49:09Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:09Z",
+          "completedAt": "2026-11-05T22:49:11Z"
+        },
+        {
+          "name": "Setup Node",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:11Z",
+          "completedAt": "2026-11-05T22:49:16Z"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:49:16Z",
+          "completedAt": "2026-11-05T22:50:12Z"
+        },
+        {
+          "name": "Skan sekretów (blokuje wyciek kluczy)",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:50:12Z",
+          "completedAt": "2026-11-05T22:50:12Z"
+        },
+        {
+          "name": "Run tests",
+          "conclusion": "failure",
+          "startedAt": "2026-11-05T22:50:12Z",
+          "completedAt": "2026-11-05T22:51:43Z"
+        },
+        {
+          "name": "Type-check + build",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:51:43Z",
+          "completedAt": "2026-11-05T22:51:43Z"
+        },
+        {
+          "name": "Post Setup Node",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-05T22:51:43Z",
+          "completedAt": "2026-11-05T22:51:43Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:51:43Z",
+          "completedAt": "2026-11-05T22:51:43Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "startedAt": "2026-11-05T22:51:43Z",
+          "completedAt": "2026-11-05T22:51:43Z"
+        }
+      ],
+      "fullLogs": "BLOCKED: public page explicitly says Sign in to view logs",
+      "snapshot": {
+        "run": "/tmp/jarvis-alpha2-run-42124662731.html",
+        "job": "/tmp/jarvis-alpha2-job-127585643835.html",
+        "runSha256": "4377e29a5bda0d7239ca9309e6f0979e4ed2aac312b21299724950409fcade51"
+      },
+      "reason": "FAIL: Run tests; same two fixture failures and actual Chromium sandbox launch failures. Public annotations expose Chromium sandboxing failed / No usable sandbox. No sandbox disabling proposed."
+    }
+  ],
+  "tag": "NOT_PUSHED_BY_THIS_AGENT",
+  "limitations": [
+    "Direct api.github.com denied by session proxy; no proxy workaround attempted.",
+    "Full job logs require GitHub sign-in; public statuses, step outcomes and annotations only."
+  ],
+  "packagingRegression": {
+    "status": "PASS",
+    "tests": 13,
+    "productionInstallerChanged": false,
+    "fix": "Synthetic canonical ancestors have controlled root-only permissions; explicit writable /opt regression still rejects before privilege changes. Real fixture app/helper/receipt permissions remain checked.",
+    "log": "QA/autonomia60/durable/evidence/alpha2-packaging-ci-regression.log",
+    "rawSha256": "f652cc8d7f03b99ae9da8bf7b332cbce854d535f968e0ad7d1d2f07c6139c2ba",
+    "storedSha256": "d0ca66ce4627aa05c67850759d91ab55956b5423f33f7f1817c5b7883032a184",
+    "normalization": "Trailing whitespace and extra empty lines at EOF only; all diagnostic/result text retained"
+  },
+  "sourceEvidenceSha256": "8f62467127a3e36c8c72bb2f3e1ac5b157b6a045ff3e73ae1560c08f150fbae4"
+}

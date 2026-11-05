@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-05T22:59:14.294929+00:00",
+  "baselineCommit": "d28089e18a2b3c40f1c1c6580786902ef5a50829",
+  "baselineFailure": {
+    "url": "https://github.com/Talent620/Jarvis/actions/runs/42124662731",
+    "observed": "Five actual browser cases failed during launch with Chromium sandboxing failed / No usable sandbox. Executable existence had incorrectly been treated as a sufficient prerequisite."
+  },
+  "scope": "Test harness only. Browser adapter, production sandbox and permissions unchanged.",
+  "fix": "Probe an actual sandboxed renderer using installed Chrome/Chromium candidates; prefer supported system Chrome before distro Chromium wrappers. Known environment failures may try another installed candidate; unexpected failure remains FAIL. Never install a browser or change sandbox flags/policies.",
+  "assertions": "All five existing browser integration assertion bodies retained unchanged.",
+  "requiredMode": "CI=true (GitHub Actions default) or JARVIS_REQUIRE_BROWSER_TESTS=1 requires READY and makes an unavailable browser a nonzero test run; local unit checks may record BLOCKED without claiming browser acceptance.",
+  "realBrowser": {
+    "status": "PASS",
+    "command": "CI=true npx vitest run tests/browserSession.test.ts tests/browserPrerequisite.test.ts",
+    "passed": 16,
+    "skipped": 0,
+    "actualBrowserScenarios": 5,
+    "precondition": {
+      "schemaVersion": 1,
+      "recordedAt": "2026-11-05T22:57:56.316Z",
+      "commit": "d28089e18a2b3c40f1c1c6580786902ef5a50829",
+      "platform": "linux",
+      "required": true,
+      "status": "READY",
+      "selectedExecutable": "/usr/bin/chromium",
+      "browserVersion": "155.0.8059.79",
+      "attempts": [
+        {
+          "executable": "/usr/bin/google-chrome-stable",
+          "status": "BLOCKED",
+          "code": "EXECUTABLE_MISSING",
+          "reason": "Nie znaleziono zainstalowanego pliku wykonywalnego."
+        },
+        {
+          "executable": "/usr/bin/google-chrome",
+          "status": "BLOCKED",
+          "code": "EXECUTABLE_MISSING",
+          "reason": "Nie znaleziono zainstalowanego pliku wykonywalnego."
+        },
+        {
+          "executable": "/opt/google/chrome/chrome",
+          "status": "BLOCKED",
+          "code": "EXECUTABLE_MISSING",
+          "reason": "Nie znaleziono zainstalowanego pliku wykonywalnego."
+        },
+        {
+          "executable": "/usr/bin/chromium",
+          "status": "READY",
+          "code": "SANDBOXED_RENDERER_STARTED",
+          "reason": "Uruchomiono i zamknięto własny sandboxowany renderer; brak kontaktu z internetem."
+        }
+      ],
+      "chromiumSandbox": true,
+      "mode": "headless sandboxed browser prerequisite, not desktop or agent acceptance",
+      "integrationTestCount": 5,
+      "integrationTests": "REQUIRED: see Vitest assertion results",
+      "desktopAcceptance": "NOT_RUN",
+      "modelAcceptance": "NOT_RUN"
+    },
+    "log": "QA/autonomia60/durable/evidence/browser-precondition-ready.log"
+  },
+  "blockedGateRegression": {
+    "status": "PASS_EXPECTED_REJECTION",
+    "command": "CI=true JARVIS_BROWSER_EXECUTABLE=/tmp/jarvis-browser-prerequisite-intentionally-missing-20261105 npx vitest run tests/browserSession.test.ts tests/browserPrerequisite.test.ts",
+    "exitCode": 1,
+    "failedEnvironmentRequirements": 1,
+    "independentPassed": 10,
+    "notExecutedBrowserScenarios": 5,
+    "precondition": {
+      "schemaVersion": 1,
+      "recordedAt": "2026-11-05T22:58:15.956Z",
+      "commit": "d28089e18a2b3c40f1c1c6580786902ef5a50829",
+      "platform": "linux",
+      "required": true,
+      "status": "BLOCKED",
+      "selectedExecutable": null,
+      "browserVersion": null,
+      "attempts": [
+        {
+          "executable": "/tmp/jarvis-browser-prerequisite-intentionally-missing-20261105",
+          "status": "BLOCKED",
+          "code": "EXECUTABLE_MISSING",
+          "reason": "Nie znaleziono zainstalowanego pliku wykonywalnego."
+        }
+      ],
+      "chromiumSandbox": true,
+      "mode": "headless sandboxed browser prerequisite, not desktop or agent acceptance",
+      "integrationTestCount": 5,
+      "integrationTests": "BLOCKED: not executed",
+      "desktopAcceptance": "NOT_RUN",
+      "modelAcceptance": "NOT_RUN"
+    },
+    "log": "QA/autonomia60/durable/evidence/browser-precondition-blocked.log"
+  },
+  "unitRegressions": {
+    "passed": 6,
+    "scope": "Mock launches verify fallback after known sandbox failure, unchanged secure options, all-backends BLOCKED, unknown failure FAIL, missing executables, renderer correctness/cleanup and explicit executable precedence. This is not proof that Google Chrome is installed or launched locally."
+  },
+  "probeArtifact": "QA/runs/browser-session/precondition.json",
+  "publicFailureDiagnostic": "Sanitized executable/code/reason per attempt included in prerequisite assertion, so failure reasons remain visible in public GitHub annotations.",
+  "sourceSha256": {
+    "tests/browserSession.test.ts": "163cec391be4323916602f571fa8f4649fad4aacf1dba666ff87444e7079cd9e",
+    "tests/helpers/browserPrerequisite.ts": "15c395b44092f8cb7cebf13a772214c474a00c330c01aa07d0ca0f273064bb82",
+    "tests/browserPrerequisite.test.ts": "e571cb057123ad8125550eab51c920f70d3ff93fcc7609dd9076c8c54303b35f"
+  },
+  "logSha256": {
+    "QA/autonomia60/durable/evidence/browser-precondition-ready.log": "3a49d769c72a83494783e37e7a19676ef328b2e29f2187211e6712a055dfa9c1",
+    "QA/autonomia60/durable/evidence/browser-precondition-blocked.log": "235c25f27d4dba3dce9356df55d038cdd08fbb4cfe9c41ba5b952d8d63d2cbc5"
+  },
+  "limits": [
+    "Remote CI rerun pending parent commit/push. No remote success claimed.",
+    "Prerequisite READY and adapter assertions do not establish real-model or native-desktop acceptance.",
+    "This cloud rejects data: navigation by policy; the probe uses a blank page and fixed local HTML with no network access. Browser policies are unchanged."
+  ],
+  "rawLogSha256": {
+    "QA/autonomia60/durable/evidence/browser-precondition-ready.log": "adf24ff2031b2b2b26744840a942cc56f957de77f1fe715adede350e66ab9e8b",
+    "QA/autonomia60/durable/evidence/browser-precondition-blocked.log": "84d371453bca44d2ee00f1c22d1d58decedbc26f4e6b36f8cac5d63f379bebce"
+  },
+  "logNormalization": "Trailing whitespace and extra empty lines at EOF only; all diagnostic/result text retained"
+}

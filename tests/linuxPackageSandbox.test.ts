@@ -7,7 +7,7 @@ import path from "node:path";
 
 const dirs: string[] = [];
 const shellQuote = (value: string) => "'" + value.replace(/'/g, "'\\''") + "'";
-function fixture(options: { badOwner?: boolean; changed?: boolean; noReceipt?: boolean; alternativesFail?: boolean } = {}) {
+function fixture(options: { badOwner?: boolean; changed?: boolean; noReceipt?: boolean; alternativesFail?: boolean; unsafeAncestor?: boolean } = {}) {
   const dir = mkdtempSync(path.join(tmpdir(), "jarvis-postinst-")); dirs.push(dir);
   const app = path.join(dir, "JARVIS"), helper = path.join(app, "chrome-sandbox"), receipt = path.join(dir, "receipt"), log = path.join(dir, "operations");
   mkdirSync(app, { mode: 0o755 });
@@ -27,6 +27,8 @@ id() { if [[ "$1" == '-u' ]]; then echo 0; else /usr/bin/id "$@"; fi; }
 stat() {
   if [[ "$2" == '%u' ]]; then ${options.badOwner ? `if [[ "$3" == "$fixture_helper" ]]; then echo 1000; else echo 0; fi` : "echo 0"}
   elif [[ "$2" == '%u:%g:%a' ]]; then echo "0:0:$(/usr/bin/stat -c '%a' "$3")";
+  elif [[ "$2" == '%a' && "$3" == '/opt' ]]; then echo ${options.unsafeAncestor ? '777' : '755'};
+  elif [[ "$2" == '%a' && ( "$3" == '/' || "$3" == '/var' || "$3" == '/var/lib' || "$3" == '/var/lib/dpkg' || "$3" == '/var/lib/dpkg/info' ) ]]; then echo 755;
   else /usr/bin/stat "$@"; fi
 }
 chown() { [[ "$1" == 'root:root' && "$2" == "$fixture_helper" ]] || exit 98; echo chown >> "$fixture_log"; }
@@ -54,6 +56,13 @@ describe("Debian package sandbox configuration", () => {
     expect(result.status, result.stderr).toBe(0);
     expect(statSync(f.helper).mode & 0o7777).toBe(0o4755);
     expect(readlinkSync(f.launcher)).toBe(path.join(f.app, 'jarvis-ai-assistant'));
+  });
+  it("rejects a writable installation ancestor before privileged changes", () => {
+    const f = fixture({ unsafeAncestor: true }); const result = f.run();
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('group/world-writable path: /opt');
+    expect(statSync(f.helper).mode & 0o7777).toBe(0o755);
+    expect(() => readFileSync(f.log)).toThrow();
   });
   it("rejects a modified helper and missing receipt before privileged changes", () => {
     for (const options of [{ changed: true }, { noReceipt: true }, { badOwner: true }]) {

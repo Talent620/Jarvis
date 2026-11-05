@@ -1,0 +1,15 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/browserPrerequisite.test.ts (6 tests) 11ms
+ ✓ tests/browserSession.test.ts (10 tests) 3929ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > reads DOM, fills a draft, asks separately for submission and verifies a bounded download 1181ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > STOP rejects late approval and blocks the external request 477ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > approves the actual mutated GET request and blocks denied query disclosure 559ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > refuses a download directory symlink and writes nothing outside its scope 431ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > keeps delayed draft requests blocked across a same-document open 1253ms
+
+ Test Files  2 passed (2)
+      Tests  16 passed (16)
+   Start at  22:57:55
+   Duration  5.09s (transform 56ms, setup 0ms, collect 1.32s, tests 3.94s, environment 0ms, prepare 154ms)

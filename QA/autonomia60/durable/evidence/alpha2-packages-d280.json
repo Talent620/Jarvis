@@ -1,0 +1,174 @@
+{
+  "recordedAt": "2026-11-05T22:53:26.817Z",
+  "expectedCommit": "d28089e18a2b3c40f1c1c6580786902ef5a50829",
+  "metadata": {
+    "schemaVersion": 1,
+    "version": "2.1.0-alpha.2",
+    "commit": "d28089e18a2b3c40f1c1c6580786902ef5a50829",
+    "build": "2026-11-05 22:48",
+    "licenseRequired": true,
+    "issuer": "application-default"
+  },
+  "packageVersion": "2.1.0-alpha.2",
+  "checksums": {
+    "JARVIS.AppImage": {
+      "expected": "c51f0e99ec763b51fec6f64f0a0acaa01413607a46261ff759910b483c697f62",
+      "actual": "c51f0e99ec763b51fec6f64f0a0acaa01413607a46261ff759910b483c697f62",
+      "matches": true
+    },
+    "JARVIS.deb": {
+      "expected": "719a206bc33d53f45f1fd1a35ddd333c2949895301834761df1063ae6d87bae9",
+      "actual": "719a206bc33d53f45f1fd1a35ddd333c2949895301834761df1063ae6d87bae9",
+      "matches": true
+    },
+    "PROVENANCE.json": {
+      "expected": "c5218c5c91c9f051e29cd4f2823b7aba2cc72689ed9108c7f9118063330b9c5a",
+      "actual": "c5218c5c91c9f051e29cd4f2823b7aba2cc72689ed9108c7f9118063330b9c5a",
+      "matches": true
+    }
+  },
+  "archives": {
+    "sha256": {
+      "deb": "e760989fccf044a52b4eaa875625f5256fe0586d0be0524a08cd1a29a496c108",
+      "appimage": "e760989fccf044a52b4eaa875625f5256fe0586d0be0524a08cd1a29a496c108"
+    },
+    "identical": true,
+    "entryCount": 9347
+  },
+  "privatePathScan": {
+    "status": "PASS",
+    "forbiddenPaths": [],
+    "scope": "Known private user/configuration paths and signing-key container extensions; no claim of exhaustive secret detection"
+  },
+  "requiredModules": {
+    "electron/main.cjs": true,
+    "electron/skill-manager.cjs": true,
+    "electron/skill-isolation.cjs": true,
+    "electron/workspace-tools.cjs": true,
+    "electron/browser-session.cjs": true,
+    "electron/goal-service.cjs": true,
+    "electron/local-ollama.cjs": true,
+    "electron/local-siteos.cjs": true,
+    "electron/monitor-connectors.cjs": true,
+    "electron/mcp-stdio.cjs": true
+  },
+  "actualElectronFiles": [
+    "electron/browser-session.cjs",
+    "electron/goal-service.cjs",
+    "electron/google.cjs",
+    "electron/launch-app.cjs",
+    "electron/linux-keyboard.cjs",
+    "electron/local-ollama.cjs",
+    "electron/local-siteos.cjs",
+    "electron/main.cjs",
+    "electron/mcp-stdio.cjs",
+    "electron/monitor-connectors.cjs",
+    "electron/page-extract.cjs",
+    "electron/preload.cjs",
+    "electron/public-page.cjs",
+    "electron/skill-isolation.cjs",
+    "electron/skill-manager.cjs",
+    "electron/smtp.cjs",
+    "electron/workspace-tools.cjs"
+  ],
+  "dependencies": {
+    "js-yaml": {
+      "declared": "4.3.2",
+      "packagedVersion": "4.3.2",
+      "exists": true
+    },
+    "playwright-core": {
+      "declared": "1.62.1",
+      "packagedVersion": "1.62.1",
+      "exists": true
+    },
+    "@modelcontextprotocol/sdk": {
+      "declared": "1.32.2",
+      "packagedVersion": "1.32.2",
+      "exists": true
+    }
+  },
+  "componentSmoke": {
+    "status": "PASS",
+    "scope": "Node required extracted production dependencies plus skill-manager/skill-isolation modules; no Electron GUI or agent-autonomy claim"
+  },
+  "debian": {
+    "version": "2.1.0~alpha.2",
+    "helperReceipt": {
+      "algorithm": "md5",
+      "expected": "19dc521280eb82ee664a348b0296b464",
+      "actual": "19dc521280eb82ee664a348b0296b464",
+      "matches": true
+    },
+    "postinstSha256": "3e38b342dad0d1661bc435fc7e635a749737abf49ce65826017e89b979368cd4",
+    "guardsPresent": [
+      "chrome-sandbox differs from installed package",
+      "group/world-writable path",
+      "chmod 4755",
+      "0:0:4755",
+      "hard-linked sandbox helper refused"
+    ],
+    "rootPrivilegeOperation": "NOT_EXECUTED; inspected actual packaged script only",
+    "unsafeSandboxFlags": false,
+    "licenseField": "unknown"
+  },
+  "nativeLaunch": {
+    "status": "BLOCKED",
+    "userId": 1000,
+    "sandboxEnabled": true,
+    "systemInstallation": false,
+    "xvfbInstalled": false,
+    "profile": "<isolated-profile>",
+    "workspace": "<isolated-workspace>",
+    "displayPresent": false,
+    "command": "JARVIS_PROFILE_DIR=<isolated-profile> JARVIS_WORKSPACE_DIR=<isolated-workspace> XDG_CACHE_HOME=<isolated-cache> timeout -k 2s 15s <actual-deb-extracted>/jarvis-ai-assistant --enable-logging=stderr",
+    "attempts": [
+      {
+        "mode": "tool sandbox",
+        "exitCode": 133,
+        "status": "BLOCKED",
+        "blocker": "Outer executor sandbox rejected shutdown operation (EPERM)",
+        "log": "<outer-tool-sandbox-attempt-log>"
+      },
+      {
+        "mode": "authorized regular user outside outer tool sandbox",
+        "exitCode": 139,
+        "status": "BLOCKED",
+        "blocker": "Missing X server or DISPLAY; graphical platform failed to initialize. System D-Bus socket also absent.",
+        "log": "alpha2-native-start-d280.log"
+      }
+    ],
+    "note": "No no-sandbox flags, no Xvfb or installation, no execution of user tasks. Exit 139 occurred after explicit missing-display diagnostics; no native UI PASS is claimed."
+  },
+  "artifactStructureStatus": "PASS",
+  "nativeBinaries": {
+    "sha256": {
+      "deb": "ee99780b5878638df40bf577cfcdbc3c157b0b3581ada099a13db446f1af84d8",
+      "appimage": "ee99780b5878638df40bf577cfcdbc3c157b0b3581ada099a13db446f1af84d8"
+    },
+    "identical": true
+  },
+  "unpackedResources": {
+    "identical": true,
+    "files": 4,
+    "inventorySha256": "dd7fc37fb800b89094296ab5a49c3169044873d95595c9420dbceded03c90e40"
+  },
+  "overallAcceptance": "BLOCKED: structure and extracted component checks passed; native graphical acceptance requires authorized display/session",
+  "rawEvidence": {
+    "packages": {
+      "sha256": "48c8d08d1d9ba4b9a9ec11acb5d29a39d4baa3776b39c6206bda9220358f643c",
+      "normalization": "Temporary execution paths replaced by role placeholders; JSON reformatted; original hash retained."
+    },
+    "native": {
+      "sha256": "954c5174fbbb3967bc6c13555578b50540ff8b5d662e64acad8245f114fbfb5e",
+      "normalization": "No whitespace or diagnostic content normalization."
+    },
+    "outerSandbox": {
+      "sha256": "90e04a54f19c5bf3d88348d8f8967bf6063af38276ba0e3842adb50bd85fe148",
+      "normalization": "No whitespace or diagnostic content normalization."
+    },
+    "sourceJson": {
+      "sha256": "48c8d08d1d9ba4b9a9ec11acb5d29a39d4baa3776b39c6206bda9220358f643c"
+    }
+  }
+}

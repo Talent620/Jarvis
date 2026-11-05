@@ -1,0 +1,28 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+stderr | tests/browserSession.test.ts
+[browser prerequisite] BLOCKED: /tmp/jarvis-browser-prerequisite-intentionally-missing-20261105: EXECUTABLE_MISSING. Evidence: QA/runs/browser-session/precondition.json
+
+ ✓ tests/browserPrerequisite.test.ts (6 tests) 14ms
+ ❯ tests/browserSession.test.ts (10 tests | 1 failed | 5 skipped) 36ms
+   × requires a working sandboxed renderer in CI or explicitly required native runs 8ms
+     → Sandboxed browser prerequisite BLOCKED: {"executable":"/tmp/jarvis-browser-prerequisite-intentionally-missing-20261105","code":"EXECUTABLE_MISSING","reason":"Nie znaleziono zainstalowanego pliku wykonywalnego."}. Evidence: QA/runs/browser-session/precondition.json. No browser/desktop PASS is established.: expected 'BLOCKED' to be 'READY' // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/browserSession.test.ts > requires a working sandboxed renderer in CI or explicitly required native runs
+AssertionError: Sandboxed browser prerequisite BLOCKED: {"executable":"/tmp/jarvis-browser-prerequisite-intentionally-missing-20261105","code":"EXECUTABLE_MISSING","reason":"Nie znaleziono zainstalowanego pliku wykonywalnego."}. Evidence: QA/runs/browser-session/precondition.json. No browser/desktop PASS is established.: expected 'BLOCKED' to be 'READY' // Object.is equality
+
+Expected: "READY"
+Received: "BLOCKED"
+
+ ❯ tests/browserSession.test.ts:29:220
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 10 passed | 5 skipped (16)
+   Start at  22:58:15
+   Duration  674ms (transform 89ms, setup 0ms, collect 615ms, tests 50ms, environment 0ms, prepare 107ms)
