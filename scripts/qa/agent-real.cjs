@@ -1,11 +1,26 @@
-/* global localStorage */
 // Existing scenario implementation, called by qa:desktop; legacy command is an alias.
 const { fs, path, pause } = require('./common.cjs');
+function verifiedReply(chats, command, expected) {
+  return chats.some(c => {
+    const at = c.messages.findIndex(m => m.role === 'user' && m.text === command);
+    const replies = c.messages.slice(at + 1).filter(m => m.role === 'assistant');
+    return at >= 0 && replies.length === 1 && replies[0].text.includes(expected);
+  });
+}
 async function runScenarios({ run, page, workspace }) {
   const { send, stored } = require('./agent-smoke.cjs');
   let phase = 'setup'; const network = [], consentLog = [];
   const commands = new Map();
   async function issue(text) { commands.set(phase, text); await send(page, text); }
+  async function waitForAnswer(command, expected) {
+    const started = performance.now();
+    while (performance.now() - started < 20000) {
+      const snapshot = await stored(page);
+      if (verifiedReply(snapshot.chats, command, expected)) return snapshot;
+      await pause(100);
+    }
+    throw Error('The saved assistant answer did not confirm the requested file content');
+  }
   try {
     const requestPhases = new WeakMap();
     page.on('request', r => { if (r.url().includes('/api/chat')) {
@@ -47,7 +62,8 @@ async function runScenarios({ run, page, workspace }) {
     phase = 'A';
     const textA = 'Zażółć gęślą jaźń.', nameA = 'notatka-orion.txt';
     const commandA = `Utwórz w katalogu testowym plik ${nameA}. Wpisz dokładnie: ${textA} Bez końcowego znaku nowej linii. Odczytaj plik narzędziem i potwierdź zawartość. Test ${run.id}.`;
-    await issue(commandA); run.write('A-result.json', await waitTurn(nameA, textA));
+    await issue(commandA); await waitTurn(nameA, textA);
+    run.write('A-result.json', await waitForAnswer(commandA, textA));
     if (!network.some(e => e.phase === 'A' && e.event === 'response' && e.status === 200)) throw Error('A did not use a real model response');
     run.record({ id: 'A', level: 'C + D', status: 'PASS', detail: 'Normal UI → real model → freshly authorized file write/read; independent filesystem and read audit verified.', evidence: ['A-result.json', 'network.json', 'consents.json'] });
     phase = 'B';
@@ -72,10 +88,7 @@ async function runScenarios({ run, page, workspace }) {
     const commandC = `Utwórz plik ${nameC} w katalogu testowym. Dokładna treść: „${textC}” (bez cudzysłowów, bez końcowej nowej linii). Odczytaj go i podaj dokładną zawartość w odpowiedzi.`;
     await issue(commandC);
     await waitTurn(nameC, textC);
-    await page.waitForFunction(text => {
-      const chats = JSON.parse(localStorage.getItem('jarvis.chats.v1') || '[]');
-      return chats.some(c => { const i = c.messages.findIndex(m => m.role === 'user' && m.text === text.command); const replies = c.messages.slice(i + 1).filter(m => m.role === 'assistant'); return i >= 0 && replies.length === 1 && replies[0].text.includes(text.expected); });
-    }, { command: commandC, expected: textC }, { timeout: 20000 });
+    await waitForAnswer(commandC, textC);
     await pause(1000);
     const finalState = await stored(page); run.write('B-new-result.json', finalState);
     const session = finalState.chats.find(c => c.messages.some(m => m.text === commandC && m.role === 'user'));
@@ -92,5 +105,5 @@ async function runScenarios({ run, page, workspace }) {
     run.write('network.json', network); run.write('consents.json', consentLog);
   }
 }
-module.exports = { runScenarios };
+module.exports = { runScenarios, verifiedReply };
 if (require.main === module) require('./desktop.cjs').main();

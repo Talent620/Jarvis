@@ -37,3 +37,11 @@ it('does not turn independent passes into overall success while the main scenari
   expect(resultExitCode([{ id: 'A', status: 'PASS' }, { id: 'B', status: 'PASS' }, { id: 'C', status: 'PASS' }])).toBe(0);
   expect(resultExitCode([{ id: 'A', status: 'FAIL' }])).toBe(1);
 });
+it('does not accept a user echo, an earlier answer, or a late extra answer as the new task result', () => {
+  const { verifiedReply } = require('../scripts/qa/agent-real.cjs');
+  const user = { role: 'user', text: 'read file' }, answer = { role: 'assistant', text: 'Zażółć gęślą jaźń.' };
+  expect(verifiedReply([{ messages: [answer, user] }], user.text, answer.text)).toBe(false);
+  expect(verifiedReply([{ messages: [{ ...user, text: answer.text }] }], answer.text, answer.text)).toBe(false);
+  expect(verifiedReply([{ messages: [user, answer] }], user.text, answer.text)).toBe(true);
+  expect(verifiedReply([{ messages: [user, answer, { role: 'assistant', text: 'late old result' }] }], user.text, answer.text)).toBe(false);
+});
