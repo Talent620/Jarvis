@@ -11,7 +11,7 @@ const LABEL: Record<GoalStatus, string> = {
   waiting_user: "Sprawdź wynik", paused: "Wstrzymane", completed: "Ukończone", failed: "Wymaga uwagi",
 };
 
-export default function GoalStatusPanel({ onClose }: { onClose: () => void }) {
+export default function GoalStatusPanel({ onClose, onRuntime }: { onClose: () => void; onRuntime?: () => void }) {
   const [goals, setGoals] = useState<GoalRecord[]>([]);
   const [error, setError] = useState("");
   const [goal, setGoal] = useState("");
@@ -64,6 +64,7 @@ export default function GoalStatusPanel({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <p className="muted queue-hint">Kolejka działa przy otwartej aplikacji. Po ponownym uruchomieniu podejmuje zapisane zadania. Pauza zatrzymuje pracę przed kolejnym krokiem; rozpoczęta operacja kończy się osobno.</p>
+      {onRuntime && <button className="btn" onClick={onRuntime}>Analizy na serwerze — działają po zamknięciu okna</button>}
       <label className="queue-label" htmlFor="queue-goal">Co mam doprowadzić do końca?</label>
       <textarea id="queue-goal" className="ta" value={goal} onChange={(e) => setGoal(e.target.value)} maxLength={4000} placeholder="Np. sprawdź pliki projektu, znajdź przyczynę błędu i przygotuj poprawkę wraz z testem." />
       <div className="queue-actions">

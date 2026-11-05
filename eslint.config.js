@@ -16,7 +16,8 @@ export default tseslint.config(
       "**/node_modules/**",
       "node_modules_incomplete/**",
       "sales-os",
-      "server",
+      "server/*",
+      "!server/runtime/",
       "demo-przempol",
       "kompas", // osobny produkt z własnym lintem (kompas/eslint.config.js)
       "*.config.*",
@@ -63,7 +64,7 @@ export default tseslint.config(
   },
   // --- Node (ESM): skrypty .mjs/.js + setup proxy ---
   {
-    files: ["scripts/**/*.{mjs,js}", "proxy/setup.mjs"],
+    files: ["scripts/**/*.{mjs,js}", "proxy/setup.mjs", "server/runtime/**/*.mjs"],
     languageOptions: { sourceType: "module", globals: { ...globals.node } },
     rules: {
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" }],

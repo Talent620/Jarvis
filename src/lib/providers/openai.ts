@@ -52,7 +52,7 @@ export function makeOpenAICompatible(
 
     const headers = {
       "content-type": "application/json",
-      authorization: `Bearer ${ctx.apiKey}`,
+      ...(ctx.apiKey?.trim() ? { authorization: `Bearer ${ctx.apiKey}` } : {}),
       ...opts.extraHeaders,
       ...(ctx.proxyUrl ? appTokenHeader() : {}),
     };

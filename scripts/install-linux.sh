@@ -70,6 +70,9 @@ jarvis_work=$(mktemp -d "$jarvis_install_dir/.install.XXXXXXXX")
 jarvis_target="$jarvis_install_dir/JARVIS.AppImage"
 jarvis_wrapper="$jarvis_bin_dir/jarvis"
 jarvis_desktop="$jarvis_apps_dir/jarvis.desktop"
+jarvis_icon_source="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/public/icon-512.png"
+jarvis_icon_target="$jarvis_install_dir/icon.png"
+jarvis_icon=applications-science
 
 case "$jarvis_source" in
   https://*)
@@ -91,10 +94,58 @@ else
   printf 'Nie podano sumy SHA256; źródło pliku musi być zaufane.\n' >&2
 fi
 chmod 755 "$jarvis_work/JARVIS.AppImage"
+if [[ -s "$jarvis_icon_source" ]]; then
+  cp -- "$jarvis_icon_source" "$jarvis_work/icon.png"
+  chmod 644 "$jarvis_work/icon.png"
+  jarvis_icon=$jarvis_icon_target
+fi
 {
   printf '#!/usr/bin/env bash\nset -e\ncd -- '
   printf '%q' "$jarvis_install_dir"
-  printf '\nexport APPIMAGE_EXTRACT_AND_RUN=1\nexec '
+  printf '\njarvis_runtime='
+  printf '%q' "$jarvis_bin_dir/jarvis-runtime"
+  cat <<'LAUNCHER'
+
+# A desktop click restores the existing runtime before opening the window.
+# This checks server availability, not model readiness: SETUP must not block UI.
+jarvis_bootstrap_runtime() (
+  umask 077
+  jarvis_runtime=$1
+  jarvis_state=$2
+  timeout --foreground 1s "$jarvis_runtime" status >/dev/null 2>&1 && return 0
+  mkdir -p -- "$jarvis_state" || return 1
+  chmod 700 "$jarvis_state" || return 1
+  jarvis_log="$jarvis_state/runtime.log"
+  [[ ! -L "$jarvis_log" && ! -L "$jarvis_state/runtime-launch.lock" ]] || return 1
+  touch -- "$jarvis_log" && chmod 600 "$jarvis_log" || return 1
+  exec 9>"$jarvis_state/runtime-launch.lock"
+  if command -v flock >/dev/null; then flock -w 3 9 || return 1; fi
+  timeout --foreground 1s "$jarvis_runtime" status >/dev/null 2>&1 && return 0
+  if command -v systemctl >/dev/null &&
+      timeout --foreground 1s systemctl --user show-environment >/dev/null 2>&1 &&
+      [[ $(timeout --foreground 1s systemctl --user show --property=LoadState --value jarvis-runtime.service 2>/dev/null) == loaded ]]; then
+    timeout --foreground 1s systemctl --user start --no-block jarvis-runtime.service >>"$jarvis_log" 2>&1 || return 1
+  else
+    # Do not inherit the short-lived launcher lock into the long-lived server.
+    nohup "$jarvis_runtime" start >>"$jarvis_log" 2>&1 < /dev/null 9>&- &
+  fi
+  for jarvis_attempt in 1 2 3 4 5 6 7 8 9 10; do
+    timeout --foreground 0.5s "$jarvis_runtime" status >/dev/null 2>&1 && return 0
+    sleep 0.15
+  done
+  printf 'Serwer nie odpowiedział podczas startu; sprawdź jego stan w aplikacji.\n' >>"$jarvis_log"
+  return 1
+)
+if [[ -x "$jarvis_runtime" ]] && command -v timeout >/dev/null; then
+  export -f jarvis_bootstrap_runtime
+  timeout --foreground --kill-after=1s 5s bash -c 'jarvis_bootstrap_runtime "$@"' _ \
+    "$jarvis_runtime" "${XDG_STATE_HOME:-$HOME/.local/state}/jarvis" >/dev/null 2>&1 || true
+  unset -f jarvis_bootstrap_runtime
+  export JARVIS_RUNTIME_BOOTSTRAP=launcher
+fi
+export APPIMAGE_EXTRACT_AND_RUN=1
+LAUNCHER
+  printf 'exec '
   printf '%q' "$jarvis_target"
   printf ' "$@"\n'
 } > "$jarvis_work/jarvis"
@@ -113,11 +164,13 @@ desktop_quote() {
 {
   printf '[Desktop Entry]\nType=Application\nName=JARVIS\nComment=Asystent AI, rozmowa i kolejka zadań\nExec=/usr/bin/env '
   desktop_quote "$jarvis_wrapper"
-  printf '\nIcon=applications-science\nTerminal=false\nCategories=Utility;\nStartupNotify=true\n'
+  # Icon is a Desktop Entry string, with one escaping layer (unlike Exec).
+  printf '\nIcon=%s\nTerminal=false\nCategories=Utility;\nStartupNotify=true\n' "${jarvis_icon//\\/\\\\}"
 } > "$jarvis_work/jarvis.desktop"
 chmod 644 "$jarvis_work/jarvis.desktop"
 
 jarvis_paths=("$jarvis_target" "$jarvis_wrapper" "$jarvis_desktop")
+[[ ! -f "$jarvis_work/icon.png" ]] || jarvis_paths+=("$jarvis_icon_target")
 for jarvis_index in "${!jarvis_paths[@]}"; do
   jarvis_path=${jarvis_paths[$jarvis_index]}
   [[ ! -L "$jarvis_path" ]] || fail "Plik docelowy jest dowiązaniem symbolicznym: $jarvis_path"
@@ -133,6 +186,7 @@ fi
 jarvis_changed=1
 mv -f -- "$jarvis_work/JARVIS.AppImage" "$jarvis_target"
 mv -f -- "$jarvis_work/jarvis" "$jarvis_wrapper"
+[[ ! -f "$jarvis_work/icon.png" ]] || mv -f -- "$jarvis_work/icon.png" "$jarvis_icon_target"
 mv -f -- "$jarvis_work/jarvis.desktop" "$jarvis_desktop"
 jarvis_committed=1
 if command -v update-desktop-database >/dev/null; then update-desktop-database "$jarvis_apps_dir" >/dev/null 2>&1 || true; fi
@@ -148,7 +202,7 @@ if ((jarvis_launch)); then
     jarvis_pid=$!
     sleep 2
     if kill -0 "$jarvis_pid" 2>/dev/null; then
-      printf 'JARVIS został uruchomiony.\n'
+      printf 'Uruchamianie JARVIS-a w toku.\n'
     else
       set +e
       wait "$jarvis_pid"

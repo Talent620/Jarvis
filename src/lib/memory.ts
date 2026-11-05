@@ -40,6 +40,8 @@ let embedDisabled = false; // ustawiane, gdy brak źródła embeddingów w CHMUR
 
 /** Embeddingi chmurowe (Gemini bezpośrednio lub przez proxy) albo null. */
 async function embedCloud(texts: string[]): Promise<number[][] | null> {
+  // On-device zabrania także pomocniczych wywołań chmurowych po awarii embeddera.
+  if (store.settings.onDeviceOnly) return null;
   if (embedDisabled) return null;
   const key = primaryKey("gemini");
   const proxy = store.settings.proxyUrl?.trim();

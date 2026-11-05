@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { afterEach, describe, it, expect, beforeEach, vi } from "vitest";
 
 // Mock lokalnego embeddera — sterujemy nim w testach.
 vi.mock("../src/lib/localEmbed", () => ({
@@ -9,7 +9,7 @@ vi.mock("../src/lib/localEmbed", () => ({
 }));
 
 import { embedLocal, localEmbedUsable } from "../src/lib/localEmbed";
-import { rememberFact } from "../src/lib/memory";
+import { ensureIndexed, prepareMemoryContext, memoryBlock, rememberFact } from "../src/lib/memory";
 import { store } from "../src/lib/store";
 
 const mockEmbedLocal = embedLocal as unknown as ReturnType<typeof vi.fn>;
@@ -30,13 +30,46 @@ function cloudFetchOk() {
 
 beforeEach(() => {
   store.setData((d) => { d.memory = []; });
-  store.setSettings({ keys: { ...store.settings.keys, gemini: "k-test" }, localEmbeddings: false, proxyUrl: "" });
+  store.setSettings({ keys: { ...store.settings.keys, gemini: "k-test" }, localEmbeddings: false, proxyUrl: "", onDeviceOnly: false });
   mockEmbedLocal.mockReset();
   mockUsable.mockReset();
   mockUsable.mockReturnValue(false);
 });
 
+afterEach(() => vi.unstubAllGlobals());
+
 describe("memory — embeddingi on-device z fallbackiem do chmury", () => {
+  it.each(["client-key", "server-key"])("on-device retains local facts without HTTP embedding via %s", async (credentials) => {
+    store.setSettings({
+      onDeviceOnly: true,
+      proxyUrl: credentials === "server-key" ? "https://bff.example" : "",
+      keys: { ...store.settings.keys, gemini: credentials === "client-key" ? "k-test" : "" },
+    });
+    store.setData((data) => { data.memory = [{ id: "private", key: "miasto", value: "Kraków", createdAt: Date.now() }]; });
+    const fetcher = cloudFetchOk();
+    vi.stubGlobal("fetch", fetcher);
+
+    await ensureIndexed();
+    await prepareMemoryContext("W jakim mieście mieszkam?");
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(memoryBlock()).toContain("Kraków");
+    expect(store.data.memory[0].embedding).toBeUndefined();
+  });
+
+  it("does not send personal facts to cloud when a local embedder fails in on-device mode", async () => {
+    store.setSettings({ onDeviceOnly: true, localEmbeddings: true, proxyUrl: "https://bff.example" });
+    mockUsable.mockReturnValue(true);
+    mockEmbedLocal.mockResolvedValue(null);
+    store.setData((data) => { data.memory = [{ id: "private", key: "miasto", value: "Kraków", createdAt: Date.now() }]; });
+    const fetcher = cloudFetchOk();
+    vi.stubGlobal("fetch", fetcher);
+
+    await ensureIndexed();
+    expect(mockEmbedLocal).toHaveBeenCalledOnce();
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(store.data.memory[0].value).toBe("Kraków");
+  });
+
   it("preferuje on-device, gdy włączone i użyteczne (tag local)", async () => {
     store.setSettings({ localEmbeddings: true });
     mockUsable.mockReturnValue(true);

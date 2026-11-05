@@ -23,6 +23,9 @@ interface ChatTurn {
 }
 
 function baseUrl(): string {
+  // Zewnętrzny Mem0 może sam używać chmurowego LLM, również pod adresem localhost.
+  // W trybie on-device pozostaje pamięć lokalna aplikacji.
+  if (store.settings.onDeviceOnly) return "";
   return (store.settings.memoryServiceUrl || "").trim().replace(/\/$/, "");
 }
 function authHeaders(): Record<string, string> {
@@ -30,7 +33,7 @@ function authHeaders(): Record<string, string> {
   return { "content-type": "application/json", ...appTokenHeader(), ...(t ? { authorization: `Bearer ${t}` } : {}) };
 }
 
-/** Czy pamięć długoterminowa jest skonfigurowana (adres serwera Mem0 podany). */
+/** Czy Mem0 jest skonfigurowany i dozwolony w bieżącym trybie. */
 export function memoryServiceAvailable(): boolean {
   return !!baseUrl();
 }

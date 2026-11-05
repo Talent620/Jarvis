@@ -6,7 +6,7 @@ Data: 2026-11-05. Punkt wyjścia: commit `964646ae020eb37d8b832c1b625084c49215bd
 
 JARVIS posiada funkcjonalne komponenty: desktop, czat, narzędzia, pamięć i kolejkę z zapisem stanu, różne silniki głosowe, interfejs Classic/PRO. To jednak nie jest jeszcze jeden lokalny serwer z jedną pamięcią dla urządzeń ani zmierzony system klasy światowej.
 
-1. Kolejka (`src/lib/goalQueue.ts`, uruchamiana w `src/App.tsx`) żyje w procesie klienta. Wznowienie po ponownym otwarciu to nie to samo co nieprzerwane wykonanie po zamknięciu aplikacji.
+1. Istnieją teraz dwie kolejki o różnych możliwościach. Dotychczasowa kolejka narzędzi (`src/lib/goalQueue.ts`, uruchamiana w `src/App.tsx`) żyje w procesie klienta. Nowa kolejka serwera działa po zamknięciu klienta, lecz wykonuje wyłącznie analizę tekstową lokalnym modelem. Nie przenosi zadań narzędziowych na serwer.
 2. Plan i wykonawca mają skończone budżety kroków i wywołań. Nazwy ról nie dowodzą niezależnych agentów; `resultVerifier.ts` sprawdza zapisane statusy i nie przeprowadza niezależnych testów rezultatu. Niezależna weryfikacja kodu i efektów wymaga osobnej implementacji.
 3. Uprawnienia i ograniczanie katalogów już istnieją, ale uruchomienie procesu z danym `cwd` nie jest sandboxem. Domyślne kodowanie w odizolowanym środowisku trzeba dopiero zbudować i sprawdzić.
 4. Dostawca i klucze nie są dowodem działania modelu; lokalny adres usługi nie jest dowodem lokalnego wykonania. Pełne `local_only`, wspólny wersjonowany RuntimeProfile oraz brak chmurowego fallbacku na wszystkich ścieżkach nie zostały wykazane.
@@ -18,14 +18,19 @@ Szacunkowa ocena dojrzałości względem docelowej wizji: **3/10**, subiektywna 
 ## Pierwsze konkretne poprawki
 
 - `hasUsableBrain` nie uznaje już samego wyboru dostawcy z pustym kluczem za skonfigurowaną ścieżkę i uwzględnia tryb lokalny oraz przekazane ustawienia. Nadal nie jest to rzeczywisty test modelu ani połączenia. Funkcje pomocnicze `askModel` mogą teraz użyć Ollamy w trybie auto bez klucza chmurowego; test wykorzystuje mock, nie prawdziwy model.
-- Wykryto osobną lukę: ścieżka BFF z kluczami wyłącznie na serwerze jest obecna, ale obecny router pomija dostawcę bez klucza po stronie klienta. Wymaga osobnej naprawy i testów end-to-end; samo ustawienie URL proxy nie dowodzi gotowości.
+- Naprawiono routing BFF dla obsługiwanych dostawców, gdy klucze znajdują się po stronie serwera. Testy sprawdzają rzeczywiste adaptery HTTP na mockowanych odpowiedziach, fallback oraz rozdzielenie trybu on-device od BFF. Nie wykonano testu z rzeczywistym wdrożonym BFF i prawdziwymi kluczami; sam adres proxy nie dowodzi gotowości.
 - Log narzędzi workspace nie zapisuje swobodnej treści plików, kodu i argumentów terminala, a typowe pola poświadczeń i dane URL są redagowane. To ogranicza ryzyko, lecz dowolny sekret w nieznanym polu nadal może trafić do logu; historyczne logi nie zostały wyczyszczone. Status jawnie rozróżnia ograniczenia ścieżek od braku sandboxa procesów.
+
+- Dodano `server/runtime`: serwer HTTP na loopback z prywatnym tokenem, profilem żądanym i aktywnym, wyborem zainstalowanego modelu Ollamy, testem odpowiedzi i trwałą kolejką analiz. Stan zadań jest zapisywany atomowo w pliku JSON; zadania mają identyfikatory żądań, statusy, wyniki i anulowanie. Zadania przerwane restartem są przywracane do kolejki, ponieważ ten wykonawca realizuje wyłącznie analizę tekstową.
+- Panel „Serwer lokalny” pozwala wybrać model GGUF dostępny w Ollamie, uruchomić test, zlecić analizę i przeglądać jej wynik. Electron odczytuje prywatny plik połączenia, sprawdzając jego uprawnienia. Serwis użytkownika `jarvis-runtime.service` umożliwia dalsze działanie po zamknięciu okna aplikacji, gdy usługa nadal działa. Instrukcja: [LOCAL_RUNTIME.md](LOCAL_RUNTIME.md).
+- Metadane GGUF i adres loopback ograniczają wybór, lecz nie dowodzą braku ruchu wychodzącego procesu Ollamy. Samo oznaczenie profilu `local_only` nie jest sieciowym zabezpieczeniem ani dowodem rzeczywistej prywatności. Wybranego modelu i usługę Ollama musi przygotować użytkownik; instalator ich nie pobiera.
+- Ostatni pełny wynik przed zmianami serwera: 2835 testów w 331 plikach. Końcowy wynik po dopracowaniu uruchamiania jednym kliknięciem: **2929 PASS w 338 plikach, 0 FAIL, 0 SKIP**. Testy Kompas: 18 PASS; Site OS API: PASS; narzędzia workspace: 10 PASS, 2 NOT_RUN. Wyniki mockowane i testy automatyczne nie są testem rzeczywistego modelu ani urządzeń użytkownika. Szczegóły: [raport walidacji](VALIDATION_2026-11-05.md).
 
 To jest początek wdrożenia, nie pełny przekrój `LOCAL_AUTOPILOT`. Wszystkie scenariusze akceptacyjne T1–T16 z protokołu wymagają osobnego wykonania i w tym audycie mają status **NOT_RUN**.
 
 ## Kierunek architektury
 
-- Jeden serwer Linux jako źródło zadań, zdarzeń, historii i wersjonowanej konfiguracji; SQLite na początek. Klienci Windows, Android i desktop pokazują ten sam stan.
+- Docelowo jeden serwer Linux jako źródło zadań, zdarzeń, historii i wersjonowanej konfiguracji. Aktualny runtime posiada tylko własny plik stanu dla analiz i profil modelu; SQLite nie jest jeszcze używane. Wspólna historia i stan klientów Windows, Android i desktop pozostają do wdrożenia.
 - Rozdzielić żądany profil, faktycznie aktywne komponenty i wyniki testów z datą ważności. Status „READY” wymaga rzeczywistego testu danej funkcji; ustawiony URL, klucz lub proces nie wystarczają.
 - Local-only egzekwować w konfiguracji, wykonawcach i sieci, nie wyłącznie w instrukcji modelu. Brak sprawdzonego lokalnego modelu = konkretny stan i instrukcja naprawy, nigdy cichy fallback do chmury.
 - Serwerowa trwała kolejka z checkpointami, idempotencją oraz procedurą uzgadniania niejednoznacznych efektów zewnętrznych. Ograniczenie uprawnień i anulowanie poza modelem.
@@ -37,7 +42,7 @@ To jest początek wdrożenia, nie pełny przekrój `LOCAL_AUTOPILOT`. Wszystkie 
 
 1. **Uczciwa gotowość i baza pomiarowa.** Poprawić fałszywą dostępność dostawcy; zachować rozróżnienie konfiguracja/zweryfikowane działanie. Zbudować niezmienny zestaw prywatnych i publicznych zadań, w tym po polsku. Zmierzyć wersję bazową.
 2. **Pierwszy pełny pion Linux.** Profil lokalny → wykrycie sprzętu → model i rzeczywista odpowiedź → lokalny głos → naprawa błędu w kontrolowanym repo → niezależne testy → raport i prawdziwy status. Model, wersję, licencję i zasoby dobrać po pomiarach. Bez rzeczywistej próby offline T1–T9 pozostają NOT_RUN.
-3. **Trwałość i uprawnienia.** Przenieść kolejkę na serwer; sprawdzić restart, ponowienia, niejednoznaczne efekty, stop i backup/restore. Testować bezpieczeństwo procesu poza ograniczeniem cwd.
+3. **Trwałość i uprawnienia.** Rozszerzyć serwerową kolejkę analiz o bezpieczne wykonawce narzędzi; sprawdzić restart, ponowienia, niejednoznaczne efekty, stop i backup/restore. Istniejąca kolejka narzędzi nadal działa w kliencie. Testować bezpieczeństwo procesu poza ograniczeniem cwd.
 4. **Urządzenia.** Parowanie z krótkotrwałymi tokenami, odwołanie, synchronizacja historii i zadań, testy Windows/Android na urządzeniach oraz odzyskiwanie po rozłączeniu. Nie traktować emulacji jako testu fizycznego.
 5. **Ulepszanie na dowodach.** Dopiero po bazowej gotowości dodać eksperymenty z hipotezą, budżetem, niezmiennym zestawem oceniającym, porównaniem i rollbackiem.
 

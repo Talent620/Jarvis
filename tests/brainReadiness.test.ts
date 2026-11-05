@@ -17,10 +17,16 @@ const baseline = {
 };
 
 describe("configured AI path", () => {
-  it("does not treat a selected provider, empty keys or a proxy alone as usable", () => {
+  it("does not treat a selected provider or empty keys as a configured route", () => {
     expect(hasUsableBrain(baseline)).toBe(false);
-    expect(hasUsableBrain({ ...baseline, proxyUrl: "https://proxy.example" })).toBe(false);
     expect(hasUsableBrain({ ...baseline, keys: { ...emptyKeys, gemini: " , \n , " } })).toBe(false);
+  });
+
+  it("recognizes BFF configuration without claiming its server credentials are verified", () => {
+    expect(hasUsableBrain({ ...baseline, proxyUrl: "https://proxy.example" })).toBe(true);
+    expect(hasUsableBrain({ ...baseline, proxyUrl: "   " })).toBe(false);
+    expect(hasUsableBrain({ ...baseline, proxyUrl: "not a URL" })).toBe(false);
+    expect(hasUsableBrain({ ...baseline, proxyUrl: "file:///tmp/proxy" })).toBe(false);
   });
 
   it("uses the supplied settings, rather than silently reading the global provider", () => {

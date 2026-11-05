@@ -52,7 +52,7 @@ export async function askAnthropic(ctx: AskCtx): Promise<JarvisReply> {
 
   const headers = {
     "content-type": "application/json",
-    "x-api-key": ctx.apiKey,
+    ...(ctx.apiKey?.trim() ? { "x-api-key": ctx.apiKey } : {}),
     "anthropic-version": "2023-06-01",
     "anthropic-dangerous-direct-browser-access": "true",
     ...(ctx.proxyUrl ? appTokenHeader() : {}),

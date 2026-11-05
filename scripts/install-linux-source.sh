@@ -14,6 +14,7 @@ Pobiera źródła, instaluje brakujące zależności, buduje i uruchamia JARVIS-
 Linux x86_64: Ubuntu, Debian, Linux Mint i zgodne pochodne z apt-get.
 JARVIS_SOURCE_REF wybiera gałąź/tag/commit; JARVIS_SOURCE_REPO wybiera repozytorium.
 Instalacja aplikacji jest per-user. sudo jest używane tylko dla brakujących pakietów systemowych.
+--no-launch instaluje aplikację i lokalny serwer bez ich uruchamiania.
 HELP
 }
 fail() { printf 'JARVIS: %s\n' "$*" >&2; exit 1; }
@@ -111,16 +112,43 @@ fetch "https://codeload.github.com/$jarvis_repo/tar.gz/$jarvis_ref" "$jarvis_wor
 mkdir "$jarvis_work/source"
 tar -xzf "$jarvis_work/source.tar.gz" --strip-components=1 --no-same-owner -C "$jarvis_work/source"
 cd "$jarvis_work/source"
-[[ -f package-lock.json && -f scripts/install-linux.sh && -f electron-builder.json ]] || fail 'Pobrana wersja nie zawiera kompletnego instalatora JARVIS-a.'
+[[ -f package-lock.json && -f scripts/install-linux.sh && -f scripts/install-runtime.sh && -f server/runtime/cli.mjs && -f electron-builder.json ]] || fail 'Pobrana wersja nie zawiera kompletnego instalatora JARVIS-a.'
 printf '\n[4/5] Instaluję zależności i buduję aplikację. Pierwsza instalacja może potrwać kilka minut.\n'
 env -u ELECTRON_SKIP_BINARY_DOWNLOAD npm ci --no-audit --no-fund
 JARVIS_LICENSE_REQUIRED=false npm run build
 node node_modules/electron-builder/cli.js --linux AppImage --publish never
 [[ -s release-desktop/JARVIS.AppImage ]] || fail 'Budowanie nie utworzyło AppImage.'
 jarvis_app_sha=$(sha256sum release-desktop/JARVIS.AppImage)
-jarvis_install_args=(--sha256 "${jarvis_app_sha%% *}")
-((jarvis_no_launch == 0)) || jarvis_install_args+=(--no-launch)
+jarvis_install_args=(--sha256 "${jarvis_app_sha%% *}" --no-launch)
 printf '\n[5/5] Instaluję aplikację i skrót w menu.\n'
 env -u JARVIS_INSTALL_URL -u JARVIS_INSTALL_SHA256 bash scripts/install-linux.sh "${jarvis_install_args[@]}" "$PWD/release-desktop/JARVIS.AppImage"
-printf '\nGotowe. Nowy profil: PRO NEW, Indygo, automatyczna kolejka, pogłębiona analiza i weryfikacja.\n'
-printf 'Istniejące ustawienia pozostają zachowane. Model AI i integracje podłączysz w Ustawieniach JARVIS-a.\n'
+jarvis_runtime_args=()
+((jarvis_no_launch == 0)) || jarvis_runtime_args+=(--no-start)
+bash scripts/install-runtime.sh "${jarvis_runtime_args[@]}"
+if ((jarvis_no_launch == 0)); then
+  if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
+    printf 'Brak sesji graficznej. Uruchom JARVIS-a z menu po zalogowaniu do pulpitu.\n'
+  else
+    jarvis_wrapper="${JARVIS_BIN_DIR:-$HOME/.local/bin}/jarvis"
+    jarvis_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/jarvis"
+    mkdir -p -- "$jarvis_state_dir"
+    jarvis_log="$jarvis_state_dir/launch.log"
+    nohup "$jarvis_wrapper" >"$jarvis_log" 2>&1 < /dev/null &
+    jarvis_pid=$!
+    sleep 2
+    if kill -0 "$jarvis_pid" 2>/dev/null; then
+      printf 'Uruchamianie JARVIS-a w toku.\n'
+    else
+      jarvis_start_status=0
+      wait "$jarvis_pid" || jarvis_start_status=$?
+      if ((jarvis_start_status == 0)); then
+        printf 'Polecenie uruchomienia zakończone; sprawdź okno JARVIS-a.\n'
+      else
+        printf 'Instalacja zakończona, ale uruchomienie zwróciło błąd %s. Szczegóły: %s\n' "$jarvis_start_status" "$jarvis_log" >&2
+        exit "$jarvis_start_status"
+      fi
+    fi
+  fi
+fi
+printf '\nInstalacja gotowa. Nowy profil: PRO NEW, Indygo, automatyczna kolejka, pogłębiona analiza i weryfikacja.\n'
+printf 'Lokalny model wybierzesz i sprawdzisz w panelu Serwer lokalny. Istniejące ustawienia i dane pozostają zachowane.\n'

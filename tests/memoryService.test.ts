@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   resolveNamespace, memoriesToBlock, parseMemories,
-  addMemory, searchMemory, getAllMemories, memoryServiceAvailable, memoryContextBlock,
+  addMemory, searchMemory, getAllMemories, updateMemory, deleteMemory, memoryServiceAvailable, memoryContextBlock,
 } from "../src/lib/memoryService";
 import { store } from "../src/lib/store";
 
@@ -31,7 +31,21 @@ describe("MemoryService — funkcje czyste", () => {
 });
 
 describe("MemoryService — sieć (mock) + graceful degradation", () => {
-  beforeEach(() => store.setSettings({ memoryServiceUrl: "", memoryServiceToken: "" }));
+  beforeEach(() => store.setSettings({ memoryServiceUrl: "", memoryServiceToken: "", onDeviceOnly: false }));
+
+  it.each(["https://memory.example", "http://localhost:8000"])("on-device does not transmit memories to configured Mem0 at %s", async (memoryServiceUrl) => {
+    store.setSettings({ onDeviceOnly: true, memoryServiceUrl });
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    expect(memoryServiceAvailable()).toBe(false);
+    expect(await searchMemory("prywatne dane", "personal")).toEqual([]);
+    expect(await getAllMemories("personal")).toEqual([]);
+    expect(await addMemory([{ role: "user", content: "prywatne dane" }], "personal")).toBe(false);
+    expect(await updateMemory("id", "prywatne dane")).toBe(false);
+    expect(await deleteMemory("id")).toBe(false);
+    expect(await memoryContextBlock("prywatne dane", "personal")).toBe("");
+    expect(fetcher).not.toHaveBeenCalled();
+  });
 
   it("bez skonfigurowanego adresu: available=false, search/add degradują", async () => {
     expect(memoryServiceAvailable()).toBe(false);

@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   mcpStdioCall: (server, tool, input = {}) => ipcRenderer.invoke("jarvis:mcp-stdio-call", { server, tool, input }),
   mcpStdioDisconnect: (server) => ipcRenderer.invoke("jarvis:mcp-stdio-disconnect", { server }),
   hardwareInfo: () => ipcRenderer.invoke("jarvis:hardware-info"),
+  runtimeConnection: () => ipcRenderer.invoke("jarvis:runtime-connection"),
+  runtimeStart: () => ipcRenderer.invoke("jarvis:runtime-start"),
   // Otwórz URL, plik lub folder w domyślnej aplikacji systemu.
   open: (target) => ipcRenderer.invoke("jarvis:open", String(target || "")),
   // Uruchom dołączony kreator stron i otwórz go w domyślnej przeglądarce.

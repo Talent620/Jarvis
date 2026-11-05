@@ -164,7 +164,7 @@ const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
   "Access-Control-Allow-Headers":
-    "content-type, authorization, x-api-key, anthropic-version, anthropic-dangerous-direct-browser-access",
+    "content-type, authorization, x-api-key, x-app-token, anthropic-version, anthropic-dangerous-direct-browser-access",
   "Access-Control-Max-Age": "86400",
 };
 

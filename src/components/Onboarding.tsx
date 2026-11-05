@@ -16,7 +16,7 @@ export const needsOnboarding = (): boolean => {
     return false;
   }
 };
-const markDone = () => {
+export const markOnboardingDone = () => {
   try {
     localStorage.setItem(FLAG, String(Date.now()));
   } catch {
@@ -40,7 +40,7 @@ const TOUR = [
   { icon: "🔐", text: "Wszystko zostaje na Twoim urządzeniu. Kopia zapasowa w ⚙ → Dane." },
 ];
 
-export default function Onboarding({ onDone }: { onDone: () => void }) {
+export default function Onboarding({ onDone, onInteraction }: { onDone: () => void; onInteraction?: () => void }) {
   const [step, setStep] = useState(0);
   const [leaving, setLeaving] = useState(false);
   const [key, setKey] = useState("");
@@ -64,7 +64,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   const finish = () => {
     if (name.trim()) store.setSettings({ userName: name.trim() });
     store.setSettings({ persona });
-    markDone();
+    markOnboardingDone();
     cue("wake");
     onDone();
   };
@@ -93,7 +93,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className="onboard">
+    <div className="onboard" onPointerDownCapture={onInteraction} onKeyDownCapture={onInteraction} onInputCapture={onInteraction}>
       <div className={`onboard-card ${leaving ? "leave" : "enter"}`}>
         {step === 0 && (
           <>

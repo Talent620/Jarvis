@@ -7,6 +7,9 @@ const { spawn, exec } = require("child_process");
 const os = require("os");
 const { createWorkspaceTools } = require("./workspace-tools.cjs");
 const { createStdioMcpManager } = require("./mcp-stdio.cjs");
+const { readRuntimeConnection } = require("./runtime-connection.cjs");
+const { createRuntimeLauncher } = require("./runtime-launcher.cjs");
+const { isTrustedAppUrl, isTrustedAppIpc } = require("./trusted-renderer.cjs");
 
 const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
 
@@ -31,6 +34,7 @@ let mainWindow = null;
 let siteOsProcess = null;
 let stdioMcp = null;
 let closingStdioMcp = false;
+const runtimeLauncher = createRuntimeLauncher({ isPackaged: app.isPackaged, resourcesPath: process.resourcesPath });
 
 function siteOsPaths() {
   const base = path.join(app.getPath("userData"), "site-os");
@@ -147,9 +151,8 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
 
-  // Twarda blokada nawigacji: renderer nie może opuścić własnego file:// (inaczej
-  // wroga strona przejęłaby cały mostek jarvisDesktop — uruchamianie, klawiatura, tokeny).
-  const allowNav = (e, url) => { if (!url.startsWith("file://")) e.preventDefault(); };
+  // Tylko nasz dokument aplikacji; pobrany lokalny HTML także jest niezaufany.
+  const allowNav = (e, url) => { if (!isTrustedAppUrl(url)) e.preventDefault(); };
   mainWindow.webContents.on("will-navigate", allowNav);
   mainWindow.webContents.on("will-redirect", allowNav);
 
@@ -306,17 +309,21 @@ async function googleAccess() {
 
 function registerDesktopControl() {
   // Zaufane źródło IPC: aplikacja ładuje się z file://…/dist/index.html (loadFile).
-  // Uprzywilejowane akcje OS (uruchamianie aplikacji, zasilanie, klawiatura, zrzut ekranu)
-  // wykonujemy TYLKO dla własnej ramki — żeby kompromitacja renderera nie sterowała komputerem.
-  const isTrustedIpc = (event) => {
-    const url = event?.senderFrame?.url || event?.sender?.getURL?.() || "";
-    return url.startsWith("file://");
-  };
+  // Uprzywilejowane akcje pochodzą wyłącznie z głównej ramki naszego dokumentu.
+  const isTrustedIpc = (event) => isTrustedAppIpc(event, mainWindow);
   const workspaceTools = createWorkspaceTools({
     root: process.env.JARVIS_WORKSPACE_DIR || path.join(app.getPath("documents"), "JARVIS Workspace"),
     openExternal: (url) => shell.openExternal(url),
   });
   stdioMcp = createStdioMcpManager({ root: workspaceTools.root });
+  ipcMain.handle("jarvis:runtime-connection", (event) => {
+    if (!isTrustedIpc(event)) return null;
+    return readRuntimeConnection();
+  });
+  ipcMain.handle("jarvis:runtime-start", (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    return runtimeLauncher.start();
+  });
   ipcMain.handle("jarvis:agent-tool", async (event, payload) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     return workspaceTools.call(String(payload && payload.tool || ""), payload && payload.input);
@@ -372,8 +379,14 @@ function registerDesktopControl() {
     if (r.ok && r.refresh_token) { writeGoogleTok({ clientId, clientSecret, refresh_token: r.refresh_token }); return { ok: true }; }
     return { ok: false, error: r.error || "Nie udało się połączyć." };
   });
-  ipcMain.handle("jarvis:google-status", () => ({ connected: !!(readGoogleTok() && readGoogleTok().refresh_token) }));
-  ipcMain.handle("jarvis:google-disconnect", () => { try { fs.unlinkSync(GTOK_FILE); } catch { /* ignore */ } return { ok: true }; });
+  ipcMain.handle("jarvis:google-status", (event) => {
+    if (!isTrustedIpc(event)) return { connected: false, error: "forbidden" };
+    return { connected: !!readGoogleTok()?.refresh_token };
+  });
+  ipcMain.handle("jarvis:google-disconnect", (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    try { fs.unlinkSync(GTOK_FILE); } catch { /* ignore */ } return { ok: true };
+  });
   ipcMain.handle("jarvis:gcal-add", async (event, ev) => {
     if (!isTrustedIpc(event)) return { error: "forbidden" };
     try {
@@ -574,9 +587,15 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    // Usługa jest niezależna od okna. Nie blokujemy uruchomienia GUI i nie zatrzymujemy jej przy zamykaniu.
+    if (process.platform === "linux") void runtimeLauncher.start();
     // Mikrofon/kamera (rozmowa na żywo, HUD) — tylko media; inne prośby odrzucamy.
     const ALLOWED_PERMISSIONS = new Set(["media", "audioCapture", "videoCapture", "mediaKeySystem", "speaker-selection"]);
-    session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(ALLOWED_PERMISSIONS.has(perm)));
+    session.defaultSession.setPermissionRequestHandler((wc, perm, cb, details) => cb(
+      wc === mainWindow?.webContents && isTrustedAppUrl(wc.getURL()) &&
+      details.isMainFrame !== false && isTrustedAppUrl(details.requestingUrl || wc.getURL()) &&
+      ALLOWED_PERMISSIONS.has(perm)
+    ));
 
     // Naprawa CORS — wstrzykuj nagłówki, by zapytania do API działały jak w aplikacji
     // mobilnej (Gemini, Claude, Groq, OpenRouter, NVIDIA, GitHub, Tavily, Home Assistant).
@@ -621,7 +640,8 @@ if (!gotLock) {
     } catch {
       /* skrót zajęty przez inny program — trudno */
     }
-    ipcMain.handle("jarvis:clipwatch", (_e, enabled) => {
+    ipcMain.handle("jarvis:clipwatch", (event, enabled) => {
+      if (!isTrustedAppIpc(event, mainWindow)) return false;
       setClipWatch(!!enabled);
       return true;
     });

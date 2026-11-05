@@ -3,6 +3,8 @@
 
 export interface JarvisDesktop {
   platform: string;
+  runtimeConnection?(): Promise<{ url: string; token: string } | null>;
+  runtimeStart?(): Promise<{ ok: boolean; error?: string }>;
   agentTool?(tool: string, input?: Record<string, unknown>): Promise<{ ok: boolean; error?: string; [key: string]: unknown }>;
   mcpStdioConnect?(config: Record<string, unknown>): Promise<{ ok: boolean; error?: string; tools?: unknown[] }>;
   mcpStdioCall?(server: string, tool: string, input?: Record<string, unknown>): Promise<{ ok: boolean; error?: string; result?: unknown }>;

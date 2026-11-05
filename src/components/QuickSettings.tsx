@@ -16,10 +16,11 @@ const PALETTES = [
   { id: "amber", label: "Bursztyn" },
 ] as const;
 
-export default function QuickSettings({ onClose, onAdvanced, onQueue }: {
+export default function QuickSettings({ onClose, onAdvanced, onQueue, onRuntime }: {
   onClose: () => void;
   onAdvanced: (tab?: SettingsTab, anchor?: string) => void;
   onQueue: () => void;
+  onRuntime?: () => void;
 }) {
   const { settings } = useStore();
   const [queue, setQueue] = useState<{ queued: number; running: number } | null>(null);
@@ -72,6 +73,7 @@ export default function QuickSettings({ onClose, onAdvanced, onQueue }: {
             : "Przycisk „Autonomicznie” włącza również pełną analizę i sprawdzanie trudnych odpowiedzi."}</p>
           <p className="quick-settings-description" role="status">{queueError ? "Nie udało się odczytać kolejki." : queue ? `W kolejce: ${queue.queued} · W trakcie: ${queue.running}` : "Odczytuję kolejkę…"}</p>
           <button className="btn" onClick={onQueue}>Otwórz kolejkę i wyniki</button>
+          {onRuntime && <button className="btn" onClick={onRuntime}>Serwer lokalny — analizy w tle</button>}
         </section>
 
         <section className="quick-settings-card" aria-labelledby="quick-voice">

@@ -134,6 +134,30 @@ const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision:
 // Dostawcy bez klucza (lokalni): autoryzacja przez adres serwera (Ollama) lub WebGPU (WebLLM).
 const isKeyless = (p: ProviderId): boolean => p === "ollama" || p === "webllm";
 
+// Tylko dostawcy, dla których proxy/worker.js potrafi wstrzyknąć sekret z ENV.
+// Adres BFF oznacza skonfigurowaną ścieżkę, nie potwierdza obecności klucza na serwerze.
+const SERVER_KEY_PROVIDERS = new Set<ProviderId>(["anthropic", "gemini", "groq", "openrouter", "nvidia", "github"]);
+function canUseServerKey(provider: ProviderId, s = store.settings): boolean {
+  if (s.onDeviceOnly || !SERVER_KEY_PROVIDERS.has(provider) || !s.proxyUrl?.trim()) return false;
+  try {
+    const url = new URL(s.proxyUrl.trim());
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch { return false; }
+}
+function configuredCloudProvider(provider: ProviderId, s = store.settings): boolean {
+  return !isKeyless(provider) && !s.onDeviceOnly &&
+    (parseKeys(s.keys[provider] || "").length > 0 || canUseServerKey(provider, s));
+}
+function requestKeys(provider: ProviderId): string[] {
+  const s = store.settings;
+  if (provider === "ollama") return s.ollamaUrl?.trim() ? ["local"] : [];
+  if (provider === "webllm") return webllmSupported() && (s.webllmEnabled || (!s.onDeviceOnly && s.provider === "webllm")) ? ["local"] : [];
+  if (store.settings.onDeviceOnly) return [];
+  const keys = orderedKeys(provider);
+  // Pusty klucz to prośba o autoryzację przez BFF. Adapter nie wysyła sztucznego sekretu.
+  return keys.length ? keys : canUseServerKey(provider) ? [""] : [];
+}
+
 function modelFor(p: ProviderId, complex: boolean, vision: boolean): string {
   const m = TASK_MODELS[p];
   return vision ? m.vision : complex ? m.complex : m.simple;
@@ -190,7 +214,7 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
 
   let base: { provider: ProviderId; model: string }[];
   if (s.provider === "auto" && (s.model === "auto" || !s.model)) {
-    let provs = PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim());
+    let provs = PROVIDER_LIST.filter((p) => configuredCloudProvider(p.id, s));
     if (hasImage) {
       const vis = provs.filter((p) => VISION_PROVIDERS.has(p.id));
       if (vis.length) provs = vis; // do obrazu wybierz dostawcę z wizją
@@ -202,7 +226,7 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
     if (!resolved) {
       // Brak rozwiązanego dostawcy (np. ręczny wybór bez klucza) — łańcuch z dostawców z kluczem + ogon.
       base = [
-        ...PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim())
+        ...PROVIDER_LIST.filter((p) => configuredCloudProvider(p.id, s))
           .sort((a, b) => b.rank - a.rank)
           .map((p) => ({ provider: p.id, model: p.defaultModel })),
         ...localTail,
@@ -210,7 +234,7 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
     } else {
       base = [
         { provider: resolved.provider, model: resolved.model },
-        ...PROVIDER_LIST.filter((p) => p.id !== "ollama" && p.id !== resolved.provider && s.keys[p.id]?.trim())
+        ...PROVIDER_LIST.filter((p) => p.id !== resolved.provider && configuredCloudProvider(p.id, s))
           .sort((a, b) => b.rank - a.rank)
           .map((p) => ({ provider: p.id, model: p.defaultModel })),
         ...localTail.filter((l) => l.provider !== resolved.provider),
@@ -414,9 +438,17 @@ export function executeGoalPlan(plan: AgentPlan, onStatus?: (s: string) => void)
 /** Rozstrzyga, którego dostawcę i model użyć (uwzględnia tryb auto). */
 export function resolveProvider(): { provider: ProviderId; model: string; apiKey: string } | null {
   const s = store.settings;
+  if (s.onDeviceOnly) {
+    // routeOrder kończy się na lokalnym ogonie przed wywołaniem resolveProvider.
+    const local = routeOrder([])[0];
+    return local ? { ...local, apiKey: "local" } : null;
+  }
   if (s.provider === "auto") {
     const pick = autoPick(s.keys);
-    if (!pick) return null;
+    if (!pick) {
+      const server = PROVIDER_LIST.filter((p) => canUseServerKey(p.id, s)).sort((a, b) => b.rank - a.rank)[0];
+      return server ? { provider: server.id, model: server.defaultModel, apiKey: "" } : null;
+    }
     // Pierwszy świeży klucz dostawcy (gdy wpisano kilka, rotacja pomija wyczerpane).
     return { ...pick, apiKey: primaryKey(pick.provider) };
   }
@@ -440,9 +472,8 @@ export function hasUsableBrain(s = store.settings): boolean {
   if ((s.webllmEnabled || (!s.onDeviceOnly && s.provider === "webllm")) && webllmSupported()) return true;
   // Chmurowe ścieżki są usuwane przez routeOrder w trybie on-device.
   if (s.onDeviceOnly) return false;
-  // Sam wybór dostawcy (resolveProvider zwraca również pusty klucz) ani URL proxy nie
-  // gwarantuje ścieżki wykonania: bieżący router wymaga co najmniej jednego klucza.
-  if (PROVIDER_LIST.some((p) => !isKeyless(p.id) && parseKeys(s.keys[p.id] || "").length > 0)) return true;
+  // BFF może przechowywać sekrety po stronie serwera, bez kopii w przeglądarce.
+  if (PROVIDER_LIST.some((p) => configuredCloudProvider(p.id, s))) return true;
   return false;
 }
 
@@ -493,8 +524,9 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
   if (now - lastLearnAt < LEARN_COOLDOWN) return;
   lastLearnAt = now;
 
-  const r = resolveProvider();
-  if (!r || !r.apiKey?.trim()) return;
+  const route = routeOrder([{ role: "user", content: text }]).find((o) => requestKeys(o.provider).length > 0);
+  if (!route) return;
+  const r = { ...route, apiKey: requestKeys(route.provider)[0] };
   // Do ekstrakcji bierzemy najtańszy model danego dostawcy.
   const model = TASK_MODELS[r.provider]?.simple || r.model;
 
@@ -587,7 +619,7 @@ async function askModelReply(params: {
     const { provider, model } = order[i];
     // Dla zadań „heavy" (jakość) bierzemy mocniejszy model dostawcy zamiast szybkiego.
     const useModel = params.heavy ? TASK_MODELS[provider]?.complex || model : model;
-    const keys = isKeyless(provider) ? ["local"] : orderedKeys(provider);
+    const keys = requestKeys(provider);
     if (!keys.length) continue;
     let providerErr: unknown;
     for (let j = 0; j < keys.length; j++) {
@@ -599,7 +631,7 @@ async function askModelReply(params: {
         providerErr = e;
         lastErr = e;
         const msg = e instanceof Error ? e.message : String(e);
-        if (!isKeyless(provider) && isKeyError(msg)) {
+        if (!isKeyless(provider) && apiKey && isKeyError(msg)) {
           coolDownKey(provider, apiKey);
           if (j < keys.length - 1) continue;
         }
@@ -626,17 +658,15 @@ export async function askModelRich(params: Parameters<typeof askModelReply>[0]):
 }
 
 export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }): Promise<JarvisReply> {
-  const resolved = resolveProvider();
-  if (!resolved) {
-    throw new Error(
-      "Brak skonfigurowanego dostawcy AI. Wejdź w ⚙ Ustawienia i wprowadź klucz API (Claude, Gemini, Groq, OpenRouter, NVIDIA lub GitHub).",
-    );
+  // Ta sama ścieżka co główna odpowiedź: lokalny model/BFF nie wymagają klucza w UI.
+  // Również przygotowawcze deepThink musi respektować onDeviceOnly.
+  const initialRoute = routeOrder(history).find((o) => requestKeys(o.provider).length > 0);
+  if (!initialRoute) {
+    throw new Error(store.settings.onDeviceOnly
+      ? "Tryb on-device jest włączony, ale brak modelu lokalnego. Włącz WebLLM lub podłącz Ollamę w ⚙ → AI."
+      : "Brak skonfigurowanego modelu AI. Podłącz lokalny model, serwer proxy lub dostawcę w ⚙ → AI.");
   }
-  if (!resolved.apiKey?.trim()) {
-    throw new Error(
-      `Brak klucza API dla: ${PROVIDERS[resolved.provider].label}. Uzupełnij go w ⚙ Ustawienia.`,
-    );
-  }
+  const resolved = { ...initialRoute, apiKey: requestKeys(initialRoute.provider)[0] };
 
   // Obraz dołączamy tylko do ostatniej wiadomości — nie zaśmiecamy kontekstu base64.
   // Tekst przycinamy do rozsądnego limitu — wklejone megabajty zamroziłyby przetwarzanie.
@@ -724,9 +754,9 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
 
   // Router dobiera dostawcę+model do zadania (prostota/złożoność/obraz) + fallback.
   let order = routeOrder(trimmed);
-  // Auto-router Szefa: jeśli wskazano najmocniejszy zmierzony mózg i ma klucz — na CZOŁO
+  // Auto-router Szefa: jeśli wskazano najmocniejszy zmierzony mózg z dostępną ścieżką — na CZOŁO
   // łańcucha (reszta zostaje jako failover). Tak Szef zawsze rusza najlepszym dostępnym.
-  if (prefer && (prefer.provider === "ollama" ? !!store.settings.ollamaUrl?.trim() : !!store.settings.keys[prefer.provider]?.trim())) {
+  if (prefer && order.some((o) => o.provider === prefer.provider) && requestKeys(prefer.provider).length > 0) {
     order = [prefer, ...order.filter((o) => !(o.provider === prefer.provider && o.model === prefer.model))];
   }
   if (!order.length) {
@@ -745,11 +775,11 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // rozbieżne → korekta Kory. Padnie cała spekulacja → spadamy do zwykłej pętli niżej.
   const clsTop = classifyTask(lastUser?.content || "", !!lastUser?.image);
   if (store.settings.speculativeMode && clsTop.kind === "complex" && store.settings.ollamaUrl?.trim() && (typeof navigator === "undefined" || navigator.onLine !== false)) {
-    const cortex = order.find((o) => !isKeyless(o.provider) && orderedKeys(o.provider).length > 0);
+    const cortex = order.find((o) => !isKeyless(o.provider) && requestKeys(o.provider).length > 0);
     if (cortex) {
       try {
         const localModel = order.find((o) => o.provider === "ollama")?.model || TASK_MODELS.ollama.complex;
-        const cortexKey = orderedKeys(cortex.provider)[0];
+        const cortexKey = requestKeys(cortex.provider)[0];
         const res = await speculativeAnswer({
           runLocal: (ot) => withRetry(() => PROVIDERS.ollama.impl({ ...baseCtx, apiKey: "local", model: localModel, onToken: ot })),
           runCortex: () => withRetry(() => PROVIDERS[cortex.provider].impl({ ...baseCtx, apiKey: cortexKey, model: cortex.model })),
@@ -785,7 +815,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   const primary = computePrimaryProvider(
     order,
     pinnedProvider,
-    (p) => isKeyless(p) || orderedKeys(p).length > 0,
+    (p) => requestKeys(p).length > 0,
   );
   let lastErr: unknown;
   // Brama Pewności (Zadanie 8): jeśli refleks lokalny był niepewny i eskalujemy, trzymamy
@@ -805,8 +835,8 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
       if (provider === primary && !primaryFailReason) { primaryFailReason = "ostatnio kilka razy nie odpowiedział pod rząd — chwilowo pomijam"; primaryFailKind = "unavailable"; }
       continue;
     }
-    // Ollama autoryzuje się adresem serwera, nie kluczem; pozostali — listą kluczy.
-    const keys = isKeyless(provider) ? ["local"] : orderedKeys(provider);
+    // Lokalny model, lista kluczy klienta albo sekret dostawcy przechowywany w BFF.
+    const keys = requestKeys(provider);
     if (!keys.length) {
       if (provider === primary && !primaryFailReason) { primaryFailReason = "brak skonfigurowanego klucza/dostępu"; primaryFailKind = "auth"; }
       continue;
@@ -969,7 +999,7 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
         recordLatency("provider:" + provider, Date.now() - t0, false, model);
         // Błąd klucza (limit/autoryzacja): odłóż go i spróbuj NASTĘPNEGO klucza tego
         // samego dostawcy, zanim zejdziemy do kolejnego dostawcy.
-        if (!isKeyless(provider) && isKeyError(msg)) {
+        if (!isKeyless(provider) && apiKey && isKeyError(msg)) {
           coolDownKey(provider, apiKey);
           if (j < keys.length - 1) continue;
         }

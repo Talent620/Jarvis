@@ -104,7 +104,15 @@ export async function askGemini(ctx: AskCtx): Promise<JarvisReply> {
   const requestFull = async (): Promise<Part[]> => {
     const res = await fetchTimeout(base, { method: "POST", headers, body: JSON.stringify(buildBody()) }, 120000);
     const data = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
+    if (!res.ok) {
+      const message = typeof data?.error === "string" ? data.error : data?.error?.message || "Błąd API";
+      // Starszy BFF zgłasza brak sekretu jako 400. Zachowaj status, ale sklasyfikuj
+      // autoryzację, aby router mógł spróbować kolejnego skonfigurowanego dostawcy.
+      if (ctx.proxyUrl && ctx.model && message === "Brak modelu lub GEMINI_API_KEY.") {
+        throw new Error(`Brak klucza Gemini na serwerze proxy — unauthorized (${res.status}).`);
+      }
+      throw new Error(`${message} (${res.status})`);
+    }
     // thoughtsTokenCount (tokeny myślenia) liczą się do kosztu — dolicz do output.
     if (data.usageMetadata) { inTok += data.usageMetadata.promptTokenCount || 0; outTok += (data.usageMetadata.candidatesTokenCount || 0) + (data.usageMetadata.thoughtsTokenCount || 0); }
     // Grounding: prawdziwe źródła z metadanych (nie wymyślamy). Brak → zostaje pusto.

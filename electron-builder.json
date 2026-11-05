@@ -13,6 +13,7 @@
     "artifactName": "JARVIS.exe"
   },
   "linux": {
+    "icon": "public/icon-512.png",
     "target": [
       "AppImage",
       "deb"
@@ -33,6 +34,11 @@
     "artifactName": "JARVIS.exe"
   },
   "extraResources": [
+    {
+      "from": "server/runtime",
+      "to": "runtime",
+      "filter": ["*.mjs"]
+    },
     {
       "from": "site-os",
       "to": "site-os",

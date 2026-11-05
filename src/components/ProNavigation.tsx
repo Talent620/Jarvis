@@ -1,8 +1,9 @@
-import { BookOpen, FolderOpen, LayoutGrid, ListTodo, MessageCircle, Plus, Settings2, Target, History, Search } from "lucide-react";
+import { BookOpen, FolderOpen, LayoutGrid, ListTodo, MessageCircle, Plus, Settings2, Target, History, Search, Server } from "lucide-react";
 
 const PRIMARY = [
   { id: null, label: "Rozmowa", icon: MessageCircle },
   { id: "goalStatus", label: "Kolejka zadań", icon: ListTodo },
+  { id: "runtime", label: "Serwer lokalny", icon: Server },
   { id: "goal", label: "Zleć cel", icon: Plus },
   { id: "more", label: "Centrum funkcji", icon: LayoutGrid },
 ];

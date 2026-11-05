@@ -11,6 +11,7 @@ export interface ScreenDef {
 
 // Rejestr modułów dostępnych do otwarcia z czatu. Każdy ma id (= klucz w App.tsx), etykietę i aliasy PL.
 export const SCREENS: ScreenDef[] = [
+  { id: "runtime", label: "Serwer lokalny", aliases: ["serwer lokalny", "lokalne analizy", "runtime", "serwer jarvis"] },
   { id: "finance", label: "Finanse", aliases: ["finanse", "finansowy", "pieniądze", "pieniadze", "budżet", "budzet", "zysk", "kpi", "zeszyt finansowy", "dashboard finansowy"] },
   { id: "studio", label: "Studio Obrazów", aliases: ["studio", "obraz", "obrazy", "zdjęcie", "zdjecie", "grafika", "generuj obraz", "edytuj zdjęcie"] },
   { id: "web", label: "Kreator stron", aliases: ["strona", "strony", "kreator", "kreator stron", "www", "landing", "sklep www"] },

@@ -10,6 +10,7 @@ import Conversation from "./components/Conversation";
 import Composer from "./components/Composer";
 const SettingsPanel = lazy(() => import("./components/Settings"));
 const QuickSettings = lazy(() => import("./components/QuickSettings"));
+const LocalRuntimePanel = lazy(() => import("./components/LocalRuntimePanel"));
 const Panels = lazy(() => import("./components/Panels"));
 import LiveOverlay from "./components/LiveOverlay";
 const ChatHistory = lazy(() => import("./components/ChatHistory"));
@@ -25,7 +26,7 @@ const More = lazy(() => import("./components/More"));
 import Boot from "./components/Boot";
 import BossFab from "./components/BossFab";
 import LockScreen from "./components/LockScreen";
-import Onboarding, { needsOnboarding } from "./components/Onboarding";
+import Onboarding, { markOnboardingDone, needsOnboarding } from "./components/Onboarding";
 import LicenseGate from "./components/LicenseGate";
 import { checkActivation, licenseRequired, licenseStatus, licenseExpiryNudge, type LicenseInfo } from "./lib/license";
 const HeadsetMode = lazy(() => import("./components/HeadsetMode"));
@@ -115,7 +116,8 @@ import { processPendingSiteOsCommands } from "./lib/siteOs";
 import { currentBrainMode } from "./lib/brainMode";
 import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, subscribeSpeaking, checkPinnedVoice, setVoiceUnavailableHandler, type VoiceListener, type VoiceUnavailableInfo } from "./lib/voice";
 import { capturePhoto } from "./lib/camera";
-import { captureScreen, isDesktop, watchClipboard } from "./lib/desktop";
+import { captureScreen, desktop, isDesktop, watchClipboard } from "./lib/desktop";
+import { bootstrapDesktopRuntime } from "./lib/runtimeOnboarding";
 import ScreenBoundary from "./components/ScreenBoundary";
 import { getWeather } from "./lib/weather";
 import { buildChiefBriefing, formatBriefing } from "./lib/chiefOfStaff";
@@ -198,6 +200,8 @@ export default function App() {
   // a otwarcie ekranu zamyka poprzedni (koniec nakładających się okien). Overlaye systemowe (zgoda,
   // blokada, Live/Boss/HUD/⌘K/powiadomienia) mają własny stan i nie przechodzą przez router.
   const [route, dispatch] = useReducer(uiRouteReducer, initialRoute);
+  const routeRef = useRef(route);
+  routeRef.current = route;
   const screenSetter = (id: string) => (v: boolean) => dispatch(v ? { type: "open", screen: id } : { type: "closeIf", screen: id });
   // Stabilny opener (dispatch jest stały) — do hooków z [] (requestScreen, ⌘K) bez migotania zależności.
   const openScreen = useCallback((id: string) => dispatch({ type: "open", screen: id }), []);
@@ -268,6 +272,12 @@ export default function App() {
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [locked, setLocked] = useState(lockIsSet());
   const [onboarding, setOnboarding] = useState(needsOnboarding());
+  const onboardingInteractedRef = useRef(false);
+  const finishOnboarding = useCallback(() => {
+    markOnboardingDone();
+    setOnboarding(false);
+    if (hasUsableBrain()) dispatch({ type: "closeIf", screen: "settings" });
+  }, []);
   const [keysLocked, setKeysLocked] = useState(keysAreLocked());
   const [clipSuggest, setClipSuggest] = useState<string>("");
   const [showVoice, setShowVoice] = useState(false);
@@ -314,6 +324,7 @@ export default function App() {
       ({ id, title, icon, keywords, group: "Akcja", run: () => actionsRef.current[id]?.() });
     return [
       open("settings", "Ustawienia", "⚙", "klucze model glos motyw konto api"),
+      open("runtime", "Serwer lokalny", "◈", "offline lokalny model serwer analizy trwale"),
       open("sales", "Pulpit Sprzedaży", "📈", "leady crm oferty klienci sprzedaz"),
       open("finance", "Finanse", "💰", "finanse projekty zysk marza cash flow kpi przychod faktury"),
       open("mail", "Wyślij e-mail", "✉", "mail email wyslij poczta oferta wiadomosc"),
@@ -437,9 +448,6 @@ export default function App() {
       StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
       StatusBar.setBackgroundColor({ color: "#04070f" }).catch(() => {});
     }
-    // Wymuś konfigurację TYLKO gdy brak JAKIEGOKOLWIEK mózgu — nie nękaj użytkowników
-    // korzystających tylko z Ollamy (tryb auto + lokalny serwer daje resolveProvider=null).
-    if (!hasUsableBrain()) setShowSettings(true);
     // Skróty / udostępnienia → polecenie; jarvis://wake (nasłuch w tle) → start słuchania.
     const dispose = registerIntents(
       (text) => sendRef.current(text),
@@ -491,6 +499,29 @@ export default function App() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Desktop installer/service already owns local-model selection. Give it a bounded
+  // chance to configure an empty chat before displaying manual setup.
+  useEffect(() => {
+    if (hasUsableBrain()) return;
+    if (!isDesktop()) { openScreen("settings"); return; }
+    const controller = new AbortController();
+    const originalRoute = routeRef.current;
+    void bootstrapDesktopRuntime({
+      signal: controller.signal, shouldApply: () => !onboardingInteractedRef.current,
+    }).then((result) => {
+      if (controller.signal.aborted || result.state === "cancelled" || result.state === "preserved") return;
+      const untouched = !onboardingInteractedRef.current && routeRef.current === originalRoute && originalRoute.screen === null;
+      if (result.state === "configured") {
+        if (untouched) finishOnboarding();
+        if (result.message) toast(result.message);
+        return;
+      }
+      if (untouched) { finishOnboarding(); openScreen("runtime"); }
+      else if (result.message) toast(result.message, { label: "Serwer lokalny", onClick: () => openScreen("runtime") });
+    });
+    return () => controller.abort();
+  }, [openScreen, finishOnboarding]);
 
   // === Proaktywny Agent: JARVIS sam się odzywa w trakcie pracy ===
   // Co chwilę sprawdza, czy jest coś ważnego (przypomnienie po terminie, wydarzenie
@@ -1023,7 +1054,7 @@ export default function App() {
   // Auto-wykrycie lokalnego serwera Ollama na DESKTOPIE (localhost = ten PC) — żeby nie trzeba
   // było wpisywać adresu. Tylko gdy nic nie skonfigurowano; ustawia adres (nie przejmuje providera).
   useEffect(() => {
-    if (!isDesktop() || store.settings.ollamaUrl?.trim()) return;
+    if (!isDesktop() || desktop()?.runtimeConnection || store.settings.ollamaUrl?.trim()) return;
     void findOllamaServer(["http://localhost:11434", "http://127.0.0.1:11434"]).then((r) => {
       if (r.ok && !store.settings.ollamaUrl?.trim()) {
         store.setSettings({ ollamaUrl: r.url });
@@ -1155,10 +1186,8 @@ export default function App() {
   if (onboarding)
     return (
       <Onboarding
-        onDone={() => {
-          setOnboarding(false);
-          if (resolveProvider()) setShowSettings(false); // klucz dodany w kreatorze
-        }}
+        onInteraction={() => { onboardingInteractedRef.current = true; }}
+        onDone={finishOnboarding}
       />
     );
 
@@ -1573,7 +1602,7 @@ export default function App() {
       {showSettings && (
         <ScreenBoundary name="Ustawienia" onBack={closeSettings}>
           {isPro && !settingsRoute?.advanced && !settingsRoute?.tab ? (
-            <QuickSettings onClose={closeSettings} onQueue={() => setShowGoalStatus(true)}
+            <QuickSettings onClose={closeSettings} onQueue={() => setShowGoalStatus(true)} onRuntime={() => openScreen("runtime")}
               onAdvanced={(tab, anchor) => dispatch({ type: "open", screen: "settings", ctx: { advanced: true, tab, anchor } satisfies SettingsRouteContext })} />
           ) : <SettingsPanel initialTab={settingsRoute?.tab} initialAnchor={settingsRoute?.anchor} onClose={closeSettings} />}
         </ScreenBoundary>
@@ -1761,7 +1790,7 @@ export default function App() {
       )}
       {showGoalStatus && (
         <ScreenBoundary>
-          <GoalStatusPanel onClose={() => setShowGoalStatus(false)} />
+          <GoalStatusPanel onClose={() => setShowGoalStatus(false)} onRuntime={() => openScreen("runtime")} />
         </ScreenBoundary>
       )}
       {showCmd && (
@@ -1798,6 +1827,7 @@ export default function App() {
           <HudVision onClose={() => setShowHud(false)} />
         </ScreenBoundary>
       )}
+      {route.screen === "runtime" && <ScreenBoundary name="Serwer lokalny" onBack={() => dispatch({ type: "close" })}><LocalRuntimePanel onClose={() => dispatch({ type: "close" })} /></ScreenBoundary>}
       {pendingConsent && (
         <PermissionDialog
           req={pendingConsent.req}
