@@ -4,15 +4,33 @@
   "request_sha256": "4808121cd4ae44403da995b01dfb26fc6323bc546ab38d35e50ea7014ea5f054",
   "integration_base": "f74705166e484f9fe76a9ecac7212a45376254ba",
   "integration_branch": "codex/durable-autonomy-20261105",
-  "current_state": "PARTIAL_IMPLEMENTATION_VERIFIED_PUBLICATION_BLOCKED",
+  "current_state": "PARTIAL_IMPLEMENTATION_CODE_AND_TAG_PUSHED_PACKAGES_VERIFIED_RELEASE_API_BLOCKED",
   "release": {
-    "sha": null,
-    "tag": null,
+    "sha": "e295f95e3a867de67a8aedb94f1452e0b92cf21c",
+    "tag": "v2.1.0-alpha.1",
     "url": null,
-    "ci": null,
-    "version": "2.1.0-alpha.1",
-    "status": "BUILD_AND_PUBLICATION_AWAITED",
-    "provenance": "Final code SHA and artifact checksums belong to generated release PROVENANCE after clean commit; no release URL exists yet."
+    "ci": {
+      "ubuntu": {
+        "status": "PASS",
+        "url": "https://github.com/Talent620/Jarvis/actions/runs/42116503962"
+      },
+      "tests": {
+        "status": "PASS",
+        "url": "https://github.com/Talent620/Jarvis/actions/runs/42116504054"
+      },
+      "android": {
+        "status": "FAIL",
+        "url": "https://github.com/Talent620/Jarvis/actions/runs/42116503997",
+        "cause": "NOT_ESTABLISHED: public summary exit2, full logs unavailable"
+      },
+      "android_v2": {
+        "status": "FAIL",
+        "url": "https://github.com/Talent620/Jarvis/actions/runs/42116503906",
+        "cause": "NOT_ESTABLISHED: full logs unavailable"
+      }
+    },
+    "delivery_evidence": "QA/autonomia60/durable/delivery.json",
+    "packages_evidence": "QA/autonomia60/durable/PACKAGES-VERIFICATION.json"
   },
   "status_rules": {
     "PASS": "Pełne potwierdzenie scenariusza na określonym poziomie.",

@@ -1150,5 +1150,8 @@
     "hash": "see Git object/packaged PROVENANCE; not self-hashed"
   },
   "private_signing_material": "untracked locally, excluded from new commit; history not rewritten",
-  "evidence_formatting": "Terminal trailing whitespace/empty EOF lines normalized; test outcomes unchanged; raw logs retained in /tmp for this session."
+  "evidence_formatting": "Terminal trailing whitespace/empty EOF lines normalized; test outcomes unchanged; raw logs retained in /tmp for this session.",
+  "packaged_code_commit": "e295f95e3a867de67a8aedb94f1452e0b92cf21c",
+  "packaged_code_tag": "v2.1.0-alpha.1",
+  "manifest_scope": "Product/source files listed describe packaged e295f95; later checkpoint changes only evidence/docs. Use tagged source for original file hashes."
 }

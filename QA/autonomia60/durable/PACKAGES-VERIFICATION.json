@@ -1,0 +1,53 @@
+{
+  "commit": "e295f95e3a867de67a8aedb94f1452e0b92cf21c",
+  "version": "2.1.0-alpha.1",
+  "temp": "/tmp/jarvis-package-check-VZTQl2",
+  "metadata": {
+    "deb": {
+      "schemaVersion": 1,
+      "version": "2.1.0-alpha.1",
+      "commit": "e295f95e3a867de67a8aedb94f1452e0b92cf21c",
+      "build": "2026-11-05 21:52",
+      "licenseRequired": true,
+      "issuer": "application-default"
+    },
+    "appimage": {
+      "schemaVersion": 1,
+      "version": "2.1.0-alpha.1",
+      "commit": "e295f95e3a867de67a8aedb94f1452e0b92cf21c",
+      "build": "2026-11-05 21:52",
+      "licenseRequired": true,
+      "issuer": "application-default"
+    }
+  },
+  "asar": {
+    "deb": "534d2c51aee81465bbc39037c21be5ccdeff443ef99eab4393922d05160bbb06",
+    "appimage": "534d2c51aee81465bbc39037c21be5ccdeff443ef99eab4393922d05160bbb06"
+  },
+  "artifacts": [
+    {
+      "name": "JARVIS.AppImage",
+      "sha256": "636b468c958f40b599b1cbf4138b1cf2484f8f0b0829136a7ed04103ad7d149a",
+      "size": 156537004
+    },
+    {
+      "name": "JARVIS.deb",
+      "sha256": "7ea5cfb564b8d635dd398b86a3a8a07ef16d2e933cd268bde4abb2f5f9b3db05",
+      "size": 98019158
+    },
+    {
+      "name": "PROVENANCE.json",
+      "sha256": "86cc2f4a3c84ab02c19f715bef18c373fd9a763c1a58a468a24470fb0e87863d",
+      "size": 36909
+    }
+  ],
+  "nativeLaunch": {
+    "status": null,
+    "signal": "SIGSEGV",
+    "error": null,
+    "profileIsolated": true,
+    "sandboxDisabled": false,
+    "outcome": "BLOCKED",
+    "reason": "[159508:1105/215511.695428:ERROR:bus.cc(407)] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory\n[159508:1105/215511.847500:ERROR:ozone_platform_x11.cc(245)] Missing X server or $DISPLAY\n[159508:1105/215511.847523:ERROR:env.cc(258)] The platform failed to initialize.  Exiting.\n"
+  }
+}

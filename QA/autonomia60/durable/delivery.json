@@ -1,0 +1,54 @@
+{
+  "code_commit": "e295f95e3a867de67a8aedb94f1452e0b92cf21c",
+  "branch": "codex/durable-autonomy-20261105",
+  "version": "2.1.0-alpha.1",
+  "git_push": "PASS verified remote SHA",
+  "full_unit_tests": {
+    "passed": 2976,
+    "failed": 0,
+    "files": 364
+  },
+  "lint": "PASS",
+  "build": "PASS",
+  "secret_scan": "PASS",
+  "qa_desktop": {
+    "exit_code": 2,
+    "A": "BLOCKED",
+    "B": "BLOCKED",
+    "C": "BLOCKED",
+    "independent_local": "PASS",
+    "license": "PASS",
+    "evidence": "verification/desktop/"
+  },
+  "release": "BLOCKED: gh release create failed checking existing tag via API HEAD Forbidden",
+  "pr": "BLOCKED: gh pr create GraphQL Forbidden",
+  "ci": {
+    "ubuntu": {
+      "status": "PASS",
+      "url": "https://github.com/Talent620/Jarvis/actions/runs/42116503962"
+    },
+    "tests": {
+      "status": "PASS",
+      "url": "https://github.com/Talent620/Jarvis/actions/runs/42116504054"
+    },
+    "android": {
+      "status": "FAIL",
+      "url": "https://github.com/Talent620/Jarvis/actions/runs/42116503997",
+      "cause": "NOT_ESTABLISHED: public summary exit2, full logs unavailable"
+    },
+    "android_v2": {
+      "status": "FAIL",
+      "url": "https://github.com/Talent620/Jarvis/actions/runs/42116503906",
+      "cause": "NOT_ESTABLISHED: full logs unavailable"
+    }
+  },
+  "goal_complete": false,
+  "tag": "v2.1.0-alpha.1",
+  "tag_pushed": true,
+  "release_url": null,
+  "pr_url": null,
+  "packages": "PASS: both extracted payloads identical, license required, checksums verified",
+  "native_package_launch": "BLOCKED: actual packaged executable, sandbox on, missing X/DISPLAY",
+  "local_user_computer_tested": false,
+  "recorded_at": "2026-11-05T21:57:55.960606+00:00"
+}

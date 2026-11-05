@@ -88,3 +88,13 @@ Pierwsza pełna integracja miała **4 FAIL** (evidence/integration-first.log). J
 ## Checkpoint
 
 Implementacja i testy opisane wyżej mają konkretne dowody. Bieżący dokument nie deklaruje kompletnych 80 scenariuszy, ukończonego wydania ani działania na komputerze użytkownika. Pełna regresja kodu jest zaliczona. Rzeczywisty model/pulpit, natywne instalatory, instalacja/aktualizacja/wycofanie na docelowym systemie i opublikowany Release pozostają osobnymi niezaliczonymi bramkami. Dokładny SHA przyszłego buildu zapisuje wygenerowany po commitcie PROVENANCE; nie wpisujemy zgadywanego SHA do jego własnego commitu.
+
+## Końcowe przekazanie kodu i paczek
+
+Commit kodu i obu paczek: `e295f95e3a867de67a8aedb94f1452e0b92cf21c`, tag `v2.1.0-alpha.1`, wersja `2.1.0-alpha.1`. Gałąź `codex/durable-autonomy-20261105` zawiera dodatkowo późniejszy checkpoint wyłącznie dowodów/dokumentacji; produkt w tagu i paczkach nie zmienił się. Kod oraz tag zostały wysłane i potwierdzone przez ls-remote. Zbudowano rzeczywiste .deb i AppImage; ich rozpakowane app.asar są identyczne, SHA i wymagana licencja poprawne. Dowód: `PACKAGES-VERIFICATION.json`, sumy `SHA256SUMS`. Natywny plik z .deb faktycznie uruchomiono z oddzielnym profilem i sandboxem: BLOCKED po braku X/DISPLAY. Nie wykonano instalacji systemowej ani testu komputera użytkownika.
+
+Ponowny qa:desktop na czystym e295f95: niezależny UI/komenda/ustawienia/restart/licencja PASS; A/B/C BLOCKED, kod2. Dowody w `evidence/final-desktop/`. GitHub Actions: Tests PASS (42116504054), Ubuntu PASS (42116503962); Android i Android v2 FAIL (42116503997 i42116503906), dokładne przyczyny nieustalone bez pełnych logów. Nie utożsamiać ich z lokalnym brakiem SDK.
+
+PR create zwrócił GraphQL Forbidden, Release create zwrócił HEAD API Forbidden. PR ani Release nie powstały; brak URL wydania. Szczegóły w `delivery.json`. Szkic środowiska z api.github.com/uploads.github.com oraz dokumentacją/API Allegro zapisano, ale nie aktywowano. Następna czynność zewnętrzna: przejrzeć/zapisać ustawienia i opublikować środowisko, sprawdzić API, następnie wykorzystać istniejący tag i rzeczywiste artefakty do prerelease, pobrać opublikowane paczki i porównać sumy. Nie generować nowego klucza licencji, nie resetować tagu ani nie force-pushować.
+
+Pełny cel nadal nie jest zakończony. Braki implementacji pozostają w requirements.json, niezależnie od powyższych blokad. Dalszy kod: kalendarzowe wyzwalacze i ogólny wykonawca bez renderera, prawdziwy adapter źródeł ofert, brakujące integracje/izolacja oraz odbiór rzeczywistym modelem i pulpitem. Nie deklarować pracy po zakończeniu sesji.

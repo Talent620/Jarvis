@@ -1,0 +1,28 @@
+{
+  "candidates": [
+    "http://127.0.0.1:11435"
+  ],
+  "url_source": "CLI --ollama-url (isolated test override)",
+  "model": "",
+  "model_source": "not selected; supply --model from installed models",
+  "production_settings_changed": false,
+  "probes": [
+    {
+      "origin": "http://127.0.0.1:11435",
+      "command": "GET http://127.0.0.1:11435/api/tags (3000ms)",
+      "reachable": false,
+      "valid_model_list": false,
+      "error": "ECONNREFUSED",
+      "models": []
+    }
+  ],
+  "selected_origin": null,
+  "stages": {
+    "tags": "BLOCKED",
+    "model": "NOT_RUN",
+    "capabilities": "NOT_RUN",
+    "generation": "NOT_RUN",
+    "jarvis_chat": "NOT_RUN",
+    "jarvis_tool": "NOT_RUN"
+  }
+}
