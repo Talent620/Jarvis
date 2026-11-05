@@ -13,7 +13,7 @@ import { retrieveKnowledge } from "./knowledge";
 import { buildProfileBlock } from "./profile";
 import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, isKeyError, humanize, classifyFailoverReason, sanitizeFailReason, PERSONAL_CUES } from "./aiHelpers";
-import { orderedKeys, primaryKey, coolDownKey } from "./keys";
+import { orderedKeys, primaryKey, coolDownKey, parseKeys } from "./keys";
 import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
 import { classifyCognitionLocal } from "./cognitiveController";
 import { learnFromUserMessage, correctionRulesBlock } from "./cognitiveRuntime";
@@ -431,15 +431,18 @@ export function resolveProvider(): { provider: ProviderId; model: string; apiKey
 }
 
 /**
- * Czy JARVIS ma JAKIKOLWIEK osiągalny mózg? Szersze niż resolveProvider: tryb „auto" z samą Ollamą
- * (bez kluczy chmury) daje resolveProvider=null, ale lokalny model i tak odpowie. Używać do decyzji
- * „czy wymusić konfigurację", by nie otwierać Ustawień użytkownikom korzystającym tylko z Ollamy/WebLLM.
+ * Czy istnieje skonfigurowana ścieżka do modelu? To nie jest test osiągalności, poprawności klucza
+ * ani obecności modelu: rzeczywistą gotowość może potwierdzić wyłącznie próba odpowiedzi.
+ * Uwzględnia lokalne ścieżki routera oraz zakaz chmury w trybie on-device.
  */
 export function hasUsableBrain(s = store.settings): boolean {
-  if (resolveProvider()) return true; // wybrany dostawca z kluczem / auto z kluczem
-  if (s.ollamaUrl?.trim()) return true; // lokalny serwer (Ollama) — odpowie nawet w trybie auto
-  if (PROVIDER_LIST.some((p) => p.id !== "ollama" && s.keys[p.id]?.trim())) return true; // klucz chmury
-  if (s.webllmEnabled && webllmSupported()) return true; // mózg on-device (WebGPU)
+  if (s.ollamaUrl?.trim()) return true;
+  if ((s.webllmEnabled || (!s.onDeviceOnly && s.provider === "webllm")) && webllmSupported()) return true;
+  // Chmurowe ścieżki są usuwane przez routeOrder w trybie on-device.
+  if (s.onDeviceOnly) return false;
+  // Sam wybór dostawcy (resolveProvider zwraca również pusty klucz) ani URL proxy nie
+  // gwarantuje ścieżki wykonania: bieżący router wymaga co najmniej jednego klucza.
+  if (PROVIDER_LIST.some((p) => !isKeyless(p.id) && parseKeys(s.keys[p.id] || "").length > 0)) return true;
   return false;
 }
 
@@ -561,10 +564,6 @@ async function askModelReply(params: {
   /** Preferuj MOCNIEJSZY model (jakość > szybkość) — oferty, strony, teczki, treści. */
   heavy?: boolean;
 }): Promise<JarvisReply> {
-  const resolved = resolveProvider();
-  if (!resolved) {
-    throw new Error("Najpierw skonfiguruj dostawcę AI w ⚙ → AI (wklej klucz: Claude, Gemini, Groq, OpenRouter…).");
-  }
   const baseCtx = {
     system: params.system,
     webSearch: !!params.webSearch,
@@ -581,7 +580,7 @@ async function askModelReply(params: {
     if (free.length) order = free; // są darmowe → użyj ich; brak → leć dalej (komunikat budżetu pokaże panel)
   }
   if (!order.length) {
-    throw new Error("Żaden dostawca AI nie ma wpisanego klucza — ⚙ → AI (Szybki start).");
+    throw new Error("Brak skonfigurowanego modelu AI. Skonfiguruj dostawcę lub podłącz lokalny model w ⚙ → AI.");
   }
   let lastErr: unknown;
   for (let i = 0; i < order.length; i++) {
@@ -611,6 +610,7 @@ async function askModelReply(params: {
     if (i < order.length - 1 && (shouldFallback(msg) || isNetworkError(msg))) continue;
     throw new Error(humanize(msg));
   }
+  if (!lastErr) throw new Error("Brak skonfigurowanego modelu AI. Podłącz lokalny model lub dostawcę w ⚙ → AI.");
   throw new Error(humanize(lastErr instanceof Error ? lastErr.message : String(lastErr)));
 }
 

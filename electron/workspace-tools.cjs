@@ -5,6 +5,31 @@ const { spawn, spawnSync } = require("child_process");
 const MAX_OUTPUT = 200_000;
 const SAFE_COMMANDS = new Set(["git", "node", "npm", "npx", "docker", "sqlite3", "psql"]);
 const BLOCKED_ARGS = /(?:^|\s)(?:--?force|-f|reset\s+--hard|clean\s+-[a-z]*f|rm\b|rmdir\b|del\b|format\b|shutdown\b)/i;
+const REDACTED = "[REDACTED]";
+const SENSITIVE_FIELD = /(?:password|passwd|passphrase|token|secret|api[_-]?key|private[_-]?key|authorization|cookie|credential|access[_-]?key)|^key$/i;
+
+// Audit records are diagnostic metadata, not a second copy of user content or command lines.
+// Free-form payloads and executable arguments may contain secrets even without labelled flags.
+function redactAuditInput(value, field = "", seen = new WeakSet()) {
+  if (SENSITIVE_FIELD.test(field) || /^(?:content|code|body|headers|args|query)$/i.test(field)) return REDACTED;
+  if (typeof value === "string") {
+    return value.replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>]+/gi, (raw) => {
+      try {
+        const url = new URL(raw);
+        if (url.username || url.password) { url.username = REDACTED; url.password = ""; }
+        if (url.search) url.search = "?redacted";
+        if (url.hash) url.hash = "#redacted";
+        return url.toString();
+      } catch { return REDACTED; }
+    }).replace(/\bBearer\s+[^\s,;]+/gi, `Bearer ${REDACTED}`)
+      .replace(/\b(password|passwd|token|secret|api[_-]?key|authorization)\s*[=:]\s*[^\s,;]+/gi, `$1=${REDACTED}`);
+  }
+  if (!value || typeof value !== "object") return value;
+  if (seen.has(value)) return "[CIRCULAR]";
+  seen.add(value);
+  if (Array.isArray(value)) return value.map((item) => redactAuditInput(item, "", seen));
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, redactAuditInput(item, key, seen)]));
+}
 
 function isOutside(flavor, base, target) {
   const relative = flavor.relative(base, target);
@@ -89,7 +114,7 @@ function createWorkspaceTools(options) {
   for (const dir of [root, logDir, backupDir, generatedDir]) fs.mkdirSync(dir, { recursive: true });
 
   const audit = (tool, input, result) => {
-    const record = { at: new Date().toISOString(), tool, input, ok: result.ok !== false };
+    const record = { at: new Date().toISOString(), tool, input: redactAuditInput(input), ok: result.ok !== false };
     fs.appendFileSync(path.join(logDir, "actions.jsonl"), JSON.stringify(record) + "\n");
   };
 
@@ -192,7 +217,7 @@ function createWorkspaceTools(options) {
             git: available("git"), node: available(process.execPath), docker: available("docker"),
             sqlite: available("sqlite3"), postgres: available("psql"), browser: typeof options.openExternal === "function",
           },
-          safety: { workspaceBoundary: true, commandAllowlist: [...SAFE_COMMANDS], backups: true, auditLog: true },
+          safety: { workspaceBoundary: true, workspaceBoundaryScope: "file paths and working directory", processSandbox: false, commandAllowlist: [...SAFE_COMMANDS], backups: true, auditLog: true },
         };
       } else throw new Error(`Nieznane narzędzie systemowe: ${tool}`);
     } catch (error) {
