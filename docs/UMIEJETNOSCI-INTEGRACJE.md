@@ -26,6 +26,8 @@ W Ustawieniach → **Przeglądarka JARVIS** zatwierdź konkretny serwis: protok�
 
 Adapter Playwright obsługuje odczyt widocznego tekstu i elementów, wypełnianie pól, kliknięcia i ograniczone pobrania. Wysyłka wymaga zgody na konkretną operację. Akcja kliknięcia nie jest automatycznie dowodem skutku na serwerze. CAPTCHA i odmowa dostępu pozostają przeszkodą; nie są obchodzone. Cofnięcie dostępu i STOP zamykają wyłącznie przeglądarkę uruchomioną przez JARVIS-a.
 
+Obsługiwany zakres obejmuje główną ramkę strony. Jedno kliknięcie może skierować do zatwierdzenia jedną rzeczywistą nawigację; zgoda pokazuje jej adres, metodę i treść. Starsze żądania szkicu, autosave oraz zasoby działające w tle nie dziedziczą tej zgody. Przekierowania HTTP są zatrzymywane przed podążeniem za nowym adresem. Osadzone ramki oraz formularze wysyłane w tle przez JavaScript (fetch/XHR, często aplikacje SPA) nie mają w tym adapterze obsługiwanej ścieżki wysyłki. Wymagają osobnego adaptera właściwej usługi; kliknięcie nie może zostać przedstawione jako ich udana wysyłka.
+
 ## Monitoring i powiadomienia
 
 W istniejącym panelu **Cele → Monitoring i powiadomienia** skonfiguruj adres własnej usługi changedetection.io lub ntfy. Dane logowania są zapisywane przez systemowy magazyn Electron `safeStorage`; brak bezpiecznego magazynu blokuje konfigurację zamiast zapisywać token jawnym tekstem. Usługi lokalne wymagają odrębnej zgody. JARVIS nie instaluje serwerów ani usług systemowych.

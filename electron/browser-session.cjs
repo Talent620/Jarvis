@@ -9,7 +9,9 @@ const https = require('node:https');
 const { isPublicIPv4 } = require('./public-page.cjs');
 const MAX_DOWNLOAD = 20 * 1024 * 1024;
 const ACTIONS = new Set(['read', 'interact', 'download']);
+const INTERACTION_LIMITS = { mainFrameOnly: true, backgroundSubmissions: false, subframes: false, redirects: false };
 const error = (message, code = 'BROWSER_BLOCKED') => Object.assign(new Error(message), { code });
+const uncertainOutcome = () => ({ ok: false, code: 'BROWSER_EFFECT_UNCONFIRMED', uncertain: true, actionDispatched: true, externalEffectConfirmed: false, error: 'Skutek zatwierdzonego żądania jest niepotwierdzony i mógł już wystąpić. Nie ponawiaj operacji bez niezależnego sprawdzenia.', notice: 'Nie cofnięto operacji wysłanej przed przerwaniem lub zablokowaniem odpowiedzi.' });
 function abortable(promise, signal) {
   if (signal.aborted) return Promise.reject(error('Działanie przeglądarki anulowano.', 'CANCELLED'));
   let abort;
@@ -95,14 +97,34 @@ function createBrowserSession(options) {
     networkMode = 'read';
     await context.route('**/*', async route => {
       try {
+        if (browser !== launched) return route.abort('blockedbyclient').catch(() => {});
         const request = route.request(), url = webUrl(request.url());
+        if (!page || request.frame() !== page.mainFrame()) {
+          if (current) current.blockedRequestCount = (current.blockedRequestCount || 0) + 1;
+          record('subframe-request', 'BLOCKED', url.origin); return route.abort('blockedbyclient');
+        }
         if (!grantFor(url, 'read')) return route.abort('blockedbyclient');
         if (networkMode !== 'read' || !['GET', 'HEAD'].includes(request.method())) {
           const operation = current;
           const body = request.postData() || '';
-          if (!operation || operation.action !== 'click' || operation.controller.signal.aborted || !grantFor(url, 'interact') || !options.approveMutation || Buffer.byteLength(body) > 8192 || /multipart\//i.test(request.headers()['content-type'] || '')) return route.abort('blockedbyclient');
+          if (!request.isNavigationRequest()) {
+            if (operation) operation.blockedRequestCount = (operation.blockedRequestCount || 0) + 1;
+            record('background-request', 'BLOCKED', `${request.method()} ${url.origin}`);
+            return route.abort('blockedbyclient');
+          }
+          if (!operation || operation.action !== 'click' || !operation.navigationArmed || operation.navigationClaimed || request.redirectedFrom() || operation.controller.signal.aborted || !grantFor(url, 'interact') || !options.approveMutation || Buffer.byteLength(body) > 8192 || /multipart\//i.test(request.headers()['content-type'] || '')) {
+            if (operation) { operation.navigationPolicyBlocked = true; operation.blockedRequestCount++; }
+            record('navigation-request', 'BLOCKED', url.origin); return route.abort('blockedbyclient');
+          }
+          operation.navigationClaimed = true; // Reserve before native approval; no second request may inherit this click.
           const decision = await abortable(Promise.resolve(options.approveMutation({ url: url.href, method: request.method(), bodyPreview: body, bodyHash: nodeCrypto.createHash('sha256').update(`${request.method()}\n${url.href}\n${body}`).digest('hex') })), operation.controller.signal);
-          if (decision !== true || current !== operation || operation.epoch !== epoch || operation.controller.signal.aborted || !grantFor(url, 'interact')) return route.abort('blockedbyclient');
+          if (decision !== true) {
+            operation.navigationDenied = true; operation.blockedRequestCount++;
+            record('external-request', 'DENIED', `${request.method()} ${url.origin}`);
+            return route.abort('blockedbyclient');
+          }
+          if (current !== operation || operation.epoch !== epoch || operation.controller.signal.aborted || !grantFor(url, 'interact')) return route.abort('blockedbyclient');
+          operation.navigationApproved = true;
           record('external-request', 'AUTHORIZED', `${request.method()} ${url.origin}`);
         }
         return route.continue();
@@ -114,6 +136,24 @@ function createBrowserSession(options) {
     context.on('page', created => { if (page && created !== page) void created.close(); });
     const createdPage = await context.newPage();
     assertCurrent(); page = createdPage;
+    // Playwright routes see only the first URL of an HTTP redirect chain. Pause
+    // real Chromium responses before processing Location; retain its DNS pinning,
+    // TLS and cookie jar instead of forwarding traffic through Node.
+    const responseGuard = await context.newCDPSession(page);
+    responseGuard.on('Fetch.requestPaused', async event => {
+      if (browser !== launched) return; // Late events from a closed session cannot affect a new task.
+      try {
+        if (event.responseErrorReason || (event.responseStatusCode >= 300 && event.responseStatusCode < 400 && event.responseStatusCode !== 304)) {
+          if (current?.navigationApproved) current.unconfirmedEffect = true;
+          record('redirect-or-failed-response', 'BLOCKED', webUrl(event.request.url).origin);
+          await responseGuard.send('Fetch.failRequest', { requestId: event.requestId, errorReason: 'BlockedByClient' });
+        } else await responseGuard.send('Fetch.continueResponse', { requestId: event.requestId });
+      } catch {
+        if (browser === launched) { record('response-guard', 'FAILED_CLOSED', 'Zamknięto własną sesję po błędzie ochrony odpowiedzi.'); await stop(); }
+      }
+    });
+    await responseGuard.send('Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Response' }] });
+    assertCurrent();
     page.setDefaultTimeout(10000);
     page.on('download', download => { void download.cancel(); });
     } catch (e) {
@@ -187,7 +227,7 @@ function createBrowserSession(options) {
   async function command(request, execution = {}) {
     await load();
     if (request?.action === 'stop') return stop();
-    if (request?.action === 'status') return { ok: true, active: !!browser, busy, starting: !!pendingLaunch, grants: grants.map(g => ({ ...g })), page: page && !page.isClosed() ? page.url() : null, audit: [...audit], browserDownloadAutomatic: false, profile: 'isolated ephemeral context; no imported user cookies' };
+    if (request?.action === 'status') return { ok: true, active: !!browser, busy, starting: !!pendingLaunch, interactionLimits: INTERACTION_LIMITS, grants: grants.map(g => ({ ...g })), page: page && !page.isClosed() ? page.url() : null, audit: [...audit], browserDownloadAutomatic: false, profile: 'isolated ephemeral context; no imported user cookies' };
     if (request?.action === 'grant') {
       if (!execution.trustedUserAction) throw error('Zakres przeglądarki zatwierdza użytkownik.', 'APPROVAL_REQUIRED');
       const url = webUrl(request.origin);
@@ -209,7 +249,7 @@ function createBrowserSession(options) {
     }
     if (!['open', 'read', 'fill', 'click', 'download'].includes(request?.action)) throw error('Nieobsługiwane działanie przeglądarki.');
     if (busy) throw error('Przeglądarka jest zajęta przez inne działanie.');
-    const operation = { epoch, action: request.action, controller: new AbortController() };
+    const operation = { epoch, action: request.action, controller: new AbortController(), navigationArmed: false, navigationClaimed: false, navigationApproved: false, navigationDenied: false, navigationPolicyBlocked: false, unconfirmedEffect: false, blockedRequestCount: 0 };
     if (execution.signal?.aborted) throw error('Anulowano działanie.');
     const abort = () => { operation.controller.abort(); void stop(); };
     execution.signal?.addEventListener('abort', abort, { once: true });
@@ -245,15 +285,32 @@ function createBrowserSession(options) {
         await locator.fill(request.value); result = { ok: true, draft: true, verifiedValue: await locator.inputValue() === request.value };
       } else if (request.action === 'click') {
         const locator = await target(request.selector);
-        // Every actual request caused by a click needs approval, including GET query data.
-        // Approval is bound to the routed URL/body, never a mutable form snapshot.
+        // Only one main-frame navigation can request approval, including GET query data.
+        // Background fetch/XHR/beacons cannot inherit this click's authorization.
         networkMode = 'click';
-        await locator.click({ timeout: 10000 }); result = { ok: true, actionDispatched: true, url: page.url(), externalEffectConfirmed: false };
+        operation.navigationArmed = true;
+        await locator.click({ timeout: 10000 });
+        const ok = !operation.navigationDenied && !operation.navigationPolicyBlocked && (!operation.blockedRequestCount || operation.navigationApproved);
+        const notice = operation.navigationDenied ? 'Użytkownik odmówił zgody. Żądanie nie zostało wysłane.'
+          : operation.navigationPolicyBlocked ? 'Żądanie nawigacji wykracza poza dozwolony zakres tej operacji i zostało zablokowane.'
+          : 'Zablokowano żądania w tle. Wysyłka przez fetch/XHR oraz formularze w ramkach wymagają innego adaptera; nie potwierdzono ich wykonania.';
+        result = operation.unconfirmedEffect ? uncertainOutcome() : { ok, actionDispatched: true, url: page.url(), externalEffectConfirmed: false,
+          blockedRequestCount: operation.blockedRequestCount, interactionLimits: INTERACTION_LIMITS,
+          ...(operation.navigationDenied ? { code: 'APPROVAL_DENIED' } : {}),
+          ...(operation.blockedRequestCount ? { notice, ...(!ok ? { error: notice } : {}) } : {}) };
       } else result = await download(request.selector, operation);
       if (operation.epoch !== epoch || operation.controller.signal.aborted) throw error('Odrzucono spóźniony wynik przeglądarki.');
-      record(request.action, 'COMPLETED', result.url ? new URL(result.url).origin : '');
+      record(request.action, result.uncertain ? 'UNCONFIRMED' : result.ok === false ? 'BLOCKED' : 'COMPLETED', result.url ? new URL(result.url).origin : '');
       return result;
-    } catch (e) { record(request.action, 'UNCONFIRMED', e.code || 'BROWSER_ERROR'); throw e; }
+    } catch (e) {
+      if (operation.navigationDenied && !operation.navigationApproved) {
+        record(request.action, 'BLOCKED', 'APPROVAL_DENIED');
+        return { ok: false, code: 'APPROVAL_DENIED', actionDispatched: true, externalEffectConfirmed: false, error: 'Użytkownik odmówił zgody. Żądanie nie zostało wysłane.' };
+      }
+      record(request.action, 'UNCONFIRMED', operation.navigationApproved ? 'BROWSER_EFFECT_UNCONFIRMED' : e.code || 'BROWSER_ERROR');
+      if (operation.navigationApproved) return uncertainOutcome();
+      throw e;
+    }
     finally { clearTimeout(timeout); execution.signal?.removeEventListener('abort', abort); if (current === operation) current = null; busy = false; }
   }
   return { command, stop, close: stop };

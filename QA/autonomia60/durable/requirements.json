@@ -4,7 +4,7 @@
   "request_sha256": "90784301789c744c57e5144312083b04043200dfbb9fe26d83b4e76bfc04ac6e",
   "integration_base": "fb17f9755faad72295cb125563ba2b0220d9319d",
   "integration_branch": "codex/skills-integration-20261105",
-  "current_state": "CODE_VERIFIED_RELEASE_PREPARATION",
+  "current_state": "CODE_VERIFIED_AWAITING_FINAL_CI_AND_RELEASE",
   "release": {
     "version": "2.1.0-alpha.2",
     "sha": null,
@@ -410,9 +410,10 @@
       "authorized": "EXACT_TEST_ORIGIN_ACTION_SCOPES",
       "tested": "PASS_REAL_CHROMIUM_CONTROLLED_SITE",
       "available": "REQUIRES_EXISTING_CHROMIUM_AND_SCOPES",
-      "limitations": "Playwright: realny DOM, read/fill/click, osobna zgoda na faktyczne żądanie wysyłki, Linux FD download i STOP. Bez pobierania przeglądarki/cookies użytkownika. Restrykcyjne blokowanie sieci szkicu może ograniczyć dynamiczne strony; nowa nawigacja po edycji resetuje izolowaną sesję. Nie wykonano modelowego researchu rzeczywistego internetu.",
+      "limitations": "Playwright: DOM/read/fill/click w głównej ramce; jedna rzeczywista nawigacja na klik wymaga zgody na dokładny URL/metodę/treść. Autosave/fetch/XHR nie dziedziczą zgody. HTTP redirects i ramki blokowane przed dalszym ruchem; brak obsługiwanej wysyłki formularzy SPA/iframe. Linux FD download i STOP. Istniejące Chromium, brak pobierania i importu prywatnych cookies. Nowa nawigacja po edycji resetuje izolowaną sesję. Nie wykonano modelowego researchu rzeczywistego internetu.",
       "evidence": [
-        "QA/autonomia60/durable/browser-mcp.json"
+        "QA/autonomia60/durable/browser-mcp.json",
+        "QA/autonomia60/durable/browser-transaction-boundary.json"
       ],
       "legacy_scenario_ids": [
         "JARVIS-13",
@@ -2203,6 +2204,45 @@
         "QA/autonomia60/durable/evidence/alpha2-final-tests.log",
         "QA/autonomia60/durable/browser-ci-precondition.json"
       ]
+    },
+    {
+      "id": "C-ALPHA2-CI-577E450",
+      "status": "FAIL",
+      "commit": "577e450faac273da0592fa7f874dc9765182cc49",
+      "ubuntu": "PASS: Verify source, build and artifact upload",
+      "tests": "FAIL: expected one native approval for form, got two",
+      "android": "FAIL: missing signing configuration",
+      "tag_published": false,
+      "evidence": [
+        "QA/autonomia60/durable/evidence/alpha2-ci-577e450.json"
+      ],
+      "resolution": "Runtime transaction boundary fixed and23/23 focused actual-browser/unit checks passed; original assertions preserved. Full final regression and new remote CI required separately. Evidence: browser-transaction-boundary.json."
+    },
+    {
+      "id": "C-BROWSER-TRANSACTION-BOUNDARY",
+      "status": "PASS",
+      "passed": 23,
+      "actual_browser_scenarios": 12,
+      "real_model": false,
+      "native_electron_ipc": false,
+      "evidence": [
+        "QA/autonomia60/durable/browser-transaction-boundary.json"
+      ],
+      "limitations": "Main frame only; redirects, iframe and background SPA submissions blocked. Does not claim full general web automation."
+    },
+    {
+      "id": "C-ALPHA2-RELEASE-REGRESSION",
+      "status": "PASS",
+      "passed": 3089,
+      "failed": 0,
+      "skipped": 0,
+      "files": 373,
+      "lint": "PASS",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/alpha2-release-validation-source.json",
+        "QA/autonomia60/durable/evidence/alpha2-release-tests.log"
+      ],
+      "note": "Actual OS sandbox and browser prerequisite required. This is code/component validation, not true-model acceptance."
     }
   ],
   "external_access": [
@@ -3051,7 +3091,7 @@
         "id": "G9",
         "title": "Jakość",
         "status": "NOT_ACCEPTED",
-        "reason": "Full3074PASS/lint/build PASS; real-model/desktop acceptance blocked and full audit32 open.",
+        "reason": "Full3089PASS/lint PASS; final clean build/CI follow separately. True-model/desktop acceptance blocked, full audit32 open.",
         "evidence": []
       },
       {

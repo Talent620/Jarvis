@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-05T23:18:37.450911+00:00",
+  "baselineCommit": "577e450faac273da0592fa7f874dc9765182cc49",
+  "originalFailure": {
+    "status": "FAIL",
+    "run": "https://github.com/Talent620/Jarvis/actions/runs/42126341839",
+    "assertion": "tests/browserSession.test.ts:120 approvals expected length 1, received 2",
+    "scope": "Public annotation proves the extra approval, but does not reveal its request identity. The subsequent controlled reproduction establishes the concrete vulnerability; it does not pretend to recover unavailable remote logs."
+  },
+  "controlledReproduction": {
+    "status": "FAIL_EXPECTED_BEFORE_PATCH",
+    "mechanism": "Actual sandboxed Chromium: filling saves a draft callback; the fixture releases that old callback during the clicked DOM event, while intended POST approval is held. This avoids a wall-clock race. Both GET /later?draft=private-draft and POST /submit reached the approval callback; GET containing the controlled draft reached the fixture server.",
+    "log": "QA/autonomia60/durable/evidence/browser-draft-race-before.log"
+  },
+  "redirectReproduction": {
+    "status": "FAIL_EXPECTED_BEFORE_PATCH",
+    "mechanism": "Independent actual product-adapter test granted only source origin. A 302 reached an ungranted target once before the old post-navigation check reported failure. Playwright route.continue does not re-route every redirect URL.",
+    "log": "QA/autonomia60/durable/evidence/browser-cross-origin-before.json"
+  },
+  "cause": "An action-labelled click window treated all contemporaneous page requests as candidates for authorization, including background fetch/beacons unrelated to the intended navigation. Request-stage routing alone also allowed redirect targets to be contacted before the post-navigation grant check.",
+  "fix": [
+    "Only a main-frame navigation armed immediately before locator.click can request consent; its single transaction slot is reserved before awaiting native consent. A rejected consent does not free that slot.",
+    "Background fetch/XHR/beacons and child-frame requests fail closed; blocked counts and notice are returned, unsupported interaction limits are visible, and a negative click result is audited BLOCKED.",
+    "A Chromium CDP response-stage guard rejects redirects before Chromium follows Location. No Node forwarding or route.fetch is introduced, so browser DNS pinning, cookies and TLS transport remain in place.",
+    "Response-guard setup failure closes the owned browser; asynchronous guard failure checks the captured browser identity before stopping it, so stale events cannot stop a later session.",
+    "The original five integration scenario assertion bodies are retained or strengthened for STOP/new-task isolation. Seven added real-browser cases cover the draft callback, main/image/iframe boundaries, blocked SPA result, owner refusal and uncertain approved POST after a blocked redirect.",
+    "A stale Playwright request callback checks the captured browser identity before reading request/frame/current state, so it cannot affect the next task after STOP.",
+    "Explicit owner refusal returns APPROVAL_DENIED and BLOCKED audit, including browsers that throw after route abort. An approved request followed by failed/blocked response returns BROWSER_EFFECT_UNCONFIRMED with a warning against retry before independent verification. Negative outcomes include error text that survives the renderer tool bridge."
+  ],
+  "verification": {
+    "status": "PASS",
+    "command": "CI=true npx vitest run tests/browserSession.test.ts tests/browserPrerequisite.test.ts",
+    "passed": 23,
+    "skipped": 0,
+    "actualBrowserScenarios": 12,
+    "testFileCounts": {
+      "browserSession": 17,
+      "browserPrerequisite": 6
+    },
+    "log": "QA/autonomia60/durable/evidence/browser-transaction-after.log",
+    "eslint": "PASS",
+    "typescriptNoEmit": "PASS",
+    "diffCheck": "PASS"
+  },
+  "independentOracles": {
+    "draft": "Exactly POST /submit is offered for approval; no draft GET reaches the fixture; approved POST executes once.",
+    "redirects": "Unapproved target HTTP server receives zero requests for main navigation, image subresource and rejected iframe cases.",
+    "blockedSPA": "No approval callback or fixture request; result ok=false, actionDispatched=true, externalEffectConfirmed=false, positive blocked count and notice; final audit BLOCKED.",
+    "existingSTOP": "Real STOP pending approval followed by a fresh browser session succeeds. Late approval cannot send the old POST. A synthetic queued old route callback never reads request data and cannot mutate the new session audit; the new page still reads correctly. Pending-startup and stale-DNS tests remain passing.",
+    "ownerDenial": "One explicit native refusal; no POST sent; APPROVAL_DENIED result and BLOCKED final audit.",
+    "approvedPOSTRedirect": "Approved POST actually reaches fixture once. Its redirect target receives zero requests. Result remains uncertain with BROWSER_EFFECT_UNCONFIRMED and explicit no-retry-without-verification text; final audit UNCONFIRMED, never rollback claimed."
+  },
+  "limits": [
+    "Supported interaction is a single owner-approved main-frame navigation; SPA background submits, child-frame forms and automatic HTTP redirects are explicitly unsupported.",
+    "The adapter does not prove that a main-frame navigation was causally triggered by the clicked element; a timer navigation during the armed interval remains possible. The exact actual URL, method and body require owner approval, and only one transaction may claim the click.",
+    "Response-stage guard checks were exercised with real Chromium. Independent reviewer also checked a dedicated-worker redirect under the same guard; this is not a claim covering every possible worker/browser topology.",
+    "These are controlled adapter tests, not real-model chat or target-desktop acceptance. Remote CI rerun after this patch remains pending parent commit/push."
+  ],
+  "sourceSha256": {
+    "electron/browser-session.cjs": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2",
+    "tests/browserSession.test.ts": "b1771dcf792ecdcb9c8f01892121e58a4385e148829e17b1e394600d0b8f1c61"
+  },
+  "evidenceSha256": {
+    "QA/autonomia60/durable/evidence/browser-draft-race-before.log": "a4a02b8d9faa7f8e4e9f5977195c1e8f35b2981997a8f7e709da5e2f7c99e412",
+    "QA/autonomia60/durable/evidence/browser-cross-origin-before.json": "37f92f8b93bfb84a5f92437d9e38795b4c763b6b772dee381c2d3e6ac32b8d32",
+    "QA/autonomia60/durable/evidence/browser-transaction-after.log": "67c111ca4cb5d4aa7899359b40b182853f22c56783de19d61e5c4f2579aa159a",
+    "QA/autonomia60/durable/evidence/browser-owner-denial-before.json": "3c53c2e38cf10838578598d960f7156970dd6c73772ac4c892a13d1aeb9b35bc",
+    "QA/autonomia60/durable/evidence/browser-cross-origin-after.json": "d4d0013a96a86e2efe0e6afcad12e9f1a6fc37bc9a7c75f11d30b9d1897fa006"
+  },
+  "ownerDenialReproduction": {
+    "status": "FAIL_EXPECTED_BEFORE_PATCH",
+    "log": "QA/autonomia60/durable/evidence/browser-owner-denial-before.json",
+    "mechanism": "Independent reviewer observed native approval=false, actual POST count0, but old result ok=true and click COMPLETED. The new exact outcome regression now requires APPROVAL_DENIED, error text, zero POSTs and BLOCKED audit."
+  },
+  "rawLogSha256": {
+    "QA/autonomia60/durable/evidence/browser-draft-race-before.log": "2df8c5ccc16275b52411229320d3a603cc60c473045701a1ea42e1d717472608",
+    "QA/autonomia60/durable/evidence/browser-transaction-after.log": "9bb2137c049bf6b9e5649cb0aed77f0db0568ec407054bfacb017c431d9cdb4a"
+  },
+  "logNormalization": "Trailing whitespace/empty EOF lines only; all diagnostic text retained"
+}

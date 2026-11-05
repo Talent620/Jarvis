@@ -1,0 +1,12 @@
+{
+  "sandboxEnabled": true,
+  "productAdapter": true,
+  "sourceHash": "f25ed49dea341cd7bcb9b7006a03cc557baecb4b6f39a2dd107c16b3ecc22c00",
+  "targetAuthorized": false,
+  "targetRequests": [],
+  "expectedTargetRequests": 0,
+  "boundary": "PASS",
+  "operationOutcome": {
+    "error": "page.goto: net::ERR_BLOCKED_BY_CLIENT at http://127.0.0.1:33817/start\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:33817/start\", waiting until \"domcontentloaded\"\u001b[22m\n"
+  }
+}

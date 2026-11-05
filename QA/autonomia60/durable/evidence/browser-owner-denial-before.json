@@ -1,0 +1,58 @@
+{
+  "sandboxEnabled": true,
+  "approvalDecision": false,
+  "approvals": [
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:34931/submit"
+    }
+  ],
+  "postRequests": [],
+  "outcome": {
+    "returned": {
+      "ok": true,
+      "actionDispatched": true,
+      "url": "http://127.0.0.1:34931/",
+      "externalEffectConfirmed": false,
+      "blockedRequestCount": 0,
+      "interactionLimits": {
+        "mainFrameOnly": true,
+        "backgroundSubmissions": false,
+        "subframes": false,
+        "redirects": false
+      }
+    }
+  },
+  "audit": [
+    {
+      "at": 1793920439882,
+      "action": "stop",
+      "result": "CANCELLED",
+      "detail": "Zamknięto wyłącznie przeglądarkę JARVIS-a; wcześniejszy skutek zewnętrzny wymaga weryfikacji."
+    },
+    {
+      "at": 1793920441709,
+      "action": "redirect-or-failed-response",
+      "result": "BLOCKED",
+      "detail": "http://127.0.0.1:34931"
+    },
+    {
+      "at": 1793920441712,
+      "action": "open",
+      "result": "COMPLETED",
+      "detail": "http://127.0.0.1:34931"
+    },
+    {
+      "at": 1793920441851,
+      "action": "redirect-or-failed-response",
+      "result": "BLOCKED",
+      "detail": "http://127.0.0.1:34931"
+    },
+    {
+      "at": 1793920441853,
+      "action": "click",
+      "result": "COMPLETED",
+      "detail": "http://127.0.0.1:34931"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+stdout | tests/browserSession.test.ts > actual sandboxed Chromium with controlled website (not LLM) > does not let a delayed draft fetch join an in-flight navigation approval
+Controlled request identities: {"approvals":[{"method":"GET","url":"http://127.0.0.1:37315/later?draft=private-draft"},{"method":"POST","url":"http://127.0.0.1:37315/submit"}],"received":[{"method":"GET","path":"/"},{"method":"GET","path":"/later?draft=private-draft"}]}
+
+ ❯ tests/browserSession.test.ts (11 tests | 1 failed | 10 skipped) 599ms
+   × actual sandboxed Chromium with controlled website (not LLM) > does not let a delayed draft fetch join an in-flight navigation approval 598ms
+     → expected [ { method: 'GET', …(1) }, …(1) ] to deeply equal [ { method: 'POST', …(1) } ]
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/browserSession.test.ts > actual sandboxed Chromium with controlled website (not LLM) > does not let a delayed draft fetch join an in-flight navigation approval
+AssertionError: expected [ { method: 'GET', …(1) }, …(1) ] to deeply equal [ { method: 'POST', …(1) } ]
+
+- Expected
++ Received
+
+  Array [
+    Object {
++     "method": "GET",
++     "url": "http://127.0.0.1:37315/later?draft=private-draft",
++   },
++   Object {
+      "method": "POST",
+      "url": "http://127.0.0.1:37315/submit",
+    },
+  ]
+
+ ❯ tests/browserSession.test.ts:197:25
+    195|       await Promise.all([waitingForPost, delayedResponse]);
+    196|       console.info("Controlled request identities:", JSON.stringify({ …
+    197|       expect(approvals).toEqual([{ method: "POST", url: `${origin}/sub…
+       |                         ^
+    198|       expect(requests.some(r => r.path.startsWith("/later") || r.path.…
+    199|       release(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  23:09:44
+   Duration  1.64s (transform 55ms, setup 0ms, collect 752ms, tests 599ms, environment 0ms, prepare 87ms)

@@ -1,0 +1,18 @@
+{
+  "sandboxEnabled": true,
+  "productAdapter": true,
+  "sourceHash": "32dfeeb9eacd6ff04e4af9fac2652e0788077dd832e548798e2a00315cfc028a",
+  "targetAuthorized": false,
+  "targetRequests": [
+    {
+      "method": "GET",
+      "path": "/private-target"
+    }
+  ],
+  "expectedTargetRequests": 0,
+  "boundary": "FAIL",
+  "operationOutcome": {
+    "error": "Przekierowanie poza dozwolony zakres.",
+    "code": "BROWSER_BLOCKED"
+  }
+}
