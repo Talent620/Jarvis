@@ -34,7 +34,7 @@ jobs:
         run: |
           mkdir -p QA/runs
           set +e
-          npm test -- --reporter=default --reporter=json --outputFile=QA/runs/ci-vitest.json 2>&1 | tee QA/runs/ci-vitest.log
+          npm test -- --maxWorkers=2 --minWorkers=1 --reporter=default --reporter=json --outputFile=QA/runs/ci-vitest.json 2>&1 | tee QA/runs/ci-vitest.log
           test_exit=${PIPESTATUS[0]}
           set -e
           printf 'exit_code=%s\n' "$test_exit" >> "$GITHUB_OUTPUT"

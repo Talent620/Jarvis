@@ -1,3 +1,7 @@
+# CI alpha.6 — kontynuacja
+
+Commit 3ab210b147f97dbd7053653f39e0bf4da577dee9: lokalnie pełna regresja 3114/3114 PASS, 18 testów przeglądarki PASS, lint i build PASS, lokalny .deb/AppImage i sumy PASS, helper sandbox zgodny z sumą. W GitHub Tests 42143315125 i Ubuntu 42143315098 wystąpił 15-sekundowy timeout uruchomienia sandboxowanego Chrome; przyczyna nieustalona. Ograniczyć do 2 workerów Vitest, zachowując sandbox i asercje; test tej hipotezy wymaga ponownego CI i pełnej regresji. Nie tagować czerwonego commitu. qa:desktop alpha.6: lokalny przepływ i licencja PASS, model i pulpit BLOCKED. MCP i watch pozostają częściowe.
+
 # Przygotowanie alpha.6
 
 Tag alpha.5 eca51fe29c062456fc8712d81be47e1c6636d490 wskazuje 3a2b19da4ebb89f3c5d3ba448ba8990c4a359e8f, ale jego Ubuntu CI 42142451700 FAIL na wyścigu raportowania żądania SPA; nie opublikowano release. Zachować tag bez przepisywania. Test z wstrzymanym żądaniem reprodukuje FAIL przed poprawką; po poprawce 18/18 testów przeglądarki PASS w sandboxowanym Chromium. Oczekiwanie na uspokojenie ruchu jest ograniczone i nie dowodzi wykrycia arbitralnie opóźnionych działań. Ponowić pełną regresję, lint, build, commit i CI; kolejny tag to alpha.6. Testy alpha.5: 3113/3113 PASS lokalnie, niezależne zadanie/licencja PASS, realna Ollama/pulpit BLOCKED. MCP i watch częściowe jak poniżej. Potwierdzić opublikowane artefakty i sumy przed wskazaniem wydania.

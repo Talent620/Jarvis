@@ -1,3 +1,7 @@
+## CI alpha.6 — diagnoza w toku
+
+Dla 3ab210b pełna regresja lokalna miała 3114/3114 PASS; dwa niezależne workflow GitHub skończyły FAIL: sandboxowany Chrome przekroczył 15 s podczas startu. Adnotacje zawierają timeout i ostrzeżenia systemowe, które same nie dowodzą przyczyny. Dwa workery Vitest w CI są próbą ograniczenia obciążenia; zachowano limit czasu, asercje i sandbox. Potwierdzenie wpływu wymaga następnego przebiegu CI. `evidence/alpha6-ci-timeout.json`.
+
 ## Kontynuacja alpha.6 — regresja przeglądarki
 
 Tag alpha.5 nie wydał pakietu: [Ubuntu CI 42142451700](https://github.com/Talent620/Jarvis/actions/runs/42142451700) FAIL, ponieważ wynik kliknięcia SPA został odczytany przed przechwyceniem żądania. Deterministyczny test na kontrolowanej stronie i prawdziwym sandboxowanym Chromium odtworzył błąd przed poprawką; po niej wszystkie 18 testów przeglądarki przeszły, w tym STOP, zgody i niepotwierdzony skutek przekierowania. Oczekiwanie na uspokojenie ruchu jest ograniczone i nie gwarantuje wykrycia dowolnie opóźnionych działań strony. Raport testu pulpitu alpha.5: `evidence/alpha5-desktop/REPORT.md`; niezależny lokalny przepływ i licencja PASS, rzeczywisty model i pulpit BLOCKED.
