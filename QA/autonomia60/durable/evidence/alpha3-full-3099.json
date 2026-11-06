@@ -1,0 +1,13 @@
+{
+  "recorded_at": "2026-11-06T00:11:59.540196+00:00",
+  "tested_commit": "44eeb3d5082dba934e94027abb2748d7a52c7538",
+  "test_files": 373,
+  "passed": 3099,
+  "failed": 0,
+  "skipped": 0,
+  "lint": "PASS_FULL_GITHUB_UBUNTU_VERIFY_SOURCE_42134604873",
+  "runtime_unchanged_from": "3ee898c8bc96612967bae4cb56231912da9f9527",
+  "log": "evidence/alpha3-full-3099.log",
+  "raw_sha256": "fd20b12e45b8f99fff08dd3c684307d112f162bd0da577f5f78d92afe38d0167",
+  "stored_sha256": "00239cfe6aebe04948718a169c39cabe6c9ac9f89b84421eac1f1a7fce6b8ab9"
+}

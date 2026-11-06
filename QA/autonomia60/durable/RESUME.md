@@ -1,3 +1,11 @@
+# Aktualne wznowienie — kandydat wydaniaalpha.3
+
+Kod/testy/budowanie44eeb3d5082dba934e94027abb2748d7a52c7538: local3099PASS/373pliki/0skip, GitHubTests42134605052 iUbuntu42134604873 SUCCESS wraz z pakowaniem. Bieżący commit dodaje wyłącznie dokumenty/dowody, bez zmiany tego kodu. Wcześniejsza przyczyna Chrome launch FAIL3ee/6f pozostaje nieustalona; nie ogłaszać naprawy przez diagnostykę. Sandbox, timeout15s, READY i pierwotne asercje zachowane.
+
+Następne: zatwierdzić/wysłać doc-only kandydata, sprawdzić brak różnic runtime/test/build względem44eeb3d i zdalnySHA. Autoryzowany anotowanytagv2.1.0-alpha.3 ma wskazać tego kandydata (nie przepisywać tagówalpha1/2). Istniejącyworkflowtagu musi sam zaliczyćpełnebramki przedRelease. Potem świeżykloń taga, pobranie9artefaktów, checksumy/PROVENANCE/publicznyissuer/17modułów/5dokumentów i natywna próba z izolowanymprofilem bezsandbox-disable. Potwierdzić prawdziwyURL. Zapisfinaldelivery/HANDOFF i wyniki tylko jako dalszy doc-only commitgałęzi; tag pozostaje niezmienny.
+
+A–C nadalBLOCKED (Ollama11435/11434 connectionrefused, brakDISPLAY); ostatniqa:desktop3ee maPASS niezależnekomendy/settings/restart/licencja, exit2. Nie instalowaćXvfb/usług/modeli, nie kontaktować realnych odbiorców, nie publikować kluczy. Androidrelease wymaga7konfiguracji podpisu. API403 blokujePR; nie obchodzićpolityki. G1–G10 pełnyodbiór nadalniezaliczony; brakówimplementacji nie nazywać brakiempulpitu. Nie deklarować pracy po końcu sesji.
+
 # Najnowszy checkpoint — główny wyjątek Chrome
 
 Commit6f719e1 ma lokalne3098PASS, zdalneTests42133889562PASS iUbuntu42133889657FAIL przylaunch. Ujawnione D-Bus/fonty NIE są ustaloną przyczyną. Limit sześciu linii ukrywał główny wyjątek; kolejny patch tylkohelper+unit zachowuje exception/name, processexit i fatal przed powtarzalnymstderr. Reprodukcja raportowania1FAIL/10PASS →28focusedPASS/lintPASS. Wszystkie runtimebytes, sandbox, timeouty, asercjaREADY i regułabrakufallbacku pozostają bez zmian. Dalej commit/push i rzeczywistyCI: odczytać pierwotny błąd, naprawić dopiero z dowodem. Nie tagować czerwonego Ubuntu, nie przedstawiać ostrzeżeń fontów jako przyczyny.

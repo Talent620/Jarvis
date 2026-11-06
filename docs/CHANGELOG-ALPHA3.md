@@ -14,8 +14,10 @@ Wydanie eksperymentalne. Nie ma jeszcze pełnego odbioru rzeczywistego modelu, p
 - Pakowanie weryfikuje publiczny klucz licencji i jego odcisk przed oraz po budowaniu archiwum; wystawca pozostaje ten sam.
 - Zachowano wcześniejsze komendy lokalne, wyniki częściowe, zapis/odtwarzanie celów, oba interfejsy oraz licencje właściciela.
 
-Pełna regresja: 3094 testy PASS, lint PASS. Testy obejmują rzeczywiste sandboxy; nie zastępują odbioru prawdziwego modelu i pulpitu. Osobny licencjonowany test przez pole rozmowy użył kontrolowanych decyzji dostawcy, rzeczywistego sandboxa i niezależnego odczytu pliku. Nie zalicza on autonomii prawdziwego modelu.
+Pełna regresja: 3099 testów PASS, lint PASS. Testy obejmują rzeczywiste sandboxy; nie zastępują odbioru prawdziwego modelu i pulpitu. Osobny licencjonowany test przez pole rozmowy użył kontrolowanych decyzji dostawcy, rzeczywistego sandboxa i niezależnego odczytu pliku. Nie zalicza on autonomii prawdziwego modelu.
 
 Wymagania i ograniczenia: istniejące Chromium; dla kodu umiejętności Linux x86_64, Node, bubblewrap i prlimit; konfiguracja i zgody dla usług zewnętrznych. Rzeczywista Ollama i pulpit nie były dostępne w tej chmurze. Pełny audit npm nadal ma 32 zgłoszenia, w tym Electron dystrybuowany w aplikacji. Zmiana głównej wersji runtime pozostaje otwarta.
 
 Instalacja, licencje, migracja i wycofanie: `WYDANIE-ALPHA.md`. Używanie i konfiguracja: `UMIEJETNOSCI-INTEGRACJE.md`. Szczegółowy odbiór: `REPORT.md` i `requirements.json` dołączone do wydania.
+
+GitHub Tests i Ubuntu dla44eeb3d przeszły testy, lint i pakowanie. Wcześniejsze przerywane próby startu Chrome w CI zachowano w raporcie; ich pierwotna przyczyna pozostaje nieustalona. To migawka przed publikacją — konkretny SHA pobranej paczki identyfikuje PROVENANCE.json.

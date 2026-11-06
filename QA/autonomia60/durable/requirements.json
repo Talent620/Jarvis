@@ -4,14 +4,16 @@
   "request_sha256": "90784301789c744c57e5144312083b04043200dfbb9fe26d83b4e76bfc04ac6e",
   "integration_base": "fb17f9755faad72295cb125563ba2b0220d9319d",
   "integration_branch": "codex/skills-integration-20261105",
-  "current_state": "ALPHA3_LOCAL_VERIFIED_CI_BROWSER_DIAGNOSIS",
+  "current_state": "VERIFIED_SOURCE_SNAPSHOT_BEFORE_PUBLICATION",
   "release": {
     "version": "2.1.0-alpha.3",
     "sha": null,
     "tag": null,
     "url": null,
-    "status": "HELD_CI_BROWSER_PREREQUISITE_FAILURE",
-    "previous_unpublished_tag": "v2.1.0-alpha.2"
+    "status": "SOURCE_SNAPSHOT_BEFORE_TAG_AND_DOWNLOAD_VERIFICATION",
+    "previous_unpublished_tag": "v2.1.0-alpha.2",
+    "verified_code_commit": "44eeb3d5082dba934e94027abb2748d7a52c7538",
+    "package_identity": "Read exact packaged SHA from PROVENANCE.json; post-publication delivery proof is maintained on the integration branch."
   },
   "status_rules": {
     "PASS": "Pełne potwierdzenie scenariusza na określonym poziomie.",
@@ -2305,6 +2307,23 @@
       "lint": "PASS",
       "evidence": "QA/autonomia60/durable/evidence/alpha3-final-validation-source.json",
       "limitation": "Not real-model/desktop acceptance. Default issuer valid and unchanged; user private key not available or needed for public-key validation."
+    },
+    {
+      "id": "alpha3_candidate_44eeb3d",
+      "status": "PASS_SOURCE_AND_CI_PACKAGING",
+      "commit": "44eeb3d5082dba934e94027abb2748d7a52c7538",
+      "passed": 3099,
+      "failed": 0,
+      "skipped": 0,
+      "files": 373,
+      "lint": "PASS",
+      "github_tests": "SUCCESS42134605052",
+      "github_ubuntu": "SUCCESS42134604873",
+      "evidence": [
+        "QA/autonomia60/durable/evidence/alpha3-ci-44eeb3d.json",
+        "QA/autonomia60/durable/evidence/alpha3-full-3099.json"
+      ],
+      "limitation": "Prior Chrome launch failures3ee/6f have unresolved primary causes. No real-model/native-user acceptance or published download claim."
     }
   ],
   "external_access": [
@@ -3017,7 +3036,8 @@
         "status": "BLOCKED",
         "detail": "Brak dostępnej lokalnej usługi/modelu; końcowy qa:desktop zapisze bieżące próby.",
         "evidence": [
-          "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md"
+          "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md",
+          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
         ]
       },
       {
@@ -3053,7 +3073,8 @@
         "status": "BLOCKED",
         "detail": "Brak autoryzowanej sesji docelowej i rzeczywistego modelu; nie instalowano Xvfb.",
         "evidence": [
-          "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md"
+          "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md",
+          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
         ]
       },
       {
@@ -3063,7 +3084,8 @@
         "detail": "Rzeczywisty STOP procesów/sandboxa/browser/MCP zaliczony odrębnie; brak modelowej generacji.",
         "evidence": [
           "QA/autonomia60/durable/evidence/closure-skill-isolation.json",
-          "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md"
+          "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md",
+          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
         ]
       },
       {
@@ -3072,7 +3094,8 @@
         "status": "BLOCKED",
         "detail": "Zachowany istniejący kod/testy; brak rzeczywistej generacji do bieżącego odbioru.",
         "evidence": [
-          "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md"
+          "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md",
+          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
         ]
       },
       {
@@ -3081,15 +3104,19 @@
         "status": "BLOCKED",
         "detail": "Zestaw odbiorczy poniżej; brak modelu, żaden przykład niezaliczony jako modelowa generalizacja.",
         "evidence": [
-          "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md"
+          "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md",
+          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
         ]
       },
       {
         "id": "T18",
         "title": "Pobrany pakiet, świeża instalacja, migracja i rollback",
-        "status": "NOT_RUN",
-        "detail": "Alpha.1 udokumentowany FAIL uruchomienia. Alpha.2 ma poprawkę; aktualny pakiet i lokalna instalacja wymagają odrębnych dowodów.",
-        "evidence": []
+        "status": "BLOCKED",
+        "detail": "Alpha.1 user launch FAIL preserved. Alpha.3 local artifacts and source verified; sandbox-on native launch BLOCKED missing authorized graphical session. Actual install, migration and rollback not executed.",
+        "evidence": [
+          "QA/autonomia60/durable/evidence/alpha3-packages-3ee898.json",
+          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
+        ]
       }
     ],
     "gates": [
@@ -3153,14 +3180,16 @@
         "id": "G9",
         "title": "Jakość",
         "status": "NOT_ACCEPTED",
-        "reason": "Local3091PASS/lintPASS. Paired ledger benchmark9.19x median improvement with unchanged data/threshold. New releaseCI pending; full audit32/model/desktop acceptance open.",
-        "evidence": []
+        "reason": "Local3099PASS/lintPASS, Tests+Ubuntu44CI PASS. Earlier intermittent Chrome launch causes remain unresolved; full audit32/model/desktop acceptance open.",
+        "evidence": [
+          "QA/autonomia60/durable/evidence/alpha3-ci-44eeb3d.json"
+        ]
       },
       {
         "id": "G10",
         "title": "Dostarczenie",
         "status": "NOT_ACCEPTED",
-        "reason": "Alpha2tag exists but releaseCI failed, publication skipped. Preparing alpha3; no published download claim until verification.",
+        "reason": "Verified source snapshot before tag publication/download. Final tag packages, owner local install, Android production signing and native rollback require separate evidence.",
         "evidence": []
       }
     ],
