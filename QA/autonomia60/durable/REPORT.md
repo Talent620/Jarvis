@@ -1,3 +1,11 @@
+# Kontynuacja alpha.4 — 2026-11-06
+
+Poprawiono podmianę katalogu podczas odczytu. Na bazie 8675cd6 deterministyczna podmiana między lstat a open dopuściła obcy zasób; poprawka odrzuca zmianę tożsamości, utrzymuje deskryptory do końca odczytu i ogranicza liczbę podkatalogów do 255. Dodatkowy test odrzuca podmianę korzenia po wyliczeniu plików. Po ostatniej zmianie: 67 testów Skills, sandboxa, STOP, monitoringu i instalatora PASS; pełna regresja 3101/3101 PASS w 373 plikach, lint i build PASS. `evidence/alpha4-validation.json`. `evidence/alpha4-race.json`.
+
+Kontrolowany przebieg normalnym polem rozmowy: wyszukiwanie → inspekcja → kwarantanna → test → aktywacja → wykonanie w rzeczywistym sandboxie → zapis i odczyt przez JARVIS → niezależny odczyt pliku PASS. Kandydat pochodził z lokalnego katalogu zeskanowanego przed rozmową; dostawca modelu i transport były kontrolowane. Ta próba nie dowodzi samodzielnego rozpoznania brakującej zdolności ani pobrania nowego skilla podczas rzeczywistego zadania. Brak prawdziwej Ollamy i natywnej sesji Electron oznacza BLOCKED dla pełnego odbioru. `evidence/alpha4-controlled/REPORT.md`.
+
+Monitoring i ntfy: kontrolowane kontrakty HTTP, zapis, restart, odwołanie i niepewny wynik powiadomienia przeszły testy. Nie testowano prawdziwej usługi ani rzeczywistego modelu. Klient MCP nie implementuje wyszukiwania nowych serwerów, a adapter changedetection nie tworzy watcha; oba wymagania pozostają MISSING_IMPLEMENTATION. Pakiet alpha.4 oraz publikacja wymagają oddzielnego potwierdzenia.
+
 # JARVIS — wdrożenie, odbiór i przekazanie
 
 ## Dostarczona wersja alpha.3 — 2026-11-06

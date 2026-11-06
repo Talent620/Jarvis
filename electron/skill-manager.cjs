@@ -87,17 +87,25 @@ async function openDirectory(root) {
     return handle;
   } catch (e) { await handle.close(); throw e; }
 }
-async function readLocal(root, relative) {
+function sameIdentity(a, b) { return a.dev === b.dev && a.ino === b.ino; }
+function requireIdentity(actual, expected) {
+  if (!expected || !sameIdentity(actual, expected)) throw error('Katalog lub zasób zmienił tożsamość podczas odczytu.', 'UNSAFE_PATH');
+}
+async function readLocal(root, relative, identities) {
   safePath(relative);
   let parent = await openDirectory(root), file;
   try {
+    requireIdentity(await parent.stat(), identities.get(''));
     const parts = relative.split('/');
+    let prefix = '';
     for (const part of parts.slice(0, -1)) {
       const next = await fs.open(`/proc/self/fd/${parent.fd}/${part}`, flags.O_RDONLY | flags.O_DIRECTORY | flags.O_NOFOLLOW);
-      await parent.close(); parent = next;
+      await parent.close(); parent = next; prefix = prefix ? `${prefix}/${part}` : part;
+      requireIdentity(await parent.stat(), identities.get(prefix));
     }
     file = await fs.open(`/proc/self/fd/${parent.fd}/${parts.at(-1)}`, flags.O_RDONLY | flags.O_NOFOLLOW | flags.O_NONBLOCK);
     const before = await file.stat();
+    requireIdentity(before, identities.get(relative));
     if (!before.isFile() || before.nlink !== 1 || before.size > MAX_FILE) throw error('Specjalny, dowiązany lub zbyt duży zasób.', 'UNSAFE_PATH');
     const bytes = Buffer.alloc(MAX_FILE + 1); let length = 0;
     while (length < bytes.length) { const { bytesRead } = await file.read(bytes, length, bytes.length - length, null); if (!bytesRead) break; length += bytesRead; }
@@ -107,7 +115,8 @@ async function readLocal(root, relative) {
   } finally { await file?.close(); await parent.close(); }
 }
 async function walkLocal(root, strict = false) {
-  const result = []; let visited = 0;
+  const result = [], identities = new Map(), handles = []; let visited = 0;
+  const close = async () => { await Promise.all(handles.splice(0).map(handle => handle.close())); };
   async function walk(handle, prefix, depth) {
     if (depth > 8) throw error('Katalog umiejętności przekracza głębokość 8.');
     for (const entry of await fs.readdir(`/proc/self/fd/${handle.fd}`, { withFileTypes: true })) {
@@ -117,15 +126,17 @@ async function walkLocal(root, strict = false) {
       const anchored = `/proc/self/fd/${handle.fd}/${entry.name}`, stat = await fs.lstat(anchored);
       if (stat.isSymbolicLink()) throw error('Symlink w katalogu umiejętności.', 'UNSAFE_PATH');
       if (stat.isDirectory()) {
+        if (handles.length >= 256) throw error('Katalog przekracza limit 255 podkatalogów.', 'RESOURCE_LIMIT');
         const child = await fs.open(anchored, flags.O_RDONLY | flags.O_DIRECTORY | flags.O_NOFOLLOW);
-        try { await walk(child, name, depth + 1); } finally { await child.close(); }
-      } else if (stat.isFile() && stat.nlink === 1) result.push(name);
+        handles.push(child); requireIdentity(await child.stat(), stat); identities.set(name, stat); await walk(child, name, depth + 1);
+      } else if (stat.isFile() && stat.nlink === 1) { identities.set(name, stat); result.push(name); }
       else throw error('Specjalny plik lub twarde dowiązanie w katalogu umiejętności.', 'UNSAFE_PATH');
       if (strict && result.length > MAX_FILES) throw error('Pakiet przekracza limit 128 plików.', 'RESOURCE_LIMIT');
     }
   }
   const handle = await openDirectory(root);
-  try { await walk(handle, '', 0); return result; } finally { await handle.close(); }
+  handles.push(handle);
+  try { identities.set('', await handle.stat()); await walk(handle, '', 0); return { names: result, identities, close }; } catch (e) { await close(); throw e; }
 }
 
 function createSkillManager(options) {
@@ -270,12 +281,13 @@ function createSkillManager(options) {
     return { candidates: scored.slice(0, 20), failures, queryTransmitted: false, networkAllowed: context.allowNetwork !== false, scope: sources };
   }
   async function readCandidate(candidate, signal, allowNetwork = true) {
-    let read, names, source;
+    let read, names, source, snapshot;
+    try {
     if (candidate.source.repo) {
       source = await gitSource(candidate.source.repo, signal, candidate.source.commit, allowNetwork);
       names = source.entries.map(e => e.name); read = source.read;
     } else {
-      names = await walkLocal(candidate.source.localRoot); read = name => readLocal(candidate.source.localRoot, name);
+      snapshot = await walkLocal(candidate.source.localRoot); names = snapshot.names; read = name => readLocal(candidate.source.localRoot, name, snapshot.identities);
     }
     const folder = candidate.source.path, prefix = folder ? folder + '/' : '';
     const selected = names.filter(name => name.startsWith(prefix)).filter(name => !name.slice(prefix.length).startsWith('.'));
@@ -290,14 +302,17 @@ function createSkillManager(options) {
     }
     if (Object.keys(files).length > MAX_FILES || Object.values(files).reduce((sum, bytes) => sum + bytes.length, 0) > MAX_PACKAGE) throw error('Pakiet z licencją przekracza limit 128 plików / 2 MiB.', 'RESOURCE_LIMIT');
     return files;
+    } finally { await snapshot?.close(); }
   }
   async function checkFiles(record) {
     const packageDir = path.join(directory, 'packages', record.hash);
-    const names = await walkLocal(packageDir, true);
+    const snapshot = await walkLocal(packageDir, true), { names, identities } = snapshot;
+    try {
     const files = Object.create(null); let size = 0;
-    for (const name of names) { const content = await readLocal(packageDir, name); size += content.length; if (size > MAX_PACKAGE) throw error('Pakiet przekracza limit.', 'HASH_MISMATCH'); files[name] = content; }
+    for (const name of names) { const content = await readLocal(packageDir, name, identities); size += content.length; if (size > MAX_PACKAGE) throw error('Pakiet przekracza limit.', 'HASH_MISMATCH'); files[name] = content; }
     if (packageHash(files) !== record.hash) throw error('Zawartość umiejętności zmieniła hash.', 'HASH_MISMATCH');
     return { directory: packageDir, files, parsed: parseSkill(files['SKILL.md'].toString()) };
+    } finally { await snapshot.close(); }
   }
   function requiredResources(parsed, files) {
     const required = parsed.jarvis.requiredResources || [];
@@ -346,8 +361,9 @@ function createSkillManager(options) {
       const localRoot = await fs.realpath(request.path || '');
       const policy = await transaction(s => s.policies.find(p => p.source === `local:${localRoot}` && p.enabled), false);
       if (!policy) throw error('Katalog projektu nie ma jawnej zgody na odczyt.', 'APPROVAL_REQUIRED');
-      const names = await walkLocal(localRoot), found = [];
-      for (const name of names.filter(n => /(^|\/)SKILL\.md$/.test(n)).slice(0, 100)) found.push(await candidateFrom({ localRoot }, path.posix.dirname(name) === '.' ? '' : path.posix.dirname(name), n => readLocal(localRoot, n), names));
+      const snapshot = await walkLocal(localRoot), { names, identities } = snapshot, found = [];
+      try { for (const name of names.filter(n => /(^|\/)SKILL\.md$/.test(n)).slice(0, 100)) found.push(await candidateFrom({ localRoot }, path.posix.dirname(name) === '.' ? '' : path.posix.dirname(name), n => readLocal(localRoot, n, identities), names)); }
+      finally { await snapshot.close(); }
       await transaction(s => { s.candidates = [...s.candidates.filter(c => c.source.localRoot !== localRoot), ...found].slice(-500); });
       return { candidates: found };
     }

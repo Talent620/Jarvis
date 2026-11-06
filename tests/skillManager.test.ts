@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { mkdtemp, mkdir, writeFile, readFile, rm, symlink, link, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -73,6 +73,45 @@ describe('native Agent Skills lifecycle', () => {
     await rm(path.join(f.source, 'leak')); await rename(f.source, f.source + '-moved'); await symlink(f.source + '-moved', f.source);
     await expect(staged(f)).rejects.toThrow();
     expect(await readFile(outside, 'utf8')).toBe('synthetic private value');
+  });
+  it('rejects replacement of a directory between inspection and opening it', async () => {
+    const f = await fixture(document(), { 'references/data.md': 'original' });
+    const replacement = path.join(path.dirname(f.source), 'replacement');
+    await mkdir(replacement); await writeFile(path.join(replacement, 'data.md'), 'replacement');
+    const fs = require('node:fs/promises'); const original = fs.lstat;
+    let swapped = false;
+    const spy = vi.spyOn(fs, 'lstat').mockImplementation(async (...args: any[]) => {
+      const result = await original(...args);
+      if (!swapped && String(args[0]).endsWith('/references')) {
+        swapped = true;
+        await rename(path.join(f.source, 'references'), path.join(path.dirname(f.source), 'original-moved'));
+        await rename(replacement, path.join(f.source, 'references'));
+      }
+      return result;
+    });
+    try {
+      await expect(staged(f)).rejects.toMatchObject({ code: 'UNSAFE_PATH' });
+      expect(swapped).toBe(true);
+    } finally { spy.mockRestore(); }
+  });
+  it('rejects replacing the authorized root between enumeration and resource reads', async () => {
+    const f = await fixture(document(), { 'references/data.md': 'original' });
+    const replacement = path.join(path.dirname(f.source), 'replacement-root');
+    await mkdir(path.join(replacement, 'references'), { recursive: true });
+    await writeFile(path.join(replacement, 'SKILL.md'), document());
+    await writeFile(path.join(replacement, 'references/data.md'), 'replacement');
+    const fs = require('node:fs/promises'); const original = fs.open;
+    let rootOpens = 0;
+    const spy = vi.spyOn(fs, 'open').mockImplementation(async (...args: any[]) => {
+      if (args[0] === '/' && ++rootOpens === 2) {
+        await rename(f.source, f.source + '-moved'); await rename(replacement, f.source);
+      }
+      return original(...args);
+    });
+    try {
+      await expect(staged(f)).rejects.toMatchObject({ code: 'UNSAFE_PATH' });
+      expect(rootOpens).toBe(2);
+    } finally { spy.mockRestore(); }
   });
   it('detects assets changed after inspection, not only SKILL.md changes', async () => {
     const f = await fixture(document(), { 'references/data.md': 'before' });

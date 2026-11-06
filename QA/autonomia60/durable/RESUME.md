@@ -1,3 +1,7 @@
+# Wznowienie alpha.4
+
+Baza 8675cd6, alpha.3 pozostaje publiczna i niezmieniona. Poprawiono wyścig podmiany katalogów, nowa wersja 2.1.0-alpha.4; 67 focused PASS po ostatniej zmianie oraz kontrolowany composer PASS bez prawdziwego modelu. Pełna regresja po ostatniej zmianie: 3101/3101 PASS, 373 pliki, lint i build PASS. Przed publikacją: commit i CI, nowy tag alpha.4, potwierdzenie faktycznego Release, pobranie i weryfikacja sum, metadanych, źródeł oraz chrome-sandbox w rzeczywistej paczce. Bez Xvfb i bez wyłączenia izolacji. Brak wyszukiwania serwerów MCP oraz tworzenia nowego watcha changedetection z polecenia; nie oznaczać ich jako ukończone. Ollama, pulpit i rzeczywiste usługi są BLOCKED. Nie deklarować pracy po sesji.
+
 # Końcowy checkpoint — alpha.3 dostarczona
 
 Publiczny release: https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.3 . Niezmienny kod, tag i paczki: `9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9`; obiekt tagu `607952531aef05442e0f9e3eb4658d0602780407`. GitHub Ubuntu dla taga 42135348137 SUCCESS, Tests 42135299865 SUCCESS, lokalnie 3099 PASS. Pobrano i sprawdzono wszystkie 9 zasobów; oba ASAR są identyczne, 17 modułów i 5 dokumentów odpowiadają świeżemu tagowi. HANDOFF-ALPHA3.json: 1613 plików, 215 zmian względem fb17, pełny fsck i ancestry. Kontrola eksportu 256/256, publicznych plików 103/103. Źródła dowodów: delivery-alpha3.json i evidence/published-alpha3/EXPORTS.json. Bieżący commit dodaje wyłącznie końcową dokumentację; nie retagować wydania.

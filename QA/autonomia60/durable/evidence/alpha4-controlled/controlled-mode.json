@@ -1,0 +1,12 @@
+{
+  "mode": "CONTROLLED_PROVIDER_REAL_SKILL_EXECUTION",
+  "model": "qa-controlled-fixture",
+  "originalCommand": "Użyj umiejętności qa-transform, aby przetworzyć tekst „zażółć gęślą jaźń — 8194e237”. Zapisz jej wynik w pliku qa-skill-output.txt w katalogu roboczym i odczytaj go dla potwierdzenia.",
+  "nativeBridge": "explicit test transport to actual registry/isolation/workspace modules; Electron IPC is tested separately",
+  "license": "required; ephemeral QA issuer and normal activation; production keys unchanged",
+  "license_required": true,
+  "realModel": false,
+  "fixtureSource": "local QA-only fixture",
+  "workspace": "/workspace/Jarvis/QA/runs/2026-11-06T00-32-13-592Z-agent-smoke-8194e237/workspace",
+  "taskExecutedByHarness": false
+}

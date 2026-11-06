@@ -4,18 +4,14 @@
   "request_sha256": "90784301789c744c57e5144312083b04043200dfbb9fe26d83b4e76bfc04ac6e",
   "integration_base": "fb17f9755faad72295cb125563ba2b0220d9319d",
   "integration_branch": "codex/skills-integration-20261105",
-  "current_state": "PUBLISHED_ALPHA3_VERIFIED_ARTIFACTS_PARTIAL_PRODUCT_ACCEPTANCE",
+  "current_state": "ALPHA4_IN_PROGRESS",
   "release": {
-    "version": "2.1.0-alpha.3",
-    "sha": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
-    "tag": "v2.1.0-alpha.3",
-    "url": "https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.3",
-    "status": "PUBLIC_PRERELEASE_DOWNLOADED_AND_VERIFIED",
-    "previous_unpublished_tag": "v2.1.0-alpha.2",
-    "verified_code_commit": "44eeb3d5082dba934e94027abb2748d7a52c7538",
-    "package_identity": "Actual downloaded PROVENANCE and archive metadata match9b21a9d; post-publication documentation commit does not change code.",
-    "tag_object": "607952531aef05442e0f9e3eb4658d0602780407",
-    "delivery": "QA/autonomia60/durable/delivery-alpha3.json"
+    "version": "2.1.0-alpha.4",
+    "sha": null,
+    "tag": null,
+    "url": null,
+    "status": "NOT_PUBLISHED",
+    "previous_release": "v2.1.0-alpha.3"
   },
   "status_rules": {
     "PASS": "Pełne potwierdzenie scenariusza na określonym poziomie.",
@@ -2742,8 +2738,8 @@
       "repository": "modelcontextprotocol/registry",
       "inspected_commit": "2729b4c8183af389936b33ec12370240bd67855b",
       "license_review": "MIT/Apache-2.0 code transition; CC-BY-4.0 documentation",
-      "decision": "REDUNDANT_WITH_REASON",
-      "reason": "Current JARVIS supports owner-configured MCP endpoints and stdio clients. Public registry search is not implemented; registry listing alone would not validate server privileges. Runtime SDK is separately pinned at1.32.2.",
+      "decision": "MISSING_IMPLEMENTATION",
+      "reason": "Publiczne wyszukiwanie nowych narzędzi/serwerów nie jest zaimplementowane; skonfigurowany klient MCP nie zastępuje katalogu ani kontroli uprawnień.",
       "documentation": [
         {
           "url": "https://github.com/modelcontextprotocol/registry/blob/2729b4c8183af389936b33ec12370240bd67855b/README.md",
@@ -2861,8 +2857,8 @@
       "repository": "ComposioHQ/composio",
       "inspected_commit": "29698b7e54ff5d2c003d2b2e42c258fb7a0b5dc3",
       "license_review": "MIT SDK; hosted-service terms are separate",
-      "decision": "REDUNDANT_WITH_REASON",
-      "reason": "No configured account or permitted hosted resource. Existing MCP and scoped JARVIS connectors cover tested integrations; no claim of Composio account/action coverage. Avoid unreviewed tool catalogs and hosted costs.",
+      "decision": "NOT_INTEGRATED",
+      "reason": "Nie ma skonfigurowanego konta ani integracji Composio. Sam klient MCP nie zastępuje katalogu nowych narzędzi ani obsługi konta Composio.",
       "documentation": [
         {
           "url": "https://github.com/ComposioHQ/composio/blob/29698b7e54ff5d2c003d2b2e42c258fb7a0b5dc3/README.md",
@@ -2928,7 +2924,7 @@
       "pinned_version": "1.32.2",
       "license_review": "MIT",
       "decision": "INTEGRATED",
-      "reason": "Existing stdio SDK client plus bounded JSON HTTP transport. Cancellation/revocation/late-result fencing integrated; JSON HTTP does not implement SSE.",
+      "reason": "Existing stdio SDK client plus bounded JSON HTTP transport. Cancellation/revocation/late-result fencing integrated; JSON HTTP does not implement SSE. Klient skonfigurowanych serwerów nie implementuje wyszukiwania nowych serwerów ani narzędzi.",
       "source_paths": [
         "electron/mcp-stdio.cjs",
         "src/lib/mcp.ts"
@@ -2939,8 +2935,8 @@
       "inspected_commit": "cdb6fc6b0d340fd28c003474918385c4b8290be0",
       "version": "0.70.1",
       "license_review": "Apache-2.0",
-      "decision": "INTEGRATED",
-      "reason": "Owner-configured existing watch adapter, not a bundled or installed server. First snapshot baseline and source freshness tracked independently.",
+      "decision": "PARTIAL",
+      "reason": "Działa wyłącznie odczyt istniejącego watcha; utworzenie nowego watcha z polecenia użytkownika nie jest zaimplementowane.",
       "source_paths": [
         "electron/monitor-connectors.cjs",
         "electron/goal-service.cjs"

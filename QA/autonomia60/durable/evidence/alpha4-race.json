@@ -1,0 +1,8 @@
+{
+  "baseline": "8675cd6c2d40d0b559ac7a10c2ecfa167ff9c5ea",
+  "reproduction": "Directory replacement between lstat and open accepted replacement on baseline; fixed code rejects UNSAFE_PATH. Root replacement between enumeration and read also rejected.",
+  "after_last_change": "67 focused tests passed, including real OS sandbox and STOP.",
+  "source_sha256": "1d62617526e5374798de9865752847c69f3939d761d521bbfdd7d61542d63d4a",
+  "controlled_proof": "QA/autonomia60/durable/evidence/alpha4-controlled/REPORT.md",
+  "real_model": "BLOCKED; controlled provider is not a real-model test."
+}

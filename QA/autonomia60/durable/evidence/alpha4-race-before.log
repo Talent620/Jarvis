@@ -1,0 +1,71 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ❯ tests/skillManager.test.ts (22 tests | 1 failed | 21 skipped) 40ms
+   × native Agent Skills lifecycle > rejects replacement of a directory between inspection and opening it 38ms
+     → promise resolved "{ …(24) }" instead of rejecting
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 21 skipped (22)
+   Start at  00:30:59
+   Duration  377ms (transform 49ms, setup 0ms, collect 66ms, tests 40ms, environment 0ms, prepare 111ms)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/skillManager.test.ts > native Agent Skills lifecycle > rejects replacement of a directory between inspection and opening it
+AssertionError: promise resolved "{ …(24) }" instead of rejecting
+
+- Expected
++ Received
+
+- [Error: rejected promise]
++ Object {
++   "candidateId": "45e8eeec39ad021e945817d8503b60dc",
++   "codeKind": "instructions",
++   "compatibility": null,
++   "createdAt": 1793925059920,
++   "declaredAllowedTools": null,
++   "dependencies": Array [],
++   "description": "Convert structured JSON into CSV with validation",
++   "discoveredAt": 1793925059910,
++   "hash": "c2ca6322a7c96706d85773d0603686a317c115694d4e04f3566a3bc7a4666be1",
++   "id": "local/convert-data@1",
++   "license": "MIT",
++   "licenseFile": null,
++   "name": "convert-data",
++   "permissions": Array [],
++   "platforms": Array [],
++   "publisher": "local",
++   "resources": Array [
++     Object {
++       "hash": "8182d728b55244e75ad26a9c9cccbfc8749718119846f1014dbf9b7e92f7b86d",
++       "path": "SKILL.md",
++       "size": 165,
++     },
++     Object {
++       "hash": "95713e9cbdd1dfcb2d4080c2537f418d43ca0da25f0d7d6631f4f7c97b89dc47",
++       "path": "references/data.md",
++       "size": 11,
++     },
++   ],
++   "skillHash": "8182d728b55244e75ad26a9c9cccbfc8749718119846f1014dbf9b7e92f7b86d",
++   "source": Object {
++     "localRoot": "/tmp/jarvis-skills-FbKSbp/source",
++     "path": "",
++   },
++   "sourceNotice": null,
++   "state": "QUARANTINED",
++   "test": null,
++   "updatedAt": 1793925059920,
++   "version": "1",
++ }
+
+ ❯ tests/skillManager.test.ts:93:29
+     91|     });
+     92|     try {
+     93|       await expect(staged(f)).rejects.toMatchObject({ code: 'UNSAFE_PA…
+       |                             ^
+     94|       expect(swapped).toBe(true);
+     95|     } finally { spy.mockRestore(); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯

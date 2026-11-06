@@ -104,13 +104,13 @@ jobs:
 
             CI packaging does not establish successful native desktop launch, upgrade/rollback or real-model acceptance. Read the repository QA report for remaining blockers. This prerelease does not update the rolling latest release.
 
-            Included documentation: CHANGELOG-ALPHA3.md, WYDANIE-ALPHA.md (installation, issuer identity, migration and rollback), UMIEJETNOSCI-INTEGRACJE.md, REPORT.md and requirements.json. Prebuilt packages use the repository issuer; local-owner installations should rebuild with their existing issuer as documented.
+            Included documentation: CHANGELOG-ALPHA4.md, WYDANIE-ALPHA.md (installation, issuer identity, migration and rollback), UMIEJETNOSCI-INTEGRACJE.md, REPORT.md and requirements.json. Prebuilt packages use the repository issuer; local-owner installations should rebuild with their existing issuer as documented.
           files: |
             release-desktop/*/JARVIS.AppImage
             release-desktop/*/JARVIS.deb
             release-desktop/*/PROVENANCE.json
             release-desktop/*/SHA256SUMS
-            docs/CHANGELOG-ALPHA3.md
+            docs/CHANGELOG-ALPHA4.md
             docs/WYDANIE-ALPHA.md
             docs/UMIEJETNOSCI-INTEGRACJE.md
             QA/autonomia60/durable/REPORT.md

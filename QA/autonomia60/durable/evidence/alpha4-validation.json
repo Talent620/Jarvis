@@ -1,0 +1,56 @@
+{
+  "time_utc": "2026-11-06T00:34:37.763426+00:00",
+  "base": "8675cd6c2d40d0b559ac7a10c2ecfa167ff9c5ea",
+  "source_status": "uncommitted at test time; source hashes bind the tested files",
+  "version": "2.1.0-alpha.4",
+  "full_tests": {
+    "passed": 3101,
+    "failed": 0,
+    "skipped": 0,
+    "files": 373
+  },
+  "focused_tests": {
+    "passed": 67,
+    "failed": 0
+  },
+  "build": "PASS",
+  "lint": "PASS",
+  "controlled_composer": "PASS_CONTROLLED_PROVIDER_AND_TEST_TRANSPORT",
+  "real_model": "BLOCKED: connection refused on localhost 11434 and 11435",
+  "live_monitor_and_notification": "NOT_RUN: no configured real service",
+  "source_sha256": {
+    "electron/skill-manager.cjs": "1d62617526e5374798de9865752847c69f3939d761d521bbfdd7d61542d63d4a",
+    "tests/skillManager.test.ts": "0afd13a3c4137fae37cca6a0ba707065c373983d2bd4870428b73a98b87012dd",
+    "package.json": "d05f7f99f67118a63c17d23909db5748828f3bc43273e026b56f76bbadd7c47c",
+    "package-lock.json": "afb0bcc318e2cea1a40d99cb3872114886c54d12b9cfac479e2ea4b0109fb1d0",
+    "android/app/build.gradle": "79f98fa2b4911c293e45c3e9839638d0330b2768e424f1de4761c06c0b85d0fe",
+    ".github/workflows/ubuntu.yml": "c4257f5b072aa970c81ac3bf1191085fc08d1ffbc6d209db2b80cab96fc85f28"
+  },
+  "logs": [
+    {
+      "file": "QA/autonomia60/durable/evidence/alpha4-full.log",
+      "raw_sha256": "f6027383e860da27e1948ec133202d181eaff658b4e984b8b307048492db3a59",
+      "stored_sha256": "fa2ff3195b1521d3e747876e024a7ca889db32cfb71f9e69bb07dde68a296961"
+    },
+    {
+      "file": "QA/autonomia60/durable/evidence/alpha4-build.log",
+      "raw_sha256": "790ab37de68c080e05d4b0eee66fef418f3f96a0f7350f206f7e85c75f5fe503",
+      "stored_sha256": "ef15201cafb3a765b7def5d0e4af8f9d7814cfffe0a747d13bc1aa6df0d2ec79"
+    },
+    {
+      "file": "QA/autonomia60/durable/evidence/alpha4-lint.log",
+      "raw_sha256": "32d1f44eaf5305c6014d44fd222628e583c45127653c844102d170616489a4bc",
+      "stored_sha256": "a5ce61962b82bf92aee410e042ef98ecc6636be99ecc776fff6d0fc33409a147"
+    },
+    {
+      "file": "QA/autonomia60/durable/evidence/alpha4-race-before.log",
+      "raw_sha256": "c2738fee389396f9cc0f335aa861d9046897bc61fb11ae836ba9d0e51ec434e9",
+      "stored_sha256": "94cac10adaea8a8bf8f08dc8cb3cf9a9d8476384ed7de9dd839f5fa54a3a8076"
+    },
+    {
+      "file": "QA/autonomia60/durable/evidence/alpha4-focused.log",
+      "raw_sha256": "4814bd031b41994437926b59a790510dbd4428ef42fc66322f4518f0351e9c24",
+      "stored_sha256": "063b4d226face5f2fc97c457efe8bd663fb90a329fc5c6ec255454a049f554f0"
+    }
+  ]
+}

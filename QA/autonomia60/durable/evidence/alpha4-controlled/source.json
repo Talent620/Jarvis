@@ -1,0 +1,10 @@
+{
+  "repo": "/workspace/Jarvis",
+  "branch": "codex/skills-integration-20261105",
+  "commit": "8675cd6c2d40d0b559ac7a10c2ecfa167ff9c5ea",
+  "local_changes": "M electron/skill-manager.cjs\n M tests/skillManager.test.ts",
+  "diff_sha256": "a55238f81a7322e92faf9c272592341ea98f91d58bbf99d3d8bbf11fa549716f",
+  "new_source_sha256": {},
+  "app_version": "2.1.0-alpha.3",
+  "app_entry": "electron/main.cjs -> dist/index.html"
+}
