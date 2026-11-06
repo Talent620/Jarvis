@@ -1,0 +1,7 @@
+{
+  "file": "qa-skill-output.txt",
+  "content": "ZAŻÓŁĆ GĘŚLĄ JAŹŃ — 895C7784",
+  "expected": "ZAŻÓŁĆ GĘŚLĄ JAŹŃ — 895C7784",
+  "passed": true,
+  "taskPinsAfterCompletion": {}
+}

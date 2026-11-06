@@ -1,0 +1,136 @@
+{
+  "id": "42144346689",
+  "name": "Build Ubuntu",
+  "runUrl": "https://github.com/Talent620/Jarvis/actions/runs/42144346689",
+  "state": {
+    "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+    "conclusion": "WORKFLOW_RUN_CONCLUSION_FAILURE"
+  },
+  "publicAnnotations": [
+    "2 errors and 1 warning",
+    "build",
+    "Process completed with exit code 1.",
+    "tests/browserSession.test.ts > requires a working sandboxed renderer in CI or explicitly required native runs:",
+    "tests/browserSession.test.ts#L30",
+    "AssertionError: launch FAIL: TimeoutError: browserType.launch: Timeout 15000ms exceeded. | [pid=2319][err] Unable to revert mtime: /usr/share/fonts | [pid=2319][err] Unable to revert mtime: /usr/share/fonts/truetype | [pid=2319][err] Unable to revert mtime: /usr/share/fonts/truetype/dejavu | [pid=2319][err] Unable to revert mtime: /usr/share/fonts/truetype/lato | [pid=2319][err] Unable to revert mtime: /usr/share/fonts/truetype/liberation; code=UNEXPECTED_PROBE_FAILURE; executable=/opt/google/chrome/google-chrome. Evidence: QA/runs/browser-session/precondition.json. No browser/desktop PASS is established.: expected 'FAIL' to be 'READY' // Object.is equality\n\nExpected: \"READY\"\nReceived: \"FAIL\"\n\n ❯ tests/browserSession.test.ts:30:158",
+    "build",
+    "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see:",
+    "https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+    "Artifacts",
+    "Produced during runtime",
+    "Name",
+    "Size",
+    "Digest",
+    "browser-sandbox-prerequisite-ubuntu",
+    "778 Bytes",
+    "sha256:3b361f04fbd6ef42441029d7e63644e90751830c8c58b6a5a07c2cefad7a4e88"
+  ],
+  "jobs": [
+    {
+      "id": "127652091645",
+      "url": "https://github.com/Talent620/Jarvis/actions/runs/42144346689/job/127652091645",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "startedAt": "2026-11-06T01:31:03Z",
+          "completedAt": "2026-11-06T01:31:04Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success",
+          "startedAt": "2026-11-06T01:31:04Z",
+          "completedAt": "2026-11-06T01:31:05Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "conclusion": "success",
+          "startedAt": "2026-11-06T01:31:05Z",
+          "completedAt": "2026-11-06T01:31:10Z"
+        },
+        {
+          "name": "Validate prerelease tag against package version",
+          "conclusion": "success",
+          "startedAt": "2026-11-06T01:31:10Z",
+          "completedAt": "2026-11-06T01:31:10Z"
+        },
+        {
+          "name": "Check native Ubuntu environment",
+          "conclusion": "success",
+          "startedAt": "2026-11-06T01:31:10Z",
+          "completedAt": "2026-11-06T01:31:24Z"
+        },
+        {
+          "name": "Run npm ci",
+          "conclusion": "success",
+          "startedAt": "2026-11-06T01:31:24Z",
+          "completedAt": "2026-11-06T01:32:21Z"
+        },
+        {
+          "name": "Verify source",
+          "conclusion": "failure",
+          "startedAt": "2026-11-06T01:32:21Z",
+          "completedAt": "2026-11-06T01:34:02Z"
+        },
+        {
+          "name": "Preserve browser sandbox prerequisite evidence",
+          "conclusion": "success",
+          "startedAt": "2026-11-06T01:34:02Z",
+          "completedAt": "2026-11-06T01:34:03Z"
+        },
+        {
+          "name": "Build and verify licensed Linux packages",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-06T01:34:03Z",
+          "completedAt": "2026-11-06T01:34:03Z"
+        },
+        {
+          "name": "Upload Linux packages",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-06T01:34:03Z",
+          "completedAt": "2026-11-06T01:34:03Z"
+        },
+        {
+          "name": "Utwórz manifest wersji Linux",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-06T01:34:03Z",
+          "completedAt": "2026-11-06T01:34:03Z"
+        },
+        {
+          "name": "Publish rolling Linux release",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-06T01:34:03Z",
+          "completedAt": "2026-11-06T01:34:03Z"
+        },
+        {
+          "name": "Publish validated version prerelease",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-06T01:34:03Z",
+          "completedAt": "2026-11-06T01:34:03Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-06T01:34:03Z",
+          "completedAt": "2026-11-06T01:34:03Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success",
+          "startedAt": "2026-11-06T01:34:03Z",
+          "completedAt": "2026-11-06T01:34:04Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "startedAt": "2026-11-06T01:34:04Z",
+          "completedAt": "2026-11-06T01:34:04Z"
+        }
+      ],
+      "snapshot": {
+        "path": "/tmp/jarvis-alpha6-tag-ci-html/job-127652091645.html",
+        "sha256": "d3e5107517a09bf751d724f58441707c25fe212eac8ad926fe608e6d969f99cb"
+      }
+    }
+  ]
+}

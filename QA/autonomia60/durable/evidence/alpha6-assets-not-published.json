@@ -1,0 +1,52 @@
+{
+  "tag": "v2.1.0-alpha.6",
+  "commit": "a47a7cfed109737efd5d1bc1406436c5f2d717fa",
+  "status": "FAIL",
+  "assets": [
+    {
+      "name": "JARVIS.AppImage",
+      "status": "FAIL",
+      "http": 404
+    },
+    {
+      "name": "JARVIS.deb",
+      "status": "FAIL",
+      "http": 404
+    },
+    {
+      "name": "PROVENANCE.json",
+      "status": "FAIL",
+      "http": 404
+    },
+    {
+      "name": "SHA256SUMS",
+      "status": "FAIL",
+      "http": 404
+    },
+    {
+      "name": "CHANGELOG-ALPHA6.md",
+      "status": "FAIL",
+      "http": 404
+    },
+    {
+      "name": "WYDANIE-ALPHA.md",
+      "status": "FAIL",
+      "http": 404
+    },
+    {
+      "name": "UMIEJETNOSCI-INTEGRACJE.md",
+      "status": "FAIL",
+      "http": 404
+    },
+    {
+      "name": "REPORT.md",
+      "status": "FAIL",
+      "http": 404
+    },
+    {
+      "name": "requirements.json",
+      "status": "FAIL",
+      "http": 404
+    }
+  ]
+}

@@ -1,3 +1,9 @@
+## Alpha.6 — tag źródeł, wydanie zablokowane
+
+Tag `v2.1.0-alpha.6` wskazuje `a47a7cfed109737efd5d1bc1406436c5f2d717fa`. Lokalne 3114/3114, lint/build oraz CI gałęzi Tests 42143738633 i Ubuntu 42143738536 PASS. CI tagu 42144346689 FAIL: timeout startu sandboxowanego Chrome po 15 s; ograniczenie liczby workerów nie wyeliminowało problemu. Nie zmieniono timeoutu ani asercji, dokładna przyczyna pozostaje nieustalona. Żaden z dziewięciu zasobów wydania nie został dostępny (HTTP 404); sam tag nie jest wydaniem. `evidence/alpha6-tag-failure.json`, `evidence/alpha6-assets-not-published.json`.
+
+Lokalne pakiety z tego commitu mają zgodne sumy; .deb zawiera helper zgodny z manifestem i skrypt kontrolujący własność oraz 4755. Bez instalacji i uruchomienia na komputerze właściciela. `evidence/alpha6-desktop/REPORT.md`: niezależny lokalny przepływ/licencja PASS, rzeczywisty model i pulpit BLOCKED. `evidence/alpha6-controlled/REPORT.md`: kontrolowany provider + wcześniej zeskanowany lokalny skill + rzeczywisty sandbox/niezależny plik PASS, prawdziwy model BLOCKED.
+
 ## CI alpha.6 — diagnoza w toku
 
 Dla 3ab210b pełna regresja lokalna miała 3114/3114 PASS; dwa niezależne workflow GitHub skończyły FAIL: sandboxowany Chrome przekroczył 15 s podczas startu. Adnotacje zawierają timeout i ostrzeżenia systemowe, które same nie dowodzą przyczyny. Dwa workery Vitest w CI są próbą ograniczenia obciążenia; zachowano limit czasu, asercje i sandbox. Potwierdzenie wpływu wymaga następnego przebiegu CI. `evidence/alpha6-ci-timeout.json`.
