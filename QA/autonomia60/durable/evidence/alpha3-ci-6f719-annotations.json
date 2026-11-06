@@ -1,0 +1,8 @@
+[
+  {
+    "url": "https://github.com/Talent620/Jarvis/actions/runs/42133889657/job/127617019230",
+    "assertions": [
+      "AssertionError: launch FAIL: - [pid=2382][err] [2382:3399:1106/000319.669996:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are \"tcp\" and on UNIX \"unix\") | - [pid=2382][err] [2382:3399:1106/000322.636713:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are \"tcp\" and on UNIX \"unix\") | - [pid=2382][err] [2382:3399:1106/000322.636742:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are \"tcp\" and on UNIX \"unix\") | - [pid=2382][err] Unable to revert mtime: /usr/share/fonts | - [pid=2382][err] Unable to revert mtime: /usr/share/fonts/truetype | - [pid=2382][err] Unable to revert mtime: /usr/share/fonts/truetype/dejavu; code=UNEXPECTED_PROBE_FAILURE; executable=/opt/google/chrome/google-chrome. Evidence: QA/runs/browser-session/precondition.json. No browser/desktop PASS is established.: expected 'FAIL' to be 'READY' // Object.is equality\n\nExpected: \"READY\"\nReceived: \"FAIL\"\n\n ❯ tests/browserSession.test.ts:30:158"
+    ]
+  }
+]

@@ -32,7 +32,7 @@ export function installedBrowserCandidates(configured?: string): string[] {
 
 /** Only bounded diagnostic text is public. Never serialize launch options or the environment. */
 export function browserErrorDetail(error: unknown): string {
-  const message = (error instanceof Error ? error.message : String(error))
+  const message = (error instanceof Error ? `${error.name !== "Error" ? `${error.name}: ` : ""}${error.message}` : String(error))
     .replace(new RegExp(String.fromCharCode(27) + "\\[[0-9;]*[A-Za-z]", "g"), "")
     .replace(/-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?(?:-----END [^-]*PRIVATE KEY-----|$)/g, "[REDACTED PRIVATE KEY]")
     .replace(/\b[a-z][a-z\d+.-]*:\/\/[^\s<>"']+/gi, "[REDACTED URL]")
@@ -41,13 +41,15 @@ export function browserErrorDetail(error: unknown): string {
     .replace(/((?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|secret|password|passphrase|credentials?|authorization|cookie|key)["']?\s*(?:[:=]\s*|\s+))(?:"[^"]*"|'[^']*'|[^\s,;}]+)/gi, "$1[REDACTED]")
     .replace(/\b(?:sk-[\w-]{12,}|gh[pousr]_[\w]{12,}|github_pat_[\w]{12,}|AKIA[A-Z0-9]{16})\b/g, "[REDACTED]")
     .replace(/\p{Cc}/gu, character => character === "\n" || character === "\t" ? character : "");
-  const lines = message.split(/\r?\n/).map(line => line.trim()).filter(line => line && !/^Call log:|^Browser logs:|<launching>|^[-\s]*at\s/.test(line));
-  const priority = (line: string) => /\[err\].*(?:FATAL|ERROR|failed|cannot|denied|not found|exception)/i.test(line) ? 0
-    : /(?:process did exit|exitCode=|signal=)/i.test(line) ? 1 : /\[err\]/.test(line) ? 2 : 3;
+  const lines = message.split(/\r?\n/).map(line => line.trim().replace(/^-\s+(?=\[pid=|<)/, "")).filter(line => line && !/^Call log:|^Browser logs:|<launching>|^[-\s]*at\s/.test(line));
+  const priority = (line: string) => /\[err\].*(?:ERROR|failed|cannot|denied|not found|exception)/i.test(line) ? 0 : /\[err\]/.test(line) ? 1 : 2;
   const unique = [...new Set(lines)];
-  // Stable sort leaves original ordering within each priority, including the first error line.
-  unique.sort((a, b) => priority(a) - priority(b));
-  return unique.slice(0, 6).map(line => line.slice(0, 300)).join(" | ").slice(0, 1800) || "(no error detail)";
+  // Reserve space before ranking stderr: repeated DBus/font messages are not the
+  // Playwright exception and must never displace it or process termination evidence.
+  const exits = unique.filter(line => /(?:process did exit|exitCode=|signal=)/i.test(line)).slice(-2);
+  const fatals = unique.filter(line => /\[err\].*(?:\bFATAL\b|Check failed|Segmentation fault)/i.test(line)).slice(0, 2);
+  const ordered = [...new Set([unique[0], ...exits, ...fatals, ...unique.slice(1).sort((a, b) => priority(a) - priority(b))])].filter(Boolean);
+  return ordered.slice(0, 6).map(line => line.slice(0, 300)).join(" | ").slice(0, 1800) || "(no error detail)";
 }
 
 export function browserPrerequisiteSummary(result: BrowserPrerequisite): string {

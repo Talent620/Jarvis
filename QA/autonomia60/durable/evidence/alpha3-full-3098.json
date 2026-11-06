@@ -1,0 +1,20 @@
+{
+  "recorded_at": "2026-11-06T00:06:50.223268+00:00",
+  "commit": "6f719e17cce6baa5737178baa9c44d0090deeb75",
+  "test_files": 373,
+  "passed": 3098,
+  "failed": 0,
+  "skipped": 0,
+  "runtime_unchanged_from": "3ee898c8bc96612967bae4cb56231912da9f9527",
+  "runtime_paths": [
+    "electron",
+    "src",
+    "scripts",
+    "package.json",
+    "package-lock.json",
+    "vite.config.ts"
+  ],
+  "log": "QA/autonomia60/durable/evidence/alpha3-full-3098.log",
+  "raw_sha256": "00cfc526ef063d6be29f0a32bc8cd7b40d0122b77ab8a99317c5ff89951aedaa",
+  "stored_sha256": "21f0abd6172f7d07ce857488928142fd4d2f1511b419e5f0bdaac1678bbbc1f8"
+}

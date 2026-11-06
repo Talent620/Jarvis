@@ -1,0 +1,9 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/browserPrerequisite.test.ts (11 tests) 16ms
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  00:07:22
+   Duration  614ms (transform 53ms, setup 0ms, collect 289ms, tests 16ms, environment 0ms, prepare 117ms)

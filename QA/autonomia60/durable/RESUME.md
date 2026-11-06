@@ -1,3 +1,7 @@
+# Najnowszy checkpoint — główny wyjątek Chrome
+
+Commit6f719e1 ma lokalne3098PASS, zdalneTests42133889562PASS iUbuntu42133889657FAIL przylaunch. Ujawnione D-Bus/fonty NIE są ustaloną przyczyną. Limit sześciu linii ukrywał główny wyjątek; kolejny patch tylkohelper+unit zachowuje exception/name, processexit i fatal przed powtarzalnymstderr. Reprodukcja raportowania1FAIL/10PASS →28focusedPASS/lintPASS. Wszystkie runtimebytes, sandbox, timeouty, asercjaREADY i regułabrakufallbacku pozostają bez zmian. Dalej commit/push i rzeczywistyCI: odczytać pierwotny błąd, naprawić dopiero z dowodem. Nie tagować czerwonego Ubuntu, nie przedstawiać ostrzeżeń fontów jako przyczyny.
+
 # Bieżące wznowienie — diagnostyka CI po3ee898c (2026-11-06)
 
 Runtime3ee898c: lokalne3094PASS/lint/build i niezależne paczki PASS; świeżyGitHubclone zgodny. Ponowny qa:desktop3ee: komenda/settings/restart/licencjaPASS, A/B/C BLOCKED, exit2; selektywne dowody `evidence/desktop-3ee898`. Oba zdalneCI3ee (Tests42133074964, Ubuntu42133074898) FAIL przy starcie sandboxowanegoChrome: UNEXPECTED_PROBE_FAILURE. Pełnej przyczyny brak w publicznych adnotacjach, logi403/404 lubsign-in; nie zgadywać.

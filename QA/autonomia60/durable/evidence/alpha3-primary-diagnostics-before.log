@@ -1,0 +1,32 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ❯ tests/browserPrerequisite.test.ts (11 tests | 1 failed) 19ms
+   × sandboxed browser prerequisite (unit regressions, not native execution) > preserves the primary timeout, process exit and fatal line despite repeated benign stderr errors 6ms
+     → expected '[pid=456][err] ERROR: DBus fixture me…' to match /^TimeoutError: browserType\.launch: T…/
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/browserPrerequisite.test.ts > sandboxed browser prerequisite (unit regressions, not native execution) > preserves the primary timeout, process exit and fatal line despite repeated benign stderr errors
+AssertionError: expected '[pid=456][err] ERROR: DBus fixture me…' to match /^TimeoutError: browserType\.launch: T…/
+
+- Expected:
+/^TimeoutError: browserType\.launch: Timeout 15000ms exceeded\./
+
++ Received:
+"[pid=456][err] ERROR: DBus fixture message 0 | [pid=456][err] ERROR: DBus fixture message 1 | [pid=456][err] ERROR: DBus fixture message 2 | [pid=456][err] ERROR: DBus fixture message 3 | [pid=456][err] ERROR: DBus fixture message 4 | [pid=456][err] ERROR: DBus fixture message 5"
+
+ ❯ tests/browserPrerequisite.test.ts:80:20
+     78|     const result = await probeSandboxedBrowser({ candidates: ["/first"…
+     79|     const detail = result.attempts[0].errorDetail!;
+     80|     expect(detail).toMatch(/^TimeoutError: browserType\.launch: Timeou…
+       |                    ^
+     81|     expect(detail).toContain("exitCode=null, signal=SIGTERM");
+     82|     expect(detail).toContain("FATAL: controlled fatal detail retained"…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  00:06:32
+   Duration  778ms (transform 55ms, setup 0ms, collect 399ms, tests 19ms, environment 0ms, prepare 182ms)

@@ -58,11 +58,35 @@ describe("sandboxed browser prerequisite (unit regressions, not native execution
       "  - <launching> /opt/google/chrome/google-chrome --verbose-fixture",
       "  at synthetic stack frame",
     ].join("\n")));
-    expect(detail).toMatch(/^\[pid=123\]\[err\] FATAL:/);
+    expect(detail).toMatch(/^browserType\.launch: Target page, context or browser has been closed/);
+    expect(detail).toContain("[pid=123][err] FATAL: failed to initialize renderer resource");
     expect(detail).toContain("exitCode=null, signal=SIGTRAP");
     expect(detail).not.toContain("verbose-fixture");
     expect(detail).not.toContain("stack frame");
     expect(detail.length).toBeLessThanOrEqual(1800);
+  });
+
+  it("preserves the primary timeout, process exit and fatal line despite repeated benign stderr errors", async () => {
+    const error = Object.assign(new Error([
+      "browserType.launch: Timeout 15000ms exceeded.",
+      "Browser logs:",
+      ...Array.from({ length: 9 }, (_, index) => `[pid=456][err] ERROR: DBus fixture message ${index}`),
+      ...Array.from({ length: 9 }, (_, index) => `[pid=456][err] fontconfig fixture warning ${index}`),
+      "[pid=456][err] FATAL: controlled fatal detail retained",
+      "[pid=456] <process did exit: exitCode=null, signal=SIGTERM>",
+    ].join("\n")), { name: "TimeoutError" });
+    const launch = vi.fn(async () => { throw error; });
+    const result = await probeSandboxedBrowser({ candidates: ["/first", "/second"], resolveExecutable, launch });
+    const detail = result.attempts[0].errorDetail!;
+    expect(detail).toMatch(/^TimeoutError: browserType\.launch: Timeout 15000ms exceeded\./);
+    expect(detail).toContain("exitCode=null, signal=SIGTERM");
+    expect(detail).toContain("FATAL: controlled fatal detail retained");
+    expect(detail.indexOf("exitCode=")).toBeLessThan(detail.indexOf("ERROR: DBus"));
+    expect(detail.length).toBeLessThanOrEqual(1800);
+    expect(browserPrerequisiteSummary(result).slice(0, 240)).toContain("TimeoutError: browserType.launch: Timeout 15000ms exceeded.");
+    expect(browserPrerequisiteSummary(result).slice(0, 240)).toContain("exitCode=null, signal=SIGTERM");
+    expect(result).toMatchObject({ status: "FAIL", attempts: [{ phase: "launch", code: "UNEXPECTED_PROBE_FAILURE" }] });
+    expect(launch).toHaveBeenCalledOnce();
   });
 
   it("redacts URL credentials/query/fragment, auth and key values before bounding diagnostic output", () => {

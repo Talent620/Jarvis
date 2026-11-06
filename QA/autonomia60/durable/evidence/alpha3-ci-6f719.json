@@ -1,0 +1,438 @@
+{
+  "schemaVersion": 1,
+  "commit": "6f719e17cce6baa5737178baa9c44d0090deeb75",
+  "observedAt": "2026-11-06T00:04:53.019553+00:00",
+  "source": "https://github.com/Talent620/Jarvis/actions",
+  "method": "Unauthenticated public HTML, exact commit match; no API/network-policy bypass or credentials",
+  "runs": [
+    {
+      "id": "42133889657",
+      "name": "Build Ubuntu",
+      "workflowFilePath": ".github/workflows/ubuntu.yml",
+      "runUrl": "https://github.com/Talent620/Jarvis/actions/runs/42133889657",
+      "state": {
+        "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+        "conclusion": "WORKFLOW_RUN_CONCLUSION_FAILURE"
+      },
+      "createdAt": {
+        "timestamp": "2026-11-06T00:02:34Z",
+        "isToday": true,
+        "isCurrentYear": true
+      },
+      "branch": {
+        "name": "refs/heads/codex/skills-integration-20261105",
+        "url": "/Talent620/Jarvis/tree/refs/heads/codex/skills-integration-20261105",
+        "title": "codex/skills-integration-20261105"
+      },
+      "publicAnnotations": [
+        "2 errors and 1 warning",
+        "build",
+        "Process completed with exit code 1.",
+        "tests/browserSession.test.ts > requires a working sandboxed renderer in CI or explicitly required native runs:",
+        "tests/browserSession.test.ts#L30",
+        "AssertionError: launch FAIL: - [pid=2382][err] [2382:3399:1106/000319.669996:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are \"tcp\" and on UNIX \"unix\") | - [pid=2382][err] [2382:3399:1106/000322.636713:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are \"tcp\" and on UNIX \"unix\") | - [pid=2382][err] [2382:3399:1106/000322.636742:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are \"tcp\" and on UNIX \"unix\") | - [pid=2382][err] Unable to revert mtime: /usr/share/fonts | - [pid=2382][err] Unable to revert mtime: /usr/share/fonts/truetype | - [pid=2382][err] Unable to revert mtime: /usr/share/fonts/truetype/dejavu; code=UNEXPECTED_PROBE_FAILURE; executable=/opt/google/chrome/google-chrome. Evidence: QA/runs/browser-session/precondition.json. No",
+        "build",
+        "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see:",
+        "https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+        "Artifacts",
+        "Produced during runtime",
+        "Name",
+        "Size",
+        "Digest",
+        "browser-sandbox-prerequisite-ubuntu",
+        "891 Bytes",
+        "sha256:156a52f94b0914bd0984a0925956060b3a1591b93b1e14393bec5869ab95a7ae"
+      ],
+      "snapshot": {
+        "path": "/tmp/jarvis-alpha3-diagnostic-branch-ci-html/run-42133889657.html",
+        "sha256": "2aeb731e0152fc5ff49dbe88fac36364c2304a149866c0d20b878f90c127606a"
+      },
+      "fullLogs": "BLOCKED: public page requires sign-in",
+      "jobs": [
+        {
+          "id": "127617019230",
+          "url": "https://github.com/Talent620/Jarvis/actions/runs/42133889657/job/127617019230",
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:39Z",
+              "completedAt": "2026-11-06T00:02:40Z"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:40Z",
+              "completedAt": "2026-11-06T00:02:41Z"
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:41Z",
+              "completedAt": "2026-11-06T00:02:48Z"
+            },
+            {
+              "name": "Validate prerelease tag against package version",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:02:48Z",
+              "completedAt": "2026-11-06T00:02:48Z"
+            },
+            {
+              "name": "Check native Ubuntu environment",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:48Z",
+              "completedAt": "2026-11-06T00:02:50Z"
+            },
+            {
+              "name": "Run npm ci",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:50Z",
+              "completedAt": "2026-11-06T00:03:07Z"
+            },
+            {
+              "name": "Verify source",
+              "conclusion": "failure",
+              "startedAt": "2026-11-06T00:03:07Z",
+              "completedAt": "2026-11-06T00:04:30Z"
+            },
+            {
+              "name": "Preserve browser sandbox prerequisite evidence",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:04:30Z",
+              "completedAt": "2026-11-06T00:04:31Z"
+            },
+            {
+              "name": "Build and verify licensed Linux packages",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:04:31Z",
+              "completedAt": "2026-11-06T00:04:31Z"
+            },
+            {
+              "name": "Upload Linux packages",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:04:31Z",
+              "completedAt": "2026-11-06T00:04:31Z"
+            },
+            {
+              "name": "Utwórz manifest wersji Linux",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:04:31Z",
+              "completedAt": "2026-11-06T00:04:31Z"
+            },
+            {
+              "name": "Publish rolling Linux release",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:04:31Z",
+              "completedAt": "2026-11-06T00:04:31Z"
+            },
+            {
+              "name": "Publish validated version prerelease",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:04:31Z",
+              "completedAt": "2026-11-06T00:04:31Z"
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:04:31Z",
+              "completedAt": "2026-11-06T00:04:31Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:04:31Z",
+              "completedAt": "2026-11-06T00:04:32Z"
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:04:32Z",
+              "completedAt": "2026-11-06T00:04:32Z"
+            }
+          ],
+          "snapshot": {
+            "path": "/tmp/jarvis-alpha3-diagnostic-branch-ci-html/job-127617019230.html",
+            "sha256": "be702b5eaef00a718b83955cff2e499cc92f40e49dd6e728c490dbd9a4eac834"
+          }
+        }
+      ]
+    },
+    {
+      "id": "42133889562",
+      "name": "Tests",
+      "workflowFilePath": ".github/workflows/test.yml",
+      "runUrl": "https://github.com/Talent620/Jarvis/actions/runs/42133889562",
+      "state": {
+        "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+        "conclusion": "WORKFLOW_RUN_CONCLUSION_SUCCESS"
+      },
+      "createdAt": {
+        "timestamp": "2026-11-06T00:02:34Z",
+        "isToday": true,
+        "isCurrentYear": true
+      },
+      "branch": {
+        "name": "refs/heads/codex/skills-integration-20261105",
+        "url": "/Talent620/Jarvis/tree/refs/heads/codex/skills-integration-20261105",
+        "title": "codex/skills-integration-20261105"
+      },
+      "publicAnnotations": [
+        "1 warning and 2 notices",
+        "test",
+        "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see:",
+        "https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+        "Vitest diagnostics",
+        "Original Run tests outcome=success; exit_code=0.",
+        "test",
+        "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see",
+        "https://github.com/actions/runner-images/issues/14748",
+        "\"",
+        "Artifacts",
+        "Produced during runtime",
+        "Name",
+        "Size",
+        "Digest",
+        "browser-sandbox-prerequisite-tests",
+        "168 KB",
+        "sha256:8e11742b39471e84777a435681a9baf38f0cb68d0f78032aba46d79e192b5a7d"
+      ],
+      "snapshot": {
+        "path": "/tmp/jarvis-alpha3-diagnostic-branch-ci-html/run-42133889562.html",
+        "sha256": "1a5f663ecab21bd8766859bcdb5cd33b1cb4f0c34ad1480e4a68aeca590eaea9"
+      },
+      "fullLogs": "BLOCKED: public page requires sign-in",
+      "jobs": [
+        {
+          "id": "127617018844",
+          "url": "https://github.com/Talent620/Jarvis/actions/runs/42133889562/job/127617018844",
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:37Z",
+              "completedAt": "2026-11-06T00:02:38Z"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:38Z",
+              "completedAt": "2026-11-06T00:02:39Z"
+            },
+            {
+              "name": "Setup Node",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:39Z",
+              "completedAt": "2026-11-06T00:02:45Z"
+            },
+            {
+              "name": "Install dependencies",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:45Z",
+              "completedAt": "2026-11-06T00:02:56Z"
+            },
+            {
+              "name": "Skan sekretów (blokuje wyciek kluczy)",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:56Z",
+              "completedAt": "2026-11-06T00:02:56Z"
+            },
+            {
+              "name": "Run tests",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:56Z",
+              "completedAt": "2026-11-06T00:04:00Z"
+            },
+            {
+              "name": "Report original test outcome and bounded failures",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:04:00Z",
+              "completedAt": "2026-11-06T00:04:00Z"
+            },
+            {
+              "name": "Preserve browser sandbox prerequisite evidence",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:04:00Z",
+              "completedAt": "2026-11-06T00:04:01Z"
+            },
+            {
+              "name": "Type-check + build",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:04:01Z",
+              "completedAt": "2026-11-06T00:04:14Z"
+            },
+            {
+              "name": "Post Setup Node",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:04:14Z",
+              "completedAt": "2026-11-06T00:04:14Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:04:14Z",
+              "completedAt": "2026-11-06T00:04:15Z"
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:04:15Z",
+              "completedAt": "2026-11-06T00:04:15Z"
+            }
+          ],
+          "snapshot": {
+            "path": "/tmp/jarvis-alpha3-diagnostic-branch-ci-html/job-127617018844.html",
+            "sha256": "c6343c17702b5acb361ac3e8f78623e39be6811d9d6648dce6e89b0aad85bc37"
+          }
+        }
+      ]
+    },
+    {
+      "id": "42133889556",
+      "name": "Build Android APK",
+      "workflowFilePath": ".github/workflows/android.yml",
+      "runUrl": "https://github.com/Talent620/Jarvis/actions/runs/42133889556",
+      "state": {
+        "status": "WORKFLOW_RUN_STATUS_COMPLETED",
+        "conclusion": "WORKFLOW_RUN_CONCLUSION_FAILURE"
+      },
+      "createdAt": {
+        "timestamp": "2026-11-06T00:02:34Z",
+        "isToday": true,
+        "isCurrentYear": true
+      },
+      "branch": {
+        "name": "refs/heads/codex/skills-integration-20261105",
+        "url": "/Talent620/Jarvis/tree/refs/heads/codex/skills-integration-20261105",
+        "title": "codex/skills-integration-20261105"
+      },
+      "publicAnnotations": [
+        "3 errors, 2 warnings, and 1 notice",
+        "Android build stage",
+        "SIGNING failed. See the named step; no release is produced by a failed build.",
+        "build",
+        "Process completed with exit code 2.",
+        "Android release signing",
+        "Android release signing blocked: missing configuration names JARVIS_RELEASE_KEYSTORE_BASE64, JARVIS_RELEASE_STORE_PASSWORD, JARVIS_RELEASE_KEY_ALIAS, JARVIS_RELEASE_KEY_PASSWORD, JARVIS_BUILD_NUMBER, JARVIS_PREVIOUS_VERSION_CODE, JARVIS_RELEASE_CERT_SHA256. No development-key fallback.",
+        "build",
+        "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-java@v4, actions/setup-node@v4. For more information see:",
+        "https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+        "build",
+        "setup-java v4 is deprecated and will no longer receive updates. Please migrate to actions/setup-java@v5.",
+        "build",
+        "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see",
+        "https://github.com/actions/runner-images/issues/14748",
+        "\""
+      ],
+      "snapshot": {
+        "path": "/tmp/jarvis-alpha3-diagnostic-branch-ci-html/run-42133889556.html",
+        "sha256": "19a62a68a79c40e542c63e81b851e2b76231400b175e593e87f7eda63e98b4c2"
+      },
+      "fullLogs": "BLOCKED: public page requires sign-in",
+      "jobs": [
+        {
+          "id": "127617018526",
+          "url": "https://github.com/Talent620/Jarvis/actions/runs/42133889556/job/127617018526",
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:37Z",
+              "completedAt": "2026-11-06T00:02:39Z"
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:39Z",
+              "completedAt": "2026-11-06T00:02:40Z"
+            },
+            {
+              "name": "Setup Node",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:40Z",
+              "completedAt": "2026-11-06T00:02:47Z"
+            },
+            {
+              "name": "Setup JDK 17",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:47Z",
+              "completedAt": "2026-11-06T00:02:47Z"
+            },
+            {
+              "name": "Prepare explicitly configured release signing",
+              "conclusion": "failure",
+              "startedAt": "2026-11-06T00:02:47Z",
+              "completedAt": "2026-11-06T00:02:47Z"
+            },
+            {
+              "name": "Setup Android SDK",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:02:47Z",
+              "completedAt": "2026-11-06T00:02:47Z"
+            },
+            {
+              "name": "Install dependencies",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:02:47Z",
+              "completedAt": "2026-11-06T00:02:47Z"
+            },
+            {
+              "name": "Build web + sync Capacitor",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:02:47Z",
+              "completedAt": "2026-11-06T00:02:47Z"
+            },
+            {
+              "name": "Build release APK with configured identity",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:02:47Z",
+              "completedAt": "2026-11-06T00:02:47Z"
+            },
+            {
+              "name": "Upload APK",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:02:47Z",
+              "completedAt": "2026-11-06T00:02:47Z"
+            },
+            {
+              "name": "Report Android build stages",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:47Z",
+              "completedAt": "2026-11-06T00:02:47Z"
+            },
+            {
+              "name": "Post Setup JDK 17",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:47Z",
+              "completedAt": "2026-11-06T00:02:47Z"
+            },
+            {
+              "name": "Post Setup Node",
+              "conclusion": "skipped",
+              "startedAt": "2026-11-06T00:02:47Z",
+              "completedAt": "2026-11-06T00:02:47Z"
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:47Z",
+              "completedAt": "2026-11-06T00:02:47Z"
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T00:02:47Z",
+              "completedAt": "2026-11-06T00:02:48Z"
+            }
+          ],
+          "snapshot": {
+            "path": "/tmp/jarvis-alpha3-diagnostic-branch-ci-html/job-127617018526.html",
+            "sha256": "bcd19e0b1ae44ff4e01b6ccfc73bd5397a42470ebb6a83e05c389991c46b9136"
+          }
+        }
+      ]
+    }
+  ],
+  "discovery": "Exact commit found",
+  "workflowDispatched": false,
+  "gitMutated": false
+}

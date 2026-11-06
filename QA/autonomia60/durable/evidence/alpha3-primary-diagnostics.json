@@ -1,0 +1,41 @@
+{
+  "recorded_at": "2026-11-06T00:08:06.144048+00:00",
+  "base_commit": "6f719e17cce6baa5737178baa9c44d0090deeb75",
+  "scope": "Diagnostic truncation regression only, not a fix for the unknown remote launch failure",
+  "before": {
+    "passed": 10,
+    "failed": 1
+  },
+  "after": {
+    "passed": 28,
+    "failed": 0,
+    "real_chromium_scenarios": 12
+  },
+  "lint": "PASS",
+  "hashes": {
+    "tests/helpers/browserPrerequisite.ts": "eda1b0a96633ef34161e92401cd4fd625b7290b3a43804bc005007a34d4af240",
+    "tests/browserPrerequisite.test.ts": "3593c405f62125d856ef7181968fd94c745bd3e59d95619e8c0b35bed895f063"
+  },
+  "logs": [
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-primary-diagnostics-before.log",
+      "raw_sha256": "d774f2192442d67e9b7e396d12b5538a04e53c63c83ced6a05a9ce85a7dcaeff",
+      "stored_sha256": "0f2f93c81cb818577a47f04dc5ca91835740e9ea01c31d4a0318fac2da88d94d"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-primary-diagnostics-unit.log",
+      "raw_sha256": "601e2081997cadeb9dd6394ee7e714d20dcbe17be66822c9a2d53c7b1862deb6",
+      "stored_sha256": "f491dbf968629b018fd908108cf2c543968c295659537563a4e621c6f8f3efe0"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-primary-diagnostics-focused.log",
+      "raw_sha256": "634dfe513093a70cffb44d19bb8cc785b0ef96cb76912cae49ecce8197c1b5b1",
+      "stored_sha256": "278445d89f25607bccdec5a30d7e119865c3265d1e2c2e3f85841d302fc977ab"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-primary-diagnostics-lint.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stored_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    }
+  ]
+}

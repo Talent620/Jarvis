@@ -3288,6 +3288,18 @@
       "code": "UNEXPECTED_PROBE_FAILURE",
       "exact_cause": "Not exposed in public annotations; diagnostic patch needed",
       "evidence": "QA/autonomia60/durable/evidence/alpha3-ci-3ee-failed.json"
+    },
+    {
+      "version": "2.1.0-alpha.3",
+      "commit": "6f719e17cce6baa5737178baa9c44d0090deeb75",
+      "tag": null,
+      "release": null,
+      "tests_ci": "PASS",
+      "ubuntu_ci": "FAIL",
+      "phase": "launch",
+      "code": "UNEXPECTED_PROBE_FAILURE",
+      "exact_cause": "Primary exception and process exit not visible; DBus/font diagnostics are not established causes",
+      "evidence": "QA/autonomia60/durable/evidence/alpha3-ci-6f719.json"
     }
   ]
 }
