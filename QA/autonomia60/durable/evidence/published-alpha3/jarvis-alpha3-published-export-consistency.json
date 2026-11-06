@@ -1,0 +1,1284 @@
+{
+  "recordedAt": "2026-11-06T00:24:13.576378+00:00",
+  "status": "PASS",
+  "scope": "Independent bounded consistency and export review of actual public download evidence, native logs and report claims; no new execution or activation acceptance.",
+  "expectedCommit": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+  "tag": "v2.1.0-alpha.3",
+  "tagObject": "607952531aef05442e0f9e3eb4658d0602780407",
+  "expectedVersion": "2.1.0-alpha.3",
+  "issuerFingerprint": "ad4e80d54f053497f66a2aa63c2a82b4dd7da758677037229057b4ce80a9e1a5",
+  "issuer": "application-default",
+  "assetComparison": {
+    "status": "PASS",
+    "assetCount": 9,
+    "documentCount": 5,
+    "checksumEntries": 3,
+    "independentChecks": 103,
+    "report": "/tmp/jarvis-alpha3-public-assets-independent.json"
+  },
+  "headerExport": {
+    "status": "PASS",
+    "requestsChecked": 18,
+    "storedEncoding": "UTF-8 sanitized header lines joined by LF with one final LF",
+    "storedHashesRecomputed": true,
+    "rawHeaderDigestsIndependentlyRecomputed": false,
+    "rawCaptureLimit": "Unsanitized header/curl captures are intentionally not persisted. Their digest format and code path were checked; the discarded bytes cannot be independently rehashed. rawHeadersSha256 hashes the decoded subprocess text re-encoded as UTF-8, including Python text-mode newline normalization; it is not a claim about original HTTP wire octets.",
+    "storedHeaderProofs": [
+      {
+        "assetName": "JARVIS.AppImage",
+        "hop": 1,
+        "storedBytes": 344,
+        "storedSha256": "8bdb1d22506e3ca41fa8caf98bfac18abd0f0fafd7a386f6a4e6b368edf260ba",
+        "matches": true
+      },
+      {
+        "assetName": "JARVIS.AppImage",
+        "hop": 2,
+        "storedBytes": 290,
+        "storedSha256": "71814390e6ecdd94bf782c27b8bc73b2679da08391e8b416ce693a4a8a5933f7",
+        "matches": true
+      },
+      {
+        "assetName": "JARVIS.deb",
+        "hop": 1,
+        "storedBytes": 344,
+        "storedSha256": "cc9f71d8af3fb431e9d33043d4219269c1568c7f450f31df6f62eb2a8175ec66",
+        "matches": true
+      },
+      {
+        "assetName": "JARVIS.deb",
+        "hop": 2,
+        "storedBytes": 284,
+        "storedSha256": "d07834f9c446bccee6fdc69ff18c5faa32e1948e20576ffc58c9be1404442e10",
+        "matches": true
+      },
+      {
+        "assetName": "PROVENANCE.json",
+        "hop": 1,
+        "storedBytes": 342,
+        "storedSha256": "a0077d7b1bc40358ab17671563f9e6b9c62d0e8e9418ebf60718237e539ba9dd",
+        "matches": true
+      },
+      {
+        "assetName": "PROVENANCE.json",
+        "hop": 2,
+        "storedBytes": 286,
+        "storedSha256": "7c4a448bcf550ed0f0145e4e2c7c578bae8920b58eed774b221c36545bf05c5e",
+        "matches": true
+      },
+      {
+        "assetName": "SHA256SUMS",
+        "hop": 1,
+        "storedBytes": 344,
+        "storedSha256": "9d30d256fe7a1ebd2f3129c9ce278eea7fa32af408c9f3c9fc89e0c0541fea18",
+        "matches": true
+      },
+      {
+        "assetName": "SHA256SUMS",
+        "hop": 2,
+        "storedBytes": 279,
+        "storedSha256": "f63671a6664260a6adcf723bde97dbd6a47d3ef8227e0cc7e676dd18456f313a",
+        "matches": true
+      },
+      {
+        "assetName": "CHANGELOG-ALPHA3.md",
+        "hop": 1,
+        "storedBytes": 344,
+        "storedSha256": "a7ae3a52c0c06a239fc07bc78c8eceb7c62e8243a835f112e753d5dcbe19c60b",
+        "matches": true
+      },
+      {
+        "assetName": "CHANGELOG-ALPHA3.md",
+        "hop": 2,
+        "storedBytes": 289,
+        "storedSha256": "af6bb918f4a8b7ac1a3c6e5e7837d9be644fe315565901d6120742f56d37a488",
+        "matches": true
+      },
+      {
+        "assetName": "WYDANIE-ALPHA.md",
+        "hop": 1,
+        "storedBytes": 344,
+        "storedSha256": "2146b2e4d35cbbcee6e013fcfda1c35fa13846576d34727f5682d94d8527e1ee",
+        "matches": true
+      },
+      {
+        "assetName": "WYDANIE-ALPHA.md",
+        "hop": 2,
+        "storedBytes": 286,
+        "storedSha256": "490c7c16271f13695576d5d21477074cd834590897a3cea4685f4ed11f45fae8",
+        "matches": true
+      },
+      {
+        "assetName": "UMIEJETNOSCI-INTEGRACJE.md",
+        "hop": 1,
+        "storedBytes": 343,
+        "storedSha256": "b0e3a6681cd36db39af52ecdddea7ed8c0d7fdc62e736bdc59cc5b99053d4f69",
+        "matches": true
+      },
+      {
+        "assetName": "UMIEJETNOSCI-INTEGRACJE.md",
+        "hop": 2,
+        "storedBytes": 296,
+        "storedSha256": "b9ab509150cb15137cd2ebcd08d6fccf9f467ff50906e848dbe554f1c84bac02",
+        "matches": true
+      },
+      {
+        "assetName": "REPORT.md",
+        "hop": 1,
+        "storedBytes": 344,
+        "storedSha256": "b5f7d1877bf767f306d745c8ba3697dbdf2d08d776a1493a9c95310a1aea1cc6",
+        "matches": true
+      },
+      {
+        "assetName": "REPORT.md",
+        "hop": 2,
+        "storedBytes": 280,
+        "storedSha256": "41840131925c8ce53119d2a793e0ca7cd7cf8bc799f6c6afed2441e3ed4a4b65",
+        "matches": true
+      },
+      {
+        "assetName": "requirements.json",
+        "hop": 1,
+        "storedBytes": 344,
+        "storedSha256": "17c78df1d58f0c0173617606439ef1d5bb1cdfd746d5282af441b2c69e587721",
+        "matches": true
+      },
+      {
+        "assetName": "requirements.json",
+        "hop": 2,
+        "storedBytes": 289,
+        "storedSha256": "88eb32705573adc8e715da52560014c801277a2f40e3ff1439a495622dba68ac",
+        "matches": true
+      }
+    ]
+  },
+  "privacyReview": {
+    "status": "PASS",
+    "storedReportUrlsInspected": 96,
+    "findings": [],
+    "scope": "URLs and known private-key/token markers in the three JSON reports plus all native log lines; no private profile directories were opened. This is a bounded export review, not exhaustive arbitrary-secret discovery."
+  },
+  "nativeLogProofs": [
+    {
+      "format": "deb",
+      "path": "/tmp/jarvis-alpha3-published-verification-deb-native.log",
+      "bytes": 340,
+      "sha256": "f8e1b1f771e316774945391c04d3b24b2ec2bf119e3afff73377fdc1601acb17",
+      "rawAndStoredHashMatch": true,
+      "startupDiagnosticLines": 3,
+      "profileContentsPresent": false
+    },
+    {
+      "format": "appimage",
+      "path": "/tmp/jarvis-alpha3-published-verification-appimage-native.log",
+      "bytes": 340,
+      "sha256": "cff11dcc9a1c033b31f6d68ade00e437a71bcc706d9f44420b4c1bd899cb455a",
+      "rawAndStoredHashMatch": true,
+      "startupDiagnosticLines": 3,
+      "profileContentsPresent": false
+    }
+  ],
+  "acceptanceLimits": {
+    "artifactStructure": "PASS",
+    "componentSmoke": "PASS",
+    "nativeLaunch": "BLOCKED",
+    "overallAcceptance": "BLOCKED: graphical environment unavailable",
+    "systemInstallation": "NOT_EXECUTED",
+    "licenseActivation": "NOT_ESTABLISHED_BY_PACKAGE_OR_PUBLIC_KEY_CHECKS",
+    "realModelAcceptance": "NOT_ESTABLISHED"
+  },
+  "proofFiles": [
+    {
+      "path": "/tmp/jarvis-alpha3-published-downloads.json",
+      "bytes": 34375,
+      "sha256": "067e109e06291081ab58eb6c09e30fadf025fd0b441d80840e3d303790e9a18e"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-public-release.json",
+      "bytes": 3372,
+      "sha256": "e36738cb9554388a33c84ef0b04faafad615f5574bf2f07ed953266ead86fca6"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-verification.json",
+      "bytes": 64773,
+      "sha256": "cdde172f18ca190767bbb42b81d670e65913b33563ed8e86bf07a8348bbde612"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-source-inventory.json",
+      "bytes": 12877,
+      "sha256": "dec34af20af8b4dfa9774f16a23667752afa4e105dff91ae659d437192b9f229"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-HANDOFF.json",
+      "bytes": 585917,
+      "sha256": "4d96d0206d69a27ee8eb7425f3ef2f2a5cfdc8cfa26ebefc7ba6e014d50314fc"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-public-assets-independent.json",
+      "bytes": 18447,
+      "sha256": "9ac0d2f5d62742e3f4d1a89661b9139c614a8a1ef90008effab5ead9b2b99e6f"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-verification.log",
+      "bytes": 64773,
+      "sha256": "cdde172f18ca190767bbb42b81d670e65913b33563ed8e86bf07a8348bbde612"
+    },
+    {
+      "path": "/tmp/jarvis-download-release.py",
+      "bytes": 19270,
+      "sha256": "b6e14d0360c32c467ea1b2e5ac292a8e29051e2da2ec10c9598b7e96a236c650"
+    },
+    {
+      "path": "/tmp/jarvis-verify-release.cjs",
+      "bytes": 15038,
+      "sha256": "cd7011891253b9f6ba3204f0815b6b49316ecfe700e6b6c073e5e6d1ca6b69a3"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-release-public.html",
+      "bytes": 150275,
+      "sha256": "04071a316e881b1369aebd0615f1e18626fe53cd34cb301c400f06b5c0e1e8b7"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-release-assets-public.html",
+      "bytes": 40364,
+      "sha256": "56c92041d93b168b94e1bc52e59cd6436606da924d5496df5d701dc451ec4b3c"
+    }
+  ],
+  "checks": [
+    {
+      "name": "Independent public asset comparison passed all checks",
+      "status": "PASS"
+    },
+    {
+      "name": "Independent public asset scope has nine assets five documents three checksum records",
+      "status": "PASS"
+    },
+    {
+      "name": "Independent public asset proof exact source/tag identity",
+      "status": "PASS"
+    },
+    {
+      "name": "Independent asset input proof hash jarvis-alpha3-published-downloads.json",
+      "status": "PASS"
+    },
+    {
+      "name": "Independent asset input proof hash jarvis-alpha3-public-release.json",
+      "status": "PASS"
+    },
+    {
+      "name": "Artifact report binds exact download evidence",
+      "status": "PASS"
+    },
+    {
+      "name": "Source/report/download identities agree",
+      "status": "PASS"
+    },
+    {
+      "name": "Prerelease version is exact",
+      "status": "PASS"
+    },
+    {
+      "name": "Package and component statuses remain bounded",
+      "status": "PASS"
+    },
+    {
+      "name": "Both package archives are reported identical",
+      "status": "PASS"
+    },
+    {
+      "name": "Report scan is explicitly limited to known private paths",
+      "status": "PASS"
+    },
+    {
+      "name": "metadata issuer public-only EC P256 fields",
+      "status": "PASS"
+    },
+    {
+      "name": "metadata canonical CLI-order default issuer fingerprint",
+      "status": "PASS"
+    },
+    {
+      "name": "metadata active licensing with application-default issuer",
+      "status": "PASS"
+    },
+    {
+      "name": "provenance issuer public-only EC P256 fields",
+      "status": "PASS"
+    },
+    {
+      "name": "provenance canonical CLI-order default issuer fingerprint",
+      "status": "PASS"
+    },
+    {
+      "name": "provenance active licensing with application-default issuer",
+      "status": "PASS"
+    },
+    {
+      "name": "issuerValidation two public import APIs and exact fingerprint",
+      "status": "PASS"
+    },
+    {
+      "name": "issuerValidation scope does not claim activation or private-key ownership",
+      "status": "PASS"
+    },
+    {
+      "name": "provenanceIssuerValidation two public import APIs and exact fingerprint",
+      "status": "PASS"
+    },
+    {
+      "name": "provenanceIssuerValidation scope does not claim activation or private-key ownership",
+      "status": "PASS"
+    },
+    {
+      "name": "Exactly seventeen native source modules in report",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/browser-session.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/goal-service.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/google.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/launch-app.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/linux-keyboard.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/local-ollama.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/local-siteos.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/main.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/mcp-stdio.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/monitor-connectors.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/page-extract.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/preload.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/public-page.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/skill-isolation.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/skill-manager.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/smtp.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Native source proof electron/workspace-tools.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Exactly five report document matches",
+      "status": "PASS"
+    },
+    {
+      "name": "Tagged document report CHANGELOG-ALPHA3.md",
+      "status": "PASS"
+    },
+    {
+      "name": "Tagged document report WYDANIE-ALPHA.md",
+      "status": "PASS"
+    },
+    {
+      "name": "Tagged document report UMIEJETNOSCI-INTEGRACJE.md",
+      "status": "PASS"
+    },
+    {
+      "name": "Tagged document report REPORT.md",
+      "status": "PASS"
+    },
+    {
+      "name": "Tagged document report requirements.json",
+      "status": "PASS"
+    },
+    {
+      "name": "Ledger source hash remains pinned",
+      "status": "PASS"
+    },
+    {
+      "name": "Compiled renderer attribution is not source-byte identity",
+      "status": "PASS"
+    },
+    {
+      "name": "Build input proof package.json",
+      "status": "PASS"
+    },
+    {
+      "name": "Build input proof package-lock.json",
+      "status": "PASS"
+    },
+    {
+      "name": "Build input proof .github/workflows/ubuntu.yml",
+      "status": "PASS"
+    },
+    {
+      "name": "Build input proof scripts/release-linux.cjs",
+      "status": "PASS"
+    },
+    {
+      "name": "Build input proof src/lib/licenseAuthority.ts",
+      "status": "PASS"
+    },
+    {
+      "name": "Public authority source is included in build input proof",
+      "status": "PASS"
+    },
+    {
+      "name": "Production dependency js-yaml",
+      "status": "PASS"
+    },
+    {
+      "name": "Production dependency playwright-core",
+      "status": "PASS"
+    },
+    {
+      "name": "Production dependency @modelcontextprotocol/sdk",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash JARVIS.AppImage hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format JARVIS.AppImage hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 1 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 1 location",
+      "status": "PASS"
+    },
+    {
+      "name": "Redirect header redaction JARVIS.AppImage hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 1 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 1 x-github-request-id",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared JARVIS.AppImage hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash JARVIS.AppImage hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format JARVIS.AppImage hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 2 last-modified",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 2 etag",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 2 content-disposition",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 2 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.AppImage hop 2 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared JARVIS.AppImage hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash JARVIS.deb hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format JARVIS.deb hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 1 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 1 location",
+      "status": "PASS"
+    },
+    {
+      "name": "Redirect header redaction JARVIS.deb hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 1 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 1 x-github-request-id",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared JARVIS.deb hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash JARVIS.deb hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format JARVIS.deb hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 2 last-modified",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 2 etag",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 2 content-disposition",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 2 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist JARVIS.deb hop 2 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared JARVIS.deb hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash PROVENANCE.json hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format PROVENANCE.json hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 1 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 1 location",
+      "status": "PASS"
+    },
+    {
+      "name": "Redirect header redaction PROVENANCE.json hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 1 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 1 x-github-request-id",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared PROVENANCE.json hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash PROVENANCE.json hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format PROVENANCE.json hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 2 last-modified",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 2 etag",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 2 content-disposition",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 2 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist PROVENANCE.json hop 2 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared PROVENANCE.json hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash SHA256SUMS hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format SHA256SUMS hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 1 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 1 location",
+      "status": "PASS"
+    },
+    {
+      "name": "Redirect header redaction SHA256SUMS hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 1 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 1 x-github-request-id",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared SHA256SUMS hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash SHA256SUMS hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format SHA256SUMS hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 2 last-modified",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 2 etag",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 2 content-disposition",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 2 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist SHA256SUMS hop 2 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared SHA256SUMS hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash CHANGELOG-ALPHA3.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format CHANGELOG-ALPHA3.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 1 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 1 location",
+      "status": "PASS"
+    },
+    {
+      "name": "Redirect header redaction CHANGELOG-ALPHA3.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 1 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 1 x-github-request-id",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared CHANGELOG-ALPHA3.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash CHANGELOG-ALPHA3.md hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format CHANGELOG-ALPHA3.md hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 2 last-modified",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 2 etag",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 2 content-disposition",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 2 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist CHANGELOG-ALPHA3.md hop 2 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared CHANGELOG-ALPHA3.md hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash WYDANIE-ALPHA.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format WYDANIE-ALPHA.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 1 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 1 location",
+      "status": "PASS"
+    },
+    {
+      "name": "Redirect header redaction WYDANIE-ALPHA.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 1 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 1 x-github-request-id",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared WYDANIE-ALPHA.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash WYDANIE-ALPHA.md hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format WYDANIE-ALPHA.md hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 2 last-modified",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 2 etag",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 2 content-disposition",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 2 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist WYDANIE-ALPHA.md hop 2 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared WYDANIE-ALPHA.md hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash UMIEJETNOSCI-INTEGRACJE.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format UMIEJETNOSCI-INTEGRACJE.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 1 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 1 location",
+      "status": "PASS"
+    },
+    {
+      "name": "Redirect header redaction UMIEJETNOSCI-INTEGRACJE.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 1 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 1 x-github-request-id",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared UMIEJETNOSCI-INTEGRACJE.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash UMIEJETNOSCI-INTEGRACJE.md hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format UMIEJETNOSCI-INTEGRACJE.md hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 2 last-modified",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 2 etag",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 2 content-disposition",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 2 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist UMIEJETNOSCI-INTEGRACJE.md hop 2 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared UMIEJETNOSCI-INTEGRACJE.md hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash REPORT.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format REPORT.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 1 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 1 location",
+      "status": "PASS"
+    },
+    {
+      "name": "Redirect header redaction REPORT.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 1 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 1 x-github-request-id",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared REPORT.md hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash REPORT.md hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format REPORT.md hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 2 last-modified",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 2 etag",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 2 content-disposition",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 2 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist REPORT.md hop 2 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared REPORT.md hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash requirements.json hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format requirements.json hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 1 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 1 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 1 location",
+      "status": "PASS"
+    },
+    {
+      "name": "Redirect header redaction requirements.json hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 1 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 1 x-github-request-id",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared requirements.json hop 1",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored sanitized-header hash requirements.json hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw capture digests have SHA256 format requirements.json hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 2 last-modified",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 2 etag",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 2 date",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 2 content-disposition",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 2 content-type",
+      "status": "PASS"
+    },
+    {
+      "name": "Header whitelist requirements.json hop 2 content-length",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header nonretention declared requirements.json hop 2",
+      "status": "PASS"
+    },
+    {
+      "name": "Nine assets have eighteen captured HTTP hops",
+      "status": "PASS"
+    },
+    {
+      "name": "Raw header hash text encoding verified from downloader source",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored header hash encoding verified from downloader source",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored report URL and known-secret marker scan",
+      "status": "PASS",
+      "detail": {
+        "urlsInspected": 96,
+        "findingCount": 0
+      }
+    },
+    {
+      "name": "Native aggregate remains BLOCKED",
+      "status": "PASS"
+    },
+    {
+      "name": "Two native package attempts recorded",
+      "status": "PASS"
+    },
+    {
+      "name": "Native log path safe deb",
+      "status": "PASS"
+    },
+    {
+      "name": "Native raw and stored log hashes deb",
+      "status": "PASS"
+    },
+    {
+      "name": "Native attempt limits deb",
+      "status": "PASS"
+    },
+    {
+      "name": "Native profile metadata uses isolated placeholders deb",
+      "status": "PASS"
+    },
+    {
+      "name": "Native log contains only classified startup diagnostics deb",
+      "status": "PASS"
+    },
+    {
+      "name": "Native log path safe appimage",
+      "status": "PASS"
+    },
+    {
+      "name": "Native raw and stored log hashes appimage",
+      "status": "PASS"
+    },
+    {
+      "name": "Native attempt limits appimage",
+      "status": "PASS"
+    },
+    {
+      "name": "Native profile metadata uses isolated placeholders appimage",
+      "status": "PASS"
+    },
+    {
+      "name": "Native log contains only classified startup diagnostics appimage",
+      "status": "PASS"
+    },
+    {
+      "name": "System installation is explicitly unexecuted",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored JSON and text verification exports are byte-identical",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored public-page snapshot hash jarvis-alpha3-release-public.html",
+      "status": "PASS"
+    },
+    {
+      "name": "Stored public-page snapshot hash jarvis-alpha3-release-assets-public.html",
+      "status": "PASS"
+    }
+  ],
+  "checksPassed": 256,
+  "checksTotal": 256,
+  "networkUsed": false,
+  "repositoryEdited": false,
+  "existingReportsModified": false,
+  "privateFilesRead": false,
+  "privateProfilesOpened": false
+}

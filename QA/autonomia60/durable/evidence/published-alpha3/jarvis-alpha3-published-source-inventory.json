@@ -1,0 +1,352 @@
+{
+  "recordedAt": "2026-11-06T00:16:33.609569+00:00",
+  "status": "PASS",
+  "scope": "Fresh remote full-history checkout of the actual annotated alpha3 tag; source proof only, no downloaded artifact or activation claim.",
+  "sourceDirectory": "/tmp/jarvis-alpha3-published-tag-source",
+  "expectedCommit": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+  "git": {
+    "head": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+    "headTree": "110d9170f04b21f4bfd35703497065a71dd1de3c",
+    "baseline": "fb17f9755faad72295cb125563ba2b0220d9319d",
+    "baselineTree": "96aef38057c89c1075492ae2bb7d9b103d531437",
+    "tag": "v2.1.0-alpha.3",
+    "tagObject": "607952531aef05442e0f9e3eb4658d0602780407",
+    "peeledCommit": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+    "tagType": "tag",
+    "detachedHead": true,
+    "remote": "https://github.com/Talent620/Jarvis.git",
+    "clean": true,
+    "fullHistory": true,
+    "ancestry": "PASS",
+    "fsck": "PASS"
+  },
+  "remoteSnapshot": {
+    "recordedAt": "2026-11-06T00:15:22.483450+00:00",
+    "url": "https://github.com/Talent620/Jarvis.git",
+    "command": [
+      "git",
+      "ls-remote",
+      "https://github.com/Talent620/Jarvis.git",
+      "refs/tags/v2.1.0-alpha.3",
+      "refs/tags/v2.1.0-alpha.3^{}"
+    ],
+    "exitCode": 0,
+    "rawOutput": "607952531aef05442e0f9e3eb4658d0602780407\trefs/tags/v2.1.0-alpha.3\n9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9\trefs/tags/v2.1.0-alpha.3^{}\n",
+    "rawOutputFile": "/tmp/jarvis-alpha3-published-remote-tag-refs.txt",
+    "rawOutputSha256": "3256153e43222178c5c5b891bd4b34548321f32ad5744e3479370b0d026ee1f2",
+    "refs": [
+      {
+        "sha": "607952531aef05442e0f9e3eb4658d0602780407",
+        "ref": "refs/tags/v2.1.0-alpha.3"
+      },
+      {
+        "sha": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+        "ref": "refs/tags/v2.1.0-alpha.3^{}"
+      }
+    ],
+    "expectedAnnotatedTagMatches": true,
+    "expectedPeeledCommitMatches": true,
+    "tlsVerificationEnabled": true,
+    "inheritedProxy": true,
+    "provenance": "Exact output persisted by the authorized git ls-remote invocation before source inventory."
+  },
+  "releaseTagState": {
+    "status": "ANNOTATED_TAG_VERIFIED",
+    "tag": "v2.1.0-alpha.3",
+    "tagObject": "607952531aef05442e0f9e3eb4658d0602780407",
+    "peeledCommit": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+    "remoteRefPresent": true,
+    "publicationState": "TAG_PUSHED_RELEASE_ASSETS_NOT_VERIFIED_BY_THIS_REPORT"
+  },
+  "publicationState": "TAG_PUSHED_RELEASE_ASSETS_NOT_VERIFIED_BY_THIS_REPORT",
+  "packageVersion": "2.1.0-alpha.3",
+  "electronFiles": [
+    {
+      "path": "electron/browser-session.cjs",
+      "mode": "100644",
+      "gitBlob": "3a19b5fc9b3d9166ca20af57c3225c88c9a6978b",
+      "bytes": 24530,
+      "sha256": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/goal-service.cjs",
+      "mode": "100644",
+      "gitBlob": "9523f81c8f8da66c51b5f7027c9a601c80bd13ec",
+      "bytes": 38741,
+      "sha256": "1c0e61605b5a043cd7f6ade1f09226baafee45e3f80964de199972e8aa36ca73",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/google.cjs",
+      "mode": "100644",
+      "gitBlob": "c72095b0b06616e5f3d09f3cdaaea8146379f9aa",
+      "bytes": 8557,
+      "sha256": "3ae5d2b4398476dcf6c63ca4137aaf7ce0b8efd4f04b1f7151f62c148e1e46b5",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/launch-app.cjs",
+      "mode": "100644",
+      "gitBlob": "e8a932d52cfd417188a7d1d6eb85113f4bb22283",
+      "bytes": 1853,
+      "sha256": "8ab6a260e39e9efd146880eb1cccca15bb2005ef7bbfdb06e9db48e67cf8e0fa",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/linux-keyboard.cjs",
+      "mode": "100644",
+      "gitBlob": "f456da38c0db9422edfcd51ef403459566d791e9",
+      "bytes": 9294,
+      "sha256": "bf7d23809ca158682fed43b8c0b31eed30728c83a318ffae16be423a40be81b0",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/local-ollama.cjs",
+      "mode": "100644",
+      "gitBlob": "039922cfe9362f3fc0e4620c9acd29e4bf62bc95",
+      "bytes": 5236,
+      "sha256": "898e61038ea6431b4bf74c40f67ae21a1b99f50bb734c3c94fe363a679765bb3",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/local-siteos.cjs",
+      "mode": "100644",
+      "gitBlob": "0d45a46eb2dd7235477f8fb0221ef03ae40e0e59",
+      "bytes": 4335,
+      "sha256": "6a305ab605a8559c79f47dc009de1810e5307235cf6bb80dcf2c2dee946af7a1",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/main.cjs",
+      "mode": "100644",
+      "gitBlob": "2e06f5ded7ff8ed6a18f06fe8fbbc636c8f82527",
+      "bytes": 48436,
+      "sha256": "eeb1700ee15cb3cbcdc6fd43433ab0456271ec941fd6b34020cd60492cf8fde7",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/mcp-stdio.cjs",
+      "mode": "100644",
+      "gitBlob": "6e5e6c6fcf944e481e38eb917a1a665d0b3eb39f",
+      "bytes": 8533,
+      "sha256": "328a043b7fca37e8c1ce05d8c7ddf172c17f28884ff4225fe55399b214ca2a01",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/monitor-connectors.cjs",
+      "mode": "100644",
+      "gitBlob": "c245e4463929c7f47cf61bcf747b3bad84311011",
+      "bytes": 13329,
+      "sha256": "c3c38f621ec57aa5d8097932eaa3fd83a445646c5ba3585c5bd8ed661d192913",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/page-extract.cjs",
+      "mode": "100644",
+      "gitBlob": "fe33680a0400671dff271b050ebc383889a3f36f",
+      "bytes": 2253,
+      "sha256": "278fd1f77b7bc8b47d2d9a2e3aebf36a56a744c5aabf130d91513794e762eec4",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/preload.cjs",
+      "mode": "100644",
+      "gitBlob": "db3f214fc420191f6a166a151e849d02c04738a6",
+      "bytes": 5933,
+      "sha256": "9280fffbff153518d50657fd1856828bd63863366581a6e17023fd5e064c4f13",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/public-page.cjs",
+      "mode": "100644",
+      "gitBlob": "baa9e4f15d946fdce339cad50021e7c824515eb4",
+      "bytes": 4208,
+      "sha256": "9b29a0518b56fc88df838033c6b1a023717da188e40ab046c77abeb5f28147a5",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/skill-isolation.cjs",
+      "mode": "100644",
+      "gitBlob": "256d91a928fa3d02945d9753bb358f509477c3d2",
+      "bytes": 17777,
+      "sha256": "e2a1c82d865b6dcc398c8299b7d7364513864dae08f1865bbb8ee8a30fbbc77d",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/skill-manager.cjs",
+      "mode": "100644",
+      "gitBlob": "d0aa8bf3c4a007eddb92dd7aaf4bb333c1424130",
+      "bytes": 43879,
+      "sha256": "6a59a4dd2b9c019b86a2ef0e5794f2ddedebe5f28470fdf353c45cfcf4301e0b",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/smtp.cjs",
+      "mode": "100644",
+      "gitBlob": "fb0a7cf54d04bb5c5c071afcc35ceb2993f8e12b",
+      "bytes": 3401,
+      "sha256": "90b9688c8ff191015e776e3eddf3296e3558659bf762038558e44b370bc1dc93",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron/workspace-tools.cjs",
+      "mode": "100644",
+      "gitBlob": "12b0056b498e72b93479d00fd9bf054e2bed2b88",
+      "bytes": 13855,
+      "sha256": "e2e250d5517f9b94df551bfc55cc51fc3106d463c31759b3ba7ec480952e0821",
+      "matchesPinnedGitObject": true
+    }
+  ],
+  "documents": [
+    {
+      "path": "docs/CHANGELOG-ALPHA3.md",
+      "mode": "100644",
+      "gitBlob": "3428de1149ea83b5c2125c3f78650db82f8a5124",
+      "bytes": 2815,
+      "sha256": "684b64d1c1e3621f58ffdade33d4db5939e75fca883f499e1fdfd8751bfa8d57",
+      "matchesPinnedGitObject": true,
+      "assetName": "CHANGELOG-ALPHA3.md"
+    },
+    {
+      "path": "docs/WYDANIE-ALPHA.md",
+      "mode": "100644",
+      "gitBlob": "a62ab2cc516d25f78bd1d569c81baf6a0d50e8ac",
+      "bytes": 7782,
+      "sha256": "957f2b5e4fa1c71fb40cb720a95a98ef0a98949c82e1a6b4e5ccc401d3b9f579",
+      "matchesPinnedGitObject": true,
+      "assetName": "WYDANIE-ALPHA.md"
+    },
+    {
+      "path": "docs/UMIEJETNOSCI-INTEGRACJE.md",
+      "mode": "100644",
+      "gitBlob": "69cfc0f1fde020ea6e01908f62cddf268d323562",
+      "bytes": 6820,
+      "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223",
+      "matchesPinnedGitObject": true,
+      "assetName": "UMIEJETNOSCI-INTEGRACJE.md"
+    },
+    {
+      "path": "QA/autonomia60/durable/REPORT.md",
+      "mode": "100644",
+      "gitBlob": "47fb2f6c8b2597d5614369ca03792a40145dab80",
+      "bytes": 35371,
+      "sha256": "ef369cf38a798d9000a119db3c164ea5475954b0fb32cb3d15c550bfef8c36b0",
+      "matchesPinnedGitObject": true,
+      "assetName": "REPORT.md"
+    },
+    {
+      "path": "QA/autonomia60/durable/requirements.json",
+      "mode": "100644",
+      "gitBlob": "6b813f1fc4e7eb998956a8f0f9d161a925ea3346",
+      "bytes": 124248,
+      "sha256": "0dce9c347e552a3fb385a777173fa7efe0b34da8a247579513ee2c4fe1db6bb8",
+      "matchesPinnedGitObject": true,
+      "assetName": "requirements.json"
+    }
+  ],
+  "sourceLedger": {
+    "path": "src/lib/predictionLedger.ts",
+    "mode": "100644",
+    "gitBlob": "ca61b8a739c549e0f5b7a44bdddc0db749c23a07",
+    "bytes": 23209,
+    "sha256": "c8ac7dc843bb6bfd7d2c10dbf987d1229940d8d7964a241ca60bb035edfb83e2",
+    "matchesPinnedGitObject": true,
+    "comparisonScope": "Pinned tracked TypeScript source; compiled renderer is not compared byte-for-byte with TypeScript."
+  },
+  "productionDependencies": {
+    "@capacitor-community/contacts": "^6.1.1",
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/app": "^6.0.1",
+    "@capacitor/app-launcher": "^6.0.2",
+    "@capacitor/camera": "^6.1.3",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/ios": "^6.2.1",
+    "@capacitor/local-notifications": "^6.1.3",
+    "@capacitor/status-bar": "^6.0.3",
+    "@capgo/capacitor-updater": "^6.45.10",
+    "@ebarooni/capacitor-calendar": "^6.7.2",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "dexie": "^4.4.4",
+    "framer-motion": "^11.18.2",
+    "js-yaml": "4.3.2",
+    "jsqr": "^1.4.0",
+    "lucide-react": "^0.460.0",
+    "parse5": "7.3.0",
+    "pdfjs-dist": "^4.10.38",
+    "playwright-core": "1.62.1",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "send-intent": "^6.0.3"
+  },
+  "browserSession": {
+    "expectedSha256": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2",
+    "actualSha256": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2",
+    "matches": true
+  },
+  "buildInputs": [
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "gitBlob": "0eacfa2f3c9b8f1a4ada6aca63dfbe80600d6531",
+      "bytes": 3701,
+      "sha256": "39717902113b74c5e238792270f3375ef05739e4775b9743281fc1f0fa2a3d7d",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "package-lock.json",
+      "mode": "100644",
+      "gitBlob": "0171e99bff6746bb1b5ad5e2e456d881b0b65c2a",
+      "bytes": 425750,
+      "sha256": "0ecec259cf2a5fca1969f29d9ff4651f377b03d58e666f1614e374b19a25b802",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": ".github/workflows/ubuntu.yml",
+      "mode": "100644",
+      "gitBlob": "c7add6d95db4efadf03ec47c346dc88271d11136",
+      "bytes": 5103,
+      "sha256": "2fc15057ef04babe1422709ec4c8d6a76bf6457cc4d21b67b468447d102038af",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "scripts/release-linux.cjs",
+      "mode": "100644",
+      "gitBlob": "a835ae964237fce18b94140082adeb96a3b6efe8",
+      "bytes": 7317,
+      "sha256": "234aedc84429655ad9db700dfb37a89ed4772f13c012d276add83db758235760",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "electron-builder.json",
+      "mode": "100644",
+      "gitBlob": "ae530ae80172359038f8f08847224b27405e0127",
+      "bytes": 1000,
+      "sha256": "cc832e205ffb63d91d9c83698051b72e8f73bdbb1aa640a52bd05300f4a977d2",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "vite.config.ts",
+      "mode": "100644",
+      "gitBlob": "277f05e3d55068e0efa0aecc22aa87d20e13f9a3",
+      "bytes": 7285,
+      "sha256": "e121864348d875e682538cbbd0515e1f9133f311baf4aa409046ac61807852a9",
+      "matchesPinnedGitObject": true
+    },
+    {
+      "path": "src/lib/licenseAuthority.ts",
+      "mode": "100644",
+      "gitBlob": "7d0d4a4dfc63ad749dba146637eff2fd1cc0e20f",
+      "bytes": 785,
+      "sha256": "e0dc66a139b5e05f5371538c5f9dc8136900f7a43d1cce95644ffab9916e5d4a",
+      "matchesPinnedGitObject": true
+    }
+  ],
+  "sourceByteValidation": "Every inventoried source byte and executable bit was checked against the exact Git object at 9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9.",
+  "independentGitProof": {
+    "path": "/tmp/jarvis-alpha3-published-independent-git-proof.json",
+    "sha256": "9ee0128422cc13323dbeadb205ea40c31e891ea1d55a73d6666f6a1a070dddbd",
+    "status": "PASS"
+  }
+}

@@ -4,16 +4,18 @@
   "request_sha256": "90784301789c744c57e5144312083b04043200dfbb9fe26d83b4e76bfc04ac6e",
   "integration_base": "fb17f9755faad72295cb125563ba2b0220d9319d",
   "integration_branch": "codex/skills-integration-20261105",
-  "current_state": "VERIFIED_SOURCE_SNAPSHOT_BEFORE_PUBLICATION",
+  "current_state": "PUBLISHED_ALPHA3_VERIFIED_ARTIFACTS_PARTIAL_PRODUCT_ACCEPTANCE",
   "release": {
     "version": "2.1.0-alpha.3",
-    "sha": null,
-    "tag": null,
-    "url": null,
-    "status": "SOURCE_SNAPSHOT_BEFORE_TAG_AND_DOWNLOAD_VERIFICATION",
+    "sha": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+    "tag": "v2.1.0-alpha.3",
+    "url": "https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.3",
+    "status": "PUBLIC_PRERELEASE_DOWNLOADED_AND_VERIFIED",
     "previous_unpublished_tag": "v2.1.0-alpha.2",
     "verified_code_commit": "44eeb3d5082dba934e94027abb2748d7a52c7538",
-    "package_identity": "Read exact packaged SHA from PROVENANCE.json; post-publication delivery proof is maintained on the integration branch."
+    "package_identity": "Actual downloaded PROVENANCE and archive metadata match9b21a9d; post-publication documentation commit does not change code.",
+    "tag_object": "607952531aef05442e0f9e3eb4658d0602780407",
+    "delivery": "QA/autonomia60/durable/delivery-alpha3.json"
   },
   "status_rules": {
     "PASS": "Pełne potwierdzenie scenariusza na określonym poziomie.",
@@ -2324,6 +2326,22 @@
         "QA/autonomia60/durable/evidence/alpha3-full-3099.json"
       ],
       "limitation": "Prior Chrome launch failures3ee/6f have unresolved primary causes. No real-model/native-user acceptance or published download claim."
+    },
+    {
+      "id": "alpha3_published_download_acceptance",
+      "status": "PASS_ARTIFACTS_BLOCKED_NATIVE_MODEL",
+      "commit": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+      "assets_downloaded": 9,
+      "native_modules_matched": 17,
+      "documents_matched": 5,
+      "source_files": 1613,
+      "source_changes": 215,
+      "checksums": "PASS",
+      "issuer_import_and_fingerprint": "PASS",
+      "native_gui": "BLOCKED_MISSING_DISPLAY",
+      "system_install": "NOT_PERFORMED",
+      "user_local_test": "NOT_PERFORMED",
+      "evidence": "QA/autonomia60/durable/delivery-alpha3.json"
     }
   ],
   "external_access": [
@@ -3112,10 +3130,11 @@
         "id": "T18",
         "title": "Pobrany pakiet, świeża instalacja, migracja i rollback",
         "status": "BLOCKED",
-        "detail": "Alpha.1 user launch FAIL preserved. Alpha.3 local artifacts and source verified; sandbox-on native launch BLOCKED missing authorized graphical session. Actual install, migration and rollback not executed.",
+        "detail": "Actual9public assets downloaded, checksum/source/issuer verified; both extracted native starts BLOCKED missingX/DISPLAY. No system install, migration or rollback. Historical alpha1 user launchFAIL preserved.",
         "evidence": [
           "QA/autonomia60/durable/evidence/alpha3-packages-3ee898.json",
-          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
+          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md",
+          "QA/autonomia60/durable/delivery-alpha3.json"
         ]
       }
     ],
@@ -3189,8 +3208,10 @@
         "id": "G10",
         "title": "Dostarczenie",
         "status": "NOT_ACCEPTED",
-        "reason": "Verified source snapshot before tag publication/download. Final tag packages, owner local install, Android production signing and native rollback require separate evidence.",
-        "evidence": []
+        "reason": "Linux prerelease and9actualdownloads verified; productionAndroid signing and local install/migration/rollback not accepted.",
+        "evidence": [
+          "QA/autonomia60/durable/delivery-alpha3.json"
+        ]
       }
     ],
     "held_out_tasks": [

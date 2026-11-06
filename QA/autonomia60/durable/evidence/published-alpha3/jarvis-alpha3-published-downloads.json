@@ -1,0 +1,657 @@
+{
+  "recordedAt": "2026-11-06T00:20:34.406548+00:00",
+  "status": "PASS",
+  "validateOnly": false,
+  "networkAttempted": true,
+  "tag": "v2.1.0-alpha.3",
+  "expectedTag": "v2.1.0-alpha.3",
+  "expectedVersion": "2.1.0-alpha.3",
+  "expectedCommit": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+  "tagObject": "607952531aef05442e0f9e3eb4658d0602780407",
+  "sourceSnapshot": {
+    "sourceDirectory": "/tmp/jarvis-alpha3-published-tag-source",
+    "expectedVersion": "2.1.0-alpha.3",
+    "expectedTag": "v2.1.0-alpha.3",
+    "expectedCommit": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+    "head": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+    "tagObject": "607952531aef05442e0f9e3eb4658d0602780407",
+    "peeledCommit": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+    "clean": true,
+    "changelog": "CHANGELOG-ALPHA3.md",
+    "files": [
+      {
+        "path": "package.json",
+        "bytes": 3701,
+        "sha256": "39717902113b74c5e238792270f3375ef05739e4775b9743281fc1f0fa2a3d7d"
+      },
+      {
+        "path": "docs/CHANGELOG-ALPHA3.md",
+        "bytes": 2815,
+        "sha256": "684b64d1c1e3621f58ffdade33d4db5939e75fca883f499e1fdfd8751bfa8d57"
+      },
+      {
+        "path": "docs/WYDANIE-ALPHA.md",
+        "bytes": 7782,
+        "sha256": "957f2b5e4fa1c71fb40cb720a95a98ef0a98949c82e1a6b4e5ccc401d3b9f579"
+      },
+      {
+        "path": "docs/UMIEJETNOSCI-INTEGRACJE.md",
+        "bytes": 6820,
+        "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223"
+      },
+      {
+        "path": "QA/autonomia60/durable/REPORT.md",
+        "bytes": 35371,
+        "sha256": "ef369cf38a798d9000a119db3c164ea5475954b0fb32cb3d15c550bfef8c36b0"
+      },
+      {
+        "path": "QA/autonomia60/durable/requirements.json",
+        "bytes": 124248,
+        "sha256": "0dce9c347e552a3fb385a777173fa7efe0b34da8a247579513ee2c4fe1db6bb8"
+      }
+    ],
+    "documents": {
+      "CHANGELOG-ALPHA3.md": "docs/CHANGELOG-ALPHA3.md",
+      "WYDANIE-ALPHA.md": "docs/WYDANIE-ALPHA.md",
+      "UMIEJETNOSCI-INTEGRACJE.md": "docs/UMIEJETNOSCI-INTEGRACJE.md",
+      "REPORT.md": "QA/autonomia60/durable/REPORT.md",
+      "requirements.json": "QA/autonomia60/durable/requirements.json"
+    },
+    "assetNames": [
+      "JARVIS.AppImage",
+      "JARVIS.deb",
+      "PROVENANCE.json",
+      "SHA256SUMS",
+      "CHANGELOG-ALPHA3.md",
+      "WYDANIE-ALPHA.md",
+      "UMIEJETNOSCI-INTEGRACJE.md",
+      "REPORT.md",
+      "requirements.json"
+    ],
+    "status": "PASS"
+  },
+  "expectedAssetCount": 9,
+  "releaseUrl": "https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.3",
+  "assets": [
+    {
+      "name": "JARVIS.AppImage",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/JARVIS.AppImage",
+      "tlsVerificationEnabled": true,
+      "inheritedProxy": true,
+      "httpsOnly": true,
+      "requests": [
+        {
+          "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/JARVIS.AppImage",
+          "httpCode": 302,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "HTTP/2 302",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "content-type: text/html; charset=utf-8",
+            "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/546c3110-9c11-42fc-b4d8-b03d42d8532c",
+            "content-length: 0",
+            "x-github-request-id: 64B6:1F5F5F:60E988:8115EB:6AED1D52"
+          ],
+          "rawHeadersSha256": "1facaa506a648685ed6578d57eabddef329ff0e80434615bb892e611aa3dda50",
+          "storedHeadersSha256": "8bdb1d22506e3ca41fa8caf98bfac18abd0f0fafd7a386f6a4e6b368edf260ba",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "3d6e663181850ae60f7a840778c8f905a79b6324602b7093af2e19cec7ee74a0",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/546c3110-9c11-42fc-b4d8-b03d42d8532c",
+          "httpCode": 200,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "HTTP/2 200",
+            "last-modified: Fri, 06 Nov 2026 00:19:17 GMT",
+            "etag: \"0x8DF3B9B9865C056\"",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "content-disposition: attachment; filename=JARVIS.AppImage",
+            "content-type: application/octet-stream",
+            "content-length: 159656860"
+          ],
+          "rawHeadersSha256": "736fb2c9035984029df4925f57eda3bf3d4b6e68528b8d69df6b4869e29f0c6a",
+          "storedHeadersSha256": "71814390e6ecdd94bf782c27b8bc73b2679da08391e8b416ce693a4a8a5933f7",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "dc06523db871c33b17faa79d0de978972c3601d8398131acd89d47a4e9124dc4",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "status": "PASS",
+      "httpCode": 200,
+      "contentType": "application/octet-stream",
+      "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/546c3110-9c11-42fc-b4d8-b03d42d8532c",
+      "bytes": 159656860,
+      "sha256": "a7ef6b0dc50bc8627e458f009bbc5c017dfefe2121fe7457075f52a6cac73db5",
+      "curlExitCode": 0
+    },
+    {
+      "name": "JARVIS.deb",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/JARVIS.deb",
+      "tlsVerificationEnabled": true,
+      "inheritedProxy": true,
+      "httpsOnly": true,
+      "requests": [
+        {
+          "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/JARVIS.deb",
+          "httpCode": 302,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "HTTP/2 302",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "content-type: text/html; charset=utf-8",
+            "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/4476b257-ceaa-4212-bf2c-595ed34ae15e",
+            "content-length: 0",
+            "x-github-request-id: 8665:301095:4DB3F5:69A4C5:6AED1D52"
+          ],
+          "rawHeadersSha256": "dd3d46e6171a579f95b68a6ed73d1267c83db3d19cba60e9d194c28c1bafba3b",
+          "storedHeadersSha256": "cc9f71d8af3fb431e9d33043d4219269c1568c7f450f31df6f62eb2a8175ec66",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "87edd6eba575c1f1e9953cdf3c098bdf4c5a147de3d9010769371babef4e87bb",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/4476b257-ceaa-4212-bf2c-595ed34ae15e",
+          "httpCode": 200,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "HTTP/2 200",
+            "last-modified: Fri, 06 Nov 2026 00:19:15 GMT",
+            "etag: \"0x8DF3B9B978750EF\"",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "content-disposition: attachment; filename=JARVIS.deb",
+            "content-type: application/octet-stream",
+            "content-length: 99909798"
+          ],
+          "rawHeadersSha256": "9ecc47f4b6e17f6ed254dfe0d08d7a4eb4b2060b8336ad14fc4f4f2186e46a2f",
+          "storedHeadersSha256": "d07834f9c446bccee6fdc69ff18c5faa32e1948e20576ffc58c9be1404442e10",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "348a7b6ec23ba95a24b50349c080c27d4ca739c1b4ee26b923eaa69fa47ffe4f",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "status": "PASS",
+      "httpCode": 200,
+      "contentType": "application/octet-stream",
+      "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/4476b257-ceaa-4212-bf2c-595ed34ae15e",
+      "bytes": 99909798,
+      "sha256": "c06cc6a17312330395b261f57bc6916f5c70bdb7cf31def7b80190a2373cfc27",
+      "curlExitCode": 0
+    },
+    {
+      "name": "PROVENANCE.json",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/PROVENANCE.json",
+      "tlsVerificationEnabled": true,
+      "inheritedProxy": true,
+      "httpsOnly": true,
+      "requests": [
+        {
+          "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/PROVENANCE.json",
+          "httpCode": 302,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "HTTP/2 302",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "content-type: text/html; charset=utf-8",
+            "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/c2f216d6-11bd-4409-83d4-5904c51fb174",
+            "content-length: 0",
+            "x-github-request-id: 9C72:4CC9:38F5DE:4D49E8:6AED1D52"
+          ],
+          "rawHeadersSha256": "9547ec8b0b0cfa4bbbe42187389eb217f4167699d5c6cd704506e4acae750477",
+          "storedHeadersSha256": "a0077d7b1bc40358ab17671563f9e6b9c62d0e8e9418ebf60718237e539ba9dd",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "1f9246f9babce9fa2238fc3701e89ebd832df14a4912c72c458812fcb0810693",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/c2f216d6-11bd-4409-83d4-5904c51fb174",
+          "httpCode": 200,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "HTTP/2 200",
+            "last-modified: Fri, 06 Nov 2026 00:19:12 GMT",
+            "etag: \"0x8DF3B9B958CDBD2\"",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "content-disposition: attachment; filename=PROVENANCE.json",
+            "content-type: application/octet-stream",
+            "content-length: 38125"
+          ],
+          "rawHeadersSha256": "7641d596826c60b22d44ad1c477f5eba6802f54296eecbcb9b3c94c18105e796",
+          "storedHeadersSha256": "7c4a448bcf550ed0f0145e4e2c7c578bae8920b58eed774b221c36545bf05c5e",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "993b45978ad440303d3adc344de1f6f742e438ad6068e72afe3df2f2492cc38e",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "status": "PASS",
+      "httpCode": 200,
+      "contentType": "application/octet-stream",
+      "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/c2f216d6-11bd-4409-83d4-5904c51fb174",
+      "bytes": 38125,
+      "sha256": "31c340689e74de6e441d9fc2fdf5dc24e0dfb235245eb03d62e3bcdcd64b5a68",
+      "curlExitCode": 0
+    },
+    {
+      "name": "SHA256SUMS",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/SHA256SUMS",
+      "tlsVerificationEnabled": true,
+      "inheritedProxy": true,
+      "httpsOnly": true,
+      "requests": [
+        {
+          "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/SHA256SUMS",
+          "httpCode": 302,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "HTTP/2 302",
+            "date: Fri, 06 Nov 2026 00:20:35 GMT",
+            "content-type: text/html; charset=utf-8",
+            "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/a7cabb87-d251-4115-ad24-fae9d76a7111",
+            "content-length: 0",
+            "x-github-request-id: FE0E:185F51:6306D6:83AA31:6AED1D52"
+          ],
+          "rawHeadersSha256": "6120155f8b78b601f7622002323ba2fcc4343dbb83f3b04f0e004b6c1b26744f",
+          "storedHeadersSha256": "9d30d256fe7a1ebd2f3129c9ce278eea7fa32af408c9f3c9fc89e0c0541fea18",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "11c0abf66eaadf6894f0c659e10750b10ae2be06a9c234a8702a8c0ae4752043",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/a7cabb87-d251-4115-ad24-fae9d76a7111",
+          "httpCode": 200,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:34 GMT",
+            "HTTP/2 200",
+            "last-modified: Fri, 06 Nov 2026 00:19:12 GMT",
+            "etag: \"0x8DF3B9B958C1956\"",
+            "date: Fri, 06 Nov 2026 00:20:35 GMT",
+            "content-disposition: attachment; filename=SHA256SUMS",
+            "content-type: application/octet-stream",
+            "content-length: 241"
+          ],
+          "rawHeadersSha256": "b0f3bbe7e6ac7918ebd15524c9e914f73f85ebcedc5c53162de3f81ba63f8fa0",
+          "storedHeadersSha256": "f63671a6664260a6adcf723bde97dbd6a47d3ef8227e0cc7e676dd18456f313a",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "839bd26d9f708c7bd4ee0077be55767180f1b94e17e7d909ac324e15475f2aea",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "status": "PASS",
+      "httpCode": 200,
+      "contentType": "application/octet-stream",
+      "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/a7cabb87-d251-4115-ad24-fae9d76a7111",
+      "bytes": 241,
+      "sha256": "6f8fc39c5e5c4d68995cd273ac8018de96d17bb5ae336c27114dad4fa25f6770",
+      "curlExitCode": 0
+    },
+    {
+      "name": "CHANGELOG-ALPHA3.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/CHANGELOG-ALPHA3.md",
+      "tlsVerificationEnabled": true,
+      "inheritedProxy": true,
+      "httpsOnly": true,
+      "requests": [
+        {
+          "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/CHANGELOG-ALPHA3.md",
+          "httpCode": 302,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:35 GMT",
+            "HTTP/2 302",
+            "date: Fri, 06 Nov 2026 00:20:35 GMT",
+            "content-type: text/html; charset=utf-8",
+            "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/977a5ed0-9d0f-4c98-ab40-17b3614b0984",
+            "content-length: 0",
+            "x-github-request-id: 99A9:257BEE:5E8EA0:7DB887:6AED1D53"
+          ],
+          "rawHeadersSha256": "7739cd104eb0e3c1b65c1b7a9ce8bbe96c53adebbf96b458448c58371e59275e",
+          "storedHeadersSha256": "a7ae3a52c0c06a239fc07bc78c8eceb7c62e8243a835f112e753d5dcbe19c60b",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "c0fce929efdd69dc7c7a7fae32a52ef2b9dfa1082ab74e275c4a0272a33adcde",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/977a5ed0-9d0f-4c98-ab40-17b3614b0984",
+          "httpCode": 200,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:35 GMT",
+            "HTTP/2 200",
+            "last-modified: Fri, 06 Nov 2026 00:19:12 GMT",
+            "etag: \"0x8DF3B9B9588C1B6\"",
+            "date: Fri, 06 Nov 2026 00:20:35 GMT",
+            "content-disposition: attachment; filename=CHANGELOG-ALPHA3.md",
+            "content-type: application/octet-stream",
+            "content-length: 2815"
+          ],
+          "rawHeadersSha256": "3f636b4d0feb46e58569ef9b2a8d04a2530793234e7cc77324fd2be924302d93",
+          "storedHeadersSha256": "af6bb918f4a8b7ac1a3c6e5e7837d9be644fe315565901d6120742f56d37a488",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "0645ed7c92d17afa9e7ff731cc94e720eaa2a82625ec556ab80868e856cd6fe0",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "status": "PASS",
+      "httpCode": 200,
+      "contentType": "application/octet-stream",
+      "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/977a5ed0-9d0f-4c98-ab40-17b3614b0984",
+      "bytes": 2815,
+      "sha256": "684b64d1c1e3621f58ffdade33d4db5939e75fca883f499e1fdfd8751bfa8d57",
+      "curlExitCode": 0
+    },
+    {
+      "name": "WYDANIE-ALPHA.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/WYDANIE-ALPHA.md",
+      "tlsVerificationEnabled": true,
+      "inheritedProxy": true,
+      "httpsOnly": true,
+      "requests": [
+        {
+          "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/WYDANIE-ALPHA.md",
+          "httpCode": 302,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:35 GMT",
+            "HTTP/2 302",
+            "date: Fri, 06 Nov 2026 00:20:36 GMT",
+            "content-type: text/html; charset=utf-8",
+            "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/e1b19c49-e41f-4d25-821e-0b51d6f692e6",
+            "content-length: 0",
+            "x-github-request-id: 71C9:22D42F:341C85:4399B9:6AED1D54"
+          ],
+          "rawHeadersSha256": "579adc4525363d202d8c7d7b1a0ded5758f9abddccde90bfd12ecca732734c41",
+          "storedHeadersSha256": "2146b2e4d35cbbcee6e013fcfda1c35fa13846576d34727f5682d94d8527e1ee",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "327efc87aaf80530f3590875836c6d42b6575ad095177bd615c7ef19924801af",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/e1b19c49-e41f-4d25-821e-0b51d6f692e6",
+          "httpCode": 200,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:35 GMT",
+            "HTTP/2 200",
+            "last-modified: Fri, 06 Nov 2026 00:19:12 GMT",
+            "etag: \"0x8DF3B9B958AE235\"",
+            "date: Fri, 06 Nov 2026 00:20:36 GMT",
+            "content-disposition: attachment; filename=WYDANIE-ALPHA.md",
+            "content-type: application/octet-stream",
+            "content-length: 7782"
+          ],
+          "rawHeadersSha256": "f1b0e6d12341a0455a3290dd2cd3c367a38c32c03e342e89e525f3f5033bb59e",
+          "storedHeadersSha256": "490c7c16271f13695576d5d21477074cd834590897a3cea4685f4ed11f45fae8",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "6057ad720a909e9ab8b5c17d193043423c11efcd2aaa44835af6022731eaf4a1",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "status": "PASS",
+      "httpCode": 200,
+      "contentType": "application/octet-stream",
+      "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/e1b19c49-e41f-4d25-821e-0b51d6f692e6",
+      "bytes": 7782,
+      "sha256": "957f2b5e4fa1c71fb40cb720a95a98ef0a98949c82e1a6b4e5ccc401d3b9f579",
+      "curlExitCode": 0
+    },
+    {
+      "name": "UMIEJETNOSCI-INTEGRACJE.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/UMIEJETNOSCI-INTEGRACJE.md",
+      "tlsVerificationEnabled": true,
+      "inheritedProxy": true,
+      "httpsOnly": true,
+      "requests": [
+        {
+          "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/UMIEJETNOSCI-INTEGRACJE.md",
+          "httpCode": 302,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:36 GMT",
+            "HTTP/2 302",
+            "date: Fri, 06 Nov 2026 00:20:36 GMT",
+            "content-type: text/html; charset=utf-8",
+            "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/78fd9d1c-3f48-4870-a2fe-44c388a95242",
+            "content-length: 0",
+            "x-github-request-id: AA60:55AC6:33FB71:43BED8:6AED1D54"
+          ],
+          "rawHeadersSha256": "d3b31936e330c3dcad75e1d1a5b4d7457ea8066b3a2461f1f9380fdbe17dd2d9",
+          "storedHeadersSha256": "b0e3a6681cd36db39af52ecdddea7ed8c0d7fdc62e736bdc59cc5b99053d4f69",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "4f82b320921eb15d1486975d25b2ba9325b7f9ad5945e48df885109f86d9aede",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/78fd9d1c-3f48-4870-a2fe-44c388a95242",
+          "httpCode": 200,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:36 GMT",
+            "HTTP/2 200",
+            "last-modified: Fri, 06 Nov 2026 00:19:12 GMT",
+            "etag: \"0x8DF3B9B9586EF04\"",
+            "date: Fri, 06 Nov 2026 00:20:36 GMT",
+            "content-disposition: attachment; filename=UMIEJETNOSCI-INTEGRACJE.md",
+            "content-type: application/octet-stream",
+            "content-length: 6820"
+          ],
+          "rawHeadersSha256": "afa5a1634da8778388990c355663d1b2d8d4b3a2c489f49c92da5ccf2f56f69d",
+          "storedHeadersSha256": "b9ab509150cb15137cd2ebcd08d6fccf9f467ff50906e848dbe554f1c84bac02",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "96e15e593be4304e7ea946c13ff9cf28d9e4f6204e5dd62309e925b407e12573",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "status": "PASS",
+      "httpCode": 200,
+      "contentType": "application/octet-stream",
+      "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/78fd9d1c-3f48-4870-a2fe-44c388a95242",
+      "bytes": 6820,
+      "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223",
+      "curlExitCode": 0
+    },
+    {
+      "name": "REPORT.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/REPORT.md",
+      "tlsVerificationEnabled": true,
+      "inheritedProxy": true,
+      "httpsOnly": true,
+      "requests": [
+        {
+          "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/REPORT.md",
+          "httpCode": 302,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:36 GMT",
+            "HTTP/2 302",
+            "date: Fri, 06 Nov 2026 00:20:37 GMT",
+            "content-type: text/html; charset=utf-8",
+            "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/57f85f66-a3cc-4993-8952-a899bac65ab8",
+            "content-length: 0",
+            "x-github-request-id: 7A56:295B39:4DFDC2:6A2C73:6AED1D55"
+          ],
+          "rawHeadersSha256": "9138412705688e66d202650cc3eb6e7e76ae46aff5f2ef12624eab79fe05e4e3",
+          "storedHeadersSha256": "b5f7d1877bf767f306d745c8ba3697dbdf2d08d776a1493a9c95310a1aea1cc6",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "a8b1be5f731686c365babe0061ae3bf000a36ff7b43760e8b5f76aeab8584177",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/57f85f66-a3cc-4993-8952-a899bac65ab8",
+          "httpCode": 200,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:37 GMT",
+            "HTTP/2 200",
+            "last-modified: Fri, 06 Nov 2026 00:19:12 GMT",
+            "etag: \"0x8DF3B9B958605B6\"",
+            "date: Fri, 06 Nov 2026 00:20:37 GMT",
+            "content-disposition: attachment; filename=REPORT.md",
+            "content-type: application/octet-stream",
+            "content-length: 35371"
+          ],
+          "rawHeadersSha256": "c6f5410e91533c075183c531620129bdc752389dfb8a682c8061d384ace4218b",
+          "storedHeadersSha256": "41840131925c8ce53119d2a793e0ca7cd7cf8bc799f6c6afed2441e3ed4a4b65",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "444ac85debc00056266ea3ccefafeea0f5f72d0b06c81bce5a2b7234c2b6f57e",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "status": "PASS",
+      "httpCode": 200,
+      "contentType": "application/octet-stream",
+      "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/57f85f66-a3cc-4993-8952-a899bac65ab8",
+      "bytes": 35371,
+      "sha256": "ef369cf38a798d9000a119db3c164ea5475954b0fb32cb3d15c550bfef8c36b0",
+      "curlExitCode": 0
+    },
+    {
+      "name": "requirements.json",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/requirements.json",
+      "tlsVerificationEnabled": true,
+      "inheritedProxy": true,
+      "httpsOnly": true,
+      "requests": [
+        {
+          "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/requirements.json",
+          "httpCode": 302,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:37 GMT",
+            "HTTP/2 302",
+            "date: Fri, 06 Nov 2026 00:20:37 GMT",
+            "content-type: text/html; charset=utf-8",
+            "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/b41f6f5a-eeb5-4232-bb5c-c6753d84b0c9",
+            "content-length: 0",
+            "x-github-request-id: 9C3D:3D8DDA:5F3C10:7E9BBC:6AED1D55"
+          ],
+          "rawHeadersSha256": "ae52f70a9443df0096b7f9d2df63c0b0528078502ad98ccb4e2c898640b9b04a",
+          "storedHeadersSha256": "17c78df1d58f0c0173617606439ef1d5bb1cdfd746d5282af441b2c69e587721",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "cdf6c815c75bf894cf8d39a76a03a201657ec4b90e6ababbe1babb1b30b6c29c",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/b41f6f5a-eeb5-4232-bb5c-c6753d84b0c9",
+          "httpCode": 200,
+          "curlExitCode": 0,
+          "headers": [
+            "HTTP/1.1 200",
+            "date: Fri, 06 Nov 2026 00:20:37 GMT",
+            "HTTP/2 200",
+            "last-modified: Fri, 06 Nov 2026 00:19:12 GMT",
+            "etag: \"0x8DF3B9B958D2994\"",
+            "date: Fri, 06 Nov 2026 00:20:38 GMT",
+            "content-disposition: attachment; filename=requirements.json",
+            "content-type: application/octet-stream",
+            "content-length: 124248"
+          ],
+          "rawHeadersSha256": "1480adcb2b1274a11c4c39d4614ffe6cfc862b4bd193a0feaeaa485f594afba2",
+          "storedHeadersSha256": "88eb32705573adc8e715da52560014c801277a2f40e3ff1439a495622dba68ac",
+          "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+          "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+          "rawCurlStdoutSha256": "8f5ec6381fa4af85804eb3fe031e6d8b818c197d63ef992849204f5161f2f60a",
+          "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "status": "PASS",
+      "httpCode": 200,
+      "contentType": "application/octet-stream",
+      "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/b41f6f5a-eeb5-4232-bb5c-c6753d84b0c9",
+      "bytes": 124248,
+      "sha256": "0dce9c347e552a3fb385a777173fa7efe0b34da8a247579513ee2c4fe1db6bb8",
+      "curlExitCode": 0
+    }
+  ],
+  "integrity": {
+    "checksums": {
+      "JARVIS.AppImage": {
+        "expected": "a7ef6b0dc50bc8627e458f009bbc5c017dfefe2121fe7457075f52a6cac73db5",
+        "actual": "a7ef6b0dc50bc8627e458f009bbc5c017dfefe2121fe7457075f52a6cac73db5",
+        "matches": true
+      },
+      "JARVIS.deb": {
+        "expected": "c06cc6a17312330395b261f57bc6916f5c70bdb7cf31def7b80190a2373cfc27",
+        "actual": "c06cc6a17312330395b261f57bc6916f5c70bdb7cf31def7b80190a2373cfc27",
+        "matches": true
+      },
+      "PROVENANCE.json": {
+        "expected": "31c340689e74de6e441d9fc2fdf5dc24e0dfb235245eb03d62e3bcdcd64b5a68",
+        "actual": "31c340689e74de6e441d9fc2fdf5dc24e0dfb235245eb03d62e3bcdcd64b5a68",
+        "matches": true
+      }
+    },
+    "documents": {
+      "CHANGELOG-ALPHA3.md": {
+        "sourcePath": "docs/CHANGELOG-ALPHA3.md",
+        "sha256": "684b64d1c1e3621f58ffdade33d4db5939e75fca883f499e1fdfd8751bfa8d57",
+        "matches": true
+      },
+      "WYDANIE-ALPHA.md": {
+        "sourcePath": "docs/WYDANIE-ALPHA.md",
+        "sha256": "957f2b5e4fa1c71fb40cb720a95a98ef0a98949c82e1a6b4e5ccc401d3b9f579",
+        "matches": true
+      },
+      "UMIEJETNOSCI-INTEGRACJE.md": {
+        "sourcePath": "docs/UMIEJETNOSCI-INTEGRACJE.md",
+        "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223",
+        "matches": true
+      },
+      "REPORT.md": {
+        "sourcePath": "QA/autonomia60/durable/REPORT.md",
+        "sha256": "ef369cf38a798d9000a119db3c164ea5475954b0fb32cb3d15c550bfef8c36b0",
+        "matches": true
+      },
+      "requirements.json": {
+        "sourcePath": "QA/autonomia60/durable/requirements.json",
+        "sha256": "0dce9c347e552a3fb385a777173fa7efe0b34da8a247579513ee2c4fe1db6bb8",
+        "matches": true
+      }
+    },
+    "provenanceMatches": true,
+    "status": "PASS"
+  },
+  "destination": "/tmp/jarvis-alpha3-published-9b21a9d"
+}

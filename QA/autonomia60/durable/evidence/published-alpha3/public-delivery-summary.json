@@ -1,0 +1,256 @@
+{
+  "recordedAt": "2026-11-06T00:24:57.336192+00:00",
+  "releaseUrl": "https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.3",
+  "releaseStatus": "PUBLIC_PRERELEASE_VERIFIED",
+  "tag": "v2.1.0-alpha.3",
+  "tagObject": "607952531aef05442e0f9e3eb4658d0602780407",
+  "commit": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+  "version": "2.1.0-alpha.3",
+  "publishedByTagWorkflow": "https://github.com/Talent620/Jarvis/actions/runs/42135348137",
+  "actualDownloadStatus": "PASS",
+  "assets": [
+    {
+      "name": "JARVIS.AppImage",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/JARVIS.AppImage",
+      "bytes": 159656860,
+      "sha256": "a7ef6b0dc50bc8627e458f009bbc5c017dfefe2121fe7457075f52a6cac73db5",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "JARVIS.deb",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/JARVIS.deb",
+      "bytes": 99909798,
+      "sha256": "c06cc6a17312330395b261f57bc6916f5c70bdb7cf31def7b80190a2373cfc27",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "PROVENANCE.json",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/PROVENANCE.json",
+      "bytes": 38125,
+      "sha256": "31c340689e74de6e441d9fc2fdf5dc24e0dfb235245eb03d62e3bcdcd64b5a68",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "SHA256SUMS",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/SHA256SUMS",
+      "bytes": 241,
+      "sha256": "6f8fc39c5e5c4d68995cd273ac8018de96d17bb5ae336c27114dad4fa25f6770",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "CHANGELOG-ALPHA3.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/CHANGELOG-ALPHA3.md",
+      "bytes": 2815,
+      "sha256": "684b64d1c1e3621f58ffdade33d4db5939e75fca883f499e1fdfd8751bfa8d57",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "WYDANIE-ALPHA.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/WYDANIE-ALPHA.md",
+      "bytes": 7782,
+      "sha256": "957f2b5e4fa1c71fb40cb720a95a98ef0a98949c82e1a6b4e5ccc401d3b9f579",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "UMIEJETNOSCI-INTEGRACJE.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/UMIEJETNOSCI-INTEGRACJE.md",
+      "bytes": 6820,
+      "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "REPORT.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/REPORT.md",
+      "bytes": 35371,
+      "sha256": "ef369cf38a798d9000a119db3c164ea5475954b0fb32cb3d15c550bfef8c36b0",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "requirements.json",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/requirements.json",
+      "bytes": 124248,
+      "sha256": "0dce9c347e552a3fb385a777173fa7efe0b34da8a247579513ee2c4fe1db6bb8",
+      "httpCode": 200,
+      "status": "PASS"
+    }
+  ],
+  "packageStructureStatus": "PASS",
+  "sourceNativeModules": {
+    "status": "PASS",
+    "matched": 17
+  },
+  "documentationAssets": {
+    "status": "PASS",
+    "matched": 5
+  },
+  "identicalAsarSha256": "533cf2712ec44a1f3f30ae2997a5c86e4a48b99396adcbe3431b57a979dac789",
+  "issuerValidation": {
+    "status": "PASS",
+    "fingerprint": "ad4e80d54f053497f66a2aa63c2a82b4dd7da758677037229057b4ce80a9e1a5",
+    "type": "EC P-256",
+    "issuer": "application-default",
+    "checks": {
+      "nodeCreatePublicKey": "PASS",
+      "webCryptoImportKey": "PASS"
+    },
+    "canonicalization": "JSON.stringify({kty,crv,x,y})",
+    "scope": "Public-key importability and fingerprint only; no private-key ownership, signature or activation proof."
+  },
+  "dependencies": {
+    "js-yaml": {
+      "declared": "4.3.2",
+      "packagedVersion": "4.3.2",
+      "exists": true
+    },
+    "playwright-core": {
+      "declared": "1.62.1",
+      "packagedVersion": "1.62.1",
+      "exists": true
+    },
+    "@modelcontextprotocol/sdk": {
+      "declared": "1.32.2",
+      "packagedVersion": "1.32.2",
+      "exists": true
+    }
+  },
+  "componentSmoke": {
+    "status": "PASS",
+    "scope": "Extracted actual production dependencies and modules loaded by Node; no GUI/model claim"
+  },
+  "installationState": "NOT_PERFORMED",
+  "nativeLaunch": {
+    "status": "BLOCKED",
+    "scope": "Both extracted published package executables; isolated profiles; no sandbox disable flag"
+  },
+  "nativeAttempts": {
+    "deb": {
+      "status": "BLOCKED",
+      "exitCode": null,
+      "signal": "SIGSEGV",
+      "errorCode": null,
+      "userId": 1000,
+      "displayPresent": false,
+      "sandboxEnabledRequested": true,
+      "sandboxDisableRequested": false,
+      "systemInstallation": false,
+      "xvfbInstalled": false,
+      "launchMode": "native executable from independently extracted deb",
+      "profile": "<isolated-profile>",
+      "workspace": "<isolated-workspace>",
+      "blocker": "Missing X server / DISPLAY",
+      "rawLogSha256": "f8e1b1f771e316774945391c04d3b24b2ec2bf119e3afff73377fdc1601acb17",
+      "storedLogSha256": "f8e1b1f771e316774945391c04d3b24b2ec2bf119e3afff73377fdc1601acb17",
+      "logNormalization": "none; raw UTF-8 stdout plus stderr saved unchanged",
+      "log": "jarvis-alpha3-published-verification-deb-native.log"
+    },
+    "appimage": {
+      "status": "BLOCKED",
+      "exitCode": null,
+      "signal": "SIGSEGV",
+      "errorCode": null,
+      "userId": 1000,
+      "displayPresent": false,
+      "sandboxEnabledRequested": true,
+      "sandboxDisableRequested": false,
+      "systemInstallation": false,
+      "xvfbInstalled": false,
+      "launchMode": "native executable from independently extracted appimage",
+      "profile": "<isolated-profile>",
+      "workspace": "<isolated-workspace>",
+      "blocker": "Missing X server / DISPLAY",
+      "rawLogSha256": "cff11dcc9a1c033b31f6d68ade00e437a71bcc706d9f44420b4c1bd899cb455a",
+      "storedLogSha256": "cff11dcc9a1c033b31f6d68ade00e437a71bcc706d9f44420b4c1bd899cb455a",
+      "logNormalization": "none; raw UTF-8 stdout plus stderr saved unchanged",
+      "log": "jarvis-alpha3-published-verification-appimage-native.log"
+    }
+  },
+  "proofs": [
+    {
+      "path": "/tmp/jarvis-alpha3-public-release.json",
+      "bytes": 3372,
+      "sha256": "e36738cb9554388a33c84ef0b04faafad615f5574bf2f07ed953266ead86fca6"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-final-tag-ci.json",
+      "bytes": 22505,
+      "sha256": "545c7c9fc8adcf6852f963c2ca9c44d5dd08441a8df68f6dd454d7e1874aed2c"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-HANDOFF.json",
+      "bytes": 585917,
+      "sha256": "4d96d0206d69a27ee8eb7425f3ef2f2a5cfdc8cfa26ebefc7ba6e014d50314fc"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-source-inventory.json",
+      "bytes": 12877,
+      "sha256": "dec34af20af8b4dfa9774f16a23667752afa4e105dff91ae659d437192b9f229"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-handoff-consistency.json",
+      "bytes": 4847,
+      "sha256": "e3638c53e66fe10e258fd4b0964257cabb023a652cbbe8ce0d1669e4d5d0f018"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-source-validation.json",
+      "bytes": 8870,
+      "sha256": "76ca6c7dd52ec8593bb0c7363632c758803a5a446becce03b03b4ccbbefab81d"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-downloads.json",
+      "bytes": 34375,
+      "sha256": "067e109e06291081ab58eb6c09e30fadf025fd0b441d80840e3d303790e9a18e"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-verification.json",
+      "bytes": 64773,
+      "sha256": "cdde172f18ca190767bbb42b81d670e65913b33563ed8e86bf07a8348bbde612"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-verification-deb-native.log",
+      "bytes": 340,
+      "sha256": "f8e1b1f771e316774945391c04d3b24b2ec2bf119e3afff73377fdc1601acb17"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-verification-appimage-native.log",
+      "bytes": 340,
+      "sha256": "cff11dcc9a1c033b31f6d68ade00e437a71bcc706d9f44420b4c1bd899cb455a"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-published-export-consistency.json",
+      "bytes": 35634,
+      "sha256": "c555d0d18d740e771116c77505bc48599db16942c233f7efee92226f04b7e915"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-public-assets-independent.json",
+      "bytes": 18447,
+      "sha256": "9ac0d2f5d62742e3f4d1a89661b9139c614a8a1ef90008effab5ead9b2b99e6f"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-public-downloads.md",
+      "bytes": 2286,
+      "sha256": "d276d7bf8191dfb2722744ee1e90e0fa1d48202b26fd8bf53a3202f9168519aa"
+    }
+  ],
+  "limitations": [
+    "Native GUI start and activation could not be accepted because both extracted native launch attempts reached a missing X server/DISPLAY prerequisite.",
+    "No system package installation, upgrade, rollback or real-model autonomy acceptance was performed.",
+    "Public issuer importability and fingerprint validation do not establish possession of its matching private signing key."
+  ],
+  "evidenceHandling": "HTTP redirect queries/userinfo and non-whitelisted headers are not stored; raw/stored header hashes are explicit. Native error logs are unchanged UTF-8 with equal raw/stored SHA256. No private issuer, synthetic token or profile content included.",
+  "finalConsistencyReview": {
+    "status": "PASS",
+    "checks": 256,
+    "independentPublicAssetChecks": 103,
+    "report": "/tmp/jarvis-alpha3-published-export-consistency.json"
+  },
+  "httpRawHeaderHashScope": "SHA256 of decoded curl header capture text after Python text-mode newline normalization; not raw wire octets. Raw captures were discarded to avoid persisting signed redirects/cookies, so these hashes cannot be independently recomputed later.",
+  "nativeLogHashScope": "Exact UTF-8 stdout concatenated with stderr saved unchanged; raw and stored hashes equal the retained 340-byte log file for each extracted native attempt."
+}

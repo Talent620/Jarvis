@@ -1,0 +1,243 @@
+{
+  "recorded_at": "2026-11-06T00:24:33.400167+00:00",
+  "status": "PUBLISHED_AND_DOWNLOADED_VERIFIED_PARTIAL_ACCEPTANCE",
+  "base_commit": "fb17f9755faad72295cb125563ba2b0220d9319d",
+  "branch": "codex/skills-integration-20261105",
+  "code_commit": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+  "tag": "v2.1.0-alpha.3",
+  "tag_object": "607952531aef05442e0f9e3eb4658d0602780407",
+  "version": "2.1.0-alpha.3",
+  "release_url": "https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.3",
+  "assets": [
+    {
+      "name": "JARVIS.AppImage",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/JARVIS.AppImage",
+      "bytes": 159656860,
+      "sha256": "a7ef6b0dc50bc8627e458f009bbc5c017dfefe2121fe7457075f52a6cac73db5",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "JARVIS.deb",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/JARVIS.deb",
+      "bytes": 99909798,
+      "sha256": "c06cc6a17312330395b261f57bc6916f5c70bdb7cf31def7b80190a2373cfc27",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "PROVENANCE.json",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/PROVENANCE.json",
+      "bytes": 38125,
+      "sha256": "31c340689e74de6e441d9fc2fdf5dc24e0dfb235245eb03d62e3bcdcd64b5a68",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "SHA256SUMS",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/SHA256SUMS",
+      "bytes": 241,
+      "sha256": "6f8fc39c5e5c4d68995cd273ac8018de96d17bb5ae336c27114dad4fa25f6770",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "CHANGELOG-ALPHA3.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/CHANGELOG-ALPHA3.md",
+      "bytes": 2815,
+      "sha256": "684b64d1c1e3621f58ffdade33d4db5939e75fca883f499e1fdfd8751bfa8d57",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "WYDANIE-ALPHA.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/WYDANIE-ALPHA.md",
+      "bytes": 7782,
+      "sha256": "957f2b5e4fa1c71fb40cb720a95a98ef0a98949c82e1a6b4e5ccc401d3b9f579",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "UMIEJETNOSCI-INTEGRACJE.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/UMIEJETNOSCI-INTEGRACJE.md",
+      "bytes": 6820,
+      "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "REPORT.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/REPORT.md",
+      "bytes": 35371,
+      "sha256": "ef369cf38a798d9000a119db3c164ea5475954b0fb32cb3d15c550bfef8c36b0",
+      "httpCode": 200,
+      "status": "PASS"
+    },
+    {
+      "name": "requirements.json",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.3/requirements.json",
+      "bytes": 124248,
+      "sha256": "0dce9c347e552a3fb385a777173fa7efe0b34da8a247579513ee2c4fe1db6bb8",
+      "httpCode": 200,
+      "status": "PASS"
+    }
+  ],
+  "main_merged": false,
+  "latest_changed": false,
+  "previous_tags_rewritten": false,
+  "user_computer_installed": false,
+  "user_computer_tested": false,
+  "source_transfer": {
+    "status": "PASS_FRESH_REMOTE_TAG_CLONE",
+    "source_file_count": 1613,
+    "changes_from_base": 215,
+    "added": 170,
+    "modified": 45,
+    "manifest": "QA/autonomia60/durable/HANDOFF-ALPHA3.json",
+    "manifest_sha256": "4d96d0206d69a27ee8eb7425f3ef2f2a5cfdc8cfa26ebefc7ba6e014d50314fc",
+    "command": "git clone --depth 1 --branch v2.1.0-alpha.3 https://github.com/Talent620/Jarvis.git NOWY_KATALOG",
+    "requirements": "Git and network; use a new empty directory. Compare git rev-parse HEAD with code_commit."
+  },
+  "source_tests": {
+    "tested_code_commit": "44eeb3d5082dba934e94027abb2748d7a52c7538",
+    "passed": 3099,
+    "failed": 0,
+    "skipped": 0,
+    "files": 373,
+    "tag_difference": "Documentation/evidence only; runtime, scripts, build configuration and tests identical",
+    "exact_tag_ci": "https://github.com/Talent620/Jarvis/actions/runs/42135348137",
+    "exact_branch_tests": "https://github.com/Talent620/Jarvis/actions/runs/42135299865",
+    "lint": "PASS",
+    "build": "PASS",
+    "earlier_ci_failure_causes": "Chrome launch failures on3ee/6f remain unresolved; subsequent PASS does not establish their cause or a fix."
+  },
+  "published_artifacts": {
+    "checksums": "PASS",
+    "actual_download_count": 9,
+    "native_module_matches": 17,
+    "document_matches": 5,
+    "public_issuer": "PASS_IMPORT_AND_FINGERPRINT_NOT_PRIVATE_KEY_OWNERSHIP",
+    "identical_asar_sha256": "533cf2712ec44a1f3f30ae2997a5c86e4a48b99396adcbe3431b57a979dac789",
+    "component_loading": "PASS",
+    "native_start": {
+      "deb": {
+        "status": "BLOCKED",
+        "exitCode": null,
+        "signal": "SIGSEGV",
+        "errorCode": null,
+        "userId": 1000,
+        "displayPresent": false,
+        "sandboxEnabledRequested": true,
+        "sandboxDisableRequested": false,
+        "systemInstallation": false,
+        "xvfbInstalled": false,
+        "launchMode": "native executable from independently extracted deb",
+        "profile": "<isolated-profile>",
+        "workspace": "<isolated-workspace>",
+        "blocker": "Missing X server / DISPLAY",
+        "rawLogSha256": "f8e1b1f771e316774945391c04d3b24b2ec2bf119e3afff73377fdc1601acb17",
+        "storedLogSha256": "f8e1b1f771e316774945391c04d3b24b2ec2bf119e3afff73377fdc1601acb17",
+        "logNormalization": "none; raw UTF-8 stdout plus stderr saved unchanged",
+        "log": "jarvis-alpha3-published-verification-deb-native.log"
+      },
+      "appimage": {
+        "status": "BLOCKED",
+        "exitCode": null,
+        "signal": "SIGSEGV",
+        "errorCode": null,
+        "userId": 1000,
+        "displayPresent": false,
+        "sandboxEnabledRequested": true,
+        "sandboxDisableRequested": false,
+        "systemInstallation": false,
+        "xvfbInstalled": false,
+        "launchMode": "native executable from independently extracted appimage",
+        "profile": "<isolated-profile>",
+        "workspace": "<isolated-workspace>",
+        "blocker": "Missing X server / DISPLAY",
+        "rawLogSha256": "cff11dcc9a1c033b31f6d68ade00e437a71bcc706d9f44420b4c1bd899cb455a",
+        "storedLogSha256": "cff11dcc9a1c033b31f6d68ade00e437a71bcc706d9f44420b4c1bd899cb455a",
+        "logNormalization": "none; raw UTF-8 stdout plus stderr saved unchanged",
+        "log": "jarvis-alpha3-published-verification-appimage-native.log"
+      }
+    },
+    "system_install": "NOT_PERFORMED"
+  },
+  "agent_acceptance": {
+    "last_runner_source": "3ee898c8bc96612967bae4cb56231912da9f9527",
+    "source_equivalence": "No runtime change from3ee to tag; later changes are test diagnostics, workflow paths and docs/evidence",
+    "run": "2026-11-05T23-56-39-964Z-desktop-9e028ff3",
+    "runner_exit": 2,
+    "local_composer_settings_restart": "PASS",
+    "ephemeral_owner_license_activation_reload": "PASS",
+    "A": "BLOCKED: no reachable Ollama at127.0.0.1:11435 or11434",
+    "B": "BLOCKED: no real model generation; STOP acceptance/executor termination/prior side effects not independently accepted at model level",
+    "C": "BLOCKED: missing authorized graphical session; no selection/clipboard/focus/save claimed",
+    "held_out_H01_H12": "BLOCKED_NO_MODEL",
+    "native_install_migration_rollback": "BLOCKED_NO_TARGET_SESSION",
+    "evidence": "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
+  },
+  "remaining": {
+    "missing_implementation": [
+      "General arbitrary goals still require renderer",
+      "Full Allegro/source marketplace integration",
+      "Complete document/OCR/Wayland and all-screen acceptance"
+    ],
+    "missing_configuration": [
+      "Production Android signing identity and version fields",
+      "Owner-configured changedetection/ntfy/accounts"
+    ],
+    "external_blockers": [
+      "Actual local Ollama/model unavailable",
+      "Authorized user desktop/phone unavailable",
+      "GitHub API access403 prevents direct PR creation"
+    ],
+    "quality": [
+      "Full npm audit32 findings including distributed Electron33",
+      "Earlier intermittent CI browser launch causes unresolved"
+    ]
+  },
+  "run_instructions": "docs/WYDANIE-ALPHA.md",
+  "owner_issuer": "Keep the existing local private key. Official assets use the repository issuer; owner-licensed installations rebuild with their existing local pair. No private material was published.",
+  "qa_command": "npm run qa:desktop -- --ollama-url http://127.0.0.1:11435 --model NAZWA_ISTNIEJACEGO_MODELU",
+  "qa_command_note": "Replace service/model with the existing local configuration. Runner does not download models, installXvfb or change production license.",
+  "rollback": "Close app; retain previous package and profile backup before updating. Install retained previous .deb using sudo apt install --allow-downgrades /path/to/previous.deb, or run retained AppImage. Native rollback was not executed.",
+  "pr": {
+    "status": "BLOCKED",
+    "reason": "Repeated read-only API check after publication returned Forbidden; PR not created.",
+    "compare_url": "https://github.com/Talent620/Jarvis/compare/main...codex/skills-integration-20261105",
+    "created": false,
+    "evidence": "QA/autonomia60/durable/evidence/published-alpha3/pr-api-access.log"
+  },
+  "evidence_exports": "QA/autonomia60/durable/evidence/published-alpha3/EXPORTS.json",
+  "delivery_record_note": "This is a post-publication documentation-only record on the integration branch. Released code/tag remains9b21a9d; subsequent evidence commit does not change installed code.",
+  "evidence_review": {
+    "export_consistency": "PASS_256_CHECKS",
+    "public_assets_independent": "PASS_103_CHECKS",
+    "handoff_consistency": "PASS_30_CHECKS"
+  },
+  "post_release_documentation_files": [
+    "QA/autonomia60/durable/HANDOFF-ALPHA3.json",
+    "QA/autonomia60/durable/REPORT.md",
+    "QA/autonomia60/durable/RESUME.md",
+    "QA/autonomia60/durable/SHA256SUMS-ALPHA3",
+    "QA/autonomia60/durable/delivery-alpha3.json",
+    "QA/autonomia60/durable/evidence/published-alpha3/EXPORTS.json",
+    "QA/autonomia60/durable/evidence/published-alpha3/SHA256SUMS",
+    "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-final-tag-ci.json",
+    "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-public-assets-independent.json",
+    "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-public-downloads.md",
+    "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-public-release.json",
+    "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-downloads.json",
+    "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-export-consistency.json",
+    "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-handoff-consistency.json",
+    "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-source-inventory.json",
+    "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-source-validation.json",
+    "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-verification-appimage-native.log",
+    "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-verification-deb-native.log",
+    "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-verification.json",
+    "QA/autonomia60/durable/evidence/published-alpha3/pr-api-access.log",
+    "QA/autonomia60/durable/evidence/published-alpha3/public-delivery-summary.json",
+    "QA/autonomia60/durable/requirements.json"
+  ]
+}

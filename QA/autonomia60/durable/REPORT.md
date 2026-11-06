@@ -1,5 +1,19 @@
 # JARVIS — wdrożenie, odbiór i przekazanie
 
+## Dostarczona wersja alpha.3 — 2026-11-06
+
+**Publiczny prerelease:** https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.3 . Kod i paczki: `9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9`; obiekt anotowanego tagu: `607952531aef05442e0f9e3eb4658d0602780407`. Baza: `fb17f9755faad72295cb125563ba2b0220d9319d`. Gałąź `codex/skills-integration-20261105` zawiera następnie wyłącznie zapis przekazania i dowody. Nie scalono main ani nie przesunięto latest lub tagów alpha.1/alpha.2.
+
+Pobrano wszystkie **9 plików wydania**. Sumy, identyczny ASAR obu instalatorów, 17 modułów Electron i 5 dokumentów odpowiadają świeżej kopii taga. Publiczny punkt i odcisk wystawcy oraz ładowanie zależności: PASS. `HANDOFF-ALPHA3.json` zawiera pełne 1613 plików i 215 zmian (170 nowych, 45 zmodyfikowanych), hashe, pochodzenie i kontrolę Git fsck. **SHA256 manifestu: `4d96d0206d69a27ee8eb7425f3ef2f2a5cfdc8cfa26ebefc7ba6e014d50314fc`.** Dowody i mapowanie dostarczonych plików: `evidence/published-alpha3/EXPORTS.json`. Kod i pliki są dostępne na GitHubie. Niezależna kontrola eksportu: 256/256; kontrola publicznych zasobów: 103/103.
+
+**3099/3099 testów lokalnie.** Dokładny tag ma GitHub Ubuntu 42135348137 SUCCESS (testy, lint, build, pakowanie i publikacja); końcowa gałąź ma Tests 42135299865 SUCCESS. Przyczyna wcześniejszych awarii startu Chrome w CI pozostaje nieustalona. Późniejszy PASS nie jest przedstawiany jako ich naprawa. Wymagany sandbox, limity i pierwotne asercje pozostały włączone.
+
+**Pełny odbiór produktu nadal niezaliczony.** A/B: BLOCKED — brak Ollamy na 11435/11434. C i obie próby uruchomienia pobranych paczek: BLOCKED — brak X/DISPLAY. Komenda lokalna, ustawienia, restart i testowa aktywacja licencji przez zwykły interfejs: PASS; runner zakończył się kodem 2. Nie wykonano instalacji ani testu na komputerze użytkownika, migracji, rollbacku, rzeczywistych kanałów lub 12 zadań generalizacji. Android nie został wydany bez zatwierdzonej konfiguracji podpisu. Braki implementacji i 32 zgłoszenia pełnego audytu npm pozostają w rejestrze niezależnie od środowiska. PR nie powstał: ponowna próba API zwróciła Forbidden. Publikację wykonał istniejący autoryzowany workflow.
+
+**Aktualizacja z własnym kluczem:** `docs/WYDANIE-ALPHA.md` zawiera gotowy blok dla Ubuntu/Debian x86_64, Git, Node.js >=20, npm, sudo i sesji graficznej. Zamknij poprzednie okno, zachowaj pakiet i profil do wycofania aktualizacji oraz użyj tej samej lokalnej pary (`JARVIS_OWNER_KEY_DIR` przy niestandardowej lokalizacji). Gotowe paczki używają wystawcy repozytorium; licencja podpisana inną lokalną parą wymaga własnego buildu. Uruchamiany plik to `/opt/JARVIS/jarvis-ai-assistant`. Instalator sprawdza helper przed ustawieniem `root:root 4755`; nie wyłącza sandboxa ani AppArmor. Licencja pozostaje wymagana.
+
+Pełny wynik przekazania, rzeczywiste adresy i sumy: `delivery-alpha3.json`, `SHA256SUMS-ALPHA3`. Dalsza część raportu jest historią etapów i ich ograniczeń; migawki sprzed publikacji nie zastępują powyższego stanu.
+
 ## Bieżący etap 2.1.0-alpha.3
 
 Baza: `fb17f9755faad72295cb125563ba2b0220d9319d`. Gałąź: `codex/skills-integration-20261105`. Wszystkie wcześniejsze poprawki są zachowane. Aktualna specyfikacja: `SPEC-CLOSURE.md`; jeden rejestr możliwości, integracji, T01–T18 i G1–G10: `requirements.json`. Historyczne 60 testów i 80 przykładów nie zostały przepisane na PASS.

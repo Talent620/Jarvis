@@ -1,0 +1,164 @@
+{
+  "recordedAt": "2026-11-06T00:17:20.504188+00:00",
+  "status": "PASS",
+  "scope": "Read-only independent published-tag manifest consistency; source contents were not rehashed and fsck was not repeated.",
+  "head": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+  "headTree": "110d9170f04b21f4bfd35703497065a71dd1de3c",
+  "baseline": "fb17f9755faad72295cb125563ba2b0220d9319d",
+  "baselineTree": "96aef38057c89c1075492ae2bb7d9b103d531437",
+  "tag": "v2.1.0-alpha.3",
+  "tagObject": "607952531aef05442e0f9e3eb4658d0602780407",
+  "peeledCommit": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+  "handoff": {
+    "path": "/tmp/jarvis-alpha3-published-HANDOFF.json",
+    "sha256": "4d96d0206d69a27ee8eb7425f3ef2f2a5cfdc8cfa26ebefc7ba6e014d50314fc"
+  },
+  "sourceInventory": {
+    "path": "/tmp/jarvis-alpha3-published-source-inventory.json",
+    "sha256": "dec34af20af8b4dfa9774f16a23667752afa4e105dff91ae659d437192b9f229"
+  },
+  "independentGitProof": {
+    "path": "/tmp/jarvis-alpha3-published-independent-git-proof.json",
+    "sha256": "9ee0128422cc13323dbeadb205ea40c31e891ea1d55a73d6666f6a1a070dddbd"
+  },
+  "rawRemoteRefs": {
+    "path": "/tmp/jarvis-alpha3-published-remote-tag-refs.txt",
+    "sha256": "3256153e43222178c5c5b891bd4b34548321f32ad5744e3479370b0d026ee1f2"
+  },
+  "trackedPaths": 1613,
+  "changedPaths": 215,
+  "statusCounts": {
+    "A": 170,
+    "M": 45
+  },
+  "trackedModes": {
+    "100644": 1607,
+    "100755": 6
+  },
+  "checks": [
+    {
+      "check": "Current HEAD is exact published commit",
+      "status": "PASS"
+    },
+    {
+      "check": "Exact head agrees across all proofs and Git",
+      "status": "PASS"
+    },
+    {
+      "check": "Exact headTree agrees across all proofs and Git",
+      "status": "PASS"
+    },
+    {
+      "check": "Exact baseline agrees across all proofs and Git",
+      "status": "PASS"
+    },
+    {
+      "check": "Exact baselineTree agrees across all proofs and Git",
+      "status": "PASS"
+    },
+    {
+      "check": "All input proofs report PASS",
+      "status": "PASS"
+    },
+    {
+      "check": "Package version agrees",
+      "status": "PASS"
+    },
+    {
+      "check": "Source-inventory reference and SHA256 match actual report bytes",
+      "status": "PASS"
+    },
+    {
+      "check": "Independent Git proof reference and SHA256 match actual report bytes",
+      "status": "PASS"
+    },
+    {
+      "check": "Inventory independent-proof SHA256 reference matches actual report bytes",
+      "status": "PASS"
+    },
+    {
+      "check": "Published tag matches independent tag proof",
+      "status": "PASS"
+    },
+    {
+      "check": "Published tagObject matches independent tag proof",
+      "status": "PASS"
+    },
+    {
+      "check": "Published peeledCommit matches independent tag proof",
+      "status": "PASS"
+    },
+    {
+      "check": "Published tagType matches independent tag proof",
+      "status": "PASS"
+    },
+    {
+      "check": "Live local annotated tag agrees with manifest and remote-proof identity",
+      "status": "PASS"
+    },
+    {
+      "check": "Detached tag checkout proof is preserved",
+      "status": "PASS"
+    },
+    {
+      "check": "Raw remote tag references match exact annotated tag and peeled commit",
+      "status": "PASS"
+    },
+    {
+      "check": "Independent remote snapshot SHA256 matches raw file bytes",
+      "status": "PASS"
+    },
+    {
+      "check": "Both manifests preserve exact remote raw bytes/hash, parsed refs and annotated tag-state identity",
+      "status": "PASS"
+    },
+    {
+      "check": "All 1613 tracked paths are unique and counts agree",
+      "status": "PASS"
+    },
+    {
+      "check": "Tracked paths exactly match HEAD ls-tree",
+      "status": "PASS"
+    },
+    {
+      "check": "Every tracked mode and blob matches Git HEAD tree",
+      "status": "PASS"
+    },
+    {
+      "check": "Every tracked path/blob/mode/type matches independent Git metadata list",
+      "status": "PASS"
+    },
+    {
+      "check": "Tracked byte/hash evidence has complete valid field shapes",
+      "status": "PASS"
+    },
+    {
+      "check": "Mode counts match independent proof",
+      "status": "PASS"
+    },
+    {
+      "check": "All 215 changed paths are unique",
+      "status": "PASS"
+    },
+    {
+      "check": "All change statuses and paths match independent baseline diff",
+      "status": "PASS"
+    },
+    {
+      "check": "Added/modified status counts agree",
+      "status": "PASS"
+    },
+    {
+      "check": "Every A has null before and every M has matching baseline before; all after records match HEAD manifest",
+      "status": "PASS"
+    },
+    {
+      "check": "All source inventory native/doc/ledger/build-input records agree with full tracked manifest",
+      "status": "PASS"
+    }
+  ],
+  "networkUsed": false,
+  "repositoryEdits": false,
+  "sourceFileContentsRehashed": false,
+  "fsckRepeated": false
+}

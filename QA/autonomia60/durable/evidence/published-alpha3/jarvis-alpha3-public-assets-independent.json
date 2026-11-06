@@ -1,0 +1,624 @@
+{
+  "recordedAt": "2026-11-06T00:22:37.670208+00:00",
+  "status": "PASS",
+  "scope": "Independent local read-only equality checks of actual downloaded assets, download evidence, public listed digests, exact tag documentation and checksum manifest. No native launch, license activation or installation acceptance claim.",
+  "expectedCommit": "9b21a9d274fbedf30a3ce66ebd85c6415c7b64b9",
+  "expectedVersion": "2.1.0-alpha.3",
+  "tag": "v2.1.0-alpha.3",
+  "tagObject": "607952531aef05442e0f9e3eb4658d0602780407",
+  "assetDirectory": "/tmp/jarvis-alpha3-published-9b21a9d",
+  "sourceDirectory": "/tmp/jarvis-alpha3-published-tag-source",
+  "assetCount": 9,
+  "documentCount": 5,
+  "manifestRecordCount": 3,
+  "proofFiles": [
+    {
+      "path": "/tmp/jarvis-alpha3-published-downloads.json",
+      "sha256": "067e109e06291081ab58eb6c09e30fadf025fd0b441d80840e3d303790e9a18e"
+    },
+    {
+      "path": "/tmp/jarvis-alpha3-public-release.json",
+      "sha256": "e36738cb9554388a33c84ef0b04faafad615f5574bf2f07ed953266ead86fca6"
+    }
+  ],
+  "publicSnapshots": [
+    {
+      "kind": "release-page",
+      "path": "/tmp/jarvis-alpha3-release-public.html",
+      "sha256": "04071a316e881b1369aebd0615f1e18626fe53cd34cb301c400f06b5c0e1e8b7"
+    },
+    {
+      "kind": "expanded-assets",
+      "path": "/tmp/jarvis-alpha3-release-assets-public.html",
+      "sha256": "56c92041d93b168b94e1bc52e59cd6436606da924d5496df5d701dc451ec4b3c"
+    }
+  ],
+  "assets": [
+    {
+      "name": "JARVIS.AppImage",
+      "bytes": 159656860,
+      "sha256": "a7ef6b0dc50bc8627e458f009bbc5c017dfefe2121fe7457075f52a6cac73db5",
+      "downloadSizeMatches": true,
+      "downloadSha256Matches": true,
+      "publicSha256Matches": true,
+      "publicDigestLineIndex": 5,
+      "status": "PASS"
+    },
+    {
+      "name": "JARVIS.deb",
+      "bytes": 99909798,
+      "sha256": "c06cc6a17312330395b261f57bc6916f5c70bdb7cf31def7b80190a2373cfc27",
+      "downloadSizeMatches": true,
+      "downloadSha256Matches": true,
+      "publicSha256Matches": true,
+      "publicDigestLineIndex": 9,
+      "status": "PASS"
+    },
+    {
+      "name": "PROVENANCE.json",
+      "bytes": 38125,
+      "sha256": "31c340689e74de6e441d9fc2fdf5dc24e0dfb235245eb03d62e3bcdcd64b5a68",
+      "downloadSizeMatches": true,
+      "downloadSha256Matches": true,
+      "publicSha256Matches": true,
+      "publicDigestLineIndex": 13,
+      "status": "PASS"
+    },
+    {
+      "name": "SHA256SUMS",
+      "bytes": 241,
+      "sha256": "6f8fc39c5e5c4d68995cd273ac8018de96d17bb5ae336c27114dad4fa25f6770",
+      "downloadSizeMatches": true,
+      "downloadSha256Matches": true,
+      "publicSha256Matches": true,
+      "publicDigestLineIndex": 25,
+      "status": "PASS"
+    },
+    {
+      "name": "CHANGELOG-ALPHA3.md",
+      "bytes": 2815,
+      "sha256": "684b64d1c1e3621f58ffdade33d4db5939e75fca883f499e1fdfd8751bfa8d57",
+      "downloadSizeMatches": true,
+      "downloadSha256Matches": true,
+      "publicSha256Matches": true,
+      "publicDigestLineIndex": 1,
+      "status": "PASS"
+    },
+    {
+      "name": "WYDANIE-ALPHA.md",
+      "bytes": 7782,
+      "sha256": "957f2b5e4fa1c71fb40cb720a95a98ef0a98949c82e1a6b4e5ccc401d3b9f579",
+      "downloadSizeMatches": true,
+      "downloadSha256Matches": true,
+      "publicSha256Matches": true,
+      "publicDigestLineIndex": 33,
+      "status": "PASS"
+    },
+    {
+      "name": "UMIEJETNOSCI-INTEGRACJE.md",
+      "bytes": 6820,
+      "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223",
+      "downloadSizeMatches": true,
+      "downloadSha256Matches": true,
+      "publicSha256Matches": true,
+      "publicDigestLineIndex": 29,
+      "status": "PASS"
+    },
+    {
+      "name": "REPORT.md",
+      "bytes": 35371,
+      "sha256": "ef369cf38a798d9000a119db3c164ea5475954b0fb32cb3d15c550bfef8c36b0",
+      "downloadSizeMatches": true,
+      "downloadSha256Matches": true,
+      "publicSha256Matches": true,
+      "publicDigestLineIndex": 17,
+      "status": "PASS"
+    },
+    {
+      "name": "requirements.json",
+      "bytes": 124248,
+      "sha256": "0dce9c347e552a3fb385a777173fa7efe0b34da8a247579513ee2c4fe1db6bb8",
+      "downloadSizeMatches": true,
+      "downloadSha256Matches": true,
+      "publicSha256Matches": true,
+      "publicDigestLineIndex": 21,
+      "status": "PASS"
+    }
+  ],
+  "checksumManifest": {
+    "path": "/tmp/jarvis-alpha3-published-9b21a9d/SHA256SUMS",
+    "sha256": "6f8fc39c5e5c4d68995cd273ac8018de96d17bb5ae336c27114dad4fa25f6770",
+    "status": "PASS",
+    "entries": [
+      {
+        "name": "JARVIS.AppImage",
+        "expected": "a7ef6b0dc50bc8627e458f009bbc5c017dfefe2121fe7457075f52a6cac73db5",
+        "actual": "a7ef6b0dc50bc8627e458f009bbc5c017dfefe2121fe7457075f52a6cac73db5",
+        "matches": true
+      },
+      {
+        "name": "JARVIS.deb",
+        "expected": "c06cc6a17312330395b261f57bc6916f5c70bdb7cf31def7b80190a2373cfc27",
+        "actual": "c06cc6a17312330395b261f57bc6916f5c70bdb7cf31def7b80190a2373cfc27",
+        "matches": true
+      },
+      {
+        "name": "PROVENANCE.json",
+        "expected": "31c340689e74de6e441d9fc2fdf5dc24e0dfb235245eb03d62e3bcdcd64b5a68",
+        "actual": "31c340689e74de6e441d9fc2fdf5dc24e0dfb235245eb03d62e3bcdcd64b5a68",
+        "matches": true
+      }
+    ]
+  },
+  "documents": [
+    {
+      "name": "CHANGELOG-ALPHA3.md",
+      "sourcePath": "docs/CHANGELOG-ALPHA3.md",
+      "gitBlob": "3428de1149ea83b5c2125c3f78650db82f8a5124",
+      "bytes": 2815,
+      "sha256": "684b64d1c1e3621f58ffdade33d4db5939e75fca883f499e1fdfd8751bfa8d57",
+      "diskEqualsPinnedGit": true,
+      "downloadEqualsPinnedGit": true,
+      "status": "PASS"
+    },
+    {
+      "name": "WYDANIE-ALPHA.md",
+      "sourcePath": "docs/WYDANIE-ALPHA.md",
+      "gitBlob": "a62ab2cc516d25f78bd1d569c81baf6a0d50e8ac",
+      "bytes": 7782,
+      "sha256": "957f2b5e4fa1c71fb40cb720a95a98ef0a98949c82e1a6b4e5ccc401d3b9f579",
+      "diskEqualsPinnedGit": true,
+      "downloadEqualsPinnedGit": true,
+      "status": "PASS"
+    },
+    {
+      "name": "UMIEJETNOSCI-INTEGRACJE.md",
+      "sourcePath": "docs/UMIEJETNOSCI-INTEGRACJE.md",
+      "gitBlob": "69cfc0f1fde020ea6e01908f62cddf268d323562",
+      "bytes": 6820,
+      "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223",
+      "diskEqualsPinnedGit": true,
+      "downloadEqualsPinnedGit": true,
+      "status": "PASS"
+    },
+    {
+      "name": "REPORT.md",
+      "sourcePath": "QA/autonomia60/durable/REPORT.md",
+      "gitBlob": "47fb2f6c8b2597d5614369ca03792a40145dab80",
+      "bytes": 35371,
+      "sha256": "ef369cf38a798d9000a119db3c164ea5475954b0fb32cb3d15c550bfef8c36b0",
+      "diskEqualsPinnedGit": true,
+      "downloadEqualsPinnedGit": true,
+      "status": "PASS"
+    },
+    {
+      "name": "requirements.json",
+      "sourcePath": "QA/autonomia60/durable/requirements.json",
+      "gitBlob": "6b813f1fc4e7eb998956a8f0f9d161a925ea3346",
+      "bytes": 124248,
+      "sha256": "0dce9c347e552a3fb385a777173fa7efe0b34da8a247579513ee2c4fe1db6bb8",
+      "diskEqualsPinnedGit": true,
+      "downloadEqualsPinnedGit": true,
+      "status": "PASS"
+    }
+  ],
+  "checks": [
+    {
+      "check": "Download report matches successful exact release identity",
+      "status": "PASS"
+    },
+    {
+      "check": "Exactly nine assets recorded as downloaded",
+      "status": "PASS"
+    },
+    {
+      "check": "Download asset names are unique and exact",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual destination contains exactly the expected nine asset names",
+      "status": "PASS"
+    },
+    {
+      "check": "Fresh source matches exact annotated release tag and commit",
+      "status": "PASS"
+    },
+    {
+      "check": "Fresh tag source is clean",
+      "status": "PASS"
+    },
+    {
+      "check": "Public asset digest evidence has textual line structure",
+      "status": "PASS"
+    },
+    {
+      "check": "Unique public digest entry for CHANGELOG-ALPHA3.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Public digest follows CHANGELOG-ALPHA3.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Exactly one public SHA256 digest for CHANGELOG-ALPHA3.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Unique public digest entry for JARVIS.AppImage",
+      "status": "PASS"
+    },
+    {
+      "check": "Public digest follows JARVIS.AppImage",
+      "status": "PASS"
+    },
+    {
+      "check": "Exactly one public SHA256 digest for JARVIS.AppImage",
+      "status": "PASS"
+    },
+    {
+      "check": "Unique public digest entry for JARVIS.deb",
+      "status": "PASS"
+    },
+    {
+      "check": "Public digest follows JARVIS.deb",
+      "status": "PASS"
+    },
+    {
+      "check": "Exactly one public SHA256 digest for JARVIS.deb",
+      "status": "PASS"
+    },
+    {
+      "check": "Unique public digest entry for PROVENANCE.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Public digest follows PROVENANCE.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Exactly one public SHA256 digest for PROVENANCE.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Unique public digest entry for REPORT.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Public digest follows REPORT.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Exactly one public SHA256 digest for REPORT.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Unique public digest entry for requirements.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Public digest follows requirements.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Exactly one public SHA256 digest for requirements.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Unique public digest entry for SHA256SUMS",
+      "status": "PASS"
+    },
+    {
+      "check": "Public digest follows SHA256SUMS",
+      "status": "PASS"
+    },
+    {
+      "check": "Exactly one public SHA256 digest for SHA256SUMS",
+      "status": "PASS"
+    },
+    {
+      "check": "Unique public digest entry for UMIEJETNOSCI-INTEGRACJE.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Public digest follows UMIEJETNOSCI-INTEGRACJE.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Exactly one public SHA256 digest for UMIEJETNOSCI-INTEGRACJE.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Unique public digest entry for WYDANIE-ALPHA.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Public digest follows WYDANIE-ALPHA.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Exactly one public SHA256 digest for WYDANIE-ALPHA.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Public release lists SHA256 digests for all nine exact assets",
+      "status": "PASS"
+    },
+    {
+      "check": "Public evidence contains exactly nine SHA256 digests",
+      "status": "PASS"
+    },
+    {
+      "check": "Public release download links identify the exact nine canonical assets",
+      "status": "PASS"
+    },
+    {
+      "check": "Preserved public release-page snapshot is a regular file",
+      "status": "PASS"
+    },
+    {
+      "check": "Preserved public release-page snapshot SHA256 agrees",
+      "status": "PASS"
+    },
+    {
+      "check": "Preserved public expanded-assets snapshot is a regular file",
+      "status": "PASS"
+    },
+    {
+      "check": "Preserved public expanded-assets snapshot SHA256 agrees",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual asset is a regular file: JARVIS.AppImage",
+      "status": "PASS"
+    },
+    {
+      "check": "Download status passed: JARVIS.AppImage",
+      "status": "PASS"
+    },
+    {
+      "check": "Download origin/TLS/proxy evidence agrees: JARVIS.AppImage",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual byte size equals download record: JARVIS.AppImage",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual SHA256 equals download and public release digest: JARVIS.AppImage",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual asset is a regular file: JARVIS.deb",
+      "status": "PASS"
+    },
+    {
+      "check": "Download status passed: JARVIS.deb",
+      "status": "PASS"
+    },
+    {
+      "check": "Download origin/TLS/proxy evidence agrees: JARVIS.deb",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual byte size equals download record: JARVIS.deb",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual SHA256 equals download and public release digest: JARVIS.deb",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual asset is a regular file: PROVENANCE.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Download status passed: PROVENANCE.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Download origin/TLS/proxy evidence agrees: PROVENANCE.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual byte size equals download record: PROVENANCE.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual SHA256 equals download and public release digest: PROVENANCE.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual asset is a regular file: SHA256SUMS",
+      "status": "PASS"
+    },
+    {
+      "check": "Download status passed: SHA256SUMS",
+      "status": "PASS"
+    },
+    {
+      "check": "Download origin/TLS/proxy evidence agrees: SHA256SUMS",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual byte size equals download record: SHA256SUMS",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual SHA256 equals download and public release digest: SHA256SUMS",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual asset is a regular file: CHANGELOG-ALPHA3.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Download status passed: CHANGELOG-ALPHA3.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Download origin/TLS/proxy evidence agrees: CHANGELOG-ALPHA3.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual byte size equals download record: CHANGELOG-ALPHA3.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual SHA256 equals download and public release digest: CHANGELOG-ALPHA3.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual asset is a regular file: WYDANIE-ALPHA.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Download status passed: WYDANIE-ALPHA.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Download origin/TLS/proxy evidence agrees: WYDANIE-ALPHA.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual byte size equals download record: WYDANIE-ALPHA.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual SHA256 equals download and public release digest: WYDANIE-ALPHA.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual asset is a regular file: UMIEJETNOSCI-INTEGRACJE.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Download status passed: UMIEJETNOSCI-INTEGRACJE.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Download origin/TLS/proxy evidence agrees: UMIEJETNOSCI-INTEGRACJE.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual byte size equals download record: UMIEJETNOSCI-INTEGRACJE.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual SHA256 equals download and public release digest: UMIEJETNOSCI-INTEGRACJE.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual asset is a regular file: REPORT.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Download status passed: REPORT.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Download origin/TLS/proxy evidence agrees: REPORT.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual byte size equals download record: REPORT.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual SHA256 equals download and public release digest: REPORT.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual asset is a regular file: requirements.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Download status passed: requirements.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Download origin/TLS/proxy evidence agrees: requirements.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual byte size equals download record: requirements.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Actual SHA256 equals download and public release digest: requirements.json",
+      "status": "PASS"
+    },
+    {
+      "check": "SHA256SUMS record syntax is strict",
+      "status": "PASS"
+    },
+    {
+      "check": "SHA256SUMS record syntax is strict",
+      "status": "PASS"
+    },
+    {
+      "check": "SHA256SUMS record syntax is strict",
+      "status": "PASS"
+    },
+    {
+      "check": "SHA256SUMS contains exactly three unique known basenames",
+      "status": "PASS"
+    },
+    {
+      "check": "SHA256SUMS matches actual asset: JARVIS.AppImage",
+      "status": "PASS"
+    },
+    {
+      "check": "SHA256SUMS matches actual asset: JARVIS.deb",
+      "status": "PASS"
+    },
+    {
+      "check": "SHA256SUMS matches actual asset: PROVENANCE.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Expected source document is a regular tracked path: CHANGELOG-ALPHA3.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Downloaded document exactly equals disk source and pinned Git blob: CHANGELOG-ALPHA3.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Expected source document is a regular tracked path: WYDANIE-ALPHA.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Downloaded document exactly equals disk source and pinned Git blob: WYDANIE-ALPHA.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Expected source document is a regular tracked path: UMIEJETNOSCI-INTEGRACJE.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Downloaded document exactly equals disk source and pinned Git blob: UMIEJETNOSCI-INTEGRACJE.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Expected source document is a regular tracked path: REPORT.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Downloaded document exactly equals disk source and pinned Git blob: REPORT.md",
+      "status": "PASS"
+    },
+    {
+      "check": "Expected source document is a regular tracked path: requirements.json",
+      "status": "PASS"
+    },
+    {
+      "check": "Downloaded document exactly equals disk source and pinned Git blob: requirements.json",
+      "status": "PASS"
+    }
+  ],
+  "networkUsed": false,
+  "repositoryEdited": false,
+  "nativeLogsRead": false,
+  "privateFilesRead": false,
+  "existingReportsModified": false
+}

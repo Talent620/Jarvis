@@ -1,0 +1,111 @@
+{
+  "recorded_at": "2026-11-06T00:26:29.302752+00:00",
+  "files": [
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-public-release.json",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-public-release.json",
+      "sha256": "e36738cb9554388a33c84ef0b04faafad615f5574bf2f07ed953266ead86fca6",
+      "bytes": 3372,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-final-tag-ci.json",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-final-tag-ci.json",
+      "sha256": "545c7c9fc8adcf6852f963c2ca9c44d5dd08441a8df68f6dd454d7e1874aed2c",
+      "bytes": 22505,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-published-HANDOFF.json",
+      "repository_path": "QA/autonomia60/durable/HANDOFF-ALPHA3.json",
+      "sha256": "4d96d0206d69a27ee8eb7425f3ef2f2a5cfdc8cfa26ebefc7ba6e014d50314fc",
+      "bytes": 585917,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-published-source-inventory.json",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-source-inventory.json",
+      "sha256": "dec34af20af8b4dfa9774f16a23667752afa4e105dff91ae659d437192b9f229",
+      "bytes": 12877,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-published-handoff-consistency.json",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-handoff-consistency.json",
+      "sha256": "e3638c53e66fe10e258fd4b0964257cabb023a652cbbe8ce0d1669e4d5d0f018",
+      "bytes": 4847,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-published-source-validation.json",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-source-validation.json",
+      "sha256": "76ca6c7dd52ec8593bb0c7363632c758803a5a446becce03b03b4ccbbefab81d",
+      "bytes": 8870,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-published-downloads.json",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-downloads.json",
+      "sha256": "067e109e06291081ab58eb6c09e30fadf025fd0b441d80840e3d303790e9a18e",
+      "bytes": 34375,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-published-verification.json",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-verification.json",
+      "sha256": "cdde172f18ca190767bbb42b81d670e65913b33563ed8e86bf07a8348bbde612",
+      "bytes": 64773,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-published-verification-deb-native.log",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-verification-deb-native.log",
+      "sha256": "f8e1b1f771e316774945391c04d3b24b2ec2bf119e3afff73377fdc1601acb17",
+      "bytes": 340,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-published-verification-appimage-native.log",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-verification-appimage-native.log",
+      "sha256": "cff11dcc9a1c033b31f6d68ade00e437a71bcc706d9f44420b4c1bd899cb455a",
+      "bytes": 340,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-published-export-consistency.json",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-published-export-consistency.json",
+      "sha256": "c555d0d18d740e771116c77505bc48599db16942c233f7efee92226f04b7e915",
+      "bytes": 35634,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-public-assets-independent.json",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-public-assets-independent.json",
+      "sha256": "9ac0d2f5d62742e3f4d1a89661b9139c614a8a1ef90008effab5ead9b2b99e6f",
+      "bytes": 18447,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-public-downloads.md",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/jarvis-alpha3-public-downloads.md",
+      "sha256": "d276d7bf8191dfb2722744ee1e90e0fa1d48202b26fd8bf53a3202f9168519aa",
+      "bytes": 2286,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-public-delivery-summary.json",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/public-delivery-summary.json",
+      "sha256": "4bee9dd31b286b8219ab0d518b99300010b8aed0ce81383aeef158017b2c87b4",
+      "bytes": 10125,
+      "normalization": "none"
+    },
+    {
+      "source_record_path": "/tmp/jarvis-alpha3-pr-access.log",
+      "repository_path": "QA/autonomia60/durable/evidence/published-alpha3/pr-api-access.log",
+      "sha256": "ff43471f577a07fd21af9e4edb7d0721ee5ed0e283c8f2d1dea6f5b7c5ad7fd0",
+      "bytes": 63,
+      "normalization": "none"
+    }
+  ],
+  "note": "Original proof paths identify the isolated verification workspace; repository copies listed here are the actual delivered evidence. HTTP header raw hashes refer to decoded curl text with Python newline normalization, not wire bytes; discarded raw captures cannot be rehashed. Stored sanitized captures and unchanged native logs were independently rehashed."
+}
