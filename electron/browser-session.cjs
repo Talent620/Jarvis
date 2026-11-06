@@ -125,6 +125,7 @@ function createBrowserSession(options) {
           }
           if (current !== operation || operation.epoch !== epoch || operation.controller.signal.aborted || !grantFor(url, 'interact')) return route.abort('blockedbyclient');
           operation.navigationApproved = true;
+          operation.approvedNavigation = { url: request.url(), method: request.method() };
           record('external-request', 'AUTHORIZED', `${request.method()} ${url.origin}`);
         }
         return route.continue();
@@ -144,7 +145,7 @@ function createBrowserSession(options) {
       if (browser !== launched) return; // Late events from a closed session cannot affect a new task.
       try {
         if (event.responseErrorReason || (event.responseStatusCode >= 300 && event.responseStatusCode < 400 && event.responseStatusCode !== 304)) {
-          if (current?.navigationApproved) current.unconfirmedEffect = true;
+          if (current?.navigationApproved && event.resourceType === 'Document' && event.request.url === current.approvedNavigation?.url && event.request.method === current.approvedNavigation?.method) current.unconfirmedEffect = true;
           record('redirect-or-failed-response', 'BLOCKED', webUrl(event.request.url).origin);
           await responseGuard.send('Fetch.failRequest', { requestId: event.requestId, errorReason: 'BlockedByClient' });
         } else await responseGuard.send('Fetch.continueResponse', { requestId: event.requestId });
@@ -290,14 +291,27 @@ function createBrowserSession(options) {
         networkMode = 'click';
         operation.navigationArmed = true;
         await locator.click({ timeout: 10000 });
+        // Click completion can precede Playwright's route callback. Wait for
+        // already-dispatched network activity to settle before reporting it.
+        // networkidle may still describe the old page immediately after click,
+        // so give Chromium time to deliver pending request events first.
+        // A busy page is an unconfirmed result, not a successful submission.
+        try {
+          await abortable(page.waitForTimeout(500), operation.controller.signal);
+          await abortable(page.waitForLoadState('networkidle', { timeout: 2000 }), operation.controller.signal);
+        }
+        catch (cause) {
+          if (cause?.name !== 'TimeoutError') throw cause;
+          result = { ...uncertainOutcome(), error: 'Nie potwierdzono wyniku kliknięcia: żądania strony nadal trwają. Sprawdź rezultat przed ponowieniem.' };
+        }
         const ok = !operation.navigationDenied && !operation.navigationPolicyBlocked && (!operation.blockedRequestCount || operation.navigationApproved);
         const notice = operation.navigationDenied ? 'Użytkownik odmówił zgody. Żądanie nie zostało wysłane.'
           : operation.navigationPolicyBlocked ? 'Żądanie nawigacji wykracza poza dozwolony zakres tej operacji i zostało zablokowane.'
           : 'Zablokowano żądania w tle. Wysyłka przez fetch/XHR oraz formularze w ramkach wymagają innego adaptera; nie potwierdzono ich wykonania.';
-        result = operation.unconfirmedEffect ? uncertainOutcome() : { ok, actionDispatched: true, url: page.url(), externalEffectConfirmed: false,
+        result = result || (operation.unconfirmedEffect ? uncertainOutcome() : { ok, actionDispatched: true, url: page.url(), externalEffectConfirmed: false,
           blockedRequestCount: operation.blockedRequestCount, interactionLimits: INTERACTION_LIMITS,
           ...(operation.navigationDenied ? { code: 'APPROVAL_DENIED' } : {}),
-          ...(operation.blockedRequestCount ? { notice, ...(!ok ? { error: notice } : {}) } : {}) };
+          ...(operation.blockedRequestCount ? { notice, ...(!ok ? { error: notice } : {}) } : {}) });
       } else result = await download(request.selector, operation);
       if (operation.epoch !== epoch || operation.controller.signal.aborted) throw error('Odrzucono spóźniony wynik przeglądarki.');
       record(request.action, result.uncertain ? 'UNCONFIRMED' : result.ok === false ? 'BLOCKED' : 'COMPLETED', result.url ? new URL(result.url).origin : '');

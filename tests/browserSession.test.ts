@@ -18,7 +18,7 @@ await mkdir(evidenceDirectory, { recursive: true });
 await writeFile(join(evidenceDirectory, "precondition.json"), JSON.stringify({
   schemaVersion: 1, recordedAt: new Date().toISOString(), commit, platform: process.platform,
   required: browserRequired, ...browserPrecondition,
-  integrationTestCount: 12,
+  integrationTestCount: 13,
   integrationTests: browserPrecondition.status === "READY" ? "REQUIRED: see Vitest assertion results"
     : browserPrecondition.status === "BLOCKED" ? "BLOCKED: not executed" : "NOT_RUN: prerequisite FAILED",
   desktopAcceptance: "NOT_RUN", modelAcceptance: "NOT_RUN",
@@ -228,7 +228,9 @@ describe.skipIf(browserPrecondition.status !== "READY")("actual sandboxed Chromi
       expect(approvals).toEqual([{ method: "POST", url: `${origin}/submit` }]);
       expect(requests.some(r => r.path.startsWith("/later") || r.path.startsWith("/autosave"))).toBe(false);
       release(true);
-      expect(await pending).toMatchObject({ ok: true, externalEffectConfirmed: false });
+      const outcome = await pending;
+      console.info("Controlled navigation outcome:", JSON.stringify(outcome));
+      expect(outcome).toMatchObject({ ok: true, externalEffectConfirmed: false });
       expect(requests.filter(r => r.method === "POST")).toHaveLength(1);
     } finally { release(false); await pending; }
   }, 30000);
@@ -271,6 +273,38 @@ describe.skipIf(browserPrecondition.status !== "READY")("actual sandboxed Chromi
     expect(requests.some(r => r.path === "/background-send")).toBe(false);
     const status = await client.command({ action: "status" });
     expect(status.audit.at(-1)).toMatchObject({ action: "click", result: "BLOCKED" });
+  }, 30000);
+
+  it("waits for a delayed intercepted SPA request before reporting the click result", async () => {
+    let release: () => void = () => {}, entered: () => void = () => {};
+    const intercepted = new Promise<void>(resolve => { entered = resolve; });
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const { client, origin, requests } = await fixture(undefined, { executablePath,
+      launch: async (options: any) => {
+        const browser = await require("playwright-core").chromium.launch(options);
+        const newContext = browser.newContext.bind(browser);
+        browser.newContext = async (contextOptions: any) => {
+          const context = await newContext(contextOptions), installRoute = context.route.bind(context);
+          context.route = async (pattern: any, handler: any) => installRoute(pattern, async (route: any) => {
+            if (route.request().url().endsWith('/background-send')) { entered(); await gate; }
+            return handler(route);
+          });
+          return context;
+        };
+        return browser;
+      },
+    });
+    await client.command({ action: "grant", origin, actions: ["read", "interact"], allowLocal: true }, { trustedUserAction: true });
+    await client.command({ action: "open", url: origin });
+    // Ensure the initial page reached network-idle before the user clicks.
+    await new Promise(resolve => setTimeout(resolve, 700));
+    const pending = client.command({ action: "click", selector: "#background-send" });
+    try {
+      await intercepted;
+      expect(await Promise.race([pending.then(() => 'returned'), new Promise(resolve => setTimeout(() => resolve('pending'), 200))])).toBe('pending');
+    } finally { release(); }
+    expect(await pending).toMatchObject({ ok: false, actionDispatched: true, externalEffectConfirmed: false, blockedRequestCount: 1 });
+    expect(requests.some(r => r.path === '/background-send')).toBe(false);
   }, 30000);
 
   it("reports an owner-denied navigation as denied with no sent POST", async () => {

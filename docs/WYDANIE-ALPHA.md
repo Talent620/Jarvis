@@ -1,4 +1,4 @@
-# JARVIS 2.1.0-alpha.5 — budowanie i identyfikacja
+# JARVIS 2.1.0-alpha.6 — budowanie i identyfikacja
 
 To wydanie eksperymentalne. Wyniki rzeczywistego modelu, pulpitu i urządzeń są
 oddzielne od testów kodu. Nie zastępuj ich udanym pakowaniem.
@@ -14,7 +14,7 @@ npm run release:linux
 ```
 
 Skrypt buduje rzeczywiste `.deb` i AppImage do
-`release-desktop/2.1.0-alpha.5-<skrót SHA>/`. Wymaga licencji, zachowuje domyślnego
+`release-desktop/2.1.0-alpha.6-<skrót SHA>/`. Wymaga licencji, zachowuje domyślnego
 wystawcę i nie generuje nowej pary. Jeżeli używasz własnego wystawcy, wskaż
 zatwierdzony **publiczny** plik przez `JARVIS_LICENSE_PUBLIC_KEY_FILE`; nie
 rozprowadzaj takiego pakietu jako aktualizacji dla licencji innego wystawcy.
@@ -105,9 +105,9 @@ node -e 'if (Number(process.versions.node.split(".")[0]) < 20) { console.error("
 jarvis_key_dir="${JARVIS_OWNER_KEY_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/jarvis/license-issuer}"
 [[ -r "$jarvis_key_dir/private.jwk.json" ]] || { echo 'Nie znaleziono klucza właściciela. Ustaw JARVIS_OWNER_KEY_DIR na katalog użyty poprzednio; nie twórz nowej pary podczas aktualizacji.' >&2; exit 1; }
 jarvis_key_dir="$(cd -- "$jarvis_key_dir" && pwd -P)"
-jarvis_source="$(mktemp -d /tmp/jarvis-alpha5.XXXXXX)"
+jarvis_source="$(mktemp -d /tmp/jarvis-alpha6.XXXXXX)"
 chmod 755 "$jarvis_source"
-git clone --depth 1 --branch v2.1.0-alpha.5 https://github.com/Talent620/Jarvis.git "$jarvis_source"
+git clone --depth 1 --branch v2.1.0-alpha.6 https://github.com/Talent620/Jarvis.git "$jarvis_source"
 cd "$jarvis_source"
 node scripts/install-local.cjs --desktop --build-only --key-dir "$jarvis_key_dir"
 ./node_modules/.bin/electron-builder --linux deb --publish never

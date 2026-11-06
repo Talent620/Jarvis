@@ -1,0 +1,3 @@
+[357506:1106/011451.557019:ERROR:bus.cc(407)] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+[357506:1106/011451.755413:ERROR:ozone_platform_x11.cc(245)] Missing X server or $DISPLAY
+[357506:1106/011451.755445:ERROR:env.cc(258)] The platform failed to initialize.  Exiting.

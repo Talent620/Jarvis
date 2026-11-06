@@ -1,0 +1,73 @@
+{
+  "data": {
+    "tasks": [
+      {
+        "id": "13kj3ng884hg",
+        "title": "Przekazanie local 2026-11-06T01-14-29-711Z-desktop-03db672a — Zażółć gęślą jaźń",
+        "done": false,
+        "priority": false,
+        "createdAt": 1793927684788
+      }
+    ],
+    "notes": [],
+    "reminders": [],
+    "shopping": [],
+    "calendar": [],
+    "memory": [],
+    "scenes": [],
+    "audit": [
+      {
+        "tool": "add_task",
+        "input": "{\"title\":\"Przekazanie local 2026-11-06T01-14-29-711Z-desktop-03db672a — Zażółć gęślą jaźń\"}",
+        "output": "Dodano zadanie: „Przekazanie local 2026-11-06T01-14-29-711Z-desktop-03db672a — Zażółć gęślą jaźń”.",
+        "status": "ok",
+        "undo": {
+          "collection": "tasks",
+          "id": "13kj3ng884hg"
+        },
+        "id": "9e71ncq584hj",
+        "at": 1793927684791
+      }
+    ],
+    "projects": [],
+    "projectFiles": [],
+    "tally": [],
+    "journal": [],
+    "leads": [],
+    "flashcards": [],
+    "bargainWatch": [],
+    "sentMail": [],
+    "contentPosts": [],
+    "imageHistory": [],
+    "siteProjects": [],
+    "financeProjects": [],
+    "world": {
+      "entities": [],
+      "relations": []
+    }
+  },
+  "chats": [
+    {
+      "id": "j76gwvsx83e3",
+      "title": "Dodaj zadanie: Przekazanie local 2026-11-06T01-1",
+      "messages": [
+        {
+          "id": "pmzdxwpa84h4",
+          "role": "user",
+          "text": "Dodaj zadanie: Przekazanie local 2026-11-06T01-14-29-711Z-desktop-03db672a — Zażółć gęślą jaźń",
+          "createdAt": 1793927684776
+        },
+        {
+          "id": "le66sude84hl",
+          "role": "assistant",
+          "text": "Dodano zadanie: „Przekazanie local 2026-11-06T01-14-29-711Z-desktop-03db672a — Zażółć gęślą jaźń”.",
+          "tools": [
+            "add_task"
+          ],
+          "createdAt": 1793927684793
+        }
+      ],
+      "updatedAt": 1793927684801
+    }
+  ]
+}

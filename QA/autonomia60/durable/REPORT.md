@@ -1,3 +1,7 @@
+## Kontynuacja alpha.6 — regresja przeglądarki
+
+Tag alpha.5 nie wydał pakietu: [Ubuntu CI 42142451700](https://github.com/Talent620/Jarvis/actions/runs/42142451700) FAIL, ponieważ wynik kliknięcia SPA został odczytany przed przechwyceniem żądania. Deterministyczny test na kontrolowanej stronie i prawdziwym sandboxowanym Chromium odtworzył błąd przed poprawką; po niej wszystkie 18 testów przeglądarki przeszły, w tym STOP, zgody i niepotwierdzony skutek przekierowania. Oczekiwanie na uspokojenie ruchu jest ograniczone i nie gwarantuje wykrycia dowolnie opóźnionych działań strony. Raport testu pulpitu alpha.5: `evidence/alpha5-desktop/REPORT.md`; niezależny lokalny przepływ i licencja PASS, rzeczywisty model i pulpit BLOCKED.
+
 ## Kontynuacja alpha.5 — częściowa implementacja
 
 Dodano wyszukiwanie w oficjalnym rejestrze MCP po natywnej zgodzie na dokładne zapytanie oraz tworzenie na skonfigurowanym changedetection watcha w pauzie i z wyciszonymi powiadomieniami. Dane kandydata są niezaufane; wyszukiwanie nie instaluje ani nie uruchamia serwera. Po zapisie zamiaru ponowienie przy nieznanym wyniku nie wysyła drugiego POST; niezależny GET sprawdza parametry i stan. Testowano na kontrolowanym HTTP i prawdziwym magazynie, nie na rzeczywistym changedetection ani z prawdziwą Ollamą. Dostęp do rejestru MCP jest w tym środowisku zablokowany przez politykę sieci. Włączenie watcha, powiązanie jego STOP/wznowienia i powiadomień z trwałym zadaniem oraz pełny cykl zdobycia MCP pozostają nieukończone.

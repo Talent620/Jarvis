@@ -1,0 +1,125 @@
+[
+  {
+    "id": "independent-local",
+    "level": "web Chromium, no model",
+    "status": "PASS",
+    "detail": "Normal composer, Polish task, UI setting switch, full process restart, same task ID, one audit and saved history. License remained required. Not scenario A/B/C proof.",
+    "evidence": [
+      "local-before-restart.json",
+      "local-after-restart.json",
+      "local-restarted.png"
+    ]
+  },
+  {
+    "id": "license-issue-activate",
+    "level": "B",
+    "status": "PASS",
+    "detail": "Normal licensed gate → owner import proof → real local signature → independent verification → normal activation → reload. No license bypass.",
+    "evidence": [
+      "verification.json",
+      "issued-license.png"
+    ]
+  },
+  {
+    "id": "native-start",
+    "level": "Electron",
+    "status": "BLOCKED",
+    "detail": "accessible graphical Electron session",
+    "evidence": [
+      "environment.json",
+      "native-launch.json",
+      "native-exit.json",
+      "electron-stderr.log"
+    ],
+    "blocker": {
+      "dependency": "accessible graphical Electron session",
+      "command": "node_modules/electron/dist/electron .",
+      "evidence": [
+        "environment.json",
+        "native-launch.json",
+        "native-exit.json",
+        "electron-stderr.log"
+      ],
+      "scenarios": [
+        "A",
+        "B",
+        "C"
+      ],
+      "action": "Run qa:desktop from the logged-in desktop session. Do not guess DISPLAY. Xvfb is neither installed nor started."
+    }
+  },
+  {
+    "id": "A",
+    "level": "Electron + real model",
+    "status": "BLOCKED",
+    "detail": "Real model prerequisite failed; independent checks continued.",
+    "evidence": [
+      "ollama.json"
+    ],
+    "blocker": {
+      "dependency": "reachable configured Ollama API",
+      "command": [
+        "GET http://127.0.0.1:11435/api/tags (3000ms)",
+        "GET http://127.0.0.1:11434/api/tags (3000ms)"
+      ],
+      "evidence": [
+        "ollama.json"
+      ],
+      "scenarios": [
+        "A",
+        "B"
+      ],
+      "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+    }
+  },
+  {
+    "id": "B",
+    "level": "Electron + real model",
+    "status": "BLOCKED",
+    "detail": "Real model prerequisite failed; independent checks continued.",
+    "evidence": [
+      "ollama.json"
+    ],
+    "blocker": {
+      "dependency": "reachable configured Ollama API",
+      "command": [
+        "GET http://127.0.0.1:11435/api/tags (3000ms)",
+        "GET http://127.0.0.1:11434/api/tags (3000ms)"
+      ],
+      "evidence": [
+        "ollama.json"
+      ],
+      "scenarios": [
+        "A",
+        "B"
+      ],
+      "action": "Run in the machine/session with the existing local Ollama service; pass --ollama-url http://127.0.0.1:11435. Do not download a model for this test."
+    }
+  },
+  {
+    "id": "C",
+    "level": "target desktop",
+    "status": "BLOCKED",
+    "detail": "Native clipboard/focus/save test is implemented but its environment prerequisites did not pass.",
+    "evidence": [
+      "environment.json",
+      "native-launch.json",
+      "native-exit.json",
+      "electron-stderr.log"
+    ],
+    "blocker": {
+      "dependency": "accessible graphical Electron session",
+      "command": "node_modules/electron/dist/electron .",
+      "evidence": [
+        "environment.json",
+        "native-launch.json",
+        "native-exit.json",
+        "electron-stderr.log"
+      ],
+      "scenarios": [
+        "C"
+      ],
+      "action": "Run qa:desktop from the logged-in desktop session. Do not guess DISPLAY. Xvfb is neither installed nor started."
+    }
+  }
+]
