@@ -1,0 +1,10 @@
+{
+  "command": "node_modules/electron/dist/electron .",
+  "cwd": "/workspace/Jarvis",
+  "profile": "/workspace/Jarvis/QA/runs/2026-11-06T00-38-45-202Z-desktop-6fbd40e3/native-profile",
+  "workspace": "/workspace/Jarvis/QA/runs/2026-11-06T00-38-45-202Z-desktop-6fbd40e3/workspace",
+  "timeout_ms": 8000,
+  "sandbox_disabled": false,
+  "renderer_loaded": false,
+  "renderer_file_exists": true
+}

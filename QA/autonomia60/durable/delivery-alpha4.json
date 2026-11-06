@@ -1,0 +1,132 @@
+{
+  "time_utc": "2026-11-06T00:46:05.351831+00:00",
+  "status": "PUBLIC_PRERELEASE_VERIFIED_PARTIAL_ACCEPTANCE",
+  "version": "2.1.0-alpha.4",
+  "tag": "v2.1.0-alpha.4",
+  "commit": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+  "tag_object": "eff3e7b0e3447fff807589fd3ff86ca762959e1c",
+  "base": "8675cd6c2d40d0b559ac7a10c2ecfa167ff9c5ea",
+  "branch": "codex/skills-integration-20261105",
+  "release_url": "https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.4",
+  "github_ci": {
+    "tests": "https://github.com/Talent620/Jarvis/actions/runs/42137864435",
+    "ubuntu_branch": "https://github.com/Talent620/Jarvis/actions/runs/42137864308",
+    "ubuntu_tag": "https://github.com/Talent620/Jarvis/actions/runs/42138624278",
+    "result": "PASS",
+    "android_release": "FAIL: signing configuration missing",
+    "android_v2": "FAIL at SDK setup; exact exception unavailable"
+  },
+  "local_tests": {
+    "passed": 3101,
+    "failed": 0,
+    "skipped": 0,
+    "files": 373,
+    "focused_passed": 67,
+    "build": "PASS",
+    "lint": "PASS"
+  },
+  "assets": [
+    {
+      "name": "JARVIS.AppImage",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/JARVIS.AppImage",
+      "sha256": "7f2075b66b49dcd168bb18ae1f046c2fdcb22eb9ae56d1c66afc26e01a3d26c9",
+      "bytes": 159656823
+    },
+    {
+      "name": "JARVIS.deb",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/JARVIS.deb",
+      "sha256": "e3fa3712ad20fee60dbe9a483f596a24aeb0ac8d9fc9ce2b4cf671638244f540",
+      "bytes": 99903380
+    },
+    {
+      "name": "PROVENANCE.json",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/PROVENANCE.json",
+      "sha256": "af9d36ba984bd354e42d59d29ca9abb7dd0313171fafe2f2376e2ca77cb8e9de",
+      "bytes": 38125
+    },
+    {
+      "name": "SHA256SUMS",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/SHA256SUMS",
+      "sha256": "2dcc843c9e9cb46d4e85922df9811f67a95909f9015f56735539a26abac68015",
+      "bytes": 241
+    },
+    {
+      "name": "CHANGELOG-ALPHA4.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/CHANGELOG-ALPHA4.md",
+      "sha256": "18a85b729973a172035ccf5821a0aebf8171236d51d2fa80406e9cb907209d7e",
+      "bytes": 1298
+    },
+    {
+      "name": "WYDANIE-ALPHA.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/WYDANIE-ALPHA.md",
+      "sha256": "143a0c218abaf7e07ce2b2fd61c45c45b11fe5e78f01f8f3691d78a1dc010dc5",
+      "bytes": 7782
+    },
+    {
+      "name": "UMIEJETNOSCI-INTEGRACJE.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/UMIEJETNOSCI-INTEGRACJE.md",
+      "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223",
+      "bytes": 6820
+    },
+    {
+      "name": "REPORT.md",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/REPORT.md",
+      "sha256": "9acd588bf54696e39af0831bf4e1c6258fc1c917123ec9487dc0035e67de793a",
+      "bytes": 40052
+    },
+    {
+      "name": "requirements.json",
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/requirements.json",
+      "sha256": "7c70e8fa3e68d9451dc1f0ccbfd9d9487eed1c43576d15b75b980243c89f9075",
+      "bytes": 124559
+    }
+  ],
+  "published_package": {
+    "checksums": "PASS",
+    "native_modules_match": 17,
+    "documents_match": 5,
+    "skill_manager_sha256": "1d62617526e5374798de9865752847c69f3939d761d521bbfdd7d61542d63d4a",
+    "license_public_key": "PASS_IMPORT_AND_FINGERPRINT",
+    "debian_chrome_sandbox": "PASS_PACKAGE_RECEIPT_AND_POSTINSTALL_GUARDS",
+    "native_launch": "BLOCKED_MISSING_DISPLAY",
+    "system_install": "NOT_PERFORMED"
+  },
+  "controlled_skill": "PASS only controlled provider, prior local catalog scan and test transport; missing capability recognition and real model not accepted",
+  "desktop_qa": {
+    "run": "2026-11-06T00-38-45-202Z-desktop-6fbd40e3",
+    "exit": 2,
+    "independent_ui_settings_restart": "PASS",
+    "test_license_activation": "PASS",
+    "A": "BLOCKED_NO_OLLAMA",
+    "B": "BLOCKED_NO_OLLAMA",
+    "C": "BLOCKED_NO_DISPLAY",
+    "evidence": "QA/autonomia60/durable/evidence/alpha4-desktop/REPORT.md"
+  },
+  "remaining": {
+    "missing_implementation": [
+      "Autonomous discovery of missing capabilities with real model",
+      "Search for new MCP servers/tools",
+      "Create changedetection watch from user request",
+      "General durable goal execution and remaining documents/Wayland/UX"
+    ],
+    "missing_configuration": [
+      "Real Ollama/model",
+      "Real changedetection and ntfy",
+      "Android signing identity"
+    ],
+    "external_blockers": [
+      "Authorized graphical desktop and device unavailable",
+      "GitHub API Forbidden prevents PR creation"
+    ],
+    "quality": [
+      "Full npm audit has 32 findings including distributed Electron",
+      "Earlier intermittent Chromium CI failures have unresolved causes"
+    ]
+  },
+  "user_installation_and_local_test": "NOT_PERFORMED",
+  "source_transfer": "git clone --depth 1 --branch v2.1.0-alpha.4 https://github.com/Talent620/Jarvis.git NOWY_KATALOG",
+  "owner_issuer": "Keep existing owner key and rebuild with docs/WYDANIE-ALPHA.md; official binaries use repository issuer.",
+  "rollback": "Keep previous package and user profile backup; see docs/WYDANIE-ALPHA.md. Not executed.",
+  "evidence": "QA/autonomia60/durable/evidence/alpha4-published/SHA256SUMS",
+  "no_private_material_exported": true
+}

@@ -1,3 +1,15 @@
+# Dostarczenie alpha.4 — 2026-11-06
+
+Publiczne wydanie eksperymentalne: https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.4 . Tag wskazuje `d2bc13b0a63d52e22be7307ecb39809fedf8b258`; wcześniejszej pracy ani tagów nie przepisano. Pobrano 9 plików i zweryfikowano ich sumy, 17 modułów Electron, 5 dokumentów, metadane oraz publiczny klucz wystawcy. `delivery-alpha4.json` i `evidence/alpha4-published/SHA256SUMS` zawierają wyniki i adresy. Testy lokalne: 3101/3101 PASS; lint i build PASS. CI Tests, Ubuntu gałęzi i Ubuntu taga PASS.
+
+Rzeczywisty `.deb` zawiera pomocnika chrome-sandbox zgodnego z rejestrem pakietu oraz skrypt weryfikujący chronione katalogi i plik przed ustawieniem root:root 4755. Nie uruchamiano aplikacji jako root i nie wyłączano sandboxa. Obie próby uruchomienia pobranych pakietów na izolowanych profilach są BLOCKED z powodu braku X/DISPLAY. Nie wykonano instalacji, migracji ani rollbacku na komputerze użytkownika.
+
+`qa:desktop` na dokładnym commicie zakończył się kodem 2: komenda lokalna, ustawienia, restart i testowa aktywacja licencji PASS; A/B BLOCKED z powodu braku Ollamy na 11434/11435; C BLOCKED z powodu braku pulpitu. `evidence/alpha4-desktop/REPORT.md`. Kontrolowany przebieg skilla ma wcześniej zeskanowany lokalny katalog i syntetycznego dostawcę: nie dowodzi samodzielnego rozpoznania brakującej zdolności ani wykonania przez realny model. Usługi monitorowania i ntfy zweryfikowano na kontrolowanych serwerach, nie na rzeczywistych kontach.
+
+**Pełny zakres nadal nie jest ukończony.** Wyszukiwanie nowych serwerów MCP i tworzenie nowego watcha z polecenia są brakującą implementacją; skonfigurowany klient MCP i adapter istniejącego watcha ich nie zastępują. Pozostałe braki opisuje rejestr. Nie ma produkcyjnego APK bez konfiguracji podpisu; testowy workflow Android zatrzymał się na konfiguracji SDK, bez ujawnienia dokładnej przyczyny. Nie twierdzimy, że JARVIS został przetestowany na komputerze użytkownika.
+
+Instalacja właściwej wersji i rollback: `docs/WYDANIE-ALPHA.md`. Używaj dotychczasowego lokalnego klucza właściciela, ponieważ gotowe paczki CI używają wystawcy repozytorium. Nie instalowano Xvfb ani usług systemowych.
+
 # Kontynuacja alpha.4 — 2026-11-06
 
 Poprawiono podmianę katalogu podczas odczytu. Na bazie 8675cd6 deterministyczna podmiana między lstat a open dopuściła obcy zasób; poprawka odrzuca zmianę tożsamości, utrzymuje deskryptory do końca odczytu i ogranicza liczbę podkatalogów do 255. Dodatkowy test odrzuca podmianę korzenia po wyliczeniu plików. Po ostatniej zmianie: 67 testów Skills, sandboxa, STOP, monitoringu i instalatora PASS; pełna regresja 3101/3101 PASS w 373 plikach, lint i build PASS. `evidence/alpha4-validation.json`. `evidence/alpha4-race.json`.

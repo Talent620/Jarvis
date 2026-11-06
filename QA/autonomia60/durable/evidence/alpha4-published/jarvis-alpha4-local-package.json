@@ -1,0 +1,26 @@
+{
+  "commit": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+  "version": "2.1.0-alpha.4",
+  "checksumStatus": "PASS",
+  "checksums": {
+    "JARVIS.AppImage": "02dc5f74b803eda1afaef50583eada0b3d4195be6f52d0cfc59e9494659f9c0e",
+    "JARVIS.deb": "b0b2e69252ba80122ea305701bbcccfc845b2cbe33ccab609ab13b104609850e",
+    "PROVENANCE.json": "be5b42d9ff4a3741f33946795f90df2b98356aad51267b15fd254f66609328d2"
+  },
+  "asarSkillMatches": true,
+  "asarSkillSha256": "1d62617526e5374798de9865752847c69f3939d761d521bbfdd7d61542d63d4a",
+  "licenseRequired": true,
+  "helperReceipt": "PASS",
+  "helperSha256": "72ab03c910947fa894d3867b8af3590b0d1c629bbe9609ef9e93c3394e87fc56",
+  "postinstallGuards": "PASS",
+  "noSystemInstallation": true,
+  "nativeLaunch": {
+    "status": "BLOCKED",
+    "reason": "Missing X server / DISPLAY",
+    "exit": null,
+    "signal": "SIGSEGV",
+    "sandboxDisabled": false,
+    "userId": 1000,
+    "logSha256": "07e55beea632334c2d84c9585003194152bf5f4f235ab4111c08f1b46f785e27"
+  }
+}

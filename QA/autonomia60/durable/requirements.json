@@ -4,14 +4,16 @@
   "request_sha256": "90784301789c744c57e5144312083b04043200dfbb9fe26d83b4e76bfc04ac6e",
   "integration_base": "fb17f9755faad72295cb125563ba2b0220d9319d",
   "integration_branch": "codex/skills-integration-20261105",
-  "current_state": "ALPHA4_IN_PROGRESS",
+  "current_state": "ALPHA4_PRERELEASE_PARTIAL_ACCEPTANCE",
   "release": {
     "version": "2.1.0-alpha.4",
-    "sha": null,
-    "tag": null,
-    "url": null,
-    "status": "NOT_PUBLISHED",
-    "previous_release": "v2.1.0-alpha.3"
+    "sha": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+    "tag": "v2.1.0-alpha.4",
+    "url": "https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.4",
+    "status": "PUBLIC_PRERELEASE_VERIFIED_PARTIAL_ACCEPTANCE",
+    "previous_release": "v2.1.0-alpha.3",
+    "tag_object": "eff3e7b0e3447fff807589fd3ff86ca762959e1c",
+    "delivery": "QA/autonomia60/durable/delivery-alpha4.json"
   },
   "status_rules": {
     "PASS": "Pełne potwierdzenie scenariusza na określonym poziomie.",
@@ -2338,6 +2340,18 @@
       "system_install": "NOT_PERFORMED",
       "user_local_test": "NOT_PERFORMED",
       "evidence": "QA/autonomia60/durable/delivery-alpha3.json"
+    },
+    {
+      "id": "alpha4_verified_public_partial",
+      "commit": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+      "tests": "3101/3101 PASS",
+      "focused": "67/67 PASS",
+      "tag_ci": "PASS",
+      "downloaded_assets": 9,
+      "checksum": "PASS",
+      "chromesandbox": "PASS_PACKAGE_CHECK",
+      "native_and_real_model": "BLOCKED",
+      "evidence": "QA/autonomia60/durable/delivery-alpha4.json"
     }
   ],
   "external_access": [
@@ -3051,7 +3065,8 @@
         "detail": "Brak dostępnej lokalnej usługi/modelu; końcowy qa:desktop zapisze bieżące próby.",
         "evidence": [
           "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md",
-          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
+          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md",
+          "QA/autonomia60/durable/evidence/alpha4-desktop/REPORT.md"
         ]
       },
       {
@@ -3088,7 +3103,8 @@
         "detail": "Brak autoryzowanej sesji docelowej i rzeczywistego modelu; nie instalowano Xvfb.",
         "evidence": [
           "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md",
-          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
+          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md",
+          "QA/autonomia60/durable/evidence/alpha4-desktop/REPORT.md"
         ]
       },
       {
@@ -3099,7 +3115,8 @@
         "evidence": [
           "QA/autonomia60/durable/evidence/closure-skill-isolation.json",
           "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md",
-          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
+          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md",
+          "QA/autonomia60/durable/evidence/alpha4-desktop/REPORT.md"
         ]
       },
       {
@@ -3109,7 +3126,8 @@
         "detail": "Zachowany istniejący kod/testy; brak rzeczywistej generacji do bieżącego odbioru.",
         "evidence": [
           "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md",
-          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
+          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md",
+          "QA/autonomia60/durable/evidence/alpha4-desktop/REPORT.md"
         ]
       },
       {
@@ -3119,18 +3137,20 @@
         "detail": "Zestaw odbiorczy poniżej; brak modelu, żaden przykład niezaliczony jako modelowa generalizacja.",
         "evidence": [
           "QA/autonomia60/durable/evidence/closure-desktop/REPORT.md",
-          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md"
+          "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md",
+          "QA/autonomia60/durable/evidence/alpha4-desktop/REPORT.md"
         ]
       },
       {
         "id": "T18",
         "title": "Pobrany pakiet, świeża instalacja, migracja i rollback",
         "status": "BLOCKED",
-        "detail": "Actual9public assets downloaded, checksum/source/issuer verified; both extracted native starts BLOCKED missingX/DISPLAY. No system install, migration or rollback. Historical alpha1 user launchFAIL preserved.",
+        "detail": "Alpha.4 assets downloaded and package/helper checks PASS; native launch blocked by missing X/DISPLAY. Actual install, migration and rollback not executed.",
         "evidence": [
           "QA/autonomia60/durable/evidence/alpha3-packages-3ee898.json",
           "QA/autonomia60/durable/evidence/desktop-3ee898/REPORT.md",
-          "QA/autonomia60/durable/delivery-alpha3.json"
+          "QA/autonomia60/durable/delivery-alpha3.json",
+          "QA/autonomia60/durable/delivery-alpha4.json"
         ]
       }
     ],
@@ -3195,7 +3215,7 @@
         "id": "G9",
         "title": "Jakość",
         "status": "NOT_ACCEPTED",
-        "reason": "Local3099PASS/lintPASS, Tests+Ubuntu44CI PASS. Earlier intermittent Chrome launch causes remain unresolved; full audit32/model/desktop acceptance open.",
+        "reason": "3101 local tests, lint, build, branch and tag Ubuntu CI PASS. Real model/desktop acceptance and full npm audit remain open.",
         "evidence": [
           "QA/autonomia60/durable/evidence/alpha3-ci-44eeb3d.json"
         ]
@@ -3204,9 +3224,9 @@
         "id": "G10",
         "title": "Dostarczenie",
         "status": "NOT_ACCEPTED",
-        "reason": "Linux prerelease and9actualdownloads verified; productionAndroid signing and local install/migration/rollback not accepted.",
+        "reason": "Alpha.4 Linux prerelease and 9 downloads verified. Production Android signing and native installation/migration/rollback not accepted.",
         "evidence": [
-          "QA/autonomia60/durable/delivery-alpha3.json"
+          "QA/autonomia60/durable/delivery-alpha4.json"
         ]
       }
     ],
@@ -3347,5 +3367,10 @@
       "exact_cause": "Primary exception and process exit not visible; DBus/font diagnostics are not established causes",
       "evidence": "QA/autonomia60/durable/evidence/alpha3-ci-6f719.json"
     }
-  ]
+  ],
+  "explicit_requirement_gaps": {
+    "mcp_discovery": "MISSING_IMPLEMENTATION: configured MCP is not discovery",
+    "new_changedetection_watch": "MISSING_IMPLEMENTATION: read-only existing watch is not watch creation",
+    "real_model_skill_discovery": "BLOCKED: controlled provider and prescanned local catalog do not prove real model discovery"
+  }
 }

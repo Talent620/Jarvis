@@ -1,0 +1,10 @@
+{
+  "repo": "/workspace/Jarvis",
+  "branch": "codex/skills-integration-20261105",
+  "commit": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+  "local_changes": "",
+  "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "new_source_sha256": {},
+  "app_version": "2.1.0-alpha.4",
+  "app_entry": "electron/main.cjs -> dist/index.html"
+}

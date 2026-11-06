@@ -1,0 +1,1408 @@
+{
+  "recordedAt": "2026-11-06T00:45:24.981Z",
+  "expectedCommit": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+  "artifactStructureStatus": "PASS",
+  "nativeLaunch": {
+    "status": "BLOCKED",
+    "scope": "Both extracted published package executables; isolated profiles; no sandbox disable flag"
+  },
+  "scope": "Independent actual Debian/AppImage extraction, integrity and packaged component loading. No system installation or claim of agent autonomy.",
+  "expectedVersion": "2.1.0-alpha.4",
+  "expectedTag": "v2.1.0-alpha.4",
+  "checksums": {
+    "JARVIS.AppImage": {
+      "expected": "7f2075b66b49dcd168bb18ae1f046c2fdcb22eb9ae56d1c66afc26e01a3d26c9",
+      "actual": "7f2075b66b49dcd168bb18ae1f046c2fdcb22eb9ae56d1c66afc26e01a3d26c9",
+      "matches": true
+    },
+    "JARVIS.deb": {
+      "expected": "e3fa3712ad20fee60dbe9a483f596a24aeb0ac8d9fc9ce2b4cf671638244f540",
+      "actual": "e3fa3712ad20fee60dbe9a483f596a24aeb0ac8d9fc9ce2b4cf671638244f540",
+      "matches": true
+    },
+    "PROVENANCE.json": {
+      "expected": "af9d36ba984bd354e42d59d29ca9abb7dd0313171fafe2f2376e2ca77cb8e9de",
+      "actual": "af9d36ba984bd354e42d59d29ca9abb7dd0313171fafe2f2376e2ca77cb8e9de",
+      "matches": true
+    }
+  },
+  "downloadEvidence": {
+    "recordedAt": "2026-11-06T00:45:11.156485+00:00",
+    "status": "PASS",
+    "validateOnly": false,
+    "networkAttempted": true,
+    "tag": "v2.1.0-alpha.4",
+    "expectedTag": "v2.1.0-alpha.4",
+    "expectedVersion": "2.1.0-alpha.4",
+    "expectedCommit": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+    "tagObject": "eff3e7b0e3447fff807589fd3ff86ca762959e1c",
+    "sourceSnapshot": {
+      "sourceDirectory": "/tmp/jarvis-alpha4-release-source",
+      "expectedVersion": "2.1.0-alpha.4",
+      "expectedTag": "v2.1.0-alpha.4",
+      "expectedCommit": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+      "head": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+      "tagObject": "eff3e7b0e3447fff807589fd3ff86ca762959e1c",
+      "peeledCommit": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+      "clean": true,
+      "changelog": "CHANGELOG-ALPHA4.md",
+      "files": [
+        {
+          "path": "package.json",
+          "bytes": 3701,
+          "sha256": "d05f7f99f67118a63c17d23909db5748828f3bc43273e026b56f76bbadd7c47c"
+        },
+        {
+          "path": "docs/CHANGELOG-ALPHA4.md",
+          "bytes": 1298,
+          "sha256": "18a85b729973a172035ccf5821a0aebf8171236d51d2fa80406e9cb907209d7e"
+        },
+        {
+          "path": "docs/WYDANIE-ALPHA.md",
+          "bytes": 7782,
+          "sha256": "143a0c218abaf7e07ce2b2fd61c45c45b11fe5e78f01f8f3691d78a1dc010dc5"
+        },
+        {
+          "path": "docs/UMIEJETNOSCI-INTEGRACJE.md",
+          "bytes": 6820,
+          "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223"
+        },
+        {
+          "path": "QA/autonomia60/durable/REPORT.md",
+          "bytes": 40052,
+          "sha256": "9acd588bf54696e39af0831bf4e1c6258fc1c917123ec9487dc0035e67de793a"
+        },
+        {
+          "path": "QA/autonomia60/durable/requirements.json",
+          "bytes": 124559,
+          "sha256": "7c70e8fa3e68d9451dc1f0ccbfd9d9487eed1c43576d15b75b980243c89f9075"
+        }
+      ],
+      "documents": {
+        "CHANGELOG-ALPHA4.md": "docs/CHANGELOG-ALPHA4.md",
+        "WYDANIE-ALPHA.md": "docs/WYDANIE-ALPHA.md",
+        "UMIEJETNOSCI-INTEGRACJE.md": "docs/UMIEJETNOSCI-INTEGRACJE.md",
+        "REPORT.md": "QA/autonomia60/durable/REPORT.md",
+        "requirements.json": "QA/autonomia60/durable/requirements.json"
+      },
+      "assetNames": [
+        "JARVIS.AppImage",
+        "JARVIS.deb",
+        "PROVENANCE.json",
+        "SHA256SUMS",
+        "CHANGELOG-ALPHA4.md",
+        "WYDANIE-ALPHA.md",
+        "UMIEJETNOSCI-INTEGRACJE.md",
+        "REPORT.md",
+        "requirements.json"
+      ],
+      "status": "PASS"
+    },
+    "expectedAssetCount": 9,
+    "releaseUrl": "https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.4",
+    "assets": [
+      {
+        "name": "JARVIS.AppImage",
+        "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/JARVIS.AppImage",
+        "tlsVerificationEnabled": true,
+        "inheritedProxy": true,
+        "httpsOnly": true,
+        "requests": [
+          {
+            "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/JARVIS.AppImage",
+            "httpCode": 302,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "HTTP/2 302",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "content-type: text/html; charset=utf-8",
+              "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/be248a9c-1ff8-4cdd-b314-eb6829231949",
+              "content-length: 0",
+              "x-github-request-id: CF49:216337:5DB7E9:7F1ECC:6AED2317"
+            ],
+            "rawHeadersSha256": "5d4f98ac6fe76619342598c508a09befa706be46056ae3757d48f8375cd8a09f",
+            "storedHeadersSha256": "366a20451e20738d0425439dd9b7fa9f4e562ab19ed619c27d6210a0c48e7ca4",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "4d6c42a4e55b48184ace0faf06fa561260db13e6d3d19aa5b916f1034e523bbf",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/be248a9c-1ff8-4cdd-b314-eb6829231949",
+            "httpCode": 200,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "HTTP/2 200",
+              "last-modified: Fri, 06 Nov 2026 00:44:50 GMT",
+              "etag: \"0x8DF3B9F2A1EE14C\"",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "content-disposition: attachment; filename=JARVIS.AppImage",
+              "content-type: application/octet-stream",
+              "content-length: 159656823"
+            ],
+            "rawHeadersSha256": "21af8a81813a8d653095d77850c7f64345885375fbef0d395e3fe6f7bcb74060",
+            "storedHeadersSha256": "2c97f0e38d45838aeaf7a4d3d8a5cd6360ee8d24837a2a623bf76fd422ccbe95",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "a61c615fd1de18f93d72a92a27b020719a8ce925e699a1d302c18ef3420d293f",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "status": "PASS",
+        "httpCode": 200,
+        "contentType": "application/octet-stream",
+        "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/be248a9c-1ff8-4cdd-b314-eb6829231949",
+        "bytes": 159656823,
+        "sha256": "7f2075b66b49dcd168bb18ae1f046c2fdcb22eb9ae56d1c66afc26e01a3d26c9",
+        "curlExitCode": 0
+      },
+      {
+        "name": "JARVIS.deb",
+        "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/JARVIS.deb",
+        "tlsVerificationEnabled": true,
+        "inheritedProxy": true,
+        "httpsOnly": true,
+        "requests": [
+          {
+            "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/JARVIS.deb",
+            "httpCode": 302,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "HTTP/2 302",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "content-type: text/html; charset=utf-8",
+              "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/d557f692-aef2-43ad-a9c0-21bd8098a218",
+              "content-length: 0",
+              "x-github-request-id: 6544:2F339D:727757:9892EA:6AED2317"
+            ],
+            "rawHeadersSha256": "4f11fc413da1d964ec0a585436f926b6df207fa53c4e1bc14f0390b29d0b8299",
+            "storedHeadersSha256": "6196143805832e8b5d158fe872cee8313e8e349ea25db41fc0f152329325b0c0",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "63a1b35274fab56012573defa9dadd6f700ce462f409dcff7b1318ad450efe99",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/d557f692-aef2-43ad-a9c0-21bd8098a218",
+            "httpCode": 200,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "HTTP/2 200",
+              "last-modified: Fri, 06 Nov 2026 00:44:49 GMT",
+              "etag: \"0x8DF3B9F29F871BA\"",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "content-disposition: attachment; filename=JARVIS.deb",
+              "content-type: application/octet-stream",
+              "content-length: 99903380"
+            ],
+            "rawHeadersSha256": "cb429e0691062556342dd8a168a55d3dd0b763804180c3c27290c24693f9be1c",
+            "storedHeadersSha256": "45d95ee470ebf921e674d941ae3dae5a10f9a3361404d6c8adef799505abfb92",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "122df3cbb5ad30e4f9aa44b39b204c8eca66cc3c68a87f4d41a69eb0971bdd11",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "status": "PASS",
+        "httpCode": 200,
+        "contentType": "application/octet-stream",
+        "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/d557f692-aef2-43ad-a9c0-21bd8098a218",
+        "bytes": 99903380,
+        "sha256": "e3fa3712ad20fee60dbe9a483f596a24aeb0ac8d9fc9ce2b4cf671638244f540",
+        "curlExitCode": 0
+      },
+      {
+        "name": "PROVENANCE.json",
+        "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/PROVENANCE.json",
+        "tlsVerificationEnabled": true,
+        "inheritedProxy": true,
+        "httpsOnly": true,
+        "requests": [
+          {
+            "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/PROVENANCE.json",
+            "httpCode": 302,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "HTTP/2 302",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "content-type: text/html; charset=utf-8",
+              "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/71c5d1ce-a1bc-4933-9461-c6df26365aac",
+              "content-length: 0",
+              "x-github-request-id: B052:1258EF:4599BC:5A5AE3:6AED2317"
+            ],
+            "rawHeadersSha256": "713f745c6872afbabb5c829d56eb4c0581b3aaeaab9d1fc10242cdc7912bbecb",
+            "storedHeadersSha256": "fcff2441ee1ec5e5ab1957ecf2746ec449186f46df411c5625a9f1921c38dcdb",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "e3a0d8cc20b522906e88d3221289321c6578e50d981b3d43a958ecd11ab1574f",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/71c5d1ce-a1bc-4933-9461-c6df26365aac",
+            "httpCode": 200,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "HTTP/2 200",
+              "last-modified: Fri, 06 Nov 2026 00:44:46 GMT",
+              "etag: \"0x8DF3B9F27E04499\"",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "content-disposition: attachment; filename=PROVENANCE.json",
+              "content-type: application/octet-stream",
+              "content-length: 38125"
+            ],
+            "rawHeadersSha256": "2d43624d286383ca5eb5aef832272b0b97e35dea1f40b2e8f5b3e53c8c32c139",
+            "storedHeadersSha256": "fde5590cb17d0ac86c922df3f71f73d714449749ec358987e9250f36d855682b",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "3fd4aba65fa109dfe5130c8aa5dc77163eb3bd781f27aca65cbd4e962f81cbe2",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "status": "PASS",
+        "httpCode": 200,
+        "contentType": "application/octet-stream",
+        "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/71c5d1ce-a1bc-4933-9461-c6df26365aac",
+        "bytes": 38125,
+        "sha256": "af9d36ba984bd354e42d59d29ca9abb7dd0313171fafe2f2376e2ca77cb8e9de",
+        "curlExitCode": 0
+      },
+      {
+        "name": "SHA256SUMS",
+        "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/SHA256SUMS",
+        "tlsVerificationEnabled": true,
+        "inheritedProxy": true,
+        "httpsOnly": true,
+        "requests": [
+          {
+            "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/SHA256SUMS",
+            "httpCode": 302,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "HTTP/2 302",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "content-type: text/html; charset=utf-8",
+              "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/6405fbf4-457e-4d44-89b3-594c0cef312f",
+              "content-length: 0",
+              "x-github-request-id: 9947:27868A:5E9F5B:807B5D:6AED2317"
+            ],
+            "rawHeadersSha256": "f910b34d64ef77dfa088e230eb9e275bddb853586d74ec7b65affd4b5c113775",
+            "storedHeadersSha256": "7bf6599f3c5e5671a6fb6eef4931b4a68d61ec80ac9e1907f3a0abf30033800c",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "d6c47f62185cd9af3c56376d582ca5230b9dab286ecb17d64ea679f3211ccc28",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/6405fbf4-457e-4d44-89b3-594c0cef312f",
+            "httpCode": 200,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:11 GMT",
+              "HTTP/2 200",
+              "last-modified: Fri, 06 Nov 2026 00:44:46 GMT",
+              "etag: \"0x8DF3B9F27DFCFE0\"",
+              "date: Fri, 06 Nov 2026 00:45:12 GMT",
+              "content-disposition: attachment; filename=SHA256SUMS",
+              "content-type: application/octet-stream",
+              "content-length: 241"
+            ],
+            "rawHeadersSha256": "3fe31029ac83de7fdd102e724388180dfb01c27f599fec07e4af1e509bcca690",
+            "storedHeadersSha256": "0dc406365eb63e1cd519faf122818e57fd0cbdfbee7d7a5cbeefdce94c3e0515",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "9fb47f59ea9ef5cdd8ca07211f8f3fb7f452b1ba3384af66eb7513cb22001b9f",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "status": "PASS",
+        "httpCode": 200,
+        "contentType": "application/octet-stream",
+        "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/6405fbf4-457e-4d44-89b3-594c0cef312f",
+        "bytes": 241,
+        "sha256": "2dcc843c9e9cb46d4e85922df9811f67a95909f9015f56735539a26abac68015",
+        "curlExitCode": 0
+      },
+      {
+        "name": "CHANGELOG-ALPHA4.md",
+        "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/CHANGELOG-ALPHA4.md",
+        "tlsVerificationEnabled": true,
+        "inheritedProxy": true,
+        "httpsOnly": true,
+        "requests": [
+          {
+            "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/CHANGELOG-ALPHA4.md",
+            "httpCode": 302,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:12 GMT",
+              "HTTP/2 302",
+              "date: Fri, 06 Nov 2026 00:45:12 GMT",
+              "content-type: text/html; charset=utf-8",
+              "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/97497645-0a4f-4e44-afee-f4f7d5724ac3",
+              "content-length: 0",
+              "x-github-request-id: 4023:1E2715:4758B1:5C333B:6AED2318"
+            ],
+            "rawHeadersSha256": "ee38e4060708983562bb325be53bc90b16bbc4fc6a91922b40036455a47b4745",
+            "storedHeadersSha256": "663031f0c9938a4849d02304992b266e4a747325159f6cb34a5f3782b1ee75b6",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "8bb8f134fe6312c8377072a873dc8c310629471dd92eb184a31a81059c1ce96f",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/97497645-0a4f-4e44-afee-f4f7d5724ac3",
+            "httpCode": 200,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:12 GMT",
+              "HTTP/2 200",
+              "last-modified: Fri, 06 Nov 2026 00:44:46 GMT",
+              "etag: \"0x8DF3B9F281CBB54\"",
+              "date: Fri, 06 Nov 2026 00:45:12 GMT",
+              "content-disposition: attachment; filename=CHANGELOG-ALPHA4.md",
+              "content-type: application/octet-stream",
+              "content-length: 1298"
+            ],
+            "rawHeadersSha256": "0ae532f4e9800f444e48f271869d1c66529c421782d8e7a8d7f9ae4bd86d226d",
+            "storedHeadersSha256": "381f69c5fb05f2f30106339b02103c401a3666732d641a8e3812145cde2da4bb",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "526bfc8b5b6305a75fa88363a569bf72a0cc7adb523753b120346dd7885367dc",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "status": "PASS",
+        "httpCode": 200,
+        "contentType": "application/octet-stream",
+        "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/97497645-0a4f-4e44-afee-f4f7d5724ac3",
+        "bytes": 1298,
+        "sha256": "18a85b729973a172035ccf5821a0aebf8171236d51d2fa80406e9cb907209d7e",
+        "curlExitCode": 0
+      },
+      {
+        "name": "WYDANIE-ALPHA.md",
+        "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/WYDANIE-ALPHA.md",
+        "tlsVerificationEnabled": true,
+        "inheritedProxy": true,
+        "httpsOnly": true,
+        "requests": [
+          {
+            "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/WYDANIE-ALPHA.md",
+            "httpCode": 302,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:12 GMT",
+              "HTTP/2 302",
+              "date: Fri, 06 Nov 2026 00:45:13 GMT",
+              "content-type: text/html; charset=utf-8",
+              "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/ebb992ce-0f07-4885-823e-b59d2d528229",
+              "content-length: 0",
+              "x-github-request-id: DE6E:2D3467:7301B1:984F13:6AED2318"
+            ],
+            "rawHeadersSha256": "5d2e7f7766b5842709e65c6e9fd87e9482023388c8ab9f8892cef372b451b125",
+            "storedHeadersSha256": "517489531439da6d08b5442829cd2694cc7a20050ddd10c0bb0204d86fc61a84",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "ce07e0deee0097d35227efb9b656ba18ab36c48ef47ec49129526e3fda5e8089",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/ebb992ce-0f07-4885-823e-b59d2d528229",
+            "httpCode": 200,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:13 GMT",
+              "HTTP/2 200",
+              "last-modified: Fri, 06 Nov 2026 00:44:46 GMT",
+              "etag: \"0x8DF3B9F27DC9F2C\"",
+              "date: Fri, 06 Nov 2026 00:45:13 GMT",
+              "content-disposition: attachment; filename=WYDANIE-ALPHA.md",
+              "content-type: application/octet-stream",
+              "content-length: 7782"
+            ],
+            "rawHeadersSha256": "9858a3c366478e3353381290b163b577c9f741a23bed3442b3b7325395e700eb",
+            "storedHeadersSha256": "cf984db21354a4426ba156ac92769bcc67e95a6e2207f620a8e80cc02a6f7179",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "8e4120ba0ad84fcf7436dbd1437ca8c32210f844dcd7cd55a975e7b21f7f2b8c",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "status": "PASS",
+        "httpCode": 200,
+        "contentType": "application/octet-stream",
+        "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/ebb992ce-0f07-4885-823e-b59d2d528229",
+        "bytes": 7782,
+        "sha256": "143a0c218abaf7e07ce2b2fd61c45c45b11fe5e78f01f8f3691d78a1dc010dc5",
+        "curlExitCode": 0
+      },
+      {
+        "name": "UMIEJETNOSCI-INTEGRACJE.md",
+        "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/UMIEJETNOSCI-INTEGRACJE.md",
+        "tlsVerificationEnabled": true,
+        "inheritedProxy": true,
+        "httpsOnly": true,
+        "requests": [
+          {
+            "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/UMIEJETNOSCI-INTEGRACJE.md",
+            "httpCode": 302,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:13 GMT",
+              "HTTP/2 302",
+              "date: Fri, 06 Nov 2026 00:45:13 GMT",
+              "content-type: text/html; charset=utf-8",
+              "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/616b3ccd-78ad-4e9d-82dc-94e36cb41468",
+              "content-length: 0",
+              "x-github-request-id: 456D:3865E3:475554:5C7E75:6AED2319"
+            ],
+            "rawHeadersSha256": "f5072228f336a14559aa174fb85f7da002141bde14bd69750193a8dd1491487c",
+            "storedHeadersSha256": "778df34e3106fa0f4661fb2ada1532bc069bcbc7c9908d9cc61efb90e7779786",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "2c2970e74d25a4543a2a763556a59439c271bd9e91dbadd09fd50f70d67d3182",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/616b3ccd-78ad-4e9d-82dc-94e36cb41468",
+            "httpCode": 200,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:13 GMT",
+              "HTTP/2 200",
+              "last-modified: Fri, 06 Nov 2026 00:44:46 GMT",
+              "etag: \"0x8DF3B9F27DD13D6\"",
+              "date: Fri, 06 Nov 2026 00:45:14 GMT",
+              "content-disposition: attachment; filename=UMIEJETNOSCI-INTEGRACJE.md",
+              "content-type: application/octet-stream",
+              "content-length: 6820"
+            ],
+            "rawHeadersSha256": "5bf209fd3fed708185861bbd8b30464b9f2a20f9e05c09b9a93e8c8eb73f4de6",
+            "storedHeadersSha256": "7e186281f37c694bb75c4cd7de96bb76edcf0475d5267f7708ae241e4b899f96",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "f4327c3ecd2e77c9e13910e138f9a619e549f01a85dfeafe03b873ad235fbf9d",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "status": "PASS",
+        "httpCode": 200,
+        "contentType": "application/octet-stream",
+        "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/616b3ccd-78ad-4e9d-82dc-94e36cb41468",
+        "bytes": 6820,
+        "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223",
+        "curlExitCode": 0
+      },
+      {
+        "name": "REPORT.md",
+        "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/REPORT.md",
+        "tlsVerificationEnabled": true,
+        "inheritedProxy": true,
+        "httpsOnly": true,
+        "requests": [
+          {
+            "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/REPORT.md",
+            "httpCode": 302,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:14 GMT",
+              "HTTP/2 302",
+              "date: Fri, 06 Nov 2026 00:45:14 GMT",
+              "content-type: text/html; charset=utf-8",
+              "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/36b4e3bf-91c6-4f88-b66d-033820e9c581",
+              "content-length: 0",
+              "x-github-request-id: A2BD:55AC6:47CEDA:5D49B2:6AED231A"
+            ],
+            "rawHeadersSha256": "d5836820223ce125f234f23f14ba52dbe5ec6c7d32a5d6bedd81a3e3daa4eb25",
+            "storedHeadersSha256": "04469b01363c2ca28338893da9a3ac8b2f70d69547577bd0f1b86a194732cd13",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "9cc1f1d9a58cf265901d8c2d52d505cd5274aeb4947236155c5b474a560411e0",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/36b4e3bf-91c6-4f88-b66d-033820e9c581",
+            "httpCode": 200,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:14 GMT",
+              "HTTP/2 200",
+              "last-modified: Fri, 06 Nov 2026 00:44:46 GMT",
+              "etag: \"0x8DF3B9F27E39C34\"",
+              "date: Fri, 06 Nov 2026 00:45:14 GMT",
+              "content-disposition: attachment; filename=REPORT.md",
+              "content-type: application/octet-stream",
+              "content-length: 40052"
+            ],
+            "rawHeadersSha256": "b09d58cc01e7d6ebc163cea7738448ff120e5b6902220609209b1a75cb1099b9",
+            "storedHeadersSha256": "fbbdf0ee42f63cf8f481930107e451c994cd5a8abe86eb663589e7978d8fe757",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "c6efd7f3e0d2cfafe6442a0ff50f59c7875e5664093a696aa7df84b102c6ccc7",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "status": "PASS",
+        "httpCode": 200,
+        "contentType": "application/octet-stream",
+        "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/36b4e3bf-91c6-4f88-b66d-033820e9c581",
+        "bytes": 40052,
+        "sha256": "9acd588bf54696e39af0831bf4e1c6258fc1c917123ec9487dc0035e67de793a",
+        "curlExitCode": 0
+      },
+      {
+        "name": "requirements.json",
+        "url": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/requirements.json",
+        "tlsVerificationEnabled": true,
+        "inheritedProxy": true,
+        "httpsOnly": true,
+        "requests": [
+          {
+            "urlWithoutQuery": "https://github.com/Talent620/Jarvis/releases/download/v2.1.0-alpha.4/requirements.json",
+            "httpCode": 302,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:14 GMT",
+              "HTTP/2 302",
+              "date: Fri, 06 Nov 2026 00:45:14 GMT",
+              "content-type: text/html; charset=utf-8",
+              "location: https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/62ea7aa3-296f-4203-8180-8a3d68b3d190",
+              "content-length: 0",
+              "x-github-request-id: 4BD0:2C47BC:435814:57C6E5:6AED231A"
+            ],
+            "rawHeadersSha256": "0904d4647ac0e65b4abce9e160ee26578c86296721c96b7358dd444fc43021d0",
+            "storedHeadersSha256": "51fba3feaa8cabca6c626f95f8271466aa890b43019138dcf25e7ae199ca9057",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "913bcfbea6574cbcf9365fb4877511fe4bbcce77f7220314b0fd1528772e2321",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "urlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/62ea7aa3-296f-4203-8180-8a3d68b3d190",
+            "httpCode": 200,
+            "curlExitCode": 0,
+            "headers": [
+              "HTTP/1.1 200",
+              "date: Fri, 06 Nov 2026 00:45:14 GMT",
+              "HTTP/2 200",
+              "last-modified: Fri, 06 Nov 2026 00:44:46 GMT",
+              "etag: \"0x8DF3B9F27E6315C\"",
+              "date: Fri, 06 Nov 2026 00:45:15 GMT",
+              "content-disposition: attachment; filename=requirements.json",
+              "content-type: application/octet-stream",
+              "content-length: 124559"
+            ],
+            "rawHeadersSha256": "c7bf1bf5b7643061ebd4e8b0fd08cfc19e33e72da666d25646feda283867d174",
+            "storedHeadersSha256": "56ac357938fccd543ae213d5936056b16ac53b7f39838da9940bfade7b08ccb4",
+            "storedHeadersHashEncoding": "UTF-8 header lines joined by LF with one final LF",
+            "headerNormalization": "Whitelisted nonsensitive fields only; redirect query/fragment/userinfo removed; raw headers are not persisted",
+            "rawCurlStdoutSha256": "eb04c9512ada4e36d2d27fa8dbbd6c85ca7e900908e9584be6f468b3d67baa7d",
+            "rawCurlStderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "status": "PASS",
+        "httpCode": 200,
+        "contentType": "application/octet-stream",
+        "effectiveUrlWithoutQuery": "https://release-assets.githubusercontent.com/github-production-release-asset/1263882938/62ea7aa3-296f-4203-8180-8a3d68b3d190",
+        "bytes": 124559,
+        "sha256": "7c70e8fa3e68d9451dc1f0ccbfd9d9487eed1c43576d15b75b980243c89f9075",
+        "curlExitCode": 0
+      }
+    ],
+    "integrity": {
+      "checksums": {
+        "JARVIS.AppImage": {
+          "expected": "7f2075b66b49dcd168bb18ae1f046c2fdcb22eb9ae56d1c66afc26e01a3d26c9",
+          "actual": "7f2075b66b49dcd168bb18ae1f046c2fdcb22eb9ae56d1c66afc26e01a3d26c9",
+          "matches": true
+        },
+        "JARVIS.deb": {
+          "expected": "e3fa3712ad20fee60dbe9a483f596a24aeb0ac8d9fc9ce2b4cf671638244f540",
+          "actual": "e3fa3712ad20fee60dbe9a483f596a24aeb0ac8d9fc9ce2b4cf671638244f540",
+          "matches": true
+        },
+        "PROVENANCE.json": {
+          "expected": "af9d36ba984bd354e42d59d29ca9abb7dd0313171fafe2f2376e2ca77cb8e9de",
+          "actual": "af9d36ba984bd354e42d59d29ca9abb7dd0313171fafe2f2376e2ca77cb8e9de",
+          "matches": true
+        }
+      },
+      "documents": {
+        "CHANGELOG-ALPHA4.md": {
+          "sourcePath": "docs/CHANGELOG-ALPHA4.md",
+          "sha256": "18a85b729973a172035ccf5821a0aebf8171236d51d2fa80406e9cb907209d7e",
+          "matches": true
+        },
+        "WYDANIE-ALPHA.md": {
+          "sourcePath": "docs/WYDANIE-ALPHA.md",
+          "sha256": "143a0c218abaf7e07ce2b2fd61c45c45b11fe5e78f01f8f3691d78a1dc010dc5",
+          "matches": true
+        },
+        "UMIEJETNOSCI-INTEGRACJE.md": {
+          "sourcePath": "docs/UMIEJETNOSCI-INTEGRACJE.md",
+          "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223",
+          "matches": true
+        },
+        "REPORT.md": {
+          "sourcePath": "QA/autonomia60/durable/REPORT.md",
+          "sha256": "9acd588bf54696e39af0831bf4e1c6258fc1c917123ec9487dc0035e67de793a",
+          "matches": true
+        },
+        "requirements.json": {
+          "sourcePath": "QA/autonomia60/durable/requirements.json",
+          "sha256": "7c70e8fa3e68d9451dc1f0ccbfd9d9487eed1c43576d15b75b980243c89f9075",
+          "matches": true
+        }
+      },
+      "provenanceMatches": true,
+      "status": "PASS"
+    },
+    "destination": "/tmp/jarvis-alpha4-public"
+  },
+  "issuerValidation": {
+    "status": "PASS",
+    "fingerprint": "ad4e80d54f053497f66a2aa63c2a82b4dd7da758677037229057b4ce80a9e1a5",
+    "type": "EC P-256",
+    "issuer": "application-default",
+    "checks": {
+      "nodeCreatePublicKey": "PASS",
+      "webCryptoImportKey": "PASS"
+    },
+    "canonicalization": "JSON.stringify({kty,crv,x,y})",
+    "scope": "Public-key importability and fingerprint only; no private-key ownership, signature or activation proof."
+  },
+  "metadata": {
+    "schemaVersion": 1,
+    "version": "2.1.0-alpha.4",
+    "commit": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+    "build": "2026-11-06 00:43",
+    "licenseRequired": true,
+    "issuer": "application-default",
+    "issuerPublicJwk": {
+      "kty": "EC",
+      "crv": "P-256",
+      "x": "cr_zxxKQMLPKsuGybJtd05h_z-m0H_xnhS7WiYtEmdU",
+      "y": "a1Xl4CHImK2EAIXg19PVIFuagNCa4PQ2zatk4gysxzg"
+    },
+    "issuerFingerprint": "ad4e80d54f053497f66a2aa63c2a82b4dd7da758677037229057b4ce80a9e1a5"
+  },
+  "packageVersion": "2.1.0-alpha.4",
+  "archives": {
+    "identical": true,
+    "sha256": {
+      "deb": "1c60504008b273ba54ef96a8b419e0243f3f23a9e2b678287c7cb5e5c9c5da1f",
+      "appimage": "1c60504008b273ba54ef96a8b419e0243f3f23a9e2b678287c7cb5e5c9c5da1f"
+    },
+    "entryCount": 9347
+  },
+  "privatePathScan": {
+    "status": "PASS",
+    "forbiddenPaths": [],
+    "scope": "Known private/configuration paths and signing containers; not exhaustive secret scanning"
+  },
+  "requiredModules": {
+    "electron/main.cjs": true,
+    "electron/preload.cjs": true,
+    "electron/skill-manager.cjs": true,
+    "electron/skill-isolation.cjs": true,
+    "electron/workspace-tools.cjs": true,
+    "electron/browser-session.cjs": true,
+    "electron/monitor-connectors.cjs": true,
+    "electron/mcp-stdio.cjs": true,
+    "electron/goal-service.cjs": true,
+    "electron/local-ollama.cjs": true,
+    "electron/local-siteos.cjs": true
+  },
+  "nativeBinaries": {
+    "sha256": {
+      "deb": "ee99780b5878638df40bf577cfcdbc3c157b0b3581ada099a13db446f1af84d8",
+      "appimage": "ee99780b5878638df40bf577cfcdbc3c157b0b3581ada099a13db446f1af84d8"
+    },
+    "identical": true
+  },
+  "unpackedResources": {
+    "identical": true,
+    "files": 4,
+    "inventorySha256": "dd7fc37fb800b89094296ab5a49c3169044873d95595c9420dbceded03c90e40"
+  },
+  "sourceEvidence": {
+    "status": "PASS",
+    "head": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+    "tag": "v2.1.0-alpha.4",
+    "tagObject": "eff3e7b0e3447fff807589fd3ff86ca762959e1c",
+    "peeledCommit": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+    "clean": true,
+    "nativeModuleMatches": [
+      {
+        "path": "electron/browser-session.cjs",
+        "bytes": 24530,
+        "sourceSha256": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2",
+        "packagedSha256": {
+          "deb": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2",
+          "appimage": "9cb2e237e11040de285bb0296980587f53e963e86bc5fb3ed022ffcf6d6f8ab2"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/goal-service.cjs",
+        "bytes": 38741,
+        "sourceSha256": "1c0e61605b5a043cd7f6ade1f09226baafee45e3f80964de199972e8aa36ca73",
+        "packagedSha256": {
+          "deb": "1c0e61605b5a043cd7f6ade1f09226baafee45e3f80964de199972e8aa36ca73",
+          "appimage": "1c0e61605b5a043cd7f6ade1f09226baafee45e3f80964de199972e8aa36ca73"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/google.cjs",
+        "bytes": 8557,
+        "sourceSha256": "3ae5d2b4398476dcf6c63ca4137aaf7ce0b8efd4f04b1f7151f62c148e1e46b5",
+        "packagedSha256": {
+          "deb": "3ae5d2b4398476dcf6c63ca4137aaf7ce0b8efd4f04b1f7151f62c148e1e46b5",
+          "appimage": "3ae5d2b4398476dcf6c63ca4137aaf7ce0b8efd4f04b1f7151f62c148e1e46b5"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/launch-app.cjs",
+        "bytes": 1853,
+        "sourceSha256": "8ab6a260e39e9efd146880eb1cccca15bb2005ef7bbfdb06e9db48e67cf8e0fa",
+        "packagedSha256": {
+          "deb": "8ab6a260e39e9efd146880eb1cccca15bb2005ef7bbfdb06e9db48e67cf8e0fa",
+          "appimage": "8ab6a260e39e9efd146880eb1cccca15bb2005ef7bbfdb06e9db48e67cf8e0fa"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/linux-keyboard.cjs",
+        "bytes": 9294,
+        "sourceSha256": "bf7d23809ca158682fed43b8c0b31eed30728c83a318ffae16be423a40be81b0",
+        "packagedSha256": {
+          "deb": "bf7d23809ca158682fed43b8c0b31eed30728c83a318ffae16be423a40be81b0",
+          "appimage": "bf7d23809ca158682fed43b8c0b31eed30728c83a318ffae16be423a40be81b0"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/local-ollama.cjs",
+        "bytes": 5236,
+        "sourceSha256": "898e61038ea6431b4bf74c40f67ae21a1b99f50bb734c3c94fe363a679765bb3",
+        "packagedSha256": {
+          "deb": "898e61038ea6431b4bf74c40f67ae21a1b99f50bb734c3c94fe363a679765bb3",
+          "appimage": "898e61038ea6431b4bf74c40f67ae21a1b99f50bb734c3c94fe363a679765bb3"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/local-siteos.cjs",
+        "bytes": 4335,
+        "sourceSha256": "6a305ab605a8559c79f47dc009de1810e5307235cf6bb80dcf2c2dee946af7a1",
+        "packagedSha256": {
+          "deb": "6a305ab605a8559c79f47dc009de1810e5307235cf6bb80dcf2c2dee946af7a1",
+          "appimage": "6a305ab605a8559c79f47dc009de1810e5307235cf6bb80dcf2c2dee946af7a1"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/main.cjs",
+        "bytes": 48436,
+        "sourceSha256": "eeb1700ee15cb3cbcdc6fd43433ab0456271ec941fd6b34020cd60492cf8fde7",
+        "packagedSha256": {
+          "deb": "eeb1700ee15cb3cbcdc6fd43433ab0456271ec941fd6b34020cd60492cf8fde7",
+          "appimage": "eeb1700ee15cb3cbcdc6fd43433ab0456271ec941fd6b34020cd60492cf8fde7"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/mcp-stdio.cjs",
+        "bytes": 8533,
+        "sourceSha256": "328a043b7fca37e8c1ce05d8c7ddf172c17f28884ff4225fe55399b214ca2a01",
+        "packagedSha256": {
+          "deb": "328a043b7fca37e8c1ce05d8c7ddf172c17f28884ff4225fe55399b214ca2a01",
+          "appimage": "328a043b7fca37e8c1ce05d8c7ddf172c17f28884ff4225fe55399b214ca2a01"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/monitor-connectors.cjs",
+        "bytes": 13329,
+        "sourceSha256": "c3c38f621ec57aa5d8097932eaa3fd83a445646c5ba3585c5bd8ed661d192913",
+        "packagedSha256": {
+          "deb": "c3c38f621ec57aa5d8097932eaa3fd83a445646c5ba3585c5bd8ed661d192913",
+          "appimage": "c3c38f621ec57aa5d8097932eaa3fd83a445646c5ba3585c5bd8ed661d192913"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/page-extract.cjs",
+        "bytes": 2253,
+        "sourceSha256": "278fd1f77b7bc8b47d2d9a2e3aebf36a56a744c5aabf130d91513794e762eec4",
+        "packagedSha256": {
+          "deb": "278fd1f77b7bc8b47d2d9a2e3aebf36a56a744c5aabf130d91513794e762eec4",
+          "appimage": "278fd1f77b7bc8b47d2d9a2e3aebf36a56a744c5aabf130d91513794e762eec4"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/preload.cjs",
+        "bytes": 5933,
+        "sourceSha256": "9280fffbff153518d50657fd1856828bd63863366581a6e17023fd5e064c4f13",
+        "packagedSha256": {
+          "deb": "9280fffbff153518d50657fd1856828bd63863366581a6e17023fd5e064c4f13",
+          "appimage": "9280fffbff153518d50657fd1856828bd63863366581a6e17023fd5e064c4f13"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/public-page.cjs",
+        "bytes": 4208,
+        "sourceSha256": "9b29a0518b56fc88df838033c6b1a023717da188e40ab046c77abeb5f28147a5",
+        "packagedSha256": {
+          "deb": "9b29a0518b56fc88df838033c6b1a023717da188e40ab046c77abeb5f28147a5",
+          "appimage": "9b29a0518b56fc88df838033c6b1a023717da188e40ab046c77abeb5f28147a5"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/skill-isolation.cjs",
+        "bytes": 17777,
+        "sourceSha256": "e2a1c82d865b6dcc398c8299b7d7364513864dae08f1865bbb8ee8a30fbbc77d",
+        "packagedSha256": {
+          "deb": "e2a1c82d865b6dcc398c8299b7d7364513864dae08f1865bbb8ee8a30fbbc77d",
+          "appimage": "e2a1c82d865b6dcc398c8299b7d7364513864dae08f1865bbb8ee8a30fbbc77d"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/skill-manager.cjs",
+        "bytes": 45151,
+        "sourceSha256": "1d62617526e5374798de9865752847c69f3939d761d521bbfdd7d61542d63d4a",
+        "packagedSha256": {
+          "deb": "1d62617526e5374798de9865752847c69f3939d761d521bbfdd7d61542d63d4a",
+          "appimage": "1d62617526e5374798de9865752847c69f3939d761d521bbfdd7d61542d63d4a"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/smtp.cjs",
+        "bytes": 3401,
+        "sourceSha256": "90b9688c8ff191015e776e3eddf3296e3558659bf762038558e44b370bc1dc93",
+        "packagedSha256": {
+          "deb": "90b9688c8ff191015e776e3eddf3296e3558659bf762038558e44b370bc1dc93",
+          "appimage": "90b9688c8ff191015e776e3eddf3296e3558659bf762038558e44b370bc1dc93"
+        },
+        "matches": true
+      },
+      {
+        "path": "electron/workspace-tools.cjs",
+        "bytes": 13855,
+        "sourceSha256": "e2e250d5517f9b94df551bfc55cc51fc3106d463c31759b3ba7ec480952e0821",
+        "packagedSha256": {
+          "deb": "e2e250d5517f9b94df551bfc55cc51fc3106d463c31759b3ba7ec480952e0821",
+          "appimage": "e2e250d5517f9b94df551bfc55cc51fc3106d463c31759b3ba7ec480952e0821"
+        },
+        "matches": true
+      }
+    ],
+    "documentMatches": [
+      {
+        "assetName": "CHANGELOG-ALPHA4.md",
+        "sourcePath": "docs/CHANGELOG-ALPHA4.md",
+        "sha256": "18a85b729973a172035ccf5821a0aebf8171236d51d2fa80406e9cb907209d7e",
+        "bytes": 1298,
+        "matches": true
+      },
+      {
+        "assetName": "WYDANIE-ALPHA.md",
+        "sourcePath": "docs/WYDANIE-ALPHA.md",
+        "sha256": "143a0c218abaf7e07ce2b2fd61c45c45b11fe5e78f01f8f3691d78a1dc010dc5",
+        "bytes": 7782,
+        "matches": true
+      },
+      {
+        "assetName": "UMIEJETNOSCI-INTEGRACJE.md",
+        "sourcePath": "docs/UMIEJETNOSCI-INTEGRACJE.md",
+        "sha256": "7230411e472deb4b664a03b85295b44febe8aea3be4152611a554fc6ce37f223",
+        "bytes": 6820,
+        "matches": true
+      },
+      {
+        "assetName": "REPORT.md",
+        "sourcePath": "QA/autonomia60/durable/REPORT.md",
+        "sha256": "9acd588bf54696e39af0831bf4e1c6258fc1c917123ec9487dc0035e67de793a",
+        "bytes": 40052,
+        "matches": true
+      },
+      {
+        "assetName": "requirements.json",
+        "sourcePath": "QA/autonomia60/durable/requirements.json",
+        "sha256": "7c70e8fa3e68d9451dc1f0ccbfd9d9487eed1c43576d15b75b980243c89f9075",
+        "bytes": 124559,
+        "matches": true
+      }
+    ],
+    "sourceLedger": {
+      "path": "src/lib/predictionLedger.ts",
+      "bytes": 23209,
+      "sha256": "c8ac7dc843bb6bfd7d2c10dbf987d1229940d8d7964a241ca60bb035edfb83e2",
+      "gitBlob": "ca61b8a739c549e0f5b7a44bdddc0db749c23a07",
+      "comparisonScope": "Tracked TypeScript source at expected commit; compiled renderer is attributed through build metadata and CI provenance, not byte equality with TypeScript."
+    },
+    "buildInputs": [
+      {
+        "path": "package.json",
+        "bytes": 3701,
+        "sha256": "d05f7f99f67118a63c17d23909db5748828f3bc43273e026b56f76bbadd7c47c",
+        "gitBlob": "cc42ac0c497af188bdd235d70ddc5f53235a4970"
+      },
+      {
+        "path": "package-lock.json",
+        "bytes": 425750,
+        "sha256": "afb0bcc318e2cea1a40d99cb3872114886c54d12b9cfac479e2ea4b0109fb1d0",
+        "gitBlob": "b053467d4ab9cc3560a8189cd03226f56990b50c"
+      },
+      {
+        "path": ".github/workflows/ubuntu.yml",
+        "bytes": 5103,
+        "sha256": "c4257f5b072aa970c81ac3bf1191085fc08d1ffbc6d209db2b80cab96fc85f28",
+        "gitBlob": "11e91195cb35203768eb4db33c37707cfcbe5e9c"
+      },
+      {
+        "path": "scripts/release-linux.cjs",
+        "bytes": 7317,
+        "sha256": "234aedc84429655ad9db700dfb37a89ed4772f13c012d276add83db758235760",
+        "gitBlob": "a835ae964237fce18b94140082adeb96a3b6efe8"
+      },
+      {
+        "path": "src/lib/licenseAuthority.ts",
+        "bytes": 785,
+        "sha256": "e0dc66a139b5e05f5371538c5f9dc8136900f7a43d1cce95644ffab9916e5d4a",
+        "gitBlob": "7d0d4a4dfc63ad749dba146637eff2fd1cc0e20f"
+      }
+    ]
+  },
+  "compiledRenderer": {
+    "packagedCommit": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
+    "packagedVersion": "2.1.0-alpha.4",
+    "files": [
+      {
+        "path": "dist/assets/AdminPanel-wUNfv6kp.js",
+        "sha256": "e194ceb9df47250becc33a9060338afab30e0536dc531dbb370e6f47bea563bb"
+      },
+      {
+        "path": "dist/assets/AuditLog-CCW8V6PA.js",
+        "sha256": "95466e164797308796507c4064ebfd24a14b8a2e1d499b0d356c9aea0f4fc851"
+      },
+      {
+        "path": "dist/assets/BargainHunter-BGaeOH_P.js",
+        "sha256": "01471c8c50d1cda089e9a45a26c1ea90b04acc822019bb14696054c9c9a253ba"
+      },
+      {
+        "path": "dist/assets/BossMode-CFFVrd4R.js",
+        "sha256": "f7e95b80a577e7cc7a1c0e71b31051b7df25d3ebc4204303679d7f77868f0451"
+      },
+      {
+        "path": "dist/assets/Cards-mm9E7oBX.js",
+        "sha256": "dab479e2739605ecee63fa72c4c1f1edfea946c163e8337e69b9fa7ccef59bd0"
+      },
+      {
+        "path": "dist/assets/ChatHistory-jqqMBtqP.js",
+        "sha256": "3ffba6c0656f2efbeef913cc67cf4e948a7e4c2a71d6edf66d3c6c6042081e4c"
+      },
+      {
+        "path": "dist/assets/CommandPalette-BO_5wUGT.js",
+        "sha256": "e95967546512bb6613ff3397229501c2fcf5b022f8dfa60622f4798a200ea72e"
+      },
+      {
+        "path": "dist/assets/CostPanel-bc3LzaNc.js",
+        "sha256": "43e0cce42af091fb8f0eb884ff9d96695545d71b4e5c88b2c8858806d1c08551"
+      },
+      {
+        "path": "dist/assets/FAQ-BacW6niy.js",
+        "sha256": "c15cc0524e622d9c65d13374d72ca549bef4e5c01b2626b100f7ece4af5156ee"
+      },
+      {
+        "path": "dist/assets/FinancialDashboard-CMV98MpL.js",
+        "sha256": "54f56fb8db992df6b5308e531e42f6504b00d9a368f126d17d340947528977ba"
+      },
+      {
+        "path": "dist/assets/Gadgets-Cdn9858b.js",
+        "sha256": "664606dd621d888d839221da28ab227ba69a3d430b88d6446d256219c48a6b72"
+      },
+      {
+        "path": "dist/assets/GoalRunner-QPIrBJPW.js",
+        "sha256": "56f82aa7daa30d2290c9ac119cb79b06f48baea1bb832b5d5430ccbd6be08def"
+      },
+      {
+        "path": "dist/assets/GoalStatusPanel-DZ9pLts_.js",
+        "sha256": "4e2a63fc7c77ecca588328e57929066c9a05cd959357d5265e94789c9852dab0"
+      },
+      {
+        "path": "dist/assets/GrowthDayPanel-Cc1obqDr.js",
+        "sha256": "aa560b95c7ffa7d63b577594b43459b6230d2cb1e905b5138447c3c8369f9c6c"
+      },
+      {
+        "path": "dist/assets/HeadsetMode-CltHwgqZ.js",
+        "sha256": "3ab3032164f3aca6b0a2937bfa47b0f86fa090f18ef149fd06c21fd20b54e981"
+      },
+      {
+        "path": "dist/assets/Help-B_oHJLVE.js",
+        "sha256": "b04753787f13cab8e3f1c769c2e8d8ffdf882176286d94492f58f3f59ac94a55"
+      },
+      {
+        "path": "dist/assets/HudVision-CCM95IOJ.js",
+        "sha256": "c85ec9595641d6792d339d7f200bb06ec650be7d954bc7de6664de428b91c863"
+      },
+      {
+        "path": "dist/assets/Journal-COSv3XjW.js",
+        "sha256": "01d8eeee7ff347d35658b0cce0339bc4a2c399957adc6253bfebb2b226ac2829"
+      },
+      {
+        "path": "dist/assets/MailCompose-B7WllpSL.js",
+        "sha256": "15845d9d944dfa9a382df91fa64768bf1e29e734850a47bbee6824e94139a3c6"
+      },
+      {
+        "path": "dist/assets/MarketingWorkspace-CJLjC1Wl.js",
+        "sha256": "895a16d9425ed341852db16cb04fa6daf391d3cd5f956865ee3ef87151e4a781"
+      },
+      {
+        "path": "dist/assets/MemoryCenter-C1IWjezy.js",
+        "sha256": "758a1724d9c9933fe36fe48dd4c7f8612d6fe88b3d8340b68b327a9b42e0e119"
+      },
+      {
+        "path": "dist/assets/MoneyHub-2RvzqMjE.js",
+        "sha256": "2ad838a56e6246ea742801f8a8a142ffb4916d27088029964f29ac0c302c25fc"
+      },
+      {
+        "path": "dist/assets/More-CCM4yJZK.js",
+        "sha256": "add56f9289ce937032c41ed0ed929955ecb0b675e5b4844a6d2f270e3ccbb991"
+      },
+      {
+        "path": "dist/assets/NeuralInterface-BV8o00uq.css",
+        "sha256": "7500599fc0d4ec4968dd0f617d9b2fb4c7b8d2329be267be5a297e65673a94c4"
+      },
+      {
+        "path": "dist/assets/NeuralInterface-BZ81v-j1.js",
+        "sha256": "d113a7580a1d0275473c995fcc60cd39d3ce508ff0f57c598f2aa5bf4d0cc42a"
+      },
+      {
+        "path": "dist/assets/Notifications-DpWJT96z.js",
+        "sha256": "2b738636b71e7210998ef9817ced12fafc34602da60a230e4316e1a71a5447d6"
+      },
+      {
+        "path": "dist/assets/Panels-C6XsAPfL.js",
+        "sha256": "b8fb505a1b0daee9fb85a41e6b3320d8190f86bb2c6ea6d740e505b15ea9f184"
+      },
+      {
+        "path": "dist/assets/Profile-Bb8tdI1u.js",
+        "sha256": "2ce39ee5a835a7048aa3ea9779d0b40bfb920d6483097675aa3fadee39a67b1b"
+      },
+      {
+        "path": "dist/assets/Projects-CQnFkKRl.js",
+        "sha256": "5143a0c9ce0fb2c15b83aa5166762f1e736256b245f6a446c94315e3a8ab973e"
+      },
+      {
+        "path": "dist/assets/Recall-D2BZMk8O.js",
+        "sha256": "eb780c87c7e78d56b39a2bc5581448d05e87138fb0d8ed087793390fb96141f7"
+      },
+      {
+        "path": "dist/assets/SalesCrm-BhsIdl28.js",
+        "sha256": "46d189fb349e62ecf39358fce35cecf4e0c51c2ec03607eb4218792151db4ac9"
+      },
+      {
+        "path": "dist/assets/SentBox-32NO8ynb.js",
+        "sha256": "359e3fc387f863bcaf20b38136b67f0bc98ce8e543c41558128b1ec39e8bccc9"
+      },
+      {
+        "path": "dist/assets/Settings--uaZG-Yf.js",
+        "sha256": "1ef3fc15a9637b2e1abb89c460d5528fb8183471b457f772eeebea37f8863126"
+      },
+      {
+        "path": "dist/assets/ShoppingList-sMnTu-42.js",
+        "sha256": "17a05290e7a16fdf8636f2276b062a82fd47fb2e78d0ae39926174bd22a9c9fc"
+      },
+      {
+        "path": "dist/assets/Studio-CqevBMoq.js",
+        "sha256": "4946f200e09a072bf5b5b7d449b8436f85e236a37ba142f99877fd341a6d3957"
+      },
+      {
+        "path": "dist/assets/SystemStatus-DX43LeL3.js",
+        "sha256": "0d5e396fa00090612c61ea40281765ed7052e2d8704d89dc3b1c3b9f384232e3"
+      },
+      {
+        "path": "dist/assets/TaskHub-mZTP5eCE.js",
+        "sha256": "0ea3f2144a6fe5210ff3c417533c4a2ba1ccf8a6a2b5d8a5f23259d0cf15fc10"
+      },
+      {
+        "path": "dist/assets/Transcribe-B-i3bW1J.js",
+        "sha256": "f4905b2777522b25ad9b1d6dde25abf12cd895d06195237ef18335f41bf29fa0"
+      },
+      {
+        "path": "dist/assets/Translator-BKKaWY55.js",
+        "sha256": "cdf991272cf186ead83d5748b6e6d159d1b0c6c91814861c385e82604290672b"
+      },
+      {
+        "path": "dist/assets/WebStudio-3-WVSlyg.js",
+        "sha256": "9b09973b418aa8611fedff5aa1ecf54a90d30c7ba6e853148ff64b0fd73f08eb"
+      },
+      {
+        "path": "dist/assets/WhereToBuy-C1iuIcEY.js",
+        "sha256": "e20edaa057454691242507f6913852455b119aba6225a34bad638d888cb425d6"
+      },
+      {
+        "path": "dist/assets/bargain-dcnnHDyn.js",
+        "sha256": "8ddb5da363a1274c26d98fbb73bbf69587cbeacd0e206eddaba4137921176d66"
+      },
+      {
+        "path": "dist/assets/campaignRoi-ClzyR1u5.js",
+        "sha256": "ee1fbf3f45a92e1771cde500e2cb3f4ea7c2c8af762cf2212fbac618281c3e24"
+      },
+      {
+        "path": "dist/assets/createLucideIcon-M4KDMcwG.js",
+        "sha256": "8e47d68f368ec82890584ef0713742e8c8737e46ed50b215cc94c0046d5aceb2"
+      },
+      {
+        "path": "dist/assets/emailComposer-DI7TGiU8.js",
+        "sha256": "f4ee101737489d6af8fbbeae647cd7df4b2448fd8962fd54ebc8c367abfa02e4"
+      },
+      {
+        "path": "dist/assets/embedWorker-C1PDpajh.js",
+        "sha256": "1c326851c4f6e5c26a78e46cc7da2d5d7c869baf5b6f1378da3da750d2119eda"
+      },
+      {
+        "path": "dist/assets/goalPlanner-yHKtHzaf.js",
+        "sha256": "8509c7a9bcf108d663aed34068c8715b638784e4cb7d275891a5173e39a273e1"
+      },
+      {
+        "path": "dist/assets/index-DD34J4-F.js",
+        "sha256": "5ea233c55f01ed4fd9581cf90d3c933d8d64b4618c76e8c7a86601ab5cdb4920"
+      },
+      {
+        "path": "dist/assets/index-DbEjRMND.css",
+        "sha256": "019127b57aa8ee86468150b1e33099e49b6131209623934955dd54d678e76641"
+      },
+      {
+        "path": "dist/assets/index-NqO822VM.js",
+        "sha256": "c3d170b7b86511d915b355af047077df076167fa7d20525c2f55951b94cf9c0d"
+      },
+      {
+        "path": "dist/assets/knowledge-index-C3Uyrusz.js",
+        "sha256": "bf285b19c71473731dbefed4331422d9ab3a57dd99e8a5659c383555c32ed24a"
+      },
+      {
+        "path": "dist/assets/league-CNPrkSEi.js",
+        "sha256": "d41b140433ce2db8863bed91b50eaa72e2e57078ba0a811392b01dc633aec6f9"
+      },
+      {
+        "path": "dist/assets/liveUpdate-kNFoIT34.js",
+        "sha256": "9d83fb1980973f3cd09ac61bcfb7a509b48e7d5602697913f27258091d33512d"
+      },
+      {
+        "path": "dist/assets/localResearchAgent-L41oHgUn.js",
+        "sha256": "acd009dd67672333a5c25d519432d50030693c66582f71e62175f22ee6306916"
+      },
+      {
+        "path": "dist/assets/mail-D6XUjvVV.js",
+        "sha256": "a8df29a8e06a183e62d5ae1359c0eda223cb9fda10cb256cf9ae780c59da1e09"
+      },
+      {
+        "path": "dist/assets/pdf-6-IbJiBi.js",
+        "sha256": "4ff6d5e392adc08526207dcb8cdfaa59384154af5293d1627e8ea4737ecdefbf"
+      },
+      {
+        "path": "dist/assets/pdf.worker.min-DgRcL-GR.js",
+        "sha256": "1636904ba68f5eb66103816b367b24254b507531d9f8c9602efb2a20a7247c26"
+      },
+      {
+        "path": "dist/assets/pdf.worker.min-yatZIOMy.mjs",
+        "sha256": "1baa1844c89c80a5b2797c916e75ab29254be46d8e9cb53cb6364d7aad84be36"
+      },
+      {
+        "path": "dist/assets/react-vendor-CVqnBPLZ.js",
+        "sha256": "ebd65ead38aa0994809c82e3f10078cd580b755f86e8ef685d517a9b6dc981fa"
+      },
+      {
+        "path": "dist/assets/shield-check-D8NIEMiF.js",
+        "sha256": "d049c6e5131eaf074bb3c9a53b76f522dd4e628f8cc35e31a495bbfa35cc3710"
+      },
+      {
+        "path": "dist/assets/simpleFlow-CgW45-Is.js",
+        "sha256": "883413df326e94b2be7f3c339c61ffa53ed2e05d553bd2abaeaaecd691e0ed9d"
+      },
+      {
+        "path": "dist/assets/ttsWorker-Nisifgm2.js",
+        "sha256": "2b4ca54b0c9b797b35993a660586198dd385397b8d0e2e5661477b8d8d12031e"
+      },
+      {
+        "path": "dist/assets/usage-3MPoM3Nw.js",
+        "sha256": "b73413e2f5aa8dcd81c5cb21903f3655aa7e1d901e954f15b6c251b2ff4a87d8"
+      },
+      {
+        "path": "dist/assets/voiceEnroll-iTon3Rhu.js",
+        "sha256": "44fa0bb8396b8a6668e1b3b8bd694c8459a7a1fde40d2941551df58795d66be6"
+      },
+      {
+        "path": "dist/assets/wakeLock-BDj5xKaW.js",
+        "sha256": "77261836a41ce7bd2f4330293ddcefd6e2a85727a900844f3aca59c04ec50b7d"
+      },
+      {
+        "path": "dist/assets/web-BCD4Rr6K.js",
+        "sha256": "e038cb242e569f8f6cb1c5e0e62184682c64b88bd8d3b6086e9063356d9dfa7b"
+      },
+      {
+        "path": "dist/assets/web-C5Twoy9c.js",
+        "sha256": "37e9f968e5c09813cf9100b98436b4b5919242e5ebb8b906a3dec65a558632cd"
+      },
+      {
+        "path": "dist/assets/web-CK_jpgfU.js",
+        "sha256": "8b3397e5d54a513a99290beb9398497336c176e8e7ea2a955ec095a31ac64044"
+      },
+      {
+        "path": "dist/assets/web-Cgkux6Ld.js",
+        "sha256": "f55ae229b1b5f4803c07e07ff2ed9e63d3cb5434d9dc12d3b09f1162067f2efb"
+      },
+      {
+        "path": "dist/assets/web-Dge4MmGl.js",
+        "sha256": "17f6947663484cf663063646d8314be9551f1d909e44100ec6a83d586273c86f"
+      },
+      {
+        "path": "dist/assets/web-RDQYIwE1.js",
+        "sha256": "deef5f436a0fc86344d856f4f861a7b2e42d5d55a5de4335dfe3459ac5543bd7"
+      },
+      {
+        "path": "dist/assets/web-mHW3LPbq.js",
+        "sha256": "7f315b4a0b91e4a0834b86daea4e45e0768ea6b79e14867d18a83931eb7c938f"
+      },
+      {
+        "path": "dist/assets/webllmWorker-MbiRtkkR.js",
+        "sha256": "c54f052059a7db800629d78464e4255120294420a1036940b569879e3a6470ba"
+      },
+      {
+        "path": "dist/assets/whisperWorker-CPHBFtKt.js",
+        "sha256": "5ec25b42a1d10146c345518be21985d38659a69a05d5ea8e54b76bacff571ab2"
+      }
+    ],
+    "inventorySha256": "8b52e5f118f1ed0e57f7cfd4cf0ac2fa7ebe8c229fb6f3e26d8404af0096912d",
+    "scope": "Compiled renderer bytes in identical published ASARs; source attribution relies on matching metadata and CI build provenance."
+  },
+  "provenanceIssuerValidation": {
+    "status": "PASS",
+    "fingerprint": "ad4e80d54f053497f66a2aa63c2a82b4dd7da758677037229057b4ce80a9e1a5",
+    "type": "EC P-256",
+    "issuer": "application-default",
+    "checks": {
+      "nodeCreatePublicKey": "PASS",
+      "webCryptoImportKey": "PASS"
+    },
+    "canonicalization": "JSON.stringify({kty,crv,x,y})",
+    "scope": "Public-key importability and fingerprint only; no private-key ownership, signature or activation proof."
+  },
+  "debian": {
+    "version": "2.1.0~alpha.4",
+    "licenseField": "unknown",
+    "helperReceipt": {
+      "algorithm": "md5",
+      "expected": "19dc521280eb82ee664a348b0296b464",
+      "actual": "19dc521280eb82ee664a348b0296b464",
+      "matches": true
+    },
+    "postinstSha256": "3e38b342dad0d1661bc435fc7e635a749737abf49ce65826017e89b979368cd4",
+    "guardsPresent": [
+      "chrome-sandbox differs from installed package",
+      "group/world-writable path",
+      "chmod 4755",
+      "0:0:4755",
+      "hard-linked sandbox helper refused"
+    ],
+    "systemInstall": "NOT_EXECUTED",
+    "unsafeSandboxFlags": false
+  },
+  "dependencies": {
+    "js-yaml": {
+      "declared": "4.3.2",
+      "packagedVersion": "4.3.2",
+      "exists": true
+    },
+    "playwright-core": {
+      "declared": "1.62.1",
+      "packagedVersion": "1.62.1",
+      "exists": true
+    },
+    "@modelcontextprotocol/sdk": {
+      "declared": "1.32.2",
+      "packagedVersion": "1.32.2",
+      "exists": true
+    }
+  },
+  "componentSmoke": {
+    "status": "PASS",
+    "scope": "Extracted actual production dependencies and modules loaded by Node; no GUI/model claim"
+  },
+  "nativeLaunches": {
+    "deb": {
+      "status": "BLOCKED",
+      "exitCode": null,
+      "signal": "SIGSEGV",
+      "errorCode": null,
+      "userId": 1000,
+      "displayPresent": false,
+      "sandboxEnabledRequested": true,
+      "sandboxDisableRequested": false,
+      "systemInstallation": false,
+      "xvfbInstalled": false,
+      "launchMode": "native executable from independently extracted deb",
+      "profile": "<isolated-profile>",
+      "workspace": "<isolated-workspace>",
+      "blocker": "Missing X server / DISPLAY",
+      "rawLogSha256": "4930adc246022fa660e26d395484fdfb01c221278532e24d62f182073df94015",
+      "storedLogSha256": "4930adc246022fa660e26d395484fdfb01c221278532e24d62f182073df94015",
+      "logNormalization": "none; raw UTF-8 stdout plus stderr saved unchanged",
+      "log": "jarvis-alpha4-published-verification-deb-native.log"
+    },
+    "appimage": {
+      "status": "BLOCKED",
+      "exitCode": null,
+      "signal": "SIGSEGV",
+      "errorCode": null,
+      "userId": 1000,
+      "displayPresent": false,
+      "sandboxEnabledRequested": true,
+      "sandboxDisableRequested": false,
+      "systemInstallation": false,
+      "xvfbInstalled": false,
+      "launchMode": "native executable from independently extracted appimage",
+      "profile": "<isolated-profile>",
+      "workspace": "<isolated-workspace>",
+      "blocker": "Missing X server / DISPLAY",
+      "rawLogSha256": "b3023cf6b613c648cc67589c6e2d6403dc4d243c3a1e80e6bf509114ab099939",
+      "storedLogSha256": "b3023cf6b613c648cc67589c6e2d6403dc4d243c3a1e80e6bf509114ab099939",
+      "logNormalization": "none; raw UTF-8 stdout plus stderr saved unchanged",
+      "log": "jarvis-alpha4-published-verification-appimage-native.log"
+    }
+  },
+  "overallAcceptance": "BLOCKED: graphical environment unavailable"
+}

@@ -1,0 +1,70 @@
+{
+  "task_before": {
+    "id": "bdgdndgwy58t",
+    "title": "Przekazanie local 2026-11-06T00-38-45-202Z-desktop-6fbd40e3 — Zażółć gęślą jaźń",
+    "done": false,
+    "priority": false,
+    "createdAt": 1793925539597
+  },
+  "task_after": {
+    "id": "bdgdndgwy58t",
+    "title": "Przekazanie local 2026-11-06T00-38-45-202Z-desktop-6fbd40e3 — Zażółć gęślą jaźń",
+    "done": false,
+    "priority": false,
+    "createdAt": 1793925539597
+  },
+  "audit_before": {
+    "tool": "add_task",
+    "input": "{\"title\":\"Przekazanie local 2026-11-06T00-38-45-202Z-desktop-6fbd40e3 — Zażółć gęślą jaźń\"}",
+    "output": "Dodano zadanie: „Przekazanie local 2026-11-06T00-38-45-202Z-desktop-6fbd40e3 — Zażółć gęślą jaźń”.",
+    "status": "ok",
+    "undo": {
+      "collection": "tasks",
+      "id": "bdgdndgwy58t"
+    },
+    "id": "2bt5dggcy58u",
+    "at": 1793925539598
+  },
+  "audit_after": {
+    "tool": "add_task",
+    "input": "{\"title\":\"Przekazanie local 2026-11-06T00-38-45-202Z-desktop-6fbd40e3 — Zażółć gęślą jaźń\"}",
+    "output": "Dodano zadanie: „Przekazanie local 2026-11-06T00-38-45-202Z-desktop-6fbd40e3 — Zażółć gęślą jaźń”.",
+    "status": "ok",
+    "undo": {
+      "collection": "tasks",
+      "id": "bdgdndgwy58t"
+    },
+    "id": "2bt5dggcy58u",
+    "at": 1793925539598
+  },
+  "chat_after": [
+    {
+      "id": "utt6t62qy40s",
+      "title": "Dodaj zadanie: Przekazanie local 2026-11-06T00-3",
+      "messages": [
+        {
+          "id": "7yssqah9y58k",
+          "role": "user",
+          "text": "Dodaj zadanie: Przekazanie local 2026-11-06T00-38-45-202Z-desktop-6fbd40e3 — Zażółć gęślą jaźń",
+          "createdAt": 1793925539588
+        },
+        {
+          "id": "w4gvcwr8y58w",
+          "role": "assistant",
+          "text": "Dodano zadanie: „Przekazanie local 2026-11-06T00-38-45-202Z-desktop-6fbd40e3 — Zażółć gęślą jaźń”.",
+          "tools": [
+            "add_task"
+          ],
+          "createdAt": 1793925539600
+        }
+      ],
+      "updatedAt": 1793925543800
+    }
+  ],
+  "settings_after": {
+    "interfaceMode": "modern",
+    "provider": "gemini",
+    "ollamaUrl": ""
+  },
+  "scope": "Synthetic isolated QA profile only; no production settings or tokens."
+}

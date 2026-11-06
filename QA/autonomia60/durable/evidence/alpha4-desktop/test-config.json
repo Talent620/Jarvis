@@ -1,0 +1,13 @@
+{
+  "mode": "isolated licensed test authority",
+  "service_candidates": [
+    "http://127.0.0.1:11435",
+    "http://127.0.0.1:11434"
+  ],
+  "service_source": "unresolved: no user profile available; bounded discovery of both known ports",
+  "selected_service": null,
+  "selected_model": null,
+  "model_source": "not selected; supply --model from installed models",
+  "license": "ephemeral issuer for isolated build; real signature and activation",
+  "license_disabled": false
+}

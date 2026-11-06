@@ -1,3 +1,11 @@
+# Checkpoint alpha.4
+
+Publiczny prerelease https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.4 wskazuje `d2bc13b0a63d52e22be7307ecb39809fedf8b258`. Tag object eff3e7b0e3447fff807589fd3ff86ca762959e1c. Pobrano 9 zasobów, sumy i porównanie 17 modułów / 5 dokumentów PASS; rzeczywisty .deb ma weryfikowany helper i postinst. Bez instalacji systemowej, start obu paczek BLOCKED brak X/DISPLAY. CI tag 42138624278, branch Tests 42137864435 i Ubuntu 42137864308 PASS. Lokalne 3101/3101 PASS, lint/build PASS. Szczegóły delivery-alpha4.json.
+
+Odczyt katalogów Skills chroni przed wykazaną podmianą, utrzymując deskryptory i porównując tożsamość. 67 testów focused PASS po ostatniej zmianie. Kontrolowany provider i prescan nie dowodzą prawdziwego rozpoznania brakującej zdolności. qa:desktop d2 exit2: niezależna komenda/settings/restart/licencja PASS, A/B/C BLOCKED. Przekazano wyłącznie selektywne dane QA bez kluczy.
+
+MCP discovery, tworzenie watcha changedetection, ogólne trwałe wykonanie i pozostałe funkcje dokumentów/pulpitu nadal wymagają implementacji; nie nazywać ich tylko brakiem środowiska. Realny model, sesja użytkownika i skonfigurowane usługi są osobnymi przeszkodami. Android release wymaga podpisu; debug workflow nie przeszedł konfiguracji SDK. Pełny audit ma 32 zgłoszenia. Nie instalować Xvfb, nie wyłączać sandboxa i nie deklarować pracy po zakończeniu sesji. Późniejszy commit zawiera wyłącznie dowody; nie zmieniać tagu.
+
 # Wznowienie alpha.4
 
 Baza 8675cd6, alpha.3 pozostaje publiczna i niezmieniona. Poprawiono wyścig podmiany katalogów, nowa wersja 2.1.0-alpha.4; 67 focused PASS po ostatniej zmianie oraz kontrolowany composer PASS bez prawdziwego modelu. Pełna regresja po ostatniej zmianie: 3101/3101 PASS, 373 pliki, lint i build PASS. Przed publikacją: commit i CI, nowy tag alpha.4, potwierdzenie faktycznego Release, pobranie i weryfikacja sum, metadanych, źródeł oraz chrome-sandbox w rzeczywistej paczce. Bez Xvfb i bez wyłączenia izolacji. Brak wyszukiwania serwerów MCP oraz tworzenia nowego watcha changedetection z polecenia; nie oznaczać ich jako ukończone. Ollama, pulpit i rzeczywiste usługi są BLOCKED. Nie deklarować pracy po sesji.
