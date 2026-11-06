@@ -4,13 +4,13 @@
   "request_sha256": "90784301789c744c57e5144312083b04043200dfbb9fe26d83b4e76bfc04ac6e",
   "integration_base": "fb17f9755faad72295cb125563ba2b0220d9319d",
   "integration_branch": "codex/skills-integration-20261105",
-  "current_state": "ALPHA3_FINAL_CODE_VERIFIED_RELEASE_PREPARATION",
+  "current_state": "ALPHA3_LOCAL_VERIFIED_CI_BROWSER_DIAGNOSIS",
   "release": {
     "version": "2.1.0-alpha.3",
     "sha": null,
     "tag": null,
     "url": null,
-    "status": "PREPARING_AFTER_PERFORMANCE_FIX",
+    "status": "HELD_CI_BROWSER_PREREQUISITE_FAILURE",
     "previous_unpublished_tag": "v2.1.0-alpha.2"
   },
   "status_rules": {
@@ -3277,6 +3277,17 @@
       "evidence": [
         "QA/autonomia60/durable/evidence/alpha2-tag-ci-failed.json"
       ]
+    },
+    {
+      "version": "2.1.0-alpha.3",
+      "commit": "3ee898c8bc96612967bae4cb56231912da9f9527",
+      "tag": null,
+      "release": null,
+      "tests_ci": "FAIL",
+      "ubuntu_ci": "FAIL",
+      "code": "UNEXPECTED_PROBE_FAILURE",
+      "exact_cause": "Not exposed in public annotations; diagnostic patch needed",
+      "evidence": "QA/autonomia60/durable/evidence/alpha3-ci-3ee-failed.json"
     }
   ]
 }

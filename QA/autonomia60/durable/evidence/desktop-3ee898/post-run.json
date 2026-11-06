@@ -1,0 +1,9 @@
+{
+  "recorded_at": "2026-11-05T23:58:06.578022+00:00",
+  "source_commit": "3ee898c8bc96612967bae4cb56231912da9f9527",
+  "tracked_tree_clean": true,
+  "only_own_ephemeral_private_files_removed": true,
+  "production_config_or_license_modified": false,
+  "native_or_user_installation_claim": false,
+  "nonfatal_dev_scan_diagnostic": "Vite inspected a prior ignored QA/runs owner-dist bundle containing @emotion/is-prop-valid; independent UI/activation/restart assertions still passed. This is not evidence of a packaged application failure."
+}

@@ -1,0 +1,159 @@
+{
+  "recordedAt": "2026-11-05T23:58:22.419Z",
+  "expectedCommit": "3ee898c8bc96612967bae4cb56231912da9f9527",
+  "artifactStructureStatus": "PASS",
+  "nativeLaunch": {
+    "status": "BLOCKED",
+    "exitCode": null,
+    "signal": "SIGSEGV",
+    "errorCode": null,
+    "userId": 1000,
+    "displayPresent": false,
+    "sandboxEnabled": true,
+    "systemInstallation": false,
+    "xvfbInstalled": false,
+    "profile": "<isolated-profile>",
+    "workspace": "<isolated-workspace>",
+    "blocker": "Missing X server / DISPLAY",
+    "rawLogSha256": "108ee478f3a7b51021553da7c6eae5f3b7944e7af06e127ed891777c03107aae",
+    "log": "jarvis-alpha3-final-local-3ee898-native.log"
+  },
+  "scope": "Independent actual Debian/AppImage extraction, integrity and packaged component loading. No system installation or claim of agent autonomy.",
+  "checksums": {
+    "JARVIS.AppImage": {
+      "expected": "c459b301d5369a7d47f366d7d02d85f4ef81e6b66a28daa5d485a9041352b792",
+      "actual": "c459b301d5369a7d47f366d7d02d85f4ef81e6b66a28daa5d485a9041352b792",
+      "matches": true
+    },
+    "JARVIS.deb": {
+      "expected": "c636d9b9fa75d1646cbdb50b63d1f85480b2e2d60e60ee454ad8d6fb065b8852",
+      "actual": "c636d9b9fa75d1646cbdb50b63d1f85480b2e2d60e60ee454ad8d6fb065b8852",
+      "matches": true
+    },
+    "PROVENANCE.json": {
+      "expected": "4e97ea964ab93cfb2c1ec5f9219473cd4634e1bfdf9fc10ff013f3258bdf2517",
+      "actual": "4e97ea964ab93cfb2c1ec5f9219473cd4634e1bfdf9fc10ff013f3258bdf2517",
+      "matches": true
+    }
+  },
+  "issuerValidation": {
+    "status": "PASS",
+    "fingerprint": "ad4e80d54f053497f66a2aa63c2a82b4dd7da758677037229057b4ce80a9e1a5",
+    "type": "EC P-256",
+    "issuer": "application-default",
+    "checks": {
+      "nodeCreatePublicKey": "PASS",
+      "webCryptoImportKey": "PASS"
+    },
+    "canonicalization": "JSON.stringify({kty,crv,x,y})",
+    "scope": "Public-key importability and fingerprint only; no private-key ownership, signature or activation proof."
+  },
+  "metadata": {
+    "schemaVersion": 1,
+    "version": "2.1.0-alpha.3",
+    "commit": "3ee898c8bc96612967bae4cb56231912da9f9527",
+    "build": "2026-11-05 23:55",
+    "licenseRequired": true,
+    "issuer": "application-default",
+    "issuerPublicJwk": {
+      "kty": "EC",
+      "crv": "P-256",
+      "x": "cr_zxxKQMLPKsuGybJtd05h_z-m0H_xnhS7WiYtEmdU",
+      "y": "a1Xl4CHImK2EAIXg19PVIFuagNCa4PQ2zatk4gysxzg"
+    },
+    "issuerFingerprint": "ad4e80d54f053497f66a2aa63c2a82b4dd7da758677037229057b4ce80a9e1a5"
+  },
+  "packageVersion": "2.1.0-alpha.3",
+  "archives": {
+    "identical": true,
+    "sha256": {
+      "deb": "efbfb01dd4c06343f55fcdf062870deb5af7d3cfd786c09c370aee51fd2a4355",
+      "appimage": "efbfb01dd4c06343f55fcdf062870deb5af7d3cfd786c09c370aee51fd2a4355"
+    },
+    "entryCount": 9347
+  },
+  "privatePathScan": {
+    "status": "PASS",
+    "forbiddenPaths": [],
+    "scope": "Known private/configuration paths and signing containers; not exhaustive secret scanning"
+  },
+  "requiredModules": {
+    "electron/main.cjs": true,
+    "electron/preload.cjs": true,
+    "electron/skill-manager.cjs": true,
+    "electron/skill-isolation.cjs": true,
+    "electron/workspace-tools.cjs": true,
+    "electron/browser-session.cjs": true,
+    "electron/monitor-connectors.cjs": true,
+    "electron/mcp-stdio.cjs": true,
+    "electron/goal-service.cjs": true,
+    "electron/local-ollama.cjs": true,
+    "electron/local-siteos.cjs": true
+  },
+  "nativeBinaries": {
+    "sha256": {
+      "deb": "ee99780b5878638df40bf577cfcdbc3c157b0b3581ada099a13db446f1af84d8",
+      "appimage": "ee99780b5878638df40bf577cfcdbc3c157b0b3581ada099a13db446f1af84d8"
+    },
+    "identical": true
+  },
+  "unpackedResources": {
+    "identical": true,
+    "files": 4,
+    "inventorySha256": "dd7fc37fb800b89094296ab5a49c3169044873d95595c9420dbceded03c90e40"
+  },
+  "provenanceIssuerValidation": {
+    "status": "PASS",
+    "fingerprint": "ad4e80d54f053497f66a2aa63c2a82b4dd7da758677037229057b4ce80a9e1a5",
+    "type": "EC P-256",
+    "issuer": "application-default",
+    "checks": {
+      "nodeCreatePublicKey": "PASS",
+      "webCryptoImportKey": "PASS"
+    },
+    "canonicalization": "JSON.stringify({kty,crv,x,y})",
+    "scope": "Public-key importability and fingerprint only; no private-key ownership, signature or activation proof."
+  },
+  "debian": {
+    "version": "2.1.0~alpha.3",
+    "licenseField": "unknown",
+    "helperReceipt": {
+      "algorithm": "md5",
+      "expected": "19dc521280eb82ee664a348b0296b464",
+      "actual": "19dc521280eb82ee664a348b0296b464",
+      "matches": true
+    },
+    "postinstSha256": "3e38b342dad0d1661bc435fc7e635a749737abf49ce65826017e89b979368cd4",
+    "guardsPresent": [
+      "chrome-sandbox differs from installed package",
+      "group/world-writable path",
+      "chmod 4755",
+      "0:0:4755",
+      "hard-linked sandbox helper refused"
+    ],
+    "systemInstall": "NOT_EXECUTED",
+    "unsafeSandboxFlags": false
+  },
+  "dependencies": {
+    "js-yaml": {
+      "declared": "4.3.2",
+      "packagedVersion": "4.3.2",
+      "exists": true
+    },
+    "playwright-core": {
+      "declared": "1.62.1",
+      "packagedVersion": "1.62.1",
+      "exists": true
+    },
+    "@modelcontextprotocol/sdk": {
+      "declared": "1.32.2",
+      "packagedVersion": "1.32.2",
+      "exists": true
+    }
+  },
+  "componentSmoke": {
+    "status": "PASS",
+    "scope": "Extracted actual production dependencies and modules loaded by Node; no GUI/model claim"
+  },
+  "overallAcceptance": "BLOCKED: graphical environment unavailable"
+}

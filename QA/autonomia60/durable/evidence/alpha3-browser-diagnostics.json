@@ -1,0 +1,40 @@
+{
+  "recorded_at": "2026-11-06T00:02:21.221665+00:00",
+  "base_commit": "3ee898c8bc96612967bae4cb56231912da9f9527",
+  "scope": "Diagnostics-only; unknown remote cause not claimed fixed; original sandbox, timeouts, READY assertion and no-fallback rule unchanged",
+  "focused": {
+    "passed": 27,
+    "failed": 0,
+    "real_chromium_scenarios": 12
+  },
+  "lint": "PASS",
+  "real_child_process_failure_probe": "PASS: Playwright launched owned temporary process exiting73; single FAIL preserved; stderr/code visible, synthetic secret URL redacted",
+  "hashes": {
+    "tests/helpers/browserPrerequisite.ts": "4202c00cfe332134e2685db9ece82c49821773b1d091f3235f639f2348791d18",
+    "tests/browserPrerequisite.test.ts": "77f7d7988565c0c45b5809b9ac45a8d51c6a5f1cc4d1f6334b41ccaf1d85fdb2",
+    "tests/browserSession.test.ts": "2690910bfff1ecfdc553870a1b774bd7566a9423f4146d91f1549194aa864746",
+    ".github/workflows/ubuntu.yml": "2fc15057ef04babe1422709ec4c8d6a76bf6457cc4d21b67b468447d102038af"
+  },
+  "logs": [
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-browser-diagnostics-unit.log",
+      "raw_sha256": "22e809f0a6ff511b3acfc3c906a15c41c6650f068bf714f09091128caa50e965",
+      "stored_sha256": "fc95884d645565a096e26b5fe3193b70da31bf508526c58318c13ae5df6ff235"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-browser-diagnostics-focused.log",
+      "raw_sha256": "14c6102f3417e9418c1a7586939ee400966b84d7183e5e7493301b70722fa6e7",
+      "stored_sha256": "691f44d2bad9dcdf7b5589b7cc16b888b3be072b4834c31323ab1e05fa6b0bc6"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-browser-diagnostics-lint.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stored_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "QA/autonomia60/durable/evidence/alpha3-browser-diagnostics-process.log",
+      "raw_sha256": "9231d887755009977bd8aa4edde21a9b7ff8ca8fbf0d79a1a8c0e2d15fa5b35a",
+      "stored_sha256": "9231d887755009977bd8aa4edde21a9b7ff8ca8fbf0d79a1a8c0e2d15fa5b35a"
+    }
+  ]
+}

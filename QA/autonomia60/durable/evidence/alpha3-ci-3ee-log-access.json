@@ -1,0 +1,30 @@
+[
+  {
+    "name": "tests",
+    "url": "https://github.com/Talent620/Jarvis/commit/3ee898c8bc96612967bae4cb56231912da9f9527/checks/127614273122/logs/6",
+    "curlExit": 0,
+    "response": [
+      "404",
+      "https://github.com/Talent620/Jarvis/commit/3ee898c8bc96612967bae4cb56231912da9f9527/checks/127614273122/logs/6"
+    ],
+    "publicText": [
+      "Not Found"
+    ],
+    "bytes": 9,
+    "snapshot": "/tmp/jarvis-alpha3-public-tests-log.html"
+  },
+  {
+    "name": "ubuntu",
+    "url": "https://github.com/Talent620/Jarvis/commit/3ee898c8bc96612967bae4cb56231912da9f9527/checks/127614273280/logs/7",
+    "curlExit": 0,
+    "response": [
+      "404",
+      "https://github.com/Talent620/Jarvis/commit/3ee898c8bc96612967bae4cb56231912da9f9527/checks/127614273280/logs/7"
+    ],
+    "publicText": [
+      "Not Found"
+    ],
+    "bytes": 9,
+    "snapshot": "/tmp/jarvis-alpha3-public-ubuntu-log.html"
+  }
+]

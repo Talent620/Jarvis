@@ -11,6 +11,7 @@ on:
     paths:
       - "electron/**"
       - "src/**"
+      - "tests/**"
       - "site-os/**"
       - "electron-builder.json"
       - "package.json"

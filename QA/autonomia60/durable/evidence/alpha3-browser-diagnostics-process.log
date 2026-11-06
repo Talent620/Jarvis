@@ -1,0 +1,22 @@
+{
+  "kind": "Controlled actual Playwright failure, not real Chromium or desktop acceptance",
+  "result": {
+    "status": "FAIL",
+    "selectedExecutable": null,
+    "browserVersion": null,
+    "attempts": [
+      {
+        "executable": "/tmp/jarvis-probe-diagnostic-OCUGW8/controlled-launch-failure",
+        "status": "FAIL",
+        "code": "UNEXPECTED_PROBE_FAILURE",
+        "reason": "Nieoczekiwany błąd próby renderera; nie uznano go za brak środowiska.",
+        "errorSha256": "8af0ded2bd31301f434e58fb217aafafa305b5f32cf5b8b0664f1893b39477b3",
+        "phase": "launch",
+        "errorDetail": "[pid=279657][err] ERROR diagnostic_fixture_exit [REDACTED URL] | - [pid=279657][err] ERROR diagnostic_fixture_exit [REDACTED URL] | - [pid=279657] <process did exit: exitCode=73, signal=null> | browserType.launch: Target page, context or browser has been closed | <launched> pid=279657 | - <launched> pid=279657"
+      }
+    ],
+    "chromiumSandbox": true,
+    "mode": "headless sandboxed browser prerequisite, not desktop or agent acceptance"
+  },
+  "summary": "launch FAIL: [pid=279657][err] ERROR diagnostic_fixture_exit [REDACTED URL] | - [pid=279657][err] ERROR diagnostic_fixture_exit [REDACTED URL] | - [pid=279657] <process did exit: exitCode=73, signal=null> | browserType.launch: Target page, context or browser has been closed | <launched> pid=279657 | - <launched> pid=279657; code=UNEXPECTED_PROBE_FAILURE; executable=/tmp/jarvis-probe-diagnostic-OCUGW8/controlled-launch-failure"
+}

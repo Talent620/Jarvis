@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { probeSandboxedBrowser } from "./helpers/browserPrerequisite";
+import { browserPrerequisiteSummary, probeSandboxedBrowser } from "./helpers/browserPrerequisite";
 import { execFileSync } from "node:child_process";
 const require = createRequire(import.meta.url);
 const { createBrowserSession, webUrl } = require("../electron/browser-session.cjs");
@@ -23,11 +23,11 @@ await writeFile(join(evidenceDirectory, "precondition.json"), JSON.stringify({
     : browserPrecondition.status === "BLOCKED" ? "BLOCKED: not executed" : "NOT_RUN: prerequisite FAILED",
   desktopAcceptance: "NOT_RUN", modelAcceptance: "NOT_RUN",
 }, null, 2) + "\n");
-const prerequisiteSummary = browserPrecondition.attempts.map(({ executable, code, reason }) => JSON.stringify({ executable: executable.slice(0, 500), code, reason })).join("; ");
-if (browserPrecondition.status !== "READY") console.warn(`[browser prerequisite] ${browserPrecondition.status}: ${browserPrecondition.attempts.map(a => `${a.executable}: ${a.code}`).join("; ")}. Evidence: QA/runs/browser-session/precondition.json`);
+const prerequisiteSummary = browserPrerequisiteSummary(browserPrecondition);
+if (browserPrecondition.status !== "READY") console.warn(`[browser prerequisite] ${prerequisiteSummary}. Evidence: QA/runs/browser-session/precondition.json`);
 it("requires a working sandboxed renderer in CI or explicitly required native runs", context => {
   if (!browserRequired && browserPrecondition.status === "BLOCKED") return context.skip();
-  expect(browserPrecondition.status, `Sandboxed browser prerequisite ${browserPrecondition.status}: ${prerequisiteSummary}. Evidence: QA/runs/browser-session/precondition.json. No browser/desktop PASS is established.`).toBe("READY");
+  expect(browserPrecondition.status, `${prerequisiteSummary}. Evidence: QA/runs/browser-session/precondition.json. No browser/desktop PASS is established.`).toBe("READY");
 });
 const temporary: string[] = [], servers: Server[] = [], clients: any[] = [];
 afterEach(async () => {

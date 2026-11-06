@@ -1,0 +1,34 @@
+
+ RUN  v2.1.9 /workspace/Jarvis
+
+ ✓ tests/browserPrerequisite.test.ts (10 tests) 21ms
+stdout | tests/browserSession.test.ts > actual sandboxed Chromium with controlled website (not LLM) > does not let a delayed draft fetch join an in-flight navigation approval
+Controlled request identities: {"approvals":[{"method":"POST","url":"http://127.0.0.1:35139/submit"}],"received":[{"method":"GET","path":"/"}]}
+
+stdout | tests/browserSession.test.ts > actual sandboxed Chromium with controlled website (not LLM) > blocks main redirects/child frames before an ungranted target receives a request
+Controlled redirect boundary: {"mode":"main","sourcePaths":["/"],"targetCalls":0}
+
+stdout | tests/browserSession.test.ts > actual sandboxed Chromium with controlled website (not LLM) > blocks image redirects/child frames before an ungranted target receives a request
+Controlled redirect boundary: {"mode":"image","sourcePaths":["/","/redirect"],"targetCalls":0}
+
+stdout | tests/browserSession.test.ts > actual sandboxed Chromium with controlled website (not LLM) > blocks iframe redirects/child frames before an ungranted target receives a request
+Controlled redirect boundary: {"mode":"iframe","sourcePaths":["/"],"targetCalls":0}
+
+ ✓ tests/browserSession.test.ts (17 tests) 8457ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > reads DOM, fills a draft, asks separately for submission and verifies a bounded download 1156ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > STOP rejects late approval and blocks the external request 1117ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > approves the actual mutated GET request and blocks denied query disclosure 749ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > refuses a download directory symlink and writes nothing outside its scope 442ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > keeps delayed draft requests blocked across a same-document open 1257ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > does not let a delayed draft fetch join an in-flight navigation approval 607ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > blocks main redirects/child frames before an ungranted target receives a request 383ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > blocks image redirects/child frames before an ungranted target receives a request 532ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > blocks iframe redirects/child frames before an ungranted target receives a request 427ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > reports a blocked SPA submission as blocked rather than a completed send 482ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > reports an owner-denied navigation as denied with no sent POST 570ms
+   ✓ actual sandboxed Chromium with controlled website (not LLM) > keeps an approved POST uncertain when its redirect response is blocked 709ms
+
+ Test Files  2 passed (2)
+      Tests  27 passed (27)
+   Start at  00:00:54
+   Duration  9.87s (transform 93ms, setup 0ms, collect 1.54s, tests 8.48s, environment 0ms, prepare 246ms)
