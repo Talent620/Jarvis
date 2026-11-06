@@ -78,7 +78,7 @@ export async function bindNativeSkillGoal(signal: AbortSignal, goalId: string): 
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(goalId)));
   skillTasks.set(signal, `skill-goal-${Array.from(hash, byte => byte.toString(16).padStart(2, "0")).join("")}`);
 }
-const skillActions = new Set(["list", "search", "scan", "inspect", "stage", "test", "activate", "disable", "revoke", "remove", "rollback", "resource", "run", "update", "assert_task", "author"]);
+const skillActions = new Set(["list", "search", "search_mcp", "watch_create", "scan", "inspect", "stage", "test", "activate", "disable", "revoke", "remove", "rollback", "resource", "run", "update", "assert_task", "author"]);
 function skillTask(signal?: AbortSignal): string {
   if (!signal) return `skill-single-${crypto.randomUUID()}`;
   let id = skillTasks.get(signal);

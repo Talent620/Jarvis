@@ -304,11 +304,30 @@ function createGoalService(options) {
   async function command(request, context = {}) {
     if (!request || typeof request.action !== 'string') throw fail('Brak działania.');
     const action = request.action;
+    if (['watch_reserve', 'watch_record'].includes(action) && context.trustedUserAction !== true) throw fail('Operację monitora zatwierdza właściciel.', 'APPROVAL_REQUIRED');
     let source;
     if (action === 'grant' || action === 'create') source = await normalizeSource(request.source);
     if (action === 'grant' && context.trustedUserAction !== true) throw fail('Zgodę może nadać wyłącznie użytkownik w ustawieniach.', 'APPROVAL_REQUIRED');
     return transaction((state) => {
       const now = clock();
+      if (action === 'watch_reserve' || action === 'watch_record') {
+        if (!/^[a-f0-9]{64}$/.test(request.key || '') || !/^[a-f0-9]{64}$/.test(request.fingerprint || '')) throw fail('Niepoprawna tożsamość operacji watch.', 'INVALID_REQUEST');
+        if (state.watchOperations === undefined) state.watchOperations = [];
+        if (!Array.isArray(state.watchOperations) || state.watchOperations.length > 2000) throw fail('Uszkodzony rejestr operacji watch.', 'STORE_CORRUPT');
+        const existing = state.watchOperations.find(op => op.key === request.key);
+        if (existing && existing.fingerprint !== request.fingerprint) throw fail('Zmieniono zakres poprzedniej operacji; sprawdź istniejący watch.', 'SCOPE_CHANGED');
+        if (action === 'watch_reserve') {
+          if (existing) return { reserved: false, operation: existing };
+          if (state.watchOperations.length >= 2000) throw fail('Limit operacji watch; wymagany przegląd stanu.', 'RESOURCE_LIMIT');
+          const operation = { key: request.key, fingerprint: request.fingerprint, state: 'DISPATCHING', watchId: null, at: now };
+          state.watchOperations.push(operation); log(state, null, 'WATCH_RESERVED', { key: request.key });
+          return { reserved: true, operation };
+        }
+        if (!existing || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.watchId || '') || !['KNOWN_ID', 'VERIFIED'].includes(request.state)) throw fail('Niepoprawny wynik operacji watch.', 'INVALID_REQUEST');
+        if (existing.watchId && existing.watchId !== request.watchId) throw fail('Identyfikator watch zmienił się.', 'SCOPE_CHANGED');
+        existing.watchId = request.watchId; existing.state = request.state; existing.updatedAt = now;
+        log(state, null, 'WATCH_RECORDED', { key: request.key, state: request.state }); return existing;
+      }
       if (action === 'list') return { goals: state.goals, events: state.events, grants: state.grants, runtime: { active: running, host: 'desktop-main-process', observationGap: 'Podczas uśpienia i wyłączenia hosta nie wykonuje się sprawdzeń.', schemaVersion: SCHEMA } };
       if (action === 'grant') {
         if (request.expiresAt !== undefined && (!Number.isFinite(request.expiresAt) || request.expiresAt <= now)) throw fail('Zgoda wymaga przyszłego terminu.');

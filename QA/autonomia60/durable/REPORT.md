@@ -1,3 +1,7 @@
+## Kontynuacja alpha.5 — częściowa implementacja
+
+Dodano wyszukiwanie w oficjalnym rejestrze MCP po natywnej zgodzie na dokładne zapytanie oraz tworzenie na skonfigurowanym changedetection watcha w pauzie i z wyciszonymi powiadomieniami. Dane kandydata są niezaufane; wyszukiwanie nie instaluje ani nie uruchamia serwera. Po zapisie zamiaru ponowienie przy nieznanym wyniku nie wysyła drugiego POST; niezależny GET sprawdza parametry i stan. Testowano na kontrolowanym HTTP i prawdziwym magazynie, nie na rzeczywistym changedetection ani z prawdziwą Ollamą. Dostęp do rejestru MCP jest w tym środowisku zablokowany przez politykę sieci. Włączenie watcha, powiązanie jego STOP/wznowienia i powiadomień z trwałym zadaniem oraz pełny cykl zdobycia MCP pozostają nieukończone.
+
 # Dostarczenie alpha.4 — 2026-11-06
 
 Publiczne wydanie eksperymentalne: https://github.com/Talent620/Jarvis/releases/tag/v2.1.0-alpha.4 . Tag wskazuje `d2bc13b0a63d52e22be7307ecb39809fedf8b258`; wcześniejszej pracy ani tagów nie przepisano. Pobrano 9 plików i zweryfikowano ich sumy, 17 modułów Electron, 5 dokumentów, metadane oraz publiczny klucz wystawcy. `delivery-alpha4.json` i `evidence/alpha4-published/SHA256SUMS` zawierają wyniki i adresy. Testy lokalne: 3101/3101 PASS; lint i build PASS. CI Tests, Ubuntu gałęzi i Ubuntu taga PASS.
@@ -6,7 +10,7 @@ Rzeczywisty `.deb` zawiera pomocnika chrome-sandbox zgodnego z rejestrem pakietu
 
 `qa:desktop` na dokładnym commicie zakończył się kodem 2: komenda lokalna, ustawienia, restart i testowa aktywacja licencji PASS; A/B BLOCKED z powodu braku Ollamy na 11434/11435; C BLOCKED z powodu braku pulpitu. `evidence/alpha4-desktop/REPORT.md`. Kontrolowany przebieg skilla ma wcześniej zeskanowany lokalny katalog i syntetycznego dostawcę: nie dowodzi samodzielnego rozpoznania brakującej zdolności ani wykonania przez realny model. Usługi monitorowania i ntfy zweryfikowano na kontrolowanych serwerach, nie na rzeczywistych kontach.
 
-**Pełny zakres nadal nie jest ukończony.** Wyszukiwanie nowych serwerów MCP i tworzenie nowego watcha z polecenia są brakującą implementacją; skonfigurowany klient MCP i adapter istniejącego watcha ich nie zastępują. Pozostałe braki opisuje rejestr. Nie ma produkcyjnego APK bez konfiguracji podpisu; testowy workflow Android zatrzymał się na konfiguracji SDK, bez ujawnienia dokładnej przyczyny. Nie twierdzimy, że JARVIS został przetestowany na komputerze użytkownika.
+**Stan alpha.4:** pełny zakres nadal nie był ukończony. Wyszukiwanie nowych serwerów MCP i tworzenie nowego watcha z polecenia były brakującą implementacją; skonfigurowany klient MCP i adapter istniejącego watcha ich nie zastępują. Pozostałe braki opisuje rejestr. Nie ma produkcyjnego APK bez konfiguracji podpisu; testowy workflow Android zatrzymał się na konfiguracji SDK, bez ujawnienia dokładnej przyczyny. Nie twierdzimy, że JARVIS został przetestowany na komputerze użytkownika.
 
 Instalacja właściwej wersji i rollback: `docs/WYDANIE-ALPHA.md`. Używaj dotychczasowego lokalnego klucza właściciela, ponieważ gotowe paczki CI używają wystawcy repozytorium. Nie instalowano Xvfb ani usług systemowych.
 
@@ -16,7 +20,7 @@ Poprawiono podmianę katalogu podczas odczytu. Na bazie 8675cd6 deterministyczna
 
 Kontrolowany przebieg normalnym polem rozmowy: wyszukiwanie → inspekcja → kwarantanna → test → aktywacja → wykonanie w rzeczywistym sandboxie → zapis i odczyt przez JARVIS → niezależny odczyt pliku PASS. Kandydat pochodził z lokalnego katalogu zeskanowanego przed rozmową; dostawca modelu i transport były kontrolowane. Ta próba nie dowodzi samodzielnego rozpoznania brakującej zdolności ani pobrania nowego skilla podczas rzeczywistego zadania. Brak prawdziwej Ollamy i natywnej sesji Electron oznacza BLOCKED dla pełnego odbioru. `evidence/alpha4-controlled/REPORT.md`.
 
-Monitoring i ntfy: kontrolowane kontrakty HTTP, zapis, restart, odwołanie i niepewny wynik powiadomienia przeszły testy. Nie testowano prawdziwej usługi ani rzeczywistego modelu. Klient MCP nie implementuje wyszukiwania nowych serwerów, a adapter changedetection nie tworzy watcha; oba wymagania pozostają MISSING_IMPLEMENTATION. Pakiet alpha.4 oraz publikacja wymagają oddzielnego potwierdzenia.
+Monitoring i ntfy: kontrolowane kontrakty HTTP, zapis, restart, odwołanie i niepewny wynik powiadomienia przeszły testy. Nie testowano prawdziwej usługi ani rzeczywistego modelu. Na etapie alpha.4 klient MCP nie implementował wyszukiwania nowych serwerów, a adapter changedetection nie tworzył watcha. Potwierdzenie opublikowanego alpha.4 opisano powyżej.
 
 # JARVIS — wdrożenie, odbiór i przekazanie
 

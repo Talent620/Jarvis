@@ -5,6 +5,7 @@ const nodeCrypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const yaml = require('js-yaml');
 const flags = require('node:fs').constants;
+const { request: requestPublic } = require('./monitor-connectors.cjs');
 
 const SOURCES = ['openai/plugins', 'openai/skills', 'anthropics/skills', 'obra/superpowers', 'vercel-labs/skills'];
 const MAX_FILE = 1024 * 1024, MAX_PACKAGE = 2 * MAX_FILE, MAX_FILES = 128;
@@ -12,6 +13,21 @@ const digest = value => nodeCrypto.createHash('sha256').update(value).digest('he
 const clone = value => JSON.parse(JSON.stringify(value));
 const error = (message, code = 'INVALID_SKILL') => Object.assign(new Error(message), { code });
 const abort = signal => { if (signal?.aborted) throw error('Operacja umiejętności anulowana.', 'ABORTED'); };
+function validateMcpQuery(value) {
+  if (typeof value !== 'string') throw error('Podaj ogólną nazwę poszukiwanej możliwości.', 'INVALID_QUERY');
+  const query = value.trim();
+  // Do not allow control characters in the owner-visible query.
+  // eslint-disable-next-line no-control-regex
+  if (Array.from(query).length < 3 || query.length > 80 || /[\x00-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2066-\u2069@]|https?:\/\/|(?:token|password|api.?key)\s*[:=]/i.test(query)) throw error('Zapytanie musi mieć 3–80 znaków, bez adresów, danych logowania i prywatnej treści.', 'INVALID_QUERY');
+  return query;
+}
+// Strip control characters from untrusted registry metadata before displaying it.
+// eslint-disable-next-line no-control-regex
+function registryText(value, limit) { return typeof value === 'string' ? value.replace(/[\x00-\x1f\x7f]/g, ' ').slice(0, limit) : ''; }
+function registryUrl(value) {
+  if (typeof value !== 'string' || value.length > 2048) return null;
+  try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash ? url.href : null; } catch { return null; }
+}
 function safePath(value) {
   if (typeof value !== 'string' || !value || value.length > 500 || value.includes('\\') || value.includes('\0') || path.posix.isAbsolute(value) || value.split('/').some(p => !p || p === '.' || p === '..')) throw error('Niebezpieczna ścieżka zasobu.');
   return value;
@@ -344,6 +360,29 @@ function createSkillManager(options) {
     if (!request || typeof request.action !== 'string') throw error('Brak działania umiejętności.');
     abort(context.signal);
     const action = request.action;
+    if (action === 'search_mcp') {
+      if (context.allowNetwork === false) throw error('Tryb wyłącznie lokalny wyłącza katalog MCP.', 'NETWORK_DISABLED');
+      if (context.registryApproved !== true) throw error('Wyszukiwanie MCP wymaga zgody właściciela na przesłanie zapytania.', 'APPROVAL_REQUIRED');
+      const query = validateMcpQuery(request.query);
+      const url = new URL('https://registry.modelcontextprotocol.io/v0.1/servers');
+      url.searchParams.set('search', query); url.searchParams.set('version', 'latest'); url.searchParams.set('limit', '20');
+      abort(context.signal);
+      const response = await (options.registryRequest || requestPublic)(url.href, { signal: context.signal });
+      abort(context.signal);
+      if (response.status !== 200) throw error(`Katalog MCP zwrócił HTTP ${response.status}.`, 'SOURCE_UNAVAILABLE');
+      if (!/^application\/json\b/i.test(response.headers.get('content-type') || '')) throw error('Katalog MCP nie zwrócił JSON.', 'SOURCE_FORMAT');
+      const body = await response.text(); abort(context.signal);
+      if (Buffer.byteLength(body) > 1024 * 1024) throw error('Odpowiedź katalogu MCP przekracza 1 MiB.', 'RESOURCE_LIMIT');
+      let data; try { data = JSON.parse(body); } catch { throw error('Niepoprawny JSON katalogu MCP.', 'SOURCE_FORMAT'); }
+      if (!Array.isArray(data?.servers)) throw error('Niepoprawny format katalogu MCP.', 'SOURCE_FORMAT');
+      const candidates = data.servers.slice(0, 20).flatMap(entry => {
+        const s = entry?.server;
+        if (!s || typeof s !== 'object' || !registryText(s.name, 200) || !registryText(s.version, 100)) return [];
+        const packages = Array.isArray(s.packages) ? s.packages.slice(0, 5).map(p => ({ registryType: registryText(p?.registryType, 40), identifier: registryText(p?.identifier, 200), version: registryText(p?.version, 100), transport: registryText(p?.transport?.type, 40), requiredEnvironment: Array.isArray(p?.environmentVariables) ? p.environmentVariables.filter(v => v?.isRequired === true && /^[A-Z_][A-Z0-9_]{0,79}$/i.test(v?.name || '')).slice(0, 10).map(v => v.name) : [] })) : [];
+        return [{ name: registryText(s.name, 200), version: registryText(s.version, 100), description: registryText(s.description, 700), repository: registryUrl(s.repository?.url), packages }];
+      });
+      return { source: 'https://registry.modelcontextprotocol.io', query, untrusted: true, installed: false, hasMore: Boolean(data?.metadata?.nextCursor), candidates, notice: 'Metadane są niezaufane. Katalog nie potwierdza bezpieczeństwa, licencji ani uprawnień. Nie uruchomiono i nie podłączono serwera.' };
+    }
     if (action === 'list') return transaction(s => ({ skills: s.skills, candidates: s.candidates, policies: s.policies, sources: [...sources, 'jarvis:self'], taskPins: s.tasks }), false);
     if (action === 'search') return search(request.query || '', request.refresh === true, context);
     if (action === 'policy') {
@@ -526,4 +565,4 @@ function createSkillManager(options) {
   }
   return { command, assertTask: (taskId, context = {}) => command({ action: 'assert_task' }, { ...context, taskId }), stopAll: () => { for (const id of active.keys()) cancelRecord(id); } };
 }
-module.exports = { createSkillManager, parseSkill, safePath, packageHash, SOURCES };
+module.exports = { createSkillManager, parseSkill, safePath, packageHash, validateMcpQuery, SOURCES };

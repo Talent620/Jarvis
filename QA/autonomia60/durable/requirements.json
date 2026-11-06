@@ -4,7 +4,7 @@
   "request_sha256": "90784301789c744c57e5144312083b04043200dfbb9fe26d83b4e76bfc04ac6e",
   "integration_base": "fb17f9755faad72295cb125563ba2b0220d9319d",
   "integration_branch": "codex/skills-integration-20261105",
-  "current_state": "ALPHA4_PRERELEASE_PARTIAL_ACCEPTANCE",
+  "current_state": "ALPHA5_PREPARATION_PARTIAL_ACCEPTANCE",
   "release": {
     "version": "2.1.0-alpha.4",
     "sha": "d2bc13b0a63d52e22be7307ecb39809fedf8b258",
@@ -2752,8 +2752,8 @@
       "repository": "modelcontextprotocol/registry",
       "inspected_commit": "2729b4c8183af389936b33ec12370240bd67855b",
       "license_review": "MIT/Apache-2.0 code transition; CC-BY-4.0 documentation",
-      "decision": "MISSING_IMPLEMENTATION",
-      "reason": "Publiczne wyszukiwanie nowych narzędzi/serwerów nie jest zaimplementowane; skonfigurowany klient MCP nie zastępuje katalogu ani kontroli uprawnień.",
+      "decision": "PARTIAL",
+      "reason": "Wyszukiwanie w oficjalnym rejestrze po zgodzie, kontrolowane testy HTTP; brak testu żywego rejestru, instalacji i wykonania nowego MCP.",
       "documentation": [
         {
           "url": "https://github.com/modelcontextprotocol/registry/blob/2729b4c8183af389936b33ec12370240bd67855b/README.md",
@@ -2950,7 +2950,7 @@
       "version": "0.70.1",
       "license_review": "Apache-2.0",
       "decision": "PARTIAL",
-      "reason": "Działa wyłącznie odczyt istniejącego watcha; utworzenie nowego watcha z polecenia użytkownika nie jest zaimplementowane.",
+      "reason": "Tworzenie nowego watcha w pauzie i z wyciszonymi powiadomieniami oraz niezależny odczyt; brak pełnego cyklu aktywacji i powiadomień.",
       "source_paths": [
         "electron/monitor-connectors.cjs",
         "electron/goal-service.cjs"
@@ -3369,8 +3369,8 @@
     }
   ],
   "explicit_requirement_gaps": {
-    "mcp_discovery": "MISSING_IMPLEMENTATION: configured MCP is not discovery",
-    "new_changedetection_watch": "MISSING_IMPLEMENTATION: read-only existing watch is not watch creation",
+    "mcp_discovery": "PARTIAL: official registry search after native owner consent; controlled HTTP only, no automatic verified install or real-model execution",
+    "new_changedetection_watch": "PARTIAL: owner-approved creation and independent readback of paused/muted watch; activation, STOP-linked lifecycle and notifications remain incomplete",
     "real_model_skill_discovery": "BLOCKED: controlled provider and prescanned local catalog do not prove real model discovery"
   }
 }

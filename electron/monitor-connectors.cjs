@@ -19,6 +19,16 @@ function baseUrl(value, allowLocal = false) {
   else if (url.protocol !== 'https:' || net.isIP(host) && !publicAddress(host) || !host.includes('.')) throw error('Usługa wymaga publicznego HTTPS albo jawnie dozwolonego loopback.');
   return url.href.replace(/\/+$/, '') + '/';
 }
+function watchSpec(input) {
+  // Control characters must be rejected in the owner-visible consent dialog.
+  // eslint-disable-next-line no-control-regex
+  if (!input || !bounded(input.connectorId, 100) || !bounded(input.url, 2048) || !bounded(input.title, 200) || !input.title.trim() || /[{}\x00-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/.test(input.title) || !Number.isSafeInteger(input.intervalMs) || input.intervalMs < 60000 || input.intervalMs > 30 * 86400000 || input.intervalMs % 1000) throw error('Podaj integrację, adres, nazwę i interwał od minuty do 30 dni.', 'SOURCE_FORMAT');
+  let url; try { url = new URL(input.url); } catch { throw error('Niepoprawny adres monitorowanej strony.', 'SOURCE_FORMAT'); }
+  const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  let decoded; try { decoded = decodeURIComponent(url.pathname + url.search); } catch { throw error('Niepoprawne kodowanie adresu.', 'SOURCE_FORMAT'); }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.hash || host === 'localhost' || host.endsWith('.localhost') || (!host.includes('.') && !net.isIP(host)) || (net.isIP(host) && !publicAddress(host)) || /[{}\r\n\0]/.test(decoded) || [...url.searchParams.keys()].some(key => /token|secret|password|api.?key|auth/i.test(key))) throw error('Watch wymaga publicznego adresu bez sekretów i szablonów.', 'SOURCE_FORMAT');
+  return { connectorId: input.connectorId, url: url.href, title: input.title.trim(), intervalMs: input.intervalMs };
+}
 async function request(urlString, options = {}) {
   const url = new URL(urlString), host = url.hostname.replace(/^\[|\]$/g, '');
   const addresses = await dns.lookup(host, { all: true });
@@ -128,6 +138,50 @@ function createMonitorConnectors(options) {
       throw cause;
     } finally { op.finish(); }
   }
+  async function createWatch(input, context = {}) {
+    if (context.trustedUserAction !== true) throw error('Utworzenie watcha wymaga zgody właściciela.', 'APPROVAL_REQUIRED');
+    if (!context.journal?.command || !/^[a-zA-Z0-9-]{1,100}$/.test(context.taskId || '')) throw error('Brak trwałej tożsamości zadania.', 'MISSING_CONFIGURATION');
+    const spec = watchSpec(input), op = operation(spec.connectorId, context.signal);
+    const key = nodeCrypto.createHash('sha256').update(JSON.stringify([context.taskId, spec.connectorId, spec.url])).digest('hex');
+    const fingerprint = nodeCrypto.createHash('sha256').update(JSON.stringify(spec)).digest('hex');
+    const journal = (action, extra = {}) => context.journal.command({ action, key, fingerprint, ...extra }, { trustedUserAction: true });
+    const uncertain = watchId => ({ ok: false, code: 'WATCH_EFFECT_UNCERTAIN', uncertain: true, ...(watchId ? { watchId } : {}), error: 'Nie potwierdzono skutku. Sprawdź usługę przed ponowieniem; JARVIS nie wyśle ponownie POST.' });
+    let dispatched = false, watchId;
+    try {
+      const config = await get(spec.connectorId, 'changedetection'); op.assert();
+      const host = new URL(spec.url).hostname.replace(/^\[|\]$/g, '');
+      const addresses = await (options.targetLookup || dns.lookup)(host, { all: true }); op.assert();
+      if (!addresses.length || addresses.some(address => !publicAddress(address.address))) throw error('Adres strony rozwiązuje się do nieautoryzowanej sieci.', 'SOURCE_BLOCKED');
+      const reservation = await journal('watch_reserve'); op.assert();
+      const params = { signal: op.controller.signal, allowLocal: config.allowLocal, headers: { ...(config.token ? { 'x-api-key': config.token } : {}) } };
+      if (!reservation.reserved) {
+        watchId = reservation.operation?.watchId;
+        if (!watchId || !['KNOWN_ID', 'VERIFIED'].includes(reservation.operation?.state)) return uncertain();
+      } else {
+        dispatched = true;
+        const response = await transport(`${config.baseUrl}api/v1/watch`, { ...params, method: 'POST', headers: { ...params.headers, 'content-type': 'application/json' }, body: JSON.stringify({ url: spec.url, title: spec.title, paused: true, notification_muted: true, time_between_check: { seconds: spec.intervalMs / 1000 }, time_between_check_use_default: false }) });
+        if (response.status !== 201 || !/^application\/json\b/i.test(response.headers.get('content-type') || '')) return uncertain();
+        let ack; try { ack = JSON.parse(await response.text()); } catch { return uncertain(); }
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ack?.uuid || '')) return uncertain();
+        watchId = ack.uuid;
+        await journal('watch_record', { watchId, state: 'KNOWN_ID' });
+        op.assert();
+      }
+      const response = await transport(`${config.baseUrl}api/v1/watch/${watchId}`, params); op.assert();
+      if (response.status !== 200 || !/^application\/json\b/i.test(response.headers.get('content-type') || '')) return uncertain(watchId);
+      let watch; try { watch = JSON.parse(await response.text()); } catch { return uncertain(watchId); }
+      const time = watch?.time_between_check;
+      const units = ['weeks', 'days', 'hours', 'minutes', 'seconds'];
+      const validTime = time && typeof time === 'object' && !Array.isArray(time) && units.every(unit => time[unit] == null || (Number.isSafeInteger(time[unit]) && time[unit] >= 0));
+      const seconds = validTime && units.reduce((sum, unit, i) => sum + (time[unit] || 0) * [604800, 86400, 3600, 60, 1][i], 0);
+      if (watch?.url !== spec.url || watch?.title !== spec.title || watch?.paused !== true || watch?.notification_muted !== true || watch?.time_between_check_use_default !== false || seconds !== spec.intervalMs / 1000) return uncertain(watchId);
+      op.assert(); await journal('watch_record', { watchId, state: 'VERIFIED' }); op.assert();
+      return { ok: true, watchId, source: { kind: 'changedetection', connectorId: spec.connectorId, watchId }, verified: true, paused: true, notificationsMuted: true, notice: 'Watch utworzono w pauzie i z wyciszonymi powiadomieniami usługi. Nie monitoruje jeszcze strony; uruchomienie wymaga osobnej obsługi i zgody.' };
+    } catch (cause) {
+      if (dispatched || watchId) return uncertain(watchId);
+      throw cause;
+    } finally { op.finish(); }
+  }
   async function notify(event, { signal } = {}) {
     if (signal?.aborted) return { accepted: false, retryable: false };
     let config;
@@ -148,6 +202,6 @@ function createMonitorConnectors(options) {
       return ack.event === 'message' && typeof ack.id === 'string' && ack.id.length > 0 && ack.topic === config.topic ? { accepted: true, providerId: ack.id } : {};
     } finally { clearTimeout(timeout); op.finish(); }
   }
-  return { configure, list, remove, readSource, notify, isRevoked: id => revoked.has(id) };
+  return { configure, list, remove, readSource, createWatch, notify, isRevoked: id => revoked.has(id) };
 }
-module.exports = { createMonitorConnectors, baseUrl, request };
+module.exports = { createMonitorConnectors, baseUrl, request, watchSpec };

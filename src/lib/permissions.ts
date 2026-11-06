@@ -6,7 +6,7 @@ import type { AuditEntry } from "../types";
 export type Risk = "read" | "write" | "outbound";
 
 const RISK: Record<string, Risk> = {
-  skill_search: "read", skill_manage: "write", skill_run: "write", browser_session: "write",
+  skill_search: "read", mcp_registry_search: "read", skill_manage: "write", skill_run: "write", browser_session: "write",
   // read — wykonują się automatycznie
   list_tasks: "read", list_notes: "read", list_shopping: "read", list_calendar: "read",
   list_scenes: "read", get_weather: "read", daily_briefing: "read", web_research: "read",
@@ -52,7 +52,7 @@ const RISK: Record<string, Risk> = {
   add_shopping_item: "write", add_calendar_event: "write", remember_fact: "write",
   create_scene: "write", set_timer: "write", add_tally_item: "write", add_journal_entry: "write",
   create_flashcards: "write",
-  monitor_status: "read", monitor_create: "write", monitor_control: "write",
+  monitor_status: "read", monitor_create: "write", monitor_control: "write", monitor_watch_create: "outbound",
   // outbound — zewnętrzne lub nieodwracalne (wymaga zgody)
   gmail_send: "outbound", gmail_reply: "outbound", gcal_add: "outbound", clear_tally: "outbound", run_automation: "outbound",
   send_test_email: "outbound", send_offers_all: "outbound",

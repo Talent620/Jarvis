@@ -1,7 +1,7 @@
 {
   "name": "jarvis-ai-assistant",
   "private": true,
-  "version": "2.1.0-alpha.4",
+  "version": "2.1.0-alpha.5",
   "type": "module",
   "description": "JARVIS — osobisty asystent z narzędziami, trwałymi celami i lokalnymi modelami.",
   "author": "Artur Józefczak",

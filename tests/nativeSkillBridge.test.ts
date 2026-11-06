@@ -7,11 +7,21 @@ import { nativeSkillsContext } from "../src/lib/skills";
 import { runTool, registerTool, unregisterTool, toolDefs } from "../src/lib/tools";
 import { clearOutboundScope, grantOutboundScope, hasOutboundScope, listRememberedConsents, requestConsent, revokeToolScopes, setConsentHandler } from "../src/lib/permissions";
 import { store } from "../src/lib/store";
+import { selectToolsForIntent } from "../src/lib/toolSelector";
 
 const original = { ...store.settings };
 beforeEach(() => { localStorage.clear(); store.setSettings({ onDeviceOnly: true, requireConsentAlways: false }); });
 afterEach(() => { delete (window as any).jarvisDesktop; vi.unstubAllGlobals(); clearOutboundScope(); setConsentHandler(null); unregisterTool("skill_effect_test"); store.setSettings(original); });
 describe("native skill bridge and ordinary tool gate", () => {
+  it("exposes registry search to normal tool selection without granting or running a server", async () => {
+    store.setSettings({ onDeviceOnly: false });
+    const command = vi.fn(async () => ({ ok: true, untrusted: true, installed: false, candidates: [{ name: "example/server" }] }));
+    Object.assign(window, { jarvisDesktop: { skillCommand: command } });
+    expect(selectToolsForIntent("Znajdź serwer MCP do kalendarza", toolDefs).map(t => t.name)).toContain("mcp_registry_search");
+    const result = JSON.parse(await runTool("mcp_registry_search", { query: "calendar" }, { signal: new AbortController().signal }));
+    expect(result).toMatchObject({ untrusted: true, installed: false });
+    expect(command).toHaveBeenCalledWith({ action: "search_mcp", query: "calendar" }, expect.any(String), true, expect.any(String));
+  });
   it("cannot grant policy or override task context through model arguments", async () => {
     const command = vi.fn(async () => ({ ok: true }));
     Object.assign(window, { jarvisDesktop: { skillCommand: command } });

@@ -16,9 +16,9 @@ const { createConfiguredLocalOllamaManager } = require("./local-ollama.cjs");
 const { createLocalSiteOsManager } = require("./local-siteos.cjs");
 const localOllama = createConfiguredLocalOllamaManager();
 const { createGoalService } = require("./goal-service.cjs");
-const { createSkillManager } = require("./skill-manager.cjs");
+const { createSkillManager, validateMcpQuery } = require("./skill-manager.cjs");
 const { createSkillIsolation } = require("./skill-isolation.cjs");
-const { createMonitorConnectors } = require("./monitor-connectors.cjs");
+const { createMonitorConnectors, watchSpec } = require("./monitor-connectors.cjs");
 const { createBrowserSession } = require("./browser-session.cjs");
 
 if (process.env.JARVIS_PROFILE_DIR) app.setPath("userData", path.resolve(process.env.JARVIS_PROFILE_DIR));
@@ -399,7 +399,7 @@ function registerDesktopControl() {
   let monitorStopVersion = 0;
   const monitorActions = new Set(["list", "create", "pause", "resume", "cancel", "update", "revoke", "mute", "stop_all"]);
   const trustedMonitorSender = (event) => isTrustedIpc(event) && event.sender === mainWindow?.webContents && event.senderFrame === mainWindow?.webContents.mainFrame;
-  const skillActions = new Set(["list", "search", "scan", "inspect", "stage", "test", "activate", "disable", "revoke", "remove", "rollback", "resource", "run", "update", "assert_task", "author"]);
+  const skillActions = new Set(["list", "search", "search_mcp", "watch_create", "scan", "inspect", "stage", "test", "activate", "disable", "revoke", "remove", "rollback", "resource", "run", "update", "assert_task", "author"]);
   ipcMain.handle("jarvis:skill-command", async (event, envelope) => {
     if (!trustedMonitorSender(event) || !skillActions.has(envelope?.request?.action)) return { ok: false, error: "forbidden" };
     const taskId = String(envelope.taskId || "");
@@ -411,7 +411,27 @@ function registerDesktopControl() {
     skillOperations.get(taskId).add(controller);
     try {
       const { trustedUserAction: _trusted, signal: _signal, taskId: _task, ...request } = envelope.request;
-      const result = await skills().command(request, { taskId, signal: controller.signal, allowNetwork: envelope.allowNetwork !== false });
+      let registryApproved = false;
+      if (request.action === "watch_create") {
+        if (envelope.allowNetwork === false) return { ok: false, error: "Tryb wyłącznie lokalny wyłącza monitorowanie stron internetowych.", code: "NETWORK_DISABLED" };
+        const spec = watchSpec(request), epoch = ownerConsentEpoch;
+        const connection = (await connectors().list()).find(item => item.id === spec.connectorId && item.kind === "changedetection");
+        if (controller.signal.aborted || epoch !== ownerConsentEpoch) return { ok: false, error: "Zadanie anulowano przed zatwierdzeniem." };
+        if (!connection) return { ok: false, error: "Nie znaleziono skonfigurowanej integracji changedetection.", code: "SOURCE_AUTH" };
+        const choice = await confirmMonitorScope({ type: "question", title: "Utworzenie watcha changedetection", message: "Utworzyć tę obserwację w skonfigurowanej usłudze?", detail: `Usługa: ${connection.label} — ${connection.baseUrl}\nStrona: ${spec.url}\nNazwa: ${spec.title}\nInterwał: ${spec.intervalMs / 1000} s\nWatch powstanie w pauzie, z wyciszonymi powiadomieniami usługi. Nie rozpocznie obserwacji automatycznie. Usługa sama będzie rozwiązywać adres strony.`, buttons: ["Anuluj", "Utwórz"], defaultId: 0, cancelId: 0 });
+        if (choice.response !== 1 || epoch !== ownerConsentEpoch || controller.signal.aborted || !trustedMonitorSender(event)) return { ok: false, error: "Zgoda anulowana albo zatrzymano zadanie.", code: "APPROVAL_REQUIRED" };
+        const result = await connectors().createWatch(spec, { taskId, signal: controller.signal, trustedUserAction: true, journal: monitors() });
+        if (controller.signal.aborted) return { ok: false, error: "STOP: skutek rozpoczętej operacji wymaga sprawdzenia w usłudze.", code: "WATCH_EFFECT_UNCERTAIN", uncertain: true };
+        return { ...result, ok: result?.ok !== false };
+      }
+      if (request.action === "search_mcp") {
+        if (envelope.allowNetwork === false) return { ok: false, error: "Tryb wyłącznie lokalny wyłącza katalog MCP.", code: "NETWORK_DISABLED" };
+        const query = validateMcpQuery(request.query), epoch = ownerConsentEpoch;
+        const choice = await confirmMonitorScope({ type: "question", title: "Wyszukiwanie serwera MCP", message: "Wysłać to zapytanie do publicznego katalogu MCP?", detail: `Katalog: https://registry.modelcontextprotocol.io\nZapytanie: ${query}\nKatalog jest zewnętrzny. Wyniki są niezaufane i nie zostaną automatycznie uruchomione ani podłączone.`, buttons: ["Anuluj", "Wyszukaj"], defaultId: 0, cancelId: 0 });
+        if (choice.response !== 1 || epoch !== ownerConsentEpoch || controller.signal.aborted || !trustedMonitorSender(event)) return { ok: false, error: "Zgoda anulowana albo zatrzymano zadanie.", code: "APPROVAL_REQUIRED" };
+        request.query = query; registryApproved = true;
+      }
+      const result = await skills().command(request, { taskId, signal: controller.signal, allowNetwork: envelope.allowNetwork !== false, ...(registryApproved ? { registryApproved: true } : {}) });
       if (controller.signal.aborted) return { ok: false, error: "STOP: nie potwierdzono wyniku operacji." };
       return { ...result, ok: result?.ok !== false };
     } catch (error) { return { ok: false, error: error.message, code: error.code }; }

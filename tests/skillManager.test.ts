@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { mkdtemp, mkdir, writeFile, readFile, rm, symlink, link, rename } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 const require = createRequire(import.meta.url);
@@ -23,6 +24,54 @@ async function active(f: any) { const r = await staged(f); await f.manager.comma
 afterEach(async () => { for (const dir of dirs.splice(0)) await rm(dir, { recursive: true, force: true }); });
 
 describe('native Agent Skills lifecycle', () => {
+  it('discovers untrusted MCP candidates through the fixed registry after owner consent, without executing them', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'jarvis-mcp-registry-')); dirs.push(root);
+    const seen: string[] = [];
+    const server = createServer((req, res) => {
+      seen.push(req.url || ''); res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ servers: [{ server: { name: 'io.example/files', version: '1.0', description: 'File tools', repository: { url: 'https://github.com/example/files' }, packages: [{ registryType: 'npm', identifier: 'example-server', version: '1', transport: { type: 'stdio' }, environmentVariables: [{ name: 'API_KEY', isRequired: true, value: 'must-not-leak' }] }] } }], metadata: { nextCursor: 'more' } }));
+    });
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const endpoint = `http://127.0.0.1:${(server.address() as any).port}`;
+    const transport = vi.fn((url: string, options: any) => {
+      expect(new URL(url).origin).toBe('https://registry.modelcontextprotocol.io');
+      return require('../electron/monitor-connectors.cjs').request(endpoint + new URL(url).pathname + new URL(url).search, { ...options, allowLocal: true });
+    });
+    const manager = createSkillManager({ directory: root, sources: [], registryRequest: transport });
+    try {
+      await expect(manager.command({ action: 'search_mcp', query: 'files' })).rejects.toMatchObject({ code: 'APPROVAL_REQUIRED' });
+      await expect(manager.command({ action: 'search_mcp', query: 'files' }, { registryApproved: true, allowNetwork: false })).rejects.toMatchObject({ code: 'NETWORK_DISABLED' });
+      expect(transport).not.toHaveBeenCalled();
+      const result = await manager.command({ action: 'search_mcp', query: 'files' }, { registryApproved: true });
+      expect(result).toMatchObject({ source: 'https://registry.modelcontextprotocol.io', untrusted: true, installed: false, hasMore: true, candidates: [{ name: 'io.example/files', version: '1.0' }] });
+      expect(seen).toEqual(['/v0.1/servers?search=files&version=latest&limit=20']);
+      expect(JSON.stringify(result)).not.toContain('must-not-leak');
+      expect((await manager.command({ action: 'list' })).skills).toEqual([]);
+    } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
+  });
+  it('cancels an in-flight registry request and discards its late result', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'jarvis-mcp-cancel-')); dirs.push(root);
+    let started!: () => void;
+    const entered = new Promise<void>(resolve => { started = resolve; });
+    const server = createServer((_req, _res) => { started(); });
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const endpoint = `http://127.0.0.1:${(server.address() as any).port}`;
+    const manager = createSkillManager({ directory: root, sources: [], registryRequest: (url: string, options: any) => require('../electron/monitor-connectors.cjs').request(endpoint + new URL(url).pathname + new URL(url).search, { ...options, allowLocal: true }) });
+    try {
+      const controller = new AbortController();
+      const pending = manager.command({ action: 'search_mcp', query: 'calendar' }, { registryApproved: true, signal: controller.signal });
+      await entered; controller.abort(); await expect(pending).rejects.toThrow();
+      expect((await manager.command({ action: 'list' })).skills).toEqual([]);
+    } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
+  });
+  it('rejects secret-shaped, hidden-control and too short registry queries', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'jarvis-mcp-query-')); dirs.push(root);
+    const transport = vi.fn(); const manager = createSkillManager({ directory: root, sources: [], registryRequest: transport });
+    for (const query of ['ab', 'https://example.org', 'token=hidden', 'foo\u202ebar', 'someone@example.org']) {
+      await expect(manager.command({ action: 'search_mcp', query }, { registryApproved: true })).rejects.toMatchObject({ code: 'INVALID_QUERY' });
+    }
+    expect(transport).not.toHaveBeenCalled();
+  });
   it('stages immutable content, verifies instruction-only integrity and pins before use', async () => {
     const f = await fixture(document(), { 'assets/data.bin': Buffer.from([0, 255, 12, 128]) });
     const r = await staged(f); expect(r.state).toBe('QUARANTINED');

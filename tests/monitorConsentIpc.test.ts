@@ -12,6 +12,7 @@ function harness() {
   const keyboard = { hotkey: vi.fn(async () => "ok"), type: vi.fn(async () => "ok"), click: vi.fn(async () => "ok"), focusWindow: vi.fn(async () => ({ ok: true })) };
   const command = vi.fn(async () => ({}));
   const skillCommand = vi.fn(async () => ({}));
+  const watchCreate = vi.fn(async () => ({ ok: true, verified: true, paused: true, watchId: 'b8266333-03c2-4231-9c03-9870f2303c8b' }));
   let resolve!: (result: { response: number }) => void;
   let reject!: (error: Error) => void;
   const showMessageBox = vi.fn(() => new Promise((yes, no) => { resolve = yes; reject = no; }));
@@ -27,9 +28,9 @@ function harness() {
     "./workspace-tools.cjs": { createWorkspaceTools: () => ({ root: "/tmp/fixture", cancelAll: vi.fn() }) },
     "./mcp-stdio.cjs": { createStdioMcpManager: () => ({ abortAll: vi.fn() }) },
     "./goal-service.cjs": { createGoalService: () => ({ command }) },
-    "./monitor-connectors.cjs": { createMonitorConnectors: () => ({ list: async () => [] }) },
+    "./monitor-connectors.cjs": { createMonitorConnectors: () => ({ list: async () => [{ id: 'fixture-connector', kind: 'changedetection', label: 'QA', baseUrl: 'http://127.0.0.1:5000/' }], createWatch: watchCreate }), watchSpec: require('../electron/monitor-connectors.cjs').watchSpec },
     "./skill-isolation.cjs": { createSkillIsolation: () => ({ cancelAll: vi.fn() }) },
-    "./skill-manager.cjs": { createSkillManager: () => ({ command: skillCommand, stopAll: vi.fn() }) },
+    "./skill-manager.cjs": { createSkillManager: () => ({ command: skillCommand, stopAll: vi.fn() }), validateMcpQuery: require('../electron/skill-manager.cjs').validateMcpQuery },
   };
   const filename = fileURLToPath(new URL("../electron/main.cjs", import.meta.url));
   runInNewContext(readFileSync(filename, "utf8") + "\nmainWindow = testWindow; registerDesktopControl();", {
@@ -39,10 +40,38 @@ function harness() {
     testWindow: window,
   });
   const event = { sender: window.webContents, senderFrame: frame };
-  return { invoke: (name: string, payload?: unknown) => handlers.get(`jarvis:${name}`)!(event, payload), keyboard, command, skillCommand, showMessageBox, accept: () => resolve({ response: 1 }), fail: () => reject(new Error("dialog failed")) };
+  return { invoke: (name: string, payload?: unknown) => handlers.get(`jarvis:${name}`)!(event, payload), keyboard, command, skillCommand, watchCreate, showMessageBox, accept: () => resolve({ response: 1 }), fail: () => reject(new Error("dialog failed")) };
 }
 
 describe("monitor source consent cannot be accepted by JARVIS desktop input tools", () => {
+  it("requires exact native approval before creating a paused watch and fences STOP during the dialog", async () => {
+    const h = harness();
+    const envelope = { request: { action: 'watch_create', connectorId: 'fixture-connector', url: 'https://example.org/offers', title: 'Offers', intervalMs: 60000, trustedUserAction: true }, taskId: 'watch-task', executionId: 'attempt-one', allowNetwork: true };
+    const pending = h.invoke('skill-command', envelope);
+    await vi.waitFor(() => expect(h.showMessageBox).toHaveBeenCalled());
+    expect(h.showMessageBox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ detail: expect.stringContaining('https://example.org/offers'), defaultId: 0 }));
+    expect(await h.invoke('hotkey', { combo: 'enter' })).toBe('err:owner-confirmation-pending');
+    await h.invoke('skill-cancel', { taskId: 'watch-task', executionId: 'attempt-one' });
+    h.accept(); expect(await pending).toMatchObject({ ok: false }); expect(h.watchCreate).not.toHaveBeenCalled();
+    const accepted = h.invoke('skill-command', { ...envelope, executionId: 'attempt-two' });
+    await vi.waitFor(() => expect(h.showMessageBox).toHaveBeenCalledTimes(2)); h.accept();
+    expect(await accepted).toMatchObject({ ok: true, verified: true, paused: true });
+    expect(h.watchCreate).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://example.org/offers', intervalMs: 60000 }), expect.objectContaining({ trustedUserAction: true, taskId: 'watch-task' }));
+  });
+  it("requires native approval for an exact MCP registry query and rejects late approval after STOP", async () => {
+    const h = harness();
+    const envelope = { request: { action: 'search_mcp', query: 'filesystem', registryApproved: true }, taskId: 'registry-task', executionId: 'attempt-one', allowNetwork: true };
+    const offline = await h.invoke('skill-command', { ...envelope, allowNetwork: false });
+    expect(offline).toMatchObject({ ok: false }); expect(h.showMessageBox).not.toHaveBeenCalled();
+    const pending = h.invoke('skill-command', envelope);
+    expect(h.showMessageBox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ detail: expect.stringContaining('filesystem'), defaultId: 0 }));
+    expect(await h.invoke('hotkey', { combo: 'enter' })).toBe('err:owner-confirmation-pending');
+    await h.invoke('skill-cancel', { taskId: 'registry-task', executionId: 'attempt-one' });
+    h.accept(); expect(await pending).toMatchObject({ ok: false }); expect(h.skillCommand).not.toHaveBeenCalled();
+    const accepted = h.invoke('skill-command', { ...envelope, executionId: 'attempt-two' }); h.accept();
+    expect(await accepted).toMatchObject({ ok: true });
+    expect(h.skillCommand).toHaveBeenCalledWith(expect.objectContaining({ action: 'search_mcp', query: 'filesystem' }), expect.objectContaining({ registryApproved: true }));
+  });
   it("blocks click/type/hotkey/focus while source dialog is pending and STOP rejects late acceptance", async () => {
     const h = harness();
     const pending = h.invoke("monitor-grant", { source: { kind: "json", url: "https://example.org/feed" } });
