@@ -256,11 +256,15 @@ async function main() {
 
   await new Promise((r) => bridge.listen(BRIDGE_PORT, "127.0.0.1", r));
 
-  const vite = spawn("npx", ["vite", "--port", String(VITE_PORT), "--host", "127.0.0.1"], {
-    cwd: REPO,
-    env: { ...xEnv, JARVIS_LICENSE_REQUIRED: "false" },
-    stdio: "ignore",
-  });
+  const vite = spawn(
+    process.execPath,
+    [path.join(REPO, "node_modules/vite/bin/vite.js"), "--port", String(VITE_PORT), "--host", "127.0.0.1"],
+    {
+      cwd: REPO,
+      env: { ...xEnv, JARVIS_LICENSE_REQUIRED: "false" },
+      stdio: "ignore",
+    },
+  );
 
   const chrome = spawn(
     chromeBin,

@@ -842,11 +842,12 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
     // Zakończenie lub przekazanie człowiekowi (z uczciwą weryfikacją ActionOutcome przez verifyResult)
     if (plan.action === "done") {
       const doneMsg = plan.summary || "Zadanie wykonane na pulpicie.";
+      const realFrameFrozen = shot.data.length > 200 && unchangedFrameStreak >= 3;
       const verdict = verifySteps.length
         ? verifyResult({
             goal: cleanGoal,
             steps: verifySteps,
-            contradictions: unchangedFrameStreak >= 2 ? ["ekran nie zmienił się po ostatnich akcjach"] : [],
+            contradictions: realFrameFrozen ? ["ekran nie zmienił się po 3 kolejnych krokach"] : [],
           })
         : { complete: true, safeFinalSummary: "Zadanie zakończone bez wymaganych kroków wykonawczych." };
       const allConfirmed = verdict.complete;
