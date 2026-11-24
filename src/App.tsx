@@ -100,6 +100,8 @@ import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import { isPrivateModeCommand, matchUnfilteredCommand, parseReadAloud } from "./lib/modeCommands";
 import { PERSONALITY_MODES, parseVoicePersonalityCommand, type PersonalityMode } from "./lib/soulModes";
 import { parseNaradaCommand, runExpertCouncil } from "./lib/expertCouncil";
+import { parseLiveVisionCommand, runLiveVision } from "./lib/liveVision";
+import { missionQueue, parseBackgroundMissionCommand, type QueuedMission } from "./lib/missionQueue";
 import Guardian from "./components/Guardian";
 import Mind from "./components/Mind";
 const GoalRunner = lazy(() => import("./components/GoalRunner"));
@@ -223,6 +225,8 @@ export default function App() {
   const [pendingConsent, setPendingConsent] = useState<PendingConsent | null>(null);
   const [step, setStep] = useState<string | null>(null);
   const [councilStep, setCouncilStep] = useState<string | null>(null);
+  const [bgMissions, setBgMissions] = useState<QueuedMission[]>(() => missionQueue.list());
+  useEffect(() => missionQueue.subscribe(setBgMissions), []);
   const showGuardian = route.screen === "guardian"; const setShowGuardian = screenSetter("guardian");
   const showMind = route.screen === "mind"; const setShowMind = screenSetter("mind");
   const showGoal = route.screen === "goal"; const setShowGoal = screenSetter("goal");
@@ -523,6 +527,34 @@ export default function App() {
     if (img) setPendingImage(img);
   };
 
+  // Sprint 2 / Live Vision („Pokaż Jarvisowi”): 1 klik lub „popatrz na to” → tylna kamera + krótka instrukcja głosowa.
+  const handleLiveVision = async (question?: string) => {
+    stopSpeaking();
+    setBusy(true);
+    setStep("👁 Otwieram tylną kamerę…");
+    try {
+      const res = await runLiveVision(question);
+      if (!res) {
+        toast("Anulowano podgląd z kamery.");
+        return;
+      }
+      const userId = uid();
+      const replyId = uid();
+      setLiveId(replyId);
+      setMessages((m) => [
+        ...m,
+        { id: userId, role: "user", text: `👁 ${res.question}`, image: res.image, createdAt: Date.now() },
+        { id: replyId, role: "assistant", text: res.text, tools: ["live_vision"], via: res.via, createdAt: Date.now() },
+      ]);
+      if (store.settings.speak) void speak(res.spokenText, store.settings).catch(() => {});
+    } catch (e) {
+      toast(`⚠ Live Vision: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setStep(null);
+      setBusy(false);
+    }
+  };
+
   // Motyw HUD.
   useEffect(() => {
     const b = document.body;
@@ -640,6 +672,46 @@ export default function App() {
         setCouncilStep(null);
         setBusy(false);
       }
+      return;
+    }
+
+    // Komenda głosowa „popatrz na to [pytanie]” → Live Vision (tylna kamera + krótka instrukcja głosowa).
+    const visionCmd = parseLiveVisionCommand(text);
+    if (visionCmd.matched) {
+      await handleLiveVision(visionCmd.question);
+      return;
+    }
+
+    // Komenda „w tle: <zadanie>” / „narada w tle: <temat>” → Kolejka Misji w Tle (natychmiastowy Refleks + karta akcji po ukończeniu).
+    const bgCmd = parseBackgroundMissionCommand(text);
+    if (bgCmd) {
+      const queued = missionQueue.enqueue({
+        kind: bgCmd.kind,
+        prompt: bgCmd.prompt,
+        runner: async () => {
+          if (bgCmd.kind === "narada") {
+            const res = await runExpertCouncil(bgCmd.prompt);
+            return { text: res.verdict, spokenSummary: res.spokenVerdict, council: res.council };
+          }
+          const res = await askJarvis([{ role: "user", content: bgCmd.prompt }]);
+          return { text: res.text };
+        },
+        onDone: (finished) => {
+          toast(
+            finished.status === "done"
+              ? `✅ Gotowe w tle: ${finished.title}`
+              : `⚠ Misja w tle przerwana: ${finished.title}`,
+          );
+        },
+      });
+      const id = uid();
+      setLiveId(id);
+      setMessages((m) => [
+        ...m,
+        { id: uid(), role: "user", text, createdAt: Date.now() },
+        { id, role: "assistant", text: `⚡ ${queued.reflexAck}`, tools: ["mission_queue"], createdAt: Date.now() },
+      ]);
+      if (store.settings.speak) void speak(queued.reflexAck, store.settings).catch(() => {});
       return;
     }
 
@@ -1502,6 +1574,57 @@ export default function App() {
           <button className="chip" onClick={() => setDecision(null)} title="Pomiń">✕</button>
         </div>
       )}
+      {bgMissions.slice(0, 3).map((m) => (
+        <div
+          key={m.id}
+          className="journal-card"
+          style={{ margin: "0 8px 6px", padding: "8px 10px", display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}
+        >
+          <span style={{ flex: 1, minWidth: 0 }}>
+            {m.status === "running" || m.status === "queued"
+              ? `⏳ Misja w tle: ${m.title}…`
+              : m.status === "done"
+                ? `✅ Gotowe w tle: ${m.title}`
+                : `⚠ Błąd misji w tle: ${m.title} (${m.error || "nieznany błąd"})`}
+          </span>
+          {m.status === "done" && m.resultText && (
+            <>
+              <button
+                type="button"
+                className="chip on"
+                onClick={() => {
+                  const replyId = uid();
+                  setLiveId(replyId);
+                  setMessages((prev) => [
+                    ...prev,
+                    {
+                      id: replyId,
+                      role: "assistant",
+                      text: m.resultText!,
+                      council: m.council,
+                      tools: ["mission_queue"],
+                      createdAt: Date.now(),
+                    },
+                  ]);
+                  if (store.settings.speak && m.spokenSummary) void speak(m.spokenSummary, store.settings).catch(() => {});
+                  missionQueue.dismiss(m.id);
+                }}
+              >
+                Otwórz
+              </button>
+              <button
+                type="button"
+                className="chip"
+                onClick={() => { if (m.spokenSummary) void speak(m.spokenSummary, { ...store.settings, speak: true }).catch(() => {}); }}
+                title="Odsłuchaj wynik głosem"
+              >
+                🔊
+              </button>
+            </>
+          )}
+          <button type="button" className="chip" onClick={() => missionQueue.dismiss(m.id)} title="Zamknij">✕</button>
+        </div>
+      ))}
       <div
         className="soul-bar"
         style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "0 10px 6px", alignItems: "center" }}
@@ -1548,6 +1671,15 @@ export default function App() {
           title="Rada Ekspertów: Inżynier-Praktyk + Strateg-Finansista + Sceptyczny Krytyk równolegle"
         >
           🏛 Narada
+        </button>
+        <button
+          type="button"
+          className="chip"
+          disabled={busy}
+          onClick={() => { void handleLiveVision(); }}
+          title="Oczy w terenie (Pokaż Jarvisowi): szybka klatka z tylnej kamery + krótka instrukcja głosowa"
+        >
+          👁 Pokaż
         </button>
       </div>
       <Composer

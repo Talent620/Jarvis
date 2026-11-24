@@ -1955,6 +1955,19 @@ const tools: Tool[] = [
       ].join("\n");
     },
   },
+  {
+    def: {
+      name: "live_vision",
+      description: "Oczy w terenie („Pokaż Jarvisowi” / „popatrz na to”): robi skompresowane zdjęcie tylną kamerą i zwraca krótką instrukcję głosową (2–3 zdania) bez konieczności patrzenia w ekran.",
+      input_schema: obj({ question: str("Pytanie do obrazu z tylnej kamery (opcjonalnie)") }, []),
+    },
+    run: async ({ question }) => {
+      const { runLiveVision } = await import("./liveVision");
+      const res = await runLiveVision(question ? String(question) : undefined);
+      if (!res) return "Anulowano zrobienie zdjęcia z tylnej kamery.";
+      return res.spokenText;
+    },
+  },
 ];
 
 export const toolDefs: ToolDef[] = tools.map((t) => t.def);
