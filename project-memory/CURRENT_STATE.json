@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "generatedBy": "scripts/sync-project-state.mjs",
-  "generatedAt": "2026-11-24T19:58:10.567Z",
+  "generatedAt": "2026-11-24T20:28:42.855Z",
   "notice": "PLIK GENEROWANY — nie edytuj ręcznie. Odśwież: npm run memory:sync",
   "git": {
-    "commit": "962d0f0462a78dca37eed0aac9462fc35fe063ee",
-    "shortCommit": "962d0f0",
-    "branch": "feat/apex-polish",
+    "commit": "67895c23ff55dd53000eda4a1e284fed1b9f8be7",
+    "shortCommit": "67895c2",
+    "branch": "feat/omni-pilot",
     "dirty": true,
     "changes": [
       "M project-memory/CURRENT_STATE.json",
@@ -16,9 +16,9 @@
       " M project-memory/reports/lint.json",
       " M project-memory/reports/secret-scan.json",
       " M project-memory/reports/test.json",
-      "?? project-memory/events/20261124T195810291Z-antigravity-apex-polish.json"
+      "?? project-memory/events/20261124T202842588Z-antigravity-omni-pilot.json"
     ],
-    "worktreeFingerprint": "671169b0c172e0ed9432871064f45c6bb32039a747ac6ef1f41de7b2b344439c"
+    "worktreeFingerprint": "c1545f8d1fc519150027cc51b14f4e66d8d7417ecdd5dec267ec5fab9f8ec8e6"
   },
   "repository": {
     "status": "OK",
@@ -40,15 +40,15 @@
   "modules": [
     {
       "dir": "tests",
-      "files": 362
+      "files": 365
     },
     {
       "dir": "src/lib",
-      "files": 311
+      "files": 314
     },
     {
       "dir": "src/components",
-      "files": 78
+      "files": 79
     },
     {
       "dir": "android",
@@ -64,7 +64,7 @@
     },
     {
       "dir": "project-memory",
-      "files": 18
+      "files": 20
     },
     {
       "dir": "ios",
@@ -76,7 +76,7 @@
     },
     {
       "dir": "electron",
-      "files": 13
+      "files": 14
     },
     {
       "dir": "proxy",
@@ -160,6 +160,7 @@
       "Live Vision (Oczy w terenie — tylna kamera + instrukcja głosowa)",
       "Kolejka Misji w Tle (mission_queue z natychmiastowym potwierdzeniem Refleks)",
       "Android Phone Use Agent + RiskGuard (Check-then-Act, zakaz pól haseł)",
+      "OMNI-PILOT Desktop Computer Use (Refleks Głosowy <30ms, Visual Grounding 0..1000, płynny kursor, RiskGuard + Ctrl+Alt+X)",
       "Bi-Temporal Core Memory + MCP Bridge"
     ],
     "tools": [
@@ -196,13 +197,21 @@
       "deep_solve",
       "desktop_active_window",
       "desktop_click",
+      "desktop_cursor_move",
       "desktop_hotkey",
       "desktop_launch_app",
       "desktop_media",
+      "desktop_mouse_action",
+      "desktop_omni_task",
       "desktop_open",
       "desktop_power",
+      "desktop_scroll",
       "desktop_type",
+      "desktop_visual_act",
+      "desktop_visual_locate",
       "desktop_volume",
+      "desktop_window_focus",
+      "desktop_windows_list",
       "expert_council",
       "finance_add_project",
       "finance_set_status",
@@ -402,6 +411,41 @@
   ],
   "recentCommits": [
     {
+      "hash": "67895c2",
+      "date": "2026-11-24T20:22:42Z",
+      "subject": "fix(omni-pilot): tighten TypeScript union narrowing in desktop.ts pilot catch fallbacks"
+    },
+    {
+      "hash": "90d170d",
+      "date": "2026-11-24T20:17:26Z",
+      "subject": "feat(omni-pilot): wire hands-free voice reflex & visual grounding into HeadsetMode (Ctrl+Shift+J) and BossMode voiceLoop"
+    },
+    {
+      "hash": "a15daf1",
+      "date": "2026-11-24T20:14:53Z",
+      "subject": "fix(omni-pilot): scale HiDPI coordinates by display scaleFactor & fix Windows PowerShell mouse/scroll/SendKeys"
+    },
+    {
+      "hash": "7976912",
+      "date": "2026-11-24T20:12:30Z",
+      "subject": "feat(omni-pilot): live Visual Grounding HUD reticle, 8 agent tools, voice-to-desktop App wiring & ADR-0004"
+    },
+    {
+      "hash": "c1fc5e6",
+      "date": "2026-11-24T20:08:25Z",
+      "subject": "feat(omni-pilot): Polish voice reflex, [0..1000] visual grounding, RiskGuard & autonomous Computer Use loop"
+    },
+    {
+      "hash": "aba643b",
+      "date": "2026-11-24T20:05:32Z",
+      "subject": "feat(omni-pilot): smooth OS desktop actuator, Wayland ydotool fallback, UTF-8 typing & Ctrl+Alt+X kill-switch"
+    },
+    {
+      "hash": "a44ba2e",
+      "date": "2026-11-24T19:58:10Z",
+      "subject": "chore(memory): verified apex-polish snapshot, reports & event (ADR-0003 proposed)"
+    },
+    {
       "hash": "962d0f0",
       "date": "2026-11-24T19:52:17Z",
       "subject": "fix(memory): parse markdown-bold ADR Status lines, update W1 diagnostics status & record ADR-0003"
@@ -415,50 +459,15 @@
       "hash": "a9e3890",
       "date": "2026-11-24T19:47:05Z",
       "subject": "feat(android): NativeTTS utterance completion & USAGE_ASSISTANT, WakeWord error backoff, hardware Back LIFO + haptics"
-    },
-    {
-      "hash": "bd708d2",
-      "date": "2026-11-24T19:44:41Z",
-      "subject": "feat(linux): native power/volume/media, real GPU/VRAM & W1 diagnostics, OS keyring safeStorage, system tray & multi-monitor clamp"
-    },
-    {
-      "hash": "da4ee14",
-      "date": "2026-11-24T16:46:57Z",
-      "subject": "chore(memory): main verified snapshot with apk=PASS (v5-jarvis-autocore)"
-    },
-    {
-      "hash": "2afee4f",
-      "date": "2026-11-24T16:34:31Z",
-      "subject": "Merge feat/autocore into main (JARVIS AUTOCORE + Guardian 5a)"
-    },
-    {
-      "hash": "713039d",
-      "date": "2026-11-24T16:34:29Z",
-      "subject": "chore(memory): verified autocore-finish snapshot & event (ADR-0002 accepted)"
-    },
-    {
-      "hash": "ad66860",
-      "date": "2026-11-24T16:29:10Z",
-      "subject": "feat(autocore): route voice TTS, liveVoice, images & memory embeddings via AutoCore + accept ADR-0002"
-    },
-    {
-      "hash": "ed8c129",
-      "date": "2026-11-24T15:46:22Z",
-      "subject": "chore(memory): autocore verified state snapshot, reports & event (ADR-0002 proposed)"
-    },
-    {
-      "hash": "87f78dd",
-      "date": "2026-11-24T15:41:04Z",
-      "subject": "feat(guardian): remote git-ref agent-lock, local guardian-daemon + systemd, APK verifier, AGENTS.md roles & ADR-0002"
     }
   ],
   "checks": {
     "secret-scan": {
       "command": "node scripts/secret-scan.mjs --all",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T19:52:25.196Z",
-      "commit": "962d0f0462a78dca37eed0aac9462fc35fe063ee",
-      "logPath": "project-memory/reports/logs/secret-scan-20261124T195224Z.log",
+      "finishedAt": "2026-11-24T20:22:48.513Z",
+      "commit": "67895c23ff55dd53000eda4a1e284fed1b9f8be7",
+      "logPath": "project-memory/reports/logs/secret-scan-20261124T202248Z.log",
       "summary": {
         "result": "Skan sekretów: czysto."
       },
@@ -469,9 +478,9 @@
     "lint": {
       "command": "npm run lint",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T19:52:45.312Z",
-      "commit": "962d0f0462a78dca37eed0aac9462fc35fe063ee",
-      "logPath": "project-memory/reports/logs/lint-20261124T195225Z.log",
+      "finishedAt": "2026-11-24T20:23:09.275Z",
+      "commit": "67895c23ff55dd53000eda4a1e284fed1b9f8be7",
+      "logPath": "project-memory/reports/logs/lint-20261124T202248Z.log",
       "summary": {
         "problems": null
       },
@@ -482,12 +491,12 @@
     "test": {
       "command": "npm test",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T19:57:11.282Z",
-      "commit": "962d0f0462a78dca37eed0aac9462fc35fe063ee",
-      "logPath": "project-memory/reports/logs/test-20261124T195245Z.log",
+      "finishedAt": "2026-11-24T20:27:28.435Z",
+      "commit": "67895c23ff55dd53000eda4a1e284fed1b9f8be7",
+      "logPath": "project-memory/reports/logs/test-20261124T202309Z.log",
       "summary": {
-        "testFiles": "Test Files  362 passed (362)",
-        "tests": "Tests  3041 passed (3041)"
+        "testFiles": "Test Files  365 passed (365)",
+        "tests": "Tests  3076 passed (3076)"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -496,11 +505,11 @@
     "build": {
       "command": "npm run build",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T19:57:49.631Z",
-      "commit": "962d0f0462a78dca37eed0aac9462fc35fe063ee",
-      "logPath": "project-memory/reports/logs/build-20261124T195711Z.log",
+      "finishedAt": "2026-11-24T20:28:08.637Z",
+      "commit": "67895c23ff55dd53000eda4a1e284fed1b9f8be7",
+      "logPath": "project-memory/reports/logs/build-20261124T202728Z.log",
       "summary": {
-        "built": "built in 13.82s"
+        "built": "built in 13.87s"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -697,10 +706,18 @@
     ]
   },
   "events": {
-    "total": 4,
-    "valid": 4,
+    "total": 5,
+    "valid": 5,
     "invalid": [],
     "recent": [
+      {
+        "file": "project-memory/events/20261124T202842588Z-antigravity-omni-pilot.json",
+        "timestamp": "2026-11-24T20:28:42.588Z",
+        "agent": "antigravity",
+        "taskId": "omni-pilot",
+        "endCommit": "UNCOMMITTED",
+        "nextStep": "Recenzja PR feat/omni-pilot (ADR-0004) i test na żywym pulpicie Linux X11/Wayland lub Windows; po akceptacji merge do main, build Linux (.AppImage/.deb) i APK oraz kolejny etap (AT-SPI2/UIA + lokalny Silero VAD/Whisper)."
+      },
       {
         "file": "project-memory/events/20261124T195810291Z-antigravity-apex-polish.json",
         "timestamp": "2026-11-24T19:58:10.291Z",
@@ -736,8 +753,8 @@
     ]
   },
   "nextRecommendedStep": {
-    "from": "project-memory/events/20261124T195810291Z-antigravity-apex-polish.json",
-    "text": "Recenzja i merge PR feat/apex-polish -> main, a nastepnie build Linux (.AppImage/.deb) i nowego APK v6-jarvis-apex"
+    "from": "project-memory/events/20261124T202842588Z-antigravity-omni-pilot.json",
+    "text": "Recenzja PR feat/omni-pilot (ADR-0004) i test na żywym pulpicie Linux X11/Wayland lub Windows; po akceptacji merge do main, build Linux (.AppImage/.deb) i APK oraz kolejny etap (AT-SPI2/UIA + lokalny Silero VAD/Whisper)."
   },
   "decisions": [
     {
@@ -754,8 +771,13 @@
       "file": "project-memory/decisions/ADR-0003-apex-linux-android-ux.md",
       "title": "ADR-0003: JARVIS Apex — parytet Linux Desktop, natywny Android UX i bezpieczny Markdown",
       "status": "proposed"
+    },
+    {
+      "file": "project-memory/decisions/ADR-0004-omni-pilot.md",
+      "title": "ADR-0004: JARVIS OMNI-PILOT — głosowe sterowanie pulpitem, Visual Grounding [0..1000] i bezpieczna pętla Computer Use",
+      "status": "proposed"
     }
   ],
   "failedAttempts": 5,
-  "integrity": "25dd6a97e00e3889db79855f63af2b60831213fe3b3b3bcb3c5aae35c027eaf5"
+  "integrity": "9002a4f2b760267fb633ae62f993ec145fb82bda33b232bc46d16e3c63e66801"
 }

@@ -4,20 +4,20 @@
   "command": "npm test",
   "available": true,
   "unavailableReason": null,
-  "startedAt": "2026-11-24T19:52:45.359Z",
-  "finishedAt": "2026-11-24T19:57:11.282Z",
-  "durationMs": 265923,
-  "commit": "962d0f0462a78dca37eed0aac9462fc35fe063ee",
-  "branch": "feat/apex-polish",
+  "startedAt": "2026-11-24T20:23:09.322Z",
+  "finishedAt": "2026-11-24T20:27:28.435Z",
+  "durationMs": 259113,
+  "commit": "67895c23ff55dd53000eda4a1e284fed1b9f8be7",
+  "branch": "feat/omni-pilot",
   "worktreeDirty": true,
-  "worktreeFingerprint": "671169b0c172e0ed9432871064f45c6bb32039a747ac6ef1f41de7b2b344439c",
+  "worktreeFingerprint": "c1545f8d1fc519150027cc51b14f4e66d8d7417ecdd5dec267ec5fab9f8ec8e6",
   "exitCode": 0,
   "signal": null,
   "timedOut": false,
   "spawnError": null,
   "summary": {
-    "testFiles": "Test Files  362 passed (362)",
-    "tests": "Tests  3041 passed (3041)"
+    "testFiles": "Test Files  365 passed (365)",
+    "tests": "Tests  3076 passed (3076)"
   },
   "outputTail": [
     "    at module.exports (/home/antigravity/Talent620/Jarvis/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)",
@@ -61,5 +61,5 @@
     "stderr | tests/chatsDegrade.test.ts > chats — brak cichej degradacji > gdy wszystkie próby padają → ok=false i warning o pełnej pamięci",
     "[chats] Nie udało się zapisać historii czatu — pamięć (localStorage) pełna."
   ],
-  "logPath": "project-memory/reports/logs/test-20261124T195245Z.log"
+  "logPath": "project-memory/reports/logs/test-20261124T202309Z.log"
 }
