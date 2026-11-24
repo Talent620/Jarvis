@@ -1,7 +1,7 @@
 import { store, uid } from "./store";
 import { fetchTimeout } from "./http";
 import { openService, call, sms, navigate, smartHome, openUrl, openCompose } from "./deviceControl";
-import { saType, saTap, saGlobal, saOpenApp, saOpenSettings } from "./systemActions";
+import { saGetUiTree, saTapById, saType, saScroll, saBack, saTap, saGlobal, saOpenApp, saOpenSettings } from "./systemActions";
 import { answerProjectQuestion, type KnowledgeIndex } from "./projectKnowledge";
 import { requestScreen, resolveScreen, SCREENS } from "./navIntent";
 import { financeSummaryText, FINANCE_STATUSES, applyPayment, financeKpis } from "./finance";
@@ -1569,14 +1569,82 @@ const tools: Tool[] = [
       return r ? r.message : `✅ Status „${lead.company}" → ${st}.`;
     },
   },
-  // === Pełne sterowanie telefonem (Android, przez usługę Dostępności) — moc Szefa ===
+  // === Pełne sterowanie telefonem (Android "Phone Use" Agent + Check-then-Act + RiskGuard) ===
+  {
+    def: {
+      name: "android_ui_tree",
+      description: "Odczytaj skompresowane, ponumerowane drzewo aktywnego ekranu Androida (`[id] Role \"Label\" (x,y)`) i sygnaturę ekranu do pętli Check-then-Act. Pola haseł są twardo blokowane.",
+      input_schema: obj({}),
+    },
+    run: () => saGetUiTree(),
+  },
+  {
+    def: {
+      name: "android_tap_id",
+      description: "Kliknij element ekranu Androida po numerze [id] z `android_ui_tree` (Check-then-Act + RiskGuard). Podaj expectedSignature i expectedLabel dla weryfikacji, że ekran się nie zmienił.",
+      input_schema: obj(
+        {
+          id: num("Numer elementu [id] z android_ui_tree"),
+          expectedSignature: str("Sygnatura ekranu z android_ui_tree (opcjonalnie)"),
+          expectedLabel: str("Oczekiwana etykieta elementu (opcjonalnie)"),
+        },
+        ["id"],
+      ),
+    },
+    run: ({ id, expectedSignature, expectedLabel }) =>
+      saTapById(
+        Number(id),
+        expectedSignature ? String(expectedSignature) : undefined,
+        expectedLabel ? String(expectedLabel) : undefined,
+      ),
+  },
   {
     def: {
       name: "android_type",
-      description: "Wpisz tekst w aktualnie aktywne pole na ekranie telefonu (Android). Najpierw upewnij się, że kursor jest w polu.",
-      input_schema: obj({ text: str("Tekst do wpisania") }, ["text"]),
+      description: "Wpisz tekst w aktywne lub wskazane [id] pole na ekranie telefonu (Android). RiskGuard całkowicie blokuje pola haseł.",
+      input_schema: obj(
+        {
+          text: str("Tekst do wpisania"),
+          id: num("Opcjonalny numer pola [id] z android_ui_tree"),
+          expectedSignature: str("Opcjonalna sygnatura ekranu (Check-then-Act)"),
+        },
+        ["text"],
+      ),
     },
-    run: ({ text }) => saType(String(text ?? "")),
+    run: ({ text, id, expectedSignature }) =>
+      saType(
+        String(text ?? ""),
+        id !== undefined ? Number(id) : undefined,
+        expectedSignature ? String(expectedSignature) : undefined,
+      ),
+  },
+  {
+    def: {
+      name: "android_scroll",
+      description: "Przewiń ekran telefonu Android w kierunku: down, up, left lub right (Check-then-Act).",
+      input_schema: obj(
+        {
+          direction: str("Kierunek: down | up | left | right"),
+          id: num("Opcjonalny numer przewijalnego kontenera [id]"),
+          expectedSignature: str("Opcjonalna sygnatura ekranu (Check-then-Act)"),
+        },
+        ["direction"],
+      ),
+    },
+    run: ({ direction, id, expectedSignature }) =>
+      saScroll(
+        String(direction ?? "down"),
+        id !== undefined ? Number(id) : undefined,
+        expectedSignature ? String(expectedSignature) : undefined,
+      ),
+  },
+  {
+    def: {
+      name: "android_back",
+      description: "Naciśnij systemowy przycisk Wstecz na Androidzie.",
+      input_schema: obj({}),
+    },
+    run: () => saBack(),
   },
   {
     def: {
@@ -1597,7 +1665,7 @@ const tools: Tool[] = [
   {
     def: {
       name: "android_open_app",
-      description: "Otwórz aplikację na telefonie po nazwie (np. WhatsApp, Gmail, Ustawienia, Chrome).",
+      description: "Otwórz aplikację na telefonie po nazwie (np. WhatsApp, Gmail, Ustawienia, Chrome). Aplikacje bankowe/bezpieczeństwa wymagają potwierdzenia RiskGuard.",
       input_schema: obj({ name: str("Nazwa aplikacji") }, ["name"]),
     },
     run: ({ name }) => saOpenApp(String(name ?? "")),

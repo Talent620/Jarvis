@@ -63,7 +63,9 @@ const RISK: Record<string, Risk> = {
   desktop_launch_app: "outbound", desktop_open: "outbound", desktop_power: "outbound",
   desktop_volume: "outbound", desktop_media: "outbound", desktop_type: "outbound", desktop_hotkey: "outbound",
   desktop_click: "outbound", desktop_active_window: "outbound", system_browser_read_public: "outbound",
-  // pełne sterowanie telefonem (Android, usługa Dostępności) — wymaga zgody
+  // pełne sterowanie telefonem (Android, usługa Dostępności + RiskGuard)
+  android_ui_tree: "read",
+  android_tap_id: "outbound", android_scroll: "outbound", android_back: "outbound",
   android_type: "outbound", android_tap: "outbound", android_global: "outbound",
   android_open_app: "outbound", android_open_settings: "outbound",
 };
