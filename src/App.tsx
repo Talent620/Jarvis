@@ -99,6 +99,7 @@ import type { ProviderId } from "./lib/providers/types";
 import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import { isPrivateModeCommand, matchUnfilteredCommand, parseReadAloud } from "./lib/modeCommands";
 import { PERSONALITY_MODES, parseVoicePersonalityCommand, type PersonalityMode } from "./lib/soulModes";
+import { parseNaradaCommand, runExpertCouncil } from "./lib/expertCouncil";
 import Guardian from "./components/Guardian";
 import Mind from "./components/Mind";
 const GoalRunner = lazy(() => import("./components/GoalRunner"));
@@ -610,6 +611,35 @@ export default function App() {
         { id, role: "assistant", text: msg, tools: ["osobowość"], createdAt: Date.now() },
       ]);
       if (store.settings.speak) void speak(msg, store.settings).catch(() => {});
+      return;
+    }
+
+    // Komenda „Narada: <temat>” → Rada Ekspertów (3 role równolegle + werdykt <= 30 s + rozwijana karta).
+    const naradaTopic = parseNaradaCommand(text);
+    if (naradaTopic) {
+      const userId = uid();
+      const replyId = uid();
+      setBusy(true);
+      setLiveId(replyId);
+      setCouncilStep("🏛 Rada Ekspertów — Inżynier, Strateg i Krytyk debatują równolegle…");
+      setMessages((m) => [
+        ...m,
+        { id: userId, role: "user", text, createdAt: Date.now() },
+        { id: replyId, role: "assistant", text: "🏛 Zwołuję Radę Ekspertów…", tools: ["expert_council"], createdAt: Date.now() },
+      ]);
+      try {
+        const res = await runExpertCouncil(naradaTopic, { onProgress: setCouncilStep });
+        setMessages((m) =>
+          m.map((x) => (x.id === replyId ? { ...x, text: res.verdict, council: res.council } : x)),
+        );
+        if (store.settings.speak) void speak(res.spokenVerdict, store.settings).catch(() => {});
+      } catch (e) {
+        const errMsg = `⚠ ${e instanceof Error ? e.message : String(e)}`;
+        setMessages((m) => m.map((x) => (x.id === replyId ? { ...x, text: errMsg } : x)));
+      } finally {
+        setCouncilStep(null);
+        setBusy(false);
+      }
       return;
     }
 
@@ -1506,6 +1536,18 @@ export default function App() {
           title="Krótkie, naturalne wypowiedzi pod głos (max 2–3 zdania, zero markdownu)"
         >
           🎙 Głos
+        </button>
+        <button
+          type="button"
+          className="chip"
+          disabled={busy}
+          onClick={() => {
+            const topic = window.prompt("Temat dla Rady Ekspertów (Inżynier + Strateg + Krytyk):");
+            if (topic && topic.trim()) void handleSend(`Narada: ${topic.trim()}`);
+          }}
+          title="Rada Ekspertów: Inżynier-Praktyk + Strateg-Finansista + Sceptyczny Krytyk równolegle"
+        >
+          🏛 Narada
         </button>
       </div>
       <Composer

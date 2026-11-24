@@ -1939,6 +1939,22 @@ const tools: Tool[] = [
       return parts.join("\n");
     },
   },
+  {
+    def: {
+      name: "expert_council",
+      description: "Rada Ekspertów (Multi-Agent Sparring): uruchamia równolegle 3 perspektywy (Inżynier-Praktyk, Strateg-Finansista, Sceptyczny Krytyk) i syntetyzuje jeden zwięzły werdykt (<= 30 s). Używaj przy haśle „Narada:” albo przy ważnych decyzjach biznesowych/technicznych.",
+      input_schema: obj({ topic: str("Temat lub decyzja do przeanalizowania przez Radę Ekspertów") }, ["topic"]),
+    },
+    run: async ({ topic }) => {
+      const { runExpertCouncil } = await import("./expertCouncil");
+      const res = await runExpertCouncil(String(topic || ""));
+      return [
+        `🏛 Werdykt Rady Ekspertów: ${res.verdict}`,
+        "",
+        ...res.opinions.map((o) => `${o.label}: ${o.text}`),
+      ].join("\n");
+    },
+  },
 ];
 
 export const toolDefs: ToolDef[] = tools.map((t) => t.def);

@@ -53,10 +53,13 @@ const CONSENSUS: Record<string, { icon: string; label: string }> = {
 // Panel Trybu Konsylium: ocena zgodności + rozwijane odpowiedzi każdego modelu.
 function CouncilPanel({ council }: { council: NonNullable<ChatMessage["council"]> }) {
   const c = CONSENSUS[council.consensus] || CONSENSUS.partial;
+  const isExpertCouncil = Boolean(council.note?.startsWith("Rada Ekspertów"));
   return (
     <details className="council">
       <summary>
-        ⚖ Konsylium {council.members.length} modeli · {c.icon} {c.label}
+        {isExpertCouncil
+          ? `🏛 Rada Ekspertów (${council.members.length} opinie) · ${c.icon} ${c.label}`
+          : `⚖ Konsylium ${council.members.length} modeli · ${c.icon} ${c.label}`}
       </summary>
       {council.note && <p className="muted" style={{ margin: "6px 0", fontSize: 13 }}>{council.note}</p>}
       {council.members.map((mem, i) => (
