@@ -592,7 +592,7 @@ export function readDecisions(root) {
       return {
         file: `${MEMORY_DIR}/decisions/${f}`,
         title: (src.match(/^#\s+(.+)$/m) || [])[1] || f,
-        status: (src.match(/^Status:\s*(.+)$/im) || [])[1]?.trim() || "UNKNOWN",
+        status: (src.match(/^(?:-\s*)?(?:\*\*)?Status:(?:\*\*)?\s*(.+)$/im) || [])[1]?.trim() || "UNKNOWN",
       };
     });
 }

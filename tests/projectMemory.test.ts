@@ -417,5 +417,7 @@ describe("zachowanie istniejących dokumentów", () => {
     expect(s.manifest.modules.length).toBeGreaterThan(0);
     expect(s.manifest.tools.length).toBeGreaterThan(50);
     expect(s.openItems.length).toBeGreaterThan(0);
+    const adr2 = s.decisions.find((d: { file: string }) => d.file.includes("ADR-0002"));
+    expect(adr2?.status).toBe("accepted");
   });
 });

@@ -70,6 +70,8 @@ Warunek odbioru: artefakty startują na czystym Ubuntu 22.04/24.04.
 
 ### W1. Jeden diagnostyczny status zależności
 
+Status: **wykonane** (`electron/linux-system.cjs` + `jarvis:system-diagnostics` + `AutoCorePanel`)
+
 - zwracać: dostępne, brakujące, wyłączone i błąd;
 - nie przedstawiać SQLite/PostgreSQL/Dockera jako aktywnych, gdy brak programu lub demona;
 - dodać prostą akcję naprawczą odpowiednią dla Ubuntu.
