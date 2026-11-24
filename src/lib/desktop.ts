@@ -47,6 +47,19 @@ export interface JarvisDesktop {
   clipWatch(enabled: boolean): Promise<boolean>;
   onClipboard(cb: (text: string) => void): () => void;
   onVoiceMode(cb: () => void): () => void;
+  // OMNI-PILOT
+  pilotCursorPos?(): Promise<{ ok: boolean; x?: number; y?: number; estimated?: boolean; error?: string }>;
+  pilotMove?(payload: { mode?: "relative" | "absolute" | "named"; dx?: number; dy?: number; x?: number; y?: number; preset?: string; smooth?: boolean }): Promise<{ ok: boolean; x?: number; y?: number; error?: string }>;
+  pilotMouse?(payload: { action?: "click" | "left" | "double" | "right" | "middle"; x?: number; y?: number; smooth?: boolean }): Promise<{ ok: boolean; action?: string; error?: string }>;
+  pilotScroll?(payload: { direction?: "up" | "down" | "left" | "right"; amount?: number }): Promise<{ ok: boolean; direction?: string; amount?: number; error?: string }>;
+  pilotDrag?(payload: { x1: number; y1: number; x2: number; y2: number }): Promise<{ ok: boolean; error?: string }>;
+  pilotWindows?(): Promise<{ ok: boolean; windows?: { id: string; title: string }[]; error?: string }>;
+  pilotFocus?(query: string): Promise<{ ok: boolean; window?: { id: string; title: string }; error?: string }>;
+  pilotTypeUnicode?(text: string): Promise<{ ok: boolean; chars?: number; error?: string }>;
+  pilotHotkey?(combo: string): Promise<{ ok: boolean; combo?: string; error?: string }>;
+  pilotAbort?(): Promise<{ ok: boolean; seq?: number }>;
+  screenshotDetailed?(): Promise<{ ok: boolean; data?: string; mediaType?: string; width?: number; height?: number; screenWidth?: number; screenHeight?: number; cursorX?: number; cursorY?: number; error?: string }>;
+  onOmniAbort?(cb: () => void): () => void;
 }
 
 export function desktop(): JarvisDesktop | null {
@@ -216,4 +229,146 @@ export async function hotkey(combo: string, window?: string): Promise<string> {
   if (detail) return detail;
   if (r === "err:unknown") return `Nie rozpoznałem skrótu „${combo}".`;
   return `Nie udało się wysłać skrótu (${r}).`;
+}
+
+// === OMNI-PILOT: płynny kursor, mysz, przewijanie, drag, okna, UTF-8, szczegółowy zrzut ===
+
+export interface DetailedScreenshot {
+  data: string;
+  mediaType: string;
+  width: number;
+  height: number;
+  screenWidth: number;
+  screenHeight: number;
+  cursorX: number;
+  cursorY: number;
+}
+
+export function formatPilotError(code?: string): string {
+  const c = String(code || "");
+  if (c === "err:wayland-ydotool-missing") return "Na sesji Wayland zainstaluj ydotool (sudo apt install ydotool && sudo systemctl enable --now ydotoold) albo przełącz sesję na X11.";
+  if (c === "err:linux-xdotool-missing") return "Brak xdotool — zainstaluj: sudo apt install -y xdotool wmctrl.";
+  if (c === "err:window-not-found") return "Nie znaleziono otwartego okna pasującego do tej nazwy.";
+  if (c === "err:aborted") return "Przerwano sterowanie pulpitem.";
+  return linuxInputError(c) || c || "nieznany błąd";
+}
+
+export async function captureScreenDetailed(): Promise<DetailedScreenshot | null> {
+  const d = desktop();
+  if (!d) return null;
+  if (d.screenshotDetailed) {
+    const r = await d.screenshotDetailed().catch(() => ({ ok: false as const }));
+    if (r.ok && "data" in r && r.data) {
+      return {
+        data: r.data,
+        mediaType: r.mediaType || "image/png",
+        width: r.width || 1440,
+        height: r.height || 810,
+        screenWidth: r.screenWidth || 1920,
+        screenHeight: r.screenHeight || 1080,
+        cursorX: r.cursorX ?? 0,
+        cursorY: r.cursorY ?? 0,
+      };
+    }
+  }
+  const fb = await captureScreen();
+  if (!fb) return null;
+  return {
+    data: fb.data,
+    mediaType: fb.mediaType,
+    width: 1600,
+    height: 900,
+    screenWidth: typeof window !== "undefined" ? window.screen?.width || 1920 : 1920,
+    screenHeight: typeof window !== "undefined" ? window.screen?.height || 1080 : 1080,
+    cursorX: 0,
+    cursorY: 0,
+  };
+}
+
+export async function moveCursorOnPc(payload: {
+  mode?: "relative" | "absolute" | "named";
+  dx?: number;
+  dy?: number;
+  x?: number;
+  y?: number;
+  preset?: string;
+  smooth?: boolean;
+}): Promise<{ ok: boolean; x?: number; y?: number; message: string }> {
+  const d = desktop();
+  if (!d?.pilotMove) return { ok: false, message: NOT_DESKTOP };
+  const r = await d.pilotMove(payload).catch((e) => ({ ok: false, error: String(e) }));
+  if (r.ok) return { ok: true, x: r.x, y: r.y, message: `Przesunięto kursor (${r.x ?? 0}, ${r.y ?? 0}).` };
+  return { ok: false, message: `Nie udało się przesunąć kursora: ${formatPilotError(r.error)}` };
+}
+
+export async function mouseActionOnPc(payload: {
+  action?: "click" | "left" | "double" | "right" | "middle";
+  x?: number;
+  y?: number;
+  smooth?: boolean;
+}): Promise<{ ok: boolean; message: string }> {
+  const d = desktop();
+  if (!d?.pilotMouse) return { ok: false, message: NOT_DESKTOP };
+  const r = await d.pilotMouse(payload).catch((e) => ({ ok: false, error: String(e) }));
+  const labels: Record<string, string> = { click: "Kliknięto", left: "Kliknięto", double: "Kliknięto dwukrotnie", right: "Kliknięto prawym", middle: "Kliknięto środkowym" };
+  if (r.ok) return { ok: true, message: `${labels[payload.action || "click"] || "Kliknięto"}.` };
+  return { ok: false, message: `Nie udało się kliknąć: ${formatPilotError(r.error)}` };
+}
+
+export async function scrollOnPc(direction: "up" | "down" | "left" | "right", amount = 5): Promise<{ ok: boolean; message: string }> {
+  const d = desktop();
+  if (!d?.pilotScroll) return { ok: false, message: NOT_DESKTOP };
+  const r = await d.pilotScroll({ direction, amount }).catch((e) => ({ ok: false, error: String(e) }));
+  const labels: Record<string, string> = { up: "w górę", down: "w dół", left: "w lewo", right: "w prawo" };
+  if (r.ok) return { ok: true, message: `Przewinięto ${labels[direction] || direction}.` };
+  return { ok: false, message: `Nie udało się przewinąć: ${formatPilotError(r.error)}` };
+}
+
+export async function dragOnPc(x1: number, y1: number, x2: number, y2: number): Promise<{ ok: boolean; message: string }> {
+  const d = desktop();
+  if (!d?.pilotDrag) return { ok: false, message: NOT_DESKTOP };
+  const r = await d.pilotDrag({ x1, y1, x2, y2 }).catch((e) => ({ ok: false, error: String(e) }));
+  if (r.ok) return { ok: true, message: `Przeciągnięto z (${x1}, ${y1}) do (${x2}, ${y2}).` };
+  return { ok: false, message: `Nie udało się przeciągnąć: ${formatPilotError(r.error)}` };
+}
+
+export async function listWindowsOnPc(): Promise<{ ok: boolean; windows: { id: string; title: string }[]; message: string }> {
+  const d = desktop();
+  if (!d?.pilotWindows) return { ok: false, windows: [], message: NOT_DESKTOP };
+  const r = await d.pilotWindows().catch((e) => ({ ok: false, windows: [], error: String(e) }));
+  if (r.ok) {
+    const list = r.windows || [];
+    const preview = list.slice(0, 12).map((w) => w.title).join(", ");
+    return { ok: true, windows: list, message: list.length ? `Otwarte okna (${list.length}): ${preview}.` : "Brak wykrytych otwartych okien." };
+  }
+  return { ok: false, windows: [], message: `Nie udało się pobrać listy okien: ${formatPilotError(r.error)}` };
+}
+
+export async function focusWindowOnPc(query: string): Promise<{ ok: boolean; title?: string; message: string }> {
+  const d = desktop();
+  if (!d?.pilotFocus) return { ok: false, message: NOT_DESKTOP };
+  const r = await d.pilotFocus(query).catch((e) => ({ ok: false, error: String(e) }));
+  if (r.ok) return { ok: true, title: r.window?.title, message: `Przełączono na okno: ${r.window?.title || query}.` };
+  return { ok: false, message: `Nie udało się przełączyć okna „${query}": ${formatPilotError(r.error)}` };
+}
+
+export async function typeUnicodeOnPc(text: string): Promise<{ ok: boolean; message: string }> {
+  const d = desktop();
+  if (!d?.pilotTypeUnicode) return { ok: false, message: NOT_DESKTOP };
+  const r = await d.pilotTypeUnicode(text).catch((e) => ({ ok: false, error: String(e) }));
+  if (r.ok) return { ok: true, message: `Wpisano tekst (${text.length} znaków).` };
+  return { ok: false, message: `Nie udało się wpisać tekstu: ${formatPilotError(r.error)}` };
+}
+
+export async function pilotHotkeyOnPc(combo: string): Promise<{ ok: boolean; message: string }> {
+  const d = desktop();
+  if (!d?.pilotHotkey) return { ok: false, message: NOT_DESKTOP };
+  const r = await d.pilotHotkey(combo).catch((e) => ({ ok: false, error: String(e) }));
+  if (r.ok) return { ok: true, message: `Wysłano skrót ${combo}.` };
+  return { ok: false, message: `Nie udało się wysłać skrótu ${combo}: ${formatPilotError(r.error)}` };
+}
+
+export async function abortDesktopPilot(): Promise<void> {
+  const d = desktop();
+  try { await d?.pilotAbort?.(); } catch { /* ignore */ }
 }

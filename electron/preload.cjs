@@ -64,4 +64,21 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
     ipcRenderer.on("jarvis:voicemode", listener);
     return () => ipcRenderer.removeListener("jarvis:voicemode", listener);
   },
+  // === OMNI-PILOT (płynny kursor, mysz, przewijanie, drag, okna, UTF-8, zrzut ze skalą, Ctrl+Alt+X) ===
+  pilotCursorPos: () => ipcRenderer.invoke("jarvis:pilot-cursor-pos"),
+  pilotMove: (payload) => ipcRenderer.invoke("jarvis:pilot-move", payload),
+  pilotMouse: (payload) => ipcRenderer.invoke("jarvis:pilot-mouse", payload),
+  pilotScroll: (payload) => ipcRenderer.invoke("jarvis:pilot-scroll", payload),
+  pilotDrag: (payload) => ipcRenderer.invoke("jarvis:pilot-drag", payload),
+  pilotWindows: () => ipcRenderer.invoke("jarvis:pilot-windows"),
+  pilotFocus: (query) => ipcRenderer.invoke("jarvis:pilot-focus", String(query || "")),
+  pilotTypeUnicode: (text) => ipcRenderer.invoke("jarvis:pilot-type-unicode", String(text || "")),
+  pilotHotkey: (combo) => ipcRenderer.invoke("jarvis:pilot-hotkey", String(combo || "")),
+  pilotAbort: () => ipcRenderer.invoke("jarvis:pilot-abort"),
+  screenshotDetailed: () => ipcRenderer.invoke("jarvis:screenshot-detailed"),
+  onOmniAbort: (cb) => {
+    const listener = () => cb();
+    ipcRenderer.on("jarvis:omni-abort", listener);
+    return () => ipcRenderer.removeListener("jarvis:omni-abort", listener);
+  },
 });

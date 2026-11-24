@@ -7,6 +7,7 @@ const os = require("os");
 const { launchLinux } = require("./launch-app.cjs");
 const { createLinuxKeyboard } = require("./linux-keyboard.cjs");
 const { linuxPower, linuxVolume, linuxMedia, detectLinuxGpu, readLinuxDistro, linuxDiagnostics, clampWindowBounds } = require("./linux-system.cjs");
+const { createDesktopPilot } = require("./desktop-pilot.cjs");
 const linuxKeyboard = createLinuxKeyboard();
 const { createWorkspaceTools } = require("./workspace-tools.cjs");
 const { createStdioMcpManager } = require("./mcp-stdio.cjs");
@@ -659,7 +660,99 @@ function registerDesktopControl() {
     sendKeys(sk, window);
     return "ok";
   });
+
+  // === JARVIS OMNI-PILOT (płynny kursor, mysz, przewijanie, drag, okna, UTF-8, szczegółowy zrzut ekranu) ===
+  const pilot = createDesktopPilot({
+    getScreenSize: () => {
+      try {
+        const d = screen.getPrimaryDisplay();
+        return { width: d.bounds.width || d.size.width || 1920, height: d.bounds.height || d.size.height || 1080 };
+      } catch {
+        return { width: 1920, height: 1080 };
+      }
+    },
+    getCursorPoint: () => {
+      try { return screen.getCursorScreenPoint(); } catch { return null; }
+    },
+    clipboard,
+  });
+  desktopPilotInstance = pilot;
+
+  ipcMain.handle("jarvis:pilot-cursor-pos", (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return pilot.cursorPosition();
+  });
+  ipcMain.handle("jarvis:pilot-move", (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return pilot.moveCursor(payload || {});
+  });
+  ipcMain.handle("jarvis:pilot-mouse", (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return pilot.mouseAction(payload || {});
+  });
+  ipcMain.handle("jarvis:pilot-scroll", (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return pilot.scroll(payload || {});
+  });
+  ipcMain.handle("jarvis:pilot-drag", (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return pilot.drag(payload || {});
+  });
+  ipcMain.handle("jarvis:pilot-windows", (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, windows: [], error: "err:forbidden" };
+    return pilot.listWindows();
+  });
+  ipcMain.handle("jarvis:pilot-focus", (event, query) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return pilot.focusWindow(String(query || ""));
+  });
+  ipcMain.handle("jarvis:pilot-type-unicode", (event, text) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return pilot.typeUnicode(String(text || ""));
+  });
+  ipcMain.handle("jarvis:pilot-hotkey", (event, combo) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return pilot.globalHotkey(String(combo || ""));
+  });
+  ipcMain.handle("jarvis:pilot-abort", (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return pilot.abort();
+  });
+  ipcMain.handle("jarvis:screenshot-detailed", async (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    try {
+      const d = screen.getPrimaryDisplay();
+      const screenWidth = d.bounds.width || d.size.width || 1920;
+      const screenHeight = d.bounds.height || d.size.height || 1080;
+      const maxW = 1440;
+      const scale = Math.min(1, maxW / screenWidth);
+      const width = Math.round(screenWidth * scale);
+      const height = Math.round(screenHeight * scale);
+      const sources = await desktopCapturer.getSources({
+        types: ["screen"],
+        thumbnailSize: { width, height },
+      });
+      const src = sources[0];
+      if (!src) return { ok: false, error: "err:no-source" };
+      const cur = await pilot.cursorPosition();
+      return {
+        ok: true,
+        data: src.thumbnail.toPNG().toString("base64"),
+        mediaType: "image/png",
+        width,
+        height,
+        screenWidth,
+        screenHeight,
+        cursorX: cur.x,
+        cursorY: cur.y,
+      };
+    } catch (e) {
+      return { ok: false, error: `err:${e && e.message ? e.message : e}` };
+    }
+  });
 }
+
+let desktopPilotInstance = null;
 
 // Tylko jedna instancja aplikacji.
 const gotLock = app.requestSingleInstanceLock();
@@ -718,6 +811,11 @@ if (!gotLock) {
       globalShortcut.register("CommandOrControl+Alt+V", () => {
         summonWindow();
         if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("jarvis:voicemode");
+      });
+      // Ctrl+Alt+X: sprzętowy kill-switch OMNI-PILOT — natychmiast przerywa sterowanie pulpitem.
+      globalShortcut.register("CommandOrControl+Alt+X", () => {
+        if (desktopPilotInstance) desktopPilotInstance.abort();
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("jarvis:omni-abort");
       });
     } catch {
       /* skrót zajęty przez inny program — trudno */
