@@ -1,6 +1,6 @@
 import { formatGoalProgress, isGoalProgressRequest } from "./lib/goalProgress";
 import { loadGoalsNewestFirst } from "./lib/goalRuntime";
-import InterfaceSwitch from "./components/InterfaceSwitch";
+import { Bell, EyeOff, LayoutGrid, Phone, Plus, Settings, ShieldCheck } from "lucide-react";
 import { applyInterfaceCommand } from "./lib/interfaceMode";
 import { lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { CommandItem } from "./lib/commandPalette";
@@ -319,12 +319,12 @@ export default function App() {
       open("mail", "Wyślij e-mail", "✉", "mail email wyslij poczta oferta wiadomosc"),
       open("sent", "Wysłane", "📤", "wyslane maile skrzynka historia poczty"),
       open("brand", "Dusza Marki", "🎨", "marka brand ton kolory fonty styl spojnosc"),
-      open("goal", "🎯 Zleć cel", "🎯", "do-for-me projekt plan wieloetapowe cel"),
-      open("growthDay", "📅 Plan dnia", "📅", "plan dnia rekomendacje roi wzrost co dzis zrobic orchestrator"),
-      open("candidates", "🧲 Kandydaci leadów", "🧲", "kandydaci leady szukaj firmy osm import bez zapisu crm"),
-      open("goalStatus", "🎯 Cele (autonomia)", "🎯", "cele postep autonomia zatrzymaj wznow anuluj trwaly cel status"),
+      open("goal", "Zleć cel", "🎯", "do-for-me projekt plan wieloetapowe cel"),
+      open("growthDay", "Plan dnia", "📅", "plan dnia rekomendacje roi wzrost co dzis zrobic orchestrator"),
+      open("candidates", "Kandydaci leadów", "🧲", "kandydaci leady szukaj firmy osm import bez zapisu crm"),
+      open("goalStatus", "Cele (autonomia)", "🎯", "cele postep autonomia zatrzymaj wznow anuluj trwaly cel status"),
       open("studio", "Studio Obrazów", "🎨", "zdjecia edycja generuj obraz foto"),
-      open("guardian", "Diagnoza i naprawa (dawny Strażnik)", "🩺", "napraw przyspiesz pomoc diagnoza strażnik"),
+      open("guardian", "Diagnoza i naprawa", "🩺", "napraw przyspiesz pomoc diagnoza strażnik"),
       open("mind", "Umysł JARVISA", "🧠", "odprawa pamiec swiat wzorce samoocena"),
       open("memory", "Co JARVIS o mnie wie", "🧠", "pamiec fakty edytuj usun wiedza"),
       open("profile", "Mój profil", "👤", "kim jestem profil"),
@@ -342,14 +342,14 @@ export default function App() {
       open("ads", "Generator reklam", "📢", "reklamy google facebook ads"),
       { id: "hud", title: "Wizja (kamera)", icon: "👁", keywords: "kamera widzisz obraz wizja", group: "Otwórz", run: () => setShowHud(true) },
       open("status", "Stan systemu", "🩺", "diagnostyka co dziala"),
-      open("recall", "🔎 Recall — znajdź wszystko", "🔎", "szukaj znajdz historia czat dziennik pamiec notatki recall"),
+      open("recall", "Recall — znajdź wszystko", "🔎", "szukaj znajdz historia czat dziennik pamiec notatki recall"),
       { id: "data", title: "Dane i kopia", icon: "🗄", keywords: "backup eksport dane kopia", group: "Otwórz", run: () => openScreen("panels") },
-      act("boss", "⬢ Tryb Szefa — agent głosowy (Matrix)", "⬢", "szef boss matrix agent glos rozkaz wykonaj strażnik"),
+      act("boss", "Tryb Szefa — agent głosowy (Matrix)", "⬢", "szef boss matrix agent glos rozkaz wykonaj strażnik"),
       act("voicemode", "Tryb Słuchawki (rozmowa)", "🎧", "glos hands-free rozmowa"),
       act("live", "Rozmowa na żywo", "☎", "live glos telefon"),
       act("newchat", "Nowa rozmowa", "＋", "wyczysc reset czat"),
       act("private", "Czat prywatny (przełącz)", "🕶", "prywatny incognito"),
-      act("exportmd", "📤 Eksportuj rozmowę (Markdown)", "📤", "eksport zapisz markdown kopiuj rozmowa udostepnij"),
+      act("exportmd", "Eksportuj rozmowę (Markdown)", "📤", "eksport zapisz markdown kopiuj rozmowa udostepnij"),
       act("mic", "Mikrofon (przełącz)", "🎤", "sluchaj mow mikrofon"),
       // ⚡ Szybkie startery (biblioteka promptów) — od razu ruszają z robotą.
       ...PRESETS.map((p): CommandItem => ({ id: p.id, title: p.title, icon: p.icon, keywords: p.kw, group: "⚡ Startery", run: () => actionsRef.current[p.id]?.() })),
@@ -432,9 +432,8 @@ export default function App() {
       StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
       StatusBar.setBackgroundColor({ color: "#04070f" }).catch(() => {});
     }
-    // Wymuś konfigurację TYLKO gdy brak JAKIEGOKOLWIEK mózgu — nie nękaj użytkowników
-    // korzystających tylko z Ollamy (tryb auto + lokalny serwer daje resolveProvider=null).
-    if (!hasUsableBrain()) setShowSettings(true);
+    // Brak klucza AI komunikujemy spokojnie w nagłówku i na ekranie powitalnym (CTA „Dodaj darmowy klucz”),
+    // bez zasłaniania pierwszego uruchomienia ścianą Ustawień.
     // Skróty / udostępnienia → polecenie; jarvis://wake (nasłuch w tle) → start słuchania.
     const dispose = registerIntents(
       (text) => sendRef.current(text),
@@ -569,10 +568,10 @@ export default function App() {
     }
   };
 
-  // Motyw HUD.
+  // Motyw interfejsu (ciemny Obsidian, Jasny, motywy akcentowe).
   useEffect(() => {
     const b = document.body;
-    ["theme-gold", "theme-green", "theme-red", "theme-purple", "theme-matrix", "theme-amber", "theme-ocean", "theme-rose", "theme-retro", "theme-xp", "theme-nord", "theme-sunset", "theme-aurora"].forEach((c) => b.classList.remove(c));
+    ["theme-light", "theme-gold", "theme-green", "theme-red", "theme-purple", "theme-matrix", "theme-amber", "theme-ocean", "theme-rose", "theme-retro", "theme-xp", "theme-nord", "theme-sunset", "theme-aurora"].forEach((c) => b.classList.remove(c));
     if (settings.theme && settings.theme !== "default") b.classList.add(`theme-${settings.theme}`);
   }, [settings.theme]);
 
@@ -1485,104 +1484,85 @@ export default function App() {
       <div className="topbar">
         <div className="brand">
           {brand()}
-          <small>
-            {(resolveProvider()?.model || (hasUsableBrain() ? "LOKALNY" : "BRAK API")).toUpperCase()}
-            {(() => {
-              const p = store.data.projects.find((x) => x.id === settings.activeProjectId);
-              return p ? ` · ${p.name.toUpperCase()}` : "";
-            })()}{" "}
-            · {online ? "ONLINE" : "OFFLINE"}
-            {(() => {
-              const m = currentBrainMode(online);
+          {(() => {
+            const brainReady = hasUsableBrain();
+            const proj = store.data.projects.find((x) => x.id === settings.activeProjectId);
+            const mode = currentBrainMode(online);
+            if (!brainReady) {
               return (
-                <span title={m.title} style={{ color: m.kind === "cloud" ? "var(--cyan)" : "var(--gold)" }}>
-                  {" · "}{m.icon} {m.label}
-                </span>
+                <small title="Brak skonfigurowanego klucza AI lub lokalnej Ollamy">
+                  <span className="brand-dot warn" />
+                  Brak klucza AI · kliknij Ustawienia
+                </small>
               );
-            })()}
-          </small>
+            }
+            const modelName = resolveProvider()?.model || "Lokalny";
+            return (
+              <small title={`${mode.label} — ${mode.title}`}>
+                <span className={`brand-dot ${online ? "" : "off"}`} />
+                {modelName}{proj ? ` · ${proj.name}` : ""} · {online ? "Online" : "Offline"}
+              </small>
+            );
+          })()}
         </div>
-        {(() => {
-          const lvl = completionReport(store.settings).percent;
-          const col = lvl >= 90 ? "#2fbf71" : lvl >= 60 ? "#28c0c8" : "var(--gold)";
-          return (
-            <button
-              className="level-badge"
-              style={{ borderColor: col, color: col }}
-              onClick={() => setShowSettings(true)}
-              title={`Poziom JARVISA: ${lvl}% gotowości. Kliknij, by dokończyć konfigurację.`}
-              aria-label={`Poziom JARVISA ${lvl} procent`}
-            >
-              ⬢ {lvl}%
-            </button>
-          );
-        })()}
         <div className="spacer" />
-        <InterfaceSwitch />
         <button
+          type="button"
           className="icon-btn"
           onClick={() => setShowGuardian(true)}
-          title="🛡 Strażnik JARVISA — napraw, przyspiesz, ulepsz, połącz serwery, doradź"
-          aria-label="Strażnik JARVISA"
-          style={{ color: "var(--gold)", borderColor: "var(--gold)" }}
+          title="Diagnoza i naprawa (Strażnik JARVISA)"
+          aria-label="Diagnoza i naprawa"
         >
-          🛡
+          <ShieldCheck size={17} strokeWidth={1.85} />
         </button>
         <button
-          className="icon-btn"
-          onClick={() => {
-            stopSpeaking();
-            listenerRef.current?.stop();
-            setShowVoice(true);
-          }}
-          title="Tryb Słuchawki — rozmowa hands-free" aria-label="Tryb Słuchawki"
-        >
-          🎙
-        </button>
-        <button
+          type="button"
           className="icon-btn"
           onClick={() => {
             stopSpeaking();
             listenerRef.current?.stop();
             setShowLive(true);
           }}
-          title="Rozmowa na żywo" aria-label="Rozmowa na żywo"
+          title="Rozmowa na żywo"
+          aria-label="Rozmowa na żywo"
         >
-          ☎
+          <Phone size={17} strokeWidth={1.85} />
         </button>
         {messages.length > 0 && (
-          <button className="icon-btn" onClick={newChat} title="Nowa rozmowa" aria-label="Nowa rozmowa">
-            ＋
+          <button type="button" className="icon-btn" onClick={newChat} title="Nowa rozmowa" aria-label="Nowa rozmowa">
+            <Plus size={18} strokeWidth={2} />
           </button>
         )}
-        <button
-          className="icon-btn"
-          onClick={togglePrivateChat}
-          title={privateChat ? "Czat prywatny WŁĄCZONY — nie zapisuję. Kliknij, by wyłączyć." : "Czat prywatny (tymczasowy — nie trafia do historii)"}
-          style={privateChat ? { color: "var(--gold)", borderColor: "var(--gold)" } : undefined}
-          aria-label="Czat prywatny"
-          aria-pressed={privateChat}
-        >
-          🕶
-        </button>
+        {privateChat && (
+          <button
+            type="button"
+            className="icon-btn active"
+            onClick={togglePrivateChat}
+            title="Czat prywatny WŁĄCZONY — kliknij, by wyłączyć"
+            aria-label="Czat prywatny"
+            aria-pressed={privateChat}
+          >
+            <EyeOff size={17} strokeWidth={1.85} />
+          </button>
+        )}
         {(() => {
           const n = notifySummary().total;
           return (
-            <button className="icon-btn" style={{ position: "relative" }} onClick={() => setShowNotifs(true)} title="Powiadomienia" aria-label="Powiadomienia">
-              🔔
+            <button type="button" className="icon-btn" style={{ position: "relative" }} onClick={() => setShowNotifs(true)} title="Powiadomienia" aria-label="Powiadomienia">
+              <Bell size={17} strokeWidth={1.85} />
               {n > 0 && (
-                <span className="notif-badge" style={{ position: "absolute", top: 0, right: 0, minWidth: 16, height: 16, padding: "0 3px", borderRadius: 9, background: "#e0584f", color: "#fff", fontSize: 10, lineHeight: "16px", textAlign: "center", fontWeight: 700, boxSizing: "border-box" }}>
+                <span className="notif-badge" style={{ position: "absolute", top: -2, right: -2, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9, background: "var(--danger)", color: "#fff", fontSize: 10, lineHeight: "16px", textAlign: "center", fontWeight: 700, boxSizing: "border-box" }}>
                   {n > 99 ? "99+" : n}
                 </span>
               )}
             </button>
           );
         })()}
-        <button className="icon-btn" onClick={() => setShowMore(true)} title="Centrum — wszystkie funkcje" aria-label="Centrum funkcji">
-          ⋯
+        <button type="button" className="icon-btn" onClick={() => setShowMore(true)} title="Centrum — wszystkie funkcje" aria-label="Centrum funkcji">
+          <LayoutGrid size={17} strokeWidth={1.85} />
         </button>
-        <button className="icon-btn" onClick={() => setShowSettings(true)} title="Ustawienia" aria-label="Ustawienia">
-          ⚙
+        <button type="button" className="icon-btn" onClick={() => setShowSettings(true)} title="Ustawienia" aria-label="Ustawienia">
+          <Settings size={17} strokeWidth={1.85} />
         </button>
       </div>
 
@@ -1745,13 +1725,10 @@ export default function App() {
           <button type="button" className="chip" onClick={() => missionQueue.dismiss(m.id)} title="Zamknij">✕</button>
         </div>
       ))}
-      <div
-        className="soul-bar"
-        style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "0 10px 6px", alignItems: "center" }}
-      >
+      <div className="soul-bar">
         {(["AUTO", "BOJOWY", "KUMPEL", "ADWOKAT_DIABLA"] as PersonalityMode[]).map((mode) => {
           const active = (store.settings.personalityMode || "AUTO") === mode;
-          const label = mode === "AUTO" ? "⚡ Auto" : `${PERSONALITY_MODES[mode].badge} ${PERSONALITY_MODES[mode].label}`;
+          const label = mode === "AUTO" ? "Auto" : PERSONALITY_MODES[mode].label;
           const hint = mode === "AUTO" ? "Router Refleks/Kora sam dobiera styl" : PERSONALITY_MODES[mode].shortHint;
           return (
             <button
@@ -1774,11 +1751,11 @@ export default function App() {
           onClick={() => {
             const next = !store.settings.voiceModeProtocol;
             store.setSettings({ voiceModeProtocol: next });
-            toast(next ? "🎙 Protokół mówionej polszczyzny: WŁ" : "🎙 Protokół mówionej polszczyzny: WYŁ");
+            toast(next ? "Protokół mówionej polszczyzny: WŁ" : "Protokół mówionej polszczyzny: WYŁ");
           }}
           title="Krótkie, naturalne wypowiedzi pod głos (max 2–3 zdania, zero markdownu)"
         >
-          🎙 Głos
+          Głos
         </button>
         <button
           type="button"
@@ -1790,7 +1767,7 @@ export default function App() {
           }}
           title="Rada Ekspertów: Inżynier-Praktyk + Strateg-Finansista + Sceptyczny Krytyk równolegle"
         >
-          🏛 Narada
+          Narada
         </button>
         <button
           type="button"
@@ -1799,7 +1776,7 @@ export default function App() {
           onClick={() => { void handleLiveVision(); }}
           title="Oczy w terenie (Pokaż Jarvisowi): szybka klatka z tylnej kamery + krótka instrukcja głosowa"
         >
-          👁 Pokaż
+          Pokaż
         </button>
         <button
           type="button"
@@ -1809,13 +1786,13 @@ export default function App() {
             store.setSettings({ autonomyProfile: next });
             toast(
               next === "OPERATOR"
-                ? "🛡 Tryb Operatora: codzienne narzędzia płynnie, RiskGuard chroni hasła/płatności/wysyłki"
-                : "🔒 Tryb Standard: potwierdzenia akcji zewnętrznych",
+                ? "Tryb Operatora: codzienne narzędzia płynnie, RiskGuard chroni hasła/płatności/wysyłki"
+                : "Tryb Standard: potwierdzenia akcji zewnętrznych",
             );
           }}
           title="Profil autonomii: STANDARD vs OPERATOR (twardy RiskGuard zawsze aktywny)"
         >
-          {store.settings.autonomyProfile === "OPERATOR" ? "🛡 Operator" : "🔒 Standard"}
+          {store.settings.autonomyProfile === "OPERATOR" ? "Operator" : "Standard"}
         </button>
       </div>
       <Composer
@@ -1834,9 +1811,9 @@ export default function App() {
         councilAvailable={councilMembers(3).length >= 2}
       />
 
-      {/* 🚀 Droga do 100% — Szef proponuje następny krok; auto-kroki robi po „Zrób". */}
+      {/* Droga do 100% — pokazywana dopiero gdy mózg AI działa (bez dublowania CTA na ekranie startowym). */}
       {(() => {
-        if (completionHidden) return null;
+        if (completionHidden || !hasUsableBrain()) return null;
         const r = completionReport(store.settings);
         if (!r.next || r.percent >= 100) return null;
         const step = r.next;
@@ -1846,12 +1823,12 @@ export default function App() {
           else setShowSettings(true);
         };
         return (
-          <div className="journal-card" style={{ margin: "0 8px 8px", padding: "8px 10px", display: "flex", gap: 8, alignItems: "center", fontSize: 13, borderLeft: "3px solid #2bff88" }}>
+          <div className="journal-card" style={{ margin: "6px 2px 2px", padding: "8px 11px", display: "flex", gap: 8, alignItems: "center", fontSize: 12.5, borderLeft: "3px solid var(--cyan)" }}>
             <span style={{ flex: 1, minWidth: 0 }}>
-              🚀 JARVIS w <b>{r.percent}%</b> — następny krok: <b>{step.title}</b>{step.patch ? " — Szef zrobi to sam" : ""}.
+              Gotowość <b>{r.percent}%</b> · następny krok: <b>{step.title}</b>{step.patch ? " — Szef zrobi to sam" : ""}.
             </span>
-            <button className="chip on" onClick={apply}>{step.patch ? "Zrób" : "Otwórz"}</button>
-            <button className="chip" onClick={() => setCompletionHidden(true)} title="Później">✕</button>
+            <button type="button" className="chip on" onClick={apply}>{step.patch ? "Zrób" : "Otwórz"}</button>
+            <button type="button" className="chip" onClick={() => setCompletionHidden(true)} title="Później" aria-label="Ukryj krok">×</button>
           </div>
         );
       })()}

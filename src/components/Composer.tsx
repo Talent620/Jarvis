@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ArrowUp, Image, Mic, Scale, Search, Square, Volume2, X } from "lucide-react";
 import { anticipate, type RecallHit } from "../lib/recall";
 import { store } from "../lib/store";
 import { speak } from "../lib/voice";
@@ -116,7 +117,7 @@ export default function Composer({
         <div className="img-preview">
           <img src={imagePreview} alt="załącznik" />
           <button className="img-x" onClick={onRemoveImage} title="Usuń zdjęcie" aria-label="Usuń zdjęcie">
-            ✕
+            <X size={12} strokeWidth={2.2} />
           </button>
         </div>
       )}
@@ -126,34 +127,38 @@ export default function Composer({
           style={{ padding: "6px 10px", margin: "0 4px 6px", display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}
         >
           <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            🧲 Masz to już u siebie: <b>{hint.title || hint.type}</b>
+            Masz to już u siebie: <b>{hint.title || hint.type}</b>
           </span>
           <button className="chip" onClick={() => { onRecall(text.trim()); setHint(null); }}>Pokaż</button>
-          <button className="chip" onClick={() => { dismissed.current = hint.id; setHint(null); }} title="Ukryj">✕</button>
+          <button className="chip" onClick={() => { dismissed.current = hint.id; setHint(null); }} title="Ukryj" aria-label="Ukryj podpowiedź">
+            <X size={13} strokeWidth={2} />
+          </button>
         </div>
       )}
       <div className="composer-tools">
-        <button className="composer-pill" onClick={onAttach} title="Zdjęcie / aparat (możesz też wkleić Ctrl+V lub upuścić plik)" disabled={busy}>
-          📷 <span className="pill-label">Obraz</span>
+        <button className="composer-pill" onClick={onAttach} title="Zdjęcie / aparat (możesz też wkleić Ctrl+V lub upuścić plik)" aria-label="Dodaj obraz" disabled={busy}>
+          <Image size={14} strokeWidth={1.9} /> <span className="pill-label">Obraz</span>
         </button>
         <button
           className={`composer-pill ${research ? "on" : ""}`}
           onClick={() => { hapticTap("light"); setResearch((v) => !v); }}
           title={research ? "Głębokie badanie WŁĄCZONE — JARVIS zrobi dokładny research ze źródłami" : "Głębokie badanie: dokładny research w sieci ze źródłami [1][2]"}
+          aria-label="Głębokie badanie"
           disabled={busy}
           aria-pressed={research}
         >
-          🔬 <span className="pill-label">Badanie</span>
+          <Search size={14} strokeWidth={1.9} /> <span className="pill-label">Badanie</span>
         </button>
         {councilAvailable && (
           <button
             className={`composer-pill ${council ? "on" : ""}`}
             onClick={() => { hapticTap("light"); setCouncil((v) => !v); }}
             title={council ? "Konsylium WŁĄCZONE — to pytanie pójdzie do kilku modeli" : "Konsylium: zapytaj kilka modeli o to pytanie"}
+            aria-label="Konsylium"
             disabled={busy}
             aria-pressed={council}
           >
-            ⚖ <span className="pill-label">Konsylium</span>
+            <Scale size={14} strokeWidth={1.9} /> <span className="pill-label">Konsylium</span>
           </button>
         )}
         {text.trim() && (
@@ -163,7 +168,7 @@ export default function Composer({
             title="Przeczytaj wpisany/wklejony tekst na głos (dosłownie)"
             aria-label="Przeczytaj na głos"
           >
-            🔊 <span className="pill-label">Czytaj</span>
+            <Volume2 size={14} strokeWidth={1.9} /> <span className="pill-label">Czytaj</span>
           </button>
         )}
         <div className="spacer" />
@@ -227,12 +232,12 @@ export default function Composer({
             title={micOn ? "Zatrzymaj mikrofon" : "Mów"}
             aria-label={micOn ? "Zatrzymaj mikrofon" : "Mów"}
           >
-            {micOn ? "■" : "🎤"}
+            {micOn ? <Square size={16} strokeWidth={2.2} /> : <Mic size={18} strokeWidth={1.9} />}
           </button>
         )}
         {busy ? (
           <button className="send stop" onClick={() => { hapticTap("medium"); onStop?.(); }} title="Zatrzymaj" aria-label="Zatrzymaj generowanie">
-            ■
+            <Square size={15} fill="currentColor" strokeWidth={2} />
           </button>
         ) : (
           <button
@@ -242,7 +247,7 @@ export default function Composer({
             title="Wyślij (Enter)"
             aria-label="Wyślij"
           >
-            ➤
+            <ArrowUp size={18} strokeWidth={2.4} />
           </button>
         )}
       </div>

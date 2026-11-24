@@ -211,10 +211,16 @@ export default function Guardian({ onClose, onRun }: { onClose: () => void; onRu
   return (
     <div className="sheet" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head"><div className="grabber" /><h2>🩺 Diagnoza i naprawa</h2></div>
+        <div className="panel-head">
+          <div className="grabber" />
+          <div className="panel-head-row">
+            <h2>Diagnoza i naprawa</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
+        </div>
         <div className="panel-body">
           <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-            Centralny panel dowodzenia: administrator, architekt AI, opiekun, diagnostyka i automatyzacja w jednym.
+            Centralny panel dowodzenia: diagnostyka, konfiguracja i szybkie naprawy systemu w jednym miejscu.
           </p>
 
           {/* 📖 Instrukcja obsługi / FAQ z wyszukiwarką — „jak uruchomić każdą funkcję i do czego służy”.
@@ -227,15 +233,26 @@ export default function Guardian({ onClose, onRun }: { onClose: () => void; onRu
           </details>
 
           {/* 📊 Health Agent — ocena zdrowia całego systemu (0–100) */}
-          {scan && (
-            <div className="journal-card" style={{ padding: "10px 12px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize: 32, fontWeight: 800, color: healthCol(scan.health.grade), lineHeight: 1, minWidth: 58, textAlign: "center" }}>{scan.health.score}</div>
-              <div style={{ fontSize: 13, lineHeight: 1.5 }}>
-                <b>Stan JARVISA: {scan.health.label}</b> (ocena {scan.health.grade})<br />
-                <span className="muted" style={{ fontSize: 12 }}>Guardian Core dyryguje {scan.reports.length} agentami i czuwa nad całością.</span>
+          {scan && (() => {
+            const brainDown = scan.reports.some((a) => a.id === "ai" && a.state === "problem");
+            const badgeColor = brainDown ? "var(--danger)" : healthCol(scan.health.grade);
+            return (
+              <div className="journal-card" style={{ padding: "12px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 30, fontWeight: 700, color: badgeColor, lineHeight: 1, minWidth: 54, textAlign: "center" }}>
+                  {scan.health.score}
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.45, minWidth: 0 }}>
+                  <b>{brainDown ? "Wymaga konfiguracji mózgu AI" : `Stan JARVISA: ${scan.health.label} (ocena ${scan.health.grade})`}</b>
+                  <br />
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    {brainDown
+                      ? "Pozostałe podsystemy działają, ale bez klucza API lub Ollamy asystent nie odpowie."
+                      : `Guardian Core monitoruje ${scan.reports.length} podsystemów.`}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* 🧠 Opiekun: nawracający problem → trwała rada */}
           {(() => { const h = recurringHint(history); return h ? (
@@ -246,30 +263,34 @@ export default function Guardian({ onClose, onRun }: { onClose: () => void; onRu
           ) : null; })()}
 
           {/* 🩹 Napraw wszystko — główna akcja naprawcza */}
-          <button className="btn primary" style={{ width: "100%", marginBottom: 8 }} disabled={busy} onClick={() => void run(() => guardian.fixAll((m) => setMsg(`🩹 ${m}`)))}>
-            🩹 Napraw wszystko (wykryj serwery i wybierz działający mózg)
+          <button type="button" className="btn primary" style={{ width: "100%", marginBottom: 8 }} disabled={busy} onClick={() => void run(() => guardian.fixAll((m) => setMsg(`🩹 ${m}`)))}>
+            Napraw wszystko (wykryj serwery i wybierz działający mózg)
           </button>
 
           {/* 🎚 Auto-konfiguracja — dobierz tryb pracy do realnego sprzętu */}
-          <button className="btn" style={{ width: "100%", marginBottom: 8 }} disabled={busy} onClick={() => void run(() => guardian.autoConfig())}>
-            🎚 Auto-konfiguracja (dobierz najlepszy tryb do mojego sprzętu)
+          <button type="button" className="btn" style={{ width: "100%", marginBottom: 10 }} disabled={busy} onClick={() => void run(() => guardian.autoConfig())}>
+            Auto-konfiguracja (dobierz najlepszy tryb do mojego sprzętu)
           </button>
 
-          {/* 🧭 Najważniejsze rekomendacje — format premium: Problem → Przyczyna → Wpływ → Naprawa → Przycisk */}
+          {/* 🧭 Najważniejsze rekomendacje — format premium: Problem → Przyczyna → Wpływ → Naprawa */}
           {scan && scan.recs.length > 0 && (
             <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>🧭 Rekomendacje Strażnika</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Rekomendacje Strażnika</div>
               {scan.recs.slice(0, 4).map((r, i) => (
                 r.problem ? (
                   <div key={i} className="journal-card" style={{ padding: "10px 12px", marginTop: 6 }}>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>⚠ {r.problem}</div>
                     {r.cause && <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>Przyczyna: {r.cause}</div>}
                     {r.impact && <div className="muted" style={{ fontSize: 12 }}>Wpływ: {r.impact}</div>}
-                    <div style={{ fontSize: 12, marginTop: 3 }}>Naprawa: {r.why}</div>
-                    {r.key && <button className="btn primary" style={{ width: "100%", marginTop: 8 }} disabled={busy} onClick={() => runRec(r.key)}>{r.label}</button>}
+                    <div style={{ fontSize: 12, marginTop: 4 }}>Naprawa: {r.why}</div>
+                    {r.key && r.key !== "fixAll" && (
+                      <button type="button" className="btn" style={{ width: "auto", marginTop: 8, padding: "7px 14px", fontSize: 12.5 }} disabled={busy} onClick={() => runRec(r.key)}>
+                        {r.label}
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <button key={i} className="btn" style={{ width: "100%", textAlign: "left", marginTop: 6, padding: "8px 12px", opacity: r.key ? 1 : 0.85 }} disabled={busy || !r.key} onClick={() => runRec(r.key)}>
+                  <button key={i} type="button" className="btn" style={{ width: "100%", textAlign: "left", marginTop: 6, padding: "8px 12px", opacity: r.key ? 1 : 0.85 }} disabled={busy || !r.key} onClick={() => runRec(r.key)}>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{r.label}</div>
                     <div className="muted" style={{ fontSize: 12, fontWeight: 400 }}>{r.why}</div>
                   </button>

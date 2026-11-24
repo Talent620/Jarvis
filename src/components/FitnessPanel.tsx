@@ -1,42 +1,76 @@
 import { useEffect, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { computeFitness } from "../lib/fitness";
 import { store } from "../lib/store";
 
-// Wskaźnik sprawności JARVIS-a: jeden rzut oka na to, ile % możliwości masz włączone,
-// co najbardziej opłaca się podpiąć (i ile % to doda), oraz pełna lista funkcji.
+// Wskaźnik sprawności JARVIS-a: domyślnie zwarty, jednowierszowy pasek postępu
+// (nie zasłania konfiguracji). Po rozwinięciu pokazuje brakujące funkcje i kategorie.
 export default function FitnessPanel() {
   const [, force] = useState(0);
-  const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   // Odśwież po każdej zmianie ustawień (klucze zapisują się od razu → procent rośnie na żywo).
   useEffect(() => store.subscribe(() => force((n) => n + 1)), []);
 
   const f = computeFitness();
   const color =
-    f.percent >= 75 ? "var(--ok, #58e08a)" : f.percent >= 50 ? "var(--cyan, #6ce7ff)" : f.percent >= 25 ? "#e8c15a" : "#e0794f";
+    f.percent >= 75 ? "var(--ok)" : f.percent >= 50 ? "var(--cyan)" : f.percent >= 25 ? "var(--gold)" : "#e0794f";
+
+  if (!expanded) {
+    return (
+      <div className="fitness-compact">
+        <div className="fitness-compact-info" style={{ flex: 1 }}>
+          <span className="fitness-compact-pct" style={{ color }}>{f.percent}%</span>
+          <div className="fitness-compact-bar" aria-label={`Sprawność ${f.percent}%`}>
+            <span style={{ width: `${f.percent}%`, background: color }} />
+          </div>
+          <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            Sprawność · {f.enabledCount}/{f.totalCount}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="chip"
+          style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 10px", fontSize: 12 }}
+          onClick={() => setExpanded(true)}
+        >
+          Szczegóły <ChevronDown size={13} strokeWidth={2} />
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="field" style={{ border: "1px solid var(--line)", borderRadius: 12, padding: 12, marginBottom: 14 }}>
+    <div className="field" style={{ border: "1px solid var(--line)", borderRadius: 12, padding: 12, marginBottom: 14, background: "var(--surface)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ fontFamily: "Orbitron", fontSize: 32, lineHeight: 1, color }}>{f.percent}%</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 600 }}>Sprawność JARVIS-a — {f.level}</div>
+        <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 26, lineHeight: 1, color }}>{f.percent}%</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>Sprawność JARVIS-a — {f.level}</div>
           <div className="muted" style={{ fontSize: 12 }}>
             {f.enabledCount} z {f.totalCount} możliwości włączonych
           </div>
         </div>
+        <button
+          type="button"
+          className="chip"
+          style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 10px", fontSize: 12 }}
+          onClick={() => setExpanded(false)}
+        >
+          Zwiń <ChevronUp size={13} strokeWidth={2} />
+        </button>
       </div>
 
-      <div style={{ height: 9, background: "var(--line)", borderRadius: 6, overflow: "hidden", margin: "10px 0" }}>
+      <div style={{ height: 6, background: "var(--line)", borderRadius: 999, overflow: "hidden", margin: "10px 0" }}>
         <div style={{ width: `${f.percent}%`, height: "100%", background: color, transition: "width .35s ease" }} />
       </div>
 
       {f.topMissing.length > 0 && (
         <div style={{ fontSize: 13 }}>
-          <div className="muted" style={{ marginBottom: 2 }}>Najwięcej zyskasz, włączając:</div>
+          <div className="muted" style={{ marginBottom: 4 }}>Najwięcej zyskasz, włączając:</div>
           {f.topMissing.map((i) => (
-            <div key={i.id} style={{ display: "flex", gap: 8, padding: "5px 0", borderTop: "1px solid var(--line)" }}>
-              <span style={{ color, fontWeight: 700, minWidth: 46 }}>+{i.gainPct}%</span>
-              <span>
+            <div key={i.id} style={{ display: "flex", gap: 8, padding: "6px 0", borderTop: "1px solid var(--line)" }}>
+              <span style={{ color, fontWeight: 700, minWidth: 42, fontFamily: "var(--font-mono)", fontSize: 12 }}>+{i.gainPct}%</span>
+              <span style={{ minWidth: 0 }}>
                 <b>{i.label}</b>
                 <br />
                 <span className="muted" style={{ fontSize: 12 }}>{i.hint}</span>
@@ -46,11 +80,11 @@ export default function FitnessPanel() {
         </div>
       )}
 
-      <button className="btn" style={{ marginTop: 10 }} onClick={() => setOpen((v) => !v)}>
-        {open ? "Ukryj pełną listę" : "Pokaż wszystkie funkcje i kategorie"}
+      <button type="button" className="btn" style={{ marginTop: 10 }} onClick={() => setShowAll((v) => !v)}>
+        {showAll ? "Ukryj pełną listę" : "Pokaż wszystkie funkcje i kategorie"}
       </button>
 
-      {open && (
+      {showAll && (
         <div style={{ marginTop: 10 }}>
           <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Sprawność wg kategorii:</div>
           {f.categories.map((c) => (

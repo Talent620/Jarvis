@@ -211,7 +211,10 @@ export default function More({
       <div className="panel" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>Centrum</h2>
+          <div className="panel-head-row">
+            <h2>Centrum</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         <div className="panel-body">
           {/* ⚡ Teraz — jedna najlepsza czynność na górze Centrum (ten sam silnik co ekran startowy).

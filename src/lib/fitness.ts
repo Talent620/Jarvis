@@ -93,25 +93,25 @@ function capabilities(): Cap[] {
   return [
     // — Mózg AI —
     { id: "ai_brain", label: "Mózg AI (klucz dostawcy)", category: "Mózg AI", weight: 22, on: () => cloudProvidersWithKey() >= 1 || !!s.ollamaUrl?.trim(),
-      hint: "⚙ → AI → wklej dowolny klucz (Claude, Gemini, Groq, OpenRouter…). Bez tego JARVIS nie myśli — to fundament." },
+      hint: "⚙ → Mózg → wklej dowolny klucz (Claude, Gemini, Groq, OpenRouter…). Bez tego JARVIS nie myśli — to fundament." },
     { id: "ai_backup", label: "Zapasowy mózg (2+ dostawców)", category: "Mózg AI", weight: 6, on: () => cloudProvidersWithKey() >= 2,
-      hint: "⚙ → AI → dodaj klucz DRUGIEGO dostawcy. Gdy jeden padnie lub wyczerpie limit, JARVIS płynnie przełączy się na zapas." },
+      hint: "⚙ → Mózg → dodaj klucz DRUGIEGO dostawcy. Gdy jeden padnie lub wyczerpie limit, JARVIS płynnie przełączy się na zapas." },
     { id: "ai_local", label: "Model lokalny (Ollama)", category: "Mózg AI", weight: 4, on: () => !!s.ollamaUrl?.trim(),
-      hint: "⚙ → AI → Zaawansowane → adres Ollamy. Działa offline, bez limitów i kosztów, domyka łańcuch awaryjny." },
+      hint: "⚙ → Mózg → Zaawansowane → adres Ollamy. Działa offline, bez limitów i kosztów, domyka łańcuch awaryjny." },
     { id: "deep_think", label: "Głębokie myślenie", category: "Mózg AI", weight: 1, on: () => !!s.deepThink,
-      hint: "⚙ → AI → Zaawansowane → Głębokie myślenie. Przy trudnych pytaniach JARVIS najpierw analizuje wewnętrznie." },
+      hint: "⚙ → Mózg → Zaawansowane → Głębokie myślenie. Przy trudnych pytaniach JARVIS najpierw analizuje wewnętrznie." },
     { id: "council", label: "Tryb Konsylium", category: "Mózg AI", weight: 1, on: () => !!s.councilMode,
-      hint: "⚙ → AI → Tryb Konsylium. Złożone pytania konsultuje u kilku modeli naraz." },
+      hint: "⚙ → Mózg → Tryb Konsylium. Złożone pytania konsultuje u kilku modeli naraz." },
     { id: "expert", label: "Wiedza ekspercka (offline)", category: "Mózg AI", weight: 1, on: () => s.expertKnowledge !== false,
-      hint: "⚙ → AI → Zaawansowane → Wiedza ekspercka. Wszczepione modele mentalne, za darmo i bez sieci." },
+      hint: "⚙ → Mózg → Zaawansowane → Wiedza ekspercka. Wszczepione modele mentalne, za darmo i bez sieci." },
 
     // — Komunikacja —
     { id: "mail", label: "Poczta (wysyłka e-maili)", category: "Komunikacja", weight: 9, on: () => mailConfigured(),
-      hint: "⚙ → AI → 📨 Poczta: adres Gmail + hasło aplikacji. Odblokowuje wysyłkę maili i masowy mailing ofert do leadów." },
+      hint: "⚙ → Połączenia → 📨 Poczta: adres Gmail + hasło aplikacji. Odblokowuje wysyłkę maili i masowy mailing ofert do leadów." },
 
     // — Głos —
     { id: "stt", label: "Sterowanie głosem (rozpoznawanie mowy)", category: "Głos", weight: 6, on: () => primaryKey("groq").length > 0,
-      hint: "⚙ → AI → wklej klucz Groq (darmowy). Włącza dyktowanie i komendy głosem na komputerze (Whisper)." },
+      hint: "⚙ → Mózg → wklej klucz Groq (darmowy). Włącza dyktowanie i komendy głosem na komputerze (Whisper)." },
     { id: "tts_premium", label: "Naturalny głos (TTS premium)", category: "Głos", weight: 4,
       on: () => (s.geminiTts !== false && primaryKey("gemini").length > 0) || !!s.elevenLabsApiKey?.trim() || !!s.fishAudioApiKey?.trim(),
       hint: "⚙ → Głos → włącz Gemini TTS (darmowy, wymaga klucza Gemini) albo dodaj ElevenLabs/Fish Audio — JARVIS brzmi naturalnie." },
@@ -124,37 +124,37 @@ function capabilities(): Cap[] {
 
     // — Wyszukiwanie —
     { id: "web_search", label: "Wyszukiwanie w sieci (Tavily)", category: "Wyszukiwanie", weight: 5, on: () => !!s.tavilyApiKey?.trim() && s.webSearch !== false,
-      hint: "⚙ → AI → Research (Tavily): wklej klucz i włącz wyszukiwanie. Odpowiedzi ze świeżych źródeł z internetu, z przypisami." },
+      hint: "⚙ → Mózg → Research (Tavily): wklej klucz i włącz wyszukiwanie. Odpowiedzi ze świeżych źródeł z internetu, z przypisami." },
 
     // — Multimedia —
     { id: "images", label: "Obrazy (generowanie/edycja)", category: "Multimedia", weight: 3, on: () => primaryKey("gemini").length > 0 || !!s.studioKeys?.trim(),
-      hint: "⚙ → AI → klucz Gemini (lub osobne klucze Studia). Tworzenie i edycja zdjęć (darmowe Nano Banana)." },
+      hint: "⚙ → Mózg → klucz Gemini (lub osobne klucze Studia). Tworzenie i edycja zdjęć (darmowe Nano Banana)." },
     { id: "images_premium", label: "Obrazy premium (fal.ai)", category: "Multimedia", weight: 2, on: () => !!s.falApiKey?.trim(),
-      hint: "⚙ → AI → Studio premium → klucz fal.ai. Najwyższa jakość (FLUX, Nano Banana Pro)." },
+      hint: "⚙ → Mózg → Studio premium → klucz fal.ai. Najwyższa jakość (FLUX, Nano Banana Pro)." },
 
     // — Automatyzacja —
     { id: "sales_autopilot", label: "Autopilot sprzedaży", category: "Automatyzacja", weight: 3, on: () => s.salesAutopilot !== false,
-      hint: "⚙ → Zachowanie → Autopilot sprzedaży. Leady same stają się zadaniami (telefony, follow-upy)." },
+      hint: "⚙ → Zaawansowane → Zachowanie → Autopilot sprzedaży. Leady same stają się zadaniami." },
     { id: "n8n", label: "Automatyzacje (n8n)", category: "Automatyzacja", weight: 3, on: () => !!s.n8nUrl?.trim(),
-      hint: "⚙ → Integracje → n8n: adres webhooka. JARVIS uruchamia Twoje gotowe automatyzacje." },
+      hint: "⚙ → Połączenia → n8n: adres webhooka. JARVIS uruchamia Twoje gotowe automatyzacje." },
     { id: "auto_prospect", label: "Auto-prospekting (sam szuka klientów)", category: "Automatyzacja", weight: 2, on: () => !!s.autoProspect,
-      hint: "⚙ → Zachowanie → Auto-prospekting. JARVIS kilka razy dziennie sam znajduje nowe leady." },
+      hint: "⚙ → Zaawansowane → Zachowanie → Auto-prospekting. JARVIS kilka razy dziennie sam znajduje nowe leady." },
     { id: "proactive", label: "Proaktywny agent", category: "Automatyzacja", weight: 2, on: () => s.proactiveAgent !== false,
-      hint: "⚙ → Zachowanie → Proaktywny agent. Sam przypomina, podsuwa zadania i follow-upy." },
+      hint: "⚙ → Zaawansowane → Zachowanie → Proaktywny agent. Sam przypomina, podsuwa zadania i follow-upy." },
     { id: "briefing", label: "Poranny briefing", category: "Automatyzacja", weight: 1, on: () => !!s.dailyBriefing,
-      hint: "⚙ → Zachowanie → Codzienny briefing o ustalonej porze." },
+      hint: "⚙ → Zaawansowane → Zachowanie → Codzienny briefing o ustalonej porze." },
 
     // — Dom i integracje —
     { id: "backend", label: "Backend (sync + Gmail + Kalendarz)", category: "Dom i integracje", weight: 8, on: () => hasBackend(),
-      hint: "⚙ → Integracje → Synchronizacja: adres + token. Odblokowuje kopię w chmurze, Gmaila i Kalendarz Google na wszystkich urządzeniach." },
+      hint: "⚙ → Połączenia → Synchronizacja: adres + token. Odblokowuje kopię w chmurze, Gmaila i Kalendarz Google." },
     { id: "home_assistant", label: "Smart home (Home Assistant)", category: "Dom i integracje", weight: 3, on: () => !!s.homeAssistantUrl?.trim() && !!s.homeAssistantToken?.trim(),
-      hint: "⚙ → Integracje → Home Assistant: adres + token. Sterowanie domem głosem i komendą." },
+      hint: "⚙ → Połączenia → Home Assistant: adres + token. Sterowanie domem głosem i komendą." },
 
     // — Bezpieczeństwo —
     { id: "pin_lock", label: "Blokada PIN", category: "Bezpieczeństwo", weight: 2, on: () => pinLockSet(),
       hint: "⚙ → Dane → Blokada PIN. Chroni dostęp do aplikacji." },
     { id: "profile", label: "Profil użytkownika", category: "Bezpieczeństwo", weight: 2, on: () => profileFilled(),
-      hint: "⚙ → Zachowanie → uzupełnij profil (cele, zainteresowania). JARVIS dopasowuje odpowiedzi do Ciebie." },
+      hint: "⚙ → Zaawansowane → Zachowanie → uzupełnij profil (cele, zainteresowania). JARVIS dopasowuje odpowiedzi do Ciebie." },
   ];
 }
 

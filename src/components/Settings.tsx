@@ -643,12 +643,15 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
       <div className="panel" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>⚙ Ustawienia</h2>
+          <div className="panel-head-row">
+            <h2>Ustawienia</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
           {/* 🔎 Wpisz, czego szukasz — przeniesiemy Cię prosto do sekcji (bez przewijania). */}
-          <div style={{ position: "relative", marginTop: 8 }}>
+          <div style={{ position: "relative", marginTop: 10 }}>
             <input
               value={find}
-              placeholder="🔎 Szukaj ustawienia… (np. klucz, głos, kopia, PIN)"
+              placeholder="Szukaj ustawienia… (np. klucz, głos, kopia, PIN)"
               onChange={(e) => setFind(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && findResults[0]) jumpTo(findResults[0]); if (e.key === "Escape") setFind(""); }}
               style={{ width: "100%" }}
@@ -667,8 +670,8 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
           {/* Podstawowe (Mózg/Głos/Połączenia/Prywatność) domyślnie; reszta pod „Zaawansowane". */}
           <div className="chips" style={{ marginTop: 10 }}>
             {([
-              { id: "basic", label: "⭐ Podstawowe" },
-              { id: "advanced", label: "🔧 Zaawansowane" },
+              { id: "basic", label: "Podstawowe" },
+              { id: "advanced", label: "Zaawansowane" },
             ] as const).map((g) => (
               <button key={g.id} type="button" className={`chip ${settingsGroup === g.id ? "on" : ""}`} aria-pressed={settingsGroup === g.id} onClick={() => setSettingsGroup(g.id)}>{g.label}</button>
             ))}
@@ -684,8 +687,6 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
           <p className="muted" style={{ margin: "8px 2px 0", fontSize: 12 }}>{TABS.find((t) => t.id === tab)?.summary}</p>
         </div>
         <div className="panel-body">
-          {/* Wskaźnik sprawności — zawsze widoczny u góry, niezależnie od zakładki. */}
-          <FitnessPanel />
           {/* ============ 🤖 AI ============ */}
           {tab === "ai" && (
             <>
@@ -693,6 +694,8 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 onChanged={() => setS((p) => ({ ...p, ...store.settings }))}
                 onJumpBackup={() => setTab("data")}
               />
+              {/* Kompaktowy pasek sprawności — zwinięty domyślnie, tylko na zakładce Mózg. */}
+              <FitnessPanel />
               {/* 🎛 Tryb pracy — jasny wybór zamiast dziesiątek przełączników */}
               <h3 id="set-mode">🎛 Tryb pracy JARVISA</h3>
               <p className="muted">Najprościej: wybierz <b>jeden</b> tryb — JARVIS ustawi za Ciebie dostawcę, model i szybkość. Chcesz sam? Niżej: <b>🔧 Diagnostyka zaawansowana</b>.</p>
@@ -2678,12 +2681,13 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                   </button>
                 ))}
               </div>
-              <h3 id="set-theme">Motyw HUD</h3>
-              <p className="muted">Kolor akcentów całego interfejsu.</p>
+              <h3 id="set-theme">Motyw interfejsu</h3>
+              <p className="muted">Wybierz motyw ciemny, jasny lub akcent kolorystyczny interfejsu.</p>
               <div className="chips" style={{ marginBottom: 8 }}>
                 {[
+                  { id: "default", l: "Obsidian (domyślny)" },
+                  { id: "light", l: "Jasny ☀" },
                   { id: "aurora", l: "Aurora ✨" },
-                  { id: "default", l: "Cyan" },
                   { id: "gold", l: "Złoty" },
                   { id: "amber", l: "Bursztyn" },
                   { id: "green", l: "Zielony" },

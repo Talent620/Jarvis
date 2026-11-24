@@ -133,7 +133,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
                     placeholder="Wklej klucz API…"
                     onChange={(e) => setKey(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addKey()}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, minWidth: 0 }}
                   />
                   <button className="btn primary" style={{ width: "auto", marginTop: 0 }} onClick={addKey} disabled={!key.trim() || testing}>
                     {testing ? "⏳" : "Połącz"}

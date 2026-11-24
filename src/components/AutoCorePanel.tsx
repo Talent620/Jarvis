@@ -121,14 +121,14 @@ export function AutoCorePanel({
             Tryb: <b>{s.provider === "auto" ? "AUTO (domyślny)" : s.provider}</b> · Usługi: <b>{configured.length}</b> · Modele w puli: <b>{discoveredCount}</b>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <div className="autocore-actions">
           {s.provider !== "auto" && (
-            <button className="btn" onClick={() => { store.setSettings({ provider: "auto", model: "auto" }); refresh(); }}>
+            <button type="button" className="btn" onClick={() => { store.setSettings({ provider: "auto", model: "auto" }); refresh(); }}>
               Włącz AUTO
             </button>
           )}
-          <button className="btn" onClick={() => speak(buildAutocoreVoiceReport(), { ...store.settings, speak: true })}>
-            🔊 Raport głosowy
+          <button type="button" className="btn" onClick={() => speak(buildAutocoreVoiceReport(), { ...store.settings, speak: true })}>
+            Raport głosowy
           </button>
         </div>
       </div>
@@ -159,7 +159,7 @@ export function AutoCorePanel({
       {/* Budżet + pasek postępu */}
       <div className="autocore-section">
         <div style={{ fontSize: 12 }}>
-          <b>💰 Budżet:</b> dziś <b>{budget.spentTodayUsd.toFixed(3)} USD</b> · miesiąc <b>{budget.spentMonthUsd.toFixed(2)} USD</b>
+          <b>Budżet:</b> dziś <b>{budget.spentTodayUsd.toFixed(3)} USD</b> · miesiąc <b>{budget.spentMonthUsd.toFixed(2)} USD</b>
           {budget.monthlyLimitUsd > 0
             ? ` / ${budget.monthlyLimitUsd.toFixed(2)} USD (${budgetPct}%, prognoza ${budget.forecastMonthUsd.toFixed(2)} USD)`
             : " (brak limitu — ustaw poniżej, by chronić płatne usługi)"}
@@ -180,7 +180,9 @@ export function AutoCorePanel({
             style={{ width: 90 }}
           />
           <button
+            type="button"
             className="btn"
+            style={{ width: "auto", marginTop: 0, padding: "8px 13px", fontSize: 12.5 }}
             onClick={() => {
               const v = Math.max(0, Number(limitDraft) || 0);
               store.setSettings({ aiMonthlyBudgetUsd: v });
@@ -196,8 +198,9 @@ export function AutoCorePanel({
             ⏳ Oczekują na zatwierdzenie limitu: {budget.pending.map((p) => (
               <button
                 key={p}
+                type="button"
                 className="btn"
-                style={{ marginLeft: 6 }}
+                style={{ width: "auto", marginTop: 0, marginLeft: 6, padding: "6px 10px", fontSize: 12 }}
                 onClick={() => {
                   const r = authorizeService(p, Math.max(0, Number(limitDraft) || 0) || undefined);
                   setMsg(r.message);
@@ -212,9 +215,9 @@ export function AutoCorePanel({
       </div>
 
       {/* Jeden przycisk: Podłącz nową usługę AI */}
-      <div style={{ marginTop: 10 }}>
-        <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>🔌 PODŁĄCZ NOWĄ USŁUGĘ AI</div>
-        <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ marginTop: 12 }}>
+        <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Podłącz nową usługę AI</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
           <input
             type="password"
             value={keyInput}
@@ -222,22 +225,22 @@ export function AutoCorePanel({
             onChange={(e) => setKeyInput(e.target.value)}
             style={{ flex: 1, minWidth: 0 }}
           />
-          <button className="btn primary" disabled={busy || !keyInput.trim()} onClick={handleConnect}>
+          <button type="button" className="btn primary" style={{ width: "auto", marginTop: 0, padding: "10px 16px" }} disabled={busy || !keyInput.trim()} onClick={handleConnect}>
             {busy ? "Łączę…" : "Podłącz"}
           </button>
         </div>
-        <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 11 }}>
-          <button className="btn" style={{ padding: "4px 9px", fontSize: 11 }} onClick={() => setShowEndpoint((v) => !v)}>
+        <div style={{ marginTop: 8, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", fontSize: 11.5 }}>
+          <button type="button" className="chip" style={{ fontSize: 11.5, padding: "5px 10px" }} onClick={() => setShowEndpoint((v) => !v)}>
             {showEndpoint ? "Ukryj własny endpoint" : "+ Własny URL (Modal / serwer)"}
           </button>
           {onJumpBackup && (
-            <button className="btn" style={{ padding: "4px 9px", fontSize: 11 }} onClick={onJumpBackup}>
-              🔐 Kopia / przywrócenie (APK)
+            <button type="button" className="chip" style={{ fontSize: 11.5, padding: "5px 10px" }} onClick={onJumpBackup}>
+              Kopia / przywrócenie
             </button>
           )}
           {isDesktop() && (
-            <button className="btn" style={{ padding: "4px 9px", fontSize: 11 }} disabled={diagLoading} onClick={runSystemDiag}>
-              {diagLoading ? "Sprawdzam system…" : "🐧 Diagnostyka systemu (W1)"}
+            <button type="button" className="chip" style={{ fontSize: 11.5, padding: "5px 10px" }} disabled={diagLoading} onClick={runSystemDiag}>
+              {diagLoading ? "Sprawdzam system…" : "Diagnostyka systemu"}
             </button>
           )}
         </div>
