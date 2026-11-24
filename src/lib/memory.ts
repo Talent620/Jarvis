@@ -1,5 +1,4 @@
 import { store, uid } from "./store";
-import { primaryKey } from "./keys";
 import { fetchTimeout, appTokenHeader } from "./http";
 import { embedLocal, localEmbedUsable, LOCAL_EMBED_TAG } from "./localEmbed";
 import { durability, memoryScore } from "./memoryScore";
@@ -42,10 +41,13 @@ let embedDisabled = false; // ustawiane, gdy brak źródła embeddingów w CHMUR
 /** Embeddingi chmurowe (Gemini bezpośrednio lub przez proxy) albo null. */
 async function embedCloud(texts: string[]): Promise<number[][] | null> {
   if (embedDisabled) return null;
-  const key = primaryKey("gemini");
+  const { resolveService, reportOutcome } = await import("./autocore/gateway");
+  const svc = resolveService("embed");
+  const key = svc.provider === "gemini" && svc.allowed ? svc.apiKey : "";
   const proxy = store.settings.proxyUrl?.trim();
   try {
     if (key) {
+      const t0 = Date.now();
       const out: number[][] = [];
       for (const t of texts) {
         const r = await fetchTimeout(
@@ -57,10 +59,15 @@ async function embedCloud(texts: string[]): Promise<number[][] | null> {
           },
           20000,
         );
-        if (!r.ok) throw new Error(`embed ${r.status}`);
+        if (!r.ok) {
+          const err = Object.assign(new Error(`embed ${r.status}`), { status: r.status });
+          reportOutcome("gemini", "text-embedding-004", key, false, { error: err });
+          throw err;
+        }
         const d = await r.json();
         out.push(d?.embedding?.values || []);
       }
+      reportOutcome("gemini", "text-embedding-004", key, true, { latencyMs: Date.now() - t0 });
       return out;
     }
     if (proxy) {

@@ -155,12 +155,20 @@ export class LiveSession {
   ) {}
 
   async start(): Promise<void> {
+    const { resolveService, reportOutcome } = await import("./autocore/gateway");
+    const svc = resolveService("live");
+    if (svc.provider === "gemini" && !svc.allowed && svc.reason) {
+      this.onState("error", svc.reason);
+      return;
+    }
     this.onState("connecting");
+    const useKey = (svc.provider === "gemini" && svc.apiKey) ? svc.apiKey : this.apiKey;
     const url =
       `wss://generativelanguage.googleapis.com/ws/` +
-      `google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${this.apiKey}`;
+      `google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${useKey}`;
     this.ws = new WebSocket(url);
     this.ws.onopen = () => {
+      reportOutcome("gemini", this.model, useKey, true);
       this.ws!.send(
         JSON.stringify({
           setup: {

@@ -83,8 +83,11 @@ export function geminiEditPrompt(prompt: string, hasInput: boolean): string {
 }
 
 async function geminiEdit(prompt: string, inputs: Img[]): Promise<Result> {
+  const { budgetGate } = await import("./autocore/budget");
+  const { keyUsable, modelUsable } = await import("./autocore/health");
+  const { reportOutcome } = await import("./autocore/gateway");
   // Studio ma WŁASNĄ pulę kluczy (studioKeys). Gdy pusta — używa zwykłych kluczy Gemini.
-  const keys = studioKeyList().length ? studioKeyList() : orderedKeys("gemini");
+  const keys = (studioKeyList().length ? studioKeyList() : orderedKeys("gemini")).filter((k) => keyUsable("gemini", k));
   if (!keys.length) return { error: "Dodaj darmowy klucz Gemini (w Studiu: 🔑 albo ⚙ → AI) — edytor obrazów korzysta z Gemini (Nano Banana)." };
   const parts: any[] = [{ text: geminiEditPrompt(prompt, inputs.length > 0) }];
   for (const im of inputs) parts.push({ inlineData: { mimeType: im.mediaType, data: im.data } });
@@ -92,14 +95,23 @@ async function geminiEdit(prompt: string, inputs: Img[]): Promise<Result> {
   for (const key of keys) {
     let quotaHit = false;
     for (const model of GEMINI_MODELS) {
+      if (!modelUsable("gemini", model)) continue;
+      const g = budgetGate("gemini", model);
+      if (!g.allowed) { lastErr = g.reason || "Budżet zatrzymany."; continue; }
+      const t0 = Date.now();
       try {
         const r = await callGemini(model, key, parts);
-        if (!("error" in r)) return r;
+        if (!("error" in r)) {
+          reportOutcome("gemini", model, key, true, { latencyMs: Date.now() - t0 });
+          return r;
+        }
         lastErr = r.error;
+        reportOutcome("gemini", model, key, false, { error: new Error(r.error) });
         if (isQuota(r.error)) { coolDownKey("gemini", key); quotaHit = true; break; } // → następny klucz
         if (!isModelMiss(r.error)) return r; // twardy błąd (np. zły opis) — nie ma sensu rotować
         // model nieobsługiwany tym kluczem → spróbuj kolejnej nazwy modelu
       } catch (e) {
+        reportOutcome("gemini", model, key, false, { error: e });
         lastErr = `Błąd połączenia: ${e instanceof Error ? e.message : e}`;
       }
     }

@@ -6,6 +6,9 @@ import { fetchTimeout } from "./http";
 import { WhisperListener } from "./whisperListener";
 import { synthLocal, localTtsUsable } from "./localTts";
 import { logError } from "./errorLog";
+import { budgetGate } from "./autocore/budget";
+import { keyUsable } from "./autocore/health";
+import { reportOutcome, resolveService } from "./autocore/gateway";
 import {
   isNavigatorOffline,
   registerAndroidAudioUnlock,
@@ -427,6 +430,7 @@ function pcmToWavUrl(b64: string, sampleRate: number): string {
 export async function geminiSpeak(text: string, voiceName?: string): Promise<boolean> {
   const key = primaryKey("gemini");
   if (!key || !text.trim()) return false;
+  if (!keyUsable("gemini", key) || !budgetGate("gemini", "gemini-2.5-flash-preview-tts").allowed) return false;
   const voice = voiceName?.trim() || "Charon";
   const chunks = splitForSpeech(text);
   if (!chunks.length) return false;
@@ -434,6 +438,7 @@ export async function geminiSpeak(text: string, voiceName?: string): Promise<boo
 
   // Synteza JEDNEGO kawałka → URL audio (albo null). Bez odtwarzania.
   const synth = async (chunk: string): Promise<string | null> => {
+    const t0 = Date.now();
     try {
       const res = await fetchTimeout(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${key}`,
@@ -450,14 +455,19 @@ export async function geminiSpeak(text: string, voiceName?: string): Promise<boo
         },
         30000,
       );
-      if (!res.ok) return null;
+      if (!res.ok) {
+        reportOutcome("gemini", "gemini-2.5-flash-preview-tts", key, false, { error: Object.assign(new Error(`Gemini TTS (${res.status})`), { status: res.status }) });
+        return null;
+      }
       const d = await res.json();
       const part = (d?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData);
       const b64 = part?.inlineData?.data;
       if (!b64) return null;
+      reportOutcome("gemini", "gemini-2.5-flash-preview-tts", key, true, { latencyMs: Date.now() - t0 });
       const rate = Number(/rate=(\d+)/.exec(part.inlineData.mimeType || "")?.[1]) || 24000;
       return pcmToWavUrl(b64, rate);
-    } catch {
+    } catch (e) {
+      reportOutcome("gemini", "gemini-2.5-flash-preview-tts", key, false, { error: e });
       return null;
     }
   };
@@ -653,6 +663,7 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
 
   // Streaming TTS zdanie-po-zdaniu: własny serwer Modal Voice (deploy/modal_voice.py).
   if (!offline && mode === "modal" && settings.modalVoiceUrl?.trim()) {
+    const t0 = Date.now();
     const ok = await streamingTtsQueue.speak(
       text,
       (sentence, signal) =>
@@ -664,11 +675,13 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
         }),
       playBlob,
     );
+    reportOutcome("modal", "modal-voice", settings.keys?.modal?.trim() || "modal", ok, { latencyMs: Date.now() - t0 });
     if (ok || myToken !== speakToken) return;
   }
 
   // Darmowy, wysokiej jakości głos przez Gemini TTS (gdy wybrany, online i jest klucz).
-  if (!offline && mode === "gemini" && primaryKey("gemini")) {
+  const ttsSvc = resolveService("tts");
+  if (!offline && mode === "gemini" && ttsSvc.allowed && primaryKey("gemini")) {
     if (await geminiTts(text, settings)) return;
   }
 

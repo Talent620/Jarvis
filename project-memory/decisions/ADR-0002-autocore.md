@@ -1,6 +1,6 @@
 # ADR-0002: JARVIS AUTOCORE — centralne zarządzanie AI, budżetem i nadzorem
 
-- **Status:** proposed
+- **Status:** accepted
 - **Data:** 2026-11-24
 - **Autor:** antigravity
 - **Zakres:** `src/lib/autocore/*`, `src/components/AutoCorePanel.tsx`, `proxy/lib/providers.js`, `scripts/agent-lock.mjs`, `scripts/guardian-daemon.mjs`, `scripts/verify-apk.mjs`, `AGENTS.md`
