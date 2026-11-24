@@ -4,11 +4,11 @@
   "command": "npm test",
   "available": true,
   "unavailableReason": null,
-  "startedAt": "2026-11-24T16:29:33.398Z",
-  "finishedAt": "2026-11-24T16:33:39.960Z",
-  "durationMs": 246562,
-  "commit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
-  "branch": "feat/autocore",
+  "startedAt": "2026-11-24T16:41:52.383Z",
+  "finishedAt": "2026-11-24T16:46:10.936Z",
+  "durationMs": 258553,
+  "commit": "2afee4fd83f492bae7190167e2ca8680aa24f805",
+  "branch": "main",
   "worktreeDirty": true,
   "worktreeFingerprint": "2609344d476d66d521435023411665f16ee4e0f4b48eefc816fd6f329691a9d5",
   "exitCode": 0,
@@ -61,5 +61,5 @@
     "stderr | tests/chatsDegrade.test.ts > chats — brak cichej degradacji > gdy wszystkie próby padają → ok=false i warning o pełnej pamięci",
     "[chats] Nie udało się zapisać historii czatu — pamięć (localStorage) pełna."
   ],
-  "logPath": "project-memory/reports/logs/test-20261124T162933Z.log"
+  "logPath": "project-memory/reports/logs/test-20261124T164152Z.log"
 }

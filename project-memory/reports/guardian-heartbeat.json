@@ -1,10 +1,10 @@
 {
-  "checkedAt": "2026-11-24T16:30:42.483Z",
-  "branch": "feat/autocore",
-  "head": "ad66860",
+  "checkedAt": "2026-11-24T16:43:02.981Z",
+  "branch": "main",
+  "head": "2afee4f",
   "dirtyCount": 2,
-  "ahead": null,
-  "behind": null,
+  "ahead": 0,
+  "behind": 0,
   "secretScanOk": true,
   "memoryVerifyOk": true,
   "ollama": {

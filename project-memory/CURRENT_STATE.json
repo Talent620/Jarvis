@@ -1,22 +1,20 @@
 {
   "schemaVersion": 1,
   "generatedBy": "scripts/sync-project-state.mjs",
-  "generatedAt": "2026-11-24T16:34:29.057Z",
+  "generatedAt": "2026-11-24T16:46:50.818Z",
   "notice": "PLIK GENEROWANY — nie edytuj ręcznie. Odśwież: npm run memory:sync",
   "git": {
-    "commit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
-    "shortCommit": "ad66860",
-    "branch": "feat/autocore",
+    "commit": "2afee4fd83f492bae7190167e2ca8680aa24f805",
+    "shortCommit": "2afee4f",
+    "branch": "main",
     "dirty": true,
     "changes": [
-      "M project-memory/CURRENT_STATE.json",
-      " M project-memory/CURRENT_STATE.md",
+      "M project-memory/reports/apk.json",
       " M project-memory/reports/build.json",
       " M project-memory/reports/guardian-heartbeat.json",
       " M project-memory/reports/lint.json",
       " M project-memory/reports/secret-scan.json",
-      " M project-memory/reports/test.json",
-      "?? project-memory/events/20261124T163428808Z-antigravity-autocore-finish.json"
+      " M project-memory/reports/test.json"
     ],
     "worktreeFingerprint": "2609344d476d66d521435023411665f16ee4e0f4b48eefc816fd6f329691a9d5"
   },
@@ -30,8 +28,13 @@
         "protocol": "https"
       }
     ],
-    "upstream": "NONE",
-    "aheadBehind": "UNKNOWN"
+    "upstream": "origin/main",
+    "aheadBehind": {
+      "upstream": "origin/main",
+      "ahead": 0,
+      "behind": 0,
+      "note": "względem ostatniego lokalnego fetch"
+    }
   },
   "project": {
     "name": "jarvis-ai-assistant",
@@ -64,7 +67,7 @@
     },
     {
       "dir": "project-memory",
-      "files": 16
+      "files": 17
     },
     {
       "dir": "ios",
@@ -402,6 +405,16 @@
   ],
   "recentCommits": [
     {
+      "hash": "2afee4f",
+      "date": "2026-11-24T16:34:31Z",
+      "subject": "Merge feat/autocore into main (JARVIS AUTOCORE + Guardian 5a)"
+    },
+    {
+      "hash": "713039d",
+      "date": "2026-11-24T16:34:29Z",
+      "subject": "chore(memory): verified autocore-finish snapshot & event (ADR-0002 accepted)"
+    },
+    {
       "hash": "ad66860",
       "date": "2026-11-24T16:29:10Z",
       "subject": "feat(autocore): route voice TTS, liveVoice, images & memory embeddings via AutoCore + accept ADR-0002"
@@ -440,25 +453,15 @@
       "hash": "f5a5dc4",
       "date": "2026-11-24T13:05:40Z",
       "subject": "fix(android): Play-Protect-safe sideload APK (strip AccessibilityService + QUERY_ALL_PACKAGES)"
-    },
-    {
-      "hash": "d387067",
-      "date": "2026-11-24T12:57:55Z",
-      "subject": "fix(android): use fresh applicationId net.serwer256.jarvis.v4 (JARVIS Apex) to avoid signature conflict with legacy JARVIS v2"
-    },
-    {
-      "hash": "34eda42",
-      "date": "2026-11-24T12:43:12Z",
-      "subject": "fix(android): sign APK with permanent GH Secrets keystore (zipalign + apksigner V1/V2/V3 verify gate), bump versionCode, and export AccessibilityService"
     }
   ],
   "checks": {
     "secret-scan": {
       "command": "node scripts/secret-scan.mjs --all",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T16:29:13.805Z",
-      "commit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
-      "logPath": "project-memory/reports/logs/secret-scan-20261124T162913Z.log",
+      "finishedAt": "2026-11-24T16:41:33.139Z",
+      "commit": "2afee4fd83f492bae7190167e2ca8680aa24f805",
+      "logPath": "project-memory/reports/logs/secret-scan-20261124T164132Z.log",
       "summary": {
         "result": "Skan sekretów: czysto."
       },
@@ -469,9 +472,9 @@
     "lint": {
       "command": "npm run lint",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T16:29:33.352Z",
-      "commit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
-      "logPath": "project-memory/reports/logs/lint-20261124T162913Z.log",
+      "finishedAt": "2026-11-24T16:41:52.334Z",
+      "commit": "2afee4fd83f492bae7190167e2ca8680aa24f805",
+      "logPath": "project-memory/reports/logs/lint-20261124T164133Z.log",
       "summary": {
         "problems": null
       },
@@ -482,9 +485,9 @@
     "test": {
       "command": "npm test",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T16:33:39.960Z",
-      "commit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
-      "logPath": "project-memory/reports/logs/test-20261124T162933Z.log",
+      "finishedAt": "2026-11-24T16:46:10.936Z",
+      "commit": "2afee4fd83f492bae7190167e2ca8680aa24f805",
+      "logPath": "project-memory/reports/logs/test-20261124T164152Z.log",
       "summary": {
         "testFiles": "Test Files  359 passed (359)",
         "tests": "Tests  3026 passed (3026)"
@@ -496,11 +499,11 @@
     "build": {
       "command": "npm run build",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T16:34:16.211Z",
-      "commit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
-      "logPath": "project-memory/reports/logs/build-20261124T163340Z.log",
+      "finishedAt": "2026-11-24T16:46:49.509Z",
+      "commit": "2afee4fd83f492bae7190167e2ca8680aa24f805",
+      "logPath": "project-memory/reports/logs/build-20261124T164610Z.log",
       "summary": {
-        "built": "built in 12.79s"
+        "built": "built in 13.59s"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -518,11 +521,11 @@
         "digest": "sha256:2de0fa2e2833354fd62cbc608a97baf1ac497431ea0ede23922a9ae202f2f098"
       }
     ],
-    "runId": 45399897217,
-    "runSha": "f5a5dc439c60981313e22ab7c22f5034b8b9721a",
-    "checkedAt": "2026-11-24T15:46:13.562Z",
-    "status": "STALE",
-    "reason": "APK zbudowany z f5a5dc4, nie z HEAD"
+    "runId": 45438729900,
+    "runSha": "2afee4fd83f492bae7190167e2ca8680aa24f805",
+    "checkedAt": "2026-11-24T16:46:50.811Z",
+    "status": "PASS",
+    "reason": "zielony build + asset .apk dla HEAD"
   },
   "openItems": [
     {
@@ -750,5 +753,5 @@
     }
   ],
   "failedAttempts": 5,
-  "integrity": "c9d792984a63153a12860ab51bb7c7c455ae3c072786d3e8a76fe4484be106a7"
+  "integrity": "198c843c09ffb4dd430d6752d69b7889f9e17e32d5dc1cd34a8629342384babe"
 }

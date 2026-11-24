@@ -1,35 +1,35 @@
-<!-- GENERATED: scripts/sync-project-state.mjs · sha256:101645f2cfd414d214b24f783bf231a70ec3a0e7e3b178b9a6f019c4dfcdcc09 · DO NOT EDIT -->
+<!-- GENERATED: scripts/sync-project-state.mjs · sha256:d0a793e7b4a354b2239ebb7eb78b65da09f1564858c2346d820c475f4df73937 · DO NOT EDIT -->
 # JARVIS — CURRENT STATE (generowany)
 
-> Wygenerowano 2026-11-24T16:34:29.057Z przez `scripts/sync-project-state.mjs`. **Nie edytuj ręcznie** — `npm run memory:sync`.
+> Wygenerowano 2026-11-24T16:46:50.818Z przez `scripts/sync-project-state.mjs`. **Nie edytuj ręcznie** — `npm run memory:sync`.
 > Statusy: PASS tylko z rzeczywistego uruchomienia dla bieżącego commita i drzewa; brak danych = UNKNOWN.
 
 ## Repozytorium
-- Commit `ad66860` na `feat/autocore` · zmiany w drzewie (poza project-memory): TAK
-- Zdalne: origin → github.com (https) · upstream: NONE
+- Commit `2afee4f` na `main` · zmiany w drzewie (poza project-memory): TAK
+- Zdalne: origin → github.com (https) · upstream: origin/main
 - Projekt: jarvis-ai-assistant@2.0.0 · manifest JARVIS 4.0.0-apex (10 modułów, 119 narzędzi)
 
 ## Weryfikacja (rzeczywiste uruchomienia)
 | Check | Status | Commit | Kod | Kiedy | Szczegóły |
 |---|---|---|---|---|---|
-| secret-scan | **PASS** | ad66860 | 0 | 2026-11-24T16:29:13.805Z | kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto. |
-| lint | **PASS** | ad66860 | 0 | 2026-11-24T16:29:33.352Z | kod wyjścia 0 dla bieżącego stanu |
-| test | **PASS** | ad66860 | 0 | 2026-11-24T16:33:39.960Z | kod wyjścia 0 dla bieżącego stanu · Test Files  359 passed (359) · Tests  3026 passed (3026) |
-| build | **PASS** | ad66860 | 0 | 2026-11-24T16:34:16.211Z | kod wyjścia 0 dla bieżącego stanu · built in 12.79s |
-| apk | **STALE** | f5a5dc4 | — | 2026-11-24T15:46:13.562Z | APK zbudowany z f5a5dc4, nie z HEAD · v4-jarvis-apex-safe · jarvis-apex-v4.apk |
+| secret-scan | **PASS** | 2afee4f | 0 | 2026-11-24T16:41:33.139Z | kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto. |
+| lint | **PASS** | 2afee4f | 0 | 2026-11-24T16:41:52.334Z | kod wyjścia 0 dla bieżącego stanu |
+| test | **PASS** | 2afee4f | 0 | 2026-11-24T16:46:10.936Z | kod wyjścia 0 dla bieżącego stanu · Test Files  359 passed (359) · Tests  3026 passed (3026) |
+| build | **PASS** | 2afee4f | 0 | 2026-11-24T16:46:49.509Z | kod wyjścia 0 dla bieżącego stanu · built in 13.59s |
+| apk | **PASS** | 2afee4f | — | 2026-11-24T16:46:50.811Z | zielony build + asset .apk dla HEAD · v4-jarvis-apex-safe · jarvis-apex-v4.apk |
 
 ## Główne moduły (pliki śledzone)
-`tests` 359 · `src/lib` 309 · `src/components` 78 · `android` 64 · `docs` 30 · `(root)` 20 · `project-memory` 16 · `ios` 15 · `scripts` 15 · `proxy` 13 · `electron` 12 · `QA` 11
+`tests` 359 · `src/lib` 309 · `src/components` 78 · `android` 64 · `docs` 30 · `(root)` 20 · `project-memory` 17 · `ios` 15 · `scripts` 15 · `proxy` 13 · `electron` 12 · `QA` 11
 
 ## Workflowy CI
 `android-v2.yml` (workflow_dispatch/push) · `android.yml` (push/workflow_dispatch) · `deploy-modal.yml` (workflow_dispatch) · `ios.yml` (workflow_dispatch/push) · `ollama-exe.yml` (workflow_dispatch/push) · `release.yml` (workflow_dispatch/push) · `sd-exe.yml` (workflow_dispatch/push) · `test.yml` (push/pull_request/workflow_dispatch) · `ubuntu.yml` (workflow_dispatch/pull_request/push) · `windows.yml` (workflow_dispatch/push)
 
 ## Ostatnie commity
+- `2afee4f` Merge feat/autocore into main (JARVIS AUTOCORE + Guardian 5a)
+- `713039d` chore(memory): verified autocore-finish snapshot & event (ADR-0002 accepted)
 - `ad66860` feat(autocore): route voice TTS, liveVoice, images & memory embeddings via AutoCore + accept ADR-0002
 - `ed8c129` chore(memory): autocore verified state snapshot, reports & event (ADR-0002 proposed)
 - `87f78dd` feat(guardian): remote git-ref agent-lock, local guardian-daemon + systemd, APK verifier, AGENTS.md roles & AD
-- `4916d35` feat(autocore): unified AI catalog, health, budget controller, A-J router, gateway, discovery & AutoCorePanel
-- `5ecd05d` fix(proxy): allow Cerebras/Mistral hosts on /openai relay (were 403 with proxyUrl) + registry↔allowlist guard 
 
 ## Otwarte sprawy z istniejącej dokumentacji (28)
 - K4. Dodać bootstrap Ubuntu — `docs/JARVIS_REPAIR_PLAN.md:43`
