@@ -1,5 +1,6 @@
 // === proxy/lib/providers.js — proxy dostawców AI (Anthropic, Gemini, OpenAI, Modal Brain, Passthrough) ===
 import { CORS, json, bearer, appTokenBad, rateLimited, blocksCloudMetadata, passthroughAllowed } from "./auth.js";
+import { applyVoiceModeToOpenAiBody } from "./voiceProtocol.js";
 
 export const ALLOWED_OPENAI_HOSTS = [
   "api.groq.com",
@@ -45,8 +46,12 @@ export function envKeyForHost(host, env) {
   return undefined;
 }
 
-export async function relay(target, req, headers) {
-  const upstream = await fetch(target, { method: "POST", headers, body: await req.text() });
+export async function relay(target, req, headers, opts = {}) {
+  const rawBody = await req.text();
+  const body = opts.openaiVoiceMode
+    ? applyVoiceModeToOpenAiBody(rawBody, req.headers.get("x-voice-mode") === "1")
+    : rawBody;
+  const upstream = await fetch(target, { method: "POST", headers, body });
   const out = new Headers(upstream.headers);
   Object.entries(CORS).forEach(([k, v]) => out.set(k, v));
   return new Response(upstream.body, { status: upstream.status, headers: out });
@@ -100,7 +105,7 @@ export async function handleProviderRoute(path, url, req, env) {
     if (!openaiHostAllowed(hostname)) return json(403, { error: `Host niedozwolony: ${hostname}` });
     const key = env.MODAL_API_KEY || env.VLLM_API_KEY || bearer(req);
     if (!key) return json(401, { error: "Brak klucza API dla Modal Brain (MODAL_API_KEY / VLLM_API_KEY)." });
-    return relay(target, req, { "content-type": "application/json", authorization: `Bearer ${key}` });
+    return relay(target, req, { "content-type": "application/json", authorization: `Bearer ${key}` }, { openaiVoiceMode: true });
   }
 
   if (path.endsWith("/anthropic")) {
@@ -128,7 +133,7 @@ export async function handleProviderRoute(path, url, req, env) {
     const hostname = new URL(u).hostname.toLowerCase();
     if (!openaiHostAllowed(hostname)) return json(403, { error: `Host niedozwolony: ${host}` });
     const key = envKeyForHost(host, env) || (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-    return relay(u, req, { "content-type": "application/json", authorization: `Bearer ${key}` });
+    return relay(u, req, { "content-type": "application/json", authorization: `Bearer ${key}` }, { openaiVoiceMode: true });
   }
 
   if (path.endsWith("/passthrough")) {

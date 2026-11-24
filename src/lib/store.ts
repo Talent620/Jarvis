@@ -119,6 +119,8 @@ const defaultSettings: Settings = {
   userName: "Sir",
   profile: { ...emptyProfile },
   persona: "classic",
+  personalityMode: "AUTO",
+  voiceModeProtocol: false,
   customPersona: "",
   interpreterMode: false,
   interpreterFrom: "polski",

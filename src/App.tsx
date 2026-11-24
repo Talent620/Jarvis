@@ -98,6 +98,7 @@ import { isUncensored, fallbackNotice, shouldAnnounceFallback } from "./lib/prov
 import type { ProviderId } from "./lib/providers/types";
 import { enablePrivateMode, findOllamaServer } from "./lib/privateMode";
 import { isPrivateModeCommand, matchUnfilteredCommand, parseReadAloud } from "./lib/modeCommands";
+import { PERSONALITY_MODES, parseVoicePersonalityCommand, type PersonalityMode } from "./lib/soulModes";
 import Guardian from "./components/Guardian";
 import Mind from "./components/Mind";
 const GoalRunner = lazy(() => import("./components/GoalRunner"));
@@ -590,6 +591,25 @@ export default function App() {
       const id = uid();
       setMessages((m) => [...m, { id, role: "assistant", text: "🔊 Czytam na głos.", tools: ["tryb"], createdAt: Date.now() }]);
       void speak(toRead, { ...store.settings, speak: true }).catch(() => {});
+      return;
+    }
+
+    // Komenda głosowa przełączenia trybu osobowości (Bojowy / Kumpel / Adwokat Diabła / Auto).
+    const soulCmd = parseVoicePersonalityCommand(text);
+    if (soulCmd) {
+      store.setSettings({ personalityMode: soulCmd });
+      const msg =
+        soulCmd === "AUTO"
+          ? "Przełączyłem osobowość na tryb automatyczny. Sam dobiorę styl do tematu."
+          : `Tryb ${PERSONALITY_MODES[soulCmd].label} aktywny (${PERSONALITY_MODES[soulCmd].shortHint}).`;
+      const id = uid();
+      setLiveId(id);
+      setMessages((m) => [
+        ...m,
+        { id: uid(), role: "user", text, createdAt: Date.now() },
+        { id, role: "assistant", text: msg, tools: ["osobowość"], createdAt: Date.now() },
+      ]);
+      if (store.settings.speak) void speak(msg, store.settings).catch(() => {});
       return;
     }
 
@@ -1452,6 +1472,42 @@ export default function App() {
           <button className="chip" onClick={() => setDecision(null)} title="Pomiń">✕</button>
         </div>
       )}
+      <div
+        className="soul-bar"
+        style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "0 10px 6px", alignItems: "center" }}
+      >
+        {(["AUTO", "BOJOWY", "KUMPEL", "ADWOKAT_DIABLA"] as PersonalityMode[]).map((mode) => {
+          const active = (store.settings.personalityMode || "AUTO") === mode;
+          const label = mode === "AUTO" ? "⚡ Auto" : `${PERSONALITY_MODES[mode].badge} ${PERSONALITY_MODES[mode].label}`;
+          const hint = mode === "AUTO" ? "Router Refleks/Kora sam dobiera styl" : PERSONALITY_MODES[mode].shortHint;
+          return (
+            <button
+              key={mode}
+              type="button"
+              className={active ? "chip on" : "chip"}
+              onClick={() => {
+                store.setSettings({ personalityMode: mode });
+                toast(mode === "AUTO" ? "Osobowość: Auto (Refleks/Kora)" : `Tryb: ${PERSONALITY_MODES[mode].label}`);
+              }}
+              title={hint}
+            >
+              {label}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          className={store.settings.voiceModeProtocol ? "chip on" : "chip"}
+          onClick={() => {
+            const next = !store.settings.voiceModeProtocol;
+            store.setSettings({ voiceModeProtocol: next });
+            toast(next ? "🎙 Protokół mówionej polszczyzny: WŁ" : "🎙 Protokół mówionej polszczyzny: WYŁ");
+          }}
+          title="Krótkie, naturalne wypowiedzi pod głos (max 2–3 zdania, zero markdownu)"
+        >
+          🎙 Głos
+        </button>
+      </div>
       <Composer
         onSend={handleSend}
         onStop={stopGeneration}

@@ -10,6 +10,7 @@ import { providerShortName } from "./providerNames";
 import { fallbackNotice, fallbackVoiceLine, shouldAnnounceFallback } from "./providers/registry";
 import { toast } from "./toast";
 import { parseBossMeta } from "./boss";
+import { formatForSpokenPolish } from "./soulModes";
 import type { Msg, ProviderId } from "./providers/types";
 import type { Settings } from "../types";
 
@@ -171,7 +172,14 @@ export class ConversationLoop {
     }, this.opts.stallMs && this.opts.stallMs > 0 ? this.opts.stallMs : 9000);
     const t0 = Date.now();
     try {
-      let reply = await askJarvis(this.history.slice(-12), undefined, undefined, this.systemSuffix, this.prefer);
+      let reply = await askJarvis(
+        this.history.slice(-12),
+        undefined,
+        undefined,
+        this.systemSuffix,
+        this.prefer,
+        { voiceMode: true },
+      );
       // Samoweryfikacja + eskalacja: trudne zadanie sprawdza drugi, mocniejszy przebieg.
       let verify: VerifyResult = "none";
       if (this.opts.verify && needsVerification(text)) {
@@ -192,7 +200,7 @@ export class ConversationLoop {
       if (notice && announceFallback) toast(notice);
 
       // 🧭 Insight: skalibrowana pewność (mówiona, gdy istotna), predykcja kroku dalej, ślad do czarnej skrzynki.
-      let spoken = reply.text;
+      let spoken = formatForSpokenPolish(reply.text, 3) || reply.text;
       if (this.opts.insight) {
         const conf = confidencePct(reply.text, verify);
         const caution = confidencePreface(conf, isRiskyCommand(text));
@@ -201,7 +209,7 @@ export class ConversationLoop {
           brain: providerShortName(reply.via || this.prefer?.provider || "auto"),
           verify, conf, ms: Date.now() - t0, tools: reply.tools || [],
         };
-        spoken = [caution, reply.text, next ? `Mogę też: ${next}. Powiedz „tak”.` : ""].filter(Boolean).join(" ");
+        spoken = [caution, spoken, next ? `Mogę też: ${next}. Powiedz „tak”.` : ""].filter(Boolean).join(" ");
       }
 
       this.lastReply = spoken; // zapamiętaj do meta-rozkazu „powtórz"

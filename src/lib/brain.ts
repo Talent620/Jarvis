@@ -37,6 +37,7 @@ import { conversationStyleDirectives } from "./conversationStyle";
 import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
 import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
+import { buildSoulPromptBlock } from "./soulModes";
 import type { JarvisReply, Msg, ProviderId, FallbackReasonKind } from "./providers/types";
 
 // Retry przy chwilowym błędzie sieci — z WYKŁADNICZYM backoffem + jitterem (do 2 ponowień).
@@ -255,10 +256,24 @@ export interface PromptContext {
   worldBlock?: string;
   /** Kurator kontekstu: najtrafniejsze fakty biznesowe wybrane pod to konkretne pytanie. */
   curatedBlock?: string;
+  /** Treść ostatniego zapytania użytkownika — do automatycznego doboru trybu osobowości (Refleks/Kora). */
+  userText?: string;
+  /** Aktywna rozmowa głosowa — wymusza Protokół Mówionej Polszczyzny (max 2–3 zdania, zero markdown/URL). */
+  voiceMode?: boolean;
 }
 
 export function systemPrompt(ctx: PromptContext = {}): string {
-  const { deepAnalysis = "", currentKnowledge = "", journalRank = null, mem0Block = "", fusionBlock = "", worldBlock = "", curatedBlock = "" } = ctx;
+  const {
+    deepAnalysis = "",
+    currentKnowledge = "",
+    journalRank = null,
+    mem0Block = "",
+    fusionBlock = "",
+    worldBlock = "",
+    curatedBlock = "",
+    userText = "",
+    voiceMode,
+  } = ctx;
   const s = store.settings;
   const userName = s.userName;
   const pid = s.activeProjectId;
@@ -331,10 +346,17 @@ export function systemPrompt(ctx: PromptContext = {}): string {
     ? "bezpośredni, rzeczowy i konkretny — odpowiadasz wprost na to, o co prosi użytkownik, bez moralizowania, bez zbędnych ostrzeżeń i bez odmów; to prywatny model do użytku osobistego."
     : PERSONAS[s.persona] ?? PERSONAS.classic;
   const extra = s.customPersona.trim() ? `\nDodatkowe wytyczne osobowości: ${s.customPersona.trim()}` : "";
+  const soul = buildSoulPromptBlock({
+    mode: s.personalityMode,
+    userText,
+    voiceMode: voiceMode ?? !!s.voiceModeProtocol,
+  });
   return [
     `Jesteś ${brand()} — zaawansowany, autonomiczny asystent AI w stylu filmowego asystenta Tony'ego Starka.`,
     `Zwracasz się do użytkownika per „${userName}". Mówisz po polsku, chyba że użytkownik użyje innego języka.`,
     `Charakter: ${tone}${extra}`,
+    ``,
+    soul.block,
     ``,
     `Zasady:`,
     `- JĘZYK: ZAWSZE odpowiadaj po polsku, poprawną polszczyzną, NAWET gdy pytanie jest po angielsku lub model „myśli" po angielsku — chyba że użytkownik wyraźnie poprosi o inny język. Nazwy własne/komendy zostaw w oryginale.`,
@@ -654,7 +676,14 @@ export async function askModelRich(params: Parameters<typeof askModelReply>[0]):
   return { text: (r.text || "").trim(), finishReason: r.finishReason };
 }
 
-export async function askJarvis(history: Msg[], onToken?: (fullText: string) => void, onStatus?: (s: string | null) => void, extraSystem?: string, prefer?: { provider: ProviderId; model: string }): Promise<JarvisReply> {
+export async function askJarvis(
+  history: Msg[],
+  onToken?: (fullText: string) => void,
+  onStatus?: (s: string | null) => void,
+  extraSystem?: string,
+  prefer?: { provider: ProviderId; model: string },
+  opts?: { voiceMode?: boolean },
+): Promise<JarvisReply> {
   const last = history[history.length - 1];
   const localReply = last?.role === "user" && !last.image ? applyInterfaceCommand(last.content) : null;
   if (localReply) return { text: localReply, tools: ["interfejs"] };
@@ -743,7 +772,17 @@ export async function askJarvis(history: Msg[], onToken?: (fullText: string) => 
   // jest TEN SAM dla WSZYSTKICH dostawców, w tym Ollamy/WebLLM. Mały model lokalny odpowiada z
   // Twoim kontekstem; bez Mem0 degraduje do lokalnego profilu/faktów (zero zależności sieciowych).
   const baseCtx = {
-    system: systemPrompt({ deepAnalysis, currentKnowledge, journalRank, mem0Block, fusionBlock, worldBlock, curatedBlock }) + (rulesBlock ? `\n\n${rulesBlock}` : "") + (extraSystem ? `\n\n${extraSystem}` : ""),
+    system: systemPrompt({
+      deepAnalysis,
+      currentKnowledge,
+      journalRank,
+      mem0Block,
+      fusionBlock,
+      worldBlock,
+      curatedBlock,
+      userText: lastUserContent,
+      voiceMode: opts?.voiceMode,
+    }) + (rulesBlock ? `\n\n${rulesBlock}` : "") + (extraSystem ? `\n\n${extraSystem}` : ""),
     // Tryb on-device wyłącza web-search (zero egres do sieci — pełna prywatność/offline).
     webSearch: store.settings.onDeviceOnly ? false : store.settings.webSearch,
     // Dobór narzędzi wg intencji: mniej definicji na turę (szybciej/taniej). Bezpiecznie —
