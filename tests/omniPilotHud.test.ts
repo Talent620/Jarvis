@@ -78,4 +78,63 @@ describe("OMNI-PILOT · Warstwa 5: OmniPilotHud UI", () => {
     act(() => root.unmount());
     div.remove();
   });
+
+  it("renderuje Dual-Track Strażnika Ekranu w tle oraz przyciski decyzji po wykryciu celu", async () => {
+    const {
+      resetOmniSentinel,
+      startOmniSentinel,
+      runSentinelTick,
+      getSentinelState,
+    } = await import("../src/lib/omniSentinel");
+    resetOmniSentinel();
+
+    const div = document.createElement("div");
+    document.body.appendChild(div);
+    const root = createRoot(div);
+    act(() => root.render(createElement(OmniPilotHud)));
+
+    await act(async () => {
+      startOmniSentinel({
+        condition: "zielony przycisk Gotowe",
+        intervalMs: 30000,
+        maxChecks: 5,
+        actuator: {
+          isDesktop: () => true,
+          captureScreenDetailed: async () => ({
+            data: "FRAME_SENTINEL_TEST",
+            mediaType: "image/png",
+            width: 1440,
+            height: 810,
+            screenWidth: 1920,
+            screenHeight: 1080,
+            cursorX: 0,
+            cursorY: 0,
+          }),
+          moveCursor: async () => ({ ok: true, x: 960, y: 540, message: "OK" }),
+          mouseAction: async () => ({ ok: true, message: "OK" }),
+        },
+        askVision: async () =>
+          '{"matched":true,"xNorm":500,"yNorm":500,"label":"Gotowe","confidence":0.95,"risk":"none","question":"Widzę Gotowe — kliknąć?"}',
+      });
+      await runSentinelTick();
+    });
+
+    expect(div.textContent).toContain("STRAŻNIK · DECYZJA");
+    expect(div.textContent).toContain("Widzę Gotowe — kliknąć?");
+    const btns = Array.from(div.querySelectorAll<HTMLButtonElement>(".omni-sentinel-actions button"));
+    expect(btns.length).toBe(4);
+
+    // Kliknij "▶ Dalej" → wraca do watching
+    await act(async () => {
+      btns[2].click();
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    expect(getSentinelState().status).toBe("watching");
+
+    act(() => {
+      resetOmniSentinel();
+      root.unmount();
+    });
+    div.remove();
+  });
 });

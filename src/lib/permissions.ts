@@ -11,6 +11,7 @@ const OPERATOR_SAFE_OUTBOUND = new Set([
   "android_open_app", "android_open_settings", "android_scroll", "android_back", "android_global",
   "desktop_launch_app", "desktop_open", "desktop_volume", "desktop_media",
   "desktop_cursor_move", "desktop_scroll", "desktop_windows_list", "desktop_window_focus",
+  "desktop_sentinel_start",
 ]);
 
 // Narzędzia interakcji UI, które w trybie OPERATOR przechodzą TYLKO jeśli RiskGuard potwierdzi brak
@@ -139,10 +140,12 @@ const RISK: Record<string, Risk> = {
   desktop_launch_app: "outbound", desktop_open: "outbound", desktop_power: "outbound",
   desktop_volume: "outbound", desktop_media: "outbound", desktop_type: "outbound", desktop_hotkey: "outbound",
   desktop_click: "outbound", desktop_active_window: "outbound", system_browser_read_public: "outbound",
-  // OMNI-PILOT (płynny kursor, okna, wizyjne namierzanie, autopilot pulpitu)
+  // OMNI-PILOT & Frontier (płynny kursor, okna, drzewo OS, wizja, strażnik w tle, diagnostyka)
   desktop_windows_list: "read", desktop_visual_locate: "read",
+  desktop_ui_tree: "read", desktop_diagnose: "read", desktop_sentinel_stop: "read",
   desktop_cursor_move: "outbound", desktop_mouse_action: "outbound", desktop_scroll: "outbound",
   desktop_window_focus: "outbound", desktop_visual_act: "outbound", desktop_omni_task: "outbound",
+  desktop_sentinel_start: "outbound",
   // pełne sterowanie telefonem (Android, usługa Dostępności + RiskGuard)
   android_ui_tree: "read",
   android_tap_id: "outbound", android_scroll: "outbound", android_back: "outbound",

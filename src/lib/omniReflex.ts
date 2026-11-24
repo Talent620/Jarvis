@@ -18,7 +18,10 @@ export type OmniIntent =
   | { kind: "hotkey"; combo: string; label: string }
   | { kind: "type_text"; text: string }
   | { kind: "visual"; action: "move" | "click" | "double" | "right" | "locate"; target: string }
-  | { kind: "omni_goal"; goal: string };
+  | { kind: "omni_goal"; goal: string }
+  | { kind: "sentinel_start"; condition: string }
+  | { kind: "sentinel_stop" }
+  | { kind: "diagnose" };
 
 /** Pure: usuń polskie znaki i znormalizuj spacje (odporność na niedoskonałości STT). */
 export function foldPolish(raw: string): string {
@@ -63,6 +66,22 @@ export function parseOmniVoiceCommand(rawText: string): OmniIntent | null {
   // 0) Awaryjny STOP
   if (/^(?:stop|stoj|przerwij|zatrzymaj kursor|zatrzymaj autopilota|anuluj ruch)$/.test(f)) {
     return { kind: "abort" };
+  }
+
+  // 0b) Strażnik Ekranu w tle (Dual-Track Sentinel) — start / stop
+  if (/^(?:zatrzymaj straznika|wylacz straznika|przestan pilnowac ekranu|wylacz obserwacje ekranu|stop straznik)$/.test(f)) {
+    return { kind: "sentinel_stop" };
+  }
+  const sentMatch = original.match(
+    /^(?:(?:hej|ok|ej)\s+)?(?:jarvis[,:\s]+)?(?:pilnuj ekranu(?:\s+i\s+daj\s+zna[ćc]\s+(?:jak|gdy|kiedy)(?:\s+pojawi\s+si[ęe])?)?|obserwuj ekran(?:\s+i\s+daj\s+zna[ćc]\s+(?:jak|gdy|kiedy)(?:\s+pojawi\s+si[ęe])?)?|szukaj na ekranie w tle|daj zna[ćc]\s+(?:jak|gdy|kiedy)\s+(?:na ekranie\s+)?pojawi si[ęe])[:\s,-]+(.+)$/i,
+  );
+  if (sentMatch && sentMatch[1].trim().length >= 3) {
+    return { kind: "sentinel_start", condition: sentMatch[1].trim() };
+  }
+
+  // 0c) Diagnostyka systemu „Znajdź i Napraw”
+  if (/^(?:zdiagnozuj komputer|diagnostyka komputera|sprawdz system|sprawdz bledy systemu|co obciaza komputer|sprawdz czemu nie dziala dzwiek|sprawdz gotowosc omni pilot)$/.test(f)) {
+    return { kind: "diagnose" };
   }
 
   // 1) Wielokrokowy komputerowy autopilot ("zrób na komputerze...", "napraw na ekranie...", "autopilot...")

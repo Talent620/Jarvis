@@ -40,8 +40,10 @@ import { syncSalesTasks, autoPlanSummary } from "./autoPlan";
 import {
   launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, clickOnPc, activeWindowOnPc,
   hotkey as desktopHotkey, moveCursorOnPc, mouseActionOnPc, scrollOnPc, listWindowsOnPc, focusWindowOnPc,
+  queryUiTreeOnPc, diagnoseDesktopOnPc,
 } from "./desktop";
 import { visualLocateAndAct, runOmniAutonomousTask } from "./omniPilot";
+import { startOmniSentinel, stopOmniSentinel } from "./omniSentinel";
 import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
 import { primaryKey } from "./keys";
 import { exportData } from "./backup";
@@ -511,6 +513,48 @@ const tools: Tool[] = [
       }, ["goal"]),
     },
     run: async ({ goal, maxSteps }) => (await runOmniAutonomousTask(goal || "", { maxSteps })).text,
+  },
+  {
+    def: {
+      name: "desktop_ui_tree",
+      description:
+        "OMNI-FRONTIER Drzewo UI systemu (Linux AT-SPI2 / Windows UIA, <80 ms, 0 USD): odczytaj semantyczną listę klikalnych przycisków, pól i zakładek aktywnego okna z dokładnymi pikselami.",
+      input_schema: obj({ maxNodes: num("Maksymalna liczba węzłów (domyślnie 120)") }),
+    },
+    run: async ({ maxNodes }) => (await queryUiTreeOnPc(maxNodes ?? 120)).message,
+  },
+  {
+    def: {
+      name: "desktop_diagnose",
+      description:
+        "OMNI-FRONTIER Diagnostyka „Znajdź i Napraw” (read-only): sprawdź dźwięk, dysk, obciążenie CPU, otwarte porty, błędy journalctl oraz gotowość OMNI-PILOT / AT-SPI2 / Ollama i podaj komendy naprawcze.",
+      input_schema: obj({}),
+    },
+    run: async () => (await diagnoseDesktopOnPc()).message,
+  },
+  {
+    def: {
+      name: "desktop_sentinel_start",
+      description:
+        "OMNI-FRONTIER Dual-Track Strażnik Ekranu: obserwuj ekran w tle bez blokowania rozmowy (statyczne klatki = 0 USD, limit sprawdzeń). Gdy pojawi się warunek, zapytaj użytkownika co zrobić.",
+      input_schema: obj({
+        condition: str("Czego wypatrywać na ekranie, np. 'komunikat błędu w terminalu' lub 'przycisk Zakończono'"),
+        intervalMs: num("Odstęp między sprawdzeniami w ms (3000-30000, domyślnie 5000)"),
+        maxChecks: num("Limit sprawdzeń dla ochrony budżetu (1-60, domyślnie 24)"),
+      }, ["condition"]),
+    },
+    run: ({ condition, intervalMs, maxChecks }) => startOmniSentinel({ condition: condition || "", intervalMs, maxChecks }).text,
+  },
+  {
+    def: {
+      name: "desktop_sentinel_stop",
+      description: "Zatrzymaj działającego w tle Strażnika Ekranu (OMNI-FRONTIER).",
+      input_schema: obj({}),
+    },
+    run: () => {
+      stopOmniSentinel("Zatrzymano Strażnika Ekranu narzędziem.");
+      return "⏹ Zatrzymano Strażnika Ekranu.";
+    },
   },
   {
     def: {

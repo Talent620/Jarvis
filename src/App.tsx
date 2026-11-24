@@ -122,6 +122,7 @@ import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, che
 import { capturePhoto, readImageFile } from "./lib/camera";
 import { captureScreen, desktop, isDesktop, watchClipboard } from "./lib/desktop";
 import { abortOmniPilot, executeOmniVoiceCommand } from "./lib/omniPilot";
+import { subscribeSentinelAlerts } from "./lib/omniSentinel";
 import { OmniPilotHud } from "./components/OmniPilotHud";
 import ScreenBoundary from "./components/ScreenBoundary";
 import { getWeather } from "./lib/weather";
@@ -1388,10 +1389,26 @@ export default function App() {
       abortOmniPilot();
       toast("⏹ OMNI-PILOT zatrzymany awaryjnie (Ctrl+Alt+X)");
     });
+    const offSentinel = subscribeSentinelAlerts((hit) => {
+      toast(`👁 Strażnik: ${hit.label}`);
+      const id = uid();
+      setMessages((m) => [
+        ...m,
+        {
+          id,
+          role: "assistant",
+          text: `👁 **Strażnik Ekranu znalazł:** **${hit.label}** (${hit.x}, ${hit.y})\n${hit.question}\n*(Powiedz np. „kliknij to”, „wskaż to”, „szukaj dalej” albo „zatrzymaj strażnika” — możesz też normalnie rozmawiać dalej.)*`,
+          tools: ["omni_sentinel"],
+          createdAt: Date.now(),
+        },
+      ]);
+      if (store.settings.speak) void speak(hit.question, store.settings).catch(() => {});
+    });
     return () => {
       stop();
       offVoice?.();
       offOmniAbort?.();
+      offSentinel();
     };
   }, []);
 

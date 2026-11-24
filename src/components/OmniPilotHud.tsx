@@ -8,6 +8,13 @@ import {
   type OmniHudState,
   type OmniPhase,
 } from "../lib/omniPilot";
+import {
+  getSentinelState,
+  resolveSentinelDecision,
+  stopOmniSentinel,
+  subscribeSentinel,
+  type SentinelState,
+} from "../lib/omniSentinel";
 
 const PHASE_META: Record<OmniPhase, { label: string; tone: "cyan" | "green" | "amber" | "red" }> = {
   idle: { label: "GOTOWY", tone: "cyan" },
@@ -27,16 +34,40 @@ const PHASE_META: Record<OmniPhase, { label: string; tone: "cyan" | "green" | "a
 
 export function OmniPilotHud() {
   const [state, setState] = useState<OmniHudState>(() => getOmniHudState());
+  const [sentinel, setSentinel] = useState<SentinelState>(() => getSentinelState());
 
   useEffect(() => {
-    return subscribeOmniPilot(setState);
+    const offPilot = subscribeOmniPilot(setState);
+    const offSentinel = subscribeSentinel(setSentinel);
+    return () => {
+      offPilot();
+      offSentinel();
+    };
   }, []);
 
-  if (!state.visible) return null;
+  const sentinelActive = sentinel.status === "watching" || sentinel.status === "awaiting_decision";
+  if (!state.visible && !sentinelActive) return null;
 
-  const meta = PHASE_META[state.phase] || PHASE_META.idle;
-  const recentSteps = state.steps.slice(-4);
-  const reticle = state.reticle;
+  const isSentinelDecision = sentinel.status === "awaiting_decision" && !!sentinel.hit;
+  const meta = isSentinelDecision
+    ? { label: "STRAŻNIK · DECYZJA", tone: "amber" as const }
+    : !state.visible && sentinel.status === "watching"
+      ? { label: "STRAŻNIK W TLE", tone: "cyan" as const }
+      : PHASE_META[state.phase] || PHASE_META.idle;
+
+  const recentSteps = state.visible ? state.steps.slice(-4) : [];
+  const stageShot = isSentinelDecision ? sentinel.hit?.screenshotDataUrl : state.screenshotDataUrl;
+  const reticle = isSentinelDecision && sentinel.hit
+    ? {
+        xNorm: sentinel.hit.xNorm,
+        yNorm: sentinel.hit.yNorm,
+        x: sentinel.hit.x,
+        y: sentinel.hit.y,
+        label: sentinel.hit.label,
+        confidence: sentinel.hit.confidence,
+        source: "vision" as const,
+      }
+    : state.reticle;
 
   return (
     <aside
@@ -47,21 +78,24 @@ export function OmniPilotHud() {
     >
       <div className="omni-hud-head">
         <div className="omni-hud-title">
-          <span className={`omni-dot ${state.active ? "pulse" : ""}`} aria-hidden="true" />
+          <span className={`omni-dot ${state.active || sentinelActive ? "pulse" : ""}`} aria-hidden="true" />
           <span className="omni-brand">OMNI-PILOT</span>
           <span className="omni-badge">{meta.label}</span>
-          {state.maxSteps > 1 && (
+          {state.visible && state.maxSteps > 1 && (
             <span className="omni-step-pill">
               {state.step}/{state.maxSteps}
             </span>
           )}
         </div>
         <div className="omni-hud-controls">
-          {state.active ? (
+          {state.active || sentinelActive ? (
             <button
               type="button"
               className="omni-stop-btn"
-              onClick={() => abortOmniPilot()}
+              onClick={() => {
+                abortOmniPilot();
+                stopOmniSentinel();
+              }}
               title="Natychmiastowe zatrzymanie awaryjne (Ctrl+Alt+X)"
             >
               ⏹ STOP
@@ -80,12 +114,26 @@ export function OmniPilotHud() {
         </div>
       </div>
 
-      {state.goal && <div className="omni-goal">{state.goal}</div>}
+      {sentinelActive && (
+        <div className="omni-sentinel-bar">
+          <div className="omni-sentinel-row">
+            <span>👁 Strażnik: <strong>{sentinel.condition}</strong></span>
+            <span className="omni-step-pill">
+              {sentinel.checksDone}/{sentinel.maxChecks}
+            </span>
+          </div>
+          <div className="omni-sentinel-meta">
+            Statyczne klatki (0 USD): {sentinel.skippedStaticFrames} · Rozmowa KUMPEL aktywna równolegle
+          </div>
+        </div>
+      )}
 
-      {state.screenshotDataUrl && (
+      {state.visible && state.goal && !isSentinelDecision && <div className="omni-goal">{state.goal}</div>}
+
+      {stageShot && (
         <div className="omni-stage">
           <img
-            src={state.screenshotDataUrl}
+            src={stageShot}
             alt="Podgląd analizy wizyjnej pulpitu"
             className="omni-shot"
           />
@@ -101,6 +149,7 @@ export function OmniPilotHud() {
               <span className="omni-reticle-ring" />
               <span className="omni-reticle-core" />
               <span className="omni-reticle-tag">
+                {reticle.source === "os-tree" ? "⚡ OS · " : ""}
                 {reticle.label} · {Math.round(reticle.confidence * 100)}%
               </span>
             </div>
@@ -108,7 +157,29 @@ export function OmniPilotHud() {
         </div>
       )}
 
-      {state.statusMessage && <div className="omni-status">{state.statusMessage}</div>}
+      {isSentinelDecision && sentinel.hit && (
+        <div className="omni-confirm" role="alertdialog" aria-label="Decyzja Strażnika Ekranu">
+          <div className="omni-confirm-text">👁 {sentinel.hit.question}</div>
+          <div className="omni-sentinel-actions">
+            <button type="button" className="omni-btn-allow" onClick={() => void resolveSentinelDecision("click")}>
+              🎯 Kliknij
+            </button>
+            <button type="button" className="omni-btn-neutral" onClick={() => void resolveSentinelDecision("move")}>
+              🖱 Wskaż
+            </button>
+            <button type="button" className="omni-btn-neutral" onClick={() => void resolveSentinelDecision("resume")}>
+              ▶ Dalej
+            </button>
+            <button type="button" className="omni-btn-deny" onClick={() => void resolveSentinelDecision("stop")}>
+              ⏹ Stop
+            </button>
+          </div>
+        </div>
+      )}
+
+      {state.visible && state.statusMessage && !isSentinelDecision && (
+        <div className="omni-status">{state.statusMessage}</div>
+      )}
 
       {state.confirmRequest && (
         <div className="omni-confirm" role="alertdialog" aria-label="Potwierdzenie RiskGuard">
@@ -147,6 +218,7 @@ export function OmniPilotHud() {
         <span>Kill-Switch: Ctrl+Alt+X</span>
         {reticle && (
           <span>
+            {reticle.source === "os-tree" ? "AT-SPI2/UIA " : ""}
             px ({reticle.x}, {reticle.y})
           </span>
         )}

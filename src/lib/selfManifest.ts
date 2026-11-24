@@ -21,7 +21,7 @@ export const JARVIS_MODULES = [
   "Live Vision (Oczy w terenie — tylna kamera + instrukcja głosowa)",
   "Kolejka Misji w Tle (mission_queue z natychmiastowym potwierdzeniem Refleks)",
   "Android Phone Use Agent + RiskGuard (Check-then-Act, zakaz pól haseł)",
-  "OMNI-PILOT Desktop Computer Use (Refleks Głosowy <30ms, Visual Grounding 0..1000, płynny kursor, RiskGuard + Ctrl+Alt+X)",
+  "OMNI-PILOT & Frontier Desktop Computer Use (Refleks <30ms, Hybryda AT-SPI2/UIA + Vision [0..1000], Dual-Track Strażnik Ekranu, Diagnostyka OS, RiskGuard + Ctrl+Alt+X)",
   "Bi-Temporal Core Memory + MCP Bridge",
 ] as const;
 

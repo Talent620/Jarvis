@@ -6,7 +6,9 @@
 import {
   abortDesktopPilot,
   captureScreenDetailed,
+  diagnoseDesktopOnPc,
   dragOnPc,
+  findUiNodeOnPc,
   focusWindowOnPc,
   isDesktop,
   launchApp,
@@ -20,6 +22,11 @@ import {
   volumePc,
 } from "./desktop";
 import { parseOmniVoiceCommand, type OmniIntent } from "./omniReflex";
+import {
+  startOmniSentinel,
+  stopOmniSentinel,
+  tryHandleSentinelVoiceReply,
+} from "./omniSentinel";
 import {
   assessDesktopActionRisk,
   locateVisualTarget,
@@ -51,6 +58,7 @@ export interface OmniReticle {
   label: string;
   confidence: number;
   action: string;
+  source?: "os-tree" | "vision";
 }
 
 export interface OmniConfirmRequest {
@@ -84,6 +92,8 @@ export interface OmniHudState {
 export interface OmniActuator {
   isDesktop: () => boolean;
   captureScreenDetailed: typeof captureScreenDetailed;
+  findUiNode: typeof findUiNodeOnPc;
+  diagnose: typeof diagnoseDesktopOnPc;
   moveCursor: typeof moveCursorOnPc;
   mouseAction: typeof mouseActionOnPc;
   scroll: typeof scrollOnPc;
@@ -109,6 +119,7 @@ export interface OmniExecOptions {
 export interface VisualActResult {
   ok: boolean;
   found: boolean;
+  source?: "os-tree" | "vision";
   blocked?: boolean;
   denied?: boolean;
   aborted?: boolean;
@@ -132,7 +143,7 @@ export interface OmniTaskResult {
 export interface OmniVoiceResult {
   handled: boolean;
   ok?: boolean;
-  kind?: OmniIntent["kind"];
+  kind?: OmniIntent["kind"] | "sentinel_decision";
   text?: string;
   spokenText?: string;
 }
@@ -140,6 +151,8 @@ export interface OmniVoiceResult {
 const DEFAULT_ACTUATOR: OmniActuator = {
   isDesktop,
   captureScreenDetailed,
+  findUiNode: findUiNodeOnPc,
+  diagnose: diagnoseDesktopOnPc,
   moveCursor: moveCursorOnPc,
   mouseAction: mouseActionOnPc,
   scroll: scrollOnPc,
@@ -250,6 +263,7 @@ export function abortOmniPilot(actuator?: Partial<OmniActuator>): void {
     pendingConfirmResolver = null;
     fn(false);
   }
+  stopOmniSentinel("Zatrzymano awaryjnie (STOP / Ctrl+Alt+X).");
   const abortHw = actuator?.abortHardware || DEFAULT_ACTUATOR.abortHardware;
   try {
     void abortHw();
@@ -309,7 +323,8 @@ function pct(confidence: number): string {
 }
 
 /**
- * Namierz element wizyjnie na ekranie (0..1000) i opcjonalnie najedź lub kliknij po weryfikacji RiskGuard.
+ * Namierz element hybrydowo: najpierw lokalne Drzewo UI systemu (AT-SPI2 / Windows UIA, <80 ms, 0 USD),
+ * a gdy element nie jest w drzewie dostępności — automatyczny fallback na Wizję AI [0..1000] przez AutoCore.
  */
 export async function visualLocateAndAct(
   target: string,
@@ -346,58 +361,95 @@ export async function visualLocateAndAct(
     screenshotDataUrl: null,
     reticle: null,
     confirmRequest: null,
-    steps: [{ ts: Date.now(), phase: "observing", summary: "Przechwytywanie zrzutu ekranu", ok: true }],
-    statusMessage: "Przechwytuję obraz ekranu…",
+    steps: [{ ts: Date.now(), phase: "observing", summary: "Hybrydowe namierzanie (Drzewo OS → Wizja AI)", ok: true }],
+    statusMessage: `Szukam w drzewie UI systemu: „${target}”…`,
   });
 
-  const shot = await act.captureScreenDetailed();
-  if (myToken !== runToken) {
-    return { ok: false, found: false, aborted: true, text: "⏹ Przerwano operację.", spokenText: "Przerwano." };
-  }
-  if (!shot) {
-    emitState({
-      active: false,
-      phase: "error",
-      statusMessage: "Nie udało się przechwycić ekranu.",
-      steps: pushStepLog("error", "Brak zrzutu ekranu", false),
-    });
-    return {
-      ok: false,
-      found: false,
-      text: "Nie udało się zrobić zrzutu ekranu (sprawdź uprawnienia przechwytywania pulpitu).",
-      spokenText: "Nie mogę zobaczyć ekranu — brak zrzutu.",
-    };
-  }
+  // FAZA 0 (Frontier 1): Błyskawiczne, lokalne Drzewo Dostępności OS (AT-SPI2 / Windows UIA, <80 ms, 0 USD)
+  let located: GroundedTarget | null = null;
+  let source: "os-tree" | "vision" = "vision";
 
-  const dataUrl = `data:${shot.mediaType};base64,${shot.data}`;
-  emitState({
-    phase: "grounding",
-    screenshotDataUrl: dataUrl,
-    statusMessage: `Szukam wizyjnie: „${target}” (${shot.screenWidth}×${shot.screenHeight})…`,
-    steps: pushStepLog("grounding", `Analiza wizyjna: ${target}`, true),
-  });
-
-  let located: GroundedTarget;
   try {
-    located = await locateVisualTarget(target, shot, { askVision: opts.askVision });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    emitState({
-      active: false,
-      phase: "error",
-      statusMessage: `Błąd modelu wizyjnego: ${msg}`,
-      steps: pushStepLog("error", `Błąd Vision: ${msg.slice(0, 80)}`, false),
-    });
-    return {
-      ok: false,
-      found: false,
-      text: `Nie udało się przeanalizować ekranu modelem wizyjnym (${msg}).`,
-      spokenText: "Brak połączenia z modelem wizyjnym.",
-    };
+    const uiHit = await act.findUiNode(target);
+    if (myToken !== runToken) {
+      return { ok: false, found: false, aborted: true, text: "⏹ Przerwano operację.", spokenText: "Przerwano." };
+    }
+    if (uiHit.ok && uiHit.found && uiHit.node) {
+      const n = uiHit.node;
+      const sw = typeof window !== "undefined" && window.screen?.width ? window.screen.width : 1920;
+      const sh = typeof window !== "undefined" && window.screen?.height ? window.screen.height : 1080;
+      located = {
+        found: true,
+        xNorm: Math.max(0, Math.min(1000, Math.round((n.centerX / Math.max(320, sw)) * 1000))),
+        yNorm: Math.max(0, Math.min(1000, Math.round((n.centerY / Math.max(240, sh)) * 1000))),
+        x: n.centerX,
+        y: n.centerY,
+        label: n.name || target,
+        confidence: uiHit.score ?? 0.95,
+        risk: n.isPassword ? "password" : "none",
+        reason: `Drzewo OS (${uiHit.backend || "a11y"} · rola: ${n.role}${uiHit.windowTitle ? ` · okno: ${uiHit.windowTitle}` : ""})`,
+      };
+      source = "os-tree";
+    }
+  } catch {
+    /* fallback do Wizji AI poniżej */
   }
 
-  if (myToken !== runToken) {
-    return { ok: false, found: false, aborted: true, text: "⏹ Przerwano operację.", spokenText: "Przerwano." };
+  // FAZA 1 (Fallback): Zrzut ekranu + AutoCore Visual Grounding [0..1000]
+  if (!located) {
+    emitState({
+      phase: "observing",
+      statusMessage: "Przechwytuję obraz ekranu do analizy wizyjnej…",
+    });
+
+    const shot = await act.captureScreenDetailed();
+    if (myToken !== runToken) {
+      return { ok: false, found: false, aborted: true, text: "⏹ Przerwano operację.", spokenText: "Przerwano." };
+    }
+    if (!shot) {
+      emitState({
+        active: false,
+        phase: "error",
+        statusMessage: "Nie udało się przechwycić ekranu.",
+        steps: pushStepLog("error", "Brak zrzutu ekranu", false),
+      });
+      return {
+        ok: false,
+        found: false,
+        text: "Nie udało się zrobić zrzutu ekranu (sprawdź uprawnienia przechwytywania pulpitu).",
+        spokenText: "Nie mogę zobaczyć ekranu — brak zrzutu.",
+      };
+    }
+
+    const dataUrl = `data:${shot.mediaType};base64,${shot.data}`;
+    emitState({
+      phase: "grounding",
+      screenshotDataUrl: dataUrl,
+      statusMessage: `Szukam wizyjnie: „${target}” (${shot.screenWidth}×${shot.screenHeight})…`,
+      steps: pushStepLog("grounding", `Analiza wizyjna: ${target}`, true),
+    });
+
+    try {
+      located = await locateVisualTarget(target, shot, { askVision: opts.askVision });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      emitState({
+        active: false,
+        phase: "error",
+        statusMessage: `Błąd modelu wizyjnego: ${msg}`,
+        steps: pushStepLog("error", `Błąd Vision: ${msg.slice(0, 80)}`, false),
+      });
+      return {
+        ok: false,
+        found: false,
+        text: `Nie udało się przeanalizować ekranu modelem wizyjnym (${msg}).`,
+        spokenText: "Brak połączenia z modelem wizyjnym.",
+      };
+    }
+
+    if (myToken !== runToken) {
+      return { ok: false, found: false, aborted: true, text: "⏹ Przerwano operację.", spokenText: "Przerwano." };
+    }
   }
 
   if (!located.found) {
@@ -411,6 +463,7 @@ export async function visualLocateAndAct(
     return {
       ok: false,
       found: false,
+      source,
       target: located,
       text: `Nie znalazłem na ekranie „${target}”. ${why}`,
       spokenText: `Nie widzę elementu ${target} na ekranie.`,
@@ -418,6 +471,7 @@ export async function visualLocateAndAct(
   }
 
   const displayLabel = located.label || target;
+  const sourceBadge = source === "os-tree" ? "⚡ Drzewo OS (0 USD)" : "👁 Wizja AI";
   emitState({
     reticle: {
       xNorm: located.xNorm,
@@ -427,9 +481,10 @@ export async function visualLocateAndAct(
       label: displayLabel,
       confidence: located.confidence,
       action,
+      source,
     },
-    statusMessage: `Namierzono „${displayLabel}” (${located.x}, ${located.y} · pewność ${pct(located.confidence)})`,
-    steps: pushStepLog("grounding", `Cel: ${displayLabel} (${located.x}, ${located.y})`, true),
+    statusMessage: `${sourceBadge}: „${displayLabel}” (${located.x}, ${located.y} · pewność ${pct(located.confidence)})`,
+    steps: pushStepLog("grounding", `${sourceBadge}: ${displayLabel} (${located.x}, ${located.y})`, true),
   });
 
   // Twardy Desktop RiskGuard przed ruchem / kliknięciem
@@ -445,6 +500,7 @@ export async function visualLocateAndAct(
     return {
       ok: false,
       found: true,
+      source,
       blocked: true,
       target: located,
       text: `🛡️ ${reason}`,
@@ -489,8 +545,9 @@ export async function visualLocateAndAct(
     return {
       ok: true,
       found: true,
+      source,
       target: located,
-      text: `🎯 Namierzono **${displayLabel}** w punkcie \`(${located.x}, ${located.y})\` (pewność ${pct(located.confidence)})${located.reason ? ` — ${located.reason}` : ""}.`,
+      text: `🎯 ${sourceBadge}: namierzono **${displayLabel}** w punkcie \`(${located.x}, ${located.y})\` (pewność ${pct(located.confidence)})${located.reason ? ` — ${located.reason}` : ""}.`,
       spokenText: `Widzę ${displayLabel}, oznaczyłem punkt na podglądzie.`,
     };
   }
@@ -506,7 +563,7 @@ export async function visualLocateAndAct(
       : await act.mouseAction({ action, x: located.x, y: located.y, smooth: true });
 
   if (myToken !== runToken) {
-    return { ok: false, found: true, aborted: true, target: located, text: "⏹ Przerwano w trakcie ruchu.", spokenText: "Przerwano." };
+    return { ok: false, found: true, source, aborted: true, target: located, text: "⏹ Przerwano w trakcie ruchu.", spokenText: "Przerwano." };
   }
 
   if (!execRes.ok) {
@@ -519,6 +576,7 @@ export async function visualLocateAndAct(
     return {
       ok: false,
       found: true,
+      source,
       target: located,
       text: execRes.message,
       spokenText: "Nie udało się wykonać ruchu na pulpicie.",
@@ -542,8 +600,9 @@ export async function visualLocateAndAct(
   return {
     ok: true,
     found: true,
+    source,
     target: located,
-    text: `🎯 ${summary} (pewność wizji: ${pct(located.confidence)})`,
+    text: `🎯 ${summary} (${sourceBadge} · pewność ${pct(located.confidence)})`,
     spokenText: `${doneVerb[action]} ${displayLabel}.`,
   };
 }
@@ -957,10 +1016,25 @@ export async function executeOmniVoiceCommand(
   transcript: string,
   opts: OmniExecOptions = {},
 ): Promise<OmniVoiceResult> {
+  const act = resolveActuator(opts);
+
+  // Dual-Track: gdy Strażnik Ekranu czeka na Twoją decyzję („kliknij to / szukaj dalej / stop”),
+  // przechwyć TYLKO wyraźną decyzję — zwykła rozmowa jak z kumplem leci dalej bez przeszkód!
+  if (act.isDesktop()) {
+    const sentinelDecision = await tryHandleSentinelVoiceReply(transcript);
+    if (sentinelDecision.handled) {
+      return {
+        handled: true,
+        ok: sentinelDecision.ok,
+        kind: "sentinel_decision",
+        text: sentinelDecision.text,
+        spokenText: sentinelDecision.spokenText,
+      };
+    }
+  }
+
   const intent = parseOmniVoiceCommand(transcript);
   if (!intent) return { handled: false };
-
-  const act = resolveActuator(opts);
 
   if (intent.kind === "abort") {
     if (!hudState.active && !act.isDesktop()) return { handled: false };
@@ -1070,6 +1144,29 @@ export async function executeOmniVoiceCommand(
     case "omni_goal": {
       const res = await runOmniAutonomousTask(intent.goal, opts);
       return { handled: true, ok: res.ok, kind: intent.kind, text: res.text, spokenText: res.spokenText };
+    }
+    case "sentinel_start": {
+      const res = startOmniSentinel({
+        condition: intent.condition,
+        actuator: act,
+        askVision: opts.askVision,
+      });
+      return { handled: true, ok: res.ok, kind: intent.kind, text: res.text, spokenText: res.spokenText };
+    }
+    case "sentinel_stop": {
+      stopOmniSentinel("Zatrzymano Strażnika Ekranu komendą głosową.");
+      return {
+        handled: true,
+        ok: true,
+        kind: intent.kind,
+        text: "⏹ Zatrzymano Strażnika Ekranu.",
+        spokenText: "Wyłączam Strażnika Ekranu.",
+      };
+    }
+    case "diagnose": {
+      const res = await act.diagnose();
+      recordReflex("Diagnostyka systemu", res.ok, res.spokenText);
+      return { handled: true, ok: res.ok, kind: intent.kind, text: res.message, spokenText: res.spokenText };
     }
   }
 }

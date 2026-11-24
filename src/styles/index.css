@@ -3456,5 +3456,47 @@ html.low-power .omni-reticle-ring {
   color: var(--text-dim);
   opacity: 0.78;
 }
+.omni-sentinel-bar {
+  background: rgba(108, 231, 255, 0.08);
+  border: 1px solid rgba(108, 231, 255, 0.24);
+  border-radius: 10px;
+  padding: 7px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.omni-sentinel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.omni-sentinel-meta {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+.omni-sentinel-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.omni-btn-neutral {
+  border-radius: 8px;
+  padding: 6px 6px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(108, 231, 255, 0.14);
+  border: 1px solid rgba(108, 231, 255, 0.42);
+  color: var(--cyan);
+}
+.omni-sentinel-actions .omni-btn-allow,
+.omni-sentinel-actions .omni-btn-deny {
+  padding: 6px 6px;
+  font-size: 11.5px;
+}
+
 
 
