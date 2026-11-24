@@ -12,7 +12,7 @@ on:
       release_tag:
         description: "Tag GitHub Release dla czystego APK"
         required: false
-        default: "v3-jarvis-nextgen"
+        default: "v3-jarvis-soul-vision"
   push:
     paths:
       - ".github/workflows/android-v2.yml"
@@ -92,29 +92,33 @@ jobs:
 
       - name: Prepare clean APK + SHA-256
         run: |
-          cp android/app/build/outputs/apk/release/app-release.apk jarvis-v3-nextgen.apk
-          SHA="$(sha256sum jarvis-v3-nextgen.apk | awk '{print $1}')"
+          cp android/app/build/outputs/apk/release/app-release.apk jarvis-v3-soul-vision.apk
+          SHA="$(sha256sum jarvis-v3-soul-vision.apk | awk '{print $1}')"
           echo "APK_SHA256=$SHA" >> "$GITHUB_ENV"
-          ls -lh jarvis-v3-nextgen.apk
+          ls -lh jarvis-v3-soul-vision.apk
           echo "SHA-256: $SHA"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: jarvis-v3-nextgen-apk
-          path: jarvis-v3-nextgen.apk
+          name: jarvis-v3-soul-vision-apk
+          path: jarvis-v3-soul-vision.apk
           if-no-files-found: error
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.release_tag || 'v3-jarvis-nextgen' }}
-          name: JARVIS v3 NextGen Mobile (bez klucza licencyjnego)
+          tag_name: ${{ inputs.release_tag || 'v3-jarvis-soul-vision' }}
+          name: JARVIS v3 Soul & Vision (bez klucza licencyjnego)
           body: |
-            Niezależny build **JARVIS v3 NextGen** (`net.serwer256.jarvis.v2`, `JARVIS_LICENSE_REQUIRED=false` — działa od razu bez klucza licencyjnego).
-            Zawiera: Modal Brain (Qwen3-32B-AWQ + snapshots), Modal Voice full-duplex barge-in, Android Phone Use Agent + RiskGuard, Bi-Temporal Core Memory (30% cap), MCP Bridge oraz modularny BFF + Cron Trigger.
+            Niezależny build **JARVIS v3 — Sprint 2: Dusza, Autonomia i Oczy** (`net.serwer256.jarvis.v2`, `JARVIS_LICENSE_REQUIRED=false` — działa od razu bez klucza licencyjnego).
+            Nowości Sprintu 2:
+            - Protokół Mówionej Polszczyzny (`voice_mode`) + 3 tryby osobowości (`BOJOWY`, `KUMPEL`, `ADWOKAT_DIABLA`)
+            - Nocny Sen (`sleep_consolidate` + `open_loops` + `user_lessons`) + Budżet Ciszy (max 3/dzień, 22:00–07:00)
+            - Rada Ekspertów (`Narada:`) — 3 role równolegle (`Promise.all`) + werdykt <= 30 s i karta 3 opinii
+            - Live Vision (`Pokaż Jarvisowi` / `popatrz na to`) + Kolejka Misji w Tle (`mission_queue`)
 
             - **Commit:** `${{ github.sha }}`
-            - **SHA-256 (`jarvis-v3-nextgen.apk`):** `${{ env.APK_SHA256 }}`
-          files: jarvis-v3-nextgen.apk
+            - **SHA-256 (`jarvis-v3-soul-vision.apk`):** `${{ env.APK_SHA256 }}`
+          files: jarvis-v3-soul-vision.apk
           make_latest: false
