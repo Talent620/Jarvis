@@ -8,6 +8,11 @@ name: Build Android APK v2 (test, niezależny)
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Tag GitHub Release dla czystego APK"
+        required: false
+        default: "v3-jarvis-nextgen"
   push:
     paths:
       - ".github/workflows/android-v2.yml"
@@ -49,7 +54,7 @@ jobs:
 
       - name: Build web + sync Capacitor
         env:
-          JARVIS_LICENSE_REQUIRED: "false" # wersja TESTOWA v2 — bez ekranu aktywacji/klucza
+          JARVIS_LICENSE_REQUIRED: "false" # wersja TESTOWA — bez ekranu aktywacji/klucza
         run: |
           npm run build
           npx cap sync android
@@ -87,29 +92,29 @@ jobs:
 
       - name: Prepare clean APK + SHA-256
         run: |
-          cp android/app/build/outputs/apk/release/app-release.apk jarvis-v2.apk
-          SHA="$(sha256sum jarvis-v2.apk | awk '{print $1}')"
+          cp android/app/build/outputs/apk/release/app-release.apk jarvis-v3-nextgen.apk
+          SHA="$(sha256sum jarvis-v3-nextgen.apk | awk '{print $1}')"
           echo "APK_SHA256=$SHA" >> "$GITHUB_ENV"
-          ls -lh jarvis-v2.apk
+          ls -lh jarvis-v3-nextgen.apk
           echo "SHA-256: $SHA"
 
-      - name: Upload APK v2
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: jarvis-v2-release-apk
-          path: jarvis-v2.apk
+          name: jarvis-v3-nextgen-apk
+          path: jarvis-v3-nextgen.apk
           if-no-files-found: error
 
-      - name: Publish GitHub Release (v2-mobile-latest)
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2-mobile-latest
-          name: JARVIS v2 Mobile (bez klucza licencyjnego)
+          tag_name: ${{ inputs.release_tag || 'v3-jarvis-nextgen' }}
+          name: JARVIS v3 NextGen Mobile (bez klucza licencyjnego)
           body: |
-            Niezależny build **JARVIS v2** (`net.serwer256.jarvis.v2`, `JARVIS_LICENSE_REQUIRED=false` — działa od razu bez ekranu licencji).
-            Zawiera integrację **Modal Brain** (`Qwen/Qwen2.5-72B-Instruct-AWQ` na A100-80GB).
+            Niezależny build **JARVIS v3 NextGen** (`net.serwer256.jarvis.v2`, `JARVIS_LICENSE_REQUIRED=false` — działa od razu bez klucza licencyjnego).
+            Zawiera: Modal Brain (Qwen3-32B-AWQ + snapshots), Modal Voice full-duplex barge-in, Android Phone Use Agent + RiskGuard, Bi-Temporal Core Memory (30% cap), MCP Bridge oraz modularny BFF + Cron Trigger.
 
             - **Commit:** `${{ github.sha }}`
-            - **SHA-256 (`jarvis-v2.apk`):** `${{ env.APK_SHA256 }}`
-          files: jarvis-v2.apk
+            - **SHA-256 (`jarvis-v3-nextgen.apk`):** `${{ env.APK_SHA256 }}`
+          files: jarvis-v3-nextgen.apk
           make_latest: false

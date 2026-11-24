@@ -118,7 +118,7 @@ export function buildCoreMemoryBlock(
       (b.valid_from ?? b.createdAt ?? 0) - (a.valid_from ?? a.createdAt ?? 0),
   );
 
-  const header = "Core Memory (aktywne fakty i preferencje):";
+  const header = "Zapamiętane fakty (Core Memory):";
   if (header.length >= maxChars) {
     return { block: "", maxChars, usedChars: 0, included: [] };
   }
