@@ -1,6 +1,6 @@
 # ADR-0001: Jedna pamięć projektu z generowanym stanem i dziennikiem zdarzeń per plik
 
-Status: accepted
+Status: proposed (czeka na recenzję człowieka lub innego agenta)
 Data: 2026-11-24 · Autor: antigravity (Sprint 5a) · Recenzent: wymagany człowiek lub inny agent (zasada „autor ≠ jedyny recenzent”)
 
 ## Kontekst

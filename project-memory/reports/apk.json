@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "check": "apk",
+  "command": "gh run list --workflow android-v2.yml -L 1 && gh release view v4-jarvis-apex-safe",
+  "checkedAt": "2026-11-24T14:42:33.411Z",
+  "commit": "07911a17ef627304cfb433953cbd472b788826cf",
+  "workflow": "android-v2.yml",
+  "releaseTag": "v4-jarvis-apex-safe",
+  "lastRun": {
+    "conclusion": "success",
+    "createdAt": "2026-11-24T13:05:44Z",
+    "databaseId": 45399897217,
+    "event": "push",
+    "headSha": "f5a5dc439c60981313e22ab7c22f5034b8b9721a",
+    "status": "completed"
+  },
+  "releaseUrl": "https://github.com/Talent620/Jarvis/releases/tag/v4-jarvis-apex-safe",
+  "releasePublishedAt": "2026-11-24T13:10:09Z",
+  "apkAssets": [
+    {
+      "name": "jarvis-apex-v4.apk",
+      "size": 8750667,
+      "url": "https://github.com/Talent620/Jarvis/releases/download/v4-jarvis-apex-safe/jarvis-apex-v4.apk",
+      "digest": "sha256:2de0fa2e2833354fd62cbc608a97baf1ac497431ea0ede23922a9ae202f2f098"
+    }
+  ]
+}
