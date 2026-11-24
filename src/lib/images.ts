@@ -3,8 +3,6 @@ import { store } from "./store";
 import { humanize } from "./aiHelpers";
 import { fetchTimeout } from "./http";
 import { localSdGenerate, type SdOpts } from "./localImage";
-import { recordUsage } from "./usageTelemetry";
-import type { ProviderId } from "./providers/types";
 
 // Szacowany koszt za jeden obraz (USD) — do licznika wydatków. fal.ai liczy za sztukę.
 const FAL_COST: Record<string, number> = { "fal-flux-kontext": 0.04, "fal-nano-banana": 0.08 };
@@ -102,7 +100,7 @@ async function geminiEdit(prompt: string, inputs: Img[]): Promise<Result> {
       try {
         const r = await callGemini(model, key, parts);
         if (!("error" in r)) {
-          reportOutcome("gemini", model, key, true, { latencyMs: Date.now() - t0 });
+          reportOutcome("gemini", model, key, true, { latencyMs: Date.now() - t0, units: 1 });
           return r;
         }
         lastErr = r.error;
@@ -147,6 +145,10 @@ function viaProxy(url: string): string {
 }
 
 async function falEdit(modelId: ImageModelId, prompt: string, inputs: Img[]): Promise<Result> {
+  const { budgetGateExternal } = await import("./autocore/budget");
+  const { reportOutcome } = await import("./autocore/gateway");
+  const gate = budgetGateExternal("fal");
+  if (!gate.allowed) return { error: gate.reason || "Budżet AI został zatrzymany — płatne generowanie fal.ai wstrzymane." };
   // Oczyść klucz z UKRYTYCH znaków nie-ASCII (zero-width, BOM, miękki łącznik) — przy kopiowaniu
   // z czatu/zrzutu wkradają się i wywalają budowę nagłówka HTTP („non ISO-8859-1 code point").
   const key = (store.settings.falApiKey || "").replace(/[^\x20-\x7E]/g, "").trim();
@@ -183,9 +185,9 @@ async function falEdit(modelId: ImageModelId, prompt: string, inputs: Img[]): Pr
     const ir = await fetchTimeout(viaProxy(imgUrl), {}, 60000);
     if (!ir.ok) return { error: "Nie udało się pobrać wyniku z fal.ai." };
     const blob = await ir.blob();
-    // Zalicz koszt do licznika wydatków (fal.ai = za obraz). Liczba obrazów: tyle, ile zwrócił.
+    // Zalicz koszt do AutoCore (jednego licznika wydatków: fal.ai = za obraz).
     const n = Array.isArray(d.images) ? d.images.length : 1;
-    recordUsage({ at: Date.now(), provider: "fal" as ProviderId, model: FAL_ENDPOINT[modelId] || modelId, inputTokens: 0, outputTokens: 0, costUsd: (FAL_COST[modelId] || 0) * n });
+    reportOutcome("fal", FAL_ENDPOINT[modelId] || modelId, key, true, { costUsd: (FAL_COST[modelId] || 0.04) * n, units: n });
     return { data: await blobToBase64(blob), mediaType: blob.type || "image/png" };
   } catch (e) {
     return { error: `Błąd fal.ai: ${e instanceof Error ? e.message : e}` };

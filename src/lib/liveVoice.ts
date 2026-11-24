@@ -166,9 +166,10 @@ export class LiveSession {
     const url =
       `wss://generativelanguage.googleapis.com/ws/` +
       `google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${useKey}`;
+    const startedAt = Date.now();
     this.ws = new WebSocket(url);
     this.ws.onopen = () => {
-      reportOutcome("gemini", this.model, useKey, true);
+      reportOutcome("gemini", this.model, useKey, true, { units: 15 });
       this.ws!.send(
         JSON.stringify({
           setup: {
@@ -198,13 +199,21 @@ export class LiveSession {
     };
     this.ws.onmessage = (ev) => this.onMessage(ev);
     this.ws.onerror = () => {
+      reportOutcome("gemini", this.model, useKey, false, { error: new Error("Gemini Live WebSocket error") });
       if (!this.closed) { this.teardownOnError(); this.onState("error", "Nie udało się połączyć z Gemini Live."); }
     };
     this.ws.onclose = (ev) => {
-      if (this.closed) return;
+      if (this.closed) {
+        const durSec = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+        if (durSec > 15) reportOutcome("gemini", this.model, useKey, true, { units: durSec - 15 });
+        return;
+      }
       // Kod 1000 = normalne zamknięcie; inne wskazują przyczynę (klucz, model, limit).
       const reason = closeReason(ev.code, ev.reason);
-      if (ev.code !== 1000) this.teardownOnError(); // zwolnij mic/konteksty — inaczej retry stackuje
+      if (ev.code !== 1000) {
+        reportOutcome("gemini", this.model, useKey, false, { error: new Error(reason || `Gemini Live close ${ev.code}`) });
+        this.teardownOnError(); // zwolnij mic/konteksty — inaczej retry stackuje
+      }
       this.onState(ev.code === 1000 ? "closed" : "error", reason);
     };
   }

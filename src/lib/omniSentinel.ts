@@ -169,7 +169,11 @@ const alertListeners = new Set<(hit: SentinelHit, condition: string) => void>();
 let timerId: ReturnType<typeof setTimeout> | null = null;
 let sentinelRunId = 0;
 let lastFingerprint = "";
-let activeOpts: { actuator: SentinelActuator; askVision?: StartSentinelOptions["askVision"] } | null = null;
+let activeOpts: {
+  actuator: SentinelActuator;
+  askVision?: StartSentinelOptions["askVision"];
+  onConfirm?: StartSentinelOptions["onConfirm"];
+} | null = null;
 
 function emit(patch: Partial<SentinelState>): void {
   state = { ...state, ...patch, updatedAt: Date.now() };

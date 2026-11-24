@@ -12,6 +12,8 @@ import { systemActionsAvailable, saOpenAccessibility } from "../lib/systemAction
 import { FREE_STACK } from "../lib/freeMode";
 import ConsentManager from "./ConsentManager";
 import { AutoCorePanel } from "./AutoCorePanel";
+import { budgetGate } from "../lib/autocore/budget";
+import { reportOutcome } from "../lib/autocore/gateway";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, salesOsConfigured, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
 import { openSiteOs, pairSiteOs, siteOsConfigured, testSiteOs } from "../lib/siteOs";
@@ -514,28 +516,39 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
     if (!effProvider || effProvider === "ollama" || !effModel || iqBusy) return;
     const key = (s.keys[effProvider as keyof typeof s.keys] || "").trim().split("\n")[0];
     if (!key) { setIqProg("Brak klucza dla tego dostawcy."); return; }
+    const gate = budgetGate(effProvider, effModel);
+    if (!gate.allowed) { setIqProg(gate.reason || "Budżet AI zatrzymany."); return; }
     setIqBusy(true);
     setIqProg("Zaczynam test…");
     try {
       const callModel = async (prompt: string): Promise<string> => {
-        const r = await PROVIDERS[effProvider].impl({
-          system: "Odpowiadaj zwięźle i dokładnie po polsku. Trzymaj się ściśle polecenia.",
-          webSearch: false,
-          tools: [],
-          history: [{ role: "user", content: prompt }],
-          apiKey: key,
-          model: effModel,
-          proxyUrl: s.proxyUrl?.trim() || undefined,
-          fast: true,
-        });
-        return r.text || "";
+        const g = budgetGate(effProvider, effModel);
+        if (!g.allowed) throw new Error(g.reason || "Budżet AI zatrzymany.");
+        const t0 = Date.now();
+        try {
+          const r = await PROVIDERS[effProvider].impl({
+            system: "Odpowiadaj zwięźle i dokładnie po polsku. Trzymaj się ściśle polecenia.",
+            webSearch: false,
+            tools: [],
+            history: [{ role: "user", content: prompt }],
+            apiKey: key,
+            model: effModel,
+            proxyUrl: s.proxyUrl?.trim() || undefined,
+            fast: true,
+          });
+          reportOutcome(effProvider, effModel, key, true, { latencyMs: Date.now() - t0, usage: r.usage });
+          return r.text || "";
+        } catch (e) {
+          reportOutcome(effProvider, effModel, key, false, { error: e });
+          throw e;
+        }
       };
       const res = await runIqProbe(callModel, (d, t) => setIqProg(`Pytanie ${d}/${t}…`));
       saveIqResult(iqKey, res);
       setIqVer((v) => v + 1);
       setIqProg(`Gotowe: ${res.correct}/${res.total} (${res.pct}%).`);
     } catch {
-      setIqProg("Nie udało się zmierzyć — sprawdź klucz i sieć.");
+      setIqProg("Nie udało się zmierzyć — sprawdź klucz, budżet i sieć.");
     } finally {
       setIqBusy(false);
     }
@@ -555,14 +568,28 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
         const p = provs[i];
         const key = (s.keys[p.id] || "").trim().split("\n")[0];
         const model = p.defaultModel;
+        const gate = budgetGate(p.id, model);
+        if (!gate.allowed) {
+          setLeagueProg(`Pominięto ${p.label} (budżet).`);
+          continue;
+        }
         setLeagueProg(`(${i + 1}/${provs.length}) ${p.label}…`);
         const callModel = async (prompt: string): Promise<string> => {
-          const r = await PROVIDERS[p.id].impl({
-            system: "Odpowiadaj zwięźle i dokładnie po polsku. Trzymaj się ściśle polecenia.",
-            webSearch: false, tools: [], history: [{ role: "user", content: prompt }],
-            apiKey: key, model, proxyUrl: s.proxyUrl?.trim() || undefined, fast: true,
-          });
-          return r.text || "";
+          const g = budgetGate(p.id, model);
+          if (!g.allowed) throw new Error(g.reason || "Budżet AI zatrzymany.");
+          const t0 = Date.now();
+          try {
+            const r = await PROVIDERS[p.id].impl({
+              system: "Odpowiadaj zwięźle i dokładnie po polsku. Trzymaj się ściśle polecenia.",
+              webSearch: false, tools: [], history: [{ role: "user", content: prompt }],
+              apiKey: key, model, proxyUrl: s.proxyUrl?.trim() || undefined, fast: true,
+            });
+            reportOutcome(p.id, model, key, true, { latencyMs: Date.now() - t0, usage: r.usage });
+            return r.text || "";
+          } catch (e) {
+            reportOutcome(p.id, model, key, false, { error: e });
+            throw e;
+          }
         };
         try { saveIqResult(`${p.id}:${model}`, await runIqProbe(callModel)); setLeagueVer((v) => v + 1); }
         catch { /* pomiń tego dostawcę */ }

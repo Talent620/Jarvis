@@ -22,7 +22,6 @@ import type { Correction } from "./learningLoop";
 import { loadJson, saveJson } from "./lsJson";
 import { curateContext, contextBudgetChars } from "./contextCurator";
 import { gatherContextCandidates } from "./contextCandidates";
-import { recordUsage, priceFor, costOf, parsePricingOverrides } from "./usageTelemetry";
 import { recordEpisode, loadEpisodes } from "./episodicMemory";
 import { buildFusionBlock } from "./contextFusion";
 import { recordWorld, worldContextBlock } from "./worldModel";
@@ -40,12 +39,13 @@ import { logError, recordLatency } from "./errorLog";
 import { buildSoulPromptBlock } from "./soulModes";
 import { buildSleepMemoryPromptBlock, consolidateOpenLoops, recordCorrectionLesson } from "./sleepCompute";
 import { buildSelfAwarenessPromptBlock } from "./selfManifest";
-import { VISION_ROUTABLE, PROFILE_LIST, taskModelFor, isKeylessProvider } from "./autocore/catalog";
+import { VISION_ROUTABLE, PROFILE_LIST, taskModelFor, isKeylessProvider, modelHasVisionHeuristic, providerSupportsVision } from "./autocore/catalog";
 import {
   providerUsable, modelUsable, keyUsable, blockReason, reportFailure, reportSuccess, providerCounters,
 } from "./autocore/health";
-import { budgetFilter, budgetState, recordCall } from "./autocore/budget";
-import { classifyTaskClass, rankForTask, notePrimary, promotionFor, checkRollback } from "./autocore/router";
+import { budgetFilter, budgetGate, budgetState, recordCall } from "./autocore/budget";
+import { discoveredModelsFor } from "./autocore/discovery";
+import { classifyTaskClass, rankForTask, notePrimary, promotionFor, checkRollback, type TaskClass } from "./autocore/router";
 import { registerGatewayExecutor } from "./autocore/gateway";
 import type { JarvisReply, Msg, ProviderId, FallbackReasonKind } from "./providers/types";
 
@@ -151,22 +151,30 @@ function modelFor(p: ProviderId, complex: boolean, vision: boolean): string {
   return vision ? m.vision : complex ? m.complex : m.simple;
 }
 
-/** Model Ollamy dla typu zadania: jawny wybór > bez-cenzury (gdy włączone) > nadpisanie per-kind > katalog. */
+/** Model Ollamy dla typu zadania: jawny wybór > bez-cenzury (gdy włączone) > nadpisanie per-kind > wykryty lokalny VL > katalog. */
 function pickOllamaModel(kind: TaskKind): string {
   const s = store.settings;
   if (s.provider === "ollama" && s.model && s.model !== "auto") return s.model; // jawny wybór wygrywa
   // Tryb nieocenzurowany (tekst): kieruj do modelu uncensored, gdy ustawiony. Wizja zostaje przy modelu wizji.
   if (s.unfilteredLocal && kind !== "vision" && s.ollamaModelUncensored?.trim()) return s.ollamaModelUncensored.trim();
   const ov = kind === "vision" ? s.ollamaModelVision : kind === "complex" ? s.ollamaModelComplex : s.ollamaModelSimple;
-  return ov?.trim() || TASK_MODELS.ollama[kind];
+  if (ov?.trim()) return ov.trim();
+  if (kind === "vision") {
+    const discoveredVl = discoveredModelsFor("ollama").find((m) => m.capabilities.includes("vision") || modelHasVisionHeuristic(m.id));
+    if (discoveredVl) return discoveredVl.id;
+  }
+  return TASK_MODELS.ollama[kind];
 }
 
-/** Buduje kolejność prób (dostawca+model) dopasowaną do zadania. */
-export function routeOrder(history: Msg[]): { provider: ProviderId; model: string }[] {
+/** Buduje kolejność prób (dostawca+model) dopasowaną do zadania, z poszanowaniem req.task i req.prefer. */
+export function routeOrder(
+  history: Msg[],
+  opts: { task?: TaskClass; prefer?: { provider: ProviderId; model: string } } = {},
+): { provider: ProviderId; model: string }[] {
   const s = store.settings;
   const last = history[history.length - 1];
-  const hasImage = !!last?.image;
-  const complex = isComplex(last?.content || "");
+  const hasImage = !!last?.image || opts.task === "E_vision" || opts.task === "F_live_vision";
+  const complex = isComplex(last?.content || "") || opts.task === "A_reasoning" || opts.task === "C_coding" || opts.task === "D_repo" || opts.task === "J_agent";
   const cls = classifyTask(last?.content || "", hasImage);
 
   // Local-first fallback: model lokalny zawsze domyka łańcuch — gdy padnie sieć/chmura,
@@ -177,7 +185,10 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
     localTail.push({ provider: "webllm", model: s.webllmModel?.trim() || TASK_MODELS.webllm.simple });
   }
   if (s.ollamaUrl?.trim()) {
-    localTail.push({ provider: "ollama", model: pickOllamaModel(cls.kind) });
+    const ollamaModel = pickOllamaModel(cls.kind);
+    if (!hasImage || providerSupportsVision("ollama", ollamaModel)) {
+      localTail.push({ provider: "ollama", model: ollamaModel });
+    }
   }
 
   // Tryb on-device (Faza 8): TYLKO model lokalny — żadna chmura, nic nie opuszcza urządzenia.
@@ -191,7 +202,8 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
   const localHead: { provider: ProviderId; model: string }[] = [];
   if (offline || (s.localFirstSimple && !!s.ollamaUrl?.trim() && cls.kind === "simple")) {
     if (s.ollamaUrl?.trim()) {
-      localHead.push({ provider: "ollama", model: pickOllamaModel(cls.kind) });
+      const om = pickOllamaModel(cls.kind);
+      if (!hasImage || providerSupportsVision("ollama", om)) localHead.push({ provider: "ollama", model: om });
     } else if (s.webllmEnabled && webllmSupported() && !hasImage) {
       localHead.push({ provider: "webllm", model: s.webllmModel?.trim() || TASK_MODELS.webllm.simple });
     }
@@ -207,7 +219,7 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
       const vis = provs.filter((p) => VISION_PROVIDERS.has(p.id));
       if (vis.length) provs = vis; // do obrazu wybierz dostawcę z wizją
     }
-    const taskCls = classifyTaskClass(last?.content || "", { hasImage });
+    const taskCls = opts.task ?? classifyTaskClass(last?.content || "", { hasImage });
     const costPressure = budgetState().level === "warn" || budgetState().level === "stop";
     const promo = promotionFor(taskCls);
     const ranked = rankForTask(
@@ -241,9 +253,19 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
     }
   }
 
-  // Refleks na początek + usuń duplikaty dostawcy (pierwsze wystąpienie wygrywa).
+  // Preferowany dostawca/model (np. z req.prefer / eksperymentu AutoCore) trafia na początek, jeśli jest dostępny.
+  const prefList: { provider: ProviderId; model: string }[] = [];
+  if (opts.prefer) {
+    const pp = opts.prefer.provider;
+    const prefOk = pp === "ollama" ? !!s.ollamaUrl?.trim() : pp === "webllm" ? !!s.webllmEnabled : hasCloudCreds(pp, s);
+    if (prefOk && (!hasImage || providerSupportsVision(pp, opts.prefer.model))) {
+      prefList.push(opts.prefer);
+    }
+  }
+
+  // Preferencja / Refleks na początek + usuń duplikaty dostawcy (pierwsze wystąpienie wygrywa).
   const seen = new Set<ProviderId>();
-  const out = [...localHead, ...base].filter((o) => (seen.has(o.provider) ? false : (seen.add(o.provider), true)));
+  const out = [...prefList, ...localHead, ...base].filter((o) => (seen.has(o.provider) ? false : (seen.add(o.provider), true)));
   // 🆓 Tryb darmowy: odetnij płatnego Claude'a — zostają same darmowe/lokalne mózgi.
   // Zabezpieczenie: gdyby to opróżniło łańcuch (brak darmowego klucza), zostaw oryginał,
   // żeby JARVIS w ogóle odpowiedział (UI i tak namawia do dodania darmowego klucza).
@@ -549,8 +571,9 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
 
   const r = resolveProvider();
   if (!r || !r.apiKey?.trim() || (store.settings.onDeviceOnly && !isKeyless(r.provider))) return;
-  // Do ekstrakcji bierzemy najtańszy model danego dostawcy.
+  // Do ekstrakcji bierzemy najtańszy model danego dostawcy — ZAWSZE przez bramkę budżetu i zdrowia AutoCore.
   const model = TASK_MODELS[r.provider]?.simple || r.model;
+  if (!providerUsable(r.provider) || !budgetGate(r.provider, model).allowed) return;
 
   const existingKeys = store.data.memory
     .filter((m) => !m.projectId || m.projectId === (store.settings.activeProjectId || ""))
@@ -568,6 +591,7 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
     .filter(Boolean)
     .join("\n");
 
+  const t0Learn = Date.now();
   try {
     const reply = await PROVIDERS[r.provider].impl({
       system,
@@ -578,6 +602,9 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
       model,
       proxyUrl: store.settings.proxyUrl?.trim() || undefined,
     });
+    const latLearn = Date.now() - t0Learn;
+    reportSuccess(r.provider, model, r.apiKey, latLearn);
+    recordCall(r.provider, model, reply.usage, latLearn);
     const raw = reply.text || "";
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return;
@@ -596,6 +623,7 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
     }
     void ensureIndexed();
   } catch (e) {
+    reportFailure(r.provider, model, r.apiKey, e);
     // Uczenie jest „best-effort" — nie blokuje odpowiedzi, ale logujemy do diagnostyki
     // (np. gdy model zwróci uszkodzony JSON), zamiast cicho połykać.
     console.debug("[learnFromExchange] pominięto:", e instanceof Error ? e.message : e);
@@ -610,11 +638,11 @@ async function learnFromExchange(userText: string, replyText: string): Promise<v
  * chwilowym błędzie (429/timeout), gdy inny dostawca/klucz odpowiedziałby.
  * Zwraca tekst odpowiedzi lub RZUCA czytelny błąd, gdy żaden dostawca nie zadziałał.
  */
-function resolveForRequest(history: Msg[]): { provider: ProviderId; model: string; apiKey: string } | null {
+function resolveForRequest(history: Msg[], opts?: { task?: TaskClass; prefer?: { provider: ProviderId; model: string } }): { provider: ProviderId; model: string; apiKey: string } | null {
   const resolved = resolveProvider();
   const localOnly = store.settings.onDeviceOnly || store.settings.provider === "ollama" || store.settings.provider === "webllm";
   if ((!resolved || !resolved.apiKey?.trim()) || (localOnly && !isKeyless(resolved.provider))) {
-    const local = routeOrder(history).find((item) => isKeyless(item.provider));
+    const local = routeOrder(history, opts).find((item) => isKeyless(item.provider));
     if (local) return { ...local, apiKey: "local" };
     if (localOnly) return null;
   }
@@ -628,8 +656,10 @@ async function askModelReply(params: {
   tools?: typeof toolDefs;
   /** Preferuj MOCNIEJSZY model (jakość > szybkość) — oferty, strony, teczki, treści. */
   heavy?: boolean;
+  task?: TaskClass;
+  prefer?: { provider: ProviderId; model: string };
 }): Promise<JarvisReply> {
-  const resolved = resolveForRequest(params.history);
+  const resolved = resolveForRequest(params.history, { task: params.task, prefer: params.prefer });
   if (!resolved) {
     throw new Error("Najpierw skonfiguruj dostawcę AI w ⚙ → AI (wklej klucz: Claude, Gemini, Groq, OpenRouter…).");
   }
@@ -640,7 +670,7 @@ async function askModelReply(params: {
     history: params.history,
     proxyUrl: store.settings.proxyUrl?.trim() || undefined,
   };
-  let order = routeOrder(params.history);
+  let order = routeOrder(params.history, { task: params.task, prefer: params.prefer });
   // 🧠 Rezerwa dla mózgu: gdy zużycie weszło w strefę rezerwy, pomocnicze AI (generatory,
   // weryfikacja) schodzi na DARMOWE modele — płatny limit zostaje dla czatu/Szefa. Mózg
   // (askJarvis) ma własny tor i nie jest tym ruszany.
@@ -648,8 +678,8 @@ async function askModelReply(params: {
     const free = freeOnly(order);
     if (free.length) order = free; // są darmowe → użyj ich; brak → leć dalej (komunikat budżetu pokaże panel)
   }
-  const hasImg = !!params.history[params.history.length - 1]?.image;
-  const taskCls = classifyTaskClass(params.history[params.history.length - 1]?.content || "", { hasImage: hasImg });
+  const hasImg = !!params.history[params.history.length - 1]?.image || params.task === "E_vision" || params.task === "F_live_vision";
+  const taskCls = params.task ?? classifyTaskClass(params.history[params.history.length - 1]?.content || "", { hasImage: hasImg });
   const bf = budgetFilter(order);
   order = bf.kept;
   if (!order.length) {
@@ -678,8 +708,9 @@ async function askModelReply(params: {
         const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model: useModel }));
         const lat = Date.now() - t0;
         reportSuccess(provider, useModel, apiKey, lat);
+        notePrimary(taskCls, provider, useModel, params.task ? `gateway:${params.task}` : "gateway");
         recordCall(provider, useModel, reply.usage, lat);
-        return reply;
+        return { ...reply, via: provider };
       } catch (e) {
         providerErr = e;
         lastErr = e;
@@ -750,24 +781,38 @@ export async function askJarvis(
   const lastUserContent = lastUser?.content || "";
   // Pamięć długoterminowa (Mem0): namespace wg aktywnego projektu. Graceful: błąd → pusty blok.
   const memNamespace = resolveNamespace(store.settings.activeProjectId);
-  // Głębokie myślenie (opt-in): wewnętrzna analiza złożonych pytań — też niezależna, więc nakłada się
-  // na pobieranie pamięci, zamiast dokładać swój czas na początku tury.
+  // Głębokie myślenie (opt-in): wewnętrzna analiza złożonych pytań — ZAWSZE przez bramkę budżetu i zdrowia AutoCore.
+  const deepModel = TASK_MODELS[resolved.provider]?.complex || resolved.model;
   const deepThinkWanted = store.settings.deepThink && !store.settings.interpreterMode && needsDeepThink(lastUserContent)
-    && (!(store.settings.onDeviceOnly || store.settings.provider === "ollama" || store.settings.provider === "webllm") || isKeyless(resolved.provider));
+    && (!(store.settings.onDeviceOnly || store.settings.provider === "ollama" || store.settings.provider === "webllm") || isKeyless(resolved.provider))
+    && providerUsable(resolved.provider)
+    && budgetGate(resolved.provider, deepModel).allowed;
   const [, mem0Block, journalRank, deepAnalysis] = await Promise.all([
     prepareMemoryContext(lastUserContent),
     memoryContextBlock(lastUserContent, memNamespace).catch(() => ""),
     rankJournal(lastUserContent).catch(() => null),
     deepThinkWanted
-      ? PROVIDERS[resolved.provider].impl({
-          system: REASONING_SYSTEM,
-          webSearch: false,
-          tools: [],
-          history: [{ role: "user", content: lastUserContent.slice(0, 2000) }],
-          apiKey: resolved.apiKey,
-          model: TASK_MODELS[resolved.provider]?.complex || resolved.model,
-          proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-        }).then((a) => (a.text || "").slice(0, 1500)).catch(() => "")
+      ? (async () => {
+          const t0Deep = Date.now();
+          try {
+            const a = await PROVIDERS[resolved.provider].impl({
+              system: REASONING_SYSTEM,
+              webSearch: false,
+              tools: [],
+              history: [{ role: "user", content: lastUserContent.slice(0, 2000) }],
+              apiKey: resolved.apiKey,
+              model: deepModel,
+              proxyUrl: store.settings.proxyUrl?.trim() || undefined,
+            });
+            const lat = Date.now() - t0Deep;
+            reportSuccess(resolved.provider, deepModel, resolved.apiKey, lat);
+            recordCall(resolved.provider, deepModel, a.usage, lat);
+            return (a.text || "").slice(0, 1500);
+          } catch (e) {
+            reportFailure(resolved.provider, deepModel, resolved.apiKey, e);
+            return "";
+          }
+        })()
       : Promise.resolve(""),
   ]);
 
@@ -868,19 +913,25 @@ export async function askJarvis(
   const clsTop = classifyTask(lastUser?.content || "", !!lastUser?.image);
   const taskCls = classifyTaskClass(lastUser?.content || "", { hasImage: !!lastUser?.image });
   if (store.settings.speculativeMode && clsTop.kind === "complex" && store.settings.ollamaUrl?.trim() && (typeof navigator === "undefined" || navigator.onLine !== false)) {
-    const cortex = order.find((o) => !isKeyless(o.provider) && orderedKeys(o.provider).length > 0);
+    const cortex = order.find((o) => !isKeyless(o.provider) && orderedKeys(o.provider).length > 0 && providerUsable(o.provider) && budgetGate(o.provider, o.model).allowed);
     if (cortex) {
+      const t0Spec = Date.now();
+      const localModel = order.find((o) => o.provider === "ollama")?.model || TASK_MODELS.ollama.complex;
+      const cortexKey = orderedKeys(cortex.provider).find((k) => keyUsable(cortex.provider, k)) || orderedKeys(cortex.provider)[0];
       try {
-        const localModel = order.find((o) => o.provider === "ollama")?.model || TASK_MODELS.ollama.complex;
-        const cortexKey = orderedKeys(cortex.provider)[0];
         const res = await speculativeAnswer({
           runLocal: (ot) => withRetry(() => PROVIDERS.ollama.impl({ ...baseCtx, apiKey: "local", model: localModel, onToken: ot })),
           runCortex: () => withRetry(() => PROVIDERS[cortex.provider].impl({ ...baseCtx, apiKey: cortexKey, model: cortex.model })),
           onToken,
           threshold: 0.5,
         });
+        const latSpec = Date.now() - t0Spec;
+        const usedProv = res.corrected ? cortex.provider : (res.reply.via || "ollama");
+        const usedModel = res.corrected ? cortex.model : localModel;
+        reportSuccess(usedProv, usedModel, usedProv === "ollama" ? "local" : cortexKey, latSpec);
+        recordCall(usedProv, usedModel, res.reply.usage, latSpec);
         logRouteDecision({
-          provider: res.reply.via || cortex.provider, model: res.corrected ? cortex.model : localModel, kind: "complex",
+          provider: usedProv, model: usedModel, kind: "complex",
           reason: res.corrected ? "spekulacja: korekta korą" : res.usedCortex ? "spekulacja: draft potwierdzony" : "spekulacja: draft (kora padła)",
           fellBack: res.corrected,
         });
@@ -889,12 +940,9 @@ export async function askJarvis(
         if (memoryServiceAvailable() && lastUser?.content && res.reply.text) {
           void addMemory([{ role: "user", content: lastUser.content }, { role: "assistant", content: res.reply.text }], memNamespace).catch(() => {});
         }
-        if (res.reply.usage && (res.reply.usage.inputTokens || res.reply.usage.outputTokens)) {
-          const price = priceFor(res.corrected ? cortex.model : localModel, parsePricingOverrides(store.settings.aiPricingOverrides));
-          recordUsage({ at: Date.now(), provider: res.reply.via || cortex.provider, model: res.corrected ? cortex.model : localModel, inputTokens: res.reply.usage.inputTokens, outputTokens: res.reply.usage.outputTokens, costUsd: costOf(res.reply.usage, price) });
-        }
         return res.reply;
-      } catch {
+      } catch (e) {
+        reportFailure(cortex.provider, cortex.model, cortexKey, e);
         /* spekulacja padła całkowicie — przejdź do zwykłej pętli failoveru */
       }
     }
@@ -993,49 +1041,63 @@ export async function askJarvis(
 
         // Self-consistency (premium): najtrudniejsze pytania — kilka prób lokalnych, wybierz
         // najspójniejszą (odporność na halucynacje). Opt-in, tylko keyless+complex. Przed korektą.
-        if (store.settings.localConsensus && isKeyless(provider) && clsTop.kind === "complex" && reply.text?.trim()) {
+        if (store.settings.localConsensus && isKeyless(provider) && clsTop.kind === "complex" && reply.text?.trim() && providerUsable(provider) && budgetGate(provider, model).allowed) {
           try {
             onStatus?.("⟳ Sprawdzam kilka razy (spójność)…");
             const cons = await localSelfConsistency({
               first: reply,
-              run: () => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model }),
+              run: async () => {
+                const tc = Date.now();
+                const r = await PROVIDERS[provider].impl({ ...baseCtx, apiKey, model });
+                reportSuccess(provider, model, apiKey, Date.now() - tc);
+                recordCall(provider, model, r.usage, Date.now() - tc);
+                return r;
+              },
             });
             if (cons.samples > 1) {
               reply = cons.reply;
               logRouteDecision({ provider, model, kind: "complex", reason: `self-consistency: ${cons.samples} prób`, fellBack: provider !== primary, tier: "reflex" });
             }
-          } catch { /* graceful — zostaje pierwsza odpowiedź */ } finally { onStatus?.(null); }
+          } catch (e) { reportFailure(provider, model, apiKey, e); /* graceful — zostaje pierwsza odpowiedź */ } finally { onStatus?.(null); }
         }
 
         // Drabina Mądrości (Z-premium): duży model lokalny SAM krytykuje i poprawia złożoną
         // odpowiedź — druga tura w całości na PC (działa też offline). Opt-in, tylko keyless+complex.
-        if (store.settings.localRefine && isKeyless(provider) && clsTop.kind === "complex" && reply.text?.trim()) {
+        if (store.settings.localRefine && isKeyless(provider) && clsTop.kind === "complex" && reply.text?.trim() && providerUsable(provider) && budgetGate(provider, model).allowed) {
           try {
             onStatus?.("⟳ Dopracowuję odpowiedź lokalnie…");
             const refined = await localRefine({
               draft: reply,
-              runCritique: () => PROVIDERS[provider].impl({
-                ...baseCtx,
-                apiKey,
-                model,
-                history: [...trimmed, { role: "assistant", content: reply.text }, { role: "user", content: critiqueInstruction() }],
-              }),
+              runCritique: async () => {
+                const tr = Date.now();
+                const r = await PROVIDERS[provider].impl({
+                  ...baseCtx,
+                  apiKey,
+                  model,
+                  history: [...trimmed, { role: "assistant", content: reply.text }, { role: "user", content: critiqueInstruction() }],
+                });
+                reportSuccess(provider, model, apiKey, Date.now() - tr);
+                recordCall(provider, model, r.usage, Date.now() - tr);
+                return r;
+              },
             });
             if (refined.improved) {
               reply = refined.reply;
               logRouteDecision({ provider, model, kind: "complex", reason: "Drabina Mądrości: lokalna samokorekta", fellBack: provider !== primary, tier: "reflex" });
             }
-          } catch { /* graceful — zostaje pierwsza odpowiedź lokalna */ } finally { onStatus?.(null); }
+          } catch (e) { reportFailure(provider, model, apiKey, e); /* graceful — zostaje pierwsza odpowiedź lokalna */ } finally { onStatus?.(null); }
         }
 
         // Auto-weryfikacja trudnych odpowiedzi (opt-in): model sam sprawdza swój wynik drugim,
-        // krótkim przebiegiem (liczenie/logika) i poprawia, jeśli znajdzie błąd. Działa z każdym
-        // dostawcą; tylko dla zadań rozumowych, online, gdy jest sensowna odpowiedź.
+        // krótkim przebiegiem (liczenie/logika) i poprawia, jeśli znajdzie błąd. ZAWSZE przez bramkę budżetu AutoCore.
+        const verifyModel = TASK_MODELS[provider]?.complex || model;
         if (
           store.settings.verifyHard && !store.settings.interpreterMode &&
           needsDeepThink(lastUser?.content || "") && reply.text && reply.text.trim().length > 2 &&
-          !reply.text.startsWith("⚠") && (typeof navigator === "undefined" || navigator.onLine !== false)
+          !reply.text.startsWith("⚠") && (typeof navigator === "undefined" || navigator.onLine !== false) &&
+          providerUsable(provider) && budgetGate(provider, verifyModel).allowed
         ) {
+          const tv = Date.now();
           try {
             onStatus?.("⟳ Sprawdzam odpowiedź…");
             const v = await PROVIDERS[provider].impl({
@@ -1044,15 +1106,18 @@ export async function askJarvis(
               tools: [],
               history: [{ role: "user", content: buildVerifyUser(lastUser?.content || "", reply.text) }],
               apiKey,
-              model: TASK_MODELS[provider]?.complex || model,
+              model: verifyModel,
               proxyUrl: store.settings.proxyUrl?.trim() || undefined,
             });
+            const latV = Date.now() - tv;
+            reportSuccess(provider, verifyModel, apiKey, latV);
+            recordCall(provider, verifyModel, v.usage, latV);
             const verdict = verifyVerdict(v.text || "", reply.text);
             if (verdict.corrected) {
               reply = { ...reply, text: verdict.text };
               logRouteDecision({ provider, model, kind: clsTop.kind, reason: "auto-weryfikacja: korekta odpowiedzi", fellBack: provider !== primary });
             }
-          } catch { /* graceful — zostaje pierwsza odpowiedź */ } finally { onStatus?.(null); }
+          } catch (e) { reportFailure(provider, verifyModel, apiKey, e); /* graceful — zostaje pierwsza odpowiedź */ } finally { onStatus?.(null); }
         }
 
         const citations = getCitations();
@@ -1118,12 +1183,14 @@ export async function askJarvis(
   throw new Error(humanize(lastErr instanceof Error ? lastErr.message : String(lastErr)));
 }
 
-// Rejestracja wykonawcy AI Gateway (jeden kontrakt dla całej aplikacji bez cykli importów).
+// Rejestracja wykonawcy AI Gateway (jeden kontrakt dla całej aplikacji — pełne zachowanie task i prefer).
 registerGatewayExecutor((req) =>
   askModelReply({
     system: req.system,
     history: req.history,
     webSearch: req.webSearch,
     heavy: req.heavy,
+    task: req.task,
+    prefer: req.prefer,
   }),
 );

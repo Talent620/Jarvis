@@ -48,6 +48,8 @@ export async function runLocalResearchAgent(query: string): Promise<ResearchAgen
   const evidence = sources.map((hit, index) =>
     `[${index + 1}] ${hit.title}\n${hit.content.slice(0, 1200)}\n${hit.url}`,
   ).join("\n\n");
+  const { providerUsable } = await import("./autocore/health");
+  if (!providerUsable("ollama")) throw new Error("Lokalna Ollama jest chwilowo niedostępna (circuit-breaker AutoCore).");
   const t0 = Date.now();
   try {
     const reply = await PROVIDERS.ollama.impl({

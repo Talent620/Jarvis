@@ -268,9 +268,13 @@ export function audit(entry: Omit<AuditEntry, "id" | "at">) {
     d.audit.unshift({ ...entry, input: redactInput(entry.input), id: uid(), at: Date.now() });
     if (d.audit.length > 200) d.audit.length = 200;
   });
-  if (GUARDIAN_BRIDGE_TOOL_RE.test(entry.tool) || !entry.ok) {
-    const kind = !entry.ok && /riskguard|zablokow|odmow|kill/i.test(`${entry.tool} ${entry.output}`) ? "security" : "action";
-    const summary = `[${entry.tool}] ${String(entry.output || (entry.ok ? "OK" : "Błąd")).slice(0, 160)}`;
+  if (GUARDIAN_BRIDGE_TOOL_RE.test(entry.tool) || entry.status !== "ok") {
+    const kind =
+      entry.status !== "ok" &&
+      (entry.status === "denied" || /riskguard|zablokow|odmow|kill/i.test(`${entry.tool} ${entry.output || ""}`))
+        ? "security"
+        : "action";
+    const summary = `[${entry.tool}] ${String(entry.output || (entry.status === "ok" ? "OK" : "Błąd")).slice(0, 160)}`;
     try { recordGuardianEvent(kind, summary); } catch { /* best-effort */ }
   }
 }
@@ -287,13 +291,13 @@ export function recordSystemActionEvent(entry: {
   ok: boolean;
   security?: boolean;
 }): void {
+  const status: AuditEntry["status"] = entry.ok ? "ok" : entry.security ? "denied" : "error";
   store.setData((d) => {
     d.audit.unshift({
       tool: entry.tool,
-      risk: entry.risk,
       input: redactInput(entry.input),
       output: String(entry.output || "").slice(0, 300),
-      ok: entry.ok,
+      status,
       id: uid(),
       at: Date.now(),
     });

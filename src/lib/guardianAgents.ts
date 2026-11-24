@@ -52,7 +52,7 @@ export interface ScanContext {
   voicePinnedExists: boolean; // czy przypięty głos (voiceName) nadal istnieje
   ttsErrors: number; // błędy TTS w bieżącej sesji
   providerErrors: number; // błędy dostawców chmury (limity/klucze) w sesji
-  autocoreBudget?: { level: "ok" | "warn" | "stop"; spentMonthUsd: number; monthlyLimitUsd: number; message: string };
+  autocoreBudget?: { level: "none" | "ok" | "warn" | "stop"; spentMonthUsd: number; monthlyLimitUsd: number; message: string };
   autocoreBackoffs?: string[];
   auditSummary?: { totalOsActions: number; riskGuardBlocks: number };
 }
@@ -84,7 +84,9 @@ export async function gatherContext(opts: { checkUpdate?: boolean } = {}): Promi
   const autocoreBackoffs = health.filter((h) => h.backoffUntil || h.badKeys > 0).map((h) => h.provider);
   const auditList = Array.isArray(store.data?.audit) ? store.data.audit : [];
   const totalOsActions = auditList.filter((a) => /^(?:desktop_|omni_|android_|sentinel_)/.test(a.tool)).length;
-  const riskGuardBlocks = auditList.filter((a) => !a.ok && /riskguard|zablokow|odmow/i.test(`${a.tool} ${a.output}`)).length;
+  const riskGuardBlocks = auditList.filter(
+    (a) => a.status !== "ok" && (a.status === "denied" || /riskguard|zablokow|odmow/i.test(`${a.tool} ${a.output || ""}`)),
+  ).length;
 
   return {
     s,

@@ -3,7 +3,7 @@ import { LiveSession, liveToolDeclarations, LIVE_VOICE_STYLE, LIVE_MODEL_NATIVE,
 import { toolDefs, runTool } from "../lib/tools";
 import { riskOf } from "../lib/permissions";
 import { ConversationLoop, type LoopState } from "../lib/voiceLoop";
-import { systemPrompt, resolveProvider } from "../lib/brain";
+import { systemPrompt, resolveProvider, hasUsableBrain } from "../lib/brain";
 import { PROVIDERS } from "../lib/providers/registry";
 import { subscribeLevel } from "../lib/audioLevel";
 import { primaryKey } from "../lib/keys";
@@ -154,9 +154,9 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
         });
       })();
     } else {
-      if (!resolveProvider()) {
+      if (!hasUsableBrain()) {
         setState("error");
-        setDetail("Brak skonfigurowanego modelu AI. Dodaj klucz w ⚙ Ustawienia.");
+        setDetail("Brak skonfigurowanego modelu AI. Dodaj klucz lub uruchom lokalną Ollamę w ⚙ Ustawienia.");
         return;
       }
       const loop = new ConversationLoop(
@@ -191,7 +191,10 @@ export default function LiveOverlay({ onClose }: { onClose: () => void }) {
   const failed = state === "error" || state === "closed";
   const providerLabel = (() => {
     const r = resolveProvider();
-    return r ? PROVIDERS[r.provider].label.toUpperCase() : "MODEL AI";
+    if (r) return PROVIDERS[r.provider].label.toUpperCase();
+    if (store.settings.ollamaUrl?.trim()) return "OLLAMA (LOKALNY)";
+    if (store.settings.webllmEnabled) return "WEBLLM (ON-DEVICE)";
+    return "MODEL AI";
   })();
 
   return (

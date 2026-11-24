@@ -8,6 +8,7 @@ import type { MemoryFact } from "../types";
 
 // Tag modelu embeddingów — porównujemy tylko wektory z tego samego modelu (różne wymiary).
 const CLOUD_EMBED_TAG = "cloud:gemini-004";
+const OLLAMA_EMBED_TAG = "local:ollama-embed";
 
 /** Czy preferować embeddingi on-device (ustawienie włączone + lokalny embedder użyteczny). */
 function localEmbedOn(): boolean {
@@ -16,7 +17,10 @@ function localEmbedOn(): boolean {
 
 /** Tag, którego embeddingów oczekujemy w tej chwili (do doboru, co reindeksować). */
 function intendedEmbedTag(): string {
-  return localEmbedOn() ? LOCAL_EMBED_TAG : CLOUD_EMBED_TAG;
+  if (localEmbedOn()) return LOCAL_EMBED_TAG;
+  const s = store.settings;
+  if ((!s.keys?.gemini?.trim() || s.onDeviceOnly) && s.ollamaUrl?.trim()) return OLLAMA_EMBED_TAG;
+  return CLOUD_EMBED_TAG;
 }
 
 interface Embedded {
@@ -25,31 +29,96 @@ interface Embedded {
 }
 
 // === Pamięć autonomiczna (semantyczna) ===
-// Fakty o użytkowniku są indeksowane wektorami (Gemini text-embedding-004) i
-// pobierane przez podobieństwo kosinusowe do bieżącego zapytania — dzięki temu
-// JARVIS przypomina sobie TO, co istotne, a nie po prostu ostatnie 25 wpisów.
-// Gdy embeddingi są niedostępne (brak klucza Gemini i proxy), płynnie wracamy
-// do trybu świeżości (przypięte + najnowsze).
+// Fakty o użytkowniku są indeksowane wektorami (Gemini text-embedding-004, Ollama embeddings lub
+// on-device Transformers.js) i pobierane przez podobieństwo kosinusowe. Brak źródła lub chwilowy
+// błąd NIGDY nie zatrzaskuje embeddingów na stałe — krótki backoff resetuje się od razu po zmianie konfiguracji.
 
 const MAX_FACTS = 25; // budżet faktów wstrzykiwanych do promptu
 const MAX_STORED = 300; // twardy limit pamięci (chroni przed nieograniczonym wzrostem)
 
 // --- Embeddingi ---
 
-let embedDisabled = false; // ustawiane, gdy brak źródła embeddingów w CHMURZE (jednorazowo)
+let embedBackoffUntil = 0;
+let lastEmbedConfigSig = "";
+const EMBED_BACKOFF_MS = 30_000;
 
-/** Embeddingi chmurowe (Gemini bezpośrednio lub przez proxy) albo null. */
-async function embedCloud(texts: string[]): Promise<number[][] | null> {
-  if (embedDisabled) return null;
+/** Zresetuj backoff embeddingów (np. w testach lub po zmianie klucza/Ollamy). */
+export function resetEmbedBackoff(): void {
+  embedBackoffUntil = 0;
+  lastEmbedConfigSig = "";
+}
+
+function currentEmbedConfigSig(): string {
+  const s = store.settings;
+  return `${s.keys?.gemini || ""}|${s.ollamaUrl || ""}|${s.proxyUrl || ""}|${s.onDeviceOnly ? 1 : 0}`;
+}
+
+function isEmbedInBackoff(): boolean {
+  const sig = currentEmbedConfigSig();
+  if (sig !== lastEmbedConfigSig) {
+    lastEmbedConfigSig = sig;
+    embedBackoffUntil = 0; // zmiana klucza / Ollamy / proxy od razu odblokowuje embeddingi!
+  }
+  return Date.now() < embedBackoffUntil;
+}
+
+/** Embeddingi przez lokalną Ollamę (/api/embed lub /api/embeddings) — 0 USD, w pełni offline. */
+async function embedOllama(endpoint: string, texts: string[]): Promise<number[][] | null> {
+  const base = endpoint.replace(/\/+$/, "");
+  const model = "nomic-embed-text";
+  const { reportOutcome } = await import("./autocore/gateway");
+  const t0 = Date.now();
+  try {
+    // 1) Nowszy batch endpoint Ollama >=0.2 (/api/embed)
+    const rBatch = await fetchTimeout(`${base}/api/embed`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model, input: texts }),
+    }, 15000);
+    if (rBatch.ok) {
+      const d = await rBatch.json().catch(() => null);
+      if (Array.isArray(d?.embeddings) && d.embeddings.length === texts.length && Array.isArray(d.embeddings[0]) && d.embeddings[0].length > 0) {
+        reportOutcome("ollama", model, "local", true, { latencyMs: Date.now() - t0 });
+        return d.embeddings as number[][];
+      }
+    }
+    // 2) Klasyczny endpoint /api/embeddings (pojedynczy prompt)
+    const out: number[][] = [];
+    for (const t of texts) {
+      const r = await fetchTimeout(`${base}/api/embeddings`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model, prompt: t }),
+      }, 15000);
+      if (!r.ok) throw new Error(`ollama embed ${r.status}`);
+      const d = await r.json();
+      if (!Array.isArray(d?.embedding) || !d.embedding.length) return null;
+      out.push(d.embedding);
+    }
+    reportOutcome("ollama", model, "local", true, { latencyMs: Date.now() - t0 });
+    return out;
+  } catch (e) {
+    reportOutcome("ollama", model, "local", false, { error: e });
+    return null;
+  }
+}
+
+/** Embeddingi zdalne/serwerowe (Gemini, lokalna Ollama lub proxy) albo null — BEZ trwałego zatrzaskiwania. */
+async function embedRemoteOrOllama(texts: string[]): Promise<Embedded | null> {
+  if (isEmbedInBackoff()) return null;
+
   const { resolveService, reportOutcome } = await import("./autocore/gateway");
   const svc = resolveService("embed");
   const key = svc.provider === "gemini" && svc.allowed ? svc.apiKey : "";
   const proxy = store.settings.proxyUrl?.trim();
+
   try {
     if (key) {
       const t0 = Date.now();
       const out: number[][] = [];
+      let totalChars = 0;
       for (const t of texts) {
+        totalChars += t.length;
         const r = await fetchTimeout(
           "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent",
           {
@@ -67,10 +136,16 @@ async function embedCloud(texts: string[]): Promise<number[][] | null> {
         const d = await r.json();
         out.push(d?.embedding?.values || []);
       }
-      reportOutcome("gemini", "text-embedding-004", key, true, { latencyMs: Date.now() - t0 });
-      return out;
+      reportOutcome("gemini", "text-embedding-004", key, true, { latencyMs: Date.now() - t0, units: Math.max(1, totalChars) });
+      return { vectors: out, tag: CLOUD_EMBED_TAG };
     }
-    if (proxy) {
+    if (svc.provider === "ollama" && svc.allowed && svc.endpoint) {
+      const ollVecs = await embedOllama(svc.endpoint, texts);
+      if (ollVecs) return { vectors: ollVecs, tag: OLLAMA_EMBED_TAG };
+      embedBackoffUntil = Date.now() + EMBED_BACKOFF_MS;
+      return null;
+    }
+    if (proxy && !store.settings.onDeviceOnly) {
       const r = await fetchTimeout(`${proxy.replace(/\/$/, "")}/v1/embed`, {
         method: "POST",
         headers: { "content-type": "application/json", ...appTokenHeader() },
@@ -78,29 +153,27 @@ async function embedCloud(texts: string[]): Promise<number[][] | null> {
       }, 20000);
       if (!r.ok) throw new Error(`embed ${r.status}`);
       const d = await r.json();
-      return Array.isArray(d?.vectors) ? d.vectors : null;
+      return Array.isArray(d?.vectors) ? { vectors: d.vectors, tag: CLOUD_EMBED_TAG } : null;
     }
   } catch {
-    return null; // chwilowy błąd — spróbujemy ponownie później
+    embedBackoffUntil = Date.now() + EMBED_BACKOFF_MS;
+    return null; // chwilowy backoff 30 s — nie zatrzaskujemy na stałe!
   }
-  embedDisabled = true; // brak jakiegokolwiek źródła embeddingów w chmurze
   return null;
 }
 
 /**
  * Zwraca wektory + tag modelu. PREFERUJE on-device (Transformers.js/WebGPU), a gdy
- * niedostępne/nieudane → płynnie spada do chmury (Gemini). Tag pozwala porównywać tylko
- * wektory z tego samego modelu (różne wymiary: lokal 384 vs chmura 768).
+ * niedostępne/nieudane → płynnie spada do Gemini lub lokalnej Ollamy.
  */
 async function embedBatch(texts: string[]): Promise<Embedded | null> {
   if (!texts.length) return null;
   if (localEmbedOn()) {
     const v = await embedLocal(texts);
     if (v && v.length === texts.length && v[0]?.length) return { vectors: v, tag: LOCAL_EMBED_TAG };
-    // null/niepełne → fallback do chmury poniżej
+    // null/niepełne → fallback do chmury/Ollamy poniżej
   }
-  const cloud = await embedCloud(texts);
-  return cloud ? { vectors: cloud, tag: CLOUD_EMBED_TAG } : null;
+  return embedRemoteOrOllama(texts);
 }
 
 async function embedText(text: string): Promise<{ vector: number[]; tag: string } | null> {
@@ -123,17 +196,18 @@ export function cosine(a: number[], b: number[]): number {
 
 // --- Indeksowanie (uzupełnianie brakujących wektorów w tle) ---
 
-let indexing = false;
+let indexingPromise: Promise<void> | null = null;
 
 /** Dolicza wektory dla faktów bez wektora LUB policzonych innym modelem. Bezpieczne „w tle". */
 export async function ensureIndexed(): Promise<void> {
-  if (indexing) return;
-  if (embedDisabled && !localEmbedOn()) return; // brak jakiegokolwiek źródła
+  while (indexingPromise) {
+    await indexingPromise;
+  }
+  if (isEmbedInBackoff() && !localEmbedOn()) return; // chwilowy backoff (resetuje się przy zmianie konfiguracji)
   const want = intendedEmbedTag();
   const pending = activeMemoryFacts(store.data.memory).filter((m) => !m.embedding?.length || m.embModel !== want);
   if (!pending.length) return;
-  indexing = true;
-  try {
+  const run = (async () => {
     const e = await embedBatch(pending.map((m) => `${m.key}: ${m.value}`));
     if (!e) return;
     store.setData((d) => {
@@ -142,8 +216,12 @@ export async function ensureIndexed(): Promise<void> {
         if (f && e.vectors[i]?.length) { f.embedding = e.vectors[i]; f.embModel = e.tag; }
       }
     });
+  })();
+  indexingPromise = run;
+  try {
+    await run;
   } finally {
-    indexing = false;
+    if (indexingPromise === run) indexingPromise = null;
   }
 }
 
@@ -375,7 +453,7 @@ function auxKey(id: string, updatedAt: number, tag: string): string {
 
 async function ensureJournalIndexed(): Promise<void> {
   if (auxIndexing) return;
-  if (embedDisabled && !localEmbedOn()) return;
+  if (isEmbedInBackoff() && !localEmbedOn()) return;
   const tag = intendedEmbedTag();
   const shared = (store.data.journal || []).filter((j) => j.shared).slice(0, AUX_CAP);
   const pending = shared.filter((j) => !auxVecs.has(auxKey(j.id, j.updatedAt, tag)));

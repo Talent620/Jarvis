@@ -122,7 +122,7 @@ describe("Etap 1 P0 · Kill-Switch, RiskGuard i Wspólny Ślad Audytowy", () => 
     expect(deniedHotkey.ok).toBe(false);
     expect(hotkeyCalled).toBe(false);
     expect(store.data.audit[0]?.tool).toBe("omni_hotkey");
-    expect(store.data.audit[0]?.ok).toBe(false);
+    expect(store.data.audit[0]?.status).toBe("denied");
 
     // 2) Destrukcyjne uruchomienie (shutdown) → twarda blokada RiskGuard bez pytania!
     const blockedLaunch = await executeOmniVoiceCommand("uruchom shutdown", {
@@ -147,7 +147,7 @@ describe("Etap 1 P0 · Kill-Switch, RiskGuard i Wspólny Ślad Audytowy", () => 
     const moved = await executeOmniVoiceCommand("przesuń kursor w prawo", { actuator: act });
     expect(moved.handled).toBe(true);
     expect(moved.ok).toBe(true);
-    expect(store.data.audit.some((a) => a.tool === "omni_cursor_move" && a.ok)).toBe(true);
+    expect(store.data.audit.some((a) => a.tool === "omni_cursor_move" && a.status === "ok")).toBe(true);
     expect(getGuardianHistory().length).toBeGreaterThan(0);
   });
 
@@ -174,13 +174,13 @@ describe("Etap 1 P0 · Kill-Switch, RiskGuard i Wspólny Ślad Audytowy", () => 
     const denied = await resolveSentinelDecision("click", { onConfirm: async () => false });
     expect(denied.ok).toBe(false);
     expect(clicked).toBe(false);
-    expect(store.data.audit.some((a) => a.tool === "sentinel_action" && !a.ok)).toBe(true);
+    expect(store.data.audit.some((a) => a.tool === "sentinel_action" && a.status === "denied")).toBe(true);
 
     // Po jawnym potwierdzeniu → wykonuje i zapisuje audyt
     const allowed = await resolveSentinelDecision("click", { onConfirm: async () => true });
     expect(allowed.ok).toBe(true);
     expect(clicked).toBe(true);
-    expect(store.data.audit.some((a) => a.tool === "sentinel_action" && a.ok)).toBe(true);
+    expect(store.data.audit.some((a) => a.tool === "sentinel_action" && a.status === "ok")).toBe(true);
   });
 
   it("desktop_omni_task wymaga świeżej zgody nawet w profilu OPERATOR, a Runtime Guardian widzi telemetrię audytu i WebLLM", async () => {

@@ -6,9 +6,9 @@ import { fetchTimeout } from "./http";
 import { WhisperListener } from "./whisperListener";
 import { synthLocal, localTtsUsable } from "./localTts";
 import { logError } from "./errorLog";
-import { budgetGate } from "./autocore/budget";
+import { budgetGate, budgetGateExternal } from "./autocore/budget";
 import { keyUsable } from "./autocore/health";
-import { reportOutcome, resolveService } from "./autocore/gateway";
+import { reportOutcome, resolveService, resolveVoiceEngine } from "./autocore/gateway";
 import {
   isNavigatorOffline,
   registerAndroidAudioUnlock,
@@ -463,7 +463,7 @@ export async function geminiSpeak(text: string, voiceName?: string): Promise<boo
       const part = (d?.candidates?.[0]?.content?.parts || []).find((p: any) => p.inlineData);
       const b64 = part?.inlineData?.data;
       if (!b64) return null;
-      reportOutcome("gemini", "gemini-2.5-flash-preview-tts", key, true, { latencyMs: Date.now() - t0 });
+      reportOutcome("gemini", "gemini-2.5-flash-preview-tts", key, true, { latencyMs: Date.now() - t0, units: chunk.length });
       const rate = Number(/rate=(\d+)/.exec(part.inlineData.mimeType || "")?.[1]) || 24000;
       return pcmToWavUrl(b64, rate);
     } catch (e) {
@@ -506,19 +506,10 @@ async function geminiTts(text: string, settings: Settings): Promise<boolean> {
 export type VoiceMode = "system" | "gemini" | "eleven" | "openai" | "modal" | "fish" | "local";
 
 /**
- * Pure: rozstrzygnij JEDNOZNACZNIE, którego silnika głosu użyć. Najpierw jawny wybór użytkownika
- * (voiceMode — źródło prawdy). Gdy go brak (stary profil), wywnioskuj ze starych flag — zgodność wstecz.
+ * Pure: JEDNO źródło prawdy o silniku głosu — deleguje do AutoCore `resolveVoiceEngine(s)`.
  */
 export function resolveVoiceMode(s: Settings): VoiceMode {
-  if (s.voiceMode) return s.voiceMode;
-  if (s.localTts) return "local";
-  if (s.fishAudioApiKey && s.fishAudioVoiceId) return "fish";
-  const basicPl = s.voicePinned || s.voiceSystemPl !== false;
-  if (!basicPl && s.elevenLabsApiKey && s.elevenLabsVoiceId) return "eleven";
-  if (!basicPl && s.openaiTtsApiKey) return "openai";
-  if (!basicPl && s.modalVoiceUrl?.trim()) return "modal";
-  if (!basicPl && s.geminiTts && s.keys?.gemini?.trim()) return "gemini";
-  return "system";
+  return resolveVoiceEngine(s);
 }
 
 /**
@@ -607,8 +598,9 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
     }
   }
 
-  // Premium głos przez Fish Audio (tani, topowy klon), jeśli wybrany, online i z kluczem.
-  if (!offline && mode === "fish" && settings.fishAudioApiKey && settings.fishAudioVoiceId) {
+  // Premium głos przez Fish Audio — przez AutoCore budgetGateExternal + wycena znaków.
+  if (!offline && mode === "fish" && settings.fishAudioApiKey && settings.fishAudioVoiceId && budgetGateExternal("fish").allowed) {
+    const t0 = Date.now();
     try {
       const res = await fetchTimeout("https://api.fish.audio/v1/tts", {
         method: "POST",
@@ -620,49 +612,60 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
         body: JSON.stringify({ text, reference_id: settings.fishAudioVoiceId, format: "mp3" }),
       }, 30000);
       if (myToken !== speakToken) return; // nowsza tura przejęła w czasie pobierania
-      if (await playFromResponse(res, fx)) return;
-    } catch {
+      if (await playFromResponse(res, fx)) {
+        reportOutcome("fish", "fish-s1", settings.fishAudioApiKey, true, { latencyMs: Date.now() - t0, units: text.length });
+        return;
+      }
+      reportOutcome("fish", "fish-s1", settings.fishAudioApiKey, false, { error: new Error(`Fish TTS (${res.status})`) });
+    } catch (e) {
+      reportOutcome("fish", "fish-s1", settings.fishAudioApiKey, false, { error: e });
       /* fallback niżej */
     }
   }
 
-  // Streaming TTS zdanie-po-zdaniu: ElevenLabs Flash v2.5 / Multilingual v2 (niskie opóźnienie PL + barge-in).
-  if (!offline && mode === "eleven" && settings.elevenLabsApiKey && settings.elevenLabsVoiceId) {
+  // Streaming TTS zdanie-po-zdaniu: ElevenLabs Flash v2.5 / Multilingual v2 — przez AutoCore budgetGateExternal + wycena znaków.
+  if (!offline && mode === "eleven" && settings.elevenLabsApiKey && settings.elevenLabsVoiceId && budgetGateExternal("elevenlabs").allowed) {
+    const t0 = Date.now();
+    const modelId = settings.elevenLabsModel || "eleven_flash_v2_5";
     const ok = await streamingTtsQueue.speak(
       text,
       (sentence, signal) =>
         synthesizeElevenLabsChunk(sentence, {
           apiKey: settings.elevenLabsApiKey,
           voiceId: settings.elevenLabsVoiceId,
-          modelId: settings.elevenLabsModel || "eleven_flash_v2_5",
+          modelId,
           stability: settings.elevenStability,
           style: settings.elevenStyle,
           signal,
         }),
       playBlob,
     );
+    reportOutcome("elevenlabs", modelId, settings.elevenLabsApiKey, ok, { latencyMs: Date.now() - t0, units: text.length });
     if (ok || myToken !== speakToken) return;
   }
 
-  // Streaming TTS zdanie-po-zdaniu: OpenAI TTS (gpt-4o-mini-tts / tts-1).
-  if (!offline && mode === "openai" && settings.openaiTtsApiKey?.trim()) {
+  // Streaming TTS zdanie-po-zdaniu: OpenAI TTS — przez AutoCore budgetGateExternal + wycena znaków.
+  if (!offline && mode === "openai" && settings.openaiTtsApiKey?.trim() && budgetGateExternal("openai-tts").allowed) {
+    const t0 = Date.now();
+    const model = settings.openaiTtsModel || "gpt-4o-mini-tts";
     const ok = await streamingTtsQueue.speak(
       text,
       (sentence, signal) =>
         synthesizeOpenAiTtsChunk(sentence, {
           apiKey: settings.openaiTtsApiKey || "",
-          model: settings.openaiTtsModel || "gpt-4o-mini-tts",
+          model,
           voice: settings.openaiTtsVoice || "onyx",
           speed: settings.voiceRate,
           signal,
         }),
       playBlob,
     );
+    reportOutcome("openai-tts", model, settings.openaiTtsApiKey, ok, { latencyMs: Date.now() - t0, units: text.length });
     if (ok || myToken !== speakToken) return;
   }
 
-  // Streaming TTS zdanie-po-zdaniu: własny serwer Modal Voice (deploy/modal_voice.py).
-  if (!offline && mode === "modal" && settings.modalVoiceUrl?.trim()) {
+  // Streaming TTS zdanie-po-zdaniu: własny serwer Modal Voice — przez AutoCore budgetGate.
+  if (!offline && mode === "modal" && settings.modalVoiceUrl?.trim() && budgetGate("modal", "modal-voice").allowed) {
     const t0 = Date.now();
     const ok = await streamingTtsQueue.speak(
       text,

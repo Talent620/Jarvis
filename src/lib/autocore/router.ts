@@ -4,7 +4,7 @@
 // i presja budżetu przesuwają kolejność dopiero, gdy są realne dane.
 import { loadJson, saveJson } from "../lsJson";
 import type { ProviderId } from "../providers/types";
-import { PROFILES } from "./catalog";
+import { PROFILES, providerSupportsVision } from "./catalog";
 import { reliabilityOf, latencyOf, providerSampleCount } from "./health";
 
 export type TaskClass =
@@ -86,7 +86,7 @@ export function scoreCandidate(p: ProviderId, model: string, rank: number, task:
 /** Sortuj kandydatów (stabilnie; remis → wyższa ranga). Filtr wizji jest twardy. */
 export function rankForTask<T extends { provider: ProviderId; model: string; rank: number }>(cands: T[], task: TaskClass, ctx: RankCtx = {}): Ranked<T>[] {
   const needs = TASK_NEEDS[task];
-  const pool = needs.vision ? cands.filter((c) => PROFILES[c.provider]?.visionRouting) : cands;
+  const pool = needs.vision ? cands.filter((c) => providerSupportsVision(c.provider, c.model)) : cands;
   return pool
     .map((item, i) => ({ item, i, ...scoreCandidate(item.provider, item.model, item.rank, task, ctx) }))
     .sort((a, b) => b.score - a.score || b.item.rank - a.item.rank || a.i - b.i)

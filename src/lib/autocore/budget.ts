@@ -122,6 +122,55 @@ export function authorizeService(p: ProviderId, monthlyLimitUsd?: number): { ok:
 
 export function setDailyLimit(usd: number): void { B().dailyUsd = Math.max(0, usd || 0); persist(); }
 
+/** Bramka budżetu dla płatnych usług spoza ProviderId (ElevenLabs, OpenAI TTS, Fish, Fal.ai, Tavily). */
+export function budgetGateExternal(service: string, now = Date.now()): GateResult {
+  const s = String(service || "").toLowerCase();
+  if (s === "native" || s === "local" || s === "system" || s === "pollinations" || s === "local-sd") {
+    return { allowed: true, costClass: "local" };
+  }
+  const st = budgetState(now);
+  if (st.level === "stop") return { allowed: false, costClass: "paid", reason: st.message };
+  return { allowed: true, costClass: "paid" };
+}
+
+/**
+ * Realistyczna wycena jednostkowa (USD) dla usług pobocznych bez licznika tokenów
+ * (koniec raportowania 0 USD dla płatnych wywołań TTS / STT / obrazów / search / embeddingów).
+ */
+export function estimateSideServiceCost(provider: string, model: string, units = 1): number {
+  const p = String(provider || "").toLowerCase();
+  const m = String(model || "").toLowerCase();
+  const u = Math.max(1, Number(units) || 1);
+  if (p === "elevenlabs") return Math.max(0.001, (u / 1000) * 0.18); // ~$0.18 / 1k znaków
+  if (p === "openai-tts") return Math.max(0.0005, (u / 1000) * (m.includes("hd") ? 0.03 : 0.015));
+  if (p === "fish") return Math.max(0.0005, (u / 1000) * 0.015);
+  if (p === "fal") return (m.includes("nano-banana") ? 0.08 : 0.04) * u;
+  if (p === "tavily") return (m.includes("basic") ? 0.008 : 0.016) * u;
+  if (p === "gemini") {
+    if (m.includes("tts")) return Math.max(0.0002, (u / 1000) * 0.01);
+    if (m.includes("image") || m.includes("imagen")) return 0.039 * u;
+    if (m.includes("embedding")) return Math.max(0.0001, (u / 1000) * 0.000025);
+    if (m.includes("live")) return Math.max(0.0005, (u / 60) * 0.002);
+  }
+  if (p === "groq" && m.includes("whisper")) return Math.max(0.0002, (u / 60) * 0.00067);
+  return 0;
+}
+
+/** Zapisz koszt płatnej usługi spoza ProviderId w jednym dzienniku zużycia (usageTelemetry). */
+export function recordExternalCall(service: string, model: string, costUsd: number, now = Date.now()): number {
+  const usd = Number.isFinite(costUsd) && costUsd > 0 ? costUsd : 0;
+  if (usd <= 0) return 0;
+  recordUsage({
+    at: now,
+    provider: service as ProviderId,
+    model: model || service,
+    inputTokens: 0,
+    outputTokens: 0,
+    costUsd: usd,
+  });
+  return usd;
+}
+
 /** Szacunkowy koszt wywołania (USD) — tokeny wg cennika + czas GPU dla dostawców rozliczanych czasem. */
 export function estimateCallCost(p: ProviderId, model: string, usage?: TokenUsage, latencyMs?: number): { usd: number; estimated: boolean } {
   const { price, estimated } = budgetPriceFor(p, model, parsePricingOverrides(store.settings.aiPricingOverrides || ""), isVerifiedFree);
@@ -131,10 +180,18 @@ export function estimateCallCost(p: ProviderId, model: string, usage?: TokenUsag
   return { usd, estimated: estimated || !!perS };
 }
 
-/** Zapisz wywołanie w JEDNYM dzienniku zużycia (usageTelemetry). Bez tokenów i bez kosztu czasu → pomija. */
-export function recordCall(p: ProviderId, model: string, usage: TokenUsage | undefined, latencyMs?: number, now = Date.now()): number {
+/** Zapisz wywołanie w JEDNYM dzienniku zużycia (usageTelemetry). Wspiera fallbackUsd dla usług nietokenowych (TTS/STT/image/embed). */
+export function recordCall(
+  p: ProviderId,
+  model: string,
+  usage: TokenUsage | undefined,
+  latencyMs?: number,
+  now = Date.now(),
+  opts?: { fallbackUsd?: number },
+): number {
   const hasTokens = !!usage && (usage.inputTokens > 0 || usage.outputTokens > 0);
-  const { usd } = estimateCallCost(p, model, hasTokens ? usage : undefined, latencyMs);
+  const { usd: baseUsd } = estimateCallCost(p, model, hasTokens ? usage : undefined, latencyMs);
+  const usd = baseUsd > 0 ? baseUsd : Math.max(0, Number(opts?.fallbackUsd) || 0);
   if (!hasTokens && usd <= 0) return 0;
   recordUsage({ at: now, provider: p, model, inputTokens: usage?.inputTokens || 0, outputTokens: usage?.outputTokens || 0, costUsd: usd });
   return usd;

@@ -184,10 +184,21 @@ export function providerCandidatesByPrefix(key: string): ProviderId[] {
   return Array.from(new Set(hits.map((h) => h.id)));
 }
 
-// Heurystyka wizji z nazwy modelu (poziom „heuristic") — dla modeli odkrytych bez metadanych modalności.
-const VISION_NAME = /vision|pixtral|gemini|gpt-4o|gpt-4\.1|gpt-5|claude|llama-4|scout|maverick|gemma-?3|llava|qwen.?2(\.5)?-?vl|qwen-?vl|minicpm-v|moondream|-vl\b/i;
+// Heurystyka wizji z nazwy modelu (poziom „heuristic") — dla modeli odkrytych bez metadanych modalności (w tym lokalne VL Ollamy).
+const VISION_NAME = /vision|pixtral|gemini|gpt-4o|gpt-4\.1|gpt-5|claude|llama-?4|llama3\.2-vision|scout|maverick|gemma-?3|llava|qwen.?2(\.5)?-?vl|qwen-?vl|minicpm-v|moondream|-vl\b/i;
 export function modelHasVisionHeuristic(model: string): boolean {
   return VISION_NAME.test(model || "");
+}
+
+/**
+ * Czy dostawca + konkretny model obsługują zadania wizyjne (E_vision / F_live_vision).
+ * Odblokowuje lokalną Ollamę, gdy skonfigurowany lub wykryty jest lokalny model VL
+ * (np. llava, qwen2.5-vl, minicpm-v, llama3.2-vision, gemma3).
+ */
+export function providerSupportsVision(p: ProviderId, model?: string): boolean {
+  if (PROFILES[p]?.visionRouting) return true;
+  if (p === "ollama" && model && modelHasVisionHeuristic(model)) return true;
+  return false;
 }
 
 // ---------- Cennik (USD / 1M tokenów) ----------

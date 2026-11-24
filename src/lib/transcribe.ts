@@ -51,7 +51,8 @@ export async function transcribeAudio(blob: Blob, lang = "pl"): Promise<{ text: 
       reportOutcome("groq", "whisper-large-v3-turbo", key, false, { error: Object.assign(new Error(msg), { status: res.status }) });
       return { error: msg };
     }
-    reportOutcome("groq", "whisper-large-v3-turbo", key, true, { latencyMs: Date.now() - t0 });
+    const estSec = Math.max(10, Math.round((blob.size || 0) / 4000));
+    reportOutcome("groq", "whisper-large-v3-turbo", key, true, { latencyMs: Date.now() - t0, units: estSec });
     return { text: (d.text || "").trim() };
   } catch (e) {
     reportOutcome("groq", "whisper-large-v3-turbo", key, false, { error: e });

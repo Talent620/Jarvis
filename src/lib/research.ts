@@ -51,23 +51,32 @@ export async function tavilySearch(query: string, opts: { maxResults?: number; d
       /* spróbuj bezpośrednio niżej */
     }
   }
-  // 2) Bezpośrednio do Tavily kluczem użytkownika (np. desktop/Electron — bez ograniczeń CORS).
-  const key = s.tavilyApiKey?.trim();
+  // 2) Bezpośrednio do Tavily kluczem użytkownika — przez bramkę budżetu AutoCore.
+  const { resolveService, reportOutcome } = await import("./autocore/gateway");
+  const svc = resolveService("search");
+  const key = svc.allowed ? svc.apiKey : "";
   if (!key) return [];
+  const depth = opts.depth ?? "advanced";
+  const t0 = Date.now();
   try {
     const res = await fetchTimeout(
       "https://api.tavily.com/search",
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ api_key: key, query, max_results: max, include_answer: false, search_depth: opts.depth ?? "advanced" }),
+        body: JSON.stringify({ api_key: key, query, max_results: max, include_answer: false, search_depth: depth }),
       },
       12000,
     );
     const data = await res.json().catch(() => null);
-    if (!res.ok || !data) return [];
+    if (!res.ok || !data) {
+      reportOutcome("tavily", depth, key, false, { error: new Error(`Tavily ${res.status}`) });
+      return [];
+    }
+    reportOutcome("tavily", depth, key, true, { latencyMs: Date.now() - t0, units: 1 });
     return mapResults(data.results);
-  } catch {
+  } catch (e) {
+    reportOutcome("tavily", depth, key, false, { error: e });
     return [];
   }
 }
