@@ -6,6 +6,28 @@ export interface CapturedImage {
   mediaType: string; // np. "image/jpeg"
 }
 
+const MAX_IMAGE_FILE_BYTES = 12 * 1024 * 1024;
+
+/** Bezpiecznie wczytaj plik obrazu (z wklejenia Ctrl+V lub przeciągnięcia) do CapturedImage. */
+export function readImageFile(file: File): Promise<CapturedImage | null> {
+  return new Promise((resolve) => {
+    if (!file || !/^image\//i.test(file.type || "") || file.size > MAX_IMAGE_FILE_BYTES) {
+      resolve(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const comma = result.indexOf(",");
+      if (comma < 0) { resolve(null); return; }
+      const mediaType = result.slice(5, result.indexOf(";")) || file.type || "image/jpeg";
+      resolve({ data: result.slice(comma + 1), mediaType });
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
 function capturePhotoFromWebInput(): Promise<CapturedImage | null> {
   return new Promise((resolve) => {
     let settled = false;
@@ -31,15 +53,7 @@ function capturePhotoFromWebInput(): Promise<CapturedImage | null> {
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return finish(null);
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = String(reader.result);
-        const comma = result.indexOf(",");
-        const mediaType = result.slice(5, result.indexOf(";")) || file.type || "image/jpeg";
-        finish({ data: result.slice(comma + 1), mediaType });
-      };
-      reader.onerror = () => finish(null);
-      reader.readAsDataURL(file);
+      void readImageFile(file).then(finish);
     };
     input.click();
   });

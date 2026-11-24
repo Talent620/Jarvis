@@ -2,14 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { anticipate, type RecallHit } from "../lib/recall";
 import { store } from "../lib/store";
 import { speak } from "../lib/voice";
+import { hapticTap } from "../lib/androidNative";
 
 export default function Composer({
   onSend,
   onStop,
   onMic,
   onAttach,
+  onAttachFile,
   onRemoveImage,
   onRecall,
+  onCommandPalette,
   imagePreview,
   micOn,
   busy,
@@ -20,8 +23,10 @@ export default function Composer({
   onStop?: () => void;
   onMic: () => void;
   onAttach: () => void;
+  onAttachFile?: (file: File) => void;
   onRemoveImage: () => void;
   onRecall?: (query: string) => void;
+  onCommandPalette?: () => void;
   imagePreview: string | null;
   micOn: boolean;
   busy: boolean;
@@ -31,8 +36,11 @@ export default function Composer({
   const [text, setText] = useState("");
   const [council, setCouncil] = useState(false);
   const [research, setResearch] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [hint, setHint] = useState<RecallHit | null>(null); // 🧲 anticipatory recall
   const dismissed = useRef<string>(""); // id trafienia odrzuconego przez użytkownika
+  const sentHistory = useRef<string[]>([]); // historia wysłanych poleceń (strzałka ↑/↓)
+  const histIdx = useRef<number>(-1);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   // 🧲 Anticipatory recall: gdy to, co piszesz, mocno pokrywa się z czymś z Twojej
@@ -50,17 +58,22 @@ export default function Composer({
     return () => clearTimeout(id);
   }, [text, onRecall]);
 
-  // Auto-wysokość: pole rośnie z treścią (do ~5 linijek), potem przewija.
+  // Auto-wysokość: pole rośnie z treścią (do ~6 linijek), potem przewija.
   const autoGrow = () => {
     const el = taRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+    el.style.height = Math.min(el.scrollHeight, 136) + "px";
   };
 
   const submit = () => {
     const t = text.trim();
     if ((!t && !imagePreview) || busy) return;
+    hapticTap("light");
+    if (t) {
+      sentHistory.current = [t, ...sentHistory.current.filter((x) => x !== t)].slice(0, 30);
+      histIdx.current = -1;
+    }
     onSend(t, { council: council && !imagePreview, research: research && !imagePreview });
     setText("");
     setResearch(false);
@@ -68,12 +81,41 @@ export default function Composer({
     if (taRef.current) taRef.current.style.height = "auto";
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!onAttachFile || busy) return;
+    const items = Array.from(e.clipboardData?.items || []);
+    const imgItem = items.find((it) => it.kind === "file" && it.type.startsWith("image/"));
+    if (!imgItem) return;
+    const file = imgItem.getAsFile();
+    if (file) {
+      e.preventDefault();
+      onAttachFile(file);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragging(false);
+    if (!onAttachFile || busy) return;
+    const file = Array.from(e.dataTransfer?.files || []).find((f) => f.type.startsWith("image/"));
+    if (file) onAttachFile(file);
+  };
+
   return (
-    <div>
+    <div
+      className={dragging ? "composer-wrap composer-drop" : "composer-wrap"}
+      onDragOver={(e) => {
+        if (!onAttachFile || busy) return;
+        e.preventDefault();
+        if (!dragging) setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={handleDrop}
+    >
       {imagePreview && (
         <div className="img-preview">
           <img src={imagePreview} alt="załącznik" />
-          <button className="img-x" onClick={onRemoveImage} title="Usuń zdjęcie">
+          <button className="img-x" onClick={onRemoveImage} title="Usuń zdjęcie" aria-label="Usuń zdjęcie">
             ✕
           </button>
         </div>
@@ -91,35 +133,48 @@ export default function Composer({
         </div>
       )}
       <div className="composer-tools">
-        <button className="mic" onClick={onAttach} title="Zdjęcie / aparat" disabled={busy}>
-          📷
+        <button className="composer-pill" onClick={onAttach} title="Zdjęcie / aparat (możesz też wkleić Ctrl+V lub upuścić plik)" disabled={busy}>
+          📷 <span className="pill-label">Obraz</span>
         </button>
         <button
-          className={`mic ${research ? "on" : ""}`}
-          onClick={() => setResearch((v) => !v)}
+          className={`composer-pill ${research ? "on" : ""}`}
+          onClick={() => { hapticTap("light"); setResearch((v) => !v); }}
           title={research ? "Głębokie badanie WŁĄCZONE — JARVIS zrobi dokładny research ze źródłami" : "Głębokie badanie: dokładny research w sieci ze źródłami [1][2]"}
           disabled={busy}
+          aria-pressed={research}
         >
-          🔬
+          🔬 <span className="pill-label">Badanie</span>
         </button>
         {councilAvailable && (
           <button
-            className={`mic ${council ? "on" : ""}`}
-            onClick={() => setCouncil((v) => !v)}
+            className={`composer-pill ${council ? "on" : ""}`}
+            onClick={() => { hapticTap("light"); setCouncil((v) => !v); }}
             title={council ? "Konsylium WŁĄCZONE — to pytanie pójdzie do kilku modeli" : "Konsylium: zapytaj kilka modeli o to pytanie"}
             disabled={busy}
+            aria-pressed={council}
           >
-            ⚖
+            ⚖ <span className="pill-label">Konsylium</span>
           </button>
         )}
         {text.trim() && (
           <button
-            className="mic"
+            className="composer-pill"
             onClick={() => void speak(text, { ...store.settings, speak: true }).catch(() => {})}
             title="Przeczytaj wpisany/wklejony tekst na głos (dosłownie)"
             aria-label="Przeczytaj na głos"
           >
-            🔊
+            🔊 <span className="pill-label">Czytaj</span>
+          </button>
+        )}
+        <div className="spacer" />
+        {onCommandPalette && (
+          <button
+            className="composer-pill composer-kbd"
+            onClick={onCommandPalette}
+            title="Szybkie polecenia (Ctrl+K lub /)"
+            aria-label="Otwórz szybkie polecenia"
+          >
+            ⌘K
           </button>
         )}
       </div>
@@ -128,25 +183,55 @@ export default function Composer({
           ref={taRef}
           rows={1}
           value={text}
-          placeholder="Wydaj polecenie JARVIS-owi…"
+          placeholder={dragging ? "Upuść obraz tutaj…" : "Wydaj polecenie JARVIS-owi…"}
+          onPaste={handlePaste}
           onChange={(e) => {
             setText(e.target.value);
+            histIdx.current = -1;
             autoGrow();
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               submit();
+              return;
+            }
+            if (e.key === "/" && !text && onCommandPalette) {
+              e.preventDefault();
+              onCommandPalette();
+              return;
+            }
+            if (e.key === "ArrowUp" && (!text || histIdx.current >= 0) && sentHistory.current.length) {
+              const next = Math.min(sentHistory.current.length - 1, histIdx.current + 1);
+              if (next !== histIdx.current) {
+                e.preventDefault();
+                histIdx.current = next;
+                setText(sentHistory.current[next]);
+                requestAnimationFrame(autoGrow);
+              }
+              return;
+            }
+            if (e.key === "ArrowDown" && histIdx.current >= 0) {
+              e.preventDefault();
+              const next = histIdx.current - 1;
+              histIdx.current = next;
+              setText(next < 0 ? "" : sentHistory.current[next]);
+              requestAnimationFrame(autoGrow);
             }
           }}
         />
         {micSupported && (
-          <button className={`mic ${micOn ? "on" : ""}`} onClick={onMic} title="Mów">
+          <button
+            className={`mic ${micOn ? "on" : ""}`}
+            onClick={() => { hapticTap("medium"); onMic(); }}
+            title={micOn ? "Zatrzymaj mikrofon" : "Mów"}
+            aria-label={micOn ? "Zatrzymaj mikrofon" : "Mów"}
+          >
             {micOn ? "■" : "🎤"}
           </button>
         )}
         {busy ? (
-          <button className="send stop" onClick={onStop} title="Zatrzymaj" aria-label="Zatrzymaj generowanie">
+          <button className="send stop" onClick={() => { hapticTap("medium"); onStop?.(); }} title="Zatrzymaj" aria-label="Zatrzymaj generowanie">
             ■
           </button>
         ) : (
@@ -154,7 +239,8 @@ export default function Composer({
             className="send"
             onClick={submit}
             disabled={!text.trim() && !imagePreview}
-            title="Wyślij"
+            title="Wyślij (Enter)"
+            aria-label="Wyślij"
           >
             ➤
           </button>

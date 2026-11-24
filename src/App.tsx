@@ -119,7 +119,7 @@ import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
 import { processPendingSiteOsCommands } from "./lib/siteOs";
 import { currentBrainMode } from "./lib/brainMode";
 import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, checkPinnedVoice, setVoiceUnavailableHandler, type VoiceListener, type VoiceUnavailableInfo } from "./lib/voice";
-import { capturePhoto } from "./lib/camera";
+import { capturePhoto, readImageFile } from "./lib/camera";
 import { captureScreen, desktop, isDesktop, watchClipboard } from "./lib/desktop";
 import ScreenBoundary from "./components/ScreenBoundary";
 import { getWeather } from "./lib/weather";
@@ -527,6 +527,15 @@ export default function App() {
   const attachImage = async () => {
     const img = await capturePhoto();
     if (img) setPendingImage(img);
+  };
+  const attachImageFile = async (file: File) => {
+    const img = await readImageFile(file);
+    if (img) {
+      setPendingImage(img);
+      toast("📷 Załączono obraz — napisz pytanie i wyślij.");
+    } else {
+      toast("⚠ Obsługiwane są obrazy do 12 MB (PNG/JPG/WebP).");
+    }
   };
 
   // Sprint 2 / Live Vision („Pokaż Jarvisowi”): 1 klik lub „popatrz na to” → tylna kamera + krótka instrukcja głosowa.
@@ -1773,7 +1782,9 @@ export default function App() {
         onMic={toggleMic}
         onRecall={(q) => { setRecallSeed(q); setShowRecall(true); }}
         onAttach={attachImage}
+        onAttachFile={attachImageFile}
         onRemoveImage={() => setPendingImage(null)}
+        onCommandPalette={() => setShowCmd(true)}
         imagePreview={pendingImage ? `data:${pendingImage.mediaType};base64,${pendingImage.data}` : null}
         micOn={micOn}
         busy={busy}
