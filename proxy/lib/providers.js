@@ -58,6 +58,8 @@ export async function handleProviderRoute(path, url, req, env) {
     path.endsWith("/gemini") ||
     path.endsWith("/openai") ||
     path.endsWith("/modal") ||
+    path.endsWith("/modal-voice/stt") ||
+    path.endsWith("/modal-voice/tts") ||
     path.endsWith("/passthrough");
 
   if (!isProxyRoute) return null;
@@ -67,6 +69,28 @@ export async function handleProviderRoute(path, url, req, env) {
   }
   if (await rateLimited(req, env)) {
     return json(429, { error: "Za dużo żądań w tej chwili — spróbuj ponownie za moment." });
+  }
+
+  if (path.endsWith("/modal-voice/stt") || path.endsWith("/modal-voice/tts")) {
+    const base = String(env.MODAL_VOICE_URL || "").trim().replace(/\/+$/, "");
+    if (!base) return json(500, { error: "Brak MODAL_VOICE_URL w konfiguracji Workera." });
+    const parsed = new URL(/^https?:\/\//i.test(base) ? base : `https://${base}`);
+    if (!openaiHostAllowed(parsed.hostname.toLowerCase())) {
+      return json(403, { error: `Host niedozwolony: ${parsed.hostname}` });
+    }
+    const key = env.MODAL_API_KEY || env.VLLM_API_KEY || bearer(req);
+    const suffix = path.endsWith("/stt") ? `/v1/stt${url.search}` : "/v1/tts";
+    const upstream = await fetch(`${parsed.origin}${suffix}`, {
+      method: "POST",
+      headers: {
+        "content-type": req.headers.get("content-type") || "application/json",
+        ...(key ? { authorization: `Bearer ${key}` } : {}),
+      },
+      body: req.body,
+    });
+    const out = new Headers(upstream.headers);
+    Object.entries(CORS).forEach(([k, v]) => out.set(k, v));
+    return new Response(upstream.body, { status: upstream.status, headers: out });
   }
 
   if (path.endsWith("/modal")) {

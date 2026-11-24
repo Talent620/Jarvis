@@ -534,6 +534,8 @@ export interface Settings {
   model: string;
   /** Adres serwera Modal Brain (OpenAI-compatible vLLM, np. https://…modal.run/v1). */
   modalUrl: string;
+  /** Opcjonalny adres serwera Modal Voice (streaming STT/TTS + barge-in, deploy/modal_voice.py). */
+  modalVoiceUrl?: string;
   /** Opcjonalny adres backend-proxy (omija CORS, chowa klucze). */
   proxyUrl: string;
   /** Wysyłka e-maili wprost z aplikacji (desktop): adres Gmail/SMTP. */

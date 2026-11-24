@@ -12,8 +12,11 @@ export interface ModelIntel {
 
 // Dokładne wpisy dla modeli z katalogu (registry). Klucz = id modelu.
 const EXACT: Record<string, ModelIntel> = {
-  // Modal Brain (self-hosted serverless vLLM on A100-80GB)
+  // Modal Brain (self-hosted serverless vLLM with GPU memory snapshots)
+  "Qwen/Qwen3-32B-AWQ": { iq: 93, official: "Qwen3 32B AWQ na Modal vLLM (L4/A10G/A100) — czołówka PL, rozumowanie i tool-calling.", casual: "Najbardziej opłacalny własny mózg 2026: świetny polski, szybki i prywatny." },
+  "Qwen/Qwen3-30B-A3B-Instruct-2507-FP8": { iq: 91, official: "Qwen3 30B-A3B MoE FP8 (3.3B aktywnych) — bardzo niskie opóźnienie i długi kontekst.", casual: "Błyskawiczny MoE — myśli w ułamku sekundy." },
   "Qwen/Qwen2.5-72B-Instruct-AWQ": { iq: 92, official: "Qwen 2.5 72B AWQ na dedykowanym A100 80GB (Modal vLLM) — 16k kontekstu, tool-calling.", casual: "Najmocniejszy własny mózg 72B na A100. Prywatny i bez limitów dziennych." },
+  "Qwen/Qwen3-14B-AWQ": { iq: 86, official: "Qwen3 14B AWQ — lekki, szybki model Refleksu na L4/A10G.", casual: "Zwinny Refleks do błyskawicznych odpowiedzi i narzędzi." },
   // Anthropic
   "claude-opus-4-8": { iq: 99, official: "Frontier: szczyt rozumowania, agentyki i kodu; czołówka światowych benchmarków.", casual: "Najmądrzejszy z całej stawki. Bierz, gdy zależy Ci na jakości." },
   "claude-sonnet-4-6": { iq: 94, official: "Bardzo mocny model ogólny — świetny stosunek jakości do szybkości.", casual: "Prawie tak bystry jak Opus, a szybszy. Złoty środek." },

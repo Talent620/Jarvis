@@ -1531,9 +1531,9 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
               </div>
               </details>
 
-              <h3 id="set-ollama">🖥 Serwery AI (Modal Brain, Ollama, obrazy)</h3>
+              <h3 id="set-ollama">🖥 Serwery AI (Modal Brain / Voice, Ollama, obrazy)</h3>
               <div className="field">
-                <label>⚡ Modal Brain — adres serwera vLLM (Qwen 2.5 72B / A100-80GB)</label>
+                <label>⚡ Modal Brain — adres serwera vLLM (Qwen3 32B / A100 / L4)</label>
                 <input
                   value={s.modalUrl || ""}
                   placeholder="https://<workspace>--jarvis-brain-serve.modal.run/v1"
@@ -1544,6 +1544,16 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 <p className="muted" style={{ marginTop: 4 }}>
                   Wklej URL z <code>modal deploy deploy/modal_brain.py</code> i klucz <code>VLLM_API_KEY</code> w „🟢 Klucze API” wyżej (lub ustaw <code>MODAL_BRAIN_URL</code> w Workerze BFF).
                 </p>
+              </div>
+              <div className="field">
+                <label>🎙 Modal Voice — adres streaming STT/TTS (opcjonalnie, full-duplex)</label>
+                <input
+                  value={s.modalVoiceUrl || ""}
+                  placeholder="https://<workspace>--jarvis-voice-voiceservice-web.modal.run"
+                  onChange={(e) => set({ modalVoiceUrl: e.target.value })}
+                  spellCheck={false}
+                  style={{ fontFamily: "monospace", fontSize: 13 }}
+                />
               </div>
               <div className="field">
                 <label>Lokalny model — adres Ollama (prywatny, offline)</label>

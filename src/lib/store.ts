@@ -49,6 +49,7 @@ const defaultSettings: Settings = {
   keys: { modal: "", anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", cohere: "", openrouter: "", nvidia: "", github: "" },
   model: "gemini-2.5-flash",
   modalUrl: "",
+  modalVoiceUrl: "",
   proxyUrl: "",
   smtpUser: "",
   smtpPass: "",

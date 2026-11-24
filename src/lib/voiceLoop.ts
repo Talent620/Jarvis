@@ -1,4 +1,5 @@
 import { createListener, speak, stopSpeaking, isSpeechSupported, type VoiceListener } from "./voice";
+import { BargeInController } from "./modalVoice";
 import { askJarvis } from "./brain";
 import { store } from "./store";
 import { needsVerification, verifyAndCorrect } from "./selfVerify";
@@ -15,14 +16,22 @@ import type { Settings } from "../types";
 export type LoopState = "listening" | "thinking" | "speaking" | "error" | "closed";
 
 // Rozmowa na żywo niezależna od Gemini Live: nasłuch (STT) → JARVIS (dowolny
-// dostawca) → głos (TTS) → znów nasłuch. Działa wszędzie, gdzie jest STT
-// (desktop/przeglądarka). Pozwala prowadzić rozmowę także bez klucza Gemini.
+// dostawca) → głos (TTS) → znów nasłuch, z obsługą barge-in (przerywania wypowiedzi).
 export class ConversationLoop {
   private listener: VoiceListener | null = null;
   private history: Msg[] = [];
   private closed = false;
   private processing = false;
   private wantListen = false; // czy wznawiać nasłuch (tryb głosowy); w trybie tekstowym false
+  private readonly bargeIn = new BargeInController({
+    onInterrupt: () => {
+      stopSpeaking();
+      if (!this.closed) {
+        this.onCaption("✋ Przerwano — słucham…");
+        this.onState("listening");
+      }
+    },
+  });
 
   constructor(
     private onState: (s: LoopState, detail?: string) => void,
@@ -203,7 +212,12 @@ export class ConversationLoop {
       this.onCaption(spoken);
       this.onState("speaking");
       if (stalled) stopSpeaking(); // ucisz „jeszcze pracuję”, zanim podasz wynik
-      await speak(spoken, { ...store.settings, speak: true, ...this.voiceTune });
+      this.bargeIn.beginSpeaking();
+      try {
+        await speak(spoken, { ...store.settings, speak: true, ...this.voiceTune });
+      } finally {
+        this.bargeIn.endSpeaking();
+      }
     } catch (e) {
       window.clearTimeout(stall);
       this.history.pop(); // zdejmij nieodpowiedzianą wiadomość użytkownika — historia musi zostać sparowana
@@ -215,8 +229,19 @@ export class ConversationLoop {
     }
   }
 
+  /** Full-duplex barge-in: przekaż próbkę energii mikrofonu (RMS 0..1) podczas mówienia JARVIS-a. */
+  feedMicLevel(rms: number): boolean {
+    return this.bargeIn.feedMicLevel(rms);
+  }
+
+  /** Natychmiast przerwij wypowiedź JARVIS-a (barge-in) i wróć do nasłuchu. */
+  interrupt(): void {
+    this.bargeIn.interrupt();
+  }
+
   stop(): void {
     this.closed = true;
+    this.bargeIn.endSpeaking();
     this.listener?.stop();
     stopSpeaking();
     this.onState("closed");

@@ -6,6 +6,7 @@
 
 # --- Dostawcy AI (mózg) ---
 MODAL_BRAIN_URL=""          # https://<workspace>--jarvis-brain-serve.modal.run/v1
+MODAL_VOICE_URL=""          # https://<workspace>--jarvis-voice-voiceservice-web.modal.run
 MODAL_API_KEY=""            # VLLM_API_KEY z sekretu Modal 'jarvis-vllm' (lub VLLM_API_KEY)
 ANTHROPIC_API_KEY=""        # sk-ant-...
 OPENROUTER_API_KEY=""       # sk-or-v1-...  (ZROTUJ stary, wyciekły!)

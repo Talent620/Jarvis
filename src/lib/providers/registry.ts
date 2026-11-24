@@ -8,7 +8,7 @@ import { appTokenHeader } from "../http";
 import { store } from "../store";
 import type { AskCtx, Msg, ProviderId, ProviderMeta, FallbackReasonKind } from "./types";
 
-export const MODAL_DEFAULT_MODEL = "Qwen/Qwen2.5-72B-Instruct-AWQ";
+export const MODAL_DEFAULT_MODEL = "Qwen/Qwen3-32B-AWQ";
 
 /** Pure: znormalizuj adres Modal Brain do pełnego endpointu OpenAI /v1/chat/completions. */
 export function normalizeModalEndpoint(raw: string): string {
@@ -31,7 +31,7 @@ export function isModalReady(s = store.settings): boolean {
   return hasModalEndpoint(s) && !!s.keys?.modal?.trim();
 }
 
-// Modal Brain — dedykowany serverless vLLM na GPU A100-80GB (deploy/modal_brain.py).
+// Modal Brain — dedykowany serverless vLLM na Modal (L4 / A10G / A100-80GB, deploy/modal_brain.py).
 // Obsługuje bezpośredni URL *.modal.run/v1 oraz fallback przez BFF /modal (proxy/worker.js).
 function askModal(ctx: AskCtx) {
   const endpoint = normalizeModalEndpoint(store.settings.modalUrl || "");
@@ -81,13 +81,16 @@ function askOllama(ctx: AskCtx) {
 export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
   modal: {
     id: "modal",
-    label: "Modal Brain (Qwen 2.5 72B — A100)",
+    label: "Modal Brain (Qwen3 32B / vLLM)",
     rank: 95,
     keysUrl: "https://modal.com/apps",
     defaultModel: MODAL_DEFAULT_MODEL,
     impl: askModal,
     models: [
-      { id: MODAL_DEFAULT_MODEL, label: "Qwen 2.5 72B Instruct AWQ — najmocniejszy (A100 80GB)" },
+      { id: "Qwen/Qwen3-32B-AWQ", label: "Qwen3 32B AWQ — najmocniejszy PL + narzędzia (L4/A10G/A100)" },
+      { id: "Qwen/Qwen3-30B-A3B-Instruct-2507-FP8", label: "Qwen3 30B-A3B FP8 — MoE błyskawiczny (L40S/A100)" },
+      { id: "Qwen/Qwen2.5-72B-Instruct-AWQ", label: "Qwen 2.5 72B Instruct AWQ — gigant (A100-80GB)" },
+      { id: "Qwen/Qwen3-14B-AWQ", label: "Qwen3 14B AWQ — szybki Refleks (L4/A10G)" },
     ],
   },
   anthropic: {

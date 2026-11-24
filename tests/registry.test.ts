@@ -1,12 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED, injectNoThink, modelBadges, PROVIDERS, providerShortName, fallbackNotice, MODAL_DEFAULT_MODEL, normalizeModalEndpoint } from "../src/lib/providers/registry";
 
-describe("Modal Brain — OpenAI-compatible vLLM na A100-80GB", () => {
-  it("jest w katalogu z domyślnym modelem Qwen2.5-72B-Instruct-AWQ i wysoką rangą", () => {
+describe("Modal Brain — OpenAI-compatible vLLM na Modal", () => {
+  it("jest w katalogu z domyślnym modelem Qwen3-32B-AWQ i wysoką rangą", () => {
     const m = PROVIDERS.modal;
     expect(m).toBeTruthy();
     expect(m.defaultModel).toBe(MODAL_DEFAULT_MODEL);
-    expect(m.defaultModel).toBe("Qwen/Qwen2.5-72B-Instruct-AWQ");
+    expect(m.defaultModel).toBe("Qwen/Qwen3-32B-AWQ");
+    expect(m.models.some((x) => x.id === "Qwen/Qwen2.5-72B-Instruct-AWQ")).toBe(true);
     expect(m.rank).toBeGreaterThan(PROVIDERS.gemini.rank);
     expect(providerShortName("modal")).toBe("Modal Brain");
   });
