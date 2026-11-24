@@ -8,6 +8,8 @@ export const ALLOWED_OPENAI_HOSTS = [
   "integrate.api.nvidia.com",
   "models.github.ai",
   "api.cohere.ai",
+  "api.cerebras.ai",
+  "api.mistral.ai",
   "modal.run",
 ];
 
@@ -32,6 +34,9 @@ export function envKeyForHost(host, env) {
   if (h.includes("openrouter.ai")) return env.OPENROUTER_API_KEY;
   if (h.includes("nvidia.com")) return env.NVIDIA_API_KEY;
   if (h.includes("github.ai")) return env.GITHUB_MODELS_TOKEN;
+  if (h === "api.cerebras.ai") return env.CEREBRAS_API_KEY;
+  if (h === "api.mistral.ai") return env.MISTRAL_API_KEY;
+  if (h === "api.cohere.ai") return env.COHERE_API_KEY;
   if (h === "modal.run" || h.endsWith(".modal.run")) {
     // Bezpieczeństwo: gdy MODAL_BRAIN_URL jest ustawione, wstrzykuj klucz TYLKO dla tego hosta.
     if (env.MODAL_BRAIN_URL) {
