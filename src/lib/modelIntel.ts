@@ -12,6 +12,8 @@ export interface ModelIntel {
 
 // Dokładne wpisy dla modeli z katalogu (registry). Klucz = id modelu.
 const EXACT: Record<string, ModelIntel> = {
+  // Modal Brain (self-hosted serverless vLLM on A100-80GB)
+  "Qwen/Qwen2.5-72B-Instruct-AWQ": { iq: 92, official: "Qwen 2.5 72B AWQ na dedykowanym A100 80GB (Modal vLLM) — 16k kontekstu, tool-calling.", casual: "Najmocniejszy własny mózg 72B na A100. Prywatny i bez limitów dziennych." },
   // Anthropic
   "claude-opus-4-8": { iq: 99, official: "Frontier: szczyt rozumowania, agentyki i kodu; czołówka światowych benchmarków.", casual: "Najmądrzejszy z całej stawki. Bierz, gdy zależy Ci na jakości." },
   "claude-sonnet-4-6": { iq: 94, official: "Bardzo mocny model ogólny — świetny stosunek jakości do szybkości.", casual: "Prawie tak bystry jak Opus, a szybszy. Złoty środek." },

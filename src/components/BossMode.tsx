@@ -58,7 +58,12 @@ export default function BossMode({ onClose }: { onClose: () => void }) {
   const fullAccess = !!store.settings.bossFullAccess;
   // Auto-router: najmocniejszy GOTOWY mózg (zmierzony Ligą, inaczej orientacyjny).
   const brain = (() => {
-    const ready = (id: ProviderId) => (id === "ollama" ? !!store.settings.ollamaUrl?.trim() : !!store.settings.keys[id]?.trim());
+    const ready = (id: ProviderId) =>
+      id === "ollama"
+        ? !!store.settings.ollamaUrl?.trim()
+        : id === "modal"
+          ? !!(store.settings.modalUrl?.trim() || store.settings.proxyUrl?.trim()) && !!store.settings.keys.modal?.trim()
+          : !!store.settings.keys[id]?.trim();
     const inputs = PROVIDER_LIST.filter((p) => p.id !== "ollama").map((p) => ({ provider: p.id, model: p.defaultModel, label: p.label, ready: ready(p.id) }));
     return store.settings.freeMode ? bestFreeBrain(inputs, loadIqResults()) : bestBrain(inputs, loadIqResults());
   })();

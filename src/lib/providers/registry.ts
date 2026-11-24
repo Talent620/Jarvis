@@ -4,8 +4,46 @@ import { askGemini } from "./gemini";
 import { askWebllm } from "./webllm";
 import { askOllamaNative } from "./ollama";
 import { WEBLLM_MODELS, WEBLLM_DEFAULT_MODEL } from "../webllm";
+import { appTokenHeader } from "../http";
 import { store } from "../store";
 import type { AskCtx, Msg, ProviderId, ProviderMeta, FallbackReasonKind } from "./types";
+
+export const MODAL_DEFAULT_MODEL = "Qwen/Qwen2.5-72B-Instruct-AWQ";
+
+/** Pure: znormalizuj adres Modal Brain do pełnego endpointu OpenAI /v1/chat/completions. */
+export function normalizeModalEndpoint(raw: string): string {
+  const trimmed = (raw || "").trim();
+  if (!trimmed) return "";
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const clean = withScheme.replace(/\/+$/, "");
+  if (/\/v1\/chat\/completions$/i.test(clean)) return clean;
+  if (/\/v1$/i.test(clean)) return `${clean}/chat/completions`;
+  return `${clean}/v1/chat/completions`;
+}
+
+/** Pure: czy Modal Brain ma skonfigurowany punkt docelowy (własny modalUrl albo BFF proxyUrl). */
+export function hasModalEndpoint(s = store.settings): boolean {
+  return !!(normalizeModalEndpoint(s.modalUrl || "") || s.proxyUrl?.trim());
+}
+
+/** Pure: czy Modal Brain jest gotowy do użycia (endpoint + klucz API). */
+export function isModalReady(s = store.settings): boolean {
+  return hasModalEndpoint(s) && !!s.keys?.modal?.trim();
+}
+
+// Modal Brain — dedykowany serverless vLLM na GPU A100-80GB (deploy/modal_brain.py).
+// Obsługuje bezpośredni URL *.modal.run/v1 oraz fallback przez BFF /modal (proxy/worker.js).
+function askModal(ctx: AskCtx) {
+  const endpoint = normalizeModalEndpoint(store.settings.modalUrl || "");
+  if (endpoint) return makeOpenAICompatible(endpoint)(ctx);
+  if (ctx.proxyUrl) {
+    const proxyEndpoint = `${ctx.proxyUrl.replace(/\/+$/, "")}/modal`;
+    return makeOpenAICompatible(proxyEndpoint, { extraHeaders: appTokenHeader() })({ ...ctx, proxyUrl: undefined });
+  }
+  return Promise.reject(
+    new Error("Brak adresu Modal Brain — wpisz URL https://…modal.run/v1 w ⚙ → Mózg (lub skonfiguruj BFF)."),
+  );
+}
 
 // Tylko modele „rozumujące" rozumieją dyrektywę /no_think — dla gemma/llama to zbędny token.
 const REASONING_LOCAL = /qwen3|deepseek|qwq|-r1|reason|think|marco|phi-?4/i;
@@ -41,6 +79,17 @@ function askOllama(ctx: AskCtx) {
 
 // Katalog dostawców i darmowych/mocnych modeli. „rank" steruje trybem auto.
 export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
+  modal: {
+    id: "modal",
+    label: "Modal Brain (Qwen 2.5 72B — A100)",
+    rank: 95,
+    keysUrl: "https://modal.com/apps",
+    defaultModel: MODAL_DEFAULT_MODEL,
+    impl: askModal,
+    models: [
+      { id: MODAL_DEFAULT_MODEL, label: "Qwen 2.5 72B Instruct AWQ — najmocniejszy (A100 80GB)" },
+    ],
+  },
   anthropic: {
     id: "anthropic",
     label: "Claude (Anthropic)",
@@ -273,6 +322,7 @@ export function shouldAnnounceFallback(prevVia: ProviderId | null, reply: Fallba
 export type ProviderKeys = Record<ProviderId, string>;
 
 export const emptyKeys: ProviderKeys = {
+  modal: "",
   anthropic: "",
   gemini: "",
   groq: "",
@@ -342,6 +392,7 @@ export const FREE_UNCENSORED = {
 export function detectProvider(key: string): ProviderId | null {
   const k = (key || "").trim();
   if (!k) return null;
+  if (k.startsWith("jvllm_") || k.startsWith("modal_vllm_")) return "modal";
   if (k.startsWith("sk-ant-")) return "anthropic";
   if (k.startsWith("sk-or-")) return "openrouter"; // OpenRouter: sk-or-v1-...
   if (k.startsWith("csk-")) return "cerebras";

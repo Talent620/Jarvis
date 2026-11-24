@@ -6,7 +6,7 @@ import { riskOf } from "./permissions";
 import { runPlan, makeDefaultExecTool, type RunResult } from "./agentRun";
 import type { AgentPlan } from "./agentPlanner";
 import { isToolFreeGreeting, selectToolsForIntent } from "./toolSelector";
-import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored } from "./providers/registry";
+import { PROVIDERS, PROVIDER_LIST, MODAL_DEFAULT_MODEL, autoPick, isUncensored, hasModalEndpoint } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed, rankJournal } from "./memory";
 import { memoryContextBlock, addMemory, resolveNamespace, memoryServiceAvailable } from "./memoryService";
 import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
@@ -115,6 +115,7 @@ const PERSONAS: Record<string, string> = {
 const VISION_PROVIDERS = new Set<ProviderId>(["anthropic", "gemini", "github", "openrouter", "mistral"]);
 
 const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision: string }> = {
+  modal: { simple: MODAL_DEFAULT_MODEL, complex: MODAL_DEFAULT_MODEL, vision: MODAL_DEFAULT_MODEL },
   anthropic: { simple: "claude-haiku-4-5", complex: "claude-opus-4-8", vision: "claude-opus-4-8" },
   gemini: { simple: "gemini-2.5-flash-lite", complex: "gemini-2.5-flash", vision: "gemini-2.5-flash" },
   groq: { simple: GROQ_SCOUT, complex: GROQ_KIMI, vision: GROQ_SCOUT },
@@ -134,6 +135,14 @@ const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision:
 
 // Dostawcy bez klucza (lokalni): autoryzacja przez adres serwera (Ollama) lub WebGPU (WebLLM).
 const isKeyless = (p: ProviderId): boolean => p === "ollama" || p === "webllm";
+
+/** Czy chmurowy dostawca jest realnie skonfigurowany (modal wymaga też modalUrl lub proxyUrl). */
+const hasCloudCreds = (id: ProviderId, s = store.settings): boolean => {
+  if (id === "ollama" || id === "webllm") return false;
+  if (!s.keys[id]?.trim()) return false;
+  if (id === "modal") return hasModalEndpoint(s);
+  return true;
+};
 
 function modelFor(p: ProviderId, complex: boolean, vision: boolean): string {
   const m = TASK_MODELS[p];
@@ -191,7 +200,7 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
 
   let base: { provider: ProviderId; model: string }[];
   if (s.provider === "auto" && (s.model === "auto" || !s.model)) {
-    let provs = PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim());
+    let provs = PROVIDER_LIST.filter((p) => hasCloudCreds(p.id, s));
     if (hasImage) {
       const vis = provs.filter((p) => VISION_PROVIDERS.has(p.id));
       if (vis.length) provs = vis; // do obrazu wybierz dostawcę z wizją
@@ -203,7 +212,7 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
     if (!resolved) {
       // Brak rozwiązanego dostawcy (np. ręczny wybór bez klucza) — łańcuch z dostawców z kluczem + ogon.
       base = [
-        ...PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim())
+        ...PROVIDER_LIST.filter((p) => hasCloudCreds(p.id, s))
           .sort((a, b) => b.rank - a.rank)
           .map((p) => ({ provider: p.id, model: p.defaultModel })),
         ...localTail,
@@ -211,7 +220,7 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
     } else {
       base = [
         { provider: resolved.provider, model: resolved.model },
-        ...PROVIDER_LIST.filter((p) => p.id !== "ollama" && p.id !== resolved.provider && s.keys[p.id]?.trim())
+        ...PROVIDER_LIST.filter((p) => p.id !== resolved.provider && hasCloudCreds(p.id, s))
           .sort((a, b) => b.rank - a.rank)
           .map((p) => ({ provider: p.id, model: p.defaultModel })),
         ...localTail.filter((l) => l.provider !== resolved.provider),
@@ -416,7 +425,8 @@ export function executeGoalPlan(plan: AgentPlan, onStatus?: (s: string) => void)
 export function resolveProvider(): { provider: ProviderId; model: string; apiKey: string } | null {
   const s = store.settings;
   if (s.provider === "auto") {
-    const pick = autoPick(s.keys);
+    const usableKeys = hasModalEndpoint(s) ? s.keys : { ...s.keys, modal: "" };
+    const pick = autoPick(usableKeys);
     if (!pick) return null;
     // Pierwszy świeży klucz dostawcy (gdy wpisano kilka, rotacja pomija wyczerpane).
     return { ...pick, apiKey: primaryKey(pick.provider) };
@@ -427,7 +437,13 @@ export function resolveProvider(): { provider: ProviderId; model: string; apiKey
   const model = s.model && s.model !== "auto" ? s.model : meta.defaultModel;
   // Modele lokalne nie używają klucza: Ollama → adres serwera, WebLLM → WebGPU w przeglądarce.
   const apiKey =
-    provider === "ollama" ? (s.ollamaUrl?.trim() ? "local" : "") : provider === "webllm" ? "local" : primaryKey(provider);
+    provider === "ollama"
+      ? (s.ollamaUrl?.trim() ? "local" : "")
+      : provider === "webllm"
+        ? "local"
+        : provider === "modal" && !hasModalEndpoint(s)
+          ? ""
+          : primaryKey(provider);
   return { provider, model, apiKey };
 }
 
@@ -437,9 +453,10 @@ export function resolveProvider(): { provider: ProviderId; model: string; apiKey
  * „czy wymusić konfigurację", by nie otwierać Ustawień użytkownikom korzystającym tylko z Ollamy/WebLLM.
  */
 export function hasUsableBrain(s = store.settings): boolean {
-  if (resolveProvider()) return true; // wybrany dostawca z kluczem / auto z kluczem
+  const resolved = resolveProvider();
+  if (resolved && resolved.apiKey?.trim()) return true; // wybrany dostawca z kluczem / auto z kluczem
   if (s.ollamaUrl?.trim()) return true; // lokalny serwer (Ollama) — odpowie nawet w trybie auto
-  if (PROVIDER_LIST.some((p) => p.id !== "ollama" && s.keys[p.id]?.trim())) return true; // klucz chmury
+  if (PROVIDER_LIST.some((p) => hasCloudCreds(p.id, s))) return true; // klucz chmury
   if (s.webllmEnabled && webllmSupported()) return true; // mózg on-device (WebGPU)
   return false;
 }

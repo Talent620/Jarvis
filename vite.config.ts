@@ -34,6 +34,7 @@ function projectStats() {
 // (BYOK) i są szyfrowane lokalnie. __DEFAULT_KEYS__ pozostaje PUSTE (kompatybilność store).
 const env = process.env;
 const DEFAULT_KEYS = {
+  modal: "",
   anthropic: "",
   gemini: "",
   groq: "",

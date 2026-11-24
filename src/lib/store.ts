@@ -46,8 +46,9 @@ const defaultSettings: Settings = {
   // Domyślnie STAŁY umysł: najlepszy darmowy model (Gemini 2.5 Flash, #1 tool-calling) zamiast
   // auto-przełączania. Bez klucza Gemini router płynnie spada na dostawcę, do którego masz klucz.
   provider: "gemini",
-  keys: { anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", cohere: "", openrouter: "", nvidia: "", github: "" },
+  keys: { modal: "", anthropic: "", gemini: "", groq: "", cerebras: "", mistral: "", cohere: "", openrouter: "", nvidia: "", github: "" },
   model: "gemini-2.5-flash",
+  modalUrl: "",
   proxyUrl: "",
   smtpUser: "",
   smtpPass: "",

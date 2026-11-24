@@ -526,12 +526,14 @@ export interface Settings {
   signatures?: Signature[];
   /** Dusza Marki — opcjonalna, wstrzykiwana do generacji dla spójności (puste = bez zmian). */
   brandKit?: BrandKit;
-  /** Wybrany dostawca AI: "auto" lub konkretny (anthropic/gemini/groq/openrouter/nvidia/github). */
+  /** Wybrany dostawca AI: "auto" lub konkretny (modal/anthropic/gemini/groq/openrouter/nvidia/github/ollama/webllm). */
   provider: string;
   /** Klucze API per dostawca (przechowywane lokalnie na urządzeniu). */
   keys: Record<string, string>;
   /** Wybrany model (id) lub "auto". */
   model: string;
+  /** Adres serwera Modal Brain (OpenAI-compatible vLLM, np. https://…modal.run/v1). */
+  modalUrl: string;
   /** Opcjonalny adres backend-proxy (omija CORS, chowa klucze). */
   proxyUrl: string;
   /** Wysyłka e-maili wprost z aplikacji (desktop): adres Gmail/SMTP. */

@@ -1,5 +1,26 @@
 import { describe, it, expect } from "vitest";
-import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED, injectNoThink, modelBadges, PROVIDERS, providerShortName, fallbackNotice } from "../src/lib/providers/registry";
+import { detectProvider, autoPick, isUncensored, FREE_UNCENSORED, injectNoThink, modelBadges, PROVIDERS, providerShortName, fallbackNotice, MODAL_DEFAULT_MODEL, normalizeModalEndpoint } from "../src/lib/providers/registry";
+
+describe("Modal Brain — OpenAI-compatible vLLM na A100-80GB", () => {
+  it("jest w katalogu z domyślnym modelem Qwen2.5-72B-Instruct-AWQ i wysoką rangą", () => {
+    const m = PROVIDERS.modal;
+    expect(m).toBeTruthy();
+    expect(m.defaultModel).toBe(MODAL_DEFAULT_MODEL);
+    expect(m.defaultModel).toBe("Qwen/Qwen2.5-72B-Instruct-AWQ");
+    expect(m.rank).toBeGreaterThan(PROVIDERS.gemini.rank);
+    expect(providerShortName("modal")).toBe("Modal Brain");
+  });
+  it("normalizuje różne formy adresu Modal do /v1/chat/completions", () => {
+    expect(normalizeModalEndpoint("https://u--jarvis-brain-serve.modal.run")).toBe("https://u--jarvis-brain-serve.modal.run/v1/chat/completions");
+    expect(normalizeModalEndpoint("https://u--jarvis-brain-serve.modal.run/v1/")).toBe("https://u--jarvis-brain-serve.modal.run/v1/chat/completions");
+    expect(normalizeModalEndpoint("https://u--jarvis-brain-serve.modal.run/v1/chat/completions")).toBe("https://u--jarvis-brain-serve.modal.run/v1/chat/completions");
+    expect(normalizeModalEndpoint("u--jarvis-brain-serve.modal.run")).toBe("https://u--jarvis-brain-serve.modal.run/v1/chat/completions");
+    expect(normalizeModalEndpoint("")).toBe("");
+  });
+  it("rozpoznaje klucz VLLM_API_KEY po prefiksie jvllm_", () => {
+    expect(detectProvider("jvllm_123456")).toBe("modal");
+  });
+});
 
 describe("Cohere — nowy darmowy dostawca", () => {
   it("jest w katalogu z modelami Command i sensownym domyślnym", () => {

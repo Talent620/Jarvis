@@ -1,6 +1,6 @@
 import type { ToolDef } from "../tools";
 
-export type ProviderId = "anthropic" | "gemini" | "groq" | "cerebras" | "mistral" | "cohere" | "openrouter" | "nvidia" | "github" | "ollama" | "webllm";
+export type ProviderId = "modal" | "anthropic" | "gemini" | "groq" | "cerebras" | "mistral" | "cohere" | "openrouter" | "nvidia" | "github" | "ollama" | "webllm";
 
 /** Profil rozumowania — ile „myślenia" włożyć w odpowiedź (wg rodzaju zadania). */
 export type ReasoningProfile = "minimal" | "low" | "medium" | "high";

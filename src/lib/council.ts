@@ -1,5 +1,5 @@
 import { store } from "./store";
-import { PROVIDERS, PROVIDER_LIST } from "./providers/registry";
+import { PROVIDERS, PROVIDER_LIST, isModalReady } from "./providers/registry";
 import { orderedKeys } from "./keys";
 import { memoryBlock, prepareMemoryContext } from "./memory";
 import type { Msg, JarvisReply, ProviderId } from "./providers/types";
@@ -31,7 +31,7 @@ export interface CouncilReply extends JarvisReply {
 
 /** Do konsylium bierzemy do `max` RÓŻNYCH dostawców z kluczem, najwyżej ocenianych. */
 export function councilMembers(max = 3): CouncilMember[] {
-  const members = PROVIDER_LIST.filter((p) => p.id !== "ollama" && orderedKeys(p.id).length > 0)
+  const members = PROVIDER_LIST.filter((p) => p.id !== "ollama" && (p.id === "modal" ? isModalReady() : orderedKeys(p.id).length > 0))
     .sort((a, b) => b.rank - a.rank)
     .slice(0, max)
     .map((p) => ({ provider: p.id as ProviderId, model: p.defaultModel, label: p.label.split(" (")[0] }));

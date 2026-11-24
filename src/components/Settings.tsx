@@ -478,11 +478,20 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
     return PROVIDERS[s.provider as ProviderId]?.models ?? [];
   }, [s.provider, ollamaModels]);
 
-  const autoTarget = useMemo(() => (s.provider === "auto" ? autoPick(s.keys) : null), [s.provider, s.keys]);
+  const autoTarget = useMemo(() => {
+    if (s.provider !== "auto") return null;
+    const usableKeys = s.modalUrl?.trim() || s.proxyUrl?.trim() ? s.keys : { ...s.keys, modal: "" };
+    return autoPick(usableKeys);
+  }, [s.provider, s.keys, s.modalUrl, s.proxyUrl]);
   // Czytelny opis modelu (z katalogu) — żeby w „auto" i przy „domyślnym" widać było, CO realnie zadziała.
   const modelLabel = (prov: ProviderId, id: string) => PROVIDERS[prov]?.models.find((m) => m.id === id)?.label || id;
-  // Czy dla danego dostawcy jest gotowy klucz/adres (Ollama łączy się adresem, nie kluczem).
-  const providerReady = (id: ProviderId) => (id === "ollama" ? !!s.ollamaUrl?.trim() : !!s.keys[id as keyof typeof s.keys]?.trim());
+  // Czy dla danego dostawcy jest gotowy klucz/adres (Ollama łączy się adresem, Modal adresem + kluczem).
+  const providerReady = (id: ProviderId) =>
+    id === "ollama"
+      ? !!s.ollamaUrl?.trim()
+      : id === "modal"
+        ? !!(s.modalUrl?.trim() || s.proxyUrl?.trim()) && !!s.keys.modal?.trim()
+        : !!s.keys[id as keyof typeof s.keys]?.trim();
 
   // Model, który REALNIE zadziała (auto → wybrany; „domyślny" → defaultModel; inaczej s.model).
   const effProvider: ProviderId | null = s.provider === "auto" ? (autoTarget?.provider ?? null) : (s.provider as ProviderId);
@@ -884,8 +893,30 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                   <span className="muted" style={{ fontSize: 12 }}>🆓 darmowy · ⚡ szybki · 🧠 mocny · 👁 wizja · 🔓 bez cenzury</span>
                   {!providerReady(s.provider as ProviderId) && (
                     <span className="muted" style={{ fontSize: 12, color: "var(--gold)" }}>
-                      ⚠ Ten dostawca nie ma jeszcze {s.provider === "ollama" ? "adresu serwera" : "klucza"} — {s.provider === "ollama" ? "podaj adres Ollamy niżej" : "dodaj go w „🔑 Klucze API” niżej"}, inaczej nie odpowie.
+                      ⚠ Ten dostawca nie ma jeszcze {s.provider === "ollama" ? "adresu serwera" : s.provider === "modal" ? "adresu Modal i/lub klucza VLLM_API_KEY" : "klucza"} — {s.provider === "ollama" ? "podaj adres Ollamy niżej" : s.provider === "modal" ? "uzupełnij adres .modal.run/v1 oraz klucz API" : "dodaj go w „🔑 Klucze API” niżej"}, inaczej nie odpowie.
                     </span>
+                  )}
+                  {s.provider === "modal" && (
+                    <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
+                      <input
+                        value={s.modalUrl || ""}
+                        placeholder="https://<workspace>--jarvis-brain-serve.modal.run/v1"
+                        onChange={(e) => set({ modalUrl: e.target.value })}
+                        spellCheck={false}
+                        style={{ fontFamily: "monospace", fontSize: 13 }}
+                      />
+                      <input
+                        type="password"
+                        value={s.keys.modal || ""}
+                        placeholder="VLLM_API_KEY (np. jvllm_…)"
+                        onChange={(e) => setKey("modal", e.target.value)}
+                        spellCheck={false}
+                        style={{ fontFamily: "monospace", fontSize: 13 }}
+                      />
+                      <span className="muted" style={{ fontSize: 12 }}>
+                        Endpoint vLLM z <code>deploy/modal_brain.py</code> (Qwen 2.5 72B AWQ na A100-80GB).
+                      </span>
+                    </div>
                   )}
                   {s.provider === "ollama" && (
                     <>
@@ -1068,7 +1099,13 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                     {st && <p className="muted" style={{ fontSize: 11, margin: "2px 0 4px" }}>{st.detail}</p>}
                     <textarea
                       value={s.keys[p.id] || ""}
-                      placeholder={p.id === "anthropic" ? "sk-ant-…  (kilka? każdy w nowej linii)" : "klucz API  (kilka? każdy w nowej linii)"}
+                      placeholder={
+                        p.id === "anthropic"
+                          ? "sk-ant-…  (kilka? każdy w nowej linii)"
+                          : p.id === "modal"
+                            ? "jvllm_… (VLLM_API_KEY z sekretu Modal 'jarvis-vllm')"
+                            : "klucz API  (kilka? każdy w nowej linii)"
+                      }
                       onChange={(e) => setKey(p.id, e.target.value)}
                       rows={s.keys[p.id]?.includes("\n") ? 3 : 1}
                       spellCheck={false}
@@ -1494,7 +1531,20 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
               </div>
               </details>
 
-              <h3 id="set-ollama">🖥 Lokalny model / serwery (Ollama, obrazy)</h3>
+              <h3 id="set-ollama">🖥 Serwery AI (Modal Brain, Ollama, obrazy)</h3>
+              <div className="field">
+                <label>⚡ Modal Brain — adres serwera vLLM (Qwen 2.5 72B / A100-80GB)</label>
+                <input
+                  value={s.modalUrl || ""}
+                  placeholder="https://<workspace>--jarvis-brain-serve.modal.run/v1"
+                  onChange={(e) => set({ modalUrl: e.target.value })}
+                  spellCheck={false}
+                  style={{ fontFamily: "monospace", fontSize: 13 }}
+                />
+                <p className="muted" style={{ marginTop: 4 }}>
+                  Wklej URL z <code>modal deploy deploy/modal_brain.py</code> i klucz <code>VLLM_API_KEY</code> w „🟢 Klucze API” wyżej (lub ustaw <code>MODAL_BRAIN_URL</code> w Workerze BFF).
+                </p>
+              </div>
               <div className="field">
                 <label>Lokalny model — adres Ollama (prywatny, offline)</label>
                 <input

@@ -7,7 +7,7 @@ import type { ProviderId } from "./providers/types";
 
 // Dostawcy z realnym darmowym tierem (lub w pełni lokalni).
 export const FREE_PROVIDERS = new Set<ProviderId>([
-  "gemini", "groq", "cerebras", "mistral", "cohere", "openrouter", "nvidia", "ollama", "webllm",
+  "modal", "gemini", "groq", "cerebras", "mistral", "cohere", "openrouter", "nvidia", "ollama", "webllm",
 ]);
 
 export const isFreeProvider = (id: ProviderId): boolean => FREE_PROVIDERS.has(id);

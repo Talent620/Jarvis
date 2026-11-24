@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 vi.mock("cloudflare:sockets", () => ({ connect: () => ({}) }));
-import { blocksCloudMetadata, noCRLF, openaiHostAllowed, envKeyForHost, passthroughAllowed } from "../proxy/worker.js";
+import { blocksCloudMetadata, noCRLF, openaiHostAllowed, envKeyForHost, passthroughAllowed, normalizeModalUrl } from "../proxy/worker.js";
 
 describe("worker passthroughAllowed — opt-in allowlista (zgodność wstecz)", () => {
   it("brak konfiguracji (puste) → wpuszcza wszystko (jak dotąd)", () => {
@@ -57,6 +57,7 @@ describe("worker openaiHostAllowed — ścisła biała lista hostów", () => {
     expect(openaiHostAllowed("integrate.api.nvidia.com")).toBe(true);
     expect(openaiHostAllowed("models.github.ai")).toBe(true);
     expect(openaiHostAllowed("api.cohere.ai")).toBe(true); // nowy dostawca Cohere przez proxy
+    expect(openaiHostAllowed("talent620--jarvis-brain-serve.modal.run")).toBe(true); // Modal Brain
   });
   it("przepuszcza subdomeny dozwolonych hostów", () => {
     expect(openaiHostAllowed("eu.api.groq.com")).toBe(true);
@@ -64,18 +65,35 @@ describe("worker openaiHostAllowed — ścisła biała lista hostów", () => {
   it("ODRZUCA podszywanie się sufiksem (wyciek klucza Bearer)", () => {
     expect(openaiHostAllowed("api.groq.com.attacker.tld")).toBe(false);
     expect(openaiHostAllowed("openrouter.ai.evil.com")).toBe(false);
+    expect(openaiHostAllowed("modal.run.evil.com")).toBe(false);
+    expect(openaiHostAllowed("evil-modal.run")).toBe(false);
     expect(openaiHostAllowed("notgroq.com")).toBe(false);
     expect(openaiHostAllowed("evil.com")).toBe(false);
   });
 });
 
 describe("worker envKeyForHost — mapowanie host → sekret env", () => {
-  const env = { GROQ_API_KEY: "g", OPENROUTER_API_KEY: "o", NVIDIA_API_KEY: "n", GITHUB_MODELS_TOKEN: "gh" };
+  const env = {
+    GROQ_API_KEY: "g",
+    OPENROUTER_API_KEY: "o",
+    NVIDIA_API_KEY: "n",
+    GITHUB_MODELS_TOKEN: "gh",
+    MODAL_BRAIN_URL: "https://talent620--jarvis-brain-serve.modal.run/v1",
+    VLLM_API_KEY: "jvllm_secret",
+  };
   it("dobiera właściwy klucz po hoście", () => {
     expect(envKeyForHost("api.groq.com", env)).toBe("g");
     expect(envKeyForHost("openrouter.ai", env)).toBe("o");
     expect(envKeyForHost("integrate.api.nvidia.com", env)).toBe("n");
     expect(envKeyForHost("models.github.ai", env)).toBe("gh");
+    expect(envKeyForHost("talent620--jarvis-brain-serve.modal.run", env)).toBe("jvllm_secret");
+  });
+  it("NIE wycieka VLLM_API_KEY do innego hosta *.modal.run niż MODAL_BRAIN_URL", () => {
+    expect(envKeyForHost("attacker--fake.modal.run", env)).toBeUndefined();
+  });
+  it("normalizuje MODAL_BRAIN_URL do /v1/chat/completions", () => {
+    expect(normalizeModalUrl("https://u--jarvis-brain-serve.modal.run")).toBe("https://u--jarvis-brain-serve.modal.run/v1/chat/completions");
+    expect(normalizeModalUrl("https://u--jarvis-brain-serve.modal.run/v1")).toBe("https://u--jarvis-brain-serve.modal.run/v1/chat/completions");
   });
   it("nieznany host → undefined (spadnie na nagłówek authorization klienta)", () => {
     expect(envKeyForHost("api.example.com", env)).toBeUndefined();

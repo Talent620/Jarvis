@@ -5,6 +5,8 @@
 # ⚠️ Tu NIE wpisujemy prawdziwych kluczy — to tylko szablon z nazwami.
 
 # --- Dostawcy AI (mózg) ---
+MODAL_BRAIN_URL=""          # https://<workspace>--jarvis-brain-serve.modal.run/v1
+MODAL_API_KEY=""            # VLLM_API_KEY z sekretu Modal 'jarvis-vllm' (lub VLLM_API_KEY)
 ANTHROPIC_API_KEY=""        # sk-ant-...
 OPENROUTER_API_KEY=""       # sk-or-v1-...  (ZROTUJ stary, wyciekły!)
 GROQ_API_KEY=""             # gsk_...

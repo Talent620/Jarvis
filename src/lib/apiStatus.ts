@@ -1,4 +1,4 @@
-import { PROVIDERS } from "./providers/registry";
+import { PROVIDERS, hasModalEndpoint } from "./providers/registry";
 import { testProvider } from "./brain";
 import { keyList } from "./keys";
 import { fetchTimeout } from "./http";
@@ -9,7 +9,7 @@ import type { ProviderId } from "./providers/types";
 // + procent zużycia tam, gdzie dostawca go UDOSTĘPNIA (uczciwie):
 //  - OpenRouter: realne saldo kredytów (endpoint /key) — wszędzie.
 //  - Anthropic/Groq: nagłówki limitów (okno czasowe) — gdy środowisko je odsłania.
-//  - Gemini/Mistral/Cerebras/NVIDIA/GitHub: brak licznika w API → sam status.
+//  - Gemini/Mistral/Cerebras/NVIDIA/GitHub/Modal: brak licznika w API → sam status.
 
 export interface ApiStatus {
   provider: ProviderId;
@@ -69,7 +69,8 @@ async function headerUsage(provider: ProviderId, key: string): Promise<{ usedPct
 /** Sprawdź jednego dostawcę: status + (gdzie się da) zużycie. */
 export async function checkApiStatus(provider: ProviderId): Promise<ApiStatus | null> {
   const key = keyList(provider)[0];
-  if (provider === "ollama" || !key) return null;
+  if (provider === "ollama" || provider === "webllm" || !key) return null;
+  if (provider === "modal" && !hasModalEndpoint()) return null;
   const test = await testProvider(provider, key);
   const state = classifyTestResult(test);
   let usedPct: number | undefined;

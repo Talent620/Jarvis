@@ -1133,7 +1133,7 @@ const tools: Tool[] = [
         "Przełącz aktywnego dostawcę AI (mózg) lub model na żądanie — np. „przełącz na Claude”, „użyj Gemini”, „wróć do auto”. Działa tylko dla dostawców z wpisanym kluczem API; w razie braku podpowiada dostępnych.",
       input_schema: obj(
         {
-          provider: str("Dostawca: auto, claude/anthropic, gemini, groq, cerebras, mistral, openrouter, nvidia, github, ollama."),
+          provider: str("Dostawca: auto, modal, claude/anthropic, gemini, groq, cerebras, mistral, openrouter, nvidia, github, ollama."),
           model: str("Opcjonalnie id modelu albo 'auto'."),
         },
         ["provider"],
@@ -1141,9 +1141,10 @@ const tools: Tool[] = [
     },
     run: ({ provider, model }) => {
       const raw = String(provider || "").trim().toLowerCase();
-      const alias: Record<string, string> = { claude: "anthropic", anthropic: "anthropic", google: "gemini", gemini: "gemini", groq: "groq", cerebras: "cerebras", mistral: "mistral", openrouter: "openrouter", nvidia: "nvidia", github: "github", ollama: "ollama", auto: "auto" };
+      const alias: Record<string, string> = { modal: "modal", "modal brain": "modal", vllm: "modal", claude: "anthropic", anthropic: "anthropic", google: "gemini", gemini: "gemini", groq: "groq", cerebras: "cerebras", mistral: "mistral", openrouter: "openrouter", nvidia: "nvidia", github: "github", ollama: "ollama", auto: "auto" };
       const id = alias[raw] || raw;
-      const available = PROVIDER_LIST.filter((p) => primaryKey(p.id)).map((p) => p.id);
+      const modalReady = !!(store.settings.modalUrl?.trim() || store.settings.proxyUrl?.trim()) && !!primaryKey("modal");
+      const available = PROVIDER_LIST.filter((p) => (p.id === "modal" ? modalReady : !!primaryKey(p.id))).map((p) => p.id);
       const hasOllama = !!store.settings.ollamaUrl?.trim();
       if (id === "auto") {
         store.setSettings({ provider: "auto", model: "auto" });
@@ -1152,9 +1153,9 @@ const tools: Tool[] = [
       if (!PROVIDERS[id as ProviderId]) {
         return `Nie znam dostawcy „${provider}”. Dostępni z kluczem: ${available.join(", ") || "brak — dodaj klucz w ⚙ → AI"}${hasOllama ? ", ollama" : ""}.`;
       }
-      const ready = id === "ollama" ? hasOllama : !!primaryKey(id as ProviderId);
+      const ready = id === "ollama" ? hasOllama : id === "modal" ? modalReady : !!primaryKey(id as ProviderId);
       if (!ready) {
-        return `Nie masz klucza do „${PROVIDERS[id as ProviderId].label}”. Dostępni teraz: ${available.join(", ") || "brak"}${hasOllama ? ", ollama" : ""}. Klucz dodasz w ⚙ → AI.`;
+        return `Nie masz konfiguracji do „${PROVIDERS[id as ProviderId].label}”. Dostępni teraz: ${available.join(", ") || "brak"}${hasOllama ? ", ollama" : ""}. Klucz/adres dodasz w ⚙ → Mózg.`;
       }
       const meta = PROVIDERS[id as ProviderId];
       const m = model && String(model).trim() && String(model).toLowerCase() !== "auto" ? String(model).trim() : meta.defaultModel;

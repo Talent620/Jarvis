@@ -18,7 +18,18 @@
 //   GROQ_API_KEY, OPENROUTER_API_KEY, NVIDIA_API_KEY, GITHUB_MODELS_TOKEN, TAVILY_API_KEY
 // Binding KV: JARVIS_KV (patrz wrangler.toml).
 
-const ALLOWED_OPENAI_HOSTS = ["api.groq.com", "openrouter.ai", "integrate.api.nvidia.com", "models.github.ai", "api.cohere.ai"];
+const ALLOWED_OPENAI_HOSTS = ["api.groq.com", "openrouter.ai", "integrate.api.nvidia.com", "models.github.ai", "api.cohere.ai", "modal.run"];
+
+// Normalizacja adresu Modal Brain do pełnego endpointu /v1/chat/completions.
+export const normalizeModalUrl = (raw) => {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  const withScheme = /^https?:\/\//i.test(s) ? s : `https://${s}`;
+  const clean = withScheme.replace(/\/+$/, "");
+  if (/\/v1\/chat\/completions$/i.test(clean)) return clean;
+  if (/\/v1$/i.test(clean)) return `${clean}/chat/completions`;
+  return `${clean}/v1/chat/completions`;
+};
 
 // Ścisłe dopasowanie hosta do białej listy: dokładny host LUB jego subdomena. Świadomie
 // NIE `includes` — to przepuszczałoby np. api.groq.com.attacker.tld i wyciekłby klucz Bearer.
@@ -172,10 +183,23 @@ const json = (status, body) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...CORS } });
 
 export function envKeyForHost(host, env) {
-  if (host.includes("groq.com")) return env.GROQ_API_KEY;
-  if (host.includes("openrouter.ai")) return env.OPENROUTER_API_KEY;
-  if (host.includes("nvidia.com")) return env.NVIDIA_API_KEY;
-  if (host.includes("github.ai")) return env.GITHUB_MODELS_TOKEN;
+  const h = String(host || "").toLowerCase();
+  if (h.includes("groq.com")) return env.GROQ_API_KEY;
+  if (h.includes("openrouter.ai")) return env.OPENROUTER_API_KEY;
+  if (h.includes("nvidia.com")) return env.NVIDIA_API_KEY;
+  if (h.includes("github.ai")) return env.GITHUB_MODELS_TOKEN;
+  if (h === "modal.run" || h.endsWith(".modal.run")) {
+    // Bezpieczeństwo: gdy MODAL_BRAIN_URL jest ustawione, wstrzykuj klucz TYLKO dla tego hosta
+    // (żeby żądanie do cudzego *.modal.run nie dostało naszego MODAL_API_KEY / VLLM_API_KEY).
+    if (env.MODAL_BRAIN_URL) {
+      try {
+        if (new URL(normalizeModalUrl(env.MODAL_BRAIN_URL)).hostname.toLowerCase() !== h) return undefined;
+      } catch {
+        return undefined;
+      }
+    }
+    return env.MODAL_API_KEY || env.VLLM_API_KEY;
+  }
   return undefined;
 }
 
@@ -239,8 +263,8 @@ function b64url(str) {
 // prywatny do WYDAWANIA licencji to sekret Workera (LICENSE_PRIVATE_JWK).
 const LICENSE_PUBLIC_JWK = {
   kty: "EC", crv: "P-256",
-  x: "yVt6bj1aOh50oDQOH8oKKEVJ2ETteQF9-N0UbSsiUFo",
-  y: "YzRn5l1wri_mFT2SHV_jsbOegqbR9b3TtjJ-5vSHzfk",
+  x: "cr_zxxKQMLPKsuGybJtd05h_z-m0H_xnhS7WiYtEmdU",
+  y: "a1Xl4CHImK2EAIXg19PVIFuagNCa4PQ2zatk4gysxzg",
 };
 function b64urlToBytesW(s) {
   const b64 = s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=");
@@ -352,6 +376,7 @@ export default {
           service: "jarvis-bff",
           kv: !!env.JARVIS_KV,
           features: {
+            modal: !!env.MODAL_BRAIN_URL,
             search: !!env.TAVILY_API_KEY,
             embed: !!env.GEMINI_API_KEY,
             google: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
@@ -775,7 +800,7 @@ export default {
       // Bramka tras proxy: (1) opcjonalny token aplikacji (origin bywa podrabialny, token nie),
       // (2) opcjonalny rate-limit anty-abuse/kosztowy. Obie env-gated (puste = bez zmian).
       const isProxyRoute =
-        path.endsWith("/anthropic") || path.endsWith("/gemini") || path.endsWith("/openai") || path.endsWith("/passthrough");
+        path.endsWith("/anthropic") || path.endsWith("/gemini") || path.endsWith("/openai") || path.endsWith("/modal") || path.endsWith("/passthrough");
       if (isProxyRoute) {
         if (appTokenBad(req, env)) {
           return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });
@@ -783,6 +808,15 @@ export default {
         if (await rateLimited(req, env)) {
           return json(429, { error: "Za dużo żądań w tej chwili — spróbuj ponownie za moment." });
         }
+      }
+      if (path.endsWith("/modal")) {
+        const target = normalizeModalUrl(env.MODAL_BRAIN_URL);
+        if (!target) return json(500, { error: "Brak MODAL_BRAIN_URL w konfiguracji Workera." });
+        const hostname = new URL(target).hostname.toLowerCase();
+        if (!openaiHostAllowed(hostname)) return json(403, { error: `Host niedozwolony: ${hostname}` });
+        const key = env.MODAL_API_KEY || env.VLLM_API_KEY || bearer(req);
+        if (!key) return json(401, { error: "Brak klucza API dla Modal Brain (MODAL_API_KEY / VLLM_API_KEY)." });
+        return relay(target, req, { "content-type": "application/json", authorization: `Bearer ${key}` });
       }
       if (path.endsWith("/anthropic")) {
         return relay("https://api.anthropic.com/v1/messages", req, {
