@@ -1,6 +1,11 @@
 package net.serwer256.jarvis;
 
+import android.media.AudioAttributes;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
 
 import com.getcapacitor.JSArray;
@@ -14,13 +19,24 @@ import org.json.JSONObject;
 
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
-/** Natywny silnik mowy Androida — pewniejszy niż Web Speech w WebView. */
+/**
+ * Natywny silnik mowy Androida — pewniejszy niż Web Speech w WebView.
+ * Używa UtteranceProgressListener, dzięki czemu Promise speak() kończy się dopiero
+ * po faktycznym wypowiedzeniu zdania (albo barge-in/stop), eliminując echo mikrofonu.
+ */
 @CapacitorPlugin(name = "NativeTTS")
 public class NativeTtsPlugin extends Plugin implements TextToSpeech.OnInitListener {
 
     private TextToSpeech tts;
     private boolean ready = false;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final AtomicInteger seq = new AtomicInteger(0);
+    private final Object lock = new Object();
+    private PluginCall activeCall = null;
+    private String activeUtteranceId = null;
+    private Runnable safetyTimeout = null;
 
     @Override
     public void load() {
@@ -33,12 +49,65 @@ public class NativeTtsPlugin extends Plugin implements TextToSpeech.OnInitListen
     @Override
     public void onInit(int status) {
         ready = status == TextToSpeech.SUCCESS;
-        if (ready) {
+        if (ready && tts != null) {
             try {
                 tts.setLanguage(new Locale("pl", "PL"));
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    tts.setAudioAttributes(new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build());
+                }
+                tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                    @Override
+                    public void onStart(String utteranceId) {}
+
+                    @Override
+                    public void onDone(String utteranceId) {
+                        resolveIfMatches(utteranceId);
+                    }
+
+                    @Override
+                    @SuppressWarnings("deprecation")
+                    public void onError(String utteranceId) {
+                        resolveIfMatches(utteranceId);
+                    }
+
+                    @Override
+                    public void onError(String utteranceId, int errorCode) {
+                        resolveIfMatches(utteranceId);
+                    }
+
+                    @Override
+                    public void onStop(String utteranceId, boolean interrupted) {
+                        resolveIfMatches(utteranceId);
+                    }
+                });
             } catch (Exception ignored) {
             }
         }
+    }
+
+    private void resolveIfMatches(String utteranceId) {
+        PluginCall toResolve = null;
+        synchronized (lock) {
+            if (activeCall != null && (utteranceId == null || utteranceId.equals(activeUtteranceId))) {
+                toResolve = activeCall;
+                activeCall = null;
+                activeUtteranceId = null;
+                if (safetyTimeout != null) {
+                    mainHandler.removeCallbacks(safetyTimeout);
+                    safetyTimeout = null;
+                }
+            }
+        }
+        if (toResolve != null) {
+            toResolve.resolve();
+        }
+    }
+
+    private void resolveActiveNow() {
+        resolveIfMatches(null);
     }
 
     @PluginMethod
@@ -48,10 +117,18 @@ public class NativeTtsPlugin extends Plugin implements TextToSpeech.OnInitListen
             return;
         }
         String text = call.getString("text", "");
+        if (text == null || text.trim().isEmpty()) {
+            call.resolve();
+            return;
+        }
         Float pitch = call.getFloat("pitch", 1f);
         Float rate = call.getFloat("rate", 1f);
         String lang = call.getString("lang", "pl-PL");
         String voiceName = call.getString("voice", "");
+
+        // Przerwij poprzednie wywołanie bez zostawiania wiszącej obietnicy w JS.
+        resolveActiveNow();
+
         try {
             tts.setLanguage(Locale.forLanguageTag(lang));
         } catch (Exception ignored) {
@@ -74,8 +151,20 @@ public class NativeTtsPlugin extends Plugin implements TextToSpeech.OnInitListen
         }
         tts.setPitch(pitch == null ? 1f : pitch);
         tts.setSpeechRate(rate == null ? 1f : rate);
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "jarvis-utt");
-        call.resolve();
+
+        final String uttId = "jarvis-utt-" + seq.incrementAndGet();
+        long maxWaitMs = Math.max(8000L, Math.min(120000L, text.length() * 140L + 6000L));
+        synchronized (lock) {
+            activeCall = call;
+            activeUtteranceId = uttId;
+            safetyTimeout = () -> resolveIfMatches(uttId);
+            mainHandler.postDelayed(safetyTimeout, maxWaitMs);
+        }
+
+        int rc = tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, uttId);
+        if (rc == TextToSpeech.ERROR) {
+            resolveIfMatches(uttId);
+        }
     }
 
     /** Lista dostępnych głosów silnika (nazwa, język, jakość, czy wymaga sieci) —
@@ -117,11 +206,14 @@ public class NativeTtsPlugin extends Plugin implements TextToSpeech.OnInitListen
             } catch (Exception ignored) {
             }
         }
+        resolveActiveNow();
         call.resolve();
     }
 
     @Override
     protected void handleOnDestroy() {
+        mainHandler.removeCallbacksAndMessages(null);
+        resolveActiveNow();
         if (tts != null) {
             try {
                 tts.shutdown();

@@ -90,11 +90,11 @@ export function buildSelfManifest(toolNames: string[] = []): JarvisSelfManifest 
 
   const limitations: string[] = [];
   if (platform === "android") {
-    limitations.push("Brak narzędzi desktop_* (Windows Electron); pełne sterowanie UI wymaga włączonej usługi Dostępności Androida.");
+    limitations.push("Brak narzędzi desktop_* (Electron); wariant sideload Play-Protect-safe działa bez usługi Dostępności Androida.");
   } else if (platform === "desktop") {
-    limitations.push("Brak natywnych pluginów Androida (android_*, dzwonienie/SMS); dostępne narzędzia desktop_*.");
+    limitations.push("Brak natywnych pluginów Androida (android_*, dzwonienie/SMS); pełne narzędzia desktop_* (Linux/Windows: aplikacje, audio, media, zasilanie, MCP, Ollama).");
   } else {
-    limitations.push("Tryb przeglądarkowy: brak natywnego sterowania telefonem (android_*) i pulpitem Windows (desktop_*).");
+    limitations.push("Tryb przeglądarkowy: brak natywnego sterowania telefonem (android_*) i pulpitem (desktop_*).");
   }
   if (!online) {
     limitations.push("Brak sieci: chmurowe AI i neuralny TTS przechodzą na tryb lokalny/natywny offline.");

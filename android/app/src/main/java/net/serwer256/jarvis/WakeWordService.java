@@ -34,6 +34,7 @@ public class WakeWordService extends Service {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean running = false;
     private boolean triggered = false;
+    private int consecutiveErrors = 0;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -44,6 +45,7 @@ public class WakeWordService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (!running) {
             running = true;
+            consecutiveErrors = 0;
             startForegroundNotif();
             startListening();
         }
@@ -104,10 +106,26 @@ public class WakeWordService extends Service {
     }
 
     private final RecognitionListener listener = new RecognitionListener() {
-        @Override public void onResults(Bundle results) { handle(results); restart(500); }
+        @Override
+        public void onResults(Bundle results) {
+            consecutiveErrors = 0;
+            handle(results);
+            restart(500);
+        }
         @Override public void onPartialResults(Bundle partialResults) { handle(partialResults); }
-        @Override public void onError(int error) { restart(900); }
-        @Override public void onReadyForSpeech(Bundle params) {}
+        @Override
+        public void onError(int error) {
+            // Brak uprawnień do mikrofonu: nie marnuj baterii w pętli błędów.
+            if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                running = false;
+                stopSelf();
+                return;
+            }
+            consecutiveErrors = Math.min(consecutiveErrors + 1, 5);
+            long delay = Math.min(15000L, 900L * (1L << (consecutiveErrors - 1)));
+            restart(delay);
+        }
+        @Override public void onReadyForSpeech(Bundle params) { consecutiveErrors = 0; }
         @Override public void onBeginningOfSpeech() {}
         @Override public void onRmsChanged(float rmsdB) {}
         @Override public void onBufferReceived(byte[] buffer) {}
@@ -154,6 +172,7 @@ public class WakeWordService extends Service {
     @Override
     public void onDestroy() {
         running = false;
+        handler.removeCallbacksAndMessages(null);
         try {
             if (recognizer != null) {
                 recognizer.destroy();

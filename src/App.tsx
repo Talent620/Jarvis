@@ -84,7 +84,9 @@ import { mcpManager } from "./lib/mcp";
 import { setConsentHandler, setStepListener, type ConsentRequest } from "./lib/permissions";
 import { startBackgroundWake } from "./lib/wakeword";
 import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
 import { StatusBar, Style } from "@capacitor/status-bar";
+import { resolveBackAction, shouldExitOnBack, hapticTap, type AndroidBackState } from "./lib/androidNative";
 
 type PendingConsent = { req: ConsentRequest; resolve: (d: { allow: boolean; remember: boolean }) => void };
 import { askJarvis, resolveProvider, hasUsableBrain } from "./lib/brain";
@@ -894,13 +896,58 @@ export default function App() {
 
   sendRef.current = handleSend;
 
+  // Android: sprzętowy/gestowy przycisk Wstecz zamyka aktywny overlay/panel w kolejności LIFO
+  // zamiast natychmiast zamykać aplikację; na ekranie głównym wymaga podwójnego naciśnięcia (2 s).
+  const backHandlerRef = useRef<() => void>(() => {});
+  const lastBackAtRef = useRef(0);
+  backHandlerRef.current = () => {
+    const state: AndroidBackState = {
+      showCmd,
+      hasConsent: !!pendingConsent,
+      showRelicense,
+      showVoice,
+      showLive,
+      showHud,
+      showBoss,
+      showNotifs,
+      hasRouteScreen: !!route.screen,
+      isBusy: busy,
+    };
+    const action = resolveBackAction(state);
+    if (action !== "confirm_exit") hapticTap("light");
+    if (action === "close_cmd") { setShowCmd(false); return; }
+    if (action === "deny_consent") { pendingConsent?.resolve({ allow: false, remember: false }); setPendingConsent(null); return; }
+    if (action === "close_relicense") { setShowRelicense(false); return; }
+    if (action === "close_voice") { setShowVoice(false); return; }
+    if (action === "close_live") { setShowLive(false); return; }
+    if (action === "close_hud") { setShowHud(false); return; }
+    if (action === "close_boss") { setShowBoss(false); return; }
+    if (action === "close_notifs") { setShowNotifs(false); return; }
+    if (action === "route_back") { if (canGoBack(route)) goBack(); else dispatch({ type: "close" }); return; }
+    if (action === "stop_generation") { stopGeneration(); return; }
+    const now = Date.now();
+    if (shouldExitOnBack(lastBackAtRef.current, now)) {
+      lastBackAtRef.current = 0;
+      void CapApp.minimizeApp().catch(() => {});
+      return;
+    }
+    lastBackAtRef.current = now;
+    toast("Naciśnij Wstecz ponownie, aby zminimalizować JARVIS-a.");
+  };
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let handle: { remove: () => Promise<void> } | null = null;
+    void CapApp.addListener("backButton", () => backHandlerRef.current()).then((h) => { handle = h; }).catch(() => {});
+    return () => { void handle?.remove().catch(() => {}); };
+  }, []);
+
   // Zrzut ekranu komputera → analiza wizyjna (desktop).
   const lookAtScreen = async () => {
     const img = await captureScreen();
     if (!img) {
       setMessages((m) => [
         ...m,
-        { id: uid(), role: "assistant", text: "Zrzut ekranu działa tylko w aplikacji desktopowej (Windows .exe).", createdAt: Date.now() },
+        { id: uid(), role: "assistant", text: "Zrzut ekranu działa tylko w aplikacji desktopowej (Linux / Windows).", createdAt: Date.now() },
       ]);
       return;
     }
