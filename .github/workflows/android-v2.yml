@@ -11,7 +11,7 @@ on:
       release_tag:
         description: "Tag GitHub Release dla podpisanego APK"
         required: false
-        default: "v4-jarvis-apex-fresh"
+        default: "v4-jarvis-apex-safe"
   push:
     paths:
       - ".github/workflows/android-v2.yml"
@@ -66,6 +66,24 @@ jobs:
           sed -i 's#<string name="app_name">JARVIS</string>#<string name="app_name">JARVIS Apex</string>#' android/app/src/main/res/values/strings.xml
           sed -i 's#<string name="title_activity_main">JARVIS</string>#<string name="title_activity_main">JARVIS Apex</string>#' android/app/src/main/res/values/strings.xml
           echo "appId/app_name ustawione na v4:"; grep -E "applicationId|versionCode" android/app/build.gradle
+
+      # Google Play Protect (rozszerzona ochrona przed oszustwami) BLOKUJE bez opcji obejścia
+      # instalację z przeglądarki aplikacji deklarujących usługę Dostępności. Wariant sideload
+      # usuwa więc JarvisAccessibilityService oraz QUERY_ALL_PACKAGES z manifestu.
+      - name: Wariant Play-Protect-safe (bez Dostępności / QUERY_ALL_PACKAGES)
+        run: |
+          python3 - <<'PY'
+          import re, pathlib
+          p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+          s = re.sub(r'\s*<!-- Usługa Dostępności.*?-->', '', s, flags=re.S)
+          s = re.sub(r'\s*<service\s+android:name="\.JarvisAccessibilityService".*?</service>', '', s, flags=re.S)
+          s = re.sub(r'\s*<!-- Otwieranie dowolnej.*?-->', '', s, flags=re.S)
+          s = re.sub(r'\s*<uses-permission android:name="android\.permission\.QUERY_ALL_PACKAGES" />', '', s)
+          assert "JarvisAccessibilityService" not in s and "QUERY_ALL_PACKAGES" not in s
+          p.write_text(s)
+          PY
+          grep -nE "service|uses-permission" android/app/src/main/AndroidManifest.xml
 
       - name: Build unsigned release APK
         working-directory: android
@@ -147,8 +165,8 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.release_tag || 'v4-jarvis-apex-fresh' }}
-          name: JARVIS Apex v4 (osobny pakiet, V2+V3, bez klucza)
+          tag_name: ${{ inputs.release_tag || 'v4-jarvis-apex-safe' }}
+          name: JARVIS Apex v4 Safe (instaluje się mimo Play Protect)
           body: |
             Niezależny pakiet **JARVIS Apex** (`net.serwer256.jarvis.v4`, `JARVIS_LICENSE_REQUIRED=false`) — instaluje się obok starszego JARVIS / JARVIS v2 bez żadnego konfliktu podpisu ani odinstalowywania.
             Podpisany stałym, prywatnym kluczem release (RSA 2048, schematy **V1 + V2 + V3**, `zipalign -p -f 4`, `apksigner verify: OK`).
