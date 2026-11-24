@@ -71,14 +71,27 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
 
   const addKey = async () => {
     const k = key.trim();
-    const prov = detectProvider(k);
-    if (!prov) {
-      setKeyMsg("Nie rozpoznaję tego klucza — sprawdź, czy skopiowałeś całość.");
+    if (!k) return;
+    setTesting(true);
+    setKeyMsg("Wykrywam usługę AI i weryfikuję klucz…");
+    const { connectService, mergeProviderKey } = await import("../lib/autocore/discovery");
+    const conn = await connectService(k);
+    if (conn.ok && conn.provider) {
+      const result = await testProvider(conn.provider, k);
+      setTesting(false);
+      setKeyMsg(result.startsWith("✅") ? `${result} (${conn.discovery?.models.length ?? 0} modeli)` : conn.message);
+      if (result.startsWith("✅")) setTimeout(next, 700);
       return;
     }
-    setTesting(true);
+    const prov = detectProvider(k);
+    if (!prov) {
+      setTesting(false);
+      setKeyMsg(conn.message || "Nie rozpoznaję tego klucza — sprawdź, czy skopiowałeś całość.");
+      return;
+    }
     setKeyMsg(`Łączę z ${PROVIDERS[prov].label}…`);
-    store.setSettings({ keys: { ...store.settings.keys, [prov]: k } });
+    const { merged } = mergeProviderKey(store.settings.keys[prov] || "", k);
+    store.setSettings({ keys: { ...store.settings.keys, [prov]: merged } });
     const result = await testProvider(prov, k);
     setTesting(false);
     setKeyMsg(result);

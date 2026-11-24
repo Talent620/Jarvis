@@ -11,6 +11,7 @@
 
 import type { ProviderId, ReasoningProfile } from "./providers/types";
 import { idbGet, idbSet } from "./db";
+import { GROQ_SCOUT, GROQ_KIMI, isKeylessProvider } from "./autocore/catalog";
 
 export type TaskKind = "simple" | "complex" | "vision";
 
@@ -97,8 +98,7 @@ export function reasoningProfileFor(
 
 // --- Groq: Llama 4 Scout vs Kimi K2 ---
 // Scout (17B, multimodalny, błyskawiczny) — proste/wizyjne; Kimi K2 (mocne rozumowanie/kod) — złożone.
-export const GROQ_SCOUT = "meta-llama/llama-4-scout-17b-16e-instruct";
-export const GROQ_KIMI = "moonshotai/kimi-k2-instruct";
+export { GROQ_SCOUT, GROQ_KIMI } from "./autocore/catalog";
 
 /** Wybór modelu Groq do zadania: Kimi K2 do rozumowania, Scout do reszty (i wizji). */
 export function groqModelFor(kind: TaskKind): string {
@@ -110,7 +110,7 @@ export type Tier = "reflex" | "cortex";
 
 /** Warstwa decyzji: refleks = model lokalny (Ollama/WebLLM), kora = chmura. */
 export function tierOf(provider: ProviderId): Tier {
-  return provider === "ollama" || provider === "webllm" ? "reflex" : "cortex";
+  return isKeylessProvider(provider) ? "reflex" : "cortex";
 }
 
 export interface RouteLogEntry {

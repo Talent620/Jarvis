@@ -20,7 +20,9 @@ export async function transcribeAudio(blob: Blob, lang = "pl"): Promise<{ text: 
     // null/puste → fallback do chmury poniżej
   }
 
-  const key = primaryKey("groq");
+  const { resolveService, reportOutcome } = await import("./autocore/gateway");
+  const svc = resolveService("stt");
+  const key = svc.provider === "groq" ? svc.apiKey : primaryKey("groq");
   if (!key) {
     return {
       error: store.settings.localStt
@@ -28,6 +30,10 @@ export async function transcribeAudio(blob: Blob, lang = "pl"): Promise<{ text: 
         : "Transkrypcja używa Groq (darmowy) — dodaj klucz Groq w ⚙ → AI.",
     };
   }
+  if (svc.provider === "groq" && !svc.allowed && svc.reason) {
+    return { error: svc.reason };
+  }
+  const t0 = Date.now();
   try {
     const form = new FormData();
     form.append("file", blob, "nagranie.webm");
@@ -40,9 +46,15 @@ export async function transcribeAudio(blob: Blob, lang = "pl"): Promise<{ text: 
       body: form,
     }, 60000);
     const d = await res.json().catch(() => null);
-    if (!res.ok || !d) return { error: d?.error?.message || `Błąd transkrypcji (${res.status}).` };
+    if (!res.ok || !d) {
+      const msg = d?.error?.message || `Błąd transkrypcji (${res.status}).`;
+      reportOutcome("groq", "whisper-large-v3-turbo", key, false, { error: Object.assign(new Error(msg), { status: res.status }) });
+      return { error: msg };
+    }
+    reportOutcome("groq", "whisper-large-v3-turbo", key, true, { latencyMs: Date.now() - t0 });
     return { text: (d.text || "").trim() };
   } catch (e) {
+    reportOutcome("groq", "whisper-large-v3-turbo", key, false, { error: e });
     return { error: `Błąd połączenia: ${e instanceof Error ? e.message : e}` };
   }
 }

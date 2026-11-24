@@ -6,7 +6,7 @@ import { riskOf } from "./permissions";
 import { runPlan, makeDefaultExecTool, type RunResult } from "./agentRun";
 import type { AgentPlan } from "./agentPlanner";
 import { isToolFreeGreeting, selectToolsForIntent } from "./toolSelector";
-import { PROVIDERS, PROVIDER_LIST, MODAL_DEFAULT_MODEL, autoPick, isUncensored, hasModalEndpoint } from "./providers/registry";
+import { PROVIDERS, PROVIDER_LIST, autoPick, isUncensored, hasModalEndpoint } from "./providers/registry";
 import { prepareMemoryContext, memoryBlock, rememberFact, ensureIndexed, rankJournal } from "./memory";
 import { memoryContextBlock, addMemory, resolveNamespace, memoryServiceAvailable } from "./memoryService";
 import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
@@ -15,7 +15,7 @@ import { buildProfileBlock } from "./profile";
 import { isDesktop } from "./desktop";
 import { shouldFallback, isNetworkError, isKeyError, humanize, classifyFailoverReason, sanitizeFailReason, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
-import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, GROQ_SCOUT, GROQ_KIMI, type TaskKind } from "./modelRouter";
+import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, type TaskKind } from "./modelRouter";
 import { classifyCognitionLocal } from "./cognitiveController";
 import { learnFromUserMessage, correctionRulesBlock } from "./cognitiveRuntime";
 import type { Correction } from "./learningLoop";
@@ -34,12 +34,19 @@ import { freeOnly } from "./freeMode";
 import { inReserveZone } from "./brainReserve";
 import { localSelfConsistency } from "./localConsensus";
 import { conversationStyleDirectives } from "./conversationStyle";
-import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
+import { webllmSupported } from "./webllm";
 import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
 import { buildSoulPromptBlock } from "./soulModes";
 import { buildSleepMemoryPromptBlock, consolidateOpenLoops, recordCorrectionLesson } from "./sleepCompute";
 import { buildSelfAwarenessPromptBlock } from "./selfManifest";
+import { VISION_ROUTABLE, PROFILE_LIST, taskModelFor, isKeylessProvider } from "./autocore/catalog";
+import {
+  providerUsable, modelUsable, keyUsable, blockReason, reportFailure, reportSuccess, providerCounters,
+} from "./autocore/health";
+import { budgetFilter, budgetState, recordCall } from "./autocore/budget";
+import { classifyTaskClass, rankForTask, notePrimary, promotionFor, checkRollback } from "./autocore/router";
+import { registerGatewayExecutor } from "./autocore/gateway";
 import type { JarvisReply, Msg, ProviderId, FallbackReasonKind } from "./providers/types";
 
 // Retry przy chwilowym błędzie sieci — z WYKŁADNICZYM backoffem + jitterem (do 2 ponowień).
@@ -115,29 +122,21 @@ const PERSONAS: Record<string, string> = {
 };
 
 // --- Router: dobór dostawcy/modelu do zadania ---
-const VISION_PROVIDERS = new Set<ProviderId>(["anthropic", "gemini", "github", "openrouter", "mistral"]);
+// AUTOCORE: wizja, modele per zadanie i „bez klucza" pochodzą z JEDNEGO katalogu (autocore/catalog).
+const VISION_PROVIDERS = VISION_ROUTABLE;
 
-const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision: string }> = {
-  modal: { simple: MODAL_DEFAULT_MODEL, complex: MODAL_DEFAULT_MODEL, vision: MODAL_DEFAULT_MODEL },
-  anthropic: { simple: "claude-haiku-4-5", complex: "claude-opus-4-8", vision: "claude-opus-4-8" },
-  gemini: { simple: "gemini-2.5-flash-lite", complex: "gemini-2.5-flash", vision: "gemini-2.5-flash" },
-  groq: { simple: GROQ_SCOUT, complex: GROQ_KIMI, vision: GROQ_SCOUT },
-  cerebras: { simple: "llama3.1-8b", complex: "llama-3.3-70b", vision: "llama-3.3-70b" },
-  mistral: { simple: "mistral-small-latest", complex: "mistral-large-latest", vision: "pixtral-12b-2409" },
-  cohere: { simple: "command-r7b-12-2024", complex: "command-a-03-2025", vision: "command-a-03-2025" },
-  openrouter: {
-    simple: "meta-llama/llama-3.3-70b-instruct:free",
-    complex: "meta-llama/llama-3.1-405b-instruct",
-    vision: "google/gemini-2.0-flash-exp:free",
-  },
-  nvidia: { simple: "meta/llama-3.3-70b-instruct", complex: "meta/llama-3.1-405b-instruct", vision: "meta/llama-3.3-70b-instruct" },
-  github: { simple: "openai/gpt-4o-mini", complex: "openai/gpt-4o", vision: "openai/gpt-4o" },
-  ollama: { simple: "qwen3:1.7b", complex: "qwen3.5:4b", vision: "gemma3:4b-it-qat" },
-  webllm: { simple: WEBLLM_DEFAULT_MODEL, complex: WEBLLM_DEFAULT_MODEL, vision: WEBLLM_DEFAULT_MODEL },
-};
+// Gettery (leniwe): registry bywa jeszcze nie zainicjalizowane przy imporcie (cykl providers↔tools↔brain).
+const defaultModelOf = (id: ProviderId) => PROVIDERS[id].defaultModel;
+const TASK_MODELS: Record<ProviderId, { simple: string; complex: string; vision: string }> = Object.fromEntries(
+  PROFILE_LIST.map((p) => [p.id, {
+    get simple() { return taskModelFor(p.id, "simple", defaultModelOf); },
+    get complex() { return taskModelFor(p.id, "complex", defaultModelOf); },
+    get vision() { return taskModelFor(p.id, "vision", defaultModelOf); },
+  }]),
+) as Record<ProviderId, { simple: string; complex: string; vision: string }>;
 
 // Dostawcy bez klucza (lokalni): autoryzacja przez adres serwera (Ollama) lub WebGPU (WebLLM).
-const isKeyless = (p: ProviderId): boolean => p === "ollama" || p === "webllm";
+const isKeyless = isKeylessProvider;
 
 /** Czy chmurowy dostawca jest realnie skonfigurowany (modal wymaga też modalUrl lub proxyUrl). */
 const hasCloudCreds = (id: ProviderId, s = store.settings): boolean => {
@@ -208,8 +207,19 @@ export function routeOrder(history: Msg[]): { provider: ProviderId; model: strin
       const vis = provs.filter((p) => VISION_PROVIDERS.has(p.id));
       if (vis.length) provs = vis; // do obrazu wybierz dostawcę z wizją
     }
-    provs.sort((a, b) => b.rank - a.rank);
-    base = [...provs.map((p) => ({ provider: p.id, model: modelFor(p.id, complex, hasImage) })), ...localTail];
+    const taskCls = classifyTaskClass(last?.content || "", { hasImage });
+    const costPressure = budgetState().level === "warn" || budgetState().level === "stop";
+    const promo = promotionFor(taskCls);
+    const ranked = rankForTask(
+      provs.map((p) => ({
+        provider: p.id,
+        model: promo?.provider === p.id ? promo.model : modelFor(p.id, complex, hasImage),
+        rank: promo?.provider === p.id ? p.rank + 50 : p.rank,
+      })),
+      taskCls,
+      { costPressure },
+    );
+    base = [...ranked.map((r) => ({ provider: r.item.provider, model: r.item.model })), ...localTail];
   } else {
     const resolved = resolveProvider();
     if (!resolved) {
@@ -638,27 +648,45 @@ async function askModelReply(params: {
     const free = freeOnly(order);
     if (free.length) order = free; // są darmowe → użyj ich; brak → leć dalej (komunikat budżetu pokaże panel)
   }
+  const hasImg = !!params.history[params.history.length - 1]?.image;
+  const taskCls = classifyTaskClass(params.history[params.history.length - 1]?.content || "", { hasImage: hasImg });
+  const bf = budgetFilter(order);
+  order = bf.kept;
   if (!order.length) {
-    throw new Error("Żaden dostawca AI nie ma wpisanego klucza — ⚙ → AI (Szybki start).");
+    throw new Error(bf.blocked[0]?.reason || "Żaden dostawca AI nie ma wpisanego klucza — ⚙ → AI (Szybki start).");
   }
   let lastErr: unknown;
   for (let i = 0; i < order.length; i++) {
     const { provider, model } = order[i];
     // Dla zadań „heavy" (jakość) bierzemy mocniejszy model dostawcy zamiast szybkiego.
     const useModel = params.heavy ? TASK_MODELS[provider]?.complex || model : model;
-    const keys = isKeyless(provider) ? ["local"] : orderedKeys(provider);
-    if (!keys.length) continue;
+    if (!providerUsable(provider) || !modelUsable(provider, useModel, { needsVision: hasImg })) {
+      if (i < order.length - 1) continue;
+    }
+    const rawKeys = isKeyless(provider) ? ["local"] : orderedKeys(provider);
+    const keys = rawKeys.filter((k) => keyUsable(provider, k));
+    if (!keys.length) {
+      const reason = blockReason(provider, useModel, rawKeys, { needsVision: hasImg });
+      if (reason && !lastErr) lastErr = new Error(reason);
+      continue;
+    }
     let providerErr: unknown;
     for (let j = 0; j < keys.length; j++) {
       const apiKey = keys[j];
+      const t0 = Date.now();
       try {
         const reply = await withRetry(() => PROVIDERS[provider].impl({ ...baseCtx, apiKey, model: useModel }));
+        const lat = Date.now() - t0;
+        reportSuccess(provider, useModel, apiKey, lat);
+        recordCall(provider, useModel, reply.usage, lat);
         return reply;
       } catch (e) {
         providerErr = e;
         lastErr = e;
+        const c = reportFailure(provider, useModel, apiKey, e);
+        checkRollback(taskCls, providerCounters(provider));
         const msg = e instanceof Error ? e.message : String(e);
-        if (!isKeyless(provider) && isKeyError(msg)) {
+        if (!isKeyless(provider) && (isKeyError(msg) || c.kind === "auth" || c.kind === "payment" || c.kind === "rate")) {
           coolDownKey(provider, apiKey);
           if (j < keys.length - 1) continue;
         }
@@ -826,6 +854,11 @@ export async function askJarvis(
     }
     throw new Error("Żaden dostawca AI nie ma wpisanego klucza. Wejdź w ⚙ → AI i wklej dowolny klucz (Szybki start).");
   }
+  const bfJarvis = budgetFilter(order);
+  order = bfJarvis.kept;
+  if (!order.length) {
+    throw new Error(bfJarvis.blocked[0]?.reason || "Budżet AI został wyczerpany.");
+  }
 
   resetCitations();
 
@@ -833,6 +866,7 @@ export async function askJarvis(
   // oraz jest sieć — lokalny draft (streaming) + równoległa weryfikacja Korą. Zgodne → tani draft;
   // rozbieżne → korekta Kory. Padnie cała spekulacja → spadamy do zwykłej pętli niżej.
   const clsTop = classifyTask(lastUser?.content || "", !!lastUser?.image);
+  const taskCls = classifyTaskClass(lastUser?.content || "", { hasImage: !!lastUser?.image });
   if (store.settings.speculativeMode && clsTop.kind === "complex" && store.settings.ollamaUrl?.trim() && (typeof navigator === "undefined" || navigator.onLine !== false)) {
     const cortex = order.find((o) => !isKeyless(o.provider) && orderedKeys(o.provider).length > 0);
     if (cortex) {
@@ -890,14 +924,20 @@ export async function askJarvis(
     const { provider, model } = order[i];
     // Bezpiecznik: dostawcę „otwartego" (świeża seria awarii) pomijamy szybko — ale NIGDY nie
     // zostawiamy pustego łańcucha (ostatniego z listy próbujemy zawsze, jako deska ratunku).
-    if (!providerBreaker.canPass(provider) && i < order.length - 1) {
-      if (provider === primary && !primaryFailReason) { primaryFailReason = "ostatnio kilka razy nie odpowiedział pod rząd — chwilowo pomijam"; primaryFailKind = "unavailable"; }
+    if ((!providerBreaker.canPass(provider) || !providerUsable(provider) || !modelUsable(provider, model, { needsVision: !!lastUser?.image })) && i < order.length - 1) {
+      if (provider === primary && !primaryFailReason) {
+        primaryFailReason = blockReason(provider, model, [], { needsVision: !!lastUser?.image }) || "ostatnio kilka razy nie odpowiedział pod rząd — chwilowo pomijam";
+        primaryFailKind = "unavailable";
+      }
       continue;
     }
     // Ollama autoryzuje się adresem serwera, nie kluczem; pozostali — listą kluczy.
-    const keys = isKeyless(provider) ? ["local"] : orderedKeys(provider);
+    const rawKeys = isKeyless(provider) ? ["local"] : orderedKeys(provider);
+    const keys = rawKeys.filter((k) => keyUsable(provider, k));
     if (!keys.length) {
-      if (provider === primary && !primaryFailReason) { primaryFailReason = "brak skonfigurowanego klucza/dostępu"; primaryFailKind = "auth"; }
+      const reason = blockReason(provider, model, rawKeys, { needsVision: !!lastUser?.image });
+      if (provider === primary && !primaryFailReason) { primaryFailReason = reason || "brak skonfigurowanego klucza/dostępu"; primaryFailKind = "auth"; }
+      if (reason && !lastErr) lastErr = new Error(reason);
       continue;
     }
 
@@ -1035,30 +1075,24 @@ export async function askJarvis(
           ...(provider !== primary && primaryFailReason ? { fellBackReason: primaryFailReason } : {}),
           ...(provider !== primary && primaryFailKind ? { fellBackReasonKind: primaryFailKind } : {}),
         };
-        // Router (Faza 4): zapisz faktyczną decyzję (model, klasyfikacja, czy failover) — zasila panel kosztów.
+        // Router (Faza 4) + AutoCore: zapisz decyzję, zdrowie, zmianę routingu i koszt.
+        const lat = Date.now() - t0;
         const cls = classifyTask(lastUser?.content || "", !!lastUser?.image);
-        logRouteDecision({ provider, model, kind: cls.kind, reason: cls.reason, fellBack: meta.fellBack, latencyMs: Date.now() - t0 });
-        // Telemetria kosztów (Faza 5): wyceń zużycie tokenów wg cennika (z nadpisaniami z configu).
-        if (reply.usage && (reply.usage.inputTokens || reply.usage.outputTokens)) {
-          const price = priceFor(model, parsePricingOverrides(store.settings.aiPricingOverrides));
-          recordUsage({
-            at: Date.now(),
-            provider,
-            model,
-            inputTokens: reply.usage.inputTokens,
-            outputTokens: reply.usage.outputTokens,
-            costUsd: costOf(reply.usage, price),
-          });
-        }
+        logRouteDecision({ provider, model, kind: cls.kind, reason: cls.reason, fellBack: meta.fellBack, latencyMs: lat });
+        reportSuccess(provider, model, apiKey, lat);
+        notePrimary(taskCls, provider, model, cls.reason);
+        recordCall(provider, model, reply.usage, lat);
         return { ...reply, ...meta, ...(citations.length ? { citations } : {}) };
       } catch (e) {
         providerErr = e;
         lastErr = e;
         const msg = e instanceof Error ? e.message : String(e);
         recordLatency("provider:" + provider, Date.now() - t0, false, model);
+        const c = reportFailure(provider, model, apiKey, e);
+        checkRollback(taskCls, providerCounters(provider));
         // Błąd klucza (limit/autoryzacja): odłóż go i spróbuj NASTĘPNEGO klucza tego
         // samego dostawcy, zanim zejdziemy do kolejnego dostawcy.
-        if (!isKeyless(provider) && isKeyError(msg)) {
+        if (!isKeyless(provider) && (isKeyError(msg) || c.kind === "auth" || c.kind === "payment" || c.kind === "rate")) {
           coolDownKey(provider, apiKey);
           if (j < keys.length - 1) continue;
         }
@@ -1083,3 +1117,13 @@ export async function askJarvis(
   if (escalateFallback) return escalateFallback;
   throw new Error(humanize(lastErr instanceof Error ? lastErr.message : String(lastErr)));
 }
+
+// Rejestracja wykonawcy AI Gateway (jeden kontrakt dla całej aplikacji bez cykli importów).
+registerGatewayExecutor((req) =>
+  askModelReply({
+    system: req.system,
+    history: req.history,
+    webSearch: req.webSearch,
+    heavy: req.heavy,
+  }),
+);

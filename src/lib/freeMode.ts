@@ -4,11 +4,11 @@
 // (Ollama/WebLLM). Płatny Claude (Anthropic) jest pomijany. Auto-router + Liga i tak
 // wybiorą najmocniejszy dostępny darmowy model, więc jakość zostaje wysoka.
 import type { ProviderId } from "./providers/types";
+import { FREE_TIER_PROVIDERS } from "./autocore/catalog";
 
 // Dostawcy z realnym darmowym tierem (lub w pełni lokalni).
-export const FREE_PROVIDERS = new Set<ProviderId>([
-  "modal", "gemini", "groq", "cerebras", "mistral", "cohere", "openrouter", "nvidia", "ollama", "webllm",
-]);
+// AUTOCORE: wyprowadzone z katalogu (costClass != "paid") — bez własnej, konkurencyjnej listy.
+export const FREE_PROVIDERS: ReadonlySet<ProviderId> = FREE_TIER_PROVIDERS;
 
 export const isFreeProvider = (id: ProviderId): boolean => FREE_PROVIDERS.has(id);
 

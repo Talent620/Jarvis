@@ -48,20 +48,29 @@ export async function runLocalResearchAgent(query: string): Promise<ResearchAgen
   const evidence = sources.map((hit, index) =>
     `[${index + 1}] ${hit.title}\n${hit.content.slice(0, 1200)}\n${hit.url}`,
   ).join("\n\n");
-  const reply = await PROVIDERS.ollama.impl({
-    apiKey: "local",
-    model,
-    proxyUrl: undefined,
-    webSearch: false,
-    tools: [],
-    system: [
-      "Jesteś lokalnym agentem researchowym JARVISA.",
-      "Odpowiadaj po polsku, konkretnie i tylko na podstawie dostarczonych źródeł.",
-      "Oddziel fakty od wniosków. Każde ważne twierdzenie oznacz numerem źródła [1], [2].",
-      "Na końcu dodaj: Wniosek, Ryzyka/niepewności oraz Źródła z pełnymi URL.",
-      "Nie wymyślaj danych ani linków. Gdy źródła są sprzeczne, pokaż sprzeczność.",
-    ].join(" "),
-    history: [{ role: "user", content: `Temat: ${q}\n\nMateriały źródłowe:\n${evidence}` }],
-  });
-  return { report: reply.text.trim(), sources, model };
+  const t0 = Date.now();
+  try {
+    const reply = await PROVIDERS.ollama.impl({
+      apiKey: "local",
+      model,
+      proxyUrl: undefined,
+      webSearch: false,
+      tools: [],
+      system: [
+        "Jesteś lokalnym agentem researchowym JARVISA.",
+        "Odpowiadaj po polsku, konkretnie i tylko na podstawie dostarczonych źródeł.",
+        "Oddziel fakty od wniosków. Każde ważne twierdzenie oznacz numerem źródła [1], [2].",
+        "Na końcu dodaj: Wniosek, Ryzyka/niepewności oraz Źródła z pełnymi URL.",
+        "Nie wymyślaj danych ani linków. Gdy źródła są sprzeczne, pokaż sprzeczność.",
+      ].join(" "),
+      history: [{ role: "user", content: `Temat: ${q}\n\nMateriały źródłowe:\n${evidence}` }],
+    });
+    const { reportOutcome } = await import("./autocore/gateway");
+    reportOutcome("ollama", model, "local", true, { latencyMs: Date.now() - t0, usage: reply.usage });
+    return { report: reply.text.trim(), sources, model };
+  } catch (e) {
+    const { reportOutcome } = await import("./autocore/gateway");
+    reportOutcome("ollama", model, "local", false, { error: e });
+    throw e;
+  }
 }
