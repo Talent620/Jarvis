@@ -62,11 +62,18 @@ function withTimeout<T>(p: Promise<T>): Promise<T> {
   ]);
 }
 
+import { budgetGate } from "./autocore/budget";
+import { keyUsable, providerUsable } from "./autocore/health";
+import { reportOutcome } from "./autocore/gateway";
+
 /** Zapytaj jednego członka konsylium (bez narzędzi — czyste rozumowanie). */
 async function askMember(m: CouncilMember, system: string, history: Msg[]): Promise<string | null> {
   // Lokalni członkowie (Ollama/WebLLM) nie mają klucza — autoryzują się adresem serwera/WebGPU.
-  const apiKey = m.provider === "ollama" || m.provider === "webllm" ? "local" : orderedKeys(m.provider)[0];
+  const isLocal = m.provider === "ollama" || m.provider === "webllm";
+  const apiKey = isLocal ? "local" : orderedKeys(m.provider).find((k) => keyUsable(m.provider, k));
   if (!apiKey) return null;
+  if (!providerUsable(m.provider) || !budgetGate(m.provider, m.model).allowed) return null;
+  const t0 = Date.now();
   try {
     const r = await withTimeout(
       PROVIDERS[m.provider].impl({
@@ -79,8 +86,10 @@ async function askMember(m: CouncilMember, system: string, history: Msg[]): Prom
         proxyUrl: store.settings.proxyUrl?.trim() || undefined,
       }),
     );
+    reportOutcome(m.provider, m.model, apiKey, true, { latencyMs: Date.now() - t0, usage: r.usage });
     return (r.text || "").trim() || null;
-  } catch {
+  } catch (e) {
+    reportOutcome(m.provider, m.model, apiKey, false, { error: e });
     return null; // jeden model padł — konsylium działa dalej z pozostałymi
   }
 }
@@ -184,19 +193,7 @@ export function makeProviderRoleRunner(): RoleRunner {
   const member = councilMembers(1)[0];
   return async (_role, prompt) => {
     if (!member) return null;
-    const apiKey = member.provider === "ollama" || member.provider === "webllm" ? "local" : orderedKeys(member.provider)[0];
-    if (!apiKey) return null;
-    try {
-      const r = await withTimeout(
-        PROVIDERS[member.provider].impl({
-          system: ROLE_SYSTEM, webSearch: false, tools: [], history: [{ role: "user", content: prompt }],
-          apiKey, model: member.model, proxyUrl: store.settings.proxyUrl?.trim() || undefined,
-        }),
-      );
-      return (r.text || "").trim() || null;
-    } catch {
-      return null;
-    }
+    return askMember(member, ROLE_SYSTEM, [{ role: "user", content: prompt }]);
   };
 }
 

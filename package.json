@@ -32,7 +32,11 @@
     "siteos": "node site-os/server.mjs",
     "siteos:tunnel": "node site-os/server.mjs --tunnel",
     "tools:verify": "node scripts/verify-workspace-tools.cjs",
-    "quality": "node scripts/quality-gate.mjs"
+    "quality": "node scripts/quality-gate.mjs",
+    "memory:sync": "node scripts/sync-project-state.mjs",
+    "memory:check": "node scripts/sync-project-state.mjs --run all",
+    "memory:verify": "node scripts/sync-project-state.mjs --verify && node scripts/agent-event.mjs validate",
+    "memory:event": "node scripts/agent-event.mjs record"
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",

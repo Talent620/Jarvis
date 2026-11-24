@@ -5,6 +5,7 @@
 // warstwa trwałości w localStorage (przeżywa odświeżenie PWA).
 
 import type { ProviderId, TokenUsage } from "./providers/types";
+import { MODEL_PRICING, type ModelPrice } from "./autocore/catalog";
 
 export interface UsageEntry {
   at: number;
@@ -16,28 +17,9 @@ export interface UsageEntry {
 }
 
 /** Cena modelu w USD za 1 mln tokenów (wejście/wyjście). */
-export interface ModelPrice {
-  in: number;
-  out: number;
-}
-
-// Domyślny cennik (USD / 1M tokenów). Modele z darmowym tierem ≈ 0. Nadpisywalny w configu.
-export const DEFAULT_PRICING: Record<string, ModelPrice> = {
-  // Anthropic
-  "claude-opus-4-8": { in: 15, out: 75 },
-  "claude-sonnet-4-6": { in: 3, out: 15 },
-  "claude-haiku-4-5": { in: 1, out: 5 },
-  // Gemini
-  "gemini-2.5-pro": { in: 1.25, out: 10 },
-  "gemini-2.5-flash": { in: 0.3, out: 2.5 },
-  "gemini-2.5-flash-lite": { in: 0.1, out: 0.4 },
-  "gemini-2.0-flash": { in: 0.1, out: 0.4 },
-  // Groq (Faza 4)
-  "meta-llama/llama-4-scout-17b-16e-instruct": { in: 0.11, out: 0.34 },
-  "moonshotai/kimi-k2-instruct": { in: 1, out: 3 },
-  "llama-3.3-70b-versatile": { in: 0.59, out: 0.79 },
-  "llama-3.1-8b-instant": { in: 0.05, out: 0.08 },
-};
+/** Cena modelu w USD za 1 mln tokenów (wejście/wyjście). Cennik: jedno źródło w autocore/catalog. */
+export type { ModelPrice } from "./autocore/catalog";
+export const DEFAULT_PRICING: Record<string, ModelPrice> = MODEL_PRICING;
 
 /** Cennik dla modelu: najpierw nadpisania z configu, potem domyślny, w ostateczności 0 (np. darmowe/lokalne). */
 export function priceFor(model: string, overrides?: Record<string, ModelPrice>): ModelPrice {

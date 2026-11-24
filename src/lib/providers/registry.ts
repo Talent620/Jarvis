@@ -6,6 +6,7 @@ import { askOllamaNative } from "./ollama";
 import { WEBLLM_MODELS, WEBLLM_DEFAULT_MODEL } from "../webllm";
 import { appTokenHeader } from "../http";
 import { store } from "../store";
+import { PROFILE_LIST, providerCandidatesByPrefix } from "../autocore/catalog";
 import type { AskCtx, Msg, ProviderId, ProviderMeta, FallbackReasonKind } from "./types";
 
 export const MODAL_DEFAULT_MODEL = "Qwen/Qwen3-32B-AWQ";
@@ -324,20 +325,7 @@ export function shouldAnnounceFallback(prevVia: ProviderId | null, reply: Fallba
 /** Klucze per dostawca przechowywane w ustawieniach. */
 export type ProviderKeys = Record<ProviderId, string>;
 
-export const emptyKeys: ProviderKeys = {
-  modal: "",
-  anthropic: "",
-  gemini: "",
-  groq: "",
-  cerebras: "",
-  mistral: "",
-  cohere: "",
-  openrouter: "",
-  nvidia: "",
-  github: "",
-  ollama: "",
-  webllm: "",
-};
+export const emptyKeys: ProviderKeys = Object.fromEntries(PROFILE_LIST.map((p) => [p.id, ""])) as ProviderKeys;
 
 /**
  * Tryb „auto": wybiera dostawcę z najwyższą rangą, który ma wpisany klucz.
@@ -393,15 +381,6 @@ export const FREE_UNCENSORED = {
 
 /** Rozpoznaje dostawcę po formacie klucza (do „wklej dowolny klucz"). */
 export function detectProvider(key: string): ProviderId | null {
-  const k = (key || "").trim();
-  if (!k) return null;
-  if (k.startsWith("jvllm_") || k.startsWith("modal_vllm_")) return "modal";
-  if (k.startsWith("sk-ant-")) return "anthropic";
-  if (k.startsWith("sk-or-")) return "openrouter"; // OpenRouter: sk-or-v1-...
-  if (k.startsWith("csk-")) return "cerebras";
-  if (k.startsWith("gsk_")) return "groq";
-  if (k.startsWith("nvapi-")) return "nvidia";
-  if (k.startsWith("AIza")) return "gemini"; // klucze Google API
-  if (/^gh[posru]_/.test(k) || k.startsWith("github_pat_")) return "github";
-  return null;
+  // AUTOCORE: prefiksy z katalogu. To tylko wskazówka — autocore/discovery potwierdza dostawcę testem endpointu.
+  return providerCandidatesByPrefix(key)[0] ?? null;
 }

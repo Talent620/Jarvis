@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-11-24T16:30:42.483Z",
+  "branch": "feat/autocore",
+  "head": "ad66860",
+  "dirtyCount": 2,
+  "ahead": null,
+  "behind": null,
+  "secretScanOk": true,
+  "memoryVerifyOk": true,
+  "ollama": {
+    "available": false,
+    "modelCount": 0
+  },
+  "anomalies": []
+}

@@ -1,0 +1,12 @@
+[Unit]
+Description=JARVIS Guardian Daemon (lokalny monitoring repozytorium i pamięci projektu)
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Talent620/Jarvis
+ExecStart=/usr/bin/env node scripts/guardian-daemon.mjs --once
+Nice=10
+
+[Install]
+WantedBy=default.target

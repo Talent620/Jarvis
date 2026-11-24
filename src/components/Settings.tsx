@@ -11,6 +11,7 @@ import { leagueRanking } from "../lib/league";
 import { systemActionsAvailable, saOpenAccessibility } from "../lib/systemActions";
 import { FREE_STACK } from "../lib/freeMode";
 import ConsentManager from "./ConsentManager";
+import { AutoCorePanel } from "./AutoCorePanel";
 import { pushSync, pullSync, testBackend } from "../lib/sync";
 import { openSalesOs, salesOsConfigured, syncFromSalesOs, testSalesOs, pushLeadsToSalesOs } from "../lib/salesOs";
 import { openSiteOs, pairSiteOs, siteOsConfigured, testSiteOs } from "../lib/siteOs";
@@ -688,9 +689,13 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
           {/* ============ 🤖 AI ============ */}
           {tab === "ai" && (
             <>
+              <AutoCorePanel
+                onChanged={() => setS((p) => ({ ...p, ...store.settings }))}
+                onJumpBackup={() => setTab("data")}
+              />
               {/* 🎛 Tryb pracy — jasny wybór zamiast dziesiątek przełączników */}
               <h3 id="set-mode">🎛 Tryb pracy JARVISA</h3>
-              <p className="muted">Najprościej: wybierz <b>jeden</b> tryb — JARVIS ustawi za Ciebie dostawcę, model i szybkość. Chcesz sam? Niżej: <b>🤖 Dostawca i model</b>.</p>
+              <p className="muted">Najprościej: wybierz <b>jeden</b> tryb — JARVIS ustawi za Ciebie dostawcę, model i szybkość. Chcesz sam? Niżej: <b>🔧 Diagnostyka zaawansowana</b>.</p>
               {(() => { const activeMode = detectBrainMode(s); return BRAIN_MODES.map((m) => {
                 const on = activeMode === m.id;
                 return (
@@ -718,6 +723,11 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 );
               }); })()}
 
+              <details className="journal-card" style={{ margin: "12px 0", padding: "10px 12px" }}>
+                <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--muted)" }}>
+                  🔧 Diagnostyka zaawansowana i ręczna konfiguracja (klucze, modele, serwery)
+                </summary>
+                <div style={{ marginTop: 10 }}>
               <details className="journal-card" style={{ margin: "8px 0", padding: "8px 12px" }}>
               <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--cyan)" }}>🩺 Diagnostyka startowa — sprawdź wszystko jednym kliknięciem</summary>
               <p className="muted">
@@ -2158,6 +2168,8 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 </button>
                 {backendMsg && <p className="muted" style={{ marginTop: 6 }}>{backendMsg}</p>}
               </div>
+                </div>
+              </details>
             </>
           )}
 

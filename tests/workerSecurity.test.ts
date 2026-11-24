@@ -70,6 +70,19 @@ describe("worker openaiHostAllowed — ścisła biała lista hostów", () => {
     expect(openaiHostAllowed("notgroq.com")).toBe(false);
     expect(openaiHostAllowed("evil.com")).toBe(false);
   });
+  it("każdy endpoint makeOpenAICompatible z rejestru dostawców przechodzi przez /openai proxy", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../src/lib/providers/registry.ts", import.meta.url), "utf8");
+    const urls = Array.from(src.matchAll(/makeOpenAICompatible\(\s*"(https:\/\/[^"]+)"/g)).map((m) => m[1]);
+    expect(urls.length).toBeGreaterThan(3);
+    for (const u of urls) expect(openaiHostAllowed(new URL(u).hostname), u).toBe(true);
+  });
+  it("mapuje opcjonalne klucze serwerowe Cerebras/Mistral/Cohere", () => {
+    const env = { CEREBRAS_API_KEY: "c", MISTRAL_API_KEY: "m", COHERE_API_KEY: "co" };
+    expect(envKeyForHost("api.cerebras.ai", env)).toBe("c");
+    expect(envKeyForHost("api.mistral.ai", env)).toBe("m");
+    expect(envKeyForHost("api.cohere.ai", env)).toBe("co");
+  });
 });
 
 describe("worker envKeyForHost — mapowanie host → sekret env", () => {

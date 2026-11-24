@@ -1,0 +1,754 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/sync-project-state.mjs",
+  "generatedAt": "2026-11-24T16:34:29.057Z",
+  "notice": "PLIK GENEROWANY — nie edytuj ręcznie. Odśwież: npm run memory:sync",
+  "git": {
+    "commit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
+    "shortCommit": "ad66860",
+    "branch": "feat/autocore",
+    "dirty": true,
+    "changes": [
+      "M project-memory/CURRENT_STATE.json",
+      " M project-memory/CURRENT_STATE.md",
+      " M project-memory/reports/build.json",
+      " M project-memory/reports/guardian-heartbeat.json",
+      " M project-memory/reports/lint.json",
+      " M project-memory/reports/secret-scan.json",
+      " M project-memory/reports/test.json",
+      "?? project-memory/events/20261124T163428808Z-antigravity-autocore-finish.json"
+    ],
+    "worktreeFingerprint": "2609344d476d66d521435023411665f16ee4e0f4b48eefc816fd6f329691a9d5"
+  },
+  "repository": {
+    "status": "OK",
+    "remotes": [
+      {
+        "name": "origin",
+        "url": "https://github.com/Talent620/Jarvis.git",
+        "host": "github.com",
+        "protocol": "https"
+      }
+    ],
+    "upstream": "NONE",
+    "aheadBehind": "UNKNOWN"
+  },
+  "project": {
+    "name": "jarvis-ai-assistant",
+    "version": "2.0.0"
+  },
+  "modules": [
+    {
+      "dir": "tests",
+      "files": 359
+    },
+    {
+      "dir": "src/lib",
+      "files": 309
+    },
+    {
+      "dir": "src/components",
+      "files": 78
+    },
+    {
+      "dir": "android",
+      "files": 64
+    },
+    {
+      "dir": "docs",
+      "files": 30
+    },
+    {
+      "dir": "(root)",
+      "files": 20
+    },
+    {
+      "dir": "project-memory",
+      "files": 16
+    },
+    {
+      "dir": "ios",
+      "files": 15
+    },
+    {
+      "dir": "scripts",
+      "files": 15
+    },
+    {
+      "dir": "proxy",
+      "files": 13
+    },
+    {
+      "dir": "electron",
+      "files": 12
+    },
+    {
+      "dir": "QA",
+      "files": 11
+    },
+    {
+      "dir": ".github",
+      "files": 10
+    },
+    {
+      "dir": "server",
+      "files": 10
+    },
+    {
+      "dir": "site-os",
+      "files": 10
+    },
+    {
+      "dir": "tools",
+      "files": 7
+    },
+    {
+      "dir": "public",
+      "files": 6
+    },
+    {
+      "dir": "deploy",
+      "files": 5
+    },
+    {
+      "dir": "src",
+      "files": 5
+    },
+    {
+      "dir": "audit",
+      "files": 4
+    },
+    {
+      "dir": "src/hooks",
+      "files": 4
+    },
+    {
+      "dir": "src/workers",
+      "files": 4
+    },
+    {
+      "dir": "src/plugins",
+      "files": 3
+    },
+    {
+      "dir": ".githooks",
+      "files": 1
+    },
+    {
+      "dir": "report",
+      "files": 1
+    },
+    {
+      "dir": "src/generated",
+      "files": 1
+    },
+    {
+      "dir": "src/styles",
+      "files": 1
+    }
+  ],
+  "manifest": {
+    "status": "OK",
+    "version": "4.0.0-apex",
+    "modules": [
+      "Modal Brain (vLLM OpenAI-compatible)",
+      "Streaming Polish TTS (ElevenLabs Flash v2.5 / OpenAI / Modal Voice / Gemini / Native fallback)",
+      "Protokół Mówionej Polszczyzny (voice_mode + barge-in)",
+      "3 Tryby Osobowości (BOJOWY / KUMPEL / ADWOKAT_DIABLA / AUTO)",
+      "Nocny Sen (open_loops + user_lessons) + Budżet Ciszy (3/dzień, 22:00–07:00)",
+      "Rada Ekspertów (Narada — 3 role równolegle Promise.all)",
+      "Live Vision (Oczy w terenie — tylna kamera + instrukcja głosowa)",
+      "Kolejka Misji w Tle (mission_queue z natychmiastowym potwierdzeniem Refleks)",
+      "Android Phone Use Agent + RiskGuard (Check-then-Act, zakaz pól haseł)",
+      "Bi-Temporal Core Memory + MCP Bridge"
+    ],
+    "tools": [
+      "add_calendar_event",
+      "add_journal_entry",
+      "add_note",
+      "add_reminder",
+      "add_shopping_item",
+      "add_tally_item",
+      "add_task",
+      "android_back",
+      "android_global",
+      "android_open_app",
+      "android_open_settings",
+      "android_scroll",
+      "android_tap",
+      "android_tap_id",
+      "android_type",
+      "android_ui_tree",
+      "backup_data",
+      "business_next_step",
+      "business_status",
+      "calculate",
+      "call_contact",
+      "chief_of_staff",
+      "clear_tally",
+      "client_next_action",
+      "complete_task",
+      "create_campaign_draft",
+      "create_content_draft",
+      "create_flashcards",
+      "create_scene",
+      "daily_briefing",
+      "deep_solve",
+      "desktop_active_window",
+      "desktop_click",
+      "desktop_hotkey",
+      "desktop_launch_app",
+      "desktop_media",
+      "desktop_open",
+      "desktop_power",
+      "desktop_type",
+      "desktop_volume",
+      "expert_council",
+      "finance_add_project",
+      "finance_set_status",
+      "finance_summary",
+      "find_leads",
+      "forget_fact",
+      "gcal_add",
+      "gcal_day",
+      "gcal_list",
+      "get_jarvis_status",
+      "get_markets",
+      "get_news",
+      "get_weather",
+      "gmail_read",
+      "gmail_reply",
+      "gmail_search",
+      "gmail_send",
+      "import_lead_candidates",
+      "lead_dossier",
+      "lead_followup",
+      "list_calendar",
+      "list_leads",
+      "list_notes",
+      "list_scenes",
+      "list_shopping",
+      "list_tasks",
+      "live_vision",
+      "local_research_agent",
+      "lock_assistant",
+      "make_call",
+      "mission_demo",
+      "mission_status",
+      "mission_undo",
+      "mission_why",
+      "navigate_to",
+      "open_screen",
+      "open_service",
+      "open_url",
+      "prediction_ledger_status",
+      "predictions",
+      "prepare_lead_demo",
+      "preview_lead_candidates",
+      "project_knowledge",
+      "rank_clients_by_efficiency",
+      "reflect",
+      "remember_fact",
+      "rollback_jarvis_settings",
+      "run_automation",
+      "run_scene",
+      "sales_autopilot",
+      "sales_plan",
+      "salesos_email",
+      "salesos_flush_emails",
+      "salesos_open",
+      "salesos_push",
+      "salesos_set_status",
+      "salesos_stats",
+      "salesos_sync",
+      "save_lead",
+      "self_check",
+      "send_offers_all",
+      "send_sms",
+      "send_test_email",
+      "set_mode",
+      "set_preference",
+      "set_theme",
+      "set_timer",
+      "set_voice",
+      "simulate_price_change",
+      "simulate_send_offers",
+      "smart_home",
+      "suggest_ai",
+      "switch_ai",
+      "system_health",
+      "tally_report",
+      "text_contact",
+      "update_jarvis_settings",
+      "web_research",
+      "world_recall"
+    ],
+    "source": "src/lib/selfManifest.ts (JARVIS_VERSION, JARVIS_MODULES) + src/lib/tools.ts (name:)"
+  },
+  "scripts": [
+    "dev",
+    "build",
+    "preview",
+    "icons",
+    "scan:secrets",
+    "hooks",
+    "cap:sync",
+    "cap:android",
+    "android:build",
+    "ios:sync",
+    "ios:open",
+    "ios:build",
+    "electron:dev",
+    "desktop:build",
+    "desktop:ubuntu",
+    "ubuntu:check",
+    "ubuntu:setup",
+    "test",
+    "test:watch",
+    "lint",
+    "build:studio",
+    "knowledge",
+    "siteos",
+    "siteos:tunnel",
+    "tools:verify",
+    "quality",
+    "memory:sync",
+    "memory:check",
+    "memory:verify",
+    "memory:event"
+  ],
+  "workflows": [
+    {
+      "file": ".github/workflows/android-v2.yml",
+      "name": "Build Android APK v2 (test, niezależny)",
+      "triggers": [
+        "workflow_dispatch",
+        "push"
+      ]
+    },
+    {
+      "file": ".github/workflows/android.yml",
+      "name": "Build Android APK",
+      "triggers": [
+        "push",
+        "workflow_dispatch"
+      ]
+    },
+    {
+      "file": ".github/workflows/deploy-modal.yml",
+      "name": "Deploy JARVIS on Modal",
+      "triggers": [
+        "workflow_dispatch"
+      ]
+    },
+    {
+      "file": ".github/workflows/ios.yml",
+      "name": "Build iOS (.ipa)",
+      "triggers": [
+        "workflow_dispatch",
+        "push"
+      ]
+    },
+    {
+      "file": ".github/workflows/ollama-exe.yml",
+      "name": "Build Ollama Server EXE",
+      "triggers": [
+        "workflow_dispatch",
+        "push"
+      ]
+    },
+    {
+      "file": ".github/workflows/release.yml",
+      "name": "Release APK",
+      "triggers": [
+        "workflow_dispatch",
+        "push"
+      ]
+    },
+    {
+      "file": ".github/workflows/sd-exe.yml",
+      "name": "Build SD Server EXE",
+      "triggers": [
+        "workflow_dispatch",
+        "push"
+      ]
+    },
+    {
+      "file": ".github/workflows/test.yml",
+      "name": "Tests",
+      "triggers": [
+        "push",
+        "pull_request",
+        "workflow_dispatch"
+      ]
+    },
+    {
+      "file": ".github/workflows/ubuntu.yml",
+      "name": "Build Ubuntu",
+      "triggers": [
+        "workflow_dispatch",
+        "pull_request",
+        "push"
+      ]
+    },
+    {
+      "file": ".github/workflows/windows.yml",
+      "name": "Build Windows EXE",
+      "triggers": [
+        "workflow_dispatch",
+        "push"
+      ]
+    }
+  ],
+  "recentCommits": [
+    {
+      "hash": "ad66860",
+      "date": "2026-11-24T16:29:10Z",
+      "subject": "feat(autocore): route voice TTS, liveVoice, images & memory embeddings via AutoCore + accept ADR-0002"
+    },
+    {
+      "hash": "ed8c129",
+      "date": "2026-11-24T15:46:22Z",
+      "subject": "chore(memory): autocore verified state snapshot, reports & event (ADR-0002 proposed)"
+    },
+    {
+      "hash": "87f78dd",
+      "date": "2026-11-24T15:41:04Z",
+      "subject": "feat(guardian): remote git-ref agent-lock, local guardian-daemon + systemd, APK verifier, AGENTS.md roles & ADR-0002"
+    },
+    {
+      "hash": "4916d35",
+      "date": "2026-11-24T15:39:42Z",
+      "subject": "feat(autocore): unified AI catalog, health, budget controller, A-J router, gateway, discovery & AutoCorePanel"
+    },
+    {
+      "hash": "5ecd05d",
+      "date": "2026-11-24T14:54:38Z",
+      "subject": "fix(proxy): allow Cerebras/Mistral hosts on /openai relay (were 403 with proxyUrl) + registry↔allowlist guard test"
+    },
+    {
+      "hash": "195d92b",
+      "date": "2026-11-24T14:43:00Z",
+      "subject": "chore(memory): first verified project state snapshot + guardian-5a event (ADR-0001 proposed)"
+    },
+    {
+      "hash": "07911a1",
+      "date": "2026-11-24T14:36:21Z",
+      "subject": "feat(guardian-5a): shared agent protocol (AGENTS.md/CLAUDE.md), project memory, state generator and event journal"
+    },
+    {
+      "hash": "f5a5dc4",
+      "date": "2026-11-24T13:05:40Z",
+      "subject": "fix(android): Play-Protect-safe sideload APK (strip AccessibilityService + QUERY_ALL_PACKAGES)"
+    },
+    {
+      "hash": "d387067",
+      "date": "2026-11-24T12:57:55Z",
+      "subject": "fix(android): use fresh applicationId net.serwer256.jarvis.v4 (JARVIS Apex) to avoid signature conflict with legacy JARVIS v2"
+    },
+    {
+      "hash": "34eda42",
+      "date": "2026-11-24T12:43:12Z",
+      "subject": "fix(android): sign APK with permanent GH Secrets keystore (zipalign + apksigner V1/V2/V3 verify gate), bump versionCode, and export AccessibilityService"
+    }
+  ],
+  "checks": {
+    "secret-scan": {
+      "command": "node scripts/secret-scan.mjs --all",
+      "exitCode": 0,
+      "finishedAt": "2026-11-24T16:29:13.805Z",
+      "commit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
+      "logPath": "project-memory/reports/logs/secret-scan-20261124T162913Z.log",
+      "summary": {
+        "result": "Skan sekretów: czysto."
+      },
+      "status": "PASS",
+      "reason": "kod wyjścia 0 dla bieżącego stanu",
+      "reportPath": "project-memory/reports/secret-scan.json"
+    },
+    "lint": {
+      "command": "npm run lint",
+      "exitCode": 0,
+      "finishedAt": "2026-11-24T16:29:33.352Z",
+      "commit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
+      "logPath": "project-memory/reports/logs/lint-20261124T162913Z.log",
+      "summary": {
+        "problems": null
+      },
+      "status": "PASS",
+      "reason": "kod wyjścia 0 dla bieżącego stanu",
+      "reportPath": "project-memory/reports/lint.json"
+    },
+    "test": {
+      "command": "npm test",
+      "exitCode": 0,
+      "finishedAt": "2026-11-24T16:33:39.960Z",
+      "commit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
+      "logPath": "project-memory/reports/logs/test-20261124T162933Z.log",
+      "summary": {
+        "testFiles": "Test Files  359 passed (359)",
+        "tests": "Tests  3026 passed (3026)"
+      },
+      "status": "PASS",
+      "reason": "kod wyjścia 0 dla bieżącego stanu",
+      "reportPath": "project-memory/reports/test.json"
+    },
+    "build": {
+      "command": "npm run build",
+      "exitCode": 0,
+      "finishedAt": "2026-11-24T16:34:16.211Z",
+      "commit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
+      "logPath": "project-memory/reports/logs/build-20261124T163340Z.log",
+      "summary": {
+        "built": "built in 12.79s"
+      },
+      "status": "PASS",
+      "reason": "kod wyjścia 0 dla bieżącego stanu",
+      "reportPath": "project-memory/reports/build.json"
+    }
+  },
+  "apk": {
+    "releaseTag": "v4-jarvis-apex-safe",
+    "releaseUrl": "https://github.com/Talent620/Jarvis/releases/tag/v4-jarvis-apex-safe",
+    "assets": [
+      {
+        "name": "jarvis-apex-v4.apk",
+        "size": 8750667,
+        "url": "https://github.com/Talent620/Jarvis/releases/download/v4-jarvis-apex-safe/jarvis-apex-v4.apk",
+        "digest": "sha256:2de0fa2e2833354fd62cbc608a97baf1ac497431ea0ede23922a9ae202f2f098"
+      }
+    ],
+    "runId": 45399897217,
+    "runSha": "f5a5dc439c60981313e22ab7c22f5034b8b9721a",
+    "checkedAt": "2026-11-24T15:46:13.562Z",
+    "status": "STALE",
+    "reason": "APK zbudowany z f5a5dc4, nie z HEAD"
+  },
+  "openItems": [
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:43",
+      "kind": "plan-napraw",
+      "text": "K4. Dodać bootstrap Ubuntu",
+      "status": "zaimplementowane, oczekuje na pełny przebieg CI"
+    },
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:56",
+      "kind": "plan-napraw",
+      "text": "K5. Zbudować i sprawdzić paczki Linux",
+      "status": "oczekuje"
+    },
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:71",
+      "kind": "plan-napraw",
+      "text": "W1. Jeden diagnostyczny status zależności",
+      "status": "brak statusu w dokumencie"
+    },
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:77",
+      "kind": "plan-napraw",
+      "text": "W2. Intuicyjny kreator integracji",
+      "status": "brak statusu w dokumencie"
+    },
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:91",
+      "kind": "plan-napraw",
+      "text": "W4. MCP stdio na Ubuntu — fundament wykonany",
+      "status": "brak statusu w dokumencie"
+    },
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:113",
+      "kind": "plan-napraw",
+      "text": "O1. Podział testów",
+      "status": "brak statusu w dokumencie"
+    },
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:120",
+      "kind": "plan-napraw",
+      "text": "O2. Rozmiar aplikacji",
+      "status": "brak statusu w dokumencie"
+    },
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:127",
+      "kind": "plan-napraw",
+      "text": "O3. Lekki profil lokalny",
+      "status": "brak statusu w dokumencie"
+    },
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:134",
+      "kind": "plan-napraw",
+      "text": "O4. Powtarzalne obrazy i wydania",
+      "status": "brak statusu w dokumencie"
+    },
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:143",
+      "kind": "plan-napraw",
+      "text": "R1. Trwały agent wykonawczy",
+      "status": "brak statusu w dokumencie"
+    },
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:158",
+      "kind": "plan-napraw",
+      "text": "R2. Bezpieczne narzędzia generowane",
+      "status": "brak statusu w dokumencie"
+    },
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:170",
+      "kind": "plan-napraw",
+      "text": "R3. Pamięć decyzji",
+      "status": "brak statusu w dokumencie"
+    },
+    {
+      "source": "docs/JARVIS_REPAIR_PLAN.md:179",
+      "kind": "plan-napraw",
+      "text": "R4. Centrum autonomii",
+      "status": "brak statusu w dokumencie"
+    },
+    {
+      "source": "docs/horizon-memory.md:175",
+      "kind": "ryzyko",
+      "text": "R1: Zgłoszony przez użytkownika błąd 500 (Google/Gemini + druga funkcja równolegle)",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/horizon-memory.md:177",
+      "kind": "ryzyko",
+      "text": "R2: Cel S9/Chrome 79 (es2019, bez `\\p{L}`, bez lookbehind) i pułapka cudzysłowów",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/horizon-memory.md:179",
+      "kind": "ryzyko",
+      "text": "R3: Brak fizycznego urządzenia elektroniki w sesji — protokół urządzeń wymaga",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/DEVLOG.md:15",
+      "kind": "odłożone-decyzja-właściciela",
+      "text": "BFF fail-closed `APP_TOKEN` na trasach relay — może zerwać wdrożenie bez `APP_TOKEN`.",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/DEVLOG.md:16",
+      "kind": "odłożone-decyzja-właściciela",
+      "text": "`admin.ts` — sekret szyfrowany numerem telefonu (hash w bundlu) → zmiana logowania właściciela + migracja.",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/DEVLOG.md:17",
+      "kind": "odłożone-decyzja-właściciela",
+      "text": "consent fail-closed dla outbound — zmienia tryb live (hands-free).",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/DEVLOG.md:18",
+      "kind": "odłożone-decyzja-właściciela",
+      "text": "`brain.ts` globalny stan modułu → parametry — poprawne, ale zmienia treść promptu w trybie live.",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/DEVLOG.md:19",
+      "kind": "odłożone-decyzja-właściciela",
+      "text": "Keystore w repo + rotacja klucza; self-signed EXE — nieodwracalne wobec Sklepu Play.",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/DEVLOG.md:20",
+      "kind": "odłożone-decyzja-właściciela",
+      "text": "`release.yml` na push brancha — ograniczenie do tagów zerwałoby rolling `latest` (z którego pobierasz buildy).",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/DEVLOG.md:21",
+      "kind": "odłożone-decyzja-właściciela",
+      "text": "Electron/sales-os wildcard CORS — allowlista zerwałaby user-konfigurowalny BFF/Home Assistant (adresy dynamiczne).",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/DEVLOG.md:24",
+      "kind": "kierunek",
+      "text": "Decyzja o BFF `APP_TOKEN` (potwierdź, że worker go ma → wdrożę fail-closed bezpiecznie).",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/DEVLOG.md:25",
+      "kind": "kierunek",
+      "text": "Przeprojektowanie `admin.ts` (sekret wysokiej entropii, nie numer telefonu).",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/DEVLOG.md:26",
+      "kind": "kierunek",
+      "text": "Migracja `sentMail`/`contentPosts`/embeddingów do IndexedDB (zdejmuje presję na localStorage).",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/DEVLOG.md:27",
+      "kind": "kierunek",
+      "text": "Scalić PR #1 do `main` (po przeglądzie).",
+      "status": "otwarte wg dokumentu"
+    },
+    {
+      "source": "docs/DEVLOG.md:28",
+      "kind": "kierunek",
+      "text": "`AudioWorklet` zamiast `ScriptProcessorNode` w trybie live (płynność/bateria).",
+      "status": "otwarte wg dokumentu"
+    }
+  ],
+  "knowledgeGaps": {
+    "missingSources": [],
+    "expectedButMissing": [
+      "docs/JARVIS_CONTROL_CENTER.md",
+      "JARVIS_BACKLOG.md",
+      "JARVIS_NEXT.md"
+    ]
+  },
+  "events": {
+    "total": 3,
+    "valid": 3,
+    "invalid": [],
+    "recent": [
+      {
+        "file": "project-memory/events/20261124T163428808Z-antigravity-autocore-finish.json",
+        "timestamp": "2026-11-24T16:34:28.808Z",
+        "agent": "antigravity",
+        "taskId": "autocore-finish",
+        "endCommit": "UNCOMMITTED",
+        "nextStep": "Weryfikacja APK v5-jarvis-autocore i odswiezenie memory:check --apk"
+      },
+      {
+        "file": "project-memory/events/20261124T154622424Z-antigravity-autocore.json",
+        "timestamp": "2026-11-24T15:46:22.424Z",
+        "agent": "antigravity",
+        "taskId": "autocore",
+        "endCommit": "UNCOMMITTED",
+        "nextStep": "Przeglad PR feat/autocore, ustawienie limitu budzetu w UI, opcjonalne uruchomienie scripts/install-guardian.sh na docelowym Linuxie"
+      },
+      {
+        "file": "project-memory/events/20261124T144248650Z-antigravity-guardian-5a.json",
+        "timestamp": "2026-11-24T14:42:48.650Z",
+        "agent": "antigravity",
+        "taskId": "guardian-5a",
+        "endCommit": "07911a17ef627304cfb433953cbd472b788826cf",
+        "nextStep": "Recenzja feat/guardian-5a przez innego agenta lub właściciela (autor != jedyny recenzent), następnie Sprint 5b: monitoring bez LLM (CI/raporty) + zdalna blokada dla odizolowanych wykonawców."
+      }
+    ]
+  },
+  "nextRecommendedStep": {
+    "from": "project-memory/events/20261124T163428808Z-antigravity-autocore-finish.json",
+    "text": "Weryfikacja APK v5-jarvis-autocore i odswiezenie memory:check --apk"
+  },
+  "decisions": [
+    {
+      "file": "project-memory/decisions/ADR-0001-project-memory.md",
+      "title": "ADR-0001: Jedna pamięć projektu z generowanym stanem i dziennikiem zdarzeń per plik",
+      "status": "proposed (czeka na recenzję człowieka lub innego agenta)"
+    },
+    {
+      "file": "project-memory/decisions/ADR-0002-autocore.md",
+      "title": "ADR-0002: JARVIS AUTOCORE — centralne zarządzanie AI, budżetem i nadzorem",
+      "status": "UNKNOWN"
+    }
+  ],
+  "failedAttempts": 5,
+  "integrity": "c9d792984a63153a12860ab51bb7c7c455ae3c072786d3e8a76fe4484be106a7"
+}
