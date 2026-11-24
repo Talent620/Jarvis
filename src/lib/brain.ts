@@ -12,7 +12,9 @@ import { memoryContextBlock, addMemory, resolveNamespace, memoryServiceAvailable
 import { COGNITIVE_CORE, REASONING_SYSTEM } from "./cognition";
 import { retrieveKnowledge } from "./knowledge";
 import { buildProfileBlock } from "./profile";
-import { isDesktop } from "./desktop";
+import { isDesktop, isLinuxDesktop } from "./desktop";
+import { verifyResult, type VerifyStep } from "./resultVerifier";
+import { attempted as outcomeAttempted, draft as outcomeDraft, confirmed as outcomeConfirmed, failed as outcomeFailed } from "./actionOutcome";
 import { shouldFallback, isNetworkError, isKeyError, humanize, classifyFailoverReason, sanitizeFailReason, PERSONAL_CUES } from "./aiHelpers";
 import { orderedKeys, primaryKey, coolDownKey } from "./keys";
 import { classifyTask, needsDeepThink, isComplex, logRouteDecision, adaptiveConfidenceThreshold, type TaskKind } from "./modelRouter";
@@ -403,7 +405,7 @@ export function systemPrompt(ctx: PromptContext = {}): string {
     `- E-MAIL: wysyłasz narzędziami gmail_send (jeden e-mail) i send_offers_all (do leadów). NIE odsyłaj do „n8n" przy zwykłej wysyłce maila — to inny moduł. Jeśli konto/poczta nie są jeszcze gotowe, narzędzie SAMO otworzy logowanie albo gotową wiadomość do wysłania jednym kliknięciem; krótko poprowadź użytkownika, ale najpierw spróbuj wysłać narzędziem.`,
     `- KALENDARZ GOOGLE: dodawaj/odczytuj narzędziami gcal_add, gcal_list, gcal_day. Jeśli konto nie jest połączone, narzędzie SAMO uruchomi logowanie — używaj śmiało, nie odmawiaj.`,
     isDesktop()
-      ? `- Jesteś na KOMPUTERZE (Windows). Sterujesz nim narzędziami desktop_*: uruchamianie programów (desktop_launch_app), otwieranie plików/folderów/URL (desktop_open), pisanie tekstu (desktop_type — podaj 'window' z tytułem okna, gdy chcesz pisać do innej aplikacji; najpierw ją uruchom/aktywuj), skróty klawiszowe (desktop_hotkey, np. ctrl+s), odtwarzanie (desktop_media), głośność (desktop_volume), zasilanie (desktop_power — wymaga zgody). Gdy użytkownik pyta „co mam na ekranie", zrzut ekranu dołącza się automatycznie — opisz go i pomóż.`
+      ? `- Jesteś na KOMPUTERZE (${isLinuxDesktop() ? "Linux" : "Windows"}). Sterujesz nim narzędziami desktop_* i OMNI-PILOT/OMNI-FRONTIER: uruchamianie programów (desktop_launch_app), otwieranie plików/folderów/URL (desktop_open), kursor/mysz/przewijanie/przeciąganie (desktop_cursor_move, desktop_mouse_action, desktop_scroll, desktop_drag), okna (desktop_windows_list, desktop_window_focus, desktop_active_window), pisanie tekstu i skróty (desktop_type, desktop_hotkey), semantyczne Drzewo UI AT-SPI2/UIA i wizja (desktop_ui_tree, desktop_visual_locate, desktop_visual_act, desktop_omni_task), Strażnik Ekranu w tle (desktop_sentinel_start, desktop_sentinel_stop), diagnostyka systemu (desktop_diagnose), odtwarzanie (desktop_media), głośność (desktop_volume), zasilanie (desktop_power — wymaga zgody). Gdy użytkownik pyta „co mam na ekranie", zrzut ekranu dołącza się automatycznie — opisz go i pomóż.`
       : `- Jesteś na URZĄDZENIU MOBILNYM. Korzystaj z dzwonienia, SMS, nawigacji, otwierania aplikacji i kamery.`,
     `- Gdy potrzeba aktualnych informacji lub źródeł, użyj narzędzia web_research i powołuj się na źródła numerami [1], [2].`,
     `- Akcje krytyczne (wysyłka wiadomości na zewnątrz, przelewy/płatności, nieodwracalne usuwanie, pola haseł) podlegają twardej ochronie RiskGuard — po potwierdzeniu potwierdź wynik krótko.`,
@@ -1118,6 +1120,41 @@ export async function askJarvis(
               logRouteDecision({ provider, model, kind: clsTop.kind, reason: "auto-weryfikacja: korekta odpowiedzi", fellBack: provider !== primary });
             }
           } catch (e) { reportFailure(provider, verifyModel, apiKey, e); /* graceful — zostaje pierwsza odpowiedź */ } finally { onStatus?.(null); }
+        }
+
+        // Weryfikacja rezultatu (resultVerifier): gdy w tej turze zadziałały narzędzia, sprawdź realne
+        // statusy z AuditLog (CONFIRMED vs denied/error), aby model nie ogłaszał fałszywego „Gotowe".
+        if (reply.tools && reply.tools.length > 0) {
+          const turnAudits = (store.data.audit || []).filter((a) => a.at >= t0);
+          const hasFailure = turnAudits.some((a) => a.status !== "ok");
+          if (hasFailure || cognition.needsVerification) {
+            const claimsSuccess = /(gotowe|wykonano|zrobiono|wys[łl]ano|zapisano|otwarto|uruchomiono)/i.test(reply.text || "");
+            const steps: VerifyStep[] = turnAudits.length
+              ? turnAudits.map((a, idx) => ({
+                  id: `${a.tool}_${idx + 1}`,
+                  successCriteria: a.tool,
+                  outcome:
+                    a.status === "ok"
+                      ? outcomeConfirmed({ source: a.tool, message: a.output || "ok" })
+                      : a.status === "denied"
+                        ? outcomeDraft(a.output || "odmowa")
+                        : outcomeFailed(a.output || "błąd", a.tool),
+                  claimedSuccess: claimsSuccess,
+                }))
+              : reply.tools.map((tName, idx) => ({
+                  id: `${tName}_${idx + 1}`,
+                  successCriteria: tName,
+                  outcome: outcomeAttempted(tName, "brak wpisu audytowego"),
+                  claimedSuccess: claimsSuccess,
+                }));
+            const verification = verifyResult({ goal: lastUser?.content || "", steps });
+            if (!verification.complete && hasFailure && !String(reply.text || "").includes("⚠ Weryfikacja:")) {
+              reply = {
+                ...reply,
+                text: `${(reply.text || "").trim()}\n\n⚠ Weryfikacja: ${verification.safeFinalSummary}`,
+              };
+            }
+          }
         }
 
         const citations = getCitations();

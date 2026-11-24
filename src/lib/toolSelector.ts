@@ -29,7 +29,7 @@ const GROUP_TOOLS: Record<string, string[]> = {
   desktop: [
     "desktop_launch_app", "desktop_open", "desktop_power", "desktop_volume", "desktop_media",
     "desktop_active_window", "desktop_click", "desktop_type", "desktop_hotkey",
-    "desktop_cursor_move", "desktop_mouse_action", "desktop_scroll",
+    "desktop_cursor_move", "desktop_mouse_action", "desktop_scroll", "desktop_drag",
     "desktop_windows_list", "desktop_window_focus",
     "desktop_visual_locate", "desktop_visual_act", "desktop_omni_task",
     "desktop_ui_tree", "desktop_diagnose", "desktop_sentinel_start", "desktop_sentinel_stop",
@@ -50,8 +50,9 @@ const GROUP_KEYWORDS: Record<string, string[]> = {
   productivity: ["zadani", "todo", "notat", "przypomnij", "przypomnien", "lista zakup", "zakupy", "dziennik", "fiszk", "minutnik", "stoper", "timer", "licznik"],
   device: ["zadzwoń", "zadzwon", "dzwoń", "dzwon", "sms", "nawiguj", "trasa", "dojazd", "scena", "dom", "światło", "swiatlo", "automatyzacj", "otwórz aplikacj", "otworz aplikacj"],
   desktop: [
-    "komputer", "pulpit windows", "desktop", "głośność", "glosnosc", "uruchom program", "wciśnij", "wcisnij",
-    "kliknij", "myszk", "na ekranie", "kursor", "przesuń", "przesun", "ikon", "okno", "okna",
+    "komputer", "pulpit", "linux", "desktop", "głośność", "glosnosc", "uruchom", "otwórz aplikacj", "otworz aplikacj",
+    "przeglądark", "przegladark", "stan systemu", "wciśnij", "wcisnij",
+    "kliknij", "myszk", "na ekranie", "kursor", "przesuń", "przesun", "przeciągnij", "przeciagnij", "ikon", "okno", "okna",
     "przewiń", "przewin", "scroll", "autopilot", "omni", "przełącz na", "przelacz na",
     "strażnik", "straznik", "pilnuj ekranu", "obserwuj ekran", "zdiagnozuj", "drzewo ui",
   ],

@@ -19,7 +19,7 @@ const OPERATOR_SAFE_OUTBOUND = new Set([
 // ryzyka (isPassword / money / security / delete / send). W przeciwnym razie twarda blokada lub zgoda.
 const OPERATOR_UI_CHECKED = new Set([
   "android_tap_id", "android_tap", "android_type",
-  "desktop_mouse_action", "desktop_visual_act",
+  "desktop_mouse_action", "desktop_drag", "desktop_visual_act",
 ]);
 
 // Twarde akcje krytyczne: wysyłka na zewnątrz, dzwonienie, usuwanie/destrukcja, płatności, system, pełna autonomia pulpitu.
@@ -144,7 +144,7 @@ const RISK: Record<string, Risk> = {
   // OMNI-PILOT & Frontier (płynny kursor, okna, drzewo OS, wizja, strażnik w tle, diagnostyka)
   desktop_windows_list: "read", desktop_visual_locate: "read",
   desktop_ui_tree: "read", desktop_diagnose: "read", desktop_sentinel_stop: "read",
-  desktop_cursor_move: "outbound", desktop_mouse_action: "outbound", desktop_scroll: "outbound",
+  desktop_cursor_move: "outbound", desktop_mouse_action: "outbound", desktop_scroll: "outbound", desktop_drag: "outbound",
   desktop_window_focus: "outbound", desktop_visual_act: "outbound", desktop_omni_task: "outbound",
   desktop_sentinel_start: "outbound",
   // pełne sterowanie telefonem (Android, usługa Dostępności + RiskGuard)

@@ -41,11 +41,17 @@ describe("AUTOCORE ops: agent-lock (bare repo) + guardian-daemon", () => {
     }
   });
 
-  it("guardian-daemon --once generuje deterministyczny raport bez LLM", () => {
-    const out = execFileSync("node", ["scripts/guardian-daemon.mjs", "--once"], { encoding: "utf8" });
-    const rep = JSON.parse(out.trim());
-    expect(rep.secretScanOk).toBe(true);
-    expect(typeof rep.head).toBe("string");
-    expect(rep.llmDiagnosis).toBeUndefined();
+  it("guardian-daemon --once generuje deterministyczny raport bez LLM bez brudzenia repo", () => {
+    const base = mkdtempSync(join(tmpdir(), "jarvis-hb-"));
+    try {
+      const hbPath = join(base, "guardian-heartbeat.json");
+      const out = execFileSync("node", ["scripts/guardian-daemon.mjs", "--once", "--out", hbPath], { encoding: "utf8" });
+      const rep = JSON.parse(out.trim());
+      expect(rep.secretScanOk).toBe(true);
+      expect(typeof rep.head).toBe("string");
+      expect(rep.llmDiagnosis).toBeUndefined();
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
   });
 });

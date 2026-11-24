@@ -8,6 +8,7 @@
 import { aiRequest } from "./autocore/gateway";
 import {
   captureScreenDetailed,
+  findUiNodeOnPc,
   isDesktop,
   mouseActionOnPc,
   moveCursorOnPc,
@@ -31,6 +32,7 @@ export interface SentinelHit {
   question: string;
   screenshotDataUrl: string;
   spottedAt: number;
+  source?: "os-tree" | "vision";
 }
 
 export interface SentinelState {
@@ -49,6 +51,7 @@ export interface SentinelState {
 export interface SentinelActuator {
   isDesktop: () => boolean;
   captureScreenDetailed: typeof captureScreenDetailed;
+  findUiNode?: typeof findUiNodeOnPc;
   moveCursor: typeof moveCursorOnPc;
   mouseAction: typeof mouseActionOnPc;
 }
@@ -81,6 +84,7 @@ export const SENTINEL_WATCH_SYSTEM = [
 const DEFAULT_ACTUATOR: SentinelActuator = {
   isDesktop,
   captureScreenDetailed,
+  findUiNode: findUiNodeOnPc,
   moveCursor: moveCursorOnPc,
   mouseAction: mouseActionOnPc,
 };
@@ -237,6 +241,62 @@ export async function runSentinelTick(expectedRunId = sentinelRunId): Promise<vo
   }
 
   const { actuator, askVision } = activeOpts;
+
+  // 1) HYBRYDA OMNI-FRONTIER: Semantyczne Drzewo OS (AT-SPI2 / Windows UIA) PRZED zrzutem i Vision AI (0 USD, <80 ms)
+  if (actuator.findUiNode) {
+    try {
+      const treeHit = await actuator.findUiNode(state.condition);
+      if (expectedRunId !== sentinelRunId) return;
+      if (treeHit?.ok && treeHit.found && treeHit.node && (treeHit.score ?? 1) >= 0.78) {
+        const node = treeHit.node;
+        const sw = typeof window !== "undefined" ? window.screen?.width || 1920 : 1920;
+        const sh = typeof window !== "undefined" ? window.screen?.height || 1080 : 1080;
+        const label = node.name || state.condition;
+        const risk: DesktopRiskKind = node.isPassword
+          ? "password"
+          : assessDesktopActionRisk(`${label} ${node.role}`, "click").blocked
+            ? "password"
+            : assessDesktopActionRisk(`${label} ${node.role}`, "click").requiresConfirmation
+              ? "destructive"
+              : "none";
+        const hit: SentinelHit = {
+          xNorm: Math.max(0, Math.min(1000, Math.round((node.centerX / Math.max(320, sw)) * 1000))),
+          yNorm: Math.max(0, Math.min(1000, Math.round((node.centerY / Math.max(240, sh)) * 1000))),
+          x: node.centerX,
+          y: node.centerY,
+          label,
+          confidence: treeHit.score ?? 0.92,
+          risk,
+          summary: `Wykryto w Drzewie OS (${treeHit.backend || "ui-tree"}): ${label} [${node.role}]`,
+          question: `Hej, widzę w systemie „${label}” (0 USD, Drzewo OS) — kliknąć to czy zostawić?`,
+          screenshotDataUrl: "",
+          spottedAt: Date.now(),
+          source: "os-tree",
+        };
+        clearTimer();
+        emit({
+          status: "awaiting_decision",
+          checksDone: state.checksDone + 1,
+          hit,
+          lastNote: hit.question,
+        });
+        recordSystemActionEvent({
+          tool: "sentinel_os_tree_match",
+          risk: "read",
+          input: { condition: state.condition, backend: treeHit.backend, label },
+          output: hit.summary,
+          ok: true,
+        });
+        for (const cb of alertListeners) {
+          try { cb(hit, state.condition); } catch { /* ignore */ }
+        }
+        return;
+      }
+    } catch {
+      /* Drzewo OS niedostępne w tej klatce → płynny fallback na Vision poniżej */
+    }
+  }
+
   const shot = await actuator.captureScreenDetailed();
   if (expectedRunId !== sentinelRunId) return;
 
@@ -289,6 +349,7 @@ export async function runSentinelTick(expectedRunId = sentinelRunId): Promise<vo
 
   const hit = parseSentinelVerdict(raw, shot);
   if (hit) {
+    hit.source = "vision";
     clearTimer();
     emit({
       status: "awaiting_decision",
@@ -323,7 +384,9 @@ function scheduleNext(myRunId: number): void {
  * Uruchom nieblokującego Strażnika Ekranu w tle (Dual-Track: w międzyczasie możesz normalnie rozmawiać jak z kumplem).
  */
 export function startOmniSentinel(opts: StartSentinelOptions): { ok: boolean; text: string; spokenText: string } {
-  const act: SentinelActuator = { ...DEFAULT_ACTUATOR, ...(opts.actuator || {}) };
+  const act: SentinelActuator = opts.actuator
+    ? { ...DEFAULT_ACTUATOR, findUiNode: opts.actuator.findUiNode, ...opts.actuator }
+    : { ...DEFAULT_ACTUATOR };
   if (!act.isDesktop()) {
     return {
       ok: false,

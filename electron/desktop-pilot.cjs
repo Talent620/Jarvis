@@ -341,7 +341,13 @@ function createDesktopPilot(deps = {}) {
       const wm = await run("wmctrl", ["-ia", hit.id], { env });
       if (wm.ok) return { ok: true, window: hit };
       const xdo = await run("xdotool", ["windowactivate", "--sync", hit.id], { env });
-      return xdo.ok ? { ok: true, window: hit } : { ok: false, error: `err:${xdo.code}` };
+      if (xdo.ok) return { ok: true, window: hit };
+      const raised = await run("xdotool", ["windowraise", hit.id], { env });
+      const focused = await run("xdotool", ["windowfocus", "--sync", hit.id], { env });
+      if (focused.ok || raised.ok) return { ok: true, window: hit };
+      const wmCheck = await run("wmctrl", ["-m"], { env });
+      if (!wmCheck.ok) return { ok: false, error: "err:no-window-manager" };
+      return { ok: false, error: `err:${xdo.code}` };
     }
     if (platform === "win32") {
       const b64 = Buffer.from(hit.title, "utf8").toString("base64");

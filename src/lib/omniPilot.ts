@@ -17,12 +17,14 @@ import {
   mouseActionOnPc,
   moveCursorOnPc,
   pilotHotkeyOnPc,
+  queryUiTreeOnPc,
   scrollOnPc,
   typeUnicodeOnPc,
   volumePc,
 } from "./desktop";
 import { parseOmniVoiceCommand, type OmniIntent } from "./omniReflex";
 import {
+  computeFrameFingerprint,
   startOmniSentinel,
   stopOmniSentinel,
   tryHandleSentinelVoiceReply,
@@ -36,6 +38,8 @@ import {
 } from "./omniVision";
 import { recordSystemActionEvent } from "./permissions";
 import { stopAllGoals } from "./goalControl";
+import { verifyResult, type VerifyStep } from "./resultVerifier";
+import { draft as outcomeDraft, confirmed as outcomeConfirmed, failed as outcomeFailed } from "./actionOutcome";
 import { store } from "./store";
 
 export type OmniPhase =
@@ -96,6 +100,7 @@ export interface OmniActuator {
   isDesktop: () => boolean;
   captureScreenDetailed: typeof captureScreenDetailed;
   findUiNode: typeof findUiNodeOnPc;
+  queryUiTree?: typeof queryUiTreeOnPc;
   diagnose: typeof diagnoseDesktopOnPc;
   moveCursor: typeof moveCursorOnPc;
   mouseAction: typeof mouseActionOnPc;
@@ -134,6 +139,8 @@ export interface VisualActResult {
 export interface OmniTaskResult {
   ok: boolean;
   completed: boolean;
+  verified?: boolean;
+  verificationSummary?: string;
   needHuman?: boolean;
   blocked?: boolean;
   aborted?: boolean;
@@ -155,6 +162,7 @@ const DEFAULT_ACTUATOR: OmniActuator = {
   isDesktop,
   captureScreenDetailed,
   findUiNode: findUiNodeOnPc,
+  queryUiTree: queryUiTreeOnPc,
   diagnose: diagnoseDesktopOnPc,
   moveCursor: moveCursorOnPc,
   mouseAction: mouseActionOnPc,
@@ -712,8 +720,11 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
   const maxSteps = Math.max(1, Math.min(12, opts.maxSteps ?? 6));
   const myToken = ++runToken;
   const history: string[] = [];
+  const verifySteps: VerifyStep[] = [];
   let prevSig = "";
   let repeatCount = 0;
+  let lastFrameFp = "";
+  let unchangedFrameStreak = 0;
 
   emitState({
     visible: true,
@@ -742,17 +753,20 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
       };
     }
 
-    // 1) OBSERWUJ
+    // 1) OBSERWUJ (Hybryda: semantyczne Drzewo OS AT-SPI2/UIA + zrzut + okna równolegle)
     emitState({
       phase: "observing",
       step,
       maxSteps,
-      statusMessage: `Krok ${step}/${maxSteps}: obserwuję ekran i okna…`,
+      statusMessage: `Krok ${step}/${maxSteps}: obserwuję Drzewo OS, ekran i okna…`,
     });
 
-    const [shot, winRes] = await Promise.all([
+    const [shot, winRes, treeRes] = await Promise.all([
       act.captureScreenDetailed(),
       act.listWindows().catch(() => ({ ok: false, windows: [] as { id: string; title: string }[], message: "" })),
+      act.queryUiTree
+        ? act.queryUiTree(60).catch(() => ({ ok: false, nodes: [] as { name: string; role: string; centerX: number; centerY: number; isPassword?: boolean }[], message: "" }))
+        : Promise.resolve({ ok: false, nodes: [] as { name: string; role: string; centerX: number; centerY: number; isPassword?: boolean }[], message: "" }),
     ]);
 
     if (myToken !== runToken) {
@@ -770,8 +784,24 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
       };
     }
 
+    // Weryfikacja zmiany klatki ekranu po poprzedniej akcji (detekcja braku realnego efektu)
+    const curFp = computeFrameFingerprint(shot.data);
+    if (step > 1 && lastFrameFp && curFp === lastFrameFp) {
+      unchangedFrameStreak += 1;
+    } else {
+      unchangedFrameStreak = 0;
+    }
+    lastFrameFp = curFp;
+
     const dataUrl = `data:${shot.mediaType};base64,${shot.data}`;
     const windowTitles = winRes.ok ? winRes.windows.map((w) => w.title) : [];
+    const uiTreeSummary =
+      treeRes.ok && Array.isArray(treeRes.nodes)
+        ? treeRes.nodes
+            .filter((n) => n.name && !n.isPassword)
+            .slice(0, 25)
+            .map((n) => `[${n.role}] ${n.name} (${n.centerX},${n.centerY})`)
+        : [];
     emitState({
       phase: "grounding",
       screenshotDataUrl: dataUrl,
@@ -784,7 +814,7 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
       plan = await planNextOmniStep(
         cleanGoal,
         shot,
-        { windows: windowTitles, history, step, maxSteps },
+        { windows: windowTitles, history, step, maxSteps, uiTreeSummary },
         { askVision: opts.askVision },
       );
     } catch (err) {
@@ -809,23 +839,36 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
       return { ok: false, completed: false, aborted: true, stepsExecuted: history.length, history, text: "⏹ Przerwano.", spokenText: "Przerwano." };
     }
 
-    // Zakończenie lub przekazanie człowiekowi
+    // Zakończenie lub przekazanie człowiekowi (z uczciwą weryfikacją ActionOutcome przez verifyResult)
     if (plan.action === "done") {
       const doneMsg = plan.summary || "Zadanie wykonane na pulpicie.";
+      const verdict = verifySteps.length
+        ? verifyResult({
+            goal: cleanGoal,
+            steps: verifySteps,
+            contradictions: unchangedFrameStreak >= 2 ? ["ekran nie zmienił się po ostatnich akcjach"] : [],
+          })
+        : { complete: true, safeFinalSummary: "Zadanie zakończone bez wymaganych kroków wykonawczych." };
+      const allConfirmed = verdict.complete;
+      const finalText = allConfirmed
+        ? `✅ **OMNI-PILOT ukończył zadanie** (${history.length} kroków): ${doneMsg}`
+        : `⚠️ **OMNI-PILOT zakończył z uwagą weryfikacji** (${history.length} kroków): ${doneMsg} — ${verdict.safeFinalSummary}`;
       emitState({
         active: false,
-        phase: "done",
+        phase: allConfirmed ? "done" : "need_human",
         reticle: null,
-        statusMessage: doneMsg,
-        steps: pushStepLog("done", doneMsg, true),
+        statusMessage: allConfirmed ? doneMsg : verdict.safeFinalSummary,
+        steps: pushStepLog(allConfirmed ? "done" : "need_human", allConfirmed ? doneMsg : verdict.safeFinalSummary, allConfirmed),
       });
       return {
-        ok: true,
-        completed: true,
+        ok: allConfirmed,
+        completed: allConfirmed,
+        verified: allConfirmed,
+        verificationSummary: verdict.safeFinalSummary,
         stepsExecuted: history.length,
         history,
-        text: `✅ **OMNI-PILOT ukończył zadanie** (${history.length} kroków): ${doneMsg}`,
-        spokenText: doneMsg,
+        text: finalText,
+        spokenText: allConfirmed ? doneMsg : `Zakończyłem kroki, ale sprawdź ekran: ${verdict.safeFinalSummary}`,
       };
     }
 
@@ -881,6 +924,7 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
     const riskVerdict = assessDesktopActionRisk(riskSubject, plan.action, plan.risk || "none");
     if (riskVerdict.blocked) {
       const reason = riskVerdict.reason || "Zablokowano przez Desktop RiskGuard.";
+      verifySteps.push({ id: `s${step}`, successCriteria: plan.summary, outcome: outcomeDraft(reason) });
       emitState({
         active: false,
         phase: "blocked",
@@ -913,6 +957,7 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
       }
       if (!approved) {
         const denyMsg = `Anulowano wrażliwy krok: ${plan.summary}`;
+        verifySteps.push({ id: `s${step}`, successCriteria: plan.summary, outcome: outcomeDraft(denyMsg) });
         emitState({
           active: false,
           phase: "blocked",
@@ -952,32 +997,66 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
       let yNorm = plan.yNorm;
       let label = plan.target || plan.summary;
       let confidence = 0.85;
+      let source: "os-tree" | "vision" = "vision";
 
-      if (xNorm !== undefined && yNorm !== undefined) {
-        px = Math.max(0, Math.min(shot.screenWidth - 1, Math.round((xNorm / 1000) * shot.screenWidth)));
-        py = Math.max(0, Math.min(shot.screenHeight - 1, Math.round((yNorm / 1000) * shot.screenHeight)));
-      } else if (plan.target) {
-        const located = await locateVisualTarget(plan.target, shot, { askVision: opts.askVision });
-        if (located.found) {
-          const extraRisk = assessDesktopActionRisk(`${plan.target} ${located.label}`, plan.action, located.risk);
-          if (extraRisk.blocked) {
-            emitState({ active: false, phase: "blocked", statusMessage: extraRisk.reason || "RiskGuard block." });
-            return {
-              ok: false,
-              completed: false,
-              blocked: true,
-              stepsExecuted: history.length,
-              history,
-              text: `🛡️ ${extraRisk.reason || "Zablokowano przez RiskGuard."}`,
-              spokenText: "Zablokowano ze względów bezpieczeństwa.",
-            };
+      // 5a) HYBRYDA: Jeśli planer podał nazwę targetu, sprawdź NAJPIERW Semantyczne Drzewo OS (0 USD, dokładne px + wykrywanie isPassword)
+      if (plan.target) {
+        try {
+          const treeHit = await act.findUiNode(plan.target);
+          if (treeHit?.ok && treeHit.found && treeHit.node && (treeHit.score ?? 1) >= 0.78) {
+            if (treeHit.node.isPassword) {
+              const reason = "RiskGuard (Drzewo OS): wykryto pole hasła — zablokowano kliknięcie.";
+              emitState({ active: false, phase: "blocked", statusMessage: reason });
+              return {
+                ok: false,
+                completed: false,
+                blocked: true,
+                stepsExecuted: history.length,
+                history,
+                text: `🛡️ ${reason}`,
+                spokenText: "Zablokowano kliknięcie pola hasła.",
+              };
+            }
+            px = treeHit.node.centerX;
+            py = treeHit.node.centerY;
+            xNorm = Math.round((px / Math.max(320, shot.screenWidth)) * 1000);
+            yNorm = Math.round((py / Math.max(240, shot.screenHeight)) * 1000);
+            label = treeHit.node.name || label;
+            confidence = treeHit.score ?? 0.94;
+            source = "os-tree";
           }
-          px = located.x;
-          py = located.y;
-          xNorm = located.xNorm;
-          yNorm = located.yNorm;
-          label = located.label || label;
-          confidence = located.confidence;
+        } catch {
+          /* fallback na współrzędne z planera / Vision AI poniżej */
+        }
+      }
+
+      if (px === null || py === null) {
+        if (xNorm !== undefined && yNorm !== undefined) {
+          px = Math.max(0, Math.min(shot.screenWidth - 1, Math.round((xNorm / 1000) * shot.screenWidth)));
+          py = Math.max(0, Math.min(shot.screenHeight - 1, Math.round((yNorm / 1000) * shot.screenHeight)));
+        } else if (plan.target) {
+          const located = await locateVisualTarget(plan.target, shot, { askVision: opts.askVision });
+          if (located.found) {
+            const extraRisk = assessDesktopActionRisk(`${plan.target} ${located.label}`, plan.action, located.risk);
+            if (extraRisk.blocked) {
+              emitState({ active: false, phase: "blocked", statusMessage: extraRisk.reason || "RiskGuard block." });
+              return {
+                ok: false,
+                completed: false,
+                blocked: true,
+                stepsExecuted: history.length,
+                history,
+                text: `🛡️ ${extraRisk.reason || "Zablokowano przez RiskGuard."}`,
+                spokenText: "Zablokowano ze względów bezpieczeństwa.",
+              };
+            }
+            px = located.x;
+            py = located.y;
+            xNorm = located.xNorm;
+            yNorm = located.yNorm;
+            label = located.label || label;
+            confidence = located.confidence;
+          }
         }
       }
 
@@ -995,6 +1074,7 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
             label,
             confidence,
             action: plan.action,
+            source,
           },
         });
         if (plan.action === "move_cursor") {
@@ -1037,6 +1117,12 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
 
     const logLine = `${plan.summary} → ${stepOk ? "OK" : `BŁĄD (${stepOutcome})`}`;
     history.push(logLine);
+    verifySteps.push({
+      id: `s${step}`,
+      successCriteria: plan.summary,
+      outcome: stepOk ? outcomeConfirmed({ source: plan.action, message: stepOutcome }) : outcomeFailed(stepOutcome, plan.action),
+      claimedSuccess: false,
+    });
     recordSystemActionEvent({
       tool: `omni_step_${plan.action}`,
       risk: plan.action === "wait" ? "read" : "outbound",
@@ -1055,7 +1141,10 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
     }
   }
 
-  const limitMsg = `Osiągnięto limit ${maxSteps} kroków — sprawdź stan na ekranie i powiedz, jeśli mam kontynuować.`;
+  const limitVerdict = verifySteps.length
+    ? verifyResult({ goal: cleanGoal, steps: verifySteps })
+    : { complete: false, safeFinalSummary: "Osiągnięto limit kroków." };
+  const limitMsg = `Osiągnięto limit ${maxSteps} kroków — ${limitVerdict.safeFinalSummary}`;
   emitState({
     active: false,
     phase: "need_human",
@@ -1265,6 +1354,17 @@ export async function executeOmniVoiceCommand(
         askVision: opts.askVision,
         onConfirm: opts.onConfirm,
       });
+      if (res.ok && !hudState.active) {
+        emitState({
+          visible: false,
+          phase: "idle",
+          goal: "",
+          statusMessage: "",
+          reticle: null,
+          screenshotDataUrl: null,
+          confirmRequest: null,
+        });
+      }
       recordSystemActionEvent({
         tool: "sentinel_start",
         risk: "outbound",

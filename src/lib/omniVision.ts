@@ -260,13 +260,16 @@ export async function locateVisualTarget(
 export async function planNextOmniStep(
   goal: string,
   shot: DetailedScreenshot,
-  context: { windows: string[]; history: string[]; step: number; maxSteps: number },
+  context: { windows: string[]; history: string[]; step: number; maxSteps: number; uiTreeSummary?: string[] },
   opts: { askVision?: (system: string, prompt: string, img: { data: string; mediaType: string }) => Promise<string> } = {},
 ): Promise<OmniPlanStep> {
   const prompt = [
     `Cel użytkownika: ${goal}`,
     `Krok ${context.step} z ${context.maxSteps}. Ekran: ${shot.screenWidth}x${shot.screenHeight}, kursor: (${shot.cursorX}, ${shot.cursorY}).`,
     context.windows.length ? `Otwarte okna: ${context.windows.slice(0, 12).join(" | ")}` : "",
+    context.uiTreeSummary?.length
+      ? `Semantyczne Drzewo UI (AT-SPI2/UIA — preferuj dokładne nazwy target):\n${context.uiTreeSummary.slice(0, 25).join("\n")}`
+      : "",
     context.history.length ? `Dotychczasowe kroki:\n${context.history.map((h, i) => `${i + 1}. ${h}`).join("\n")}` : "Brak wcześniejszych kroków.",
     "Zwróć następny pojedynczy krok w formacie JSON.",
   ]

@@ -229,13 +229,17 @@ async function linuxDiagnostics(opts = {}) {
     ...(pctl.ok ? {} : { fixHint: "sudo apt install -y playerctl" }),
   });
 
-  // Klawiatura / mysz X11
+  // Klawiatura / mysz (X11 xdotool lub Wayland ydotool — spójne z desktop-doctor.cjs)
   if (sessionType === "wayland") {
+    const ydo = await hasBin("ydotool", ["--help"]);
     items.push({
       id: "x11Input",
-      label: "Automatyzacja klawiatury/myszy",
-      status: "disabled",
-      detail: "Sesja Wayland — xdotool wymaga sesji X11 (bezpiecznie zablokowane).",
+      label: "Automatyzacja klawiatury/myszy (Wayland)",
+      status: ydo.ok ? "available" : "disabled",
+      detail: ydo.ok
+        ? "Sesja Wayland — aktywne sterowanie OMNI-PILOT przez ydotool (xdotool wymaga X11)."
+        : "Sesja Wayland — xdotool wymaga X11; dla OMNI-PILOT na Wayland zainstaluj ydotool.",
+      ...(ydo.ok ? {} : { fixHint: "sudo apt install -y ydotool ydotoold && sudo systemctl enable --now ydotoold" }),
     });
   } else {
     const xdo = await hasBin("xdotool", ["version"]);

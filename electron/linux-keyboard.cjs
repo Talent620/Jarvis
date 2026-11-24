@@ -38,9 +38,16 @@ function parseShortcut(value) {
   return key ? [...mods, key].join("+") : null;
 }
 
+function isX11Session(env) {
+  if (!env || !env.DISPLAY) return false;
+  const st = String(env.XDG_SESSION_TYPE || "").toLowerCase();
+  if (st === "wayland" || env.WAYLAND_DISPLAY) return false;
+  return st === "" || st === "x11";
+}
+
 function createLinuxKeyboard({ env = process.env, run = (args, input) => runXdotool(args, input, env) } = {}) {
   async function target(title) {
-    if (env.XDG_SESSION_TYPE !== "x11" || !env.DISPLAY) return { error: "err:linux-session" };
+    if (!isX11Session(env)) return { error: "err:linux-session" };
     if (typeof title !== "string" || !title.trim() || title.length > 160) return { error: "err:linux-window-required" };
     const id = String(await run(["getactivewindow"])).trim();
     if (!/^\d+$/.test(id)) return { error: "err:linux-no-window" };
@@ -68,7 +75,7 @@ function createLinuxKeyboard({ env = process.env, run = (args, input) => runXdot
     }
   }
   async function activeWindow() {
-    if (env.XDG_SESSION_TYPE !== "x11" || !env.DISPLAY) return { ok: false, error: "err:linux-session" };
+    if (!isX11Session(env)) return { ok: false, error: "err:linux-session" };
     try {
       const id = String(await run(["getactivewindow"])).trim();
       if (!/^\d+$/.test(id)) return { ok: false, error: "err:linux-no-window" };

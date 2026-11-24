@@ -138,9 +138,14 @@ export async function checkForUpdate(): Promise<UpdateInfo | { error: string }> 
     let latestISO = "";
     let verifiedBuild = false;
     const manifest = assets.find((a) => a.name === MANIFEST[p]);
-    if (manifest?.browser_download_url) {
+    const manifestUrl = manifest?.browser_download_url || "";
+    const isGithubDownloadCrossOrigin =
+      typeof window !== "undefined" &&
+      /^https?:$/i.test(window.location?.protocol || "") &&
+      /^https:\/\/github\.com\/[^/]+\/[^/]+\/releases\/download\//i.test(manifestUrl);
+    if (manifestUrl && !isGithubDownloadCrossOrigin) {
       try {
-        const mr = await fetchTimeout(`${manifest.browser_download_url}?t=${Date.now()}`, { headers: { accept: "application/json" } }, 15000);
+        const mr = await fetchTimeout(`${manifestUrl}?t=${Date.now()}`, { headers: { accept: "application/json" } }, 15000);
         const mj = (await mr.json().catch(() => null)) as { iso?: string } | null;
         if (mj?.iso) { latestISO = mj.iso; verifiedBuild = true; }
       } catch {

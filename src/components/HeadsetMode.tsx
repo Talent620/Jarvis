@@ -21,6 +21,7 @@ import { abortOmniPilot, executeOmniVoiceCommand } from "../lib/omniPilot";
 import { stopOmniSentinel } from "../lib/omniSentinel";
 import { stopAllGoals } from "../lib/goalControl";
 import { parseBossMeta } from "../lib/boss";
+import { handleVoiceOrChatGoalCommand } from "../lib/goalVoiceBridge";
 import type { Msg } from "../lib/providers/types";
 
 const LABEL: Record<SmartState, string> = {
@@ -141,6 +142,20 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
           if (!cancelled) cue(omni.ok ? "confirm" : "error");
           return;
         }
+      }
+      // Trwałe cele wieloetapowe (voiceCognition → agentPlanner → goalRuntime) w trybie słuchawek.
+      const goalCmd = await handleVoiceOrChatGoalCommand(clean);
+      if (goalCmd.handled) {
+        const outText = goalCmd.text || "Gotowe.";
+        history.current = [...history.current, { role: "assistant" as const, content: outText }].slice(-16);
+        saveLiveThread(history.current);
+        if (!cancelled) {
+          setCaption(outText);
+          if (goalCmd.spokenText) say([goalCmd.spokenText]);
+        }
+        await chain;
+        if (!cancelled) cue(goalCmd.ok ? "confirm" : "error");
+        return;
       }
       // Persona mowy (krótko, naturalnie, jak człowiek) + pamięć/profil/narzędzia/uczenie się z askJarvis.
       const reply = await askJarvis(

@@ -9,9 +9,10 @@ import { normalizeProactiveBudget } from "./sleepCompute";
 import type { ProactiveBudgetState, Settings } from "../types";
 import type { PersonalityMode } from "./soulModes";
 
-export const JARVIS_VERSION = "4.0.0-apex";
+export const JARVIS_VERSION = "5.0.0-production-rc";
 
 export const JARVIS_MODULES = [
+  "JARVIS AUTOCORE (Centralny router AI, zdrowie dostawców, budżet 100%, discovery, jeden resolver TTS)",
   "Modal Brain (vLLM OpenAI-compatible)",
   "Streaming Polish TTS (ElevenLabs Flash v2.5 / OpenAI / Modal Voice / Gemini / Native fallback)",
   "Protokół Mówionej Polszczyzny (voice_mode + barge-in)",
@@ -20,8 +21,9 @@ export const JARVIS_MODULES = [
   "Rada Ekspertów (Narada — 3 role równolegle Promise.all)",
   "Live Vision (Oczy w terenie — tylna kamera + instrukcja głosowa)",
   "Kolejka Misji w Tle (mission_queue z natychmiastowym potwierdzeniem Refleks)",
+  "Trwałe Cele Wieloetapowe (voiceCognition + agentPlanner + goalRuntime + resultVerifier)",
   "Android Phone Use Agent + RiskGuard (Check-then-Act, zakaz pól haseł)",
-  "OMNI-PILOT & Frontier Desktop Computer Use (Refleks <30ms, Hybryda AT-SPI2/UIA + Vision [0..1000], Dual-Track Strażnik Ekranu, Diagnostyka OS, RiskGuard + Ctrl+Alt+X)",
+  "OMNI-PILOT & Frontier Desktop Computer Use (Refleks <30ms, Hybryda AT-SPI2/UIA + Vision [0..1000], Dual-Track Strażnik Ekranu, Diagnostyka OS, RiskGuard + Kill-Switch Ctrl+Alt+X)",
   "Bi-Temporal Core Memory + MCP Bridge",
 ] as const;
 

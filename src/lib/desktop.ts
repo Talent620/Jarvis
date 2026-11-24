@@ -253,6 +253,7 @@ export function formatPilotError(code?: string): string {
   if (c === "err:linux-xdotool-missing") return "Brak xdotool — zainstaluj: sudo apt install -y xdotool wmctrl.";
   if (c === "err:window-not-found") return "Nie znaleziono otwartego okna pasującego do tej nazwy.";
   if (c === "err:aborted") return "Przerwano sterowanie pulpitem.";
+  if (c === "err:no-window-manager") return "Brak menedżera okien EWMH w tej sesji X11 (np. czysty Xvfb) — okno istnieje, ale system nie obsługuje przełączania fokusu.";
   return linuxInputError(c) || c || "nieznany błąd";
 }
 

@@ -49,14 +49,20 @@ export function OmniPilotHud() {
   if (!state.visible && !sentinelActive) return null;
 
   const isSentinelDecision = sentinel.status === "awaiting_decision" && !!sentinel.hit;
+  const isStalePilotOverSentinel =
+    sentinelActive &&
+    !state.active &&
+    (state.phase === "error" || state.phase === "done" || state.phase === "aborted" || state.phase === "idle");
+  const showPilotBody = state.visible && !isSentinelDecision && !isStalePilotOverSentinel;
+
   const meta = isSentinelDecision
     ? { label: "STRAŻNIK · DECYZJA", tone: "amber" as const }
-    : !state.visible && sentinel.status === "watching"
+    : sentinel.status === "watching" && !state.active
       ? { label: "STRAŻNIK W TLE", tone: "cyan" as const }
       : PHASE_META[state.phase] || PHASE_META.idle;
 
-  const recentSteps = state.visible ? state.steps.slice(-4) : [];
-  const stageShot = isSentinelDecision ? sentinel.hit?.screenshotDataUrl : state.screenshotDataUrl;
+  const recentSteps = showPilotBody ? state.steps.slice(-4) : [];
+  const stageShot = isSentinelDecision ? sentinel.hit?.screenshotDataUrl : showPilotBody ? state.screenshotDataUrl : null;
   const reticle = isSentinelDecision && sentinel.hit
     ? {
         xNorm: sentinel.hit.xNorm,
@@ -65,9 +71,11 @@ export function OmniPilotHud() {
         y: sentinel.hit.y,
         label: sentinel.hit.label,
         confidence: sentinel.hit.confidence,
-        source: "vision" as const,
+        source: sentinel.hit.source || ("vision" as const),
       }
-    : state.reticle;
+    : showPilotBody
+      ? state.reticle
+      : null;
 
   return (
     <aside
@@ -81,7 +89,7 @@ export function OmniPilotHud() {
           <span className={`omni-dot ${state.active || sentinelActive ? "pulse" : ""}`} aria-hidden="true" />
           <span className="omni-brand">OMNI-PILOT</span>
           <span className="omni-badge">{meta.label}</span>
-          {state.visible && state.maxSteps > 1 && (
+          {showPilotBody && state.maxSteps > 1 && (
             <span className="omni-step-pill">
               {state.step}/{state.maxSteps}
             </span>
@@ -128,7 +136,7 @@ export function OmniPilotHud() {
         </div>
       )}
 
-      {state.visible && state.goal && !isSentinelDecision && <div className="omni-goal">{state.goal}</div>}
+      {showPilotBody && state.goal && <div className="omni-goal">{state.goal}</div>}
 
       {stageShot && (
         <div className="omni-stage">

@@ -1,5 +1,6 @@
 import { formatGoalProgress, isGoalProgressRequest } from "./lib/goalProgress";
 import { loadGoalsNewestFirst } from "./lib/goalRuntime";
+import { handleVoiceOrChatGoalCommand } from "./lib/goalVoiceBridge";
 import { Bell, EyeOff, LayoutGrid, Phone, Plus, Settings, ShieldCheck } from "lucide-react";
 import { applyInterfaceCommand } from "./lib/interfaceMode";
 import { lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
@@ -701,6 +702,24 @@ export default function App() {
         ]);
         if (store.settings.speak && omni.spokenText) {
           void speak(omni.spokenText, store.settings).catch(() => {});
+        }
+        return;
+      }
+    }
+
+    // Trwałe cele wieloetapowe (voiceCognition → agentPlanner → goalRuntime): rozpocznij / postęp / pauza / wznów / co dalej.
+    if (!pendingImageRef.current) {
+      const goalCmd = await handleVoiceOrChatGoalCommand(text);
+      if (goalCmd.handled) {
+        const replyId = uid();
+        setLiveId(replyId);
+        setMessages((m) => [
+          ...m,
+          { id: uid(), role: "user", text, createdAt: Date.now() },
+          { id: replyId, role: "assistant", text: goalCmd.text || "Gotowe.", tools: ["goal_runtime"], createdAt: Date.now() },
+        ]);
+        if (store.settings.speak && goalCmd.spokenText) {
+          void speak(goalCmd.spokenText, store.settings).catch(() => {});
         }
         return;
       }

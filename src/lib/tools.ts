@@ -39,7 +39,7 @@ import { callNowList, followUpsDue, followUpMessage, pipelineForecast, openLabel
 import { syncSalesTasks, autoPlanSummary } from "./autoPlan";
 import {
   launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, clickOnPc, activeWindowOnPc,
-  hotkey as desktopHotkey, moveCursorOnPc, mouseActionOnPc, scrollOnPc, listWindowsOnPc, focusWindowOnPc,
+  hotkey as desktopHotkey, moveCursorOnPc, mouseActionOnPc, scrollOnPc, dragOnPc, listWindowsOnPc, focusWindowOnPc,
   queryUiTreeOnPc, diagnoseDesktopOnPc,
 } from "./desktop";
 import { visualLocateAndAct, runOmniAutonomousTask } from "./omniPilot";
@@ -464,6 +464,19 @@ const tools: Tool[] = [
       }, ["direction"]),
     },
     run: async ({ direction, amount }) => (await scrollOnPc(direction || "down", amount ?? 5)).message,
+  },
+  {
+    def: {
+      name: "desktop_drag",
+      description: "OMNI-PILOT (Linux/Windows): przeciągnij element myszą z punktu (x1, y1) do punktu (x2, y2).",
+      input_schema: obj({
+        x1: num("Początkowe X w px"),
+        y1: num("Początkowe Y w px"),
+        x2: num("Docelowe X w px"),
+        y2: num("Docelowe Y w px"),
+      }, ["x1", "y1", "x2", "y2"]),
+    },
+    run: async ({ x1, y1, x2, y2 }) => (await dragOnPc(Number(x1), Number(y1), Number(x2), Number(y2))).message,
   },
   {
     def: {

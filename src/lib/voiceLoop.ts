@@ -16,6 +16,7 @@ import { toast } from "./toast";
 import { parseBossMeta } from "./boss";
 import { formatForSpokenPolish } from "./soulModes";
 import { recordCorrectionLesson } from "./sleepCompute";
+import { handleVoiceOrChatGoalCommand, shortenForVoice } from "./goalVoiceBridge";
 import type { Msg, ProviderId } from "./providers/types";
 import type { Settings } from "../types";
 
@@ -232,6 +233,25 @@ export class ConversationLoop {
           return;
         }
       }
+      // Trwałe cele wieloetapowe (voiceCognition → agentPlanner → goalRuntime) w pętli głosowej.
+      const goalCmd = await handleVoiceOrChatGoalCommand(text);
+      if (goalCmd.handled) {
+        if (this.stallTimer) { clearTimeout(this.stallTimer); this.stallTimer = null; }
+        const outText = goalCmd.text || "Gotowe.";
+        const spoken = goalCmd.spokenText || shortenForVoice(outText);
+        this.history.push({ role: "assistant", content: outText });
+        this.lastReply = spoken;
+        this.onCaption(outText);
+        this.onState("speaking");
+        if (stalled) stopSpeaking();
+        this.bargeIn.beginSpeaking();
+        try {
+          await speak(spoken, { ...store.settings, speak: true, ...this.voiceTune });
+        } finally {
+          this.bargeIn.endSpeaking();
+        }
+        return;
+      }
       let reply = await askJarvis(
         this.history.slice(-12),
         undefined,
@@ -260,7 +280,8 @@ export class ConversationLoop {
       if (notice && announceFallback) toast(notice);
 
       // 🧭 Insight: skalibrowana pewność (mówiona, gdy istotna), predykcja kroku dalej, ślad do czarnej skrzynki.
-      let spoken = formatForSpokenPolish(reply.text, 3) || reply.text;
+      const baseSpoken = formatForSpokenPolish(reply.text, 3) || reply.text;
+      let spoken = baseSpoken.length > 360 ? shortenForVoice(baseSpoken, 360) : baseSpoken;
       if (this.opts.insight) {
         const conf = confidencePct(reply.text, verify);
         const caution = confidencePreface(conf, isRiskyCommand(text));

@@ -8,13 +8,15 @@
 
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 
 const args = process.argv.slice(2);
 const once = args.includes("--once");
 const llmOnAnomaly = args.includes("--llm-on-anomaly");
 const ivIdx = args.indexOf("--interval");
 const intervalSec = ivIdx >= 0 && Number(args[ivIdx + 1]) > 0 ? Number(args[ivIdx + 1]) : 900;
+const outIdx = args.indexOf("--out");
+const customOutPath = (outIdx >= 0 && args[outIdx + 1]) ? args[outIdx + 1] : (process.env.GUARDIAN_HEARTBEAT_PATH || "");
 const root = resolve(import.meta.dirname, "..");
 
 function run(cmd, argv) {
@@ -104,9 +106,11 @@ export async function runCycle() {
     ...(llmDiagnosis ? { llmDiagnosis } : {}),
   };
 
-  const outDir = resolve(root, "project-memory/reports");
-  mkdirSync(outDir, { recursive: true });
-  writeFileSync(resolve(outDir, "guardian-heartbeat.json"), JSON.stringify(report, null, 2) + "\n", "utf8");
+  const targetFile = customOutPath
+    ? resolve(root, customOutPath)
+    : resolve(root, "project-memory/reports/guardian-heartbeat.json");
+  mkdirSync(dirname(targetFile), { recursive: true });
+  writeFileSync(targetFile, JSON.stringify(report, null, 2) + "\n", "utf8");
   return report;
 }
 
