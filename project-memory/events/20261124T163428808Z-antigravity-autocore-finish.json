@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-11-24T16:34:28.808Z",
+  "taskId": "autocore-finish",
+  "agent": "antigravity",
+  "branch": "feat/autocore",
+  "startCommit": "ed8c129",
+  "endCommit": "UNCOMMITTED",
+  "summary": "Domkniecie sciezek pobocznych (TTS/liveVoice/images/memory), ADR-0002 accepted, pelny memory:check PASS, merge feat/autocore -> main",
+  "changedFiles": [
+    "project-memory/CURRENT_STATE.md",
+    "project-memory/decisions/ADR-0002-autocore.md",
+    "project-memory/reports/build.json",
+    "project-memory/reports/guardian-heartbeat.json",
+    "project-memory/reports/lint.json",
+    "project-memory/reports/secret-scan.json",
+    "project-memory/reports/test.json",
+    "roject-memory/CURRENT_STATE.json",
+    "src/lib/images.ts",
+    "src/lib/liveVoice.ts",
+    "src/lib/memory.ts",
+    "src/lib/voice.ts",
+    "tests/autocoreSidePaths.test.ts"
+  ],
+  "commands": [],
+  "testResults": [
+    {
+      "check": "secret-scan",
+      "status": "PASS",
+      "source": "report",
+      "command": "node scripts/secret-scan.mjs --all",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/secret-scan.json",
+      "reportCommit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
+      "reportDigest": "cb543e0dd1aed4a46826a31479e6810165ef9fb0e1d534f9bf14a5f7c0e28dce",
+      "finishedAt": "2026-11-24T16:29:13.805Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto."
+    },
+    {
+      "check": "lint",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/lint.json",
+      "reportCommit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
+      "reportDigest": "1ae592d4c84cd0501ee6654b6833c35b55980a4611d82e48d8a8e4b79b819bc3",
+      "finishedAt": "2026-11-24T16:29:33.352Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu"
+    },
+    {
+      "check": "test",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm test",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/test.json",
+      "reportCommit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
+      "reportDigest": "3b8635263d4309ecb46c184a7a0db429ddc0eacd33932f9ab2d484debe583800",
+      "finishedAt": "2026-11-24T16:33:39.960Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Test Files  359 passed (359) · Tests  3026 passed (3026)"
+    },
+    {
+      "check": "build",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run build",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/build.json",
+      "reportCommit": "ad6686082973e6f7e2403391f7f22ba21ce01c42",
+      "reportDigest": "5ec6d87c864d68588eae3e9b9355ad7d220c25854c1a2183aa1450083283c830",
+      "finishedAt": "2026-11-24T16:34:16.211Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · built in 12.79s"
+    }
+  ],
+  "problems": [],
+  "hypotheses": [],
+  "nextStep": "Weryfikacja APK v5-jarvis-autocore i odswiezenie memory:check --apk",
+  "relatedDecisions": [
+    "ADR-0002"
+  ],
+  "redactions": 0
+}
