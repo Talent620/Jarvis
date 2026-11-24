@@ -4,23 +4,23 @@
   "command": "npm run build",
   "available": true,
   "unavailableReason": null,
-  "startedAt": "2026-11-24T20:27:28.486Z",
-  "finishedAt": "2026-11-24T20:28:08.637Z",
-  "durationMs": 40151,
-  "commit": "67895c23ff55dd53000eda4a1e284fed1b9f8be7",
-  "branch": "feat/omni-pilot",
+  "startedAt": "2026-11-24T20:44:58.294Z",
+  "finishedAt": "2026-11-24T20:45:35.024Z",
+  "durationMs": 36730,
+  "commit": "6df9e801ffb8905223577afdafb8e9834d6f6dff",
+  "branch": "feat/omni-frontier",
   "worktreeDirty": true,
-  "worktreeFingerprint": "c1545f8d1fc519150027cc51b14f4e66d8d7417ecdd5dec267ec5fab9f8ec8e6",
+  "worktreeFingerprint": "de18c60d7f6c7c741382af3afed075198381be00a6955a7da8d31a16da7d7046",
   "exitCode": 0,
   "signal": null,
   "timedOut": false,
   "spawnError": null,
   "summary": {
-    "built": "built in 13.87s"
+    "built": "built in 12.87s"
   },
   "outputTail": [
-    "dist/assets/index-CXnd69B_.js                 970.96 kB │ gzip: 357.14 kB",
-    "✓ built in 13.87s",
+    "dist/assets/index-O26f4cDj.js                 987.72 kB │ gzip: 362.49 kB",
+    "✓ built in 12.87s",
     "npm notice run jarvis-ai-assistant@2.0.0 build",
     "npm notice run tsc -b && vite build",
     "[plugin:vite:reporter] [plugin vite:reporter] ",
@@ -36,7 +36,7 @@
     "[plugin:vite:reporter] [plugin vite:reporter] ",
     "(!) /home/antigravity/Talent620/Jarvis/src/lib/autocore/health.ts is dynamically imported by /home/antigravity/Talent620/Jarvis/src/lib/images.ts but also statically imported by /home/antigravity/Talent620/Jarvis/src/components/AutoCorePanel.tsx, /home/antigravity/Talent620/Jarvis/src/lib/autocore/experiments.ts, /home/antigravity/Talent620/Jarvis/src/lib/autocore/gateway.ts, /home/antigravity/Talent620/Jarvis/src/lib/autocore/router.ts, /home/antigravity/Talent620/Jarvis/src/lib/brain.ts, /home/antigravity/Talent620/Jarvis/src/lib/council.ts, /home/antigravity/Talent620/Jarvis/src/lib/voice.ts, dynamic import will not move module into another chunk.",
     "[plugin:vite:reporter] [plugin vite:reporter] ",
-    "(!) /home/antigravity/Talent620/Jarvis/src/lib/autocore/gateway.ts is dynamically imported by /home/antigravity/Talent620/Jarvis/src/lib/images.ts, /home/antigravity/Talent620/Jarvis/src/lib/liveVoice.ts, /home/antigravity/Talent620/Jarvis/src/lib/localResearchAgent.ts, /home/antigravity/Talent620/Jarvis/src/lib/localResearchAgent.ts, /home/antigravity/Talent620/Jarvis/src/lib/memory.ts, /home/antigravity/Talent620/Jarvis/src/lib/transcribe.ts but also statically imported by /home/antigravity/Talent620/Jarvis/src/components/AutoCorePanel.tsx, /home/antigravity/Talent620/Jarvis/src/lib/brain.ts, /home/antigravity/Talent620/Jarvis/src/lib/council.ts, /home/antigravity/Talent620/Jarvis/src/lib/omniVision.ts, /home/antigravity/Talent620/Jarvis/src/lib/voice.ts, dynamic import will not move module into another chunk.",
+    "(!) /home/antigravity/Talent620/Jarvis/src/lib/autocore/gateway.ts is dynamically imported by /home/antigravity/Talent620/Jarvis/src/lib/images.ts, /home/antigravity/Talent620/Jarvis/src/lib/liveVoice.ts, /home/antigravity/Talent620/Jarvis/src/lib/localResearchAgent.ts, /home/antigravity/Talent620/Jarvis/src/lib/localResearchAgent.ts, /home/antigravity/Talent620/Jarvis/src/lib/memory.ts, /home/antigravity/Talent620/Jarvis/src/lib/transcribe.ts but also statically imported by /home/antigravity/Talent620/Jarvis/src/components/AutoCorePanel.tsx, /home/antigravity/Talent620/Jarvis/src/lib/brain.ts, /home/antigravity/Talent620/Jarvis/src/lib/council.ts, /home/antigravity/Talent620/Jarvis/src/lib/omniSentinel.ts, /home/antigravity/Talent620/Jarvis/src/lib/omniVision.ts, /home/antigravity/Talent620/Jarvis/src/lib/voice.ts, dynamic import will not move module into another chunk.",
     "[plugin:vite:reporter] [plugin vite:reporter] ",
     "(!) /home/antigravity/Talent620/Jarvis/src/lib/voice.ts is dynamically imported by /home/antigravity/Talent620/Jarvis/src/App.tsx, /home/antigravity/Talent620/Jarvis/src/lib/guardian.ts but also statically imported by /home/antigravity/Talent620/Jarvis/src/App.tsx, /home/antigravity/Talent620/Jarvis/src/components/AutoCorePanel.tsx, /home/antigravity/Talent620/Jarvis/src/components/BossMode.tsx, /home/antigravity/Talent620/Jarvis/src/components/Composer.tsx, /home/antigravity/Talent620/Jarvis/src/components/Conversation.tsx, /home/antigravity/Talent620/Jarvis/src/components/Guardian.tsx, /home/antigravity/Talent620/Jarvis/src/components/HeadsetMode.tsx, /home/antigravity/Talent620/Jarvis/src/components/HudVision.tsx, /home/antigravity/Talent620/Jarvis/src/components/Onboarding.tsx, /home/antigravity/Talent620/Jarvis/src/components/PermissionDialog.tsx, /home/antigravity/Talent620/Jarvis/src/components/Settings.tsx, /home/antigravity/Talent620/Jarvis/src/components/Translator.tsx, /home/antigravity/Talent620/Jarvis/src/components/jarvis-ui/NeuralInterface.tsx, /home/antigravity/Talent620/Jarvis/src/hooks/useWatchdog.ts, /home/antigravity/Talent620/Jarvis/src/lib/guardianAgents.ts, /home/antigravity/Talent620/Jarvis/src/lib/healthCheck.ts, /home/antigravity/Talent620/Jarvis/src/lib/selfManifest.ts, /home/antigravity/Talent620/Jarvis/src/lib/smartConversation.ts, /home/antigravity/Talent620/Jarvis/src/lib/voiceLoop.ts, /home/antigravity/Talent620/Jarvis/src/lib/whisperListener.ts, dynamic import will not move module into another chunk.",
     "[plugin:vite:reporter] [plugin vite:reporter] ",
@@ -60,5 +60,5 @@
     "- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks",
     "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit."
   ],
-  "logPath": "project-memory/reports/logs/build-20261124T202728Z.log"
+  "logPath": "project-memory/reports/logs/build-20261124T204458Z.log"
 }

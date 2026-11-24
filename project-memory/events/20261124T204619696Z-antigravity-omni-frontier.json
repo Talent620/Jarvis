@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-11-24T20:46:19.696Z",
+  "taskId": "omni-frontier",
+  "agent": "antigravity",
+  "branch": "feat/omni-frontier",
+  "startCommit": "c8c9234",
+  "endCommit": "UNCOMMITTED",
+  "summary": "Wdrożono JARVIS OMNI-FRONTIER: (1) hybrydowe Drzewo OS Linux AT-SPI2 / Windows UIA (<80ms, 0 USD, synonimy PL/EN, blokada isPassword bez zrzutu) + fallback AutoCore Vision [0..1000]; (2) Dual-Track Strażnik Ekranu w tle (omniSentinel.ts) z pre-filtrem statycznych klatek O(1), równoległą rozmową KUMPEL i decyzjami na HUD; (3) read-only Desktop Doctor + 4 narzędzia AI i ADR-0005.",
+  "changedFiles": [
+    "electron/desktop-doctor.cjs",
+    "electron/main.cjs",
+    "electron/preload.cjs",
+    "electron/ui-tree.cjs",
+    "project-memory/CURRENT_STATE.md",
+    "project-memory/decisions/ADR-0005-omni-frontier.md",
+    "project-memory/reports/build.json",
+    "project-memory/reports/guardian-heartbeat.json",
+    "project-memory/reports/lint.json",
+    "project-memory/reports/secret-scan.json",
+    "project-memory/reports/test.json",
+    "roject-memory/CURRENT_STATE.json",
+    "src/App.tsx",
+    "src/components/OmniPilotHud.tsx",
+    "src/lib/desktop.ts",
+    "src/lib/omniPilot.ts",
+    "src/lib/omniReflex.ts",
+    "src/lib/omniSentinel.ts",
+    "src/lib/permissions.ts",
+    "src/lib/selfManifest.ts",
+    "src/lib/toolSelector.ts",
+    "src/lib/tools.ts",
+    "src/styles/index.css",
+    "tests/omniFrontier.test.ts",
+    "tests/omniPilotHud.test.ts"
+  ],
+  "commands": [
+    {
+      "command": "npm run memory:check",
+      "exitCode": 0
+    }
+  ],
+  "testResults": [
+    {
+      "check": "secret-scan",
+      "status": "PASS",
+      "source": "report",
+      "command": "node scripts/secret-scan.mjs --all",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/secret-scan.json",
+      "reportCommit": "6df9e801ffb8905223577afdafb8e9834d6f6dff",
+      "reportDigest": "46fb491b1a9bf246c1acf9e70563611d980c8d023acac6d2f18b52c75d5db4af",
+      "finishedAt": "2026-11-24T20:40:19.624Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto."
+    },
+    {
+      "check": "lint",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/lint.json",
+      "reportCommit": "6df9e801ffb8905223577afdafb8e9834d6f6dff",
+      "reportDigest": "5fe5ebce14d520f25f5a35fcfd8e0e039d0d8f6aedf9a5b1ad44b23244b1cf83",
+      "finishedAt": "2026-11-24T20:40:39.808Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu"
+    },
+    {
+      "check": "test",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm test",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/test.json",
+      "reportCommit": "6df9e801ffb8905223577afdafb8e9834d6f6dff",
+      "reportDigest": "52987b488c18ad69a70f4152b17b15c961c278a67ab8cbe7bec993d1d2e36d21",
+      "finishedAt": "2026-11-24T20:44:58.245Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Test Files  366 passed (366) · Tests  3093 passed (3093)"
+    },
+    {
+      "check": "build",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run build",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/build.json",
+      "reportCommit": "6df9e801ffb8905223577afdafb8e9834d6f6dff",
+      "reportDigest": "821fdae430a7290d8a3d322c9f8fbcabe1ed7d76276f6189d9bce9af553fba0e",
+      "finishedAt": "2026-11-24T20:45:35.024Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · built in 12.87s"
+    }
+  ],
+  "problems": [],
+  "hypotheses": [
+    "Odczyt drzewa AT-SPI2 / Windows UIA na żywym ekranie pozostaje UNKNOWN do testu na komputerze z serwerem graficznym (VM bezgłowa)."
+  ],
+  "nextStep": "Recenzja PR feat/omni-frontier (ADR-0003/0004/0005) i test na żywym pulpicie Linux/Windows; następnie merge do main + build Linux/Windows/APK lub lokalny daemon audio <300ms.",
+  "relatedDecisions": [
+    "ADR-0005"
+  ],
+  "redactions": 0
+}
