@@ -91,3 +91,9 @@ Nie twórz nowego backlogu ani roadmapy. Nowe otwarte sprawy dopisuj do istniej�
 - Kanoniczne źródło: `origin` = `https://github.com/Talent620/Jarvis.git` (GitHub, HTTPS). Rzeczywisty stan zdalnych
   i rozbieżność ahead/behind: sekcja `repository` w `CURRENT_STATE.json` (liczona z gita, nie zakładana).
 - Artefakty: APK z GitHub Actions (`android-v2.yml`) → GitHub Releases. Status: `node scripts/sync-project-state.mjs --apk`.
+
+## 9. Role multi-agent i blokady współbieżności
+- Role w zespole (Antigravity / Codex / Claude / człowiek): **architekt** (ADR, kontrakty), **programista** (implementacja na izolowanej gałęzi), **audytor** (bezpieczeństwo, brak sekretów, zgodność zasad), **tester** (testy, mutacje, weryfikacja), **analityk** (koszty, telemetry, regresje), **badacz** (dokumentacja źródłowa, eksperymenty `exp/…`).
+- **Niezależna recenzja:** autor zmiany nie może być jej jedynym recenzentem.
+- **Zdalna blokada zadań:** przed pracą równoległą nad wspólnym obszarem zajmij blokadę `node scripts/agent-lock.mjs claim <zadanie> --agent <kto>`, a po zakończeniu zwolnij (`release`). Konflikt na `CURRENT_STATE.*` rozwiązuj wyłącznie przez `npm run memory:sync`.
+
