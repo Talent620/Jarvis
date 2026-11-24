@@ -11,7 +11,7 @@ on:
       release_tag:
         description: "Tag GitHub Release dla podpisanego APK"
         required: false
-        default: "v4-jarvis-apex-signed"
+        default: "v4-jarvis-apex-fresh"
   push:
     paths:
       - ".github/workflows/android-v2.yml"
@@ -58,13 +58,14 @@ jobs:
           npm run build
           npx cap sync android
 
-      # Tożsamość v2 — TYLKO w runnerze (po cap sync). Inny applicationId = osobna instalacja.
-      - name: Nadaj tożsamość v2 (appId + nazwa)
+      # Osobna tożsamość v4 (net.serwer256.jarvis.v4 / JARVIS Apex) — ZERO konfliktu podpisu ze starym JARVIS / JARVIS v2.
+      - name: Nadaj tożsamość v4 (appId + nazwa)
         run: |
-          sed -i 's/applicationId "net.serwer256.jarvis"/applicationId "net.serwer256.jarvis.v2"/' android/app/build.gradle
-          sed -i 's#<string name="app_name">JARVIS</string>#<string name="app_name">JARVIS v2</string>#' android/app/src/main/res/values/strings.xml
-          sed -i 's#<string name="title_activity_main">JARVIS</string>#<string name="title_activity_main">JARVIS v2</string>#' android/app/src/main/res/values/strings.xml
-          echo "appId/app_name ustawione na v2:"; grep -E "applicationId|versionCode" android/app/build.gradle
+          sed -i 's/applicationId "net.serwer256.jarvis"/applicationId "net.serwer256.jarvis.v4"/' android/app/build.gradle
+          sed -i 's/android:targetPackage="net.serwer256.jarvis"/android:targetPackage="net.serwer256.jarvis.v4"/g' android/app/src/main/res/xml/shortcuts.xml
+          sed -i 's#<string name="app_name">JARVIS</string>#<string name="app_name">JARVIS Apex</string>#' android/app/src/main/res/values/strings.xml
+          sed -i 's#<string name="title_activity_main">JARVIS</string>#<string name="title_activity_main">JARVIS Apex</string>#' android/app/src/main/res/values/strings.xml
+          echo "appId/app_name ustawione na v4:"; grep -E "applicationId|versionCode" android/app/build.gradle
 
       - name: Build unsigned release APK
         working-directory: android
@@ -93,7 +94,7 @@ jobs:
           KEYSTORE="$RUNNER_TEMP/jarvis-v2-release.jks"
           UNSIGNED_APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
           ALIGNED_APK="$RUNNER_TEMP/jarvis-aligned.apk"
-          FINAL_APK="jarvis-v4-apex-signed.apk"
+          FINAL_APK="jarvis-apex-v4.apk"
 
           if [ ! -f "$UNSIGNED_APK" ]; then
             echo "::error::Nie znaleziono $UNSIGNED_APK"
@@ -139,20 +140,20 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: jarvis-v4-apex-signed-apk
-          path: jarvis-v4-apex-signed.apk
+          name: jarvis-apex-v4-apk
+          path: jarvis-apex-v4.apk
           if-no-files-found: error
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.release_tag || 'v4-jarvis-apex-signed' }}
-          name: JARVIS v4 Apex Signed (V2+V3, bez klucza licencyjnego)
+          tag_name: ${{ inputs.release_tag || 'v4-jarvis-apex-fresh' }}
+          name: JARVIS Apex v4 (osobny pakiet, V2+V3, bez klucza)
           body: |
-            Podpisany stałym, prywatnym kluczem release (RSA 2048, schematy **V1 + V2 + V3**, wyrównany `zipalign -p -f 4`, zweryfikowany `apksigner verify --verbose`) build **JARVIS v4 Apex** (`net.serwer256.jarvis.v2`, `JARVIS_LICENSE_REQUIRED=false`).
+            Niezależny pakiet **JARVIS Apex** (`net.serwer256.jarvis.v4`, `JARVIS_LICENSE_REQUIRED=false`) — instaluje się obok starszego JARVIS / JARVIS v2 bez żadnego konfliktu podpisu ani odinstalowywania.
+            Podpisany stałym, prywatnym kluczem release (RSA 2048, schematy **V1 + V2 + V3**, `zipalign -p -f 4`, `apksigner verify: OK`).
 
             - **Commit:** `${{ github.sha }}`
-            - **SHA-256 (`jarvis-v4-apex-signed.apk`):** `${{ env.APK_SHA256 }}`
-            - *Uwaga przy pierwszej instalacji:* jeśli na telefonie jest stara wersja `JARVIS v2` podpisana starym lub tymczasowym kluczem debug, odinstaluj ją raz przed instalacją tego APK; wszystkie kolejne aktualizacje będą się instalować bezpośrednio na nią.
-          files: jarvis-v4-apex-signed.apk
+            - **SHA-256 (`jarvis-apex-v4.apk`):** `${{ env.APK_SHA256 }}`
+          files: jarvis-apex-v4.apk
           make_latest: false
