@@ -1,0 +1,77 @@
+name: Deploy JARVIS on Modal
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_voice:
+        description: "Wdróż również deploy/modal_voice.py (STT + TTS)"
+        required: false
+        type: boolean
+        default: true
+      deploy_sleep:
+        description: "Wdróż również deploy/modal_sleep.py (Nocny Sen Cron)"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  deploy-modal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Modal CLI
+        run: python -m pip install --upgrade pip modal
+
+      - name: Authenticate Modal & sync jarvis-vllm secret
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          VLLM_API_KEY: ${{ secrets.VLLM_API_KEY }}
+        run: |
+          if [ -z "$MODAL_TOKEN_ID" ] || [ -z "$MODAL_TOKEN_SECRET" ]; then
+            echo "::error::Brak sekretów MODAL_TOKEN_ID lub MODAL_TOKEN_SECRET w GitHub Secrets."
+            exit 1
+          fi
+          if [ -z "$VLLM_API_KEY" ]; then
+            echo "::error::Brak sekretu VLLM_API_KEY w GitHub Secrets."
+            exit 1
+          fi
+          modal secret create --force jarvis-vllm "VLLM_API_KEY=${VLLM_API_KEY}"
+
+      - name: Deploy Modal Brain (vLLM)
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: modal deploy deploy/modal_brain.py
+
+      - name: Deploy Modal Sleep (optional)
+        if: ${{ inputs.deploy_sleep != false }}
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          if [ -f deploy/modal_sleep.py ]; then
+            modal deploy deploy/modal_sleep.py
+          fi
+
+      - name: Deploy Modal Voice (optional)
+        if: ${{ inputs.deploy_voice != false }}
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          if [ -f deploy/modal_voice.py ]; then
+            modal deploy deploy/modal_voice.py
+          fi
+
+      - name: List deployed Modal apps
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: modal app list
