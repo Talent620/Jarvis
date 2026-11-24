@@ -220,12 +220,15 @@ function createDesktopPilot(deps = {}) {
       return r.ok ? { ok: true, action } : { ok: false, error: r.code === "ENOENT" ? "err:linux-xdotool-missing" : `err:${r.code}` };
     }
     if (platform === "win32") {
-      const flags =
-        action === "right" ? "0x08,0,0,0,0); [M]::mouse_event(0x10,0,0,0,0)"
-          : action === "middle" ? "0x20,0,0,0,0); [M]::mouse_event(0x40,0,0,0,0)"
-            : action === "double" ? "0x02,0,0,0,0); [M]::mouse_event(0x04,0,0,0,0); Start-Sleep -Milliseconds 60; [M]::mouse_event(0x02,0,0,0,0); [M]::mouse_event(0x04,0,0,0,0)"
-              : "0x02,0,0,0,0); [M]::mouse_event(0x04,0,0,0,0)";
-      const ps = `Add-Type -Name M -Namespace J -MemberDefinition '[DllImport("user32.dll")]public static extern void mouse_event(int f,int x,int y,int d,int e);'; [J.M]::mouse_event(${flags}`;
+      const seq =
+        action === "right"
+          ? "[J.M]::mouse_event(0x08,0,0,0,0); [J.M]::mouse_event(0x10,0,0,0,0)"
+          : action === "middle"
+            ? "[J.M]::mouse_event(0x20,0,0,0,0); [J.M]::mouse_event(0x40,0,0,0,0)"
+            : action === "double"
+              ? "[J.M]::mouse_event(0x02,0,0,0,0); [J.M]::mouse_event(0x04,0,0,0,0); Start-Sleep -Milliseconds 60; [J.M]::mouse_event(0x02,0,0,0,0); [J.M]::mouse_event(0x04,0,0,0,0)"
+              : "[J.M]::mouse_event(0x02,0,0,0,0); [J.M]::mouse_event(0x04,0,0,0,0)";
+      const ps = `Add-Type -Name M -Namespace J -MemberDefinition '[DllImport("user32.dll")]public static extern void mouse_event(int f,int x,int y,int d,int e);'; ${seq}`;
       const r = await run("powershell", ["-NoProfile", "-Command", ps], { env });
       return r.ok ? { ok: true, action } : { ok: false, error: `err:${r.code}` };
     }
@@ -249,8 +252,10 @@ function createDesktopPilot(deps = {}) {
       return r.ok ? { ok: true, direction: dir, amount } : { ok: false, error: r.code === "ENOENT" ? "err:linux-xdotool-missing" : `err:${r.code}` };
     }
     if (platform === "win32") {
-      const wheel = (dir === "up" ? 120 : -120) * amount;
-      const ps = `Add-Type -Name M -Namespace J -MemberDefinition '[DllImport("user32.dll")]public static extern void mouse_event(int f,int x,int y,int d,int e);'; [J.M]::mouse_event(0x0800,0,0,${wheel},0)`;
+      const horiz = dir === "left" || dir === "right";
+      const flag = horiz ? "0x01000" : "0x0800";
+      const wheel = (dir === "up" || dir === "right" ? 120 : -120) * amount;
+      const ps = `Add-Type -Name M -Namespace J -MemberDefinition '[DllImport("user32.dll")]public static extern void mouse_event(int f,int x,int y,int d,int e);'; [J.M]::mouse_event(${flag},0,0,${wheel},0)`;
       const r = await run("powershell", ["-NoProfile", "-Command", ps], { env });
       return r.ok ? { ok: true, direction: dir, amount } : { ok: false, error: `err:${r.code}` };
     }
@@ -367,7 +372,11 @@ function createDesktopPilot(deps = {}) {
       }
       await sleep(120);
       try { if (clipboard.writeText) clipboard.writeText(prev); } catch { /* ignore */ }
-      return pasteRes.ok ? { ok: true, chars: s.length } : { ok: false, error: `err:${pasteRes.code}` };
+      if (pasteRes.ok) return { ok: true, chars: s.length };
+      if (platform === "linux" && pasteRes.code === "ENOENT") {
+        return { ok: false, error: isWayland() ? "err:wayland-ydotool-missing" : "err:linux-xdotool-missing" };
+      }
+      return { ok: false, error: `err:${pasteRes.code}` };
     }
     if (platform === "linux" && !isWayland()) {
       const r = await run("xdotool", ["type", "--clearmodifiers", "--delay", "12", "--", s], { env });
@@ -404,12 +413,15 @@ function createDesktopPilot(deps = {}) {
         .replace("ctrl+", "^")
         .replace("alt+", "%")
         .replace("shift+", "+")
-        .replace("enter", "{ENTER}")
-        .replace("escape", "{ESC}")
-        .replace("tab", "{TAB}")
-        .replace("backspace", "{BACKSPACE}")
-        .replace("f5", "{F5}")
-        .replace("f11", "{F11}");
+        .replace(/\benter\b/, "{ENTER}")
+        .replace(/\bescape\b/, "{ESC}")
+        .replace(/\btab\b/, "{TAB}")
+        .replace(/\bspace\b/, " ")
+        .replace(/\bbackspace\b/, "{BACKSPACE}")
+        .replace(/\bleft\b/, "{LEFT}")
+        .replace(/\bright\b/, "{RIGHT}")
+        .replace(/\bf5\b/, "{F5}")
+        .replace(/\bf11\b/, "{F11}");
       const ps = `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${sk}')`;
       const r = await run("powershell", ["-NoProfile", "-Command", ps], { env });
       return r.ok ? { ok: true, combo: c } : { ok: false, error: `err:${r.code}` };

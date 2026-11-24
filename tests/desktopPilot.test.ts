@@ -104,4 +104,28 @@ describe("OMNI-PILOT OS Actuator (electron/desktop-pilot.cjs)", () => {
     const res = await pilot.moveCursor({ mode: "absolute", x: 100, y: 100, smooth: false });
     expect(res).toEqual({ ok: false, error: "err:wayland-ydotool-missing" });
   });
+
+  it("na Windowsie (win32) generuje poprawny PowerShell [J.M]::mouse_event, scroll pionowy/poziomy i SendKeys", async () => {
+    const scripts: string[] = [];
+    const run = async (_cmd: string, args: string[]) => {
+      scripts.push(args[args.length - 1]);
+      return { ok: true, code: 0, stdout: "", stderr: "" };
+    };
+    const pilot = createDesktopPilot({
+      platform: "win32",
+      env: {},
+      run,
+      sleep: async () => {},
+    });
+
+    expect((await pilot.mouseAction({ action: "double" })).ok).toBe(true);
+    expect(scripts[0]).toContain("[J.M]::mouse_event(0x02,0,0,0,0)");
+    expect(scripts[0]).not.toContain("[M]::mouse_event");
+
+    expect((await pilot.scroll({ direction: "right", amount: 3 })).ok).toBe(true);
+    expect(scripts[1]).toContain("[J.M]::mouse_event(0x01000,0,0,360,0)");
+
+    expect((await pilot.globalHotkey("alt+left")).ok).toBe(true);
+    expect(scripts[2]).toContain("SendWait('%{LEFT}')");
+  });
 });

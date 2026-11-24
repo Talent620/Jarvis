@@ -662,17 +662,32 @@ function registerDesktopControl() {
   });
 
   // === JARVIS OMNI-PILOT (płynny kursor, mysz, przewijanie, drag, okna, UTF-8, szczegółowy zrzut ekranu) ===
+  const getPrimaryPhysicalSize = () => {
+    try {
+      const d = screen.getPrimaryDisplay();
+      const sf = Number(d.scaleFactor) || 1;
+      return {
+        width: Math.round((d.bounds.width || d.size.width || 1920) * sf),
+        height: Math.round((d.bounds.height || d.size.height || 1080) * sf),
+        scaleFactor: sf,
+      };
+    } catch {
+      return { width: 1920, height: 1080, scaleFactor: 1 };
+    }
+  };
   const pilot = createDesktopPilot({
     getScreenSize: () => {
-      try {
-        const d = screen.getPrimaryDisplay();
-        return { width: d.bounds.width || d.size.width || 1920, height: d.bounds.height || d.size.height || 1080 };
-      } catch {
-        return { width: 1920, height: 1080 };
-      }
+      const sz = getPrimaryPhysicalSize();
+      return { width: sz.width, height: sz.height };
     },
     getCursorPoint: () => {
-      try { return screen.getCursorScreenPoint(); } catch { return null; }
+      try {
+        const sf = getPrimaryPhysicalSize().scaleFactor;
+        const pt = screen.getCursorScreenPoint();
+        return { x: Math.round(pt.x * sf), y: Math.round(pt.y * sf) };
+      } catch {
+        return null;
+      }
     },
     clipboard,
   });
@@ -721,9 +736,9 @@ function registerDesktopControl() {
   ipcMain.handle("jarvis:screenshot-detailed", async (event) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
     try {
-      const d = screen.getPrimaryDisplay();
-      const screenWidth = d.bounds.width || d.size.width || 1920;
-      const screenHeight = d.bounds.height || d.size.height || 1080;
+      const sz = getPrimaryPhysicalSize();
+      const screenWidth = sz.width;
+      const screenHeight = sz.height;
       const maxW = 1440;
       const scale = Math.min(1, maxW / screenWidth);
       const width = Math.round(screenWidth * scale);
