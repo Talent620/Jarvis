@@ -37,7 +37,11 @@ import { openSalesOs, syncFromSalesOs, salesOsStatsText, pushLeadsToSalesOs, sal
 import { buildDossier, auditWeakPoints } from "./leadIntel";
 import { callNowList, followUpsDue, followUpMessage, pipelineForecast, openLabel } from "./salesEngine";
 import { syncSalesTasks, autoPlanSummary } from "./autoPlan";
-import { launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, clickOnPc, activeWindowOnPc, hotkey as desktopHotkey } from "./desktop";
+import {
+  launchApp, openOnPc, powerPc, volumePc, mediaPc, typeText, clickOnPc, activeWindowOnPc,
+  hotkey as desktopHotkey, moveCursorOnPc, mouseActionOnPc, scrollOnPc, listWindowsOnPc, focusWindowOnPc,
+} from "./desktop";
+import { visualLocateAndAct, runOmniAutonomousTask } from "./omniPilot";
 import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
 import { primaryKey } from "./keys";
 import { exportData } from "./backup";
@@ -418,6 +422,95 @@ const tools: Tool[] = [
       input_schema: obj({ combo: str("Skrót, np. ctrl+s"), window: str("Fragment tytułu okna (opcjonalnie)") }, ["combo"]),
     },
     run: ({ combo, window }) => desktopHotkey(combo, window),
+  },
+  {
+    def: {
+      name: "desktop_cursor_move",
+      description:
+        "OMNI-PILOT (Linux/Windows): płynnie przesuń kursor myszy — względnie (mode='relative', dx/dy), absolutnie (mode='absolute', x/y) lub do nazwanego punktu (mode='named', preset='center|top-left|top-right|bottom-left|bottom-right|topbar|dock').",
+      input_schema: obj({
+        mode: { type: "string", enum: ["relative", "absolute", "named"], description: "Tryb ruchu kursora" },
+        dx: num("Przesunięcie poziome w px (dla relative)"),
+        dy: num("Przesunięcie pionowe w px (dla relative)"),
+        x: num("Docelowe X w px (dla absolute)"),
+        y: num("Docelowe Y w px (dla absolute)"),
+        preset: str("Nazwany punkt: center, top-left, top-right, bottom-left, bottom-right, topbar, dock"),
+      }),
+    },
+    run: async (input) => (await moveCursorOnPc(input || {})).message,
+  },
+  {
+    def: {
+      name: "desktop_mouse_action",
+      description:
+        "OMNI-PILOT (Linux/Windows): wykonaj akcję myszy (click, double, right, middle) w bieżącym punkcie albo po płynnym najechaniu na współrzędne (x, y).",
+      input_schema: obj({
+        action: { type: "string", enum: ["click", "double", "right", "middle"], description: "Typ kliknięcia" },
+        x: num("Opcjonalne docelowe X w px"),
+        y: num("Opcjonalne docelowe Y w px"),
+      }, ["action"]),
+    },
+    run: async (input) => (await mouseActionOnPc(input || {})).message,
+  },
+  {
+    def: {
+      name: "desktop_scroll",
+      description: "OMNI-PILOT (Linux/Windows): przewiń zawartość pod kursorem w górę, w dół, w lewo lub w prawo.",
+      input_schema: obj({
+        direction: { type: "string", enum: ["up", "down", "left", "right"], description: "Kierunek przewijania" },
+        amount: num("Liczba kroków (domyślnie 5)"),
+      }, ["direction"]),
+    },
+    run: async ({ direction, amount }) => (await scrollOnPc(direction || "down", amount ?? 5)).message,
+  },
+  {
+    def: {
+      name: "desktop_windows_list",
+      description: "OMNI-PILOT (Linux/Windows): pobierz listę aktualnie otwartych okien na pulpicie.",
+      input_schema: obj({}),
+    },
+    run: async () => (await listWindowsOnPc()).message,
+  },
+  {
+    def: {
+      name: "desktop_window_focus",
+      description: "OMNI-PILOT (Linux/Windows): przełącz fokus na otwarte okno pasujące do podanego fragmentu tytułu (np. 'Firefox', 'VS Code').",
+      input_schema: obj({ query: str("Fragment nazwy okna") }, ["query"]),
+    },
+    run: async ({ query }) => (await focusWindowOnPc(query || "")).message,
+  },
+  {
+    def: {
+      name: "desktop_visual_locate",
+      description:
+        "OMNI-PILOT Visual Grounding (tylko odczyt): zrób zrzut ekranu, namierz wizyjnie element (ikona, przycisk, zakładka, pole) i wskaż go na podglądzie HUD bez klikania.",
+      input_schema: obj({ target: str("Opis elementu na ekranie, np. 'ikona Firefox' lub 'przycisk Zapisz'") }, ["target"]),
+    },
+    run: async ({ target }) => (await visualLocateAndAct(target || "", "locate")).text,
+  },
+  {
+    def: {
+      name: "desktop_visual_act",
+      description:
+        "OMNI-PILOT Visual Grounding + RiskGuard: namierz element na ekranie po opisie i płynnie najedź (move) albo kliknij (click/double/right). Hasła i 2FA są twardo zablokowane; płatności i wysyłki wymagają potwierdzenia.",
+      input_schema: obj({
+        target: str("Opis elementu na ekranie"),
+        action: { type: "string", enum: ["move", "click", "double", "right"], description: "Akcja po namierzeniu" },
+      }, ["target", "action"]),
+    },
+    run: async ({ target, action }) => (await visualLocateAndAct(target || "", action || "move")).text,
+  },
+  {
+    def: {
+      name: "desktop_omni_task",
+      description:
+        "OMNI-PILOT Autopilot (Obserwuj → Zaplanuj → RiskGuard → Wykonaj → Zweryfikuj): wykonaj wielokrokowe zadanie na pulpicie użytkownika z podglądem HUD i awaryjnym Kill-Switchem Ctrl+Alt+X.",
+      input_schema: obj({
+        goal: str("Konkretny cel do wykonania na komputerze"),
+        maxSteps: num("Maksymalna liczba kroków (1-12, domyślnie 6)"),
+      }, ["goal"]),
+    },
+    run: async ({ goal, maxSteps }) => (await runOmniAutonomousTask(goal || "", { maxSteps })).text,
   },
   {
     def: {

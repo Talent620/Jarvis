@@ -10,11 +10,15 @@ const OPERATOR_SAFE_OUTBOUND = new Set([
   "navigate_to", "open_service", "open_url", "smart_home", "run_scene",
   "android_open_app", "android_open_settings", "android_scroll", "android_back", "android_global",
   "desktop_launch_app", "desktop_open", "desktop_volume", "desktop_media",
+  "desktop_cursor_move", "desktop_scroll", "desktop_windows_list", "desktop_window_focus",
 ]);
 
 // Narzędzia interakcji UI, które w trybie OPERATOR przechodzą TYLKO jeśli RiskGuard potwierdzi brak
 // ryzyka (isPassword / money / security / delete / send). W przeciwnym razie twarda blokada lub zgoda.
-const OPERATOR_UI_CHECKED = new Set(["android_tap_id", "android_tap", "android_type"]);
+const OPERATOR_UI_CHECKED = new Set([
+  "android_tap_id", "android_tap", "android_type",
+  "desktop_mouse_action", "desktop_visual_act",
+]);
 
 // Twarde akcje krytyczne: wysyłka na zewnątrz, dzwonienie, usuwanie/destrukcja, płatności, system.
 // NIGDY nie są auto-zatwierdzane przez tryb OPERATOR.
@@ -131,10 +135,14 @@ const RISK: Record<string, Risk> = {
   make_call: "outbound", send_sms: "outbound", smart_home: "outbound", run_scene: "outbound",
   open_service: "outbound", navigate_to: "outbound", call_contact: "outbound", text_contact: "outbound",
   open_url: "outbound",
-  // sterowanie komputerem (Windows) — wymaga zgody
+  // sterowanie komputerem (Linux/Windows) — wymaga zgody lub profilu OPERATOR + RiskGuard
   desktop_launch_app: "outbound", desktop_open: "outbound", desktop_power: "outbound",
   desktop_volume: "outbound", desktop_media: "outbound", desktop_type: "outbound", desktop_hotkey: "outbound",
   desktop_click: "outbound", desktop_active_window: "outbound", system_browser_read_public: "outbound",
+  // OMNI-PILOT (płynny kursor, okna, wizyjne namierzanie, autopilot pulpitu)
+  desktop_windows_list: "read", desktop_visual_locate: "read",
+  desktop_cursor_move: "outbound", desktop_mouse_action: "outbound", desktop_scroll: "outbound",
+  desktop_window_focus: "outbound", desktop_visual_act: "outbound", desktop_omni_task: "outbound",
   // pełne sterowanie telefonem (Android, usługa Dostępności + RiskGuard)
   android_ui_tree: "read",
   android_tap_id: "outbound", android_scroll: "outbound", android_back: "outbound",

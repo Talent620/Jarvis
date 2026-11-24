@@ -121,6 +121,8 @@ import { currentBrainMode } from "./lib/brainMode";
 import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, checkPinnedVoice, setVoiceUnavailableHandler, type VoiceListener, type VoiceUnavailableInfo } from "./lib/voice";
 import { capturePhoto, readImageFile } from "./lib/camera";
 import { captureScreen, desktop, isDesktop, watchClipboard } from "./lib/desktop";
+import { abortOmniPilot, executeOmniVoiceCommand } from "./lib/omniPilot";
+import { OmniPilotHud } from "./components/OmniPilotHud";
 import ScreenBoundary from "./components/ScreenBoundary";
 import { getWeather } from "./lib/weather";
 import { buildChiefBriefing, formatBriefing } from "./lib/chiefOfStaff";
@@ -684,6 +686,24 @@ export default function App() {
         setBusy(false);
       }
       return;
+    }
+
+    // OMNI-PILOT (desktop Linux/Windows): sub-30ms Refleks Głosowy kursora/myszy/okien + Visual Grounding + Autopilot.
+    if (isDesktop() && !pendingImageRef.current) {
+      const omni = await executeOmniVoiceCommand(text);
+      if (omni.handled) {
+        const replyId = uid();
+        setLiveId(replyId);
+        setMessages((m) => [
+          ...m,
+          { id: uid(), role: "user", text, createdAt: Date.now() },
+          { id: replyId, role: "assistant", text: omni.text || "Gotowe.", tools: ["omni_pilot"], createdAt: Date.now() },
+        ]);
+        if (store.settings.speak && omni.spokenText) {
+          void speak(omni.spokenText, store.settings).catch(() => {});
+        }
+        return;
+      }
     }
 
     // Komenda głosowa „popatrz na to [pytanie]” → Live Vision (tylna kamera + krótka instrukcja głosowa).
@@ -1364,9 +1384,14 @@ export default function App() {
       setShowVoice(true);
     });
     const offVoice = (window as any).jarvisDesktop?.onVoiceMode?.(() => setShowVoice((v: boolean) => !v));
+    const offOmniAbort = (window as any).jarvisDesktop?.onOmniAbort?.(() => {
+      abortOmniPilot();
+      toast("⏹ OMNI-PILOT zatrzymany awaryjnie (Ctrl+Alt+X)");
+    });
     return () => {
       stop();
       offVoice?.();
+      offOmniAbort?.();
     };
   }, []);
 
@@ -2127,6 +2152,7 @@ export default function App() {
           <HudVision onClose={() => setShowHud(false)} />
         </ScreenBoundary>
       )}
+      <OmniPilotHud />
       {pendingConsent && (
         <PermissionDialog
           req={pendingConsent.req}
