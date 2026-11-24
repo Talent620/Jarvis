@@ -76,6 +76,9 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   pilotHotkey: (combo) => ipcRenderer.invoke("jarvis:pilot-hotkey", String(combo || "")),
   pilotAbort: () => ipcRenderer.invoke("jarvis:pilot-abort"),
   screenshotDetailed: () => ipcRenderer.invoke("jarvis:screenshot-detailed"),
+  pilotUiTree: (maxNodes) => ipcRenderer.invoke("jarvis:pilot-ui-tree", maxNodes),
+  pilotUiFind: (query) => ipcRenderer.invoke("jarvis:pilot-ui-find", String(query || "")),
+  desktopDiagnose: () => ipcRenderer.invoke("jarvis:desktop-diagnose"),
   onOmniAbort: (cb) => {
     const listener = () => cb();
     ipcRenderer.on("jarvis:omni-abort", listener);

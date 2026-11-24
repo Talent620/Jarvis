@@ -8,6 +8,8 @@ const { launchLinux } = require("./launch-app.cjs");
 const { createLinuxKeyboard } = require("./linux-keyboard.cjs");
 const { linuxPower, linuxVolume, linuxMedia, detectLinuxGpu, readLinuxDistro, linuxDiagnostics, clampWindowBounds } = require("./linux-system.cjs");
 const { createDesktopPilot } = require("./desktop-pilot.cjs");
+const { createUiTreeInspector } = require("./ui-tree.cjs");
+const { createDesktopDoctor } = require("./desktop-doctor.cjs");
 const linuxKeyboard = createLinuxKeyboard();
 const { createWorkspaceTools } = require("./workspace-tools.cjs");
 const { createStdioMcpManager } = require("./mcp-stdio.cjs");
@@ -764,6 +766,22 @@ function registerDesktopControl() {
     } catch (e) {
       return { ok: false, error: `err:${e && e.message ? e.message : e}` };
     }
+  });
+
+  // === OMNI-FRONTIER: Semantyczne Drzewo UI (Linux AT-SPI2 / Windows UIA) + Diagnostyka „Znajdź i Napraw” ===
+  const uiTree = createUiTreeInspector();
+  const desktopDoctor = createDesktopDoctor();
+  ipcMain.handle("jarvis:pilot-ui-tree", (event, maxNodes) => {
+    if (!isTrustedIpc(event)) return { ok: false, nodes: [], error: "err:forbidden" };
+    return uiTree.queryTree({ maxNodes });
+  });
+  ipcMain.handle("jarvis:pilot-ui-find", (event, query) => {
+    if (!isTrustedIpc(event)) return { ok: false, found: false, error: "err:forbidden" };
+    return uiTree.findNode(String(query || ""));
+  });
+  ipcMain.handle("jarvis:desktop-diagnose", (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, checks: [], error: "err:forbidden" };
+    return desktopDoctor.diagnose();
   });
 }
 

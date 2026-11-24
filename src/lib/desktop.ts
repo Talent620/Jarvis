@@ -59,6 +59,9 @@ export interface JarvisDesktop {
   pilotHotkey?(combo: string): Promise<{ ok: boolean; combo?: string; error?: string }>;
   pilotAbort?(): Promise<{ ok: boolean; seq?: number }>;
   screenshotDetailed?(): Promise<{ ok: boolean; data?: string; mediaType?: string; width?: number; height?: number; screenWidth?: number; screenHeight?: number; cursorX?: number; cursorY?: number; error?: string }>;
+  pilotUiTree?(maxNodes?: number): Promise<{ ok: boolean; backend?: string; windowTitle?: string; nodes?: UiTreeNode[]; error?: string }>;
+  pilotUiFind?(query: string): Promise<{ ok: boolean; found?: boolean; backend?: string; windowTitle?: string; node?: UiTreeNode; score?: number; error?: string }>;
+  desktopDiagnose?(): Promise<DesktopDoctorReport>;
   onOmniAbort?(cb: () => void): () => void;
 }
 
@@ -378,3 +381,110 @@ export async function abortDesktopPilot(): Promise<void> {
   const d = desktop();
   try { await d?.pilotAbort?.(); } catch { /* ignore */ }
 }
+
+// === OMNI-FRONTIER: Semantyczne Drzewo UI (AT-SPI2 / UIA) + Diagnostyka „Znajdź i Napraw” ===
+
+export interface UiTreeNode {
+  name: string;
+  role: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+  isPassword?: boolean;
+}
+
+export interface UiFindResult {
+  ok: boolean;
+  found: boolean;
+  backend?: string;
+  windowTitle?: string;
+  node?: UiTreeNode;
+  score?: number;
+  error?: string;
+}
+
+export interface DesktopDoctorCheck {
+  id: string;
+  label: string;
+  status: "ok" | "warn" | "error";
+  detail: string;
+  fixHint?: string;
+}
+
+export interface DesktopDoctorReport {
+  ok: boolean;
+  platform: string;
+  sessionType?: string;
+  checks: DesktopDoctorCheck[];
+  generatedAt?: string;
+  error?: string;
+}
+
+export async function queryUiTreeOnPc(maxNodes = 160): Promise<{ ok: boolean; backend?: string; windowTitle?: string; nodes: UiTreeNode[]; message: string }> {
+  const d = desktop();
+  if (!d?.pilotUiTree) return { ok: false, nodes: [], message: NOT_DESKTOP };
+  const r: { ok: boolean; backend?: string; windowTitle?: string; nodes?: UiTreeNode[]; error?: string } = await d
+    .pilotUiTree(maxNodes)
+    .catch((e) => ({ ok: false, nodes: [], error: String(e) }));
+  if (r.ok) {
+    const nodes = r.nodes || [];
+    const sample = nodes.slice(0, 15).map((n) => `[${n.role}] ${n.name} (${n.centerX},${n.centerY})`).join(" | ");
+    return {
+      ok: true,
+      backend: r.backend,
+      windowTitle: r.windowTitle,
+      nodes,
+      message: `Drzewo UI (${r.backend || "os"}, okno „${r.windowTitle || "?"}”, ${nodes.length} elementów): ${sample || "brak widocznych etykiet"}.`,
+    };
+  }
+  return { ok: false, nodes: [], message: `Drzewo dostępności UI niedostępne (${r.error || "brak"}) — przechodzę na analizę wizyjną.` };
+}
+
+export async function findUiNodeOnPc(query: string): Promise<UiFindResult> {
+  const d = desktop();
+  if (!d?.pilotUiFind) return { ok: false, found: false, error: "err:not-desktop" };
+  const r: UiFindResult = await d
+    .pilotUiFind(query)
+    .then((res) => ({
+      ok: !!res.ok,
+      found: !!res.found,
+      backend: res.backend,
+      windowTitle: res.windowTitle,
+      node: res.node,
+      score: res.score,
+      error: res.error,
+    }))
+    .catch((e) => ({ ok: false, found: false, error: String(e) }));
+  return r;
+}
+
+export function formatDesktopDoctorReport(rep: DesktopDoctorReport): string {
+  if (!rep.ok) return `Nie udało się uruchomić diagnostyki systemu (${rep.error || "brak danych"}).`;
+  const icon = (s: DesktopDoctorCheck["status"]) => (s === "ok" ? "✅" : s === "warn" ? "⚠️" : "❌");
+  const lines = [
+    `🩺 **Diagnostyka systemu (${rep.platform}${rep.sessionType ? ` · ${rep.sessionType}` : ""}):**`,
+    ...rep.checks.map((c) => `- ${icon(c.status)} **${c.label}:** ${c.detail}${c.fixHint ? `\n  → Naprawa: \`${c.fixHint}\`` : ""}`),
+  ];
+  return lines.join("\n");
+}
+
+export async function diagnoseDesktopOnPc(): Promise<{ ok: boolean; report?: DesktopDoctorReport; message: string; spokenText: string }> {
+  const d = desktop();
+  if (!d?.desktopDiagnose) {
+    return { ok: false, message: NOT_DESKTOP, spokenText: "Diagnostyka systemu działa na komputerze z aplikacją JARVIS." };
+  }
+  const rep: DesktopDoctorReport = await d
+    .desktopDiagnose()
+    .catch((e) => ({ ok: false, platform: d.platform || "unknown", checks: [], error: String(e) }));
+  const warns = (rep.checks || []).filter((c) => c.status !== "ok");
+  const spokenText = !rep.ok
+    ? "Nie udało się pobrać diagnostyki systemu."
+    : warns.length === 0
+      ? "System wygląda zdrowo: dźwięk, dysk i narzędzia OMNI-PILOT działają prawidłowo."
+      : `Wykryłem ${warns.length} rzeczy do sprawdzenia: ${warns.map((w) => w.label).join(", ")}. Szczegóły i komendy naprawcze wypisałem na ekranie.`;
+  return { ok: rep.ok, report: rep, message: formatDesktopDoctorReport(rep), spokenText };
+}
+
