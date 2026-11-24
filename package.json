@@ -26,15 +26,13 @@
     "ubuntu:setup": "bash scripts/bootstrap-ubuntu.sh --install",
     "test": "vitest run",
     "test:watch": "vitest",
-    "salesos": "bash sales-os/start.sh",
     "lint": "eslint .",
     "build:studio": "vite build --config vite.studio.config.ts",
     "knowledge": "node scripts/gen-knowledge.mjs",
     "siteos": "node site-os/server.mjs",
     "siteos:tunnel": "node site-os/server.mjs --tunnel",
     "tools:verify": "node scripts/verify-workspace-tools.cjs",
-    "quality": "node scripts/quality-gate.mjs",
-    "quality:all": "node scripts/quality-gate.mjs --sales"
+    "quality": "node scripts/quality-gate.mjs"
   },
   "dependencies": {
     "@capacitor-community/contacts": "^6.1.1",

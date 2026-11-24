@@ -29,24 +29,44 @@ jobs:
           java-version: "17"
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          SDKMANAGER="$(ls -1 "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | sort -V | tail -n 1)"
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+            "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          fi
 
       - name: Install dependencies
         run: npm ci
 
       # Klucze NIE trafiają do bundla (model BYOK: użytkownik podaje własne, szyfrowane lokalnie;
-      # produkcyjne klucze idą przez BFF). Wcześniejsze env JARVIS_*_KEY było martwe i mylące.
+      # produkcyjne klucze idą przez BFF).
       - name: Build web + sync Capacitor
         run: |
           npm run build
           npx cap sync android
 
-      # RELEASE (nie debug): podpis STAŁYM kluczem jarvis.jks (signingConfigs.release ma
-      # samowystarczalny fallback z hasłami w build.gradle — bez sekretów). Dzięki temu KAŻDY
-      # build ma ten sam podpis co jarvis.apk z Release'ów, więc aktualizacje instalują się „na
-      # wierzch" bez odinstalowywania (koniec „podczas instalowania pakietu wystąpił problem").
-      - name: Build release APK (stały klucz)
+      - name: Decode optional release keystore (GitHub Secrets)
+        env:
+          KEYSTORE_B64: ${{ secrets.JARVIS_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/jarvis-release.jks"
+            echo "JARVIS_RELEASE_STORE_FILE=$RUNNER_TEMP/jarvis-release.jks" >> "$GITHUB_ENV"
+            echo "Używam produkcyjnego keystore z GitHub Secrets."
+          else
+            echo "Brak sekretu JARVIS_RELEASE_KEYSTORE_BASE64 — build testowy podpisany efemerycznym kluczem debug."
+          fi
+
+      - name: Build APK (release secrets lub debug fallback)
         working-directory: android
+        env:
+          JARVIS_RELEASE_STORE_PASSWORD: ${{ secrets.JARVIS_RELEASE_STORE_PASSWORD }}
+          JARVIS_RELEASE_KEY_ALIAS: ${{ secrets.JARVIS_RELEASE_KEY_ALIAS }}
+          JARVIS_RELEASE_KEY_PASSWORD: ${{ secrets.JARVIS_RELEASE_KEY_PASSWORD }}
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease --no-daemon

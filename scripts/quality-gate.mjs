@@ -6,7 +6,6 @@ import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
 const npmScript = process.env.npm_execpath;
-const includeSales = process.argv.includes("--sales");
 
 function run(label, command, args, cwd = root, env = process.env) {
   console.log(`\n[QUALITY] ${label}`);
@@ -98,8 +97,7 @@ try {
   runNpm("Pełne testy", ["test"]);
   runNpm("Build produkcyjny", ["run", "build"]);
   await siteOsSmoke();
-  if (includeSales) runNpm("AI Sales gates", ["run", "gates"], path.join(root, "sales-os"));
-  console.log(`\n[QUALITY] PASS${includeSales ? " — JARVIS + Site OS + AI Sales" : " — JARVIS + Site OS"}`);
+  console.log("\n[QUALITY] PASS — JARVIS + Site OS");
 } catch (error) {
   console.error(`\n[QUALITY] FAIL — ${error instanceof Error ? error.message : error}`);
   process.exitCode = 1;

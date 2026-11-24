@@ -62,9 +62,25 @@ jobs:
           sed -i 's#<string name="title_activity_main">JARVIS</string>#<string name="title_activity_main">JARVIS v2</string>#' android/app/src/main/res/values/strings.xml
           echo "appId/app_name ustawione na v2:"; grep applicationId android/app/build.gradle
 
-      # RELEASE (stały klucz jarvis.jks) — spójny podpis, aktualizacje v2 też instalują się bez odinstalowywania.
-      - name: Build release APK (stały klucz)
+      - name: Decode optional release keystore (GitHub Secrets)
+        env:
+          KEYSTORE_B64: ${{ secrets.JARVIS_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/jarvis-release.jks"
+            echo "JARVIS_RELEASE_STORE_FILE=$RUNNER_TEMP/jarvis-release.jks" >> "$GITHUB_ENV"
+            echo "Używam produkcyjnego keystore z GitHub Secrets."
+          else
+            echo "Brak sekretu JARVIS_RELEASE_KEYSTORE_BASE64 — build testowy podpisany efemerycznym kluczem debug."
+          fi
+
+      # RELEASE z GitHub Secrets lub bezpieczny fallback debug (bez publicznego .jks w repo).
+      - name: Build release APK (secrets lub debug fallback)
         working-directory: android
+        env:
+          JARVIS_RELEASE_STORE_PASSWORD: ${{ secrets.JARVIS_RELEASE_STORE_PASSWORD }}
+          JARVIS_RELEASE_KEY_ALIAS: ${{ secrets.JARVIS_RELEASE_KEY_ALIAS }}
+          JARVIS_RELEASE_KEY_PASSWORD: ${{ secrets.JARVIS_RELEASE_KEY_PASSWORD }}
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease --no-daemon

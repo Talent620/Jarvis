@@ -14,10 +14,7 @@ export default tseslint.config(
       "node_modules",
       "**/node_modules/**",
       "node_modules_incomplete/**",
-      "sales-os",
       "server",
-      "demo-przempol",
-      "kompas", // osobny produkt z własnym lintem (kompas/eslint.config.js)
       "*.config.*",
       "public",
       "ios",
@@ -92,7 +89,7 @@ export default tseslint.config(
   },
   // --- Cloudflare Worker (BFF): środowisko service-worker + Web API ---
   {
-    files: ["proxy/worker.js"],
+    files: ["proxy/worker.js", "proxy/lib/**/*.js"],
     languageOptions: {
       sourceType: "module",
       globals: { ...globals.serviceworker, ...globals.worker, ...globals.browser },

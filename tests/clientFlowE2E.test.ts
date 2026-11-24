@@ -8,7 +8,7 @@ import type { RawLead } from "../src/lib/leads";
 import { telHref, hasPhone } from "../src/lib/contactActions";
 import { leadToProjectDraft, hasProjectForClient } from "../src/lib/growthContext";
 import { clientJourney } from "../src/lib/clientJourney";
-import { derivePublishStatus, isPublishedLike } from "../sales-os/src/lib/social/statusPolicy";
+import { derivePublishStatus, isPublishedLike } from "../src/lib/socialStatusPolicy";
 import type { Lead, FinanceProject, SentMail } from "../src/types";
 
 const NOW = 30_000_000_000;

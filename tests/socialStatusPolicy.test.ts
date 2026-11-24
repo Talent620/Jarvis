@@ -6,7 +6,7 @@ import { describe, it, expect } from "vitest";
 import {
   extractHashtags, derivePublishStatus, isSimulated, isPublishedLike, countPublished, SIMULATION_TOAST,
   PUBLISHED_LIKE_STATUSES,
-} from "../sales-os/src/lib/social/statusPolicy";
+} from "../src/lib/socialStatusPolicy";
 
 describe("statusPolicy — uczciwe statusy publikacji", () => {
   it("brak tokena → SIMULATED (NIGDY PUBLISHED)", () => {
