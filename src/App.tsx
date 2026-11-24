@@ -1072,68 +1072,86 @@ export default function App() {
 
   // --- Poranny briefing o ustalonej porze (raz dziennie, gdy aplikacja otwarta) ---
   useEffect(() => {
-    const tick = setInterval(async () => {
-      const st = store.settings;
-      if (!st.dailyBriefing) return;
-      const now = new Date();
-      const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const todayStr = now.toISOString().slice(0, 10);
-      if (localStorage.getItem("jarvis.briefing.date") === todayStr) return; // już dziś było
-      if (hhmm < (st.briefingTime || "08:00")) return; // jeszcze nie pora
-      localStorage.setItem("jarvis.briefing.date", todayStr);
-      const text = await buildBriefing();
-      const id = uid();
-      setLiveId(id);
-      setMessages((m) => [...m, { id, role: "assistant", text, tools: ["briefing"], createdAt: Date.now() }]);
-      notify("JARVIS — poranny raport", text.replace(/\s+/g, " ").slice(0, 140));
-      if (st.speak) {
-        setOrb("speaking");
-        void speak(text, st).catch(() => {});
-      }
+    const tick = setInterval(() => {
+      void (async () => {
+        try {
+          const st = store.settings;
+          if (!st.dailyBriefing) return;
+          const now = new Date();
+          const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+          const todayStr = now.toISOString().slice(0, 10);
+          if (localStorage.getItem("jarvis.briefing.date") === todayStr) return; // już dziś było
+          if (hhmm < (st.briefingTime || "08:00")) return; // jeszcze nie pora
+          localStorage.setItem("jarvis.briefing.date", todayStr);
+          const text = await buildBriefing();
+          const id = uid();
+          setLiveId(id);
+          setMessages((m) => [...m, { id, role: "assistant", text, tools: ["briefing"], createdAt: Date.now() }]);
+          void notify("JARVIS — poranny raport", text.replace(/\s+/g, " ").slice(0, 140)).catch(() => {});
+          if (st.speak) {
+            setOrb("speaking");
+            void speak(text, st).catch(() => {});
+          }
+        } catch {
+          /* best-effort offline/storage guard */
+        }
+      })();
     }, 30000);
     return () => clearInterval(tick);
   }, []);
 
   // --- Auto-prospekting: co ~4 h (gdy włączone) JARVIS szuka nowych leadów ---
   useEffect(() => {
-    const tick = setInterval(async () => {
-      const st = store.settings;
-      // Auto-prospekting używa DARMOWEGO źródła (OpenStreetMap) — nie wymaga klucza Tavily ani niszy.
-      // Wystarczy włączone + znane miasto (nisza jest opcjonalna; bez niej szukamy szeroko).
-      if (!st.autoProspect || !st.prospectLocation?.trim()) return;
-      const last = Number(localStorage.getItem("jarvis.prospect.ts") || 0);
-      if (Date.now() - last < 4 * 3600 * 1000) return; // ~6×/dzień
-      localStorage.setItem("jarvis.prospect.ts", String(Date.now()));
-      const r = await runProspecting();
-      if (r.added) {
-        const id = uid();
-        setLiveId(id);
-        const where = [st.prospectNiche?.trim(), st.prospectLocation?.trim()].filter(Boolean).join(", ");
-        setMessages((m) => [
-          ...m,
-          { id, role: "assistant", text: `📈 Automat sprzedaży: znalazłem ${r.added} nowych leadów${where ? ` (${where})` : ""}. Są w Pulpicie Sprzedaży (⋯ → 📈).`, tools: ["prospect"], createdAt: Date.now() },
-        ]);
-      }
+    const tick = setInterval(() => {
+      void (async () => {
+        try {
+          const st = store.settings;
+          // Auto-prospekting używa DARMOWEGO źródła (OpenStreetMap) — nie wymaga klucza Tavily ani niszy.
+          // Wystarczy włączone + znane miasto (nisza jest opcjonalna; bez niej szukamy szeroko).
+          if (!st.autoProspect || !st.prospectLocation?.trim()) return;
+          const last = Number(localStorage.getItem("jarvis.prospect.ts") || 0);
+          if (Date.now() - last < 4 * 3600 * 1000) return; // ~6×/dzień
+          localStorage.setItem("jarvis.prospect.ts", String(Date.now()));
+          const r = await runProspecting();
+          if (r.added) {
+            const id = uid();
+            setLiveId(id);
+            const where = [st.prospectNiche?.trim(), st.prospectLocation?.trim()].filter(Boolean).join(", ");
+            setMessages((m) => [
+              ...m,
+              { id, role: "assistant", text: `📈 Automat sprzedaży: znalazłem ${r.added} nowych leadów${where ? ` (${where})` : ""}. Są w Pulpicie Sprzedaży (⋯ → 📈).`, tools: ["prospect"], createdAt: Date.now() },
+            ]);
+          }
+        } catch {
+          /* best-effort offline guard */
+        }
+      })();
     }, 60000);
     return () => clearInterval(tick);
   }, []);
 
   // --- Auto-sync z AI Sales OS: co N minut (gdy włączone) pobiera nowe leady ---
   useEffect(() => {
-    const tick = setInterval(async () => {
-      const st = store.settings;
-      const lastTs = Number(localStorage.getItem("jarvis.salesos.ts") || 0);
-      if (!shouldAutoSyncSalesOs({ everyMin: Number(st.salesOsAutoSync) || 0, url: st.salesOsUrl, token: st.salesOsToken, lastTs })) return;
-      localStorage.setItem("jarvis.salesos.ts", String(Date.now()));
-      const r = await syncFromSalesOs();
-      if (r.ok && r.added) {
-        const id = uid();
-        setLiveId(id);
-        setMessages((m) => [
-          ...m,
-          { id, role: "assistant", text: `🔄 AI Sales OS: pobrałem ${r.added} nowych leadów do Pulpitu Sprzedaży (⋯ → 📈).`, tools: ["salesos_sync"], createdAt: Date.now() },
-        ]);
-      }
+    const tick = setInterval(() => {
+      void (async () => {
+        try {
+          const st = store.settings;
+          const lastTs = Number(localStorage.getItem("jarvis.salesos.ts") || 0);
+          if (!shouldAutoSyncSalesOs({ everyMin: Number(st.salesOsAutoSync) || 0, url: st.salesOsUrl, token: st.salesOsToken, lastTs })) return;
+          localStorage.setItem("jarvis.salesos.ts", String(Date.now()));
+          const r = await syncFromSalesOs();
+          if (r.ok && r.added) {
+            const id = uid();
+            setLiveId(id);
+            setMessages((m) => [
+              ...m,
+              { id, role: "assistant", text: `🔄 AI Sales OS: pobrałem ${r.added} nowych leadów do Pulpitu Sprzedaży (⋯ → 📈).`, tools: ["salesos_sync"], createdAt: Date.now() },
+            ]);
+          }
+        } catch {
+          /* best-effort offline guard */
+        }
+      })();
     }, 60000);
     return () => clearInterval(tick);
   }, []);
@@ -1141,8 +1159,12 @@ export default function App() {
   // --- Site OS: odbieraj polecenia z pełnoekranowego edytora i stosuj je obecnym silnikiem AI ---
   useEffect(() => {
     const run = async () => {
-      const result = await processPendingSiteOsCommands();
-      if (result.processed && result.message) toast(result.message);
+      try {
+        const result = await processPendingSiteOsCommands();
+        if (result.processed && result.message) toast(result.message);
+      } catch {
+        /* best-effort offline guard */
+      }
     };
     void run();
     const tick = setInterval(() => { void run(); }, 12000);

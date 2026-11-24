@@ -55,6 +55,8 @@ export class ConversationLoop {
   // Zapasowy dostawca z poprzedniej odpowiedzi (null = poprzednio bez failoveru) — żeby ogłaszać
   // przełączenie przy ZMIANIE stanu, a nie przerywać każdej kolejnej odpowiedzi tego samego zapasu.
   private lastFallbackVia: ProviderId | null = null;
+  private restartTimer: ReturnType<typeof setTimeout> | null = null;
+  private stallTimer: ReturnType<typeof setTimeout> | null = null;
 
   static supported(): boolean {
     return isSpeechSupported();
@@ -117,8 +119,14 @@ export class ConversationLoop {
         if (!this.closed) this.onState("error", msg);
       },
       onEnd: () => {
-        // Cisza / koniec frazy bez treści — wznawiaj nasłuch.
-        if (!this.closed && !this.processing) setTimeout(() => this.listenOnce(), 300);
+        // Cisza / koniec frazy bez treści — wznawiaj nasłuch (z czystym uchwytem timera).
+        if (!this.closed && !this.processing) {
+          if (this.restartTimer) clearTimeout(this.restartTimer);
+          this.restartTimer = setTimeout(() => {
+            this.restartTimer = null;
+            this.listenOnce();
+          }, 300);
+        }
       },
     });
     this.listener.start();
@@ -165,7 +173,9 @@ export class ConversationLoop {
     }
     // Watchdog czasu: gdy myślenie się przeciąga, Szef zapewnia, że pracuje (nie znika w ciszy).
     let stalled = false;
-    const stall = window.setTimeout(() => {
+    if (this.stallTimer) clearTimeout(this.stallTimer);
+    this.stallTimer = setTimeout(() => {
+      this.stallTimer = null;
       if (this.closed) return;
       stalled = true;
       const m = "Pracuję nad tym dłużej niż zwykle — już wracam z wynikiem.";
@@ -190,7 +200,7 @@ export class ConversationLoop {
         verify = v.corrected ? "fixed" : "pass";
         if (v.corrected) reply = { ...reply, text: v.text };
       }
-      window.clearTimeout(stall);
+      if (this.stallTimer) { clearTimeout(this.stallTimer); this.stallTimer = null; }
       this.history.push({ role: "assistant", content: reply.text });
       // Failover widoczny tak jak w czacie tekstowym: BossMode i LiveOverlay (silnik „loop")
       // dzielą tę pętlę, więc jedna poprawka ujawnia zapasowy mózg w obu miejscach.
@@ -229,7 +239,7 @@ export class ConversationLoop {
         this.bargeIn.endSpeaking();
       }
     } catch (e) {
-      window.clearTimeout(stall);
+      if (this.stallTimer) { clearTimeout(this.stallTimer); this.stallTimer = null; }
       this.history.pop(); // zdejmij nieodpowiedzianą wiadomość użytkownika — historia musi zostać sparowana
       this.onState("error", e instanceof Error ? e.message : String(e));
     } finally {
@@ -251,6 +261,8 @@ export class ConversationLoop {
 
   stop(): void {
     this.closed = true;
+    if (this.restartTimer) { clearTimeout(this.restartTimer); this.restartTimer = null; }
+    if (this.stallTimer) { clearTimeout(this.stallTimer); this.stallTimer = null; }
     this.bargeIn.endSpeaking();
     this.listener?.stop();
     stopSpeaking();

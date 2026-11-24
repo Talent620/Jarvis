@@ -88,13 +88,16 @@ export function normalizeKey(s: string): string {
 }
 
 /** Zweryfikuj klucz licencyjny (podpis + ewentualny termin ważności). */
-export async function verifyLicense(token: string): Promise<LicenseInfo> {
+export async function verifyLicense(token: string, overridePublicJwk?: JsonWebKey): Promise<LicenseInfo> {
   try {
     const [data, sigB64] = normalizeKey(token).split(".");
     if (!data || !sigB64) return { valid: false };
+    const key = overridePublicJwk
+      ? await crypto.subtle.importKey("jwk", overridePublicJwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"])
+      : await publicKey();
     const ok = await crypto.subtle.verify(
       { name: "ECDSA", hash: "SHA-256" },
-      await publicKey(),
+      key,
       bs(b64urlToBytes(sigB64)),
       bs(new TextEncoder().encode(data)),
     );

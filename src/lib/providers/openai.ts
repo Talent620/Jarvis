@@ -94,16 +94,23 @@ export function makeOpenAICompatible(
       const dec = new TextDecoder();
       const acc = new OAIStreamAccumulator();
       let buf = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const { events, rest } = drainSSE(buf);
-        buf = rest;
-        for (const ev of events) {
-          const delta = acc.push(ev);
-          if (delta) ctx.onToken?.(delta);
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          const { events, rest } = drainSSE(buf);
+          buf = rest;
+          for (const ev of events) {
+            const delta = acc.push(ev);
+            if (delta) ctx.onToken?.(delta);
+          }
         }
+      } catch (err) {
+        try { await reader.cancel(); } catch { /* ignore */ }
+        throw err;
+      } finally {
+        try { reader.releaseLock(); } catch { /* ignore */ }
       }
       const tail = drainSSE(buf + "\n\n");
       for (const ev of tail.events) {

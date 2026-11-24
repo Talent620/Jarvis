@@ -8,21 +8,37 @@ export interface CapturedImage {
 
 function capturePhotoFromWebInput(): Promise<CapturedImage | null> {
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = (img: CapturedImage | null) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("focus", onFocus);
+      resolve(img);
+    };
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
     input.setAttribute("capture", "environment");
+    // Jeśli użytkownik kliknie Anuluj w systemowym oknie aparatu/pliku, onchange nie odpali —
+    // zdarzenie cancel + powrót focusu gwarantuje czyste zakończenie bez zawieszenia UI.
+    const onFocus = () => {
+      setTimeout(() => {
+        if (!input.files?.length) finish(null);
+      }, 400);
+    };
+    input.addEventListener("cancel", () => finish(null), { once: true });
+    window.addEventListener("focus", onFocus, { once: true });
     input.onchange = () => {
       const file = input.files?.[0];
-      if (!file) return resolve(null);
+      if (!file) return finish(null);
       const reader = new FileReader();
       reader.onload = () => {
         const result = String(reader.result);
         const comma = result.indexOf(",");
         const mediaType = result.slice(5, result.indexOf(";")) || file.type || "image/jpeg";
-        resolve({ data: result.slice(comma + 1), mediaType });
+        finish({ data: result.slice(comma + 1), mediaType });
       };
-      reader.onerror = () => resolve(null);
+      reader.onerror = () => finish(null);
       reader.readAsDataURL(file);
     };
     input.click();

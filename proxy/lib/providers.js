@@ -1,5 +1,5 @@
 // === proxy/lib/providers.js — proxy dostawców AI (Anthropic, Gemini, OpenAI, Modal Brain, Passthrough) ===
-import { CORS, json, bearer, appTokenBad, rateLimited, blocksCloudMetadata, passthroughAllowed } from "./auth.js";
+import { CORS, json, bearer, appTokenBad, rateLimited, blocksCloudMetadata, passthroughAllowed, fetchT } from "./auth.js";
 import { applyVoiceModeToOpenAiBody } from "./voiceProtocol.js";
 
 export const ALLOWED_OPENAI_HOSTS = [
@@ -46,12 +46,30 @@ export function envKeyForHost(host, env) {
   return undefined;
 }
 
+function safeParseUrl(raw) {
+  try {
+    return new URL(String(raw || ""));
+  } catch {
+    return null;
+  }
+}
+
 export async function relay(target, req, headers, opts = {}) {
   const rawBody = await req.text();
   const body = opts.openaiVoiceMode
     ? applyVoiceModeToOpenAiBody(rawBody, req.headers.get("x-voice-mode") === "1")
     : rawBody;
-  const upstream = await fetch(target, { method: "POST", headers, body });
+  let upstream;
+  try {
+    upstream = await fetchT(target, { method: "POST", headers, body }, opts.timeoutMs || 90000);
+  } catch (e) {
+    const isAbort = e && (e.name === "AbortError" || /abort|timeout/i.test(String(e.message || e)));
+    return json(isAbort ? 504 : 502, {
+      error: isAbort
+        ? "Przekroczono czas odpowiedzi serwera AI (możliwy cold-start Modal — spróbuj za chwilę)."
+        : "Nie udało się połączyć z dostawcą AI (błąd sieci upstream).",
+    });
+  }
   const out = new Headers(upstream.headers);
   Object.entries(CORS).forEach(([k, v]) => out.set(k, v));
   return new Response(upstream.body, { status: upstream.status, headers: out });
@@ -79,20 +97,31 @@ export async function handleProviderRoute(path, url, req, env) {
   if (path.endsWith("/modal-voice/stt") || path.endsWith("/modal-voice/tts")) {
     const base = String(env.MODAL_VOICE_URL || "").trim().replace(/\/+$/, "");
     if (!base) return json(500, { error: "Brak MODAL_VOICE_URL w konfiguracji Workera." });
-    const parsed = new URL(/^https?:\/\//i.test(base) ? base : `https://${base}`);
+    const parsed = safeParseUrl(/^https?:\/\//i.test(base) ? base : `https://${base}`);
+    if (!parsed) return json(500, { error: "Niepoprawny MODAL_VOICE_URL w konfiguracji Workera." });
     if (!openaiHostAllowed(parsed.hostname.toLowerCase())) {
       return json(403, { error: `Host niedozwolony: ${parsed.hostname}` });
     }
     const key = env.MODAL_API_KEY || env.VLLM_API_KEY || bearer(req);
     const suffix = path.endsWith("/stt") ? `/v1/stt${url.search}` : "/v1/tts";
-    const upstream = await fetch(`${parsed.origin}${suffix}`, {
-      method: "POST",
-      headers: {
-        "content-type": req.headers.get("content-type") || "application/json",
-        ...(key ? { authorization: `Bearer ${key}` } : {}),
-      },
-      body: req.body,
-    });
+    let upstream;
+    try {
+      upstream = await fetchT(
+        `${parsed.origin}${suffix}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": req.headers.get("content-type") || "application/json",
+            ...(key ? { authorization: `Bearer ${key}` } : {}),
+          },
+          body: req.body,
+        },
+        90000,
+      );
+    } catch (e) {
+      const isAbort = e && (e.name === "AbortError" || /abort|timeout/i.test(String(e.message || e)));
+      return json(isAbort ? 504 : 502, { error: isAbort ? "Timeout serwera Modal Voice." : "Błąd połączenia z Modal Voice." });
+    }
     const out = new Headers(upstream.headers);
     Object.entries(CORS).forEach(([k, v]) => out.set(k, v));
     return new Response(upstream.body, { status: upstream.status, headers: out });
@@ -101,7 +130,9 @@ export async function handleProviderRoute(path, url, req, env) {
   if (path.endsWith("/modal")) {
     const target = normalizeModalUrl(env.MODAL_BRAIN_URL);
     if (!target) return json(500, { error: "Brak MODAL_BRAIN_URL w konfiguracji Workera." });
-    const hostname = new URL(target).hostname.toLowerCase();
+    const parsed = safeParseUrl(target);
+    if (!parsed) return json(500, { error: "Niepoprawny MODAL_BRAIN_URL w konfiguracji Workera." });
+    const hostname = parsed.hostname.toLowerCase();
     if (!openaiHostAllowed(hostname)) return json(403, { error: `Host niedozwolony: ${hostname}` });
     const key = env.MODAL_API_KEY || env.VLLM_API_KEY || bearer(req);
     if (!key) return json(401, { error: "Brak klucza API dla Modal Brain (MODAL_API_KEY / VLLM_API_KEY)." });
@@ -129,8 +160,10 @@ export async function handleProviderRoute(path, url, req, env) {
   if (path.endsWith("/openai")) {
     const u = url.searchParams.get("u");
     if (!u) return json(400, { error: "Brak parametru u." });
-    const host = new URL(u).host;
-    const hostname = new URL(u).hostname.toLowerCase();
+    const parsed = safeParseUrl(u);
+    if (!parsed) return json(400, { error: "Niepoprawny URL w parametrze u." });
+    const host = parsed.host;
+    const hostname = parsed.hostname.toLowerCase();
     if (!openaiHostAllowed(hostname)) return json(403, { error: `Host niedozwolony: ${host}` });
     const key = envKeyForHost(host, env) || (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
     return relay(u, req, { "content-type": "application/json", authorization: `Bearer ${key}` }, { openaiVoiceMode: true });
@@ -139,9 +172,11 @@ export async function handleProviderRoute(path, url, req, env) {
   if (path.endsWith("/passthrough")) {
     const u = url.searchParams.get("u");
     if (!u) return json(400, { error: "Brak parametru u." });
+    const parsed = safeParseUrl(u);
+    if (!parsed) return json(400, { error: "Niepoprawny URL w parametrze u." });
     if (blocksCloudMetadata(u)) return json(403, { error: "Adres niedozwolony." });
-    if (!passthroughAllowed(new URL(u).hostname, env.PASSTHROUGH_HOSTS)) {
-      return json(403, { error: `Host niedozwolony: ${new URL(u).host}` });
+    if (!passthroughAllowed(parsed.hostname, env.PASSTHROUGH_HOSTS)) {
+      return json(403, { error: `Host niedozwolony: ${parsed.host}` });
     }
     const h = { "content-type": "application/json" };
     const auth = req.headers.get("authorization");

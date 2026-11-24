@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { verifyLicense, deviceId, normalizeKey, licenseStatus, licenseExpiryNudge } from "../src/lib/license";
+import { signLicense } from "../src/lib/licenseSign";
 
 describe("licenseStatus + licenseExpiryNudge — trial i licencja czasowa", () => {
   const NOW = 1_800_000_000_000;
@@ -28,28 +29,45 @@ describe("licenseStatus + licenseExpiryNudge — trial i licencja czasowa", () =
   });
 });
 
-// Ważny klucz testowy (fixture) podpisany kluczem prywatnym właściciela pod kluczem
-// publicznym wbudowanym w aplikację. Klucza nie da się podrobić bez prywatnego.
-const MASTER =
+// Historyczny klucz sprzed rotacji ECDSA — weryfikacja produkcyjna MUSI go odrzucić.
+const ROTATED_LEGACY_MASTER =
   "eyJuIjoiRklYVFVSRSBURVNUT1dZIiwidCI6InBlcnBldHVhbCIsImlhdCI6MTc4MTIyMTkzMDQwM30.ThGeY2Iw7qNJ31oQz32SImiVICML-4TM8N5lRtHvO1J728d9B4lvTSnIX8x8t61sNUFbLqqEPLHulVa-8zmc5A";
 
 describe("Licencja — weryfikacja ECDSA", () => {
+  let testPublicJwk: JsonWebKey;
+  let validMasterToken: string;
+
+  beforeAll(async () => {
+    // Generujemy efemeryczną parę ECDSA P-256 w teście, by testować pełną kryptografię
+    // bez trzymania prywatnego klucza produkcyjnego w repozytorium.
+    const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+    testPublicJwk = await crypto.subtle.exportKey("jwk", pair.publicKey);
+    const privateJwk = await crypto.subtle.exportKey("jwk", pair.privateKey);
+    validMasterToken = await signLicense(privateJwk, "FIXTURE TESTOWY", 0);
+  });
+
   it("akceptuje ważny klucz właściciela i czyta dane", async () => {
-    const r = await verifyLicense(MASTER);
+    const r = await verifyLicense(validMasterToken, testPublicJwk);
     expect(r.valid).toBe(true);
     expect(r.name).toBe("FIXTURE TESTOWY");
     expect(r.type).toBe("perpetual");
   });
 
+  it("odrzuca stary klucz sprzed rotacji ECDSA wobec produkcyjnego PUBLIC_JWK", async () => {
+    expect((await verifyLicense(ROTATED_LEGACY_MASTER)).valid).toBe(false);
+    // Token podpisany kluczem testowym nie przejdzie weryfikacji produkcyjnym kluczem aplikacji
+    expect((await verifyLicense(validMasterToken)).valid).toBe(false);
+  });
+
   it("odrzuca podrobiony podpis (zmieniony znak)", async () => {
-    const tampered = MASTER.slice(0, -3) + (MASTER.endsWith("AAA") ? "BBB" : "AAA");
-    expect((await verifyLicense(tampered)).valid).toBe(false);
+    const tampered = validMasterToken.slice(0, -3) + (validMasterToken.endsWith("AAA") ? "BBB" : "AAA");
+    expect((await verifyLicense(tampered, testPublicJwk)).valid).toBe(false);
   });
 
   it("odrzuca podmienioną treść (inny payload, ten sam podpis)", async () => {
-    const [, sig] = MASTER.split(".");
+    const [, sig] = validMasterToken.split(".");
     const fakePayload = Buffer.from(JSON.stringify({ n: "Haker", t: "master" })).toString("base64url");
-    expect((await verifyLicense(`${fakePayload}.${sig}`)).valid).toBe(false);
+    expect((await verifyLicense(`${fakePayload}.${sig}`, testPublicJwk)).valid).toBe(false);
   });
 
   it("odrzuca śmieci i pusty klucz", async () => {
@@ -73,7 +91,7 @@ describe("Licencja — weryfikacja ECDSA", () => {
   });
 
   it("akceptuje ważny klucz mimo brudnego wklejenia (spacje + zero-width)", async () => {
-    const dirty = "  " + MASTER.slice(0, 20) + "​ \n" + MASTER.slice(20) + "﻿";
-    expect((await verifyLicense(dirty)).valid).toBe(true);
+    const dirty = "  " + validMasterToken.slice(0, 20) + "​ \n" + validMasterToken.slice(20) + "﻿";
+    expect((await verifyLicense(dirty, testPublicJwk)).valid).toBe(true);
   });
 });
