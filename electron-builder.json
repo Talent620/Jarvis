@@ -17,9 +17,16 @@
       "AppImage",
       "deb"
     ],
-    "category": "Utility",
+    "icon": "public/icon-512.png",
+    "category": "Utility;Office",
     "maintainer": "Talent620 <192472679+Talent620@users.noreply.github.com>",
-    "artifactName": "JARVIS.${ext}"
+    "artifactName": "JARVIS.${ext}",
+    "desktop": {
+      "Name": "JARVIS AI",
+      "Comment": "Autonomiczny asystent AI (AutoCore, lokalna Ollama, MCP, głos i wizja)",
+      "StartupWMClass": "JARVIS",
+      "Keywords": "AI;Assistant;Voice;Ollama;MCP;JARVIS;"
+    }
   },
   "nsis": {
     "oneClick": true,

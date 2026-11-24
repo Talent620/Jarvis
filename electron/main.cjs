@@ -1,17 +1,23 @@
-// Główny proces Electrona — JARVIS na komputer (Windows .exe), pełna wersja.
-const { app, BrowserWindow, shell, session, Menu, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification } = require("electron");
+// Główny proces Electrona — JARVIS na komputer (Linux AppImage/.deb + Windows .exe), pełna wersja.
+const { app, BrowserWindow, shell, session, Menu, Tray, nativeImage, safeStorage, ipcMain, desktopCapturer, screen, globalShortcut, clipboard, Notification } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { spawn, exec } = require("child_process");
 const os = require("os");
 const { launchLinux } = require("./launch-app.cjs");
 const { createLinuxKeyboard } = require("./linux-keyboard.cjs");
+const { linuxPower, linuxVolume, linuxMedia, detectLinuxGpu, readLinuxDistro, linuxDiagnostics, clampWindowBounds } = require("./linux-system.cjs");
 const linuxKeyboard = createLinuxKeyboard();
 const { createWorkspaceTools } = require("./workspace-tools.cjs");
 const { createStdioMcpManager } = require("./mcp-stdio.cjs");
 const { createLocalOllamaManager } = require("./local-ollama.cjs");
 const { createLocalSiteOsManager } = require("./local-siteos.cjs");
 const localOllama = createLocalOllamaManager();
+
+// Na Linuxie automatycznie dopasuj backend X11/Wayland (Ozone) zamiast twardego XWayland.
+if (process.platform === "linux") {
+  app.commandLine.appendSwitch("ozone-platform-hint", "auto");
+}
 
 const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
 
@@ -101,17 +107,58 @@ function setClipWatch(enabled) {
   }, 1500);
 }
 
+function resolveAppIcon() {
+  const candidates = [
+    path.join(__dirname, "../dist/icon-192.png"),
+    path.join(__dirname, "../public/icon-192.png"),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return undefined;
+}
+
+let appTray = null;
+function ensureTray() {
+  if (appTray) return;
+  try {
+    const iconPath = resolveAppIcon();
+    const img = iconPath ? nativeImage.createFromPath(iconPath).resize({ width: 22, height: 22 }) : nativeImage.createEmpty();
+    appTray = new Tray(img);
+    appTray.setToolTip("JARVIS AI · Ctrl+Alt+J");
+    appTray.setContextMenu(
+      Menu.buildFromTemplate([
+        { label: "Pokaż JARVIS (Ctrl+Alt+J)", click: () => summonWindow() },
+        {
+          label: "Tryb głosowy (Ctrl+Alt+V)",
+          click: () => {
+            summonWindow();
+            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("jarvis:voicemode");
+          },
+        },
+        { type: "separator" },
+        { label: "Zamknij JARVIS", click: () => app.quit() },
+      ]),
+    );
+    appTray.on("click", () => summonWindow());
+  } catch {
+    /* Środowisko bez zasobnika systemowego (np. minimalny WM/headless) — pomijamy bez błędu. */
+    appTray = null;
+  }
+}
+
 function createWindow() {
-  const st = loadState();
+  const st = clampWindowBounds(loadState(), screen.getAllDisplays());
+  const icon = resolveAppIcon();
   mainWindow = new BrowserWindow({
-    width: st.width || 1100,
-    height: st.height || 820,
-    x: st.x,
-    y: st.y,
+    width: st.width,
+    height: st.height,
+    ...(typeof st.x === "number" ? { x: st.x, y: st.y } : {}),
     minWidth: 380,
     minHeight: 560,
     backgroundColor: "#04070f",
     autoHideMenuBar: true,
+    ...(icon ? { icon } : {}),
     title: "JARVIS",
     webPreferences: {
       contextIsolation: true,
@@ -312,21 +359,70 @@ function registerDesktopControl() {
   ipcMain.handle("jarvis:hardware-info", async (event) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     try {
-      const gpuInfo = await app.getGPUInfo("basic");
-      const active = (gpuInfo.gpuDevice || []).find((device) => device.active) || (gpuInfo.gpuDevice || [])[0] || {};
-      const gpu = String(active.deviceString || active.device_string || "");
-      const knownVram = /1050\s*ti/i.test(gpu) ? 4 : 0;
+      let gpu = "";
+      let vramGb = 0;
+      if (process.platform === "linux") {
+        const det = await detectLinuxGpu();
+        gpu = det.gpu;
+        vramGb = det.vramGb;
+      }
+      if (!gpu) {
+        const gpuInfo = await app.getGPUInfo("basic");
+        const active = (gpuInfo.gpuDevice || []).find((device) => device.active) || (gpuInfo.gpuDevice || [])[0] || {};
+        gpu = String(active.deviceString || active.device_string || "");
+        if (!vramGb && /1050\s*ti/i.test(gpu)) vramGb = 4;
+      }
       return {
         ok: true,
         platform: process.platform,
+        distro: process.platform === "linux" ? readLinuxDistro() : process.platform,
+        sessionType: process.platform === "linux" ? (process.env.XDG_SESSION_TYPE || (process.env.WAYLAND_DISPLAY ? "wayland" : process.env.DISPLAY ? "x11" : "headless")) : "native",
         cpu: os.cpus()[0] ? os.cpus()[0].model : "",
         cores: os.cpus().length,
         ramGb: Math.round((os.totalmem() / 1073741824) * 10) / 10,
         gpu,
-        vramGb: knownVram,
+        vramGb,
       };
     } catch (error) {
       return { ok: false, error: error && error.message ? error.message : String(error) };
+    }
+  });
+  ipcMain.handle("jarvis:system-diagnostics", async (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    if (process.platform === "linux") return linuxDiagnostics();
+    return {
+      ok: true,
+      platform: process.platform,
+      distro: process.platform,
+      sessionType: "native",
+      gpu: "",
+      vramGb: 0,
+      items: [{ id: "desktop", label: "Środowisko desktopowe", status: "available", detail: `Platforma ${process.platform}` }],
+    };
+  });
+  // Natywny pęk kluczy systemu (Linux Secret Service / KWallet, Windows DPAPI, macOS Keychain).
+  ipcMain.handle("jarvis:secure-available", (event) => {
+    if (!isTrustedIpc(event)) return false;
+    try { return Boolean(safeStorage && safeStorage.isEncryptionAvailable()); } catch { return false; }
+  });
+  ipcMain.handle("jarvis:secure-encrypt", (event, plaintext) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    try {
+      if (!safeStorage || !safeStorage.isEncryptionAvailable()) return { ok: false, error: "unavailable" };
+      const buf = safeStorage.encryptString(String(plaintext || ""));
+      return { ok: true, data: buf.toString("base64") };
+    } catch (e) {
+      return { ok: false, error: e && e.message ? e.message : String(e) };
+    }
+  });
+  ipcMain.handle("jarvis:secure-decrypt", (event, b64) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    try {
+      if (!safeStorage || !safeStorage.isEncryptionAvailable()) return { ok: false, error: "unavailable" };
+      const text = safeStorage.decryptString(Buffer.from(String(b64 || ""), "base64"));
+      return { ok: true, text };
+    } catch (e) {
+      return { ok: false, error: e && e.message ? e.message : String(e) };
     }
   });
   ipcMain.handle("jarvis:ollama-ensure-local", async (event, url) => {
@@ -470,6 +566,7 @@ function registerDesktopControl() {
   ipcMain.handle("jarvis:power", async (event, action) => {
     if (!isTrustedIpc(event)) return "err:forbidden";
     const a = String(action || "").toLowerCase();
+    if (process.platform === "linux") return linuxPower(a);
     if (process.platform !== "win32") return "err:unsupported";
     const map = {
       lock: "rundll32.exe user32.dll,LockWorkStation",
@@ -487,6 +584,7 @@ function registerDesktopControl() {
   ipcMain.handle("jarvis:volume", async (event, action) => {
     if (!isTrustedIpc(event)) return "err:forbidden";
     const a = String(action || "").toLowerCase();
+    if (process.platform === "linux") return linuxVolume(a);
     if (process.platform !== "win32") return "err:unsupported";
     // VK: 175 = głośniej, 174 = ciszej, 173 = wycisz.
     const vk = { up: 175, down: 174, mute: 173 }[a];
@@ -498,6 +596,7 @@ function registerDesktopControl() {
   ipcMain.handle("jarvis:media", async (event, action) => {
     if (!isTrustedIpc(event)) return "err:forbidden";
     const a = String(action || "").toLowerCase();
+    if (process.platform === "linux") return linuxMedia(a);
     if (process.platform !== "win32") return "err:unsupported";
     // VK multimedialne: play/pause 179, next 176, prev 177, stop 178.
     const vk = { playpause: 179, play: 179, pause: 179, next: 176, prev: 177, previous: 177, stop: 178 }[a];
@@ -610,6 +709,7 @@ if (!gotLock) {
     registerDesktopControl();
     buildMenu();
     createWindow();
+    ensureTray();
 
     // Globalny skrót: Ctrl+Alt+J przywołuje JARVIS-a nad każdą aplikacją.
     try {
@@ -648,5 +748,6 @@ if (!gotLock) {
     localOllama.close();
     setClipWatch(false);
     if (siteOsManager) siteOsManager.close();
+    if (appTray) { try { appTray.destroy(); } catch { /* ignore */ } appTray = null; }
   });
 }

@@ -11,6 +11,10 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   mcpStdioCall: (server, tool, input = {}) => ipcRenderer.invoke("jarvis:mcp-stdio-call", { server, tool, input }),
   mcpStdioDisconnect: (server) => ipcRenderer.invoke("jarvis:mcp-stdio-disconnect", { server }),
   hardwareInfo: () => ipcRenderer.invoke("jarvis:hardware-info"),
+  systemDiagnostics: () => ipcRenderer.invoke("jarvis:system-diagnostics"),
+  secureStorageAvailable: () => ipcRenderer.invoke("jarvis:secure-available"),
+  encryptSecret: (plaintext) => ipcRenderer.invoke("jarvis:secure-encrypt", String(plaintext || "")),
+  decryptSecret: (b64) => ipcRenderer.invoke("jarvis:secure-decrypt", String(b64 || "")),
   ensureLocalOllama: (url) => ipcRenderer.invoke("jarvis:ollama-ensure-local", String(url || "")),
   // Otwórz URL, plik lub folder w domyślnej aplikacji systemu.
   open: (target) => ipcRenderer.invoke("jarvis:open", String(target || "")),

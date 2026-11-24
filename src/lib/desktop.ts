@@ -1,6 +1,25 @@
 // Most do sterowania komputerem (Windows/desktop) wystawiony przez Electron preload.
 // Na Androidzie/web window.jarvisDesktop nie istnieje — funkcje zwracają komunikat.
 
+export interface SystemDiagnosticItem {
+  id: string;
+  label: string;
+  status: "available" | "missing" | "disabled" | "error";
+  detail: string;
+  fixHint?: string;
+}
+
+export interface SystemDiagnosticsReport {
+  ok: boolean;
+  platform: string;
+  distro?: string;
+  sessionType?: string;
+  gpu?: string;
+  vramGb?: number;
+  items: SystemDiagnosticItem[];
+  error?: string;
+}
+
 export interface JarvisDesktop {
   platform: string;
   ensureLocalSiteOs?(url: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; error?: string }>;
@@ -9,7 +28,11 @@ export interface JarvisDesktop {
   mcpStdioConnect?(config: Record<string, unknown>): Promise<{ ok: boolean; error?: string; tools?: unknown[] }>;
   mcpStdioCall?(server: string, tool: string, input?: Record<string, unknown>): Promise<{ ok: boolean; error?: string; result?: unknown }>;
   mcpStdioDisconnect?(server: string): Promise<{ ok: boolean; error?: string }>;
-  hardwareInfo?(): Promise<{ ok: boolean; platform?: string; cpu?: string; cores?: number; ramGb?: number; gpu?: string; vramGb?: number; error?: string }>;
+  hardwareInfo?(): Promise<{ ok: boolean; platform?: string; distro?: string; sessionType?: string; cpu?: string; cores?: number; ramGb?: number; gpu?: string; vramGb?: number; error?: string }>;
+  systemDiagnostics?(): Promise<SystemDiagnosticsReport>;
+  secureStorageAvailable?(): Promise<boolean>;
+  encryptSecret?(plaintext: string): Promise<{ ok: boolean; data?: string; error?: string }>;
+  decryptSecret?(b64: string): Promise<{ ok: boolean; text?: string; error?: string }>;
   open(target: string): Promise<string>;
   launch(appName: string): Promise<string>;
   power(action: string): Promise<string>;
@@ -31,8 +54,23 @@ export function desktop(): JarvisDesktop | null {
 }
 
 export const isDesktop = (): boolean => !!desktop();
+export const isLinuxDesktop = (): boolean => desktop()?.platform === "linux";
 
-const NOT_DESKTOP = "Ta akcja działa tylko w aplikacji desktopowej JARVIS (Windows .exe).";
+/** Pobierz ujednolicony raport diagnostyczny systemu (W1: available/missing/disabled/error). */
+export async function desktopDiagnostics(): Promise<SystemDiagnosticsReport | null> {
+  const d = desktop();
+  if (!d?.systemDiagnostics) return null;
+  try { return await d.systemDiagnostics(); } catch { return null; }
+}
+
+/** Sprawdź, czy pęk kluczy systemu (Linux Secret Service / KWallet / Windows DPAPI) jest dostępny. */
+export async function desktopKeyringAvailable(): Promise<boolean> {
+  const d = desktop();
+  if (!d?.secureStorageAvailable) return false;
+  try { return await d.secureStorageAvailable(); } catch { return false; }
+}
+
+const NOT_DESKTOP = "Ta akcja działa tylko w aplikacji desktopowej JARVIS (Linux / Windows).";
 
 export async function launchApp(appName: string): Promise<string> {
   const d = desktop();
@@ -62,7 +100,7 @@ export async function powerPc(action: string): Promise<string> {
   const a = action.toLowerCase().trim();
   const r = await d.power(a).catch((e) => `err:${e}`);
   if (r === "ok") return POWER_LABEL[a] || `Wykonano: ${a}.`;
-  if (r === "err:unsupported") return "Akcje zasilania są dostępne tylko na Windows.";
+  if (r === "err:unsupported") return "Akcje zasilania są dostępne tylko na desktopie (Linux / Windows).";
   return `Nie udało się wykonać akcji „${a}" (${r}).`;
 }
 
@@ -71,8 +109,9 @@ export async function volumePc(action: string): Promise<string> {
   if (!d) return NOT_DESKTOP;
   const a = action.toLowerCase().trim();
   const r = await d.volume(a).catch((e) => `err:${e}`);
-  if (r === "ok") return a === "mute" ? "Przełączam wyciszenie." : a === "up" ? "Głośniej." : "Ciszej.";
-  if (r === "err:unsupported") return "Sterowanie głośnością jest dostępne tylko na Windows.";
+  if (r === "ok") return a === "mute" ? "Przełączam wyciszenie." : a === "up" ? "Głośniej." : a === "down" ? "Ciszej." : `Głośność ustawiona (${a}).`;
+  if (r === "err:unsupported") return "Sterowanie głośnością jest dostępne tylko na desktopie (Linux / Windows).";
+  if (r === "err:not-found") return "Brak narzędzia audio (zainstaluj wpctl / pactl / amixer).";
   return `Nie udało się zmienić głośności (${r}).`;
 }
 
@@ -87,11 +126,12 @@ export async function mediaPc(action: string): Promise<string> {
   const a = action.toLowerCase().trim();
   const r = await d.media(a).catch((e) => `err:${e}`);
   if (r === "ok") return MEDIA_LABEL[a] || "Gotowe.";
-  if (r === "err:unsupported") return "Sterowanie multimediami jest dostępne tylko na Windows.";
+  if (r === "err:unsupported") return "Sterowanie multimediami jest dostępne tylko na desktopie (Linux / Windows).";
+  if (r === "err:not-found") return "Brak playerctl (zainstaluj: sudo apt install playerctl).";
   return `Nie udało się sterować odtwarzaniem (${r}).`;
 }
 
-/** Natywne powiadomienie Windows (lub false poza desktopem / starszym .exe). */
+/** Natywne powiadomienie systemowe (Linux / Windows; false poza desktopem). */
 export async function desktopNotify(title: string, body: string): Promise<boolean> {
   const d = desktop();
   if (!d?.notify) return false;
