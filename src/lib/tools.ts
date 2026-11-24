@@ -1968,6 +1968,64 @@ const tools: Tool[] = [
       return res.spokenText;
     },
   },
+  {
+    def: {
+      name: "get_jarvis_status",
+      description: "Samowiedza JARVIS-a: zwraca aktualną mapę własną (wersja, platforma, aktywny dostawca AI/model, silnik TTS i tempo, tryb osobowości, profil autonomii STANDARD/OPERATOR, Budżet Ciszy, status połączeń Modal/proxy/kamera oraz liczba narzędzi). Używaj, gdy użytkownik pyta kim jesteś, jak działasz, jaki masz model/głos lub co potrafisz.",
+      input_schema: obj({}, []),
+    },
+    run: async () => {
+      const { buildSelfManifest } = await import("./selfManifest");
+      const m = buildSelfManifest(toolDefs.map((d) => d.name));
+      return JSON.stringify(m, null, 2);
+    },
+  },
+  {
+    def: {
+      name: "update_jarvis_settings",
+      description: "Autonomiczna zmiana ustawień własnych JARVIS-a z walidacją schematu i zapisem stanu do cofnięcia (undo). Obsługuje: provider, model, voiceMode (system/gemini/eleven/openai/modal/fish/local), voiceRate (0.5-2.0), voicePitch (0.5-2.0), speak, elevenLabsModel, openaiTtsModel, openaiTtsVoice, geminiVoice, personalityMode (AUTO/BOJOWY/KUMPEL/ADWOKAT_DIABLA), voiceModeProtocol, autonomyProfile (STANDARD/OPERATOR), modalUrl, modalVoiceUrl, proxyUrl, proactiveDailyLimit (0-20), quietStartHour (0-23), quietEndHour (0-23).",
+      input_schema: obj(
+        {
+          provider: str("Dostawca AI: auto, modal, gemini, anthropic, groq, openrouter, ollama itp."),
+          model: str("Nazwa modelu AI"),
+          voiceMode: str("Silnik TTS: system, gemini, eleven, openai, modal, fish, local"),
+          voiceRate: num("Tempo mowy (0.5 do 2.0)"),
+          voicePitch: num("Wysokość głosu (0.5 do 2.0)"),
+          speak: { type: "boolean", description: "Czy czytać odpowiedzi na głos" },
+          elevenLabsModel: str("eleven_flash_v2_5 lub eleven_multilingual_v2"),
+          openaiTtsModel: str("gpt-4o-mini-tts, tts-1 lub tts-1-hd"),
+          openaiTtsVoice: str("Głos OpenAI TTS np. onyx, ash, coral, alloy"),
+          geminiVoice: str("Głos Gemini np. Charon, Orus, Puck, Aoede"),
+          personalityMode: str("AUTO, BOJOWY, KUMPEL lub ADWOKAT_DIABLA"),
+          voiceModeProtocol: { type: "boolean", description: "Protokół Mówionej Polszczyzny (krótkie 2-3 zdania pod TTS)" },
+          autonomyProfile: str("STANDARD lub OPERATOR"),
+          modalUrl: str("Pełny adres http(s):// endpointu Modal Brain"),
+          modalVoiceUrl: str("Pełny adres http(s):// endpointu Modal Voice"),
+          proxyUrl: str("Pełny adres http(s):// proxy"),
+          proactiveDailyLimit: num("Dzienny limit Budżetu Ciszy (0-20)"),
+          quietStartHour: num("Godzina startu ciszy nocnej (0-23)"),
+          quietEndHour: num("Godzina końca ciszy nocnej (0-23)"),
+        },
+        [],
+      ),
+    },
+    run: async (args) => {
+      const { validateAndApplyJarvisSettings } = await import("./selfManifest");
+      const res = validateAndApplyJarvisSettings(args as Record<string, unknown>, "tool:update_jarvis_settings");
+      return res.summary;
+    },
+  },
+  {
+    def: {
+      name: "rollback_jarvis_settings",
+      description: "Cofnij (1-klikowe undo) ostatnią autonomiczną zmianę ustawień JARVIS-a wprowadzoną przez update_jarvis_settings.",
+      input_schema: obj({}, []),
+    },
+    run: async () => {
+      const { rollbackJarvisSettings } = await import("./selfManifest");
+      return rollbackJarvisSettings().summary;
+    },
+  },
 ];
 
 export const toolDefs: ToolDef[] = tools.map((t) => t.def);

@@ -39,6 +39,7 @@ import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
 import { buildSoulPromptBlock } from "./soulModes";
 import { buildSleepMemoryPromptBlock, consolidateOpenLoops, recordCorrectionLesson } from "./sleepCompute";
+import { buildSelfAwarenessPromptBlock } from "./selfManifest";
 import type { JarvisReply, Msg, ProviderId, FallbackReasonKind } from "./providers/types";
 
 // Retry przy chwilowym błędzie sieci — z WYKŁADNICZYM backoffem + jitterem (do 2 ponowień).
@@ -358,6 +359,8 @@ export function systemPrompt(ctx: PromptContext = {}): string {
     `Charakter: ${tone}${extra}`,
     ``,
     soul.block,
+    ``,
+    buildSelfAwarenessPromptBlock(toolDefs.map((d) => d.name)),
     ``,
     `Zasady:`,
     `- JĘZYK: ZAWSZE odpowiadaj po polsku, poprawną polszczyzną, NAWET gdy pytanie jest po angielsku lub model „myśli" po angielsku — chyba że użytkownik wyraźnie poprosi o inny język. Nazwy własne/komendy zostaw w oryginale.`,

@@ -9,6 +9,7 @@ import type { ToolDef } from "./tools";
 // Narzędzia ZAWSZE dostępne (nawigacja + uniwersalne) — niezależnie od intencji.
 const CORE_TOOLS = new Set<string>([
   "open_screen", "project_knowledge", "calculate", "daily_briefing", "chief_of_staff", "web_research",
+  "get_jarvis_status", "update_jarvis_settings", "rollback_jarvis_settings",
 ]);
 
 // Grupy domenowe: nazwy narzędzi.

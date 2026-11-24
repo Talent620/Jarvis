@@ -32,9 +32,12 @@ const RISK: Record<string, Risk> = {
   simulate_price_change: "read", simulate_send_offers: "read", rank_clients_by_efficiency: "read",
   // read — odczyt Dziennika Predykcji (samoocena celności), zero zapisu
   prediction_ledger_status: "read",
-  // Sprint 2 / Rada Ekspertów + Live Vision (czysta analiza, zero zapisu/outbound)
+  // Sprint 2 & 3 / Rada Ekspertów + Live Vision + Samowiedza i ustawienia własne
   expert_council: "read",
   live_vision: "read",
+  get_jarvis_status: "read",
+  update_jarvis_settings: "write",
+  rollback_jarvis_settings: "write",
   // Sztafeta Misji (Horizon): status tylko czyta; pokaz pisze LOKALNY dziennik misji
   // i rusza wyłącznie emulator w pamięci (jawna symulacja) — zero akcji wychodzących.
   mission_status: "read", mission_why: "read", mission_demo: "write",

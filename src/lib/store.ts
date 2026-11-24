@@ -109,6 +109,7 @@ const defaultSettings: Settings = {
   guardianProactive: false,
   guardianAutopilot: false,
   requireConsentAlways: false,
+  autonomyProfile: "STANDARD",
   bossFullAccess: false,
   bossVoice: "kapitan",
   freeMode: false,
