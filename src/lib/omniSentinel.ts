@@ -15,6 +15,7 @@ import {
 } from "./desktop";
 import { foldPolish } from "./omniReflex";
 import { assessDesktopActionRisk, type DesktopRiskKind } from "./omniVision";
+import { askConsentUI, recordSystemActionEvent } from "./permissions";
 
 export type SentinelStatus = "idle" | "watching" | "awaiting_decision" | "stopped" | "error";
 
@@ -58,6 +59,7 @@ export interface StartSentinelOptions {
   maxChecks?: number;
   actuator?: Partial<SentinelActuator>;
   askVision?: (system: string, prompt: string, img: { data: string; mediaType: string }) => Promise<string>;
+  onConfirm?: (req: { reason: string; target: string; action: string }) => Promise<boolean>;
 }
 
 export interface SentinelDecisionResult {
@@ -372,9 +374,17 @@ export function startOmniSentinel(opts: StartSentinelOptions): { ok: boolean; te
  */
 export async function resolveSentinelDecision(
   decision: "click" | "double" | "right" | "move" | "resume" | "stop",
+  opts?: { onConfirm?: (req: { reason: string; target: string; action: string }) => Promise<boolean> },
 ): Promise<{ ok: boolean; text: string; spokenText: string }> {
   if (decision === "stop") {
     stopOmniSentinel("Zatrzymano Strażnika Ekranu decyzją użytkownika.");
+    recordSystemActionEvent({
+      tool: "sentinel_stop",
+      risk: "read",
+      input: { decision },
+      output: "Zatrzymano Strażnika Ekranu decyzją użytkownika.",
+      ok: true,
+    });
     return { ok: true, text: "⏹ Zatrzymałem Strażnika Ekranu.", spokenText: "Wyłączam strażnika." };
   }
 
@@ -397,17 +407,67 @@ export async function resolveSentinelDecision(
   // Twardy Desktop RiskGuard przed kliknięciem / ruchem na wykrytym celu
   const risk = assessDesktopActionRisk(`${hit.label} ${hit.summary}`, decision, hit.risk);
   if (risk.blocked) {
+    const reason = risk.reason || "RiskGuard zablokował wrażliwy element.";
+    recordSystemActionEvent({
+      tool: "sentinel_action",
+      risk: "outbound",
+      input: { label: hit.label, decision, risk: hit.risk },
+      output: reason,
+      ok: false,
+      security: true,
+    });
     return {
       ok: false,
-      text: `🛡️ ${risk.reason || "RiskGuard zablokował wrażliwy element."}`,
+      text: `🛡️ ${reason}`,
       spokenText: "Zablokowałem tę akcję ze względów bezpieczeństwa — hasła i 2FA wpisz ręcznie.",
     };
+  }
+
+  // Wymagane jawne potwierdzenie (płatności / destrukcja / wysyłka) — zakaz cichego kliknięcia!
+  if (risk.requiresConfirmation) {
+    const reason = risk.reason || `RiskGuard: potwierdź ryzykowną akcję Strażnika na „${hit.label}”.`;
+    const confirmFn = opts?.onConfirm || activeOpts?.onConfirm;
+    let allowed = false;
+    if (confirmFn) {
+      allowed = await confirmFn({ reason, target: hit.label, action: decision }).catch(() => false);
+    } else {
+      const ui = await askConsentUI({
+        tool: "desktop_sentinel_act",
+        input: { label: hit.label, decision, risk: hit.risk, reason },
+        risk: "outbound",
+        freshOnly: true,
+      });
+      allowed = !!ui?.allow;
+    }
+    if (!allowed) {
+      recordSystemActionEvent({
+        tool: "sentinel_action",
+        risk: "outbound",
+        input: { label: hit.label, decision, risk: hit.risk },
+        output: `Odrzucono przez RiskGuard (brak potwierdzenia): ${reason}`,
+        ok: false,
+        security: true,
+      });
+      return {
+        ok: false,
+        text: `🛡️ ${reason} — wstrzymano (brak potwierdzenia).`,
+        spokenText: "Wstrzymałem tę akcję, bo wymaga osobnego potwierdzenia bezpieczeństwa.",
+      };
+    }
   }
 
   const res =
     decision === "move"
       ? await act.moveCursor({ mode: "absolute", x: hit.x, y: hit.y, smooth: true })
       : await act.mouseAction({ action: decision, x: hit.x, y: hit.y, smooth: true });
+
+  recordSystemActionEvent({
+    tool: "sentinel_action",
+    risk: decision === "move" ? "read" : "outbound",
+    input: { label: hit.label, decision, x: hit.x, y: hit.y },
+    output: res.ok ? `${decision} → ${hit.label} (${hit.x},${hit.y})` : res.message,
+    ok: res.ok,
+  });
 
   if (!res.ok) {
     return { ok: false, text: res.message, spokenText: "Nie udało się wykonać ruchu na ekranie." };

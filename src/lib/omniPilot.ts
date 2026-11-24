@@ -34,6 +34,9 @@ import {
   type GroundedTarget,
   type OmniPlanStep,
 } from "./omniVision";
+import { recordSystemActionEvent } from "./permissions";
+import { stopAllGoals } from "./goalControl";
+import { store } from "./store";
 
 export type OmniPhase =
   | "idle"
@@ -188,7 +191,13 @@ function makeInitialState(): OmniHudState {
 let hudState: OmniHudState = makeInitialState();
 const listeners = new Set<(state: OmniHudState) => void>();
 let runToken = 0;
+let activeAbortController: AbortController = new AbortController();
 let pendingConfirmResolver: ((allow: boolean) => void) | null = null;
+
+/** Aktywny sygnał przerwania (AbortController) dla trwających operacji OMNI-PILOT. */
+export function getOmniAbortSignal(): AbortSignal {
+  return activeAbortController.signal;
+}
 
 function emitState(patch: Partial<OmniHudState>): void {
   hudState = {
@@ -236,6 +245,8 @@ export function dismissOmniHud(): void {
 /** Zresetuj stan modułu (wyłącznie do testów jednostkowych). */
 export function resetOmniPilotState(): void {
   runToken += 1;
+  try { activeAbortController.abort("reset"); } catch { /* ignore */ }
+  activeAbortController = new AbortController();
   if (pendingConfirmResolver) {
     const fn = pendingConfirmResolver;
     pendingConfirmResolver = null;
@@ -255,20 +266,31 @@ export function respondOmniConfirm(allow: boolean): void {
   if (resolver) resolver(!!allow);
 }
 
-/** Natychmiastowy globalny Kill-Switch (Ctrl+Alt+X lub przycisk STOP w HUD). */
+/** Natychmiastowy globalny Kill-Switch (STOP / Ctrl+Alt+X / przycisk STOP w HUD): synchronicznie zatrzymuje OMNI-PILOT, Sentinela i goalRuntime. */
 export function abortOmniPilot(actuator?: Partial<OmniActuator>): void {
   runToken += 1;
+  try { activeAbortController.abort("kill-switch"); } catch { /* ignore */ }
+  activeAbortController = new AbortController();
   if (pendingConfirmResolver) {
     const fn = pendingConfirmResolver;
     pendingConfirmResolver = null;
     fn(false);
   }
   stopOmniSentinel("Zatrzymano awaryjnie (STOP / Ctrl+Alt+X).");
+  const stoppedGoals = stopAllGoals();
   const abortHw = actuator?.abortHardware || DEFAULT_ACTUATOR.abortHardware;
   try {
     void abortHw();
   } catch { /* ignore */ }
-  if (hudState.visible || hudState.active) {
+  recordSystemActionEvent({
+    tool: "omni_kill_switch",
+    risk: "outbound",
+    input: { stoppedGoals },
+    output: "Zatrzymano awaryjnie OMNI-PILOT / Strażnik Ekranu / Cele (STOP / Ctrl+Alt+X).",
+    ok: true,
+    security: true,
+  });
+  if (hudState.visible || hudState.active || stoppedGoals > 0) {
     emitState({
       visible: true,
       active: false,
@@ -491,6 +513,14 @@ export async function visualLocateAndAct(
   const riskVerdict = assessDesktopActionRisk(`${target} ${displayLabel}`, action, located.risk);
   if (riskVerdict.blocked) {
     const reason = riskVerdict.reason || "Zablokowano przez Desktop RiskGuard.";
+    recordSystemActionEvent({
+      tool: "omni_visual_act",
+      risk: "outbound",
+      input: { target, action, source },
+      output: reason,
+      ok: false,
+      security: true,
+    });
     emitState({
       active: false,
       phase: "blocked",
@@ -518,6 +548,14 @@ export async function visualLocateAndAct(
       return { ok: false, found: true, aborted: true, target: located, text: "⏹ Przerwano.", spokenText: "Przerwano." };
     }
     if (!approved) {
+      recordSystemActionEvent({
+        tool: "omni_visual_act",
+        risk: "outbound",
+        input: { target: displayLabel, action, source },
+        output: `Użytkownik odrzucił wrażliwą akcję RiskGuard: ${displayLabel}`,
+        ok: false,
+        security: true,
+      });
       emitState({
         active: false,
         phase: "blocked",
@@ -536,6 +574,13 @@ export async function visualLocateAndAct(
   }
 
   if (action === "locate") {
+    recordSystemActionEvent({
+      tool: "omni_visual_locate",
+      risk: "read",
+      input: { target: displayLabel, source },
+      output: `Namierzono ${displayLabel} (${located.x}, ${located.y})`,
+      ok: true,
+    });
     emitState({
       active: false,
       phase: "done",
@@ -567,6 +612,13 @@ export async function visualLocateAndAct(
   }
 
   if (!execRes.ok) {
+    recordSystemActionEvent({
+      tool: "omni_visual_act",
+      risk: action === "move" ? "read" : "outbound",
+      input: { target: displayLabel, action, x: located.x, y: located.y, source },
+      output: execRes.message,
+      ok: false,
+    });
     emitState({
       active: false,
       phase: "error",
@@ -590,6 +642,13 @@ export async function visualLocateAndAct(
     right: "Kliknięto prawym na",
   };
   const summary = `${doneVerb[action]} „${displayLabel}” (${located.x}, ${located.y}).`;
+  recordSystemActionEvent({
+    tool: "omni_visual_act",
+    risk: action === "move" ? "read" : "outbound",
+    input: { target: displayLabel, action, x: located.x, y: located.y, source },
+    output: summary,
+    ok: true,
+  });
   emitState({
     active: false,
     phase: "done",
@@ -978,6 +1037,13 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
 
     const logLine = `${plan.summary} → ${stepOk ? "OK" : `BŁĄD (${stepOutcome})`}`;
     history.push(logLine);
+    recordSystemActionEvent({
+      tool: `omni_step_${plan.action}`,
+      risk: plan.action === "wait" ? "read" : "outbound",
+      input: { goal, step, action: plan.action, target: plan.target || plan.app || plan.combo || plan.window },
+      output: logLine,
+      ok: stepOk,
+    });
     emitState({
       phase: "verifying",
       steps: pushStepLog(stepOk ? "verifying" : "error", logLine, stepOk),
@@ -1050,19 +1116,32 @@ export async function executeOmniVoiceCommand(
 
   if (!act.isDesktop()) return { handled: false };
 
-  // Natychmiastowy Refleks (<30 ms, offline, 0 USD)
-  const recordReflex = (goal: string, ok: boolean, message: string) => {
+  // Natychmiastowy Refleks (<30 ms, offline, 0 USD) + obowiązkowy wspólny zapis AuditLog i Guardian
+  const recordReflex = (
+    goal: string,
+    ok: boolean,
+    message: string,
+    meta?: { tool?: string; risk?: "read" | "write" | "outbound"; input?: unknown; security?: boolean },
+  ) => {
     emitState({
       visible: true,
       active: false,
-      phase: ok ? "done" : "error",
+      phase: ok ? "done" : meta?.security ? "blocked" : "error",
       goal,
       step: 1,
       maxSteps: 1,
       reticle: null,
       confirmRequest: null,
       statusMessage: message,
-      steps: pushStepLog(ok ? "reflex" : "error", message, ok),
+      steps: pushStepLog(ok ? "reflex" : meta?.security ? "blocked" : "error", message, ok),
+    });
+    recordSystemActionEvent({
+      tool: meta?.tool || `omni_${intent.kind}`,
+      risk: meta?.risk || "outbound",
+      input: meta?.input ?? { transcript },
+      output: message,
+      ok,
+      security: meta?.security,
     });
   };
 
@@ -1070,71 +1149,105 @@ export async function executeOmniVoiceCommand(
     case "cursor_relative": {
       const r = await act.moveCursor({ mode: "relative", dx: intent.dx, dy: intent.dy, smooth: true });
       const text = r.ok ? `⚡ Przesunięto kursor ${intent.label} → (${r.x ?? 0}, ${r.y ?? 0}).` : r.message;
-      recordReflex(`Kursor ${intent.label}`, r.ok, text);
+      recordReflex(`Kursor ${intent.label}`, r.ok, text, { tool: "omni_cursor_move", input: { dx: intent.dx, dy: intent.dy } });
       return { handled: true, ok: r.ok, kind: intent.kind, text, spokenText: r.ok ? `Przesunięto kursor ${intent.label.split("(")[0].trim()}.` : r.message };
     }
     case "cursor_named": {
       const r = await act.moveCursor({ mode: "named", preset: intent.preset, smooth: true });
       const text = r.ok ? `⚡ Kursor ustawiony na: ${intent.label} (${r.x ?? 0}, ${r.y ?? 0}).` : r.message;
-      recordReflex(`Kursor: ${intent.label}`, r.ok, text);
+      recordReflex(`Kursor: ${intent.label}`, r.ok, text, { tool: "omni_cursor_move", input: { preset: intent.preset } });
       return { handled: true, ok: r.ok, kind: intent.kind, text, spokenText: r.ok ? `Kursor na ${intent.label}.` : r.message };
     }
     case "mouse": {
       const r = await act.mouseAction({ action: intent.action });
       const text = r.ok ? `⚡ Wykonano: ${intent.label}.` : r.message;
-      recordReflex(intent.label, r.ok, text);
+      recordReflex(intent.label, r.ok, text, { tool: "omni_mouse_action", input: { action: intent.action } });
       return { handled: true, ok: r.ok, kind: intent.kind, text, spokenText: r.ok ? `${intent.label}.` : r.message };
     }
     case "scroll": {
       const r = await act.scroll(intent.direction, intent.amount);
       const text = r.ok ? `⚡ Przewinięto ${intent.label}.` : r.message;
-      recordReflex(`Przewijanie ${intent.label}`, r.ok, text);
+      recordReflex(`Przewijanie ${intent.label}`, r.ok, text, { tool: "omni_scroll", input: { direction: intent.direction, amount: intent.amount } });
       return { handled: true, ok: r.ok, kind: intent.kind, text, spokenText: r.ok ? `Przewinięto ${intent.label}.` : r.message };
     }
     case "windows_list": {
       const r = await act.listWindows();
-      recordReflex("Lista okien", r.ok, r.message);
+      recordReflex("Lista okien", r.ok, r.message, { tool: "omni_windows_list", risk: "read" });
       return { handled: true, ok: r.ok, kind: intent.kind, text: `🪟 ${r.message}`, spokenText: r.message };
     }
     case "window_focus": {
       const r = await act.focusWindow(intent.query);
-      recordReflex(`Okno: ${intent.query}`, r.ok, r.message);
+      recordReflex(`Okno: ${intent.query}`, r.ok, r.message, { tool: "omni_window_focus", input: { query: intent.query } });
       return { handled: true, ok: r.ok, kind: intent.kind, text: `🪟 ${r.message}`, spokenText: r.message };
     }
     case "launch": {
+      const risk = assessDesktopActionRisk(intent.app, "launch");
+      if (risk.blocked) {
+        const msg = `🛡️ ${risk.reason || "RiskGuard zablokował uruchomienie tej aplikacji."}`;
+        recordReflex("RiskGuard blokada", false, msg, { tool: "omni_launch", input: { app: intent.app }, security: true });
+        return { handled: true, ok: false, kind: intent.kind, text: msg, spokenText: "Zablokowano ze względów bezpieczeństwa." };
+      }
+      if (risk.requiresConfirmation || store.settings.requireConsentAlways === true) {
+        const myToken = ++runToken;
+        emitState({ visible: true, active: true, goal: `Uruchom: ${intent.app}`, step: 1, maxSteps: 1 });
+        const reason = risk.reason || `Potwierdź uruchomienie aplikacji: „${intent.app}”`;
+        const approved = await requestConfirmation({ reason, target: intent.app, action: "launch" }, myToken, opts.onConfirm);
+        if (!approved) {
+          const msg = `🛡️ RiskGuard: wstrzymano uruchomienie „${intent.app}” (brak potwierdzenia).`;
+          recordReflex(`RiskGuard: ${intent.app}`, false, msg, { tool: "omni_launch", input: { app: intent.app }, security: true });
+          return { handled: true, ok: false, kind: intent.kind, text: msg, spokenText: "Wstrzymano uruchomienie aplikacji." };
+        }
+      }
       const msg = await act.launchApp(intent.app);
       const ok = !msg.startsWith("Nie udało") && !msg.startsWith("Ta akcja");
-      recordReflex(`Uruchom: ${intent.app}`, ok, msg);
+      recordReflex(`Uruchom: ${intent.app}`, ok, msg, { tool: "omni_launch", input: { app: intent.app } });
       return { handled: true, ok, kind: intent.kind, text: `🚀 ${msg}`, spokenText: msg };
     }
     case "volume": {
       const msg = await act.volume(intent.action);
       const ok = !msg.startsWith("Nie udało") && !msg.startsWith("Brak") && !msg.startsWith("Sterowanie");
-      recordReflex(`Głośność: ${intent.action}`, ok, msg);
+      recordReflex(`Głośność: ${intent.action}`, ok, msg, { tool: "omni_volume", input: { action: intent.action } });
       return { handled: true, ok, kind: intent.kind, text: `🔊 ${msg}`, spokenText: msg };
     }
     case "media": {
       const msg = await act.media(intent.action);
       const ok = !msg.startsWith("Nie udało") && !msg.startsWith("Brak") && !msg.startsWith("Sterowanie");
-      recordReflex(`Media: ${intent.action}`, ok, msg);
+      recordReflex(`Media: ${intent.action}`, ok, msg, { tool: "omni_media", input: { action: intent.action } });
       return { handled: true, ok, kind: intent.kind, text: `🎵 ${msg}`, spokenText: msg };
     }
     case "hotkey": {
+      const risk = assessDesktopActionRisk(intent.combo, "hotkey");
+      if (risk.blocked) {
+        const msg = `🛡️ ${risk.reason || "RiskGuard zablokował ten skrót klawiszowy."}`;
+        recordReflex("RiskGuard blokada", false, msg, { tool: "omni_hotkey", input: { combo: intent.combo }, security: true });
+        return { handled: true, ok: false, kind: intent.kind, text: msg, spokenText: "Zablokowano ryzykowny skrót ze względów bezpieczeństwa." };
+      }
+      if (risk.requiresConfirmation || store.settings.requireConsentAlways === true) {
+        const myToken = ++runToken;
+        emitState({ visible: true, active: true, goal: `Skrót: ${intent.combo}`, step: 1, maxSteps: 1 });
+        const reason = risk.reason || `Potwierdź wysłanie skrótu: „${intent.combo}”`;
+        const approved = await requestConfirmation({ reason, target: intent.combo, action: "hotkey" }, myToken, opts.onConfirm);
+        if (!approved) {
+          const msg = `🛡️ RiskGuard: wstrzymano skrót „${intent.combo}” (brak potwierdzenia).`;
+          recordReflex(`RiskGuard: ${intent.combo}`, false, msg, { tool: "omni_hotkey", input: { combo: intent.combo }, security: true });
+          return { handled: true, ok: false, kind: intent.kind, text: msg, spokenText: "Wstrzymano wysłanie skrótu." };
+        }
+      }
       const r = await act.hotkey(intent.combo);
       const text = r.ok ? `⌨️ ${intent.label}.` : r.message;
-      recordReflex(intent.label, r.ok, text);
+      recordReflex(intent.label, r.ok, text, { tool: "omni_hotkey", input: { combo: intent.combo } });
       return { handled: true, ok: r.ok, kind: intent.kind, text, spokenText: r.ok ? intent.label : r.message };
     }
     case "type_text": {
       const risk = assessDesktopActionRisk(intent.text, "type");
       if (risk.blocked) {
         const msg = `🛡️ ${risk.reason || "RiskGuard zablokował wpisywanie wrażliwego tekstu."}`;
-        recordReflex("RiskGuard blokada", false, msg);
+        recordReflex("RiskGuard blokada", false, msg, { tool: "omni_type", input: { chars: intent.text.length }, security: true });
         return { handled: true, ok: false, kind: intent.kind, text: msg, spokenText: "Zablokowano ze względów bezpieczeństwa." };
       }
       const r = await act.typeUnicode(intent.text);
       const text = r.ok ? `⌨️ Wpisano na ekranie (${intent.text.length} znaków).` : r.message;
-      recordReflex("Dyktowanie UTF-8", r.ok, text);
+      recordReflex("Dyktowanie UTF-8", r.ok, text, { tool: "omni_type", input: { chars: intent.text.length } });
       return { handled: true, ok: r.ok, kind: intent.kind, text, spokenText: r.ok ? "Wpisano." : r.message };
     }
     case "visual": {
@@ -1150,11 +1263,26 @@ export async function executeOmniVoiceCommand(
         condition: intent.condition,
         actuator: act,
         askVision: opts.askVision,
+        onConfirm: opts.onConfirm,
+      });
+      recordSystemActionEvent({
+        tool: "sentinel_start",
+        risk: "outbound",
+        input: { condition: intent.condition },
+        output: res.text,
+        ok: res.ok,
       });
       return { handled: true, ok: res.ok, kind: intent.kind, text: res.text, spokenText: res.spokenText };
     }
     case "sentinel_stop": {
       stopOmniSentinel("Zatrzymano Strażnika Ekranu komendą głosową.");
+      recordSystemActionEvent({
+        tool: "sentinel_stop",
+        risk: "read",
+        input: { source: "voice" },
+        output: "Zatrzymano Strażnika Ekranu komendą głosową.",
+        ok: true,
+      });
       return {
         handled: true,
         ok: true,
@@ -1165,7 +1293,7 @@ export async function executeOmniVoiceCommand(
     }
     case "diagnose": {
       const res = await act.diagnose();
-      recordReflex("Diagnostyka systemu", res.ok, res.spokenText);
+      recordReflex("Diagnostyka systemu", res.ok, res.spokenText, { tool: "omni_diagnose", risk: "read" });
       return { handled: true, ok: res.ok, kind: intent.kind, text: res.message, spokenText: res.spokenText };
     }
   }

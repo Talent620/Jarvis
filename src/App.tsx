@@ -1386,6 +1386,7 @@ export default function App() {
     const offVoice = (window as any).jarvisDesktop?.onVoiceMode?.(() => setShowVoice((v: boolean) => !v));
     const offOmniAbort = (window as any).jarvisDesktop?.onOmniAbort?.(() => {
       abortOmniPilot();
+      stopSpeaking();
       toast("⏹ OMNI-PILOT zatrzymany awaryjnie (Ctrl+Alt+X)");
     });
     const offSentinel = subscribeSentinelAlerts((hit) => {

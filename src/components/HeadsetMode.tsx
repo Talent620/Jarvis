@@ -17,7 +17,10 @@ import { DEFAULT_ENDPOINT } from "../lib/endpoint";
 import { enrollVoice, hasVoiceProfile } from "../lib/voiceEnroll";
 import { useEscape } from "../hooks/useEscape";
 import { isDesktop } from "../lib/desktop";
-import { executeOmniVoiceCommand } from "../lib/omniPilot";
+import { abortOmniPilot, executeOmniVoiceCommand } from "../lib/omniPilot";
+import { stopOmniSentinel } from "../lib/omniSentinel";
+import { stopAllGoals } from "../lib/goalControl";
+import { parseBossMeta } from "../lib/boss";
 import type { Msg } from "../lib/providers/types";
 
 const LABEL: Record<SmartState, string> = {
@@ -83,12 +86,26 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
   };
 
   const handle = async (text: string) => {
-    if (busy.current || !text.trim()) return;
+    const clean = text.trim();
+    if (!clean) return;
+    if (parseBossMeta(clean) === "stop") {
+      abortOmniPilot();
+      stopOmniSentinel("Przerwano komendą głosową STOP (Słuchawki).");
+      stopAllGoals();
+      speechCancel.current?.();
+      stopSpeaking();
+      busy.current = false;
+      setCaption("⏹ Zatrzymano wszystko. Słucham dalej.");
+      setPhase("listening");
+      cue("confirm");
+      return;
+    }
+    if (busy.current) return;
     busy.current = true;
-    setCaption("🗣 " + text);
+    setCaption("🗣 " + clean);
     setPhase("thinking");
     cue("tap");
-    history.current = [...history.current, { role: "user" as const, content: text }].slice(-16);
+    history.current = [...history.current, { role: "user" as const, content: clean }].slice(-16);
 
     // Strumieniowy głos: mów każde zdanie, gdy tylko się pojawi (nie czekaj na całą odpowiedź).
     // Sekwencyjna kolejka, żeby zdania się nie nakładały; barge-in (speechCancel) ją przerywa.

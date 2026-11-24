@@ -750,7 +750,7 @@ export function stopSpeaking(): void {
     currentAudio.pause();
     currentAudio = null;
   }
-  cancelAnimationFrame(levelRaf);
+  if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(levelRaf);
   setLevel(0);
 }
 

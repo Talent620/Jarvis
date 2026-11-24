@@ -12,6 +12,8 @@ import { checkForUpdate } from "./updater";
 import { googleBackendReady } from "./google";
 import { listSpeechVoices, type NativeVoiceInfo } from "./voice";
 import { speedSummary, voiceSummary, type GuardianActionKey } from "./guardian";
+import { budgetState } from "./autocore/budget";
+import { healthSnapshot } from "./autocore/health";
 
 export type AgentId = "performance" | "voice" | "ai" | "image" | "integration" | "update";
 export type AgentState = "ok" | "warn" | "problem" | "off";
@@ -50,6 +52,9 @@ export interface ScanContext {
   voicePinnedExists: boolean; // czy przypięty głos (voiceName) nadal istnieje
   ttsErrors: number; // błędy TTS w bieżącej sesji
   providerErrors: number; // błędy dostawców chmury (limity/klucze) w sesji
+  autocoreBudget?: { level: "ok" | "warn" | "stop"; spentMonthUsd: number; monthlyLimitUsd: number; message: string };
+  autocoreBackoffs?: string[];
+  auditSummary?: { totalOsActions: number; riskGuardBlocks: number };
 }
 
 /** Guardian Core: zbierz pełny stan systemu (jedno przejście). */
@@ -65,7 +70,7 @@ export async function gatherContext(opts: { checkUpdate?: boolean } = {}): Promi
     listSpeechVoices().catch(() => [] as NativeVoiceInfo[]),
   ]);
 
-  const cloudProviders = PROVIDER_LIST.filter((p) => p.id !== "ollama" && s.keys[p.id]?.trim()).map((p) => p.id);
+  const cloudProviders = PROVIDER_LIST.filter((p) => p.id !== "ollama" && p.id !== "webllm" && s.keys[p.id]?.trim()).map((p) => p.id);
   const update = upd && !("error" in upd) ? { current: upd.current, latest: upd.latest, newer: upd.newer } : upd && "error" in upd ? { current: "?", latest: "?", newer: false, error: upd.error } : null;
   const pinned = s.voiceName?.trim();
   const rel = reliabilityStats();
@@ -73,6 +78,13 @@ export async function gatherContext(opts: { checkUpdate?: boolean } = {}): Promi
   const providerErrors = Object.entries(rel.byScope)
     .filter(([k]) => k.startsWith("provider:") && !/ollama|webllm/.test(k))
     .reduce((n, [, v]) => n + v, 0);
+
+  const b = budgetState();
+  const health = healthSnapshot();
+  const autocoreBackoffs = health.filter((h) => h.backoffUntil || h.badKeys > 0).map((h) => h.provider);
+  const auditList = Array.isArray(store.data?.audit) ? store.data.audit : [];
+  const totalOsActions = auditList.filter((a) => /^(?:desktop_|omni_|android_|sentinel_)/.test(a.tool)).length;
+  const riskGuardBlocks = auditList.filter((a) => !a.ok && /riskguard|zablokow|odmow/i.test(`${a.tool} ${a.output}`)).length;
 
   return {
     s,
@@ -86,6 +98,9 @@ export async function gatherContext(opts: { checkUpdate?: boolean } = {}): Promi
     voicePinnedExists: !pinned || !voices.length || voices.some((v) => v.name === pinned),
     ttsErrors: rel.byScope["tts"] || 0,
     providerErrors,
+    autocoreBudget: { level: b.level, spentMonthUsd: b.spentMonthUsd, monthlyLimitUsd: b.monthlyLimitUsd, message: b.message },
+    autocoreBackoffs,
+    auditSummary: { totalOsActions, riskGuardBlocks },
   };
 }
 
@@ -145,6 +160,12 @@ export function performanceAgent(ctx: ScanContext): AgentReport {
     if (slowNet) score -= 10;
   }
   if (r.errors > 0) findings.push({ level: r.errors > 5 ? "warn" : "ok", text: `Błędy w sesji: ${r.errors}` });
+  if (ctx.auditSummary && (ctx.auditSummary.totalOsActions > 0 || ctx.auditSummary.riskGuardBlocks > 0)) {
+    findings.push({
+      level: ctx.auditSummary.riskGuardBlocks > 0 ? "warn" : "ok",
+      text: `Audyt OS/OMNI: ${ctx.auditSummary.totalOsActions} akcji, ${ctx.auditSummary.riskGuardBlocks} blokad RiskGuard.`,
+    });
+  }
   if (findings.length === 1) findings.push({ level: "ok", text: "Brak danych o opóźnieniach — wszystko świeże." });
 
   return { id: "performance", name: "Wydajność", icon: "⚡", state: worst(findings), score: clamp(score), summary: slow ? "Można przyspieszyć" : "Reaguje od ręki", findings, recs };
@@ -214,8 +235,8 @@ export function aiAgent(ctx: ScanContext): AgentReport {
   const recs: AgentRec[] = [];
   let score = 100;
 
-  const localOk = ctx.ollama.ok && ctx.ollama.models.length > 0;
-  const hasBrain = localOk || ctx.cloudProviders.length > 0 || s.provider === "ollama";
+  const localOk = (ctx.ollama.ok && ctx.ollama.models.length > 0) || !!s.webllmEnabled;
+  const hasBrain = localOk || ctx.cloudProviders.length > 0 || s.provider === "ollama" || s.provider === "webllm";
 
   if (!hasBrain) {
     findings.push({ level: "problem", text: "Żaden mózg nie odpowie — brak modelu lokalnego i kluczy chmurowych." });
@@ -230,6 +251,18 @@ export function aiAgent(ctx: ScanContext): AgentReport {
   }
   if (ctx.cloudProviders.length) findings.push({ level: "ok", text: `Chmura: ${ctx.cloudProviders.length} dostawc(ów) z kluczem (${ctx.cloudProviders.join(", ")}).` });
   else findings.push({ level: "warn", text: "Brak kluczy chmurowych — pełna sprawność wymaga Ollamy albo klucza API." });
+  if (s.webllmEnabled) findings.push({ level: "ok", text: "WebLLM (on-device WebGPU) aktywny jako lokalny mózg." });
+  if (ctx.autocoreBudget && ctx.autocoreBudget.level !== "ok") {
+    findings.push({
+      level: ctx.autocoreBudget.level === "stop" ? "problem" : "warn",
+      text: `AutoCore Budżet (${ctx.autocoreBudget.level.toUpperCase()}): ${ctx.autocoreBudget.message}`,
+    });
+    score -= ctx.autocoreBudget.level === "stop" ? 25 : 10;
+  }
+  if (ctx.autocoreBackoffs && ctx.autocoreBackoffs.length > 0) {
+    findings.push({ level: "warn", text: `AutoCore Health: chwilowa blokada/backoff dla ${ctx.autocoreBackoffs.join(", ")}.` });
+    score -= 8;
+  }
 
   if (ctx.ollama.configured) {
     if (!ctx.ollama.ok) { findings.push({ level: "warn", text: `Ollama nieosiągalna${ctx.ollama.error ? ` (${ctx.ollama.error})` : ""}.` }); score -= 14; recs.push({ key: "connectServers", label: "🔗 Połącz serwery", problem: "Lokalny serwer Ollama nie odpowiada.", cause: ctx.ollama.error || "Serwer wyłączony lub zmienił adres.", impact: "Brak prywatnego AI offline — JARVIS musi polegać na chmurze.", why: "Poszukam Ollamy na typowych adresach i podłączę ją." }); }

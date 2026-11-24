@@ -1,5 +1,6 @@
 import { store, uid } from "./store";
 import { assessPhoneRisk } from "./phoneAgent";
+import { recordGuardianEvent } from "./guardianHistory";
 import type { AuditEntry } from "../types";
 
 export type AutonomyProfile = "STANDARD" | "OPERATOR";
@@ -21,12 +22,12 @@ const OPERATOR_UI_CHECKED = new Set([
   "desktop_mouse_action", "desktop_visual_act",
 ]);
 
-// Twarde akcje krytyczne: wysyłka na zewnątrz, dzwonienie, usuwanie/destrukcja, płatności, system.
+// Twarde akcje krytyczne: wysyłka na zewnątrz, dzwonienie, usuwanie/destrukcja, płatności, system, pełna autonomia pulpitu.
 // NIGDY nie są auto-zatwierdzane przez tryb OPERATOR.
 const CRITICAL_RISKGUARD_TOOLS = new Set([
   "gmail_send", "gmail_reply", "send_test_email", "send_offers_all", "salesos_email", "salesos_flush_emails",
   "send_sms", "text_contact", "make_call", "call_contact",
-  "clear_tally", "desktop_power", "run_automation",
+  "clear_tally", "desktop_power", "desktop_omni_task", "run_automation",
   "system_terminal", "system_git", "system_docker", "system_http_request", "system_files_write", "system_generated_tool",
 ]);
 
@@ -202,7 +203,7 @@ export function resetConsents(): boolean { return saveConsents({}); }
 // albo ogólny zakres sesji nie mogą zastąpić decyzji dla następnej wysyłki.
 const ALWAYS_CONFIRM = new Set([
   "gmail_send", "gmail_reply", "send_test_email", "send_offers_all", "salesos_email", "salesos_flush_emails",
-  "send_sms", "text_contact", "desktop_power", "desktop_click", "desktop_active_window", "desktop_type", "desktop_hotkey", "clear_tally",
+  "send_sms", "text_contact", "desktop_power", "desktop_click", "desktop_active_window", "desktop_type", "desktop_hotkey", "desktop_omni_task", "clear_tally",
   "salesos_push", "salesos_set_status", "gcal_add", "run_automation",
   "system_terminal", "system_git", "system_docker", "system_http_request", "system_files_write", "system_generated_tool",
 ]);
@@ -259,12 +260,51 @@ function redactInput(input: unknown): unknown {
   }
 }
 
-// --- Audyt + cofanie ---
+const GUARDIAN_BRIDGE_TOOL_RE = /^(?:desktop_|omni_|android_|system_|sentinel_|riskguard_)/;
+
+// --- Audyt + cofanie + wspólny most z Runtime Guardian ---
 export function audit(entry: Omit<AuditEntry, "id" | "at">) {
   store.setData((d) => {
     d.audit.unshift({ ...entry, input: redactInput(entry.input), id: uid(), at: Date.now() });
     if (d.audit.length > 200) d.audit.length = 200;
   });
+  if (GUARDIAN_BRIDGE_TOOL_RE.test(entry.tool) || !entry.ok) {
+    const kind = !entry.ok && /riskguard|zablokow|odmow|kill/i.test(`${entry.tool} ${entry.output}`) ? "security" : "action";
+    const summary = `[${entry.tool}] ${String(entry.output || (entry.ok ? "OK" : "Błąd")).slice(0, 160)}`;
+    try { recordGuardianEvent(kind, summary); } catch { /* best-effort */ }
+  }
+}
+
+/**
+ * Wspólny most zdarzeń operacyjnych (OMNI-PILOT / Sentinel / RiskGuard / Kill-Switch):
+ * zapisuje spójny ślad jednocześnie w AuditLog (`store.data.audit`) oraz telemetrii Runtime Guardiana.
+ */
+export function recordSystemActionEvent(entry: {
+  tool: string;
+  risk: Risk;
+  input: unknown;
+  output: string;
+  ok: boolean;
+  security?: boolean;
+}): void {
+  store.setData((d) => {
+    d.audit.unshift({
+      tool: entry.tool,
+      risk: entry.risk,
+      input: redactInput(entry.input),
+      output: String(entry.output || "").slice(0, 300),
+      ok: entry.ok,
+      id: uid(),
+      at: Date.now(),
+    });
+    if (d.audit.length > 200) d.audit.length = 200;
+  });
+  try {
+    recordGuardianEvent(
+      entry.security || (!entry.ok && /riskguard|zablokow|odmow|kill/i.test(`${entry.tool} ${entry.output}`)) ? "security" : "action",
+      `[${entry.tool}] ${String(entry.output || (entry.ok ? "OK" : "Błąd")).slice(0, 160)}`,
+    );
+  } catch { /* best-effort */ }
 }
 
 export function undoAction(entry: AuditEntry): string {

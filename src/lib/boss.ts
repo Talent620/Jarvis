@@ -65,7 +65,7 @@ export type BossMeta = "stop" | "repeat" | null;
 export function parseBossMeta(text: string): BossMeta {
   const t = (text || "").trim().toLowerCase().replace(/[!.,?…]+$/, "");
   if (!t || t.length > 35) return null;
-  if (/^(stop|anuluj|przerwij|cisza|cicho|do[śs][ćc]|wystarczy|zatrzymaj( się)?|przesta[ńn])$/.test(t)) return "stop";
+  if (/^(stop|st[oó]j|anuluj|przerwij|cisza|cicho|do[śs][ćc]|wystarczy|zatrzymaj( się)?|przesta[ńn])$/.test(t)) return "stop";
   if (/^(powt[oó]rz( to)?|jeszcze raz|powiedz (jeszcze raz|to ponownie)|nie dos[łl]ysza[łl]em)$/.test(t)) return "repeat";
   return null;
 }

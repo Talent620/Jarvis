@@ -7,12 +7,12 @@ import { loadJson, saveJson } from "./lsJson";
 
 export interface GuardianEvent {
   at: number;            // timestamp
-  kind: "fix" | "recommend" | "scan";
+  kind: "fix" | "recommend" | "scan" | "action" | "security";
   message: string;       // czytelny opis
 }
 
 const KEY = "jarvis.guardian.history";
-const MAX = 20;
+const MAX = 50;
 
 /** Pure: dołóż zdarzenie na początek i przytnij do MAX (bez duplikatu identycznej, świeżej wiadomości). */
 export function appendEvent(list: GuardianEvent[], ev: GuardianEvent, max = MAX): GuardianEvent[] {
@@ -34,8 +34,15 @@ export function recurringHint(list: GuardianEvent[], min = 3): RecurringHint | n
   const top = topFixes(list, 1)[0];
   if (!top || top.count < min) return null;
   const m = top.message.toLowerCase();
+  const isLinux =
+    (typeof window !== "undefined" && (window as any).jarvisDesktop?.platform === "linux") ||
+    (typeof navigator !== "undefined" && /linux/i.test(navigator.platform || ""));
   let advice: string;
-  if (/ollama|serwer|połącz|polacz|lokaln/.test(m)) advice = "Włącz autostart serwera Ollama przy starcie Windows (JARVIS-Ollama-Server) — przestaniesz łączyć ręcznie.";
+  if (/ollama|serwer|połącz|polacz|lokaln/.test(m)) {
+    advice = isLinux
+      ? "Włącz autostart usługi Ollama w systemd (sudo systemctl enable --now ollama) — przestaniesz łączyć ręcznie."
+      : "Włącz autostart serwera Ollama przy starcie systemu (JARVIS-Ollama-Server / systemd) — przestaniesz łączyć ręcznie.";
+  }
   else if (/głos|glos|voice/.test(m)) advice = "Przypnij głos na stałe (🚀 Używaj głosu JARVISA), żeby nie wracał do systemowego.";
   else if (/szybk|od ręki|od reki/.test(m)) advice = "Ustaw tryb szybki jako domyślny w ⚙ → AI, żeby nie włączać go za każdym razem.";
   else if (/model|mądr|madr|pobra/.test(m)) advice = "Trzymaj komplet modeli lokalnych zainstalowany na stałe (tryb Mądrzej raz, potem zostają).";
@@ -43,14 +50,30 @@ export function recurringHint(list: GuardianEvent[], min = 3): RecurringHint | n
   return { count: top.count, problem: top.message, advice };
 }
 
+let memHistory: GuardianEvent[] | null = null;
+
+function hasLocalStorage(): boolean {
+  try {
+    return typeof localStorage !== "undefined" && typeof localStorage.getItem === "function";
+  } catch {
+    return false;
+  }
+}
+
 function read(): GuardianEvent[] {
-  const arr = loadJson<GuardianEvent[]>(KEY, []);
-  return Array.isArray(arr) ? arr : [];
+  if (hasLocalStorage()) {
+    const arr = loadJson<GuardianEvent[]>(KEY, []);
+    memHistory = Array.isArray(arr) ? arr : [];
+    return memHistory;
+  }
+  return memHistory ? memHistory.slice() : [];
 }
 
 /** Zapisz zdarzenie Strażnika do historii (best-effort). */
 export function recordGuardianEvent(kind: GuardianEvent["kind"], message: string): void {
-  saveJson(KEY, appendEvent(read(), { at: Date.now(), kind, message }));
+  const next = appendEvent(read(), { at: Date.now(), kind, message });
+  memHistory = next;
+  if (hasLocalStorage()) saveJson(KEY, next);
 }
 
 /** Odczytaj historię Strażnika (najnowsze pierwsze). */
@@ -60,5 +83,6 @@ export function getGuardianHistory(): GuardianEvent[] {
 
 /** Wyczyść historię Strażnika. */
 export function clearGuardianHistory(): void {
-  try { if (typeof localStorage !== "undefined") localStorage.removeItem(KEY); } catch { /* ignore */ }
+  memHistory = [];
+  try { if (hasLocalStorage()) localStorage.removeItem(KEY); } catch { /* ignore */ }
 }

@@ -9,7 +9,9 @@ import { confidencePct, confidencePreface, isRiskyCommand, isExplainRequest, exp
 import { providerShortName } from "./providerNames";
 import { fallbackNotice, fallbackVoiceLine, shouldAnnounceFallback } from "./providers/registry";
 import { isDesktop } from "./desktop";
-import { executeOmniVoiceCommand } from "./omniPilot";
+import { abortOmniPilot, executeOmniVoiceCommand } from "./omniPilot";
+import { stopOmniSentinel } from "./omniSentinel";
+import { stopAllGoals } from "./goalControl";
 import { toast } from "./toast";
 import { parseBossMeta } from "./boss";
 import { formatForSpokenPolish } from "./soulModes";
@@ -85,6 +87,17 @@ export class ConversationLoop {
     this.voiceTune = v;
   }
 
+  /** Natychmiastowy synchroniczny Kill-Switch: przerywa OMNI-PILOT, Sentinela, cele i TTS. */
+  private triggerKillSwitch(): void {
+    abortOmniPilot();
+    stopOmniSentinel("Przerwano komendą głosową STOP.");
+    stopAllGoals();
+    stopSpeaking();
+    if (this.stallTimer) { clearTimeout(this.stallTimer); this.stallTimer = null; }
+    this.onCaption("⏹ Zatrzymano wszystko (OMNI-PILOT / Strażnik / Cele). Słucham dalej.");
+    this.onState("listening");
+  }
+
   start(): void {
     if (!ConversationLoop.supported()) {
       // Niezawodność: brak STT NIE wyłącza Szefa — zostaje tor tekstowy (say()).
@@ -98,7 +111,14 @@ export class ConversationLoop {
   /** Tor tekstowy (fallback): wpisane polecenie idzie tą samą drogą co usłyszane. */
   say(text: string): void {
     const t = (text || "").trim();
-    if (this.closed || this.processing || !t) return;
+    if (this.closed || !t) return;
+    // Kill-Switch działa NATYCHMIAST nawet podczas aktywnego wykonywania polecenia!
+    if (parseBossMeta(t) === "stop") {
+      this.triggerKillSwitch();
+      this.processing = false;
+      return;
+    }
+    if (this.processing) return;
     this.processing = true;
     this.listener?.stop();
     void this.handle(t);
@@ -111,11 +131,18 @@ export class ConversationLoop {
       wakeWord: false,
       onInterim: (t) => { if (t) this.onCaption("🗣 " + t); },
       onFinal: (t) => {
-        if (this.closed || this.processing) return;
-        if (t.trim()) {
-          this.processing = true;
-          void this.handle(t.trim());
+        if (this.closed) return;
+        const clean = t.trim();
+        if (!clean) return;
+        if (parseBossMeta(clean) === "stop") {
+          this.triggerKillSwitch();
+          this.processing = false;
+          if (!this.closed && this.wantListen) this.listenOnce();
+          return;
         }
+        if (this.processing) return;
+        this.processing = true;
+        void this.handle(clean);
       },
       onError: (msg) => {
         if (!this.closed) this.onState("error", msg);
@@ -147,12 +174,10 @@ export class ConversationLoop {
       if (!this.closed && this.wantListen) this.listenOnce();
       return;
     }
-    // ⚡ META-rozkazy bez modelu (natychmiast, pewnie): stop/anuluj, powtórz.
+    // ⚡ META-rozkazy bez modelu (natychmiast, pewnie): stop/stój/przerwij/anuluj, powtórz.
     const meta = parseBossMeta(text);
     if (meta === "stop") {
-      stopSpeaking();
-      this.onCaption("⏹ Zatrzymane. Słucham dalej.");
-      this.onState("listening");
+      this.triggerKillSwitch();
       this.processing = false;
       if (!this.closed && this.wantListen) this.listenOnce();
       return;

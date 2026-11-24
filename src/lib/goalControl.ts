@@ -15,3 +15,19 @@ export function requestGoalPause(id: string): boolean {
   return true;
 }
 export function isGoalRunning(id: string): boolean { return active.has(id); }
+
+/** Synchronicznie zatrzymaj wszystkie aktywne cele (globalny Kill-Switch: STOP / Ctrl+Alt+X). */
+export function stopAllGoals(): number {
+  let count = 0;
+  for (const state of active.values()) {
+    if (!state.pause) {
+      state.pause = true;
+      count += 1;
+    }
+  }
+  return count;
+}
+
+export function getActiveGoalIds(): string[] {
+  return [...active.keys()];
+}

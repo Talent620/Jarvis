@@ -79,18 +79,23 @@ export const OMNI_PLANNER_SYSTEM = [
   "- Nie powtarzaj dokładnie tego samego kroku, który już nie przyniósł efektu — spróbuj innej drogi albo need_human.",
 ].join("\n");
 
-const PASSWORD_RE = /\b(hasl|hasł|password|passcode|pin\b|2fa|otp|tajny klucz|seed phrase|private key|klucz prywatny)\b/i;
+const PASSWORD_RE = /\b(hasl|hasł|password|passcode|pin\b|2fa|otp|tajny klucz|seed phrase|private key|klucz prywatny|passwd)\b/i;
 const PAYMENT_RE = /\b(zaplac|zapłać|przelew|kup teraz|buy now|checkout|pay now|potwierdz platnosc|potwierdź płatność|blik|karta kredytowa)\b/i;
-const DESTRUCTIVE_RE = /\b(usun trwale|usuń trwale|delete forever|formatuj|format disk|wyczysc dysk|wyczyść dysk|odinstaluj|shutdown|wylacz komputer|wyłącz komputer)\b/i;
+const DESTRUCTIVE_RE = /\b(usun trwale|usuń trwale|delete forever|formatuj|format disk|wyczysc dysk|wyczyść dysk|odinstaluj|shutdown|poweroff|reboot|wylacz komputer|wyłącz komputer|mkfs|fdisk|diskpart|rm\s+-rf)\b/i;
 const SEND_RE = /\b(wyslij teraz|wyślij teraz|send email|opublikuj|publish now|post now|prześlij dalej)\b/i;
+const RISKY_HOTKEY_RE = /^(?:ctrl\+w|alt\+f4|ctrl\+q|ctrl\+shift\+q|shift\+delete|ctrl\+alt\+del(?:ete)?|super\+l|win\+l)$/i;
+const BLOCKED_HOTKEY_RE = /^(?:ctrl\+alt\+del(?:ete)?|ctrl\+alt\+backspace)$/i;
+const RISKY_LAUNCH_RE = /\b(terminal|konsole|alacritty|kitty|xterm|bash|zsh|sh\b|powershell|pwsh|cmd|sudo|regedit|gparted|disks|format|fdisk|diskpart|dd\b|mkfs|rm\b|shutdown|reboot|poweroff|systemctl)\b/i;
 
-/** Pure: Desktop RiskGuard — twarda blokada haseł i zgoda przed płatnościami/destrukcją/wysyłką. */
+/** Pure: Desktop RiskGuard — twarda blokada haseł i zgoda przed płatnościami/destrukcją/wysyłką/ryzykownymi skrótami i aplikacjami. */
 export function assessDesktopActionRisk(
   targetLabel: string,
   action: string,
   modelRisk: DesktopRiskKind = "none",
 ): DesktopRiskVerdict {
-  const txt = `${targetLabel || ""} ${action || ""}`;
+  const act = String(action || "").toLowerCase().trim();
+  const label = String(targetLabel || "").trim();
+  const txt = `${label} ${act}`;
   if (modelRisk === "password" || PASSWORD_RE.test(txt)) {
     return {
       blocked: true,
@@ -98,8 +103,41 @@ export function assessDesktopActionRisk(
       reason: "RiskGuard: pole hasła / 2FA / klucza prywatnego jest twardo zablokowane — wpisz dane ręcznie.",
     };
   }
-  if (action === "move" || action === "locate") {
+  if (act === "move" || act === "locate") {
     return { blocked: false, requiresConfirmation: false };
+  }
+  if (act === "hotkey") {
+    const combo = label.toLowerCase().replace(/\s+/g, "");
+    if (BLOCKED_HOTKEY_RE.test(combo)) {
+      return {
+        blocked: true,
+        requiresConfirmation: false,
+        reason: `RiskGuard: krytyczny skrót systemowy „${label}” jest zablokowany.`,
+      };
+    }
+    if (RISKY_HOTKEY_RE.test(combo)) {
+      return {
+        blocked: false,
+        requiresConfirmation: true,
+        reason: `Potwierdź ryzykowny skrót klawiszowy (zamknięcie/usunięcie): „${label}”`,
+      };
+    }
+  }
+  if (act === "launch" || act === "launch_app") {
+    if (DESTRUCTIVE_RE.test(label)) {
+      return {
+        blocked: true,
+        requiresConfirmation: false,
+        reason: `RiskGuard: destrukcyjne polecenie/aplikacja „${label}” jest zablokowane.`,
+      };
+    }
+    if (RISKY_LAUNCH_RE.test(label)) {
+      return {
+        blocked: false,
+        requiresConfirmation: true,
+        reason: `Potwierdź uruchomienie narzędzia systemowego/powłoki: „${label}”`,
+      };
+    }
   }
   if (modelRisk === "payment" || PAYMENT_RE.test(txt)) {
     return { blocked: false, requiresConfirmation: true, reason: `Potwierdź akcję płatniczą: „${targetLabel}"` };
