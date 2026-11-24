@@ -4,23 +4,23 @@
   "command": "npm run build",
   "available": true,
   "unavailableReason": null,
-  "startedAt": "2026-11-24T20:44:58.294Z",
-  "finishedAt": "2026-11-24T20:45:35.024Z",
-  "durationMs": 36730,
-  "commit": "6df9e801ffb8905223577afdafb8e9834d6f6dff",
-  "branch": "feat/omni-frontier",
+  "startedAt": "2026-11-24T21:20:44.649Z",
+  "finishedAt": "2026-11-24T21:21:25.587Z",
+  "durationMs": 40938,
+  "commit": "debb484c971ce84dd9b6360731ba0e5dfc25ea4d",
+  "branch": "feat/ux-craft-audit",
   "worktreeDirty": true,
-  "worktreeFingerprint": "de18c60d7f6c7c741382af3afed075198381be00a6955a7da8d31a16da7d7046",
+  "worktreeFingerprint": "7050d1b8445ffe99f596555ba561087a84898511951448a9fc0339b378d04f74",
   "exitCode": 0,
   "signal": null,
   "timedOut": false,
   "spawnError": null,
   "summary": {
-    "built": "built in 12.87s"
+    "built": "built in 13.59s"
   },
   "outputTail": [
-    "dist/assets/index-O26f4cDj.js                 987.72 kB │ gzip: 362.49 kB",
-    "✓ built in 12.87s",
+    "dist/assets/index-A2u91OZm.js                 995.59 kB │ gzip: 364.67 kB",
+    "✓ built in 13.59s",
     "npm notice run jarvis-ai-assistant@2.0.0 build",
     "npm notice run tsc -b && vite build",
     "[plugin:vite:reporter] [plugin vite:reporter] ",
@@ -60,5 +60,5 @@
     "- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks",
     "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit."
   ],
-  "logPath": "project-memory/reports/logs/build-20261124T204458Z.log"
+  "logPath": "project-memory/reports/logs/build-20261124T212044Z.log"
 }

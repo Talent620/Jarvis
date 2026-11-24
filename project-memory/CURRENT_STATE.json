@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "generatedBy": "scripts/sync-project-state.mjs",
-  "generatedAt": "2026-11-24T20:46:19.953Z",
+  "generatedAt": "2026-11-24T21:21:57.759Z",
   "notice": "PLIK GENEROWANY — nie edytuj ręcznie. Odśwież: npm run memory:sync",
   "git": {
-    "commit": "6df9e801ffb8905223577afdafb8e9834d6f6dff",
-    "shortCommit": "6df9e80",
-    "branch": "feat/omni-frontier",
+    "commit": "debb484c971ce84dd9b6360731ba0e5dfc25ea4d",
+    "shortCommit": "debb484",
+    "branch": "feat/ux-craft-audit",
     "dirty": true,
     "changes": [
       "M project-memory/CURRENT_STATE.json",
@@ -16,9 +16,10 @@
       " M project-memory/reports/lint.json",
       " M project-memory/reports/secret-scan.json",
       " M project-memory/reports/test.json",
-      "?? project-memory/events/20261124T204619696Z-antigravity-omni-frontier.json"
+      "?? project-memory/decisions/ADR-0006-ux-obsidian-precision.md",
+      "?? project-memory/events/20261124T212157501Z-antigravity-ux-craft-audit.json"
     ],
-    "worktreeFingerprint": "de18c60d7f6c7c741382af3afed075198381be00a6955a7da8d31a16da7d7046"
+    "worktreeFingerprint": "7050d1b8445ffe99f596555ba561087a84898511951448a9fc0339b378d04f74"
   },
   "repository": {
     "status": "OK",
@@ -60,7 +61,7 @@
     },
     {
       "dir": "project-memory",
-      "files": 22
+      "files": 23
     },
     {
       "dir": "(root)",
@@ -415,6 +416,26 @@
   ],
   "recentCommits": [
     {
+      "hash": "debb484",
+      "date": "2026-11-24T21:13:52Z",
+      "subject": "fix(ux): second-pass visual polish — top-right desktop toast, active chip hover, cmdk input border, wrapped themes & mobile placeholders"
+    },
+    {
+      "hash": "bcd8b65",
+      "date": "2026-11-24T21:10:05Z",
+      "subject": "feat(ux): decluttered topbar & Lucide icons, collapsible FitnessPanel, clean Settings/Guardian/CommandPalette & responsive Composer"
+    },
+    {
+      "hash": "6c0a62e",
+      "date": "2026-11-24T21:03:05Z",
+      "subject": "feat(ux): unified Obsidian Precision design system, true Light theme, dark form controls & BossFab/Toast/mobile layout fixes"
+    },
+    {
+      "hash": "a00b8ae",
+      "date": "2026-11-24T20:46:20Z",
+      "subject": "chore(memory): verified omni-frontier snapshot, reports & event (ADR-0005 proposed)"
+    },
+    {
       "hash": "6df9e80",
       "date": "2026-11-24T20:40:11Z",
       "subject": "feat(omni-frontier): Hybrid OS-Tree+Vision grounding, Dual-Track Screen Sentinel (0-USD static skip), HUD decisions & ADR-0005"
@@ -443,35 +464,15 @@
       "hash": "a15daf1",
       "date": "2026-11-24T20:14:53Z",
       "subject": "fix(omni-pilot): scale HiDPI coordinates by display scaleFactor & fix Windows PowerShell mouse/scroll/SendKeys"
-    },
-    {
-      "hash": "7976912",
-      "date": "2026-11-24T20:12:30Z",
-      "subject": "feat(omni-pilot): live Visual Grounding HUD reticle, 8 agent tools, voice-to-desktop App wiring & ADR-0004"
-    },
-    {
-      "hash": "c1fc5e6",
-      "date": "2026-11-24T20:08:25Z",
-      "subject": "feat(omni-pilot): Polish voice reflex, [0..1000] visual grounding, RiskGuard & autonomous Computer Use loop"
-    },
-    {
-      "hash": "aba643b",
-      "date": "2026-11-24T20:05:32Z",
-      "subject": "feat(omni-pilot): smooth OS desktop actuator, Wayland ydotool fallback, UTF-8 typing & Ctrl+Alt+X kill-switch"
-    },
-    {
-      "hash": "a44ba2e",
-      "date": "2026-11-24T19:58:10Z",
-      "subject": "chore(memory): verified apex-polish snapshot, reports & event (ADR-0003 proposed)"
     }
   ],
   "checks": {
     "secret-scan": {
       "command": "node scripts/secret-scan.mjs --all",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T20:40:19.624Z",
-      "commit": "6df9e801ffb8905223577afdafb8e9834d6f6dff",
-      "logPath": "project-memory/reports/logs/secret-scan-20261124T204019Z.log",
+      "finishedAt": "2026-11-24T21:16:04.271Z",
+      "commit": "debb484c971ce84dd9b6360731ba0e5dfc25ea4d",
+      "logPath": "project-memory/reports/logs/secret-scan-20261124T211603Z.log",
       "summary": {
         "result": "Skan sekretów: czysto."
       },
@@ -482,9 +483,9 @@
     "lint": {
       "command": "npm run lint",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T20:40:39.808Z",
-      "commit": "6df9e801ffb8905223577afdafb8e9834d6f6dff",
-      "logPath": "project-memory/reports/logs/lint-20261124T204019Z.log",
+      "finishedAt": "2026-11-24T21:16:24.548Z",
+      "commit": "debb484c971ce84dd9b6360731ba0e5dfc25ea4d",
+      "logPath": "project-memory/reports/logs/lint-20261124T211604Z.log",
       "summary": {
         "problems": null
       },
@@ -495,9 +496,9 @@
     "test": {
       "command": "npm test",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T20:44:58.245Z",
-      "commit": "6df9e801ffb8905223577afdafb8e9834d6f6dff",
-      "logPath": "project-memory/reports/logs/test-20261124T204039Z.log",
+      "finishedAt": "2026-11-24T21:20:44.598Z",
+      "commit": "debb484c971ce84dd9b6360731ba0e5dfc25ea4d",
+      "logPath": "project-memory/reports/logs/test-20261124T211624Z.log",
       "summary": {
         "testFiles": "Test Files  366 passed (366)",
         "tests": "Tests  3093 passed (3093)"
@@ -509,11 +510,11 @@
     "build": {
       "command": "npm run build",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T20:45:35.024Z",
-      "commit": "6df9e801ffb8905223577afdafb8e9834d6f6dff",
-      "logPath": "project-memory/reports/logs/build-20261124T204458Z.log",
+      "finishedAt": "2026-11-24T21:21:25.587Z",
+      "commit": "debb484c971ce84dd9b6360731ba0e5dfc25ea4d",
+      "logPath": "project-memory/reports/logs/build-20261124T212044Z.log",
       "summary": {
-        "built": "built in 12.87s"
+        "built": "built in 13.59s"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -710,10 +711,18 @@
     ]
   },
   "events": {
-    "total": 6,
-    "valid": 6,
+    "total": 7,
+    "valid": 7,
     "invalid": [],
     "recent": [
+      {
+        "file": "project-memory/events/20261124T212157501Z-antigravity-ux-craft-audit.json",
+        "timestamp": "2026-11-24T21:21:57.501Z",
+        "agent": "antigravity",
+        "taskId": "ux-craft-audit",
+        "endCommit": "UNCOMMITTED",
+        "nextStep": "Recenzja PR feat/ux-craft-audit przez właściciela lub innego agenta, scalenie z main oraz test docelowy na fizycznym Android APK (Samsung S9+) i Linux Desktop."
+      },
       {
         "file": "project-memory/events/20261124T204619696Z-antigravity-omni-frontier.json",
         "timestamp": "2026-11-24T20:46:19.696Z",
@@ -765,8 +774,8 @@
     ]
   },
   "nextRecommendedStep": {
-    "from": "project-memory/events/20261124T204619696Z-antigravity-omni-frontier.json",
-    "text": "Recenzja PR feat/omni-frontier (ADR-0003/0004/0005) i test na żywym pulpicie Linux/Windows; następnie merge do main + build Linux/Windows/APK lub lokalny daemon audio <300ms."
+    "from": "project-memory/events/20261124T212157501Z-antigravity-ux-craft-audit.json",
+    "text": "Recenzja PR feat/ux-craft-audit przez właściciela lub innego agenta, scalenie z main oraz test docelowy na fizycznym Android APK (Samsung S9+) i Linux Desktop."
   },
   "decisions": [
     {
@@ -793,8 +802,13 @@
       "file": "project-memory/decisions/ADR-0005-omni-frontier.md",
       "title": "ADR-0005: JARVIS OMNI-FRONTIER — Hybrydowe Drzewo UI (AT-SPI2/UIA), Dual-Track Strażnik Ekranu i Diagnostyka Systemu",
       "status": "proposed"
+    },
+    {
+      "file": "project-memory/decisions/ADR-0006-ux-obsidian-precision.md",
+      "title": "ADR-0006: JARVIS UX/UI „Obsidian Precision” — Spójny System Wizualny, Ergonomia, Prawdziwy Motyw Jasny i Inspekcja Live",
+      "status": "proposed"
     }
   ],
   "failedAttempts": 5,
-  "integrity": "a4663d6398649a7ac3d2a84cd9291bac335c6d167ce417500d165f61b50d8700"
+  "integrity": "930563053d9f2a67c096d2ff4c64110446e86de947e55578f44578cc807a16f4"
 }

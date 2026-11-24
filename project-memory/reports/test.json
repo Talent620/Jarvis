@@ -4,13 +4,13 @@
   "command": "npm test",
   "available": true,
   "unavailableReason": null,
-  "startedAt": "2026-11-24T20:40:39.858Z",
-  "finishedAt": "2026-11-24T20:44:58.245Z",
-  "durationMs": 258387,
-  "commit": "6df9e801ffb8905223577afdafb8e9834d6f6dff",
-  "branch": "feat/omni-frontier",
+  "startedAt": "2026-11-24T21:16:24.608Z",
+  "finishedAt": "2026-11-24T21:20:44.598Z",
+  "durationMs": 259990,
+  "commit": "debb484c971ce84dd9b6360731ba0e5dfc25ea4d",
+  "branch": "feat/ux-craft-audit",
   "worktreeDirty": true,
-  "worktreeFingerprint": "de18c60d7f6c7c741382af3afed075198381be00a6955a7da8d31a16da7d7046",
+  "worktreeFingerprint": "7050d1b8445ffe99f596555ba561087a84898511951448a9fc0339b378d04f74",
   "exitCode": 0,
   "signal": null,
   "timedOut": false,
@@ -61,5 +61,5 @@
     "stderr | tests/chatsDegrade.test.ts > chats — brak cichej degradacji > gdy wszystkie próby padają → ok=false i warning o pełnej pamięci",
     "[chats] Nie udało się zapisać historii czatu — pamięć (localStorage) pełna."
   ],
-  "logPath": "project-memory/reports/logs/test-20261124T204039Z.log"
+  "logPath": "project-memory/reports/logs/test-20261124T211624Z.log"
 }
