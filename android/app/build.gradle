@@ -1,8 +1,10 @@
 apply plugin: 'com.android.application'
 
 // Wersja zsynchronizowana z numerem builda CI (GITHUB_RUN_NUMBER / JARVIS_BUILD_NUMBER).
-// Fallback 56 — pierwszy bezpieczny build po wycieku w buildach <= 55.
+// Offset +100 gwarantuje ściśle rosnący versionCode > wszystkich wcześniejszych wydań (<= 56),
+// zapobiegając błędowi Androida INSTALL_FAILED_VERSION_DOWNGRADE między workflowami.
 def buildNo = (System.getenv("JARVIS_BUILD_NUMBER") ?: System.getenv("GITHUB_RUN_NUMBER") ?: "56").toInteger()
+def appVersionCode = 100 + buildNo
 
 android {
     namespace "net.serwer256.jarvis"
@@ -11,8 +13,8 @@ android {
         applicationId "net.serwer256.jarvis"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode buildNo
-        versionName "2.0." + buildNo
+        versionCode appVersionCode
+        versionName "4.0." + appVersionCode
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -21,10 +23,11 @@ android {
         }
     }
     // Klucz podpisujący: wyłącznie zmienne środowiskowe / gradle.properties (GitHub Secrets).
-    // Gdy brak sekretów (build testowy/CI bez klucza release), Gradle używa efemerycznego klucza debug,
-    // dzięki czemu build nie wywala się i nadal generuje instalowalny APK bez publicznego .jks w repo.
+    // Gdy JARVIS_UNSIGNED_FOR_APKSIGNER=true, Gradle tworzy czysty app-release-unsigned.apk,
+    // który CI następnie wyrównuje (zipalign -p -f 4) i podpisuje apksignerem (V1+V2+V3).
+    def unsignedForApksigner = System.getenv("JARVIS_UNSIGNED_FOR_APKSIGNER") == "true"
     def envStoreFile = System.getenv("JARVIS_RELEASE_STORE_FILE") ?: project.findProperty("JARVIS_RELEASE_STORE_FILE")
-    def hasReleaseKeystore = envStoreFile != null && !envStoreFile.toString().isBlank() && file(envStoreFile).exists()
+    def hasReleaseKeystore = !unsignedForApksigner && envStoreFile != null && !envStoreFile.toString().isBlank() && file(envStoreFile).exists()
     signingConfigs {
         release {
             if (hasReleaseKeystore) {
@@ -37,7 +40,9 @@ android {
     }
     buildTypes {
         release {
-            signingConfig hasReleaseKeystore ? signingConfigs.release : signingConfigs.debug
+            if (!unsignedForApksigner) {
+                signingConfig hasReleaseKeystore ? signingConfigs.release : signingConfigs.debug
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
