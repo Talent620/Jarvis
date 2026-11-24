@@ -16,6 +16,8 @@ import { SmartConversation, type SmartState } from "../lib/smartConversation";
 import { DEFAULT_ENDPOINT } from "../lib/endpoint";
 import { enrollVoice, hasVoiceProfile } from "../lib/voiceEnroll";
 import { useEscape } from "../hooks/useEscape";
+import { isDesktop } from "../lib/desktop";
+import { executeOmniVoiceCommand } from "../lib/omniPilot";
 import type { Msg } from "../lib/providers/types";
 
 const LABEL: Record<SmartState, string> = {
@@ -107,6 +109,22 @@ export default function HeadsetMode({ onClose }: { onClose: () => void }) {
     };
 
     try {
+      // OMNI-PILOT (desktop Linux/Windows): natychmiastowe sterowanie kursorem, wizją i oknami z trybu głosowego (Ctrl+Shift+J).
+      if (isDesktop()) {
+        const omni = await executeOmniVoiceCommand(text);
+        if (omni.handled) {
+          const outText = omni.text || "Gotowe.";
+          history.current = [...history.current, { role: "assistant" as const, content: outText }].slice(-16);
+          saveLiveThread(history.current);
+          if (!cancelled) {
+            setCaption(outText);
+            if (omni.spokenText) say([omni.spokenText]);
+          }
+          await chain;
+          if (!cancelled) cue(omni.ok ? "confirm" : "error");
+          return;
+        }
+      }
       // Persona mowy (krótko, naturalnie, jak człowiek) + pamięć/profil/narzędzia/uczenie się z askJarvis.
       const reply = await askJarvis(
         history.current,

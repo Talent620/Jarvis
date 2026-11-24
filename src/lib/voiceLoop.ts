@@ -8,6 +8,8 @@ import { recordBossDecision } from "./bossMemory";
 import { confidencePct, confidencePreface, isRiskyCommand, isExplainRequest, explainTrace, predictNext, type BossTrace, type VerifyResult } from "./bossInsight";
 import { providerShortName } from "./providerNames";
 import { fallbackNotice, fallbackVoiceLine, shouldAnnounceFallback } from "./providers/registry";
+import { isDesktop } from "./desktop";
+import { executeOmniVoiceCommand } from "./omniPilot";
 import { toast } from "./toast";
 import { parseBossMeta } from "./boss";
 import { formatForSpokenPolish } from "./soulModes";
@@ -184,6 +186,27 @@ export class ConversationLoop {
     }, this.opts.stallMs && this.opts.stallMs > 0 ? this.opts.stallMs : 9000);
     const t0 = Date.now();
     try {
+      // OMNI-PILOT (desktop Linux/Windows): pełne sterowanie kursorem, wizją i oknami również w BossMode / LiveOverlay.
+      if (isDesktop()) {
+        const omni = await executeOmniVoiceCommand(text);
+        if (omni.handled) {
+          if (this.stallTimer) { clearTimeout(this.stallTimer); this.stallTimer = null; }
+          const outText = omni.text || "Gotowe.";
+          const spoken = omni.spokenText || outText;
+          this.history.push({ role: "assistant", content: outText });
+          this.lastReply = spoken;
+          this.onCaption(outText);
+          this.onState("speaking");
+          if (stalled) stopSpeaking();
+          this.bargeIn.beginSpeaking();
+          try {
+            await speak(spoken, { ...store.settings, speak: true, ...this.voiceTune });
+          } finally {
+            this.bargeIn.endSpeaking();
+          }
+          return;
+        }
+      }
       let reply = await askJarvis(
         this.history.slice(-12),
         undefined,
