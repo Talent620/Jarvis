@@ -2336,7 +2336,9 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 >
                   <option value="system">🇵🇱 Polski systemowy — zalecane (offline, spójny)</option>
                   <option value="gemini">🎙 Gemini TTS — darmowy premium (klucz Gemini)</option>
-                  <option value="eleven">⭐ ElevenLabs — premium (klucz)</option>
+                  <option value="eleven">⭐ ElevenLabs — streaming Flash v2.5 / Multilingual v2</option>
+                  <option value="openai">⚡ OpenAI TTS — streaming gpt-4o-mini-tts / tts-1</option>
+                  <option value="modal">☁ Modal Voice — własny TTS na GPU (Chatterbox / Qwen3)</option>
                   <option value="fish">🐟 Fish Audio — premium (klucz)</option>
                   <option value="local">🧠 Lokalny offline (Kokoro)</option>
                 </select>
@@ -2344,12 +2346,12 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
 
               {/* 🎭 Doradca głosu premium — naturalny/emocjonalny głos: co daje, ile kosztuje, jak wpiąć. */}
               <div className="journal-card" style={{ padding: "10px 12px", margin: "10px 0" }}>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>🎭 Chcesz głos naturalny, z emocją?</div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>🎭 Chcesz głos naturalny, z emocją i niskim opóźnieniem?</div>
                 <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.5, marginTop: 4 }}>
-                  Głos systemowy jest spójny, ale płaski. Bardziej ludzkie brzmienie dają głosy premium:
-                  <br />• <b>Gemini TTS — DARMOWY</b>: wystarczy klucz Gemini (aistudio.google.com/apikey).
-                  <br />• <b>ElevenLabs / Fish Audio</b>: najbardziej naturalne i emocjonalne, płatne — grosze za zdanie, wymagają klucza.
-                  <br />• <b>Kokoro</b>: offline na urządzeniu, prywatnie, za darmo.
+                  Wszystkie silniki neuralne działają w trybie <b>streaming zdanie-po-zdaniu</b> z natychmiastowym barge-in i automatycznym fallbackiem offline:
+                  <br />• <b>ElevenLabs Flash v2.5</b> (~75 ms) / <b>OpenAI gpt-4o-mini-tts</b>: najniższe opóźnienie i naturalna polszczyzna.
+                  <br />• <b>Modal Voice</b>: Twój własny serwer TTS na GPU (`deploy/modal_voice.py`).
+                  <br />• <b>Gemini TTS — DARMOWY</b>: wystarczy klucz Gemini.
                 </div>
                 <button
                   className="btn"
@@ -2414,8 +2416,54 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 <>
                   <div className="field"><label>Klucz API ElevenLabs</label><input type="password" value={s.elevenLabsApiKey} placeholder="(wymagany)" onChange={(e) => setVoice({ elevenLabsApiKey: e.target.value })} /></div>
                   <div className="field"><label>ID głosu ElevenLabs</label><input value={s.elevenLabsVoiceId} placeholder="np. JBFqnCBsd6RMkjVDRZzb" onChange={(e) => setVoice({ elevenLabsVoiceId: e.target.value })} /></div>
-                  <button className="btn" onClick={() => setVoice({ speak: true, voicePitch: 0.85, voiceRate: 0.98, elevenLabsVoiceId: s.elevenLabsVoiceId || (s.elevenLabsApiKey ? "onwK4e9ZLuTAKqWW03F9" : "") })}>🎩 Ustaw głos JARVIS (Iron Man)</button>
-                  <p className="muted">Najbliższy legalny odpowiednik filmowego JARVIS-a: niski, brytyjski męski głos „Daniel”.</p>
+                  <div className="field">
+                    <label>Model ElevenLabs</label>
+                    <select
+                      value={s.elevenLabsModel || "eleven_flash_v2_5"}
+                      onChange={(e) => setVoice({ elevenLabsModel: e.target.value as "eleven_flash_v2_5" | "eleven_multilingual_v2" })}
+                    >
+                      <option value="eleven_flash_v2_5">Flash v2.5 (~75 ms — najniższe opóźnienie PL)</option>
+                      <option value="eleven_multilingual_v2">Multilingual v2 (maksymalna ekspresja)</option>
+                    </select>
+                  </div>
+                  <button className="btn" onClick={() => setVoice({ speak: true, voicePitch: 0.85, voiceRate: 0.98, elevenLabsModel: s.elevenLabsModel || "eleven_flash_v2_5", elevenLabsVoiceId: s.elevenLabsVoiceId || (s.elevenLabsApiKey ? "onwK4e9ZLuTAKqWW03F9" : "") })}>🎩 Ustaw głos JARVIS (Iron Man)</button>
+                  <p className="muted">Streaming zdanie-po-zdaniu z pełnym barge-in i automatycznym fallbackiem offline.</p>
+                </>
+              )}
+
+              {voiceMode === "openai" && (
+                <>
+                  <div className="field"><label>Klucz API OpenAI (TTS)</label><input type="password" value={s.openaiTtsApiKey || ""} placeholder="sk-..." onChange={(e) => setVoice({ openaiTtsApiKey: e.target.value })} /></div>
+                  <div className="field">
+                    <label>Model OpenAI TTS</label>
+                    <select
+                      value={s.openaiTtsModel || "gpt-4o-mini-tts"}
+                      onChange={(e) => setVoice({ openaiTtsModel: e.target.value as "gpt-4o-mini-tts" | "tts-1" | "tts-1-hd" })}
+                    >
+                      <option value="gpt-4o-mini-tts">gpt-4o-mini-tts (najlepsza naturalna polszczyzna)</option>
+                      <option value="tts-1">tts-1 (niskie opóźnienie)</option>
+                      <option value="tts-1-hd">tts-1-hd (wysoka jakość)</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Głos OpenAI</label>
+                    <select value={s.openaiTtsVoice || "onyx"} onChange={(e) => setVoice({ openaiTtsVoice: e.target.value })}>
+                      {["onyx", "ash", "coral", "sage", "alloy", "nova", "echo", "shimmer"].map((v) => (
+                        <option key={v} value={v}>{v}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="muted">Streaming zdanie-po-zdaniu po polsku. Bez sieci lub klucza automatycznie spada na natywny TTS.</p>
+                </>
+              )}
+
+              {voiceMode === "modal" && (
+                <>
+                  <div className="field">
+                    <label>URL serwera Modal Voice</label>
+                    <input value={s.modalVoiceUrl || ""} placeholder="https://...--jarvis-voice-voiceservice-web...modal.run" onChange={(e) => setVoice({ modalVoiceUrl: e.target.value })} />
+                  </div>
+                  <p className="muted">Korzysta z własnego serwera `deploy/modal_voice.py` (Chatterbox / Qwen3-TTS, Bearer z klucza Modal w zakładce AI).</p>
                 </>
               )}
 

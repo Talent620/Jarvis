@@ -753,9 +753,17 @@ export interface Settings {
   /** Czy mówić odpowiedzi na głos. */
   speak: boolean;
   /** JEDEN, jednoznaczny wybór silnika głosu — źródło prawdy dla speak() (koniec walki flag).
-   *  "system" = polski głos urządzenia (voiceName); "gemini"/"eleven"/"fish" = chmurowe premium;
+   *  "system" = polski głos urządzenia (voiceName); "gemini"/"eleven"/"openai"/"modal"/"fish" = chmurowe premium;
    *  "local" = offline na urządzeniu. Pusty = wywnioskuj ze starych ustawień (zgodność wstecz). */
-  voiceMode?: "system" | "gemini" | "eleven" | "fish" | "local";
+  voiceMode?: "system" | "gemini" | "eleven" | "openai" | "modal" | "fish" | "local";
+  /** Model ElevenLabs: eleven_flash_v2_5 (~75 ms, polski) lub eleven_multilingual_v2. */
+  elevenLabsModel?: "eleven_flash_v2_5" | "eleven_multilingual_v2";
+  /** Opcjonalny klucz API OpenAI do streaming TTS (gpt-4o-mini-tts / tts-1). */
+  openaiTtsApiKey?: string;
+  /** Model OpenAI TTS: gpt-4o-mini-tts (domyślny, naturalny PL) | tts-1 | tts-1-hd. */
+  openaiTtsModel?: "gpt-4o-mini-tts" | "tts-1" | "tts-1-hd";
+  /** Głos OpenAI TTS (np. onyx, ash, coral, sage, alloy, nova). */
+  openaiTtsVoice?: string;
   /** Co robić, gdy wybrany głos (premium/local) chwilowo padnie: „ask" = zapytaj, NIE zmieniaj po cichu
    *  (domyślne); „system" = użyj systemowego. Chroni przed samoczynną zmianą głosu. Zgodność wstecz: brak = ask. */
   voiceFallbackPolicy?: "ask" | "system";

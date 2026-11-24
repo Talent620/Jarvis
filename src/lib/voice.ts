@@ -6,6 +6,17 @@ import { fetchTimeout } from "./http";
 import { WhisperListener } from "./whisperListener";
 import { synthLocal, localTtsUsable } from "./localTts";
 import { logError } from "./errorLog";
+import {
+  isNavigatorOffline,
+  registerAndroidAudioUnlock,
+  streamingTtsQueue,
+  synthesizeElevenLabsChunk,
+  synthesizeModalVoiceTtsChunk,
+  synthesizeOpenAiTtsChunk,
+  unlockAudioContext,
+} from "./streamingTts";
+
+registerAndroidAudioUnlock();
 
 // Natywny silnik mowy Androida (pewniejszy niż Web Speech w WebView).
 export interface NativeVoiceInfo { name: string; lang: string; quality?: number; network?: boolean }
@@ -312,23 +323,39 @@ export function splitForSpeech(text: string, max = 200): string[] {
   return out;
 }
 
-/** Odtwórz URL i rozwiąż, gdy SKOŃCZY (albo przerwano). Napędza poziom orba. */
-function playUrlEnded(url: string): Promise<boolean> {
+/** Odtwórz URL i rozwiąż, gdy SKOŃCZY (albo przerwano). Napędza poziom orba, odblokowuje AudioContext na Androidzie. */
+function playUrlEnded(url: string, fx?: boolean, signal?: AbortSignal): Promise<boolean> {
   return new Promise((resolve) => {
+    if (signal?.aborted) {
+      URL.revokeObjectURL(url);
+      resolve(false);
+      return;
+    }
+    void unlockAudioContext();
     const audio = new Audio(url);
     currentAudio = audio;
+    if (fx) audio.playbackRate = 0.84;
     let done = false;
     let srcNode: MediaElementAudioSourceNode | null = null;
+    let fxOut: AudioNode | null = null;
+    let analyserNode: AnalyserNode | null = null;
+    const onAbort = () => finish(false);
     const finish = (ok: boolean) => {
       if (done) return;
       done = true;
+      signal?.removeEventListener("abort", onAbort);
       interruptPlayback = null;
+      try { audio.pause(); } catch { /* ignore */ }
+      if (currentAudio === audio) currentAudio = null;
       try { srcNode?.disconnect(); } catch { /* ignore */ }
+      try { fxOut?.disconnect(); } catch { /* ignore */ }
+      try { analyserNode?.disconnect(); } catch { /* ignore */ }
       URL.revokeObjectURL(url);
       cancelAnimationFrame(levelRaf);
       setLevel(0);
       resolve(ok);
     };
+    signal?.addEventListener("abort", onAbort, { once: true });
     interruptPlayback = () => finish(false); // wywoła to stopSpeaking()
     audio.onended = () => finish(true);
     audio.onerror = () => finish(false);
@@ -337,12 +364,16 @@ function playUrlEnded(url: string): Promise<boolean> {
       const ctx = levelCtx;
       if (ctx.state === "suspended") void ctx.resume().catch(() => {});
       srcNode = ctx.createMediaElementSource(audio);
+      const head: AudioNode = fx ? kapitanFxChain(ctx, srcNode) : srcNode;
+      fxOut = fx ? head : null;
       const analyser = ctx.createAnalyser();
+      analyserNode = analyser;
       analyser.fftSize = 256;
-      srcNode.connect(ctx.destination);
-      srcNode.connect(analyser);
+      head.connect(ctx.destination);
+      head.connect(analyser);
       const data = new Uint8Array(analyser.frequencyBinCount);
       const tick = () => {
+        if (done) return;
         analyser.getByteTimeDomainData(data);
         let sum = 0;
         for (const v of data) { const c = (v - 128) / 128; sum += c * c; }
@@ -462,7 +493,7 @@ async function geminiTts(text: string, settings: Settings): Promise<boolean> {
   return geminiSpeak(text, settings.geminiVoice?.trim() || "Charon");
 }
 
-export type VoiceMode = "system" | "gemini" | "eleven" | "fish" | "local";
+export type VoiceMode = "system" | "gemini" | "eleven" | "openai" | "modal" | "fish" | "local";
 
 /**
  * Pure: rozstrzygnij JEDNOZNACZNIE, którego silnika głosu użyć. Najpierw jawny wybór użytkownika
@@ -474,6 +505,8 @@ export function resolveVoiceMode(s: Settings): VoiceMode {
   if (s.fishAudioApiKey && s.fishAudioVoiceId) return "fish";
   const basicPl = s.voicePinned || s.voiceSystemPl !== false;
   if (!basicPl && s.elevenLabsApiKey && s.elevenLabsVoiceId) return "eleven";
+  if (!basicPl && s.openaiTtsApiKey) return "openai";
+  if (!basicPl && s.modalVoiceUrl?.trim()) return "modal";
   if (!basicPl && s.geminiTts && s.keys?.gemini?.trim()) return "gemini";
   return "system";
 }
@@ -487,7 +520,15 @@ export function activeVoiceLabel(s: Settings): string {
   const mode = resolveVoiceMode(s);
   if (mode === "local") return "🧠 lokalny (offline)";
   if (mode === "fish" && s.fishAudioApiKey && s.fishAudioVoiceId) return "🐟 Fish Audio (premium)";
-  if (mode === "eleven" && s.elevenLabsApiKey && s.elevenLabsVoiceId) return "🎙 ElevenLabs (premium)";
+  if (mode === "eleven" && s.elevenLabsApiKey && s.elevenLabsVoiceId) {
+    return `🎙 ElevenLabs (${s.elevenLabsModel === "eleven_multilingual_v2" ? "Multilingual v2" : "Flash v2.5"})`;
+  }
+  if (mode === "openai" && s.openaiTtsApiKey?.trim()) {
+    return `⚡ OpenAI TTS (${s.openaiTtsModel || "gpt-4o-mini-tts"} · ${s.openaiTtsVoice || "onyx"})`;
+  }
+  if (mode === "modal" && s.modalVoiceUrl?.trim()) {
+    return "☁ Modal Voice (Chatterbox/Qwen3)";
+  }
   if (mode === "gemini" && s.keys?.gemini?.trim()) return `🎙 Gemini TTS (${s.geminiVoice || "Charon"})`;
   // system albo premium bez klucza → realnie zabrzmi głos systemowy (PL).
   return s.voiceName?.trim() ? `🇵🇱 ${s.voiceName}${s.voicePinned ? " · przypięty" : ""}` : "🇵🇱 polski systemowy (auto)";
@@ -529,16 +570,22 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
   const myToken = speakToken; // bieżąca „tura mówienia"; nowszy speak()/stop unieważni
   speakingDepth++;
   const fx = settings.voiceFx === "kapitan"; // efekt zniekształcenia (głos Kapitana Bomby) na audio buforowym
+  const offline = isNavigatorOffline();
+  const playBlob = (blob: Blob, signal: AbortSignal) => playUrlEnded(URL.createObjectURL(blob), fx, signal);
   try {
   // JEDEN jednoznaczny wybór silnika (voiceMode) — koniec „walki flag". Każdy premium tor
-  // przy braku klucza/niepowodzeniu spada bezpiecznie do głosu systemowego (PL) niżej.
+  // przy braku sieci/klucza spada automatycznie na natywny TTS offline.
   const mode = resolveVoiceMode(settings);
-  // Czy wybrano PREMIUM/LOCAL z kluczem? Jeśli tak i nie zabrzmi, to prawdziwa AWARIA (nie brak konfiguracji).
+  // Czy wybrano PREMIUM/LOCAL z kluczem i mamy sieć? Gdy brak sieci/klucza → cichy fallback na natywny TTS.
   const premiumWithKey =
-    (mode === "fish" && !!settings.fishAudioApiKey && !!settings.fishAudioVoiceId) ||
-    (mode === "eleven" && !!settings.elevenLabsApiKey && !!settings.elevenLabsVoiceId) ||
-    (mode === "gemini" && !!primaryKey("gemini")) ||
-    (mode === "local" && localTtsUsable());
+    !offline && (
+      (mode === "fish" && !!settings.fishAudioApiKey && !!settings.fishAudioVoiceId) ||
+      (mode === "eleven" && !!settings.elevenLabsApiKey && !!settings.elevenLabsVoiceId) ||
+      (mode === "openai" && !!settings.openaiTtsApiKey?.trim()) ||
+      (mode === "modal" && !!settings.modalVoiceUrl?.trim()) ||
+      (mode === "gemini" && !!primaryKey("gemini")) ||
+      (mode === "local" && localTtsUsable())
+    );
   // Głos on-device (Kokoro) — prywatnie, bez chmury. Opcja; przy niepowodzeniu fallback niżej.
   if (mode === "local" && localTtsUsable()) {
     try {
@@ -550,8 +597,8 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
     }
   }
 
-  // Premium głos przez Fish Audio (tani, topowy klon), jeśli wybrany i z kluczem.
-  if (mode === "fish" && settings.fishAudioApiKey && settings.fishAudioVoiceId) {
+  // Premium głos przez Fish Audio (tani, topowy klon), jeśli wybrany, online i z kluczem.
+  if (!offline && mode === "fish" && settings.fishAudioApiKey && settings.fishAudioVoiceId) {
     try {
       const res = await fetchTimeout("https://api.fish.audio/v1/tts", {
         method: "POST",
@@ -569,46 +616,65 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
     }
   }
 
-  // Premium głos przez ElevenLabs (najbliżej oryginalnego JARVIS-a), jeśli wybrany i z kluczem.
-  if (mode === "eleven" && settings.elevenLabsApiKey && settings.elevenLabsVoiceId) {
-    try {
-      const res = await fetchTimeout(
-        `https://api.elevenlabs.io/v1/text-to-speech/${settings.elevenLabsVoiceId}`,
-        {
-          method: "POST",
-          headers: {
-            "xi-api-key": settings.elevenLabsApiKey,
-            "content-type": "application/json",
-            accept: "audio/mpeg",
-          },
-          body: JSON.stringify({
-            text,
-            model_id: "eleven_multilingual_v2",
-            // Domyślnie naturalnie; profil może dostroić (np. agresywny Tryb Szefa: niska stabilność, wysoki styl).
-            voice_settings: {
-              stability: typeof settings.elevenStability === "number" ? settings.elevenStability : 0.4,
-              similarity_boost: 0.85,
-              style: typeof settings.elevenStyle === "number" ? settings.elevenStyle : 0,
-              use_speaker_boost: true,
-            },
-          }),
-        },
-        30000,
-      );
-      if (myToken !== speakToken) return; // nowsza tura przejęła w czasie pobierania
-      if (await playFromResponse(res, fx)) return;
-    } catch {
-      /* fallback do systemowego TTS */
-    }
+  // Streaming TTS zdanie-po-zdaniu: ElevenLabs Flash v2.5 / Multilingual v2 (niskie opóźnienie PL + barge-in).
+  if (!offline && mode === "eleven" && settings.elevenLabsApiKey && settings.elevenLabsVoiceId) {
+    const ok = await streamingTtsQueue.speak(
+      text,
+      (sentence, signal) =>
+        synthesizeElevenLabsChunk(sentence, {
+          apiKey: settings.elevenLabsApiKey,
+          voiceId: settings.elevenLabsVoiceId,
+          modelId: settings.elevenLabsModel || "eleven_flash_v2_5",
+          stability: settings.elevenStability,
+          style: settings.elevenStyle,
+          signal,
+        }),
+      playBlob,
+    );
+    if (ok || myToken !== speakToken) return;
   }
 
-  // Darmowy, wysokiej jakości głos przez Gemini TTS (gdy wybrany i jest klucz).
-  if (mode === "gemini" && primaryKey("gemini")) {
+  // Streaming TTS zdanie-po-zdaniu: OpenAI TTS (gpt-4o-mini-tts / tts-1).
+  if (!offline && mode === "openai" && settings.openaiTtsApiKey?.trim()) {
+    const ok = await streamingTtsQueue.speak(
+      text,
+      (sentence, signal) =>
+        synthesizeOpenAiTtsChunk(sentence, {
+          apiKey: settings.openaiTtsApiKey || "",
+          model: settings.openaiTtsModel || "gpt-4o-mini-tts",
+          voice: settings.openaiTtsVoice || "onyx",
+          speed: settings.voiceRate,
+          signal,
+        }),
+      playBlob,
+    );
+    if (ok || myToken !== speakToken) return;
+  }
+
+  // Streaming TTS zdanie-po-zdaniu: własny serwer Modal Voice (deploy/modal_voice.py).
+  if (!offline && mode === "modal" && settings.modalVoiceUrl?.trim()) {
+    const ok = await streamingTtsQueue.speak(
+      text,
+      (sentence, signal) =>
+        synthesizeModalVoiceTtsChunk(sentence, {
+          modalVoiceUrl: settings.modalVoiceUrl || "",
+          apiKey: settings.keys?.modal?.trim() || undefined,
+          language: "pl",
+          signal,
+        }),
+      playBlob,
+    );
+    if (ok || myToken !== speakToken) return;
+  }
+
+  // Darmowy, wysokiej jakości głos przez Gemini TTS (gdy wybrany, online i jest klucz).
+  if (!offline && mode === "gemini" && primaryKey("gemini")) {
     if (await geminiTts(text, settings)) return;
   }
 
   // Wybrany głos (premium/local) NIE zabrzmiał. Zamiast po cichu przełączyć na systemowy —
   // uszanuj politykę: „ask" (domyślnie) → zapytaj i NIE zmieniaj przypiętego głosu.
+  // Gdy brak sieci lub brak klucza (`premiumWithKey === false`) → automatyczny fallback na natywny TTS offline.
   if (myToken === speakToken && voiceFallbackDecision({ policy: settings.voiceFallbackPolicy, premiumFailed: premiumWithKey, systemOverride: opts.systemOverride }) === "notify") {
     voiceUnavailableHandler?.({
       engine: mode,
@@ -657,8 +723,9 @@ export async function speak(text: string, settings: Settings, opts: { systemOver
 }
 
 export function stopSpeaking(): void {
-  speakToken++; // przerwij trwające potokowe czytanie (Gemini, po kawałkach)
+  speakToken++; // przerwij trwające potokowe czytanie (Gemini/streaming, po kawałkach)
   speakingDepth = 0; // już nie mówimy — odblokuj nasłuch
+  streamingTtsQueue.cancel(); // natychmiast przerwij kolejkę streaming TTS i in-flight fetch (barge-in)
   interruptPlayback?.(); // natychmiast rozwiąż bieżące odtwarzanie kawałka
   try {
     window.speechSynthesis?.cancel();
