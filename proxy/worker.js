@@ -26,7 +26,9 @@ export {
 } from "./lib/providers.js";
 
 import { routeRequest } from "./lib/router.js";
-import { handleScheduled } from "./lib/cron.js";
+import { handleScheduled, collectBriefingEvents, shouldSendBriefing, buildMorningBriefing } from "./lib/cron.js";
+
+export { collectBriefingEvents, shouldSendBriefing, buildMorningBriefing, handleScheduled };
 
 export default {
   async fetch(req, env) {

@@ -125,6 +125,15 @@ export async function handleIntegrationRoute(path, url, req, env) {
     }
   }
 
+  // --- PROAKTYWNY BRIEFING (z Cron Triggera) ---
+  if (path === "/v1/briefing" && req.method === "GET") {
+    const token = bearer(req);
+    if (!token) return json(401, { error: "Brak tokenu sync." });
+    if (!env.JARVIS_KV) return json(500, { error: "Brak bindingu KV (JARVIS_KV)." });
+    const raw = await env.JARVIS_KV.get(`briefing:${token}`);
+    return json(200, raw ? JSON.parse(raw) : { briefing: null });
+  }
+
   // --- RESEARCH (Tavily) ---
   if (path === "/v1/search" && req.method === "POST") {
     if (appTokenBad(req, env)) return json(401, { error: "Brak lub zły token aplikacji (x-app-token)." });

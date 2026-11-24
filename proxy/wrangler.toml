@@ -17,3 +17,7 @@ kv_namespaces = [
 #   Google OAuth: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 #   Licencje/admin: LICENSE_PRIVATE_JWK, ADMIN_TOKEN
 # Klient kieruje ruch tu przez VITE_BFF_URL (np. https://jarvis-bff.<konto>.workers.dev).
+
+# Proaktywny Cron Trigger (poranny briefing 06:00 UTC — generowany tylko gdy są istotne zdarzenia):
+[triggers]
+crons = ["0 6 * * *"]

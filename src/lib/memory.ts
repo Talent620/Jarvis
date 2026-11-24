@@ -4,6 +4,7 @@ import { fetchTimeout, appTokenHeader } from "./http";
 import { embedLocal, localEmbedUsable, LOCAL_EMBED_TAG } from "./localEmbed";
 import { durability, memoryScore } from "./memoryScore";
 import { mmrSelect, reciprocalRankFusion, keywordScore } from "./rag";
+import { activeMemoryFacts, buildCoreMemoryBlock, invalidateConflictingFacts } from "./coreMemory";
 import type { MemoryFact } from "../types";
 
 // Tag modelu embeddingów — porównujemy tylko wektory z tego samego modelu (różne wymiary).
@@ -122,7 +123,7 @@ export async function ensureIndexed(): Promise<void> {
   if (indexing) return;
   if (embedDisabled && !localEmbedOn()) return; // brak jakiegokolwiek źródła
   const want = intendedEmbedTag();
-  const pending = store.data.memory.filter((m) => !m.embedding?.length || m.embModel !== want);
+  const pending = activeMemoryFacts(store.data.memory).filter((m) => !m.embedding?.length || m.embModel !== want);
   if (!pending.length) return;
   indexing = true;
   try {
@@ -139,9 +140,8 @@ export async function ensureIndexed(): Promise<void> {
   }
 }
 
-// --- Zapis faktu (z unieważnieniem wektora + reindeksacją) ---
+// --- Zapis faktu (z unieważnieniem wektora + bi-temporal + reindeksacją) ---
 
-/** Zapamiętaj/zaktualizuj fakt; po zmianie treści wektor jest przeliczany w tle. */
 /** Usuń pojedynczy fakt po id (Centrum Pamięci — kontrola użytkownika). */
 export function deleteFact(id: string): void {
   store.setData((d) => { d.memory = d.memory.filter((m) => m.id !== id); });
@@ -152,42 +152,106 @@ export function setFactPinned(id: string, pinned: boolean): void {
   store.setData((d) => { const m = d.memory.find((x) => x.id === id); if (m) m.pinned = pinned; });
 }
 
-/** Edytuj wartość faktu (zmiana treści → przelicz wektor). */
+/** Edytuj wartość faktu (zmiana treści → przelicz wektor + odśwież valid_from). */
 export function editFact(id: string, value: string): void {
   store.setData((d) => {
     const m = d.memory.find((x) => x.id === id);
-    if (m && m.value !== value) { m.value = value; m.embedding = undefined; m.embModel = undefined; }
+    if (m && m.value !== value) {
+      m.value = value;
+      m.valid_from = Date.now();
+      m.invalid_at = undefined;
+      m.embedding = undefined;
+      m.embModel = undefined;
+    }
   });
   void ensureIndexed();
 }
 
+function pruneMemoryStore(d: { memory: MemoryFact[] }): void {
+  if (d.memory.length <= MAX_STORED) return;
+  const keep = d.memory.filter((m) => m.pinned && !m.invalid_at);
+  const rest = d.memory
+    .filter((m) => !(m.pinned && !m.invalid_at))
+    .sort((a, b) => {
+      // Aktywne fakty zawsze przed historycznymi (unieważnionymi).
+      const aActive = a.invalid_at ? 0 : 1;
+      const bActive = b.invalid_at ? 0 : 1;
+      return bActive - aActive || durability(b) - durability(a);
+    })
+    .slice(0, Math.max(0, MAX_STORED - keep.length));
+  d.memory = [...keep, ...rest].sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/**
+ * Zapamiętaj/zaktualizuj fakt z automatycznym unieważnianiem (invalid_at) sprzecznych faktów
+ * o tym samym temacie (np. miasto vs miasto_zamieszkania) zamiast duplikowania ich w RAG.
+ */
 export function rememberFact(key: string, value: string, projectId?: string): void {
+  const now = Date.now();
   store.setData((d) => {
-    const existing = d.memory.find((m) => m.key === key && (m.projectId || "") === (projectId || ""));
+    const existing = d.memory.find(
+      (m) => m.key === key && (m.projectId || "") === (projectId || "") && !m.invalid_at,
+    );
+    let targetId: string;
     if (existing) {
+      targetId = existing.id;
       if (existing.value !== value) {
         existing.value = value;
+        existing.valid_from = now;
+        existing.invalid_at = undefined;
         existing.embedding = undefined; // treść się zmieniła — przelicz wektor
         existing.embModel = undefined;
       }
       // Wzmocnienie: ponowne wspomnienie tego samego faktu czyni go trwalszym.
       existing.useCount = (existing.useCount || 0) + 1;
-      existing.lastUsedAt = Date.now();
+      existing.lastUsedAt = now;
     } else {
-      d.memory.unshift({ id: uid(), key, value, projectId, createdAt: Date.now(), useCount: 1, lastUsedAt: Date.now() });
+      targetId = uid();
+      d.memory.unshift({
+        id: targetId,
+        key,
+        value,
+        projectId,
+        createdAt: now,
+        valid_from: now,
+        useCount: 1,
+        lastUsedAt: now,
+      });
     }
-    // Twardy limit: usuń wspomnienia o NAJNIŻSZEJ trwałości (decay × reinforcement), nie po prostu
-    // najstarsze — często wracające, ważne fakty przetrwają mimo wieku (pamięć ludzka).
-    if (d.memory.length > MAX_STORED) {
-      const keep = d.memory.filter((m) => m.pinned);
-      const rest = d.memory
-        .filter((m) => !m.pinned)
-        .sort((a, b) => durability(b) - durability(a))
-        .slice(0, Math.max(0, MAX_STORED - keep.length));
-      d.memory = [...keep, ...rest].sort((a, b) => b.createdAt - a.createdAt);
-    }
+    invalidateConflictingFacts(d.memory, { id: targetId, key, value, projectId }, now);
+    pruneMemoryStore(d);
   });
   void ensureIndexed();
+}
+
+/**
+ * Zapis bi-temporal z pełną historią zmian: poprzedni sprzeczny fakt dostaje `invalid_at = now`
+ * i `superseded_by = newId`, a nowy fakt dostaje `valid_from = now`. RAG czyta tylko aktywne.
+ */
+export function rememberTemporalFact(
+  key: string,
+  value: string,
+  opts: { projectId?: string; now?: number; pinned?: boolean } = {},
+): MemoryFact {
+  const now = opts.now ?? Date.now();
+  const created: MemoryFact = {
+    id: uid(),
+    key,
+    value,
+    projectId: opts.projectId,
+    pinned: opts.pinned,
+    createdAt: now,
+    valid_from: now,
+    useCount: 1,
+    lastUsedAt: now,
+  };
+  store.setData((d) => {
+    invalidateConflictingFacts(d.memory, created, now);
+    d.memory.unshift(created);
+    pruneMemoryStore(d);
+  });
+  void ensureIndexed();
+  return created;
 }
 
 // --- Pobieranie trafnych faktów ---
@@ -199,11 +263,11 @@ function sortByFreshness(facts: MemoryFact[]): MemoryFact[] {
 }
 
 /**
- * Wybiera najtrafniejsze fakty dla zapytania. Przypięte zawsze wchodzą; resztę
- * dobiera podobieństwem semantycznym, a nieobjęte indeksem — świeżością.
+ * Wybiera najtrafniejsze AKTYWNE fakty dla zapytania (pomija fakty z invalid_at).
+ * Przypięte zawsze wchodzą; resztę dobiera podobieństwem semantycznym / świeżością.
  */
 async function retrieve(query: string, pid: string): Promise<MemoryFact[]> {
-  const all = store.data.memory.filter((m) => !m.projectId || m.projectId === pid);
+  const all = activeMemoryFacts(store.data.memory).filter((m) => !m.projectId || m.projectId === pid);
   void ensureIndexed(); // uzupełnij indeks w tle (nie blokujemy odpowiedzi)
   if (all.length <= MAX_FACTS) return sortByFreshness(all);
 
@@ -215,15 +279,8 @@ async function retrieve(query: string, pid: string): Promise<MemoryFact[]> {
   const pinned = all.filter((m) => m.pinned);
   const indexed = all.filter((m) => !m.pinned && m.embedding?.length && m.embModel === q.tag);
   const unindexed = all.filter((m) => !m.pinned && !(m.embedding?.length && m.embModel === q.tag));
-  // Ranking hybrydowy: trafność semantyczna SPLECIONA z trwałością (świeżość + wzmocnienie),
-  // by ważne, często wracające fakty nie wypadały przez sam dystans wektorowy.
   const now = Date.now();
   const slots = Math.max(0, MAX_FACTS - pinned.length);
-  // WYSZUKIWANIE HYBRYDOWE (nowoczesny RAG): dwie listy rankingowe —
-  //  • semantyczna: trafność wektorowa spleciona z trwałością (memoryScore),
-  //  • leksykalna: dokładne dopasowania słów kluczowych (embeddingi to gubią: nazwy, numery, skróty).
-  // Łączymy je RRF (Reciprocal Rank Fusion — bez strojenia wag), a potem MMR dla RÓŻNORODNOŚCI
-  // (koniec duplikatów marnujących budżet kontekstu). Pełny potok: hybryda → fuzja → dywersyfikacja.
   const byId = new Map(indexed.map((m) => [m.id, m]));
   const semIds = [...indexed]
     .sort((a, b) => memoryScore(b, cosine(qv, b.embedding!), now) - memoryScore(a, cosine(qv, a.embedding!), now))
@@ -271,14 +328,28 @@ export async function prepareMemoryContext(query: string): Promise<void> {
   }
 }
 
-/** Sformatowany blok faktów do wstrzyknięcia w prompt (semantyczny lub świeżościowy). */
-export function memoryBlock(): string {
+/** Kompaktowy blok Core Memory (twardy limit max 30% budżetu kontekstu). */
+export function coreMemoryBlock(totalContextBudgetChars = 4000): string {
   const pid = store.settings.activeProjectId || "";
-  const facts =
-    cachedFacts ??
-    sortByFreshness(store.data.memory.filter((m) => !m.projectId || m.projectId === pid)).slice(0, MAX_FACTS);
-  if (!facts.length) return "";
-  return "\n\nZapamiętane fakty o użytkowniku:\n" + facts.map((m) => `- ${m.key}: ${m.value}`).join("\n");
+  const scoped = activeMemoryFacts(store.data.memory).filter((m) => !m.projectId || m.projectId === pid);
+  return buildCoreMemoryBlock(scoped, totalContextBudgetChars).block;
+}
+
+/** Sformatowany blok aktywnych faktów (Core Memory ≤ 30% budżetu + kontekst semantyczny). */
+export function memoryBlock(totalContextBudgetChars = 4000): string {
+  const pid = store.settings.activeProjectId || "";
+  const activeScoped = activeMemoryFacts(store.data.memory).filter((m) => !m.projectId || m.projectId === pid);
+  const core = buildCoreMemoryBlock(activeScoped, totalContextBudgetChars);
+  const facts = activeMemoryFacts(cachedFacts ?? sortByFreshness(activeScoped).slice(0, MAX_FACTS));
+  if (!facts.length && !core.block) return "";
+  const coreIds = new Set(core.included.map((f) => f.id));
+  const extra = facts.filter((f) => !coreIds.has(f.id));
+  const parts: string[] = [];
+  if (core.block) parts.push(core.block);
+  if (extra.length) {
+    parts.push("Dodatkowe aktywne fakty (RAG):\n" + extra.map((m) => `- ${m.key}: ${m.value}`).join("\n"));
+  }
+  return "\n\n" + parts.join("\n\n");
 }
 
 // === Pamięć ewoluująca: semantyczny dobór wpisów dziennika ===

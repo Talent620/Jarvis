@@ -120,6 +120,12 @@ export interface MemoryFact {
   lastUsedAt?: number;
   /** Ile razy wspomnienie zostało wzmocnione (przypomniane/powtórzone). */
   useCount?: number;
+  /** Bi-temporal: od kiedy fakt obowiązuje (ms epoch). */
+  valid_from?: number;
+  /** Bi-temporal: kiedy fakt został unieważniony przez nowszą, sprzeczną informację (ms epoch). */
+  invalid_at?: number;
+  /** Id nowszego faktu, który unieważnił ten rekord. */
+  superseded_by?: string;
 }
 
 export interface Project {
