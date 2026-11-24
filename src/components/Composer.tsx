@@ -188,7 +188,7 @@ export default function Composer({
           ref={taRef}
           rows={1}
           value={text}
-          placeholder={dragging ? "Upuść obraz tutaj…" : "Wydaj polecenie JARVIS-owi…"}
+          placeholder={dragging ? "Upuść obraz tutaj…" : "Polecenie dla JARVISA…"}
           onPaste={handlePaste}
           onChange={(e) => {
             setText(e.target.value);

@@ -651,7 +651,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
           <div style={{ position: "relative", marginTop: 10 }}>
             <input
               value={find}
-              placeholder="Szukaj ustawienia… (np. klucz, głos, kopia, PIN)"
+              placeholder="Szukaj ustawienia… (klucz, głos, PIN)"
               onChange={(e) => setFind(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && findResults[0]) jumpTo(findResults[0]); if (e.key === "Escape") setFind(""); }}
               style={{ width: "100%" }}
@@ -2683,7 +2683,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
               </div>
               <h3 id="set-theme">Motyw interfejsu</h3>
               <p className="muted">Wybierz motyw ciemny, jasny lub akcent kolorystyczny interfejsu.</p>
-              <div className="chips" style={{ marginBottom: 8 }}>
+              <div className="chips" style={{ marginBottom: 8, flexWrap: "wrap" }}>
                 {[
                   { id: "default", l: "Obsidian (domyślny)" },
                   { id: "light", l: "Jasny ☀" },
