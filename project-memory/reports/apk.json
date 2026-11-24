@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "check": "apk",
   "command": "gh run list --workflow android-v2.yml -L 1 && gh release view v4-jarvis-apex-safe",
-  "checkedAt": "2026-11-24T14:42:33.411Z",
-  "commit": "07911a17ef627304cfb433953cbd472b788826cf",
+  "checkedAt": "2026-11-24T15:46:13.562Z",
+  "commit": "87f78dd8e81e6342cadcf0ef50c1f889b0605433",
   "workflow": "android-v2.yml",
   "releaseTag": "v4-jarvis-apex-safe",
   "lastRun": {

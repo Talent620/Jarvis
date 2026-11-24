@@ -1,25 +1,25 @@
 {
   "schemaVersion": 1,
   "generatedBy": "scripts/sync-project-state.mjs",
-  "generatedAt": "2026-11-24T14:42:59.954Z",
+  "generatedAt": "2026-11-24T15:46:22.692Z",
   "notice": "PLIK GENEROWANY — nie edytuj ręcznie. Odśwież: npm run memory:sync",
   "git": {
-    "commit": "07911a17ef627304cfb433953cbd472b788826cf",
-    "shortCommit": "07911a1",
-    "branch": "feat/guardian-5a",
+    "commit": "87f78dd8e81e6342cadcf0ef50c1f889b0605433",
+    "shortCommit": "87f78dd",
+    "branch": "feat/autocore",
     "dirty": true,
     "changes": [
-      "M project-memory/decisions/ADR-0001-project-memory.md",
-      "?? project-memory/CURRENT_STATE.json",
-      "?? project-memory/CURRENT_STATE.md",
-      "?? project-memory/events/20261124T144248650Z-antigravity-guardian-5a.json",
-      "?? project-memory/reports/apk.json",
-      "?? project-memory/reports/build.json",
-      "?? project-memory/reports/lint.json",
-      "?? project-memory/reports/secret-scan.json",
-      "?? project-memory/reports/test.json"
+      "M project-memory/CURRENT_STATE.json",
+      " M project-memory/CURRENT_STATE.md",
+      " M project-memory/reports/apk.json",
+      " M project-memory/reports/build.json",
+      " M project-memory/reports/lint.json",
+      " M project-memory/reports/secret-scan.json",
+      " M project-memory/reports/test.json",
+      "?? project-memory/events/20261124T154622424Z-antigravity-autocore.json",
+      "?? project-memory/reports/guardian-heartbeat.json"
     ],
-    "worktreeFingerprint": "5ca0280f6d76e71636e0952c030fb2faa0bd2f308819b27bc1355db9f7d4cf08"
+    "worktreeFingerprint": "a5adb2f4f22b30443833e771a83bba6055d1bf119c2788287cdd487e8984428f"
   },
   "repository": {
     "status": "OK",
@@ -41,15 +41,15 @@
   "modules": [
     {
       "dir": "tests",
-      "files": 354
+      "files": 358
     },
     {
       "dir": "src/lib",
-      "files": 302
+      "files": 309
     },
     {
       "dir": "src/components",
-      "files": 77
+      "files": 78
     },
     {
       "dir": "android",
@@ -68,6 +68,14 @@
       "files": 15
     },
     {
+      "dir": "scripts",
+      "files": 15
+    },
+    {
+      "dir": "project-memory",
+      "files": 14
+    },
+    {
       "dir": "proxy",
       "files": 13
     },
@@ -77,10 +85,6 @@
     },
     {
       "dir": "QA",
-      "files": 11
-    },
-    {
-      "dir": "scripts",
       "files": 11
     },
     {
@@ -104,7 +108,7 @@
       "files": 6
     },
     {
-      "dir": "project-memory",
+      "dir": "deploy",
       "files": 5
     },
     {
@@ -122,10 +126,6 @@
     {
       "dir": "src/workers",
       "files": 4
-    },
-    {
-      "dir": "deploy",
-      "files": 3
     },
     {
       "dir": "src/plugins",
@@ -403,6 +403,26 @@
   ],
   "recentCommits": [
     {
+      "hash": "87f78dd",
+      "date": "2026-11-24T15:41:04Z",
+      "subject": "feat(guardian): remote git-ref agent-lock, local guardian-daemon + systemd, APK verifier, AGENTS.md roles & ADR-0002"
+    },
+    {
+      "hash": "4916d35",
+      "date": "2026-11-24T15:39:42Z",
+      "subject": "feat(autocore): unified AI catalog, health, budget controller, A-J router, gateway, discovery & AutoCorePanel"
+    },
+    {
+      "hash": "5ecd05d",
+      "date": "2026-11-24T14:54:38Z",
+      "subject": "fix(proxy): allow Cerebras/Mistral hosts on /openai relay (were 403 with proxyUrl) + registry↔allowlist guard test"
+    },
+    {
+      "hash": "195d92b",
+      "date": "2026-11-24T14:43:00Z",
+      "subject": "chore(memory): first verified project state snapshot + guardian-5a event (ADR-0001 proposed)"
+    },
+    {
       "hash": "07911a1",
       "date": "2026-11-24T14:36:21Z",
       "subject": "feat(guardian-5a): shared agent protocol (AGENTS.md/CLAUDE.md), project memory, state generator and event journal"
@@ -431,35 +451,15 @@
       "hash": "76047eb",
       "date": "2026-11-24T12:20:59Z",
       "subject": "feat(operator): add Direct Style prompt and OPERATOR autonomy profile with unbreakable RiskGuard"
-    },
-    {
-      "hash": "36d7bfc",
-      "date": "2026-11-24T12:18:25Z",
-      "subject": "feat(self-awareness): add live selfManifest, system prompt self-awareness, and schema-validated update/rollback settings tools"
-    },
-    {
-      "hash": "97ef8b5",
-      "date": "2026-11-24T12:13:45Z",
-      "subject": "feat(voice): add sentence-by-sentence streaming Polish TTS (ElevenLabs Flash v2.5, OpenAI TTS, Modal Voice), Android AudioContext unlock, and barge-in cancellation"
-    },
-    {
-      "hash": "6287183",
-      "date": "2026-11-24T12:04:44Z",
-      "subject": "ci(modal): add manual deploy-modal.yml workflow using GitHub Secrets"
-    },
-    {
-      "hash": "f683bfd",
-      "date": "2026-11-24T11:27:29Z",
-      "subject": "chore(release): target v3-jarvis-soul-vision APK release in android-v2.yml"
     }
   ],
   "checks": {
     "secret-scan": {
       "command": "node scripts/secret-scan.mjs --all",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T14:36:27.177Z",
-      "commit": "07911a17ef627304cfb433953cbd472b788826cf",
-      "logPath": "project-memory/reports/logs/secret-scan-20261124T143626Z.log",
+      "finishedAt": "2026-11-24T15:41:09.642Z",
+      "commit": "87f78dd8e81e6342cadcf0ef50c1f889b0605433",
+      "logPath": "project-memory/reports/logs/secret-scan-20261124T154109Z.log",
       "summary": {
         "result": "Skan sekretów: czysto."
       },
@@ -470,9 +470,9 @@
     "lint": {
       "command": "npm run lint",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T14:36:48.259Z",
-      "commit": "07911a17ef627304cfb433953cbd472b788826cf",
-      "logPath": "project-memory/reports/logs/lint-20261124T143627Z.log",
+      "finishedAt": "2026-11-24T15:41:30.953Z",
+      "commit": "87f78dd8e81e6342cadcf0ef50c1f889b0605433",
+      "logPath": "project-memory/reports/logs/lint-20261124T154109Z.log",
       "summary": {
         "problems": null
       },
@@ -483,12 +483,12 @@
     "test": {
       "command": "npm test",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T14:41:51.009Z",
-      "commit": "07911a17ef627304cfb433953cbd472b788826cf",
-      "logPath": "project-memory/reports/logs/test-20261124T143648Z.log",
+      "finishedAt": "2026-11-24T15:45:35.332Z",
+      "commit": "87f78dd8e81e6342cadcf0ef50c1f889b0605433",
+      "logPath": "project-memory/reports/logs/test-20261124T154130Z.log",
       "summary": {
-        "testFiles": "Test Files  354 passed (354)",
-        "tests": "Tests  2991 passed (2991)"
+        "testFiles": "Test Files  358 passed (358)",
+        "tests": "Tests  3023 passed (3023)"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -497,11 +497,11 @@
     "build": {
       "command": "npm run build",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T14:42:32.038Z",
-      "commit": "07911a17ef627304cfb433953cbd472b788826cf",
-      "logPath": "project-memory/reports/logs/build-20261124T144151Z.log",
+      "finishedAt": "2026-11-24T15:46:11.959Z",
+      "commit": "87f78dd8e81e6342cadcf0ef50c1f889b0605433",
+      "logPath": "project-memory/reports/logs/build-20261124T154535Z.log",
       "summary": {
-        "built": "built in 14.75s"
+        "built": "built in 13.25s"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -521,7 +521,7 @@
     ],
     "runId": 45399897217,
     "runSha": "f5a5dc439c60981313e22ab7c22f5034b8b9721a",
-    "checkedAt": "2026-11-24T14:42:33.411Z",
+    "checkedAt": "2026-11-24T15:46:13.562Z",
     "status": "STALE",
     "reason": "APK zbudowany z f5a5dc4, nie z HEAD"
   },
@@ -704,10 +704,18 @@
     ]
   },
   "events": {
-    "total": 1,
-    "valid": 1,
+    "total": 2,
+    "valid": 2,
     "invalid": [],
     "recent": [
+      {
+        "file": "project-memory/events/20261124T154622424Z-antigravity-autocore.json",
+        "timestamp": "2026-11-24T15:46:22.424Z",
+        "agent": "antigravity",
+        "taskId": "autocore",
+        "endCommit": "UNCOMMITTED",
+        "nextStep": "Przeglad PR feat/autocore, ustawienie limitu budzetu w UI, opcjonalne uruchomienie scripts/install-guardian.sh na docelowym Linuxie"
+      },
       {
         "file": "project-memory/events/20261124T144248650Z-antigravity-guardian-5a.json",
         "timestamp": "2026-11-24T14:42:48.650Z",
@@ -719,16 +727,21 @@
     ]
   },
   "nextRecommendedStep": {
-    "from": "project-memory/events/20261124T144248650Z-antigravity-guardian-5a.json",
-    "text": "Recenzja feat/guardian-5a przez innego agenta lub właściciela (autor != jedyny recenzent), następnie Sprint 5b: monitoring bez LLM (CI/raporty) + zdalna blokada dla odizolowanych wykonawców."
+    "from": "project-memory/events/20261124T154622424Z-antigravity-autocore.json",
+    "text": "Przeglad PR feat/autocore, ustawienie limitu budzetu w UI, opcjonalne uruchomienie scripts/install-guardian.sh na docelowym Linuxie"
   },
   "decisions": [
     {
       "file": "project-memory/decisions/ADR-0001-project-memory.md",
       "title": "ADR-0001: Jedna pamięć projektu z generowanym stanem i dziennikiem zdarzeń per plik",
       "status": "proposed (czeka na recenzję człowieka lub innego agenta)"
+    },
+    {
+      "file": "project-memory/decisions/ADR-0002-autocore.md",
+      "title": "ADR-0002: JARVIS AUTOCORE — centralne zarządzanie AI, budżetem i nadzorem",
+      "status": "UNKNOWN"
     }
   ],
   "failedAttempts": 5,
-  "integrity": "73c48f2c377357d3ad75be59691d2724b352297bde2c7a488e773cfaf6fe8ff4"
+  "integrity": "208f2d65d99f339b82adb003087fd4a9d29cc174c46aa6df21dc2cf3c87b4790"
 }
