@@ -1,5 +1,71 @@
 import { store, uid } from "./store";
+import { assessPhoneRisk } from "./phoneAgent";
 import type { AuditEntry } from "../types";
+
+export type AutonomyProfile = "STANDARD" | "OPERATOR";
+
+// Codzienne narzędzia operacyjne wykonywane płynnie w trybie OPERATOR bez popupów
+// (nawigacja, otwieranie aplikacji/URL, bezpieczne przewijanie/cofanie, smart home, media).
+const OPERATOR_SAFE_OUTBOUND = new Set([
+  "navigate_to", "open_service", "open_url", "smart_home", "run_scene",
+  "android_open_app", "android_open_settings", "android_scroll", "android_back", "android_global",
+  "desktop_launch_app", "desktop_open", "desktop_volume", "desktop_media",
+]);
+
+// Narzędzia interakcji UI, które w trybie OPERATOR przechodzą TYLKO jeśli RiskGuard potwierdzi brak
+// ryzyka (isPassword / money / security / delete / send). W przeciwnym razie twarda blokada lub zgoda.
+const OPERATOR_UI_CHECKED = new Set(["android_tap_id", "android_tap", "android_type"]);
+
+// Twarde akcje krytyczne: wysyłka na zewnątrz, dzwonienie, usuwanie/destrukcja, płatności, system.
+// NIGDY nie są auto-zatwierdzane przez tryb OPERATOR.
+const CRITICAL_RISKGUARD_TOOLS = new Set([
+  "gmail_send", "gmail_reply", "send_test_email", "send_offers_all", "salesos_email", "salesos_flush_emails",
+  "send_sms", "text_contact", "make_call", "call_contact",
+  "clear_tally", "desktop_power", "run_automation",
+  "system_terminal", "system_git", "system_docker", "system_http_request", "system_files_write", "system_generated_tool",
+]);
+
+/** Zwróć aktywny profil autonomii (domyślnie STANDARD). */
+export function getAutonomyProfile(): AutonomyProfile {
+  return store.settings.autonomyProfile === "OPERATOR" ? "OPERATOR" : "STANDARD";
+}
+
+/** Przełącz profil autonomii (STANDARD | OPERATOR). */
+export function setAutonomyProfile(profile: AutonomyProfile): void {
+  store.setSettings({ autonomyProfile: profile === "OPERATOR" ? "OPERATOR" : "STANDARD" });
+}
+
+/** Pure: wyłuskaj kontekst ryzyka z parametrów narzędzia dla twardego RiskGuard. */
+function assessToolInputRisk(tool: string, input: unknown) {
+  const rec = input && typeof input === "object" && !Array.isArray(input)
+    ? (input as Record<string, unknown>)
+    : {};
+  const isPassword =
+    rec.isPassword === true ||
+    rec.password === true ||
+    String(rec.expectedLabel || rec.label || "") === "[PASSWORD_BLOCKED]";
+  const label = String(rec.expectedLabel || rec.label || rec.target || rec.text || "");
+  const packageName = String(rec.packageName || rec.app || "");
+  const extraText = String(rec.text || rec.body || rec.query || "");
+  return assessPhoneRisk({ action: tool, label, packageName, extraText, isPassword });
+}
+
+/** Pure: czy RiskGuard TWARDO BLOKUJE akcję (np. pole hasła isPassword — zakaz bezwzględny). */
+export function isHardRiskGuardBlocked(tool: string, input: unknown): boolean {
+  return assessToolInputRisk(tool, input).blocked;
+}
+
+/** Pure: czy narzędzie może przejść bez popupu w trybie OPERATOR (po przejściu twardego RiskGuard). */
+export function isOperatorAutoAllowed(tool: string, input: unknown): boolean {
+  if (store.settings.requireConsentAlways === true) return false;
+  if (getAutonomyProfile() !== "OPERATOR") return false;
+  if (CRITICAL_RISKGUARD_TOOLS.has(tool)) return false;
+  const uiRisk = assessToolInputRisk(tool, input);
+  if (uiRisk.blocked || uiRisk.requiresConfirmation) return false;
+  if (OPERATOR_SAFE_OUTBOUND.has(tool)) return true;
+  if (OPERATOR_UI_CHECKED.has(tool)) return true;
+  return false;
+}
 
 // --- Klasyfikacja ryzyka narzędzi ---
 export type Risk = "read" | "write" | "outbound";
@@ -202,15 +268,31 @@ export function undoAction(entry: AuditEntry): string {
 }
 
 /**
- * Bramka uprawnień: dla narzędzi read przepuszcza; dla write/outbound pyta UI
- * (chyba że użytkownik zapamiętał zgodę). Zwraca true, jeśli można wykonać.
+ * Bramka uprawnień:
+ * 1) Twardy RiskGuard: pola haseł (`isPassword`) są BEZWZGLĘDNIE ZABLOKOWANE zawsze (nawet w OPERATOR).
+ * 2) Narzędzia read/write przechodzą automatycznie.
+ * 3) W trybie OPERATOR bezpieczne codzienne narzędzia (nawigacja, otwieranie aplikacji/URL, bezpieczne UI)
+ *    przechodzą płynnie bez popupów — z wyjątkiem krytycznych akcji (wysyłki, przelewy/płatności,
+ *    nieodwracalne usuwanie, bezpieczeństwo), które ZAWSZE wymagają jawnego potwierdzenia (freshOnly).
  */
 export async function requestConsent(tool: string, input: unknown): Promise<boolean> {
+  // 1) Bezwzględny zakaz odczytu/wypełniania pól haseł (RiskGuard — nienaruszalny w każdym profilu).
+  if (isHardRiskGuardBlocked(tool, input)) return false;
+
   const risk = riskOf(tool);
-  // Pytamy tylko o akcje zewnętrzne/nieodwracalne; lokalne zapisy idą automatycznie.
+  // 2) Pytamy tylko o akcje zewnętrzne/nieodwracalne; lokalne odczyty/zapisy idą automatycznie.
   if (risk !== "outbound") return true;
-  const freshOnly = requiresFreshConsent(tool);
-  // Nieodwracalne wysyłki i ustawienie „zawsze pytaj” nie respektują szerokich
+
+  // 3) Tryb OPERATOR: płynne codzienne narzędzia po przejściu oceny RiskGuard.
+  if (isOperatorAutoAllowed(tool, input)) return true;
+
+  const uiRisk = assessToolInputRisk(tool, input);
+  const freshOnly =
+    requiresFreshConsent(tool) ||
+    CRITICAL_RISKGUARD_TOOLS.has(tool) ||
+    uiRisk.requiresConfirmation;
+
+  // Nieodwracalne wysyłki/płatności/usuwanie i ustawienie „zawsze pytaj” nie respektują szerokich
   // zgód sesyjnych ani zgód zapamiętanych dla samego typu narzędzia.
   if (!freshOnly) {
     if (isAutoConsent()) return true;

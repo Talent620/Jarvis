@@ -1681,6 +1681,22 @@ export default function App() {
         >
           👁 Pokaż
         </button>
+        <button
+          type="button"
+          className={store.settings.autonomyProfile === "OPERATOR" ? "chip on" : "chip"}
+          onClick={() => {
+            const next = store.settings.autonomyProfile === "OPERATOR" ? "STANDARD" : "OPERATOR";
+            store.setSettings({ autonomyProfile: next });
+            toast(
+              next === "OPERATOR"
+                ? "🛡 Tryb Operatora: codzienne narzędzia płynnie, RiskGuard chroni hasła/płatności/wysyłki"
+                : "🔒 Tryb Standard: potwierdzenia akcji zewnętrznych",
+            );
+          }}
+          title="Profil autonomii: STANDARD vs OPERATOR (twardy RiskGuard zawsze aktywny)"
+        >
+          {store.settings.autonomyProfile === "OPERATOR" ? "🛡 Operator" : "🔒 Standard"}
+        </button>
       </div>
       <Composer
         onSend={handleSend}
