@@ -1,25 +1,23 @@
 {
   "schemaVersion": 1,
   "generatedBy": "scripts/sync-project-state.mjs",
-  "generatedAt": "2026-11-24T21:21:57.759Z",
+  "generatedAt": "2026-11-24T23:20:08.104Z",
   "notice": "PLIK GENEROWANY — nie edytuj ręcznie. Odśwież: npm run memory:sync",
   "git": {
-    "commit": "debb484c971ce84dd9b6360731ba0e5dfc25ea4d",
-    "shortCommit": "debb484",
-    "branch": "feat/ux-craft-audit",
+    "commit": "71762681de57a590e5e2c4e41c698a78a97953f0",
+    "shortCommit": "7176268",
+    "branch": "fix/production-integration",
     "dirty": true,
     "changes": [
       "M project-memory/CURRENT_STATE.json",
       " M project-memory/CURRENT_STATE.md",
       " M project-memory/reports/build.json",
-      " M project-memory/reports/guardian-heartbeat.json",
       " M project-memory/reports/lint.json",
       " M project-memory/reports/secret-scan.json",
       " M project-memory/reports/test.json",
-      "?? project-memory/decisions/ADR-0006-ux-obsidian-precision.md",
-      "?? project-memory/events/20261124T212157501Z-antigravity-ux-craft-audit.json"
+      "?? project-memory/events/20261124T232007805Z-antigravity-production-integration.json"
     ],
-    "worktreeFingerprint": "7050d1b8445ffe99f596555ba561087a84898511951448a9fc0339b378d04f74"
+    "worktreeFingerprint": "bc0d1edf6479dee319c0bced8df40ff046afead23cd1d6daa847af9617571d67"
   },
   "repository": {
     "status": "OK",
@@ -41,11 +39,11 @@
   "modules": [
     {
       "dir": "tests",
-      "files": 366
+      "files": 369
     },
     {
       "dir": "src/lib",
-      "files": 315
+      "files": 316
     },
     {
       "dir": "src/components",
@@ -61,7 +59,7 @@
     },
     {
       "dir": "project-memory",
-      "files": 23
+      "files": 25
     },
     {
       "dir": "(root)",
@@ -72,11 +70,11 @@
       "files": 16
     },
     {
-      "dir": "ios",
-      "files": 15
+      "dir": "scripts",
+      "files": 16
     },
     {
-      "dir": "scripts",
+      "dir": "ios",
       "files": 15
     },
     {
@@ -150,8 +148,9 @@
   ],
   "manifest": {
     "status": "OK",
-    "version": "4.0.0-apex",
+    "version": "5.0.0-production-rc",
     "modules": [
+      "JARVIS AUTOCORE (Centralny router AI, zdrowie dostawców, budżet 100%, discovery, jeden resolver TTS)",
       "Modal Brain (vLLM OpenAI-compatible)",
       "Streaming Polish TTS (ElevenLabs Flash v2.5 / OpenAI / Modal Voice / Gemini / Native fallback)",
       "Protokół Mówionej Polszczyzny (voice_mode + barge-in)",
@@ -160,8 +159,9 @@
       "Rada Ekspertów (Narada — 3 role równolegle Promise.all)",
       "Live Vision (Oczy w terenie — tylna kamera + instrukcja głosowa)",
       "Kolejka Misji w Tle (mission_queue z natychmiastowym potwierdzeniem Refleks)",
+      "Trwałe Cele Wieloetapowe (voiceCognition + agentPlanner + goalRuntime + resultVerifier)",
       "Android Phone Use Agent + RiskGuard (Check-then-Act, zakaz pól haseł)",
-      "OMNI-PILOT & Frontier Desktop Computer Use (Refleks <30ms, Hybryda AT-SPI2/UIA + Vision [0..1000], Dual-Track Strażnik Ekranu, Diagnostyka OS, RiskGuard + Ctrl+Alt+X)",
+      "OMNI-PILOT & Frontier Desktop Computer Use (Refleks <30ms, Hybryda AT-SPI2/UIA + Vision [0..1000], Dual-Track Strażnik Ekranu, Diagnostyka OS, RiskGuard + Kill-Switch Ctrl+Alt+X)",
       "Bi-Temporal Core Memory + MCP Bridge"
     ],
     "tools": [
@@ -200,6 +200,7 @@
       "desktop_click",
       "desktop_cursor_move",
       "desktop_diagnose",
+      "desktop_drag",
       "desktop_hotkey",
       "desktop_launch_app",
       "desktop_media",
@@ -319,6 +320,7 @@
     "ubuntu:setup",
     "test",
     "test:watch",
+    "test:e2e:xvfb",
     "lint",
     "build:studio",
     "knowledge",
@@ -416,6 +418,36 @@
   ],
   "recentCommits": [
     {
+      "hash": "7176268",
+      "date": "2026-11-24T23:13:48Z",
+      "subject": "fix(omni): refine visual stagnation contradiction threshold & clean Vite teardown in E2E probe"
+    },
+    {
+      "hash": "1c31896",
+      "date": "2026-11-24T23:06:46Z",
+      "subject": "test(e2e): Etap 4 — permanent live Xvfb+Chrome+xdotool E2E suite (npm run test:e2e:xvfb)"
+    },
+    {
+      "hash": "473cb7a",
+      "date": "2026-11-24T23:02:40Z",
+      "subject": "feat(integration): Etap 3 P0/P1/P2 — wire voiceCognition/agentPlanner/goalRuntime/verifyResult, hybrid OS-Tree->Vision, Xvfb/HUD/CORS & repo hygiene"
+    },
+    {
+      "hash": "04d0223",
+      "date": "2026-11-24T22:47:40Z",
+      "subject": "fix(autocore): Etap 2 P0 — preserve gateway task/prefer, 100% budgetGate & non-zero pricing, single TTS resolver & Ollama unblock"
+    },
+    {
+      "hash": "7c7bf27",
+      "date": "2026-11-24T22:32:42Z",
+      "subject": "fix(security): Etap 1 P0 — global Kill-Switch, RiskGuard hotkey/launch/sentinel gates & unified AuditLog+Guardian bridge"
+    },
+    {
+      "hash": "a442130",
+      "date": "2026-11-24T21:21:58Z",
+      "subject": "docs(memory): record ux-craft-audit event, ADR-0006 & verified CURRENT_STATE"
+    },
+    {
       "hash": "debb484",
       "date": "2026-11-24T21:13:52Z",
       "subject": "fix(ux): second-pass visual polish — top-right desktop toast, active chip hover, cmdk input border, wrapped themes & mobile placeholders"
@@ -434,45 +466,15 @@
       "hash": "a00b8ae",
       "date": "2026-11-24T20:46:20Z",
       "subject": "chore(memory): verified omni-frontier snapshot, reports & event (ADR-0005 proposed)"
-    },
-    {
-      "hash": "6df9e80",
-      "date": "2026-11-24T20:40:11Z",
-      "subject": "feat(omni-frontier): Hybrid OS-Tree+Vision grounding, Dual-Track Screen Sentinel (0-USD static skip), HUD decisions & ADR-0005"
-    },
-    {
-      "hash": "86b26c6",
-      "date": "2026-11-24T20:40:11Z",
-      "subject": "feat(omni-frontier): semantic OS UI tree (AT-SPI2/Windows UIA) & read-only Desktop Doctor IPC"
-    },
-    {
-      "hash": "c8c9234",
-      "date": "2026-11-24T20:28:53Z",
-      "subject": "chore(memory): verified omni-pilot snapshot, reports & event (ADR-0004 proposed)"
-    },
-    {
-      "hash": "67895c2",
-      "date": "2026-11-24T20:22:42Z",
-      "subject": "fix(omni-pilot): tighten TypeScript union narrowing in desktop.ts pilot catch fallbacks"
-    },
-    {
-      "hash": "90d170d",
-      "date": "2026-11-24T20:17:26Z",
-      "subject": "feat(omni-pilot): wire hands-free voice reflex & visual grounding into HeadsetMode (Ctrl+Shift+J) and BossMode voiceLoop"
-    },
-    {
-      "hash": "a15daf1",
-      "date": "2026-11-24T20:14:53Z",
-      "subject": "fix(omni-pilot): scale HiDPI coordinates by display scaleFactor & fix Windows PowerShell mouse/scroll/SendKeys"
     }
   ],
   "checks": {
     "secret-scan": {
       "command": "node scripts/secret-scan.mjs --all",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T21:16:04.271Z",
-      "commit": "debb484c971ce84dd9b6360731ba0e5dfc25ea4d",
-      "logPath": "project-memory/reports/logs/secret-scan-20261124T211603Z.log",
+      "finishedAt": "2026-11-24T23:13:54.999Z",
+      "commit": "71762681de57a590e5e2c4e41c698a78a97953f0",
+      "logPath": "project-memory/reports/logs/secret-scan-20261124T231354Z.log",
       "summary": {
         "result": "Skan sekretów: czysto."
       },
@@ -483,9 +485,9 @@
     "lint": {
       "command": "npm run lint",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T21:16:24.548Z",
-      "commit": "debb484c971ce84dd9b6360731ba0e5dfc25ea4d",
-      "logPath": "project-memory/reports/logs/lint-20261124T211604Z.log",
+      "finishedAt": "2026-11-24T23:14:17.649Z",
+      "commit": "71762681de57a590e5e2c4e41c698a78a97953f0",
+      "logPath": "project-memory/reports/logs/lint-20261124T231355Z.log",
       "summary": {
         "problems": null
       },
@@ -496,12 +498,12 @@
     "test": {
       "command": "npm test",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T21:20:44.598Z",
-      "commit": "debb484c971ce84dd9b6360731ba0e5dfc25ea4d",
-      "logPath": "project-memory/reports/logs/test-20261124T211624Z.log",
+      "finishedAt": "2026-11-24T23:18:52.848Z",
+      "commit": "71762681de57a590e5e2c4e41c698a78a97953f0",
+      "logPath": "project-memory/reports/logs/test-20261124T231417Z.log",
       "summary": {
-        "testFiles": "Test Files  366 passed (366)",
-        "tests": "Tests  3093 passed (3093)"
+        "testFiles": "Test Files  369 passed (369)",
+        "tests": "Tests  3108 passed (3108)"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -510,11 +512,11 @@
     "build": {
       "command": "npm run build",
       "exitCode": 0,
-      "finishedAt": "2026-11-24T21:21:25.587Z",
-      "commit": "debb484c971ce84dd9b6360731ba0e5dfc25ea4d",
-      "logPath": "project-memory/reports/logs/build-20261124T212044Z.log",
+      "finishedAt": "2026-11-24T23:19:32.650Z",
+      "commit": "71762681de57a590e5e2c4e41c698a78a97953f0",
+      "logPath": "project-memory/reports/logs/build-20261124T231852Z.log",
       "summary": {
-        "built": "built in 13.59s"
+        "built": "built in 13.73s"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -711,10 +713,18 @@
     ]
   },
   "events": {
-    "total": 7,
-    "valid": 7,
+    "total": 8,
+    "valid": 8,
     "invalid": [],
     "recent": [
+      {
+        "file": "project-memory/events/20261124T232007805Z-antigravity-production-integration.json",
+        "timestamp": "2026-11-24T23:20:07.805Z",
+        "agent": "antigravity",
+        "taskId": "production-integration",
+        "endCommit": "UNCOMMITTED",
+        "nextStep": "Wykonać 10-15 min checklistę odbiorczą na fizycznym Linuxie (Ollama + binarny Electron + X11/Wayland), Androidzie i 1 testowym kluczu API przed merge na main."
+      },
       {
         "file": "project-memory/events/20261124T212157501Z-antigravity-ux-craft-audit.json",
         "timestamp": "2026-11-24T21:21:57.501Z",
@@ -774,8 +784,8 @@
     ]
   },
   "nextRecommendedStep": {
-    "from": "project-memory/events/20261124T212157501Z-antigravity-ux-craft-audit.json",
-    "text": "Recenzja PR feat/ux-craft-audit przez właściciela lub innego agenta, scalenie z main oraz test docelowy na fizycznym Android APK (Samsung S9+) i Linux Desktop."
+    "from": "project-memory/events/20261124T232007805Z-antigravity-production-integration.json",
+    "text": "Wykonać 10-15 min checklistę odbiorczą na fizycznym Linuxie (Ollama + binarny Electron + X11/Wayland), Androidzie i 1 testowym kluczu API przed merge na main."
   },
   "decisions": [
     {
@@ -810,5 +820,5 @@
     }
   ],
   "failedAttempts": 5,
-  "integrity": "930563053d9f2a67c096d2ff4c64110446e86de947e55578f44578cc807a16f4"
+  "integrity": "9cc65126d7defe6d767d8c52226aca6920b5675e92542a2852ca1466cdd6513c"
 }
