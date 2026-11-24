@@ -7,6 +7,8 @@ import { buildChiefBriefing, briefingOneLiner } from "./chiefOfStaff";
 import { notify } from "./notifications";
 import { store } from "./store";
 import { currentRecap } from "./habit";
+import { canSendProactiveNudge, consumeProactiveBudget } from "./sleepCompute";
+import type { ProactiveBudgetState } from "../types";
 
 export interface NotifyDecision { key: string; title: string; body: string }
 
@@ -17,6 +19,8 @@ export interface NotifyInput {
   briefingLine: string;   // briefingOneLiner(...) — może być "" (nic pilnego)
   predictions: Prediction[];
   weeklyRecapLine?: string; // podsumowanie tygodnia (habit) — push re-engage w niedzielę wieczór
+  /** Budżet Ciszy: twardy limit dzienny (domyślnie 3) + cisza nocna 22:00–07:00. */
+  proactiveBudget?: Partial<ProactiveBudgetState>;
 }
 
 /** Pure: minuty od północy z "HH:MM" (null gdy format zły lub poza zakresem). */
@@ -36,18 +40,23 @@ export function dayKey(now: number): string {
 
 /**
  * Pure: które proaktywne powiadomienia są należne TERAZ — z deduplikacją po zbiorze `sent` (klucze
- * już wysłane). Anty-spam: poranny briefing RAZ dziennie po godzinie i tylko gdy jest co powiedzieć;
- * pilne predykcje (zaległe/termin/przypomnienie „high") RAZ na dobę każda; twardy limit liczby.
+ * już wysłane) oraz poszanowaniem Budżetu Ciszy (cisza nocna 22:00–07:00 + max 3 dziennie).
  * Caller wysyła decyzje i dopisuje ich `key` do `sent`.
  */
 export function dueNotifications(input: NotifyInput, now: number, sent: Set<string>): NotifyDecision[] {
   if (!input.enabled) return [];
+  let maxAllowed = 4;
+  if (input.proactiveBudget) {
+    const gate = canSendProactiveNudge(input.proactiveBudget, now);
+    if (!gate.allowed) return [];
+    maxAllowed = Math.min(maxAllowed, gate.remaining);
+  }
   const out: NotifyDecision[] = [];
   const today = dayKey(now);
   const mins = new Date(now).getHours() * 60 + new Date(now).getMinutes();
 
   // 1) Poranna odprawa — po ustalonej godzinie, raz dziennie, tylko gdy jest realny sygnał.
-  if (input.dailyBriefing && input.briefingLine) {
+  if (input.dailyBriefing && input.briefingLine && out.length < maxAllowed) {
     const at = parseHM(input.briefingTime);
     const key = `briefing:${today}`;
     if (at != null && mins >= at && !sent.has(key)) {
@@ -58,15 +67,15 @@ export function dueNotifications(input: NotifyInput, now: number, sent: Set<stri
   // 2) Pilne predykcje — zaległe/terminy/przypomnienia o wysokim priorytecie, raz na dobę każda.
   const URGENT = new Set(["overdue", "deadline", "reminder"]);
   for (const p of input.predictions) {
+    if (out.length >= maxAllowed) break;
     if (p.urgency !== "high" || !URGENT.has(p.kind)) continue;
     const key = `pred:${p.id}:${today}`;
     if (sent.has(key)) continue;
     out.push({ key, title: "🔔 JARVIS", body: `${p.title}${p.detail ? ` — ${p.detail}` : ""}` });
-    if (out.length >= 4) break; // nie zalewaj powiadomieniami
   }
 
   // 3) Tygodniowy recap — re-engage RAZ na tydzień, od niedzieli 18:00 (dowód, że inwestycja procentuje).
-  if (input.weeklyRecapLine) {
+  if (input.weeklyRecapLine && out.length < maxAllowed) {
     const sunday = new Date(now);
     sunday.setHours(0, 0, 0, 0);
     sunday.setDate(sunday.getDate() - sunday.getDay()); // cofnij do niedzieli tego tygodnia
@@ -79,7 +88,7 @@ export function dueNotifications(input: NotifyInput, now: number, sent: Set<stri
   return out;
 }
 
-// --- Uruchamiacz (warstwa nieczysta: dane + wysyłka + trwała deduplikacja) ---
+// --- Uruchamiacz (warstwa nieczysta: dane + wysyłka + trwała deduplikacja + Budżet Ciszy) ---
 const SENT_KEY = "jarvis.notif.sent.v1";
 function loadSent(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem(SENT_KEY) || "[]") as string[]); } catch { return new Set(); }
@@ -90,7 +99,7 @@ function saveSent(s: Set<string>): void {
 
 /**
  * Sprawdź i wyślij należne powiadomienia systemowe. Wywoływane przy starcie i co jakiś czas.
- * Zwraca liczbę wysłanych (0 = nic należnego). Bezpieczne do odpalania często — dedup pilnuje spamu.
+ * Zwraca liczbę wysłanych (0 = nic należnego). Respektuje Budżet Ciszy (max 3/dzień + 22:00–07:00).
  */
 export async function runProactiveNotifications(now = Date.now()): Promise<number> {
   const s = store.settings;
@@ -105,14 +114,21 @@ export async function runProactiveNotifications(now = Date.now()): Promise<numbe
       briefingLine: briefingOneLiner(buildChiefBriefing(input, now)),
       predictions: predict(input, now),
       weeklyRecapLine: currentRecap(now).line,
+      proactiveBudget: d.proactive_budget || { date: "", usedToday: 0, dailyLimit: 3, quietStartHour: 22, quietEndHour: 7 },
     },
     now,
     sent,
   );
   if (!decisions.length) return 0;
+  let delivered = 0;
   for (const dec of decisions) {
-    try { await notify(dec.title, dec.body); sent.add(dec.key); } catch { /* dostarczenie best-effort */ }
+    try { await notify(dec.title, dec.body); sent.add(dec.key); delivered += 1; } catch { /* dostarczenie best-effort */ }
   }
   saveSent(sent);
-  return decisions.length;
+  if (delivered > 0) {
+    store.setData((data) => {
+      data.proactive_budget = consumeProactiveBudget(data.proactive_budget, now, delivered);
+    });
+  }
+  return delivered;
 }

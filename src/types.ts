@@ -214,6 +214,46 @@ export interface AppData {
   /** Dziennik Predykcji — konkretne, sprawdzalne przewidywania JARVISA z terminem i realnym
    *  rozstrzygnięciem (nie zmyślonym). Fundament uczciwej samooceny celności. */
   predictionLedger?: PredictionRecord[];
+  /** Sprint 2 / Nocny Sen: niedomknięte sprawy i obietnice z ostatnich rozmów. */
+  open_loops?: OpenLoop[];
+  /** Sprint 2 / Nocny Sen: krótkie reguły stylu wyciągane automatycznie z korekt i przerwania (barge-in). */
+  user_lessons?: UserLesson[];
+  /** Sprint 2 / Budżet Ciszy: dzienny limit proaktywnych zaczepek (domyślnie 3) + cisza nocna 22:00–07:00. */
+  proactive_budget?: ProactiveBudgetState;
+}
+
+export interface OpenLoop {
+  id: string;
+  topic: string;
+  promise: string;
+  priority: "low" | "medium" | "high";
+  status: "open" | "closed";
+  createdAt: number;
+  updatedAt: number;
+  source?: string;
+}
+
+export interface UserLesson {
+  id: string;
+  rule: string;
+  trigger: string;
+  source: "correction" | "barge_in" | "sleep";
+  hits: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ProactiveBudgetState {
+  /** Lokalna data YYYY-MM-DD, której dotyczy licznik `usedToday`. */
+  date: string;
+  /** Liczba wykorzystanych proaktywnych zaczepek dzisiaj. */
+  usedToday: number;
+  /** Twardy limit dzienny (domyślnie 3). */
+  dailyLimit: number;
+  /** Początek godzin ciszy nocnej (domyślnie 22 = 22:00). */
+  quietStartHour: number;
+  /** Koniec godzin ciszy nocnej (domyślnie 7 = 07:00). */
+  quietEndHour: number;
 }
 
 export type PredictionKind = "relationship_neglect";

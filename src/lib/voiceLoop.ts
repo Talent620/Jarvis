@@ -11,6 +11,7 @@ import { fallbackNotice, fallbackVoiceLine, shouldAnnounceFallback } from "./pro
 import { toast } from "./toast";
 import { parseBossMeta } from "./boss";
 import { formatForSpokenPolish } from "./soulModes";
+import { recordCorrectionLesson } from "./sleepCompute";
 import type { Msg, ProviderId } from "./providers/types";
 import type { Settings } from "../types";
 
@@ -27,6 +28,7 @@ export class ConversationLoop {
   private readonly bargeIn = new BargeInController({
     onInterrupt: () => {
       stopSpeaking();
+      try { recordCorrectionLesson("", true); } catch { /* best-effort */ }
       if (!this.closed) {
         this.onCaption("✋ Przerwano — słucham…");
         this.onState("listening");

@@ -34,6 +34,9 @@ const emptyData: AppData = {
   siteProjects: [],
   financeProjects: [],
   world: { entities: [], relations: [] },
+  open_loops: [],
+  user_lessons: [],
+  proactive_budget: { date: "", usedToday: 0, dailyLimit: 3, quietStartHour: 22, quietEndHour: 7 },
 };
 
 // Domyślna stopka e-mail (czysta, „wizytówkowa"): nazwisko, telefon, strona.
@@ -201,7 +204,7 @@ function read<T>(key: string, fallback: T): T {
 export function normalizeData(d: AppData): AppData {
   const rec = d as unknown as Record<string, unknown>;
   for (const k of Object.keys(emptyData) as (keyof AppData)[]) {
-    if (k === "world") continue;
+    if (k === "world" || k === "proactive_budget") continue;
     if (!Array.isArray(rec[k as string])) rec[k as string] = [];
   }
   const w = d.world as { entities?: unknown; relations?: unknown } | undefined;
@@ -209,6 +212,18 @@ export function normalizeData(d: AppData): AppData {
   else {
     if (!Array.isArray(w.entities)) w.entities = [];
     if (!Array.isArray(w.relations)) w.relations = [];
+  }
+  const pb = d.proactive_budget as Partial<NonNullable<AppData["proactive_budget"]>> | undefined;
+  if (!pb || typeof pb !== "object" || Array.isArray(pb)) {
+    d.proactive_budget = { date: "", usedToday: 0, dailyLimit: 3, quietStartHour: 22, quietEndHour: 7 };
+  } else {
+    d.proactive_budget = {
+      date: typeof pb.date === "string" ? pb.date : "",
+      usedToday: typeof pb.usedToday === "number" && pb.usedToday >= 0 ? Math.floor(pb.usedToday) : 0,
+      dailyLimit: typeof pb.dailyLimit === "number" && pb.dailyLimit >= 0 ? Math.floor(pb.dailyLimit) : 3,
+      quietStartHour: typeof pb.quietStartHour === "number" ? pb.quietStartHour : 22,
+      quietEndHour: typeof pb.quietEndHour === "number" ? pb.quietEndHour : 7,
+    };
   }
   return d;
 }

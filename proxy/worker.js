@@ -26,10 +26,27 @@ export {
 } from "./lib/providers.js";
 
 import { routeRequest } from "./lib/router.js";
-import { handleScheduled, collectBriefingEvents, shouldSendBriefing, buildMorningBriefing } from "./lib/cron.js";
+import {
+  handleScheduled,
+  collectBriefingEvents,
+  shouldSendBriefing,
+  buildMorningBriefing,
+  sleepConsolidate,
+  checkProactiveBudget,
+  isQuietHours,
+} from "./lib/cron.js";
 import { applyVoiceModeToOpenAiBody } from "./lib/voiceProtocol.js";
 
-export { collectBriefingEvents, shouldSendBriefing, buildMorningBriefing, handleScheduled, applyVoiceModeToOpenAiBody };
+export {
+  collectBriefingEvents,
+  shouldSendBriefing,
+  buildMorningBriefing,
+  sleepConsolidate,
+  checkProactiveBudget,
+  isQuietHours,
+  handleScheduled,
+  applyVoiceModeToOpenAiBody,
+};
 
 export default {
   async fetch(req, env) {

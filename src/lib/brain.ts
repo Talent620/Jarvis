@@ -38,6 +38,7 @@ import { WEBLLM_DEFAULT_MODEL, webllmSupported } from "./webllm";
 import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
 import { buildSoulPromptBlock } from "./soulModes";
+import { buildSleepMemoryPromptBlock, consolidateOpenLoops, recordCorrectionLesson } from "./sleepCompute";
 import type { JarvisReply, Msg, ProviderId, FallbackReasonKind } from "./providers/types";
 
 // Retry przy chwilowym błędzie sieci — z WYKŁADNICZYM backoffem + jitterem (do 2 ponowień).
@@ -394,6 +395,7 @@ export function systemPrompt(ctx: PromptContext = {}): string {
     fusionBlock,
     worldBlock,
     curatedBlock,
+    buildSleepMemoryPromptBlock(store.data.open_loops, store.data.user_lessons),
     projectCtx,
     journalCtx,
   ].join("\n");
@@ -760,6 +762,15 @@ export async function askJarvis(
   if (lastUser?.content && !store.settings.interpreterMode) {
     const lc = learnFromUserMessage(corrections, lastUser.content, { id: uid(), source: "czat", now: Date.now() });
     if (lc.learned) { corrections = lc.rules; saveJson(CORRECTIONS_KEY, corrections); }
+    // Sprint 2: automatyczne wyciąganie user_lessons (np. „za długo / konkretniej”) + open_loops
+    recordCorrectionLesson(lastUser.content, false);
+    const nextLoops = consolidateOpenLoops(
+      store.data.open_loops || [],
+      [{ role: "user", content: lastUser.content, createdAt: Date.now() }],
+    );
+    if (nextLoops.length !== (store.data.open_loops || []).length || JSON.stringify(nextLoops) !== JSON.stringify(store.data.open_loops || [])) {
+      store.setData((data) => { data.open_loops = nextLoops; });
+    }
   }
   const rulesBlock = correctionRulesBlock(corrections);
 
