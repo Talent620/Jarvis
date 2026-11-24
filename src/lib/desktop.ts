@@ -296,7 +296,9 @@ export async function moveCursorOnPc(payload: {
 }): Promise<{ ok: boolean; x?: number; y?: number; message: string }> {
   const d = desktop();
   if (!d?.pilotMove) return { ok: false, message: NOT_DESKTOP };
-  const r = await d.pilotMove(payload).catch((e) => ({ ok: false, error: String(e) }));
+  const r: { ok: boolean; x?: number; y?: number; error?: string } = await d
+    .pilotMove(payload)
+    .catch((e) => ({ ok: false, error: String(e) }));
   if (r.ok) return { ok: true, x: r.x, y: r.y, message: `Przesunięto kursor (${r.x ?? 0}, ${r.y ?? 0}).` };
   return { ok: false, message: `Nie udało się przesunąć kursora: ${formatPilotError(r.error)}` };
 }
@@ -335,7 +337,9 @@ export async function dragOnPc(x1: number, y1: number, x2: number, y2: number): 
 export async function listWindowsOnPc(): Promise<{ ok: boolean; windows: { id: string; title: string }[]; message: string }> {
   const d = desktop();
   if (!d?.pilotWindows) return { ok: false, windows: [], message: NOT_DESKTOP };
-  const r = await d.pilotWindows().catch((e) => ({ ok: false, windows: [], error: String(e) }));
+  const r: { ok: boolean; windows?: { id: string; title: string }[]; error?: string } = await d
+    .pilotWindows()
+    .catch((e) => ({ ok: false, windows: [], error: String(e) }));
   if (r.ok) {
     const list = r.windows || [];
     const preview = list.slice(0, 12).map((w) => w.title).join(", ");
@@ -347,7 +351,9 @@ export async function listWindowsOnPc(): Promise<{ ok: boolean; windows: { id: s
 export async function focusWindowOnPc(query: string): Promise<{ ok: boolean; title?: string; message: string }> {
   const d = desktop();
   if (!d?.pilotFocus) return { ok: false, message: NOT_DESKTOP };
-  const r = await d.pilotFocus(query).catch((e) => ({ ok: false, error: String(e) }));
+  const r: { ok: boolean; window?: { id: string; title: string }; error?: string } = await d
+    .pilotFocus(query)
+    .catch((e) => ({ ok: false, error: String(e) }));
   if (r.ok) return { ok: true, title: r.window?.title, message: `Przełączono na okno: ${r.window?.title || query}.` };
   return { ok: false, message: `Nie udało się przełączyć okna „${query}": ${formatPilotError(r.error)}` };
 }
