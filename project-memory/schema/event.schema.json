@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Talent620/Jarvis/project-memory/schema/event.schema.json",
+  "title": "JARVIS agent event",
+  "description": "Jedno zdarzenie pracy agenta (Antigravity / Codex / Claude / human). Jeden plik na zdarzenie, nigdy nie dopisywany. Bez sekretów i bez treści prywatnych rozmów.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "taskId", "agent", "timestamp", "startCommit", "endCommit", "summary", "changedFiles", "commands", "testResults", "problems", "nextStep", "redactions"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "taskId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,63}$" },
+    "agent": { "type": "string", "enum": ["antigravity", "codex", "claude", "human", "ci"] },
+    "model": { "type": "string", "maxLength": 80 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "branch": { "type": "string", "maxLength": 120 },
+    "startCommit": { "type": "string", "pattern": "^([0-9a-f]{7,40}|UNKNOWN)$" },
+    "endCommit": { "type": "string", "pattern": "^([0-9a-f]{7,40}|UNKNOWN|UNCOMMITTED)$" },
+    "summary": { "type": "string", "minLength": 3, "maxLength": 600 },
+    "changedFiles": { "type": "array", "maxItems": 500, "items": { "type": "string", "maxLength": 300 } },
+    "commands": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command", "exitCode"],
+        "properties": {
+          "command": { "type": "string", "maxLength": 300 },
+          "exitCode": { "type": ["integer", "null"] }
+        }
+      }
+    },
+    "testResults": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check", "status", "source"],
+        "properties": {
+          "check": { "type": "string", "maxLength": 60 },
+          "status": { "type": "string", "enum": ["PASS", "FAIL", "STALE", "UNKNOWN", "NOT_RUN"] },
+          "source": { "type": "string", "enum": ["report", "agent-claim", "not-run"] },
+          "command": { "type": "string", "maxLength": 300 },
+          "exitCode": { "type": ["integer", "null"] },
+          "reportPath": { "type": "string", "maxLength": 300 },
+          "reportCommit": { "type": "string", "maxLength": 40 },
+          "reportDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "finishedAt": { "type": "string", "maxLength": 40 },
+          "summary": { "type": "string", "maxLength": 300 }
+        }
+      }
+    },
+    "problems": { "type": "array", "maxItems": 50, "items": { "type": "string", "maxLength": 400 } },
+    "hypotheses": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 400 } },
+    "nextStep": { "type": "string", "minLength": 3, "maxLength": 400 },
+    "relatedDecisions": { "type": "array", "maxItems": 20, "items": { "type": "string", "pattern": "^ADR-\\d{4}" } },
+    "redactions": { "type": "integer", "minimum": 0 }
+  }
+}

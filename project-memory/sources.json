@@ -1,0 +1,10 @@
+{
+  "description": "Mapa ISTNIEJĄCEJ wiedzy projektu dla generatora stanu. Generator czyta otwarte sprawy z tych dokumentów (z odniesieniem plik:linia) — nie ma drugiego backlogu. Edytowalne ręcznie.",
+  "openItemSources": [
+    { "file": "docs/JARVIS_REPAIR_PLAN.md", "mode": "status-headings", "kind": "plan-napraw" },
+    { "file": "docs/horizon-memory.md", "mode": "section-bullets", "heading": "^## 5\\. Aktywne ryzyka", "kind": "ryzyko" },
+    { "file": "docs/DEVLOG.md", "mode": "section-bullets", "heading": "^### Świadomie ODŁOŻONE", "kind": "odłożone-decyzja-właściciela" },
+    { "file": "docs/DEVLOG.md", "mode": "section-bullets", "heading": "^### Proponowane kolejne kierunki", "kind": "kierunek" }
+  ],
+  "expectedButMissing": ["docs/JARVIS_CONTROL_CENTER.md", "JARVIS_BACKLOG.md", "JARVIS_NEXT.md"]
+}

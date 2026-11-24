@@ -35,3 +35,8 @@ release-desktop
 
 # Kandydaci narzędzi generowanych przez agenta nigdy nie trafiają do repozytorium.
 tools/generated/*.candidate.cjs
+
+# Project memory (Sprint 5a): pełne logi uruchomień i blokady są lokalne; raporty *.json trafiają do repo.
+project-memory/reports/logs/
+project-memory/.lock
+project-memory/**/.tmp-*
