@@ -22,7 +22,8 @@ export interface SystemDiagnosticsReport {
 
 export interface JarvisDesktop {
   platform: string;
-  ensureLocalSiteOs?(url: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; error?: string }>;
+  ensureLocalSiteOs?(url: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; token?: string; error?: string }>;
+  ensureLocalForge?(url?: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; url?: string; token?: string; error?: string }>;
   ensureLocalOllama?(url: string): Promise<{ ok: boolean; started?: boolean; skipped?: boolean; error?: string }>;
   agentTool?(tool: string, input?: Record<string, unknown>): Promise<{ ok: boolean; error?: string; [key: string]: unknown }>;
   mcpStdioConnect?(config: Record<string, unknown>): Promise<{ ok: boolean; error?: string; tools?: unknown[] }>;

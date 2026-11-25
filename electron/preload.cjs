@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   ensureLocalSiteOs: (url) => ipcRenderer.invoke("jarvis:site-os-ensure-local", String(url || "")),
   // Uruchom dołączony kreator stron i otwórz go w domyślnej przeglądarce.
   siteOsStart: (tunnel = false) => ipcRenderer.invoke("jarvis:site-os-start", { tunnel: Boolean(tunnel) }),
+  ensureLocalForge: (url) => ipcRenderer.invoke("jarvis:forge-ensure-local", String(url || "http://127.0.0.1:3220")),
   // Uruchom lokalny program (po nazwie znanej lub ścieżce/poleceniu).
   launch: (appName) => ipcRenderer.invoke("jarvis:launch", String(appName || "")),
   // Akcja zasilania: lock | sleep | restart | shutdown | logoff.

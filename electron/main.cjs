@@ -15,6 +15,7 @@ const { createWorkspaceTools } = require("./workspace-tools.cjs");
 const { createStdioMcpManager } = require("./mcp-stdio.cjs");
 const { createLocalOllamaManager } = require("./local-ollama.cjs");
 const { createLocalSiteOsManager } = require("./local-siteos.cjs");
+const { createLocalForgeManager } = require("./local-forge.cjs");
 const localOllama = createLocalOllamaManager();
 
 // Na Linuxie automatycznie dopasuj backend X11/Wayland (Ozone) zamiast twardego XWayland.
@@ -43,6 +44,7 @@ function saveState(win) {
 
 let mainWindow = null;
 let siteOsManager = null;
+let forgeManager = null;
 let stdioMcp = null;
 let closingStdioMcp = false;
 
@@ -61,6 +63,22 @@ function siteOsPaths() {
 function localSiteOs() {
   if (!siteOsManager) siteOsManager = createLocalSiteOsManager({ paths: siteOsPaths() });
   return siteOsManager;
+}
+
+function forgePaths() {
+  const base = path.join(app.getPath("userData"), "jarvis-forge");
+  return {
+    script: app.isPackaged
+      ? path.join(process.resourcesPath, "forge", "server.mjs")
+      : path.join(__dirname, "..", "forge", "server.mjs"),
+    runtime: path.join(base, "runtime"),
+    defaultRepo: app.isPackaged ? path.join(app.getPath("documents"), "JARVIS Workspace") : path.join(__dirname, ".."),
+  };
+}
+
+function localForge() {
+  if (!forgeManager) forgeManager = createLocalForgeManager({ paths: forgePaths() });
+  return forgeManager;
 }
 
 async function startSiteOs({ tunnel = false } = {}) {
@@ -443,6 +461,10 @@ function registerDesktopControl() {
     } catch (error) {
       return { ok: false, error: error && error.message ? error.message : String(error) };
     }
+  });
+  ipcMain.handle("jarvis:forge-ensure-local", async (event, url) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    return localForge().ensure(url || "http://127.0.0.1:3220");
   });
 
   // --- Kalendarz Google (natywnie, bez serwera) ---
@@ -879,6 +901,7 @@ if (!gotLock) {
     localOllama.close();
     setClipWatch(false);
     if (siteOsManager) siteOsManager.close();
+    if (forgeManager) forgeManager.close();
     if (appTray) { try { appTray.destroy(); } catch { /* ignore */ } appTray = null; }
   });
 }

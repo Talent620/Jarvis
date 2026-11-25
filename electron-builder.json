@@ -47,6 +47,13 @@
         "server.mjs",
         "public/**/*"
       ]
+    },
+    {
+      "from": "forge",
+      "to": "forge",
+      "filter": [
+        "*.mjs"
+      ]
     }
   ]
 }
