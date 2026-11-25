@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-11-25T03:28:32.053Z",
+  "taskId": "symbiont-ghost-ar",
+  "agent": "antigravity",
+  "branch": "exp/symbiont-ghost-ar",
+  "startCommit": "4ec1594",
+  "endCommit": "UNCOMMITTED",
+  "summary": "Zbudowano Fazę 1 JARVIS SYMBIONT na gałęzi exp/symbiont-ghost-ar (ADR-0007): przezroczystą, bezfokusową warstwę Ghost AR (electron/ghost-overlay.{cjs,html}, ghost-preload.cjs) z click-through, HiDPI/multi-monitor, uczciwym Wayland fallback i tarczą poufnych okien (Polkit/2FA/hasła) oraz Percepcję Deiktyczną Pod Kursorem (foveated-crop.cjs 384x384 px, ui-tree nodeAtPoint, foveatedPerception.ts) dla komend co to jest / wyjaśnij to / napraw to / kliknij tutaj / odpisz na to, zintegrowaną z OMNI-PILOT, RiskGuard, Kill-Switch Ctrl+Alt+X, Ustawieniami i 1-klikowym rollbackiem.",
+  "changedFiles": [
+    "electron/foveated-crop.cjs",
+    "electron/ghost-overlay.cjs",
+    "electron/ghost-overlay.html",
+    "electron/ghost-preload.cjs",
+    "electron/main.cjs",
+    "electron/preload.cjs",
+    "electron/ui-tree.cjs",
+    "project-memory/CURRENT_STATE.md",
+    "project-memory/decisions/ADR-0007-symbiont-ghost-ar.md",
+    "project-memory/reports/build.json",
+    "project-memory/reports/lint.json",
+    "project-memory/reports/secret-scan.json",
+    "project-memory/reports/test.json",
+    "roject-memory/CURRENT_STATE.json",
+    "scripts/e2e-xvfb-probe.cjs",
+    "src/components/Settings.tsx",
+    "src/lib/desktop.ts",
+    "src/lib/foveatedPerception.ts",
+    "src/lib/omniPilot.ts",
+    "src/lib/permissions.ts",
+    "src/lib/selfManifest.ts",
+    "src/lib/store.ts",
+    "src/lib/toolSelector.ts",
+    "src/lib/tools.ts",
+    "src/types.ts",
+    "tests/symbiontGhostAr.test.ts"
+  ],
+  "commands": [
+    {
+      "command": "npm run memory:check",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run test:e2e:xvfb",
+      "exitCode": 0
+    }
+  ],
+  "testResults": [
+    {
+      "check": "secret-scan",
+      "status": "PASS",
+      "source": "report",
+      "command": "node scripts/secret-scan.mjs --all",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/secret-scan.json",
+      "reportCommit": "9cbed36d5e6a51bab0ce25321916d8f5e17f7c99",
+      "reportDigest": "9aec2df7f32e69a4d1387713ea0c0e92d2d436ce22ebc5b9e335ce44df81498f",
+      "finishedAt": "2026-11-25T03:21:29.905Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto."
+    },
+    {
+      "check": "lint",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/lint.json",
+      "reportCommit": "9cbed36d5e6a51bab0ce25321916d8f5e17f7c99",
+      "reportDigest": "0d5117c144004a4b89dd0f722c8f33c60aca16d38873e34ba5d3f95b973d4901",
+      "finishedAt": "2026-11-25T03:21:51.868Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu"
+    },
+    {
+      "check": "test",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm test",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/test.json",
+      "reportCommit": "9cbed36d5e6a51bab0ce25321916d8f5e17f7c99",
+      "reportDigest": "3e074211a7e64c4d8ed7ab6701d665442084df83ad3da471fae0373116056e2f",
+      "finishedAt": "2026-11-25T03:26:15.776Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Test Files  370 passed (370) · Tests  3124 passed (3124)"
+    },
+    {
+      "check": "build",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run build",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/build.json",
+      "reportCommit": "9cbed36d5e6a51bab0ce25321916d8f5e17f7c99",
+      "reportDigest": "4a78e9c431724b9c8d92977d552def40fc08c2e3160336510de1fb97effaa935",
+      "finishedAt": "2026-11-25T03:26:55.132Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · built in 14.21s"
+    }
+  ],
+  "problems": [],
+  "hypotheses": [],
+  "nextStep": "Przeprowadzić fizyczny odbiór natywnego okna Electron GhostOverlay na Ubuntu X11/Wayland oraz Windows 11 przed decyzją o scaleniu do gałęzi integracyjnej i przed rozpoczęciem Fazy 2 (Learn-by-Watching).",
+  "relatedDecisions": [
+    "ADR-0007"
+  ],
+  "redactions": 0
+}

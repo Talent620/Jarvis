@@ -4,28 +4,22 @@
   "command": "npm test",
   "available": true,
   "unavailableReason": null,
-  "startedAt": "2026-11-24T23:14:17.700Z",
-  "finishedAt": "2026-11-24T23:18:52.848Z",
-  "durationMs": 275148,
-  "commit": "71762681de57a590e5e2c4e41c698a78a97953f0",
-  "branch": "fix/production-integration",
+  "startedAt": "2026-11-25T03:21:51.914Z",
+  "finishedAt": "2026-11-25T03:26:15.776Z",
+  "durationMs": 263862,
+  "commit": "9cbed36d5e6a51bab0ce25321916d8f5e17f7c99",
+  "branch": "exp/symbiont-ghost-ar",
   "worktreeDirty": true,
-  "worktreeFingerprint": "bc0d1edf6479dee319c0bced8df40ff046afead23cd1d6daa847af9617571d67",
+  "worktreeFingerprint": "5492680441af008cf5165064492b8318a77f88f4658741685ce84045902ad19d",
   "exitCode": 0,
   "signal": null,
   "timedOut": false,
   "spawnError": null,
   "summary": {
-    "testFiles": "Test Files  369 passed (369)",
-    "tests": "Tests  3108 passed (3108)"
+    "testFiles": "Test Files  370 passed (370)",
+    "tests": "Tests  3124 passed (3124)"
   },
   "outputTail": [
-    "    at module.exports (/home/antigravity/Talent620/Jarvis/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)",
-    "    at /home/antigravity/Talent620/Jarvis/node_modules/jsdom/lib/jsdom/browser/Window.js:960:7",
-    "    at startGoogleAuth (/home/antigravity/Talent620/Jarvis/src/lib/google.ts:48:17)",
-    "    at autoConnect (/home/antigravity/Talent620/Jarvis/src/lib/google.ts:95:5)",
-    "    at Module.gmailSend (/home/antigravity/Talent620/Jarvis/src/lib/google.ts:163:23)",
-    "    at processTicksAndRejections (node:internal/process/task_queues:103:5)",
     "    at Module.sendOfferEmail (/home/antigravity/Talent620/Jarvis/src/lib/mailer.ts:243:15)",
     "    at /home/antigravity/Talent620/Jarvis/tests/mailer.test.ts:39:15",
     "    at file:///home/antigravity/Talent620/Jarvis/node_modules/@vitest/runner/dist/index.js:533:5",
@@ -49,7 +43,7 @@
     "stderr | tests/storeAudit.test.ts > store — setData nie wywala apki przy rzucającym mutatorze (#5) > wyjątek w mutatorze jest złapany, apka działa dalej",
     "[JARVIS] setData mutator error: Error: boom",
     "    at /home/antigravity/Talent620/Jarvis/tests/storeAudit.test.ts:46:46",
-    "    at Store.setData (/home/antigravity/Talent620/Jarvis/src/lib/store.ts:546:11)",
+    "    at Store.setData (/home/antigravity/Talent620/Jarvis/src/lib/store.ts:547:11)",
     "    at /home/antigravity/Talent620/Jarvis/tests/storeAudit.test.ts:46:24",
     "    at Proxy.assertThrows (file:///home/antigravity/Talent620/Jarvis/node_modules/chai/index.js:2767:5)",
     "    at Proxy.methodWrapper (file:///home/antigravity/Talent620/Jarvis/node_modules/chai/index.js:1686:25)",
@@ -59,7 +53,13 @@
     "    at Proxy.<anonymous> (file:///home/antigravity/Talent620/Jarvis/node_modules/@vitest/expect/dist/index.js:972:17)",
     "    at Proxy.methodWrapper (file:///home/antigravity/Talent620/Jarvis/node_modules/chai/index.js:1686:25)",
     "stderr | tests/chatsDegrade.test.ts > chats — brak cichej degradacji > gdy wszystkie próby padają → ok=false i warning o pełnej pamięci",
-    "[chats] Nie udało się zapisać historii czatu — pamięć (localStorage) pełna."
+    "[chats] Nie udało się zapisać historii czatu — pamięć (localStorage) pełna.",
+    "stderr | tests/storeIndexeddb.test.ts > store ↔ IndexedDB — migracja i hydratacja > hydratuje duże kolekcje z IDB do RAM przy kolejnym starcie",
+    "Another connection wants to delete database 'jarvis'. Closing db now to resume the delete request.",
+    "stderr | tests/storeIndexeddb.test.ts > store ↔ IndexedDB — migracja i hydratacja > nowo dodana kolekcja (projectFiles) migruje do IDB u już-zmigrowanego usera, bez utraty",
+    "Another connection wants to delete database 'jarvis'. Closing db now to resume the delete request.",
+    "stderr | tests/storeIndexeddb.test.ts > store ↔ IndexedDB — migracja i hydratacja > setData zapisuje duże kolekcje do IDB (debounce)",
+    "Another connection wants to delete database 'jarvis'. Closing db now to resume the delete request."
   ],
-  "logPath": "project-memory/reports/logs/test-20261124T231417Z.log"
+  "logPath": "project-memory/reports/logs/test-20261125T032151Z.log"
 }
