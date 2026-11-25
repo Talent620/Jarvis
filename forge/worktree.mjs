@@ -20,7 +20,7 @@ function gitExec(cwd, args, timeoutMs = 20_000) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     timeout: timeoutMs,
-  }).trim();
+  }).trimEnd();
 }
 
 /** Sprawdź, czy katalog jest poprawnym repozytorium Git z co najmniej jednym commitem HEAD. */

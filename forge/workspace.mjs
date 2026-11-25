@@ -603,6 +603,16 @@ export const FORGE_TOOL_SCHEMAS = [
   },
 ];
 
+/** Usuń przypadkowo skopiowane prefiksy numerów linii z `read_file` (np. `12: const x = 1`). */
+function stripAccidentalLineNumbers(block) {
+  const lines = String(block ?? "").replace(/\r\n/g, "\n").split("\n");
+  const nonEmpty = lines.filter((l) => l.trim().length > 0);
+  if (nonEmpty.length >= 2 && nonEmpty.every((l) => /^\s*\d+:\s/.test(l))) {
+    return lines.map((l) => l.replace(/^\s*\d+:\s/, "")).join("\n");
+  }
+  return block;
+}
+
 /** Zastosuj pojedynczą lub wielokrotną operację SEARCH/REPLACE na treści pliku. */
 export function applySearchReplaceEdits(original, edits) {
   let content = String(original ?? "");
@@ -611,8 +621,8 @@ export function applySearchReplaceEdits(original, edits) {
 
   for (let idx = 0; idx < list.length; idx++) {
     const item = list[idx] || {};
-    const search = String(item.search ?? "");
-    const replace = String(item.replace ?? "");
+    const search = stripAccidentalLineNumbers(String(item.search ?? ""));
+    const replace = stripAccidentalLineNumbers(String(item.replace ?? ""));
     if (!search) throw new Error(`Edycja #${idx + 1}: pole 'search' nie może być puste.`);
 
     const first = content.indexOf(search);
@@ -640,8 +650,41 @@ export function applySearchReplaceEdits(original, edits) {
       }
       if (ok) matches.push(i);
     }
+    // Fallback 2: unikalne dopasowanie ignorujące wcięcie początkowe (gdy blok ma >=2 niepuste linie)
+    const trimmedContent = contentLines.map((l) => l.trim());
+    const trimmedSearch = normSearch.map((l) => l.trim());
+    const nonEmptySearchCount = trimmedSearch.filter(Boolean).length;
+    if (matches.length === 0 && nonEmptySearchCount >= 2) {
+      const trimMatches = [];
+      for (let i = 0; i <= trimmedContent.length - trimmedSearch.length; i++) {
+        let ok = true;
+        for (let j = 0; j < trimmedSearch.length; j++) {
+          if (trimmedContent[i + j] !== trimmedSearch[j]) { ok = false; break; }
+        }
+        if (ok) trimMatches.push(i);
+      }
+      if (trimMatches.length === 1) {
+        const at = trimMatches[0];
+        const origIndent = (contentLines[at].match(/^[ \t]*/) || [""])[0];
+        const searchIndent = (normSearch[0].match(/^[ \t]*/) || [""])[0];
+        const repLines = replace.replace(/\r\n/g, "\n").split("\n").map((l) => {
+          if (!l.trim()) return l;
+          if (searchIndent && l.startsWith(searchIndent)) return origIndent + l.slice(searchIndent.length);
+          return origIndent && !/^[ \t]/.test(l) ? origIndent + l : l;
+        });
+        contentLines.splice(at, normSearch.length, ...repLines);
+        content = contentLines.join("\n");
+        continue;
+      }
+    }
+
     if (matches.length === 0) {
-      throw new Error(`Edycja #${idx + 1}: nie znaleziono fragmentu 'search' w pliku. Odczytaj aktualną treść pliku przez read_file.`);
+      const firstKey = trimmedSearch.find((l) => l.length >= 6) || "";
+      const nearIdx = firstKey ? trimmedContent.findIndex((l) => l.includes(firstKey.slice(0, 24))) : -1;
+      const hint = nearIdx >= 0
+        ? ` Podobna linia istnieje w wierszu ${nearIdx + 1}: "${contentLines[nearIdx].trim().slice(0, 80)}".`
+        : "";
+      throw new Error(`Edycja #${idx + 1}: nie znaleziono fragmentu 'search' w pliku.${hint} Odczytaj aktualną treść pliku przez read_file lub użyj write_file.`);
     }
     if (matches.length > 1) {
       throw new Error(`Edycja #${idx + 1}: fragment 'search' pasuje w wielu miejscach (linie ${matches.map((m) => m + 1).join(", ")}). Dodaj więcej kontekstu.`);
@@ -832,9 +875,21 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
         if (secrets.length) {
           return { ok: false, error: `Zablokowano zapis pliku "${rel}": wykryto potencjalny sekret (${secrets.join(", ")}).` };
         }
+        const beforeSyntax = quickSyntaxCheck(abs);
         ensureSnapshot(rel, abs);
         atomicWriteFile(abs, after);
         const syntax = quickSyntaxCheck(abs);
+        if (!syntax.ok && beforeSyntax.ok) {
+          // SWE-agent Edit-Lint-Revert: nie zostawiaj uszkodzonej składni na dysku (zapobiega kaskadowemu psuciu search/replace!)
+          atomicWriteFile(abs, before);
+          return {
+            ok: false,
+            path: rel,
+            reverted: true,
+            syntax,
+            error: `Odrzucono edycję i przywrócono poprzednią czystą wersję "${rel}" — błąd składni (${syntax.checker}): ${syntax.error}. Popraw pełny blok search/replace albo użyj write_file.`,
+          };
+        }
         const change = recordFileChange(rel, "modified", before, after, syntax);
         return {
           ok: syntax.ok,

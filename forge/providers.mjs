@@ -439,10 +439,63 @@ function parseRetryAfterMs(headerVal) {
   return 60_000;
 }
 
+/**
+ * Wyłuskaj wywołania narzędzi osadzone w treści tekstu (np. Ollama `qwen2.5-coder:3b` zwraca JSON w `content`,
+ * a modele Qwen3/Hermes potrafią emitować `<tool_call>{...}</tool_call>`).
+ */
+export function extractInlineToolCallsFromText(text, tools = []) {
+  const cleaned = stripThinkingTags(text);
+  if (!cleaned) return [];
+  const allowed = new Set((tools || []).map((t) => t.name).filter(Boolean));
+  const out = [];
+
+  const pushCandidate = (obj) => {
+    if (!obj || typeof obj !== "object") return;
+    const name = obj.name || obj.tool || obj.function?.name || (typeof obj.function === "string" ? obj.function : "");
+    if (!name || (allowed.size > 0 && !allowed.has(name))) return;
+    let args = obj.arguments ?? obj.args ?? obj.input ?? obj.parameters ?? obj.function?.arguments ?? {};
+    if (typeof args === "string") {
+      try { args = JSON.parse(args); } catch { args = { _raw: args }; }
+    }
+    if (!args || typeof args !== "object") args = {};
+    out.push({ id: `inline_${out.length + 1}_${Date.now()}`, name, arguments: args });
+  };
+
+  // 1. Bloki <tool_call>...</tool_call> (również bez zamykającego tagu </tool_call>)
+  const hermesMatches = [...cleaned.matchAll(/<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/gi)];
+  for (const m of hermesMatches) {
+    try { pushCandidate(JSON.parse(m[1].trim())); } catch { /* ignore */ }
+  }
+  if (out.length) return out;
+
+  // 2. Bloki ```json ... ``` lub czysty obiekt JSON (po usunięciu ew. niedomkniętego <tool_call>)
+  const stripped = cleaned.replace(/<\/?tool_call>/gi, "").trim();
+  const fenced = [...stripped.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)].map((m) => m[1].trim());
+  const candidates = fenced.length ? fenced : [stripped];
+  for (const cand of candidates) {
+    try {
+      const parsed = JSON.parse(cand);
+      if (Array.isArray(parsed)) parsed.forEach(pushCandidate);
+      else pushCandidate(parsed);
+      if (out.length) return out;
+    } catch {
+      const start = cand.indexOf("{");
+      const end = cand.lastIndexOf("}");
+      if (start >= 0 && end > start) {
+        try {
+          pushCandidate(JSON.parse(cand.slice(start, end + 1)));
+          if (out.length) return out;
+        } catch { /* ignore */ }
+      }
+    }
+  }
+  return out;
+}
+
 /** Znormalizuj odpowiedź OpenAI-compatible do kontraktu Forge { content, toolCalls, usage }. */
-function parseOpenAiResponse(data) {
+function parseOpenAiResponse(data, tools = []) {
   const msg = data?.choices?.[0]?.message || {};
-  const toolCalls = Array.isArray(msg.tool_calls)
+  let toolCalls = Array.isArray(msg.tool_calls)
     ? msg.tool_calls.map((tc, i) => {
         let parsedArgs = {};
         const rawArgs = tc?.function?.arguments;
@@ -458,8 +511,12 @@ function parseOpenAiResponse(data) {
         };
       }).filter((t) => t.name)
     : [];
+  const cleanContent = typeof msg.content === "string" ? stripThinkingTags(msg.content) : "";
+  if (!toolCalls.length && cleanContent && tools.length) {
+    toolCalls = extractInlineToolCallsFromText(cleanContent, tools);
+  }
   return {
-    content: typeof msg.content === "string" ? msg.content : "",
+    content: cleanContent,
     toolCalls,
     usage: {
       inputTokens: Number(data?.usage?.prompt_tokens || 0),
@@ -526,7 +583,7 @@ async function callOpenAiProtocol({ endpoint, apiKey, model, system, messages, t
       err.retryAfter = res.headers.get("retry-after") || undefined;
       throw err;
     }
-    return parseOpenAiResponse(data);
+    return parseOpenAiResponse(data, tools);
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener("abort", onExtAbort);
@@ -621,8 +678,10 @@ async function callGeminiProtocol({ endpoint, apiKey, model, system, messages, t
   }
 }
 
-/** Wywołanie natywnego API Ollama (`/api/chat`) z natywnymi narzędziami. */
-async function callOllamaProtocol({ endpoint, model, system, messages, tools, timeoutMs = 120_000, signal }) {
+/** Wywołanie natywnego API Ollama (`/api/chat`) z natywnymi narzędziami i adaptacją pod CPU/GPU. */
+async function callOllamaProtocol({ endpoint, model, system, messages, tools, hardware = null, timeoutMs, signal }) {
+  const isCpuLight = hardware ? (!hardware.gpu && hardware.cpuCores <= 4) : false;
+  const effectiveTimeout = timeoutMs ?? (isCpuLight ? 180_000 : 120_000);
   const base = String(endpoint || "http://127.0.0.1:11434").replace(/\/+$/, "");
   const ollMessages = [{ role: "system", content: system }];
   for (const m of messages) {
@@ -642,8 +701,13 @@ async function callOllamaProtocol({ endpoint, model, system, messages, tools, ti
   const body = {
     model,
     stream: false,
+    keep_alive: "5m",
     messages: ollMessages,
-    options: { temperature: 0.15, num_ctx: 8192 },
+    options: {
+      temperature: 0.15,
+      num_ctx: isCpuLight ? 4096 : 8192,
+      ...(isCpuLight ? { num_predict: 1024 } : {}),
+    },
   };
   if (tools && tools.length) {
     body.tools = tools.map((t) => ({
@@ -653,7 +717,7 @@ async function callOllamaProtocol({ endpoint, model, system, messages, tools, ti
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), effectiveTimeout);
   const onExtAbort = () => controller.abort();
   signal?.addEventListener("abort", onExtAbort, { once: true });
 
@@ -671,7 +735,7 @@ async function callOllamaProtocol({ endpoint, model, system, messages, tools, ti
       throw err;
     }
     const msg = data.message || {};
-    const toolCalls = Array.isArray(msg.tool_calls)
+    let toolCalls = Array.isArray(msg.tool_calls)
       ? msg.tool_calls.map((tc, i) => {
           let parsedArgs = {};
           const rawArgs = tc?.function?.arguments;
@@ -687,8 +751,12 @@ async function callOllamaProtocol({ endpoint, model, system, messages, tools, ti
           };
         }).filter((t) => t.name)
       : [];
+    const cleanContent = typeof msg.content === "string" ? stripThinkingTags(msg.content) : "";
+    if (!toolCalls.length && cleanContent && tools && tools.length) {
+      toolCalls = extractInlineToolCallsFromText(cleanContent, tools);
+    }
     return {
-      content: typeof msg.content === "string" ? stripThinkingTags(msg.content) : "",
+      content: cleanContent,
       toolCalls,
       usage: {
         inputTokens: Number(data.prompt_eval_count || 0),
@@ -810,10 +878,10 @@ function createModalBridgeSession() {
     return readyPromise;
   };
 
-  async function invoke({ model, system, messages, tools, timeoutMs = 150_000, signal }) {
+  async function invoke({ model, system, messages, tools, timeoutMs = 240_000, signal }) {
     if (signal?.aborted) throw new Error("Anulowano przez użytkownika.");
     await ensureStarted(Math.min(90_000, timeoutMs));
-    const payload = buildOpenAiPayload({ model, system, messages, tools, maxTokens: 2560 });
+    const payload = buildOpenAiPayload({ model, system, messages, tools, maxTokens: 3072 });
 
     const response = await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -843,7 +911,7 @@ function createModalBridgeSession() {
       err.status = Number(response?.status || 502);
       throw err;
     }
-    const parsed = parseOpenAiResponse(response.data);
+    const parsed = parseOpenAiResponse(response.data, tools);
     return {
       ...parsed,
       content: stripThinkingTags(parsed.content),
@@ -1204,7 +1272,7 @@ export function createProviderPool({
         } else if (cand.spec.protocol === "gemini") {
           reply = await callGeminiProtocol({ endpoint: cand.endpoint, apiKey: cand.apiKey, model: cand.model, system, messages, tools, signal });
         } else if (cand.spec.protocol === "ollama") {
-          reply = await callOllamaProtocol({ endpoint: cand.endpoint, model: cand.model, system, messages, tools, signal });
+          reply = await callOllamaProtocol({ endpoint: cand.endpoint, model: cand.model, system, messages, tools, hardware, signal });
         } else if (cand.spec.protocol === "anthropic") {
           reply = await callAnthropicProtocol({ endpoint: cand.endpoint, apiKey: cand.apiKey, model: cand.model, system, messages, tools, signal });
         } else {
