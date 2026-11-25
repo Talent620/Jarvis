@@ -61,6 +61,8 @@ const ui = {
   seoDescription: $("#seoDescription"),
   leadCount: $("#leadCount"),
   leadList: $("#leadList"),
+  versionCount: $("#versionCount"),
+  versionList: $("#versionList"),
   projectDialog: $("#newProjectDialog"),
   localPreview: $("#localPreviewUrl"),
   publicPreview: $("#publicPreviewUrl"),
@@ -69,6 +71,7 @@ const ui = {
 };
 
 const PALETTES = {
+  impuls: { ink: "#102332", paper: "#f5f1e8", brand: "#102332", accent: "#b86b3d", line: "#cfc8b8" },
   north: { ink: "#10201c", paper: "#f5f3ed", brand: "#1f6b52", accent: "#e76f51", line: "#c8cec7" },
   noir: { ink: "#111111", paper: "#f5f5f2", brand: "#111111", accent: "#9cca28", line: "#c9cbc6" },
   signal: { ink: "#10192d", paper: "#f7f9ff", brand: "#1557ff", accent: "#d59f00", line: "#cbd5eb" },
@@ -76,18 +79,27 @@ const PALETTES = {
 };
 
 const BLOCK_STYLES = `
-  .siteos-block{--so-ink:var(--ink,var(--foreground,#10201c));--so-paper:var(--paper,var(--background,#f6f5f0));--so-brand:var(--green,var(--brand,#1f6b52));--so-accent:var(--coral,var(--accent,#e76f51));box-sizing:border-box;padding:clamp(64px,8vw,112px) clamp(24px,6vw,88px);overflow-wrap:anywhere;background:var(--so-paper);color:var(--so-ink);font-family:inherit}
-  .siteos-block *{box-sizing:border-box}.siteos-block__inner{width:min(1160px,100%);margin:0 auto}.siteos-block__eyebrow{display:block;margin-bottom:14px;color:var(--so-brand);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.siteos-block h2{max-width:820px;margin:0 0 18px;font:700 clamp(34px,5vw,64px)/1.04 Georgia,serif;letter-spacing:0}.siteos-block__lead{max-width:680px;margin:0 0 34px;font-size:18px;line-height:1.6;opacity:.78}
-  .siteos-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.siteos-card{padding:28px;border:1px solid color-mix(in srgb,var(--so-ink) 18%,transparent);background:color-mix(in srgb,var(--so-paper) 88%,white)}.siteos-card b{display:block;margin-bottom:10px;font-size:19px}.siteos-card p{margin:0;line-height:1.6;opacity:.72}.siteos-button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 21px;background:var(--so-brand);color:white;text-decoration:none;font-weight:800}.siteos-button--line{margin-left:8px;border:1px solid var(--so-ink);background:transparent;color:var(--so-ink)}
-  .siteos-hero{display:grid;grid-template-columns:1.02fr .98fr;min-height:650px;padding:0}.siteos-hero__copy{display:flex;flex-direction:column;justify-content:center;padding:clamp(70px,9vw,132px) clamp(28px,6vw,90px)}.siteos-hero h1{max-width:760px;margin:0 0 24px;font:700 clamp(48px,7vw,96px)/.96 Georgia,serif;letter-spacing:0}.siteos-hero__media{min-height:520px;background:center/cover no-repeat url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1500&q=85')}
-  .siteos-proof{display:grid;grid-template-columns:repeat(3,1fr);padding:0;border-top:1px solid color-mix(in srgb,var(--so-ink) 20%,transparent);border-bottom:1px solid color-mix(in srgb,var(--so-ink) 20%,transparent)}.siteos-proof article{padding:42px clamp(24px,5vw,70px);border-right:1px solid color-mix(in srgb,var(--so-ink) 20%,transparent)}.siteos-proof article:last-child{border-right:0}.siteos-proof b{display:block;font:700 44px Georgia,serif}.siteos-proof span{opacity:.68}
-  .siteos-quote{font:600 22px/1.5 Georgia,serif}.siteos-author{margin-top:22px;font-size:13px}.siteos-price{position:relative}.siteos-price--featured{border:2px solid var(--so-brand)}.siteos-price small{display:block;color:var(--so-brand);font-weight:800;text-transform:uppercase}.siteos-price strong{display:block;margin:18px 0;font:700 38px Georgia,serif}.siteos-price ul{padding-left:18px;line-height:1.9;opacity:.76}
-  .siteos-faq details{padding:19px 0;border-top:1px solid color-mix(in srgb,var(--so-ink) 18%,transparent)}.siteos-faq summary{cursor:pointer;font-weight:800}.siteos-faq p{max-width:760px;line-height:1.65;opacity:.72}.siteos-contact{display:grid;grid-template-columns:.85fr 1.15fr;gap:8vw}.siteos-form{display:grid;gap:12px}.siteos-form label{display:grid;gap:6px;font-size:12px;font-weight:700}.siteos-form input,.siteos-form textarea{width:100%;padding:14px;border:1px solid color-mix(in srgb,var(--so-ink) 25%,transparent);border-radius:0;background:white;color:#111;font:inherit}.siteos-form button{border:0;cursor:pointer}.siteos-form__status{min-height:22px;font-size:13px}.siteos-honeypot{position:absolute;left:-10000px}
-  .siteos-cta{text-align:center;background:var(--so-ink);color:var(--so-paper)}.siteos-cta h2,.siteos-cta .siteos-block__lead{margin-left:auto;margin-right:auto}.siteos-cta .siteos-button{background:var(--so-accent);color:#101010}
-  @media(max-width:780px){.siteos-grid-3,.siteos-contact,.siteos-hero{grid-template-columns:1fr}.siteos-hero__media{min-height:390px;order:-1}.siteos-proof{grid-template-columns:1fr}.siteos-proof article{border-right:0;border-bottom:1px solid color-mix(in srgb,var(--so-ink) 20%,transparent)}.siteos-button--line{margin:8px 0 0}.siteos-block{padding:64px 24px}}
+  .siteos-block{--so-ink:var(--ink,var(--foreground,#102332));--so-paper:var(--paper,var(--background,#f5f1e8));--so-brand:var(--green,var(--brand,#102332));--so-accent:var(--coral,var(--accent,#b86b3d));box-sizing:border-box;padding:clamp(60px,8vw,108px) clamp(24px,6vw,88px);overflow-wrap:anywhere;background:var(--so-paper);color:var(--so-ink);font-family:inherit}
+  .siteos-block *{box-sizing:border-box}.siteos-block__inner{width:min(1160px,100%);margin:0 auto}.siteos-block__eyebrow{display:block;margin-bottom:14px;color:var(--so-accent);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}.siteos-block h2{max-width:820px;margin:0 0 18px;font:600 clamp(32px,5vw,60px)/1.05 var(--serif,Georgia,serif);letter-spacing:-.015em}.siteos-block__lead{max-width:680px;margin:0 0 34px;font-size:18px;line-height:1.6;opacity:.8}
+  .siteos-num{font-family:var(--mono,ui-monospace,monospace);font-variant-numeric:tabular-nums}
+  .siteos-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.siteos-card{padding:28px;border:1px solid color-mix(in srgb,var(--so-ink) 16%,transparent);background:color-mix(in srgb,var(--so-paper) 86%,white)}.siteos-card b{display:block;margin-bottom:10px;font-size:19px}.siteos-card p{margin:0;line-height:1.6;opacity:.76}.siteos-button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 22px;background:var(--so-brand);color:var(--so-paper);border:0;cursor:pointer;text-decoration:none;font-weight:700;font-size:14px}.siteos-button--line{margin-left:8px;border:1px solid var(--so-ink);background:transparent;color:var(--so-ink)}
+  .siteos-hero{display:grid;grid-template-columns:1.02fr .98fr;min-height:640px;padding:0}.siteos-hero__copy{display:flex;flex-direction:column;justify-content:center;padding:clamp(64px,9vw,124px) clamp(24px,6vw,88px)}.siteos-hero h1{max-width:760px;margin:0 0 24px;font:600 clamp(42px,6.5vw,88px)/.98 var(--serif,Georgia,serif);letter-spacing:-.02em}.siteos-hero__media{min-height:500px;background:center/cover no-repeat url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1500&q=85')}
+  .siteos-proof{display:grid;grid-template-columns:repeat(3,1fr);padding:0;border-top:1px solid color-mix(in srgb,var(--so-ink) 18%,transparent);border-bottom:1px solid color-mix(in srgb,var(--so-ink) 18%,transparent)}.siteos-proof article{padding:40px clamp(24px,5vw,68px);border-right:1px solid color-mix(in srgb,var(--so-ink) 18%,transparent)}.siteos-proof article:last-child{border-right:0}.siteos-proof b{display:block;font:600 42px var(--serif,Georgia,serif);font-variant-numeric:tabular-nums}.siteos-proof span{opacity:.7}
+  .siteos-quote{font:600 21px/1.5 var(--serif,Georgia,serif)}.siteos-author{margin-top:22px;font-size:13px}.siteos-price{position:relative}.siteos-price--featured{border:2px solid var(--so-accent)}.siteos-price small{display:block;color:var(--so-accent);font-weight:800;text-transform:uppercase}.siteos-price strong{display:block;margin:18px 0;font:600 36px var(--serif,Georgia,serif);font-variant-numeric:tabular-nums}.siteos-price ul{padding-left:18px;line-height:1.9;opacity:.78}
+  .siteos-faq details{padding:19px 0;border-top:1px solid color-mix(in srgb,var(--so-ink) 18%,transparent)}.siteos-faq summary{cursor:pointer;font-weight:700}.siteos-faq p{max-width:760px;line-height:1.65;opacity:.76}.siteos-contact{display:grid;grid-template-columns:.85fr 1.15fr;gap:7vw}.siteos-form{display:grid;gap:12px}.siteos-form label{display:grid;gap:6px;font-size:12px;font-weight:700}.siteos-form input,.siteos-form textarea{width:100%;padding:13px 14px;border:1px solid color-mix(in srgb,var(--so-ink) 24%,transparent);border-radius:0;background:white;color:#111;font:inherit}.siteos-form__status{min-height:22px;font-size:13px}.siteos-honeypot{position:absolute;left:-10000px}
+  .siteos-cta{text-align:center;background:var(--so-ink);color:var(--so-paper)}.siteos-cta h2,.siteos-cta .siteos-block__lead{margin-left:auto;margin-right:auto}.siteos-cta .siteos-button{background:var(--so-accent);color:#fff}
+  .siteos-compass__steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}.siteos-compass__pill{display:block;width:100%;text-align:left;padding:14px 16px;margin-top:8px;border:1px solid color-mix(in srgb,var(--so-ink) 20%,transparent);background:white;color:#102332;cursor:pointer;font:600 13px inherit}.siteos-compass__pill[data-on="1"]{border-color:var(--so-accent);background:color-mix(in srgb,var(--so-accent) 12%,white)}
+  .siteos-calc{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;align-items:center}.siteos-calc input[type=range]{width:100%;accent-color:var(--so-accent)}
+  .siteos-brief-box{border:1px solid color-mix(in srgb,var(--so-ink) 22%,transparent);padding:32px;background:white;color:#102332}
+  @media(max-width:780px){.siteos-grid-3,.siteos-contact,.siteos-hero,.siteos-compass__steps,.siteos-calc{grid-template-columns:1fr}.siteos-hero__media{min-height:360px;order:-1}.siteos-proof{grid-template-columns:1fr}.siteos-proof article{border-right:0;border-bottom:1px solid color-mix(in srgb,var(--so-ink) 18%,transparent)}.siteos-button--line{margin:8px 0 0}.siteos-block{padding:56px 20px}}
+  @media(max-height:520px){.siteos-hero{min-height:auto}.siteos-block{padding:36px 20px}}
+  @media print{nav,.siteos-no-print,footer{display:none!important}.siteos-block{padding:16px 0;background:#fff!important;color:#000!important}.siteos-brief-box{border:1px solid #000;box-shadow:none}}
 `;
 
 const SECTION_TEMPLATES = {
+  compass: `<section class="siteos-block" data-siteos-label="Kompas decyzyjny (3 kroki)"><div class="siteos-block__inner"><span class="siteos-block__eyebrow">01 · Diagnoza przed zakupem</span><h2>Dobierz architekturę wdrożenia w 30 sekund.</h2><p class="siteos-block__lead">Zaznacz priorytet, horyzont oraz skalę — system wskaże rekomendowany wariant bez czekania na wycenę.</p><div class="siteos-compass__steps"><div class="siteos-card"><b>1. Główny cel</b><button type="button" class="siteos-compass__pill" data-on="1" onclick="var r=this.closest('section');this.parentElement.querySelectorAll('button').forEach(b=>b.dataset.on='0');this.dataset.on='1';r.querySelector('[data-compass-out]').textContent='Rekomendacja: Pakiet Butikowy Growth · wdrożenie w 21 dni · estymowany wzrost konwersji +28%.'">Pozyskiwanie leadów B2B</button><button type="button" class="siteos-compass__pill" onclick="var r=this.closest('section');this.parentElement.querySelectorAll('button').forEach(b=>b.dataset.on='0');this.dataset.on='1';r.querySelector('[data-compass-out]').textContent='Rekomendacja: Repoziomowanie Marki Flagship · okładka autorska + narracja ekspercka (4 tygodnie).'">Prestiż i pozycjonowanie</button></div><div class="siteos-card"><b>2. Tempo startu</b><button type="button" class="siteos-compass__pill" data-on="1" onclick="var r=this.closest('section');this.parentElement.querySelectorAll('button').forEach(b=>b.dataset.on='0');this.dataset.on='1';r.querySelector('[data-compass-time]').textContent='Sprint 14–21 dni'">Pilny start (do 3 tyg.)</button><button type="button" class="siteos-compass__pill" onclick="var r=this.closest('section');this.parentElement.querySelectorAll('button').forEach(b=>b.dataset.on='0');this.dataset.on='1';r.querySelector('[data-compass-time]').textContent='Pełny proces 4–6 tyg.'">Spokojny proces kwartalny</button></div><div class="siteos-card"><b>3. Zakres</b><button type="button" class="siteos-compass__pill" data-on="1" onclick="var r=this.closest('section');this.parentElement.querySelectorAll('button').forEach(b=>b.dataset.on='0');this.dataset.on='1';r.querySelector('[data-compass-budget]').textContent='6 900 – 9 500 zł netto'">Strona główna + kalkulator</button><button type="button" class="siteos-compass__pill" onclick="var r=this.closest('section');this.parentElement.querySelectorAll('button').forEach(b=>b.dataset.on='0');this.dataset.on='1';r.querySelector('[data-compass-budget]').textContent='12 900 – 18 000 zł netto'">Pełny ekosystem wielostronicowy</button></div></div><div class="siteos-card" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px"><div><strong data-compass-out>Rekomendacja: Pakiet Butikowy Growth · wdrożenie w 21 dni · estymowany wzrost konwersji +28%.</strong><p class="siteos-num" style="margin-top:6px"><span data-compass-time>Sprint 14–21 dni</span> · budżet orientacyjny: <span data-compass-budget>6 900 – 9 500 zł netto</span></p></div><a class="siteos-button" href="#kontakt">Przekaż do rozmowy →</a></div></div></section>`,
+  calculator: `<section class="siteos-block" data-siteos-label="Symulator ROI i wyceny"><div class="siteos-block__inner"><span class="siteos-block__eyebrow">02 · Twarda matematyka decyzji</span><h2>Policz zwrot z nowej architektury strony.</h2><div class="siteos-calc"><div class="siteos-card"><label style="display:block;margin-bottom:18px"><b>Miesięczna liczba odwiedzin: <span class="siteos-num" data-roi-v-lbl>2 500</span></b><input type="range" min="500" max="20000" step="500" value="2500" oninput="var s=this.closest('section'),v=+this.value,d=+s.querySelector('[data-roi-deal]').value;s.querySelector('[data-roi-v-lbl]').textContent=v.toLocaleString('pl-PL');var leads=Math.round(v*0.024),rev=Math.round(leads*0.2*d);s.querySelector('[data-roi-leads]').textContent=leads;s.querySelector('[data-roi-sum]').textContent=rev.toLocaleString('pl-PL')+' zł / mies.'"></label><label style="display:block"><b>Średnia wartość klienta (LTV): <span class="siteos-num" data-roi-d-lbl>4 500 zł</span></b><input data-roi-deal type="range" min="1000" max="25000" step="500" value="4500" oninput="var s=this.closest('section'),d=+this.value,v=+s.querySelector('input[type=range]').value;s.querySelector('[data-roi-d-lbl]').textContent=d.toLocaleString('pl-PL')+' zł';var leads=Math.round(v*0.024),rev=Math.round(leads*0.2*d);s.querySelector('[data-roi-leads]').textContent=leads;s.querySelector('[data-roi-sum]').textContent=rev.toLocaleString('pl-PL')+' zł / mies.'"></label></div><div class="siteos-card"><span class="siteos-block__eyebrow">Szacowany potencjał przy konwersji 2.4%</span><strong class="siteos-num" data-roi-sum style="display:block;font-size:38px;margin:8px 0">54 000 zł / mies.</strong><p>Około <b class="siteos-num" style="display:inline" data-roi-leads>60</b> kwalifikowanych zapytań miesięcznie (przy ostrożnym domknięciu 20% rozmów).</p></div></div></div></section>`,
+  brief: `<section class="siteos-block" data-siteos-label="Teczka Projektowa A4 PDF"><div class="siteos-block__inner"><div class="siteos-brief-box"><span class="siteos-block__eyebrow">Dokument zarządczy · Gotowy do wydruku A4</span><h2 style="margin-bottom:12px">Teczka Decyzyjna Projektu</h2><p style="max-width:680px;line-height:1.65;margin:0 0 22px">Poniższe podsumowanie możesz wydrukować lub zapisać jako czysty plik PDF A4 na spotkanie zarządu — bez pasków nawigacji i elementów zbędnych w druku.</p><div class="siteos-grid-3" style="margin-bottom:24px"><div><b>Zakres i architektura</b><p>Strategia przekazu, responsywność 360 px / landscape 520 px, SEO i formularz leadowy.</p></div><div><b>Gwarancja techniczna</b><p>Czas ładowania poniżej 1 s, pełna własność kodu HTML/CSS/JS, zero opłat abonamentowych.</p></div><div><b>Następny krok</b><p>30-minutowa sesja warsztatowa i harmonogram wdrożenia w 3 etapach.</p></div></div><div class="siteos-no-print"><button type="button" class="siteos-button" onclick="window.print()">Drukuj / Zapisz Brief A4 (PDF)</button><a class="siteos-button siteos-button--line" href="#kontakt">Wyślij zapytanie online</a></div></div></div></section>`,
   hero: `<section class="siteos-block siteos-hero" data-siteos-label="Hero premium"><div class="siteos-hero__copy"><span class="siteos-block__eyebrow">Nowy standard w Twojej branży</span><h1>Rezultat, który widać od pierwszego dnia.</h1><p class="siteos-block__lead">Łączymy strategię, wykonanie i dbałość o szczegóły, aby Twoi klienci szybciej podejmowali decyzję.</p><div><a class="siteos-button" href="#kontakt">Umów rozmowę</a><a class="siteos-button siteos-button--line" href="#oferta">Poznaj ofertę</a></div></div><div class="siteos-hero__media" role="img" aria-label="Dopracowana przestrzeń pracy"></div></section>`,
   benefits: `<section class="siteos-block" id="oferta" data-siteos-label="Korzyści"><div class="siteos-block__inner"><span class="siteos-block__eyebrow">Dlaczego my</span><h2>Każdy element pracuje na Twój wynik.</h2><p class="siteos-block__lead">Krótko, konkretnie i bez pustych obietnic. Pokazujemy wartość, którą klient może zrozumieć i zapamiętać.</p><div class="siteos-grid-3"><article class="siteos-card"><b>Strategia przed działaniem</b><p>Najpierw porządkujemy cel i decyzje, dopiero potem projektujemy rozwiązanie.</p></article><article class="siteos-card"><b>Jedna odpowiedzialność</b><p>Masz jeden zespół, czytelny proces i pełną kontrolę nad kolejnymi krokami.</p></article><article class="siteos-card"><b>Jakość, która skaluje</b><p>Budujemy system gotowy rosnąć razem z marką, ofertą i ruchem.</p></article></div></div></section>`,
   proof: `<section class="siteos-block siteos-proof" data-siteos-label="Dowody i liczby"><article><b>42+</b><span>zrealizowane projekty</span></article><article><b>4.9/5</b><span>średnia ocena współpracy</span></article><article><b>18%</b><span>średni wzrost zapytań</span></article></section>`,
@@ -124,6 +136,21 @@ function safeName(value) {
 }
 
 function projectTemplate(kind) {
+  if (kind === "boutique") {
+    return `<!doctype html>
+<html lang="pl" data-theme="classic"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pracownia ImPULS — Architektura Marek i Wydawnictw Cyfrowych</title><meta name="description" content="Butikowe studio cyfrowe: łączymy typografię redakcyjną, interaktywne kompasy decyzyjne i twardą inżynierię konwersji B2B."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><style>
+:root{--ink:#102332;--paper:#f5f1e8;--surface:#fffdf9;--green:#102332;--coral:#b86b3d;--line:rgba(16,35,50,.15);--serif:"Fraunces",Georgia,serif;--sans:"Plus Jakarta Sans",system-ui,sans-serif;--mono:"JetBrains Mono",monospace}
+html[data-theme="night"]{--ink:#edf2f7;--paper:#0b131d;--surface:#121f2e;--green:#edf2f7;--coral:#d88b5a;--line:rgba(237,242,247,.16)}
+html[data-theme="forest"]{--ink:#10261e;--paper:#f1f5f0;--surface:#fbfdfb;--green:#1f6b52;--coral:#b86b3d;--line:rgba(16,38,30,.15)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;overflow-x:hidden;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans)}
+nav{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 6vw;border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(10px);z-index:10}
+nav strong{font:700 17px var(--serif)}nav .links{display:flex;align-items:center;gap:20px}nav a{color:inherit;text-decoration:none;font-size:14px}
+.theme-pill{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:6px 12px;font:600 11px var(--mono);cursor:pointer}
+.boutique-hero{display:grid;grid-template-columns:1.08fr .92fr;gap:4vw;align-items:center;padding:clamp(48px,7vw,96px) 6vw}
+.boutique-folio{background:var(--surface);border:1px solid var(--line);padding:28px;box-shadow:0 22px 54px rgba(16,35,50,.08)}
+@media(max-width:780px){nav .links a{display:none}.boutique-hero{grid-template-columns:1fr;padding:42px 20px}}
+${BLOCK_STYLES}</style></head><body><nav data-siteos-label="Nawigacja Butikowa"><strong>PRACOWNIA IMPULS</strong><div class="links"><a href="#oferta">Metoda</a><a href="#kontakt">Kontakt</a><button type="button" class="theme-pill" onclick="var h=document.documentElement,m=['classic','night','forest'];h.dataset.theme=m[(m.indexOf(h.dataset.theme||'classic')+1)%m.length]">MOTYW ◐</button></div></nav><section class="boutique-hero" data-siteos-label="Hero Editorial + Okładka SVG"><div><span class="siteos-block__eyebrow">Wydawnictwo cyfrowe · Quiet Luxury · Konwersja B2B</span><h1 style="font:600 clamp(38px,5.6vw,74px)/1.02 var(--serif);margin:14px 0 20px;letter-spacing:-.02em">Rzemiosło redakcyjne połączone z logiką sprzedaży.</h1><p class="siteos-block__lead">Zamiast hałaśliwych szablonów projektujemy strony-narzędzia: klient sprawdza zakres w kompasie, przelicza ROI i drukuje gotowy Brief A4.</p><div><a class="siteos-button" href="#kontakt">Rozpocznij rozmowę</a><a class="siteos-button siteos-button--line" href="#oferta">Przetestuj kompas ↓</a></div></div><div class="boutique-folio" role="img" aria-label="Autorska okładka introligatorska SVG"><svg viewBox="0 0 420 300" style="width:100%;height:auto;display:block"><rect x="6" y="6" width="408" height="288" fill="none" stroke="currentColor" stroke-opacity="0.22"/><line x1="6" y1="56" x2="414" y2="56" stroke="currentColor" stroke-opacity="0.16"/><circle cx="210" cy="174" r="76" fill="none" stroke="#b86b3d" stroke-width="1.6"/><circle cx="210" cy="174" r="42" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.45"/><path d="M134 174 H286 M210 98 V250" stroke="currentColor" stroke-opacity="0.24"/><text x="22" y="37" font-family="monospace" font-size="11" fill="currentColor" opacity="0.72">FOLIO 01 · EDITORIAL ARCHITECTURE</text><text x="22" y="278" font-family="monospace" font-size="10" fill="#b86b3d">FRAUNCES · PLUS JAKARTA · TABULAR NUMS</text></svg></div></section><div id="oferta">${SECTION_TEMPLATES.compass}</div>${SECTION_TEMPLATES.calculator}${SECTION_TEMPLATES.brief}${SECTION_TEMPLATES.contact}<footer class="siteos-block" data-siteos-label="Stopka" style="padding-top:28px;padding-bottom:28px;border-top:1px solid var(--line)"><div class="siteos-block__inner"><b>PRACOWNIA IMPULS</b><span style="float:right;opacity:.65">© ${new Date().getFullYear()}</span></div></footer></body></html>`;
+  }
   if (kind === "blank") {
     return `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nowy projekt</title><meta name="description" content="Nowa strona przygotowana w JARVIS Site OS."><style>:root{--ink:#10201c;--paper:#f5f3ed;--green:#1f6b52;--coral:#e76f51;--line:#c8cec7}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 Arial,sans-serif}</style></head><body>${SECTION_TEMPLATES.hero}${SECTION_TEMPLATES.contact}</body></html>`;
   }
@@ -259,6 +286,7 @@ async function loadProject(id) {
   ui.projectName.value = state.current.name;
   updatePreviewUrls();
   renderProjects();
+  renderVersions();
   renderFrame();
   updateHistoryButtons();
   void loadLeads();
@@ -268,8 +296,12 @@ function renderFrame() {
   if (!state.current) return;
   state.selected = null;
   updateSelectionPanel();
+  // P1-5: w trybie Podglądu włączamy pełny JS (kalkulatory, kompas, koszyk, motywy) bez allow-same-origin,
+  // dzięki czemu skrypt strony jest w 100% odizolowany od tokenu rodzica.
+  ui.frame.setAttribute("sandbox", state.editMode ? "allow-same-origin allow-forms" : "allow-scripts allow-forms");
   ui.frame.srcdoc = state.current.html;
   ui.frame.onload = () => {
+    if (!state.editMode) return;
     installEditorBridge();
     updateStats();
   };
@@ -285,6 +317,7 @@ function installEditorBridge() {
     style.textContent = `
       .siteos-selected{outline:2px solid #28cbe0!important;outline-offset:2px!important}
       .siteos-hover{outline:1px dashed rgba(40,203,224,.8)!important;outline-offset:2px!important}
+      [class*="reveal"],[data-reveal],[style*="opacity: 0"],[style*="opacity:0"]{opacity:1!important;transform:none!important}
     `;
     (doc.head || doc.documentElement).append(style);
   }
@@ -592,8 +625,9 @@ async function saveCurrent() {
     ui.projectName.value = state.current.name;
     ui.saveState.textContent = "Zapisano";
     const summary = state.projects.find((item) => item.id === state.current.id);
-    if (summary) Object.assign(summary, { name: state.current.name, updatedAt: state.current.updatedAt, size: state.current.html.length });
+    if (summary) Object.assign(summary, { name: state.current.name, updatedAt: state.current.updatedAt, size: state.current.html.length, versionCount: state.current.versions?.length || 0 });
     renderProjects();
+    renderVersions();
   } catch (error) {
     ui.saveState.textContent = "Błąd zapisu";
     toast(error.message);
@@ -713,19 +747,26 @@ function auditPage() {
   const forms = [...doc.querySelectorAll("form")];
   const fieldsWithoutLabels = [...doc.querySelectorAll("input:not([type=hidden]),textarea,select")].filter((field) => !field.closest("label") && !field.id);
   const styleText = [...doc.querySelectorAll("style")].map((style) => style.textContent).join(" ");
-  const ctas = [...doc.querySelectorAll("a,button")].filter((element) => /kontakt|rozmow|kup|wyprób|zacznij|umów|zamów|ofert|demo|zapyt/i.test(element.textContent));
+  const ctas = [...doc.querySelectorAll("a,button")].filter((element) => /kontakt|rozmow|kup|wyprób|zacznij|umów|zamów|ofert|demo|zapyt|kompas|drukuj/i.test(element.textContent));
   const sections = pageSections();
+  // Strażnik geometrii rect.right (wykrywa pułapkę overflow-x: clip na 360 px i w poziomie)
+  const winWidth = ui.frame.contentWindow?.innerWidth || 360;
+  const overflowing = [...doc.querySelectorAll("nav, header, section, article, h1, h2, a, button, form")].filter((el) => {
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && r.right > winWidth + 2;
+  });
   const checks = [
-    { key: "title", label: "Tytuł ma 10–65 znaków", pass: title.length >= 10 && title.length <= 65, weight: 12 },
-    { key: "description", label: "Opis SEO ma 70–170 znaków", pass: description.length >= 70 && description.length <= 170, weight: 12 },
-    { key: "h1", label: "Strona ma dokładnie jeden nagłówek H1", pass: h1s.length === 1, weight: 12 },
+    { key: "title", label: "Tytuł ma 10–65 znaków", pass: title.length >= 10 && title.length <= 65, weight: 11 },
+    { key: "description", label: "Opis SEO ma 70–170 znaków", pass: description.length >= 70 && description.length <= 170, weight: 11 },
+    { key: "h1", label: "Strona ma dokładnie jeden nagłówek H1", pass: h1s.length === 1, weight: 11 },
     { key: "alt", label: "Wszystkie zdjęcia mają opis alternatywny", pass: missingAlt.length === 0, weight: 10 },
     { key: "viewport", label: "Widok mobilny jest poprawnie skonfigurowany", pass: Boolean(doc.querySelector('meta[name="viewport"]')), weight: 10 },
-    { key: "responsive", label: "Projekt zawiera reguły dla telefonu", pass: /@media/i.test(styleText), weight: 10 },
-    { key: "cta", label: "Jest czytelne wezwanie do działania", pass: ctas.length > 0, weight: 10 },
+    { key: "responsive", label: "Projekt zawiera reguły dla telefonu", pass: /@media/i.test(styleText), weight: 9 },
+    { key: "geometry", label: "Brak uciętych elementów poza krawędzią (rect.right)", pass: overflowing.length === 0, weight: 10 },
+    { key: "cta", label: "Jest czytelne wezwanie do działania", pass: ctas.length > 0, weight: 8 },
     { key: "structure", label: "Strona ma co najmniej cztery logiczne części", pass: sections.length >= 4, weight: 8 },
-    { key: "links", label: "Linki nie są puste", pass: emptyLinks.length === 0, weight: 6 },
-    { key: "forms", label: "Pola formularzy mają etykiety", pass: forms.length === 0 || fieldsWithoutLabels.length === 0, weight: 6 },
+    { key: "links", label: "Linki nie są puste", pass: emptyLinks.length === 0, weight: 4 },
+    { key: "forms", label: "Pola formularzy mają etykiety", pass: forms.length === 0 || fieldsWithoutLabels.length === 0, weight: 4 },
     { key: "lang", label: "Ustawiono język dokumentu", pass: Boolean(doc.documentElement.lang), weight: 4 }
   ];
   const score = Math.max(0, 100 - checks.filter((check) => !check.pass).reduce((sum, check) => sum + check.weight, 0));
@@ -733,6 +774,10 @@ function auditPage() {
 }
 
 function renderAudit() {
+  if (!state.editMode) {
+    toast("Przełącz z Podglądu JS na Edycję, aby uruchomić audyt DOM.");
+    return null;
+  }
   const result = auditPage();
   if (!result) return;
   state.audit = result;
@@ -812,6 +857,43 @@ function downloadHtml() {
   toast("Plik HTML jest gotowy.");
 }
 
+function renderVersions() {
+  if (!ui.versionCount || !ui.versionList) return;
+  const versions = Array.isArray(state.current?.versions) ? state.current.versions : [];
+  ui.versionCount.textContent = String(versions.length);
+  ui.versionList.innerHTML = "";
+  if (!versions.length) {
+    ui.versionList.innerHTML = "<p>Migawki pojawią się automatycznie po pierwszej zmianie w projekcie.</p>";
+    return;
+  }
+  versions.slice(0, 20).forEach((ver, index) => {
+    const row = document.createElement("div");
+    row.className = "version-row";
+    const info = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = ver.label || ("Wersja #" + (versions.length - index));
+    const meta = document.createElement("span");
+    meta.textContent = formatDate(ver.at) + " · " + Math.max(1, Math.round((ver.html || "").length / 1024)) + " KB";
+    info.append(title, meta);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "Przywróć";
+    btn.addEventListener("click", () => {
+      if (!ver.html) return;
+      if (!state.editMode) {
+        state.editMode = true;
+        $("#selectModeBtn").classList.add("active");
+        $("#selectModeBtn").classList.remove("preview-live");
+        $("#selectModeBtn").textContent = "Edycja";
+      }
+      restoreHtml(ver.html, state.undo);
+      toast("Przywrócono wersję z " + formatDate(ver.at) + ".");
+    });
+    row.append(info, btn);
+    ui.versionList.append(row);
+  });
+}
+
 async function loadLeads() {
   if (!state.current) return;
   try {
@@ -882,7 +964,10 @@ function setPanel(name) {
   $$("[data-tab]").forEach((button) => button.classList.toggle("active", button.dataset.tab === name));
   $$("[data-panel]").forEach((panel) => panel.classList.toggle("active", panel.dataset.panel === name));
   if (name === "sections") renderStructure();
-  if (name === "publish") void loadLeads();
+  if (name === "publish") {
+    renderVersions();
+    void loadLeads();
+  }
 }
 
 async function importedHtml(file) {
@@ -960,7 +1045,7 @@ async function sendPrompt() {
     });
     ui.aiStatus.hidden = false;
     ui.aiStatus.textContent = data.connected
-      ? "JARVIS odebrał polecenie. Zmiana pojawi się tutaj automatycznie."
+      ? "JARVIS odebrał polecenie przez strumień SSE. Zmiana pojawi się tutaj automatycznie."
       : "Polecenie zapisane w kolejce. JARVIS odbierze je po połączeniu z Site OS.";
     ui.aiPrompt.value = "";
     toast("Polecenie przekazane do JARVISA.");
@@ -985,7 +1070,7 @@ function bindControls() {
     if (event.target === ui.projectDialog) ui.projectDialog.close();
   });
   $$("[data-starter]").forEach((button) => button.addEventListener("click", async () => {
-    const names = { service: "Aurelia Studio", product: "Flowbase", local: "Soma House", blank: "Nowy projekt" };
+    const names = { boutique: "Pracownia ImPULS", service: "Aurelia Studio", product: "Flowbase", local: "Soma House", blank: "Nowy projekt" };
     button.disabled = true;
     try {
       await createProject(projectTemplate(button.dataset.starter), names[button.dataset.starter]);
@@ -1024,15 +1109,15 @@ function bindControls() {
     ui.canvasStage.dataset.viewport = button.dataset.viewport;
   }));
   $("#selectModeBtn").addEventListener("click", () => {
+    if (state.editMode && state.current) {
+      state.current.html = serializeFrame();
+    }
     state.editMode = !state.editMode;
     $("#selectModeBtn").classList.toggle("active", state.editMode);
-    $("#selectModeBtn").textContent = state.editMode ? "Edycja" : "Podgląd";
-    ui.hint.textContent = state.editMode ? "Kliknij element, aby go edytować" : "Tryb podglądu strony";
-    if (!state.editMode && state.selected) {
-      state.selected.classList.remove("siteos-selected");
-      state.selected = null;
-      updateSelectionPanel();
-    }
+    $("#selectModeBtn").classList.toggle("preview-live", !state.editMode);
+    $("#selectModeBtn").textContent = state.editMode ? "Edycja" : "Podgląd JS";
+    ui.hint.textContent = state.editMode ? "Kliknij element, aby go edytować" : "Żywy podgląd JS (kompas, kalkulatory, motywy)";
+    renderFrame();
   });
 
   $$("[data-tab]").forEach((button) => button.addEventListener("click", () => setPanel(button.dataset.tab)));
@@ -1157,6 +1242,45 @@ async function checkRemoteProjectUpdate() {
   }
 }
 
+function connectEventsStream() {
+  if (typeof EventSource === "undefined" || !state.token) return;
+  try {
+    const es = new EventSource("/api/events?token=" + encodeURIComponent(state.token));
+    es.addEventListener("project-updated", (event) => {
+      try {
+        const data = JSON.parse(event.data || "{}");
+        if (data.source === "jarvis" && state.current && data.projectId === state.current.id) {
+          void loadProject(state.current.id);
+          ui.aiStatus.hidden = false;
+          ui.aiStatus.textContent = "✅ JARVIS zakończył modyfikację i zaktualizował stronę na żywo.";
+          toast("JARVIS zaktualizował stronę na żywo.");
+        } else if (data.source === "upsert" || data.source === "create") {
+          void refreshProjects(data.projectId);
+        }
+      } catch { /* ignore */ }
+    });
+    es.addEventListener("command-done", (event) => {
+      try {
+        const data = JSON.parse(event.data || "{}");
+        if (data.status === "failed" && data.error) {
+          ui.aiStatus.hidden = false;
+          ui.aiStatus.textContent = "⚠ " + data.error;
+          toast(data.error);
+        }
+      } catch { /* ignore */ }
+    });
+    es.addEventListener("lead-created", (event) => {
+      try {
+        const data = JSON.parse(event.data || "{}");
+        if (state.current && data.projectId === state.current.id) {
+          void loadLeads();
+          toast("Nowe zapytanie z formularza leadowego!");
+        }
+      } catch { /* ignore */ }
+    });
+  } catch { /* fallback do pollingu 5 s */ }
+}
+
 async function init() {
   bindControls();
   try {
@@ -1166,8 +1290,9 @@ async function init() {
     state.tunnelUrl = health.tunnelUrl || "";
     updateTunnelUi();
     await refreshProjects();
+    connectEventsStream();
     ui.app.dataset.ready = "true";
-    ui.status.textContent = "Site OS " + health.version + " · gotowy";
+    ui.status.textContent = "Site OS " + health.version + " · gotowy (SSE aktywne)";
     setInterval(checkRemoteProjectUpdate, 5000);
   } catch (error) {
     ui.status.textContent = "Brak połączenia";

@@ -12,7 +12,7 @@ import { appendBrand } from "./brandKit";
 
 export type SiteKind = "auto" | "landing" | "sklep" | "firma" | "portfolio" | "saas" | "blog";
 export type SiteStyle =
-  | "auto" | "editorial" | "brutalist" | "glass" | "neon" | "retro" | "organic" | "swiss" | "luxury"
+  | "auto" | "editorial" | "boutique" | "brutalist" | "glass" | "neon" | "retro" | "organic" | "swiss" | "luxury"
   // Systemy projektowe klasy światowej (ETAP 3 — AI Design Engine):
   | "apple" | "stripe" | "linear" | "notion" | "tesla" | "airbnb" | "openai" | "saas" | "enterprise" | "cyberpunk" | "minimal";
 
@@ -59,6 +59,7 @@ const PREMIUM = [
 const STYLE_HINTS: Record<SiteStyle, string> = {
   auto: "KIERUNEK: dobierz oryginalny, niesztampowy styl najlepiej pasujący do branży — i konsekwentnie go pogłęb.",
   editorial: "KIERUNEK: edytorialowy/magazynowy — ekspresyjna typografia szeryfowa, łamanie jak w magazynie, asymetryczna siatka, dużo światła, cienkie linie jako akcent, numerowane sekcje.",
+  boutique: "KIERUNEK: Editorial Boutique Digital Studio (Quiet Luxury + Tactile Software, standard Stripe Press / Readymag / Awwwards): ciepły papier introligatorski (#f5f1e8), głęboki granat atramentu (#102332), miedziany akcent (#b86b3d), leśna zieleń (#256c52). Triada fontów Google Fonts: Fraunces (nagłówki szeryfowe), Plus Jakarta Sans (treść), JetBrains Mono z font-variant-numeric: tabular-nums (liczby/ceny/indeksy). Delikatna tekstura ziarna papieru (SVG feTurbulence opacity 0.025), techniczne ilustracje/okładki inline SVG zamiast generycznych ikon, przełącznik motywów data-theme, reguła @media (max-height: 520px) dla orientacji poziomej telefonu oraz @media print dla czystego wydruku Briefu A4.",
   brutalist: "KIERUNEK: neo-brutalizm — surowe bloki, grube czarne obramowania, twarde cienie (box-shadow bez rozmycia), mocne kontrasty, monospaced akcenty, celowa „surowość”, jaskrawe plamy koloru.",
   glass: "KIERUNEK: glassmorphism — półprzezroczyste, rozmyte panele (backdrop-filter: blur), kolorowy gradient-mesh/poświaty w tle, delikatne obwódki 1px, wyraźna głębia warstw.",
   neon: "KIERUNEK: cyberpunk/neon — ciemne tło, neonowe akcenty (cyan/magenta), świecące krawędzie (glow, text-shadow), siatki perspektywiczne, animowane gradienty, futurystyczny sznyt.",
@@ -85,6 +86,7 @@ const STYLE_RULES: [Exclude<SiteStyle, "auto">, RegExp][] = [
   ["stripe", /p[łl]atno[śs]|fintech|\bbank|invoic|rozlicze|saas finansow/i],
   ["linear", /\bsaas\b|aplikacj|dashboard|platform|software|\bdev|api\b|narz[eę]dzi/i],
   ["luxury", /luksus|premium|jubiler|zegark|apartament|willa|ekskluz|presti[żz]|hotel 5|moda premium|biżuteri/i],
+  ["boutique", /\bbutik|pracowni|akademia|atelier|introligat|editorial boutique|quiet luxury/i],
   ["editorial", /restauracj|kawiarni|bistro|kuchni|piekarni|cukierni|\bfood\b|menu|magazyn|blog|wydawnict/i],
   ["organic", /fitness|si[łl]own|trener|\bjoga\b|\bsport|gabinet|\bspa\b|kosmet|uroda|wellness|zdrowi|terapi/i],
   ["cyberpunk", /gaming|\bgr[ay]\b|esport|krypto|\bnft\b|cyber|futur|techno|web3|blockchain/i],

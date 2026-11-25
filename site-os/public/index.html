@@ -50,10 +50,11 @@
           <button type="button" class="active" data-viewport="desktop">Desktop</button>
           <button type="button" data-viewport="tablet">Tablet</button>
           <button type="button" data-viewport="mobile">Telefon</button>
+          <button type="button" data-viewport="landscape" title="Orientacja pozioma telefonu (max-height: 520px)">Poziom</button>
         </div>
         <div class="canvas-meta">
           <span id="canvasHint">Kliknij element, aby go edytować</span>
-          <button id="selectModeBtn" class="mode-button active" type="button">Edycja</button>
+          <button id="selectModeBtn" class="mode-button active" type="button" title="Przełącz między inspektorem DOM a żywym podglądem JS">Edycja</button>
         </div>
       </div>
       <div id="canvasStage" class="canvas-stage" data-viewport="desktop">
@@ -157,9 +158,12 @@
       <section id="sectionsPanel" class="inspector-panel" data-panel="sections">
         <div class="panel-heading">
           <span class="sections-dot"></span>
-          <div><h3>Biblioteka sekcji</h3><p>Gotowe, responsywne bloki dopasują się do kolorów strony.</p></div>
+          <div><h3>Biblioteka sekcji 2.0</h3><p>Bloki konwersji, symulatory i sekcje dopasowane do palety marki.</p></div>
         </div>
         <div class="section-library" id="sectionLibrary">
+          <button type="button" data-section="compass"><span>03→</span><strong>Kompas decyzyjny</strong><small>Interaktywny wybór w 3 krokach</small></button>
+          <button type="button" data-section="calculator"><span>ROI</span><strong>Symulator wyceny</strong><small>Suwaki + wynik na żywo</small></button>
+          <button type="button" data-section="brief"><span>PDF</span><strong>Teczka i Brief A4</strong><small>Wydruk zarządczy @media print</small></button>
           <button type="button" data-section="hero"><span>H1</span><strong>Hero premium</strong><small>Obietnica, obraz, CTA</small></button>
           <button type="button" data-section="benefits"><span>03</span><strong>Korzyści</strong><small>Trzy mocne argumenty</small></button>
           <button type="button" data-section="proof"><span>99</span><strong>Dowody</strong><small>Liczby i wiarygodność</small></button>
@@ -178,6 +182,7 @@
         <div class="control-group">
           <h3>Paleta marki</h3>
           <div class="palette-grid">
+            <button type="button" data-palette="impuls"><i style="--a:#102332;--b:#b86b3d;--c:#f5f1e8"></i><span>ImPULS</span></button>
             <button type="button" data-palette="north"><i style="--a:#164f42;--b:#ef765f;--c:#f4f1e9"></i><span>North</span></button>
             <button type="button" data-palette="noir"><i style="--a:#111111;--b:#c7ff4a;--c:#f5f5f2"></i><span>Noir</span></button>
             <button type="button" data-palette="signal"><i style="--a:#1557ff;--b:#ffcf33;--c:#f7f9ff"></i><span>Signal</span></button>
@@ -189,27 +194,27 @@
       <section id="jarvisPanel" class="inspector-panel" data-panel="jarvis">
         <div class="panel-heading">
           <span class="ai-dot"></span>
-          <div><h3>Dyrektor kreatywny</h3><p>Zmiany dotyczą bieżącego projektu.</p></div>
+          <div><h3>Dyrektor kreatywny</h3><p>Zaznacz element lub sekcję, aby edytować chirurgicznie (obrazy chronione przed limitem tokenów).</p></div>
         </div>
         <div class="prompt-presets">
-          <button type="button" data-prompt="Podnieś wizualny poziom tej sekcji, zachowując treść i styl marki.">Bardziej premium</button>
-          <button type="button" data-prompt="Popraw wersję mobilną, rytm odstępów i czytelność tej strony.">Dopracuj telefon</button>
-          <button type="button" data-prompt="Wzmocnij główne wezwanie do działania i ścieżkę konwersji.">Wzmocnij CTA</button>
-          <button type="button" data-prompt="Sprawdź spójność całej strony i zaproponuj najważniejszą poprawkę.">Audyt całości</button>
+          <button type="button" data-prompt="Przebuduj tę sekcję w estetyce Editorial Boutique (Fraunces + Plus Jakarta Sans, spokojny luksus, miedziane detale).">Styl Editorial Boutique</button>
+          <button type="button" data-prompt="Popraw wersję mobilną (360 px i orientację poziomą 520 px), rytm odstępów i czytelność.">Dopracuj telefon</button>
+          <button type="button" data-prompt="Wzmocnij główne wezwanie do działania, dodaj konkret liczbowy i ścieżkę konwersji.">Wzmocnij CTA</button>
+          <button type="button" data-prompt="Sprawdź spójność całej strony i zaproponuj najważniejszą poprawkę sprzedażową.">Audyt całości</button>
         </div>
         <label class="field prompt-field">
           <span>Polecenie dla JARVISA</span>
-          <textarea id="aiPrompt" rows="7" placeholder="Np. zamień tę sekcję na spokojniejszą, bardziej luksusową i dodaj mocny dowód społeczny"></textarea>
+          <textarea id="aiPrompt" rows="6" placeholder="Np. zamień tę sekcję na spokojniejszą, w stylu Stripe Press, i dodaj konkretne wskaźniki wdrożenia"></textarea>
         </label>
         <button id="sendPromptBtn" class="button primary wide" type="button">Zastosuj z JARVISEM</button>
         <div id="aiStatus" class="notice" hidden></div>
         <div class="quality-card">
           <div class="quality-head">
-            <div><span>Kontrola jakości</span><strong id="auditScore">Nie sprawdzono</strong></div>
+            <div><span>Kontrola jakości + Geometria 360px</span><strong id="auditScore">Nie sprawdzono</strong></div>
             <button id="runAuditBtn" class="button secondary" type="button">Uruchom audyt</button>
           </div>
           <div id="auditMeter" class="audit-meter"><i></i></div>
-          <div id="auditResults" class="audit-results"><p>Sprawdzę SEO, telefon, dostępność i ścieżkę konwersji.</p></div>
+          <div id="auditResults" class="audit-results"><p>Sprawdzę SEO, realne ucięcia mobilne (rect.right), dostępność i konwersję.</p></div>
           <button id="fixAuditBtn" class="text-button" type="button" hidden>Napraw automatycznie bezpieczne elementy</button>
         </div>
       </section>
@@ -217,22 +222,26 @@
       <section id="publishPanel" class="inspector-panel" data-panel="publish">
         <div class="panel-heading">
           <span class="publish-dot"></span>
-          <div><h3>Podgląd dla klienta</h3><p>Edytor pozostaje dostępny tylko na tym komputerze.</p></div>
+          <div><h3>Podgląd dla klienta</h3><p>Tunel udostępnia wyłącznie czystą stronę klienta (/p/:id) — panel edytora jest chroniony (403).</p></div>
         </div>
         <div class="publish-block">
           <span>Adres lokalny</span>
           <div class="copy-row"><input id="localPreviewUrl" readonly><button data-copy="localPreviewUrl" type="button">Kopiuj</button></div>
         </div>
         <div class="publish-block">
-          <span>Publiczny link</span>
+          <span>Publiczny link (Cloudflare Tunnel)</span>
           <div id="tunnelEmpty">
-            <p>Uruchom bezpieczny, tymczasowy link do obecnego projektu.</p>
+            <p>Uruchom bezpieczny, izolowany link produkcyjny dla klienta.</p>
             <button id="startTunnelBtn" class="button primary wide" type="button">Uruchom tunel</button>
           </div>
           <div id="tunnelReady" hidden>
             <div class="copy-row"><input id="publicPreviewUrl" readonly><button data-copy="publicPreviewUrl" type="button">Kopiuj</button></div>
             <button id="stopTunnelBtn" class="text-button danger-text" type="button">Wyłącz tunel</button>
           </div>
+        </div>
+        <div class="publish-block">
+          <div class="publish-title-row"><span>Historia wersji (do 20)</span><b id="versionCount">0</b></div>
+          <div id="versionList" class="lead-list"><p>Migawki zapisują się automatycznie przy każdej zmianie.</p></div>
         </div>
         <div class="publish-block">
           <span>SEO i udostępnianie</span>
@@ -250,8 +259,8 @@
           <button id="runPublishAuditBtn" class="button secondary" type="button">Sprawdź przed publikacją</button>
         </div>
         <div class="security-note">
-          <strong>Prywatność</strong>
-          <p>Link pokazuje wyłącznie zapisaną stronę. Projekty, panel i token JARVISA nie są udostępniane.</p>
+          <strong>Prywatność i izolacja</strong>
+          <p>Tunel udostępnia wyłącznie /p/:id oraz formularz leadowy. Panel edytora, /api/pair i tokeny są zablokowane (403).</p>
         </div>
       </section>
     </aside>
@@ -259,8 +268,9 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <dialog id="newProjectDialog" class="project-dialog">
-      <div class="dialog-head"><div><span>Nowy projekt</span><h2>Wybierz mocny punkt startu</h2></div><button id="closeProjectDialog" class="icon-btn" type="button" aria-label="Zamknij">×</button></div>
+      <div class="dialog-head"><div><span>Site OS 2.0 · Nowy projekt</span><h2>Wybierz architekturę startową</h2></div><button id="closeProjectDialog" class="icon-btn" type="button" aria-label="Zamknij">×</button></div>
       <div class="starter-grid">
+        <button type="button" data-starter="boutique"><span class="starter-preview boutique">✒</span><strong>Butik Editorial (ImPULS)</strong><small>Quiet Luxury, Kompas 3-krokowy, Brief A4 PDF</small></button>
         <button type="button" data-starter="service"><span class="starter-preview service"></span><strong>Usługa premium</strong><small>Ekspert, studio, doradztwo</small></button>
         <button type="button" data-starter="product"><span class="starter-preview product"></span><strong>Produkt cyfrowy</strong><small>SaaS, aplikacja, platforma</small></button>
         <button type="button" data-starter="local"><span class="starter-preview local"></span><strong>Marka lokalna</strong><small>Hotel, klinika, restauracja</small></button>

@@ -653,3 +653,96 @@ button {
   .workspace { grid-column: 2; }
   .top-actions .secondary { display: none; }
 }
+
+/* === SITE OS 2.0 — Tactile Studio Polish, Landscape Preview, Version History & Boutique Starter === */
+.brand-mark,
+.icon-btn,
+.button,
+.search,
+.project-item,
+.project-thumb,
+.segmented,
+.mode-button,
+.browser-frame,
+.field input,
+.field textarea,
+.field select,
+.copy-row input,
+.copy-row button,
+.image-dropzone,
+.section-library button,
+.section-library button > span,
+.structure-item,
+.palette-grid button,
+.palette-grid i,
+.prompt-presets button,
+.notice,
+.audit-item,
+.lead-item,
+.project-dialog,
+.starter-grid > button,
+.starter-preview,
+.toast {
+  border-radius: 6px;
+}
+
+.segmented button { border-radius: 0; font-size: 11px; }
+.field > span, .publish-block > span { font-size: 10px; letter-spacing: 0.04em; }
+.field input, .field textarea, .field select, .copy-row input { font-size: 12px; }
+.section-library strong { font-size: 11px; }
+.section-library small { font-size: 9.5px; }
+.palette-grid { grid-template-columns: repeat(5, 1fr); }
+.palette-grid span { font-size: 9.5px; font-weight: 600; }
+
+.canvas-stage[data-viewport="mobile"] .browser-frame { width: min(360px, 100%); }
+.canvas-stage[data-viewport="landscape"] .browser-frame { width: min(844px, 100%); }
+.canvas-stage[data-viewport="landscape"] #siteFrame { height: 470px; min-height: 470px; }
+
+.mode-button.preview-live {
+  color: #071211;
+  background: var(--cyan);
+  border-color: var(--cyan);
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+}
+.version-row div { min-width: 0; }
+.version-row strong { display: block; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.version-row span { display: block; margin-top: 2px; font-size: 9.5px; color: var(--muted); }
+.version-row button {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  background: var(--panel-2);
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 650;
+}
+.version-row button:hover { border-color: var(--cyan); color: var(--text); }
+
+.starter-grid > button[data-starter="boutique"] {
+  grid-column: 1 / -1;
+  border-color: rgba(184, 107, 61, 0.55);
+  background: linear-gradient(135deg, rgba(184, 107, 61, 0.14), var(--panel) 65%);
+}
+.starter-preview.boutique {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #f5f1e8, #e8dfd0);
+  color: #102332;
+  border-color: rgba(16, 35, 50, 0.22);
+  font-family: Georgia, serif;
+  font-size: 32px;
+}
+

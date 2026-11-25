@@ -117,7 +117,7 @@ import { checkForUpdate, applyUpdate } from "./lib/updater";
 import { topPredictions } from "./lib/predict";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
-import { processPendingSiteOsCommands } from "./lib/siteOs";
+import { processPendingSiteOsCommands, subscribeSiteOsEvents } from "./lib/siteOs";
 import { currentBrainMode } from "./lib/brainMode";
 import { createListener, isSpeechSupported, loadVoices, speak, stopSpeaking, checkPinnedVoice, setVoiceUnavailableHandler, type VoiceListener, type VoiceUnavailableInfo } from "./lib/voice";
 import { capturePhoto, readImageFile } from "./lib/camera";
@@ -1251,7 +1251,7 @@ export default function App() {
     return () => clearInterval(tick);
   }, []);
 
-  // --- Site OS: odbieraj polecenia z pełnoekranowego edytora i stosuj je obecnym silnikiem AI ---
+  // --- Site OS: odbieraj polecenia z pełnoekranowego edytora (natychmiastowo przez SSE + fallback 12 s) ---
   useEffect(() => {
     const run = async () => {
       try {
@@ -1262,9 +1262,13 @@ export default function App() {
       }
     };
     void run();
+    const unsubSse = subscribeSiteOsEvents(() => { void run(); });
     const tick = setInterval(() => { void run(); }, 12000);
-    return () => clearInterval(tick);
-  }, []);
+    return () => {
+      unsubSse();
+      clearInterval(tick);
+    };
+  }, [settings.siteOsUrl, settings.siteOsToken]);
 
   // Wznów tylko sparowaną lokalną usługę; nie uruchamiaj tunelu ani przeglądarki.
   useEffect(() => {

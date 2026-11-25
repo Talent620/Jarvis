@@ -28,6 +28,7 @@ const KINDS: { id: SiteKind; label: string }[] = [
 // Niesztampowe style — żeby strona nie wyglądała jak „kolejny szablon".
 const STYLES: { id: SiteStyle; label: string }[] = [
   { id: "auto", label: "✨ Auto" },
+  { id: "boutique", label: "✒ Butik Editorial" },
   { id: "editorial", label: "📰 Edytorial" },
   { id: "brutalist", label: "🧱 Brutalizm" },
   { id: "glass", label: "🫧 Glass" },

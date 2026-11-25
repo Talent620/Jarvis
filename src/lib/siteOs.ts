@@ -1,6 +1,6 @@
-// === Łącznik z JARVIS Site OS ===
+// === Łącznik z JARVIS Site OS 2.0 ===
 // Site OS jest osobną aplikacją przeglądarkową. JARVIS przekazuje projekty i wykonuje
-// polecenia AI przez lokalne, tokenowane API; publiczny tunel nigdy nie dostaje tokenu.
+// polecenia AI przez lokalne, tokenowane API (SSE + REST); publiczny tunel nigdy nie dostaje tokenu.
 
 import { store } from "./store";
 import { continueSite, generateSite, repairTruncatedSite } from "./webgen";
@@ -28,6 +28,33 @@ export interface SiteOsCommand {
   } | null;
 }
 
+/**
+ * Pure (P0-1 fix): wycina ciężkie obrazy `data:image/...;base64,...` z kodu HTML przed wysłaniem do LLM,
+ * zamieniając je na lekkie tokeny `__JARVIS_ASSET_N__`. Chroni przed ścianą SAFE_EDIT_CHARS = 60_000
+ * po dodaniu grafik WebP w Site OS oraz oszczędza setki tysięcy tokenów.
+ */
+export function extractDataUriAssets(html: string): { strippedHtml: string; assets: Map<string, string> } {
+  const assets = new Map<string, string>();
+  if (!html || html.indexOf("data:image/") === -1) {
+    return { strippedHtml: html || "", assets };
+  }
+  let idx = 0;
+  const strippedHtml = html.replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]{256,}/g, (match) => {
+    const tokenKey = `__JARVIS_ASSET_${idx++}__`;
+    assets.set(tokenKey, match);
+    return tokenKey;
+  });
+  return { strippedHtml, assets };
+}
+
+/**
+ * Pure: przywraca oryginalne `data:image/...` na miejsce tokenów `__JARVIS_ASSET_N__` po odpowiedzi modelu.
+ */
+export function restoreDataUriAssets(html: string, assets: Map<string, string>): string {
+  if (!html || assets.size === 0) return html || "";
+  return html.replace(/__JARVIS_ASSET_\d+__/g, (tokenKey) => assets.get(tokenKey) ?? tokenKey);
+}
+
 function baseUrl(): string {
   return (store.settings.siteOsUrl || DEFAULT_URL).trim().replace(/\/$/, "");
 }
@@ -50,6 +77,24 @@ export function siteOsConfigured(): boolean {
   return Boolean(baseUrl() && token());
 }
 
+/**
+ * Automatyczne parowanie loopback (0 kliknięć i bez przepisywania 6 cyfr na tym samym komputerze):
+ * jeśli Site OS działa lokalnie na 127.0.0.1, pobiera sesję bezpośrednio z `/api/session`.
+ */
+export async function autoConnectLocalSiteOs(): Promise<boolean> {
+  if (siteOsConfigured()) return true;
+  try {
+    const session = await request<{ ok: boolean; token?: string }>("/api/session", {}, false);
+    if (session?.ok && session.token) {
+      store.setSettings({ siteOsUrl: baseUrl(), siteOsToken: session.token });
+      return true;
+    }
+  } catch {
+    /* serwer wyłączony albo zdalny — wymagany kod parowania */
+  }
+  return false;
+}
+
 export function openSiteOs(): boolean {
   try {
     window.open(baseUrl(), "_blank", "noopener,noreferrer");
@@ -66,7 +111,10 @@ export async function checkSiteOs(): Promise<SiteOsHealth> {
 export async function testSiteOs(): Promise<string> {
   try {
     const health = await checkSiteOs();
-    if (!token()) return `Site OS ${health.version} działa. Wpisz kod parowania, aby połączyć JARVISA.`;
+    if (!token()) {
+      const auto = await autoConnectLocalSiteOs();
+      if (!auto) return `Site OS ${health.version} działa. Wpisz kod parowania, aby połączyć JARVISA.`;
+    }
     await request("/api/projects");
     return `Połączono z Site OS ${health.version}. Projekty i polecenia AI są zsynchronizowane.`;
   } catch (error) {
@@ -91,7 +139,10 @@ export async function pairSiteOs(code: string): Promise<string> {
 }
 
 export async function sendProjectToSiteOs(project: Pick<SiteProject, "id" | "name" | "html" | "brief">): Promise<{ id: string }> {
-  if (!siteOsConfigured()) throw new Error("Najpierw połącz Site OS w Ustawieniach → Integracje.");
+  if (!siteOsConfigured()) {
+    await autoConnectLocalSiteOs();
+  }
+  if (!siteOsConfigured()) throw new Error("Najpierw połącz Site OS w Ustawieniach → Połączenia.");
   const result = await request<{ ok: boolean; project: { id: string } }>("/api/public/projects", {
     method: "POST",
     body: JSON.stringify({
@@ -117,15 +168,15 @@ function commandInstruction(command: SiteOsCommand): string {
     command.prompt,
     "",
     `Zmień przede wszystkim zaznaczony element (${target}).`,
-    "Zachowaj wszystkie pozostałe sekcje, treści, działające formularze i responsywność.",
+    "Zachowaj wszystkie pozostałe sekcje, tokeny grafik __JARVIS_ASSET_N__, działające formularze i responsywność.",
   ].join("\n");
 }
 
 let processing = false;
 
 /**
- * Odbiera najwyżej jedno polecenie naraz. Dzięki temu dwa interwały lub ponowne
- * renderowanie aplikacji nie uruchomią równoległych, kosztownych generacji.
+ * Odbiera najwyżej jedno polecenie naraz. Przed wysłaniem do modelu wycina osadzone obrazy base64
+ * do lekkich placeholderów `__JARVIS_ASSET_N__` i przywraca je po wygenerowaniu poprawki.
  */
 export async function processPendingSiteOsCommands(): Promise<{ processed: number; message?: string }> {
   if (processing || !siteOsConfigured()) return { processed: 0 };
@@ -138,7 +189,8 @@ export async function processPendingSiteOsCommands(): Promise<{ processed: numbe
     const projectResult = await request<{ ok: boolean; project: { html: string } }>(
       `/api/public/projects/${encodeURIComponent(command.projectId)}`,
     );
-    const generated = await generateSite(commandInstruction(command), projectResult.project.html);
+    const { strippedHtml, assets } = extractDataUriAssets(projectResult.project.html);
+    const generated = await generateSite(commandInstruction(command), strippedHtml);
     if ("error" in generated) {
       await request(`/api/public/commands/${command.id}`, {
         method: "PUT",
@@ -157,9 +209,10 @@ export async function processPendingSiteOsCommands(): Promise<{ processed: numbe
       return { processed: 1, message: error };
     }
 
+    const finalHtml = restoreDataUriAssets(repaired.html, assets);
     await request(`/api/public/commands/${command.id}`, {
       method: "PUT",
-      body: JSON.stringify({ status: "done", html: repaired.html }),
+      body: JSON.stringify({ status: "done", html: finalHtml }),
     });
     return { processed: 1, message: "Site OS: poprawka JARVISA jest gotowa." };
   } catch (error) {
@@ -167,4 +220,23 @@ export async function processPendingSiteOsCommands(): Promise<{ processed: numbe
   } finally {
     processing = false;
   }
+}
+
+/**
+ * Subskrybuje strumień SSE `/api/events` z lokalnego Site OS, aby polecenia AI startowały
+ * w czasie rzeczywistym (< 50 ms) zamiast czekać na 12-sekundowy interwał pollingu.
+ */
+export function subscribeSiteOsEvents(onCommandQueued: () => void): () => void {
+  if (typeof EventSource === "undefined" || !siteOsConfigured()) return () => {};
+  let es: EventSource | null = null;
+  try {
+    const url = `${baseUrl()}/api/events?token=${encodeURIComponent(token())}`;
+    es = new EventSource(url);
+    es.addEventListener("command-queued", () => onCommandQueued());
+  } catch {
+    return () => {};
+  }
+  return () => {
+    try { es?.close(); } catch { /* ignore */ }
+  };
 }

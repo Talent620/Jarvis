@@ -1,14 +1,15 @@
 import http from "node:http";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(rootDir, "public");
 const dataDir = process.env.SITE_OS_DATA_DIR ? path.resolve(process.env.SITE_OS_DATA_DIR) : path.join(rootDir, "data");
+const uploadsDir = path.join(dataDir, "uploads");
 const runtimeDir = process.env.SITE_OS_RUNTIME_DIR ? path.resolve(process.env.SITE_OS_RUNTIME_DIR) : path.join(rootDir, ".runtime");
 const toolsDir = process.env.SITE_OS_TOOLS_DIR ? path.resolve(process.env.SITE_OS_TOOLS_DIR) : path.join(rootDir, ".tools");
 const projectsFile = path.join(dataDir, "projects.json");
@@ -17,7 +18,7 @@ const leadsFile = path.join(dataDir, "leads.json");
 const runtimeFile = path.join(runtimeDir, "connection.json");
 const host = process.env.SITE_OS_HOST || "127.0.0.1";
 const port = Number(process.env.SITE_OS_PORT || 3210);
-const version = "0.2.1";
+const version = "2.0.0";
 const localUrl = "http://" + host + ":" + port;
 const maxBodyBytes = 8 * 1024 * 1024;
 
@@ -26,6 +27,46 @@ let tunnelUrl = "";
 let tunnelError = "";
 let tunnelStarting = null;
 const leadRate = new Map();
+const pairFailures = new Map();
+const sseClients = new Set();
+
+function broadcastEvent(eventName, payload = {}) {
+  const frame = `event: ${eventName}\ndata: ${JSON.stringify({ ...payload, at: Date.now() })}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(frame);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}
+
+/**
+ * Twarda weryfikacja binarnych nagłówków Magic Bytes (DNA ImPULS):
+ * akceptuje wyłącznie prawdziwe PNG, JPEG i WebP; blokuje surowe SVG/HTML (ochrona przed Stored XSS).
+ */
+function verifyImageMagicBytes(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 12) return null;
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47 &&
+    buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a
+  ) {
+    return { mime: "image/png", ext: ".png" };
+  }
+  // JPEG: FF D8 FF
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
+    return { mime: "image/jpeg", ext: ".jpg" };
+  }
+  // WebP: "RIFF" .... "WEBP"
+  if (
+    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+  ) {
+    return { mime: "image/webp", ext: ".webp" };
+  }
+  return null;
+}
 
 async function connectToRunningInstance() {
   const healthResponse = await fetch(localUrl + "/api/health", {
@@ -62,46 +103,71 @@ async function connectToRunningInstance() {
 
 function starterHtml() {
   return `<!doctype html>
-<html lang="pl">
+<html lang="pl" data-theme="classic">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Northstar Studio</title>
-  <meta name="description" content="Projektujemy miejsca, do których chce się wracać.">
+  <title>Pracownia ImPULS — Editorial Boutique Studio</title>
+  <meta name="description" content="Projektujemy systemy cyfrowe, wydawnictwa i doświadczenia marek, w których rzemiosło spotyka mierzalny wzrost.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root{--ink:#10201c;--paper:#f5f3ed;--green:#1f6b52;--coral:#e76f51;--line:#c8cec7}
-    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;overflow-x:hidden;background:var(--paper);color:var(--ink);font:16px/1.55 Arial,sans-serif}
-    nav{height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 6vw;border-bottom:1px solid var(--line)}
-    nav strong{font-size:18px}nav a{color:inherit;text-decoration:none;margin-left:24px}
-    .hero{min-height:72vh;display:grid;grid-template-columns:1.05fr .95fr;align-items:stretch}
-    .hero-copy{padding:9vw 6vw 6vw;display:flex;flex-direction:column;justify-content:center}
-    .eyebrow{text-transform:uppercase;font-size:12px;font-weight:700;color:var(--green)}
-    h1{font:700 clamp(44px,7vw,96px)/.98 Georgia,serif;margin:18px 0 24px;letter-spacing:0}
-    .lead{font-size:20px;max-width:580px;overflow-wrap:anywhere}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
-    .button{display:inline-flex;padding:13px 18px;background:var(--green);color:white;text-decoration:none;font-weight:700}
+    :root{--ink:#102332;--paper:#f5f1e8;--surface:#fffdf9;--green:#256c52;--coral:#b86b3d;--line:rgba(16,35,50,.14);--serif:"Fraunces",Georgia,serif;--sans:"Plus Jakarta Sans",system-ui,sans-serif;--mono:"JetBrains Mono",monospace}
+    html[data-theme="night"]{--ink:#edf2f7;--paper:#0b131d;--surface:#121f2e;--green:#4cc39a;--coral:#d88b5a;--line:rgba(237,242,247,.15)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;overflow-x:hidden;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans)}
+    .num-tab{font-family:var(--mono);font-variant-numeric:tabular-nums}
+    nav{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 6vw;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--paper) 90%,transparent);backdrop-filter:blur(10px);position:sticky;top:0;z-index:10}
+    nav strong{font:700 17px var(--serif);letter-spacing:.02em}nav .nav-links{display:flex;align-items:center;gap:22px}nav a{color:inherit;text-decoration:none;font-size:14px;font-weight:500}
+    .theme-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:6px 12px;font:600 12px var(--mono);cursor:pointer}
+    .hero{min-height:72vh;display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:4vw;padding:6vw}
+    .eyebrow{text-transform:uppercase;font:600 11px var(--mono);letter-spacing:.12em;color:var(--coral)}
+    h1{font:600 clamp(40px,6vw,78px)/1.02 var(--serif);margin:16px 0 22px;letter-spacing:-.02em}
+    .lead{font-size:19px;max-width:560px;opacity:.84}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+    .button{display:inline-flex;align-items:center;min-height:46px;padding:0 22px;background:var(--ink);color:var(--paper);text-decoration:none;font-weight:600;font-size:14px}
     .button.alt{background:transparent;color:var(--ink);border:1px solid var(--ink)}
-    .hero-image{min-height:520px;background:url("https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1400&q=85") center/cover}
+    .folio{background:var(--surface);border:1px solid var(--line);padding:32px;position:relative;box-shadow:0 20px 50px rgba(16,35,50,.07)}
+    .folio svg{width:100%;height:auto;display:block}
     .proof{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-    .proof article{padding:34px 6vw;border-right:1px solid var(--line)}.proof article:last-child{border:0}.proof b{font:700 34px Georgia,serif}
-    @media(max-width:760px){nav div{display:none}.hero{grid-template-columns:1fr}.hero-copy{padding:70px 24px}.hero-image{min-height:340px}.proof{grid-template-columns:1fr}.proof article{border-right:0;border-bottom:1px solid var(--line)}}
+    .proof article{padding:34px 6vw;border-right:1px solid var(--line)}.proof article:last-child{border:0}.proof b{display:block;font:600 36px var(--serif)}
+    @media(max-width:780px){nav .nav-links a{display:none}.hero{grid-template-columns:1fr;padding:44px 24px}.proof{grid-template-columns:1fr}.proof article{border-right:0;border-bottom:1px solid var(--line)}}
+    @media(max-height:520px){nav{min-height:48px}.hero{min-height:auto;padding:28px 24px}}
+    @media print{nav,.actions,.theme-btn{display:none!important}body{background:#fff;color:#000}}
   </style>
 </head>
 <body>
-  <nav><strong>NORTHSTAR</strong><div><a href="#oferta">Oferta</a><a href="#kontakt">Kontakt</a></div></nav>
+  <nav data-siteos-label="Nawigacja">
+    <strong>PRACOWNIA IMPULS</strong>
+    <div class="nav-links">
+      <a href="#oferta">Metoda</a>
+      <a href="#kontakt">Rozmowa</a>
+      <button type="button" class="theme-btn" onclick="document.documentElement.dataset.theme=document.documentElement.dataset.theme==='night'?'classic':'night'">MOTYW ◐</button>
+    </div>
+  </nav>
   <main>
-    <section class="hero">
+    <section class="hero" data-siteos-label="Hero Editorial">
       <div class="hero-copy">
-        <span class="eyebrow">Strategia, przestrzeń, wzrost</span>
-        <h1>Marka, którą widać i czuć.</h1>
-        <p class="lead">Tworzymy dopracowane miejsca i doświadczenia, które zamieniają pierwsze wrażenie w długą relację.</p>
-        <div class="actions"><a class="button" href="#kontakt">Umów rozmowę</a><a class="button alt" href="#oferta">Zobacz realizacje</a></div>
+        <span class="eyebrow">wydawnictwo cyfrowe · architektura marki · systemy B2B</span>
+        <h1>Spokojna precyzja, która sprzedaje bez krzyku.</h1>
+        <p class="lead">Łączymy redakcyjną dyscyplinę, interaktywne narzędzia decyzyjne i inżynierię konwersji w jedną autorską witrynę.</p>
+        <div class="actions"><a class="button" href="#kontakt">Otwórz teczkę projektu</a><a class="button alt" href="#oferta">Zobacz architekturę</a></div>
       </div>
-      <div class="hero-image" role="img" aria-label="Nowoczesna przestrzeń biurowa"></div>
+      <div class="folio" data-siteos-label="Okładka introligatorska SVG">
+        <svg viewBox="0 0 420 320" role="img" aria-label="Geometryczna ilustracja introligatorska Pracowni">
+          <rect x="8" y="8" width="404" height="304" fill="none" stroke="currentColor" stroke-opacity="0.22"/>
+          <line x1="8" y1="64" x2="412" y2="64" stroke="currentColor" stroke-opacity="0.16"/>
+          <circle cx="210" cy="184" r="82" fill="none" stroke="#b86b3d" stroke-width="1.6"/>
+          <circle cx="210" cy="184" r="46" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.45"/>
+          <path d="M128 184 H292 M210 102 V266" stroke="currentColor" stroke-opacity="0.25"/>
+          <text x="24" y="42" font-family="monospace" font-size="11" fill="currentColor" opacity="0.7">FOLIO NR 01 · ARCHITEKTURA DECYZJI</text>
+          <text x="24" y="294" font-family="monospace" font-size="10" fill="#b86b3d">QUIET LUXURY · TABULAR PRECISION</text>
+        </svg>
+      </div>
     </section>
-    <section class="proof" id="oferta">
-      <article><b>42</b><p>zrealizowane marki</p></article>
-      <article><b>18%</b><p>średni wzrost zapytań</p></article>
-      <article><b>4.9</b><p>ocena współpracy</p></article>
+    <section class="proof" id="oferta" data-siteos-label="Dowody liczbowe">
+      <article><b class="num-tab">42</b><p>wdrożone ekosystemy marek</p></article>
+      <article><b class="num-tab">+34%</b><p>wzrost kwalifikowanych zapytań</p></article>
+      <article><b class="num-tab">99/100</b><p>wynik jakości i czytelności mobilnej</p></article>
     </section>
   </main>
 </body>
@@ -124,22 +190,23 @@ async function writeJson(file, value) {
 
 async function ensureState() {
   await mkdir(dataDir, { recursive: true });
+  await mkdir(uploadsDir, { recursive: true });
   await mkdir(runtimeDir, { recursive: true });
-  const projects = await readJson(projectsFile, []);
-  if (!Array.isArray(projects) || projects.length === 0) {
+  const existingProjects = await readJson(projectsFile, []);
+  if (!Array.isArray(existingProjects) || existingProjects.length === 0) {
     const now = Date.now();
     await writeJson(projectsFile, [{
       id: randomUUID(),
-      name: "Northstar Studio",
+      name: "Pracownia ImPULS",
       html: starterHtml(),
-      brief: { source: "starter" },
+      brief: { source: "starter", archetype: "boutique" },
       createdAt: now,
       updatedAt: now,
       versions: []
     }]);
   }
   const previous = await readJson(runtimeFile, {});
-  const runtime = {
+  const stateRuntime = {
     name: "JARVIS Site OS",
     version,
     localUrl,
@@ -151,15 +218,15 @@ async function ensureState() {
     tunnelUrl: "",
     lastJarvisSeen: Number(previous.lastJarvisSeen || 0)
   };
-  await writeJson(runtimeFile, runtime);
-  return runtime;
+  await writeJson(runtimeFile, stateRuntime);
+  return stateRuntime;
 }
 
 const runtime = await ensureState();
 
 function isLoopback(req) {
   // Tunel łączy się z serwerem lokalnie, dlatego sam remoteAddress nie wystarcza.
-  // Każdy nagłówek proxy oznacza, że żądanie przyszło z zewnątrz.
+  // Każdy nagłówek proxy oznacza, że żądanie przyszło z zewnątrz (Cloudflare / reverse proxy).
   if (req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"] || req.headers.forwarded) return false;
   const address = req.socket.remoteAddress || "";
   return address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1";
@@ -175,6 +242,7 @@ function corsHeaders(req) {
     ...(allowed && origin ? { "Access-Control-Allow-Origin": origin } : {}),
     "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Jarvis-Token",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "X-Content-Type-Options": "nosniff",
     "Vary": "Origin"
   };
 }
@@ -195,14 +263,15 @@ function bearer(req) {
   return auth.startsWith("Bearer ") ? auth.slice(7).trim() : String(req.headers["x-jarvis-token"] || "").trim();
 }
 
-function authorized(req) {
-  return bearer(req) === runtime.token;
+function authorized(req, urlObj = null) {
+  const tok = bearer(req) || (urlObj && isLoopback(req) ? String(urlObj.searchParams.get("token") || "").trim() : "");
+  return Boolean(tok) && tok === runtime.token;
 }
 
-async function bodyJson(req) {
+async function bodyRaw(req, limitBytes = maxBodyBytes) {
   const declaredSize = Number(req.headers["content-length"] || 0);
-  if (declaredSize > maxBodyBytes) {
-    const error = new Error("Projekt jest zbyt duży. Zmniejsz liczbę lub rozmiar grafik.");
+  if (declaredSize > limitBytes) {
+    const error = new Error("Projekt lub plik jest zbyt duży.");
     error.statusCode = 413;
     throw error;
   }
@@ -210,16 +279,21 @@ async function bodyJson(req) {
   const chunks = [];
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > maxBodyBytes) {
-      const error = new Error("Projekt jest zbyt duży. Zmniejsz liczbę lub rozmiar grafik.");
+    if (size > limitBytes) {
+      const error = new Error("Projekt lub plik jest zbyt duży.");
       error.statusCode = 413;
       throw error;
     }
     chunks.push(chunk);
   }
-  if (!chunks.length) return {};
+  return Buffer.concat(chunks);
+}
+
+async function bodyJson(req) {
+  const buf = await bodyRaw(req, maxBodyBytes);
+  if (!buf.length) return {};
   try {
-    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    return JSON.parse(buf.toString("utf8"));
   } catch {
     const error = new Error("Dane żądania mają nieprawidłowy format.");
     error.statusCode = 400;
@@ -236,18 +310,39 @@ async function saveProjects(value) {
   await writeJson(projectsFile, value.slice(0, 200));
 }
 
-function leadClientKey(req) {
+function clientIpKey(req) {
   return String(req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "local").split(",")[0].trim();
 }
 
 function allowLead(req) {
-  const key = leadClientKey(req);
+  const key = clientIpKey(req);
   const now = Date.now();
   const recent = (leadRate.get(key) || []).filter((at) => now - at < 10 * 60 * 1000);
   if (recent.length >= 8) return false;
   recent.push(now);
   leadRate.set(key, recent);
   return true;
+}
+
+function allowPairAttempt(req) {
+  const key = clientIpKey(req);
+  const now = Date.now();
+  const recent = (pairFailures.get(key) || []).filter((at) => now - at < 10 * 60 * 1000);
+  pairFailures.set(key, recent);
+  return recent.length < 5;
+}
+
+function recordPairFailure(req) {
+  const key = clientIpKey(req);
+  const now = Date.now();
+  const recent = (pairFailures.get(key) || []).filter((at) => now - at < 10 * 60 * 1000);
+  recent.push(now);
+  pairFailures.set(key, recent);
+  if (recent.length >= 5) {
+    // Rotacja kodu po serii błędnych prób — ochrona przed brute-force
+    runtime.pairingCode = String(randomInt(100000, 999999));
+    updateRuntime().catch(() => {});
+  }
 }
 
 function cleanLeadValue(value, limit) {
@@ -268,12 +363,17 @@ function cleanProject(input, existing) {
   const html = typeof input.html === "string" ? input.html : existing?.html || starterHtml();
   const versions = Array.isArray(existing?.versions) ? [...existing.versions] : [];
   if (existing?.html && existing.html !== html) {
-    versions.unshift({ at: now, html: existing.html });
+    versions.unshift({
+      at: now,
+      label: typeof input.versionLabel === "string" ? input.versionLabel.slice(0, 80) : "Zapisana migawka",
+      html: existing.html
+    });
     versions.length = Math.min(20, versions.length);
     while (versions.length > 1 && versions.reduce((sum, item) => sum + item.html.length, 0) > 8 * 1024 * 1024) versions.pop();
   }
   return {
     id: existing?.id || (typeof input.id === "string" && input.id) || randomUUID(),
+    jarvisProjectId: (typeof input.jarvisProjectId === "string" && input.jarvisProjectId) || existing?.jarvisProjectId || null,
     name: String(input.name || existing?.name || "Nowy projekt").slice(0, 120),
     html,
     brief: input.brief ?? existing?.brief ?? null,
@@ -290,20 +390,35 @@ async function updateRuntime() {
 
 async function ensureCloudflared() {
   if (process.env.CLOUDFLARED_PATH) return process.env.CLOUDFLARED_PATH;
-  if (process.platform !== "win32") return "cloudflared";
+  if (process.platform !== "win32") {
+    try {
+      const sysBin = execFileSync("which", ["cloudflared"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+      if (sysBin) return sysBin;
+    } catch {
+      /* brak systemowego cloudflared — pobierz oficjalną binarkę dla Linuxa */
+    }
+  }
 
-  const executable = path.join(toolsDir, "cloudflared.exe");
+  const isWin = process.platform === "win32";
+  const isLinux = process.platform === "linux";
+  if (!isWin && !isLinux) return "cloudflared";
+
+  const arch = process.arch === "arm64" ? "arm64" : "amd64";
+  const binName = isWin ? "cloudflared.exe" : `cloudflared-linux-${arch}`;
+  const executable = path.join(toolsDir, binName);
   if (existsSync(executable)) return executable;
 
   await mkdir(toolsDir, { recursive: true });
   const temp = executable + ".download";
-  const source = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe";
-  console.log("Pobieram oficjalny Cloudflare Tunnel…");
+  const assetName = isWin ? "cloudflared-windows-amd64.exe" : `cloudflared-linux-${arch}`;
+  const source = "https://github.com/cloudflare/cloudflared/releases/latest/download/" + assetName;
+  console.log("Pobieram oficjalny Cloudflare Tunnel (" + assetName + ")…");
   const response = await fetch(source, { redirect: "follow" });
   if (!response.ok) throw new Error("Nie udało się pobrać Cloudflare Tunnel (HTTP " + response.status + ").");
   const bytes = Buffer.from(await response.arrayBuffer());
   if (bytes.length < 5_000_000) throw new Error("Pobrany plik Cloudflare Tunnel jest nieprawidłowy.");
   await writeFile(temp, bytes);
+  if (!isWin) await chmod(temp, 0o755);
   await rename(temp, executable);
   console.log("Cloudflare Tunnel jest gotowy.");
   return executable;
@@ -374,9 +489,11 @@ async function serveStatic(req, res, pathname) {
     ".js": "text/javascript; charset=utf-8",
     ".json": "application/json; charset=utf-8",
     ".png": "image/png",
+    ".webp": "image/webp",
+    ".jpg": "image/jpeg",
     ".svg": "image/svg+xml"
   }[ext] || "application/octet-stream";
-  res.writeHead(200, { "Content-Type": mime, "Cache-Control": "no-cache" });
+  res.writeHead(200, { "Content-Type": mime, "Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff" });
   res.end(await readFile(target));
   return true;
 }
@@ -389,6 +506,19 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "OPTIONS") {
       res.writeHead(204, corsHeaders(req));
       return res.end();
+    }
+
+    // P0-2 TWARDA IZOLACJA TUNELU: ruch spoza loopbacka ma dostęp WYŁĄCZNIE do czystego podglądu klienta (/p/:id),
+    // zweryfikowanych grafik (/api/uploads/public/:name) oraz wysyłki formularza leadowego (POST /api/leads/:id).
+    // Panel edytora (/), sesja (/api/session) i parowanie (/api/pair) są całkowicie odcięte od świata (403).
+    if (!isLoopback(req)) {
+      const allowedPublicRoute =
+        (req.method === "GET" && /^\/p\/[a-f0-9-]+$/i.test(pathname)) ||
+        (req.method === "GET" && /^\/api\/uploads\/public\/[a-z0-9._-]+$/i.test(pathname)) ||
+        (req.method === "POST" && /^\/api\/leads\/[a-f0-9-]+$/i.test(pathname));
+      if (!allowedPublicRoute) {
+        return send(req, res, 403, { ok: false, error: "Edytor i API administracyjne są dostępne wyłącznie lokalnie." });
+      }
     }
 
     if (req.method === "GET" && pathname === "/api/health") {
@@ -409,11 +539,34 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && pathname === "/api/pair") {
+      if (!allowPairAttempt(req)) {
+        return send(req, res, 429, { ok: false, error: "Za dużo nieudanych prób parowania. Odczekaj 10 minut." });
+      }
       const input = await bodyJson(req);
-      if (String(input.code || "") !== runtime.pairingCode) return send(req, res, 401, { ok: false, error: "Nieprawidłowy kod parowania." });
+      if (String(input.code || "") !== runtime.pairingCode) {
+        recordPairFailure(req);
+        return send(req, res, 401, { ok: false, error: "Nieprawidłowy kod parowania." });
+      }
       runtime.pairingCode = String(randomInt(100000, 999999));
       await updateRuntime();
       return send(req, res, 200, { ok: true, token: runtime.token, url: localUrl, version });
+    }
+
+    const publicUploadMatch = pathname.match(/^\/api\/uploads\/public\/([a-z0-9._-]+)$/i);
+    if (req.method === "GET" && publicUploadMatch) {
+      const target = path.resolve(uploadsDir, publicUploadMatch[1]);
+      if (!target.startsWith(path.resolve(uploadsDir)) || !existsSync(target)) {
+        return send(req, res, 404, { ok: false, error: "Nie znaleziono grafiki." });
+      }
+      const bytes = await readFile(target);
+      const magic = verifyImageMagicBytes(bytes);
+      if (!magic) return send(req, res, 415, { ok: false, error: "Nieprawidłowy format pliku." });
+      res.writeHead(200, {
+        "Content-Type": magic.mime,
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff"
+      });
+      return res.end(bytes);
     }
 
     const previewMatch = pathname.match(/^\/p\/([a-f0-9-]+)$/i);
@@ -423,7 +576,8 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8",
         "Content-Security-Policy": "frame-ancestors *",
-        "Referrer-Policy": "strict-origin-when-cross-origin"
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "X-Content-Type-Options": "nosniff"
       });
       return res.end(withCapture(project.html, project.id));
     }
@@ -449,11 +603,54 @@ const server = http.createServer(async (req, res) => {
       }
       const list = await readJson(leadsFile, []);
       await writeJson(leadsFile, [lead, ...(Array.isArray(list) ? list : [])].slice(0, 2000));
+      broadcastEvent("lead-created", { projectId: lead.projectId, leadId: lead.id });
       return send(req, res, 201, { ok: true, id: lead.id });
     }
 
-    if (pathname.startsWith("/api/") && !authorized(req)) {
+    if (pathname.startsWith("/api/") && !authorized(req, url)) {
       return send(req, res, 401, { ok: false, error: "Brak autoryzacji Site OS." });
+    }
+
+    // Strumień SSE czasu rzeczywistego (eliminuje opóźnienia pollingu między edytorem a JARVISEM)
+    if (req.method === "GET" && pathname === "/api/events") {
+      res.writeHead(200, {
+        ...corsHeaders(req),
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive"
+      });
+      res.write(`event: connected\ndata: ${JSON.stringify({ version, at: Date.now() })}\n\n`);
+      sseClients.add(res);
+      const keepAlive = setInterval(() => {
+        try { res.write(": ping\n\n"); } catch { sseClients.delete(res); }
+      }, 20000);
+      req.on("close", () => {
+        clearInterval(keepAlive);
+        sseClients.delete(res);
+      });
+      return;
+    }
+
+    // Bezpieczny magazyn grafik z weryfikacją binarnych Magic Bytes (blokuje SVG XSS)
+    if (req.method === "POST" && pathname === "/api/uploads") {
+      const raw = await bodyRaw(req, 5 * 1024 * 1024);
+      let bytes = raw;
+      const ctype = String(req.headers["content-type"] || "");
+      if (ctype.includes("application/json")) {
+        let parsed;
+        try { parsed = JSON.parse(raw.toString("utf8")); } catch { return send(req, res, 400, { ok: false, error: "Nieprawidłowy JSON uploadu." }); }
+        const dataUrl = String(parsed.dataUrl || "");
+        const base64Match = dataUrl.match(/^data:image\/[a-z0-9.+-]+;base64,([a-z0-9+/=\s]+)$/i);
+        if (!base64Match) return send(req, res, 415, { ok: false, error: "Dozwolone są wyłącznie obrazy PNG, JPEG i WebP." });
+        bytes = Buffer.from(base64Match[1], "base64");
+      }
+      const magic = verifyImageMagicBytes(bytes);
+      if (!magic) {
+        return send(req, res, 415, { ok: false, error: "Odrzucono plik: nieprawidłowe Magic Bytes (wymagane PNG, JPEG lub WebP; SVG zablokowane)." });
+      }
+      const filename = `${Date.now()}-${randomBytes(6).toString("hex")}${magic.ext}`;
+      await writeFile(path.join(uploadsDir, filename), bytes);
+      return send(req, res, 201, { ok: true, url: `/api/uploads/public/${filename}`, mime: magic.mime, size: bytes.length });
     }
 
     if (req.method === "POST" && pathname === "/api/commands") {
@@ -472,10 +669,11 @@ const server = http.createServer(async (req, res) => {
         createdAt: Date.now()
       };
       await writeJson(commandsFile, [command, ...(Array.isArray(list) ? list : [])].slice(0, 200));
+      broadcastEvent("command-queued", { commandId: command.id, projectId: command.projectId });
       return send(req, res, 201, {
         ok: true,
         command,
-        connected: Date.now() - Number(runtime.lastJarvisSeen || 0) < 45000
+        connected: Date.now() - Number(runtime.lastJarvisSeen || 0) < 45000 || sseClients.size > 0
       });
     }
 
@@ -506,11 +704,13 @@ const server = http.createServer(async (req, res) => {
         const projectList = await projects();
         const existing = projectList.find((item) => item.id === command.projectId);
         if (existing) {
-          const project = cleanProject({ html: input.html }, existing);
+          const project = cleanProject({ html: input.html, versionLabel: "Przed zmianą JARVIS AI" }, existing);
           await saveProjects([project, ...projectList.filter((item) => item.id !== project.id)]);
+          broadcastEvent("project-updated", { projectId: project.id, source: "jarvis" });
         }
       }
       await writeJson(commandsFile, list);
+      broadcastEvent("command-done", { commandId: command.id, projectId: command.projectId, status: command.status, error: command.error });
       return send(req, res, 200, { ok: true, command });
     }
 
@@ -526,9 +726,15 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && (pathname === "/api/projects" || pathname === "/api/public/projects")) {
       const input = await bodyJson(req);
       const list = await projects();
-      const project = cleanProject(input);
+      // P1-4 UPSERT: aktualizuj istniejący projekt po id lub jarvisProjectId zamiast tworzyć duplikaty
+      const matched = list.find((item) =>
+        (typeof input.id === "string" && input.id && item.id === input.id) ||
+        (typeof input.jarvisProjectId === "string" && input.jarvisProjectId && item.jarvisProjectId === input.jarvisProjectId)
+      );
+      const project = cleanProject(input, matched);
       await saveProjects([project, ...list.filter((item) => item.id !== project.id)]);
-      return send(req, res, 201, { ok: true, project });
+      broadcastEvent("project-updated", { projectId: project.id, source: matched ? "upsert" : "create" });
+      return send(req, res, matched ? 200 : 201, { ok: true, project, upserted: Boolean(matched) });
     }
 
     const projectMatch = pathname.match(/^\/api\/(?:public\/)?projects\/([a-f0-9-]+)$/i);
@@ -541,6 +747,7 @@ const server = http.createServer(async (req, res) => {
         const input = await bodyJson(req);
         const project = cleanProject(input, existing);
         await saveProjects([project, ...list.filter((item) => item.id !== project.id)]);
+        broadcastEvent("project-updated", { projectId: project.id, source: "editor" });
         return send(req, res, 200, { ok: true, project });
       }
       if (req.method === "DELETE") {
@@ -566,8 +773,8 @@ const server = http.createServer(async (req, res) => {
     if (await serveStatic(req, res, pathname)) return;
     send(req, res, 404, { ok: false, error: "Nie znaleziono." });
   } catch (error) {
-    console.error(error);
     const status = Number(error?.statusCode) || 500;
+    if (status >= 500) console.error(error);
     send(req, res, status, { ok: false, error: error instanceof Error ? error.message : "Błąd Site OS." });
   }
 });
@@ -601,6 +808,8 @@ server.listen(port, host, () => {
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, async () => {
     await stopTunnel();
+    for (const c of sseClients) { try { c.end(); } catch { /* ignore */ } }
+    sseClients.clear();
     server.close(() => process.exit(0));
   });
 }

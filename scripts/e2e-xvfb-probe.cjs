@@ -368,12 +368,11 @@ async function main() {
     await sleep(2500);
 
     await cdp.eval(`(async () => {
-      for (let step = 0; step < 6; step++) {
-        if (document.querySelector("textarea")) break;
+      for (let step = 0; step < 24; step++) {
+        if (!document.querySelector(".boot") && document.querySelector("textarea")) break;
         const btn = [...document.querySelectorAll("button")].find(b => /pomiń|pomin|dalej|uruchom jarvis|zacznij|rozpocznij|gotowe/i.test(b.innerText || ""));
-        if (!btn) break;
-        btn.click();
-        await new Promise(r => setTimeout(r, 400));
+        if (btn) btn.click();
+        await new Promise(r => setTimeout(r, 350));
       }
       return !!document.querySelector("textarea");
     })()`);
