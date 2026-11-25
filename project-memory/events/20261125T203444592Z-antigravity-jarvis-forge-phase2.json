@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-11-25T20:34:44.592Z",
+  "taskId": "jarvis-forge-phase2",
+  "agent": "antigravity",
+  "branch": "feat/jarvis-forge-evolution",
+  "startCommit": "eeb8cb2",
+  "endCommit": "UNCOMMITTED",
+  "summary": "Faza 2 Forge: audyt i utwardzenie bezpieczeństwa (polityka zdolności komend, sanitizeChildEnv, blokada .git/.env/symlinków, obrona prompt-injection), 3 kategorie kosztów + PromoBudgetGovernor (Billed=/bin/bash.00), izolacja git worktree, impact analysis 2-hop, SSE reconnect, żywe benchmarki na Ollama qwen2.5-coder:3b i Modal A100 Qwen3-32B-AWQ (~.05 promo, /bin/bash.00 Billed), poprawki z testów live (Edit-Lint-Revert, Completeness Gate, inline tool JSON, porcelain trimEnd) oraz skrypt odbioru Ubuntu (npm run forge:accept).",
+  "changedFiles": [
+    "docs/FORGE_UBUNTU_ACCEPTANCE.md",
+    "forge/budget.mjs",
+    "forge/cli.mjs",
+    "forge/engine.mjs",
+    "forge/modal-bridge.py",
+    "forge/providers.mjs",
+    "forge/repo-intel.mjs",
+    "forge/security.mjs",
+    "forge/server.mjs",
+    "forge/workspace.mjs",
+    "forge/worktree.mjs",
+    "package.json",
+    "project-memory/CURRENT_STATE.md",
+    "project-memory/journal/failed-attempts.md",
+    "project-memory/reports/build.json",
+    "project-memory/reports/lint.json",
+    "project-memory/reports/secret-scan.json",
+    "project-memory/reports/test.json",
+    "roject-memory/CURRENT_STATE.json",
+    "scripts/forge-ubuntu-acceptance.mjs",
+    "src/lib/forgeClient.ts",
+    "tests/jarvisForgePhase2Hardening.test.ts"
+  ],
+  "commands": [
+    {
+      "command": "npm run tools:verify",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run test:e2e:xvfb",
+      "exitCode": 0
+    },
+    {
+      "command": "node scripts/forge-ubuntu-acceptance.mjs --skip-live-task",
+      "exitCode": 0
+    }
+  ],
+  "testResults": [
+    {
+      "check": "secret-scan",
+      "status": "PASS",
+      "source": "report",
+      "command": "node scripts/secret-scan.mjs --all",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/secret-scan.json",
+      "reportCommit": "7c00e534448eb726c69f0a25a1d7734b8f259af8",
+      "reportDigest": "b36f2f9c6fbac54e4ca2f75580ce32b2b4dbc9f812d53e45c44c0c80b2749645",
+      "finishedAt": "2026-11-25T20:26:34.134Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto."
+    },
+    {
+      "check": "lint",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/lint.json",
+      "reportCommit": "7c00e534448eb726c69f0a25a1d7734b8f259af8",
+      "reportDigest": "9953bfe86119ce3ba5a202e57b5cc638db302f903568c333685ba5105af58947",
+      "finishedAt": "2026-11-25T20:27:00.198Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu"
+    },
+    {
+      "check": "test",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm test",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/test.json",
+      "reportCommit": "7c00e534448eb726c69f0a25a1d7734b8f259af8",
+      "reportDigest": "73de37145f88cd20ee04bf63c9de33d4ef45cfcc7208a8c272c4674bb4d2debb",
+      "finishedAt": "2026-11-25T20:32:11.354Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Test Files  374 passed (374) · Tests  3139 passed (3139)"
+    },
+    {
+      "check": "build",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run build",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/build.json",
+      "reportCommit": "7c00e534448eb726c69f0a25a1d7734b8f259af8",
+      "reportDigest": "a56f2974da0006526f9ac4f5aa7a5a154188d3a75bb0cc988da68d47e31f5f98",
+      "finishedAt": "2026-11-25T20:32:54.990Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · built in 15.49s"
+    }
+  ],
+  "problems": [
+    "Brak kluczy API kategorii B (Gemini/Groq/Cerebras/Mistral/OpenRouter) w VM — kategoria api_free zweryfikowana kontraktowo.",
+    "Deployed Modal app jarvis-brain wpada w CUDA OOM na 1x L4 (24 GB VRAM, MAX_MODEL_LEN=16384 bez --enforce-eager); pozostawiono do decyzji właściciela.",
+    "Benchmark 3 (greenfield DAG scheduler) uczciwie zatrzymany jako BLOCKED po 240s przez PromoBudgetGovernor (1/7 testów PASS).",
+    "Brak natywnej binarki Electron w VM — odbiór natywnego Electron IPC i lokalnej GPU wymaga uruchomienia npm run forge:accept na fizycznym Ubuntu."
+  ],
+  "hypotheses": [],
+  "nextStep": "Uruchomić npm run forge:accept na fizycznym Ubuntu (Ollama 7B-14B lub darmowy klucz API), naprawić OOM L4 w deploy/modal_brain.py i zdecydować o scaleniu feat/jarvis-forge-evolution.",
+  "relatedDecisions": [
+    "ADR-0009"
+  ],
+  "redactions": 0
+}
