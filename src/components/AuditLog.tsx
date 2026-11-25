@@ -42,8 +42,8 @@ export default function AuditLog({ onClose }: { onClose: () => void }) {
       footStyle={{ display: "flex", gap: 8 }}
       foot={
         <>
-          {all.length > 0 && <button className="btn" onClick={exportJson}>📋 Eksport</button>}
-          {all.length > 0 && <button className="btn" onClick={clearAll}>🗑 Wyczyść</button>}
+          {all.length > 0 && <button className="btn" style={{ width: "auto" }} onClick={exportJson}>📋 Eksport</button>}
+          {all.length > 0 && <button className="btn" style={{ width: "auto" }} onClick={clearAll}>🗑 Wyczyść</button>}
           <button className="btn primary" style={{ flex: 1 }} onClick={onClose}>Zamknij</button>
         </>
       }

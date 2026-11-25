@@ -508,13 +508,13 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, onConnections,
           </button>
           {bulkMsg && <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>{bulkMsg}</p>}
 
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button className="btn primary" style={{ flex: 1 }} onClick={() => setShowPlan(true)}>
+          <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+            <button className="btn primary" style={{ flex: "1 1 180px", marginTop: 0 }} onClick={() => setShowPlan(true)}>
               🎯 Plan na dziś{todoCount ? ` (${todoCount})` : ""}
             </button>
-            <button className="btn" onClick={() => setShowImport((v) => !v)} title="Wklej listę firm">📥 Import</button>
-            <button className="btn" onClick={exportCsv} title="Eksport do Excela/Arkuszy">📤 CSV</button>
-            <button className="btn" onClick={exportLora} title="Dane treningowe LoRA Twój głos (zanonimizowane)">🧠 Trening</button>
+            <button className="btn" style={{ width: "auto", marginTop: 0 }} onClick={() => setShowImport((v) => !v)} title="Wklej listę firm">📥 Import</button>
+            <button className="btn" style={{ width: "auto", marginTop: 0 }} onClick={exportCsv} title="Eksport do Excela/Arkuszy">📤 CSV</button>
+            <button className="btn" style={{ width: "auto", marginTop: 0 }} onClick={exportLora} title="Dane treningowe LoRA Twój głos (zanonimizowane)">🧠 Trening</button>
           </div>
           {(store.settings.salesOsUrl || "").trim() && (
             <div className="sales-os-actions">
@@ -560,9 +560,9 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, onConnections,
                 placeholder={"Wklej listę firm — jedna na linię, albo z danymi:\nSalon Ola, 600100200, biuro@ola.pl, Kraków\nWarsztat Marek; 501502503; Wrocław"}
                 className="ta" style={{ minHeight: "14vh", fontSize: 13 }}
               />
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="btn primary" style={{ flex: 1 }} onClick={doImport}>✅ Importuj</button>
-                <button className="btn" onClick={() => { setShowImport(false); setImportText(""); }}>Anuluj</button>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button className="btn primary" style={{ flex: 1, marginTop: 0 }} onClick={doImport}>✅ Importuj</button>
+                <button className="btn" style={{ width: "auto", marginTop: 0 }} onClick={() => { setShowImport(false); setImportText(""); }}>Anuluj</button>
               </div>
               <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>
                 Rozpoznaję telefon, e-mail, stronę i miasto automatycznie. Obsługuję też CSV z nagłówkiem (Firma, Telefon, E-mail, Miasto).

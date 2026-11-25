@@ -130,7 +130,7 @@ export default function ChatHistory({
           )}
         </div>
         <div className="panel-foot" style={{ display: "flex", gap: 8 }}>
-          {chats.length > 0 && <button className="btn" onClick={clearAll}>🗑 Wyczyść</button>}
+          {chats.length > 0 && <button className="btn" style={{ width: "auto" }} onClick={clearAll}>🗑 Wyczyść</button>}
           <button className="btn" style={{ flex: 1 }} onClick={onClose}>Zamknij</button>
         </div>
       </div>

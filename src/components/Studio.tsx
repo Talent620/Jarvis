@@ -422,10 +422,10 @@ export default function Studio({ onClose }: { onClose: () => void }) {
                   <div style={{ fontSize: 13, fontWeight: 600 }}>🤖 Zrozumiałem tak:</div>
                   <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>{plan.summary || plan.prompt}</p>
                   <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                    <button className="btn primary" style={{ flex: 1 }} onClick={confirmGen} disabled={busy}>
+                    <button className="btn primary" style={{ flex: "1 1 180px", marginTop: 0 }} onClick={confirmGen} disabled={busy}>
                       ✅ Generuj{model === "fal-flux-kontext" || model === "fal-nano-banana" ? " (płatne ~$0.04–0.08)" : ""}
                     </button>
-                    <button className="btn" onClick={() => setPlan(null)}>✏ Popraw opis</button>
+                    <button className="btn" style={{ width: "auto", marginTop: 0 }} onClick={() => setPlan(null)}>✏ Popraw opis</button>
                   </div>
                 </>
               ) : (
@@ -472,8 +472,8 @@ export default function Studio({ onClose }: { onClose: () => void }) {
                 <button className="chip" onClick={() => downloadAs("image/webp", "webp")}>⬇ WEBP</button>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                <button className="btn" style={{ flex: 1 }} onClick={editFurther}>✏ Edytuj dalej</button>
-                {history.length > 1 && <button className="btn" onClick={undo}>↩ Cofnij wersję</button>}
+                <button className="btn" style={{ flex: "1 1 160px", marginTop: 0 }} onClick={editFurther}>✏ Edytuj dalej</button>
+                {history.length > 1 && <button className="btn" style={{ width: "auto", marginTop: 0 }} onClick={undo}>↩ Cofnij wersję</button>}
               </div>
               {history.length > 1 && <p className="muted" style={{ fontSize: 12 }}>Wersja {history.length} — możesz cofać i nakładać kolejne zmiany.</p>}
             </div>
