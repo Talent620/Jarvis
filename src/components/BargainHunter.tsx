@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { useStore } from "../hooks/useStore";
 import { copyWithToast, toast } from "../lib/toast";
 import { resolveProvider } from "../lib/brain";
@@ -45,6 +46,7 @@ function WatchTrend({ item }: { item: WatchedItem }) {
 
 export default function BargainHunter({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data } = useStore();
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
@@ -113,7 +115,7 @@ export default function BargainHunter({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Łowca Okazji" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

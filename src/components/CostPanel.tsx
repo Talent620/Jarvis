@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
 import { primaryKey } from "../lib/keys";
@@ -25,6 +26,7 @@ const num = (n: number) => n.toLocaleString("pl-PL");
 // rozbicie per dostawca/model, prognoza miesięczna i budżet. Dane lokalne (localStorage).
 export default function CostPanel({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [tick, setTick] = useState(0); // odśwież po wyczyszczeniu / zmianie budżetu
   const [budget, setBudget] = useState(String(store.settings.aiMonthlyBudgetUsd || ""));
   const [pricing, setPricing] = useState(store.settings.aiPricingOverrides || "");
@@ -95,7 +97,7 @@ export default function CostPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Koszty AI" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Koszty AI" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

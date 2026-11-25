@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { useStore } from "../hooks/useStore";
 import { store } from "../lib/store";
 import { toast } from "../lib/toast";
@@ -14,6 +15,7 @@ const uid = () => `fp_${Date.now().toString(36)}${Math.random().toString(36).sli
 
 export default function FinancialDashboard({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data } = useStore();
   const projects = data.financeProjects || [];
   const k = financeKpis(projects);
@@ -89,7 +91,7 @@ export default function FinancialDashboard({ onClose }: { onClose: () => void })
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-xl" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Financial Intelligence" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head"><div className="grabber" /><div className="panel-head-row"><h2>💰 Financial Intelligence</h2><button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button></div></div>
         <div className="panel-body">
           {/* KPI */}

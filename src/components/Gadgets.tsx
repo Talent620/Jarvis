@@ -10,6 +10,7 @@ import {
 } from "../lib/vault";
 import { isDesktop, typeText } from "../lib/desktop";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 
 type Tab = "torch" | "magnify" | "compass" | "level" | "noise" | "timer" | "metro" | "rec" | "nfc" | "pass" | "dice" | "qr" | "cipher" | "pulse" | "vault";
 
@@ -969,10 +970,11 @@ function Vault() {
 
 export default function Gadgets({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [tab, setTab] = useState<Tab>("torch");
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Gadżety — multi-tool" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

@@ -8,6 +8,7 @@ import { useStore } from "../hooks/useStore";
 import { LANGS, getLang } from "../lib/langs";
 import { copyWithToast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 
 // Tryb Tłumacza — rozmowa na żywo dwóch osób w różnych językach, z głosem
 // PREMIUM (Gemini TTS — naturalny, wielojęzyczny). Strona A mówi → JARVIS
@@ -18,6 +19,7 @@ interface Turn { side: "A" | "B"; src: string; dst: string; }
 
 export default function Translator({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { settings } = useStore();
   const [a, setA] = useState("pl");
   const [b, setB] = useState("uk");
@@ -138,7 +140,7 @@ export default function Translator({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Tłumacz na żywo" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

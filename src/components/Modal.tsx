@@ -1,8 +1,112 @@
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useEscape } from "../hooks/useEscape";
 import { useDirtyClose } from "../hooks/useDirtyClose";
 import { FOCUSABLE_SELECTOR, nextTrapIndex } from "../lib/a11y";
+
+let activeSheetCount = 0;
+
+/**
+ * Wspólna, jedyna implementacja pułapki i przywracania fokusu dla <Modal> oraz starszych arkuszy .sheet.
+ * - Po otwarciu przenosi fokus do pierwszego elementu interaktywnego (lub samego panelu).
+ * - Tab / Shift+Tab zawijają fokus wewnątrz aktywnego okna dialogowego.
+ * - Po zamknięciu przywraca fokus do elementu wywołującego sprzed otwarcia.
+ * - Utrzymuje klasę `body.sheet-open`, aby dymki `.toast` nie zasłaniały nagłówka ani przycisku `×`.
+ */
+export function useModalFocusTrap() {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const prevFocus = useRef<Element | null>(null);
+  const capturedPrev = useRef(false);
+
+  const trapTabEvent = useCallback((e: { key: string; shiftKey: boolean; defaultPrevented: boolean; preventDefault: () => void }) => {
+    if (e.key !== "Tab" || e.defaultPrevented) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    if (typeof document !== "undefined") {
+      const dialogs = document.querySelectorAll<HTMLElement>('.sheet [role="dialog"]');
+      if (dialogs.length > 1 && dialogs[dialogs.length - 1] !== panel) return;
+    }
+    const hasLayout = panel.offsetParent !== null || panel.getClientRects().length > 0;
+    const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => {
+      if (el.closest("[hidden], [aria-hidden='true']")) return false;
+      if (el === panel) return true;
+      if (!hasLayout) return true;
+      return el.offsetParent !== null || el.getClientRects().length > 0;
+    });
+    if (items.length === 0) {
+      e.preventDefault();
+      panel.focus?.();
+      return;
+    }
+    const active = (typeof document !== "undefined" ? document.activeElement : null) as HTMLElement | null;
+    const idx = active ? items.indexOf(active) : -1;
+    const next =
+      idx < 0
+        ? (e.shiftKey ? items.length - 1 : 0)
+        : nextTrapIndex(items.length, idx, e.shiftKey);
+    if (next >= 0) {
+      e.preventDefault();
+      items[next]?.focus?.();
+    }
+  }, []);
+
+  const setPanelRef = useCallback((panel: HTMLDivElement | null) => {
+    const previous = panelRef.current;
+    panelRef.current = panel;
+    if (panel && panel !== previous) {
+      if (!capturedPrev.current && typeof document !== "undefined") {
+        capturedPrev.current = true;
+        prevFocus.current = document.activeElement;
+      }
+      const first = panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      (first ?? panel).focus?.();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!capturedPrev.current && typeof document !== "undefined") {
+      capturedPrev.current = true;
+      prevFocus.current = document.activeElement;
+    }
+    const tracked = typeof document !== "undefined";
+    if (tracked) {
+      activeSheetCount += 1;
+      document.body.classList.add("sheet-open");
+    }
+    const panel = panelRef.current;
+    if (panel && typeof document !== "undefined" && !panel.contains(document.activeElement)) {
+      const first = panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      (first ?? panel).focus?.();
+    }
+    const onDocKeyDown = (ev: KeyboardEvent) => trapTabEvent(ev);
+    if (tracked) document.addEventListener("keydown", onDocKeyDown, true);
+    return () => {
+      if (tracked) document.removeEventListener("keydown", onDocKeyDown, true);
+      capturedPrev.current = false;
+      if (tracked) {
+        activeSheetCount = Math.max(0, activeSheetCount - 1);
+        if (activeSheetCount === 0) document.body.classList.remove("sheet-open");
+      }
+      try {
+        const prev = prevFocus.current as HTMLElement | null;
+        if (prev && (typeof document === "undefined" || document.contains(prev))) {
+          prev.focus?.();
+        }
+      } catch { /* ignore */ }
+    };
+  }, [trapTabEvent]);
+
+  const onKeyDownTrap = useCallback(
+    (e: ReactKeyboardEvent<HTMLDivElement>) => trapTabEvent(e),
+    [trapTabEvent],
+  );
+
+  return {
+    ref: setPanelRef,
+    onKeyDown: onKeyDownTrap,
+    tabIndex: -1 as const,
+  };
+}
 
 // Wspólny „arkusz" (modal/panel) — jedno miejsce dla powtarzanej w ~37 ekranach struktury
 // .sheet/.panel/.panel-head/.panel-body/.panel-foot. Zachowanie 1:1 z dotychczasowym (klik w tło
@@ -32,39 +136,13 @@ export default function Modal({
   const close = dirty ? guardedClose : onClose;
   useEscape(close);
   const label = ariaLabel ?? (typeof title === "string" ? title : undefined);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  // Przywróć fokus do elementu sprzed otwarcia (po zamknięciu) + PRZENIEŚ fokus do modala po otwarciu
-  // (pierwsze pole albo sam panel) — dostępność klawiatury i czytnika ekranu.
-  const prevFocus = useRef<Element | null>(null);
-  useEffect(() => {
-    prevFocus.current = typeof document !== "undefined" ? document.activeElement : null;
-    const panel = panelRef.current;
-    if (panel) {
-      const first = panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-      (first ?? panel).focus?.();
-    }
-    return () => { try { (prevFocus.current as HTMLElement | null)?.focus?.(); } catch { /* ignore */ } };
-  }, []);
-  // Pułapka fokusu: Tab/Shift+Tab zawija WEWNĄTRZ modala (nie ucieka na tło = tło niedostępne z klawiatury).
-  const onKeyDownTrap = (e: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== "Tab") return;
-    const panel = panelRef.current;
-    if (!panel) return;
-    const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => el.offsetParent !== null || el === panel);
-    if (items.length === 0) { e.preventDefault(); return; }
-    const active = document.activeElement as HTMLElement | null;
-    const idx = active ? items.indexOf(active) : -1;
-    const next = nextTrapIndex(items.length, idx < 0 ? (e.shiftKey ? 0 : items.length - 1) : idx, e.shiftKey);
-    if (next >= 0) { e.preventDefault(); items[next]?.focus?.(); }
-  };
+  const dialogTrap = useModalFocusTrap();
   return (
     <div className="sheet" onClick={close}>
       <div
-        ref={panelRef}
+        {...dialogTrap}
         className={"panel" + (className ? " " + className : "")}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={onKeyDownTrap}
-        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={label}

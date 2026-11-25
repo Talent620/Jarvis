@@ -4,6 +4,7 @@ import { brandImageSuffix } from "../lib/brandKit";
 import { enhanceImagePrompt, IMAGE_STYLES, type ImageStyle } from "../lib/imagePrompt";
 import { capturePhoto } from "../lib/camera";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { store } from "../lib/store";
 import { parseKeys } from "../lib/keys";
 import { toast } from "../lib/toast";
@@ -59,6 +60,7 @@ const PRESETS: { label: string; prompt: string }[] = [
 
 export default function Studio({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   // Domyślnie najlepszy DOSTĘPNY generator: serwer SD > Gemini (klucz) > darmowy bez klucza.
   // Dzięki temu Studio działa od razu, nawet bez żadnej konfiguracji (Pollinations).
   const [model, setModel] = useState<ImageModelId>(bestImageModel());
@@ -267,7 +269,7 @@ export default function Studio({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-xl" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Studio Obrazów" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

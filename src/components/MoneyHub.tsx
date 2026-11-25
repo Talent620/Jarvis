@@ -4,10 +4,12 @@ import { generateContentPack, generateProductIdeas } from "../lib/content";
 import { runProspecting } from "../lib/prospect";
 import { copyWithToast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import Guide from "./Guide";
 
 export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => void; onSales: () => void; onWeb: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data } = useStore();
   const leads = useMemo(() => data.leads || [], [data.leads]);
   const [niche, setNiche] = useState("");
@@ -54,7 +56,7 @@ export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => v
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Zarabianie" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Zarabianie" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

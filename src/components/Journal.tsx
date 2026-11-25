@@ -3,6 +3,7 @@ import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import type { JournalEntry } from "../types";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 
 // Osobisty dziennik — przejrzysta baza przemyśleń. Oddzielne wpisy (nie jeden ciąg),
 // z tytułem, tagami i wyszukiwaniem. Można wyeksportować do pliku (np. pod książkę).
@@ -50,6 +51,7 @@ function exportMarkdown(entries: JournalEntry[]) {
 
 export default function Journal({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data } = useStore();
   const entries = useMemo(() => data.journal || [], [data.journal]);
   const [query, setQuery] = useState("");
@@ -148,7 +150,7 @@ export default function Journal({ onClose }: { onClose: () => void }) {
   if (editing) {
     return (
       <div className="sheet" onClick={onClose}>
-        <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label={editing === "new" ? "Nowy wpis dziennika" : "Edycja wpisu dziennika"} onClick={(e) => e.stopPropagation()}>
           <div className="panel-head">
             <div className="grabber" />
             <div className="panel-head-row">
@@ -210,7 +212,7 @@ export default function Journal({ onClose }: { onClose: () => void }) {
   // --- Widok listy ---
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Mój dziennik" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

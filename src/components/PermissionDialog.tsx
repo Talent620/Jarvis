@@ -4,6 +4,8 @@ import { createListener, isSpeechSupported, speak, stopSpeaking, type VoiceListe
 import { parseVoiceConsent } from "../lib/voiceConsent";
 import { feedback } from "../lib/feedback";
 import { store } from "../lib/store";
+import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 
 const LABELS: Record<string, string> = {
   make_call: "Zadzwonić",
@@ -43,6 +45,8 @@ export default function PermissionDialog({
     decidedRef.current = true;
     onDecision(allow, rememberFlag);
   };
+  useEscape(() => finish(false, false));
+  const dialogTrap = useModalFocusTrap();
   const label = LABELS[req.tool] ?? req.tool;
   const summary = JSON.stringify(req.input ?? {}, null, 0).slice(0, 200);
 
@@ -98,7 +102,7 @@ export default function PermissionDialog({
 
   return (
     <div className="sheet" style={{ zIndex: 60 }}>
-      <div className="panel" role="dialog" aria-modal="true" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel" role="dialog" aria-modal="true" aria-label="Zgoda na akcję" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

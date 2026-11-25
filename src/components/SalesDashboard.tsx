@@ -17,6 +17,7 @@ import { openSalesOs, syncFromSalesOs, pushLeadsToSalesOs, flushSalesOsOutreach,
 import { copyWithToast, toast } from "../lib/toast";
 import type { Lead, LeadStatus } from "../types";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import LeadDetail from "./LeadDetail";
 import SalesPlan from "./SalesPlan";
 import { leadBucket, type CrmBucket } from "../lib/crmBuckets";
@@ -61,6 +62,7 @@ function numOrUndef(v: string): number | undefined {
 
 export default function SalesDashboard({ onClose, onWeb, onMoney, onConnections, embedded, bucket }: { onClose: () => void; onWeb?: (ctx?: GrowthContext) => void; onMoney?: () => void; onConnections?: () => void; embedded?: boolean; bucket?: CrmBucket }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data, settings } = useStore();
   const leads = useMemo(() => data.leads || [], [data.leads]);
   const [filter, setFilter] = useState<LeadStatus | "all" | "call" | "emailed">("all");
@@ -727,7 +729,7 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, onConnections,
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Pulpit Sprzedaży" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Pulpit Sprzedaży" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

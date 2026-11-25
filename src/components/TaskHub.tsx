@@ -4,6 +4,7 @@ import { useStore } from "../hooks/useStore";
 import { parseQuickTask, nextRepeat } from "../lib/taskParser";
 import { gcalEventUrl } from "../lib/glinks";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import type { Task } from "../types";
 
 // Centrum Zadań w stylu Nozbe (GTD): Priorytet (dzisiejszy fokus), Dziś,
@@ -16,6 +17,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function TaskHub({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data } = useStore();
   const tasks = useMemo(() => data.tasks || [], [data.tasks]);
   const projects = data.projects || [];
@@ -149,7 +151,7 @@ export default function TaskHub({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Zadania Pro" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

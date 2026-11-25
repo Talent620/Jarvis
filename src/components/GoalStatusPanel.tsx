@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { isGoalRunning, requestGoalPause } from "../lib/goalControl";
 import { loadGoalsNewestFirst, resumeAndRunGoal } from "../lib/goalRuntime";
 import { pauseGoal, removeGoal, upsertGoal, describeGoal, type GoalRecord, type GoalStatus } from "../lib/goalState";
@@ -19,6 +20,7 @@ const canStop = (s: GoalStatus) => s === "running" || s === "queued" || s === "w
 
 export default function GoalStatusPanel({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [goals, setGoals] = useState<GoalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export default function GoalStatusPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Cele prowadzone przez JARVIS" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

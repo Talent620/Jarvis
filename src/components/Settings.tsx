@@ -57,6 +57,7 @@ import WebllmPanel from "./WebllmPanel";
 import type { ProviderId } from "../lib/providers/types";
 import type { Settings } from "../types";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { listPlugins } from "../plugins/PluginRegistry";
 import { hourlyActivity, resetAdaptive } from "../lib/usage";
 import Toggle from "./Toggle";
@@ -138,6 +139,7 @@ function revealSetting(anchor?: string): void {
 
 export default function SettingsPanel({ onClose, initialTab = "ai", initialAnchor }: SettingsPanelProps) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [s, setS] = useState<Settings>(() => ({ ...store.settings, keys: { ...store.settings.keys } }));
   const [tab, setTabRaw] = useState<Tab>(initialTab);
   const [settingsGroup, setSettingsGroup] = useState<SettingsGroup>(() => initialTab ? groupOfTab(initialTab) : DEFAULT_SETTINGS_GROUP);
@@ -667,7 +669,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Ustawienia" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Ustawienia" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

@@ -8,6 +8,7 @@
 import { useMemo, useState } from "react";
 import { useStore } from "../hooks/useStore";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { loadJson, saveJson } from "../lib/lsJson";
 import {
   planDailyGrowth, actionToPlan, recordDecision, DEFAULT_ORCH_WEIGHTS,
@@ -26,6 +27,7 @@ const riskLabel: Record<GrowthAction["risk"], string> = { low: "niskie", medium:
 
 export default function GrowthDayPanel({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data } = useStore();
   const [weights, setWeights] = useState<OrchestratorWeights>(() => loadJson<OrchestratorWeights>(WEIGHTS_KEY, DEFAULT_ORCH_WEIGHTS));
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -85,7 +87,7 @@ export default function GrowthDayPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Plan dnia" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

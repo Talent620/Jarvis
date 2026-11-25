@@ -1,9 +1,11 @@
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 export default function Help({ onClose, onFaq }: { onClose: () => void; onFaq?: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Pomoc — co potrafi JARVIS" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

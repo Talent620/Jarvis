@@ -6,6 +6,7 @@
 
 import { useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { useStore } from "../hooks/useStore";
 import { toast } from "../lib/toast";
 import { MARKETING_TABS, campaignStatusLabel, campaignMainAction, type MarketingTab } from "../lib/marketingModel";
@@ -17,6 +18,7 @@ import BrandKit from "./BrandKit";
 
 export default function MarketingWorkspace({ onClose, initialTab = "content" }: { onClose: () => void; initialTab?: MarketingTab }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data } = useStore();
   const [tab, setTab] = useState<MarketingTab>(initialTab);
   const campaigns = useMemo(() => data.campaigns || [], [data.campaigns]);
@@ -34,7 +36,7 @@ export default function MarketingWorkspace({ onClose, initialTab = "content" }: 
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-xl" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Marketing" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

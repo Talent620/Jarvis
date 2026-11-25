@@ -9,6 +9,7 @@ import { conversionAudit, conversionFixInstruction } from "../lib/conversionAi";
 import { assessSeo, seoFixInstruction } from "../lib/seoPreview";
 import { buildRobotsTxt, buildSitemapXml, extractInternalPaths, normalizeDomain } from "../lib/siteSeoFiles";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { copyWithToast, toast } from "../lib/toast";
 import { listSiteProjects, saveSiteProject, renameSiteProject, removeSiteProject, exportSiteProject, importSiteProject } from "../lib/siteProjects";
 import { openSiteOs, sendProjectToSiteOs } from "../lib/siteOs";
@@ -67,6 +68,7 @@ const IDEAS: Record<string, string[]> = {
 
 export default function WebStudio({ onClose, initialContext }: { onClose: () => void; initialContext?: GrowthContext | null }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [prompt, setPrompt] = useState("");
   // Most Lead → demo: firma, dla której budujemy (z odpięciem). Null = zwykłe wejście z Centrum.
   const [demoFor, setDemoFor] = useState<GrowthContext | null>(initialContext ?? null);
@@ -320,7 +322,7 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Kreator stron i sklepów" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Kreator stron i sklepów" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

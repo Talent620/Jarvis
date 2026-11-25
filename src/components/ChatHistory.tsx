@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { loadChats, saveChats, type ChatSession } from "../lib/chats";
 
 // Historia rozmów — wyszukiwarka, grupowanie po dacie, podgląd ostatniej
@@ -35,6 +36,7 @@ export default function ChatHistory({
   onClose: () => void;
 }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [chats, setChats] = useState<ChatSession[]>(() => loadChats());
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<string>("");
@@ -77,7 +79,7 @@ export default function ChatHistory({
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Historia rozmów" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Historia rozmów" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

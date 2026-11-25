@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { copyWithToast, toast } from "../lib/toast";
 import { dailyValuation, plnRange } from "../lib/projectValue";
 import Guide from "./Guide";
@@ -32,6 +33,7 @@ import { revokeId } from "../lib/revoked";
 // numerem właściciela (dostęp awaryjny), sekrety szyfrowane lokalnie.
 export default function AdminPanel({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [phone, setPhone] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [cfg, setCfg] = useState<AdminConfig>({ workerUrl: "", adminToken: "" });
@@ -125,7 +127,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
   if (!unlocked) {
     return (
       <div className="sheet" onClick={onClose}>
-        <div className="panel" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <div {...dialogTrap} className="panel" role="dialog" aria-modal="true" aria-label="Panel administratora" onClick={(e) => e.stopPropagation()}>
           <div className="panel-head">
             <div className="grabber" />
             <div className="panel-head-row">
@@ -167,7 +169,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
   // --- Panel właściwy ---
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Panel administratora" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { useDirtyClose } from "../hooks/useDirtyClose";
 import { store } from "../lib/store";
 import { toast } from "../lib/toast";
@@ -22,6 +23,7 @@ export default function MailCompose({ onClose, presetTo = "", presetSubject = ""
     (to.trim() !== "" || subject.trim() !== "" || body.trim() !== "");
   const close = useDirtyClose(dirty, onClose, "Masz niewysłany e-mail. Zamknąć i odrzucić wersję roboczą?");
   useEscape(close);
+  const dialogTrap = useModalFocusTrap();
   const [busy, setBusy] = useState(false);
   const [composing, setComposing] = useState<ComposerAction | "">("");
   const [sigs, setSigs] = useState<Signature[]>([]);
@@ -70,7 +72,7 @@ export default function MailCompose({ onClose, presetTo = "", presetSubject = ""
 
   return (
     <div className="sheet" onClick={close}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Wyślij e-mail" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

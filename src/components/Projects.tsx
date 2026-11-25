@@ -3,9 +3,11 @@ import { store, uid } from "../lib/store";
 import { useStore } from "../hooks/useStore";
 import { importDocument } from "../lib/documents";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 
 export default function Projects({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data, settings } = useStore();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -65,7 +67,7 @@ export default function Projects({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Projekty i Workspace" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

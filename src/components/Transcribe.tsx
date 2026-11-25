@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { transcribeAudio, transcribeSupported } from "../lib/transcribe";
 import { store, uid } from "../lib/store";
 import { micAudioConstraints } from "../lib/mic";
@@ -14,6 +15,7 @@ const MAX_SECS = 600; // ~10 min — twarda granica, by blob nie urósł ponad l
 // tekst, zapisujesz jako notatkę lub wpis dziennika. Darmowe (klucz Groq).
 export default function Transcribe({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [phase, setPhase] = useState<Phase>("idle");
   const [text, setText] = useState("");
   const [secs, setSecs] = useState(0);
@@ -89,7 +91,7 @@ export default function Transcribe({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel" role="dialog" aria-modal="true" aria-label="Transkrypcja" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

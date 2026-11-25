@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { adaptiveOrder, track, shouldAnnounceAdapt } from "../lib/usage";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
@@ -95,6 +96,7 @@ export default function More({
   onClose: () => void;
 }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [query, setQuery] = useState("");
 
   // Każda funkcja: krótka NAZWA (na kafelku) + OPIS (podtytuł kafelka i pole wyszukiwania).
@@ -213,7 +215,7 @@ export default function More({
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Centrum" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Centrum" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

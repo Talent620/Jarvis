@@ -5,6 +5,7 @@
 
 import { useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { store, uid } from "../lib/store";
 import { toast, copyWithToast } from "../lib/toast";
 import { safeOpenExternal, smsUrl, mapsSearchUrl } from "../lib/glinks";
@@ -37,6 +38,7 @@ const NEXT_ACTION_LABEL: Record<IcpScore["bestNextAction"], string> = {
 
 export default function LeadCandidatesPanel({ onClose, onWeb, embedded, onImported }: { onClose: () => void; onWeb?: (ctx: GrowthContext) => void; embedded?: boolean; onImported?: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [niche, setNiche] = useState(store.settings.prospectNiche || "");
   const [city, setCity] = useState(store.settings.prospectLocation || "");
   const [busy, setBusy] = useState(false);
@@ -300,7 +302,7 @@ export default function LeadCandidatesPanel({ onClose, onWeb, embedded, onImport
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Kandydaci leadów" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

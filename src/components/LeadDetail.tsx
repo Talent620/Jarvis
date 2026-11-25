@@ -17,6 +17,7 @@ import { leadTimeline, appendLeadNote } from "../lib/leadNotes";
 import { salesOsConfigured, outreachViaSalesOs, leadToOutreachInput, pushLeadStatusToSalesOs } from "../lib/salesOs";
 import { copyWithToast, toast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import type { Lead, LeadStatus } from "../types";
 
 const STATUS: { id: LeadStatus; label: string }[] = [
@@ -34,6 +35,7 @@ const STATUS: { id: LeadStatus; label: string }[] = [
  */
 export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string; onClose: () => void; onWeb?: (ctx?: GrowthContext) => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data } = useStore();
   const lead = data.leads.find((l) => l.id === leadId);
   const [busy, setBusy] = useState(false);
@@ -52,7 +54,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
   if (!lead) {
     return (
       <div className="sheet" onClick={onClose}>
-        <div className="panel" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <div {...dialogTrap} className="panel" role="dialog" aria-modal="true" aria-label="Teczka klienta" onClick={(e) => e.stopPropagation()}>
           <div className="panel-head"><div className="grabber" /><div className="panel-head-row"><h2>🗂 Teczka klienta</h2><button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button></div></div>
           <div className="panel-body"><p className="muted" style={{ padding: "8px 0" }}>Nie udało się wczytać tego leada — mógł zostać usunięty lub lista jeszcze się ładuje. Zamknij i otwórz ponownie z listy.</p></div>
           <div className="panel-foot"><button className="btn" onClick={onClose}>Zamknij</button></div>
@@ -167,7 +169,7 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label={`Teczka klienta: ${lead.company}`} onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

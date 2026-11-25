@@ -26,6 +26,11 @@ export function toast(message: string, action?: ToastAction): void {
   if (!el) {
     el = document.createElement("div");
     el.className = "toast";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+    el.addEventListener("click", (ev) => {
+      if (ev.target === el) el?.classList.remove("show");
+    });
     document.body.appendChild(el);
   }
   el.textContent = normalizeToastText(message);

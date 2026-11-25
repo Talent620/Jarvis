@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { copyWithToast, toast } from "../lib/toast";
 import { resolveProvider } from "../lib/brain";
 import { findPlaces, rankPlaces, mapLinks, myCoords, type PlacesResult, type Place, type Coords } from "../lib/places";
@@ -16,6 +17,7 @@ function price(p: Place): string {
 
 export default function WhereToBuy({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [query, setQuery] = useState("");
   const [place, setPlace] = useState("");
   const [coords, setCoords] = useState<Coords | null>(null);
@@ -69,7 +71,7 @@ export default function WhereToBuy({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Gdzie kupię w pobliżu" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

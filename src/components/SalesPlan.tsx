@@ -8,6 +8,7 @@ import { store } from "../lib/store";
 import { scoreLabel } from "../lib/leadIntel";
 import { copyWithToast, toast } from "../lib/toast";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import type { Lead } from "../types";
 
 /**
@@ -18,6 +19,7 @@ import type { Lead } from "../types";
  */
 export default function SalesPlan({ onClose, onLead }: { onClose: () => void; onLead?: (id: string) => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data } = useStore();
   const leads = useMemo(() => data.leads || [], [data.leads]);
   const now = new Date();
@@ -61,7 +63,7 @@ export default function SalesPlan({ onClose, onLead }: { onClose: () => void; on
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Plan sprzedaży na dziś" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Plan sprzedaży na dziś" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

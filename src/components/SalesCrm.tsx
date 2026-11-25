@@ -7,6 +7,7 @@
 
 import { useMemo, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { useStore } from "../hooks/useStore";
 import type { GrowthContext } from "../lib/growthContext";
 import { bucketCounts, type CrmBucket } from "../lib/crmBuckets";
@@ -30,6 +31,7 @@ export default function SalesCrm({ onClose, onWeb, onMoney, onConnections, initi
   initialTab?: CrmTab;
 }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data } = useStore();
   const [tab, setTab] = useState<CrmTab>(initialTab);
   const counts = useMemo(() => bucketCounts(data.leads || []), [data.leads]);
@@ -37,7 +39,7 @@ export default function SalesCrm({ onClose, onWeb, onMoney, onConnections, initi
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-xl" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Sprzedaż i CRM" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

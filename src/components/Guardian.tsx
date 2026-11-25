@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { toast } from "../lib/toast";
 import { store } from "../lib/store";
 import { createListener, isSpeechSupported, speak, stopSpeaking, type VoiceListener } from "../lib/voice";
@@ -20,6 +21,7 @@ const FIND_COL: Record<"ok" | "warn" | "problem", string> = { ok: "var(--text-di
 
 export default function Guardian({ onClose, onRun }: { onClose: () => void; onRun?: (commandId: string) => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   // Realne zdolności środowiska — sterują plakietkami „gotowe / trzeba skonfigurować" w instrukcji.
   const s = store.settings;
   const k = s.keys || {};
@@ -210,7 +212,7 @@ export default function Guardian({ onClose, onRun }: { onClose: () => void; onRu
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Diagnoza i naprawa" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Diagnoza i naprawa" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

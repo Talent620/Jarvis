@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { loadBrandKit, saveBrandKit, hasBrandKit } from "../lib/brandKit";
 import type { BrandKit as BrandKitType } from "../types";
 
@@ -18,6 +19,7 @@ const FIELDS: { key: keyof BrandKitType; label: string; placeholder: string; are
 
 export default function BrandKit({ onClose, embedded }: { onClose: () => void; embedded?: boolean }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [kit, setKit] = useState<BrandKitType>(() => ({ ...loadBrandKit() }));
 
   const set = (k: keyof BrandKitType, v: string) => {
@@ -50,7 +52,7 @@ export default function BrandKit({ onClose, embedded }: { onClose: () => void; e
   if (embedded) return body;
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Dusza Marki" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

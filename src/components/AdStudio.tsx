@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { copyWithToast, toast, shareOrCopy } from "../lib/toast";
 import { generateAds, AD_PLATFORMS, AD_GOALS, type AdPlatform, type AdGoal } from "../lib/adStudio";
 import { AD_ANGLES, adAngleGuide } from "../lib/adAngles";
@@ -23,6 +24,7 @@ const CHANNEL_STATE_LABEL: Record<string, string> = {
 // 📢 Generator reklam (Faza 0) — gotowe zestawy reklam Google/Meta do skopiowania.
 export default function AdStudio({ onClose, embedded }: { onClose: () => void; embedded?: boolean }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const [platform, setPlatform] = useState<AdPlatform>("google");
   const [product, setProduct] = useState("");
   const [audience, setAudience] = useState("");
@@ -182,7 +184,7 @@ export default function AdStudio({ onClose, embedded }: { onClose: () => void; e
   if (embedded) return body;
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Generator reklam" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

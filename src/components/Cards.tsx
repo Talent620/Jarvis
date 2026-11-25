@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useStore } from "../hooks/useStore";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 import { dueCards, reviewCard, addCard, removeCard, generateCards, cardStats, type Grade } from "../lib/cards";
 import { toast } from "../lib/toast";
 import Guide from "./Guide";
@@ -14,6 +15,7 @@ const GRADES: { g: Grade; label: string; color: string }[] = [
 
 export default function Cards({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data } = useStore();
   // Przelicz statystyki przy zmianie fiszek (cardStats czyta store wewnątrz — dep to trigger).
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,7 +86,7 @@ export default function Cards({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Kapsuły Wiedzy" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Kapsuły Wiedzy" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

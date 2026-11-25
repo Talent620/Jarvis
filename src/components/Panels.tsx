@@ -5,6 +5,7 @@ import { smartHome } from "../lib/deviceControl";
 import { toast } from "../lib/toast";
 import { undoAction } from "../lib/permissions";
 import { useEscape } from "../hooks/useEscape";
+import { useModalFocusTrap } from "./Modal";
 
 type Tab = "tasks" | "notes" | "reminders" | "shopping" | "tally" | "calendar" | "scenes" | "memory" | "audit";
 
@@ -22,6 +23,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 export default function Panels({ onClose }: { onClose: () => void }) {
   useEscape(onClose);
+  const dialogTrap = useModalFocusTrap();
   const { data } = useStore();
   const [tab, setTab] = useState<Tab>("tasks");
 
@@ -32,7 +34,7 @@ export default function Panels({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div {...dialogTrap} className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Twoje dane" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">
