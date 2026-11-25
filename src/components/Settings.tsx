@@ -38,7 +38,7 @@ import { getGeminiModels, pickGeminiModel, type IntelligenceMode } from "../lib/
 import { benchmarkModels, speedLabel, type BenchResult } from "../lib/benchmarkOllama";
 import { applyPremiumSetup, applyFastSetup, ensurePremiumModels, applyAutoFromInstalled, ensureResearchAgent, ADDABLE_MODELS } from "../lib/ollamaMaestro";
 import { recommendLocalResearchAgent, type HardwareSnapshot } from "../lib/localResearchAgent";
-import { desktop } from "../lib/desktop";
+import { desktop, setGhostOverlayEnabledOnPc } from "../lib/desktop";
 import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
 import { detectSd, normalizeSdUrl } from "../lib/localImage";
 import { checkFalKey } from "../lib/images";
@@ -2072,6 +2072,24 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                   </span>
                 </span>
                 <Toggle on={s.requireConsentAlways} onClick={() => set({ requireConsentAlways: !s.requireConsentAlways })} />
+              </div>
+              <div className="row">
+                <span>
+                  🎯 Warstwa Ghost AR na pulpicie (SYMBIONT)
+                  <br />
+                  <span className="muted">
+                    Pokazuje lekki, przepuszczający kliknięcia celownik i zamiar działania bezpośrednio na pulpicie
+                    (X11 / Windows; na Waylandzie w HUD-zie). Automatycznie ukrywa się nad oknami haseł i po <code>Ctrl+Alt+X</code>.
+                  </span>
+                </span>
+                <Toggle
+                  on={s.ghostArEnabled !== false}
+                  onClick={() => {
+                    const next = s.ghostArEnabled === false;
+                    set({ ghostArEnabled: next });
+                    void setGhostOverlayEnabledOnPc(next);
+                  }}
+                />
               </div>
               <div className="row" style={{ borderLeft: "3px solid #2bff88", paddingLeft: 10 }}>
                 <span>

@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';" />
+  <title>JARVIS Ghost AR</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; pointer-events: none; }
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: transparent !important;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 150ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #stage.visible { opacity: 1; }
+
+    /* Ramka dokładnych granic OS-Tree (AT-SPI2 / Windows UIA) */
+    .bounds-box {
+      position: absolute;
+      border-radius: 7px;
+      border: 1.5px solid var(--accent, #22d3ee);
+      background: var(--fill, rgba(34, 211, 238, 0.07));
+      box-shadow: 0 0 0 1px rgba(4, 10, 22, 0.55), 0 0 18px var(--glow, rgba(34, 211, 238, 0.35));
+      transform: scale(0.96);
+      transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #stage.visible .bounds-box { transform: scale(1); }
+
+    /* Narożniki precyzyjne */
+    .corner {
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      border-color: var(--accent, #22d3ee);
+      border-style: solid;
+    }
+    .c-tl { top: -2px; left: -2px; border-width: 2.5px 0 0 2.5px; border-top-left-radius: 4px; }
+    .c-tr { top: -2px; right: -2px; border-width: 2.5px 2.5px 0 0; border-top-right-radius: 4px; }
+    .c-bl { bottom: -2px; left: -2px; border-width: 0 0 2.5px 2.5px; border-bottom-left-radius: 4px; }
+    .c-br { bottom: -2px; right: -2px; border-width: 0 2.5px 2.5px 0; border-bottom-right-radius: 4px; }
+
+    /* Pierścień celowania (dla Vision lub punktu kursora; promień odzwierciedla niepewność) */
+    .target-ring {
+      position: absolute;
+      border-radius: 999px;
+      border: 2px solid var(--accent, #22d3ee);
+      background: radial-gradient(circle, var(--fill, rgba(34, 211, 238, 0.12)) 0%, transparent 72%);
+      box-shadow: 0 0 0 1px rgba(4, 10, 22, 0.65), 0 0 20px var(--glow, rgba(34, 211, 238, 0.38));
+      transform: translate(-50%, -50%) scale(0.92);
+      transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .target-ring.uncertain {
+      border-style: dashed;
+    }
+    #stage.visible .target-ring {
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .center-dot {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent, #22d3ee);
+      box-shadow: 0 0 8px var(--accent, #22d3ee);
+      transform: translate(-50%, -50%);
+    }
+
+    /* Lekka etykieta informacyjna Ghost AR */
+    .hud-card {
+      position: absolute;
+      min-width: 210px;
+      max-width: 340px;
+      padding: 8px 11px;
+      border-radius: 10px;
+      background: rgba(7, 12, 24, 0.90);
+      border: 1px solid var(--border, rgba(34, 211, 238, 0.42));
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.52);
+      color: #f1f5f9;
+      font-size: 12px;
+      line-height: 1.35;
+      transform: translateY(4px);
+      transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #stage.visible .hud-card { transform: translateY(0); }
+
+    .row-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .target-name {
+      font-weight: 600;
+      font-size: 12.5px;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 195px;
+    }
+    .source-pill {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(34, 211, 238, 0.14);
+      color: var(--accent, #67e8f9);
+      border: 1px solid var(--border, rgba(34, 211, 238, 0.32));
+      white-space: nowrap;
+    }
+    .row-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #cbd5e1;
+    }
+    .dot-sep { opacity: 0.45; }
+    .approval {
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(148, 163, 184, 0.16);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 10.5px;
+      color: var(--status-color, #94a3b8);
+    }
+    .hotkey-hint {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 9.5px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage" aria-hidden="true"></div>
+  <script>
+    (function () {
+      const stage = document.getElementById("stage");
+      let hideTimer = null;
+
+      const TONES = {
+        cyan: {
+          accent: "#22d3ee",
+          fill: "rgba(34, 211, 238, 0.09)",
+          glow: "rgba(34, 211, 238, 0.36)",
+          border: "rgba(34, 211, 238, 0.44)",
+          status: "#67e8f9",
+        },
+        green: {
+          accent: "#34d399",
+          fill: "rgba(52, 211, 153, 0.09)",
+          glow: "rgba(52, 211, 153, 0.34)",
+          border: "rgba(52, 211, 153, 0.44)",
+          status: "#6ee7b7",
+        },
+        amber: {
+          accent: "#fbbf24",
+          fill: "rgba(251, 191, 36, 0.11)",
+          glow: "rgba(251, 191, 36, 0.38)",
+          border: "rgba(251, 191, 36, 0.50)",
+          status: "#fde68a",
+        },
+        red: {
+          accent: "#f87171",
+          fill: "rgba(248, 113, 113, 0.11)",
+          glow: "rgba(248, 113, 113, 0.38)",
+          border: "rgba(248, 113, 113, 0.50)",
+          status: "#fca5a5",
+        },
+      };
+
+      function esc(s) {
+        return String(s || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function clearSurface() {
+        if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+        stage.classList.remove("visible");
+      }
+
+      function renderSurface(p) {
+        if (!p || p.hidden) {
+          clearSurface();
+          return;
+        }
+        if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+
+        const vw = window.innerWidth || 1920;
+        const vh = window.innerHeight || 1080;
+        const x = Math.max(0, Math.min(vw, Number(p.localX) || 0));
+        const y = Math.max(0, Math.min(vh, Number(p.localY) || 0));
+        const bw = Number(p.localWidth) || 0;
+        const bh = Number(p.localHeight) || 0;
+        const conf = typeof p.confidence === "number" ? Math.max(0, Math.min(1, p.confidence)) : 0.9;
+        const confPct = Math.round(conf * 100) + "%";
+
+        const toneKey = p.approvalStatus === "blocked" ? "red"
+          : p.approvalStatus === "pending_consent" ? "amber"
+          : p.approvalStatus === "confirmed" ? "green"
+          : "cyan";
+        const t = TONES[toneKey];
+
+        stage.style.setProperty("--accent", t.accent);
+        stage.style.setProperty("--fill", t.fill);
+        stage.style.setProperty("--glow", t.glow);
+        stage.style.setProperty("--border", t.border);
+        stage.style.setProperty("--status-color", t.status);
+
+        let reticleHtml = "";
+        let anchorBottom = y + 28;
+        let anchorTop = y - 28;
+
+        if (bw >= 8 && bh >= 8) {
+          const pad = 4;
+          const bx = Math.max(0, Number(p.boxLocalX ?? (x - bw / 2)) - pad);
+          const by = Math.max(0, Number(p.boxLocalY ?? (y - bh / 2)) - pad);
+          const w = bw + pad * 2;
+          const h = bh + pad * 2;
+          anchorBottom = by + h + 10;
+          anchorTop = by - 10;
+          reticleHtml =
+            '<div class="bounds-box" style="left:' + bx + 'px;top:' + by + 'px;width:' + w + 'px;height:' + h + 'px;">' +
+              '<span class="corner c-tl"></span><span class="corner c-tr"></span>' +
+              '<span class="corner c-bl"></span><span class="corner c-br"></span>' +
+            '</div>' +
+            '<div class="center-dot" style="left:' + x + 'px;top:' + y + 'px;"></div>';
+        } else {
+          // Uczciwy promień niepewności dla Vision / kursora (mniejsza pewność = szerszy przerywany okrąg)
+          const radius = Math.round(22 + (1 - conf) * 38);
+          const diam = radius * 2;
+          const cls = conf < 0.78 ? "target-ring uncertain" : "target-ring";
+          anchorBottom = y + radius + 10;
+          anchorTop = y - radius - 10;
+          reticleHtml =
+            '<div class="' + cls + '" style="left:' + x + 'px;top:' + y + 'px;width:' + diam + 'px;height:' + diam + 'px;"></div>' +
+            '<div class="center-dot" style="left:' + x + 'px;top:' + y + 'px;"></div>';
+        }
+
+        const cardW = 290;
+        const cardH = 82;
+        const cardLeft = Math.max(12, Math.min(vw - cardW - 12, Math.round(x - cardW / 2)));
+        const cardTop = (anchorBottom + cardH + 14 <= vh)
+          ? Math.round(anchorBottom)
+          : Math.max(12, Math.round(anchorTop - cardH));
+
+        const srcLabel = p.sourceLabel || (p.source === "at-spi2" ? "AT-SPI2 · lokalnie" : p.source === "win-uia" ? "Windows UIA · lokalnie" : "Vision");
+        const actionLabel = p.plannedAction || "Wskazanie celu";
+        const approvalLabel = p.approvalLabel || (
+          p.approvalStatus === "pending_consent" ? "🛡️ Oczekuje na Twoją zgodę"
+          : p.approvalStatus === "blocked" ? "⛔ Zablokowano (RiskGuard)"
+          : p.approvalStatus === "confirmed" ? "✓ Zatwierdzone"
+          : "👁 Podgląd intencji"
+        );
+
+        stage.innerHTML =
+          reticleHtml +
+          '<div class="hud-card" id="ghost-card" style="left:' + cardLeft + 'px;top:' + cardTop + 'px;">' +
+            '<div class="row-top">' +
+              '<span class="target-name">' + esc(p.label || "Element ekranu") + '</span>' +
+              '<span class="source-pill">' + esc(srcLabel) + '</span>' +
+            '</div>' +
+            '<div class="row-meta">' +
+              '<span>Czynność: <strong>' + esc(actionLabel) + '</strong></span>' +
+              '<span class="dot-sep">·</span>' +
+              '<span>Pewność: <strong>' + esc(confPct) + '</strong></span>' +
+            '</div>' +
+            '<div class="approval">' +
+              '<span>' + esc(approvalLabel) + '</span>' +
+              '<span class="hotkey-hint">Ctrl+Alt+X ukryj</span>' +
+            '</div>' +
+          '</div>';
+
+        requestAnimationFrame(function () {
+          stage.classList.add("visible");
+        });
+
+        const ttl = Number(p.ttlMs) || 0;
+        if (ttl > 0) {
+          hideTimer = setTimeout(clearSurface, ttl);
+        }
+      }
+
+      window.__jarvisGhostRender = renderSurface;
+      window.__jarvisGhostClear = clearSurface;
+
+      if (window.jarvisGhostSurface) {
+        window.jarvisGhostSurface.onRender(renderSurface);
+        window.jarvisGhostSurface.onClear(clearSurface);
+      }
+    })();
+  </script>
+</body>
+</html>

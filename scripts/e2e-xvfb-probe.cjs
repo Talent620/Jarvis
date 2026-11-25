@@ -193,6 +193,9 @@ async function main() {
   let cdp = null;
   let launchInvocations = 0;
 
+  let simulatedNodeAtCursor = null;
+  const ghostEvents = [];
+
   const bridge = http.createServer(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Headers", "content-type");
@@ -219,6 +222,17 @@ async function main() {
         else if (req.url === "/pilotAbort") out = pilot.abort();
         else if (req.url === "/pilotUiTree") out = await uiTree.queryTree(arg.maxNodes || 120);
         else if (req.url === "/pilotUiFind") out = await uiTree.findNode(arg.query);
+        else if (req.url === "/pilotUiNodeAt") {
+          out = simulatedNodeAtCursor || (await uiTree.nodeAtPoint(arg.x, arg.y));
+        } else if (req.url === "/pilotFoveatedCrop") {
+          out = { ok: false, error: "err:no-crop-needed" };
+        } else if (req.url === "/ghostShow") {
+          ghostEvents.push({ type: "show", payload: arg });
+          out = { ok: true, mode: "native-overlay" };
+        } else if (req.url === "/ghostHide") {
+          ghostEvents.push({ type: "hide", reason: arg.reason || "manual" });
+          out = { ok: true, hidden: true };
+        }
         else if (req.url === "/desktopDiagnose") out = await doctor.diagnose();
         else if (req.url === "/systemDiagnostics") out = await linuxDiagnostics({ env: xEnv });
         else if (req.url === "/launch") {
@@ -358,6 +372,10 @@ async function main() {
           pilotAbort: () => call("/pilotAbort"),
           pilotUiTree: (maxNodes) => call("/pilotUiTree", { maxNodes }),
           pilotUiFind: (query) => call("/pilotUiFind", { query }),
+          pilotUiNodeAt: (x, y) => call("/pilotUiNodeAt", { x, y }),
+          pilotFoveatedCrop: (opts) => call("/pilotFoveatedCrop", opts),
+          ghostShow: (payload) => call("/ghostShow", payload),
+          ghostHide: (reason) => call("/ghostHide", { reason }),
           desktopDiagnose: () => call("/desktopDiagnose"),
           screenshotDetailed: () => call("/screenshotDetailed"),
         };
@@ -365,13 +383,19 @@ async function main() {
     });
 
     await cdp.send("Page.navigate", { url: `http://127.0.0.1:${VITE_PORT}/` });
-    await sleep(2500);
 
     await cdp.eval(`(async () => {
+      for (let wait = 0; wait < 45; wait++) {
+        if (document.querySelector("textarea, button")) break;
+        await new Promise(r => setTimeout(r, 200));
+      }
       for (let step = 0; step < 6; step++) {
         if (document.querySelector("textarea")) break;
         const btn = [...document.querySelectorAll("button")].find(b => /pomiń|pomin|dalej|uruchom jarvis|zacznij|rozpocznij|gotowe/i.test(b.innerText || ""));
-        if (!btn) break;
+        if (!btn) {
+          await new Promise(r => setTimeout(r, 300));
+          continue;
+        }
         btn.click();
         await new Promise(r => setTimeout(r, 400));
       }
@@ -445,6 +469,26 @@ async function main() {
         traceB.audit.some((a) => a.tool === "omni_launch" && a.status === "denied") &&
         traceB.guardianHist.some((e) => e.kind === "security"),
       { launchInvocations, deniedAudit: traceB.audit[0]?.tool, hasSecurityEvent: traceB.guardianHist.some((e) => e.kind === "security") },
+    );
+
+    // CHECK 3b (Flow G — SYMBIONT Phase 1): Live deictic „kliknij tutaj” over confidential password field -> Ghost AR hidden + hard-blocked
+    ghostEvents.length = 0;
+    simulatedNodeAtCursor = {
+      ok: true,
+      found: true,
+      backend: "at-spi2",
+      windowTitle: "Polkit Authentication",
+      node: { name: "Hasło administratora", role: "password text", x: 600, y: 380, width: 200, height: 34, centerX: 700, centerY: 397, isPassword: true },
+    };
+    await submitChat("kliknij tutaj");
+    await sleep(900);
+    simulatedNodeAtCursor = null;
+    const traceG = await readAuditAndGuardian();
+    assertCheck(
+      "FlowG_symbiont_foveated_password_shield_and_ghost_ar",
+      ghostEvents.some((e) => e.type === "hide" && e.reason === "confidential-blocked") &&
+        traceG.audit.some((a) => a.tool === "foveated_perception" && a.status === "denied"),
+      { ghostEventsCount: ghostEvents.length, firstGhostEvent: ghostEvents[0] || null },
     );
 
     // CHECK 4 (Flow C): Error -> Sentinel Start (NO stale BŁĄD badge) -> Kill-Switch "stop"

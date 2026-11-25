@@ -24,6 +24,7 @@ export const JARVIS_MODULES = [
   "Trwałe Cele Wieloetapowe (voiceCognition + agentPlanner + goalRuntime + resultVerifier)",
   "Android Phone Use Agent + RiskGuard (Check-then-Act, zakaz pól haseł)",
   "OMNI-PILOT & Frontier Desktop Computer Use (Refleks <30ms, Hybryda AT-SPI2/UIA + Vision [0..1000], Dual-Track Strażnik Ekranu, Diagnostyka OS, RiskGuard + Kill-Switch Ctrl+Alt+X)",
+  "SYMBIONT Faza 1: Ghost AR & Foveated Perception (przezroczysty celownik AR X11/Windows + Wayland fallback, percepcja deiktyczna 384×384 px pod kursorem, tarcza poufnych okien)",
   "Bi-Temporal Core Memory + MCP Bridge",
 ] as const;
 
@@ -352,6 +353,10 @@ export function validateAndApplyJarvisSettings(
     const ap = String(patch.autonomyProfile).trim().toUpperCase();
     if (!ALLOWED_AUTONOMY.has(ap)) errors.push(`Nieznany profil autonomii: ${ap} (dozwolone: STANDARD, OPERATOR).`);
     else stage("autonomyProfile", ap as "STANDARD" | "OPERATOR", "autonomyProfile");
+  }
+  if ("ghostArEnabled" in patch && patch.ghostArEnabled !== undefined) {
+    if (typeof patch.ghostArEnabled !== "boolean") errors.push("Pole ghostArEnabled musi być wartością logiczną (true/false).");
+    else stage("ghostArEnabled", patch.ghostArEnabled, "ghostArEnabled");
   }
 
   for (const urlKey of ["modalUrl", "modalVoiceUrl", "proxyUrl"] as const) {

@@ -43,6 +43,7 @@ import {
   queryUiTreeOnPc, diagnoseDesktopOnPc,
 } from "./desktop";
 import { visualLocateAndAct, runOmniAutonomousTask } from "./omniPilot";
+import { executeFoveatedCommand } from "./foveatedPerception";
 import { startOmniSentinel, stopOmniSentinel } from "./omniSentinel";
 import { PROVIDER_LIST, PROVIDERS } from "./providers/registry";
 import { primaryKey } from "./keys";
@@ -567,6 +568,32 @@ const tools: Tool[] = [
     run: () => {
       stopOmniSentinel("Zatrzymano Strażnika Ekranu narzędziem.");
       return "⏹ Zatrzymano Strażnika Ekranu.";
+    },
+  },
+  {
+    def: {
+      name: "desktop_foveated_inspect",
+      description:
+        "SYMBIONT Faza 1 (Percepcja Deiktyczna „Pod Kursorem”): odczytaj element dokładnie pod kursorem myszy (najpierw AT-SPI2 / Windows UIA 0 USD, w razie potrzeby lokalny wycinek 384×384 px bez zrzutu całego ekranu), oznacz go w Ghost AR i wyjaśnij lub zaproponuj naprawę. Twardo blokuje pola haseł i okna 2FA/Polkit.",
+      input_schema: obj({
+        mode: str("Tryb analizy: 'inspect' (co to jest?), 'explain' (wyjaśnij to), 'fix' (napraw to), 'reply' (szkic odpowiedzi)"),
+        instruction: str("Opcjonalna instrukcja do szkicu odpowiedzi (dla mode='reply')"),
+      }),
+    },
+    run: async ({ mode, instruction }) => {
+      const m = String(mode || "inspect");
+      const cmd =
+        m === "fix"
+          ? "napraw to"
+          : m === "explain"
+            ? "wyjaśnij to"
+            : m === "reply"
+              ? instruction
+                ? `odpisz na to: ${instruction}`
+                : "odpisz na to"
+              : "co to jest?";
+      const res = await executeFoveatedCommand(cmd);
+      return res.text || "Nie udało się przeanalizować obszaru pod kursorem.";
     },
   },
   {

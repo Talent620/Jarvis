@@ -259,6 +259,40 @@ function matchUiNode(nodes, query) {
   return { node: best, score: Number(bestScore.toFixed(3)) };
 }
 
+/**
+ * Pure: znajdź najbardziej szczegółowy (najmniejszy powierzchniowo) węzeł UI pod współrzędnymi kursora (x, y).
+ * Jeśli pod kursorem znajduje się pole hasła (isPassword), ma ono bezwzględny priorytet bezpieczeństwa nad kontenerem.
+ */
+function findNodeAtPoint(nodes, x, y, tolerancePx = 6) {
+  if (!Array.isArray(nodes) || nodes.length === 0) return null;
+  const px = Number(x);
+  const py = Number(y);
+  if (!Number.isFinite(px) || !Number.isFinite(py)) return null;
+  const tol = Math.max(0, Number(tolerancePx) || 0);
+
+  const hits = [];
+  for (const n of nodes) {
+    if (!n || typeof n !== "object") continue;
+    const nx = Number(n.x);
+    const ny = Number(n.y);
+    const nw = Number(n.width);
+    const nh = Number(n.height);
+    if (!Number.isFinite(nx) || !Number.isFinite(ny) || nw <= 0 || nh <= 0) continue;
+    if (px >= nx - tol && px <= nx + nw + tol && py >= ny - tol && py <= ny + nh + tol) {
+      const area = nw * nh;
+      const dist = Math.hypot(px - (Number(n.centerX) || nx + nw / 2), py - (Number(n.centerY) || ny + nh / 2));
+      hits.push({ node: n, area, dist });
+    }
+  }
+  if (hits.length === 0) return null;
+
+  const passwordHit = hits.find((h) => h.node.isPassword === true || String(h.node.role || "").toLowerCase().includes("password"));
+  if (passwordHit) return passwordHit.node;
+
+  hits.sort((a, b) => a.area - b.area || a.dist - b.dist);
+  return hits[0].node;
+}
+
 function createUiTreeInspector(deps = {}) {
   const platform = deps.platform || process.platform;
   const env = deps.env || process.env;
@@ -327,11 +361,26 @@ function createUiTreeInspector(deps = {}) {
     };
   }
 
-  return { queryTree, findNode };
+  async function nodeAtPoint(x, y, opts = {}) {
+    const tree = await queryTree(opts);
+    if (!tree.ok) return { ok: false, found: false, backend: tree.backend, error: tree.error };
+    const node = findNodeAtPoint(tree.nodes, x, y, opts.tolerancePx ?? 6);
+    if (!node) return { ok: true, found: false, backend: tree.backend, windowTitle: tree.windowTitle, totalNodes: tree.nodes.length };
+    return {
+      ok: true,
+      found: true,
+      backend: tree.backend,
+      windowTitle: tree.windowTitle,
+      node,
+    };
+  }
+
+  return { queryTree, findNode, nodeAtPoint };
 }
 
 module.exports = {
   createUiTreeInspector,
   matchUiNode,
+  findNodeAtPoint,
   foldAscii,
 };

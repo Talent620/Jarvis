@@ -695,6 +695,8 @@ export interface Settings {
   requireConsentAlways: boolean;
   /** Profil autonomii (Sprint 3): STANDARD (domyślny) lub OPERATOR (płynne codzienne narzędzia, twardy RiskGuard tylko na krytyczne akcje). */
   autonomyProfile?: "STANDARD" | "OPERATOR";
+  /** Warstwa Ghost AR na pulpicie (SYMBIONT): nieinwazyjny celownik i podgląd intencji nad oknami (X11/Windows; można całkowicie wyłączyć). */
+  ghostArEnabled?: boolean;
   /** Tryb Szefa — PEŁNY DOSTĘP: agent głosowy może użyć WSZYSTKICH narzędzi/akcji bez ekranów
    *  zgody (sam przewiduje i potwierdza głosem). Działa tylko, gdy Tryb Szefa jest otwarty. */
   bossFullAccess?: boolean;

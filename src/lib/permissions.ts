@@ -141,9 +141,10 @@ const RISK: Record<string, Risk> = {
   desktop_launch_app: "outbound", desktop_open: "outbound", desktop_power: "outbound",
   desktop_volume: "outbound", desktop_media: "outbound", desktop_type: "outbound", desktop_hotkey: "outbound",
   desktop_click: "outbound", desktop_active_window: "outbound", system_browser_read_public: "outbound",
-  // OMNI-PILOT & Frontier (płynny kursor, okna, drzewo OS, wizja, strażnik w tle, diagnostyka)
+  // OMNI-PILOT & Frontier + SYMBIONT Ghost AR / Foveated Perception
   desktop_windows_list: "read", desktop_visual_locate: "read",
   desktop_ui_tree: "read", desktop_diagnose: "read", desktop_sentinel_stop: "read",
+  desktop_foveated_inspect: "read",
   desktop_cursor_move: "outbound", desktop_mouse_action: "outbound", desktop_scroll: "outbound", desktop_drag: "outbound",
   desktop_window_focus: "outbound", desktop_visual_act: "outbound", desktop_omni_task: "outbound",
   desktop_sentinel_start: "outbound",

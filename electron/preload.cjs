@@ -78,6 +78,12 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
   screenshotDetailed: () => ipcRenderer.invoke("jarvis:screenshot-detailed"),
   pilotUiTree: (maxNodes) => ipcRenderer.invoke("jarvis:pilot-ui-tree", maxNodes),
   pilotUiFind: (query) => ipcRenderer.invoke("jarvis:pilot-ui-find", String(query || "")),
+  pilotUiNodeAt: (x, y) => ipcRenderer.invoke("jarvis:pilot-ui-node-at", { x: Number(x), y: Number(y) }),
+  pilotFoveatedCrop: (opts = {}) => ipcRenderer.invoke("jarvis:pilot-foveated-crop", opts),
+  ghostShow: (payload = {}) => ipcRenderer.invoke("jarvis:ghost-show", payload),
+  ghostHide: (reason = "manual") => ipcRenderer.invoke("jarvis:ghost-hide", String(reason || "manual")),
+  ghostSetEnabled: (enabled) => ipcRenderer.invoke("jarvis:ghost-enable", Boolean(enabled)),
+  ghostStatus: () => ipcRenderer.invoke("jarvis:ghost-status"),
   desktopDiagnose: () => ipcRenderer.invoke("jarvis:desktop-diagnose"),
   onOmniAbort: (cb) => {
     const listener = () => cb();

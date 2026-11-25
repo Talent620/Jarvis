@@ -10,6 +10,8 @@ const { linuxPower, linuxVolume, linuxMedia, detectLinuxGpu, readLinuxDistro, li
 const { createDesktopPilot } = require("./desktop-pilot.cjs");
 const { createUiTreeInspector } = require("./ui-tree.cjs");
 const { createDesktopDoctor } = require("./desktop-doctor.cjs");
+const { createGhostOverlayManager } = require("./ghost-overlay.cjs");
+const { createFoveatedCropper } = require("./foveated-crop.cjs");
 const linuxKeyboard = createLinuxKeyboard();
 const { createWorkspaceTools } = require("./workspace-tools.cjs");
 const { createStdioMcpManager } = require("./mcp-stdio.cjs");
@@ -188,6 +190,7 @@ function createWindow() {
   ["resize", "move", "close"].forEach((ev) => mainWindow.on(ev, () => saveState(mainWindow)));
   mainWindow.on("closed", () => {
     mainWindow = null;
+    if (ghostOverlayInstance) ghostOverlayInstance.destroy();
   });
 }
 
@@ -733,6 +736,7 @@ function registerDesktopControl() {
   });
   ipcMain.handle("jarvis:pilot-abort", (event) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    if (ghostOverlayInstance) ghostOverlayInstance.hideImmediate("kill-switch");
     return pilot.abort();
   });
   ipcMain.handle("jarvis:screenshot-detailed", async (event) => {
@@ -771,6 +775,30 @@ function registerDesktopControl() {
   // === OMNI-FRONTIER: Semantyczne Drzewo UI (Linux AT-SPI2 / Windows UIA) + Diagnostyka „Znajdź i Napraw” ===
   const uiTree = createUiTreeInspector();
   const desktopDoctor = createDesktopDoctor();
+  const getActiveWinTitle = async () => {
+    if (process.platform === "linux") {
+      const r = await linuxKeyboard.activeWindow().catch(() => null);
+      return r && r.ok ? String(r.title || "") : "";
+    }
+    return "";
+  };
+
+  // === SYMBIONT Faza 1: Warstwa Ghost AR + Lokalny Wycinek „Pod Kursorem” (384×384 px) ===
+  const ghostOverlay = createGhostOverlayManager({
+    BrowserWindow,
+    screen,
+    getActiveWindowTitle: getActiveWinTitle,
+  });
+  ghostOverlayInstance = ghostOverlay;
+
+  const foveatedCropper = createFoveatedCropper({
+    desktopCapturer,
+    screen,
+    pilot,
+    uiTree,
+    getActiveWindowTitle: getActiveWinTitle,
+  });
+
   ipcMain.handle("jarvis:pilot-ui-tree", (event, maxNodes) => {
     if (!isTrustedIpc(event)) return { ok: false, nodes: [], error: "err:forbidden" };
     return uiTree.queryTree({ maxNodes });
@@ -779,6 +807,30 @@ function registerDesktopControl() {
     if (!isTrustedIpc(event)) return { ok: false, found: false, error: "err:forbidden" };
     return uiTree.findNode(String(query || ""));
   });
+  ipcMain.handle("jarvis:pilot-ui-node-at", (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, found: false, error: "err:forbidden" };
+    return uiTree.nodeAtPoint(Number(payload && payload.x), Number(payload && payload.y));
+  });
+  ipcMain.handle("jarvis:pilot-foveated-crop", (event, opts) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return foveatedCropper.captureCrop(opts || {});
+  });
+  ipcMain.handle("jarvis:ghost-show", (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return ghostOverlay.showTarget(payload || {});
+  });
+  ipcMain.handle("jarvis:ghost-hide", (event, reason) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return ghostOverlay.hideImmediate(String(reason || "manual"));
+  });
+  ipcMain.handle("jarvis:ghost-enable", (event, enabled) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return ghostOverlay.setEnabled(Boolean(enabled));
+  });
+  ipcMain.handle("jarvis:ghost-status", (event) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "err:forbidden" };
+    return ghostOverlay.status();
+  });
   ipcMain.handle("jarvis:desktop-diagnose", (event) => {
     if (!isTrustedIpc(event)) return { ok: false, checks: [], error: "err:forbidden" };
     return desktopDoctor.diagnose();
@@ -786,6 +838,7 @@ function registerDesktopControl() {
 }
 
 let desktopPilotInstance = null;
+let ghostOverlayInstance = null;
 
 // Tylko jedna instancja aplikacji.
 const gotLock = app.requestSingleInstanceLock();
@@ -845,8 +898,9 @@ if (!gotLock) {
         summonWindow();
         if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("jarvis:voicemode");
       });
-      // Ctrl+Alt+X: sprzętowy kill-switch OMNI-PILOT — natychmiast przerywa sterowanie pulpitem.
+      // Ctrl+Alt+X: sprzętowy kill-switch OMNI-PILOT + Ghost AR — natychmiast przerywa sterowanie pulpitem i ukrywa nakładkę.
       globalShortcut.register("CommandOrControl+Alt+X", () => {
+        if (ghostOverlayInstance) ghostOverlayInstance.hideImmediate("kill-switch");
         if (desktopPilotInstance) desktopPilotInstance.abort();
         if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("jarvis:omni-abort");
       });
@@ -876,6 +930,10 @@ if (!gotLock) {
 
   app.on("will-quit", () => {
     globalShortcut.unregisterAll();
+    if (ghostOverlayInstance) {
+      ghostOverlayInstance.destroy();
+      ghostOverlayInstance = null;
+    }
     localOllama.close();
     setClipWatch(false);
     if (siteOsManager) siteOsManager.close();

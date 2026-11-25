@@ -10,6 +10,7 @@ import {
   dragOnPc,
   findUiNodeOnPc,
   focusWindowOnPc,
+  hideGhostOverlayOnPc,
   isDesktop,
   launchApp,
   listWindowsOnPc,
@@ -19,10 +20,13 @@ import {
   pilotHotkeyOnPc,
   queryUiTreeOnPc,
   scrollOnPc,
+  showGhostTargetOnPc,
   typeUnicodeOnPc,
   volumePc,
+  type GhostSourceKind,
 } from "./desktop";
 import { parseOmniVoiceCommand, type OmniIntent } from "./omniReflex";
+import { executeFoveatedCommand, type DeicticIntent } from "./foveatedPerception";
 import {
   computeFrameFingerprint,
   startOmniSentinel,
@@ -101,6 +105,8 @@ export interface OmniActuator {
   captureScreenDetailed: typeof captureScreenDetailed;
   findUiNode: typeof findUiNodeOnPc;
   queryUiTree?: typeof queryUiTreeOnPc;
+  ghostShow?: typeof showGhostTargetOnPc;
+  ghostHide?: typeof hideGhostOverlayOnPc;
   diagnose: typeof diagnoseDesktopOnPc;
   moveCursor: typeof moveCursorOnPc;
   mouseAction: typeof mouseActionOnPc;
@@ -153,7 +159,7 @@ export interface OmniTaskResult {
 export interface OmniVoiceResult {
   handled: boolean;
   ok?: boolean;
-  kind?: OmniIntent["kind"] | "sentinel_decision";
+  kind?: OmniIntent["kind"] | "sentinel_decision" | DeicticIntent["kind"];
   text?: string;
   spokenText?: string;
 }
@@ -163,6 +169,8 @@ const DEFAULT_ACTUATOR: OmniActuator = {
   captureScreenDetailed,
   findUiNode: findUiNodeOnPc,
   queryUiTree: queryUiTreeOnPc,
+  ghostShow: showGhostTargetOnPc,
+  ghostHide: hideGhostOverlayOnPc,
   diagnose: diagnoseDesktopOnPc,
   moveCursor: moveCursorOnPc,
   mouseAction: mouseActionOnPc,
@@ -242,6 +250,7 @@ export function dismissOmniHud(): void {
   if (hudState.active) {
     abortOmniPilot();
   }
+  try { void hideGhostOverlayOnPc("dismiss"); } catch { /* ignore */ }
   emitState({
     visible: false,
     active: false,
@@ -274,7 +283,7 @@ export function respondOmniConfirm(allow: boolean): void {
   if (resolver) resolver(!!allow);
 }
 
-/** Natychmiastowy globalny Kill-Switch (STOP / Ctrl+Alt+X / przycisk STOP w HUD): synchronicznie zatrzymuje OMNI-PILOT, Sentinela i goalRuntime. */
+/** Natychmiastowy globalny Kill-Switch (STOP / Ctrl+Alt+X / przycisk STOP w HUD): synchronicznie zatrzymuje OMNI-PILOT, Ghost AR, Sentinela i goalRuntime. */
 export function abortOmniPilot(actuator?: Partial<OmniActuator>): void {
   runToken += 1;
   try { activeAbortController.abort("kill-switch"); } catch { /* ignore */ }
@@ -286,6 +295,10 @@ export function abortOmniPilot(actuator?: Partial<OmniActuator>): void {
   }
   stopOmniSentinel("Zatrzymano awaryjnie (STOP / Ctrl+Alt+X).");
   const stoppedGoals = stopAllGoals();
+  const hideGhost = actuator?.ghostHide || DEFAULT_ACTUATOR.ghostHide;
+  try {
+    void hideGhost?.("kill-switch");
+  } catch { /* ignore */ }
   const abortHw = actuator?.abortHardware || DEFAULT_ACTUATOR.abortHardware;
   try {
     void abortHw();
@@ -294,7 +307,7 @@ export function abortOmniPilot(actuator?: Partial<OmniActuator>): void {
     tool: "omni_kill_switch",
     risk: "outbound",
     input: { stoppedGoals },
-    output: "Zatrzymano awaryjnie OMNI-PILOT / Strażnik Ekranu / Cele (STOP / Ctrl+Alt+X).",
+    output: "Zatrzymano awaryjnie OMNI-PILOT / Ghost AR / Strażnik Ekranu / Cele (STOP / Ctrl+Alt+X).",
     ok: true,
     security: true,
   });
@@ -398,6 +411,16 @@ export async function visualLocateAndAct(
   // FAZA 0 (Frontier 1): Błyskawiczne, lokalne Drzewo Dostępności OS (AT-SPI2 / Windows UIA, <80 ms, 0 USD)
   let located: GroundedTarget | null = null;
   let source: "os-tree" | "vision" = "vision";
+  let uiBounds: {
+    width: number;
+    height: number;
+    boxX: number;
+    boxY: number;
+    backend?: string;
+    windowTitle?: string;
+    role?: string;
+    isPassword?: boolean;
+  } | null = null;
 
   try {
     const uiHit = await act.findUiNode(target);
@@ -418,6 +441,16 @@ export async function visualLocateAndAct(
         confidence: uiHit.score ?? 0.95,
         risk: n.isPassword ? "password" : "none",
         reason: `Drzewo OS (${uiHit.backend || "a11y"} · rola: ${n.role}${uiHit.windowTitle ? ` · okno: ${uiHit.windowTitle}` : ""})`,
+      };
+      uiBounds = {
+        width: n.width,
+        height: n.height,
+        boxX: n.x,
+        boxY: n.y,
+        backend: uiHit.backend,
+        windowTitle: uiHit.windowTitle,
+        role: n.role,
+        isPassword: n.isPassword,
       };
       source = "os-tree";
     }
@@ -502,6 +535,17 @@ export async function visualLocateAndAct(
 
   const displayLabel = located.label || target;
   const sourceBadge = source === "os-tree" ? "⚡ Drzewo OS (0 USD)" : "👁 Wizja AI";
+  const ghostAllowed = store.settings.ghostArEnabled !== false;
+  const ghostSource: GhostSourceKind =
+    source === "os-tree" ? (uiBounds?.backend === "win-uia" ? "win-uia" : "at-spi2") : "vision";
+  const plannedActionPl: Record<typeof action, string> = {
+    locate: "Wskazanie celu",
+    move: "Ruch kursora",
+    click: "Kliknięcie",
+    double: "Podwójne kliknięcie",
+    right: "Prawy klik",
+  };
+
   emitState({
     reticle: {
       xNorm: located.xNorm,
@@ -520,6 +564,9 @@ export async function visualLocateAndAct(
   // Twardy Desktop RiskGuard przed ruchem / kliknięciem
   const riskVerdict = assessDesktopActionRisk(`${target} ${displayLabel}`, action, located.risk);
   if (riskVerdict.blocked) {
+    if (ghostAllowed) {
+      try { await act.ghostHide?.("riskguard-blocked"); } catch { /* ignore */ }
+    }
     const reason = riskVerdict.reason || "Zablokowano przez Desktop RiskGuard.";
     recordSystemActionEvent({
       tool: "omni_visual_act",
@@ -546,9 +593,53 @@ export async function visualLocateAndAct(
     };
   }
 
-  if (riskVerdict.requiresConfirmation) {
+  const lowConfidenceAct = action !== "locate" && action !== "move" && located.confidence < 0.65;
+  const needsConfirm = riskVerdict.requiresConfirmation || lowConfidenceAct;
+
+  // SYMBIONT Ghost AR: pokaż podgląd namierzonego celu na prawdziwym pulpicie PRZED wykonaniem akcji
+  if (ghostAllowed) {
+    try {
+      await act.ghostShow?.({
+        x: located.x,
+        y: located.y,
+        ...(uiBounds
+          ? {
+              width: uiBounds.width,
+              height: uiBounds.height,
+              boxX: uiBounds.boxX,
+              boxY: uiBounds.boxY,
+              role: uiBounds.role,
+              windowTitle: uiBounds.windowTitle,
+              isPassword: uiBounds.isPassword,
+            }
+          : {}),
+        label: displayLabel,
+        source: ghostSource,
+        confidence: located.confidence,
+        plannedAction: plannedActionPl[action],
+        approvalStatus: needsConfirm ? "pending_consent" : action === "locate" ? "preview" : "confirmed",
+        approvalLabel: lowConfidenceAct
+          ? `⚠ Niska pewność (${pct(located.confidence)}) — potwierdź`
+          : riskVerdict.requiresConfirmation
+            ? "🛡️ Wymaga Twojej zgody"
+            : action === "locate"
+              ? "🎯 Podgląd celu na pulpicie"
+              : "✓ Cel zweryfikowany",
+        ttlMs: needsConfirm ? 15000 : 3500,
+      });
+    } catch {
+      /* ignore ghost overlay errors */
+    }
+  }
+
+  if (needsConfirm) {
+    const confirmReason =
+      riskVerdict.reason ||
+      (lowConfidenceAct
+        ? `Niska pewność rozpoznania (${pct(located.confidence)}): czy na pewno wykonać „${plannedActionPl[action]}” na „${displayLabel}”?`
+        : `Potwierdź akcję: ${displayLabel}`);
     const approved = await requestConfirmation(
-      { reason: riskVerdict.reason || `Potwierdź akcję: ${displayLabel}`, target: displayLabel, action },
+      { reason: confirmReason, target: displayLabel, action },
       myToken,
       opts.onConfirm,
     );
@@ -556,11 +647,14 @@ export async function visualLocateAndAct(
       return { ok: false, found: true, aborted: true, target: located, text: "⏹ Przerwano.", spokenText: "Przerwano." };
     }
     if (!approved) {
+      if (ghostAllowed) {
+        try { await act.ghostHide?.("consent-denied"); } catch { /* ignore */ }
+      }
       recordSystemActionEvent({
         tool: "omni_visual_act",
         risk: "outbound",
-        input: { target: displayLabel, action, source },
-        output: `Użytkownik odrzucił wrażliwą akcję RiskGuard: ${displayLabel}`,
+        input: { target: displayLabel, action, source, confidence: located.confidence },
+        output: `Użytkownik odrzucił akcję: ${displayLabel}`,
         ok: false,
         security: true,
       });
@@ -575,9 +669,29 @@ export async function visualLocateAndAct(
         found: true,
         denied: true,
         target: located,
-        text: `🛡️ Anulowano wrażliwą akcję na „${displayLabel}”.`,
+        text: `🛡️ Anulowano akcję na „${displayLabel}”.`,
         spokenText: "Anulowano.",
       };
+    }
+    if (ghostAllowed) {
+      try {
+        await act.ghostShow?.({
+          x: located.x,
+          y: located.y,
+          ...(uiBounds
+            ? { width: uiBounds.width, height: uiBounds.height, boxX: uiBounds.boxX, boxY: uiBounds.boxY, windowTitle: uiBounds.windowTitle }
+            : {}),
+          label: displayLabel,
+          source: ghostSource,
+          confidence: located.confidence,
+          plannedAction: plannedActionPl[action],
+          approvalStatus: "confirmed",
+          approvalLabel: "⚡ Zgoda potwierdzona — wykonuję",
+          ttlMs: 2200,
+        });
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -999,6 +1113,15 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
       let label = plan.target || plan.summary;
       let confidence = 0.85;
       let source: "os-tree" | "vision" = "vision";
+      let stepUiBounds: {
+        width: number;
+        height: number;
+        boxX: number;
+        boxY: number;
+        backend?: string;
+        windowTitle?: string;
+        role?: string;
+      } | null = null;
 
       // 5a) HYBRYDA: Jeśli planer podał nazwę targetu, sprawdź NAJPIERW Semantyczne Drzewo OS (0 USD, dokładne px + wykrywanie isPassword)
       if (plan.target) {
@@ -1006,6 +1129,9 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
           const treeHit = await act.findUiNode(plan.target);
           if (treeHit?.ok && treeHit.found && treeHit.node && (treeHit.score ?? 1) >= 0.78) {
             if (treeHit.node.isPassword) {
+              if (store.settings.ghostArEnabled !== false) {
+                try { await act.ghostHide?.("riskguard-password"); } catch { /* ignore */ }
+              }
               const reason = "RiskGuard (Drzewo OS): wykryto pole hasła — zablokowano kliknięcie.";
               emitState({ active: false, phase: "blocked", statusMessage: reason });
               return {
@@ -1025,6 +1151,15 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
             label = treeHit.node.name || label;
             confidence = treeHit.score ?? 0.94;
             source = "os-tree";
+            stepUiBounds = {
+              width: treeHit.node.width,
+              height: treeHit.node.height,
+              boxX: treeHit.node.x,
+              boxY: treeHit.node.y,
+              backend: treeHit.backend,
+              windowTitle: treeHit.windowTitle,
+              role: treeHit.node.role,
+            };
           }
         } catch {
           /* fallback na współrzędne z planera / Vision AI poniżej */
@@ -1040,6 +1175,9 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
           if (located.found) {
             const extraRisk = assessDesktopActionRisk(`${plan.target} ${located.label}`, plan.action, located.risk);
             if (extraRisk.blocked) {
+              if (store.settings.ghostArEnabled !== false) {
+                try { await act.ghostHide?.("riskguard-blocked"); } catch { /* ignore */ }
+              }
               emitState({ active: false, phase: "blocked", statusMessage: extraRisk.reason || "RiskGuard block." });
               return {
                 ok: false,
@@ -1065,6 +1203,42 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
         stepOk = false;
         stepOutcome = `Nie udało się wyznaczyć współrzędnych dla „${label}”.`;
       } else {
+        if (store.settings.ghostArEnabled !== false) {
+          const ghostSrc: GhostSourceKind =
+            source === "os-tree" ? (stepUiBounds?.backend === "win-uia" ? "win-uia" : "at-spi2") : "vision";
+          try {
+            await act.ghostShow?.({
+              x: px,
+              y: py,
+              ...(stepUiBounds
+                ? {
+                    width: stepUiBounds.width,
+                    height: stepUiBounds.height,
+                    boxX: stepUiBounds.boxX,
+                    boxY: stepUiBounds.boxY,
+                    windowTitle: stepUiBounds.windowTitle,
+                    role: stepUiBounds.role,
+                  }
+                : {}),
+              label,
+              source: ghostSrc,
+              confidence,
+              plannedAction:
+                plan.action === "move_cursor"
+                  ? "Ruch kursora"
+                  : plan.action === "visual_double"
+                    ? "Podwójne kliknięcie"
+                    : plan.action === "visual_right"
+                      ? "Prawy klik"
+                      : "Kliknięcie",
+              approvalStatus: "confirmed",
+              approvalLabel: `⚡ Krok ${step}/${maxSteps}`,
+              ttlMs: 2400,
+            });
+          } catch {
+            /* ignore */
+          }
+        }
         emitState({
           phase: "moving",
           reticle: {
@@ -1165,7 +1339,7 @@ export async function runOmniAutonomousTask(goal: string, opts: OmniExecOptions 
 
 /**
  * Główny punkt wejścia głosowo-tekstowy:
- * rozpoznaje polską komendę pulpitu (<30 ms refleks / wizyjne namierzanie / autopilot).
+ * rozpoznaje polską komendę pulpitu (<30 ms refleks / percepcję deiktyczną „pod kursorem” / wizyjne namierzanie / autopilot).
  * Zwraca `{ handled: false }`, jeśli wiadomość nie dotyczy sterowania pulpitem lub nie jesteśmy na desktopie.
  */
 export async function executeOmniVoiceCommand(
@@ -1190,9 +1364,7 @@ export async function executeOmniVoiceCommand(
   }
 
   const intent = parseOmniVoiceCommand(transcript);
-  if (!intent) return { handled: false };
-
-  if (intent.kind === "abort") {
+  if (intent?.kind === "abort") {
     if (!hudState.active && !act.isDesktop()) return { handled: false };
     abortOmniPilot(act);
     return {
@@ -1204,6 +1376,31 @@ export async function executeOmniVoiceCommand(
     };
   }
 
+  // SYMBIONT Faza 1: Percepcja Deiktyczna „Pod Kursorem” („co to jest?”, „wyjaśnij to”, „napraw to”, „kliknij tutaj”, „odpisz na to”)
+  if (act.isDesktop()) {
+    const deictic = await executeFoveatedCommand(transcript, {
+      actuator: {
+        isDesktop: act.isDesktop,
+        mouseAction: act.mouseAction,
+        ...(act.ghostShow ? { ghostShow: act.ghostShow } : {}),
+        ...(act.ghostHide ? { ghostHide: act.ghostHide } : {}),
+        sleep: act.sleep,
+      },
+      onConfirm: opts.onConfirm,
+      aborted: () => getOmniAbortSignal().aborted,
+    });
+    if (deictic.handled) {
+      return {
+        handled: true,
+        ok: deictic.ok,
+        kind: deictic.kind,
+        text: deictic.text,
+        spokenText: deictic.spokenText,
+      };
+    }
+  }
+
+  if (!intent) return { handled: false };
   if (!act.isDesktop()) return { handled: false };
 
   // Natychmiastowy Refleks (<30 ms, offline, 0 USD) + obowiązkowy wspólny zapis AuditLog i Guardian

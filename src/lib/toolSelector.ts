@@ -33,6 +33,7 @@ const GROUP_TOOLS: Record<string, string[]> = {
     "desktop_windows_list", "desktop_window_focus",
     "desktop_visual_locate", "desktop_visual_act", "desktop_omni_task",
     "desktop_ui_tree", "desktop_diagnose", "desktop_sentinel_start", "desktop_sentinel_stop",
+    "desktop_foveated_inspect",
   ],
   android: ["android_type", "android_tap", "android_global", "android_open_app", "android_open_settings"],
   info: ["get_weather", "get_news", "get_markets"],
@@ -52,7 +53,7 @@ const GROUP_KEYWORDS: Record<string, string[]> = {
   desktop: [
     "komputer", "pulpit", "linux", "desktop", "głośność", "glosnosc", "uruchom", "otwórz aplikacj", "otworz aplikacj",
     "przeglądark", "przegladark", "stan systemu", "wciśnij", "wcisnij",
-    "kliknij", "myszk", "na ekranie", "kursor", "przesuń", "przesun", "przeciągnij", "przeciagnij", "ikon", "okno", "okna",
+    "kliknij", "myszk", "na ekranie", "kursor", "pod kursorem", "wskazuj", "celownik", "ghost ar", "przesuń", "przesun", "przeciągnij", "przeciagnij", "ikon", "okno", "okna",
     "przewiń", "przewin", "scroll", "autopilot", "omni", "przełącz na", "przelacz na",
     "strażnik", "straznik", "pilnuj ekranu", "obserwuj ekran", "zdiagnozuj", "drzewo ui",
   ],

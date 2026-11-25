@@ -61,6 +61,12 @@ export interface JarvisDesktop {
   screenshotDetailed?(): Promise<{ ok: boolean; data?: string; mediaType?: string; width?: number; height?: number; screenWidth?: number; screenHeight?: number; cursorX?: number; cursorY?: number; error?: string }>;
   pilotUiTree?(maxNodes?: number): Promise<{ ok: boolean; backend?: string; windowTitle?: string; nodes?: UiTreeNode[]; error?: string }>;
   pilotUiFind?(query: string): Promise<{ ok: boolean; found?: boolean; backend?: string; windowTitle?: string; node?: UiTreeNode; score?: number; error?: string }>;
+  pilotUiNodeAt?(x: number, y: number): Promise<{ ok: boolean; found?: boolean; backend?: string; windowTitle?: string; node?: UiTreeNode; error?: string }>;
+  pilotFoveatedCrop?(opts?: { x?: number; y?: number; cropSize?: number; coordSpace?: "physical" | "dip" }): Promise<FoveatedCropResult>;
+  ghostShow?(payload: GhostTargetPayload): Promise<GhostShowResult>;
+  ghostHide?(reason?: string): Promise<{ ok: boolean; hidden?: boolean; reason?: string }>;
+  ghostSetEnabled?(enabled: boolean): Promise<GhostOverlayStatus>;
+  ghostStatus?(): Promise<GhostOverlayStatus>;
   desktopDiagnose?(): Promise<DesktopDoctorReport>;
   onOmniAbort?(cb: () => void): () => void;
 }
@@ -488,4 +494,129 @@ export async function diagnoseDesktopOnPc(): Promise<{ ok: boolean; report?: Des
       : `Wykryłem ${warns.length} rzeczy do sprawdzenia: ${warns.map((w) => w.label).join(", ")}. Szczegóły i komendy naprawcze wypisałem na ekranie.`;
   return { ok: rep.ok, report: rep, message: formatDesktopDoctorReport(rep), spokenText };
 }
+
+// === SYMBIONT PHASE 1: Ghost AR Overlay + Foveated Perception („Pod Kursorem”) ===
+
+export type GhostSourceKind = "at-spi2" | "win-uia" | "vision" | "cursor";
+export type GhostApprovalStatus = "preview" | "pending_consent" | "confirmed" | "blocked";
+
+export interface GhostTargetPayload {
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  boxX?: number;
+  boxY?: number;
+  coordSpace?: "physical" | "dip";
+  label: string;
+  source?: GhostSourceKind;
+  sourceLabel?: string;
+  confidence?: number;
+  plannedAction?: string;
+  approvalStatus?: GhostApprovalStatus;
+  approvalLabel?: string;
+  windowTitle?: string;
+  role?: string;
+  isPassword?: boolean;
+  ttlMs?: number;
+}
+
+export interface GhostShowResult {
+  ok: boolean;
+  fallback?: boolean;
+  blocked?: boolean;
+  mode?: string;
+  backend?: string;
+  reason?: string;
+  geometry?: {
+    displayId: number;
+    displayBounds: { x: number; y: number; width: number; height: number };
+    scaleFactor: number;
+    localX: number;
+    localY: number;
+    localWidth: number;
+    localHeight: number;
+  };
+}
+
+export interface GhostOverlayStatus {
+  enabled: boolean;
+  visible: boolean;
+  windowCreated?: boolean;
+  supported: boolean;
+  mode: string;
+  backend?: string;
+  reason?: string;
+}
+
+export interface FoveatedCropResult {
+  ok: boolean;
+  blocked?: boolean;
+  data?: string;
+  mediaType?: string;
+  width?: number;
+  height?: number;
+  cursorX?: number;
+  cursorY?: number;
+  cursorRelX?: number;
+  cursorRelY?: number;
+  displayId?: number;
+  scaleFactor?: number;
+  windowTitle?: string;
+  backend?: string;
+  node?: UiTreeNode;
+  reason?: string;
+  error?: string;
+}
+
+export async function findUiNodeAtPointOnPc(x: number, y: number): Promise<UiFindResult> {
+  const d = desktop();
+  if (!d?.pilotUiNodeAt) return { ok: false, found: false, error: "err:not-desktop" };
+  return d
+    .pilotUiNodeAt(x, y)
+    .then((res) => ({
+      ok: !!res.ok,
+      found: !!res.found,
+      backend: res.backend,
+      windowTitle: res.windowTitle,
+      node: res.node,
+      error: res.error,
+    }))
+    .catch((e) => ({ ok: false, found: false, error: String(e) }));
+}
+
+export async function captureFoveatedCropOnPc(opts?: {
+  x?: number;
+  y?: number;
+  cropSize?: number;
+  coordSpace?: "physical" | "dip";
+}): Promise<FoveatedCropResult> {
+  const d = desktop();
+  if (!d?.pilotFoveatedCrop) return { ok: false, error: "err:not-desktop" };
+  return d.pilotFoveatedCrop(opts || {}).catch((e) => ({ ok: false, error: String(e) }));
+}
+
+export async function showGhostTargetOnPc(payload: GhostTargetPayload): Promise<GhostShowResult> {
+  const d = desktop();
+  if (!d?.ghostShow) return { ok: false, fallback: true, mode: "not-desktop" };
+  return d.ghostShow(payload).catch(() => ({ ok: false, fallback: true, mode: "ipc-error" }));
+}
+
+export async function hideGhostOverlayOnPc(reason = "manual"): Promise<void> {
+  const d = desktop();
+  try { await d?.ghostHide?.(reason); } catch { /* ignore */ }
+}
+
+export async function setGhostOverlayEnabledOnPc(enabled: boolean): Promise<GhostOverlayStatus | null> {
+  const d = desktop();
+  if (!d?.ghostSetEnabled) return null;
+  try { return await d.ghostSetEnabled(enabled); } catch { return null; }
+}
+
+export async function getGhostOverlayStatusOnPc(): Promise<GhostOverlayStatus | null> {
+  const d = desktop();
+  if (!d?.ghostStatus) return null;
+  try { return await d.ghostStatus(); } catch { return null; }
+}
+
 
