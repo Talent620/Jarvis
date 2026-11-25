@@ -19,6 +19,7 @@ const Journal = lazy(() => import("./components/Journal"));
 const SalesCrm = lazy(() => import("./components/SalesCrm"));
 const GrowthDayPanel = lazy(() => import("./components/GrowthDayPanel"));
 const GoalStatusPanel = lazy(() => import("./components/GoalStatusPanel"));
+const ForgeWorkspace = lazy(() => import("./components/ForgeWorkspace"));
 const MoneyHub = lazy(() => import("./components/MoneyHub"));
 const FinancialDashboard = lazy(() => import("./components/FinancialDashboard"));
 const Help = lazy(() => import("./components/Help"));
@@ -239,6 +240,7 @@ export default function App() {
   const showGrowthDay = route.screen === "growthDay"; const setShowGrowthDay = screenSetter("growthDay");
   const showCandidates = route.screen === "candidates"; const setShowCandidates = screenSetter("candidates");
   const showGoalStatus = route.screen === "goalStatus"; const setShowGoalStatus = screenSetter("goalStatus");
+  const showForge = route.screen === "forge"; const setShowForge = screenSetter("forge");
   const [showCmd, setShowCmd] = useState(false);
   const showRecall = route.screen === "recall"; const setShowRecall = screenSetter("recall");
   const [recallSeed, setRecallSeed] = useState("");
@@ -324,6 +326,7 @@ export default function App() {
       open("growthDay", "Plan dnia", "📅", "plan dnia rekomendacje roi wzrost co dzis zrobic orchestrator"),
       open("candidates", "Kandydaci leadów", "🧲", "kandydaci leady szukaj firmy osm import bez zapisu crm"),
       open("goalStatus", "Cele (autonomia)", "🎯", "cele postep autonomia zatrzymaj wznow anuluj trwaly cel status"),
+      open("forge", "Jarvis Forge — autonomiczne programowanie", "⚒", "forge kod programowanie agent repo testy debug naprawa git"),
       open("studio", "Studio Obrazów", "🎨", "zdjecia edycja generuj obraz foto"),
       open("guardian", "Diagnoza i naprawa", "🩺", "napraw przyspiesz pomoc diagnoza strażnik"),
       open("mind", "Umysł JARVISA", "🧠", "odprawa pamiec swiat wzorce samoocena"),
@@ -2001,6 +2004,7 @@ export default function App() {
           onRecall={() => setShowRecall(true)}
           onMind={() => setShowMind(true)}
           onGoal={() => setShowGoal(true)}
+          onForge={() => setShowForge(true)}
           onGrowthDay={() => setShowGrowthDay(true)}
           onCandidates={() => setShowCandidates(true)}
           onGoalStatus={() => setShowGoalStatus(true)}
@@ -2134,6 +2138,11 @@ export default function App() {
       {showGoalStatus && (
         <ScreenBoundary>
           <GoalStatusPanel onClose={() => setShowGoalStatus(false)} />
+        </ScreenBoundary>
+      )}
+      {showForge && (
+        <ScreenBoundary name="Jarvis Forge" onBack={() => setShowForge(false)}>
+          <ForgeWorkspace onClose={() => setShowForge(false)} />
         </ScreenBoundary>
       )}
       {showCmd && (

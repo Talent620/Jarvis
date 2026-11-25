@@ -24,6 +24,7 @@ export const JARVIS_MODULES = [
   "Trwałe Cele Wieloetapowe (voiceCognition + agentPlanner + goalRuntime + resultVerifier)",
   "Android Phone Use Agent + RiskGuard (Check-then-Act, zakaz pól haseł)",
   "OMNI-PILOT & Frontier Desktop Computer Use (Refleks <30ms, Hybryda AT-SPI2/UIA + Vision [0..1000], Dual-Track Strażnik Ekranu, Diagnostyka OS, RiskGuard + Kill-Switch Ctrl+Alt+X)",
+  "JARVIS FORGE (Autonomiczne środowisko programistyczne: Repo Map, chirurgiczny SEARCH/REPLACE, pula 14 darmowych/lokalnych modeli 0 USD, pamięć doświadczeń, checkpointy i rollback)",
   "Bi-Temporal Core Memory + MCP Bridge",
 ] as const;
 

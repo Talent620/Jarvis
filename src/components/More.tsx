@@ -22,6 +22,7 @@ export default function More({
   onRecall,
   onMind,
   onGoal,
+  onForge,
   onGrowthDay,
   onCandidates,
   onGoalStatus,
@@ -65,6 +66,7 @@ export default function More({
   onRecall: () => void;
   onMind: () => void;
   onGoal: () => void;
+  onForge?: () => void;
   onGrowthDay: () => void;
   onCandidates: () => void;
   onGoalStatus: () => void;
@@ -101,6 +103,7 @@ export default function More({
 
   // Każda funkcja: krótka NAZWA (na kafelku) + OPIS (podtytuł kafelka i pole wyszukiwania).
   const items = [
+    ...(onForge ? [{ id: "forge", icon: "⚒", name: "Jarvis Forge", desc: "Autonomiczny inżynier: buduj, naprawiaj, testuj (0 USD)", fn: onForge }] : []),
     { id: "boss", icon: "⬢", name: "Szef", desc: "Agent głosowy: zrób za mnie, napraw, doradź", fn: onBoss },
     { id: "command", icon: "⌘", name: "Polecenia", desc: "Znajdź/otwórz wszystko (⌘K)", fn: onCommand },
     { id: "recall", icon: "🔎", name: "Recall", desc: "Znajdź wszystko u siebie (czaty, dziennik, pamięć…)", fn: onRecall },

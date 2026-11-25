@@ -31,7 +31,7 @@ export const CENTER_GROUPS: { title: string; ids: string[] }[] = [
   { title: "🛒 Zakupy i okazje", ids: ["bargain", "wheretobuy", "shoppinglist"] },
   { title: "🎙 Narzędzia AI", ids: ["translator", "transcribe", "hud", "screen", "studio"] },
   { title: "🧠 Ja i pamięć", ids: ["mind", "profile", "memory"] },
-  { title: "⬢ Szef i sterowanie", ids: ["boss", "command", "recall", "goal", "goalStatus"] },
+  { title: "⬢ Szef i sterowanie", ids: ["forge", "boss", "command", "recall", "goal", "goalStatus"] },
   { title: "⚙️ System, dane i pomoc", ids: ["notifications", "status", "guardian", "history", "data", "audit", "costs", "gadgets", "helpfaq", "admin"] },
 ];
 
