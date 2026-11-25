@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-11-25T21:47:34.320Z",
+  "taskId": "jarvis-forge-adaptive-phase3",
+  "agent": "antigravity",
+  "branch": "feat/jarvis-forge-evolution",
+  "startCommit": "0f3f279",
+  "endCommit": "UNCOMMITTED",
+  "summary": "Eksperyment Adaptive Intelligence i tryb konkurencyjny Forge: klasyfikator trudności i dynamiczny konstruktor minimalnych zespołów (forge/adaptive.mjs), eskalacja tieru i strategii przy porażce/timeout, turniej w izolowanych git worktree z obiektywnym sędzią (executeCompetitiveForgeRun), twarde rozdzielenie ksiąg kosztów i ochrona przed opóźnionym rozliczeniem (delayedBillingRisk + inFlightReservedUsd), żywe benchmarki na Ollama (1.5b/3b/4b) i Modal A100 Qwen3-32B-AWQ (+/bin/bash.65 promo, /bin/bash.00 z kieszeni) oraz poprawki z testów live (protectedPaths, NDJSON parser, zero-test guard).",
+  "changedFiles": [
+    "forge/adaptive.mjs",
+    "forge/budget.mjs",
+    "forge/cli.mjs",
+    "forge/engine.mjs",
+    "forge/modal-bridge.py",
+    "forge/providers.mjs",
+    "forge/server.mjs",
+    "forge/workspace.mjs",
+    "project-memory/CURRENT_STATE.md",
+    "project-memory/journal/failed-attempts.md",
+    "project-memory/reports/build.json",
+    "project-memory/reports/lint.json",
+    "project-memory/reports/secret-scan.json",
+    "project-memory/reports/test.json",
+    "roject-memory/CURRENT_STATE.json",
+    "tests/jarvisForgeAdaptive.test.ts"
+  ],
+  "commands": [
+    {
+      "command": "node scripts/forge-ubuntu-acceptance.mjs --skip-live-task",
+      "exitCode": 0
+    }
+  ],
+  "testResults": [
+    {
+      "check": "secret-scan",
+      "status": "PASS",
+      "source": "report",
+      "command": "node scripts/secret-scan.mjs --all",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/secret-scan.json",
+      "reportCommit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
+      "reportDigest": "82a023481f46c257e72640435ea475cba34f450b6383d1ac07ea7373590027ce",
+      "finishedAt": "2026-11-25T21:40:31.610Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto."
+    },
+    {
+      "check": "lint",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/lint.json",
+      "reportCommit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
+      "reportDigest": "ffe64aaf3973c20fb3f35d2b7c600e8d4b96414de3ad8db8cca016b1113da2af",
+      "finishedAt": "2026-11-25T21:40:57.088Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu"
+    },
+    {
+      "check": "test",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm test",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/test.json",
+      "reportCommit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
+      "reportDigest": "b7c0a6650c330b2d946646db5f3a93c86db4387457df5ec151524edac8f992f7",
+      "finishedAt": "2026-11-25T21:46:19.612Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Test Files  375 passed (375) · Tests  3144 passed (3144)"
+    },
+    {
+      "check": "build",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run build",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/build.json",
+      "reportCommit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
+      "reportDigest": "648692e6f77b6639734b6fff7aa2cc84d1738d893ebe318fdc168986884e3610",
+      "finishedAt": "2026-11-25T21:47:02.418Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · built in 14.96s"
+    }
+  ],
+  "problems": [
+    "Lokalny model 1.5B na 2 vCPU jest zbyt słaby na wieloetapowe kodowanie (halucynuje narzędzia i próbował edytować testy) — rozwiązane przez eskalację Zasady 5 oraz deterministyczne protectedPaths.",
+    "Równoległe uruchamianie 2 kandydatów na 1 wspólnym GPU Modal pod ciasnym limitem /bin/bash.25 obniżyło skuteczność przez podział budżetu (0/3 ukończonych, parallelWorthIt=false); tryb konkurencyjny opłaca się wyłącznie dla niezależnych, mocnych i osobno limitowanych backendów.",
+    "W Exp B1 (5-plikowy bench-ledger) i Exp B3 (ttlCache.mjs po eskalacji) Qwen3-32B-AWQ zbliżyło się o 1-2 kroki do PASS, lecz uczciwie zablokowane przez maxIterations/Completeness Gate (0 fałszywych pozytywów)."
+  ],
+  "hypotheses": [],
+  "nextStep": "Na fizycznym Ubuntu przetestować Adaptive Intelligence z prawdziwym darmowym API Kat. B (np. Gemini/Cerebras/Mistral) + lokalną Ollamą 7B-14B na GPU (npm run forge:accept), naprawić OOM L4 w deploy/modal_brain.py i ocenić gotowość gałęzi feat/jarvis-forge-evolution.",
+  "relatedDecisions": [
+    "ADR-0009"
+  ],
+  "redactions": 0
+}

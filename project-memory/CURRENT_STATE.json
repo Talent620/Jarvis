@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "generatedBy": "scripts/sync-project-state.mjs",
-  "generatedAt": "2026-11-25T20:34:44.895Z",
+  "generatedAt": "2026-11-25T21:47:34.636Z",
   "notice": "PLIK GENEROWANY — nie edytuj ręcznie. Odśwież: npm run memory:sync",
   "git": {
-    "commit": "7c00e534448eb726c69f0a25a1d7734b8f259af8",
-    "shortCommit": "7c00e53",
+    "commit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
+    "shortCommit": "aff119c",
     "branch": "feat/jarvis-forge-evolution",
     "dirty": true,
     "changes": [
@@ -16,9 +16,9 @@
       " M project-memory/reports/lint.json",
       " M project-memory/reports/secret-scan.json",
       " M project-memory/reports/test.json",
-      "?? project-memory/events/20261125T203444592Z-antigravity-jarvis-forge-phase2.json"
+      "?? project-memory/events/20261125T214734320Z-antigravity-jarvis-forge-adaptive-phase3.json"
     ],
-    "worktreeFingerprint": "52f03c88a3d58f72b5d629772618b527b01e68fb3ba0ed1bb49ae65b4dd5669b"
+    "worktreeFingerprint": "7748d4ce1d9ad0d6dc9ca24ccccba420b9b9c4840f0bb87216bdfd445f524e0c"
   },
   "repository": {
     "status": "OK",
@@ -40,7 +40,7 @@
   "modules": [
     {
       "dir": "tests",
-      "files": 374
+      "files": 375
     },
     {
       "dir": "src/lib",
@@ -60,7 +60,7 @@
     },
     {
       "dir": "project-memory",
-      "files": 32
+      "files": 33
     },
     {
       "dir": "(root)",
@@ -83,11 +83,11 @@
       "files": 13
     },
     {
-      "dir": "QA",
-      "files": 11
+      "dir": "forge",
+      "files": 12
     },
     {
-      "dir": "forge",
+      "dir": "QA",
       "files": 11
     },
     {
@@ -429,6 +429,16 @@
   ],
   "recentCommits": [
     {
+      "hash": "aff119c",
+      "date": "2026-11-25T21:40:23Z",
+      "subject": "feat(forge): Adaptive Intelligence (5-tier routing & escalation), dynamic minimal teams, competitive worktree tournament, delayed-billing guard & live-hardening"
+    },
+    {
+      "hash": "0f3f279",
+      "date": "2026-11-25T20:34:54Z",
+      "subject": "docs(memory): record jarvis-forge-phase2 real-world validation, FA-005..FA-007 & verified CURRENT_STATE"
+    },
+    {
       "hash": "7c00e53",
       "date": "2026-11-25T20:26:25Z",
       "subject": "feat(forge): Phase 2 live-test fixes (Edit-Lint-Revert, completeness gate, Ollama inline tools, worktree porcelain fix), Ubuntu acceptance & hardening tests"
@@ -467,25 +477,15 @@
       "hash": "8bc8e03",
       "date": "2026-11-25T10:07:31Z",
       "subject": "docs(memory): record production-release-main event & verified CURRENT_STATE on main"
-    },
-    {
-      "hash": "97544a5",
-      "date": "2026-11-25T10:00:28Z",
-      "subject": "docs(release): add JARVIS_PRODUCTION_RELEASE.md for main fast-forward merge"
-    },
-    {
-      "hash": "0a0f53f",
-      "date": "2026-11-25T09:42:32Z",
-      "subject": "docs(memory): record production-hardening event & verified CURRENT_STATE (372/372 suites, 3125/3125 tests)"
     }
   ],
   "checks": {
     "secret-scan": {
       "command": "node scripts/secret-scan.mjs --all",
       "exitCode": 0,
-      "finishedAt": "2026-11-25T20:26:34.134Z",
-      "commit": "7c00e534448eb726c69f0a25a1d7734b8f259af8",
-      "logPath": "project-memory/reports/logs/secret-scan-20261125T202633Z.log",
+      "finishedAt": "2026-11-25T21:40:31.610Z",
+      "commit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
+      "logPath": "project-memory/reports/logs/secret-scan-20261125T214031Z.log",
       "summary": {
         "result": "Skan sekretów: czysto."
       },
@@ -496,9 +496,9 @@
     "lint": {
       "command": "npm run lint",
       "exitCode": 0,
-      "finishedAt": "2026-11-25T20:27:00.198Z",
-      "commit": "7c00e534448eb726c69f0a25a1d7734b8f259af8",
-      "logPath": "project-memory/reports/logs/lint-20261125T202634Z.log",
+      "finishedAt": "2026-11-25T21:40:57.088Z",
+      "commit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
+      "logPath": "project-memory/reports/logs/lint-20261125T214031Z.log",
       "summary": {
         "problems": null
       },
@@ -509,12 +509,12 @@
     "test": {
       "command": "npm test",
       "exitCode": 0,
-      "finishedAt": "2026-11-25T20:32:11.354Z",
-      "commit": "7c00e534448eb726c69f0a25a1d7734b8f259af8",
-      "logPath": "project-memory/reports/logs/test-20261125T202700Z.log",
+      "finishedAt": "2026-11-25T21:46:19.612Z",
+      "commit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
+      "logPath": "project-memory/reports/logs/test-20261125T214057Z.log",
       "summary": {
-        "testFiles": "Test Files  374 passed (374)",
-        "tests": "Tests  3139 passed (3139)"
+        "testFiles": "Test Files  375 passed (375)",
+        "tests": "Tests  3144 passed (3144)"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -523,11 +523,11 @@
     "build": {
       "command": "npm run build",
       "exitCode": 0,
-      "finishedAt": "2026-11-25T20:32:54.990Z",
-      "commit": "7c00e534448eb726c69f0a25a1d7734b8f259af8",
-      "logPath": "project-memory/reports/logs/build-20261125T203211Z.log",
+      "finishedAt": "2026-11-25T21:47:02.418Z",
+      "commit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
+      "logPath": "project-memory/reports/logs/build-20261125T214619Z.log",
       "summary": {
-        "built": "built in 15.49s"
+        "built": "built in 14.96s"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -724,10 +724,18 @@
     ]
   },
   "events": {
-    "total": 13,
-    "valid": 13,
+    "total": 14,
+    "valid": 14,
     "invalid": [],
     "recent": [
+      {
+        "file": "project-memory/events/20261125T214734320Z-antigravity-jarvis-forge-adaptive-phase3.json",
+        "timestamp": "2026-11-25T21:47:34.320Z",
+        "agent": "antigravity",
+        "taskId": "jarvis-forge-adaptive-phase3",
+        "endCommit": "UNCOMMITTED",
+        "nextStep": "Na fizycznym Ubuntu przetestować Adaptive Intelligence z prawdziwym darmowym API Kat. B (np. Gemini/Cerebras/Mistral) + lokalną Ollamą 7B-14B na GPU (npm run forge:accept), naprawić OOM L4 w deploy/modal_brain.py i ocenić gotowość gałęzi feat/jarvis-forge-evolution."
+      },
       {
         "file": "project-memory/events/20261125T203444592Z-antigravity-jarvis-forge-phase2.json",
         "timestamp": "2026-11-25T20:34:44.592Z",
@@ -799,20 +807,12 @@
         "taskId": "omni-pilot",
         "endCommit": "UNCOMMITTED",
         "nextStep": "Recenzja PR feat/omni-pilot (ADR-0004) i test na żywym pulpicie Linux X11/Wayland lub Windows; po akceptacji merge do main, build Linux (.AppImage/.deb) i APK oraz kolejny etap (AT-SPI2/UIA + lokalny Silero VAD/Whisper)."
-      },
-      {
-        "file": "project-memory/events/20261124T195810291Z-antigravity-apex-polish.json",
-        "timestamp": "2026-11-24T19:58:10.291Z",
-        "agent": "antigravity",
-        "taskId": "apex-polish",
-        "endCommit": "UNCOMMITTED",
-        "nextStep": "Recenzja i merge PR feat/apex-polish -> main, a nastepnie build Linux (.AppImage/.deb) i nowego APK v6-jarvis-apex"
       }
     ]
   },
   "nextRecommendedStep": {
-    "from": "project-memory/events/20261125T203444592Z-antigravity-jarvis-forge-phase2.json",
-    "text": "Uruchomić npm run forge:accept na fizycznym Ubuntu (Ollama 7B-14B lub darmowy klucz API), naprawić OOM L4 w deploy/modal_brain.py i zdecydować o scaleniu feat/jarvis-forge-evolution."
+    "from": "project-memory/events/20261125T214734320Z-antigravity-jarvis-forge-adaptive-phase3.json",
+    "text": "Na fizycznym Ubuntu przetestować Adaptive Intelligence z prawdziwym darmowym API Kat. B (np. Gemini/Cerebras/Mistral) + lokalną Ollamą 7B-14B na GPU (npm run forge:accept), naprawić OOM L4 w deploy/modal_brain.py i ocenić gotowość gałęzi feat/jarvis-forge-evolution."
   },
   "decisions": [
     {
@@ -856,6 +856,6 @@
       "status": "proposed"
     }
   ],
-  "failedAttempts": 7,
-  "integrity": "d52dcd30be671436081f1ea5ac81a5e2082024328326402ed5c2721c44e15b55"
+  "failedAttempts": 8,
+  "integrity": "15aae6b963ae3a8179ce43b9456b0181770eb6a979a5fb99cd93f778a6583b1e"
 }
