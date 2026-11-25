@@ -4,19 +4,19 @@
   "command": "npm run build",
   "available": true,
   "unavailableReason": null,
-  "startedAt": "2026-11-25T06:39:17.267Z",
-  "finishedAt": "2026-11-25T06:39:55.705Z",
-  "durationMs": 38438,
-  "commit": "6c9e13a2d9e31b8e27827f347ba241457afa066f",
-  "branch": "feat/master-interface-polish",
+  "startedAt": "2026-11-25T09:40:45.783Z",
+  "finishedAt": "2026-11-25T09:41:27.219Z",
+  "durationMs": 41436,
+  "commit": "803f8bd809da935e7c62c34cb251b39de3854fda",
+  "branch": "fix/production-integration",
   "worktreeDirty": true,
-  "worktreeFingerprint": "76337ab5047effd9aec5c7ef241d1168e9582b3f1e3df19ebf7deb71dadacf75",
+  "worktreeFingerprint": "1289155a773901375a652de0cb8e8d286f82ecbc43e3ce10c53d18bae5c9fe30",
   "exitCode": 0,
   "signal": null,
   "timedOut": false,
   "spawnError": null,
   "summary": {
-    "built": "built in 13.58s"
+    "built": "built in 14.82s"
   },
   "outputTail": [
     "npm notice run jarvis-ai-assistant@2.0.0 build",
@@ -60,5 +60,5 @@
     "- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks",
     "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit."
   ],
-  "logPath": "project-memory/reports/logs/build-20261125T063917Z.log"
+  "logPath": "project-memory/reports/logs/build-20261125T094045Z.log"
 }
