@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-11-25T06:41:22.297Z",
+  "taskId": "master-interface-polish",
+  "agent": "antigravity",
+  "branch": "feat/master-interface-polish",
+  "startCommit": "4ec1594",
+  "endCommit": "UNCOMMITTED",
+  "summary": "Dopracowano wszystkie 34 moduły UI (.panel-close ×, role=dialog, szerokości desktopowe 760/920 px, .num-tab, pigułki kategorii w Centrum, naprawa przycisków flex .btn oraz nowy motyw Editorial Boutique z DNA ImPULS) i wdrożono JARVIS Site OS 2.0 (ochrona obrazów WebP przed limitem 60 KB, izolacja tunelu 403 dla / i /api/pair, Magic Bytes przeciw SVG XSS, upsert jarvisProjectId, SSE /api/events, Podgląd JS, 20 wersji, audytor rect.right oraz Kompas, ROI i Brief A4 PDF).",
+  "changedFiles": [
+    "index.html",
+    "project-memory/CURRENT_STATE.md",
+    "project-memory/decisions/ADR-0008-master-interface-and-siteos2.md",
+    "project-memory/reports/build.json",
+    "project-memory/reports/lint.json",
+    "project-memory/reports/secret-scan.json",
+    "project-memory/reports/test.json",
+    "roject-memory/CURRENT_STATE.json",
+    "scripts/e2e-xvfb-probe.cjs",
+    "site-os/package.json",
+    "site-os/public/app.js",
+    "site-os/public/index.html",
+    "site-os/public/styles.css",
+    "site-os/scripts/smoke.mjs",
+    "site-os/server.mjs",
+    "src/App.tsx",
+    "src/components/AdStudio.tsx",
+    "src/components/AdminPanel.tsx",
+    "src/components/AuditLog.tsx",
+    "src/components/BargainHunter.tsx",
+    "src/components/BrandKit.tsx",
+    "src/components/Cards.tsx",
+    "src/components/ChatHistory.tsx",
+    "src/components/Conversation.tsx",
+    "src/components/CostPanel.tsx",
+    "src/components/FinancialDashboard.tsx",
+    "src/components/Gadgets.tsx",
+    "src/components/GoalStatusPanel.tsx",
+    "src/components/GrowthDayPanel.tsx",
+    "src/components/Guardian.tsx",
+    "src/components/Help.tsx",
+    "src/components/Journal.tsx",
+    "src/components/LeadCandidatesPanel.tsx",
+    "src/components/LeadDetail.tsx",
+    "src/components/MailCompose.tsx",
+    "src/components/MarketingWorkspace.tsx",
+    "src/components/Modal.tsx",
+    "src/components/MoneyHub.tsx",
+    "src/components/More.tsx",
+    "src/components/Panels.tsx",
+    "src/components/PermissionDialog.tsx",
+    "src/components/Projects.tsx",
+    "src/components/SalesCrm.tsx",
+    "src/components/SalesDashboard.tsx",
+    "src/components/SalesPlan.tsx",
+    "src/components/Settings.tsx",
+    "src/components/Studio.tsx",
+    "src/components/TaskHub.tsx",
+    "src/components/Transcribe.tsx",
+    "src/components/Translator.tsx",
+    "src/components/WebStudio.tsx",
+    "src/components/WebllmPanel.tsx",
+    "src/components/WhereToBuy.tsx",
+    "src/lib/siteOs.ts",
+    "src/lib/tools.ts",
+    "src/lib/webgen.ts",
+    "src/styles/index.css",
+    "tests/masterInterfaceAndSiteOs.test.ts"
+  ],
+  "commands": [
+    {
+      "command": "npm test",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run lint",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run test:e2e:xvfb",
+      "exitCode": 0
+    },
+    {
+      "command": "node site-os/scripts/smoke.mjs",
+      "exitCode": 0
+    }
+  ],
+  "testResults": [
+    {
+      "check": "secret-scan",
+      "status": "PASS",
+      "source": "report",
+      "command": "node scripts/secret-scan.mjs --all",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/secret-scan.json",
+      "reportCommit": "6c9e13a2d9e31b8e27827f347ba241457afa066f",
+      "reportDigest": "04f9d490fff9fee2c4a36d10c9f53c37ca279d5454c4b7ce14ae7fd5253337c5",
+      "finishedAt": "2026-11-25T06:34:28.042Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto."
+    },
+    {
+      "check": "lint",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/lint.json",
+      "reportCommit": "6c9e13a2d9e31b8e27827f347ba241457afa066f",
+      "reportDigest": "0a0846bdbb48d110dab00676977fb533b76261d5db4cbf4ea7b176fd004cfbaf",
+      "finishedAt": "2026-11-25T06:34:49.110Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu"
+    },
+    {
+      "check": "test",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm test",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/test.json",
+      "reportCommit": "6c9e13a2d9e31b8e27827f347ba241457afa066f",
+      "reportDigest": "7902696550e905ccb5e9755402c8a1eee956cf5dec27721e1900ea3ff5c0d31e",
+      "finishedAt": "2026-11-25T06:39:17.218Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Test Files  370 passed (370) · Tests  3114 passed (3114)"
+    },
+    {
+      "check": "build",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run build",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/build.json",
+      "reportCommit": "6c9e13a2d9e31b8e27827f347ba241457afa066f",
+      "reportDigest": "e3eb600208d3b29301147a25db7b598eae5bcb38885fb840367a76cf91b401fc",
+      "finishedAt": "2026-11-25T06:39:55.705Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · built in 13.58s"
+    }
+  ],
+  "problems": [],
+  "hypotheses": [],
+  "nextStep": "Odbiór wizualny i sprzętowy właściciela na fizycznym Ubuntu oraz przetestowanie warsztatu Site OS 2.0 przed scaleniem do main.",
+  "relatedDecisions": [
+    "ADR-0008"
+  ],
+  "redactions": 0
+}
