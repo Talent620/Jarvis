@@ -13,22 +13,237 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
-import { atomicWriteFile, insideRoot, redactSecrets, scanSecretsInText, shortHash } from "./security.mjs";
+import {
+  assertSafeRepoFile,
+  atomicWriteFile,
+  detectPromptInjection,
+  insideRoot,
+  redactSecrets,
+  sanitizeChildEnv,
+  scanSecretsInText,
+  shortHash,
+  wrapUntrustedRepoData,
+} from "./security.mjs";
 import { buildRepoMap, scanRepository } from "./repo-intel.mjs";
 
 export const ALLOWED_DEV_COMMANDS = new Set([
   "node", "npm", "npx", "pnpm", "yarn", "git",
-  "python3", "python", "pytest", "go", "cargo", "make", "rg", "sqlite3", "docker",
+  "python3", "python", "pytest", "go", "cargo", "make", "rg",
 ]);
 
-const DESTRUCTIVE_ARG_PATTERNS = [
-  /(?:^|\s)--force(?:\s|$)/i,
-  /(?:^|\s)reset\s+--hard(?:\s|$)/i,
-  /(?:^|\s)clean\s+-[a-z]*f/i,
-  /(?:^|\s)push(?:\s|$)/i,
-  /(?:^|\s)rm\s+-rf/i,
-  /(?:^|\s)(?:shutdown|reboot|mkfs|dd\s+if=)/i,
-];
+const ALLOWED_GIT_SUBCOMMANDS = new Set([
+  "status", "diff", "log", "show", "rev-parse", "ls-files", "grep", "blame", "branch",
+]);
+
+const ALLOWED_NPX_BINARIES = new Set([
+  "vitest", "tsc", "eslint", "prettier", "jest", "mocha", "tsx", "biome",
+]);
+
+const ALLOWED_MAKE_TARGETS = new Set([
+  "test", "tests", "check", "lint", "build", "fmt", "format", "typecheck",
+]);
+
+const BLOCKED_NPM_SCRIPT_NAME_RE = /(?:publish|release|deploy|push|destroy|reset|clean:all|nuke)/i;
+const SHELL_META_RE = /[;&|`$<>]/;
+
+/**
+ * Rzeczywista, politykowa ocena polecenia (Capability-Based Command Policy — NIE lista zablokowanych słów!).
+ * Każda binarka z allowlisty posiada ścisłą specyfikację dozwolonych podkomend, flag i granic ścieżek.
+ */
+export function evaluateCommandPolicy(command, args = [], repoRoot = null) {
+  const cmd = String(command || "").trim();
+  if (!ALLOWED_DEV_COMMANDS.has(cmd)) {
+    return {
+      ok: false,
+      rule: "binary-allowlist",
+      reason: `Polecenie "${cmd}" nie należy do zweryfikowanej polityki narzędzi deweloperskich Forge.`,
+    };
+  }
+
+  const argList = (Array.isArray(args) ? args : []).map(String);
+  if (argList.length > 60) {
+    return { ok: false, rule: "arg-limit", reason: "Przekroczono limit liczby argumentów (max 60)." };
+  }
+  for (const a of argList) {
+    if (a.includes("\0")) {
+      return { ok: false, rule: "nul-byte", reason: "Argument zawiera niedozwolony znak NUL." };
+    }
+  }
+
+  // 1. GIT — wyłącznie bezpieczne operacje odczytu (bez -c, --git-dir, push, reset, clean, checkout, config)
+  if (cmd === "git") {
+    const first = argList[0] || "";
+    if (!first || first.startsWith("-")) {
+      return {
+        ok: false,
+        rule: "git-global-flag",
+        reason: `Globalne flagi git przed podkomendą ("${first}") są zablokowane przez politykę (ochrona przed -c / --git-dir / -C).`,
+      };
+    }
+    if (!ALLOWED_GIT_SUBCOMMANDS.has(first)) {
+      return {
+        ok: false,
+        rule: "git-subcommand",
+        reason: `Podkomenda "git ${first}" jest zablokowana (dozwolone wyłącznie bezpieczne komendy odczytu: ${[...ALLOWED_GIT_SUBCOMMANDS].join(", ")}).`,
+      };
+    }
+    if (first === "branch") {
+      const dangerous = argList.slice(1).find((a) => /^-(?:d|D|f|m|M|c|C)|^--(?:delete|force|move|copy|set-upstream)/i.test(a));
+      if (dangerous) {
+        return { ok: false, rule: "git-branch-mutate", reason: `Mutująca flaga "git branch ${dangerous}" jest zablokowana.` };
+      }
+    }
+    if (argList.some((a) => /^--(?:exec-path|git-dir|work-tree|upload-pack|receive-pack|output)=?/i.test(a))) {
+      return { ok: false, rule: "git-exec-flag", reason: "Flaga git zmieniająca ścieżkę wykonania lub zapisu jest zablokowana." };
+    }
+    return { ok: true, command: cmd, args: argList };
+  }
+
+  // 2. NODE — zakaz inline code execution (-e/--eval/-p/--print/-r/--require/--import)
+  if (cmd === "node") {
+    for (const a of argList) {
+      if (/^-(?:e|p|r|i)$|^--(?:eval|print|require|import|loader|experimental-loader|inspect|inspect-brk)(?:=|$)/i.test(a)) {
+        return {
+          ok: false,
+          rule: "node-no-inline-eval",
+          reason: `Flaga "${a}" w node jest zablokowana (zakaz wykonywania dowolnego kodu inline — uruchamiaj wyłącznie pliki/testy projektu).`,
+        };
+      }
+    }
+    if (argList.length === 0) {
+      return { ok: false, rule: "node-no-repl", reason: "Interaktywny REPL node bez argumentów jest zablokowany." };
+    }
+    // Wszystkie argumenty będące ścieżkami skryptów muszą leżeć wewnątrz repoRoot
+    if (repoRoot) {
+      for (const a of argList) {
+        if (!a.startsWith("-") && (a.includes("/") || a.includes("\\") || /\.(?:js|mjs|cjs|ts)$/i.test(a))) {
+          try {
+            insideRoot(repoRoot, a);
+          } catch (e) {
+            return { ok: false, rule: "node-path-boundary", reason: e instanceof Error ? e.message : String(e) };
+          }
+        }
+      }
+    }
+    return { ok: true, command: cmd, args: argList };
+  }
+
+  // 3. PYTHON / PYTHON3 — zakaz `-c`, `-i`, `pip`, `http.server`; dozwolone `pytest`, `unittest`, `py_compile`, pliki w repo
+  if (cmd === "python" || cmd === "python3") {
+    if (argList.length === 0) {
+      return { ok: false, rule: "python-no-repl", reason: "Interaktywny REPL Python jest zablokowany." };
+    }
+    for (let i = 0; i < argList.length; i++) {
+      const a = argList[i];
+      if (/^-(?:c|i)$|^--command$/i.test(a) || (a.startsWith("-") && !a.startsWith("--") && /[ci]/.test(a.slice(1)))) {
+        return { ok: false, rule: "python-no-inline-exec", reason: `Flaga "${a}" w Pythonie jest zablokowana (zakaz inline -c / REPL).` };
+      }
+      if (a === "-m") {
+        const mod = argList[i + 1] || "";
+        if (!["pytest", "unittest", "py_compile", "json.tool"].includes(mod)) {
+          return {
+            ok: false,
+            rule: "python-module-allowlist",
+            reason: `Moduł "python -m ${mod}" nie jest dozwolony (dozwolone: pytest, unittest, py_compile).`,
+          };
+        }
+      }
+    }
+    if (repoRoot) {
+      for (const a of argList) {
+        if (!a.startsWith("-") && (a.includes("/") || a.includes("\\") || a.endsWith(".py"))) {
+          try {
+            insideRoot(repoRoot, a);
+          } catch (e) {
+            return { ok: false, rule: "python-path-boundary", reason: e instanceof Error ? e.message : String(e) };
+          }
+        }
+      }
+    }
+    return { ok: true, command: cmd, args: argList };
+  }
+
+  // 4. NPM / PNPM / YARN — tylko test + bezpieczne skrypty projektu z package.json (bez install/exec/publish/dlx!)
+  if (cmd === "npm" || cmd === "pnpm" || cmd === "yarn") {
+    const sub = argList[0] || "";
+    if (sub === "test" || sub === "t" || sub === "--version" || sub === "-v") {
+      return { ok: true, command: cmd, args: argList };
+    }
+    if (sub === "run" && argList[1]) {
+      const scriptName = argList[1];
+      if (BLOCKED_NPM_SCRIPT_NAME_RE.test(scriptName) || SHELL_META_RE.test(scriptName)) {
+        return { ok: false, rule: "npm-script-policy", reason: `Skrypt "${scriptName}" zablokowany przez politykę bezpieczeństwa.` };
+      }
+      if (repoRoot) {
+        try {
+          const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+          if (!pkg?.scripts || !Object.prototype.hasOwnProperty.call(pkg.scripts, scriptName)) {
+            return { ok: false, rule: "npm-script-exists", reason: `Skrypt "${scriptName}" nie istnieje w package.json tego repozytorium.` };
+          }
+        } catch {
+          return { ok: false, rule: "npm-package-missing", reason: "Brak poprawnego package.json w repozytorium." };
+        }
+      }
+      return { ok: true, command: cmd, args: argList };
+    }
+    return {
+      ok: false,
+      rule: "npm-subcommand",
+      reason: `Podkomenda "${cmd} ${sub}" jest zablokowana (dozwolone wyłącznie "${cmd} test" oraz "${cmd} run <skrypt-projektu>", zakaz install/exec/publish/dlx).`,
+    };
+  }
+
+  // 5. NPX — wyłącznie znane lokalne narzędzia dev Z WYMUSZONYM --no-install (nigdy nie pobiera zdalnych pakietów!)
+  if (cmd === "npx") {
+    if (argList.some((a) => /^-(?:y|p)$|^--(?:yes|package|call)(?:=|$)/i.test(a))) {
+      return { ok: false, rule: "npx-no-remote-install", reason: "Flagi pobierania/wykonania zdalnych pakietów w npx są zablokowane." };
+    }
+    const nonFlagArgs = argList.filter((a) => !a.startsWith("-"));
+    const targetBin = nonFlagArgs[0] || "";
+    if (!ALLOWED_NPX_BINARIES.has(targetBin)) {
+      return {
+        ok: false,
+        rule: "npx-binary-allowlist",
+        reason: `Binarka "npx ${targetBin}" nie jest na liście dozwolonych lokalnych narzędzi (${[...ALLOWED_NPX_BINARIES].join(", ")}).`,
+      };
+    }
+    const normalizedArgs = argList.includes("--no-install") ? argList : ["--no-install", ...argList];
+    return { ok: true, command: cmd, args: normalizedArgs };
+  }
+
+  // 6. PYTEST / GO / CARGO / MAKE / RG — ścisłe podkomendy
+  if (cmd === "go") {
+    const sub = argList[0] || "";
+    if (!["test", "vet", "build", "fmt", "version"].includes(sub)) {
+      return { ok: false, rule: "go-subcommand", reason: `Podkomenda "go ${sub}" jest zablokowana (dozwolone: test, vet, build, fmt, version).` };
+    }
+    return { ok: true, command: cmd, args: argList };
+  }
+  if (cmd === "cargo") {
+    const sub = argList[0] || "";
+    if (!["test", "check", "clippy", "fmt", "build", "--version"].includes(sub)) {
+      return { ok: false, rule: "cargo-subcommand", reason: `Podkomenda "cargo ${sub}" jest zablokowana (dozwolone: test, check, clippy, fmt, build).` };
+    }
+    return { ok: true, command: cmd, args: argList };
+  }
+  if (cmd === "make") {
+    if (argList.some((a) => a.startsWith("-") || a.includes("="))) {
+      return { ok: false, rule: "make-flags", reason: "Flagi oraz nadpisania zmiennych w make są zablokowane." };
+    }
+    if (!argList.length || argList.some((t) => !ALLOWED_MAKE_TARGETS.has(t))) {
+      return { ok: false, rule: "make-target", reason: `Dozwolone cele make: ${[...ALLOWED_MAKE_TARGETS].join(", ")}.` };
+    }
+    return { ok: true, command: cmd, args: argList };
+  }
+  if (cmd === "rg") {
+    if (argList.some((a) => /^--pre(?:=|$)|^--pre-glob/i.test(a))) {
+      return { ok: false, rule: "rg-no-preprocessor", reason: "Flaga --pre w ripgrep (wykonanie zewnętrznego polecenia) jest zablokowana." };
+    }
+    return { ok: true, command: cmd, args: argList };
+  }
+
+  return { ok: true, command: cmd, args: argList };
+}
 
 const MAX_CMD_OUTPUT = 180_000;
 const MAX_READ_BYTES = 1_500_000;
@@ -39,7 +254,6 @@ export function computeUnifiedDiff(relPath, beforeText, afterText, contextLines 
   const b = String(afterText ?? "").split(/\r?\n/);
   if (beforeText === afterText) return "";
 
-  // Prosty LCS / prefiks-sufiks dla szybkiego, deterministycznego diffu bez kwadratowej pamięci na dużych plikach
   let prefix = 0;
   while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix += 1;
   let suffix = 0;
@@ -70,7 +284,7 @@ export function computeUnifiedDiff(relPath, beforeText, afterText, contextLines 
   return out.join("\n").slice(0, 12_000);
 }
 
-/** Sprawdź składnię pliku natychmiast po zapisie (ACI lint-on-edit). */
+/** Sprawdź składnię pliku natychmiast po zapisie (ACI lint-on-edit: JS/MJS/CJS/JSON/Python). */
 export function quickSyntaxCheck(absPath) {
   const ext = path.extname(absPath).toLowerCase();
   if (ext === ".json") {
@@ -89,6 +303,16 @@ export function quickSyntaxCheck(absPath) {
     });
     if (res.status === 0) return { ok: true, checker: "node --check" };
     return { ok: false, checker: "node --check", error: (res.stderr || res.stdout || "SyntaxError").trim().slice(0, 1200) };
+  }
+  if (ext === ".py") {
+    const res = spawnSync("python3", ["-m", "py_compile", absPath], {
+      encoding: "utf8",
+      timeout: 8000,
+      windowsHide: true,
+    });
+    if (res.error && res.error.code === "ENOENT") return { ok: true, checker: "none" };
+    if (res.status === 0) return { ok: true, checker: "python3 -m py_compile" };
+    return { ok: false, checker: "python3 -m py_compile", error: (res.stderr || res.stdout || "SyntaxError").trim().slice(0, 1200) };
   }
   return { ok: true, checker: "none" };
 }
@@ -109,14 +333,12 @@ export function extractErrorSignature(output, command = "") {
   const picked = (errorLines.length ? errorLines : lines.slice(-12)).slice(0, 8);
   const rawSummary = picked.join("\n").slice(0, 900);
 
-  // Wyciągnij pliki wspomniane w błędach
   const fileMatches = new Set();
   for (const l of picked) {
     const m = l.match(/([A-Za-z0-9_./-]+\.(?:ts|tsx|js|jsx|mjs|cjs|py|go|rs))(?::(\d+))?/);
     if (m && m[1] && !m[1].includes("node_modules")) fileMatches.add(m[1]);
   }
 
-  // Znormalizuj zmienne (timestamp, porty, numery ms, ścieżki tmp) aby ta sama klasa błędu miała stały podpis
   const normalized = picked
     .slice(0, 3)
     .join(" | ")
@@ -144,34 +366,24 @@ export function condenseCommandOutput(stdout, stderr, maxChars = 6000) {
   return `${redacted.slice(0, headLen)}\n\n... [skondensowano ${redacted.length - headLen - tailLen} znaków] ...\n\n${redacted.slice(-tailLen)}`;
 }
 
-/** Bezpieczne uruchomienie procesu potomnego z zabijaniem grupy procesów przy timeout. */
+/** Bezpieczne uruchomienie procesu potomnego pod polityką capability-based, z oczyszczonym env i zabijaniem grupy procesów. */
 export function runSafeProcess(command, args = [], opts = {}) {
-  const cmd = String(command || "").trim();
-  if (!ALLOWED_DEV_COMMANDS.has(cmd)) {
+  const policy = evaluateCommandPolicy(command, args, opts.repoRoot || opts.cwd || null);
+  if (!policy.ok) {
     return Promise.resolve({
       ok: false,
       code: -1,
       stdout: "",
-      stderr: `Polecenie "${cmd}" nie znajduje się na allowliście narzędzi deweloperskich Forge.`,
+      stderr: `[POLITYKA:${policy.rule}] ${policy.reason}`,
       durationMs: 0,
       timedOut: false,
+      policyDenied: true,
+      policyRule: policy.rule,
     });
   }
-  const argList = (Array.isArray(args) ? args : []).map(String).slice(0, 60);
-  const joined = `${cmd} ${argList.join(" ")}`;
-  for (const pat of DESTRUCTIVE_ARG_PATTERNS) {
-    if (pat.test(joined)) {
-      return Promise.resolve({
-        ok: false,
-        code: -1,
-        stdout: "",
-        stderr: `Argumenty polecenia "${cmd}" zostały zablokowane przez politykę bezpieczeństwa Forge (ochrona przed destrukcją / push).`,
-        durationMs: 0,
-        timedOut: false,
-      });
-    }
-  }
 
+  const cmd = policy.command;
+  const argList = policy.args;
   const timeoutMs = Math.min(300_000, Math.max(1000, opts.timeoutMs ?? 90_000));
   const startedAt = Date.now();
 
@@ -186,7 +398,7 @@ export function runSafeProcess(command, args = [], opts = {}) {
       shell: false,
       detached: process.platform !== "win32",
       windowsHide: true,
-      env: { ...process.env, CI: "1", FORCE_COLOR: "0", ...(opts.env || {}) },
+      env: sanitizeChildEnv(process.env, opts.env || {}),
     });
 
     const killTree = () => {
@@ -449,7 +661,9 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
   const snapshotManifestPath = path.join(snapshotDir, "manifest.json");
 
   let repoIndex = null;
+  let indexDirty = true;
   const modifiedMap = new Map(); // relPath -> { path, action, diff, bytes, syntaxOk, updatedAt }
+  const securityEvents = [];
 
   const loadSnapshotManifest = () => {
     try {
@@ -479,7 +693,10 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
   };
 
   const getIndex = (forceRefresh = false) => {
-    if (!repoIndex || forceRefresh) repoIndex = scanRepository(root);
+    if (!repoIndex || indexDirty || forceRefresh) {
+      repoIndex = scanRepository(root, { previousIndex: repoIndex });
+      indexDirty = false;
+    }
     return repoIndex;
   };
 
@@ -495,7 +712,7 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
       updatedAt: new Date().toISOString(),
     };
     modifiedMap.set(relPath, entry);
-    repoIndex = null; // odśwież indeks przy kolejnym zapytaniu
+    indexDirty = true; // inkrementalne odświeżenie przy kolejnym zapytaniu (zachowuje cache mtime)
     return entry;
   };
 
@@ -526,6 +743,7 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
       if (name === "read_file") {
         const abs = insideRoot(root, args.path);
         const rel = path.relative(root, abs).split(path.sep).join("/");
+        assertSafeRepoFile(rel, "read");
         if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
           return { ok: false, error: `Plik "${rel}" nie istnieje.` };
         }
@@ -537,13 +755,19 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
         const start = Math.max(1, Number(args.start_line) || 1);
         const end = Math.min(lines.length, Number(args.end_line) || start + 199);
         const slice = lines.slice(start - 1, end).map((l, i) => `${start + i}: ${l}`).join("\n");
+        const redacted = redactSecrets(slice).text;
+        const framed = wrapUntrustedRepoData(rel, redacted);
+        if (framed.detections.length) {
+          securityEvents.push({ at: new Date().toISOString(), kind: "prompt-injection", source: rel, detections: framed.detections });
+        }
         return {
           ok: true,
           path: rel,
           totalLines: lines.length,
           startLine: start,
           endLine: end,
-          content: redactSecrets(slice).text,
+          content: framed.wrapped,
+          ...(framed.detections.length ? { promptInjectionDetected: framed.detections } : {}),
         };
       }
 
@@ -560,8 +784,10 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
           re = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
         }
         const hits = [];
+        const injectionHits = new Set();
         for (const f of idx.files) {
           if (prefix && !f.path.startsWith(prefix)) continue;
+          try { assertSafeRepoFile(f.path, "read"); } catch { continue; }
           const abs = path.join(root, f.path);
           let txt;
           try {
@@ -570,18 +796,30 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
           const lines = txt.split(/\r?\n/);
           for (let i = 0; i < lines.length; i++) {
             if (re.test(lines[i])) {
-              hits.push({ path: f.path, line: i + 1, text: redactSecrets(lines[i].trim()).text.slice(0, 200) });
+              const snippet = redactSecrets(lines[i].trim()).text.slice(0, 200);
+              for (const d of detectPromptInjection(snippet)) injectionHits.add(d);
+              hits.push({ path: f.path, line: i + 1, text: snippet });
               if (hits.length >= maxResults) break;
             }
           }
           if (hits.length >= maxResults) break;
         }
-        return { ok: true, query, count: hits.length, hits };
+        if (injectionHits.size) {
+          securityEvents.push({ at: new Date().toISOString(), kind: "prompt-injection", source: `search:${query}`, detections: [...injectionHits] });
+        }
+        return {
+          ok: true,
+          query,
+          count: hits.length,
+          hits,
+          ...(injectionHits.size ? { promptInjectionDetected: [...injectionHits] } : {}),
+        };
       }
 
       if (name === "edit_file") {
         const abs = insideRoot(root, args.path);
         const rel = path.relative(root, abs).split(path.sep).join("/");
+        assertSafeRepoFile(rel, "edit");
         if (!fs.existsSync(abs)) {
           return { ok: false, error: `Plik "${rel}" nie istnieje — użyj write_file, aby go utworzyć.` };
         }
@@ -610,6 +848,7 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
       if (name === "write_file") {
         const abs = insideRoot(root, args.path);
         const rel = path.relative(root, abs).split(path.sep).join("/");
+        assertSafeRepoFile(rel, "write");
         const content = String(args.content ?? "");
         if (Buffer.byteLength(content, "utf8") > MAX_READ_BYTES) {
           return { ok: false, error: "Treść pliku przekracza bezpieczny limit 1.5 MB." };
@@ -638,6 +877,7 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
       if (name === "delete_file") {
         const abs = insideRoot(root, args.path);
         const rel = path.relative(root, abs).split(path.sep).join("/");
+        assertSafeRepoFile(rel, "delete");
         if (!fs.existsSync(abs)) return { ok: false, error: `Plik "${rel}" nie istnieje.` };
         const before = fs.readFileSync(abs, "utf8");
         ensureSnapshot(rel, abs);
@@ -650,26 +890,33 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
         const cwd = insideRoot(root, args.cwd || ".");
         const res = await runSafeProcess(args.command, args.args || [], {
           cwd,
+          repoRoot: root,
           timeoutMs: Number(args.timeout_ms) || 90_000,
           signal: execOpts.signal,
         });
         const condensed = condenseCommandOutput(res.stdout, res.stderr, 5500);
+        const framed = wrapUntrustedRepoData(`cmd:${args.command}`, condensed);
+        if (framed.detections.length) {
+          securityEvents.push({ at: new Date().toISOString(), kind: "prompt-injection", source: `cmd:${args.command}`, detections: framed.detections });
+        }
         const errorInfo = res.ok ? null : extractErrorSignature(`${res.stdout}\n${res.stderr}`, `${args.command} ${(args.args || []).join(" ")}`.trim());
         return {
           ok: res.ok,
           code: res.code,
           durationMs: res.durationMs,
           timedOut: res.timedOut,
-          output: condensed,
+          policyDenied: Boolean(res.policyDenied),
+          output: execOpts.rawOutput ? condensed : framed.wrapped,
+          ...(framed.detections.length ? { promptInjectionDetected: framed.detections } : {}),
           ...(errorInfo ? { errorSignature: errorInfo.signature, errorSummary: errorInfo.summary, errorFiles: errorInfo.files } : {}),
         };
       }
 
       if (name === "git_diff") {
-        const status = await runSafeProcess("git", ["status", "--short"], { cwd: root, timeoutMs: 15_000 });
+        const status = await runSafeProcess("git", ["status", "--short"], { cwd: root, repoRoot: root, timeoutMs: 15_000 });
         const diffArgs = ["diff", "--stat"];
         if (args.path) diffArgs.push("--", path.relative(root, insideRoot(root, args.path)));
-        const diff = await runSafeProcess("git", diffArgs, { cwd: root, timeoutMs: 15_000 });
+        const diff = await runSafeProcess("git", diffArgs, { cwd: root, repoRoot: root, timeoutMs: 15_000 });
         return {
           ok: status.ok && diff.ok,
           status: status.stdout,
@@ -711,7 +958,7 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
       }
     }
     modifiedMap.clear();
-    repoIndex = null;
+    indexDirty = true;
     return { ok: true, restoredCount: restored.length, restored };
   }
 
@@ -721,5 +968,6 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
     executeTool,
     rollbackRun,
     getModifiedFiles: () => [...modifiedMap.values()],
+    getSecurityEvents: () => [...securityEvents],
   };
 }

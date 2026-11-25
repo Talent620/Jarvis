@@ -27,7 +27,7 @@ const CODE_EXTS = new Set([
 ]);
 
 const MAX_FILE_BYTES = 260_000;
-const MAX_SCAN_FILES = 2500;
+const MAX_SCAN_FILES = 6000;
 
 function readGitIgnorePatterns(repoRoot) {
   const ignoreFile = path.join(repoRoot, ".gitignore");
@@ -275,12 +275,14 @@ export function detectProjectProfile(repoRoot) {
 export function scanRepository(repoRoot, opts = {}) {
   const root = path.resolve(repoRoot);
   const maxFiles = opts.maxFiles ?? MAX_SCAN_FILES;
+  const prevByPath = new Map((opts.previousIndex?.files || []).map((f) => [f.path, f]));
   const ignorePatterns = readGitIgnorePatterns(root);
   const files = [];
   const extCounts = new Map();
+  let truncated = false;
 
   const walk = (dir) => {
-    if (files.length >= maxFiles) return;
+    if (files.length >= maxFiles) { truncated = true; return; }
     let entries;
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -289,7 +291,7 @@ export function scanRepository(repoRoot, opts = {}) {
     }
     entries.sort((a, b) => a.name.localeCompare(b.name));
     for (const entry of entries) {
-      if (files.length >= maxFiles) break;
+      if (files.length >= maxFiles) { truncated = true; break; }
       if (entry.isSymbolicLink()) continue;
       const full = path.join(dir, entry.name);
       const relPosix = path.relative(root, full).split(path.sep).join("/");
@@ -307,6 +309,24 @@ export function scanRepository(repoRoot, opts = {}) {
           continue;
         }
         if (stat.size > MAX_FILE_BYTES) continue;
+
+        const prev = prevByPath.get(relPosix);
+        if (prev && prev.mtimeMs === stat.mtimeMs && prev.bytes === stat.size) {
+          files.push({
+            path: relPosix,
+            ext,
+            bytes: stat.size,
+            mtimeMs: stat.mtimeMs,
+            lineCount: prev.lineCount,
+            symbols: prev.symbols,
+            rawImports: prev.rawImports,
+            imports: [],
+            importedBy: [],
+          });
+          extCounts.set(ext || entry.name, (extCounts.get(ext || entry.name) || 0) + 1);
+          continue;
+        }
+
         let buf;
         try {
           buf = fs.readFileSync(full);
@@ -320,6 +340,7 @@ export function scanRepository(repoRoot, opts = {}) {
           path: relPosix,
           ext,
           bytes: stat.size,
+          mtimeMs: stat.mtimeMs,
           lineCount: parsed.lineCount,
           symbols: parsed.symbols,
           rawImports: parsed.imports,
@@ -402,6 +423,7 @@ export function scanRepository(repoRoot, opts = {}) {
     repoRoot: root,
     profile,
     totalFiles: files.length,
+    truncated,
     edgeCount,
     coreModules,
     files,
@@ -416,6 +438,55 @@ function tokenizeQuery(text) {
       .split(/\s+/)
       .filter((w) => w.length >= 2),
   )];
+}
+
+/**
+ * Analiza wpływu zmian (Change Impact Analysis):
+ * Wyznacza bezpośrednich i pośrednich (2-hop) konsumentów zmodyfikowanych plików oraz powiązane pliki testowe.
+ */
+export function analyzeChangeImpact(index, modifiedPaths = []) {
+  const byPath = new Map((index?.files || []).map((f) => [f.path, f]));
+  const modifiedSet = new Set(modifiedPaths.map((p) => String(p || "").replace(/\\/g, "/")));
+  const directImporters = new Set();
+  const transitiveImporters = new Set();
+  const affectedTests = new Set();
+
+  const isTestFile = (p) => /(?:^|\/)(?:test|tests|__tests__)\/|\.(?:test|spec)\.[a-z]+$|_test\.py$|^test_.*\.py$/i.test(p);
+
+  for (const rel of modifiedSet) {
+    if (isTestFile(rel)) affectedTests.add(rel);
+    const node = byPath.get(rel);
+    if (!node) continue;
+    for (const imp of node.importedBy || []) {
+      if (!modifiedSet.has(imp)) directImporters.add(imp);
+      if (isTestFile(imp)) affectedTests.add(imp);
+      const depNode = byPath.get(imp);
+      for (const imp2 of depNode?.importedBy || []) {
+        if (!modifiedSet.has(imp2) && !directImporters.has(imp2)) transitiveImporters.add(imp2);
+        if (isTestFile(imp2)) affectedTests.add(imp2);
+      }
+    }
+    // Dopasowanie nazw testów odpowiadających zmienionemu modułowi (np. foo.js -> tests/foo.test.js)
+    const stem = path.posix.basename(rel, path.posix.extname(rel)).toLowerCase();
+    if (stem.length >= 3) {
+      for (const f of index.files || []) {
+        if (isTestFile(f.path) && f.path.toLowerCase().includes(stem)) {
+          affectedTests.add(f.path);
+        }
+      }
+    }
+  }
+
+  const blastRadius = directImporters.size + transitiveImporters.size;
+  const riskLevel = blastRadius >= 15 ? "high" : blastRadius >= 4 ? "medium" : "low";
+  return {
+    modifiedFiles: [...modifiedSet],
+    directImporters: [...directImporters].slice(0, 30),
+    transitiveImporters: [...transitiveImporters].slice(0, 30),
+    affectedTests: [...affectedTests].slice(0, 20),
+    blastRadius,
+    riskLevel,
+  };
 }
 
 /**
@@ -456,7 +527,7 @@ export function buildRepoMap(index, opts = {}) {
   const ranked = [...index.files].sort((a, b) => (scores.get(b.path) || 0) - (scores.get(a.path) || 0));
 
   const lines = [
-    `# Repo Map: ${index.profile.name} (${index.totalFiles} plików, ${index.edgeCount} krawędzi zależności)`,
+    `# Repo Map: ${index.profile.name} (${index.totalFiles} plików${index.truncated ? " [obcięto]" : ""}, ${index.edgeCount} krawędzi zależności)`,
     `Języki: ${index.profile.languages.join(", ") || "nieznane"} · Git: ${index.profile.git.isRepo ? `${index.profile.git.branch || "detached"}@${index.profile.git.head}${index.profile.git.dirty ? " (dirty)" : ""}` : "brak"}`,
   ];
   if (index.profile.testCommands.length) {

@@ -17,7 +17,24 @@
  * - Wymienialność: `registerCustomProvider()` pozwala podpiąć dowolny nowy model/serwer bez zmian silnika.
  */
 import os from "node:os";
-import { execFileSync } from "node:child_process";
+import path from "node:path";
+import { execFileSync, spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import {
+  COST_CATEGORIES,
+  costCategoryOf,
+  createPromoBudgetGovernor,
+  validatePromoBudgetSpec,
+  verifyModalPromoStatus,
+} from "./budget.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const MODAL_BRIDGE_SCRIPT = path.join(__dirname, "modal-bridge.py");
+
+/** Usuń bloki rozumowania `<think>...</think>` emitowane przez modele Qwen3 / DeepSeek-R1 przed parsowaniem JSON/narzędzi. */
+export function stripThinkingTags(text) {
+  return String(text || "").replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+}
 
 /** @typedef {"local" | "free_api" | "promo_credit" | "paid"} CostTier */
 /** @typedef {"architect" | "developer" | "debugger" | "reviewer"} ForgeRole */
@@ -368,27 +385,49 @@ export function pickBestLocalOllamaModel(installedModels, role, hardware) {
   return pool[0];
 }
 
-/** Czy dany dostawca + model są dozwolone w wybranej polityce kosztowej? */
-export function isAllowedByCostPolicy(providerSpec, modelId, costPolicy = "zero_cost") {
+/**
+ * Czy dany dostawca + model są dozwolone w wybranej polityce kosztowej?
+ * 3 kategorie bez wydatków z kieszeni:
+ *  - A. `local_free` (`local`)
+ *  - B. `api_free` (`free_api`)
+ *  - C. `promo_credits` (`promo_credit`) — WYŁĄCZNIE z jawną kopertą budżetową + limitem czasu, ZERO przejścia na `paid`!
+ */
+export function isAllowedByCostPolicy(providerSpec, modelId, costPolicy = "zero_cost", opts = {}) {
   if (!providerSpec) return { ok: false, reason: "Nieznany dostawca." };
   const tier = providerSpec.costTier;
+  const category = costCategoryOf(tier);
   if (costPolicy === "local_only") {
-    return tier === "local" ? { ok: true } : { ok: false, reason: "Polityka local_only dopuszcza wyłącznie modele lokalne." };
+    return category === COST_CATEGORIES.LOCAL_FREE
+      ? { ok: true, category }
+      : { ok: false, category, reason: "Polityka local_only dopuszcza wyłącznie modele lokalne (kategoria A: Local Free)." };
   }
   if (costPolicy === "zero_cost") {
-    if (tier !== "local" && tier !== "free_api") {
-      return { ok: false, reason: `Dostawca ${providerSpec.id} ma klasę kosztu "${tier}" — zablokowany w trybie zero_cost (0 USD).` };
+    if (category !== COST_CATEGORIES.LOCAL_FREE && category !== COST_CATEGORIES.API_FREE) {
+      return { ok: false, category, reason: `Dostawca ${providerSpec.id} ma kategorię "${category}" — zablokowany w trybie zero_cost (tylko Local Free + API Free).` };
     }
     if (providerSpec.requireFreeSuffixInZeroCost && !/:free$/i.test(String(modelId || ""))) {
-      return { ok: false, reason: `OpenRouter w trybie zero_cost dopuszcza wyłącznie modele z sufiksem ":free" (otrzymano "${modelId}").` };
+      return { ok: false, category, reason: `OpenRouter w trybie zero_cost dopuszcza wyłącznie modele z sufiksem ":free" (otrzymano "${modelId}").` };
     }
-    return { ok: true };
+    return { ok: true, category };
   }
-  if (costPolicy === "allow_credits") {
-    if (tier === "paid") return { ok: false, reason: `Dostawca ${providerSpec.id} jest płatny (wymaga allow_paid).` };
-    return { ok: true };
+  if (costPolicy === "allow_promo_credits" || costPolicy === "allow_credits") {
+    if (category === COST_CATEGORIES.PAID) {
+      return { ok: false, category, reason: `Dostawca ${providerSpec.id} należy do rozliczenia płatnego — twardo zablokowany w polityce kredytów promocyjnych.` };
+    }
+    if (providerSpec.requireFreeSuffixInZeroCost && !/:free$/i.test(String(modelId || ""))) {
+      return { ok: false, category, reason: `OpenRouter bez sufiksu ":free" wymaga płatnych środków — zablokowany w polityce kredytów promocyjnych.` };
+    }
+    if (category === COST_CATEGORIES.PROMO_CREDITS) {
+      if (!opts.promoGovernor) {
+        const check = validatePromoBudgetSpec(opts.promoBudget);
+        if (!check.ok) {
+          return { ok: false, category, reason: `Kredyty promocyjne (${providerSpec.id}) zablokowane bez jawnego budżetu i limitu czasu: ${check.reason}` };
+        }
+      }
+    }
+    return { ok: true, category };
   }
-  return { ok: true };
+  return { ok: true, category };
 }
 
 function parseRetryAfterMs(headerVal) {
@@ -633,14 +672,23 @@ async function callOllamaProtocol({ endpoint, model, system, messages, tools, ti
     }
     const msg = data.message || {};
     const toolCalls = Array.isArray(msg.tool_calls)
-      ? msg.tool_calls.map((tc, i) => ({
-          id: `oll_${i + 1}`,
-          name: tc?.function?.name || "",
-          arguments: tc?.function?.arguments || {},
-        })).filter((t) => t.name)
+      ? msg.tool_calls.map((tc, i) => {
+          let parsedArgs = {};
+          const rawArgs = tc?.function?.arguments;
+          if (typeof rawArgs === "string") {
+            try { parsedArgs = JSON.parse(rawArgs); } catch { parsedArgs = { _raw: rawArgs }; }
+          } else if (rawArgs && typeof rawArgs === "object") {
+            parsedArgs = rawArgs;
+          }
+          return {
+            id: `oll_${i + 1}`,
+            name: tc?.function?.name || "",
+            arguments: parsedArgs,
+          };
+        }).filter((t) => t.name)
       : [];
     return {
-      content: typeof msg.content === "string" ? msg.content : "",
+      content: typeof msg.content === "string" ? stripThinkingTags(msg.content) : "",
       toolCalls,
       usage: {
         inputTokens: Number(data.prompt_eval_count || 0),
@@ -651,6 +699,169 @@ async function callOllamaProtocol({ endpoint, model, system, messages, tools, ti
     clearTimeout(timer);
     signal?.removeEventListener("abort", onExtAbort);
   }
+}
+
+/** Zbuduj standardowy payload OpenAI chat/completions (używany przez OpenAI-compat i Modal Bridge). */
+function buildOpenAiPayload({ model, system, messages, tools, maxTokens = 2560 }) {
+  const oaiMessages = [{ role: "system", content: system }];
+  for (const m of messages) {
+    if (m.role === "tool") {
+      oaiMessages.push({ role: "tool", tool_call_id: m.toolCallId || "call_1", content: String(m.content ?? "") });
+    } else if (m.role === "assistant" && Array.isArray(m.toolCalls) && m.toolCalls.length) {
+      oaiMessages.push({
+        role: "assistant",
+        content: m.content || null,
+        tool_calls: m.toolCalls.map((tc) => ({
+          id: tc.id,
+          type: "function",
+          function: { name: tc.name, arguments: JSON.stringify(tc.arguments || {}) },
+        })),
+      });
+    } else {
+      oaiMessages.push({ role: m.role, content: String(m.content ?? "") });
+    }
+  }
+  const body = {
+    model,
+    messages: oaiMessages,
+    temperature: 0.15,
+    max_tokens: maxTokens,
+  };
+  if (tools && tools.length) {
+    body.tools = tools.map((t) => ({
+      type: "function",
+      function: { name: t.name, description: t.description, parameters: t.parameters },
+    }));
+    body.tool_choice = "auto";
+  }
+  return body;
+}
+
+/**
+ * Długowieczna sesja przekaźnika Modal (`forge/modal-bridge.py --daemon`),
+ * wywołująca wdrożony `jarvis-brain` bez ujawniania `VLLM_API_KEY` lokalnej VM.
+ */
+function createModalBridgeSession() {
+  let proc = null;
+  let readyPromise = null;
+  let buf = "";
+  const waiters = [];
+
+  const rejectAll = (err) => {
+    while (waiters.length) {
+      const w = waiters.shift();
+      clearTimeout(w.timer);
+      w.reject(err);
+    }
+  };
+
+  const handleLine = (line) => {
+    let parsed;
+    try { parsed = JSON.parse(line); } catch { return; }
+    const w = waiters.shift();
+    if (!w) return;
+    clearTimeout(w.timer);
+    w.resolve(parsed);
+  };
+
+  const ensureStarted = (timeoutMs = 90_000) => {
+    if (readyPromise && proc && !proc.killed) return readyPromise;
+    readyPromise = new Promise((resolve, reject) => {
+      proc = spawn("python3", [MODAL_BRIDGE_SCRIPT, "--daemon"], {
+        stdio: ["pipe", "pipe", "pipe"],
+        windowsHide: true,
+      });
+      let stderrBuf = "";
+      const timer = setTimeout(() => {
+        try { proc.kill("SIGTERM"); } catch { /* ignore */ }
+        reject(new Error(`Timeout uruchomienia Modal Bridge (${Math.round(timeoutMs / 1000)}s).`));
+      }, timeoutMs);
+
+      waiters.push({
+        timer,
+        resolve: (msg) => {
+          if (msg && msg.ready) resolve(msg);
+          else reject(new Error(msg?.error || "Modal Bridge nie zgłosił gotowości."));
+        },
+        reject,
+      });
+
+      proc.stdout.on("data", (chunk) => {
+        buf += chunk.toString("utf8");
+        let idx = buf.indexOf("\n");
+        while (idx !== -1) {
+          const line = buf.slice(0, idx).trim();
+          buf = buf.slice(idx + 1);
+          if (line) handleLine(line);
+          idx = buf.indexOf("\n");
+        }
+      });
+      proc.stderr.on("data", (c) => { stderrBuf = (stderrBuf + c.toString("utf8")).slice(-2000); });
+      proc.on("error", (err) => {
+        readyPromise = null;
+        rejectAll(err);
+      });
+      proc.on("close", (code) => {
+        readyPromise = null;
+        proc = null;
+        rejectAll(new Error(`Modal Bridge zakończony (exit ${code}): ${stderrBuf.trim().slice(0, 260)}`));
+      });
+    });
+    return readyPromise;
+  };
+
+  async function invoke({ model, system, messages, tools, timeoutMs = 150_000, signal }) {
+    if (signal?.aborted) throw new Error("Anulowano przez użytkownika.");
+    await ensureStarted(Math.min(90_000, timeoutMs));
+    const payload = buildOpenAiPayload({ model, system, messages, tools, maxTokens: 2560 });
+
+    const response = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`Przekroczono limit czasu wywołania Modal Bridge (${Math.round(timeoutMs / 1000)}s).`));
+      }, timeoutMs);
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(new Error("Anulowano wywołanie Modal (AbortSignal)."));
+      };
+      signal?.addEventListener("abort", onAbort, { once: true });
+      waiters.push({
+        timer,
+        resolve: (msg) => {
+          signal?.removeEventListener("abort", onAbort);
+          resolve(msg);
+        },
+        reject: (err) => {
+          signal?.removeEventListener("abort", onAbort);
+          reject(err);
+        },
+      });
+      proc.stdin.write(JSON.stringify({ payload, timeoutSeconds: Math.round(timeoutMs / 1000) }) + "\n");
+    });
+
+    if (!response || !response.ok || !response.data) {
+      const err = new Error(`Modal Brain (${response?.status || 500}): ${response?.error || "Brak danych"}`);
+      err.status = Number(response?.status || 502);
+      throw err;
+    }
+    const parsed = parseOpenAiResponse(response.data);
+    return {
+      ...parsed,
+      content: stripThinkingTags(parsed.content),
+    };
+  }
+
+  function close() {
+    if (proc && !proc.killed) {
+      try { proc.stdin.write(JSON.stringify({ cmd: "quit" }) + "\n"); } catch { /* ignore */ }
+      setTimeout(() => {
+        try { proc?.kill("SIGTERM"); } catch { /* ignore */ }
+      }, 300).unref();
+    }
+    proc = null;
+    readyPromise = null;
+  }
+
+  return { invoke, close };
 }
 
 /** Wywołanie natywnego API Anthropic (wyłącznie gdy jawnie włączono `allow_paid`). */
@@ -732,15 +943,26 @@ async function callAnthropicProtocol({ endpoint, apiKey, model, system, messages
  * Utwórz zarządzaną pulę dostawców (Provider Pool) z możliwością:
  * - wstrzykiwania kluczy per uruchomienie (z UI Jarvisa lub env) bez zapisu na dysku,
  * - wykrywania żywej lokalnej Ollamy (`/api/tags`),
+ * - kontrolowanego wykorzystania kredytów promocyjnych (kategoria C: Modal Bridge pod PromoBudgetGovernor),
  * - podpinania własnych/testowych adapterów (`registerCustomProvider`),
  * - uczenia się routingu z `ExperienceMemory` oraz cooldownów `429 Retry-After`.
  */
-export function createProviderPool({ env = process.env, runtimeKeys = {}, ollamaUrl, memory = null, customProviders = {} } = {}) {
+export function createProviderPool({
+  env = process.env,
+  runtimeKeys = {},
+  ollamaUrl,
+  memory = null,
+  customProviders = {},
+  enableModalBridge = false,
+  modalBillingVerifier = verifyModalPromoStatus,
+} = {}) {
   const hardware = detectHardwareProfile();
   const registry = { ...FORGE_PROVIDERS, ...customProviders };
   const cooldownUntil = new Map(); // providerId -> timestamp
   const authBlocked = new Set();
+  const modalBridge = createModalBridgeSession();
   let ollamaProbeCache = { checkedAt: 0, online: false, models: [], url: ollamaUrl || env.OLLAMA_URL || "http://127.0.0.1:11434" };
+  let modalStatusCache = { checkedAt: 0, result: null };
 
   function resolveKey(spec, overrideKeys = {}) {
     if (!spec.requiresKey) return "local";
@@ -772,6 +994,18 @@ export function createProviderPool({ env = process.env, runtimeKeys = {}, ollama
     return spec.endpoint;
   }
 
+  function probeModal(force = false) {
+    if (!enableModalBridge && !env?.FORGE_MODAL_BRIDGE) {
+      return { verified: false, available: false, reason: "Modal Bridge wyłączony domyślnie (wymaga jawnego budżetu kredytów promocyjnych)." };
+    }
+    if (!force && modalStatusCache.result && Date.now() - modalStatusCache.checkedAt < 60_000) {
+      return modalStatusCache.result;
+    }
+    const res = modalBillingVerifier();
+    modalStatusCache = { checkedAt: Date.now(), result: res };
+    return res;
+  }
+
   async function probeOllama(force = false, customUrl) {
     const url = (customUrl || ollamaProbeCache.url || "http://127.0.0.1:11434").replace(/\/+$/, "");
     if (!force && Date.now() - ollamaProbeCache.checkedAt < 20_000 && ollamaProbeCache.url === url) {
@@ -789,27 +1023,33 @@ export function createProviderPool({ env = process.env, runtimeKeys = {}, ollama
     return ollamaProbeCache;
   }
 
-  /** Zwróć pełny, uczciwy status wszystkich dostawców (bez ujawniania kluczy!). */
-  async function getProviderMatrix({ costPolicy = "zero_cost", overrideKeys = {}, probeLocal = true } = {}) {
+  /** Zwróć pełny, uczciwy status wszystkich dostawców (3 kategorie kosztów, bez ujawniania kluczy!). */
+  async function getProviderMatrix({ costPolicy = "zero_cost", overrideKeys = {}, probeLocal = true, promoBudget = null, promoGovernor = null } = {}) {
     const ollamaState = probeLocal ? await probeOllama(false, overrideKeys?.ollamaUrl) : ollamaProbeCache;
+    const modalBridgeState = (enableModalBridge || env?.FORGE_MODAL_BRIDGE) ? probeModal(false) : null;
+
     return Object.values(registry).map((spec) => {
       const key = resolveKey(spec, overrideKeys);
       const endpoint = resolveEndpoint(spec, overrideKeys);
       const defaultModel = spec.id === "ollama"
         ? (pickBestLocalOllamaModel(ollamaState.models, "developer", hardware) || spec.roleModels.developer)
         : spec.roleModels.developer;
-      const policyCheck = isAllowedByCostPolicy(spec, defaultModel, costPolicy);
+      const policyCheck = isAllowedByCostPolicy(spec, defaultModel, costPolicy, { promoBudget, promoGovernor });
       const cooledMs = Math.max(0, (cooldownUntil.get(spec.id) || 0) - Date.now());
+      const usingModalBridge = spec.id === "modal" && (!key || !endpoint) && Boolean(modalBridgeState?.available);
 
       let status = "ready";
       let statusReason = "Gotowy do pracy";
       if (spec.protocol === "custom") {
-        status = "ready";
-        statusReason = "Adapter niestandardowy (aktywny)";
+        status = policyCheck.ok ? "ready" : "blocked_by_policy";
+        statusReason = policyCheck.ok ? "Adapter niestandardowy (aktywny)" : policyCheck.reason;
       } else if (spec.id === "ollama") {
         if (!ollamaState.online) { status = "offline"; statusReason = `Ollama nieosiągalna pod ${ollamaState.url}`; }
         else if (!ollamaState.models.length) { status = "untested"; statusReason = "Ollama działa, ale brak zainstalowanych modeli (ollama pull qwen2.5-coder:3b)"; }
         else { status = "ready"; statusReason = `Lokalnie dostępnych modeli: ${ollamaState.models.length}`; }
+      } else if (usingModalBridge) {
+        if (!policyCheck.ok) { status = "blocked_by_policy"; statusReason = policyCheck.reason; }
+        else { status = "ready"; statusReason = `Modal Bridge (${modalBridgeState.profile}, Billed $0.00, kredyty promocyjne pod budżetem)`; }
       } else if (!key || !endpoint) {
         status = "not_configured";
         statusReason = !key ? `Brak klucza API (${(spec.envKeys || []).join(" / ") || "ustawienia"})` : "Brak adresu/Account ID";
@@ -829,7 +1069,8 @@ export function createProviderPool({ env = process.env, runtimeKeys = {}, ollama
         id: spec.id,
         label: spec.label,
         costTier: spec.costTier,
-        protocol: spec.protocol,
+        costCategory: costCategoryOf(spec.costTier),
+        protocol: usingModalBridge ? "modal-bridge" : spec.protocol,
         status,
         statusReason,
         allowedInPolicy: policyCheck.ok,
@@ -845,7 +1086,14 @@ export function createProviderPool({ env = process.env, runtimeKeys = {}, ollama
   }
 
   /** Posortuj dostępnych, dozwolonych i zdrowych kandydatów dla konkretnej roli. */
-  async function selectCandidatesForRole(role, { costPolicy = "zero_cost", overrideKeys = {}, excludeProviders = [], preferDifferentFrom = null } = {}) {
+  async function selectCandidatesForRole(role, {
+    costPolicy = "zero_cost",
+    overrideKeys = {},
+    excludeProviders = [],
+    preferDifferentFrom = null,
+    promoBudget = null,
+    promoGovernor = null,
+  } = {}) {
     const ollamaState = await probeOllama(false, overrideKeys?.ollamaUrl);
     const exclude = new Set(excludeProviders);
     const now = Date.now();
@@ -862,45 +1110,97 @@ export function createProviderPool({ env = process.env, runtimeKeys = {}, ollama
         model = pickBestLocalOllamaModel(ollamaState.models, role, hardware) || model;
       }
 
-      const policy = isAllowedByCostPolicy(spec, model, costPolicy);
+      const policy = isAllowedByCostPolicy(spec, model, costPolicy, { promoBudget, promoGovernor });
       if (!policy.ok) continue;
 
       const key = resolveKey(spec, overrideKeys);
       const endpoint = resolveEndpoint(spec, overrideKeys);
-      if (spec.protocol !== "custom" && (!key || !endpoint)) continue;
+      let useModalBridge = false;
+      if (spec.id === "modal" && (!key || !endpoint) && (enableModalBridge || env?.FORGE_MODAL_BRIDGE)) {
+        const mb = probeModal(false);
+        if (mb?.verified && mb?.available) useModalBridge = true;
+      }
+
+      if (spec.protocol !== "custom" && !useModalBridge && (!key || !endpoint)) continue;
 
       let score = spec.rolePriority?.[role] ?? 70;
-      // Inteligentny bonus: na sprzęcie z mocnym GPU preferuj lokalną Ollamę dla Developer/Debugger
       if (spec.id === "ollama" && (hardware.tier === "gpu_pro" || hardware.tier === "gpu_mid")) score += 20;
-      // Niezależna recenzja (cross-model review): bonus dla innego dostawcy niż Developer!
       if (role === "reviewer" && preferDifferentFrom && spec.id !== preferDifferentFrom) score += 18;
-      // Uczenie z pamięci doświadczeń!
       const learned = memory ? memory.getModelScore(spec.id, model, role) : null;
       if (learned !== null) score += Math.round((learned - 0.5) * 30);
 
-      candidates.push({ spec, provider: spec.id, model, apiKey: key, endpoint, score, contextChars: spec.contextChars || 32_000 });
+      candidates.push({
+        spec,
+        provider: spec.id,
+        model,
+        apiKey: key,
+        endpoint,
+        useModalBridge,
+        score,
+        contextChars: spec.contextChars || 32_000,
+      });
     }
 
     candidates.sort((a, b) => b.score - a.score);
     return candidates;
   }
 
-  /** Wywołaj najlepszego dostępnego dostawcę dla roli z automatycznym failoverem i respektowaniem 429 Retry-After. */
-  async function invokeForRole(role, { system, messages, tools = [], costPolicy = "zero_cost", overrideKeys = {}, excludeProviders = [], preferDifferentFrom = null, signal }) {
-    const candidates = await selectCandidatesForRole(role, { costPolicy, overrideKeys, excludeProviders, preferDifferentFrom });
+  /** Wywołaj najlepszego dostępnego dostawcę dla roli z failoverem, 429 Retry-After i twardą kontrolą budżetu kredytów promocyjnych. */
+  async function invokeForRole(role, {
+    system,
+    messages,
+    tools = [],
+    costPolicy = "zero_cost",
+    overrideKeys = {},
+    excludeProviders = [],
+    preferDifferentFrom = null,
+    promoBudget = null,
+    promoGovernor = null,
+    signal,
+  }) {
+    const activeGovernor = promoGovernor
+      || (promoBudget && (costPolicy === "allow_promo_credits" || costPolicy === "allow_credits")
+        ? createPromoBudgetGovernor({ budgetSpec: promoBudget, billingVerifier: modalBillingVerifier })
+        : null);
+
+    const candidates = await selectCandidatesForRole(role, {
+      costPolicy,
+      overrideKeys,
+      excludeProviders,
+      preferDifferentFrom,
+      promoBudget,
+      promoGovernor: activeGovernor,
+    });
     if (!candidates.length) {
-      const err = new Error(`Brak dostępnego dostawcy AI dla roli "${role}" w polityce "${costPolicy}". Skonfiguruj darmowy klucz API (np. Gemini/Cerebras/Groq/Mistral/OpenRouter :free) lub uruchom lokalną Ollamę.`);
+      const err = new Error(`Brak dostępnego dostawcy AI dla roli "${role}" w polityce "${costPolicy}". Skonfiguruj darmowy klucz API (np. Gemini/Cerebras/Groq/Mistral/OpenRouter :free), uruchom lokalną Ollamę albo przekaż jawny budżet kredytów promocyjnych.`);
       err.code = "NO_PROVIDER_AVAILABLE";
       throw err;
     }
 
     const errors = [];
     for (const cand of candidates) {
+      const isPromo = costCategoryOf(cand.spec.costTier) === COST_CATEGORIES.PROMO_CREDITS;
+      if (isPromo) {
+        if (!activeGovernor) {
+          errors.push(`${cand.provider}/${cand.model}: brak kontrolera budżetu kredytów promocyjnych.`);
+          continue;
+        }
+        try {
+          activeGovernor.assertCanSpend(15);
+        } catch (budgetErr) {
+          errors.push(`${cand.provider}/${cand.model}: ${budgetErr instanceof Error ? budgetErr.message : String(budgetErr)}`);
+          // Jeśli w puli są jeszcze darmowi kandydaci (np. lokalna Ollama), pozwól im przejąć zadanie!
+          continue;
+        }
+      }
+
       const t0 = Date.now();
       try {
         let reply;
         if (cand.spec.protocol === "custom" && typeof cand.spec.invoke === "function") {
           reply = await cand.spec.invoke({ role, model: cand.model, system, messages, tools, signal });
+        } else if (cand.useModalBridge) {
+          reply = await modalBridge.invoke({ model: cand.model, system, messages, tools, signal });
         } else if (cand.spec.protocol === "gemini") {
           reply = await callGeminiProtocol({ endpoint: cand.endpoint, apiKey: cand.apiKey, model: cand.model, system, messages, tools, signal });
         } else if (cand.spec.protocol === "ollama") {
@@ -918,8 +1218,17 @@ export function createProviderPool({ env = process.env, runtimeKeys = {}, ollama
             extraHeaders: cand.spec.extraHeaders || {},
             signal,
           });
+          reply = { ...reply, content: stripThinkingTags(reply.content) };
         }
         const latencyMs = Date.now() - t0;
+        let promoUsage = null;
+        if (isPromo && activeGovernor) {
+          promoUsage = activeGovernor.recordUsage({
+            durationMs: latencyMs,
+            tokensIn: reply?.usage?.inputTokens || 0,
+            tokensOut: reply?.usage?.outputTokens || 0,
+          });
+        }
         memory?.recordModelOutcome({
           provider: cand.provider,
           model: cand.model,
@@ -934,12 +1243,19 @@ export function createProviderPool({ env = process.env, runtimeKeys = {}, ollama
           provider: cand.provider,
           model: cand.model,
           costTier: cand.spec.costTier,
+          costCategory: costCategoryOf(cand.spec.costTier),
           contextChars: cand.contextChars,
           latencyMs,
-          estimatedCostUsd: cand.spec.costTier === "local" || cand.spec.costTier === "free_api" ? 0 : null,
+          estimatedCostUsd: (cand.spec.costTier === "local" || cand.spec.costTier === "free_api")
+            ? 0
+            : (promoUsage ? promoUsage.costUsd : null),
+          ...(promoUsage ? { promoBudgetSnapshot: promoUsage.snapshot } : {}),
         };
       } catch (e) {
         const latencyMs = Date.now() - t0;
+        if (isPromo && activeGovernor && latencyMs > 1000) {
+          activeGovernor.recordUsage({ durationMs: latencyMs, overheadSec: 1 });
+        }
         const status = Number(e?.status || 0);
         const rateLimited = status === 429;
         if (rateLimited) {
@@ -979,9 +1295,11 @@ export function createProviderPool({ env = process.env, runtimeKeys = {}, ollama
   return {
     hardware,
     probeOllama,
+    probeModal,
     getProviderMatrix,
     selectCandidatesForRole,
     invokeForRole,
     registerCustomProvider,
+    close: () => modalBridge.close(),
   };
 }

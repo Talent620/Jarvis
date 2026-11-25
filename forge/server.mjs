@@ -19,6 +19,7 @@ import { atomicWriteFile, redactDeep, safeEqual } from "./security.mjs";
 import { buildRepoMap, scanRepository } from "./repo-intel.mjs";
 import { createExperienceMemory } from "./memory.mjs";
 import { createProviderPool } from "./providers.mjs";
+import { verifyModalPromoStatus } from "./budget.mjs";
 import { createForgeStore, executeForgeRun, rollbackForgeRun } from "./engine.mjs";
 
 const VERSION = "1.0.0";
@@ -248,6 +249,12 @@ export function createForgeServer({
         return;
       }
 
+      if (req.method === "GET" && pathname === "/api/budget/modal") {
+        const status = verifyModalPromoStatus();
+        sendJson(req, res, 200, { ok: true, modalPromoStatus: status });
+        return;
+      }
+
       if (req.method === "GET" && pathname === "/api/runs") {
         const targetRepo = resolveRepoRoot(urlObj.searchParams.get("path"));
         const store = createForgeStore(targetRepo);
@@ -263,9 +270,21 @@ export function createForgeServer({
           return;
         }
         const targetRepo = resolveRepoRoot(body.repoPath);
+        const useWorktree = body.useWorktree === true;
+        // Ochrona współbieżności: 2 zadania bez izolacji worktree NIE mogą modyfikować tego samego katalogu roboczego!
+        if (!useWorktree) {
+          const conflicting = [...activeRuns.entries()].find(([, meta]) => meta.repoRoot === targetRepo && !meta.useWorktree);
+          if (conflicting) {
+            sendJson(req, res, 409, {
+              ok: false,
+              error: `W katalogu "${targetRepo}" trwa już aktywne zadanie (${conflicting[0]}). Użyj useWorktree: true dla równoległej izolacji lub poczekaj na zakończenie.`,
+            });
+            return;
+          }
+        }
         const costPolicy = String(body.costPolicy || "zero_cost");
         const controller = new AbortController();
-        const runControl = { controller, pauseRequested: false, repoRoot: targetRepo };
+        const runControl = { controller, pauseRequested: false, repoRoot: targetRepo, useWorktree };
         let assignedId = null;
 
         // Uruchom asynchronicznie (lub synchronicznie gdy `wait: true` — wygodne w testach/CLI)
@@ -274,6 +293,8 @@ export function createForgeServer({
           repoRoot: targetRepo,
           providerPool: pool,
           costPolicy,
+          promoBudget: body.promoBudget || null,
+          useWorktree,
           overrideKeys: body.providerKeys || {},
           maxIterations: Math.min(30, Math.max(2, Number(body.maxIterations) || 12)),
           maxRepairCycles: Math.min(6, Math.max(1, Number(body.maxRepairCycles) || 3)),
@@ -297,7 +318,6 @@ export function createForgeServer({
           return;
         }
 
-        // Poczekaj krótko na inicjalizację runId (etap scouting tworzy pierwszy checkpoint w <100 ms)
         const deadline = Date.now() + 2000;
         while (!assignedId && Date.now() < deadline) {
           await new Promise((r) => setTimeout(r, 25));
@@ -373,13 +393,14 @@ export function createForgeServer({
           const body = await readJsonBody(req);
           const repoForResume = resolveRepoRoot(body.repoPath || urlObj.searchParams.get("path"));
           const controller = new AbortController();
-          const runControl = { controller, pauseRequested: false, repoRoot: repoForResume };
+          const runControl = { controller, pauseRequested: false, repoRoot: repoForResume, useWorktree: false };
           activeRuns.set(runId, runControl);
           const promise = executeForgeRun({
             repoRoot: repoForResume,
             providerPool: pool,
             resumeRunId: runId,
             costPolicy: String(body.costPolicy || "zero_cost"),
+            promoBudget: body.promoBudget || null,
             overrideKeys: body.providerKeys || {},
             signal: controller.signal,
             shouldPause: () => runControl.pauseRequested,
@@ -420,6 +441,7 @@ export function createForgeServer({
 
   async function close() {
     for (const active of activeRuns.values()) active.controller.abort();
+    pool.close?.();
     for (const c of [...sseClients]) {
       clearInterval(c.keepAlive);
       try { c.res.end(); } catch { /* ignore */ }

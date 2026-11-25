@@ -9,7 +9,7 @@ import { store } from "./store";
 
 export const FORGE_DEFAULT_URL = "http://127.0.0.1:3220";
 
-export type ForgeCostPolicy = "zero_cost" | "local_only" | "allow_credits" | "allow_paid";
+export type ForgeCostPolicy = "zero_cost" | "local_only" | "allow_promo_credits" | "allow_credits" | "allow_paid";
 
 export interface ForgeHardwareProfile {
   platform: string;
@@ -329,50 +329,87 @@ export async function getForgeMemory(repoPath?: string): Promise<{ repoRoot: str
   return forgeFetch(`/api/memory${q}`);
 }
 
-/** Subskrybuj żywy strumień zdarzeń SSE z bezpiecznym nagłówkiem X-Forge-Token. Zwraca funkcję rozłączającą. */
+/** Subskrybuj żywy strumień zdarzeń SSE z automatycznym wznawianiem po utracie połączenia i dogonieniem stanu przez REST. */
 export function subscribeForgeRun(
   runId: string,
   repoPath: string | undefined,
   onUpdate: (state: ForgeRunState) => void,
 ): () => void {
   let closed = false;
-  const ctrl = new AbortController();
+  let activeCtrl: AbortController | null = null;
+  let retryDelayMs = 800;
+  let terminalReached = false;
+  const TERMINAL = new Set(["completed", "blocked", "failed", "paused"]);
+
+  const sleep = (ms: number) => new Promise<void>((r) => { setTimeout(r, ms); });
 
   (async () => {
-    try {
-      const sess = await ensureSession();
-      const q = repoPath ? `?path=${encodeURIComponent(repoPath)}` : "";
-      const res = await fetch(`${sess.url}/api/runs/${encodeURIComponent(runId)}/events${q}`, {
-        headers: { "X-Forge-Token": sess.token, "X-Forge-Client": "jarvis-ui" },
-        signal: ctrl.signal,
-      });
-      if (!res.ok || !res.body) return;
-      const reader = res.body.getReader();
-      const dec = new TextDecoder();
-      let buf = "";
-      while (!closed) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        let idx = buf.indexOf("\n\n");
-        while (idx !== -1) {
-          const frame = buf.slice(0, idx);
-          buf = buf.slice(idx + 2);
-          const dataLines = frame.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim());
-          if (dataLines.length) {
-            try {
-              const parsed = JSON.parse(dataLines.join("\n"));
-              if (parsed && parsed.state && parsed.state.id) onUpdate(parsed.state as ForgeRunState);
-            } catch { /* ignore malformed frame */ }
-          }
-          idx = buf.indexOf("\n\n");
+    while (!closed && !terminalReached) {
+      activeCtrl = new AbortController();
+      try {
+        const sess = await ensureSession();
+        const q = repoPath ? `?path=${encodeURIComponent(repoPath)}` : "";
+        const res = await fetch(`${sess.url}/api/runs/${encodeURIComponent(runId)}/events${q}`, {
+          headers: { "X-Forge-Token": sess.token, "X-Forge-Client": "jarvis-ui" },
+          signal: activeCtrl.signal,
+        });
+        if (res.status === 401) {
+          cachedSession = null;
+          throw new Error("SSE session expired");
         }
+        if (!res.ok || !res.body) throw new Error(`SSE HTTP ${res.status}`);
+        retryDelayMs = 800;
+
+        // Dogonienie ewentualnych pominiętych zdarzeń po wznowieniu połączenia
+        try {
+          const latest = await getForgeRun(runId, repoPath);
+          if (latest && latest.run && !closed) {
+            onUpdate(latest.run);
+            if (TERMINAL.has(latest.run.status)) {
+              terminalReached = true;
+              break;
+            }
+          }
+        } catch { /* ignore transient catch-up error */ }
+
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = "";
+        while (!closed) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let idx = buf.indexOf("\n\n");
+          while (idx !== -1) {
+            const frame = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            const dataLines = frame.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim());
+            if (dataLines.length) {
+              try {
+                const parsed = JSON.parse(dataLines.join("\n"));
+                if (parsed && parsed.state && parsed.state.id) {
+                  const st = parsed.state as ForgeRunState;
+                  onUpdate(st);
+                  if (TERMINAL.has(st.status)) terminalReached = true;
+                }
+              } catch { /* ignore malformed frame */ }
+            }
+            idx = buf.indexOf("\n\n");
+          }
+        }
+      } catch {
+        if (closed) break;
       }
-    } catch { /* disconnected or aborted */ }
+
+      if (!closed && !terminalReached) {
+        await sleep(retryDelayMs);
+        retryDelayMs = Math.min(8000, Math.round(retryDelayMs * 1.6));
+      }
+    }
   })();
 
   return () => {
     closed = true;
-    ctrl.abort();
+    try { activeCtrl?.abort(); } catch { /* ignore */ }
   };
 }
