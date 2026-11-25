@@ -387,15 +387,15 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, onConnections,
         <div className="panel-body">
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
             <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontFamily: "Orbitron", color: "var(--gold)" }}>{stats.potential} zł</div>
+              <div className="num-tab" style={{ fontSize: 22, fontWeight: 600, color: "var(--gold)" }}>{stats.potential} zł</div>
               <div className="muted" style={{ fontSize: 11 }}>potencjał w toku</div>
             </div>
             <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontFamily: "Orbitron", color: "var(--ok, #58e08a)" }}>{stats.earned} zł</div>
+              <div className="num-tab" style={{ fontSize: 22, fontWeight: 600, color: "var(--ok, #58e08a)" }}>{stats.earned} zł</div>
               <div className="muted" style={{ fontSize: 11 }}>zarobione ({stats.won})</div>
             </div>
             <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontFamily: "Orbitron", color: "var(--cyan, #6ce7ff)" }}>{sentTodayCount(data.sentMail || [])}</div>
+              <div className="num-tab" style={{ fontSize: 22, fontWeight: 600, color: "var(--cyan, #6ce7ff)" }}>{sentTodayCount(data.sentMail || [])}</div>
               <div className="muted" style={{ fontSize: 11 }}>✉ wysłane dziś</div>
             </div>
           </div>
@@ -727,10 +727,13 @@ export default function SalesDashboard({ onClose, onWeb, onMoney, onConnections,
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Pulpit Sprzedaży" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>📈 Pulpit Sprzedaży</h2>
+          <div className="panel-head-row">
+            <h2>📈 Pulpit Sprzedaży</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         {inner}
         <div className="panel-foot">

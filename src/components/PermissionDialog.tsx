@@ -98,10 +98,13 @@ export default function PermissionDialog({
 
   return (
     <div className="sheet" style={{ zIndex: 60 }}>
-      <div className="panel" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+      <div className="panel" role="dialog" aria-modal="true" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>🔐 Zgoda na akcję</h2>
+          <div className="panel-head-row">
+            <h2>🔐 Zgoda na akcję</h2>
+            <button type="button" className="panel-close" onClick={() => finish(false, false)} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         <div className="panel-body">
           <p style={{ fontSize: 17, margin: "4px 0 10px" }}>

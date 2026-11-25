@@ -148,10 +148,13 @@ export default function Journal({ onClose }: { onClose: () => void }) {
   if (editing) {
     return (
       <div className="sheet" onClick={onClose}>
-        <div className="panel" onClick={(e) => e.stopPropagation()}>
+        <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
           <div className="panel-head">
             <div className="grabber" />
-            <h2>📔 {editing === "new" ? "Nowy wpis" : "Edycja wpisu"}</h2>
+            <div className="panel-head-row">
+              <h2>📔 {editing === "new" ? "Nowy wpis" : "Edycja wpisu"}</h2>
+              <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+            </div>
           </div>
           <div className="panel-body">
             <div className="field">
@@ -207,10 +210,13 @@ export default function Journal({ onClose }: { onClose: () => void }) {
   // --- Widok listy ---
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>📔 Mój dziennik</h2>
+          <div className="panel-head-row">
+            <h2>📔 Mój dziennik</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         <div className="panel-body">
           <div className="field" style={{ display: "flex", gap: 8 }}>

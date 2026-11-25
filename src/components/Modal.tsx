@@ -72,7 +72,10 @@ export default function Modal({
         {title != null && (
           <div className="panel-head">
             <div className="grabber" />
-            <h2>{title}</h2>
+            <div className="panel-head-row">
+              <h2>{title}</h2>
+              <button type="button" className="panel-close" onClick={close} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+            </div>
           </div>
         )}
         <div className="panel-body">{children}</div>

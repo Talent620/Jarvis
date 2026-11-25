@@ -1369,12 +1369,15 @@ const tools: Tool[] = [
     def: {
       name: "set_theme",
       description:
-        "Zmień motyw kolorystyczny interfejsu (HUD): cyan (domyślny), złoty, bursztyn, zielony, ocean, czerwony, róż, fiolet, Matrix, Nord, Sunset, Retro 95, XP. Np. „włącz motyw XP”, „zmień na Nord”.",
-      input_schema: obj({ theme: str("cyan, gold/złoty, amber/bursztyn, green/zielony, ocean, red/czerwony, rose/róż, purple/fiolet, matrix, nord, sunset, retro, xp") }, ["theme"]),
+        "Zmień motyw kolorystyczny interfejsu: obsidian (domyślny), jasny (light), editorial (butik/papier), aurora, złoty, bursztyn, zielony, ocean, czerwony, róż, fiolet, Matrix, Nord, Sunset, Retro 95, XP.",
+      input_schema: obj({ theme: str("default/obsidian, light/jasny, editorial/butik, aurora, gold/złoty, amber/bursztyn, green/zielony, ocean, red/czerwony, rose/róż, purple/fiolet, matrix, nord, sunset, retro, xp") }, ["theme"]),
     },
     run: ({ theme }) => {
       const map: Record<string, string> = {
-        cyan: "default", default: "default", domyslny: "default", domyślny: "default", niebieski: "default",
+        cyan: "default", default: "default", obsidian: "default", domyslny: "default", domyślny: "default", niebieski: "default", ciemny: "default", dark: "default",
+        light: "light", jasny: "light", dzienny: "light", bialy: "light", biały: "light",
+        editorial: "editorial", butik: "editorial", butikowy: "editorial", papier: "editorial", papierowy: "editorial", boutique: "editorial",
+        aurora: "aurora", zorza: "aurora",
         zloty: "gold", złoty: "gold", gold: "gold",
         bursztyn: "amber", bursztynowy: "amber", amber: "amber",
         zielony: "green", green: "green",
@@ -1389,7 +1392,7 @@ const tools: Tool[] = [
         xp: "xp", "xp luna": "xp", luna: "xp", windowsxp: "xp", "windows xp": "xp",
       };
       const t = map[String(theme || "").trim().toLowerCase()];
-      if (!t) return "Dostępne motywy: cyan, złoty, bursztyn, zielony, ocean, czerwony, róż, fiolet, matrix, nord, sunset, retro, xp.";
+      if (!t) return "Dostępne motywy: obsidian, jasny, editorial, aurora, złoty, bursztyn, zielony, ocean, czerwony, róż, fiolet, matrix, nord, sunset, retro, xp.";
       store.setSettings({ theme: t });
       return `✅ Motyw interfejsu zmieniony na ${theme}.`;
     },

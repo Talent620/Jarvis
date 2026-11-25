@@ -77,7 +77,7 @@ export default function ChatHistory({
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Historia rozmów" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

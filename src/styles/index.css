@@ -23,7 +23,8 @@
   --shadow-2: 0 18px 54px rgba(0, 0, 0, 0.56);
   --accent-grad: linear-gradient(135deg, #38bdf8, #0ea5e9);
   --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-serif: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -340,6 +341,70 @@ body.theme-light .boss-fab { background: linear-gradient(145deg, #065f46, #04785
 body.theme-light .pillar { background: #ffffff; border-color: var(--line); }
 body.theme-light .pillar:hover { background: #f0f9ff; border-color: var(--accent-ring); }
 body.theme-light .toast { background: #0f172a; color: #f8fafc; border-color: rgba(255, 255, 255, 0.12); }
+body.theme-light .switch::after { background: #ffffff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.28); }
+
+/* ============ Motyw EDITORIAL BOUTIQUE (QUIET LUXURY · DNA ImPULS) ============ */
+body.theme-editorial {
+  --bg: #f5f1e8;
+  --bg-2: #fffdf9;
+  --bg-3: #ece6d9;
+  --cyan: #9e582f;
+  --cyan-dim: #7c4220;
+  --accent-soft: rgba(158, 88, 47, 0.11);
+  --accent-ring: rgba(158, 88, 47, 0.34);
+  --gold: #9a6720;
+  --text: #102332;
+  --text-dim: #52606d;
+  --danger: #b83227;
+  --ok: #256c52;
+  --line: rgba(16, 35, 50, 0.12);
+  --line-strong: rgba(16, 35, 50, 0.24);
+  --surface: rgba(16, 35, 50, 0.036);
+  --surface-2: rgba(16, 35, 50, 0.068);
+  --surface-hover: rgba(16, 35, 50, 0.105);
+  --shadow-1: 0 6px 20px rgba(16, 35, 50, 0.065);
+  --shadow-2: 0 22px 52px rgba(16, 35, 50, 0.15);
+  --accent-grad: linear-gradient(135deg, #102332, #203d54);
+  background: radial-gradient(1100px 680px at 50% -15%, rgba(158, 88, 47, 0.08) 0%, transparent 62%), var(--bg);
+}
+body.theme-editorial::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0.024;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+html.low-power body.theme-editorial::before { display: none; }
+body.theme-editorial h1,
+body.theme-editorial .panel-head h2 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+body.theme-editorial .btn.primary { color: #fffdf9; box-shadow: 0 4px 14px rgba(16, 35, 50, 0.2); }
+body.theme-editorial .btn.primary:disabled { background: var(--bg-3); color: var(--text-dim); border: 1px solid var(--line-strong); box-shadow: none; }
+body.theme-editorial .panel { background: var(--bg-2); }
+body.theme-editorial .sheet { background: rgba(16, 35, 50, 0.44); }
+body.theme-editorial .bubble.assistant { background: #fffdf9; border-color: var(--line); box-shadow: var(--shadow-1); }
+body.theme-editorial .bubble.user { background: rgba(158, 88, 47, 0.1); border-color: rgba(158, 88, 47, 0.26); color: #102332; }
+body.theme-editorial .md-code-wrap { background: #102332; border-color: #1c3549; }
+body.theme-editorial .md-code-head { background: rgba(255, 255, 255, 0.06); border-bottom-color: rgba(255, 255, 255, 0.12); }
+body.theme-editorial .md-code-lang { color: #cbd5e1; }
+body.theme-editorial .md-pre { background: #102332; color: #f1f5f9; }
+body.theme-editorial .md-inline-code { background: rgba(158, 88, 47, 0.1); border-color: rgba(158, 88, 47, 0.24); color: #7c4220; }
+body.theme-editorial .composer { background: #fffdf9; border-color: var(--line-strong); box-shadow: var(--shadow-1); }
+body.theme-editorial .send { color: #fffdf9; }
+body.theme-editorial .autocore-card { background: #faf6ee; border-color: var(--line-strong); }
+body.theme-editorial .autocore-section { background: #fffdf9; }
+body.theme-editorial .cmdk { background: #fffdf9; box-shadow: var(--shadow-2); }
+body.theme-editorial .onboard { background: radial-gradient(ellipse at 50% 20%, rgba(158, 88, 47, 0.09), transparent 60%), var(--bg); }
+body.theme-editorial .boss-fab { background: linear-gradient(145deg, #1d5742, #256c52); color: #f4fbf7; border-color: rgba(37, 108, 82, 0.45); }
+body.theme-editorial .pillar { background: #fffdf9; border-color: var(--line); }
+body.theme-editorial .pillar:hover { background: #faf4eb; border-color: var(--accent-ring); }
+body.theme-editorial .toast { background: #102332; color: #fffdf9; border-color: rgba(255, 255, 255, 0.14); }
+body.theme-editorial .switch::after { background: #fffdf9; box-shadow: 0 1px 3px rgba(16, 35, 50, 0.28); }
 
 /* Bezpieczne marginesy okna (paski stanu/nawigacji). Fallback do env() działa na
    iOS/web; na Androidzie MainActivity nadpisuje --sat/--sar/--sab/--sal realnymi px,
@@ -3728,5 +3793,137 @@ html.low-power .omni-reticle-ring {
   font-size: 11.5px;
 }
 
+/* === MASTER INTERFACE POLISH — Desktop Workspace Widths, Tabular Metrics, Centrum Filters & Landscape === */
+.num-tab {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
 
+@media (min-width: 760px) {
+  .panel.panel-wide {
+    max-width: 760px;
+  }
+  .panel.panel-xl {
+    max-width: 920px;
+  }
+  .menu-grid-goals {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
 
+.msg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.msg-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+@media (hover: hover) {
+  .msg-actions button:hover {
+    background: var(--surface-hover);
+    border-color: var(--line-strong);
+    color: var(--text);
+  }
+}
+
+.menu-sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 16px 0 8px;
+}
+.menu-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 8px;
+  margin-bottom: 4px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.menu-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+.menu-filter-pill {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.menu-filter-pill:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.menu-filter-pill.on {
+  background: var(--accent-soft);
+  border-color: var(--accent-ring);
+  color: var(--cyan);
+}
+
+/* Light & Editorial contrast for floating Omni-Pilot HUD */
+body.theme-light .omni-hud,
+body.theme-editorial .omni-hud {
+  background: var(--bg-2);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-2);
+}
+body.theme-light .omni-log,
+body.theme-editorial .omni-log {
+  border-top-color: var(--line);
+}
+body.theme-light .omni-btn-allow,
+body.theme-editorial .omni-btn-allow {
+  color: var(--ok);
+}
+body.theme-light .omni-btn-deny,
+body.theme-editorial .omni-btn-deny {
+  color: var(--danger);
+}
+
+/* Reguła orientacji poziomej na telefonach (max-height: 520px · DNA ImPULS) — chroni pole robocze przed ściśnięciem */
+@media (max-height: 520px) {
+  .topbar {
+    padding-top: max(4px, var(--sat));
+    padding-bottom: 4px;
+    min-height: 44px;
+  }
+  .panel {
+    max-height: calc(100vh - 6px);
+  }
+  .panel-head {
+    padding: 8px 14px 7px;
+  }
+  .panel-head .grabber {
+    display: none;
+  }
+  .panel-foot {
+    padding: 6px 14px;
+  }
+  .soul-bar {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+}

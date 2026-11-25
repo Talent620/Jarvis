@@ -89,10 +89,13 @@ export default function Transcribe({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>🎙 Transkrypcja</h2>
+          <div className="panel-head-row">
+            <h2>🎙 Transkrypcja</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         <div className="panel-body">
           <p className="muted">
@@ -103,7 +106,7 @@ export default function Transcribe({ onClose }: { onClose: () => void }) {
           <div style={{ textAlign: "center", padding: "14px 0" }}>
             {phase === "recording" ? (
               <>
-                <div style={{ fontFamily: "Orbitron", fontSize: 30, color: "#ff8585" }}>● {mm}:{ss}</div>
+                <div style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 30, color: "#ff8585" }}>● {mm}:{ss}</div>
                 <button className="btn primary" style={{ marginTop: 10 }} onClick={stop}>⏹ Zatrzymaj i przepisz</button>
               </>
             ) : phase === "working" ? (

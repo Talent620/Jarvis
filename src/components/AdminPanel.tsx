@@ -125,10 +125,13 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
   if (!unlocked) {
     return (
       <div className="sheet" onClick={onClose}>
-        <div className="panel" onClick={(e) => e.stopPropagation()}>
+        <div className="panel" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
           <div className="panel-head">
             <div className="grabber" />
-            <h2>🔐 Panel administratora</h2>
+            <div className="panel-head-row">
+              <h2>🔐 Panel administratora</h2>
+              <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+            </div>
           </div>
           <div className="panel-body">
             <p className="muted">
@@ -164,10 +167,13 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
   // --- Panel właściwy ---
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>🔐 Panel administratora</h2>
+          <div className="panel-head-row">
+            <h2>🔐 Panel administratora</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
           <div className="chips" style={{ marginTop: 10 }}>
             <button className={`chip ${tab === "licenses" ? "on" : ""}`} onClick={() => setTab("licenses")}>📋 Licencje</button>
             <button className={`chip ${tab === "offline" ? "on" : ""}`} onClick={() => setTab("offline")}>🔏 Offline</button>

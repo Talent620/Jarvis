@@ -83,10 +83,10 @@ export default function WebllmPanel({ s, set }: { s: Settings; set: (patch: Part
 
           {busy && (
             <div style={{ margin: "2px 0" }}>
-              <div style={{ height: 6, background: "rgba(255,255,255,.1)", borderRadius: 4, overflow: "hidden" }}>
-                <div style={{ width: `${pct}%`, height: "100%", background: "var(--accent,#3da9fc)", transition: "width .2s" }} />
+              <div style={{ height: 6, background: "var(--surface-2)", borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ width: `${pct}%`, height: "100%", background: "var(--cyan)", transition: "width .2s" }} />
               </div>
-              <p className="muted" style={{ marginTop: 4, fontSize: 12 }}>{pct}% · {progressText || "przygotowuję…"}</p>
+              <p className="muted num-tab" style={{ marginTop: 4, fontSize: 12 }}>{pct}% · {progressText || "przygotowuję…"}</p>
             </div>
           )}
           {ready && !busy && <p className="muted" style={{ fontSize: 12 }}>✅ Model załadowany i gotowy do rozmowy on-device.</p>}

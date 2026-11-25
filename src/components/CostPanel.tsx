@@ -95,10 +95,13 @@ export default function CostPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Koszty AI" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>💸 Koszty AI</h2>
+          <div className="panel-head-row">
+            <h2>💸 Koszty AI</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         <div className="panel-body">
           {credits && (
@@ -120,7 +123,7 @@ export default function CostPanel({ onClose }: { onClose: () => void }) {
                   {isLowBalance(credits.remaining, store.settings.openrouterLowBalanceUsd) ? " · ⚠ niskie saldo" : ""}
                 </div>
               </div>
-              <strong style={{ fontSize: 15 }}>{usd(credits.remaining)}</strong>
+              <strong className="num-tab" style={{ fontSize: 15 }}>{usd(credits.remaining)}</strong>
             </div>
           )}
           {data.empty ? (
@@ -140,18 +143,18 @@ export default function CostPanel({ onClose }: { onClose: () => void }) {
                   <div className="status-title">Prognoza / miesiąc</div>
                   <div className="status-detail">run-rate z 7 dni × 30</div>
                 </div>
-                <strong>{usd(data.forecast)}</strong>
+                <strong className="num-tab">{usd(data.forecast)}</strong>
               </div>
               {store.settings.aiMonthlyBudgetUsd > 0 && (
                 <div style={{ margin: "8px 0 4px" }}>
                   <div
-                    style={{ height: 8, borderRadius: 4, background: "rgba(255,255,255,.1)", overflow: "hidden" }}
+                    style={{ height: 8, borderRadius: 4, background: "var(--surface-2)", overflow: "hidden" }}
                   >
                     <div
                       style={{
                         height: "100%",
                         width: `${Math.min(100, bud.pct * 100).toFixed(0)}%`,
-                        background: bud.over ? "var(--danger,#ff6b6b)" : bud.warn ? "#f5a623" : "var(--accent,#4caf50)",
+                        background: bud.over ? "var(--danger,#ff6b6b)" : bud.warn ? "var(--gold)" : "var(--ok,#4caf50)",
                       }}
                     />
                   </div>

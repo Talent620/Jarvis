@@ -319,10 +319,13 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Kreator stron i sklepów" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>🌐 Kreator stron i sklepów</h2>
+          <div className="panel-head-row">
+            <h2>🌐 Kreator stron i sklepów</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         <div className="panel-body">
           {/* Prosty tor 4 kroków: Brief → Plan → Budowa → Dostarczenie. Zawsze widać, gdzie jesteś. */}
@@ -361,7 +364,7 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
 
               {/* Wybór typu */}
               <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Typ strony</div>
-              <div className="chips" style={{ marginBottom: 8 }}>
+              <div className="chips" style={{ flexWrap: "wrap", marginBottom: 8 }}>
                 {KINDS.map((k) => (
                   <button key={k.id} className={`chip ${kind === k.id ? "on" : ""}`} onClick={() => setKind(k.id)} disabled={busy}>
                     {k.label}
@@ -448,7 +451,7 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
                   readOnly
                   value={html}
                   onFocus={(e) => e.currentTarget.select()}
-                  style={{ width: "100%", height: "48vh", background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: 10, fontFamily: "Share Tech Mono, monospace", fontSize: 12 }}
+                  style={{ width: "100%", height: "48vh", background: "var(--bg)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: 10, fontFamily: "var(--font-mono)", fontSize: 12 }}
                 />
               )}
             </>
@@ -473,7 +476,7 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
               </div>
               {blueprint && (
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-                  <pre style={{ whiteSpace: "pre-wrap", fontSize: 12, background: "var(--panel2, rgba(255,255,255,0.03))", padding: 8, borderRadius: 8, margin: 0 }}>
+                  <pre style={{ whiteSpace: "pre-wrap", fontSize: 12, background: "var(--surface)", padding: 8, borderRadius: 8, margin: 0 }}>
                     {blueprintSummary(blueprint)}
                   </pre>
                   {/* Edycja kluczowych pól planu — wprost wpływają na wygenerowaną stronę. */}
@@ -672,18 +675,18 @@ export default function WebStudio({ onClose, initialContext }: { onClose: () => 
                   🔍 Podgląd w Google + social {seo.issues.length > 0 ? `· ${seo.issues.length} do poprawy` : "· OK ✓"}
                 </summary>
                 {/* Snippet Google */}
-                <div style={{ marginTop: 10, background: "rgba(255,255,255,.04)", borderRadius: 8, padding: "8px 10px" }}>
-                  <div style={{ fontSize: 11, color: "#bdbdbd" }}>{host}</div>
-                  <div style={{ fontSize: 15, color: "#8ab4f8", lineHeight: 1.2, marginTop: 2 }}>{m.title || "(brak tytułu — Google wybierze sam)"}</div>
-                  <div style={{ fontSize: 12, color: "#cfcfcf", marginTop: 2 }}>{m.description || "(brak opisu — Google wytnie losowy fragment strony)"}</div>
+                <div style={{ marginTop: 10, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "8px 10px" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{host}</div>
+                  <div style={{ fontSize: 15, color: "var(--cyan)", fontWeight: 600, lineHeight: 1.25, marginTop: 2 }}>{m.title || "(brak tytułu — Google wybierze sam)"}</div>
+                  <div style={{ fontSize: 12, color: "var(--text)", opacity: 0.88, marginTop: 2 }}>{m.description || "(brak opisu — Google wytnie losowy fragment strony)"}</div>
                 </div>
                 {/* Karta social (OG) */}
                 <div style={{ marginTop: 8, border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
-                  <div style={{ height: 64, background: m.ogImage ? "#0c1118" : "rgba(255,107,107,.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "var(--muted)" }}>
+                  <div style={{ height: 64, background: m.ogImage ? "var(--surface-2)" : "rgba(255,107,107,.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "var(--text-dim)" }}>
                     {m.ogImage ? "🖼 og:image ✓" : "⚠ brak og:image (link bez miniatury)"}
                   </div>
                   <div style={{ padding: "6px 10px" }}>
-                    <div style={{ fontSize: 11, color: "#bdbdbd", textTransform: "uppercase" }}>{host}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase" }}>{host}</div>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{m.ogTitle || m.title || "(brak og:title)"}</div>
                     <div style={{ fontSize: 12, color: "var(--muted)" }}>{m.ogDescription || m.description || ""}</div>
                   </div>

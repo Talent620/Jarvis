@@ -54,10 +54,13 @@ export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => v
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Zarabianie" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>💰 Zarabianie</h2>
+          <div className="panel-head-row">
+            <h2>💰 Zarabianie</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         <div className="panel-body">
           <Guide title="ℹ Jak realnie na tym zarobić (krok po kroku)">
@@ -71,15 +74,15 @@ export default function MoneyHub({ onClose, onSales, onWeb }: { onClose: () => v
           {/* Kokpit */}
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
             <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-              <div style={{ fontSize: 20, fontFamily: "Orbitron", color: "var(--gold)" }}>{stats.potential} zł</div>
+              <div className="num-tab" style={{ fontSize: 20, fontWeight: 600, color: "var(--gold)" }}>{stats.potential} zł</div>
               <div className="muted" style={{ fontSize: 11 }}>w toku</div>
             </div>
             <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-              <div style={{ fontSize: 20, fontFamily: "Orbitron", color: "var(--ok, #58e08a)" }}>{stats.earned} zł</div>
+              <div className="num-tab" style={{ fontSize: 20, fontWeight: 600, color: "var(--ok, #58e08a)" }}>{stats.earned} zł</div>
               <div className="muted" style={{ fontSize: 11 }}>zarobione</div>
             </div>
             <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-              <div style={{ fontSize: 20, fontFamily: "Orbitron", color: "var(--cyan)" }}>{stats.offers}</div>
+              <div className="num-tab" style={{ fontSize: 20, fontWeight: 600, color: "var(--cyan)" }}>{stats.offers}</div>
               <div className="muted" style={{ fontSize: 11 }}>ofert gotowych</div>
             </div>
           </div>

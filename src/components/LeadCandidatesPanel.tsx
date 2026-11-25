@@ -215,7 +215,7 @@ export default function LeadCandidatesPanel({ onClose, onWeb, embedded, onImport
                 <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} style={{ minWidth: 20, minHeight: 20 }} />
                 {/* ICP score — kolor sygnalizuje jakość (zielony ≥65, złoty ≥40, szary niżej). */}
                 <span title={`ICP score ${icp.score}/100 · pewność ${Math.round(icp.confidence * 100)}%`}
-                  style={{ fontFamily: "Orbitron, monospace", fontSize: 13, fontWeight: 700, minWidth: 34, textAlign: "center",
+                  style={{ fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 13, fontWeight: 700, minWidth: 34, textAlign: "center",
                     color: icp.score >= 65 ? "var(--ok, #58e08a)" : icp.score >= 40 ? "var(--gold, #d9a400)" : "var(--text-dim, #8aa)" }}>
                   {icp.score}
                 </span>
@@ -300,10 +300,13 @@ export default function LeadCandidatesPanel({ onClose, onWeb, embedded, onImport
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>🧲 Kandydaci leadów</h2>
+          <div className="panel-head-row">
+            <h2>🧲 Kandydaci leadów</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         {body}
       </div>

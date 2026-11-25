@@ -210,7 +210,7 @@ export default function Guardian({ onClose, onRun }: { onClose: () => void; onRu
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Diagnoza i naprawa" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">

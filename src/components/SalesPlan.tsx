@@ -61,10 +61,13 @@ export default function SalesPlan({ onClose, onLead }: { onClose: () => void; on
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Plan sprzedaży na dziś" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>🎯 Plan sprzedaży na dziś</h2>
+          <div className="panel-head-row">
+            <h2>🎯 Plan sprzedaży na dziś</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         <div className="panel-body">
           <p className="muted" style={{ marginTop: 0, textTransform: "capitalize" }}>{dateLabel}</p>
@@ -76,15 +79,15 @@ export default function SalesPlan({ onClose, onLead }: { onClose: () => void; on
           {/* Prognoza lejka */}
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
             <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-              <div style={{ fontSize: 19, fontFamily: "Orbitron", color: "var(--gold)" }}>{fc.expected} zł</div>
+              <div className="num-tab" style={{ fontSize: 19, fontWeight: 600, color: "var(--gold)" }}>{fc.expected} zł</div>
               <div className="muted" style={{ fontSize: 11 }}>prognoza (ważona)</div>
             </div>
             <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-              <div style={{ fontSize: 19, fontFamily: "Orbitron", color: "var(--cyan)" }}>{fc.pipeline} zł</div>
+              <div className="num-tab" style={{ fontSize: 19, fontWeight: 600, color: "var(--cyan)" }}>{fc.pipeline} zł</div>
               <div className="muted" style={{ fontSize: 11 }}>w lejku</div>
             </div>
             <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-              <div style={{ fontSize: 19, fontFamily: "Orbitron", color: "var(--ok, #58e08a)" }}>{fc.won} zł</div>
+              <div className="num-tab" style={{ fontSize: 19, fontWeight: 600, color: "var(--ok, #58e08a)" }}>{fc.won} zł</div>
               <div className="muted" style={{ fontSize: 11 }}>zarobione</div>
             </div>
           </div>

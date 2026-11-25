@@ -667,7 +667,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-xl" role="dialog" aria-modal="true" aria-label="Ustawienia" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">
@@ -2714,6 +2714,7 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                 {[
                   { id: "default", l: "Obsidian (domyślny)" },
                   { id: "light", l: "Jasny ☀" },
+                  { id: "editorial", l: "Editorial ✒" },
                   { id: "aurora", l: "Aurora ✨" },
                   { id: "gold", l: "Złoty" },
                   { id: "amber", l: "Bursztyn" },

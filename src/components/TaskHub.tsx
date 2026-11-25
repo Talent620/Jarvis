@@ -149,10 +149,13 @@ export default function TaskHub({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>✅ Zadania Pro</h2>
+          <div className="panel-head-row">
+            <h2>✅ Zadania Pro</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         <div className="panel-body">
           {/* Szybkie dodawanie */}

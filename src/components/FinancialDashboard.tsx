@@ -89,8 +89,8 @@ export default function FinancialDashboard({ onClose }: { onClose: () => void })
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <div className="panel-head"><div className="grabber" /><h2>💰 Financial Intelligence</h2></div>
+      <div className="panel panel-xl" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <div className="panel-head"><div className="grabber" /><div className="panel-head-row"><h2>💰 Financial Intelligence</h2><button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button></div></div>
         <div className="panel-body">
           {/* KPI */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>

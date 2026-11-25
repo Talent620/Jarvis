@@ -166,6 +166,8 @@ export default function More({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [activeGroup, setActiveGroup] = useState<string>("all");
+
   // Wyszukiwarka: ignoruje wielkość liter i polskie znaki (ł→l, ż→z…), szuka w nazwie i opisie.
   const norm = (s: string) =>
     s
@@ -181,8 +183,11 @@ export default function More({
   if (filtered) {
     if (filtered.length) sections.push({ title: `🔎 Wyniki (${filtered.length})`, rows: filtered });
   } else {
-    if (shortcuts.length) sections.push({ title: "⭐ Skróty (najczęściej używane)", rows: shortcuts });
+    if (activeGroup === "all" && shortcuts.length) {
+      sections.push({ title: "⭐ Skróty (najczęściej używane)", rows: shortcuts });
+    }
     for (const g of GROUPS) {
+      if (activeGroup !== "all" && g.title !== activeGroup) continue;
       const rows = g.ids.map((id) => byId.get(id)).filter((x): x is Item => !!x);
       if (rows.length) sections.push({ title: g.title, rows });
     }
@@ -208,7 +213,7 @@ export default function More({
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Centrum" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
           <div className="panel-head-row">
@@ -224,6 +229,7 @@ export default function More({
             if (!a) return null;
             return (
               <button
+                type="button"
                 className="journal-card"
                 onClick={() => { requestScreen(a.screen); onClose(); }}
                 style={{ display: "block", width: "100%", textAlign: "left", marginBottom: 10, padding: "10px 12px", borderRadius: 12, border: "1px solid var(--gold)", background: "linear-gradient(135deg, rgba(245,200,90,.08), transparent 70%)", cursor: "pointer" }}
@@ -239,16 +245,16 @@ export default function More({
             type="search"
             inputMode="search"
             autoComplete="off"
-            placeholder="Szukaj funkcji…"
+            placeholder="Szukaj funkcji… (np. strony, leady, głos, pamięć)"
             aria-label="Szukaj funkcji"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          {/* SZEŚĆ celów — jedno, proste menu na górze. Reszta to „Wszystkie funkcje" poniżej. */}
+          {/* SZEŚĆ celów — jedno, proste menu na górze. Reszta to „Wszystkie funkcje" z szybkim filtrem kategorii. */}
           {!query.trim() && (
             <>
               <h3 className="menu-sec">🎯 Główne cele</h3>
-              <div className="menu-grid">
+              <div className="menu-grid menu-grid-goals">
                 {CENTER_GOALS.map((g) => {
                   const target = byId.get(g.opens);
                   return (
@@ -260,7 +266,33 @@ export default function More({
                   );
                 })}
               </div>
-              <h3 className="menu-sec" style={{ marginTop: 12 }}>📚 Wszystkie funkcje</h3>
+              <div className="menu-sec-head">
+                <h3 className="menu-sec" style={{ margin: 0 }}>📚 Wszystkie funkcje</h3>
+                <span className="muted num-tab" style={{ fontSize: 11.5 }}>{items.length} modułów</span>
+              </div>
+              <div className="menu-filter-bar" role="tablist" aria-label="Filtruj kategorie funkcji">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeGroup === "all"}
+                  className={`menu-filter-pill ${activeGroup === "all" ? "on" : ""}`}
+                  onClick={() => setActiveGroup("all")}
+                >
+                  Wszystko
+                </button>
+                {GROUPS.map((g) => (
+                  <button
+                    key={g.title}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeGroup === g.title}
+                    className={`menu-filter-pill ${activeGroup === g.title ? "on" : ""}`}
+                    onClick={() => setActiveGroup(g.title)}
+                  >
+                    {g.title}
+                  </button>
+                ))}
+              </div>
             </>
           )}
           {filtered && filtered.length === 0 ? (
@@ -275,7 +307,7 @@ export default function More({
           )}
         </div>
         <div className="panel-foot">
-          <button className="btn" onClick={onClose}>Zamknij</button>
+          <button type="button" className="btn" onClick={onClose}>Zamknij</button>
         </div>
       </div>
     </div>

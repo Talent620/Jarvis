@@ -34,10 +34,13 @@ export default function MarketingWorkspace({ onClose, initialTab = "content" }: 
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-xl" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>📣 Marketing</h2>
+          <div className="panel-head-row">
+            <h2>📣 Marketing</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
           <div className="chips" style={{ flexWrap: "wrap", marginTop: 6, padding: "0 4px" }}>
             {MARKETING_TABS.map((t) => (
               <button key={t.id} type="button" className={`chip ${tab === t.id ? "on" : ""}`} aria-pressed={tab === t.id} onClick={() => setTab(t.id)} style={{ fontSize: 12 }}>

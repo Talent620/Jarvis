@@ -84,25 +84,28 @@ export default function Cards({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" aria-label="Kapsuły Wiedzy" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>🧠 Kapsuły Wiedzy</h2>
+          <div className="panel-head-row">
+            <h2>🧠 Kapsuły Wiedzy</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         <div className="panel-body">
           {mode === "home" && (
             <>
               <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                 <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-                  <div style={{ fontSize: 22, fontFamily: "Orbitron", color: "var(--cyan)" }}>{stats.due}</div>
+                  <div className="num-tab" style={{ fontSize: 22, fontWeight: 600, color: "var(--cyan)" }}>{stats.due}</div>
                   <div className="muted" style={{ fontSize: 11 }}>do powtórki</div>
                 </div>
                 <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-                  <div style={{ fontSize: 22, fontFamily: "Orbitron", color: "var(--ok, #58e08a)" }}>{stats.learned}</div>
+                  <div className="num-tab" style={{ fontSize: 22, fontWeight: 600, color: "var(--ok, #58e08a)" }}>{stats.learned}</div>
                   <div className="muted" style={{ fontSize: 11 }}>w pamięci</div>
                 </div>
                 <div className="journal-card" style={{ flex: 1, margin: 0, textAlign: "center" }}>
-                  <div style={{ fontSize: 22, fontFamily: "Orbitron", color: "var(--gold)" }}>{stats.total}</div>
+                  <div className="num-tab" style={{ fontSize: 22, fontWeight: 600, color: "var(--gold)" }}>{stats.total}</div>
                   <div className="muted" style={{ fontSize: 11 }}>fiszek</div>
                 </div>
               </div>

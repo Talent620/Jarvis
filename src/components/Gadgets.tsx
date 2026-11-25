@@ -154,7 +154,7 @@ function Compass() {
       >
         <div style={{ position: "absolute", top: 4, left: "50%", transform: "translateX(-50%)", color: "var(--danger)", fontWeight: 700 }}>N</div>
       </div>
-      <div style={{ fontSize: 28, fontFamily: "Orbitron", color: "var(--cyan)" }}>
+      <div style={{ fontSize: 28, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "var(--cyan)" }}>
         {heading == null ? "—" : `${heading}° ${dir}`}
       </div>
       {heading == null && <p className="muted">Brak czujnika kierunku na tym urządzeniu.</p>}
@@ -225,7 +225,7 @@ function NoiseMeter() {
         <p className="muted">Brak dostępu do mikrofonu.</p>
       ) : (
         <>
-          <div style={{ fontSize: 56, fontFamily: "Orbitron", color: "var(--cyan)" }}>{db ?? "—"}</div>
+          <div style={{ fontSize: 56, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "var(--cyan)" }}>{db ?? "—"}</div>
           <div className="muted">dB (orientacyjnie)</div>
           <div style={{ height: 10, background: "var(--bg)", borderRadius: 6, margin: "16px 0", overflow: "hidden", border: "1px solid var(--line)" }}>
             <div style={{ height: "100%", width: `${((db || 0) / 120) * 100}%`, background: (db || 0) > 85 ? "var(--danger)" : "var(--cyan)" }} />
@@ -260,7 +260,7 @@ function PasswordGen() {
         <input type="checkbox" checked={sym} onChange={(e) => setSym(e.target.checked)} style={{ width: 20, height: 20 }} />
       </div>
       <div
-        style={{ background: "var(--bg)", border: "1px solid var(--line-strong)", borderRadius: 10, padding: 14, margin: "12px 0", fontFamily: "Share Tech Mono", fontSize: 18, color: "var(--gold)", wordBreak: "break-all" }}
+        style={{ background: "var(--bg)", border: "1px solid var(--line-strong)", borderRadius: 10, padding: 14, margin: "12px 0", fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontSize: 18, color: "var(--gold)", wordBreak: "break-all" }}
       >
         {pwd}
       </div>
@@ -276,7 +276,7 @@ function DiceCoin() {
   const rnd = (n: number) => 1 + Math.floor((crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32) * n);
   return (
     <div style={{ textAlign: "center", paddingTop: 16 }}>
-      <div style={{ fontSize: 64, fontFamily: "Orbitron", color: "var(--cyan)", minHeight: 80 }}>{out}</div>
+      <div style={{ fontSize: 64, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "var(--cyan)", minHeight: 80 }}>{out}</div>
       <button className="btn primary" onClick={() => setOut(String(rnd(6)))}>🎲 Kostka (1–6)</button>
       <button className="btn" onClick={() => setOut(rnd(2) === 1 ? "ORZEŁ" : "RESZKA")}>🪙 Moneta</button>
       <button className="btn" onClick={() => setOut(String(rnd(100)))}>🔢 1–100</button>
@@ -439,7 +439,7 @@ function Stopwatch() {
     `${String(Math.floor(t / 60000)).padStart(2, "0")}:${String(Math.floor((t % 60000) / 1000)).padStart(2, "0")}.${String(Math.floor((t % 1000) / 10)).padStart(2, "0")}`;
   return (
     <div style={{ textAlign: "center", paddingTop: 16 }}>
-      <div style={{ fontSize: 48, fontFamily: "Share Tech Mono", color: "var(--cyan)" }}>{fmt(ms)}</div>
+      <div style={{ fontSize: 48, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "var(--cyan)" }}>{fmt(ms)}</div>
       <button className="btn primary" onClick={() => setRun(!run)}>{run ? "Pauza" : "Start"}</button>
       <button className="btn" onClick={() => setLaps((l) => [ms, ...l])} disabled={!run}>Międzyczas</button>
       <button className="btn" onClick={() => { setRun(false); setMs(0); setLaps([]); }}>Reset</button>
@@ -469,7 +469,7 @@ function Metronome() {
   }, [on, bpm]);
   return (
     <div style={{ textAlign: "center", paddingTop: 16 }}>
-      <div style={{ fontSize: 56, fontFamily: "Orbitron", color: "var(--cyan)" }}>{bpm}</div>
+      <div style={{ fontSize: 56, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "var(--cyan)" }}>{bpm}</div>
       <div className="muted">BPM</div>
       <div className="field" style={{ marginTop: 12 }}>
         <input type="range" min="40" max="220" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} />
@@ -819,7 +819,7 @@ function HeartRate() {
       <div style={{ fontSize: 64, lineHeight: 1, margin: "8px 0" }}>
         <span style={{ display: "inline-block", animation: measuring ? "pulse 0.8s ease-in-out infinite" : "none" }}>❤️</span>
       </div>
-      <div style={{ fontSize: 40, fontFamily: "Orbitron", color: "var(--cyan)", minHeight: 48 }}>
+      <div style={{ fontSize: 40, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", color: "var(--cyan)", minHeight: 48 }}>
         {bpm ? `${bpm}` : measuring ? "…" : "—"}
         <span style={{ fontSize: 16, color: "var(--text-dim)" }}> BPM</span>
       </div>
@@ -941,7 +941,7 @@ function Vault() {
             <button type="button" className="x" aria-label="Usuń wpis" title="Usuń wpis" style={{ cursor: "pointer" }} onClick={async () => { await removeCred(c.id); refresh(); }}>✕</button>
           </div>
           {c.login && <div className="muted" style={{ fontSize: 13 }}>{c.login}</div>}
-          <div className="muted" style={{ fontSize: 13, fontFamily: "Share Tech Mono" }}>
+          <div className="muted" style={{ fontSize: 13, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
             {reveal[c.id] ? c.password : "••••••••••"}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
@@ -972,10 +972,13 @@ export default function Gadgets({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("torch");
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>🧰 Gadżety — multi-tool</h2>
+          <div className="panel-head-row">
+            <h2>🧰 Gadżety — multi-tool</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
           <div className="tabs" style={{ marginBottom: 0, marginTop: 12 }}>
             {TABS.map((t) => (
               <button key={t.id} className={`tab ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>

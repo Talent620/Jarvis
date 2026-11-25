@@ -3,10 +3,13 @@ export default function Help({ onClose, onFaq }: { onClose: () => void; onFaq?: 
   useEscape(onClose);
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>❓ Pomoc — co potrafi JARVIS</h2>
+          <div className="panel-head-row">
+            <h2>❓ Pomoc — co potrafi JARVIS</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         <div className="panel-body help">
           <p className="muted">

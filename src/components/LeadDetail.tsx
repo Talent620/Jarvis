@@ -52,8 +52,8 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
   if (!lead) {
     return (
       <div className="sheet" onClick={onClose}>
-        <div className="panel" onClick={(e) => e.stopPropagation()}>
-          <div className="panel-head"><div className="grabber" /><h2>🗂 Teczka klienta</h2></div>
+        <div className="panel" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+          <div className="panel-head"><div className="grabber" /><div className="panel-head-row"><h2>🗂 Teczka klienta</h2><button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button></div></div>
           <div className="panel-body"><p className="muted" style={{ padding: "8px 0" }}>Nie udało się wczytać tego leada — mógł zostać usunięty lub lista jeszcze się ładuje. Zamknij i otwórz ponownie z listy.</p></div>
           <div className="panel-foot"><button className="btn" onClick={onClose}>Zamknij</button></div>
         </div>
@@ -167,10 +167,13 @@ export default function LeadDetail({ leadId, onClose, onWeb }: { leadId: string;
 
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>🗂 {lead.company}</h2>
+          <div className="panel-head-row">
+            <h2>🗂 {lead.company}</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         <div className="panel-body">
           {/* Relacja: ostatni kontakt + następny follow-up + ostrzeżenie o zaległości — bez skoku

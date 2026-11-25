@@ -182,10 +182,13 @@ export default function AdStudio({ onClose, embedded }: { onClose: () => void; e
   if (embedded) return body;
   return (
     <div className="sheet" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <div className="grabber" />
-          <h2>📢 Generator reklam</h2>
+          <div className="panel-head-row">
+            <h2>📢 Generator reklam</h2>
+            <button type="button" className="panel-close" onClick={onClose} aria-label="Zamknij" title="Zamknij (Esc)">×</button>
+          </div>
         </div>
         {body}
         <div className="panel-foot">

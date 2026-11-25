@@ -569,10 +569,10 @@ export default function App() {
     }
   };
 
-  // Motyw interfejsu (ciemny Obsidian, Jasny, motywy akcentowe).
+  // Motyw interfejsu (ciemny Obsidian, Jasny, Editorial Boutique, motywy akcentowe).
   useEffect(() => {
     const b = document.body;
-    ["theme-light", "theme-gold", "theme-green", "theme-red", "theme-purple", "theme-matrix", "theme-amber", "theme-ocean", "theme-rose", "theme-retro", "theme-xp", "theme-nord", "theme-sunset", "theme-aurora"].forEach((c) => b.classList.remove(c));
+    ["theme-light", "theme-editorial", "theme-gold", "theme-green", "theme-red", "theme-purple", "theme-matrix", "theme-amber", "theme-ocean", "theme-rose", "theme-retro", "theme-xp", "theme-nord", "theme-sunset", "theme-aurora"].forEach((c) => b.classList.remove(c));
     if (settings.theme && settings.theme !== "default") b.classList.add(`theme-${settings.theme}`);
   }, [settings.theme]);
 

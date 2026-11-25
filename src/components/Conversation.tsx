@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from "react";
+import { Check, Copy, RotateCw, Volume2 } from "lucide-react";
 import type { ChatMessage } from "../types";
 import TypeText from "./TypeText";
 import { speak } from "../lib/voice";
@@ -14,7 +15,7 @@ import { lifeEntropy } from "../lib/lifeEntropy";
 import { ideaCollider, dayNumber } from "../lib/ideaCollider";
 import { providerShortName } from "../lib/providerNames";
 
-// Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓).
+// Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓) + regeneruj.
 function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -28,15 +29,18 @@ function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () =>
   };
   return (
     <div className="msg-actions">
-      <button onClick={() => speak(text, { ...store.settings, speak: true })} title="Odsłuchaj">
-        🔊
+      <button type="button" onClick={() => speak(text, { ...store.settings, speak: true })} title="Odsłuchaj" aria-label="Odsłuchaj">
+        <Volume2 size={13} aria-hidden="true" />
+        <span>Odsłuchaj</span>
       </button>
-      <button onClick={copy} title="Kopiuj">
-        {copied ? "✓" : "📋"}
+      <button type="button" onClick={copy} title="Kopiuj do schowka" aria-label="Kopiuj">
+        {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+        <span>{copied ? "Skopiowano" : "Kopiuj"}</span>
       </button>
       {onRegenerate && (
-        <button onClick={onRegenerate} title="Inna odpowiedź (regeneruj)">
-          🔄
+        <button type="button" onClick={onRegenerate} title="Inna odpowiedź (regeneruj)" aria-label="Regeneruj odpowiedź">
+          <RotateCw size={13} aria-hidden="true" />
+          <span>Ponów</span>
         </button>
       )}
     </div>
@@ -261,9 +265,9 @@ export default function Conversation({
                 <div style={{ marginTop: pulse ? 11 : 0 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12 }}>
                     <span className="muted">🧭 Poziom rozproszenia</span>
-                    <span style={{ fontWeight: 700, color: entColor }}>{entropy.level}</span>
+                    <span className="num-tab" style={{ fontWeight: 700, color: entColor }}>{entropy.level}</span>
                   </div>
-                  <div style={{ height: 6, borderRadius: 4, background: "rgba(255,255,255,.08)", marginTop: 5, overflow: "hidden" }}>
+                  <div style={{ height: 6, borderRadius: 4, background: "var(--surface-2)", marginTop: 5, overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${entropy.score}%`, background: entColor, transition: "width .6s ease" }} />
                   </div>
                   {entropy.score >= 20 && <div className="muted" style={{ fontSize: 12, marginTop: 7, lineHeight: 1.45 }}>💡 {entropy.topFix}</div>}
