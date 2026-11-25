@@ -365,22 +365,44 @@ export function detectHardwareProfile() {
   };
 }
 
-/** Wybierz najlepszy zainstalowany lokalnie model Ollama dla danej roli (lub fallback). */
-export function pickBestLocalOllamaModel(installedModels, role, hardware) {
+/** Wybierz najlepszy zainstalowany lokalnie model Ollama dla danej roli (z obsługą eskalacji i cross-model review). */
+export function pickBestLocalOllamaModel(installedModels, role, hardware, { excludeModels = [], preferDifferentModelFrom = null, preferredModel = null } = {}) {
   const list = (installedModels || []).map((m) => String(m || "")).filter(Boolean);
   if (!list.length) return null;
+  if (preferredModel) {
+    const exact = list.find((m) => m === preferredModel || m.startsWith(`${preferredModel}:`));
+    if (exact) return exact;
+  }
+
+  const excluded = new Set((excludeModels || []).map((m) => String(m || "").replace(/^ollama\//, "")));
   const prefs = role === "developer" || role === "debugger"
     ? [/qwen3[-.]?coder/i, /qwen2\.5-coder/i, /codestral/i, /deepseek-coder/i, /devstral/i, /qwen3/i, /llama3/i]
     : [/qwen3/i, /deepseek-r1/i, /phi4/i, /qwen2\.5-coder/i, /gemma3/i, /llama3/i];
 
-  // Na słabszym sprzęcie (<=8GB RAM bez GPU) unikaj wielkich modeli 30B+, jeśli dostępny jest mniejszy
+  // Na słabszym sprzęcie (<=10GB RAM bez GPU) unikaj wielkich modeli 27B+, jeśli dostępny jest mniejszy
   const avoidHuge = !hardware?.gpu && (hardware?.totalRamGb || 8) <= 10;
-  const filtered = avoidHuge ? list.filter((m) => !/:(?:27b|30b|32b|70b|72b)\b/i.test(m)) : list;
-  const pool = filtered.length ? filtered : list;
+  const sizeFiltered = avoidHuge ? list.filter((m) => !/:(?:27b|30b|32b|70b|72b)\b/i.test(m)) : list;
+  const basePool = sizeFiltered.length ? sizeFiltered : list;
+  const notExcluded = basePool.filter((m) => !excluded.has(m));
+  let pool = notExcluded.length ? notExcluded : basePool;
 
+  // Przy recenzji lub eskalacji preferuj INNY zainstalowany model lokalny (np. qwen3:4b vs qwen2.5-coder:3b)
+  if (preferDifferentModelFrom) {
+    const diffName = String(preferDifferentModelFrom).replace(/^ollama\//, "");
+    const others = pool.filter((m) => m !== diffName);
+    if (others.length) pool = others;
+  }
+
+  const paramSizeB = (name) => {
+    const m = String(name).match(/:(\d+(?:\.\d+)?)b\b/i);
+    return m ? Number(m[1]) : 0;
+  };
   for (const re of prefs) {
-    const hit = pool.find((m) => re.test(m));
-    if (hit) return hit;
+    const hits = pool.filter((m) => re.test(m));
+    if (hits.length) {
+      hits.sort((a, b) => paramSizeB(b) - paramSizeB(a));
+      return hits[0];
+    }
   }
   return pool[0];
 }
@@ -479,6 +501,13 @@ export function extractInlineToolCallsFromText(text, tools = []) {
       else pushCandidate(parsed);
       if (out.length) return out;
     } catch {
+      // 2b. NDJSON / wiele obiektów JSON linia po linii (częste w Ollama qwen2.5-coder:3b!)
+      const lines = cand.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.startsWith("{") && l.endsWith("}"));
+      for (const ln of lines) {
+        try { pushCandidate(JSON.parse(ln)); } catch { /* ignore */ }
+      }
+      if (out.length) return out;
+
       const start = cand.indexOf("{");
       const end = cand.lastIndexOf("}");
       if (start >= 0 && end > start) {
@@ -679,7 +708,7 @@ async function callGeminiProtocol({ endpoint, apiKey, model, system, messages, t
 }
 
 /** Wywołanie natywnego API Ollama (`/api/chat`) z natywnymi narzędziami i adaptacją pod CPU/GPU. */
-async function callOllamaProtocol({ endpoint, model, system, messages, tools, hardware = null, timeoutMs, signal }) {
+async function callOllamaProtocol({ endpoint, model, system, messages, tools, hardware = null, temperature = 0.15, timeoutMs, signal }) {
   const isCpuLight = hardware ? (!hardware.gpu && hardware.cpuCores <= 4) : false;
   const effectiveTimeout = timeoutMs ?? (isCpuLight ? 180_000 : 120_000);
   const base = String(endpoint || "http://127.0.0.1:11434").replace(/\/+$/, "");
@@ -702,17 +731,24 @@ async function callOllamaProtocol({ endpoint, model, system, messages, tools, ha
     model,
     stream: false,
     keep_alive: "5m",
+    ...(/^qwen3/i.test(String(model || "")) ? { think: false } : {}),
     messages: ollMessages,
     options: {
-      temperature: 0.15,
+      temperature: Number.isFinite(temperature) ? temperature : 0.15,
       num_ctx: isCpuLight ? 4096 : 8192,
       ...(isCpuLight ? { num_predict: 1024 } : {}),
     },
   };
   if (tools && tools.length) {
-    body.tools = tools.map((t) => ({
+    const coreNames = new Set(["read_file", "edit_file", "write_file", "run_command", "finish_task"]);
+    const activeTools = isCpuLight ? tools.filter((t) => coreNames.has(t.name)) : tools;
+    body.tools = (activeTools.length ? activeTools : tools).map((t) => ({
       type: "function",
-      function: { name: t.name, description: t.description, parameters: t.parameters },
+      function: {
+        name: t.name,
+        description: isCpuLight ? String(t.description || "").slice(0, 72) : t.description,
+        parameters: t.parameters,
+      },
     }));
   }
 
@@ -770,7 +806,7 @@ async function callOllamaProtocol({ endpoint, model, system, messages, tools, ha
 }
 
 /** Zbuduj standardowy payload OpenAI chat/completions (używany przez OpenAI-compat i Modal Bridge). */
-function buildOpenAiPayload({ model, system, messages, tools, maxTokens = 2560 }) {
+function buildOpenAiPayload({ model, system, messages, tools, maxTokens = 2560, temperature = 0.15 }) {
   const oaiMessages = [{ role: "system", content: system }];
   for (const m of messages) {
     if (m.role === "tool") {
@@ -792,7 +828,7 @@ function buildOpenAiPayload({ model, system, messages, tools, maxTokens = 2560 }
   const body = {
     model,
     messages: oaiMessages,
-    temperature: 0.15,
+    temperature: Number.isFinite(temperature) ? temperature : 0.15,
     max_tokens: maxTokens,
   };
   if (tools && tools.length) {
@@ -878,10 +914,10 @@ function createModalBridgeSession() {
     return readyPromise;
   };
 
-  async function invoke({ model, system, messages, tools, timeoutMs = 240_000, signal }) {
+  async function invoke({ model, system, messages, tools, temperature = 0.15, timeoutMs = 240_000, signal }) {
     if (signal?.aborted) throw new Error("Anulowano przez użytkownika.");
     await ensureStarted(Math.min(90_000, timeoutMs));
-    const payload = buildOpenAiPayload({ model, system, messages, tools, maxTokens: 3072 });
+    const payload = buildOpenAiPayload({ model, system, messages, tools, maxTokens: 3072, temperature });
 
     const response = await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -1074,7 +1110,14 @@ export function createProviderPool({
     return res;
   }
 
+  const explicitOllamaUrl = Boolean(ollamaUrl || env?.OLLAMA_URL);
+
   async function probeOllama(force = false, customUrl) {
+    const hasCustom = Object.values(registry).some((s) => s.protocol === "custom");
+    if (hasCustom && !explicitOllamaUrl && !customUrl) {
+      ollamaProbeCache = { checkedAt: Date.now(), online: false, models: [], url: ollamaProbeCache.url };
+      return ollamaProbeCache;
+    }
     const url = (customUrl || ollamaProbeCache.url || "http://127.0.0.1:11434").replace(/\/+$/, "");
     if (!force && Date.now() - ollamaProbeCache.checkedAt < 20_000 && ollamaProbeCache.url === url) {
       return ollamaProbeCache;
@@ -1153,17 +1196,25 @@ export function createProviderPool({
     });
   }
 
-  /** Posortuj dostępnych, dozwolonych i zdrowych kandydatów dla konkretnej roli. */
+  /** Posortuj dostępnych, dozwolonych i zdrowych kandydatów dla konkretnej roli (z obsługą Adaptive Intelligence). */
   async function selectCandidatesForRole(role, {
     costPolicy = "zero_cost",
     overrideKeys = {},
     excludeProviders = [],
+    excludeModels = [],
     preferDifferentFrom = null,
+    preferDifferentModelFrom = null,
+    preferredCategories = null,
+    allowedCategories = null,
+    preferredProvider = null,
+    preferredModel = null,
     promoBudget = null,
     promoGovernor = null,
   } = {}) {
     const ollamaState = await probeOllama(false, overrideKeys?.ollamaUrl);
     const exclude = new Set(excludeProviders);
+    const allowedCatSet = Array.isArray(allowedCategories) && allowedCategories.length ? new Set(allowedCategories) : null;
+    const prefCatList = Array.isArray(preferredCategories) ? preferredCategories : [];
     const now = Date.now();
     const candidates = [];
 
@@ -1172,11 +1223,24 @@ export function createProviderPool({
       if (authBlocked.has(spec.id)) continue;
       if ((cooldownUntil.get(spec.id) || 0) > now) continue;
 
+      const category = costCategoryOf(spec.costTier);
+      if (allowedCatSet && !allowedCatSet.has(category)) continue;
+
       let model = spec.roleModels?.[role] || spec.roleModels?.developer || "default";
       if (spec.id === "ollama") {
         if (!ollamaState.online || !ollamaState.models.length) continue;
-        model = pickBestLocalOllamaModel(ollamaState.models, role, hardware) || model;
+        model = pickBestLocalOllamaModel(ollamaState.models, role, hardware, {
+          excludeModels,
+          preferDifferentModelFrom: preferDifferentModelFrom && (!preferDifferentFrom || preferDifferentFrom === "ollama")
+            ? preferDifferentModelFrom
+            : null,
+          preferredModel: (!preferredProvider || preferredProvider === "ollama") ? preferredModel : null,
+        }) || model;
+      } else if (preferredProvider === spec.id && preferredModel) {
+        model = preferredModel;
       }
+
+      if (excludeModels.includes(`${spec.id}/${model}`)) continue;
 
       const policy = isAllowedByCostPolicy(spec, model, costPolicy, { promoBudget, promoGovernor });
       if (!policy.ok) continue;
@@ -1193,7 +1257,21 @@ export function createProviderPool({
 
       let score = spec.rolePriority?.[role] ?? 70;
       if (spec.id === "ollama" && (hardware.tier === "gpu_pro" || hardware.tier === "gpu_mid")) score += 20;
-      if (role === "reviewer" && preferDifferentFrom && spec.id !== preferDifferentFrom) score += 18;
+      if (role === "reviewer" && preferDifferentFrom && spec.id !== preferDifferentFrom) score += 22;
+      if (role === "reviewer" && preferDifferentModelFrom && model !== String(preferDifferentModelFrom).replace(/^[^/]+\//, "")) score += 10;
+
+      // Adaptive Intelligence: priorytetyzacja kategorii kosztowej (np. simple -> local_free, medium -> api_free, hard -> promo/strongest)
+      if (prefCatList.length) {
+        const catIdx = prefCatList.indexOf(category);
+        if (catIdx === 0) score += 60;
+        else if (catIdx === 1) score += 28;
+        else if (catIdx === 2) score += 8;
+        else score -= 40;
+      }
+
+      if (preferredProvider && spec.id === preferredProvider) score += 120;
+      if (preferredModel && model === preferredModel) score += 40;
+
       const learned = memory ? memory.getModelScore(spec.id, model, role) : null;
       if (learned !== null) score += Math.round((learned - 0.5) * 30);
 
@@ -1201,6 +1279,7 @@ export function createProviderPool({
         spec,
         provider: spec.id,
         model,
+        costCategory: category,
         apiKey: key,
         endpoint,
         useModalBridge,
@@ -1213,7 +1292,7 @@ export function createProviderPool({
     return candidates;
   }
 
-  /** Wywołaj najlepszego dostępnego dostawcę dla roli z failoverem, 429 Retry-After i twardą kontrolą budżetu kredytów promocyjnych. */
+  /** Wywołaj najlepszego dostępnego dostawcę dla roli z failoverem, 429 Retry-After, Adaptive Intelligence i twardą kontrolą budżetu. */
   async function invokeForRole(role, {
     system,
     messages,
@@ -1221,7 +1300,14 @@ export function createProviderPool({
     costPolicy = "zero_cost",
     overrideKeys = {},
     excludeProviders = [],
+    excludeModels = [],
     preferDifferentFrom = null,
+    preferDifferentModelFrom = null,
+    preferredCategories = null,
+    allowedCategories = null,
+    preferredProvider = null,
+    preferredModel = null,
+    temperature = 0.15,
     promoBudget = null,
     promoGovernor = null,
     signal,
@@ -1231,14 +1317,39 @@ export function createProviderPool({
         ? createPromoBudgetGovernor({ budgetSpec: promoBudget, billingVerifier: modalBillingVerifier })
         : null);
 
-    const candidates = await selectCandidatesForRole(role, {
+    let candidates = await selectCandidatesForRole(role, {
       costPolicy,
       overrideKeys,
       excludeProviders,
+      excludeModels,
       preferDifferentFrom,
+      preferDifferentModelFrom,
+      preferredCategories,
+      allowedCategories,
+      preferredProvider,
+      preferredModel,
       promoBudget,
       promoGovernor: activeGovernor,
     });
+    // Jeśli filtr kategorii (np. local_free dla prostego zadania) nie znalazł gotowego dostawcy (np. Ollama offline),
+    // rozszerz fallback WYŁĄCZNIE do darmowych kategorii (local_free + api_free) — NIGDY nie przeskakuj cicho na promo_credits!
+    if (!candidates.length && Array.isArray(allowedCategories) && allowedCategories.length && !preferredProvider) {
+      const safeFallbackCats = allowedCategories.includes(COST_CATEGORIES.PROMO_CREDITS)
+        ? null
+        : [COST_CATEGORIES.LOCAL_FREE, COST_CATEGORIES.API_FREE];
+      candidates = await selectCandidatesForRole(role, {
+        costPolicy,
+        overrideKeys,
+        excludeProviders,
+        excludeModels,
+        preferDifferentFrom,
+        preferDifferentModelFrom,
+        preferredCategories: preferredCategories || [COST_CATEGORIES.LOCAL_FREE, COST_CATEGORIES.API_FREE],
+        allowedCategories: safeFallbackCats,
+        promoBudget,
+        promoGovernor: activeGovernor,
+      });
+    }
     if (!candidates.length) {
       const err = new Error(`Brak dostępnego dostawcy AI dla roli "${role}" w polityce "${costPolicy}". Skonfiguruj darmowy klucz API (np. Gemini/Cerebras/Groq/Mistral/OpenRouter :free), uruchom lokalną Ollamę albo przekaż jawny budżet kredytów promocyjnych.`);
       err.code = "NO_PROVIDER_AVAILABLE";
@@ -1248,13 +1359,15 @@ export function createProviderPool({
     const errors = [];
     for (const cand of candidates) {
       const isPromo = costCategoryOf(cand.spec.costTier) === COST_CATEGORIES.PROMO_CREDITS;
+      let reservedUsd = 0;
       if (isPromo) {
         if (!activeGovernor) {
           errors.push(`${cand.provider}/${cand.model}: brak kontrolera budżetu kredytów promocyjnych.`);
           continue;
         }
         try {
-          activeGovernor.assertCanSpend(15);
+          const check = activeGovernor.assertCanSpend(15, { reserve: true });
+          reservedUsd = check?.reservedUsd || 0;
         } catch (budgetErr) {
           errors.push(`${cand.provider}/${cand.model}: ${budgetErr instanceof Error ? budgetErr.message : String(budgetErr)}`);
           // Jeśli w puli są jeszcze darmowi kandydaci (np. lokalna Ollama), pozwól im przejąć zadanie!
@@ -1266,13 +1379,13 @@ export function createProviderPool({
       try {
         let reply;
         if (cand.spec.protocol === "custom" && typeof cand.spec.invoke === "function") {
-          reply = await cand.spec.invoke({ role, model: cand.model, system, messages, tools, signal });
+          reply = await cand.spec.invoke({ role, model: cand.model, system, messages, tools, temperature, signal });
         } else if (cand.useModalBridge) {
-          reply = await modalBridge.invoke({ model: cand.model, system, messages, tools, signal });
+          reply = await modalBridge.invoke({ model: cand.model, system, messages, tools, temperature, signal });
         } else if (cand.spec.protocol === "gemini") {
           reply = await callGeminiProtocol({ endpoint: cand.endpoint, apiKey: cand.apiKey, model: cand.model, system, messages, tools, signal });
         } else if (cand.spec.protocol === "ollama") {
-          reply = await callOllamaProtocol({ endpoint: cand.endpoint, model: cand.model, system, messages, tools, hardware, signal });
+          reply = await callOllamaProtocol({ endpoint: cand.endpoint, model: cand.model, system, messages, tools, hardware, temperature, signal });
         } else if (cand.spec.protocol === "anthropic") {
           reply = await callAnthropicProtocol({ endpoint: cand.endpoint, apiKey: cand.apiKey, model: cand.model, system, messages, tools, signal });
         } else {
@@ -1295,7 +1408,9 @@ export function createProviderPool({
             durationMs: latencyMs,
             tokensIn: reply?.usage?.inputTokens || 0,
             tokensOut: reply?.usage?.outputTokens || 0,
+            reservedUsd,
           });
+          reservedUsd = 0;
         }
         memory?.recordModelOutcome({
           provider: cand.provider,
@@ -1321,8 +1436,13 @@ export function createProviderPool({
         };
       } catch (e) {
         const latencyMs = Date.now() - t0;
-        if (isPromo && activeGovernor && latencyMs > 1000) {
-          activeGovernor.recordUsage({ durationMs: latencyMs, overheadSec: 1 });
+        if (isPromo && activeGovernor) {
+          if (latencyMs > 1000) {
+            activeGovernor.recordUsage({ durationMs: latencyMs, overheadSec: 1, reservedUsd });
+          } else {
+            activeGovernor.releaseReservation?.(reservedUsd);
+          }
+          reservedUsd = 0;
         }
         const status = Number(e?.status || 0);
         const rateLimited = status === 429;

@@ -54,7 +54,7 @@ vllm_cache_vol = modal.Volume.from_name("jarvis-vllm-cache", create_if_missing=T
 @app.cls(
     image=vllm_image,
     gpu=GPU_SPEC,
-    scaledown_window=15,
+    scaledown_window=60,
     timeout=360,
     max_containers=1,
     volumes={

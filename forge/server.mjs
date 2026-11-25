@@ -20,7 +20,7 @@ import { buildRepoMap, scanRepository } from "./repo-intel.mjs";
 import { createExperienceMemory } from "./memory.mjs";
 import { createProviderPool } from "./providers.mjs";
 import { verifyModalPromoStatus } from "./budget.mjs";
-import { createForgeStore, executeForgeRun, rollbackForgeRun } from "./engine.mjs";
+import { createForgeStore, executeCompetitiveForgeRun, executeForgeRun, rollbackForgeRun } from "./engine.mjs";
 
 const VERSION = "1.0.0";
 const MAX_BODY_BYTES = 1_500_000;
@@ -295,6 +295,8 @@ export function createForgeServer({
           costPolicy,
           promoBudget: body.promoBudget || null,
           useWorktree,
+          adaptive: body.adaptive !== false,
+          leanSimple: body.leanSimple === true,
           overrideKeys: body.providerKeys || {},
           maxIterations: Math.min(30, Math.max(2, Number(body.maxIterations) || 12)),
           maxRepairCycles: Math.min(6, Math.max(1, Number(body.maxRepairCycles) || 3)),
@@ -325,6 +327,31 @@ export function createForgeServer({
         const store = createForgeStore(targetRepo);
         const snapshot = assignedId ? store.loadRun(assignedId) : null;
         sendJson(req, res, 202, { ok: true, runId: assignedId, run: snapshot });
+        return;
+      }
+
+      if (req.method === "POST" && pathname === "/api/runs/competitive") {
+        const body = await readJsonBody(req);
+        const goal = String(body.goal || "").trim();
+        if (!goal) {
+          sendJson(req, res, 400, { ok: false, error: "Podaj cel zadania (pole 'goal')." });
+          return;
+        }
+        const targetRepo = resolveRepoRoot(body.repoPath);
+        const result = await executeCompetitiveForgeRun({
+          goal,
+          repoRoot: targetRepo,
+          providerPool: pool,
+          candidates: Array.isArray(body.candidates) ? body.candidates : [],
+          costPolicy: String(body.costPolicy || "zero_cost"),
+          promoBudget: body.promoBudget || null,
+          overrideKeys: body.providerKeys || {},
+          maxIterations: Math.min(24, Math.max(2, Number(body.maxIterations) || 12)),
+          maxRepairCycles: Math.min(4, Math.max(1, Number(body.maxRepairCycles) || 2)),
+          verifyCommands: Array.isArray(body.verifyCommands) ? body.verifyCommands : null,
+          applyWinner: body.applyWinner !== false,
+        });
+        sendJson(req, res, 200, { ok: result.ok, competitive: result });
         return;
       }
 

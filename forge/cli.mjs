@@ -16,7 +16,9 @@ import { buildRepoMap, scanRepository } from "./repo-intel.mjs";
 import { createExperienceMemory } from "./memory.mjs";
 import { createProviderPool } from "./providers.mjs";
 import { verifyModalPromoStatus } from "./budget.mjs";
-import { createForgeStore, executeForgeRun, rollbackForgeRun } from "./engine.mjs";
+import { assessTaskDifficulty, composeAgentTeam } from "./adaptive.mjs";
+import { createForgeStore, executeCompetitiveForgeRun, executeForgeRun, rollbackForgeRun } from "./engine.mjs";
+import { isGitWorktreeCapable } from "./worktree.mjs";
 
 const argv = process.argv.slice(2);
 const cmd = argv[0] || "status";
@@ -33,6 +35,8 @@ function hasFlag(name) {
 const repoRoot = path.resolve(opt("--repo", process.cwd()));
 const costPolicy = opt("--policy", "zero_cost");
 const useWorktree = hasFlag("--worktree");
+const adaptive = !hasFlag("--no-adaptive");
+const leanSimple = hasFlag("--lean-simple");
 const promoExpUsd = opt("--promo-budget", null);
 const promoTotalUsd = opt("--promo-total", null);
 const promoTimeoutSec = opt("--promo-timeout", null);
@@ -69,9 +73,32 @@ async function main() {
     if (cmd === "budget") {
       const modalStatus = verifyModalPromoStatus();
       console.log(JSON.stringify({
-        categories: ["A: local_free (Ollama/CPU/GPU)", "B: api_free (darmowe tiery API)", "C: promo_credits (kontrolowany budżet, Billed=$0.00)"],
+        categories: ["A: local_free (Ollama/CPU/GPU)", "B: api_free (darmowe tiery API)", "C: promo_credits (kontrolowany budżet, Billed=$0.00 + disclaimer o opóźnieniu rozliczeń)"],
         modalPromoStatus: modalStatus,
       }, null, 2));
+      return;
+    }
+
+    if (cmd === "assess") {
+      const goal = argv[1] && !argv[1].startsWith("--") ? argv[1] : opt("--goal", "");
+      if (!goal) {
+        console.error('Podaj cel: node forge/cli.mjs assess "Opis zadania"');
+        process.exit(2);
+      }
+      const idx = scanRepository(repoRoot);
+      const matrix = await pool.getProviderMatrix({ costPolicy, promoBudget, probeLocal: true });
+      const difficulty = assessTaskDifficulty({ goal, repoIndex: idx, memory });
+      const team = composeAgentTeam({
+        difficulty,
+        repoIndex: idx,
+        providerMatrix: matrix,
+        hardware: pool.hardware,
+        costPolicy,
+        allowCompetitive: hasFlag("--competitive"),
+        hasPromoBudget: Boolean(promoBudget),
+        isWorktreeReady: isGitWorktreeCapable(repoRoot),
+      });
+      console.log(JSON.stringify({ difficulty, team }, null, 2));
       return;
     }
 
@@ -108,6 +135,26 @@ async function main() {
       return;
     }
 
+    if (cmd === "compete") {
+      const goal = argv[1] && !argv[1].startsWith("--") ? argv[1] : opt("--goal", "");
+      if (!goal) {
+        console.error('Podaj cel: node forge/cli.mjs compete "Trudne zadanie" [--repo .]');
+        process.exit(2);
+      }
+      const res = await executeCompetitiveForgeRun({
+        goal,
+        repoRoot,
+        providerPool: pool,
+        costPolicy,
+        promoBudget,
+        onEvent: (ev) => {
+          if (ev.actionLabel) console.log(`[${ev.candidateId || "comp"}:${ev.phase}/${ev.role}] ${ev.actionLabel}`);
+        },
+      });
+      console.log(JSON.stringify({ status: res.status, difficulty: res.difficulty, comparison: res.comparison, mergedFiles: res.mergedFiles }, null, 2));
+      process.exit(res.ok ? 0 : 1);
+    }
+
     if (cmd === "run") {
       const goal = argv[1] && !argv[1].startsWith("--") ? argv[1] : opt("--goal", "");
       if (!goal) {
@@ -121,13 +168,15 @@ async function main() {
         costPolicy,
         promoBudget,
         useWorktree,
+        adaptive,
+        leanSimple,
         onEvent: (ev) => {
           if (ev.actionLabel) console.log(`[${ev.phase}/${ev.role}] ${ev.actionLabel}`);
         },
       });
       console.log(`\n=== WYNIK (${res.id}): ${res.status.toUpperCase()} ===\n${res.finalResult || ""}`);
       if (res.budgetSnapshot) {
-        console.log(`Budżet kredytów promocyjnych: $${res.budgetSnapshot.experimentSpentUsd} / $${res.budgetSnapshot.maxExperimentUsd} (łącznie $${res.budgetSnapshot.totalSpentUsd} / $${res.budgetSnapshot.maxTotalUsd})`);
+        console.log(`Budżet kredytów promocyjnych: $${res.budgetSnapshot.experimentSpentUsd} / $${res.budgetSnapshot.maxExperimentUsd} (łącznie $${res.budgetSnapshot.totalSpentUsd} / $${res.budgetSnapshot.maxTotalUsd} · outOfPocket=$0.00)`);
       }
       process.exit(res.status === "completed" ? 0 : 1);
     }
@@ -141,6 +190,7 @@ async function main() {
         resumeRunId: runId,
         costPolicy,
         promoBudget,
+        adaptive,
         onEvent: (ev) => {
           if (ev.actionLabel) console.log(`[${ev.phase}/${ev.role}] ${ev.actionLabel}`);
         },
@@ -157,7 +207,7 @@ async function main() {
       return;
     }
 
-    console.error("Użycie: node forge/cli.mjs <status|budget|inspect|providers|memory|run|resume|rollback> [argumenty]");
+    console.error("Użycie: node forge/cli.mjs <status|budget|assess|inspect|providers|memory|run|compete|resume|rollback> [argumenty]");
     process.exit(2);
   } finally {
     pool.close?.();

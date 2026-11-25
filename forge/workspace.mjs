@@ -697,8 +697,13 @@ export function applySearchReplaceEdits(original, edits) {
 }
 
 /** Utwórz bezpieczne środowisko ACI powiązane z repozytorium i konkretnym runId. */
-export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
+export function createForgeWorkspace({ repoRoot, runId, storageDir, protectedPaths = [] }) {
   const root = path.resolve(repoRoot);
+  const protectedSet = new Set(
+    (Array.isArray(protectedPaths) ? protectedPaths : [])
+      .map((p) => String(p || "").replace(/\\/g, "/").replace(/^\.\//, ""))
+      .filter(Boolean),
+  );
   const baseStorage = path.resolve(storageDir || path.join(root, ".jarvis-forge"));
   const snapshotDir = path.join(baseStorage, "snapshots", runId || "default");
   const snapshotManifestPath = path.join(snapshotDir, "manifest.json");
@@ -863,6 +868,9 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
         const abs = insideRoot(root, args.path);
         const rel = path.relative(root, abs).split(path.sep).join("/");
         assertSafeRepoFile(rel, "edit");
+        if (protectedSet.has(rel)) {
+          return { ok: false, error: `BŁĄD POLITYKI: plik "${rel}" jest chroniony przed modyfikacją w specyfikacji zadania — napraw przyczynę w kodzie produkcyjnym zamiast zmieniać test.` };
+        }
         if (!fs.existsSync(abs)) {
           return { ok: false, error: `Plik "${rel}" nie istnieje — użyj write_file, aby go utworzyć.` };
         }
@@ -904,6 +912,9 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
         const abs = insideRoot(root, args.path);
         const rel = path.relative(root, abs).split(path.sep).join("/");
         assertSafeRepoFile(rel, "write");
+        if (protectedSet.has(rel)) {
+          return { ok: false, error: `BŁĄD POLITYKI: plik "${rel}" jest chroniony przed modyfikacją w specyfikacji zadania — napraw przyczynę w kodzie produkcyjnym.` };
+        }
         const content = String(args.content ?? "");
         if (Buffer.byteLength(content, "utf8") > MAX_READ_BYTES) {
           return { ok: false, error: "Treść pliku przekracza bezpieczny limit 1.5 MB." };
@@ -933,6 +944,9 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
         const abs = insideRoot(root, args.path);
         const rel = path.relative(root, abs).split(path.sep).join("/");
         assertSafeRepoFile(rel, "delete");
+        if (protectedSet.has(rel)) {
+          return { ok: false, error: `BŁĄD POLITYKI: plik "${rel}" jest chroniony przed usunięciem.` };
+        }
         if (!fs.existsSync(abs)) return { ok: false, error: `Plik "${rel}" nie istnieje.` };
         const before = fs.readFileSync(abs, "utf8");
         ensureSnapshot(rel, abs);
@@ -943,18 +957,26 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir }) {
 
       if (name === "run_command") {
         const cwd = insideRoot(root, args.cwd || ".");
-        const res = await runSafeProcess(args.command, args.args || [], {
+        let cmdName = String(args.command || "").trim();
+        let cmdArgs = Array.isArray(args.args) ? args.args.map(String) : [];
+        // Małe modele czasem wysyłają "npm test" lub "node --check src/a.mjs" jako 1 string — bezpieczny split BEZ metaznaków powłoki!
+        if (!cmdArgs.length && /\s/.test(cmdName) && !SHELL_META_RE.test(cmdName)) {
+          const parts = cmdName.split(/\s+/).filter(Boolean);
+          cmdName = parts[0] || "";
+          cmdArgs = parts.slice(1);
+        }
+        const res = await runSafeProcess(cmdName, cmdArgs, {
           cwd,
           repoRoot: root,
           timeoutMs: Number(args.timeout_ms) || 90_000,
           signal: execOpts.signal,
         });
         const condensed = condenseCommandOutput(res.stdout, res.stderr, 5500);
-        const framed = wrapUntrustedRepoData(`cmd:${args.command}`, condensed);
+        const framed = wrapUntrustedRepoData(`cmd:${cmdName}`, condensed);
         if (framed.detections.length) {
-          securityEvents.push({ at: new Date().toISOString(), kind: "prompt-injection", source: `cmd:${args.command}`, detections: framed.detections });
+          securityEvents.push({ at: new Date().toISOString(), kind: "prompt-injection", source: `cmd:${cmdName}`, detections: framed.detections });
         }
-        const errorInfo = res.ok ? null : extractErrorSignature(`${res.stdout}\n${res.stderr}`, `${args.command} ${(args.args || []).join(" ")}`.trim());
+        const errorInfo = res.ok ? null : extractErrorSignature(`${res.stdout}\n${res.stderr}`, `${cmdName} ${cmdArgs.join(" ")}`.trim());
         return {
           ok: res.ok,
           code: res.code,
