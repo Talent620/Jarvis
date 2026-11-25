@@ -28,7 +28,7 @@ const CRITICAL_RISKGUARD_TOOLS = new Set([
   "gmail_send", "gmail_reply", "send_test_email", "send_offers_all", "salesos_email", "salesos_flush_emails",
   "send_sms", "text_contact", "make_call", "call_contact",
   "clear_tally", "desktop_power", "desktop_omni_task", "run_automation",
-  "system_terminal", "system_git", "system_docker", "system_http_request", "system_files_write", "system_generated_tool",
+  "system_terminal", "system_git", "system_docker", "system_http_request", "system_files_write", "system_generate_tool", "system_generated_tool",
 ]);
 
 /** Zwróć aktywny profil autonomii (domyślnie STANDARD). */
@@ -152,6 +152,11 @@ const RISK: Record<string, Risk> = {
   android_tap_id: "outbound", android_scroll: "outbound", android_back: "outbound",
   android_type: "outbound", android_tap: "outbound", android_global: "outbound",
   android_open_app: "outbound", android_open_settings: "outbound",
+  // narzędzia lokalnego workspace / MCP (Electron) — jawna klasyfikacja ryzyka
+  system_workspace_status: "read", system_files_list: "read", system_files_read: "read", system_database_read: "read",
+  system_files_write: "write",
+  system_git: "outbound", system_terminal: "outbound", system_docker: "outbound",
+  system_http_request: "outbound", system_browser_open: "outbound", system_generate_tool: "outbound",
 };
 
 /** Czy narzędzie ma JAWNĄ klasyfikację ryzyka (a nie tylko fail-safe outbound)? */
@@ -205,7 +210,7 @@ const ALWAYS_CONFIRM = new Set([
   "gmail_send", "gmail_reply", "send_test_email", "send_offers_all", "salesos_email", "salesos_flush_emails",
   "send_sms", "text_contact", "desktop_power", "desktop_click", "desktop_active_window", "desktop_type", "desktop_hotkey", "desktop_omni_task", "clear_tally",
   "salesos_push", "salesos_set_status", "gcal_add", "run_automation",
-  "system_terminal", "system_git", "system_docker", "system_http_request", "system_files_write", "system_generated_tool",
+  "system_terminal", "system_git", "system_docker", "system_http_request", "system_files_write", "system_generate_tool", "system_generated_tool",
 ]);
 export function requiresFreshConsent(tool: string): boolean {
   return ALWAYS_CONFIRM.has(tool) || store.settings.requireConsentAlways === true;

@@ -6,7 +6,7 @@ const { extractPage } = require("./page-extract.cjs");
 
 const MAX_OUTPUT = 200_000;
 const SAFE_COMMANDS = new Set(["git", "node", "npm", "npx", "docker", "sqlite3", "psql"]);
-const BLOCKED_ARGS = /(?:^|\s)(?:--?force|-f|reset\s+--hard|clean\s+-[a-z]*f|rm\b|rmdir\b|del\b|format\b|shutdown\b)/i;
+const BLOCKED_ARGS = /(?:^|\s)(?:--force|-f|reset\s+--hard|clean\s+-[a-z]*f|rm\b|rmdir\b|del\b|mkfs\b|shutdown\b)/i;
 
 function isOutside(flavor, base, target) {
   const relative = flavor.relative(base, target);

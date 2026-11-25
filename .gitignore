@@ -40,3 +40,6 @@ tools/generated/*.candidate.cjs
 project-memory/reports/logs/
 project-memory/.lock
 project-memory/**/.tmp-*
+
+# Jarvis Forge: lokalne checkpointy, snapshoty i pamięć robocza uruchomień
+.jarvis-forge/

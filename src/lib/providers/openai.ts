@@ -66,12 +66,20 @@ export function makeOpenAICompatible(
       // ucinana. To tylko GÓRNY limit (model stopuje sam, gdy skończy) — bez wpływu na krótkie odpowiedzi.
       ({ model, messages, ...(useTools ? { tools, tool_choice: "auto" } : {}), max_tokens: 8192, ...(opts.extraBody || {}) });
 
+    const makeApiError = (res: Response, data: { error?: { message?: string } } | null): Error => {
+      const err = new Error(`${data?.error?.message || "Błąd API"} (${res.status})`) as Error & { status?: number; retryAfter?: string };
+      err.status = res.status;
+      const retryAfter = res.headers?.get?.("retry-after");
+      if (retryAfter) err.retryAfter = retryAfter;
+      return err;
+    };
+
     // Pełna odpowiedź (bez strumienia) — ścieżka klasyczna / fallback.
     const requestFull = async (): Promise<OAIMessage> => {
       const res = await fetchTimeout(url, { method: "POST", headers, body: JSON.stringify(body()) }, 120000);
       // Brama/proxy może oddać HTML zamiast JSON — parsuj bezpiecznie i dołącz kod statusu.
       const data = await res.json().catch(() => null);
-      if (!res.ok || !data) throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
+      if (!res.ok || !data) throw makeApiError(res, data);
       if (data.usage) { inTok += data.usage.prompt_tokens || 0; outTok += data.usage.completion_tokens || 0; }
       const m: OAIMessage | undefined = data.choices?.[0]?.message;
       if (!m) throw new Error("Pusta odpowiedź modelu.");
@@ -87,7 +95,7 @@ export function makeOpenAICompatible(
       );
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(`${data?.error?.message || "Błąd API"} (${res.status})`);
+        throw makeApiError(res, data);
       }
       const reader = res.body?.getReader();
       if (!reader) throw new Error("stream-unsupported"); // brak strumienia → fallback do pełnej

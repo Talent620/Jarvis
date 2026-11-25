@@ -19,6 +19,7 @@ export default tseslint.config(
       "public",
       "ios",
       "android",
+      ".jarvis-forge",
     ],
   },
   js.configs.recommended,
@@ -71,6 +72,17 @@ export default tseslint.config(
   {
     files: ["site-os/public/**/*.js"],
     languageOptions: { sourceType: "script", globals: { ...globals.browser } },
+  },
+  // --- Jarvis Forge: autonomiczny silnik programistyczny (Node ESM) ---
+  {
+    files: ["forge/**/*.mjs"],
+    languageOptions: { sourceType: "module", globals: { ...globals.node } },
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" }],
+      "no-empty": ["warn", { allowEmptyCatch: true }],
+      "no-constant-condition": ["error", { checkLoops: false }],
+      "prefer-const": "warn",
+    },
   },
   {
     files: ["site-os/server.mjs", "site-os/scripts/**/*.mjs"],

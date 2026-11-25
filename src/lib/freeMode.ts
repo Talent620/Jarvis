@@ -4,7 +4,7 @@
 // (Ollama/WebLLM). Płatny Claude (Anthropic) jest pomijany. Auto-router + Liga i tak
 // wybiorą najmocniejszy dostępny darmowy model, więc jakość zostaje wysoka.
 import type { ProviderId } from "./providers/types";
-import { FREE_TIER_PROVIDERS } from "./autocore/catalog";
+import { FREE_TIER_PROVIDERS, costClassOf } from "./autocore/catalog";
 
 // Dostawcy z realnym darmowym tierem (lub w pełni lokalni).
 // AUTOCORE: wyprowadzone z katalogu (costClass != "paid") — bez własnej, konkurencyjnej listy.
@@ -12,9 +12,13 @@ export const FREE_PROVIDERS: ReadonlySet<ProviderId> = FREE_TIER_PROVIDERS;
 
 export const isFreeProvider = (id: ProviderId): boolean => FREE_PROVIDERS.has(id);
 
-/** Odfiltruj łańcuch dostawców do samych darmowych (zachowuje kolejność). */
-export function freeOnly<T extends { provider: ProviderId }>(order: T[]): T[] {
-  return order.filter((o) => isFreeProvider(o.provider));
+/** Odfiltruj łańcuch dostawców do samych darmowych (zachowuje kolejność, chroni przed płatnym OpenRouterem bez `:free`). */
+export function freeOnly<T extends { provider: ProviderId; model?: string }>(order: T[]): T[] {
+  return order.filter((o) => {
+    if (!isFreeProvider(o.provider)) return false;
+    if (typeof o.model === "string" && o.model.trim() && costClassOf(o.provider, o.model) === "paid") return false;
+    return true;
+  });
 }
 
 // Rekomendowany darmowy zestaw — kolejność wg jakości/niezawodności dla JARVISA.
