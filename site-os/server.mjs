@@ -1,6 +1,6 @@
 import http from "node:http";
 import { execFileSync, spawn } from "node:child_process";
-import { randomBytes, randomInt, randomUUID } from "node:crypto";
+import { randomBytes, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -19,24 +19,35 @@ const runtimeFile = path.join(runtimeDir, "connection.json");
 const host = process.env.SITE_OS_HOST || "127.0.0.1";
 const port = Number(process.env.SITE_OS_PORT || 3210);
 const version = "2.0.0";
-const localUrl = "http://" + host + ":" + port;
+const localUrl = "http://" + (host === "0.0.0.0" ? "127.0.0.1" : host) + ":" + port;
 const maxBodyBytes = 8 * 1024 * 1024;
+const MAX_SSE_CLIENTS = Math.max(1, Number(process.env.SITE_OS_MAX_SSE_CLIENTS || 16));
 
 let tunnelProcess = null;
 let tunnelUrl = "";
 let tunnelError = "";
 let tunnelStarting = null;
+let pairQueue = Promise.resolve();
 const leadRate = new Map();
 const pairFailures = new Map();
-const sseClients = new Set();
+const sseClients = new Map();
+
+function pruneDeadSseClients() {
+  for (const [client, cleanup] of sseClients.entries()) {
+    if (client.destroyed || client.writableEnded) {
+      cleanup();
+    }
+  }
+}
 
 function broadcastEvent(eventName, payload = {}) {
+  pruneDeadSseClients();
   const frame = `event: ${eventName}\ndata: ${JSON.stringify({ ...payload, at: Date.now() })}\n\n`;
-  for (const client of sseClients) {
+  for (const [client, cleanup] of sseClients.entries()) {
     try {
       client.write(frame);
     } catch {
-      sseClients.delete(client);
+      cleanup();
     }
   }
 }
@@ -79,6 +90,7 @@ async function connectToRunningInstance() {
 
   if (process.argv.includes("--tunnel")) {
     const sessionResponse = await fetch(localUrl + "/api/session", {
+      headers: { "X-SiteOS-Client": "cli" },
       signal: AbortSignal.timeout(3000)
     });
     const session = await sessionResponse.json();
@@ -224,33 +236,163 @@ async function ensureState() {
 
 const runtime = await ensureState();
 
-function isLoopback(req) {
-  // Tunel łączy się z serwerem lokalnie, dlatego sam remoteAddress nie wystarcza.
-  // Każdy nagłówek proxy oznacza, że żądanie przyszło z zewnątrz (Cloudflare / reverse proxy).
-  if (req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"] || req.headers.forwarded) return false;
-  const address = req.socket.remoteAddress || "";
-  return address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1";
+const PROXY_HEADERS = [
+  "cf-connecting-ip",
+  "cf-ray",
+  "cf-visitor",
+  "cf-ipcountry",
+  "cdn-loop",
+  "x-forwarded-for",
+  "forwarded",
+  "x-real-ip",
+  "true-client-ip",
+  "x-forwarded-host",
+  "x-forwarded-proto",
+  "via"
+];
+
+function isProxiedOrTunnelRequest(req) {
+  for (const h of PROXY_HEADERS) {
+    const val = req.headers[h];
+    if (typeof val === "string" ? val.trim().length > 0 : Array.isArray(val) && val.length > 0) {
+      return true;
+    }
+  }
+  return false;
 }
 
-function corsHeaders(req) {
-  const origin = req.headers.origin || "";
+function normalizeRemoteIp(raw) {
+  let ip = String(raw || "").trim();
+  if (ip.toLowerCase().startsWith("::ffff:")) ip = ip.slice(7);
+  const zoneIdx = ip.indexOf("%");
+  if (zoneIdx !== -1) ip = ip.slice(0, zoneIdx);
+  return ip;
+}
+
+function parseIpv4Octets(ip) {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip);
+  if (!m) return null;
+  const octets = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])];
+  return octets.every((n) => n >= 0 && n <= 255) ? octets : null;
+}
+
+function isLoopbackIp(ip) {
+  if (ip === "::1") return true;
+  const oct = parseIpv4Octets(ip);
+  return Boolean(oct && oct[0] === 127);
+}
+
+/**
+ * Ścisłe rozpoznawanie prywatnych adresów sieci lokalnej (RFC1918 IPv4: 10/8, 172.16/12, 192.168/16
+ * oraz lokalne IPv6 ULA fc00::/7 i link-local fe80::/10). Wyklucza loopback, CGNAT 100.64/10 i publiczne IP.
+ */
+function isPrivateLanIp(ip) {
+  const oct = parseIpv4Octets(ip);
+  if (oct) {
+    const [a, b] = oct;
+    if (a === 10) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    return false;
+  }
+  return /^f[cd][0-9a-f]{2}:/i.test(ip) || /^fe[89ab][0-9a-f]:/i.test(ip);
+}
+
+function isDirectLoopback(req) {
+  if (isProxiedOrTunnelRequest(req)) return false;
+  return isLoopbackIp(normalizeRemoteIp(req.socket?.remoteAddress));
+}
+
+function isDirectLanRequest(req) {
+  if (isProxiedOrTunnelRequest(req)) return false;
+  return isPrivateLanIp(normalizeRemoteIp(req.socket?.remoteAddress));
+}
+
+function isTrustedAppOrigin(origin) {
+  return (
+    /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(origin) ||
+    /^(capacitor|ionic):\/\/localhost$/i.test(origin)
+  );
+}
+
+function isLoopbackHostHeader(hostHdr) {
+  return /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(String(hostHdr || "").trim());
+}
+
+/**
+ * Wielowarstwowa ochrona GET /api/session (P1):
+ * blokuje nieprzezroczysty Origin: null (np. z piaskownicy /p/:id), żądania cross-origin,
+ * podzasoby bez nagłówka niestandardowego (<script>, <iframe>, no-cors), DNS rebinding
+ * oraz jakikolwiek dostęp spoza bezpośredniego loopbacka (w tym z LAN i tunelu).
+ */
+function isTrustedSessionRequest(req) {
+  if (!isDirectLoopback(req)) return false;
+  if (!isLoopbackHostHeader(req.headers.host)) return false;
+
+  const clientKind = String(req.headers["x-siteos-client"] || "").trim().toLowerCase();
+  if (!["studio", "jarvis", "cli"].includes(clientKind)) return false;
+
+  const origin = String(req.headers.origin || "").trim();
+  if (origin) {
+    if (origin.toLowerCase() === "null" || !isTrustedAppOrigin(origin)) return false;
+  }
+
+  const referer = String(req.headers.referer || "").trim();
+  if (referer) {
+    try {
+      const refUrl = new URL(referer);
+      if (!isTrustedAppOrigin(refUrl.origin) || /^\/p(\/|$)/i.test(refUrl.pathname)) return false;
+    } catch {
+      return false;
+    }
+  }
+
+  const secSite = String(req.headers["sec-fetch-site"] || "").trim().toLowerCase();
+  const secMode = String(req.headers["sec-fetch-mode"] || "").trim().toLowerCase();
+  const secDest = String(req.headers["sec-fetch-dest"] || "").trim().toLowerCase();
+  if (secMode && secMode !== "cors" && secMode !== "same-origin") return false;
+  if (secDest && secDest !== "empty") return false;
+  if (secSite) {
+    if (secSite === "same-origin") {
+      // Zaufany panel Site OS (ścieżka /p/ odrzucona powyżej przez Referer oraz CSP sandbox -> Origin: null).
+    } else if ((secSite === "same-site" || secSite === "cross-site") && origin && isTrustedAppOrigin(origin)) {
+      // Zaufana lokalna aplikacja JARVIS (np. http://localhost:5173 -> http://127.0.0.1:3210).
+    } else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function safeSecretEqual(candidate, expected) {
+  if (typeof candidate !== "string" || typeof expected !== "string") return false;
+  const a = Buffer.from(candidate, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  if (a.length === 0 || a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+function corsHeaders(req, pathname = "") {
+  const origin = String(req.headers.origin || "").trim();
+  const isPublicLeadEndpoint =
+    (req.method === "POST" || req.method === "OPTIONS") && /^\/api\/leads\/[a-f0-9-]+$/i.test(pathname);
   const allowed = !origin
-    || origin === "null"
-    || /^(capacitor|ionic):\/\/localhost$/i.test(origin)
-    || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+    || isTrustedAppOrigin(origin)
+    || (isPublicLeadEndpoint && (origin === "null" || /^https?:\/\//i.test(origin)));
   return {
     ...(allowed && origin ? { "Access-Control-Allow-Origin": origin } : {}),
-    "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Jarvis-Token",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Jarvis-Token, X-SiteOS-Client",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "X-Content-Type-Options": "nosniff",
     "Vary": "Origin"
   };
 }
 
-function send(req, res, status, body, extra = {}) {
+function send(req, res, status, body, extra = {}, pathname = "") {
   const payload = typeof body === "string" ? body : JSON.stringify(body);
   res.writeHead(status, {
-    ...corsHeaders(req),
+    ...corsHeaders(req, pathname),
     "Content-Type": typeof body === "string" ? "text/plain; charset=utf-8" : "application/json; charset=utf-8",
     "Cache-Control": "no-store",
     ...extra
@@ -264,8 +406,12 @@ function bearer(req) {
 }
 
 function authorized(req, urlObj = null) {
-  const tok = bearer(req) || (urlObj && isLoopback(req) ? String(urlObj.searchParams.get("token") || "").trim() : "");
-  return Boolean(tok) && tok === runtime.token;
+  const canUseEventQueryToken =
+    urlObj &&
+    urlObj.pathname === "/api/events" &&
+    (isDirectLoopback(req) || isDirectLanRequest(req));
+  const tok = bearer(req) || (canUseEventQueryToken ? String(urlObj.searchParams.get("token") || "").trim() : "");
+  return safeSecretEqual(tok, runtime.token);
 }
 
 async function bodyRaw(req, limitBytes = maxBodyBytes) {
@@ -480,8 +626,9 @@ function stopTunnel() {
 
 async function serveStatic(req, res, pathname) {
   const relative = pathname === "/" ? "index.html" : decodeURIComponent(pathname.slice(1));
-  const target = path.resolve(publicDir, relative);
-  if (!target.startsWith(path.resolve(publicDir)) || !existsSync(target)) return false;
+  const pubRoot = path.resolve(publicDir);
+  const target = path.resolve(pubRoot, relative);
+  if ((target !== pubRoot && !target.startsWith(pubRoot + path.sep)) || !existsSync(target)) return false;
   const ext = path.extname(target).toLowerCase();
   const mime = {
     ".html": "text/html; charset=utf-8",
@@ -493,74 +640,115 @@ async function serveStatic(req, res, pathname) {
     ".jpg": "image/jpeg",
     ".svg": "image/svg+xml"
   }[ext] || "application/octet-stream";
-  res.writeHead(200, { "Content-Type": mime, "Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff" });
+  res.writeHead(200, {
+    "Content-Type": mime,
+    "Cache-Control": "no-cache",
+    "X-Content-Type-Options": "nosniff",
+    ...(ext === ".html" ? { "Content-Security-Policy": "frame-ancestors 'none'" } : {})
+  });
   res.end(await readFile(target));
   return true;
 }
 
 const server = http.createServer(async (req, res) => {
+  const url = new URL(req.url || "/", localUrl);
+  const pathname = url.pathname;
   try {
-    const url = new URL(req.url || "/", localUrl);
-    const pathname = url.pathname;
-
     if (req.method === "OPTIONS") {
-      res.writeHead(204, corsHeaders(req));
+      res.writeHead(204, corsHeaders(req, pathname));
       return res.end();
     }
 
-    // P0-2 TWARDA IZOLACJA TUNELU: ruch spoza loopbacka ma dostęp WYŁĄCZNIE do czystego podglądu klienta (/p/:id),
-    // zweryfikowanych grafik (/api/uploads/public/:name) oraz wysyłki formularza leadowego (POST /api/leads/:id).
-    // Panel edytora (/), sesja (/api/session) i parowanie (/api/pair) są całkowicie odcięte od świata (403).
-    if (!isLoopback(req)) {
-      const allowedPublicRoute =
-        (req.method === "GET" && /^\/p\/[a-f0-9-]+$/i.test(pathname)) ||
-        (req.method === "GET" && /^\/api\/uploads\/public\/[a-z0-9._-]+$/i.test(pathname)) ||
-        (req.method === "POST" && /^\/api\/leads\/[a-f0-9-]+$/i.test(pathname));
-      if (!allowedPublicRoute) {
-        return send(req, res, 403, { ok: false, error: "Edytor i API administracyjne są dostępne wyłącznie lokalnie." });
+    const allowedPublicRoute =
+      (req.method === "GET" && /^\/p\/[a-f0-9-]+$/i.test(pathname)) ||
+      (req.method === "GET" && /^\/api\/uploads\/public\/[a-z0-9._-]+$/i.test(pathname)) ||
+      (req.method === "POST" && /^\/api\/leads\/[a-f0-9-]+$/i.test(pathname));
+
+    const allowedPairedLanApiRoute =
+      pathname === "/api/events" ||
+      pathname === "/api/projects" ||
+      pathname === "/api/public/projects" ||
+      /^\/api\/(?:public\/)?projects\/[a-f0-9-]+$/i.test(pathname) ||
+      pathname === "/api/commands" ||
+      pathname === "/api/public/commands" ||
+      /^\/api\/public\/commands\/[a-f0-9-]+$/i.test(pathname) ||
+      pathname === "/api/uploads" ||
+      (req.method === "GET" && /^\/api\/leads\/[a-f0-9-]+$/i.test(pathname));
+
+    // P0-2 / F-05 ROZDZIAŁ STREF ZAUFANIA (Loopback vs Prywatny LAN RFC1918 vs Proxy/Tunel):
+    // 1. Proxy / Cloudflare Tunnel / publiczne IP: wyłącznie podgląd klienta (/p/:id), publiczne grafiki i formularz leadowy.
+    // 2. Prywatny LAN RFC1918 (np. parowanie telefonu przez Wi-Fi przy SITE_OS_HOST=0.0.0.0):
+    //    dodatkowo /api/health, /api/pair (z kodem i rate-limitem) oraz API sparowanego klienta z ważnym tokenem Bearer.
+    //    Panel edytora (/), sesja lokalna (/api/session) oraz sterowanie tunelem (/api/tunnel*) są ZAWSZE zablokowane (403) poza loopbackiem.
+    if (!isDirectLoopback(req)) {
+      if (isDirectLanRequest(req)) {
+        const allowedOnLan =
+          allowedPublicRoute ||
+          (req.method === "GET" && pathname === "/api/health") ||
+          (req.method === "POST" && pathname === "/api/pair") ||
+          allowedPairedLanApiRoute;
+        if (!allowedOnLan) {
+          return send(req, res, 403, { ok: false, error: "Panel edytora, sesja lokalna i sterowanie tunelem są dostępne wyłącznie na tym samym urządzeniu." }, {}, pathname);
+        }
+      } else if (!allowedPublicRoute) {
+        return send(req, res, 403, { ok: false, error: "Edytor i API administracyjne są dostępne wyłącznie lokalnie." }, {}, pathname);
       }
     }
 
     if (req.method === "GET" && pathname === "/api/health") {
+      const fullDetails = isDirectLoopback(req) || authorized(req);
       return send(req, res, 200, {
         ok: true,
         name: runtime.name,
         version,
-        localUrl,
-        tunnelUrl,
-        tunnelError,
+        ...(fullDetails ? { localUrl, tunnelUrl, tunnelError } : {}),
         pairingRequired: true
-      });
+      }, {}, pathname);
     }
 
     if (req.method === "GET" && pathname === "/api/session") {
-      if (!isLoopback(req)) return send(req, res, 403, { ok: false, error: "Edytor jest dostępny tylko lokalnie." });
-      return send(req, res, 200, { ok: true, token: runtime.token, pairingCode: runtime.pairingCode });
+      if (!isTrustedSessionRequest(req)) {
+        return send(req, res, 403, { ok: false, error: "Dostęp do sesji lokalnej został odrzucony." }, {}, pathname);
+      }
+      return send(req, res, 200, { ok: true, token: runtime.token, pairingCode: runtime.pairingCode }, {}, pathname);
     }
 
     if (req.method === "POST" && pathname === "/api/pair") {
       if (!allowPairAttempt(req)) {
-        return send(req, res, 429, { ok: false, error: "Za dużo nieudanych prób parowania. Odczekaj 10 minut." });
+        return send(req, res, 429, { ok: false, error: "Za dużo nieudanych prób parowania. Odczekaj 10 minut." }, {}, pathname);
       }
       const input = await bodyJson(req);
-      if (String(input.code || "") !== runtime.pairingCode) {
-        recordPairFailure(req);
-        return send(req, res, 401, { ok: false, error: "Nieprawidłowy kod parowania." });
-      }
-      runtime.pairingCode = String(randomInt(100000, 999999));
-      await updateRuntime();
-      return send(req, res, 200, { ok: true, token: runtime.token, url: localUrl, version });
+      const outcome = await (pairQueue = pairQueue.catch(() => {}).then(async () => {
+        if (!allowPairAttempt(req)) {
+          return { status: 429, body: { ok: false, error: "Za dużo nieudanych prób parowania. Odczekaj 10 minut." } };
+        }
+        const candidate = String(input.code || "").trim();
+        if (!safeSecretEqual(candidate, runtime.pairingCode)) {
+          recordPairFailure(req);
+          return { status: 401, body: { ok: false, error: "Nieprawidłowy kod parowania." } };
+        }
+        runtime.pairingCode = String(randomInt(100000, 999999));
+        await updateRuntime();
+        const rawHost = String(req.headers.host || "").trim();
+        const resolvedUrl =
+          host === "0.0.0.0" && /^[a-z0-9.\-[\]:]+$/i.test(rawHost) && !rawHost.startsWith("0.0.0.0")
+            ? "http://" + rawHost
+            : localUrl;
+        return { status: 200, body: { ok: true, token: runtime.token, url: resolvedUrl, version } };
+      }));
+      return send(req, res, outcome.status, outcome.body, {}, pathname);
     }
 
     const publicUploadMatch = pathname.match(/^\/api\/uploads\/public\/([a-z0-9._-]+)$/i);
     if (req.method === "GET" && publicUploadMatch) {
-      const target = path.resolve(uploadsDir, publicUploadMatch[1]);
-      if (!target.startsWith(path.resolve(uploadsDir)) || !existsSync(target)) {
-        return send(req, res, 404, { ok: false, error: "Nie znaleziono grafiki." });
+      const upRoot = path.resolve(uploadsDir);
+      const target = path.resolve(upRoot, publicUploadMatch[1]);
+      if (!target.startsWith(upRoot + path.sep) || !existsSync(target)) {
+        return send(req, res, 404, { ok: false, error: "Nie znaleziono grafiki." }, {}, pathname);
       }
       const bytes = await readFile(target);
       const magic = verifyImageMagicBytes(bytes);
-      if (!magic) return send(req, res, 415, { ok: false, error: "Nieprawidłowy format pliku." });
+      if (!magic) return send(req, res, 415, { ok: false, error: "Nieprawidłowy format pliku." }, {}, pathname);
       res.writeHead(200, {
         "Content-Type": magic.mime,
         "Cache-Control": "public, max-age=31536000, immutable",
@@ -572,11 +760,13 @@ const server = http.createServer(async (req, res) => {
     const previewMatch = pathname.match(/^\/p\/([a-f0-9-]+)$/i);
     if (req.method === "GET" && previewMatch) {
       const project = (await projects()).find((item) => item.id === previewMatch[1]);
-      if (!project) return send(req, res, 404, "Nie znaleziono projektu.");
+      if (!project) return send(req, res, 404, "Nie znaleziono projektu.", {}, pathname);
+      // P1-A IZOLACJA PODGLĄDU: piaskownica CSP bez allow-same-origin nadaje stronie nieprzezroczysty
+      // origin "null" — skrypty i formularze witryny działają, ale nie mają dostępu do /api/session ani storage panelu.
       res.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8",
-        "Content-Security-Policy": "frame-ancestors *",
-        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Content-Security-Policy": "sandbox allow-scripts allow-forms allow-modals allow-popups; frame-ancestors *",
+        "Referrer-Policy": "no-referrer",
         "X-Content-Type-Options": "nosniff"
       });
       return res.end(withCapture(project.html, project.id));
@@ -584,11 +774,11 @@ const server = http.createServer(async (req, res) => {
 
     const publicLeadMatch = pathname.match(/^\/api\/leads\/([a-f0-9-]+)$/i);
     if (req.method === "POST" && publicLeadMatch) {
-      if (!allowLead(req)) return send(req, res, 429, { ok: false, error: "Za dużo prób. Spróbuj ponownie za kilka minut." });
+      if (!allowLead(req)) return send(req, res, 429, { ok: false, error: "Za dużo prób. Spróbuj ponownie za kilka minut." }, {}, pathname);
       const projectExists = (await projects()).some((item) => item.id === publicLeadMatch[1]);
-      if (!projectExists) return send(req, res, 404, { ok: false, error: "Nie znaleziono projektu." });
+      if (!projectExists) return send(req, res, 404, { ok: false, error: "Nie znaleziono projektu." }, {}, pathname);
       const input = await bodyJson(req);
-      if (cleanLeadValue(input.website, 200)) return send(req, res, 202, { ok: true });
+      if (cleanLeadValue(input.website, 200)) return send(req, res, 202, { ok: true }, {}, pathname);
       const lead = {
         id: randomUUID(),
         projectId: publicLeadMatch[1],
@@ -599,35 +789,58 @@ const server = http.createServer(async (req, res) => {
         createdAt: Date.now()
       };
       if (!lead.name || !/^\S+@\S+\.\S+$/.test(lead.email) || !lead.message) {
-        return send(req, res, 400, { ok: false, error: "Uzupełnij imię, poprawny e-mail i wiadomość." });
+        return send(req, res, 400, { ok: false, error: "Uzupełnij imię, poprawny e-mail i wiadomość." }, {}, pathname);
       }
       const list = await readJson(leadsFile, []);
       await writeJson(leadsFile, [lead, ...(Array.isArray(list) ? list : [])].slice(0, 2000));
       broadcastEvent("lead-created", { projectId: lead.projectId, leadId: lead.id });
-      return send(req, res, 201, { ok: true, id: lead.id });
+      return send(req, res, 201, { ok: true, id: lead.id }, {}, pathname);
     }
 
     if (pathname.startsWith("/api/") && !authorized(req, url)) {
-      return send(req, res, 401, { ok: false, error: "Brak autoryzacji Site OS." });
+      return send(req, res, 401, { ok: false, error: "Brak autoryzacji Site OS." }, {}, pathname);
     }
 
-    // Strumień SSE czasu rzeczywistego (eliminuje opóźnienia pollingu między edytorem a JARVISEM)
+    // F-03 Strumień SSE czasu rzeczywistego z twardym limitem MAX_SSE_CLIENTS i bezwyciekowym sprzątaniem
     if (req.method === "GET" && pathname === "/api/events") {
+      pruneDeadSseClients();
+      if (sseClients.size >= MAX_SSE_CLIENTS) {
+        return send(
+          req,
+          res,
+          429,
+          { ok: false, error: "Przekroczono limit aktywnych połączeń SSE (" + MAX_SSE_CLIENTS + ")." },
+          { "Retry-After": "5" },
+          pathname
+        );
+      }
       res.writeHead(200, {
-        ...corsHeaders(req),
+        ...corsHeaders(req, pathname),
         "Content-Type": "text/event-stream; charset=utf-8",
         "Cache-Control": "no-cache, no-transform",
         "Connection": "keep-alive"
       });
-      res.write(`event: connected\ndata: ${JSON.stringify({ version, at: Date.now() })}\n\n`);
-      sseClients.add(res);
-      const keepAlive = setInterval(() => {
-        try { res.write(": ping\n\n"); } catch { sseClients.delete(res); }
-      }, 20000);
-      req.on("close", () => {
-        clearInterval(keepAlive);
+      let cleaned = false;
+      let keepAlive = null;
+      const cleanupSse = () => {
+        if (cleaned) return;
+        cleaned = true;
+        if (keepAlive) clearInterval(keepAlive);
         sseClients.delete(res);
-      });
+      };
+      keepAlive = setInterval(() => {
+        if (res.destroyed || res.writableEnded) {
+          cleanupSse();
+          return;
+        }
+        try { res.write(": ping\n\n"); } catch { cleanupSse(); }
+      }, 20000);
+      keepAlive.unref?.();
+      sseClients.set(res, cleanupSse);
+      req.once("close", cleanupSse);
+      res.once("close", cleanupSse);
+      res.once("error", cleanupSse);
+      res.write(`event: connected\ndata: ${JSON.stringify({ version, at: Date.now() })}\n\n`);
       return;
     }
 
@@ -638,26 +851,26 @@ const server = http.createServer(async (req, res) => {
       const ctype = String(req.headers["content-type"] || "");
       if (ctype.includes("application/json")) {
         let parsed;
-        try { parsed = JSON.parse(raw.toString("utf8")); } catch { return send(req, res, 400, { ok: false, error: "Nieprawidłowy JSON uploadu." }); }
+        try { parsed = JSON.parse(raw.toString("utf8")); } catch { return send(req, res, 400, { ok: false, error: "Nieprawidłowy JSON uploadu." }, {}, pathname); }
         const dataUrl = String(parsed.dataUrl || "");
         const base64Match = dataUrl.match(/^data:image\/[a-z0-9.+-]+;base64,([a-z0-9+/=\s]+)$/i);
-        if (!base64Match) return send(req, res, 415, { ok: false, error: "Dozwolone są wyłącznie obrazy PNG, JPEG i WebP." });
+        if (!base64Match) return send(req, res, 415, { ok: false, error: "Dozwolone są wyłącznie obrazy PNG, JPEG i WebP." }, {}, pathname);
         bytes = Buffer.from(base64Match[1], "base64");
       }
       const magic = verifyImageMagicBytes(bytes);
       if (!magic) {
-        return send(req, res, 415, { ok: false, error: "Odrzucono plik: nieprawidłowe Magic Bytes (wymagane PNG, JPEG lub WebP; SVG zablokowane)." });
+        return send(req, res, 415, { ok: false, error: "Odrzucono plik: nieprawidłowe Magic Bytes (wymagane PNG, JPEG lub WebP; SVG zablokowane)." }, {}, pathname);
       }
       const filename = `${Date.now()}-${randomBytes(6).toString("hex")}${magic.ext}`;
       await writeFile(path.join(uploadsDir, filename), bytes);
-      return send(req, res, 201, { ok: true, url: `/api/uploads/public/${filename}`, mime: magic.mime, size: bytes.length });
+      return send(req, res, 201, { ok: true, url: `/api/uploads/public/${filename}`, mime: magic.mime, size: bytes.length }, {}, pathname);
     }
 
     if (req.method === "POST" && pathname === "/api/commands") {
       const input = await bodyJson(req);
       const projectExists = (await projects()).some((item) => item.id === input.projectId);
       if (!projectExists || typeof input.prompt !== "string" || !input.prompt.trim()) {
-        return send(req, res, 400, { ok: false, error: "Projekt i polecenie są wymagane." });
+        return send(req, res, 400, { ok: false, error: "Projekt i polecenie są wymagane." }, {}, pathname);
       }
       const list = await readJson(commandsFile, []);
       const command = {
@@ -674,13 +887,13 @@ const server = http.createServer(async (req, res) => {
         ok: true,
         command,
         connected: Date.now() - Number(runtime.lastJarvisSeen || 0) < 45000 || sseClients.size > 0
-      });
+      }, {}, pathname);
     }
 
     if (req.method === "GET" && publicLeadMatch) {
       const list = await readJson(leadsFile, []);
       const leads = (Array.isArray(list) ? list : []).filter((lead) => lead.projectId === publicLeadMatch[1]).slice(0, 500);
-      return send(req, res, 200, { ok: true, leads });
+      return send(req, res, 200, { ok: true, leads }, {}, pathname);
     }
 
     if (req.method === "GET" && pathname === "/api/public/commands") {
@@ -688,7 +901,7 @@ const server = http.createServer(async (req, res) => {
       await updateRuntime();
       const list = await readJson(commandsFile, []);
       const pending = (Array.isArray(list) ? list : []).filter((item) => item.status === "pending");
-      return send(req, res, 200, { ok: true, commands: pending });
+      return send(req, res, 200, { ok: true, commands: pending }, {}, pathname);
     }
 
     const commandMatch = pathname.match(/^\/api\/public\/commands\/([a-f0-9-]+)$/i);
@@ -696,7 +909,7 @@ const server = http.createServer(async (req, res) => {
       const input = await bodyJson(req);
       const list = await readJson(commandsFile, []);
       const command = (Array.isArray(list) ? list : []).find((item) => item.id === commandMatch[1]);
-      if (!command) return send(req, res, 404, { ok: false, error: "Nie znaleziono polecenia." });
+      if (!command) return send(req, res, 404, { ok: false, error: "Nie znaleziono polecenia." }, {}, pathname);
       command.status = input.status === "failed" ? "failed" : "done";
       command.error = typeof input.error === "string" ? input.error.slice(0, 1000) : null;
       command.completedAt = Date.now();
@@ -711,7 +924,7 @@ const server = http.createServer(async (req, res) => {
       }
       await writeJson(commandsFile, list);
       broadcastEvent("command-done", { commandId: command.id, projectId: command.projectId, status: command.status, error: command.error });
-      return send(req, res, 200, { ok: true, command });
+      return send(req, res, 200, { ok: true, command }, {}, pathname);
     }
 
     if (req.method === "GET" && pathname === "/api/projects") {
@@ -720,7 +933,7 @@ const server = http.createServer(async (req, res) => {
         ...item,
         size: html.length,
         versionCount: versions?.length || 0
-      })) });
+      })) }, {}, pathname);
     }
 
     if (req.method === "POST" && (pathname === "/api/projects" || pathname === "/api/public/projects")) {
@@ -734,48 +947,56 @@ const server = http.createServer(async (req, res) => {
       const project = cleanProject(input, matched);
       await saveProjects([project, ...list.filter((item) => item.id !== project.id)]);
       broadcastEvent("project-updated", { projectId: project.id, source: matched ? "upsert" : "create" });
-      return send(req, res, matched ? 200 : 201, { ok: true, project, upserted: Boolean(matched) });
+      return send(req, res, matched ? 200 : 201, { ok: true, project, upserted: Boolean(matched) }, {}, pathname);
     }
 
     const projectMatch = pathname.match(/^\/api\/(?:public\/)?projects\/([a-f0-9-]+)$/i);
     if (projectMatch) {
       const list = await projects();
       const existing = list.find((item) => item.id === projectMatch[1]);
-      if (!existing) return send(req, res, 404, { ok: false, error: "Nie znaleziono projektu." });
-      if (req.method === "GET") return send(req, res, 200, { ok: true, project: existing });
+      if (!existing) return send(req, res, 404, { ok: false, error: "Nie znaleziono projektu." }, {}, pathname);
+      if (req.method === "GET") return send(req, res, 200, { ok: true, project: existing }, {}, pathname);
       if (req.method === "PUT") {
         const input = await bodyJson(req);
         const project = cleanProject(input, existing);
         await saveProjects([project, ...list.filter((item) => item.id !== project.id)]);
         broadcastEvent("project-updated", { projectId: project.id, source: "editor" });
-        return send(req, res, 200, { ok: true, project });
+        return send(req, res, 200, { ok: true, project }, {}, pathname);
       }
       if (req.method === "DELETE") {
         await saveProjects(list.filter((item) => item.id !== existing.id));
-        return send(req, res, 200, { ok: true });
+        return send(req, res, 200, { ok: true }, {}, pathname);
       }
+    }
+
+    if (pathname.startsWith("/api/tunnel") && !isDirectLoopback(req)) {
+      return send(req, res, 403, { ok: false, error: "Sterowanie tunelem jest dostępne wyłącznie na urządzeniu lokalnym." }, {}, pathname);
     }
 
     if (req.method === "POST" && pathname === "/api/tunnel/start") {
       await startTunnel();
-      return send(req, res, 202, { ok: true, status: "starting", tunnelUrl, error: tunnelError });
+      return send(req, res, 202, { ok: true, status: "starting", tunnelUrl, error: tunnelError }, {}, pathname);
     }
 
     if (req.method === "POST" && pathname === "/api/tunnel/stop") {
       await stopTunnel();
-      return send(req, res, 200, { ok: true, status: "stopped" });
+      return send(req, res, 200, { ok: true, status: "stopped" }, {}, pathname);
     }
 
     if (req.method === "GET" && pathname === "/api/tunnel") {
-      return send(req, res, 200, { ok: true, active: Boolean(tunnelUrl), tunnelUrl, error: tunnelError });
+      return send(req, res, 200, { ok: true, active: Boolean(tunnelUrl), tunnelUrl, error: tunnelError }, {}, pathname);
+    }
+
+    if (!isDirectLoopback(req)) {
+      return send(req, res, 403, { ok: false, error: "Edytor jest dostępny wyłącznie lokalnie." }, {}, pathname);
     }
 
     if (await serveStatic(req, res, pathname)) return;
-    send(req, res, 404, { ok: false, error: "Nie znaleziono." });
+    send(req, res, 404, { ok: false, error: "Nie znaleziono." }, {}, pathname);
   } catch (error) {
     const status = Number(error?.statusCode) || 500;
-    if (status >= 500) console.error(error);
-    send(req, res, status, { ok: false, error: error instanceof Error ? error.message : "Błąd Site OS." });
+    if (status >= 500) console.error("[Site OS] Błąd żądania:", error instanceof Error ? error.message : "unknown");
+    send(req, res, status, { ok: false, error: error instanceof Error ? error.message : "Błąd Site OS." }, {}, pathname);
   }
 });
 
@@ -808,7 +1029,10 @@ server.listen(port, host, () => {
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, async () => {
     await stopTunnel();
-    for (const c of sseClients) { try { c.end(); } catch { /* ignore */ } }
+    for (const [client, cleanup] of sseClients.entries()) {
+      cleanup();
+      try { client.end(); } catch { /* ignore */ }
+    }
     sseClients.clear();
     server.close(() => process.exit(0));
   });

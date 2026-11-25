@@ -118,7 +118,9 @@ describe("Site OS 2.0 — żywy serwer: izolacja tunelu, rate-limit parowania, M
       expect(smokeCode).toBe(0);
 
       // 2. Pobranie sesji lokalnej i weryfikacja prawdziwego 1×1 PNG przez Magic Bytes
-      const sessRes = await fetch(`${baseUrl}/api/session`);
+      const sessRes = await fetch(`${baseUrl}/api/session`, {
+        headers: { "X-SiteOS-Client": "cli" },
+      });
       const sess = (await sessRes.json()) as { token: string };
       expect(sess.token.length).toBeGreaterThan(20);
 

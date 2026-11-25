@@ -30,11 +30,25 @@ function probeSiteOs(port) {
   });
 }
 
+function readRuntimeToken(runtimeDir) {
+  try {
+    if (!runtimeDir) return undefined;
+    const raw = JSON.parse(fs.readFileSync(require("node:path").join(runtimeDir, "connection.json"), "utf8"));
+    return typeof raw?.token === "string" && raw.token.length > 20 ? raw.token : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function createLocalSiteOsManager({ paths, execPath = process.execPath, port = 3210, start = spawn, timeoutMs = 20000, intervalMs = 250 }) {
   let child = null;
   let pending = null;
   let closed = false;
   const close = () => { closed = true; if (child && child.exitCode === null && !child.killed) child.kill(); };
+  const withToken = (obj) => {
+    const token = readRuntimeToken(paths?.runtime);
+    return token ? { ...obj, token } : obj;
+  };
   const ensure = (url, { tunnel = false } = {}) => {
     if (!isLocalSiteOs(url, port)) return Promise.resolve({ ok: false, skipped: true, error: "Automatyczny start obsługuje tylko lokalny Site OS na domyślnym porcie." });
     if (closed) return Promise.resolve({ ok: false, error: "Aplikacja jest zamykana." });
@@ -42,7 +56,7 @@ function createLocalSiteOsManager({ paths, execPath = process.execPath, port = 3
     pending = (async () => {
       const initial = await probeSiteOs(port);
       if (closed) return { ok: false, error: "Aplikacja jest zamykana." };
-      if (initial === "ready") return { ok: true, started: false, url: `http://127.0.0.1:${port}` };
+      if (initial === "ready") return withToken({ ok: true, started: false, url: `http://127.0.0.1:${port}` });
       if (initial !== "refused") return { ok: false, error: "Port Site OS jest zajęty lub usługa zwraca nieprawidłową odpowiedź." };
       if (!fs.existsSync(paths.script)) return { ok: false, error: "Brak modułu Site OS w instalacji." };
       let spawnError = "";
@@ -62,7 +76,7 @@ function createLocalSiteOsManager({ paths, execPath = process.execPath, port = 3
         if (exited || owned.exitCode !== null) return { ok: false, error: `Site OS zakończył pracę (kod ${owned.exitCode ?? "brak"}).` };
         const ready = await probeSiteOs(port);
         if (closed) break;
-        if (ready === "ready" && !exited && owned.exitCode === null) return { ok: true, started: true, url: `http://127.0.0.1:${port}` };
+        if (ready === "ready" && !exited && owned.exitCode === null) return withToken({ ok: true, started: true, url: `http://127.0.0.1:${port}` });
         await new Promise((resolve) => setTimeout(resolve, intervalMs));
       }
       if (owned.exitCode === null && !owned.killed) owned.kill();

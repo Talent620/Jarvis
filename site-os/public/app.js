@@ -119,7 +119,7 @@ function toast(message) {
 }
 
 async function api(path, options = {}) {
-  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  const headers = { "Content-Type": "application/json", "X-SiteOS-Client": "studio", ...(options.headers || {}) };
   if (state.token) headers.Authorization = "Bearer " + state.token;
   const response = await fetch(path, { ...options, headers });
   const data = await response.json().catch(() => ({ ok: false, error: "Nieprawidłowa odpowiedź serwera." }));
@@ -253,7 +253,8 @@ function renderProjects() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "project-item" + (project.id === state.current?.id ? " active" : "");
-    button.innerHTML = `<span class="project-thumb">${project.name.slice(0, 2).toUpperCase()}</span><span><strong></strong><span></span></span>`;
+    button.innerHTML = "<span class=\"project-thumb\"></span><span><strong></strong><span></span></span>";
+    $(".project-thumb", button).textContent = project.name.slice(0, 2).toUpperCase();
     $("strong", button).textContent = project.name;
     $$("span", button)[2].textContent = formatDate(project.updatedAt);
     button.addEventListener("click", () => loadProject(project.id));
@@ -1123,7 +1124,7 @@ function bindControls() {
 
   $$("[data-tab]").forEach((button) => button.addEventListener("click", () => setPanel(button.dataset.tab)));
   $("#shareBtn").addEventListener("click", () => setPanel("publish"));
-  $("#previewBtn").addEventListener("click", () => state.current && window.open("/p/" + state.current.id, "_blank", "noopener"));
+  $("#previewBtn").addEventListener("click", () => state.current && window.open("/p/" + state.current.id, "_blank", "noopener,noreferrer"));
   $$("[data-section]").forEach((button) => button.addEventListener("click", () => insertSection(button.dataset.section)));
   $$("[data-palette]").forEach((button) => button.addEventListener("click", () => applyPalette(button.dataset.palette)));
 

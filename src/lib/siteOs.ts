@@ -29,9 +29,10 @@ export interface SiteOsCommand {
 }
 
 /**
- * Pure (P0-1 fix): wycina ciężkie obrazy `data:image/...;base64,...` z kodu HTML przed wysłaniem do LLM,
- * zamieniając je na lekkie tokeny `__JARVIS_ASSET_N__`. Chroni przed ścianą SAFE_EDIT_CHARS = 60_000
- * po dodaniu grafik WebP w Site OS oraz oszczędza setki tysięcy tokenów.
+ * Pure (P0-1 / F-04 fix): wycina ciężkie obrazy `data:image/...;base64,...` z kodu HTML przed wysłaniem do LLM,
+ * zamieniając je na lekkie tokeny `__JARVIS_ASSET_N__`. Obsługuje bezpiecznie atrybuty w cudzysłowach (`"..."`, `'...'`,
+ * w tym wielowierszowy base64), nieujęte w cudzysłów (`src=data:image/... alt="x"` oraz `=/>`) i CSS `url(...)`,
+ * bez pochłaniania spacji ani sąsiednich atrybutów HTML (zgodne z ES2019 / Chrome 79 — bez lookbehind).
  */
 export function extractDataUriAssets(html: string): { strippedHtml: string; assets: Map<string, string> } {
   const assets = new Map<string, string>();
@@ -39,11 +40,30 @@ export function extractDataUriAssets(html: string): { strippedHtml: string; asse
     return { strippedHtml: html || "", assets };
   }
   let idx = 0;
-  const strippedHtml = html.replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]{256,}/g, (match) => {
+  const stash = (uri: string): string => {
     const tokenKey = `__JARVIS_ASSET_${idx++}__`;
-    assets.set(tokenKey, match);
+    assets.set(tokenKey, uri);
     return tokenKey;
-  });
+  };
+  // 1) Wartości ujęte bezpośrednio w cudzysłowy "..." lub '...' (mogą zawierać łamanie wierszy wewnątrz cudzysłowów)
+  const afterQuoted = html.replace(
+    /(["'])(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\r\n\t ]{256,})\1/g,
+    (full, quote: string, uri: string) => {
+      const compactLen = uri.slice(uri.indexOf(",") + 1).replace(/\s+/g, "").length;
+      if (compactLen < 256) return full;
+      return quote + stash(uri) + quote;
+    },
+  );
+  // 2) Wartości nieujęte w cudzysłów (src=data:image/... alt="x", />) oraz CSS url(data:image/...) — ZERO białych znaków
+  const strippedHtml = afterQuoted.replace(
+    /data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]{256,}/g,
+    (match, offset: number, source: string) => {
+      if (match.charAt(match.length - 1) === "/" && source.charAt(offset + match.length) === ">") {
+        return stash(match.slice(0, -1)) + "/";
+      }
+      return stash(match);
+    },
+  );
   return { strippedHtml, assets };
 }
 
@@ -66,6 +86,7 @@ function token(): string {
 async function request<T>(path: string, init: RequestInit = {}, requireToken = true): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
+  headers.set("X-SiteOS-Client", "jarvis");
   if (requireToken && token()) headers.set("Authorization", `Bearer ${token()}`);
   const response = await fetch(baseUrl() + path, { ...init, headers });
   const data = await response.json().catch(() => ({ error: "Nieprawidłowa odpowiedź Site OS." }));
@@ -79,10 +100,22 @@ export function siteOsConfigured(): boolean {
 
 /**
  * Automatyczne parowanie loopback (0 kliknięć i bez przepisywania 6 cyfr na tym samym komputerze):
- * jeśli Site OS działa lokalnie na 127.0.0.1, pobiera sesję bezpośrednio z `/api/session`.
+ * na desktopie Electron może bezpiecznie odebrać token przez zaufane IPC, a w przeglądarce lokalnej z `/api/session`.
  */
 export async function autoConnectLocalSiteOs(): Promise<boolean> {
   if (siteOsConfigured()) return true;
+  try {
+    const desk = (globalThis as { jarvisDesktop?: { ensureLocalSiteOs?: (u: string) => Promise<{ ok?: boolean; url?: string; token?: string }> } }).jarvisDesktop;
+    if (desk?.ensureLocalSiteOs) {
+      const ensured = await desk.ensureLocalSiteOs(baseUrl());
+      if (ensured?.ok && ensured.token) {
+        store.setSettings({ siteOsUrl: ensured.url || baseUrl(), siteOsToken: ensured.token });
+        return true;
+      }
+    }
+  } catch {
+    /* fallback do zaufanego żądania HTTP loopback poniżej */
+  }
   try {
     const session = await request<{ ok: boolean; token?: string }>("/api/session", {}, false);
     if (session?.ok && session.token) {
@@ -126,12 +159,17 @@ export async function pairSiteOs(code: string): Promise<string> {
   const clean = code.replace(/\D/g, "").slice(0, 6);
   if (clean.length !== 6) return "Wpisz sześciocyfrowy kod pokazany przy uruchomieniu Site OS.";
   try {
+    const currentBase = baseUrl();
     const result = await request<{ ok: boolean; token: string; url: string; version: string }>(
       "/api/pair",
       { method: "POST", body: JSON.stringify({ code: clean }) },
       false,
     );
-    store.setSettings({ siteOsUrl: result.url || baseUrl(), siteOsToken: result.token });
+    const nextUrl =
+      result.url && result.url.indexOf("0.0.0.0") === -1
+        ? result.url
+        : currentBase;
+    store.setSettings({ siteOsUrl: nextUrl, siteOsToken: result.token });
     return `Połączono z Site OS ${result.version}. Od teraz projekty i poprawki przepływają automatycznie.`;
   } catch (error) {
     return `Nie udało się sparować Site OS: ${error instanceof Error ? error.message : String(error)}`;

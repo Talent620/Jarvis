@@ -6,8 +6,29 @@ async function json(path, init = {}) {
   return { response, body };
 }
 
-const session = await json("/api/session");
-if (!session.response.ok || !session.body.token) throw new Error("Brak lokalnej sesji.");
+const bareSession = await json("/api/session");
+if (bareSession.response.status !== 403 || bareSession.body.token) {
+  throw new Error("Gołe żądanie /api/session bez nagłówka klienta nie zostało odrzucone (403).");
+}
+
+const nullOriginSession = await json("/api/session", {
+  headers: { "X-SiteOS-Client": "studio", Origin: "null" }
+});
+if (nullOriginSession.response.status !== 403 || nullOriginSession.body.token) {
+  throw new Error("Żądanie /api/session z Origin: null uzyskało dostęp do sesji.");
+}
+
+const crossOriginSession = await json("/api/session", {
+  headers: { "X-SiteOS-Client": "studio", Origin: "https://evil.example" }
+});
+if (crossOriginSession.response.status !== 403 || crossOriginSession.body.token) {
+  throw new Error("Żądanie cross-origin do /api/session nie zostało odrzucone.");
+}
+
+const session = await json("/api/session", {
+  headers: { "X-SiteOS-Client": "cli" }
+});
+if (!session.response.ok || !session.body.token) throw new Error("Brak lokalnej sesji dla zaufanego klienta.");
 
 const headers = {
   "Content-Type": "application/json",
@@ -86,10 +107,14 @@ const complete = await json("/api/public/commands/" + command.body.command.id, {
 });
 if (complete.body.command?.status !== "done") throw new Error("Nie udało się zakończyć polecenia.");
 
-// Podgląd klienta musi działać również przez tunel
+// Podgląd klienta musi działać również przez tunel i wymuszać CSP sandbox bez allow-same-origin
 const preview = await fetch(base + "/p/" + projectId, { headers: { "CF-Connecting-IP": "203.0.113.10" } });
+const previewCsp = preview.headers.get("content-security-policy") || "";
 const previewHtml = await preview.text();
 if (!preview.ok || !previewHtml.includes("<html") || !previewHtml.includes("/api/leads/" + projectId)) throw new Error("Podgląd klienta nie działa.");
+if (!previewCsp.includes("sandbox") || previewCsp.includes("allow-same-origin")) {
+  throw new Error("Podgląd /p/:id nie ma bezpiecznej piaskownicy CSP (sandbox bez allow-same-origin): " + previewCsp);
+}
 
 const lead = await json("/api/leads/" + projectId, {
   method: "POST",
