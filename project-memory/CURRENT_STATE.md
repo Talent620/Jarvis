@@ -1,35 +1,35 @@
-<!-- GENERATED: scripts/sync-project-state.mjs · sha256:f8ad7b416d047ba385fa1ebbe67aa9e2a31f0138eb5b72fd7e28d10d72c2ec21 · DO NOT EDIT -->
+<!-- GENERATED: scripts/sync-project-state.mjs · sha256:3ddf427cce52419faa3496be4411ba16d0a4738318012c011fd7a005ea76a3f8 · DO NOT EDIT -->
 # JARVIS — CURRENT STATE (generowany)
 
-> Wygenerowano 2026-11-27T15:49:12.054Z przez `scripts/sync-project-state.mjs`. **Nie edytuj ręcznie** — `npm run memory:sync`.
+> Wygenerowano 2026-11-27T16:28:44.978Z przez `scripts/sync-project-state.mjs`. **Nie edytuj ręcznie** — `npm run memory:sync`.
 > Statusy: PASS tylko z rzeczywistego uruchomienia dla bieżącego commita i drzewa; brak danych = UNKNOWN.
 
 ## Repozytorium
-- Commit `f2ba49b` na `feat/jarvis-forge-evolution` · zmiany w drzewie (poza project-memory): TAK
+- Commit `01002ba` na `feat/jarvis-forge-evolution` · zmiany w drzewie (poza project-memory): TAK
 - Zdalne: origin → github.com (https) · upstream: NONE
 - Projekt: jarvis-ai-assistant@2.0.0 · manifest JARVIS 5.0.0-production-rc (14 modułów, 136 narzędzi)
 
 ## Weryfikacja (rzeczywiste uruchomienia)
 | Check | Status | Commit | Kod | Kiedy | Szczegóły |
 |---|---|---|---|---|---|
-| secret-scan | **PASS** | f2ba49b | 0 | 2026-11-27T15:42:01.395Z | kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto. |
-| lint | **PASS** | f2ba49b | 0 | 2026-11-27T15:42:25.632Z | kod wyjścia 0 dla bieżącego stanu · ✖ 2 problems (0 errors, 2 warnings) |
-| test | **PASS** | f2ba49b | 0 | 2026-11-27T15:47:58.871Z | kod wyjścia 0 dla bieżącego stanu · Test Files  377 passed (377) · Tests  3169 passed (3169) |
-| build | **PASS** | f2ba49b | 0 | 2026-11-27T15:48:40.438Z | kod wyjścia 0 dla bieżącego stanu · built in 14.59s |
+| secret-scan | **PASS** | 01002ba | 0 | 2026-11-27T16:21:37.054Z | kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto. |
+| lint | **PASS** | 01002ba | 0 | 2026-11-27T16:22:02.073Z | kod wyjścia 0 dla bieżącego stanu · ✖ 2 problems (0 errors, 2 warnings) |
+| test | **PASS** | 01002ba | 0 | 2026-11-27T16:27:33.129Z | kod wyjścia 0 dla bieżącego stanu · Test Files  377 passed (377) · Tests  3170 passed (3170) |
+| build | **PASS** | 01002ba | 0 | 2026-11-27T16:28:14.743Z | kod wyjścia 0 dla bieżącego stanu · built in 14.90s |
 | apk | **STALE** | 2afee4f | — | 2026-11-24T16:46:50.811Z | APK zbudowany z 2afee4f, nie z HEAD · v4-jarvis-apex-safe · jarvis-apex-v4.apk |
 
 ## Główne moduły (pliki śledzone)
-`tests` 377 · `src/lib` 317 · `src/components` 80 · `android` 64 · `docs` 37 · `project-memory` 35 · `(root)` 20 · `electron` 17 · `scripts` 17 · `ios` 15 · `forge` 13 · `proxy` 13
+`tests` 377 · `src/lib` 317 · `src/components` 80 · `android` 64 · `docs` 38 · `project-memory` 36 · `(root)` 20 · `electron` 17 · `scripts` 17 · `ios` 15 · `forge` 13 · `proxy` 13
 
 ## Workflowy CI
 `android-v2.yml` (workflow_dispatch/push) · `android.yml` (push/workflow_dispatch) · `deploy-modal.yml` (workflow_dispatch) · `ios.yml` (workflow_dispatch/push) · `ollama-exe.yml` (workflow_dispatch/push) · `release.yml` (workflow_dispatch/push) · `sd-exe.yml` (workflow_dispatch/push) · `test.yml` (push/pull_request/workflow_dispatch) · `ubuntu.yml` (workflow_dispatch/pull_request/push) · `windows.yml` (workflow_dispatch/push)
 
 ## Ostatnie commity
-- `f2ba49b` docs(forge): add Phase 5 Real Autonomy report and FA-009 live Ollama findings
-- `6a4e1f5` test(forge): add Phase 5 resilience and live-regression test suite (8 tests)
-- `d0797c0` fix(forge,ui): Phase 5 real-autonomy hardening, KV-cache, loop breaker, TAP/JSON parsers & test-protection rev
-- `f263df1` docs(memory): record jarvis-forge-phase4-autopilot event & verified CURRENT_STATE (376/376, 3161/3161)
-- `0a321bf` feat(ui,core): zero-config Autopilot UX, decision gate, Core tools, 5 E2E scenarios & report
+- `01002ba` docs(acceptance): update closeout commit chain & final memory:check reference
+- `89cc850` fix(forge): remove redundant regex escape in engine.mjs (ESLint no-useless-escape)
+- `eb3a254` docs(acceptance): add final Phase 5 closeout acceptance report (docs/JARVIS_FINAL_ACCEPTANCE.md)
+- `ce42434` fix(forge,ui): fix compound analyze-and-fix read-only bug, HTTP/UI resume SSE race & Scenario 4 cancel sync
+- `8867109` docs(memory): record jarvis-forge-phase5-real-autonomy event & verified CURRENT_STATE (377/377, 3169/3169)
 
 ## Otwarte sprawy z istniejącej dokumentacji (27)
 - K4. Dodać bootstrap Ubuntu — `docs/JARVIS_REPAIR_PLAN.md:43`
@@ -48,13 +48,13 @@
 - R2: Cel S9/Chrome 79 (es2019, bez `\p{L}`, bez lookbehind) i pułapka cudzysłowów — `docs/horizon-memory.md:177`
 - … +13 w CURRENT_STATE.json
 
-## Dziennik agentów (16/16 poprawnych)
+## Dziennik agentów (17/17 poprawnych)
+- 2026-11-27T16:28:44.690Z · antigravity · `jarvis-forge-phase5-closeout-acceptance` → Wykonać manualny odbiór fizycznego Ubuntu wg sekcji E.2 docs/JARVIS_FINAL_ACCEPTANCE.md (npm install
 - 2026-11-27T15:49:11.760Z · antigravity · `jarvis-forge-phase5-real-autonomy` → Niezależny przegląd feat/jarvis-forge-evolution przez właściciela; opcjonalnie dodanie darmowego klu
 - 2026-11-27T12:13:57.798Z · antigravity · `jarvis-forge-phase4-autopilot` → Skonfigurować darmowy klucz Kat. B lub lokalną Ollamę na docelowym Ubuntu i uruchomić npm run forge:
 - 2026-11-25T21:47:34.320Z · antigravity · `jarvis-forge-adaptive-phase3` → Na fizycznym Ubuntu przetestować Adaptive Intelligence z prawdziwym darmowym API Kat. B (np. Gemini/
 - 2026-11-25T20:34:44.592Z · antigravity · `jarvis-forge-phase2` → Uruchomić npm run forge:accept na fizycznym Ubuntu (Ollama 7B-14B lub darmowy klucz API), naprawić O
-- 2026-11-25T18:48:22.050Z · antigravity · `jarvis-forge-evolution` → Przegląd właściciela, test z rzeczywistym darmowym kluczem API lub lokalną Ollamą na fizycznym Ubunt
-- **Następny krok (ostatnie zdarzenie):** Niezależny przegląd feat/jarvis-forge-evolution przez właściciela; opcjonalnie dodanie darmowego klucza API Kat. B do testu eskalacji local_free -> api_free ora
+- **Następny krok (ostatnie zdarzenie):** Wykonać manualny odbiór fizycznego Ubuntu wg sekcji E.2 docs/JARVIS_FINAL_ACCEPTANCE.md (npm install + Electron, npm run forge:accept 7/7, npm run electron:dev 
 
 ## Decyzje: ADR-0001-project-memory (proposed (czeka na recenzję człowieka lub innego agenta)), ADR-0002-autocore (accepted), ADR-0003-apex-linux-android-ux (proposed), ADR-0004-omni-pilot (proposed), ADR-0005-omni-frontier (proposed), ADR-0006-ux-obsidian-precision (proposed), ADR-0008-master-interface-and-siteos2 (proposed), ADR-0009-jarvis-forge-evolution (proposed) · nieudane podejścia: 9
 

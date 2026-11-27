@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "generatedBy": "scripts/sync-project-state.mjs",
-  "generatedAt": "2026-11-27T15:49:12.054Z",
+  "generatedAt": "2026-11-27T16:28:44.978Z",
   "notice": "PLIK GENEROWANY — nie edytuj ręcznie. Odśwież: npm run memory:sync",
   "git": {
-    "commit": "f2ba49bcb567880f74eb97bf3a7069781a889d8e",
-    "shortCommit": "f2ba49b",
+    "commit": "01002ba03ca67cf7b61a042515b11646931fb3c0",
+    "shortCommit": "01002ba",
     "branch": "feat/jarvis-forge-evolution",
     "dirty": true,
     "changes": [
@@ -15,9 +15,9 @@
       " M project-memory/reports/lint.json",
       " M project-memory/reports/secret-scan.json",
       " M project-memory/reports/test.json",
-      "?? project-memory/events/20261127T154911760Z-antigravity-jarvis-forge-phase5-real-autonomy.json"
+      "?? project-memory/events/20261127T162844690Z-antigravity-jarvis-forge-phase5-closeout-acceptance.json"
     ],
-    "worktreeFingerprint": "9fd28361e7e1e7908ec8423ae80da4643d129f6f10538f2b221aa6ce7097bffd"
+    "worktreeFingerprint": "3a94b4f99dbe5babeca60413b200aed64501b1f11c6e2fa373bc52ba0a0ff67c"
   },
   "repository": {
     "status": "OK",
@@ -55,11 +55,11 @@
     },
     {
       "dir": "docs",
-      "files": 37
+      "files": 38
     },
     {
       "dir": "project-memory",
-      "files": 35
+      "files": 36
     },
     {
       "dir": "(root)",
@@ -432,6 +432,31 @@
   ],
   "recentCommits": [
     {
+      "hash": "01002ba",
+      "date": "2026-11-27T16:21:36Z",
+      "subject": "docs(acceptance): update closeout commit chain & final memory:check reference"
+    },
+    {
+      "hash": "89cc850",
+      "date": "2026-11-27T16:21:03Z",
+      "subject": "fix(forge): remove redundant regex escape in engine.mjs (ESLint no-useless-escape)"
+    },
+    {
+      "hash": "eb3a254",
+      "date": "2026-11-27T16:12:34Z",
+      "subject": "docs(acceptance): add final Phase 5 closeout acceptance report (docs/JARVIS_FINAL_ACCEPTANCE.md)"
+    },
+    {
+      "hash": "ce42434",
+      "date": "2026-11-27T16:09:20Z",
+      "subject": "fix(forge,ui): fix compound analyze-and-fix read-only bug, HTTP/UI resume SSE race & Scenario 4 cancel sync"
+    },
+    {
+      "hash": "8867109",
+      "date": "2026-11-27T15:49:12Z",
+      "subject": "docs(memory): record jarvis-forge-phase5-real-autonomy event & verified CURRENT_STATE (377/377, 3169/3169)"
+    },
+    {
       "hash": "f2ba49b",
       "date": "2026-11-27T15:41:53Z",
       "subject": "docs(forge): add Phase 5 Real Autonomy report and FA-009 live Ollama findings"
@@ -455,40 +480,15 @@
       "hash": "0a321bf",
       "date": "2026-11-27T12:06:51Z",
       "subject": "feat(ui,core): zero-config Autopilot UX, decision gate, Core tools, 5 E2E scenarios & report"
-    },
-    {
-      "hash": "d12c556",
-      "date": "2026-11-27T12:06:51Z",
-      "subject": "feat(autopilot): Phase 4 Autopilot Orchestrator, timeout/history, safety gate & memory fixes"
-    },
-    {
-      "hash": "300ef5b",
-      "date": "2026-11-25T21:47:35Z",
-      "subject": "docs(memory): record jarvis-forge-adaptive-phase3 live benchmarks, FA-008 & verified CURRENT_STATE"
-    },
-    {
-      "hash": "aff119c",
-      "date": "2026-11-25T21:40:23Z",
-      "subject": "feat(forge): Adaptive Intelligence (5-tier routing & escalation), dynamic minimal teams, competitive worktree tournament, delayed-billing guard & live-hardening"
-    },
-    {
-      "hash": "0f3f279",
-      "date": "2026-11-25T20:34:54Z",
-      "subject": "docs(memory): record jarvis-forge-phase2 real-world validation, FA-005..FA-007 & verified CURRENT_STATE"
-    },
-    {
-      "hash": "7c00e53",
-      "date": "2026-11-25T20:26:25Z",
-      "subject": "feat(forge): Phase 2 live-test fixes (Edit-Lint-Revert, completeness gate, Ollama inline tools, worktree porcelain fix), Ubuntu acceptance & hardening tests"
     }
   ],
   "checks": {
     "secret-scan": {
       "command": "node scripts/secret-scan.mjs --all",
       "exitCode": 0,
-      "finishedAt": "2026-11-27T15:42:01.395Z",
-      "commit": "f2ba49bcb567880f74eb97bf3a7069781a889d8e",
-      "logPath": "project-memory/reports/logs/secret-scan-20261127T154201Z.log",
+      "finishedAt": "2026-11-27T16:21:37.054Z",
+      "commit": "01002ba03ca67cf7b61a042515b11646931fb3c0",
+      "logPath": "project-memory/reports/logs/secret-scan-20261127T162136Z.log",
       "summary": {
         "result": "Skan sekretów: czysto."
       },
@@ -499,9 +499,9 @@
     "lint": {
       "command": "npm run lint",
       "exitCode": 0,
-      "finishedAt": "2026-11-27T15:42:25.632Z",
-      "commit": "f2ba49bcb567880f74eb97bf3a7069781a889d8e",
-      "logPath": "project-memory/reports/logs/lint-20261127T154201Z.log",
+      "finishedAt": "2026-11-27T16:22:02.073Z",
+      "commit": "01002ba03ca67cf7b61a042515b11646931fb3c0",
+      "logPath": "project-memory/reports/logs/lint-20261127T162137Z.log",
       "summary": {
         "problems": "✖ 2 problems (0 errors, 2 warnings)"
       },
@@ -512,12 +512,12 @@
     "test": {
       "command": "npm test",
       "exitCode": 0,
-      "finishedAt": "2026-11-27T15:47:58.871Z",
-      "commit": "f2ba49bcb567880f74eb97bf3a7069781a889d8e",
-      "logPath": "project-memory/reports/logs/test-20261127T154225Z.log",
+      "finishedAt": "2026-11-27T16:27:33.129Z",
+      "commit": "01002ba03ca67cf7b61a042515b11646931fb3c0",
+      "logPath": "project-memory/reports/logs/test-20261127T162202Z.log",
       "summary": {
         "testFiles": "Test Files  377 passed (377)",
-        "tests": "Tests  3169 passed (3169)"
+        "tests": "Tests  3170 passed (3170)"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -526,11 +526,11 @@
     "build": {
       "command": "npm run build",
       "exitCode": 0,
-      "finishedAt": "2026-11-27T15:48:40.438Z",
-      "commit": "f2ba49bcb567880f74eb97bf3a7069781a889d8e",
-      "logPath": "project-memory/reports/logs/build-20261127T154758Z.log",
+      "finishedAt": "2026-11-27T16:28:14.743Z",
+      "commit": "01002ba03ca67cf7b61a042515b11646931fb3c0",
+      "logPath": "project-memory/reports/logs/build-20261127T162733Z.log",
       "summary": {
-        "built": "built in 14.59s"
+        "built": "built in 14.90s"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -727,10 +727,18 @@
     ]
   },
   "events": {
-    "total": 16,
-    "valid": 16,
+    "total": 17,
+    "valid": 17,
     "invalid": [],
     "recent": [
+      {
+        "file": "project-memory/events/20261127T162844690Z-antigravity-jarvis-forge-phase5-closeout-acceptance.json",
+        "timestamp": "2026-11-27T16:28:44.690Z",
+        "agent": "antigravity",
+        "taskId": "jarvis-forge-phase5-closeout-acceptance",
+        "endCommit": "UNCOMMITTED",
+        "nextStep": "Wykonać manualny odbiór fizycznego Ubuntu wg sekcji E.2 docs/JARVIS_FINAL_ACCEPTANCE.md (npm install + Electron, npm run forge:accept 7/7, npm run electron:dev + IPC, żywe zadanie z pauzą/wznowieniem), potem decyzja o merge do main."
+      },
       {
         "file": "project-memory/events/20261127T154911760Z-antigravity-jarvis-forge-phase5-real-autonomy.json",
         "timestamp": "2026-11-27T15:49:11.760Z",
@@ -802,20 +810,12 @@
         "taskId": "production-integration",
         "endCommit": "UNCOMMITTED",
         "nextStep": "Wykonać 10-15 min checklistę odbiorczą na fizycznym Linuxie (Ollama + binarny Electron + X11/Wayland), Androidzie i 1 testowym kluczu API przed merge na main."
-      },
-      {
-        "file": "project-memory/events/20261124T212157501Z-antigravity-ux-craft-audit.json",
-        "timestamp": "2026-11-24T21:21:57.501Z",
-        "agent": "antigravity",
-        "taskId": "ux-craft-audit",
-        "endCommit": "UNCOMMITTED",
-        "nextStep": "Recenzja PR feat/ux-craft-audit przez właściciela lub innego agenta, scalenie z main oraz test docelowy na fizycznym Android APK (Samsung S9+) i Linux Desktop."
       }
     ]
   },
   "nextRecommendedStep": {
-    "from": "project-memory/events/20261127T154911760Z-antigravity-jarvis-forge-phase5-real-autonomy.json",
-    "text": "Niezależny przegląd feat/jarvis-forge-evolution przez właściciela; opcjonalnie dodanie darmowego klucza API Kat. B do testu eskalacji local_free -> api_free oraz testy na fizycznym Ubuntu z GPU/Electron przed decyzją o merge do main."
+    "from": "project-memory/events/20261127T162844690Z-antigravity-jarvis-forge-phase5-closeout-acceptance.json",
+    "text": "Wykonać manualny odbiór fizycznego Ubuntu wg sekcji E.2 docs/JARVIS_FINAL_ACCEPTANCE.md (npm install + Electron, npm run forge:accept 7/7, npm run electron:dev + IPC, żywe zadanie z pauzą/wznowieniem), potem decyzja o merge do main."
   },
   "decisions": [
     {
@@ -860,5 +860,5 @@
     }
   ],
   "failedAttempts": 9,
-  "integrity": "7e7dd0bbf766a59284457143de71b4dc3dece802c562a01d34229fd1ba448036"
+  "integrity": "4de1f0cf5bcd5e1ae6d36c490e9fbc310edfef11561a7e2d3292c6793813bf14"
 }
