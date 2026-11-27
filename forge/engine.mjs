@@ -512,7 +512,7 @@ export async function executeForgeRun({
     protectExistingTests,
   });
   const goalRequestsCodeChanges =
-    /(?:^|[\s,.;:!?(\[-])(?:popraw\w*|napraw\w*|zmie[nń]\w*|zaktualizuj\w*|dodaj\w*|usu[nń]\w*|napisz\w*|zaimplementuj\w*|zrefaktoruj\w*|utw[oó]rz\w*|stw[oó]rz\w*|wdro[zż]\w*|przebuduj\w*|ulepsz\w*|zoptymalizuj\w*|fix(?:es|ed|ing)?|repair\w*|patch\w*|edit\w*|modif\w*|updat\w*|add(?:s|ed|ing)?|implement\w*|creat\w*|refactor\w*|writ\w*|remov\w*|delet\w*|upgrad\w*|migrat\w*)(?=$|[\s,.;:!?)}\]-])/i.test(goalWithoutNegative);
+    /(?:^|[\s,.;:!?([-])(?:popraw\w*|napraw\w*|zmie[nń]\w*|zaktualizuj\w*|dodaj\w*|usu[nń]\w*|napisz\w*|zaimplementuj\w*|zrefaktoruj\w*|utw[oó]rz\w*|stw[oó]rz\w*|wdro[zż]\w*|przebuduj\w*|ulepsz\w*|zoptymalizuj\w*|fix(?:es|ed|ing)?|repair\w*|patch\w*|edit\w*|modif\w*|updat\w*|add(?:s|ed|ing)?|implement\w*|creat\w*|refactor\w*|writ\w*|remov\w*|delet\w*|upgrad\w*|migrat\w*)(?=$|[\s,.;:!?)}\]-])/i.test(goalWithoutNegative);
   const isReadOnlyGoal =
     /^\s*(?:przeanalizuj|oce[nń]|zbadaj\s+tylko|audyt\s+read-?only|wyja[sś]nij|analy[sz]e|explain|audit\s+only|read-?only)(?=$|[\s,.;:!?)\]-])/i.test(state.goal)
     && !goalRequestsCodeChanges;
