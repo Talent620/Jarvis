@@ -21,8 +21,15 @@ import { createExperienceMemory } from "./memory.mjs";
 import { createProviderPool } from "./providers.mjs";
 import { verifyModalPromoStatus } from "./budget.mjs";
 import { createForgeStore, executeCompetitiveForgeRun, executeForgeRun, rollbackForgeRun } from "./engine.mjs";
+import {
+  decideAutopilotMission,
+  enforceBudgetPolicyGuard,
+  executeAutopilotMission,
+  planAutopilotMission,
+  resumeAutopilotMission,
+} from "./autopilot.mjs";
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const MAX_BODY_BYTES = 1_500_000;
 const MAX_SSE_CLIENTS = Math.max(4, Number(process.env.FORGE_MAX_SSE_CLIENTS || 16));
 const ALLOWED_CLIENTS = new Set(["jarvis-ui", "cli", "electron"]);
@@ -208,7 +215,12 @@ export function createForgeServer({
       if (req.method === "GET" && pathname === "/api/providers") {
         const costPolicy = urlObj.searchParams.get("costPolicy") || "zero_cost";
         const probe = urlObj.searchParams.get("probe") !== "0";
-        const providers = await pool.getProviderMatrix({ costPolicy, probeLocal: probe });
+        const targetRepo = urlObj.searchParams.get("path") ? resolveRepoRoot(urlObj.searchParams.get("path")) : rootDefault;
+        const providers = await pool.getProviderMatrix({
+          costPolicy,
+          probeLocal: probe,
+          memoryOverride: createExperienceMemory(targetRepo),
+        });
         sendJson(req, res, 200, { ok: true, hardware: pool.hardware, costPolicy, providers });
         return;
       }
@@ -216,10 +228,12 @@ export function createForgeServer({
       if (req.method === "POST" && pathname === "/api/providers/status") {
         const body = await readJsonBody(req);
         const costPolicy = String(body.costPolicy || "zero_cost");
+        const targetRepo = body.repoPath ? resolveRepoRoot(body.repoPath) : rootDefault;
         const providers = await pool.getProviderMatrix({
           costPolicy,
           overrideKeys: body.providerKeys || {},
           probeLocal: body.probe !== false,
+          memoryOverride: createExperienceMemory(targetRepo),
         });
         sendJson(req, res, 200, { ok: true, hardware: pool.hardware, costPolicy, providers });
         return;
@@ -262,6 +276,190 @@ export function createForgeServer({
         return;
       }
 
+      // --- AUTOPILOT ORCHESTRATOR (ZERO-CONFIG UNIFIED EXECUTION) ---
+      if (req.method === "POST" && pathname === "/api/autopilot/plan") {
+        const body = await readJsonBody(req);
+        const goal = String(body.goal || "").trim();
+        if (!goal) {
+          sendJson(req, res, 400, { ok: false, error: "Podaj cel zadania (pole 'goal')." });
+          return;
+        }
+        const targetRepo = resolveRepoRoot(body.repoPath);
+        const plan = await planAutopilotMission({
+          goal,
+          repoRoot: targetRepo,
+          providerPool: pool,
+          costPolicy: String(body.costPolicy || "zero_cost"),
+          promoBudget: body.promoBudget || null,
+          overrideKeys: body.providerKeys || {},
+          allowCompetitive: body.allowCompetitive === true,
+          approvals: body.approvals || {},
+          initiatedBy: body.initiatedBy === "agent" ? "agent" : "user",
+          userApprovedPaid: body.userApprovedPaid === true,
+          maxDurationMs: body.maxDurationMs ? Number(body.maxDurationMs) : null,
+          maxIterations: body.maxIterations ? Number(body.maxIterations) : null,
+          maxRepairCycles: body.maxRepairCycles ? Number(body.maxRepairCycles) : null,
+          useWorktree: typeof body.useWorktree === "boolean" ? body.useWorktree : null,
+          verifyCommands: Array.isArray(body.verifyCommands) ? body.verifyCommands : null,
+          probeLocal: body.probe !== false,
+        });
+        sendJson(req, res, 200, { ok: true, plan });
+        return;
+      }
+
+      if (req.method === "POST" && pathname === "/api/autopilot/run") {
+        const body = await readJsonBody(req);
+        const goal = String(body.goal || "").trim();
+        if (!goal) {
+          sendJson(req, res, 400, { ok: false, error: "Podaj cel zadania (pole 'goal')." });
+          return;
+        }
+        const targetRepo = resolveRepoRoot(body.repoPath);
+        const requestedPolicy = String(body.costPolicy || "zero_cost");
+        const initiatedBy = body.initiatedBy === "agent" ? "agent" : "user";
+        const policyCheck = enforceBudgetPolicyGuard({
+          requestedPolicy,
+          requestedPromoBudget: body.promoBudget || null,
+          initiatedBy,
+          userApprovedPaid: body.userApprovedPaid === true,
+        });
+
+        // Ochrona współbieżności na tym samym repo bez izolacji worktree
+        const explicitNoWorktree = body.useWorktree === false;
+        if (explicitNoWorktree) {
+          const conflicting = [...activeRuns.entries()].find(([, meta]) => meta.repoRoot === targetRepo && !meta.useWorktree);
+          if (conflicting) {
+            sendJson(req, res, 409, {
+              ok: false,
+              error: `W katalogu "${targetRepo}" trwa już aktywne zadanie (${conflicting[0]}). Poczekaj lub włącz worktree.`,
+            });
+            return;
+          }
+        }
+
+        const controller = new AbortController();
+        const runControl = { controller, pauseRequested: false, repoRoot: targetRepo, useWorktree: body.useWorktree !== false };
+        let assignedId = null;
+        let resolvedResult = null;
+        let settled = false;
+
+        const promise = executeAutopilotMission({
+          goal,
+          repoRoot: targetRepo,
+          providerPool: pool,
+          costPolicy: policyCheck.costPolicy,
+          promoBudget: policyCheck.promoBudget,
+          overrideKeys: body.providerKeys || {},
+          allowCompetitive: body.allowCompetitive === true,
+          approvals: body.approvals || {},
+          initiatedBy,
+          userApprovedPaid: body.userApprovedPaid === true,
+          maxDurationMs: body.maxDurationMs ? Number(body.maxDurationMs) : null,
+          maxIterations: body.maxIterations ? Number(body.maxIterations) : null,
+          maxRepairCycles: body.maxRepairCycles ? Number(body.maxRepairCycles) : null,
+          useWorktree: typeof body.useWorktree === "boolean" ? body.useWorktree : null,
+          verifyCommands: Array.isArray(body.verifyCommands) ? body.verifyCommands : null,
+          probeLocal: body.probe !== false,
+          signal: controller.signal,
+          shouldPause: () => runControl.pauseRequested,
+          onEvent: (ev, st) => {
+            if (!assignedId && st?.id) {
+              assignedId = st.id;
+              runControl.useWorktree = Boolean(st.worktreePath);
+              if (st.status !== "waiting_approval" && st.status !== "blocked") {
+                activeRuns.set(st.id, runControl);
+              }
+            }
+            if (st?.id) broadcastSse(st.id, ev, st);
+          },
+        }).then((r) => {
+          resolvedResult = r;
+          return r;
+        }).finally(() => {
+          settled = true;
+          if (assignedId) activeRuns.delete(assignedId);
+        });
+
+        if (body.wait === true) {
+          const result = await promise;
+          sendJson(req, res, 200, {
+            ok: result.ok,
+            verdict: result.verdict,
+            status: result.status,
+            decisionRequired: result.decisionRequired,
+            missionPlan: result.missionPlan,
+            run: result.run,
+            competitive: result.competitive,
+          });
+          return;
+        }
+
+        const deadline = Date.now() + 2000;
+        while (!assignedId && !settled && Date.now() < deadline) {
+          await new Promise((r) => setTimeout(r, 25));
+        }
+        if (settled && resolvedResult) {
+          sendJson(req, res, 200, {
+            ok: resolvedResult.ok,
+            runId: resolvedResult.run?.id || assignedId,
+            verdict: resolvedResult.verdict,
+            status: resolvedResult.status,
+            decisionRequired: resolvedResult.decisionRequired,
+            missionPlan: resolvedResult.missionPlan,
+            run: resolvedResult.run,
+            competitive: resolvedResult.competitive,
+          });
+          return;
+        }
+        const store = createForgeStore(targetRepo);
+        const snapshot = assignedId ? store.loadRun(assignedId) : null;
+        sendJson(req, res, 202, {
+          ok: true,
+          runId: assignedId,
+          status: snapshot?.status || "scouting",
+          decisionRequired: Boolean(snapshot?.pendingDecision?.required),
+          run: snapshot,
+        });
+        return;
+      }
+
+      const decideMatch = pathname.match(/^\/api\/autopilot\/([A-Za-z0-9._-]+)\/decide$/);
+      if (decideMatch && req.method === "POST") {
+        const [, runId] = decideMatch;
+        const body = await readJsonBody(req);
+        const targetRepo = resolveRepoRoot(body.repoPath || urlObj.searchParams.get("path"));
+        const decision = String(body.decision || "").trim().toLowerCase();
+        const initiatedBy = body.initiatedBy === "agent" ? "agent" : "user";
+        if (initiatedBy === "agent") {
+          sendJson(req, res, 403, { ok: false, code: "SELF_APPROVAL_DENIED", error: "Agent nie może samodzielnie zatwierdzić operacji wymagającej decyzji użytkownika." });
+          return;
+        }
+        const controller = new AbortController();
+        const runControl = { controller, pauseRequested: false, repoRoot: targetRepo, useWorktree: false };
+        if (decision === "approve") activeRuns.set(runId, runControl);
+
+        const promise = decideAutopilotMission({
+          runId,
+          repoRoot: targetRepo,
+          decision,
+          providerPool: pool,
+          overrideKeys: body.providerKeys || {},
+          initiatedBy,
+          userApprovedPaid: body.userApprovedPaid === true,
+          signal: controller.signal,
+          shouldPause: () => runControl.pauseRequested,
+          onEvent: (ev, st) => broadcastSse(st.id, ev, st),
+        }).finally(() => activeRuns.delete(runId));
+
+        if (body.wait === true || decision === "reject") {
+          const result = await promise;
+          sendJson(req, res, 200, { ok: result.ok, verdict: result.verdict, status: result.status, run: result.run });
+          return;
+        }
+        sendJson(req, res, 202, { ok: true, runId, decision: "approve", resumed: true });
+        return;
+      }
+
       if (req.method === "POST" && pathname === "/api/runs") {
         const body = await readJsonBody(req);
         const goal = String(body.goal || "").trim();
@@ -282,7 +480,13 @@ export function createForgeServer({
             return;
           }
         }
-        const costPolicy = String(body.costPolicy || "zero_cost");
+        const policyCheck = enforceBudgetPolicyGuard({
+          requestedPolicy: String(body.costPolicy || "zero_cost"),
+          requestedPromoBudget: body.promoBudget || null,
+          initiatedBy: body.initiatedBy === "agent" ? "agent" : "user",
+          userApprovedPaid: body.userApprovedPaid === true,
+        });
+        const costPolicy = policyCheck.costPolicy;
         const controller = new AbortController();
         const runControl = { controller, pauseRequested: false, repoRoot: targetRepo, useWorktree };
         let assignedId = null;
@@ -293,13 +497,14 @@ export function createForgeServer({
           repoRoot: targetRepo,
           providerPool: pool,
           costPolicy,
-          promoBudget: body.promoBudget || null,
+          promoBudget: policyCheck.promoBudget,
           useWorktree,
           adaptive: body.adaptive !== false,
           leanSimple: body.leanSimple === true,
           overrideKeys: body.providerKeys || {},
           maxIterations: Math.min(30, Math.max(2, Number(body.maxIterations) || 12)),
           maxRepairCycles: Math.min(6, Math.max(1, Number(body.maxRepairCycles) || 3)),
+          maxDurationMs: Number(body.maxDurationMs) || 0,
           verifyCommands: Array.isArray(body.verifyCommands) ? body.verifyCommands : null,
           signal: controller.signal,
           shouldPause: () => runControl.pauseRequested,
@@ -337,17 +542,24 @@ export function createForgeServer({
           sendJson(req, res, 400, { ok: false, error: "Podaj cel zadania (pole 'goal')." });
           return;
         }
+        const policyCheck = enforceBudgetPolicyGuard({
+          requestedPolicy: String(body.costPolicy || "zero_cost"),
+          requestedPromoBudget: body.promoBudget || null,
+          initiatedBy: body.initiatedBy === "agent" ? "agent" : "user",
+          userApprovedPaid: body.userApprovedPaid === true,
+        });
         const targetRepo = resolveRepoRoot(body.repoPath);
         const result = await executeCompetitiveForgeRun({
           goal,
           repoRoot: targetRepo,
           providerPool: pool,
           candidates: Array.isArray(body.candidates) ? body.candidates : [],
-          costPolicy: String(body.costPolicy || "zero_cost"),
-          promoBudget: body.promoBudget || null,
+          costPolicy: policyCheck.costPolicy,
+          promoBudget: policyCheck.promoBudget,
           overrideKeys: body.providerKeys || {},
           maxIterations: Math.min(24, Math.max(2, Number(body.maxIterations) || 12)),
           maxRepairCycles: Math.min(4, Math.max(1, Number(body.maxRepairCycles) || 2)),
+          maxDurationMs: Number(body.maxDurationMs) || 0,
           verifyCommands: Array.isArray(body.verifyCommands) ? body.verifyCommands : null,
           applyWinner: body.applyWinner !== false,
         });
@@ -419,24 +631,37 @@ export function createForgeServer({
         if (action === "resume" && req.method === "POST") {
           const body = await readJsonBody(req);
           const repoForResume = resolveRepoRoot(body.repoPath || urlObj.searchParams.get("path"));
+          const savedBefore = createForgeStore(repoForResume).loadRun(runId);
+          if (!savedBefore) {
+            sendJson(req, res, 404, { ok: false, error: `Nie znaleziono zadania "${runId}".` });
+            return;
+          }
+          if (savedBefore.status === "waiting_approval") {
+            sendJson(req, res, 409, {
+              ok: false,
+              code: "APPROVAL_REQUIRED",
+              error: `Zadanie "${runId}" oczekuje na jawną decyzję użytkownika (użyj POST /api/autopilot/${runId}/decide).`,
+            });
+            return;
+          }
           const controller = new AbortController();
           const runControl = { controller, pauseRequested: false, repoRoot: repoForResume, useWorktree: false };
           activeRuns.set(runId, runControl);
-          const promise = executeForgeRun({
+          const promise = resumeAutopilotMission({
+            runId,
             repoRoot: repoForResume,
             providerPool: pool,
-            resumeRunId: runId,
-            costPolicy: String(body.costPolicy || "zero_cost"),
-            promoBudget: body.promoBudget || null,
             overrideKeys: body.providerKeys || {},
+            maxDurationMs: body.maxDurationMs ? Number(body.maxDurationMs) : null,
+            maxIterations: body.maxIterations ? Number(body.maxIterations) : null,
             signal: controller.signal,
             shouldPause: () => runControl.pauseRequested,
             onEvent: (ev, st) => broadcastSse(st.id, ev, st),
           }).finally(() => activeRuns.delete(runId));
 
           if (body.wait === true) {
-            const finalState = await promise;
-            sendJson(req, res, 200, { ok: true, run: finalState });
+            const finalRes = await promise;
+            sendJson(req, res, 200, { ok: true, run: finalRes.run, verdict: finalRes.verdict });
             return;
           }
           sendJson(req, res, 202, { ok: true, runId, resumed: true });
@@ -446,7 +671,13 @@ export function createForgeServer({
 
       sendJson(req, res, 404, { ok: false, error: `Nieznana trasa Forge: ${req.method} ${pathname}` });
     } catch (e) {
-      sendJson(req, res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) });
+      const code = e?.code || null;
+      const status = code === "BUDGET_ESCALATION_DENIED" || code === "PAID_APPROVAL_REQUIRED" || code === "SELF_APPROVAL_DENIED"
+        ? 403
+        : code === "APPROVAL_REQUIRED"
+          ? 409
+          : 400;
+      sendJson(req, res, status, { ok: false, ...(code ? { code } : {}), error: e instanceof Error ? e.message : String(e) });
     }
   });
 

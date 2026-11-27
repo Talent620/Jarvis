@@ -6,6 +6,9 @@
  *   node forge/cli.mjs status [--repo .]
  *   node forge/cli.mjs inspect [--repo .] [--query "routing"]
  *   node forge/cli.mjs providers [--policy zero_cost]
+ *   node forge/cli.mjs autopilot "Co mam zbudować, naprawić lub ulepszyć?" [--repo .]
+ *   node forge/cli.mjs autopilot-plan "Opis zadania" [--repo .]
+ *   node forge/cli.mjs decide <runId> <approve|reject> [--repo .]
  *   node forge/cli.mjs run "Napraw błąd w module X" [--repo .] [--policy zero_cost]
  *   node forge/cli.mjs resume <runId> [--repo .]
  *   node forge/cli.mjs rollback <runId> [--repo .]
@@ -18,6 +21,7 @@ import { createProviderPool } from "./providers.mjs";
 import { verifyModalPromoStatus } from "./budget.mjs";
 import { assessTaskDifficulty, composeAgentTeam } from "./adaptive.mjs";
 import { createForgeStore, executeCompetitiveForgeRun, executeForgeRun, rollbackForgeRun } from "./engine.mjs";
+import { decideAutopilotMission, executeAutopilotMission, planAutopilotMission, resumeAutopilotMission } from "./autopilot.mjs";
 import { isGitWorktreeCapable } from "./worktree.mjs";
 
 const argv = process.argv.slice(2);
@@ -155,6 +159,77 @@ async function main() {
       process.exit(res.ok ? 0 : 1);
     }
 
+    if (cmd === "autopilot-plan") {
+      const goal = argv[1] && !argv[1].startsWith("--") ? argv[1] : opt("--goal", "");
+      if (!goal) {
+        console.error('Podaj cel: node forge/cli.mjs autopilot-plan "Co mam zrobić?"');
+        process.exit(2);
+      }
+      const plan = await planAutopilotMission({
+        goal,
+        repoRoot,
+        providerPool: pool,
+        costPolicy,
+        promoBudget,
+        allowCompetitive: hasFlag("--competitive"),
+        probeLocal: true,
+      });
+      console.log(JSON.stringify(plan, null, 2));
+      return;
+    }
+
+    if (cmd === "autopilot") {
+      const goal = argv[1] && !argv[1].startsWith("--") ? argv[1] : opt("--goal", "");
+      if (!goal) {
+        console.error('Podaj cel: node forge/cli.mjs autopilot "Co mam zbudować, naprawić lub ulepszyć?"');
+        process.exit(2);
+      }
+      const timeoutMs = opt("--timeout-ms", null);
+      const res = await executeAutopilotMission({
+        goal,
+        repoRoot,
+        providerPool: pool,
+        costPolicy,
+        promoBudget,
+        allowCompetitive: hasFlag("--competitive"),
+        maxDurationMs: timeoutMs ? Number(timeoutMs) : null,
+        onEvent: (ev) => {
+          if (ev.actionLabel) console.log(`[autopilot:${ev.phase}/${ev.role}] ${ev.actionLabel}`);
+        },
+      });
+      const id = res.run?.id || "competitive";
+      console.log(`\n=== AUTOPILOT (${id}): ${res.verdict} (${res.status}) ===`);
+      if (res.run?.finalResult) console.log(res.run.finalResult);
+      if (res.decisionRequired && res.run?.pendingDecision) {
+        console.log(`⚠️ WYMAGANA DECYZJA UŻYTKOWNIKA: ${res.run.pendingDecision.title}`);
+        console.log(`   Powód: ${res.run.pendingDecision.reason}`);
+        if (res.status === "waiting_approval") {
+          console.log(`   Uruchom: node forge/cli.mjs decide ${id} approve|reject --repo "${repoRoot}"`);
+        }
+      }
+      process.exit(res.ok ? 0 : 1);
+    }
+
+    if (cmd === "decide") {
+      const runId = argv[1];
+      const decision = argv[2];
+      if (!runId || !decision) {
+        console.error("Użycie: node forge/cli.mjs decide <runId> <approve|reject> [--repo .]");
+        process.exit(2);
+      }
+      const res = await decideAutopilotMission({
+        runId,
+        repoRoot,
+        decision,
+        providerPool: pool,
+        onEvent: (ev) => {
+          if (ev.actionLabel) console.log(`[autopilot:${ev.phase}/${ev.role}] ${ev.actionLabel}`);
+        },
+      });
+      console.log(`\n=== DECYZJA (${runId}): ${res.verdict} (${res.status}) ===\n${res.run?.finalResult || ""}`);
+      process.exit(res.ok ? 0 : 1);
+    }
+
     if (cmd === "run") {
       const goal = argv[1] && !argv[1].startsWith("--") ? argv[1] : opt("--goal", "");
       if (!goal) {
@@ -184,19 +259,16 @@ async function main() {
     if (cmd === "resume") {
       const runId = argv[1];
       if (!runId) { console.error("Podaj runId do wznowienia."); process.exit(2); }
-      const res = await executeForgeRun({
+      const res = await resumeAutopilotMission({
+        runId,
         repoRoot,
         providerPool: pool,
-        resumeRunId: runId,
-        costPolicy,
-        promoBudget,
-        adaptive,
         onEvent: (ev) => {
           if (ev.actionLabel) console.log(`[${ev.phase}/${ev.role}] ${ev.actionLabel}`);
         },
       });
-      console.log(`\n=== WZNOWIENIE (${res.id}): ${res.status.toUpperCase()} ===\n${res.finalResult || ""}`);
-      process.exit(res.status === "completed" ? 0 : 1);
+      console.log(`\n=== WZNOWIENIE (${res.run.id}): ${res.verdict} (${res.status}) ===\n${res.run.finalResult || ""}`);
+      process.exit(res.ok ? 0 : 1);
     }
 
     if (cmd === "rollback") {
@@ -207,7 +279,7 @@ async function main() {
       return;
     }
 
-    console.error("Użycie: node forge/cli.mjs <status|budget|assess|inspect|providers|memory|run|compete|resume|rollback> [argumenty]");
+    console.error("Użycie: node forge/cli.mjs <status|budget|assess|inspect|providers|memory|autopilot|autopilot-plan|decide|run|compete|resume|rollback> [argumenty]");
     process.exit(2);
   } finally {
     pool.close?.();

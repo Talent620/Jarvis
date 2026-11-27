@@ -1135,7 +1135,8 @@ export function createProviderPool({
   }
 
   /** Zwróć pełny, uczciwy status wszystkich dostawców (3 kategorie kosztów, bez ujawniania kluczy!). */
-  async function getProviderMatrix({ costPolicy = "zero_cost", overrideKeys = {}, probeLocal = true, promoBudget = null, promoGovernor = null } = {}) {
+  async function getProviderMatrix({ costPolicy = "zero_cost", overrideKeys = {}, probeLocal = true, promoBudget = null, promoGovernor = null, memoryOverride = null } = {}) {
+    const activeMemory = memoryOverride || memory;
     const ollamaState = probeLocal ? await probeOllama(false, overrideKeys?.ollamaUrl) : ollamaProbeCache;
     const modalBridgeState = (enableModalBridge || env?.FORGE_MODAL_BRIDGE) ? probeModal(false) : null;
 
@@ -1175,7 +1176,7 @@ export function createProviderPool({
         statusReason = `Limit 429 — ponowna próba za ${Math.ceil(cooledMs / 1000)} s`;
       }
 
-      const devScore = memory ? memory.getModelScore(spec.id, defaultModel, "developer") : null;
+      const devScore = activeMemory ? activeMemory.getModelScore(spec.id, defaultModel, "developer") : null;
       return {
         id: spec.id,
         label: spec.label,
@@ -1210,7 +1211,9 @@ export function createProviderPool({
     preferredModel = null,
     promoBudget = null,
     promoGovernor = null,
+    memoryOverride = null,
   } = {}) {
+    const activeMemory = memoryOverride || memory;
     const ollamaState = await probeOllama(false, overrideKeys?.ollamaUrl);
     const exclude = new Set(excludeProviders);
     const allowedCatSet = Array.isArray(allowedCategories) && allowedCategories.length ? new Set(allowedCategories) : null;
@@ -1272,7 +1275,7 @@ export function createProviderPool({
       if (preferredProvider && spec.id === preferredProvider) score += 120;
       if (preferredModel && model === preferredModel) score += 40;
 
-      const learned = memory ? memory.getModelScore(spec.id, model, role) : null;
+      const learned = activeMemory ? activeMemory.getModelScore(spec.id, model, role) : null;
       if (learned !== null) score += Math.round((learned - 0.5) * 30);
 
       candidates.push({
@@ -1310,8 +1313,10 @@ export function createProviderPool({
     temperature = 0.15,
     promoBudget = null,
     promoGovernor = null,
+    memoryOverride = null,
     signal,
   }) {
+    const activeMemory = memoryOverride || memory;
     const activeGovernor = promoGovernor
       || (promoBudget && (costPolicy === "allow_promo_credits" || costPolicy === "allow_credits")
         ? createPromoBudgetGovernor({ budgetSpec: promoBudget, billingVerifier: modalBillingVerifier })
@@ -1330,6 +1335,7 @@ export function createProviderPool({
       preferredModel,
       promoBudget,
       promoGovernor: activeGovernor,
+      memoryOverride: activeMemory,
     });
     // Jeśli filtr kategorii (np. local_free dla prostego zadania) nie znalazł gotowego dostawcy (np. Ollama offline),
     // rozszerz fallback WYŁĄCZNIE do darmowych kategorii (local_free + api_free) — NIGDY nie przeskakuj cicho na promo_credits!
@@ -1348,6 +1354,7 @@ export function createProviderPool({
         allowedCategories: safeFallbackCats,
         promoBudget,
         promoGovernor: activeGovernor,
+        memoryOverride: activeMemory,
       });
     }
     if (!candidates.length) {
@@ -1412,7 +1419,7 @@ export function createProviderPool({
           });
           reservedUsd = 0;
         }
-        memory?.recordModelOutcome({
+        activeMemory?.recordModelOutcome({
           provider: cand.provider,
           model: cand.model,
           role,
@@ -1453,7 +1460,7 @@ export function createProviderPool({
         } else if (status === 402) {
           cooldownUntil.set(cand.provider, Date.now() + 24 * 3600_000);
         }
-        memory?.recordModelOutcome({ provider: cand.provider, model: cand.model, role, ok: false, latencyMs, rateLimited });
+        activeMemory?.recordModelOutcome({ provider: cand.provider, model: cand.model, role, ok: false, latencyMs, rateLimited });
         errors.push(`${cand.provider}/${cand.model}: ${e instanceof Error ? e.message : String(e)}`);
         if (signal?.aborted) throw e;
       }

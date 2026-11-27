@@ -81,7 +81,7 @@ export function readJarvisProjectMemoryBridge(repoRoot) {
       for (const name of fs.readdirSync(decDir).filter((f) => f.endsWith(".md")).sort().slice(-8)) {
         const raw = fs.readFileSync(path.join(decDir, name), "utf8");
         const title = (raw.match(/^#\s+(.+)$/m) || [])[1] || name;
-        const status = (raw.match(/\*\*Status:\*\*\s*([^\n]+)/i) || [])[1] || "unknown";
+        const status = (raw.match(/(?:\*\*)?Status:(?:\*\*)?\s*([^\n]+)/i) || [])[1] || "unknown";
         bridge.adrs.push({ file: name, title: title.trim(), status: status.trim() });
       }
     }
@@ -91,7 +91,7 @@ export function readJarvisProjectMemoryBridge(repoRoot) {
     const faPath = path.join(pmDir, "journal", "failed-attempts.md");
     if (fs.existsSync(faPath)) {
       const raw = fs.readFileSync(faPath, "utf8");
-      const matches = [...raw.matchAll(/^##\s+(FA-\d+\s+—\s+.+)$/gm)];
+      const matches = [...raw.matchAll(/^#{2,3}\s+(FA-\d+[^\n]*)$/gm)];
       bridge.failedAttempts = matches.slice(-10).map((m) => m[1].trim());
     }
   } catch { /* ignore */ }
@@ -354,6 +354,16 @@ export function createExperienceMemory(repoRoot, storageDir) {
         lines.push(`- ${item.title}: ${item.rationale.slice(0, 140)}`);
       }
     }
+    const adrs = bridge?.adrs || [];
+    const projectChecks = bridge?.checks
+      ? Object.entries(bridge.checks).map(([name, status]) => ({ name, status }))
+      : [];
+    if (adrs.length) {
+      lines.push(`Decyzje ADR (project-memory): ${adrs.slice(-4).map((a) => `${a.file} — ${a.title} [${a.status}]`).join(" | ")}`);
+    }
+    if (projectChecks.length) {
+      lines.push(`Stan weryfikacji project-memory: ${projectChecks.map((c) => `${c.name}=${c.status}`).join(", ")}`);
+    }
     if (bridge?.failedAttempts?.length) {
       lines.push(`Dziennik project-memory (failed-attempts): ${bridge.failedAttempts.slice(-3).join(" | ")}`);
     }
@@ -364,6 +374,8 @@ export function createExperienceMemory(repoRoot, storageDir) {
       lessons: scoredLessons.map((x) => x.item),
       failedAttempts: scoredFailures.map((x) => x.item),
       decisions: scoredDecisions.map((x) => x.item),
+      adrs,
+      projectChecks,
       projectMemoryBridge: bridge,
     };
   }

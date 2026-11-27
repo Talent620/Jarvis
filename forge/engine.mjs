@@ -277,6 +277,7 @@ export async function executeForgeRun({
   overrideKeys = {},
   maxIterations = 12,
   maxRepairCycles = 3,
+  maxDurationMs = 0,
   verifyCommands = null,
   useWorktree = false,
   keepWorktree = false,
@@ -287,6 +288,7 @@ export async function executeForgeRun({
   preferredModel = null,
   temperature = 0.15,
   resumeRunId = null,
+  autopilotMeta = null,
   signal = null,
   shouldPause = null,
   onEvent = null,
@@ -304,15 +306,23 @@ export async function executeForgeRun({
   if (resumeRunId) {
     const saved = store.loadRun(resumeRunId);
     if (!saved) throw new Error(`Nie znaleziono zapisanego zadania Forge o ID "${resumeRunId}".`);
+    const effectiveMaxDurationMs = Number(maxDurationMs || saved.maxDurationMs || 0);
     state = {
       ...saved,
       status: "executing",
+      verdict: null,
+      pauseReason: null,
+      pendingDecision: null,
       updatedAt: nowIso(),
       resumedCount: (saved.resumedCount || 0) + 1,
       maxIterations: Math.max(Number(saved.maxIterations || 0), Number(maxIterations || 0)),
       maxRepairCycles: Math.max(Number(saved.maxRepairCycles || 0), Number(maxRepairCycles || 0)),
+      maxDurationMs: effectiveMaxDurationMs,
+      budgetLocked: true,
+      attemptHistory: Array.isArray(saved.attemptHistory) ? saved.attemptHistory : [],
       adaptiveTrace: Array.isArray(saved.adaptiveTrace) ? saved.adaptiveTrace : [],
       usageTotals: saved.usageTotals || { inputTokens: 0, outputTokens: 0 },
+      autopilot: autopilotMeta || saved.autopilot || null,
       _checkpoint: {
         errorCounts: {},
         lastErrorSignature: "",
@@ -340,8 +350,12 @@ export async function executeForgeRun({
       repoRoot: baseRepoRoot,
       worktreePath: null,
       costPolicy,
+      budgetLocked: true,
       status: "scouting",
+      verdict: null,
       phase: "scouting",
+      pauseReason: null,
+      pendingDecision: null,
       activeRole: "scout",
       activeExecutor: { provider: "local-cpu", model: "repo-intel", costTier: "local", reason: "Deterministyczny skan repozytorium (0 tokenów)" },
       progressPct: 5,
@@ -349,13 +363,16 @@ export async function executeForgeRun({
       maxIterations,
       repairCycle: 0,
       maxRepairCycles,
+      maxDurationMs: Number(maxDurationMs || 0),
       strategy: startStrategy,
       strategiesTried: [startStrategy],
+      attemptHistory: [],
       difficulty: null,
       teamComposition: null,
       activeIntelligenceTier: null,
       adaptiveTrace: [],
       usageTotals: { inputTokens: 0, outputTokens: 0 },
+      autopilot: autopilotMeta || null,
       plan: [],
       verifyCommands: Array.isArray(verifyCommands) ? verifyCommands : [],
       recentActions: [],
@@ -392,6 +409,26 @@ export async function executeForgeRun({
   }
 
   if (!state.goal) throw new Error("Cel zadania nie może być pusty.");
+
+  // Uniwersalny limit czasu zegarowego (dla local_free, api_free i promo_credits) z czystym checkpointem
+  const runClockStartMs = Date.now();
+  const effectiveMaxDurationMs = Math.max(0, Number(state.maxDurationMs || 0));
+  const internalAbort = new AbortController();
+  let wallClockTimedOut = false;
+  let durationTimer = null;
+  const onExternalAbort = () => internalAbort.abort(signal?.reason);
+  if (signal) {
+    if (signal.aborted) internalAbort.abort(signal.reason);
+    else signal.addEventListener("abort", onExternalAbort, { once: true });
+  }
+  if (effectiveMaxDurationMs > 0) {
+    durationTimer = setTimeout(() => {
+      wallClockTimedOut = true;
+      internalAbort.abort(new Error("TIME_LIMIT_EXCEEDED"));
+    }, effectiveMaxDurationMs);
+    if (typeof durationTimer.unref === "function") durationTimer.unref();
+  }
+  const runSignal = internalAbort.signal;
 
   let worktreeInfo = null;
   let root = baseRepoRoot;
@@ -432,18 +469,40 @@ export async function executeForgeRun({
   };
 
   const checkPauseOrAbort = () => {
+    const elapsedMs = Date.now() - runClockStartMs;
+    if (wallClockTimedOut || (effectiveMaxDurationMs > 0 && elapsedMs >= effectiveMaxDurationMs)) {
+      wallClockTimedOut = true;
+      state.status = "paused";
+      state.verdict = "PAUSED";
+      state.phase = "paused";
+      state.pauseReason = "time_limit";
+      state.pendingDecision = {
+        required: true,
+        kind: "time_limit",
+        title: "Przekroczono limit czasu zadania",
+        reason: `Zadanie osiągnęło limit czasu (${Math.round(effectiveMaxDurationMs / 1000)}s, upłynęło ${Math.round(elapsedMs / 1000)}s). Postęp zapisano na checkpoincie.`,
+        options: ["resume", "rollback"],
+      };
+      state.finalResult = `Zadanie wstrzymane po osiągnięciu limitu czasu (${Math.round(effectiveMaxDurationMs / 1000)}s). Pełny checkpoint zapisany — możesz wznowić lub wycofać zmiany.`;
+      emit("paused", { reason: "time_limit", elapsedMs, actionLabel: `Limit czasu (${Math.round(effectiveMaxDurationMs / 1000)}s) — zapisano checkpoint do wznowienia`, ok: true });
+      return true;
+    }
     if (signal?.aborted) {
       state.status = "paused";
+      state.verdict = "PAUSED";
       state.phase = "paused";
+      state.pauseReason = "user_abort";
       state.finalResult = "Zadanie zostało zatrzymane przez użytkownika. Możesz je wznowić od ostatniego checkpointu albo cofnąć zmiany.";
-      emit("paused", { actionLabel: "Przerwano wykonanie (Kill-Switch / Abort)", ok: true });
+      emit("paused", { reason: "user_abort", actionLabel: "Przerwano wykonanie (Kill-Switch / Abort)", ok: true });
       return true;
     }
     if (shouldPause?.()) {
       state.status = "paused";
+      state.verdict = "PAUSED";
       state.phase = "paused";
+      state.pauseReason = "user_pause";
       state.finalResult = "Zadanie wstrzymane na żądanie użytkownika — pełny checkpoint zapisany na dysku.";
-      emit("paused", { actionLabel: "Wstrzymano zadanie na bezpiecznym checkpoincie", ok: true });
+      emit("paused", { reason: "user_pause", actionLabel: "Wstrzymano zadanie na bezpiecznym checkpoincie", ok: true });
       return true;
     }
     return false;
@@ -503,6 +562,7 @@ export async function executeForgeRun({
             overrideKeys,
             promoBudget,
             promoGovernor: activeGovernor,
+            memoryOverride: memory,
           })
         : [];
       state.difficulty = assessTaskDifficulty({ goal: state.goal, repoIndex, memory });
@@ -613,8 +673,9 @@ export async function executeForgeRun({
           promoGovernor: activeGovernor,
           overrideKeys,
           temperature,
+          memoryOverride: memory,
           ...archRouting,
-          signal,
+          signal: runSignal,
         });
         recordUsageTotals(planReply);
         if (planReply.contextChars) activeContextChars = Math.min(28_000, Math.max(10_000, Math.round(planReply.contextChars * 0.65)));
@@ -659,9 +720,19 @@ export async function executeForgeRun({
           plan: state.plan,
         });
       } catch (e) {
+        if (checkPauseOrAbort()) return state;
         const msg = e instanceof Error ? e.message : String(e);
+        const isBudgetErr = e?.code === "PROMO_BUDGET_EXCEEDED" || /budżet|limit/i.test(msg);
         state.status = "blocked";
+        state.verdict = "BLOCKED";
         state.phase = "blocked";
+        state.pendingDecision = {
+          required: true,
+          kind: isBudgetErr ? "budget_limit" : "no_free_provider",
+          title: isBudgetErr ? "Osiągnięto limit budżetu" : "Brak dostępnego darmowego modelu",
+          reason: msg,
+          options: ["configure_free_provider", "retry"],
+        };
         state.problems.push({ at: nowIso(), severity: "blocker", message: msg });
         state.finalResult = `Blokada na etapie planowania: ${msg}`;
         state.finishedAt = nowIso();
@@ -765,15 +836,17 @@ export async function executeForgeRun({
             excludeProviders: state._checkpoint.excludedProviders || [],
             excludeModels: state._checkpoint.excludedModels || [],
             temperature,
+            memoryOverride: memory,
             ...devRouting,
-            signal,
+            signal: runSignal,
           });
         } catch (e) {
+          if (checkPauseOrAbort()) return state;
           const msg = e instanceof Error ? e.message : String(e);
           // Zasada 5 Adaptive Intelligence: jeśli niższy tier (np. lokalny CPU) nie daje rady / timeoutuje, eskaluj na wyższy poziom!
           const ladder = Array.isArray(state._checkpoint.escalationLadder) ? state._checkpoint.escalationLadder : [];
           const curTierIdx = Number(state._checkpoint.tierIndex || 0);
-          if (adaptive && !preferredProvider && curTierIdx + 1 < ladder.length && !signal?.aborted) {
+          if (adaptive && !preferredProvider && curTierIdx + 1 < ladder.length && !runSignal?.aborted) {
             const fromTier = state.activeIntelligenceTier;
             state._checkpoint.tierIndex = curTierIdx + 1;
             const toTier = ladder[state._checkpoint.tierIndex];
@@ -799,8 +872,17 @@ export async function executeForgeRun({
             emit("strategy_note", { actionLabel: "Brak alternatywnego dostawcy po eskalacji — powrót do pełnej puli.", ok: true });
             continue;
           }
+          const isBudgetErr = e?.code === "PROMO_BUDGET_EXCEEDED" || /budżet|limit/i.test(msg);
           state.status = "blocked";
+          state.verdict = "BLOCKED";
           state.phase = "blocked";
+          state.pendingDecision = {
+            required: true,
+            kind: isBudgetErr ? "budget_limit" : "no_free_provider",
+            title: isBudgetErr ? "Osiągnięto limit budżetu" : "Brak dostępnego darmowego modelu",
+            reason: msg,
+            options: ["configure_free_provider", "resume", "rollback"],
+          };
           state.problems.push({ at: nowIso(), severity: "blocker", message: msg });
           state.finalResult = `Blokada wykonawcy (${roleToUse}): ${msg}`;
           state.finishedAt = nowIso();
@@ -861,7 +943,7 @@ export async function executeForgeRun({
 
         for (const tc of toolCalls) {
           if (checkPauseOrAbort()) return state;
-          const toolRes = await workspace.executeTool(tc.name, tc.arguments, { signal });
+          const toolRes = await workspace.executeTool(tc.name, tc.arguments, { signal: runSignal });
           syncModifiedFiles();
 
           const briefTarget = tc.arguments?.path || tc.arguments?.command || tc.arguments?.query || "";
@@ -966,7 +1048,7 @@ export async function executeForgeRun({
             command: cmd.command,
             args: cmd.args || [],
             timeout_ms: 90_000,
-          }, { signal, rawOutput: true });
+          }, { signal: runSignal, rawOutput: true });
 
           const record = {
             command: label,
@@ -1001,7 +1083,25 @@ export async function executeForgeRun({
         }
       }
 
+      if (checkPauseOrAbort()) return state;
+
       state.testResults = [...cycleTests, ...state.testResults].slice(0, 30);
+      state.attemptHistory.push({
+        attempt: state.attemptHistory.length + 1,
+        cycle: state.repairCycle + 1,
+        iteration: state.iteration,
+        strategy: state.strategy,
+        tier: state.activeIntelligenceTier || "default",
+        provider: state._checkpoint.lastDevProvider || state.activeExecutor?.provider || "unknown",
+        model: state._checkpoint.lastDevModel || state.activeExecutor?.model || "unknown",
+        ok: allPassed,
+        errorSignature: firstFailure?.errorSignature || null,
+        testsPassed: cycleTests.filter((t) => t.ok).length,
+        testsTotal: cycleTests.length,
+        modifiedCount: state.modifiedFiles.length,
+        at: nowIso(),
+      });
+      if (state.attemptHistory.length > 30) state.attemptHistory = state.attemptHistory.slice(-30);
 
       // 3. ROZGAŁĘZIENIE: PORAŻKA -> DEBUGGING + STRATEGY PIVOT
       if (!allPassed && firstFailure) {
@@ -1043,8 +1143,16 @@ export async function executeForgeRun({
         state.repairCycle += 1;
         if (state.repairCycle > state.maxRepairCycles || state.iteration >= state.maxIterations) {
           state.status = "blocked";
+          state.verdict = "BLOCKED";
           state.phase = "blocked";
           const reason = `Wyczerpano limit cykli samonaprawy (${state.maxRepairCycles}) — test "${firstFailure.command}" nadal nie przechodzi (${firstFailure.errorSignature}).`;
+          state.pendingDecision = {
+            required: true,
+            kind: "iteration_or_repair_limit",
+            title: "Wyczerpano limit prób naprawy",
+            reason,
+            options: ["resume", "rollback"],
+          };
           state.problems.push({ at: nowIso(), severity: "blocker", message: reason, errorSignature: firstFailure.errorSignature });
           state.finalResult = `Zadanie zablokowane (uczciwa weryfikacja — nie udaję sukcesu): ${reason}`;
           state.finishedAt = nowIso();
@@ -1233,8 +1341,9 @@ export async function executeForgeRun({
             overrideKeys,
             preferDifferentFrom: state._checkpoint.lastDevProvider,
             preferDifferentModelFrom: state._checkpoint.lastDevModel,
+            memoryOverride: memory,
             ...revRouting,
-            signal,
+            signal: runSignal,
           });
           recordUsageTotals(revReply);
           reviewerLabel = `${revReply.provider}/${revReply.model}`;
@@ -1256,6 +1365,7 @@ export async function executeForgeRun({
             reviewIssues = Array.isArray(parsedRev.issues) ? parsedRev.issues.map(String) : [];
           }
         } catch {
+          if (checkPauseOrAbort()) return state;
           reviewerLabel = "deterministic-reviewer (fallback)";
         }
       }
@@ -1281,6 +1391,7 @@ export async function executeForgeRun({
 
       if (!reviewApproved) {
         state.status = "blocked";
+        state.verdict = "BLOCKED";
         state.phase = "blocked";
         state.finalResult = `Zablokowano na etapie recenzji: ${reviewSummary}`;
         state.finishedAt = nowIso();
@@ -1293,6 +1404,7 @@ export async function executeForgeRun({
         const merged = mergeWorktreesIntoRepo(baseRepoRoot, [worktreeInfo]);
         if (!merged.ok) {
           state.status = "blocked";
+          state.verdict = "BLOCKED";
           state.phase = "blocked";
           state.finalResult = `Zmiany przeszły testy w worktree, ale wykryto konflikt przy scalaniu do repo: ${merged.conflicts.map((c) => c.reason).join("; ")}`;
           state.finishedAt = nowIso();
@@ -1346,7 +1458,9 @@ export async function executeForgeRun({
       memory.recordStrategyOutcome(state.strategy, true, state.iteration);
 
       state.status = "completed";
+      state.verdict = "PASS";
       state.phase = "completed";
+      state.pendingDecision = null;
       state.progressPct = 100;
       state.finishedAt = nowIso();
       state.finalResult = [
@@ -1373,7 +1487,15 @@ export async function executeForgeRun({
 
     // Wyczerpanie limitu iteracji bez potwierdzenia testami — uczciwe BLOCKED
     state.status = "blocked";
+    state.verdict = "BLOCKED";
     state.phase = "blocked";
+    state.pendingDecision = {
+      required: true,
+      kind: "iteration_limit",
+      title: "Osiągnięto limit iteracji zadania",
+      reason: `Osiągnięto limit iteracji (${state.maxIterations}) bez potwierdzenia wszystkimi testami.`,
+      options: ["resume", "rollback"],
+    };
     state.finalResult = `Osiągnięto limit iteracji (${state.maxIterations}) bez potwierdzenia wszystkimi testami. Możesz wznowić zadanie lub cofnąć zmiany.`;
     state.finishedAt = nowIso();
     memory.recordStrategyOutcome(state.strategy, false, state.iteration);
@@ -1391,6 +1513,8 @@ export async function executeForgeRun({
     emit("blocked", { ok: false, actionLabel: state.finalResult });
     return state;
   } finally {
+    if (durationTimer) clearTimeout(durationTimer);
+    if (signal) signal.removeEventListener("abort", onExternalAbort);
     if (worktreeInfo && !keepWorktree) {
       cleanupWorktree(worktreeInfo);
     }
@@ -1546,6 +1670,7 @@ export async function executeCompetitiveForgeRun({
   overrideKeys = {},
   maxIterations = 12,
   maxRepairCycles = 2,
+  maxDurationMs = 0,
   verifyCommands = null,
   applyWinner = true,
   signal = null,
@@ -1563,7 +1688,7 @@ export async function executeCompetitiveForgeRun({
   const baseIndex = baseWs.getIndex(true);
   const difficulty = assessTaskDifficulty({ goal, repoIndex: baseIndex, memory });
   const providerMatrix = typeof providerPool?.getProviderMatrix === "function"
-    ? await providerPool.getProviderMatrix({ costPolicy, overrideKeys, promoBudget, promoGovernor })
+    ? await providerPool.getProviderMatrix({ costPolicy, overrideKeys, promoBudget, promoGovernor, memoryOverride: memory })
     : [];
   const teamComposition = composeAgentTeam({
     difficulty,
@@ -1638,6 +1763,7 @@ export async function executeCompetitiveForgeRun({
         overrideKeys,
         maxIterations: candSpec.maxIterations || maxIterations,
         maxRepairCycles: candSpec.maxRepairCycles ?? maxRepairCycles,
+        maxDurationMs: candSpec.maxDurationMs ?? maxDurationMs,
         verifyCommands: effectiveVerifyCmds.length ? effectiveVerifyCmds : null,
         useWorktree: false,
         adaptive: candSpec.adaptive !== false,
