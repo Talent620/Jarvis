@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "generatedBy": "scripts/sync-project-state.mjs",
-  "generatedAt": "2026-11-27T12:13:58.088Z",
+  "generatedAt": "2026-11-27T15:49:12.054Z",
   "notice": "PLIK GENEROWANY — nie edytuj ręcznie. Odśwież: npm run memory:sync",
   "git": {
-    "commit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
-    "shortCommit": "0a321bf",
+    "commit": "f2ba49bcb567880f74eb97bf3a7069781a889d8e",
+    "shortCommit": "f2ba49b",
     "branch": "feat/jarvis-forge-evolution",
     "dirty": true,
     "changes": [
@@ -15,9 +15,9 @@
       " M project-memory/reports/lint.json",
       " M project-memory/reports/secret-scan.json",
       " M project-memory/reports/test.json",
-      "?? project-memory/events/20261127T121357798Z-antigravity-jarvis-forge-phase4-autopilot.json"
+      "?? project-memory/events/20261127T154911760Z-antigravity-jarvis-forge-phase5-real-autonomy.json"
     ],
-    "worktreeFingerprint": "82c07ec55b8b9d7ea4846726dcead2cfe64467dc49e535a9bc063cfbc77c909f"
+    "worktreeFingerprint": "9fd28361e7e1e7908ec8423ae80da4643d129f6f10538f2b221aa6ce7097bffd"
   },
   "repository": {
     "status": "OK",
@@ -39,7 +39,7 @@
   "modules": [
     {
       "dir": "tests",
-      "files": 376
+      "files": 377
     },
     {
       "dir": "src/lib",
@@ -55,11 +55,11 @@
     },
     {
       "dir": "docs",
-      "files": 36
+      "files": 37
     },
     {
       "dir": "project-memory",
-      "files": 34
+      "files": 35
     },
     {
       "dir": "(root)",
@@ -432,6 +432,26 @@
   ],
   "recentCommits": [
     {
+      "hash": "f2ba49b",
+      "date": "2026-11-27T15:41:53Z",
+      "subject": "docs(forge): add Phase 5 Real Autonomy report and FA-009 live Ollama findings"
+    },
+    {
+      "hash": "6a4e1f5",
+      "date": "2026-11-27T15:41:52Z",
+      "subject": "test(forge): add Phase 5 resilience and live-regression test suite (8 tests)"
+    },
+    {
+      "hash": "d0797c0",
+      "date": "2026-11-27T15:41:52Z",
+      "subject": "fix(forge,ui): Phase 5 real-autonomy hardening, KV-cache, loop breaker, TAP/JSON parsers & test-protection review alignment"
+    },
+    {
+      "hash": "f263df1",
+      "date": "2026-11-27T12:13:58Z",
+      "subject": "docs(memory): record jarvis-forge-phase4-autopilot event & verified CURRENT_STATE (376/376, 3161/3161)"
+    },
+    {
       "hash": "0a321bf",
       "date": "2026-11-27T12:06:51Z",
       "subject": "feat(ui,core): zero-config Autopilot UX, decision gate, Core tools, 5 E2E scenarios & report"
@@ -460,35 +480,15 @@
       "hash": "7c00e53",
       "date": "2026-11-25T20:26:25Z",
       "subject": "feat(forge): Phase 2 live-test fixes (Edit-Lint-Revert, completeness gate, Ollama inline tools, worktree porcelain fix), Ubuntu acceptance & hardening tests"
-    },
-    {
-      "hash": "90509cf",
-      "date": "2026-11-25T19:23:37Z",
-      "subject": "feat(forge): Phase 2 security policy, 3-category promo budget governor, Modal bridge, worktree isolation, impact analysis & SSE reconnect"
-    },
-    {
-      "hash": "eeb8cb2",
-      "date": "2026-11-25T18:48:31Z",
-      "subject": "docs(memory): record jarvis-forge-evolution event, ADR-0009 & verified CURRENT_STATE"
-    },
-    {
-      "hash": "e3a79f4",
-      "date": "2026-11-25T18:36:11Z",
-      "subject": "test(forge): full vertical-slice E2E, HTTP 429 Retry-After failover, ACI safety, strategy pivot, pause/resume & server auth tests"
-    },
-    {
-      "hash": "72b9c9c",
-      "date": "2026-11-25T18:36:11Z",
-      "subject": "feat(ui): Jarvis Forge minimalist autonomous workspace (<Modal>, live SSE, 10-point status, diffs, rollback, memory & models)"
     }
   ],
   "checks": {
     "secret-scan": {
       "command": "node scripts/secret-scan.mjs --all",
       "exitCode": 0,
-      "finishedAt": "2026-11-27T12:07:00.226Z",
-      "commit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
-      "logPath": "project-memory/reports/logs/secret-scan-20261127T120659Z.log",
+      "finishedAt": "2026-11-27T15:42:01.395Z",
+      "commit": "f2ba49bcb567880f74eb97bf3a7069781a889d8e",
+      "logPath": "project-memory/reports/logs/secret-scan-20261127T154201Z.log",
       "summary": {
         "result": "Skan sekretów: czysto."
       },
@@ -499,9 +499,9 @@
     "lint": {
       "command": "npm run lint",
       "exitCode": 0,
-      "finishedAt": "2026-11-27T12:07:24.424Z",
-      "commit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
-      "logPath": "project-memory/reports/logs/lint-20261127T120700Z.log",
+      "finishedAt": "2026-11-27T15:42:25.632Z",
+      "commit": "f2ba49bcb567880f74eb97bf3a7069781a889d8e",
+      "logPath": "project-memory/reports/logs/lint-20261127T154201Z.log",
       "summary": {
         "problems": "✖ 2 problems (0 errors, 2 warnings)"
       },
@@ -512,12 +512,12 @@
     "test": {
       "command": "npm test",
       "exitCode": 0,
-      "finishedAt": "2026-11-27T12:12:46.003Z",
-      "commit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
-      "logPath": "project-memory/reports/logs/test-20261127T120724Z.log",
+      "finishedAt": "2026-11-27T15:47:58.871Z",
+      "commit": "f2ba49bcb567880f74eb97bf3a7069781a889d8e",
+      "logPath": "project-memory/reports/logs/test-20261127T154225Z.log",
       "summary": {
-        "testFiles": "Test Files  376 passed (376)",
-        "tests": "Tests  3161 passed (3161)"
+        "testFiles": "Test Files  377 passed (377)",
+        "tests": "Tests  3169 passed (3169)"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -526,11 +526,11 @@
     "build": {
       "command": "npm run build",
       "exitCode": 0,
-      "finishedAt": "2026-11-27T12:13:30.929Z",
-      "commit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
-      "logPath": "project-memory/reports/logs/build-20261127T121246Z.log",
+      "finishedAt": "2026-11-27T15:48:40.438Z",
+      "commit": "f2ba49bcb567880f74eb97bf3a7069781a889d8e",
+      "logPath": "project-memory/reports/logs/build-20261127T154758Z.log",
       "summary": {
-        "built": "built in 16.80s"
+        "built": "built in 14.59s"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -727,10 +727,18 @@
     ]
   },
   "events": {
-    "total": 15,
-    "valid": 15,
+    "total": 16,
+    "valid": 16,
     "invalid": [],
     "recent": [
+      {
+        "file": "project-memory/events/20261127T154911760Z-antigravity-jarvis-forge-phase5-real-autonomy.json",
+        "timestamp": "2026-11-27T15:49:11.760Z",
+        "agent": "antigravity",
+        "taskId": "jarvis-forge-phase5-real-autonomy",
+        "endCommit": "UNCOMMITTED",
+        "nextStep": "Niezależny przegląd feat/jarvis-forge-evolution przez właściciela; opcjonalnie dodanie darmowego klucza API Kat. B do testu eskalacji local_free -> api_free oraz testy na fizycznym Ubuntu z GPU/Electron przed decyzją o merge do main."
+      },
       {
         "file": "project-memory/events/20261127T121357798Z-antigravity-jarvis-forge-phase4-autopilot.json",
         "timestamp": "2026-11-27T12:13:57.798Z",
@@ -802,20 +810,12 @@
         "taskId": "ux-craft-audit",
         "endCommit": "UNCOMMITTED",
         "nextStep": "Recenzja PR feat/ux-craft-audit przez właściciela lub innego agenta, scalenie z main oraz test docelowy na fizycznym Android APK (Samsung S9+) i Linux Desktop."
-      },
-      {
-        "file": "project-memory/events/20261124T204619696Z-antigravity-omni-frontier.json",
-        "timestamp": "2026-11-24T20:46:19.696Z",
-        "agent": "antigravity",
-        "taskId": "omni-frontier",
-        "endCommit": "UNCOMMITTED",
-        "nextStep": "Recenzja PR feat/omni-frontier (ADR-0003/0004/0005) i test na żywym pulpicie Linux/Windows; następnie merge do main + build Linux/Windows/APK lub lokalny daemon audio <300ms."
       }
     ]
   },
   "nextRecommendedStep": {
-    "from": "project-memory/events/20261127T121357798Z-antigravity-jarvis-forge-phase4-autopilot.json",
-    "text": "Skonfigurować darmowy klucz Kat. B lub lokalną Ollamę na docelowym Ubuntu i uruchomić npm run forge:accept; po recenzji właściciela zdecydować o merge feat/jarvis-forge-evolution do main."
+    "from": "project-memory/events/20261127T154911760Z-antigravity-jarvis-forge-phase5-real-autonomy.json",
+    "text": "Niezależny przegląd feat/jarvis-forge-evolution przez właściciela; opcjonalnie dodanie darmowego klucza API Kat. B do testu eskalacji local_free -> api_free oraz testy na fizycznym Ubuntu z GPU/Electron przed decyzją o merge do main."
   },
   "decisions": [
     {
@@ -859,6 +859,6 @@
       "status": "proposed"
     }
   ],
-  "failedAttempts": 8,
-  "integrity": "8c88bdf63868e1c70654dc3c3f7603d6c040289cec3daced4607200151d4c5b4"
+  "failedAttempts": 9,
+  "integrity": "7e7dd0bbf766a59284457143de71b4dc3dece802c562a01d34229fd1ba448036"
 }
