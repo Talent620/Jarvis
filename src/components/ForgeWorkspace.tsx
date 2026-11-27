@@ -566,7 +566,8 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
                   <div style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 4 }}>{activeRun.finalResult}</div>
                   {activeRun.review && (
                     <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                      Recenzja: <b>{activeRun.review.reviewer}</b> · Sekrety: {activeRun.review.secretScanClean ? "czysto ✓" : "UWAGA ⚠"} · {activeRun.review.summary}
+                      Recenzja: <b>{activeRun.review.reviewer}</b>{" "}
+                      {activeRun.review.independentModelReviewed ? "(niezależny cross-model ✓)" : "(weryfikacja pomocnicza)"} · Sekrety: {activeRun.review.secretScanClean ? "czysto ✓" : "UWAGA ⚠"} · {activeRun.review.summary}
                     </div>
                   )}
                   {attemptsList.length > 0 && (

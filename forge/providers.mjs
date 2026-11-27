@@ -331,8 +331,8 @@ export function detectHardwareProfile() {
   } catch { /* brak nvidia-smi / GPU */ }
 
   let tier = "cpu_light";
-  let recommendedOllamaModels = ["qwen2.5-coder:3b", "qwen3:1.7b"];
-  let localStrategy = "CPU bez GPU: używaj lokalnej Ollamy do lekkiej kompakcji/prostych poprawek, a cięższe kodowanie kieruj do puli free_api.";
+  let recommendedOllamaModels = ["qwen2.5-coder:3b", "qwen3:4b-instruct-2507-q4_K_M"];
+  let localStrategy = "CPU bez GPU: używaj lokalnej Ollamy (modele non-thinking 3B–4B) do prostych/średnich poprawek i recenzji, a cięższe kodowanie kieruj do puli free_api.";
 
   if (gpu && gpu.vramGb >= 20) {
     tier = "gpu_pro";
@@ -344,11 +344,11 @@ export function detectHardwareProfile() {
     localStrategy = `GPU ${gpu.vramGb} GB VRAM: lokalny Developer (7B–14B Q4) + darmowa chmura dla trudnego planowania i recenzji.`;
   } else if (gpu && gpu.vramGb >= 4) {
     tier = "gpu_entry";
-    recommendedOllamaModels = ["qwen2.5-coder:3b", "qwen3:4b"];
+    recommendedOllamaModels = ["qwen2.5-coder:3b", "qwen3:4b-instruct-2507-q4_K_M"];
     localStrategy = `GPU ${gpu.vramGb} GB VRAM: szybki lokalny Refleks (3B–4B Q4) + darmowa chmura (Gemini/Cerebras/Groq/Mistral) dla głównych zadań.`;
   } else if (totalRamGb >= 24) {
     tier = "cpu_heavy";
-    recommendedOllamaModels = ["qwen2.5-coder:7b", "qwen3:4b"];
+    recommendedOllamaModels = ["qwen2.5-coder:7b", "qwen3:4b-instruct-2507-q4_K_M"];
     localStrategy = `CPU + ${totalRamGb} GB RAM: modele 4B–7B Q4 użyteczne lokalnie do prostych zmian; do dużych refaktorów preferuj darmowe API.`;
   }
 
@@ -374,19 +374,21 @@ export function pickBestLocalOllamaModel(installedModels, role, hardware, { excl
     if (exact) return exact;
   }
 
+  const isCpuLight = Boolean(hardware && !hardware.gpu && (hardware.cpuCores || 4) <= 4);
   const excluded = new Set((excludeModels || []).map((m) => String(m || "").replace(/^ollama\//, "")));
-  const prefs = role === "developer" || role === "debugger"
-    ? [/qwen3[-.]?coder/i, /qwen2\.5-coder/i, /codestral/i, /deepseek-coder/i, /devstral/i, /qwen3/i, /llama3/i]
-    : [/qwen3/i, /deepseek-r1/i, /phi4/i, /qwen2\.5-coder/i, /gemma3/i, /llama3/i];
+  const useCoderPrefs = role === "developer" || role === "debugger" || (role === "architect" && isCpuLight && !preferDifferentModelFrom);
+  const prefs = useCoderPrefs
+    ? [/qwen3[-.]?coder/i, /qwen2\.5-coder:(?:7|14|32)b/i, /qwen3:.*instruct/i, /qwen2\.5-coder/i, /codestral/i, /deepseek-coder/i, /devstral/i, /qwen3/i, /llama3/i]
+    : [/qwen3:.*instruct/i, /qwen2\.5-coder/i, /qwen3/i, /deepseek-r1/i, /phi4/i, /gemma3/i, /llama3/i];
 
-  // Na słabszym sprzęcie (<=10GB RAM bez GPU) unikaj wielkich modeli 27B+, jeśli dostępny jest mniejszy
+  // Na słabszym sprzęcie (<=10GB RAM bez GPU) unikaj wielkich modeli 14B+, jeśli dostępny jest mniejszy (3B–8B)
   const avoidHuge = !hardware?.gpu && (hardware?.totalRamGb || 8) <= 10;
-  const sizeFiltered = avoidHuge ? list.filter((m) => !/:(?:27b|30b|32b|70b|72b)\b/i.test(m)) : list;
+  const sizeFiltered = avoidHuge ? list.filter((m) => !/:(?:14b|20b|27b|30b|32b|70b|72b)\b/i.test(m)) : list;
   const basePool = sizeFiltered.length ? sizeFiltered : list;
   const notExcluded = basePool.filter((m) => !excluded.has(m));
   let pool = notExcluded.length ? notExcluded : basePool;
 
-  // Przy recenzji lub eskalacji preferuj INNY zainstalowany model lokalny (np. qwen3:4b vs qwen2.5-coder:3b)
+  // Przy recenzji lub eskalacji preferuj INNY zainstalowany model lokalny (np. qwen3:4b-instruct vs qwen2.5-coder:3b)
   if (preferDifferentModelFrom) {
     const diffName = String(preferDifferentModelFrom).replace(/^ollama\//, "");
     const others = pool.filter((m) => m !== diffName);
@@ -461,6 +463,59 @@ function parseRetryAfterMs(headerVal) {
   return 60_000;
 }
 
+function escapeRawControlsInJsonStrings(input) {
+  let out = "";
+  let inStr = false;
+  let escaped = false;
+  for (let i = 0; i < input.length; i += 1) {
+    const ch = input[i];
+    if (!inStr) {
+      if (ch === '"') inStr = true;
+      out += ch;
+      continue;
+    }
+    if (escaped) {
+      // RFC 8259 nie dopuszcza `\'` w stringu JSON (częsty błąd małych modeli generujących kod JS/Python)
+      if (ch === "'") {
+        out = out.slice(0, -1) + "'";
+      } else {
+        out += ch;
+      }
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escaped = true;
+      out += ch;
+    } else if (ch === '"') {
+      inStr = false;
+      out += ch;
+    } else if (ch === "\n") {
+      out += "\\n";
+    } else if (ch === "\r") {
+      out += "\\r";
+    } else if (ch === "\t") {
+      out += "\\t";
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+function safeJsonParseRelaxed(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return null;
+  try { return JSON.parse(s); } catch { /* retry relaxed */ }
+  try {
+    // Usuń końcowe przecinki przed `}` lub `]`, napraw `\'` oraz surowe znaki nowej linii wewnątrz stringów JSON
+    const repaired = escapeRawControlsInJsonStrings(s).replace(/,\s*([}\]])/g, "$1");
+    return JSON.parse(repaired);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Wyłuskaj wywołania narzędzi osadzone w treści tekstu (np. Ollama `qwen2.5-coder:3b` zwraca JSON w `content`,
  * a modele Qwen3/Hermes potrafią emitować `<tool_call>{...}</tool_call>`).
@@ -473,20 +528,21 @@ export function extractInlineToolCallsFromText(text, tools = []) {
 
   const pushCandidate = (obj) => {
     if (!obj || typeof obj !== "object") return;
-    const name = obj.name || obj.tool || obj.function?.name || (typeof obj.function === "string" ? obj.function : "");
+    const name = obj.name || obj.tool || obj.tool_name || obj.function?.name || (typeof obj.function === "string" ? obj.function : "");
     if (!name || (allowed.size > 0 && !allowed.has(name))) return;
     let args = obj.arguments ?? obj.args ?? obj.input ?? obj.parameters ?? obj.function?.arguments ?? {};
     if (typeof args === "string") {
-      try { args = JSON.parse(args); } catch { args = { _raw: args }; }
+      args = safeJsonParseRelaxed(args) ?? { _raw: args };
     }
     if (!args || typeof args !== "object") args = {};
     out.push({ id: `inline_${out.length + 1}_${Date.now()}`, name, arguments: args });
   };
 
-  // 1. Bloki <tool_call>...</tool_call> (również bez zamykającego tagu </tool_call>)
+  // 1. Bloki <tool_call>...</tool_call>
   const hermesMatches = [...cleaned.matchAll(/<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/gi)];
   for (const m of hermesMatches) {
-    try { pushCandidate(JSON.parse(m[1].trim())); } catch { /* ignore */ }
+    const parsed = safeJsonParseRelaxed(m[1]);
+    if (parsed) pushCandidate(parsed);
   }
   if (out.length) return out;
 
@@ -495,30 +551,66 @@ export function extractInlineToolCallsFromText(text, tools = []) {
   const fenced = [...stripped.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)].map((m) => m[1].trim());
   const candidates = fenced.length ? fenced : [stripped];
   for (const cand of candidates) {
-    try {
-      const parsed = JSON.parse(cand);
+    const parsed = safeJsonParseRelaxed(cand);
+    if (parsed) {
       if (Array.isArray(parsed)) parsed.forEach(pushCandidate);
       else pushCandidate(parsed);
       if (out.length) return out;
-    } catch {
+    } else {
       // 2b. NDJSON / wiele obiektów JSON linia po linii (częste w Ollama qwen2.5-coder:3b!)
       const lines = cand.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.startsWith("{") && l.endsWith("}"));
       for (const ln of lines) {
-        try { pushCandidate(JSON.parse(ln)); } catch { /* ignore */ }
+        const obj = safeJsonParseRelaxed(ln);
+        if (obj) pushCandidate(obj);
       }
       if (out.length) return out;
 
       const start = cand.indexOf("{");
       const end = cand.lastIndexOf("}");
       if (start >= 0 && end > start) {
-        try {
-          pushCandidate(JSON.parse(cand.slice(start, end + 1)));
+        const obj = safeJsonParseRelaxed(cand.slice(start, end + 1));
+        if (obj) {
+          pushCandidate(obj);
           if (out.length) return out;
-        } catch { /* ignore */ }
+        }
       }
     }
   }
   return out;
+}
+
+/**
+ * Zdiagnozuj przyczynę braku poprawnego wywołania narzędzia w odpowiedzi tekstowej modelu:
+ * - `unknown_tool`: model wywołał nieistniejące narzędzie (np. `createTaskScheduler`),
+ * - `malformed_json`: niekompletny lub uszkodzony JSON wywołania narzędzia,
+ * - `code_without_tool`: model wypisał gotowy kod w bloku markdown zamiast użyć `edit_file`/`write_file`.
+ */
+export function detectMalformedOrUnknownToolCall(text, tools = []) {
+  const cleaned = stripThinkingTags(text);
+  if (!cleaned) return { kind: null };
+  const allowed = new Set((tools || []).map((t) => t.name).filter(Boolean));
+  const stripped = cleaned.replace(/<\/?tool_call>/gi, "").trim();
+  const fenced = [...stripped.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)].map((m) => m[1].trim());
+  for (const cand of fenced.length ? fenced : [stripped]) {
+    const start = cand.indexOf("{");
+    const end = cand.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      const obj = safeJsonParseRelaxed(cand.slice(start, end + 1));
+      if (obj && typeof obj === "object") {
+        const name = obj.name || obj.tool || obj.tool_name || obj.function?.name || (typeof obj.function === "string" ? obj.function : "");
+        if (typeof name === "string" && name.trim() && allowed.size > 0 && !allowed.has(name.trim())) {
+          return { kind: "unknown_tool", toolName: name.trim() };
+        }
+      }
+    }
+  }
+  if (/<tool_call>|\{\s*"(?:name|tool|tool_name|function|arguments)"\s*:/i.test(cleaned)) {
+    return { kind: "malformed_json" };
+  }
+  if (/```(?:js|mjs|cjs|ts|tsx|javascript|typescript|python|py|diff)\b[\s\S]{15,}```/i.test(cleaned)) {
+    return { kind: "code_without_tool" };
+  }
+  return { kind: null };
 }
 
 /** Znormalizuj odpowiedź OpenAI-compatible do kontraktu Forge { content, toolCalls, usage }. */
@@ -708,9 +800,17 @@ async function callGeminiProtocol({ endpoint, apiKey, model, system, messages, t
 }
 
 /** Wywołanie natywnego API Ollama (`/api/chat`) z natywnymi narzędziami i adaptacją pod CPU/GPU. */
+const COMPACT_OLLAMA_TOOLS = [
+  { name: "read_file", description: "Read file", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] } },
+  { name: "edit_file", description: "Search/replace in file", parameters: { type: "object", properties: { path: { type: "string" }, search: { type: "string" }, replace: { type: "string" } }, required: ["path", "search", "replace"] } },
+  { name: "write_file", description: "Write full file", parameters: { type: "object", properties: { path: { type: "string" }, content: { type: "string" } }, required: ["path", "content"] } },
+  { name: "run_command", description: "Run test command", parameters: { type: "object", properties: { command: { type: "string" }, args: { type: "array", items: { type: "string" } } }, required: ["command"] } },
+  { name: "finish_task", description: "Finish after tests pass", parameters: { type: "object", properties: { summary: { type: "string" } }, required: ["summary"] } },
+];
+
 async function callOllamaProtocol({ endpoint, model, system, messages, tools, hardware = null, temperature = 0.15, timeoutMs, signal }) {
   const isCpuLight = hardware ? (!hardware.gpu && hardware.cpuCores <= 4) : false;
-  const effectiveTimeout = timeoutMs ?? (isCpuLight ? 180_000 : 120_000);
+  const effectiveTimeout = timeoutMs ?? (isCpuLight ? 240_000 : 120_000);
   const base = String(endpoint || "http://127.0.0.1:11434").replace(/\/+$/, "");
   const ollMessages = [{ role: "system", content: system }];
   for (const m of messages) {
@@ -727,29 +827,40 @@ async function callOllamaProtocol({ endpoint, model, system, messages, tools, ha
     }
   }
 
+  const isJsonOnlyRole = !tools || !tools.length;
   const body = {
     model,
     stream: false,
     keep_alive: "5m",
     ...(/^qwen3/i.test(String(model || "")) ? { think: false } : {}),
+    ...(isJsonOnlyRole ? { format: "json" } : {}),
     messages: ollMessages,
     options: {
       temperature: Number.isFinite(temperature) ? temperature : 0.15,
       num_ctx: isCpuLight ? 4096 : 8192,
-      ...(isCpuLight ? { num_predict: 1024 } : {}),
+      ...(isJsonOnlyRole
+        ? { num_predict: isCpuLight ? 320 : 640 }
+        : (isCpuLight ? { num_predict: 512 } : {})),
     },
   };
   if (tools && tools.length) {
-    const coreNames = new Set(["read_file", "edit_file", "write_file", "run_command", "finish_task"]);
-    const activeTools = isCpuLight ? tools.filter((t) => coreNames.has(t.name)) : tools;
-    body.tools = (activeTools.length ? activeTools : tools).map((t) => ({
-      type: "function",
-      function: {
-        name: t.name,
-        description: isCpuLight ? String(t.description || "").slice(0, 72) : t.description,
-        parameters: t.parameters,
-      },
-    }));
+    if (isCpuLight) {
+      const provided = new Set(tools.map((t) => t.name));
+      const compactActive = COMPACT_OLLAMA_TOOLS.filter((t) => provided.has(t.name));
+      body.tools = (compactActive.length ? compactActive : COMPACT_OLLAMA_TOOLS).map((t) => ({
+        type: "function",
+        function: t,
+      }));
+    } else {
+      body.tools = tools.map((t) => ({
+        type: "function",
+        function: {
+          name: t.name,
+          description: t.description,
+          parameters: t.parameters,
+        },
+      }));
+    }
   }
 
   const controller = new AbortController();
@@ -776,7 +887,7 @@ async function callOllamaProtocol({ endpoint, model, system, messages, tools, ha
           let parsedArgs = {};
           const rawArgs = tc?.function?.arguments;
           if (typeof rawArgs === "string") {
-            try { parsedArgs = JSON.parse(rawArgs); } catch { parsedArgs = { _raw: rawArgs }; }
+            parsedArgs = safeJsonParseRelaxed(rawArgs) ?? { _raw: rawArgs };
           } else if (rawArgs && typeof rawArgs === "object") {
             parsedArgs = rawArgs;
           }
@@ -1059,6 +1170,7 @@ export function createProviderPool({
   customProviders = {},
   enableModalBridge = false,
   modalBillingVerifier = verifyModalPromoStatus,
+  transientCooldownMs = 30_000,
 } = {}) {
   const hardware = detectHardwareProfile();
   const registry = { ...FORGE_PROVIDERS, ...customProviders };
@@ -1428,13 +1540,16 @@ export function createProviderPool({
           tokensIn: reply?.usage?.inputTokens || 0,
           tokensOut: reply?.usage?.outputTokens || 0,
         });
+        const effectiveContextChars = cand.provider === "ollama" && !hardware?.gpu && (hardware?.cpuCores || 4) <= 4
+          ? 16_000
+          : cand.contextChars;
         return {
           ...reply,
           provider: cand.provider,
           model: cand.model,
           costTier: cand.spec.costTier,
           costCategory: costCategoryOf(cand.spec.costTier),
-          contextChars: cand.contextChars,
+          contextChars: effectiveContextChars,
           latencyMs,
           estimatedCostUsd: (cand.spec.costTier === "local" || cand.spec.costTier === "free_api")
             ? 0
@@ -1459,6 +1574,15 @@ export function createProviderPool({
           authBlocked.add(cand.provider);
         } else if (status === 402) {
           cooldownUntil.set(cand.provider, Date.now() + 24 * 3600_000);
+        } else if (!signal?.aborted && (status === 0 || status >= 500) && transientCooldownMs > 0) {
+          const isTimeoutAbort = e?.name === "AbortError" || /aborted|timeout/i.test(String(e?.message || ""));
+          if (!(isTimeoutAbort && (cand.provider === "ollama" || candidates.length === 1))) {
+            // Przejściowa awaria sieci / 5xx / pad serwera: krótki cooldown, żeby kolejna tura nie uderzała znów w martwego dostawcę!
+            cooldownUntil.set(cand.provider, Date.now() + transientCooldownMs);
+            if (cand.provider === "ollama") {
+              ollamaProbeCache = { ...ollamaProbeCache, checkedAt: 0, online: false };
+            }
+          }
         }
         activeMemory?.recordModelOutcome({ provider: cand.provider, model: cand.model, role, ok: false, latencyMs, rateLimited });
         errors.push(`${cand.provider}/${cand.model}: ${e instanceof Error ? e.message : String(e)}`);

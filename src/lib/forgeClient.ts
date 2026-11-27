@@ -86,6 +86,7 @@ export interface ForgeProblem {
 export interface ForgeReview {
   approved: boolean;
   reviewer: string;
+  independentModelReviewed?: boolean;
   summary: string;
   issues: string[];
   secretScanClean: boolean;

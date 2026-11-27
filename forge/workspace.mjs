@@ -326,21 +326,21 @@ export function extractErrorSignature(output, command = "") {
     .trim();
   if (!clean) return { signature: `${command}:empty-failure`, summary: "Polecenie zakończone błędem bez wyjścia.", files: [] };
 
-  const lines = clean.split(/\r?\n/);
+  const lines = clean.split(/\r?\n/).filter((l) => !/node:internal\/|node_modules\//.test(l));
   const errorLines = lines.filter((l) =>
-    /(?:Error:|FAIL\s|AssertionError|TypeError|ReferenceError|SyntaxError|error TS\d+|✗|×|Expected:|Received:|Traceback|panic:)/i.test(l),
+    /(?:Error:|FAIL\s|AssertionError|TypeError|ReferenceError|SyntaxError|error TS\d+|✗|×|not ok \d+|Expected:|expected:|Received:|actual:|!==|===|location:|Traceback|panic:)/i.test(l),
   );
-  const picked = (errorLines.length ? errorLines : lines.slice(-12)).slice(0, 8);
-  const rawSummary = picked.join("\n").slice(0, 900);
+  const picked = (errorLines.length ? errorLines : lines.slice(-12)).slice(0, 14);
+  const rawSummary = picked.join("\n").slice(0, 1100);
 
   const fileMatches = new Set();
-  for (const l of picked) {
+  for (const l of [...picked, ...lines.slice(0, 60)]) {
     const m = l.match(/([A-Za-z0-9_./-]+\.(?:ts|tsx|js|jsx|mjs|cjs|py|go|rs))(?::(\d+))?/);
     if (m && m[1] && !m[1].includes("node_modules")) fileMatches.add(m[1]);
   }
 
   const normalized = picked
-    .slice(0, 3)
+    .slice(0, 4)
     .join(" | ")
     .replace(/\b\d+ms\b/g, "<ms>")
     .replace(/:\d+:\d+/g, ":<line>:<col>")
@@ -604,10 +604,10 @@ export const FORGE_TOOL_SCHEMAS = [
 ];
 
 /** Usuń przypadkowo skopiowane prefiksy numerów linii z `read_file` (np. `12: const x = 1`). */
-function stripAccidentalLineNumbers(block) {
+function stripAccidentalLineNumbers(block, originalContent = "") {
   const lines = String(block ?? "").replace(/\r\n/g, "\n").split("\n");
   const nonEmpty = lines.filter((l) => l.trim().length > 0);
-  if (nonEmpty.length >= 2 && nonEmpty.every((l) => /^\s*\d+:\s/.test(l))) {
+  if (nonEmpty.length >= 1 && nonEmpty.every((l) => /^\s*\d+:\s/.test(l)) && !/^\s*\d+:\s/m.test(String(originalContent))) {
     return lines.map((l) => l.replace(/^\s*\d+:\s/, "")).join("\n");
   }
   return block;
@@ -621,8 +621,8 @@ export function applySearchReplaceEdits(original, edits) {
 
   for (let idx = 0; idx < list.length; idx++) {
     const item = list[idx] || {};
-    const search = stripAccidentalLineNumbers(String(item.search ?? ""));
-    const replace = stripAccidentalLineNumbers(String(item.replace ?? ""));
+    const search = stripAccidentalLineNumbers(String(item.search ?? ""), content);
+    const replace = stripAccidentalLineNumbers(String(item.replace ?? ""), content);
     if (!search) throw new Error(`Edycja #${idx + 1}: pole 'search' nie może być puste.`);
 
     const first = content.indexOf(search);
@@ -650,11 +650,12 @@ export function applySearchReplaceEdits(original, edits) {
       }
       if (ok) matches.push(i);
     }
-    // Fallback 2: unikalne dopasowanie ignorujące wcięcie początkowe (gdy blok ma >=2 niepuste linie)
+    // Fallback 2: unikalne dopasowanie ignorujące wcięcie początkowe (blok >=2 niepuste linie LUB unikalna linia >=12 znaków)
     const trimmedContent = contentLines.map((l) => l.trim());
     const trimmedSearch = normSearch.map((l) => l.trim());
     const nonEmptySearchCount = trimmedSearch.filter(Boolean).length;
-    if (matches.length === 0 && nonEmptySearchCount >= 2) {
+    const allowTrimFallback = nonEmptySearchCount >= 2 || (nonEmptySearchCount === 1 && (trimmedSearch.find(Boolean) || "").length >= 12);
+    if (matches.length === 0 && allowTrimFallback) {
       const trimMatches = [];
       for (let i = 0; i <= trimmedContent.length - trimmedSearch.length; i++) {
         let ok = true;
@@ -696,8 +697,119 @@ export function applySearchReplaceEdits(original, edits) {
   return content;
 }
 
+/** Rozpoznaj, czy ścieżka względna w repozytorium jest plikiem testowym. */
+export function isTestFilePath(relPath = "") {
+  const norm = String(relPath || "").replace(/\\/g, "/").replace(/^\.\//, "");
+  return (
+    /(?:^|\/)(?:test|tests|__tests__|spec|specs)\//i.test(norm)
+    || /\.(?:test|spec)\.[a-z0-9]{1,5}$/i.test(norm)
+    || /(?:^|\/)test_[^/]+\.py$/i.test(norm)
+    || /_test\.go$/i.test(norm)
+  );
+}
+
+/**
+ * Wykryj próby osłabienia lub obejścia testów (usuwanie przypadków testowych / asercji,
+ * dodawanie `.skip`, zamiana asercji na trywialne `assert.ok(true)` / `expect(true).toBe(true)`).
+ */
+export function detectTestWeakening(beforeText = "", afterText = "") {
+  const before = String(beforeText ?? "");
+  const after = String(afterText ?? "");
+  if (before === after) return { weakened: false, reason: "" };
+
+  const count = (txt, re) => (txt.match(re) || []).length;
+  const skipRe = /\b(?:test|it|describe)\.skip\s*\(|\b(?:xit|xtest|xdescribe)\s*\(|@unittest\.skip|pytest\.mark\.skip/g;
+  const beforeSkips = count(before, skipRe);
+  const afterSkips = count(after, skipRe);
+  if (afterSkips > beforeSkips) {
+    return { weakened: true, reason: "Próba wyłączenia testu przez .skip / xit / xtest." };
+  }
+
+  const trivialRe = /\bassert\.(?:ok|equal|strictEqual)\s*\(\s*true\s*(?:,\s*true\s*)?\)|\bexpect\s*\(\s*true\s*\)\.toBe\s*\(\s*true\s*\)/g;
+  if (count(after, trivialRe) > count(before, trivialRe)) {
+    return { weakened: true, reason: "Próba zastąpienia prawdziwej asercji trywialnym assert.ok(true) / expect(true).toBe(true)." };
+  }
+
+  const caseRe = /\b(?:test|it)\s*\(|^\s*def\s+test_|^\s*func\s+Test/gm;
+  const beforeCases = count(before, caseRe);
+  const afterCases = count(after, caseRe);
+  if (beforeCases > 0 && afterCases < beforeCases) {
+    return { weakened: true, reason: `Próba usunięcia przypadków testowych (${beforeCases} → ${afterCases}).` };
+  }
+
+  const assertRe = /\bassert(?:\.\w+)?\s*\(|\bexpect\s*\(|\bself\.assert\w+\s*\(|\bt\.(?:Error|Fatal|Errorf|Fatalf)\s*\(/g;
+  const beforeAsserts = count(before, assertRe);
+  const afterAsserts = count(after, assertRe);
+  if (beforeAsserts > 0 && afterAsserts < beforeAsserts) {
+    return { weakened: true, reason: `Próba usunięcia lub osłabienia asercji testowych (${beforeAsserts} → ${afterAsserts}).` };
+  }
+
+  return { weakened: false, reason: "" };
+}
+
+const TOOL_NAME_ALIASES = {
+  read: "read_file",
+  open_file: "read_file",
+  view_file: "read_file",
+  cat_file: "read_file",
+  patch_file: "edit_file",
+  replace_in_file: "edit_file",
+  str_replace: "edit_file",
+  modify_file: "edit_file",
+  create_file: "write_file",
+  save_file: "write_file",
+  overwrite_file: "write_file",
+  remove_file: "delete_file",
+  bash: "run_command",
+  shell: "run_command",
+  exec: "run_command",
+  run_shell: "run_command",
+  run_tests: "run_command",
+  grep: "search_code",
+  find_in_files: "search_code",
+  done: "finish_task",
+  complete_task: "finish_task",
+};
+
+/** Bezpieczna normalizacja drobnych odchyleń nazw narzędzi i pól z mniejszych modeli LLM (bez osłabiania polityki bezpieczeństwa). */
+export function normalizeToolInvocation(rawName, rawArgs = {}) {
+  const trimmed = String(rawName || "").trim();
+  const canonical = TOOL_NAME_ALIASES[trimmed] || trimmed;
+  const src = rawArgs && typeof rawArgs === "object" && !Array.isArray(rawArgs) ? { ...rawArgs } : {};
+
+  if (!src.path) {
+    const altPath = src.file_path ?? src.filepath ?? src.filename ?? src.file;
+    if (typeof altPath === "string" && altPath.trim()) src.path = altPath.trim();
+  }
+  if (canonical === "edit_file") {
+    if (src.search === undefined) {
+      const altSearch = src.old_str ?? src.old_string ?? src.old_text ?? src.find ?? src.target;
+      if (typeof altSearch === "string") src.search = altSearch;
+    }
+    if (src.replace === undefined) {
+      const altReplace = src.new_str ?? src.new_string ?? src.new_text ?? src.replacement;
+      if (typeof altReplace === "string") src.replace = altReplace;
+    }
+  } else if (canonical === "write_file") {
+    if (src.content === undefined) {
+      const altContent = src.text ?? src.code ?? src.body;
+      if (typeof altContent === "string") src.content = altContent;
+    }
+  } else if (canonical === "run_command") {
+    if (!src.command && typeof src.cmd === "string") src.command = src.cmd;
+    if (!src.command && trimmed === "run_tests") {
+      src.command = "npm";
+      src.args = ["test"];
+    }
+  } else if (canonical === "search_code") {
+    if (!src.query && typeof src.pattern === "string") src.query = src.pattern;
+  }
+
+  return { name: canonical, originalName: trimmed, aliased: canonical !== trimmed, args: src };
+}
+
 /** Utwórz bezpieczne środowisko ACI powiązane z repozytorium i konkretnym runId. */
-export function createForgeWorkspace({ repoRoot, runId, storageDir, protectedPaths = [] }) {
+export function createForgeWorkspace({ repoRoot, runId, storageDir, protectedPaths = [], protectExistingTests = false }) {
   const root = path.resolve(repoRoot);
   const protectedSet = new Set(
     (Array.isArray(protectedPaths) ? protectedPaths : [])
@@ -764,8 +876,10 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir, protectedPat
     return entry;
   };
 
-  async function executeTool(name, rawArgs = {}, execOpts = {}) {
-    const args = rawArgs && typeof rawArgs === "object" ? rawArgs : {};
+  async function executeTool(rawName, rawArgs = {}, execOpts = {}) {
+    const normalized = normalizeToolInvocation(rawName, rawArgs);
+    const name = normalized.name;
+    const args = normalized.args;
     try {
       if (name === "repo_map") {
         const idx = getIndex();
@@ -869,16 +983,36 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir, protectedPat
         const rel = path.relative(root, abs).split(path.sep).join("/");
         assertSafeRepoFile(rel, "edit");
         if (protectedSet.has(rel)) {
+          securityEvents.push({ at: new Date().toISOString(), kind: "test-tampering-blocked", source: rel, detail: "protectedPaths" });
           return { ok: false, error: `BŁĄD POLITYKI: plik "${rel}" jest chroniony przed modyfikacją w specyfikacji zadania — napraw przyczynę w kodzie produkcyjnym zamiast zmieniać test.` };
         }
         if (!fs.existsSync(abs)) {
           return { ok: false, error: `Plik "${rel}" nie istnieje — użyj write_file, aby go utworzyć.` };
+        }
+        if (protectExistingTests && isTestFilePath(rel)) {
+          securityEvents.push({ at: new Date().toISOString(), kind: "test-tampering-blocked", source: rel, detail: "auto-protectExistingTests" });
+          return { ok: false, error: `BŁĄD POLITYKI: plik testowy "${rel}" jest automatycznie chroniony przy naprawie błędu — napraw przyczynę w kodzie źródłowym zamiast modyfikować istniejące testy.` };
         }
         const before = fs.readFileSync(abs, "utf8");
         const edits = Array.isArray(args.edits) && args.edits.length
           ? args.edits
           : [{ search: args.search, replace: args.replace }];
         const after = applySearchReplaceEdits(before, edits);
+        if (after === before) {
+          return {
+            ok: false,
+            path: rel,
+            noOp: true,
+            error: `BŁĄD (no-op): edycja pliku "${rel}" nie wprowadziła żadnej zmiany (fragment replace jest identyczny z search). Wprowadź faktyczną poprawkę logiki zamiast kopiować stary kod.`,
+          };
+        }
+        if (isTestFilePath(rel)) {
+          const weak = detectTestWeakening(before, after);
+          if (weak.weakened) {
+            securityEvents.push({ at: new Date().toISOString(), kind: "test-weakening-blocked", source: rel, detail: weak.reason });
+            return { ok: false, error: `BŁĄD POLITYKI: odrzucono edycję pliku testowego "${rel}" — ${weak.reason} Napraw kod produkcyjny zamiast osłabiać testy.` };
+          }
+        }
         const secrets = scanSecretsInText(after);
         if (secrets.length) {
           return { ok: false, error: `Zablokowano zapis pliku "${rel}": wykryto potencjalny sekret (${secrets.join(", ")}).` };
@@ -913,18 +1047,30 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir, protectedPat
         const rel = path.relative(root, abs).split(path.sep).join("/");
         assertSafeRepoFile(rel, "write");
         if (protectedSet.has(rel)) {
+          securityEvents.push({ at: new Date().toISOString(), kind: "test-tampering-blocked", source: rel, detail: "protectedPaths" });
           return { ok: false, error: `BŁĄD POLITYKI: plik "${rel}" jest chroniony przed modyfikacją w specyfikacji zadania — napraw przyczynę w kodzie produkcyjnym.` };
+        }
+        const existed = fs.existsSync(abs);
+        if (protectExistingTests && existed && isTestFilePath(rel)) {
+          securityEvents.push({ at: new Date().toISOString(), kind: "test-tampering-blocked", source: rel, detail: "auto-protectExistingTests" });
+          return { ok: false, error: `BŁĄD POLITYKI: nie wolno nadpisywać istniejącego pliku testowego "${rel}" podczas naprawy błędu — napraw kod produkcyjny.` };
         }
         const content = String(args.content ?? "");
         if (Buffer.byteLength(content, "utf8") > MAX_READ_BYTES) {
           return { ok: false, error: "Treść pliku przekracza bezpieczny limit 1.5 MB." };
         }
+        const before = existed ? fs.readFileSync(abs, "utf8") : "";
+        if (existed && isTestFilePath(rel)) {
+          const weak = detectTestWeakening(before, content);
+          if (weak.weakened) {
+            securityEvents.push({ at: new Date().toISOString(), kind: "test-weakening-blocked", source: rel, detail: weak.reason });
+            return { ok: false, error: `BŁĄD POLITYKI: odrzucono zapis pliku testowego "${rel}" — ${weak.reason}` };
+          }
+        }
         const secrets = scanSecretsInText(content);
         if (secrets.length) {
           return { ok: false, error: `Zablokowano zapis pliku "${rel}": wykryto potencjalny sekret (${secrets.join(", ")}).` };
         }
-        const existed = fs.existsSync(abs);
-        const before = existed ? fs.readFileSync(abs, "utf8") : "";
         ensureSnapshot(rel, abs);
         atomicWriteFile(abs, content);
         const syntax = quickSyntaxCheck(abs);
@@ -945,7 +1091,12 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir, protectedPat
         const rel = path.relative(root, abs).split(path.sep).join("/");
         assertSafeRepoFile(rel, "delete");
         if (protectedSet.has(rel)) {
+          securityEvents.push({ at: new Date().toISOString(), kind: "test-tampering-blocked", source: rel, detail: "protectedPaths" });
           return { ok: false, error: `BŁĄD POLITYKI: plik "${rel}" jest chroniony przed usunięciem.` };
+        }
+        if (isTestFilePath(rel) && fs.existsSync(abs)) {
+          securityEvents.push({ at: new Date().toISOString(), kind: "test-tampering-blocked", source: rel, detail: "delete-existing-test" });
+          return { ok: false, error: `BŁĄD POLITYKI: usuwanie istniejącego pliku testowego "${rel}" jest zablokowane.` };
         }
         if (!fs.existsSync(abs)) return { ok: false, error: `Plik "${rel}" nie istnieje.` };
         const before = fs.readFileSync(abs, "utf8");
@@ -1010,7 +1161,11 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir, protectedPat
         };
       }
 
-      return { ok: false, error: `Nieznane narzędzie Forge: ${name}` };
+      return {
+        ok: false,
+        unknownTool: true,
+        error: `Nieznane narzędzie Forge: "${name}". Użyj wyłącznie jednego z dozwolonych narzędzi: read_file(path), edit_file(path, search, replace), write_file(path, content), run_command(command, args), search_code(query), list_files(), finish_task(summary).`,
+      };
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }

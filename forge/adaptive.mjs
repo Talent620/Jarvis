@@ -433,6 +433,10 @@ export function scoreCandidateSolution({
   let totalScore = Object.values(breakdown).reduce((a, b) => a + b, 0);
   if (!eligible) totalScore = Math.min(35, totalScore);
 
+  const diffFingerprintByFile = Object.fromEntries(
+    (runState?.modifiedFiles || []).map((m) => [m.path, String(m.diff || `${m.action}:${m.bytes || 0}`)]),
+  );
+
   return {
     candidateId,
     label,
@@ -447,6 +451,7 @@ export function scoreCandidateSolution({
     reviewer: runState?.review?.reviewer || null,
     providersUsed: runState?.providersUsed || [],
     modifiedFiles: (runState?.modifiedFiles || []).map((m) => m.path),
+    diffFingerprintByFile,
     diffLines,
     iterations: runState?.iterations ?? runState?.iteration ?? 0,
     repairCycles: runState?.repairCycle ?? 0,
@@ -478,14 +483,41 @@ export function compareCompetitiveCandidates(scoredList = [], { executionMode = 
   const totalPromoUsd = Number(sorted.reduce((sum, c) => sum + (c.estimatedPromoUsd || 0), 0).toFixed(5));
   const sumDurationMs = sorted.reduce((sum, c) => sum + (c.durationMs || 0), 0);
 
+  // Wykryj sprzeczne rozwiązania między kandydatami (różne zmiany w tych samych plikach lub rozbieżny zestaw plików)
+  let conflictingSolutionsDetected = false;
+  const divergentFiles = [];
+  if (sorted.length >= 2) {
+    const fileSets = sorted.map((c) => new Set(c.modifiedFiles || []));
+    const allFiles = new Set(sorted.flatMap((c) => c.modifiedFiles || []));
+    for (const f of allFiles) {
+      const presentCount = fileSets.filter((s) => s.has(f)).length;
+      const hashes = new Set(
+        sorted
+          .filter((c) => (c.modifiedFiles || []).includes(f))
+          .map((c) => c.diffFingerprintByFile?.[f] || `${c.candidateId}:${c.diffLines}:${c.score}`),
+      );
+      if (presentCount < sorted.length || hashes.size > 1) {
+        divergentFiles.push(f);
+      }
+    }
+    conflictingSolutionsDetected = divergentFiles.length > 0;
+  }
+
   let parallelWorthIt = false;
   let verdictReason = "";
+  let conflictResolution = null;
   if (!winner) {
     parallelWorthIt = false;
     verdictReason = `Żaden z ${sorted.length} kandydatów nie przeszedł twardej weryfikacji testowej — nic nie scalono.`;
+    if (conflictingSolutionsDetected) {
+      conflictResolution = `Wykryto rozbieżne zmiany w ${divergentFiles.join(", ")}, lecz żaden kandydat nie zaliczył testów — repo bazowe pozostało nietknięte.`;
+    }
   } else if (eligibleOnes.length === 1 && sorted.length >= 2) {
     parallelWorthIt = true;
     verdictReason = `Tylko 1 z ${sorted.length} kandydatów (${winner.label}, ${winner.score}/100) zaliczył wszystkie testy — tryb konkurencyjny uratował wynik tam, gdzie drugi model/strategia zawiódł.`;
+    if (conflictingSolutionsDetected) {
+      conflictResolution = `Sprzeczne rozwiązania rozstrzygnięto deterministycznie: tylko ${winner.label} przeszedł testy; odrzucono niezweryfikowany wariant (${runnerUp?.label || "kandydat 2"}) bez mieszania patchy.`;
+    }
   } else if (eligibleOnes.length >= 2 && runnerUp) {
     const scoreGap = winner.score - runnerUp.score;
     const savedPromo = (runnerUp.estimatedPromoUsd || 0) - (winner.estimatedPromoUsd || 0);
@@ -493,6 +525,9 @@ export function compareCompetitiveCandidates(scoredList = [], { executionMode = 
     verdictReason = parallelWorthIt
       ? `Obaj kandydaci przeszli testy; zwycięzca ${winner.label} (${winner.score}/100) wyraźnie wyprzedził ${runnerUp.label} (${runnerUp.score}/100) jakością lub kosztem zasobów.`
       : `Obaj kandydaci przeszli testy o zbliżonej jakości (${winner.score} vs ${runnerUp.score}) — dla tej klasy zadań pojedynczy model z eskalacją jest bardziej ekonomiczny.`;
+    if (conflictingSolutionsDetected) {
+      conflictResolution = `Oba modele zaliczyły testy ze sprzecznymi zmianami w [${divergentFiles.join(", ")}]. Wdrożono wyłącznie zwycięski wariant ${winner.label} (${winner.score}/100 vs ${runnerUp.score}/100) bez łączenia sprzecznych diffów; odrzucony wariant zachowano w raporcie.`;
+    }
   } else {
     verdictReason = `Zwycięzca: ${winner.label} (${winner.score}/100).`;
   }
@@ -510,6 +545,9 @@ export function compareCompetitiveCandidates(scoredList = [], { executionMode = 
     eligibleCount: eligibleOnes.length,
     totalCandidates: sorted.length,
     parallelWorthIt,
+    conflictingSolutionsDetected,
+    divergentFiles,
+    conflictResolution,
     verdictReason,
     ranking: sorted,
   };
