@@ -1,54 +1,73 @@
 # JARVIS — PRZEWODNIK PRZEKAZANIA I ODBIORU NA FIZYCZNYM UBUNTU (PHYSICAL MACHINE HANDOFF)
 
-- **Data przygotowania:** 2026-11-27
-- **Plik transferowy:** `~/JARVIS-TRANSFER/JARVIS-FINAL-ACCEPTANCE.bundle` (rozmiar: `5 813 996` bajtów / `5.6M`)
-- **Oczekiwana suma SHA256:** `bf3bae98cc76bff1fde8fe3e7c7c0fedd170a88c9d98273504e0e0c829dfd0da`
-- **Gałęzie zawarte w bundle:**
-  - `main`: `8bc8e0388539c41adad1729ae796c998becfefe8`
-  - `feat/jarvis-forge-evolution`: `a6b8bd6ae39ccdb07de2496c0e7882a274863952` (`22` commity ponad `main`, pełna historia)
-- **Status weryfikacji źródłowej:** `git bundle verify` = **`okay`** (`The bundle records a complete history`), `sha256sum` = **`OK`**
+- **Plik transferowy:** `JARVIS-FINAL-ACCEPTANCE.bundle` (źródło: `/home/antigravity/JARVIS-TRANSFER/`)
+- **Kanoniczne źródło sum i commitów:** `TRANSFER-README.txt` (zawsze kopiowane razem z plikiem `.bundle`)
+- **Zakres gałęzi w pakiecie:** `main` oraz `feat/jarvis-forge-evolution` (pełna historia Git)
 
-> **Uwaga dotycząca `TRANSFER-README.txt`:** plik `~/JARVIS-TRANSFER/TRANSFER-README.txt` został zweryfikowany — wszystkie sumy SHA256, rozmiary i SHA commitów są w 100% spójne z bundle. Niniejszy przewodnik rozszerza go o twardą detekcję maszyny fizycznej, izolowaną instalację `npm ci` w `~/Jarvis-Acceptance`, obowiązkowy audyt RAM/dysku/GPU przed pobraniem modeli oraz diagnostykę Electron / IPC / Ollama / Forge.
+> **ZASADA JEDNEGO ŹRÓDŁA PRAWDY (SINGLE SOURCE OF TRUTH):**
+> 1. **`TRANSFER-README.txt` jest jedynym źródłem** aktualnej sumy `SHA256`, dokładnego rozmiaru pliku `JARVIS-FINAL-ACCEPTANCE.bundle`, oczekiwanych SHA commitów `main` i `feat/jarvis-forge-evolution` oraz liczby commitów gałęzi roboczej ponad `main`.
+> 2. Niniejszy przewodnik **celowo nie zawiera wpisanych na stałe sum SHA256 ani hashy commitów**, aby nigdy nie rozjeżdżał się z kolejnymi wersjami pakietu.
+> 3. **Nie wolno kopiować starych ani historycznych wartości** do komend — zawsze odczytuj bieżące wartości bezpośrednio z `TRANSFER-README.txt` dostarczonego razem z danym plikiem `.bundle`.
 
 ---
 
-## 1. Przeniesienie pliku na fizyczny komputer Ubuntu
+## 1. Przeniesienie pakietu na fizyczny komputer Ubuntu
 
-Skopiuj plik `JARVIS-FINAL-ACCEPTANCE.bundle` (oraz opcjonalnie `TRANSFER-README.txt` i ten przewodnik) ze środowiska źródłowego `/home/antigravity/JARVIS-TRANSFER/` do katalogu `~/Downloads/` na fizycznym komputerze Ubuntu.
+Skopiuj **oba obowiązkowe pliki** ze środowiska źródłowego `/home/antigravity/JARVIS-TRANSFER/` do katalogu `~/Downloads/` na fizycznym komputerze Ubuntu:
+1. `JARVIS-FINAL-ACCEPTANCE.bundle`
+2. `TRANSFER-README.txt` *(obowiązkowy — jedyne źródło aktualnego SHA256, rozmiaru i SHA commitów)*
+3. Opcjonalnie (dla wygody offline): `JARVIS_PHYSICAL_HANDOFF_GUIDE.md`
 
 ### Wybierz najwygodniejszą metodę transferu
 
 - **Metoda A — Pobieranie przez przeglądarkę / IDE (jeśli pracujesz z panelem plików Devbox):**
-  1. Otwórz ścieżkę `/home/antigravity/JARVIS-TRANSFER/JARVIS-FINAL-ACCEPTANCE.bundle` w eksploratorze plików i pobierz plik na dysk lokalny.
-  2. Zapisz go jako `~/Downloads/JARVIS-FINAL-ACCEPTANCE.bundle`.
+  1. Pobierz z `/home/antigravity/JARVIS-TRANSFER/` pliki `JARVIS-FINAL-ACCEPTANCE.bundle` oraz `TRANSFER-README.txt`.
+  2. Zapisz je w `~/Downloads/` na fizycznym komputerze Ubuntu.
 - **Metoda B — Pendrive USB:**
-  1. Zapisz `JARVIS-FINAL-ACCEPTANCE.bundle` na pendrive (wymaga zaledwie ~6 MB wolnego miejsca; bezpieczne na FAT32/exFAT/ext4).
+  1. Skopiuj `JARVIS-FINAL-ACCEPTANCE.bundle` i `TRANSFER-README.txt` na pendrive (wymaga ~6 MB wolnego miejsca; bezpieczne na FAT32/exFAT/ext4).
   2. Po podłączeniu pendrive'a na fizycznym Ubuntu wykonaj:
      ```bash
      mkdir -p ~/Downloads
      cp /media/"$USER"/*/JARVIS-FINAL-ACCEPTANCE.bundle ~/Downloads/
+     cp /media/"$USER"/*/TRANSFER-README.txt ~/Downloads/
      ```
 - **Metoda C — Transfer sieciowy `scp` / `rsync` (jeśli masz dostęp SSH do maszyny źródłowej):**
   ```bash
   mkdir -p ~/Downloads
-  scp uzytkownik@host-zrodlowy:/home/antigravity/JARVIS-TRANSFER/JARVIS-FINAL-ACCEPTANCE.bundle ~/Downloads/
+  scp uzytkownik@host-zrodlowy:/home/antigravity/JARVIS-TRANSFER/JARVIS-FINAL-ACCEPTANCE.bundle \
+      uzytkownik@host-zrodlowy:/home/antigravity/JARVIS-TRANSFER/TRANSFER-README.txt \
+      ~/Downloads/
   ```
 
-### Obowiązkowa weryfikacja po przeniesieniu (na fizycznym Ubuntu)
+### Obowiązkowa weryfikacja po przeniesieniu (na podstawie `TRANSFER-README.txt`)
 
 ```bash
 cd ~/Downloads
-ls -lh JARVIS-FINAL-ACCEPTANCE.bundle
-echo "bf3bae98cc76bff1fde8fe3e7c7c0fedd170a88c9d98273504e0e0c829dfd0da  JARVIS-FINAL-ACCEPTANCE.bundle" | sha256sum -c -
+
+# 1. Odczytaj aktualne wartości kanoniczne z TRANSFER-README.txt (NIE używaj starych hashy!)
+test -f TRANSFER-README.txt || { echo "⛔ Brak TRANSFER-README.txt w ~/Downloads/ — skopiuj go razem z bundle!"; exit 1; }
+head -n 30 TRANSFER-README.txt
+
+# 2. Pobierz aktualną sumę SHA256 i dokładny rozmiar bezpośrednio z TRANSFER-README.txt
+EXPECTED_SHA256="$(awk -F': *' '/^SHA256/{print $2; exit}' TRANSFER-README.txt | tr -d '\r ')"
+EXPECTED_SIZE="$(awk -F': *' '/^Rozmiar/{print $2; exit}' TRANSFER-README.txt | awk '{print $1}')"
+ACTUAL_SIZE="$(stat -c '%s' JARVIS-FINAL-ACCEPTANCE.bundle)"
+
+test -n "$EXPECTED_SHA256" && test -n "$EXPECTED_SIZE" || { echo "⛔ Nie udało się odczytać SHA256/Rozmiar z TRANSFER-README.txt!"; exit 1; }
+echo "Rozmiar z README: ${EXPECTED_SIZE} B | rozmiar rzeczywisty: ${ACTUAL_SIZE} B"
+test "$ACTUAL_SIZE" = "$EXPECTED_SIZE" || { echo "❌ Rozmiar pliku nie zgadza się z TRANSFER-README.txt!"; exit 1; }
+echo "${EXPECTED_SHA256}  JARVIS-FINAL-ACCEPTANCE.bundle" | sha256sum -c -
+
+# 3. Wyświetl referencje w bundle i porównaj je z wartościami w TRANSFER-README.txt
 git bundle list-heads JARVIS-FINAL-ACCEPTANCE.bundle
 ```
 
 **Oczekiwany wynik:**
-- `JARVIS-FINAL-ACCEPTANCE.bundle: OK`
-- `8bc8e0388539c41adad1729ae796c998becfefe8 refs/heads/main`
-- `a6b8bd6ae39ccdb07de2496c0e7882a274863952 refs/heads/feat/jarvis-forge-evolution`
+- `Rozmiar z README` == `rozmiar rzeczywisty` (co do bajtu),
+- `JARVIS-FINAL-ACCEPTANCE.bundle: OK`,
+- oba SHA wypisane przez `git bundle list-heads` dla `refs/heads/main` i `refs/heads/feat/jarvis-forge-evolution` są identyczne z wartościami w `TRANSFER-README.txt`.
 
-Jeśli suma SHA256 się nie zgadza — **NIE kontynuuj**, pobierz plik ponownie.
+Jeśli suma SHA256, rozmiar lub refs nie zgadzają się z `TRANSFER-README.txt` — **NIE kontynuuj**, pobierz oba pliki ponownie z tego samego eksportu.
 
 ---
 
@@ -61,16 +80,17 @@ bash -c '
 set -u
 HOST="$(hostname)"
 VIRT="$(systemd-detect-virt 2>/dev/null || echo unknown)"
-CHASSIS="$(hostnamectl --static >/dev/null 2>&1 && hostnamectl | awk -F: "/Chassis/{gsub(/^[ \t]+/,\"\",\$2); print \$2}" || echo unknown)"
+CHASSIS="$(hostnamectl 2>/dev/null | sed -n "s/^[[:space:]]*Chassis:[[:space:]]*//p" | head -n 1)"
+[ -n "$CHASSIS" ] || CHASSIS="unknown"
 DMI_PROD="$(cat /sys/class/dmi/id/product_name 2>/dev/null || echo unavailable)"
 DMI_VEND="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || echo unavailable)"
 KERNEL="$(uname -a)"
 
-echo "Hostname          : $HOST"
+echo "Hostname           : $HOST"
 echo "systemd-detect-virt: $VIRT"
-echo "Chassis           : $CHASSIS"
-echo "DMI Vendor/Product: $DMI_VEND / $DMI_PROD"
-echo "Kernel            : $KERNEL"
+echo "Chassis            : $CHASSIS"
+echo "DMI Vendor/Product : $DMI_VEND / $DMI_PROD"
+echo "Kernel             : $KERNEL"
 
 FAIL=0
 if [ "$VIRT" != "none" ]; then
@@ -113,11 +133,13 @@ node -v && npm -v && git --version
 
 ## 3. Import bundle do osobnego katalogu roboczego (`~/Jarvis-Acceptance`)
 
-Poniższe polecenia tworzą całkowicie odizolowaną kopię roboczą `~/Jarvis-Acceptance`, **nie dotykając** żadnego istniejącego repozytorium Jarvisa na komputerze użytkownika.
+Poniższe polecenia tworzą całkowicie odizolowaną kopię roboczą `~/Jarvis-Acceptance`, **nie dotykając** żadnego istniejącego repozytorium Jarvisa na komputerze użytkownika. Wszystkie oczekiwane SHA są odczytywane bezpośrednio z `~/Downloads/TRANSFER-README.txt`.
 
 ```bash
-# 1. Sprawdź, że katalog docelowy jeszcze nie istnieje (zero nadpisywania!)
+# 1. Sprawdź, że katalog docelowy jeszcze nie istnieje i że oba pliki transferowe są obecne
 test ! -e ~/Jarvis-Acceptance || { echo "⛔ ~/Jarvis-Acceptance już istnieje — wybierz inną nazwę lub sprawdź zawartość!"; exit 1; }
+test -f ~/Downloads/JARVIS-FINAL-ACCEPTANCE.bundle && test -f ~/Downloads/TRANSFER-README.txt \
+  || { echo "⛔ Brak JARVIS-FINAL-ACCEPTANCE.bundle lub TRANSFER-README.txt w ~/Downloads/!"; exit 1; }
 
 # 2. Utwórz puste repozytorium i zweryfikuj bundle z kompletną historią
 git init ~/Jarvis-Acceptance
@@ -132,19 +154,28 @@ git fetch ~/Downloads/JARVIS-FINAL-ACCEPTANCE.bundle \
 # 4. Przełącz się na gałąź odbiorczą (bez dotykania main!)
 git checkout feat/jarvis-forge-evolution
 
-# 5. Zweryfikuj dokładne SHA, wspólną historię i czystość drzewa
+# 5. Zweryfikuj dokładne SHA względem TRANSFER-README.txt oraz czystość drzewa
+EXPECTED_MAIN="$(awk -F': *' '/^[[:space:]]*-[[:space:]]*main[[:space:]]*:/{print $2; exit}' ~/Downloads/TRANSFER-README.txt | tr -d '\r ')"
+EXPECTED_FEAT="$(awk -F': *' '/^[[:space:]]*-[[:space:]]*feat\/jarvis-forge-evolution[[:space:]]*:/{print $2; exit}' ~/Downloads/TRANSFER-README.txt | tr -d '\r ')"
+ACTUAL_HEAD="$(git rev-parse HEAD)"
+ACTUAL_MAIN="$(git rev-parse main)"
+
 git status --short --branch
-echo "HEAD : $(git rev-parse HEAD)"
-echo "main : $(git rev-parse main)"
-echo "ahead: $(git rev-list --count main..feat/jarvis-forge-evolution) commitów"
+echo "HEAD : $ACTUAL_HEAD (z TRANSFER-README.txt: $EXPECTED_FEAT)"
+echo "main : $ACTUAL_MAIN (z TRANSFER-README.txt: $EXPECTED_MAIN)"
+echo "ahead: $(git rev-list --count main..feat/jarvis-forge-evolution) commitów ponad main"
+test -n "$EXPECTED_MAIN" && test -n "$EXPECTED_FEAT" \
+  && test "$ACTUAL_HEAD" = "$EXPECTED_FEAT" \
+  && test "$ACTUAL_MAIN" = "$EXPECTED_MAIN" \
+  && echo "✅ Zaimportowane HEAD i main są w 100% zgodne z TRANSFER-README.txt." \
+  || { echo "❌ Rozbieżność SHA względem TRANSFER-README.txt!"; exit 1; }
 git log --oneline -8
 ```
 
-**Oczekiwane wartości:**
-- `HEAD`: `a6b8bd6ae39ccdb07de2496c0e7882a274863952`
-- `main`: `8bc8e0388539c41adad1729ae796c998becfefe8`
-- `ahead`: `22` commity
-- `git status --short --branch`: `## feat/jarvis-forge-evolution` (czyste drzewo)
+**Oczekiwany wynik:**
+- `git bundle verify` kończy się komunikatem `... is okay` (`The bundle records a complete history`),
+- `ACTUAL_HEAD == EXPECTED_FEAT` oraz `ACTUAL_MAIN == EXPECTED_MAIN` (odczytane z `TRANSFER-README.txt`),
+- `git status --short --branch` pokazuje `## feat/jarvis-forge-evolution` (czyste drzewo robocze).
 
 *(Opcjonalnie, wyłącznie jeśli kiedyś zdecydujesz się dodać zdalny `origin` — bez `push`: `git remote add origin https://github.com/Talent620/Jarvis.git`.)*
 
@@ -182,7 +213,7 @@ npm ci
 node -e "console.log(require('electron'))"
 ls -lh node_modules/electron/dist/electron
 
-# 5. Build produkcyjny UI (wymagany m.in. przez forge:accept krok 6 i Electron)
+# 5. Build produkcyjny UI (wymagany przez forge:accept krok 6 oraz electron/main.cjs -> dist/index.html)
 npm run build
 ```
 
@@ -234,7 +265,7 @@ Jeśli na maszynie nie ma odpowiedniego modelu i nie chcesz go pobierać teraz �
 
 ### Krok 6.1 — Pełna weryfikacja repozytorium na fizycznym sprzęcie
 
-> **Ważne:** jeśli masz <= 12 GB RAM, uruchamiaj `npm run memory:check` gdy Ollama nie trzyma załadowanych wag w RAM (albo po `ollama stop <model>`), aby uniknąć presji pamięci podczas 377 plików Vitest.
+> **Ważne:** jeśli masz <= 12 GB RAM, uruchamiaj `npm run memory:check` gdy Ollama nie trzyma załadowanych wag w RAM (albo po `ollama stop <model>`), aby uniknąć presji pamięci podczas pełnego pakietu Vitest.
 
 ```bash
 cd ~/Jarvis-Acceptance
@@ -245,10 +276,10 @@ npm run test:e2e:xvfb
 ```
 
 Zapisz kod wyjścia (`echo $?`) dla każdego polecenia. Oczekiwane wyniki:
-- `memory:check`: `secret-scan=PASS lint=PASS test=PASS (377/377, 3170/3170) build=PASS`
+- `memory:check`: exit `0`, `secret-scan=PASS lint=PASS test=PASS build=PASS` (`0` błędów, wszystkie pliki testowe PASS)
 - `tools:verify`: exit `0`
-- `memory:verify`: exit `0` (`17/17` zdarzeń)
-- `test:e2e:xvfb`: `10/10 PASS`, `0` błędów CORS, `0` wyjątków JS
+- `memory:verify`: exit `0` (pliki generowane nienaruszone, wszystkie zdarzenia poprawne)
+- `test:e2e:xvfb`: exit `0`, `10/10 PASS`, `0` błędów CORS, `0` wyjątków JS
 
 ### Krok 6.2 — Oficjalny odbiór Forge (`npm run forge:accept`)
 
@@ -270,8 +301,9 @@ npm run forge:accept
 
 ### Krok 6.3 — Natywny Electron i bezpośredni test IPC `jarvis:forge-ensure-local`
 
-1. **Upewnij się, że ręczny serwer Forge NIE działa na porcie 3220** (aby przetestować realny auto-start przez Electron IPC):
+1. **Upewnij się, że istnieje zbudowany `dist/index.html` (z kroku 4.2 `npm run build`) oraz że ręczny serwer Forge NIE działa na porcie 3220** (aby przetestować realny auto-start przez Electron IPC):
    ```bash
+   test -f ~/Jarvis-Acceptance/dist/index.html || { echo "⛔ Brak dist/index.html — uruchom najpierw npm run build!"; exit 1; }
    ss -tlnp | grep 3220 || echo "Port 3220 wolny — gotowy do testu auto-startu IPC"
    ```
 2. **Uruchom natywny proces Electron:**
@@ -295,7 +327,7 @@ npm run forge:accept
    ```bash
    ps aux | grep -E "electron|forge/server.mjs" | grep -v grep
    curl -fsS http://127.0.0.1:3220/api/health
-   ls -la ~/.config/jarvis-ai-assistant/jarvis-forge/runtime/connection.json
+   ls -la "${XDG_CONFIG_HOME:-$HOME/.config}/jarvis-ai-assistant/jarvis-forge/runtime/connection.json"
    ```
 6. **Otwórz `ForgeWorkspace` w oknie Electron:**
    - Naciśnij **`Ctrl+K`**, wpisz `forge` i wybierz **„Jarvis Forge — autonomiczne programowanie”**.
@@ -397,8 +429,8 @@ npm run forge:accept
 ### 7.3 IPC `jarvis:forge-ensure-local`
 | Objaw / Błąd | Przyczyna | Rozwiązanie |
 |---|---|---|
-| `window.jarvisDesktop` jest `undefined` | Aplikacja otwarta w zwykłej przeglądarce zamiast w oknie Electron albo błąd ładowania `electron/preload.cjs` | Uruchom `npm run electron:dev` i sprawdź terminal pod kątem błędów `preload.cjs`. |
-| `{ ok: false, error: "forbidden" }` | Wywołanie IPC z nieautoryzowanego pochodzenia (ochrona `isTrustedIpc` w `electron/main.cjs:465`) | Wywołuj wyłącznie z głównego okna aplikacji (Vite dev lub lokalny `dist/index.html`). |
+| `window.jarvisDesktop` jest `undefined` | Aplikacja otwarta w zwykłej przeglądarce zamiast w oknie Electron albo błąd ładowania `electron/preload.cjs` | Uruchom `npm run electron:dev` (po wcześniejszym `npm run build`) i sprawdź terminal pod kątem błędów `preload.cjs`. |
+| `{ ok: false, error: "forbidden" }` | Wywołanie IPC z nieautoryzowanego pochodzenia (ochrona `isTrustedIpc` w `electron/main.cjs:465`) | Wywołuj wyłącznie z głównego okna aplikacji Electron (`file://.../dist/index.html`). |
 | `{ ok: false, error: "Brak modułu forge/server.mjs w instalacji." }` | Niekompletna kopia repo lub uszkodzona ścieżka `forge/server.mjs` | Sprawdź `ls -la ~/Jarvis-Acceptance/forge/server.mjs` i `git status`. |
 | `{ ok: false, error: "JARVIS Forge zakończył pracę (kod ...)" }` | Błąd uruchomienia `forge/server.mjs` przez `ELECTRON_RUN_AS_NODE=1` | Uruchom ręcznie `node forge/server.mjs` w terminalu, aby zobaczyć pełny stacktrace błędu. |
 
