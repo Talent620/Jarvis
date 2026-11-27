@@ -747,6 +747,10 @@ export async function decideAutopilotMission({
       approvedAt: now,
     },
   };
+  saved.status = "queued";
+  saved.phase = "queued";
+  saved.verdict = null;
+  saved.pauseReason = null;
   saved.pendingDecision = null;
   saved.updatedAt = now;
   store.saveRun(saved);
@@ -754,7 +758,7 @@ export async function decideAutopilotMission({
     at: now,
     runId,
     type: "approval_granted",
-    phase: "executing",
+    phase: "queued",
     role: "autopilot",
     ok: true,
     actionLabel: `Użytkownik zatwierdził wykonanie misji (${kind}) — wznawiam wykonanie.`,
@@ -807,6 +811,26 @@ export async function resumeAutopilotMission({
     err.code = "APPROVAL_REQUIRED";
     throw err;
   }
+
+  const now = nowIso();
+  saved.status = "queued";
+  saved.phase = "queued";
+  saved.verdict = null;
+  saved.pauseReason = null;
+  saved.pendingDecision = null;
+  saved.updatedAt = now;
+  store.saveRun(saved);
+  const ev = {
+    at: now,
+    runId,
+    type: "resumed",
+    phase: "queued",
+    role: "autopilot",
+    ok: true,
+    actionLabel: "Wznowiono zadanie z ostatniego checkpointu.",
+  };
+  store.appendEvent(runId, ev);
+  onEvent?.(ev, saved);
 
   const run = await executeForgeRun({
     repoRoot: root,

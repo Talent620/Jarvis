@@ -542,8 +542,12 @@ export async function cancelForgeRun(runId: string, repoPath?: string): Promise<
   await forgeFetch(`/api/runs/${encodeURIComponent(runId)}/cancel${q}`, { method: "POST", body: "{}" });
 }
 
-export async function resumeForgeRun(runId: string, repoPath?: string, costPolicy: ForgeCostPolicy = "zero_cost"): Promise<void> {
-  await forgeFetch(`/api/runs/${encodeURIComponent(runId)}/resume`, {
+export async function resumeForgeRun(
+  runId: string,
+  repoPath?: string,
+  costPolicy: ForgeCostPolicy = "zero_cost",
+): Promise<{ ok: boolean; runId: string; resumed?: boolean; status?: string; run?: ForgeRunState }> {
+  return forgeFetch(`/api/runs/${encodeURIComponent(runId)}/resume`, {
     method: "POST",
     body: JSON.stringify({ repoPath, costPolicy, providerKeys: collectJarvisProviderKeys(costPolicy) }),
   });

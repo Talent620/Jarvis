@@ -220,7 +220,15 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
         setRuns((prev) => [res.run as ForgeRunState, ...prev.filter((r) => r.id !== res.run?.id)]);
       } else {
         const fetched = await getForgeRun(activeRun.id, activeRun.repoRoot).catch(() => null);
-        if (fetched) setActiveRun(fetched.run);
+        if (fetched) {
+          const next = decision === "approve" && !isRunActive(fetched.run.status) && fetched.run.status === "waiting_approval"
+            ? { ...fetched.run, status: "queued" as const, phase: "queued", verdict: null, pendingDecision: null }
+            : fetched.run;
+          setActiveRun(next);
+          setRuns((prev) => [next, ...prev.filter((r) => r.id !== next.id)]);
+        } else if (decision === "approve") {
+          setActiveRun((cur) => (cur ? { ...cur, status: "queued", phase: "queued", verdict: null, pendingDecision: null } : cur));
+        }
       }
       setNotice(
         decision === "approve"
@@ -236,30 +244,60 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
 
   const handlePause = async () => {
     if (!activeRun) return;
-    await pauseForgeRun(activeRun.id, activeRun.repoRoot);
-    setNotice("Zlecono wstrzymanie — bieżący krok zapisze checkpoint.");
+    try {
+      await pauseForgeRun(activeRun.id, activeRun.repoRoot);
+      setNotice("Zlecono wstrzymanie — bieżący krok zapisze checkpoint.");
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Nie udało się zlecić wstrzymania zadania.");
+    }
   };
 
   const handleCancel = async () => {
     if (!activeRun) return;
-    await cancelForgeRun(activeRun.id, activeRun.repoRoot);
-    setNotice("Wysłano sygnał przerwania (Kill-Switch).");
+    try {
+      await cancelForgeRun(activeRun.id, activeRun.repoRoot);
+      setNotice("Wysłano sygnał przerwania (Kill-Switch).");
+      const updated = await getForgeRun(activeRun.id, activeRun.repoRoot).catch(() => null);
+      if (updated) {
+        setActiveRun(updated.run);
+        setRuns((prev) => [updated.run, ...prev.filter((r) => r.id !== updated.run.id)]);
+      }
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Nie udało się przerwać zadania.");
+    }
   };
 
   const handleResume = async () => {
     if (!activeRun) return;
     setNotice("Wznawiam zadanie od ostatniego checkpointu…");
-    await resumeForgeRun(activeRun.id, activeRun.repoRoot, costPolicy);
-    const updated = await getForgeRun(activeRun.id, activeRun.repoRoot).catch(() => null);
-    if (updated) setActiveRun(updated.run);
+    try {
+      const res = await resumeForgeRun(activeRun.id, activeRun.repoRoot, costPolicy);
+      const next = res.run || (await getForgeRun(activeRun.id, activeRun.repoRoot).catch(() => null))?.run;
+      const effective: ForgeRunState = next
+        ? (isRunActive(next.status) || next.status === "completed" || next.status === "failed"
+          ? next
+          : { ...next, status: "queued", phase: "queued", verdict: null, pendingDecision: null, pauseReason: null })
+        : { ...activeRun, status: "queued", phase: "queued", verdict: null, pendingDecision: null, pauseReason: null };
+      setActiveRun(effective);
+      setRuns((prev) => [effective, ...prev.filter((r) => r.id !== effective.id)]);
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Nie udało się wznowić zadania z checkpointu.");
+    }
   };
 
   const handleRollback = async () => {
     if (!activeRun) return;
-    const res = await rollbackForgeRunClient(activeRun.id, activeRun.repoRoot);
-    setNotice(`Wycofano zmiany: przywrócono ${res.rollback.restoredCount} plik(ów).`);
-    const updated = await getForgeRun(activeRun.id, activeRun.repoRoot).catch(() => null);
-    if (updated) setActiveRun(updated.run);
+    try {
+      const res = await rollbackForgeRunClient(activeRun.id, activeRun.repoRoot);
+      setNotice(`Wycofano zmiany: przywrócono ${res.rollback.restoredCount} plik(ów).`);
+      const updated = await getForgeRun(activeRun.id, activeRun.repoRoot).catch(() => null);
+      if (updated) {
+        setActiveRun(updated.run);
+        setRuns((prev) => [updated.run, ...prev.filter((r) => r.id !== updated.run.id)]);
+      }
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Nie udało się wycofać zmian.");
+    }
   };
 
   const activeBusy = isRunActive(activeRun?.status);

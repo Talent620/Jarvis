@@ -500,7 +500,7 @@ export async function executeForgeRun({
   }
 
   const protectedPaths = extractProtectedPaths(state.goal);
-  const goalWithoutNegative = state.goal.replace(/(?:do\s+not|don't|never|nie)\s+(?:modify|edit|change|touch|zmieniaj|edytuj)(?:(?![,;\n]|\.(?:\s|$)).)*/gi, " ");
+  const goalWithoutNegative = state.goal.replace(/(?:do\s+not|don't|never|nie)\s+(?:modify|edit|change|touch|fix|patch|zmieniaj|edytuj|modyfikuj|poprawiaj|naprawiaj|ruszaj)(?:(?![,;\n]|\.(?:\s|$)).)*/gi, " ");
   const goalRequestsTestEdits = /\b(add\s+(?:a\s+|new\s+|unit\s+|regression\s+)?test|write\s+(?:a\s+|new\s+)?test|create\s+(?:a\s+|new\s+)?test|update\s+test|modify\s+test|dodaj\s+(?:brakując\w*\s+)?test|napisz\s+test|utwórz\s+test|zaktualizuj\s+test|testy\s+jednostkowe|from\s+scratch|greenfield|od\s+zera)\b|\b(?:add|create|write|update|modify|edit|implement|extend|dodaj|utwórz|napisz|zaktualizuj|zmień|rozszerz)\b[^\n]{0,160}(?:test|tests|__tests__)\//i.test(goalWithoutNegative);
   const protectExistingTests = !goalRequestsTestEdits;
 
@@ -511,7 +511,11 @@ export async function executeForgeRun({
     protectedPaths,
     protectExistingTests,
   });
-  const isReadOnlyGoal = /^\s*(?:przeanalizuj|oceń|zbadaj\s+tylko|audyt\s+read-?only|wyjaśnij)\b/i.test(state.goal);
+  const goalRequestsCodeChanges =
+    /(?:^|[\s,.;:!?(\[-])(?:popraw\w*|napraw\w*|zmie[nń]\w*|zaktualizuj\w*|dodaj\w*|usu[nń]\w*|napisz\w*|zaimplementuj\w*|zrefaktoruj\w*|utw[oó]rz\w*|stw[oó]rz\w*|wdro[zż]\w*|przebuduj\w*|ulepsz\w*|zoptymalizuj\w*|fix(?:es|ed|ing)?|repair\w*|patch\w*|edit\w*|modif\w*|updat\w*|add(?:s|ed|ing)?|implement\w*|creat\w*|refactor\w*|writ\w*|remov\w*|delet\w*|upgrad\w*|migrat\w*)(?=$|[\s,.;:!?)}\]-])/i.test(goalWithoutNegative);
+  const isReadOnlyGoal =
+    /^\s*(?:przeanalizuj|oce[nń]|zbadaj\s+tylko|audyt\s+read-?only|wyja[sś]nij|analy[sz]e|explain|audit\s+only|read-?only)(?=$|[\s,.;:!?)\]-])/i.test(state.goal)
+    && !goalRequestsCodeChanges;
   const isCpuLightHost = Boolean(providerPool?.hardware && !providerPool.hardware.gpu && (providerPool.hardware.cpuCores || 4) <= 4);
   let activeContextChars = isCpuLightHost ? 9500 : 20_000;
 

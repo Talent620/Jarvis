@@ -581,6 +581,8 @@ describe("Phase 4 — 5 realnych scenariuszy akceptacyjnych end-to-end (HTTP/SSE
 
     const pool = createProviderPool({ memory: createExperienceMemory(repo), env: {} });
     let callCount = 0;
+    let markCall2Started: (() => void) | null = null;
+    const call2Started = new Promise<void>((resolve) => { markCall2Started = resolve; });
     pool.registerCustomProvider("local_slow", {
       costTier: "local",
       invoke: async ({ role, signal }) => {
@@ -590,6 +592,7 @@ describe("Phase 4 — 5 realnych scenariuszy akceptacyjnych end-to-end (HTTP/SSE
           return { content: "", toolCalls: [{ id: "r1", name: "read_file", arguments: { path: "src/math.mjs" } }] };
         }
         if (callCount === 2) {
+          markCall2Started?.();
           // Symulacja długiego wywołania przerywanego przez Kill-Switch / limit czasu
           await new Promise((resolve, reject) => {
             const t = setTimeout(resolve, 4000);
@@ -610,7 +613,7 @@ describe("Phase 4 — 5 realnych scenariuszy akceptacyjnych end-to-end (HTTP/SSE
     const srv = createForgeServer({ defaultRepoRoot: repo, port: 0, providerPool: pool, runtimeDir: "" });
     const started = await srv.start();
     try {
-      // 1. Uruchom asynchronicznie i przerwij (cancel) w trakcie 2. wywołania
+      // 1. Uruchom asynchronicznie i przerwij (cancel) dokładnie w trakcie 2. wywołania LLM
       const launch = await apiJson(started.url, started.token, "/api/autopilot/run", "POST", {
         goal: "Fix small bug in src/math.mjs so mul multiplies",
         repoPath: repo,
@@ -620,7 +623,7 @@ describe("Phase 4 — 5 realnych scenariuszy akceptacyjnych end-to-end (HTTP/SSE
       const runId = launch.data.runId as string;
       expect(runId).toBeTruthy();
 
-      await new Promise((r) => setTimeout(r, 150));
+      await Promise.race([call2Started, new Promise((r) => setTimeout(r, 2500))]);
       const cancelRes = await apiJson(started.url, started.token, `/api/runs/${runId}/cancel?path=${encodeURIComponent(repo)}`, "POST", {});
       expect(cancelRes.status).toBe(200);
 

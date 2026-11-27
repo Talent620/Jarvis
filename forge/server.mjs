@@ -456,7 +456,8 @@ export function createForgeServer({
           sendJson(req, res, 200, { ok: result.ok, verdict: result.verdict, status: result.status, run: result.run });
           return;
         }
-        sendJson(req, res, 202, { ok: true, runId, decision: "approve", resumed: true });
+        const refreshed = createForgeStore(targetRepo).loadRun(runId);
+        sendJson(req, res, 202, { ok: true, runId, decision: "approve", resumed: true, status: refreshed?.status || "queued", run: refreshed });
         return;
       }
 
@@ -644,6 +645,10 @@ export function createForgeServer({
             });
             return;
           }
+          if (activeRuns.has(runId)) {
+            sendJson(req, res, 409, { ok: false, error: `Zadanie "${runId}" jest już uruchomione.` });
+            return;
+          }
           const controller = new AbortController();
           const runControl = { controller, pauseRequested: false, repoRoot: repoForResume, useWorktree: false };
           activeRuns.set(runId, runControl);
@@ -664,7 +669,8 @@ export function createForgeServer({
             sendJson(req, res, 200, { ok: true, run: finalRes.run, verdict: finalRes.verdict });
             return;
           }
-          sendJson(req, res, 202, { ok: true, runId, resumed: true });
+          const refreshed = createForgeStore(repoForResume).loadRun(runId);
+          sendJson(req, res, 202, { ok: true, runId, resumed: true, status: refreshed?.status || "queued", run: refreshed });
           return;
         }
       }

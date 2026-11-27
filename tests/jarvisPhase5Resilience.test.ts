@@ -548,5 +548,168 @@ describe("Phase 5 — Failover martwego dostawcy, zachowanie worktree przy pauzi
     expect(reviewerPromptSeen).toContain("OCHRONA TESTÓW");
     expect(reviewerPromptSeen).not.toContain("BRAKUJĄCE: test/sum.test.mjs");
   });
+
+  it("9. Codzienne polskie polecenie 'Przeanalizuj moduł faktur, znajdź błędy i popraw je. Nie zmieniaj testów...' NIE jest read-only (blokuje no-op PASS i edycję testów), a HTTP /resume natychmiast zwraca aktywny status", async () => {
+    const repo = makeGitRepo({
+      "package.json": JSON.stringify({ name: "p5-daily-invoice", type: "module", scripts: { test: "node --test" } }),
+      "src/invoice.mjs": [
+        "export function calculateInvoice(subtotal, discountPercent = 0, vatRate = 0.23) {",
+        "  const net = subtotal * (1 + discountPercent / 100);",
+        "  const vat = Math.round(net * vatRate * 100) / 100;",
+        "  return { net: Math.round(net * 100) / 100, vat, total: Math.round((net + vat) * 100) / 100 };",
+        "}",
+        "",
+      ].join("\n"),
+      "test/invoice.test.mjs": [
+        "import test from 'node:test';",
+        "import assert from 'node:assert/strict';",
+        "import { calculateInvoice } from '../src/invoice.mjs';",
+        "test('10% discount reduces net and VAT', () => {",
+        "  const r = calculateInvoice(100, 10, 0.23);",
+        "  assert.equal(r.net, 90);",
+        "  assert.equal(r.vat, 20.7);",
+        "  assert.equal(r.total, 110.7);",
+        "});",
+        "",
+      ].join("\n"),
+    });
+
+    const pool = createProviderPool({ memory: createExperienceMemory(repo), env: {}, ollamaUrl: "http://127.0.0.1:1" });
+    let devTurn = 0;
+    let sawTestProtectionError = false;
+    pool.registerCustomProvider("daily_dev", {
+      costTier: "local",
+      rolePriority: { architect: 80, developer: 95, debugger: 95, reviewer: 10 },
+      invoke: async ({ role, messages }) => {
+        if (role === "architect") {
+          return { content: JSON.stringify({ summary: "Fix invoice discount sign", steps: [{ id: "s1", title: "Fix src/invoice.mjs", role: "developer" }] }), toolCalls: [] };
+        }
+        devTurn += 1;
+        // Tura 1: agent próbuje fałszywego finish_task BEZ żadnych edycji -> MUSI zostać odrzucony przez change-check!
+        if (devTurn === 1) {
+          return { content: "", toolCalls: [{ id: "d1", name: "finish_task", arguments: { summary: "Przeanalizowałem moduł faktur, wszystko wygląda dobrze" } }] };
+        }
+        // Tura 2: po odrzuceniu no-op agent próbuje zmodyfikować test -> MUSI zostać zablokowany przez protectExistingTests!
+        if (devTurn === 2) {
+          return { content: "", toolCalls: [{ id: "d2", name: "edit_file", arguments: { path: "test/invoice.test.mjs", search: "assert.equal(r.net, 90);", replace: "assert.equal(r.net, 110);" } }] };
+        }
+        // Tura 3: agent czyta odmowę polityki i naprawia prawdziwy błąd w src/invoice.mjs
+        if (devTurn === 3) {
+          const lastMsg = messages[messages.length - 1]?.content || "";
+          if (lastMsg.includes("BŁĄD POLITYKI")) sawTestProtectionError = true;
+          return { content: "", toolCalls: [{ id: "d3", name: "edit_file", arguments: { path: "src/invoice.mjs", search: "1 + discountPercent / 100", replace: "1 - discountPercent / 100" } }] };
+        }
+        return { content: "", toolCalls: [{ id: "d4", name: "finish_task", arguments: { summary: "Naprawiono znak rabatu w src/invoice.mjs i zweryfikowano testami" } }] };
+      },
+    });
+    pool.registerCustomProvider("daily_reviewer", {
+      costTier: "local",
+      rolePriority: { architect: 10, developer: 10, debugger: 10, reviewer: 99 },
+      invoke: async () => ({ content: JSON.stringify({ approved: true, summary: "Poprawka zweryfikowana niezależnie", issues: [] }), toolCalls: [] }),
+    });
+
+    // 9a. Dokładne codzienne polecenie z odbioru końcowego: zaczyna się od „Przeanalizuj”, ale żąda „i popraw je”
+    const dailyGoal = "Przeanalizuj moduł faktur, znajdź błędy i popraw je. Nie zmieniaj testów. Na koniec uruchom testy i pokaż mi wynik";
+    const res = await executeAutopilotMission({
+      goal: dailyGoal,
+      repoRoot: repo,
+      providerPool: pool,
+      probeLocal: false,
+      useWorktree: false,
+    });
+    expect(res.ok).toBe(true);
+    expect(res.verdict).toBe("PASS");
+    // Tura 1 (no-op finish_task) została ODRZUCONA przez change-check -> musiała nastąpić próba naprawy!
+    expect(res.run?.attemptHistory?.some((a: { ok: boolean; errorSignature: string | null }) => !a.ok && a.errorSignature === "no-files-modified")).toBe(true);
+    expect(sawTestProtectionError).toBe(true);
+    expect(res.run?.securityEvents?.some((e: { kind: string }) => e.kind === "test-tampering-blocked")).toBe(true);
+    expect(res.run?.review?.independentModelReviewed).toBe(true);
+    expect(fs.readFileSync(path.join(repo, "src/invoice.mjs"), "utf8")).toContain("1 - discountPercent / 100");
+    expect(fs.readFileSync(path.join(repo, "test/invoice.test.mjs"), "utf8")).toContain("assert.equal(r.net, 90);");
+
+    // 9b. Natomiast czyste zapytanie read-only („Nie zmieniaj żadnych plików”) nadal może zakończyć się bez edycji plików
+    let roTurn = 0;
+    const roPool = createProviderPool({ memory: createExperienceMemory(repo), env: {}, ollamaUrl: "http://127.0.0.1:1" });
+    roPool.registerCustomProvider("ro_model", {
+      costTier: "local",
+      invoke: async ({ role }) => {
+        if (role === "architect") return { content: JSON.stringify({ summary: "Audit only", steps: [{ id: "s1", title: "Inspect", role: "developer" }] }), toolCalls: [] };
+        if (role === "reviewer") return { content: JSON.stringify({ approved: true, summary: "OK", issues: [] }), toolCalls: [] };
+        roTurn += 1;
+        return { content: "", toolCalls: [{ id: `ro${roTurn}`, name: "finish_task", arguments: { summary: "Raport analizy read-only" } }] };
+      },
+    });
+    const roRes = await executeForgeRun({
+      goal: "Przeanalizuj moduł faktur i wyjaśnij jak działa. Nie zmieniaj żadnych plików.",
+      repoRoot: repo,
+      providerPool: roPool,
+      costPolicy: "zero_cost",
+    });
+    expect(roRes.status).toBe("completed");
+    expect(roRes.modifiedFiles).toHaveLength(0);
+
+    // 9c. HTTP POST /api/runs/:id/resume (bez wait:true) natychmiast zwraca status 'queued' (aktywny) -> UI nie zamarza na 'paused'
+    const { createForgeServer } = await import("../forge/server.mjs");
+    const repoHttp = makeGitRepo({
+      "package.json": JSON.stringify({ name: "p5-http-resume", type: "module", scripts: { test: "node --test" } }),
+      "src/v.mjs": "export const v = 1;\n",
+      "test/v.test.mjs": "import test from 'node:test'; import assert from 'node:assert/strict'; import { v } from '../src/v.mjs'; test('v', () => assert.equal(v, 2));\n",
+    });
+    const httpPool = createProviderPool({ memory: createExperienceMemory(repoHttp), env: {}, ollamaUrl: "http://127.0.0.1:1" });
+    let hCall = 0;
+    httpPool.registerCustomProvider("http_sim", {
+      costTier: "local",
+      invoke: async ({ role }) => {
+        if (role === "architect") {
+          return { content: JSON.stringify({ summary: "Fix v", steps: [{ id: "s1", title: "edit v", role: "developer" }], targetFiles: ["src/v.mjs"] }), toolCalls: [] };
+        }
+        if (role === "reviewer") return { content: JSON.stringify({ approved: true, summary: "OK", issues: [] }), toolCalls: [] };
+        hCall += 1;
+        if (hCall === 1) return { content: "", toolCalls: [{ id: "h1", name: "edit_file", arguments: { path: "src/v.mjs", search: "v = 1", replace: "v = 2" } }] };
+        return { content: "", toolCalls: [{ id: "h2", name: "finish_task", arguments: { summary: "v=2" } }] };
+      },
+    });
+    // Najpierw zatrzymujemy zadanie na checkpoincie (paused)
+    let hitPause = false;
+    const pausedRun = await executeForgeRun({
+      goal: "Napraw v na 2 w src/v.mjs",
+      repoRoot: repoHttp,
+      providerPool: httpPool,
+      shouldPause: () => hitPause,
+      onEvent: (ev: { type: string; tool?: string }) => { if (ev.type === "tool_call" && ev.tool === "edit_file") hitPause = true; },
+    });
+    expect(pausedRun.status).toBe("paused");
+
+    const srv = createForgeServer({ defaultRepoRoot: repoHttp, port: 0, runtimeDir: null, providerPool: httpPool });
+    const started = await srv.start();
+    try {
+      const resumeRes = await fetch(`${started.url}/api/runs/${pausedRun.id}/resume`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Forge-Token": started.token, "X-Forge-Client": "jarvis-ui" },
+        body: JSON.stringify({ repoPath: repoHttp }),
+      });
+      expect(resumeRes.status).toBe(202);
+      const resumeJson = await resumeRes.json();
+      expect(resumeJson.ok).toBe(true);
+      expect(["queued", "scouting", "executing", "verifying", "reviewing", "completed"]).toContain(resumeJson.status);
+      expect(resumeJson.run?.status).not.toBe("paused");
+
+      // Poczekaj aż wznowione zadanie przejdzie do completed
+      let finalRun = resumeJson.run;
+      for (let i = 0; i < 40 && finalRun?.status !== "completed"; i += 1) {
+        await new Promise((r) => setTimeout(r, 50));
+        const poll = await fetch(`${started.url}/api/runs/${pausedRun.id}?path=${encodeURIComponent(repoHttp)}`, {
+          headers: { "X-Forge-Token": started.token, "X-Forge-Client": "jarvis-ui" },
+        });
+        const pollJson = await poll.json();
+        finalRun = pollJson.run;
+      }
+      expect(finalRun?.status).toBe("completed");
+      expect(finalRun?.verdict).toBe("PASS");
+    } finally {
+      await srv.close();
+    }
+  });
 });
+
 
