@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-11-27T12:13:57.798Z",
+  "taskId": "jarvis-forge-phase4-autopilot",
+  "agent": "antigravity",
+  "branch": "feat/jarvis-forge-evolution",
+  "startCommit": "300ef5b",
+  "endCommit": "UNCOMMITTED",
+  "summary": "Faza 4 (Autopilot Integration): audyt 10 modułów, forge/autopilot.mjs (zero-config bez duplikowania Adaptive Intelligence), maxDurationMs + attemptHistory + waiting_approval Safety Gate + niezmienialność budżetu, naprawa mostka ADR/checks i izolacji pamięci multi-repo, narzędzia Core (autopilot_*), UI z kartą decyzji, 5 scenariuszy E2E + Chromium UI E2E + docs/JARVIS_PHASE4_AUTOPILOT.md (0 USD).",
+  "changedFiles": [
+    "docs/JARVIS_PHASE4_AUTOPILOT.md",
+    "forge/autopilot.mjs",
+    "forge/cli.mjs",
+    "forge/engine.mjs",
+    "forge/memory.mjs",
+    "forge/providers.mjs",
+    "forge/server.mjs",
+    "project-memory/CURRENT_STATE.md",
+    "project-memory/reports/build.json",
+    "project-memory/reports/lint.json",
+    "project-memory/reports/secret-scan.json",
+    "project-memory/reports/test.json",
+    "roject-memory/CURRENT_STATE.json",
+    "src/components/ForgeWorkspace.tsx",
+    "src/lib/forgeClient.ts",
+    "src/lib/navIntent.ts",
+    "src/lib/permissions.ts",
+    "src/lib/selfManifest.ts",
+    "src/lib/toolSelector.ts",
+    "src/lib/tools.ts",
+    "src/styles/index.css",
+    "tests/jarvisPhase4Autopilot.test.ts"
+  ],
+  "commands": [
+    {
+      "command": "npm run memory:check",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run test:e2e:xvfb",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run tools:verify",
+      "exitCode": 0
+    },
+    {
+      "command": "node scripts/forge-ubuntu-acceptance.mjs --skip-live-task",
+      "exitCode": 0
+    },
+    {
+      "command": "xvfb-run playwright phase4-ui-verify.py",
+      "exitCode": 0
+    }
+  ],
+  "testResults": [
+    {
+      "check": "secret-scan",
+      "status": "PASS",
+      "source": "report",
+      "command": "node scripts/secret-scan.mjs --all",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/secret-scan.json",
+      "reportCommit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
+      "reportDigest": "4654f03d810d5bae6b5b94f79c7a73fa359ad1f0e991661425e1584874b29487",
+      "finishedAt": "2026-11-27T12:07:00.226Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto."
+    },
+    {
+      "check": "lint",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/lint.json",
+      "reportCommit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
+      "reportDigest": "8525ad224db58d64410fbc59c7eaacf6d96b97a929e060aee88001d5a4b912f4",
+      "finishedAt": "2026-11-27T12:07:24.424Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · ✖ 2 problems (0 errors, 2 warnings)"
+    },
+    {
+      "check": "test",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm test",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/test.json",
+      "reportCommit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
+      "reportDigest": "2bc2086f55ff452ff5bc5c1b11a1af940140c31ee7aa29af996605d3d964a177",
+      "finishedAt": "2026-11-27T12:12:46.003Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · Test Files  376 passed (376) · Tests  3161 passed (3161)"
+    },
+    {
+      "check": "build",
+      "status": "PASS",
+      "source": "report",
+      "command": "npm run build",
+      "exitCode": 0,
+      "reportPath": "project-memory/reports/build.json",
+      "reportCommit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
+      "reportDigest": "59785848da51c16cc3f6a1fe647d9f040d4206868b93edec63f692f0f48e1aaf",
+      "finishedAt": "2026-11-27T12:13:30.929Z",
+      "summary": "kod wyjścia 0 dla bieżącego stanu · built in 16.80s"
+    }
+  ],
+  "problems": [],
+  "hypotheses": [],
+  "nextStep": "Skonfigurować darmowy klucz Kat. B lub lokalną Ollamę na docelowym Ubuntu i uruchomić npm run forge:accept; po recenzji właściciela zdecydować o merge feat/jarvis-forge-evolution do main.",
+  "relatedDecisions": [
+    "ADR-0009"
+  ],
+  "redactions": 0
+}

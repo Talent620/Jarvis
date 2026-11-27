@@ -4,23 +4,29 @@
   "command": "npm run lint",
   "available": true,
   "unavailableReason": null,
-  "startedAt": "2026-11-25T21:40:31.702Z",
-  "finishedAt": "2026-11-25T21:40:57.088Z",
-  "durationMs": 25386,
-  "commit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
+  "startedAt": "2026-11-27T12:07:00.326Z",
+  "finishedAt": "2026-11-27T12:07:24.424Z",
+  "durationMs": 24098,
+  "commit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
   "branch": "feat/jarvis-forge-evolution",
   "worktreeDirty": true,
-  "worktreeFingerprint": "7748d4ce1d9ad0d6dc9ca24ccccba420b9b9c4840f0bb87216bdfd445f524e0c",
+  "worktreeFingerprint": "82c07ec55b8b9d7ea4846726dcead2cfe64467dc49e535a9bc063cfbc77c909f",
   "exitCode": 0,
   "signal": null,
   "timedOut": false,
   "spawnError": null,
   "summary": {
-    "problems": null
+    "problems": "✖ 2 problems (0 errors, 2 warnings)"
   },
   "outputTail": [
+    "/home/antigravity/Talent620/Jarvis/src/lib/forgeClient.ts",
+    "  489:7  warning  'sess' is never reassigned. Use 'const' instead  prefer-const",
+    "/home/antigravity/Talent620/Jarvis/tests/jarvisPhase4Autopilot.test.ts",
+    "  28:3  warning  'decideAutopilotMission' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars",
+    "✖ 2 problems (0 errors, 2 warnings)",
+    "  0 errors and 1 warning potentially fixable with the `--fix` option.",
     "npm notice run jarvis-ai-assistant@2.0.0 lint",
     "npm notice run eslint ."
   ],
-  "logPath": "project-memory/reports/logs/lint-20261125T214031Z.log"
+  "logPath": "project-memory/reports/logs/lint-20261127T120700Z.log"
 }

@@ -1,24 +1,23 @@
 {
   "schemaVersion": 1,
   "generatedBy": "scripts/sync-project-state.mjs",
-  "generatedAt": "2026-11-25T21:47:34.636Z",
+  "generatedAt": "2026-11-27T12:13:58.088Z",
   "notice": "PLIK GENEROWANY — nie edytuj ręcznie. Odśwież: npm run memory:sync",
   "git": {
-    "commit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
-    "shortCommit": "aff119c",
+    "commit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
+    "shortCommit": "0a321bf",
     "branch": "feat/jarvis-forge-evolution",
     "dirty": true,
     "changes": [
       "M project-memory/CURRENT_STATE.json",
       " M project-memory/CURRENT_STATE.md",
-      " M project-memory/journal/failed-attempts.md",
       " M project-memory/reports/build.json",
       " M project-memory/reports/lint.json",
       " M project-memory/reports/secret-scan.json",
       " M project-memory/reports/test.json",
-      "?? project-memory/events/20261125T214734320Z-antigravity-jarvis-forge-adaptive-phase3.json"
+      "?? project-memory/events/20261127T121357798Z-antigravity-jarvis-forge-phase4-autopilot.json"
     ],
-    "worktreeFingerprint": "7748d4ce1d9ad0d6dc9ca24ccccba420b9b9c4840f0bb87216bdfd445f524e0c"
+    "worktreeFingerprint": "82c07ec55b8b9d7ea4846726dcead2cfe64467dc49e535a9bc063cfbc77c909f"
   },
   "repository": {
     "status": "OK",
@@ -40,7 +39,7 @@
   "modules": [
     {
       "dir": "tests",
-      "files": 375
+      "files": 376
     },
     {
       "dir": "src/lib",
@@ -56,11 +55,11 @@
     },
     {
       "dir": "docs",
-      "files": 35
+      "files": 36
     },
     {
       "dir": "project-memory",
-      "files": 33
+      "files": 34
     },
     {
       "dir": "(root)",
@@ -79,12 +78,12 @@
       "files": 15
     },
     {
-      "dir": "proxy",
+      "dir": "forge",
       "files": 13
     },
     {
-      "dir": "forge",
-      "files": 12
+      "dir": "proxy",
+      "files": 13
     },
     {
       "dir": "QA",
@@ -167,7 +166,7 @@
       "Trwałe Cele Wieloetapowe (voiceCognition + agentPlanner + goalRuntime + resultVerifier)",
       "Android Phone Use Agent + RiskGuard (Check-then-Act, zakaz pól haseł)",
       "OMNI-PILOT & Frontier Desktop Computer Use (Refleks <30ms, Hybryda AT-SPI2/UIA + Vision [0..1000], Dual-Track Strażnik Ekranu, Diagnostyka OS, RiskGuard + Kill-Switch Ctrl+Alt+X)",
-      "JARVIS FORGE (Autonomiczne środowisko programistyczne: Repo Map, chirurgiczny SEARCH/REPLACE, pula 14 darmowych/lokalnych modeli 0 USD, pamięć doświadczeń, checkpointy i rollback)",
+      "JARVIS FORGE + AUTOPILOT ORCHESTRATOR (Jedno polecenie zero-config: Adaptive Intelligence, dynamiczne zespoły, 14 darmowych/lokalnych modeli 0 USD, git worktree, pamięć projektu/ADR, bramka zgody waiting_approval, testy, cross-model review, checkpointy i rollback)",
       "Bi-Temporal Core Memory + MCP Bridge"
     ],
     "tools": [
@@ -187,6 +186,10 @@
       "android_tap_id",
       "android_type",
       "android_ui_tree",
+      "autopilot_decide",
+      "autopilot_rollback",
+      "autopilot_run",
+      "autopilot_status",
       "backup_data",
       "business_next_step",
       "business_status",
@@ -429,6 +432,21 @@
   ],
   "recentCommits": [
     {
+      "hash": "0a321bf",
+      "date": "2026-11-27T12:06:51Z",
+      "subject": "feat(ui,core): zero-config Autopilot UX, decision gate, Core tools, 5 E2E scenarios & report"
+    },
+    {
+      "hash": "d12c556",
+      "date": "2026-11-27T12:06:51Z",
+      "subject": "feat(autopilot): Phase 4 Autopilot Orchestrator, timeout/history, safety gate & memory fixes"
+    },
+    {
+      "hash": "300ef5b",
+      "date": "2026-11-25T21:47:35Z",
+      "subject": "docs(memory): record jarvis-forge-adaptive-phase3 live benchmarks, FA-008 & verified CURRENT_STATE"
+    },
+    {
       "hash": "aff119c",
       "date": "2026-11-25T21:40:23Z",
       "subject": "feat(forge): Adaptive Intelligence (5-tier routing & escalation), dynamic minimal teams, competitive worktree tournament, delayed-billing guard & live-hardening"
@@ -462,30 +480,15 @@
       "hash": "72b9c9c",
       "date": "2026-11-25T18:36:11Z",
       "subject": "feat(ui): Jarvis Forge minimalist autonomous workspace (<Modal>, live SSE, 10-point status, diffs, rollback, memory & models)"
-    },
-    {
-      "hash": "d3b528b",
-      "date": "2026-11-25T18:28:28Z",
-      "subject": "feat(forge): autonomous coding engine (repo-intel, ACI workspace, 14-provider free-first mesh, experience memory, server/CLI & Electron manager)"
-    },
-    {
-      "hash": "dd78a3f",
-      "date": "2026-11-25T18:22:14Z",
-      "subject": "feat(forge): ADR-0009 architecture audit & core autonomy fixes (system_* RISK, :free guard, Retry-After, BLOCKED_ARGS)"
-    },
-    {
-      "hash": "8bc8e03",
-      "date": "2026-11-25T10:07:31Z",
-      "subject": "docs(memory): record production-release-main event & verified CURRENT_STATE on main"
     }
   ],
   "checks": {
     "secret-scan": {
       "command": "node scripts/secret-scan.mjs --all",
       "exitCode": 0,
-      "finishedAt": "2026-11-25T21:40:31.610Z",
-      "commit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
-      "logPath": "project-memory/reports/logs/secret-scan-20261125T214031Z.log",
+      "finishedAt": "2026-11-27T12:07:00.226Z",
+      "commit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
+      "logPath": "project-memory/reports/logs/secret-scan-20261127T120659Z.log",
       "summary": {
         "result": "Skan sekretów: czysto."
       },
@@ -496,11 +499,11 @@
     "lint": {
       "command": "npm run lint",
       "exitCode": 0,
-      "finishedAt": "2026-11-25T21:40:57.088Z",
-      "commit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
-      "logPath": "project-memory/reports/logs/lint-20261125T214031Z.log",
+      "finishedAt": "2026-11-27T12:07:24.424Z",
+      "commit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
+      "logPath": "project-memory/reports/logs/lint-20261127T120700Z.log",
       "summary": {
-        "problems": null
+        "problems": "✖ 2 problems (0 errors, 2 warnings)"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -509,12 +512,12 @@
     "test": {
       "command": "npm test",
       "exitCode": 0,
-      "finishedAt": "2026-11-25T21:46:19.612Z",
-      "commit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
-      "logPath": "project-memory/reports/logs/test-20261125T214057Z.log",
+      "finishedAt": "2026-11-27T12:12:46.003Z",
+      "commit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
+      "logPath": "project-memory/reports/logs/test-20261127T120724Z.log",
       "summary": {
-        "testFiles": "Test Files  375 passed (375)",
-        "tests": "Tests  3144 passed (3144)"
+        "testFiles": "Test Files  376 passed (376)",
+        "tests": "Tests  3161 passed (3161)"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -523,11 +526,11 @@
     "build": {
       "command": "npm run build",
       "exitCode": 0,
-      "finishedAt": "2026-11-25T21:47:02.418Z",
-      "commit": "aff119c46fb19935a5e5bb24382af2b404d7b092",
-      "logPath": "project-memory/reports/logs/build-20261125T214619Z.log",
+      "finishedAt": "2026-11-27T12:13:30.929Z",
+      "commit": "0a321bf48d7bae35fd94a1079d2f1b0f938c8928",
+      "logPath": "project-memory/reports/logs/build-20261127T121246Z.log",
       "summary": {
-        "built": "built in 14.96s"
+        "built": "built in 16.80s"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -724,10 +727,18 @@
     ]
   },
   "events": {
-    "total": 14,
-    "valid": 14,
+    "total": 15,
+    "valid": 15,
     "invalid": [],
     "recent": [
+      {
+        "file": "project-memory/events/20261127T121357798Z-antigravity-jarvis-forge-phase4-autopilot.json",
+        "timestamp": "2026-11-27T12:13:57.798Z",
+        "agent": "antigravity",
+        "taskId": "jarvis-forge-phase4-autopilot",
+        "endCommit": "UNCOMMITTED",
+        "nextStep": "Skonfigurować darmowy klucz Kat. B lub lokalną Ollamę na docelowym Ubuntu i uruchomić npm run forge:accept; po recenzji właściciela zdecydować o merge feat/jarvis-forge-evolution do main."
+      },
       {
         "file": "project-memory/events/20261125T214734320Z-antigravity-jarvis-forge-adaptive-phase3.json",
         "timestamp": "2026-11-25T21:47:34.320Z",
@@ -799,20 +810,12 @@
         "taskId": "omni-frontier",
         "endCommit": "UNCOMMITTED",
         "nextStep": "Recenzja PR feat/omni-frontier (ADR-0003/0004/0005) i test na żywym pulpicie Linux/Windows; następnie merge do main + build Linux/Windows/APK lub lokalny daemon audio <300ms."
-      },
-      {
-        "file": "project-memory/events/20261124T202842588Z-antigravity-omni-pilot.json",
-        "timestamp": "2026-11-24T20:28:42.588Z",
-        "agent": "antigravity",
-        "taskId": "omni-pilot",
-        "endCommit": "UNCOMMITTED",
-        "nextStep": "Recenzja PR feat/omni-pilot (ADR-0004) i test na żywym pulpicie Linux X11/Wayland lub Windows; po akceptacji merge do main, build Linux (.AppImage/.deb) i APK oraz kolejny etap (AT-SPI2/UIA + lokalny Silero VAD/Whisper)."
       }
     ]
   },
   "nextRecommendedStep": {
-    "from": "project-memory/events/20261125T214734320Z-antigravity-jarvis-forge-adaptive-phase3.json",
-    "text": "Na fizycznym Ubuntu przetestować Adaptive Intelligence z prawdziwym darmowym API Kat. B (np. Gemini/Cerebras/Mistral) + lokalną Ollamą 7B-14B na GPU (npm run forge:accept), naprawić OOM L4 w deploy/modal_brain.py i ocenić gotowość gałęzi feat/jarvis-forge-evolution."
+    "from": "project-memory/events/20261127T121357798Z-antigravity-jarvis-forge-phase4-autopilot.json",
+    "text": "Skonfigurować darmowy klucz Kat. B lub lokalną Ollamę na docelowym Ubuntu i uruchomić npm run forge:accept; po recenzji właściciela zdecydować o merge feat/jarvis-forge-evolution do main."
   },
   "decisions": [
     {
@@ -857,5 +860,5 @@
     }
   ],
   "failedAttempts": 8,
-  "integrity": "15aae6b963ae3a8179ce43b9456b0181770eb6a979a5fb99cd93f778a6583b1e"
+  "integrity": "8c88bdf63868e1c70654dc3c3f7603d6c040289cec3daced4607200151d4c5b4"
 }
