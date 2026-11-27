@@ -33,14 +33,16 @@
 | `f2ba49b` | `docs(forge): add Phase 5 Real Autonomy report and FA-009 live Ollama findings` |
 | `8867109` | `docs(memory): record jarvis-forge-phase5-real-autonomy event & verified CURRENT_STATE (377/377, 3169/3169)` |
 | `ce42434` | `fix(forge,ui): fix compound analyze-and-fix read-only bug, HTTP/UI resume SSE race & Scenario 4 cancel sync` |
-| *(kolejny commit)* | `docs(acceptance): add final Phase 5 closeout acceptance report (docs/JARVIS_FINAL_ACCEPTANCE.md)` |
+| `eb3a254` | `docs(acceptance): add final Phase 5 closeout acceptance report (docs/JARVIS_FINAL_ACCEPTANCE.md)` |
+| `89cc850` | `fix(forge): remove redundant regex escape in engine.mjs (ESLint no-useless-escape)` |
+| *(kolejny commit)* | `docs(acceptance): update closeout commit chain & final memory:check reference` |
 | *(końcowy commit)* | `docs(memory): record jarvis-forge-phase5-closeout-acceptance event & verified CURRENT_STATE` |
 
 ---
 
 ## B. Wyniki kontroli
 
-### B.1 Weryfikacja deterministyczna, budowanie i testy UI na kodzie po poprawkach (`ce42434`)
+### B.1 Weryfikacja deterministyczna, budowanie i testy UI na kodzie po poprawkach (`ce42434` / `89cc850`)
 
 | Kontrola | Polecenie / Źródło | Wynik | Twardy dowód |
 |---|---|---|---|
@@ -51,7 +53,7 @@
 | **E2E przeglądarka + Xvfb + X11** | `npm run test:e2e:xvfb` | **`PASS`** | **10/10 PASS**, `0` błędów CORS, `0` wyjątków JS (z jawną informacją o braku binarki Electron w VM) |
 | **Żywa sonda UI `ForgeWorkspace` w Chrome (CDP)** | Prawdziwy `forge/server.mjs` + Vite + Google Chrome (Xvfb) | **`PASS`** | Otwarcie przez `Ctrl+K`, polskie polecenie z §5, widoczny cel/model/postęp/przyciski `Pauza` i `Przerwij` → `PAUSED` bez fałszywego sukcesu → kliknięcie `▶ Wznów z checkpointu` → żywa aktualizacja SSE do `Zakończono sukcesem (PASS)`, diff `src/invoice.mjs`, `1/1 PASS`, `(niezależny cross-model ✓)`, `↩ Cofnij zmiany`, karta `waiting_approval` dla `git push origin main`, **`0` wyjątków JS** |
 | **Odbiór Ubuntu kroki 1–6 na `ce42434`** | `node scripts/forge-ubuntu-acceptance.mjs --skip-live-task` | **`PASS` (4 PASS, 3 WARN, 0 FAIL)** | PASS: hardware, daemon security (`403` bez klienta / `Origin:null`), pause/resume/rollback, `dist/` build; WARN: brak binarki Electron w VM, daemon Ollama zatrzymany na czas Vitest, krok 7 pominięty (zweryfikowany na żywo w `task-5269`) |
-| **Pełna bramka repo (`memory:check`)** | `npm run memory:check` (`secret-scan`, `lint`, pełny Vitest **377/377 plików · 3170/3170 testów**, `build`) + `npm run memory:verify` | **Uruchamiane na czystym drzewie natychmiast po commicie niniejszego raportu** | Historyczny punkt bazowy `f2ba49b` (`task-5423.log`): `secret-scan=PASS`, `lint=PASS (0 errors, 2 warnings)`, `test=PASS (377/377, 3169/3169, 333 s)`, `build=PASS (41 s)`. Świeży wynik dla finalnego HEAD z `ce42434` zapisywany jest w `project-memory/CURRENT_STATE.md` i `project-memory/reports/*.json`. |
+| **Pełna bramka repo (`memory:check`)** | `npm run memory:check` (`secret-scan`, `lint`, pełny Vitest **377/377 plików · 3170/3170 testów**, `build`) + `npm run memory:verify` | **Zweryfikowane na `eb3a254` (test `377/377 · 3170/3170 PASS`, build `PASS`, secret-scan `PASS`; 1 błąd ESLint `no-useless-escape` w `forge/engine.mjs:515` naprawiony w `89cc850`), powtórzone w całości na finalnym HEAD** | Zapisane w `project-memory/CURRENT_STATE.md` oraz `project-memory/reports/{secret-scan,lint,test,build}.json` dla finalnego HEAD. |
 | **Android APK** | `android-v2.yml` (GitHub Actions) | **`NOT RUN` (`STALE`)** | Zbudowany na `2afee4f`; nie uruchamiano zgodnie z zakazem `push` i brakiem zmian Androida |
 
 ### B.2 Uczciwy audyt WSZYSTKICH testów Live AI (lokalna Ollama `v0.40.18`, 2 vCPU CPU-only, `$0.00`)
