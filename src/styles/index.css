@@ -4040,9 +4040,27 @@ body.theme-editorial .omni-btn-deny {
   color: #f87171;
 }
 .forge-status-debugging,
-.forge-status-paused {
-  border-color: rgba(245, 158, 11, 0.55);
+.forge-status-paused,
+.forge-status-waiting_approval {
+  border-color: rgba(245, 158, 11, 0.65);
   color: #f59e0b;
+}
+.forge-decision-card {
+  border-color: rgba(245, 158, 11, 0.7) !important;
+  background: rgba(245, 158, 11, 0.08);
+}
+.forge-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.forge-pill {
+  font-size: 11.5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(148, 163, 184, 0.08);
 }
 .forge-progress-wrap {
   width: 100%;

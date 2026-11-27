@@ -1,13 +1,15 @@
-// === JARVIS FORGE — Proste, profesjonalne centrum autonomicznego programowania ===
-// Jedno główne polecenie („Co mam zbudować, naprawić lub ulepszyć?"), zero narzutu konfiguracji,
-// pełna widoczność celu, planu, etapu, wykonawcy, postępu, działań, testów, diffów, blokad i rezultatu.
-// Używa kanonicznego <Modal> (focus-trap, ARIA, Escape) i zachowuje zgodność ES2019 (Chrome 79 / S9).
+// === JARVIS AUTOPILOT & FORGE — Zero-Config Centrum Autonomicznego Programowania ===
+// Jedno główne polecenie („Co mam zbudować, naprawić lub ulepszyć?"), zero ręcznej konfiguracji
+// modelu/zespołu/strategii, przejrzysty podgląd: co Jarvis robi, jaki model i zespół działają,
+// postęp i limity, zmieniane pliki, wykonywane testy, KARTA DECYZJI UŻYTKOWNIKA (waiting_approval)
+// oraz jasny werdykt końcowy z historią prób i 1-klikowym rollbackiem. S9/ES2019 safe.
 
 import { useCallback, useEffect, useState } from "react";
 import Modal from "./Modal";
 import {
   cancelForgeRun,
   connectForge,
+  decideAutopilotRun,
   getForgeMemory,
   getForgeProviders,
   getForgeRun,
@@ -15,7 +17,7 @@ import {
   pauseForgeRun,
   resumeForgeRun,
   rollbackForgeRunClient,
-  startForgeRun,
+  startAutopilotRun,
   subscribeForgeRun,
   type ForgeCostPolicy,
   type ForgeHardwareProfile,
@@ -27,15 +29,35 @@ import {
 const PHASE_LABEL: Record<string, string> = {
   queued: "W kolejce",
   scouting: "Analiza repozytorium",
-  planning: "Planowanie (Architect)",
-  executing: "Implementacja (Developer)",
-  verifying: "Weryfikacja testami",
-  debugging: "Debugowanie i samonaprawa",
-  reviewing: "Niezależna recenzja",
-  completed: "Ukończono i zweryfikowano",
-  paused: "Wstrzymano (checkpoint zapisany)",
-  blocked: "Zablokowano — wymaga uwagi",
-  failed: "Błąd wykonania",
+  planning: "Planowanie etapów",
+  executing: "Pisanie kodu",
+  verifying: "Uruchamianie testów",
+  debugging: "Naprawa błędów i zmiana strategii",
+  reviewing: "Niezależna recenzja kodu",
+  waiting_approval: "Wymagana Twoja decyzja",
+  completed: "Zakończono sukcesem (PASS)",
+  paused: "Wstrzymano (zapisany checkpoint)",
+  blocked: "Zablokowano (BLOCKED)",
+  failed: "Błąd wykonania (FAIL)",
+};
+
+const TIER_LABEL: Record<string, string> = {
+  local_free: "Tier 1 · Lokalny (0 USD)",
+  api_free: "Tier 2 · Darmowe API (0 USD)",
+  promo_credits: "Tier 3 · Kredyty promocyjne (limit)",
+};
+
+const TEAM_LABEL: Record<string, string> = {
+  lean_2_agent: "Lekki zespół (2–3 role)",
+  disciplined_4_role: "Zespół 4-rolny (Plan → Kod → Test → Recenzja)",
+  specialist_squad: "Zespół specjalistyczny (z eskalacją)",
+  competitive_dual_worktree: "Tryb konkurencyjny (2 worktree)",
+};
+
+const DIFFICULTY_LABEL: Record<string, string> = {
+  simple: "Proste",
+  medium: "Średnie",
+  hard: "Trudne",
 };
 
 const STEP_ICON: Record<string, string> = {
@@ -48,12 +70,19 @@ const STEP_ICON: Record<string, string> = {
 const EXAMPLES = [
   "Napraw wykryte błędy w testach i dodaj brakujący test regresyjny",
   "Dodaj walidację danych wejściowych w module API i sprawdź testami",
-  "Zrefaktoryzuj obsługę błędów sieciowych z zachowaniem 100% testów",
+  "Zbuduj nowy moduł pomocniczy z kompletem testów jednostkowych",
 ];
 
 function isRunActive(status?: string): boolean {
   return status === "queued" || status === "scouting" || status === "planning"
     || status === "executing" || status === "verifying" || status === "debugging" || status === "reviewing";
+}
+
+function formatDurationLimit(ms?: number): string {
+  if (!ms || ms <= 0) return "domyślny";
+  const sec = Math.round(ms / 1000);
+  if (sec < 60) return `${sec}s`;
+  return `${Math.round(sec / 60)} min`;
 }
 
 export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
@@ -63,7 +92,9 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
   const [repoPath, setRepoPath] = useState("");
   const [goal, setGoal] = useState("");
   const [costPolicy, setCostPolicy] = useState<ForgeCostPolicy>("zero_cost");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [launching, setLaunching] = useState(false);
+  const [deciding, setDeciding] = useState(false);
 
   const [hardware, setHardware] = useState<ForgeHardwareProfile | null>(null);
   const [providers, setProviders] = useState<ForgeProviderStatus[]>([]);
@@ -72,6 +103,7 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
   const [activeRun, setActiveRun] = useState<ForgeRunState | null>(null);
   const [expandedDiff, setExpandedDiff] = useState<Record<string, boolean>>({});
   const [expandedTest, setExpandedTest] = useState<Record<string, boolean>>({});
+  const [showAttempts, setShowAttempts] = useState(false);
   const [notice, setNotice] = useState("");
 
   const refreshState = useCallback(async (targetRepo?: string, policy: ForgeCostPolicy = costPolicy) => {
@@ -83,7 +115,7 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
       if (!repoPath && resolvedRepo) setRepoPath(resolvedRepo);
 
       const [provRes, runsRes, memRes] = await Promise.all([
-        getForgeProviders(policy),
+        getForgeProviders(policy, resolvedRepo),
         listForgeRuns(resolvedRepo),
         getForgeMemory(resolvedRepo),
       ]);
@@ -113,7 +145,7 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
   const activeRunRepo = activeRun?.repoRoot;
   const activeRunStatus = activeRun?.status;
 
-  // Żywa subskrypcja SSE dla aktywnego zadania + lekki fallback polling co 3 s
+  // Żywa subskrypcja SSE dla aktywnego zadania + fallback polling co 3 s
   useEffect(() => {
     if (!connected || !activeRunId || !isRunActive(activeRunStatus)) return;
     const unsub = subscribeForgeRun(activeRunId, activeRunRepo, (nextState) => {
@@ -146,7 +178,11 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
     setLaunching(true);
     setNotice("");
     try {
-      const started = await startForgeRun({ goal: g, repoPath: repoPath.trim() || undefined, costPolicy });
+      const started = await startAutopilotRun({
+        goal: g,
+        repoPath: repoPath.trim() || undefined,
+        costPolicy,
+      });
       if (started.run) {
         setActiveRun(started.run);
         setRuns((prev) => [started.run as ForgeRunState, ...prev.filter((r) => r.id !== started.run?.id)]);
@@ -154,12 +190,47 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
         const fetched = await getForgeRun(started.runId, repoPath.trim() || undefined);
         setActiveRun(fetched.run);
       }
+      if (started.status === "waiting_approval") {
+        setNotice("Autopilot zatrzymał misję przed wykonaniem — sprawdź kartę decyzji poniżej.");
+      } else if (started.status === "blocked") {
+        setNotice("Brak dostępnego darmowego modelu (0 USD). Jarvis nie uruchomił płatnego API.");
+      }
       setTab("mission");
       setGoal("");
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "Nie udało się uruchomić zadania.");
+      setNotice(e instanceof Error ? e.message : "Nie udało się uruchomić Autopilota.");
     } finally {
       setLaunching(false);
+    }
+  };
+
+  const handleDecision = async (decision: "approve" | "reject") => {
+    if (!activeRun || deciding) return;
+    setDeciding(true);
+    setNotice("");
+    try {
+      const res = await decideAutopilotRun({
+        runId: activeRun.id,
+        decision,
+        repoPath: activeRun.repoRoot,
+        costPolicy,
+      });
+      if (res.run) {
+        setActiveRun(res.run);
+        setRuns((prev) => [res.run as ForgeRunState, ...prev.filter((r) => r.id !== res.run?.id)]);
+      } else {
+        const fetched = await getForgeRun(activeRun.id, activeRun.repoRoot).catch(() => null);
+        if (fetched) setActiveRun(fetched.run);
+      }
+      setNotice(
+        decision === "approve"
+          ? "Zatwierdzono — Autopilot wznawia wykonanie zadania."
+          : "Odrzucono — zadanie zostało bezpiecznie zablokowane bez zmian w kodzie.",
+      );
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Nie udało się zapisać decyzji.");
+    } finally {
+      setDeciding(false);
     }
   };
 
@@ -192,18 +263,35 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
   };
 
   const activeBusy = isRunActive(activeRun?.status);
+  const needsUserDecision = Boolean(
+    activeRun && (activeRun.status === "waiting_approval" || activeRun.pendingDecision?.required),
+  );
+  const passedTestsCount = (activeRun?.testResults || []).filter((t) => t.ok).length;
+  const totalTestsCount = (activeRun?.testResults || []).length;
+  const attemptsList = activeRun?.attemptHistory || [];
+  const verdictLabel = activeRun?.verdict || (
+    activeRun?.status === "completed"
+      ? "PASS"
+      : activeRun?.status === "waiting_approval"
+        ? "WAITING_APPROVAL"
+        : activeRun?.status === "paused"
+          ? "PAUSED"
+          : activeRun?.status === "blocked"
+            ? "BLOCKED"
+            : null
+  );
 
   return (
     <Modal
-      title="⚒ Jarvis Forge"
-      ariaLabel="Jarvis Forge — autonomiczne środowisko programistyczne"
+      title="⚒ Jarvis Autopilot (Forge)"
+      ariaLabel="Jarvis Autopilot — autonomiczny wykonawca zadań programistycznych"
       className="panel-wide forge-panel"
       onClose={onClose}
       foot={
         <div className="forge-foot-row">
           <span className="muted" style={{ fontSize: 12 }}>
             {connected
-              ? `Połączono · ${readyCount} gotowych modeli (${costPolicy === "zero_cost" ? "0 USD" : costPolicy})`
+              ? `Autopilot gotowy · ${readyCount} darmowych modeli · Koszt: $0.00`
               : "Lokalny silnik Forge offline"}
           </span>
           <button type="button" className="btn" style={{ width: "auto", marginTop: 0 }} onClick={onClose}>
@@ -212,13 +300,13 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
         </div>
       }
     >
-      {/* Zakładki robocze — maksymalna prostota */}
-      <div className="forge-tabs" role="tablist" aria-label="Widoki Jarvis Forge">
+      {/* Proste zakładki bez szumu */}
+      <div className="forge-tabs" role="tablist" aria-label="Widoki Jarvis Autopilot">
         <button type="button" role="tab" aria-selected={tab === "mission"} className={`menu-filter-pill ${tab === "mission" ? "on" : ""}`} onClick={() => setTab("mission")}>
-          ⚡ Zadanie
+          ⚡ Autopilot
         </button>
         <button type="button" role="tab" aria-selected={tab === "memory"} className={`menu-filter-pill ${tab === "memory" ? "on" : ""}`} onClick={() => setTab("memory")}>
-          🧠 Pamięć i modele ({readyCount})
+          🧠 Modele i pamięć ({readyCount})
         </button>
         <button type="button" role="tab" aria-selected={tab === "history"} className={`menu-filter-pill ${tab === "history" ? "on" : ""}`} onClick={() => setTab("history")}>
           🕘 Historia ({runs.length})
@@ -242,7 +330,7 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
 
       {tab === "mission" && (
         <>
-          {/* JEDNO GŁÓWNE POLECENIE */}
+          {/* ZERO-CONFIG: JEDNO POLECENIE -> PEŁNA AUTONOMIA */}
           <div className="forge-card forge-hero">
             <label htmlFor="forge-goal-input" className="forge-hero-label">
               Co mam zbudować, naprawić lub ulepszyć?
@@ -252,40 +340,58 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
               className="ta forge-goal-ta"
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
-              placeholder="Opisz konkretny cel inżynierski — Forge sam zbada repozytorium, zaplanuje kroki, dobierze darmowy/lokalny model, napisze kod, uruchomi testy i zweryfikuje wynik…"
+              placeholder="Wpisz jedno polecenie — Autopilot sam oceni trudność, dobierze darmowy model i zespół, wprowadzi zmiany, uruchomi testy i zweryfikuje wynik…"
               disabled={launching}
             />
             <div className="forge-hero-controls">
-              <input
-                type="text"
-                className="inp forge-repo-inp"
-                aria-label="Katalog repozytorium"
-                value={repoPath}
-                onChange={(e) => setRepoPath(e.target.value)}
-                placeholder="Ścieżka repozytorium (domyślnie bieżące)"
-              />
-              <button
-                type="button"
-                className="chip"
-                title="Przełącz politykę kosztu"
-                onClick={() => {
-                  const next: ForgeCostPolicy = costPolicy === "zero_cost" ? "local_only" : "zero_cost";
-                  setCostPolicy(next);
-                  void refreshState(repoPath, next);
-                }}
-              >
-                {costPolicy === "zero_cost" ? "🛡 Tryb 0 USD (Local + Free API)" : "💻 Tylko lokalnie (Ollama)"}
-              </button>
               <button
                 type="button"
                 className="btn primary"
-                style={{ width: "auto", marginTop: 0, minHeight: 44, padding: "8px 18px" }}
+                style={{ width: "auto", marginTop: 0, minHeight: 44, padding: "8px 20px" }}
                 disabled={!connected || launching || !goal.trim()}
                 onClick={() => void handleLaunch()}
               >
-                {launching ? "⏳ Uruchamiam…" : "▶ Uruchom Forge"}
+                {launching ? "⏳ Planuję i uruchamiam…" : "▶ Uruchom Autopilot"}
+              </button>
+              <span className="muted" style={{ fontSize: 12 }}>
+                Tryb automatyczny · <b>0 USD</b> · bez ręcznej konfiguracji
+              </span>
+              <button
+                type="button"
+                className="chip"
+                style={{ marginLeft: "auto" }}
+                aria-expanded={showAdvanced}
+                onClick={() => setShowAdvanced((v) => !v)}
+              >
+                {showAdvanced ? "Ukryj opcje" : "⚙ Opcje"}
               </button>
             </div>
+
+            {showAdvanced && (
+              <div className="forge-hero-controls" style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed var(--line)" }}>
+                <input
+                  type="text"
+                  className="inp forge-repo-inp"
+                  aria-label="Katalog repozytorium"
+                  value={repoPath}
+                  onChange={(e) => setRepoPath(e.target.value)}
+                  placeholder="Ścieżka repozytorium (domyślnie bieżące)"
+                />
+                <button
+                  type="button"
+                  className="chip"
+                  title="Przełącz politykę kosztu (zawsze $0.00)"
+                  onClick={() => {
+                    const next: ForgeCostPolicy = costPolicy === "zero_cost" ? "local_only" : "zero_cost";
+                    setCostPolicy(next);
+                    void refreshState(repoPath, next);
+                  }}
+                >
+                  {costPolicy === "zero_cost" ? "🛡 0 USD (Lokalny + Darmowe API)" : "💻 Tylko lokalnie (Ollama)"}
+                </button>
+              </div>
+            )}
+
             {!activeRun && (
               <div className="chips" style={{ flexWrap: "wrap", marginTop: 8 }}>
                 {EXAMPLES.map((ex) => (
@@ -299,14 +405,82 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
 
           {notice && <p className="notice" role="status">ℹ {notice}</p>}
 
-          {/* WIDOK AKTYWNEGO / OSTATNIEGO ZADANIA — 10 WYMAGANYCH ELEMENTÓW */}
           {activeRun && (
             <div className="forge-mission-grid">
-              {/* 1. Aktualny cel, 3. Aktualny etap, 4. Wykonawca, 5. Postęp */}
+              {/* 6. KARTA DECYZJI UŻYTKOWNIKA — widoczna natychmiast gdy potrzebna jest decyzja */}
+              {needsUserDecision && activeRun.pendingDecision && (
+                <div className="forge-card forge-decision-card" role="alert" data-testid="autopilot-decision-card">
+                  <div className="forge-row-between">
+                    <div className="forge-kicker" style={{ color: "#f59e0b" }}>⚠ WYMAGANA DECYZJA UŻYTKOWNIKA</div>
+                    <span className="forge-badge forge-status-waiting_approval">
+                      {activeRun.pendingDecision.kind}
+                    </span>
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 14.5, marginTop: 4 }}>{activeRun.pendingDecision.title}</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>{activeRun.pendingDecision.reason}</div>
+
+                  {activeRun.pendingDecision.triggers && activeRun.pendingDecision.triggers.length > 0 && (
+                    <div className="forge-pill-row">
+                      {activeRun.pendingDecision.triggers.map((t, idx) => (
+                        <span key={`${t.kind}-${idx}`} className="forge-pill">
+                          🛡 {t.label}: <code>{t.match}</code>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="forge-actions-row">
+                    {activeRun.status === "waiting_approval" && activeRun.pendingDecision.kind !== "budget_escalation" && (
+                      <button
+                        type="button"
+                        className="btn primary"
+                        style={{ width: "auto", marginTop: 0, minHeight: 44 }}
+                        disabled={deciding}
+                        onClick={() => void handleDecision("approve")}
+                      >
+                        {deciding ? "⏳ Przetwarzam…" : "✅ Zatwierdź i wykonaj"}
+                      </button>
+                    )}
+                    {activeRun.status === "waiting_approval" && (
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ width: "auto", marginTop: 0, minHeight: 44 }}
+                        disabled={deciding}
+                        onClick={() => void handleDecision("reject")}
+                      >
+                        🛑 Odrzuć operację
+                      </button>
+                    )}
+                    {activeRun.status !== "waiting_approval" && (activeRun.pendingDecision.kind === "time_limit" || activeRun.pendingDecision.kind === "iteration_limit" || activeRun.pendingDecision.kind === "iteration_or_repair_limit") && (
+                      <button
+                        type="button"
+                        className="btn primary"
+                        style={{ width: "auto", marginTop: 0, minHeight: 44 }}
+                        onClick={() => void handleResume()}
+                      >
+                        ▶ Kontynuuj z checkpointu
+                      </button>
+                    )}
+                    {(activeRun.pendingDecision.kind === "no_free_provider" || activeRun.pendingDecision.kind === "budget_limit") && (
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ width: "auto", marginTop: 0, minHeight: 44 }}
+                        onClick={() => setTab("memory")}
+                      >
+                        🧠 Zobacz dostępne modele
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 1. CO JARVIS ROBI + 2. MODEL & ZESPÓŁ + 3. POSTĘP I LIMITY */}
               <div className="forge-card">
                 <div className="forge-row-between">
                   <div>
-                    <div className="forge-kicker">1. AKTUALNY CEL</div>
+                    <div className="forge-kicker">AKTUALNE ZADANIE</div>
                     <div className="forge-goal-title">{activeRun.goal}</div>
                   </div>
                   <span className={`forge-badge forge-status-${activeRun.status}`}>
@@ -319,25 +493,49 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
                 </div>
 
                 <div className="forge-meta-strip">
-                  <span><b>Etap:</b> {PHASE_LABEL[activeRun.phase] || activeRun.phase}</span>
-                  <span><b>Postęp:</b> {activeRun.progressPct}% (iteracja {activeRun.iteration}/{activeRun.maxIterations})</span>
-                  <span><b>Strategia:</b> <code>{activeRun.strategy}</code></span>
+                  <span><b>Co robi:</b> {PHASE_LABEL[activeRun.phase] || activeRun.phase}</span>
+                  <span><b>Postęp:</b> {activeRun.progressPct}% ({activeRun.iteration}/{activeRun.maxIterations} kroków)</span>
+                  <span><b>Limit czasu:</b> {formatDurationLimit(activeRun.maxDurationMs)}</span>
+                  <span><b>Koszt:</b> $0.00{activeRun.budgetSnapshot ? ` (kredyty: $${activeRun.budgetSnapshot.experimentSpentUsd})` : ""}</span>
+                  <span><b>Decyzja użytkownika:</b> {needsUserDecision ? "⚠ TAK" : "Nie wymagana"}</span>
                 </div>
 
-                {activeRun.activeExecutor && (
-                  <div className="forge-executor-box">
-                    <span className="forge-kicker">WYKONAWCA:</span>{" "}
-                    <b>{activeRun.activeRole}</b> → <code>{activeRun.activeExecutor.provider}/{activeRun.activeExecutor.model}</code>{" "}
-                    <span className="muted">
-                      ({activeRun.activeExecutor.costTier === "local" || activeRun.activeExecutor.costTier === "free_api" ? "$0.00" : activeRun.activeExecutor.costTier} · {activeRun.activeExecutor.reason})
-                    </span>
+                {/* Aktywny model, poziom inteligencji i zespół */}
+                <div className="forge-executor-box">
+                  <div>
+                    <span className="forge-kicker">MODEL I ZESPÓŁ:</span>{" "}
+                    <b>{activeRun.activeRole}</b> →{" "}
+                    <code>{activeRun.activeExecutor ? `${activeRun.activeExecutor.provider}/${activeRun.activeExecutor.model}` : "automatyczny"}</code>
                   </div>
-                )}
+                  <div className="forge-pill-row">
+                    {activeRun.difficulty && (
+                      <span className="forge-pill">
+                        Trudność: <b>{DIFFICULTY_LABEL[activeRun.difficulty.level] || activeRun.difficulty.level}</b> ({activeRun.difficulty.score}/100)
+                      </span>
+                    )}
+                    {activeRun.activeIntelligenceTier && (
+                      <span className="forge-pill">
+                        {TIER_LABEL[activeRun.activeIntelligenceTier] || activeRun.activeIntelligenceTier}
+                      </span>
+                    )}
+                    {activeRun.teamComposition && (
+                      <span className="forge-pill">
+                        {TEAM_LABEL[activeRun.teamComposition.teamPattern] || activeRun.teamComposition.teamPattern}
+                      </span>
+                    )}
+                    {activeRun.worktreePath && (
+                      <span className="forge-pill">🌿 Izolowany git worktree</span>
+                    )}
+                    {(activeRun.resumedCount || 0) > 0 && (
+                      <span className="forge-pill">♻ Wznowiono z checkpointu ×{activeRun.resumedCount}</span>
+                    )}
+                  </div>
+                </div>
 
                 <div className="forge-actions-row">
                   {activeBusy && (
                     <>
-                      <button type="button" className="btn" style={{ width: "auto", marginTop: 0, minHeight: 44 }} onClick={() => void handlePause()}>⏸ Pauza</button>
+                      <button type="button" className="btn" style={{ width: "auto", marginTop: 0, minHeight: 44 }} onClick={() => void handlePause()}>⏸ Pauza (checkpoint)</button>
                       <button type="button" className="btn" style={{ width: "auto", marginTop: 0, minHeight: 44 }} onClick={() => void handleCancel()}>⏹ Przerwij</button>
                     </>
                   )}
@@ -354,66 +552,50 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
                 </div>
               </div>
 
-              {/* 10. Końcowy rezultat & Recenzja */}
+              {/* 7. JASNY WERDYKT KOŃCOWY */}
               {activeRun.finalResult && (
-                <div className={`forge-card ${activeRun.status === "completed" ? "forge-ok" : "forge-warn"}`}>
-                  <div className="forge-kicker">KOŃCOWY REZULTAT</div>
-                  <div style={{ fontSize: 13.5, lineHeight: 1.55 }}>{activeRun.finalResult}</div>
+                <div className={`forge-card ${activeRun.status === "completed" ? "forge-ok" : "forge-warn"}`} data-testid="autopilot-verdict-card">
+                  <div className="forge-row-between">
+                    <div className="forge-kicker">WYNIK KOŃCOWY</div>
+                    {verdictLabel && (
+                      <span className={`forge-badge forge-status-${activeRun.status}`}>
+                        {verdictLabel}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 13.5, lineHeight: 1.55, marginTop: 4 }}>{activeRun.finalResult}</div>
                   {activeRun.review && (
                     <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                      Recenzent: <b>{activeRun.review.reviewer}</b> · Sekrety: {activeRun.review.secretScanClean ? "czysto ✓" : "UWAGA ⚠"} · {activeRun.review.summary}
+                      Recenzja: <b>{activeRun.review.reviewer}</b> · Sekrety: {activeRun.review.secretScanClean ? "czysto ✓" : "UWAGA ⚠"} · {activeRun.review.summary}
+                    </div>
+                  )}
+                  {attemptsList.length > 0 && (
+                    <div style={{ marginTop: 8 }}>
+                      <button type="button" className="chip" onClick={() => setShowAttempts((v) => !v)}>
+                        {showAttempts ? "Ukryj historię prób" : `Historia prób i zmian strategii (${attemptsList.length})`}
+                      </button>
+                      {showAttempts && (
+                        <div className="forge-list" style={{ marginTop: 6 }}>
+                          {attemptsList.map((att) => (
+                            <div key={`${att.attempt}-${att.at}`} className="forge-list-item">
+                              <span>
+                                {att.ok ? "✅" : "❌"} Próba #{att.attempt} · strategia <code>{att.strategy}</code> · tier <code>{att.tier}</code> · <code>{att.provider}/{att.model}</code>
+                              </span>
+                              <span className="muted" style={{ fontSize: 11.5 }}>
+                                testy {att.testsPassed}/{att.testsTotal}{att.errorSignature ? ` · ${att.errorSignature}` : ""}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               )}
 
-              {/* 2. Plan pracy */}
+              {/* 4. ZMIENIANE PLIKI */}
               <div className="forge-card">
-                <div className="forge-kicker">PLAN PRACY ({activeRun.plan.length} kroków)</div>
-                {activeRun.plan.length === 0 ? (
-                  <p className="muted" style={{ margin: "6px 0 0", fontSize: 12.5 }}>Plan w trakcie przygotowania przez Architecta…</p>
-                ) : (
-                  <div className="forge-list">
-                    {activeRun.plan.map((s) => (
-                      <div key={s.id} className="forge-list-item">
-                        <span>{STEP_ICON[s.status] || "○"} <b>{s.id}.</b> {s.title}</span>
-                        <span className="muted" style={{ fontSize: 11.5 }}>{s.role}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* 7. Wyniki testów */}
-              <div className="forge-card">
-                <div className="forge-kicker">WYNIKI TESTÓW I WERYFIKACJI ({activeRun.testResults.length})</div>
-                {activeRun.testResults.length === 0 ? (
-                  <p className="muted" style={{ margin: "6px 0 0", fontSize: 12.5 }}>Brak uruchomionych komend weryfikacyjnych na tym etapie.</p>
-                ) : (
-                  <div className="forge-list">
-                    {activeRun.testResults.map((t, idx) => {
-                      const key = `${t.command}-${idx}`;
-                      return (
-                        <div key={key} className="forge-subcard">
-                          <div className="forge-row-between">
-                            <span>{t.ok ? "✅" : "❌"} <code>{t.command}</code> <span className="muted">(exit {t.code}, {t.durationMs} ms)</span></span>
-                            <button type="button" className="chip" onClick={() => setExpandedTest((p) => ({ ...p, [key]: !p[key] }))}>
-                              {expandedTest[key] ? "Ukryj log" : "Pokaż log"}
-                            </button>
-                          </div>
-                          {expandedTest[key] && (
-                            <pre className="forge-pre">{t.output || "(brak wyjścia)"}</pre>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* 8. Zmodyfikowane pliki + podgląd diffu */}
-              <div className="forge-card">
-                <div className="forge-kicker">ZMODYFIKOWANE PLIKI ({activeRun.modifiedFiles.length})</div>
+                <div className="forge-kicker">ZMIENIANE PLIKI ({activeRun.modifiedFiles.length})</div>
                 {activeRun.modifiedFiles.length === 0 ? (
                   <p className="muted" style={{ margin: "6px 0 0", fontSize: 12.5 }}>Żaden plik nie został jeszcze zmodyfikowany.</p>
                 ) : (
@@ -440,38 +622,63 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
                 )}
               </div>
 
-              {/* 9. Problemy i blokady */}
+              {/* 5. WYKONYWANE TESTY */}
               <div className="forge-card">
-                <div className="forge-kicker">PROBLEMY I BLOKADY ({activeRun.problems.length})</div>
-                {activeRun.problems.length === 0 ? (
-                  <p className="muted" style={{ margin: "6px 0 0", fontSize: 12.5 }}>Brak zgłoszonych błędów ani blokad.</p>
+                <div className="forge-kicker">WYKONYWANE TESTY ({passedTestsCount}/{totalTestsCount} PASS)</div>
+                {activeRun.testResults.length === 0 ? (
+                  <p className="muted" style={{ margin: "6px 0 0", fontSize: 12.5 }}>Testy uruchomią się automatycznie po wprowadzeniu zmian.</p>
                 ) : (
                   <div className="forge-list">
-                    {activeRun.problems.map((p, idx) => (
-                      <div key={`${p.at}-${idx}`} className="forge-list-item">
-                        <span>
-                          {p.severity === "blocker" ? "🛑" : p.severity === "error" ? "⚠" : "ℹ"} {p.message}
-                          {p.strategyPivot ? <span className="muted"> · zmiana strategii → <code>{p.strategyPivot}</code></span> : null}
-                        </span>
-                      </div>
-                    ))}
+                    {activeRun.testResults.map((t, idx) => {
+                      const key = `${t.command}-${idx}`;
+                      return (
+                        <div key={key} className="forge-subcard">
+                          <div className="forge-row-between">
+                            <span>{t.ok ? "✅" : "❌"} <code>{t.command}</code> <span className="muted">(exit {t.code}, {t.durationMs} ms)</span></span>
+                            <button type="button" className="chip" onClick={() => setExpandedTest((p) => ({ ...p, [key]: !p[key] }))}>
+                              {expandedTest[key] ? "Ukryj log" : "Pokaż log"}
+                            </button>
+                          </div>
+                          {expandedTest[key] && (
+                            <pre className="forge-pre">{t.output || "(brak wyjścia)"}</pre>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
 
-              {/* 6. Ostatnie działania */}
-              <div className="forge-card">
-                <div className="forge-kicker">OSTATNIE DZIAŁANIA ({activeRun.recentActions.length})</div>
-                <div className="forge-log">
-                  {activeRun.recentActions.slice(0, 18).map((a, idx) => (
-                    <div key={`${a.at}-${idx}`} className="forge-log-row">
-                      <span className="muted num-tab">{a.at.slice(11, 19)}</span>
-                      <span className="forge-role-tag">{a.role}</span>
-                      <span>{a.ok ? "•" : "⚠"} {a.text}</span>
-                    </div>
-                  ))}
+              {/* ETAPY / PLAN PRACY */}
+              {activeRun.plan.length > 0 && (
+                <div className="forge-card">
+                  <div className="forge-kicker">ETAPY PRACY ({activeRun.plan.length})</div>
+                  <div className="forge-list">
+                    {activeRun.plan.map((s) => (
+                      <div key={s.id} className="forge-list-item">
+                        <span>{STEP_ICON[s.status] || "○"} <b>{s.id}.</b> {s.title}</span>
+                        <span className="muted" style={{ fontSize: 11.5 }}>{s.role}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* OSTATNIE DZIAŁANIA (zwięzły dziennik bez szumu) */}
+              {activeRun.recentActions.length > 0 && (
+                <div className="forge-card">
+                  <div className="forge-kicker">DZIENNIK DZIAŁAŃ ({activeRun.recentActions.length})</div>
+                  <div className="forge-log">
+                    {activeRun.recentActions.slice(0, 12).map((a, idx) => (
+                      <div key={`${a.at}-${idx}`} className="forge-log-row">
+                        <span className="muted num-tab">{a.at.slice(11, 19)}</span>
+                        <span className="forge-role-tag">{a.role}</span>
+                        <span>{a.ok ? "•" : "⚠"} {a.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -491,7 +698,7 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
           )}
 
           <div className="forge-card">
-            <div className="forge-kicker">PULA DOSTAWCÓW AI ({costPolicy}) — WYMIENIALNE MODELE</div>
+            <div className="forge-kicker">DOSTĘPNE MODELE ({costPolicy}) — ADAPTIVE INTELLIGENCE</div>
             <div className="forge-list">
               {providers.map((p) => (
                 <div key={p.id} className="forge-subcard">
@@ -515,11 +722,11 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
           {memory && (
             <div className="forge-card">
               <div className="forge-kicker">
-                PAMIĘĆ DOŚWIADCZEŃ ({memory.lessons.length} zweryfikowanych lekcji · {memory.failedAttempts.length} nieudanych prób · {memory.decisions.length} decyzji)
+                PAMIĘĆ PROJEKTU I DOŚWIADCZEŃ ({memory.lessons.length} lekcji · {memory.failedAttempts.length} nieudanych prób · {memory.decisions.length} decyzji)
               </div>
               {memory.lessons.length === 0 && memory.decisions.length === 0 ? (
                 <p className="muted" style={{ fontSize: 12.5, margin: "6px 0 0" }}>
-                  Pamięć wypełnia się automatycznie po każdym zweryfikowanym uruchomieniu (FAIL → PASS) oraz decyzji architektonicznej.
+                  Pamięć wypełnia się automatycznie po każdym zweryfikowanym uruchomieniu oraz czyta ADR-y z <code>project-memory/</code>.
                 </p>
               ) : (
                 <div className="forge-list">
@@ -562,6 +769,7 @@ export default function ForgeWorkspace({ onClose }: { onClose: () => void }) {
                   </div>
                   <span className="muted" style={{ fontSize: 11.5 }}>
                     {r.id} · {r.progressPct}% · pliki: {r.modifiedFiles.length} · testy: {r.testResults.filter((t) => t.ok).length}/{r.testResults.length}
+                    {r.pendingDecision?.required ? " · ⚠ DECYZJA" : ""}
                   </span>
                 </button>
               ))}

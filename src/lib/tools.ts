@@ -2179,6 +2179,139 @@ const tools: Tool[] = [
       return rollbackJarvisSettings().summary;
     },
   },
+  // --- JARVIS PHASE 4: AUTOPILOT ORCHESTRATOR (Core <-> Forge Engine / Adaptive Intelligence) ---
+  {
+    def: {
+      name: "autopilot_run",
+      description:
+        "Uruchom autonomicznego JARVIS Autopilota dla zadania programistycznego/inżynierskiego (naprawa błędu, funkcja wieloplikowa, nowy moduł). Zero ręcznej konfiguracji: sam dobiera poziom inteligencji, darmowy model (0 USD), zespół agentów, uruchamia testy i recenzję; dla operacji ryzykownych zatrzymuje się i prosi o decyzję użytkownika.",
+      input_schema: obj(
+        {
+          goal: str("Konkretny cel zadania do wykonania w repozytorium"),
+          repoPath: str("Opcjonalna ścieżka do repozytorium (domyślnie aktywne repozytorium serwera Forge)"),
+        },
+        ["goal"],
+      ),
+    },
+    run: async (args) => {
+      const a = args as { goal?: string; repoPath?: string };
+      const goal = String(a.goal || "").trim();
+      if (!goal) return "Podaj cel zadania (parametr goal).";
+      const { startAutopilotRun } = await import("./forgeClient");
+      const res = await startAutopilotRun({
+        goal,
+        repoPath: a.repoPath ? String(a.repoPath) : undefined,
+        costPolicy: "zero_cost",
+        initiatedBy: "agent",
+      });
+      const r = res.run;
+      const tier = r?.activeIntelligenceTier || r?.teamComposition?.initialTier || "auto";
+      const team = r?.teamComposition?.teamPattern || "auto";
+      if (res.status === "waiting_approval" && r?.pendingDecision) {
+        return [
+          `⏸ AUTOPILOT (${res.runId || "?"}) — WYMAGANA DECYZJA UŻYTKOWNIKA (${r.pendingDecision.title}).`,
+          `Powód: ${r.pendingDecision.reason}`,
+          `Zatwierdź lub odrzuć w panelu Jarvis Forge albo narzędziem autopilot_decide.`,
+        ].join("\n");
+      }
+      if (res.status === "blocked") {
+        return [
+          `⛔ AUTOPILOT (${res.runId || "?"}) — ZABLOKOWANY (0 USD, bez cichego przełączenia na płatny model).`,
+          r?.finalResult || r?.pendingDecision?.reason || "Brak dostępnego darmowego wykonawcy.",
+        ].join("\n");
+      }
+      return [
+        `🚀 AUTOPILOT uruchomiony (${res.runId || "?"}) · status: ${res.status}`,
+        `Trudność: ${r?.difficulty?.level || "auto"} · poziom: ${tier} · zespół: ${team}`,
+        `Sprawdź postęp przez autopilot_status lub otwórz ekran Jarvis Forge.`,
+      ].join("\n");
+    },
+  },
+  {
+    def: {
+      name: "autopilot_status",
+      description: "Sprawdź aktualny status, postęp, aktywny model, zmienione pliki, wyniki testów i ewentualne oczekujące decyzje zadań JARVIS Autopilota.",
+      input_schema: obj(
+        {
+          runId: str("Opcjonalne ID konkretnego zadania Autopilota (bez ID zwraca listę ostatnich misji)"),
+          repoPath: str("Opcjonalna ścieżka do repozytorium"),
+        },
+        [],
+      ),
+    },
+    run: async (args) => {
+      const a = args as { runId?: string; repoPath?: string };
+      const { getForgeRun, listForgeRuns } = await import("./forgeClient");
+      const repoPath = a.repoPath ? String(a.repoPath) : undefined;
+      if (a.runId) {
+        const { run } = await getForgeRun(String(a.runId), repoPath);
+        const execLabel = run.activeExecutor ? `${run.activeExecutor.provider}/${run.activeExecutor.model}` : "brak";
+        const passTests = (run.testResults || []).filter((t) => t.ok).length;
+        const totalTests = (run.testResults || []).length;
+        const lines = [
+          `Autopilot ${run.id}: ${run.verdict || run.status.toUpperCase()} (${run.progressPct}%) · iteracje ${run.iteration}/${run.maxIterations}`,
+          `Cel: ${run.goal}`,
+          `Model: ${execLabel} · tier: ${run.activeIntelligenceTier || "-"} · zespół: ${run.teamComposition?.teamPattern || "-"}`,
+          `Pliki (${run.modifiedFiles.length}): ${run.modifiedFiles.map((f) => f.path).join(", ") || "brak"} · Testy: ${passTests}/${totalTests}`,
+        ];
+        if (run.pendingDecision?.required) {
+          lines.push(`⚠️ WYMAGANA DECYZJA: ${run.pendingDecision.title} — ${run.pendingDecision.reason}`);
+        }
+        if (run.finalResult) lines.push(`Wynik: ${run.finalResult}`);
+        return lines.join("\n");
+      }
+      const { runs } = await listForgeRuns(repoPath);
+      if (!runs.length) return "Brak zapisanych zadań JARVIS Autopilota.";
+      return runs
+        .slice(0, 6)
+        .map((r) => `- ${r.id} [${r.verdict || r.status}] (${r.progressPct}%) ${r.goal.slice(0, 70)}${r.pendingDecision?.required ? " ⚠️ DECYZJA" : ""}`)
+        .join("\n");
+    },
+  },
+  {
+    def: {
+      name: "autopilot_decide",
+      description: "Zatwierdź (approve) lub odrzuć (reject) zadanie JARVIS Autopilota wstrzymane w stanie waiting_approval. Zawsze wymaga wyraźnego potwierdzenia użytkownika.",
+      input_schema: obj(
+        {
+          runId: str("ID misji oczekującej na decyzję"),
+          decision: str("Decyzja użytkownika: approve lub reject"),
+          repoPath: str("Opcjonalna ścieżka do repozytorium"),
+        },
+        ["runId", "decision"],
+      ),
+    },
+    run: async (args) => {
+      const a = args as { runId?: string; decision?: string; repoPath?: string };
+      const decision = String(a.decision || "").toLowerCase() === "approve" ? "approve" : "reject";
+      const { decideAutopilotRun } = await import("./forgeClient");
+      const res = await decideAutopilotRun({
+        runId: String(a.runId || ""),
+        decision,
+        repoPath: a.repoPath ? String(a.repoPath) : undefined,
+      });
+      return `Decyzja "${decision}" dla misji ${res.runId}: status=${res.status || (decision === "approve" ? "resumed" : "blocked")}${res.run?.finalResult ? ` · ${res.run.finalResult}` : ""}`;
+    },
+  },
+  {
+    def: {
+      name: "autopilot_rollback",
+      description: "Deterministycznie wycofaj wszystkie zmiany plików wprowadzone przez wybrane zadanie JARVIS Autopilota z migawki checkpointu.",
+      input_schema: obj(
+        {
+          runId: str("ID zadania do cofnięcia"),
+          repoPath: str("Opcjonalna ścieżka do repozytorium"),
+        },
+        ["runId"],
+      ),
+    },
+    run: async (args) => {
+      const a = args as { runId?: string; repoPath?: string };
+      const { rollbackForgeRunClient } = await import("./forgeClient");
+      const res = await rollbackForgeRunClient(String(a.runId || ""), a.repoPath ? String(a.repoPath) : undefined);
+      return `↩ Rollback misji ${String(a.runId || "")}: przywrócono ${res.rollback.restoredCount} plik(ów).`;
+    },
+  },
 ];
 
 export const toolDefs: ToolDef[] = tools.map((t) => t.def);

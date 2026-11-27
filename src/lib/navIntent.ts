@@ -44,6 +44,7 @@ export const SCREENS: ScreenDef[] = [
   { id: "guardian", label: "Diagnoza i naprawa", aliases: ["diagnoza", "napraw", "strażnik", "straznik", "przyspiesz"] },
   { id: "data", label: "Dane i kopia", aliases: ["dane", "kopia", "backup", "eksport danych", "kopia zapasowa"] },
   { id: "history", label: "Historia rozmów", aliases: ["historia", "historia rozmów", "historia rozmow", "poprzednie czaty"] },
+  { id: "forge", label: "Jarvis Forge / Autopilot", aliases: ["forge", "jarvis forge", "autopilot kodu", "programowanie", "kodowanie", "autonomiczny programista"] },
   { id: "admin", label: "Administrator", aliases: ["administrator", "panel admina", "licencje"] },
 ];
 

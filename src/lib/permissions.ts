@@ -29,6 +29,7 @@ const CRITICAL_RISKGUARD_TOOLS = new Set([
   "send_sms", "text_contact", "make_call", "call_contact",
   "clear_tally", "desktop_power", "desktop_omni_task", "run_automation",
   "system_terminal", "system_git", "system_docker", "system_http_request", "system_files_write", "system_generate_tool", "system_generated_tool",
+  "autopilot_decide", "autopilot_rollback",
 ]);
 
 /** Zwróć aktywny profil autonomii (domyślnie STANDARD). */
@@ -157,6 +158,11 @@ const RISK: Record<string, Risk> = {
   system_files_write: "write",
   system_git: "outbound", system_terminal: "outbound", system_docker: "outbound",
   system_http_request: "outbound", system_browser_open: "outbound", system_generate_tool: "outbound",
+  // JARVIS Phase 4 Autopilot Orchestrator (zero-config coding + jawna zgoda na decyzje i rollback)
+  autopilot_status: "read",
+  autopilot_run: "write",
+  autopilot_decide: "outbound",
+  autopilot_rollback: "outbound",
 };
 
 /** Czy narzędzie ma JAWNĄ klasyfikację ryzyka (a nie tylko fail-safe outbound)? */
@@ -211,6 +217,7 @@ const ALWAYS_CONFIRM = new Set([
   "send_sms", "text_contact", "desktop_power", "desktop_click", "desktop_active_window", "desktop_type", "desktop_hotkey", "desktop_omni_task", "clear_tally",
   "salesos_push", "salesos_set_status", "gcal_add", "run_automation",
   "system_terminal", "system_git", "system_docker", "system_http_request", "system_files_write", "system_generate_tool", "system_generated_tool",
+  "autopilot_decide", "autopilot_rollback",
 ]);
 export function requiresFreshConsent(tool: string): boolean {
   return ALWAYS_CONFIRM.has(tool) || store.settings.requireConsentAlways === true;
