@@ -15,6 +15,7 @@ on:
       - "electron/**"
       - "src/**"
       - "site-os/**"
+      - "forge/**"
       - "electron-builder.json"
       - ".github/workflows/windows.yml"
 
@@ -61,13 +62,16 @@ jobs:
       - name: Package installer EXE (signed)
         run: npx electron-builder --win nsis --publish never
 
-      - name: Utwórz manifest wersji Windows
+      - name: Utwórz manifest wersji Windows (z SHA256)
         shell: pwsh
         run: |
+          $exeSha = (Get-FileHash -Algorithm SHA256 "release-desktop/JARVIS.exe").Hash.ToLowerInvariant()
           $manifest = @{
             version = $env:APP_BUILD
             iso = $env:APP_BUILD.Replace(" ", "T") + ":00Z"
             url = "https://github.com/Talent620/Jarvis/releases/download/latest/JARVIS.exe"
+            sha256 = $exeSha
+            commit = $env:GITHUB_SHA
           } | ConvertTo-Json -Compress
           Set-Content -LiteralPath "windows.json" -Value $manifest -Encoding utf8
 
