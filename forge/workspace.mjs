@@ -842,7 +842,7 @@ export function createForgeWorkspace({ repoRoot, runId, storageDir, protectedPat
     if (manifest.files[relPath]) return; // pierwsza kopia sprzed runu już istnieje
     const existed = fs.existsSync(absPath);
     if (existed) {
-      const backupName = `${shortHash(relPath, 12)}-${path.basename(relPath)}`;
+      const backupName = `${shortHash(relPath, 12)}-${path.basename(relPath)}.snap`;
       fs.mkdirSync(snapshotDir, { recursive: true });
       fs.copyFileSync(absPath, path.join(snapshotDir, backupName));
       manifest.files[relPath] = { existed: true, backupName };

@@ -377,6 +377,7 @@ describe("P1 + F-03 + F-05 — Site OS 2.0: izolacja /p/:id, obrona /api/session
     const chrome = spawn(
       "google-chrome",
       [
+        ...(process.env.DISPLAY ? [] : ["--headless=new"]),
         "--no-sandbox",
         "--disable-gpu",
         "--disable-dev-shm-usage",
