@@ -1,35 +1,35 @@
-<!-- GENERATED: scripts/sync-project-state.mjs · sha256:3ddf427cce52419faa3496be4411ba16d0a4738318012c011fd7a005ea76a3f8 · DO NOT EDIT -->
+<!-- GENERATED: scripts/sync-project-state.mjs · sha256:d3e33062c00d2aaafd9ec99d0b7562bbc781368906f93775dd189fc1f14cd950 · DO NOT EDIT -->
 # JARVIS — CURRENT STATE (generowany)
 
-> Wygenerowano 2026-11-27T16:28:44.978Z przez `scripts/sync-project-state.mjs`. **Nie edytuj ręcznie** — `npm run memory:sync`.
+> Wygenerowano 2026-11-28T00:18:53.515Z przez `scripts/sync-project-state.mjs`. **Nie edytuj ręcznie** — `npm run memory:sync`.
 > Statusy: PASS tylko z rzeczywistego uruchomienia dla bieżącego commita i drzewa; brak danych = UNKNOWN.
 
 ## Repozytorium
-- Commit `01002ba` na `feat/jarvis-forge-evolution` · zmiany w drzewie (poza project-memory): TAK
+- Commit `50b661e` na `feat/jarvis-forge-evolution` · zmiany w drzewie (poza project-memory): TAK
 - Zdalne: origin → github.com (https) · upstream: NONE
-- Projekt: jarvis-ai-assistant@2.0.0 · manifest JARVIS 5.0.0-production-rc (14 modułów, 136 narzędzi)
+- Projekt: jarvis-ai-assistant@2.0.0 · manifest JARVIS 5.0.0-production-rc (16 modułów, 136 narzędzi)
 
 ## Weryfikacja (rzeczywiste uruchomienia)
 | Check | Status | Commit | Kod | Kiedy | Szczegóły |
 |---|---|---|---|---|---|
-| secret-scan | **PASS** | 01002ba | 0 | 2026-11-27T16:21:37.054Z | kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto. |
-| lint | **PASS** | 01002ba | 0 | 2026-11-27T16:22:02.073Z | kod wyjścia 0 dla bieżącego stanu · ✖ 2 problems (0 errors, 2 warnings) |
-| test | **PASS** | 01002ba | 0 | 2026-11-27T16:27:33.129Z | kod wyjścia 0 dla bieżącego stanu · Test Files  377 passed (377) · Tests  3170 passed (3170) |
-| build | **PASS** | 01002ba | 0 | 2026-11-27T16:28:14.743Z | kod wyjścia 0 dla bieżącego stanu · built in 14.90s |
+| secret-scan | **PASS** | 50b661e | 0 | 2026-11-28T00:11:26.926Z | kod wyjścia 0 dla bieżącego stanu · Skan sekretów: czysto. |
+| lint | **PASS** | 50b661e | 0 | 2026-11-28T00:11:50.233Z | kod wyjścia 0 dla bieżącego stanu · ✖ 2 problems (0 errors, 2 warnings) |
+| test | **PASS** | 50b661e | 0 | 2026-11-28T00:17:13.532Z | kod wyjścia 0 dla bieżącego stanu · Test Files  378 passed (378) · Tests  3182 passed (3182) |
+| build | **PASS** | 50b661e | 0 | 2026-11-28T00:17:55.520Z | kod wyjścia 0 dla bieżącego stanu · built in 14.93s |
 | apk | **STALE** | 2afee4f | — | 2026-11-24T16:46:50.811Z | APK zbudowany z 2afee4f, nie z HEAD · v4-jarvis-apex-safe · jarvis-apex-v4.apk |
 
 ## Główne moduły (pliki śledzone)
-`tests` 377 · `src/lib` 317 · `src/components` 80 · `android` 64 · `docs` 38 · `project-memory` 36 · `(root)` 20 · `electron` 17 · `scripts` 17 · `ios` 15 · `forge` 13 · `proxy` 13
+`tests` 378 · `src/lib` 319 · `src/components` 82 · `android` 64 · `docs` 39 · `project-memory` 37 · `(root)` 20 · `electron` 18 · `scripts` 17 · `ios` 15 · `forge` 13 · `proxy` 13
 
 ## Workflowy CI
 `android-v2.yml` (workflow_dispatch/push) · `android.yml` (push/workflow_dispatch) · `deploy-modal.yml` (workflow_dispatch) · `ios.yml` (workflow_dispatch/push) · `ollama-exe.yml` (workflow_dispatch/push) · `release.yml` (workflow_dispatch/push) · `sd-exe.yml` (workflow_dispatch/push) · `test.yml` (push/pull_request/workflow_dispatch) · `ubuntu.yml` (workflow_dispatch/pull_request/push) · `windows.yml` (workflow_dispatch/push)
 
 ## Ostatnie commity
-- `01002ba` docs(acceptance): update closeout commit chain & final memory:check reference
-- `89cc850` fix(forge): remove redundant regex escape in engine.mjs (ESLint no-useless-escape)
-- `eb3a254` docs(acceptance): add final Phase 5 closeout acceptance report (docs/JARVIS_FINAL_ACCEPTANCE.md)
-- `ce42434` fix(forge,ui): fix compound analyze-and-fix read-only bug, HTTP/UI resume SSE race & Scenario 4 cancel sync
-- `8867109` docs(memory): record jarvis-forge-phase5-real-autonomy event & verified CURRENT_STATE (377/377, 3169/3169)
+- `50b661e` ci(release): fix Ubuntu workflow_dispatch publish, watch forge/** & add SHA256/OTA manifests
+- `31ef908` feat(pioneer): add 1-click multi-platform Update Center, JARVIS Flow focus director & Kokpit Mocy
+- `f56681d` docs(handoff): decouple handoff guide from hardcoded bundle hashes (TRANSFER-README.txt as single source of tr
+- `399e20a` docs(handoff): add physical Ubuntu handoff & acceptance guide (docs/JARVIS_PHYSICAL_HANDOFF_GUIDE.md)
+- `a6b8bd6` docs(memory): record jarvis-forge-phase5-closeout-acceptance event & verified CURRENT_STATE (377/377, 3170/317
 
 ## Otwarte sprawy z istniejącej dokumentacji (27)
 - K4. Dodać bootstrap Ubuntu — `docs/JARVIS_REPAIR_PLAN.md:43`
@@ -48,13 +48,13 @@
 - R2: Cel S9/Chrome 79 (es2019, bez `\p{L}`, bez lookbehind) i pułapka cudzysłowów — `docs/horizon-memory.md:177`
 - … +13 w CURRENT_STATE.json
 
-## Dziennik agentów (17/17 poprawnych)
+## Dziennik agentów (18/18 poprawnych)
+- 2026-11-28T00:18:53.239Z · antigravity · `jarvis-v6-pioneer-updater-flow` → Wypchnąć gałąź feat/jarvis-forge-evolution (bez ruszania main), uruchomić workflow CI dla Ubuntu (.A
 - 2026-11-27T16:28:44.690Z · antigravity · `jarvis-forge-phase5-closeout-acceptance` → Wykonać manualny odbiór fizycznego Ubuntu wg sekcji E.2 docs/JARVIS_FINAL_ACCEPTANCE.md (npm install
 - 2026-11-27T15:49:11.760Z · antigravity · `jarvis-forge-phase5-real-autonomy` → Niezależny przegląd feat/jarvis-forge-evolution przez właściciela; opcjonalnie dodanie darmowego klu
 - 2026-11-27T12:13:57.798Z · antigravity · `jarvis-forge-phase4-autopilot` → Skonfigurować darmowy klucz Kat. B lub lokalną Ollamę na docelowym Ubuntu i uruchomić npm run forge:
 - 2026-11-25T21:47:34.320Z · antigravity · `jarvis-forge-adaptive-phase3` → Na fizycznym Ubuntu przetestować Adaptive Intelligence z prawdziwym darmowym API Kat. B (np. Gemini/
-- 2026-11-25T20:34:44.592Z · antigravity · `jarvis-forge-phase2` → Uruchomić npm run forge:accept na fizycznym Ubuntu (Ollama 7B-14B lub darmowy klucz API), naprawić O
-- **Następny krok (ostatnie zdarzenie):** Wykonać manualny odbiór fizycznego Ubuntu wg sekcji E.2 docs/JARVIS_FINAL_ACCEPTANCE.md (npm install + Electron, npm run forge:accept 7/7, npm run electron:dev 
+- **Następny krok (ostatnie zdarzenie):** Wypchnąć gałąź feat/jarvis-forge-evolution (bez ruszania main), uruchomić workflow CI dla Ubuntu (.AppImage/.deb), Windows (.exe) i Androida (.apk) oraz zweryfi
 
 ## Decyzje: ADR-0001-project-memory (proposed (czeka na recenzję człowieka lub innego agenta)), ADR-0002-autocore (accepted), ADR-0003-apex-linux-android-ux (proposed), ADR-0004-omni-pilot (proposed), ADR-0005-omni-frontier (proposed), ADR-0006-ux-obsidian-precision (proposed), ADR-0008-master-interface-and-siteos2 (proposed), ADR-0009-jarvis-forge-evolution (proposed) · nieudane podejścia: 9
 

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "generatedBy": "scripts/sync-project-state.mjs",
-  "generatedAt": "2026-11-27T16:28:44.978Z",
+  "generatedAt": "2026-11-28T00:18:53.515Z",
   "notice": "PLIK GENEROWANY — nie edytuj ręcznie. Odśwież: npm run memory:sync",
   "git": {
-    "commit": "01002ba03ca67cf7b61a042515b11646931fb3c0",
-    "shortCommit": "01002ba",
+    "commit": "50b661e0934b809f02ff87ea4f54fb358ad1bb2c",
+    "shortCommit": "50b661e",
     "branch": "feat/jarvis-forge-evolution",
     "dirty": true,
     "changes": [
@@ -15,9 +15,9 @@
       " M project-memory/reports/lint.json",
       " M project-memory/reports/secret-scan.json",
       " M project-memory/reports/test.json",
-      "?? project-memory/events/20261127T162844690Z-antigravity-jarvis-forge-phase5-closeout-acceptance.json"
+      "?? project-memory/events/20261128T001853239Z-antigravity-jarvis-v6-pioneer-updater-flow.json"
     ],
-    "worktreeFingerprint": "3a94b4f99dbe5babeca60413b200aed64501b1f11c6e2fa373bc52ba0a0ff67c"
+    "worktreeFingerprint": "9945f25a0c56bd9c25fec49026e550d6d78755208dbfacab5d0bbeaafa1671ee"
   },
   "repository": {
     "status": "OK",
@@ -39,15 +39,15 @@
   "modules": [
     {
       "dir": "tests",
-      "files": 377
+      "files": 378
     },
     {
       "dir": "src/lib",
-      "files": 317
+      "files": 319
     },
     {
       "dir": "src/components",
-      "files": 80
+      "files": 82
     },
     {
       "dir": "android",
@@ -55,11 +55,11 @@
     },
     {
       "dir": "docs",
-      "files": 38
+      "files": 39
     },
     {
       "dir": "project-memory",
-      "files": 36
+      "files": 37
     },
     {
       "dir": "(root)",
@@ -67,7 +67,7 @@
     },
     {
       "dir": "electron",
-      "files": 17
+      "files": 18
     },
     {
       "dir": "scripts",
@@ -167,6 +167,8 @@
       "Android Phone Use Agent + RiskGuard (Check-then-Act, zakaz pól haseł)",
       "OMNI-PILOT & Frontier Desktop Computer Use (Refleks <30ms, Hybryda AT-SPI2/UIA + Vision [0..1000], Dual-Track Strażnik Ekranu, Diagnostyka OS, RiskGuard + Kill-Switch Ctrl+Alt+X)",
       "JARVIS FORGE + AUTOPILOT ORCHESTRATOR (Jedno polecenie zero-config: Adaptive Intelligence, dynamiczne zespoły, 14 darmowych/lokalnych modeli 0 USD, git worktree, pamięć projektu/ADR, bramka zgody waiting_approval, testy, cross-model review, checkpointy i rollback)",
+      "JARVIS FLOW — Reżyser Skupienia (100% offline sprinty 15/25/45 min, Parking Myśli → 1-klik Zadanie/Notatka, proceduralny Web Audio generator dźwięku, Momentum & debrief)",
+      "Centrum Aktualizacji 1-Klik (Topbar + ⌘K + natywny downloader Electron z paskiem postępu %, weryfikacją SHA256, auto chmod +x dla AppImage oraz katalog Ubuntu .AppImage/.deb, Windows .exe i Android APK/OTA)",
       "Bi-Temporal Core Memory + MCP Bridge"
     ],
     "tools": [
@@ -432,6 +434,31 @@
   ],
   "recentCommits": [
     {
+      "hash": "50b661e",
+      "date": "2026-11-28T00:11:15Z",
+      "subject": "ci(release): fix Ubuntu workflow_dispatch publish, watch forge/** & add SHA256/OTA manifests"
+    },
+    {
+      "hash": "31ef908",
+      "date": "2026-11-28T00:11:02Z",
+      "subject": "feat(pioneer): add 1-click multi-platform Update Center, JARVIS Flow focus director & Kokpit Mocy"
+    },
+    {
+      "hash": "f56681d",
+      "date": "2026-11-27T19:44:09Z",
+      "subject": "docs(handoff): decouple handoff guide from hardcoded bundle hashes (TRANSFER-README.txt as single source of truth)"
+    },
+    {
+      "hash": "399e20a",
+      "date": "2026-11-27T18:37:59Z",
+      "subject": "docs(handoff): add physical Ubuntu handoff & acceptance guide (docs/JARVIS_PHYSICAL_HANDOFF_GUIDE.md)"
+    },
+    {
+      "hash": "a6b8bd6",
+      "date": "2026-11-27T16:28:45Z",
+      "subject": "docs(memory): record jarvis-forge-phase5-closeout-acceptance event & verified CURRENT_STATE (377/377, 3170/3170)"
+    },
+    {
       "hash": "01002ba",
       "date": "2026-11-27T16:21:36Z",
       "subject": "docs(acceptance): update closeout commit chain & final memory:check reference"
@@ -455,40 +482,15 @@
       "hash": "8867109",
       "date": "2026-11-27T15:49:12Z",
       "subject": "docs(memory): record jarvis-forge-phase5-real-autonomy event & verified CURRENT_STATE (377/377, 3169/3169)"
-    },
-    {
-      "hash": "f2ba49b",
-      "date": "2026-11-27T15:41:53Z",
-      "subject": "docs(forge): add Phase 5 Real Autonomy report and FA-009 live Ollama findings"
-    },
-    {
-      "hash": "6a4e1f5",
-      "date": "2026-11-27T15:41:52Z",
-      "subject": "test(forge): add Phase 5 resilience and live-regression test suite (8 tests)"
-    },
-    {
-      "hash": "d0797c0",
-      "date": "2026-11-27T15:41:52Z",
-      "subject": "fix(forge,ui): Phase 5 real-autonomy hardening, KV-cache, loop breaker, TAP/JSON parsers & test-protection review alignment"
-    },
-    {
-      "hash": "f263df1",
-      "date": "2026-11-27T12:13:58Z",
-      "subject": "docs(memory): record jarvis-forge-phase4-autopilot event & verified CURRENT_STATE (376/376, 3161/3161)"
-    },
-    {
-      "hash": "0a321bf",
-      "date": "2026-11-27T12:06:51Z",
-      "subject": "feat(ui,core): zero-config Autopilot UX, decision gate, Core tools, 5 E2E scenarios & report"
     }
   ],
   "checks": {
     "secret-scan": {
       "command": "node scripts/secret-scan.mjs --all",
       "exitCode": 0,
-      "finishedAt": "2026-11-27T16:21:37.054Z",
-      "commit": "01002ba03ca67cf7b61a042515b11646931fb3c0",
-      "logPath": "project-memory/reports/logs/secret-scan-20261127T162136Z.log",
+      "finishedAt": "2026-11-28T00:11:26.926Z",
+      "commit": "50b661e0934b809f02ff87ea4f54fb358ad1bb2c",
+      "logPath": "project-memory/reports/logs/secret-scan-20261128T001126Z.log",
       "summary": {
         "result": "Skan sekretów: czysto."
       },
@@ -499,9 +501,9 @@
     "lint": {
       "command": "npm run lint",
       "exitCode": 0,
-      "finishedAt": "2026-11-27T16:22:02.073Z",
-      "commit": "01002ba03ca67cf7b61a042515b11646931fb3c0",
-      "logPath": "project-memory/reports/logs/lint-20261127T162137Z.log",
+      "finishedAt": "2026-11-28T00:11:50.233Z",
+      "commit": "50b661e0934b809f02ff87ea4f54fb358ad1bb2c",
+      "logPath": "project-memory/reports/logs/lint-20261128T001127Z.log",
       "summary": {
         "problems": "✖ 2 problems (0 errors, 2 warnings)"
       },
@@ -512,12 +514,12 @@
     "test": {
       "command": "npm test",
       "exitCode": 0,
-      "finishedAt": "2026-11-27T16:27:33.129Z",
-      "commit": "01002ba03ca67cf7b61a042515b11646931fb3c0",
-      "logPath": "project-memory/reports/logs/test-20261127T162202Z.log",
+      "finishedAt": "2026-11-28T00:17:13.532Z",
+      "commit": "50b661e0934b809f02ff87ea4f54fb358ad1bb2c",
+      "logPath": "project-memory/reports/logs/test-20261128T001150Z.log",
       "summary": {
-        "testFiles": "Test Files  377 passed (377)",
-        "tests": "Tests  3170 passed (3170)"
+        "testFiles": "Test Files  378 passed (378)",
+        "tests": "Tests  3182 passed (3182)"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -526,11 +528,11 @@
     "build": {
       "command": "npm run build",
       "exitCode": 0,
-      "finishedAt": "2026-11-27T16:28:14.743Z",
-      "commit": "01002ba03ca67cf7b61a042515b11646931fb3c0",
-      "logPath": "project-memory/reports/logs/build-20261127T162733Z.log",
+      "finishedAt": "2026-11-28T00:17:55.520Z",
+      "commit": "50b661e0934b809f02ff87ea4f54fb358ad1bb2c",
+      "logPath": "project-memory/reports/logs/build-20261128T001713Z.log",
       "summary": {
-        "built": "built in 14.90s"
+        "built": "built in 14.93s"
       },
       "status": "PASS",
       "reason": "kod wyjścia 0 dla bieżącego stanu",
@@ -727,10 +729,18 @@
     ]
   },
   "events": {
-    "total": 17,
-    "valid": 17,
+    "total": 18,
+    "valid": 18,
     "invalid": [],
     "recent": [
+      {
+        "file": "project-memory/events/20261128T001853239Z-antigravity-jarvis-v6-pioneer-updater-flow.json",
+        "timestamp": "2026-11-28T00:18:53.239Z",
+        "agent": "antigravity",
+        "taskId": "jarvis-v6-pioneer-updater-flow",
+        "endCommit": "UNCOMMITTED",
+        "nextStep": "Wypchnąć gałąź feat/jarvis-forge-evolution (bez ruszania main), uruchomić workflow CI dla Ubuntu (.AppImage/.deb), Windows (.exe) i Androida (.apk) oraz zweryfikować artefakty w GitHub Release latest."
+      },
       {
         "file": "project-memory/events/20261127T162844690Z-antigravity-jarvis-forge-phase5-closeout-acceptance.json",
         "timestamp": "2026-11-27T16:28:44.690Z",
@@ -802,20 +812,12 @@
         "taskId": "master-interface-polish",
         "endCommit": "UNCOMMITTED",
         "nextStep": "Odbiór wizualny i sprzętowy właściciela na fizycznym Ubuntu oraz przetestowanie warsztatu Site OS 2.0 przed scaleniem do main."
-      },
-      {
-        "file": "project-memory/events/20261124T232007805Z-antigravity-production-integration.json",
-        "timestamp": "2026-11-24T23:20:07.805Z",
-        "agent": "antigravity",
-        "taskId": "production-integration",
-        "endCommit": "UNCOMMITTED",
-        "nextStep": "Wykonać 10-15 min checklistę odbiorczą na fizycznym Linuxie (Ollama + binarny Electron + X11/Wayland), Androidzie i 1 testowym kluczu API przed merge na main."
       }
     ]
   },
   "nextRecommendedStep": {
-    "from": "project-memory/events/20261127T162844690Z-antigravity-jarvis-forge-phase5-closeout-acceptance.json",
-    "text": "Wykonać manualny odbiór fizycznego Ubuntu wg sekcji E.2 docs/JARVIS_FINAL_ACCEPTANCE.md (npm install + Electron, npm run forge:accept 7/7, npm run electron:dev + IPC, żywe zadanie z pauzą/wznowieniem), potem decyzja o merge do main."
+    "from": "project-memory/events/20261128T001853239Z-antigravity-jarvis-v6-pioneer-updater-flow.json",
+    "text": "Wypchnąć gałąź feat/jarvis-forge-evolution (bez ruszania main), uruchomić workflow CI dla Ubuntu (.AppImage/.deb), Windows (.exe) i Androida (.apk) oraz zweryfikować artefakty w GitHub Release latest."
   },
   "decisions": [
     {
@@ -860,5 +862,5 @@
     }
   ],
   "failedAttempts": 9,
-  "integrity": "4de1f0cf5bcd5e1ae6d36c490e9fbc310edfef11561a7e2d3292c6793813bf14"
+  "integrity": "85136b64324c50cb66df89c91f955fac2569f5ec9f58003673af8dbb1ca0caff"
 }
