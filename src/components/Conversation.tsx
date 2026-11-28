@@ -149,6 +149,10 @@ export default function Conversation({
   onMemory,
   onBoss,
   onVoice,
+  onForge,
+  onFlow,
+  onUpdate,
+  updateBadge,
   tasksToday,
 }: {
   messages: ChatMessage[];
@@ -162,6 +166,10 @@ export default function Conversation({
   onMemory?: () => void;
   onBoss?: () => void;
   onVoice?: () => void;
+  onForge?: () => void;
+  onFlow?: () => void;
+  onUpdate?: () => void;
+  updateBadge?: string;
   tasksToday?: number;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
@@ -285,23 +293,45 @@ export default function Conversation({
               )}
             </div>
           )}
-          {/* Pozycjonowanie: JEDNA idea — AI, które Cię zna, pamięta i działa. Trzy filary. */}
-          {!needsSetup && (onMemory || onBoss || onVoice) && (
+          {/* Dyskretny baner nowej wersji (gdy wykryta na GitHub) */}
+          {updateBadge && onUpdate && (
+            <button
+              type="button"
+              className="update-home-banner"
+              style={{ minHeight: 44 }}
+              onClick={onUpdate}
+            >
+              <span>✨ Dostępna nowa wersja JARVISA ({updateBadge})</span>
+              <strong>Aktualizuj →</strong>
+            </button>
+          )}
+          {/* Kokpit Mocy: 4 główne filary jednym kliknięciem (Forge, Flow, Szef, Pamięć). */}
+          {!needsSetup && (onMemory || onBoss || onVoice || onForge || onFlow) && (
             <div className="pillars">
-              <div className="pillars-tag">Jedno AI, które Cię zna, pamięta Twoje życie i działa za Ciebie.</div>
+              <div className="pillars-tag">Jedno AI, które Cię zna, chroni skupienie, koduje i działa za Ciebie.</div>
               <div className="pillars-row">
+                {onForge && (
+                  <button type="button" className="pillar" style={{ minHeight: 44 }} onClick={onForge}>
+                    <span className="pillar-ico">⚒</span><b>Forge</b><small>autonomiczny kod</small>
+                  </button>
+                )}
+                {onFlow && (
+                  <button type="button" className="pillar" style={{ minHeight: 44 }} onClick={onFlow}>
+                    <span className="pillar-ico">⚡</span><b>Tryb Flow</b><small>skupienie i rytm</small>
+                  </button>
+                )}
                 {onBoss && (
-                  <button className="pillar" onClick={onBoss}>
-                    <span className="pillar-ico">⬢</span><b>Działa</b><small>agent: zrób za mnie</small>
+                  <button type="button" className="pillar" style={{ minHeight: 44 }} onClick={onBoss}>
+                    <span className="pillar-ico">⬢</span><b>Szef</b><small>zrób za mnie</small>
                   </button>
                 )}
                 {onMemory && (
-                  <button className="pillar" onClick={onMemory}>
+                  <button type="button" className="pillar" style={{ minHeight: 44 }} onClick={onMemory}>
                     <span className="pillar-ico">🧠</span><b>Pamięta</b><small>zna Twoje życie</small>
                   </button>
                 )}
-                {onVoice && (
-                  <button className="pillar" onClick={onVoice}>
+                {!onForge && !onFlow && onVoice && (
+                  <button type="button" className="pillar" style={{ minHeight: 44 }} onClick={onVoice}>
                     <span className="pillar-ico">🎙</span><b>Rozmawia</b><small>naturalnie, głosem</small>
                   </button>
                 )}

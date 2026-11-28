@@ -23,6 +23,8 @@ export default function More({
   onMind,
   onGoal,
   onForge,
+  onFlow,
+  onUpdate,
   onGrowthDay,
   onCandidates,
   onGoalStatus,
@@ -67,6 +69,8 @@ export default function More({
   onMind: () => void;
   onGoal: () => void;
   onForge?: () => void;
+  onFlow?: () => void;
+  onUpdate?: () => void;
   onGrowthDay: () => void;
   onCandidates: () => void;
   onGoalStatus: () => void;
@@ -104,6 +108,8 @@ export default function More({
   // Każda funkcja: krótka NAZWA (na kafelku) + OPIS (podtytuł kafelka i pole wyszukiwania).
   const items = [
     ...(onForge ? [{ id: "forge", icon: "⚒", name: "Jarvis Forge", desc: "Autonomiczny inżynier: buduj, naprawiaj, testuj (0 USD)", fn: onForge }] : []),
+    ...(onFlow ? [{ id: "flow", icon: "⚡", name: "Tryb Flow", desc: "Reżyser skupienia: sprinty, Parking Myśli, dźwięk offline", fn: onFlow }] : []),
+    ...(onUpdate ? [{ id: "update", icon: "⬇", name: "Aktualizuj JARVIS", desc: "1-klik pobierania + Ubuntu .AppImage/.deb, Windows .exe, Android .apk", fn: onUpdate }] : []),
     { id: "boss", icon: "⬢", name: "Szef", desc: "Agent głosowy: zrób za mnie, napraw, doradź", fn: onBoss },
     { id: "command", icon: "⌘", name: "Polecenia", desc: "Znajdź/otwórz wszystko (⌘K)", fn: onCommand },
     { id: "recall", icon: "🔎", name: "Recall", desc: "Znajdź wszystko u siebie (czaty, dziennik, pamięć…)", fn: onRecall },

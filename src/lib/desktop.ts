@@ -64,6 +64,19 @@ export interface JarvisDesktop {
   pilotUiFind?(query: string): Promise<{ ok: boolean; found?: boolean; backend?: string; windowTitle?: string; node?: UiTreeNode; score?: number; error?: string }>;
   desktopDiagnose?(): Promise<DesktopDoctorReport>;
   onOmniAbort?(cb: () => void): () => void;
+  downloadUpdate?(payload: { url: string; expectedSha256?: string }): Promise<{
+    ok: boolean;
+    filePath?: string;
+    filename?: string;
+    bytes?: number;
+    sha256?: string;
+    verifiedSha256?: boolean;
+    executableSet?: boolean;
+    error?: string;
+  }>;
+  openDownloadedUpdate?(filePath: string): Promise<{ ok: boolean; error?: string }>;
+  revealDownloadedUpdate?(filePath: string): Promise<{ ok: boolean; error?: string }>;
+  onUpdateProgress?(cb: (progress: { filename: string; receivedBytes: number; totalBytes: number; pct: number; speedBps: number }) => void): () => void;
 }
 
 export function desktop(): JarvisDesktop | null {

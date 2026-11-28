@@ -42,7 +42,19 @@ import { desktop } from "../lib/desktop";
 import { BRAIN_MODES, applyBrainMode, detectBrainMode, modeReadinessWarning } from "../lib/brainModes";
 import { detectSd, normalizeSdUrl } from "../lib/localImage";
 import { checkFalKey } from "../lib/images";
-import { applyUpdate, buildLocalTime, checkForUpdate, currentBuild, formatUpdateSize, platform, platformLabel, type UpdateInfo } from "../lib/updater";
+import {
+  applyUpdate,
+  buildLocalTime,
+  checkForUpdate,
+  currentBuild,
+  downloadNativeDesktopUpdate,
+  formatUpdateSize,
+  nativeDesktopDownloadSupported,
+  platform,
+  platformLabel,
+  type UpdateInfo,
+} from "../lib/updater";
+import { requestScreen } from "../lib/navIntent";
 import { CHANGELOG } from "../lib/changelog";
 import { liveUpdateSupported, checkLiveUpdate, applyLiveUpdate } from "../lib/liveUpdate";
 import { recentRoutes, type RouteLine } from "../lib/routeView";
@@ -638,6 +650,19 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
   const applyFullInstaller = async () => {
     if (!updInfo || updBusy) return;
     setUpdBusy(true);
+    if (nativeDesktopDownloadSupported() && updInfo.platform !== "web") {
+      setUpdMsg("Pobieram instalator z GitHub (weryfikacja SHA256)…");
+      const nr = await downloadNativeDesktopUpdate(updInfo.url, updInfo.sha256, (p) => {
+        setUpdMsg(`Pobieram ${p.filename}: ${p.pct}%…`);
+      });
+      setUpdBusy(false);
+      setUpdMsg(nr.message);
+      toast(nr.ok ? nr.message : `❌ ${nr.message}`);
+      if (nr.ok && nr.filePath) {
+        void desktop()?.openDownloadedUpdate?.(nr.filePath);
+      }
+      return;
+    }
     setUpdMsg(updInfo.platform === "web" ? "Odświeżam aplikację…" : "Otwieram bezpieczne pobieranie z GitHub…");
     const r = await applyUpdate(updInfo);
     setUpdBusy(false);
@@ -3440,6 +3465,14 @@ export default function SettingsPanel({ onClose, initialTab = "ai", initialAncho
                           <RefreshCw size={16} aria-hidden="true" /> Sprawdź ponownie
                         </button>
                       )}
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ minHeight: 44 }}
+                        onClick={() => { onClose(); requestScreen("update"); }}
+                      >
+                        <Download size={16} aria-hidden="true" /> Wszystkie platformy (Ubuntu · Windows · APK)
+                      </button>
                     </div>
 
                     {liveUpdateSupported() && updInfo?.newer && updInfo.assetAvailable && (

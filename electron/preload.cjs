@@ -85,4 +85,13 @@ contextBridge.exposeInMainWorld("jarvisDesktop", {
     ipcRenderer.on("jarvis:omni-abort", listener);
     return () => ipcRenderer.removeListener("jarvis:omni-abort", listener);
   },
+  // === Natywny downloader aktualizacji (allowlista GitHub + SHA256 + auto chmod +x dla AppImage) ===
+  downloadUpdate: (payload) => ipcRenderer.invoke("jarvis:update-download", payload),
+  openDownloadedUpdate: (filePath) => ipcRenderer.invoke("jarvis:update-open-file", String(filePath || "")),
+  revealDownloadedUpdate: (filePath) => ipcRenderer.invoke("jarvis:update-reveal-file", String(filePath || "")),
+  onUpdateProgress: (cb) => {
+    const listener = (_e, data) => cb(data);
+    ipcRenderer.on("jarvis:update-progress", listener);
+    return () => ipcRenderer.removeListener("jarvis:update-progress", listener);
+  },
 });

@@ -25,6 +25,8 @@ export const JARVIS_MODULES = [
   "Android Phone Use Agent + RiskGuard (Check-then-Act, zakaz pól haseł)",
   "OMNI-PILOT & Frontier Desktop Computer Use (Refleks <30ms, Hybryda AT-SPI2/UIA + Vision [0..1000], Dual-Track Strażnik Ekranu, Diagnostyka OS, RiskGuard + Kill-Switch Ctrl+Alt+X)",
   "JARVIS FORGE + AUTOPILOT ORCHESTRATOR (Jedno polecenie zero-config: Adaptive Intelligence, dynamiczne zespoły, 14 darmowych/lokalnych modeli 0 USD, git worktree, pamięć projektu/ADR, bramka zgody waiting_approval, testy, cross-model review, checkpointy i rollback)",
+  "JARVIS FLOW — Reżyser Skupienia (100% offline sprinty 15/25/45 min, Parking Myśli → 1-klik Zadanie/Notatka, proceduralny Web Audio generator dźwięku, Momentum & debrief)",
+  "Centrum Aktualizacji 1-Klik (Topbar + ⌘K + natywny downloader Electron z paskiem postępu %, weryfikacją SHA256, auto chmod +x dla AppImage oraz katalog Ubuntu .AppImage/.deb, Windows .exe i Android APK/OTA)",
   "Bi-Temporal Core Memory + MCP Bridge",
 ] as const;
 

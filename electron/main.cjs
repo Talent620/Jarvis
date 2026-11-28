@@ -16,6 +16,7 @@ const { createStdioMcpManager } = require("./mcp-stdio.cjs");
 const { createLocalOllamaManager } = require("./local-ollama.cjs");
 const { createLocalSiteOsManager } = require("./local-siteos.cjs");
 const { createLocalForgeManager } = require("./local-forge.cjs");
+const { downloadReleaseAsset, isPathInsideDir } = require("./updater-native.cjs");
 const localOllama = createLocalOllamaManager();
 
 // Na Linuxie automatycznie dopasuj backend X11/Wayland (Ozone) zamiast twardego XWayland.
@@ -465,6 +466,66 @@ function registerDesktopControl() {
   ipcMain.handle("jarvis:forge-ensure-local", async (event, url) => {
     if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
     return localForge().ensure(url || "http://127.0.0.1:3220");
+  });
+
+  // --- Natywny downloader aktualizacji (GitHub Releases allowlist + SHA256 + auto chmod +x dla AppImage) ---
+  ipcMain.handle("jarvis:update-download", async (event, payload) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    const url = String((payload && payload.url) || "").trim();
+    const expectedSha256 = String((payload && payload.expectedSha256) || "").trim();
+    const destDir = app.getPath("downloads");
+    return downloadReleaseAsset({
+      url,
+      expectedSha256,
+      destDir,
+      onProgress: (progress) => {
+        try {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send("jarvis:update-progress", progress);
+          }
+        } catch {
+          /* ignore */
+        }
+      },
+    });
+  });
+  ipcMain.handle("jarvis:update-open-file", async (event, rawPath) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    const downloadsDir = app.getPath("downloads");
+    const target = path.resolve(String(rawPath || ""));
+    if (!isPathInsideDir(downloadsDir, target) || !fs.existsSync(target)) {
+      return { ok: false, error: "Plik instalatora nie istnieje w katalogu Pobrane." };
+    }
+    if (!/\.(?:AppImage|deb|exe|apk|zip)$/i.test(target)) {
+      return { ok: false, error: "Niedozwolony typ pliku do uruchomienia." };
+    }
+    try {
+      if (process.platform === "linux" && /\.AppImage$/i.test(target)) {
+        try { fs.chmodSync(target, 0o755); } catch { /* ignore */ }
+        const child = spawn(target, [], { detached: true, stdio: "ignore" });
+        child.unref();
+        return { ok: true };
+      }
+      const errMsg = await shell.openPath(target);
+      if (errMsg) return { ok: false, error: errMsg };
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e && e.message ? e.message : String(e) };
+    }
+  });
+  ipcMain.handle("jarvis:update-reveal-file", (event, rawPath) => {
+    if (!isTrustedIpc(event)) return { ok: false, error: "forbidden" };
+    const downloadsDir = app.getPath("downloads");
+    const target = path.resolve(String(rawPath || ""));
+    if (!isPathInsideDir(downloadsDir, target) || !fs.existsSync(target)) {
+      return { ok: false, error: "Plik nie istnieje w katalogu Pobrane." };
+    }
+    try {
+      shell.showItemInFolder(target);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e && e.message ? e.message : String(e) };
+    }
   });
 
   // --- Kalendarz Google (natywnie, bez serwera) ---

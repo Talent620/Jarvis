@@ -10,6 +10,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "Listopad 2026 — JARVIS v6 Pioneer",
+    date: "2026-11-27",
+    items: [
+      "⬇ Dopracowany 1-klik „Aktualizuj” prosto z górnego paska, palety ⌘K, Centrum i Ustawień: w aplikacji desktopowej Electron pobiera instalator natywnie z paskiem postępu %, weryfikacją SHA256, atomowym zapisem (.part → rename) i automatycznym chmod +x dla Ubuntu .AppImage, a potem uruchamia go jednym kliknięciem.",
+      "📦 Multi-platformowe Centrum Aktualizacji pokazuje na jednym ekranie gotowe paczki dla Ubuntu (.AppImage i .deb), Windows (.exe) oraz Androida (podpisany Play-Protect Safe APK + błyskawiczne OTA).",
+      "⚡ Nowy moduł „JARVIS Flow — Reżyser Skupienia”: offline'owy zegar bloków głębokiej pracy (15/25/45 min + przerwa 5 min), Parking Myśli (łap rozpraszacze w 2 sekundy i zamieniaj je jednym kliknięciem w Zadanie lub Notatkę), proceduralny generator dźwięku skupienia Web Audio API (0 KB plików — szum brązowy, deszcz, binauralne Alpha 10 Hz) oraz śledzenie dziennego Momentum i serii.",
+      "🚀 Kokpit Mocy na ekranie startowym: 4 filary jednym kliknięciem (Jarvis Forge Autopilot, Tryb Flow, Tryb Szefa, Pamięć) oraz dyskretny baner, gdy na GitHub czeka nowsza wersja.",
+      "⚒ Jarvis Forge Autopilot (Fazy 4–5): pełny autonomiczny inżynier oprogramowania z izolacją Git worktree, weryfikatorem testów, recenzją cross-modelową i twardym limitem budżetu ($0 na lokalnej Ollamie).",
+    ],
+  },
+  {
     version: "Lipiec 2026 — Agent Workspace",
     date: "2026-07-24",
     items: [

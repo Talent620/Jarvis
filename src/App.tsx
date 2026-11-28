@@ -1,7 +1,7 @@
 import { formatGoalProgress, isGoalProgressRequest } from "./lib/goalProgress";
 import { loadGoalsNewestFirst } from "./lib/goalRuntime";
 import { handleVoiceOrChatGoalCommand } from "./lib/goalVoiceBridge";
-import { Bell, EyeOff, LayoutGrid, Phone, Plus, Settings, ShieldCheck } from "lucide-react";
+import { Bell, Download, EyeOff, LayoutGrid, Phone, Plus, Settings, ShieldCheck } from "lucide-react";
 import { applyInterfaceCommand } from "./lib/interfaceMode";
 import { lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { CommandItem } from "./lib/commandPalette";
@@ -20,6 +20,8 @@ const SalesCrm = lazy(() => import("./components/SalesCrm"));
 const GrowthDayPanel = lazy(() => import("./components/GrowthDayPanel"));
 const GoalStatusPanel = lazy(() => import("./components/GoalStatusPanel"));
 const ForgeWorkspace = lazy(() => import("./components/ForgeWorkspace"));
+const UpdateModal = lazy(() => import("./components/UpdateModal"));
+const FlowCockpit = lazy(() => import("./components/FlowCockpit"));
 const MoneyHub = lazy(() => import("./components/MoneyHub"));
 const FinancialDashboard = lazy(() => import("./components/FinancialDashboard"));
 const Help = lazy(() => import("./components/Help"));
@@ -114,7 +116,7 @@ const Recall = lazy(() => import("./components/Recall"));
 const BossMode = lazy(() => import("./components/BossMode"));
 import { guardianAutoHeal } from "./lib/guardian";
 import { guardianScan } from "./lib/guardianAgents";
-import { checkForUpdate, applyUpdate } from "./lib/updater";
+import { checkForUpdate, buildLocalTime, type UpdateInfo } from "./lib/updater";
 import { topPredictions } from "./lib/predict";
 import { runProspecting } from "./lib/prospect";
 import { syncFromSalesOs, shouldAutoSyncSalesOs } from "./lib/salesOs";
@@ -241,6 +243,9 @@ export default function App() {
   const showCandidates = route.screen === "candidates"; const setShowCandidates = screenSetter("candidates");
   const showGoalStatus = route.screen === "goalStatus"; const setShowGoalStatus = screenSetter("goalStatus");
   const showForge = route.screen === "forge"; const setShowForge = screenSetter("forge");
+  const showUpdate = route.screen === "update"; const setShowUpdate = screenSetter("update");
+  const showFlow = route.screen === "flow"; const setShowFlow = screenSetter("flow");
+  const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
   const [showCmd, setShowCmd] = useState(false);
   const showRecall = route.screen === "recall"; const setShowRecall = screenSetter("recall");
   const [recallSeed, setRecallSeed] = useState("");
@@ -327,6 +332,8 @@ export default function App() {
       open("candidates", "Kandydaci leadów", "🧲", "kandydaci leady szukaj firmy osm import bez zapisu crm"),
       open("goalStatus", "Cele (autonomia)", "🎯", "cele postep autonomia zatrzymaj wznow anuluj trwaly cel status"),
       open("forge", "Jarvis Forge — autonomiczne programowanie", "⚒", "forge kod programowanie agent repo testy debug naprawa git"),
+      open("flow", "JARVIS Flow — Reżyser Skupienia", "⚡", "flow skupienie pomodoro focus parking mysli dzwiek szum alpha"),
+      open("update", "Aktualizuj JARVIS (Ubuntu / Windows / Android)", "⬇", "aktualizuj aktualizacja pobierz appimage deb exe apk ota nowa wersja"),
       open("studio", "Studio Obrazów", "🎨", "zdjecia edycja generuj obraz foto"),
       open("guardian", "Diagnoza i naprawa", "🩺", "napraw przyspiesz pomoc diagnoza strażnik"),
       open("mind", "Umysł JARVISA", "🧠", "odprawa pamiec swiat wzorce samoocena"),
@@ -1308,9 +1315,8 @@ export default function App() {
     });
   }, []);
 
-  // Auto-sprawdzanie aktualizacji przy starcie (≤1×/dzień): gdy jest nowsza wersja, pokaż
-  // nienachalny toast z przyciskiem „Zaktualizuj". W przeglądarce aktualizacja jest płynna
-  // (czyści cache i przeładowuje — bez zamykania aplikacji); na telefonie/PC otwiera pobranie.
+  // Auto-sprawdzanie aktualizacji przy starcie (≤1×/dzień): zapisuje stan do availableUpdate
+  // (podświetla przycisk „Aktualizuj” na górnym pasku) i pokazuje nienachalny toast.
   useEffect(() => {
     const last = Number(localStorage.getItem("jarvis.update.lastCheck") || 0);
     if (Date.now() - last < 24 * 60 * 60 * 1000) return;
@@ -1318,22 +1324,21 @@ export default function App() {
       try {
         const r = await checkForUpdate();
         if ("error" in r) return; // błąd sieci — spróbujemy znów przy następnym starcie
-        // Zapisz znacznik PO udanym sprawdzeniu (też gdy brak nowości) — inaczej throttle 24h
-        // nie zadziała i sprawdzalibyśmy przy każdym starcie.
         localStorage.setItem("jarvis.update.lastCheck", String(Date.now()));
+        setAvailableUpdate(r);
         if (!r.newer) return;
         if (!r.assetAvailable) {
           toast(`Nowa wersja ${r.latest} jest wykryta. Instalator jeszcze się przygotowuje.`);
           return;
         }
-        toast(`🎉 Jest nowsza wersja JARVISA (${r.latest})`, {
-          label: r.platform === "web" ? "Odśwież" : "Pobierz",
-          onClick: () => void applyUpdate(r).then((result) => { if (!result.ok) toast(result.message); }),
+        toast(`🎉 Jest nowsza wersja JARVISA (${buildLocalTime(r.latest) || r.latest})`, {
+          label: "Aktualizuj",
+          onClick: () => setShowUpdate(true),
         });
       } catch { /* sieć — pomiń */ }
     }, 8000); // po starcie, nie blokuj pierwszego renderu
     return () => clearTimeout(t);
-  }, []);
+  }, [setShowUpdate]);
 
   // Silnik predykcyjny: po starcie (≤1×/dzień) wysuń PILNE przewidywania — JARVIS działa, zanim
   // zapytasz (zaległe zadania, terminy, follow-upy). Tylko gdy realnie jest coś pilnego.
@@ -1535,6 +1540,23 @@ export default function App() {
         <div className="spacer" />
         <button
           type="button"
+          className={`topbar-update-btn${availableUpdate?.newer && availableUpdate.assetAvailable ? " has-update" : ""}`}
+          onClick={() => setShowUpdate(true)}
+          title={
+            availableUpdate?.newer && availableUpdate.assetAvailable
+              ? `Nowa wersja JARVISA (${buildLocalTime(availableUpdate.latest) || availableUpdate.latest}) — kliknij, aby zaktualizować`
+              : "Centrum Aktualizacji (Ubuntu .AppImage/.deb · Windows .exe · Android .apk)"
+          }
+          aria-label="Aktualizuj JARVIS"
+        >
+          <Download size={15} strokeWidth={2} />
+          <span className="topbar-update-label">Aktualizuj</span>
+          {availableUpdate?.newer && availableUpdate.assetAvailable && (
+            <span className="topbar-update-dot" aria-hidden="true" />
+          )}
+        </button>
+        <button
+          type="button"
           className="icon-btn"
           onClick={() => setShowGuardian(true)}
           title="Diagnoza i naprawa (Strażnik JARVISA)"
@@ -1656,6 +1678,14 @@ export default function App() {
         onBoss={() => setShowBoss(true)}
         onMemory={() => setShowMemory(true)}
         onVoice={() => setShowVoice(true)}
+        onForge={() => setShowForge(true)}
+        onFlow={() => setShowFlow(true)}
+        onUpdate={() => setShowUpdate(true)}
+        updateBadge={
+          availableUpdate?.newer && availableUpdate.assetAvailable
+            ? (buildLocalTime(availableUpdate.latest) || availableUpdate.latest)
+            : undefined
+        }
         tasksToday={(store.data.tasks || []).filter((t) => !t.done && (t.due || "").slice(0, 10) === new Date().toISOString().slice(0, 10)).length}
       />
 
@@ -2005,6 +2035,8 @@ export default function App() {
           onMind={() => setShowMind(true)}
           onGoal={() => setShowGoal(true)}
           onForge={() => setShowForge(true)}
+          onFlow={() => setShowFlow(true)}
+          onUpdate={() => setShowUpdate(true)}
           onGrowthDay={() => setShowGrowthDay(true)}
           onCandidates={() => setShowCandidates(true)}
           onGoalStatus={() => setShowGoalStatus(true)}
@@ -2143,6 +2175,25 @@ export default function App() {
       {showForge && (
         <ScreenBoundary name="Jarvis Forge" onBack={() => setShowForge(false)}>
           <ForgeWorkspace onClose={() => setShowForge(false)} />
+        </ScreenBoundary>
+      )}
+      {showUpdate && (
+        <ScreenBoundary name="Centrum Aktualizacji" onBack={() => setShowUpdate(false)}>
+          <UpdateModal
+            initialInfo={availableUpdate}
+            onInfoChange={setAvailableUpdate}
+            onClose={() => setShowUpdate(false)}
+          />
+        </ScreenBoundary>
+      )}
+      {showFlow && (
+        <ScreenBoundary name="JARVIS Flow" onBack={() => setShowFlow(false)}>
+          <FlowCockpit
+            onClose={() => setShowFlow(false)}
+            onDebrief={(prompt) => {
+              void handleSend(prompt);
+            }}
+          />
         </ScreenBoundary>
       )}
       {showCmd && (
