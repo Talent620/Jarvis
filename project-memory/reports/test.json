@@ -4,20 +4,20 @@
   "command": "npm test",
   "available": true,
   "unavailableReason": null,
-  "startedAt": "2026-11-28T00:11:50.299Z",
-  "finishedAt": "2026-11-28T00:17:13.532Z",
-  "durationMs": 323233,
-  "commit": "50b661e0934b809f02ff87ea4f54fb358ad1bb2c",
+  "startedAt": "2026-11-28T02:24:19.719Z",
+  "finishedAt": "2026-11-28T02:29:40.210Z",
+  "durationMs": 320491,
+  "commit": "aa14322679e0a315666256498bbe0e0c940b1263",
   "branch": "feat/jarvis-forge-evolution",
   "worktreeDirty": true,
-  "worktreeFingerprint": "9945f25a0c56bd9c25fec49026e550d6d78755208dbfacab5d0bbeaafa1671ee",
+  "worktreeFingerprint": "78cd9c554022003d32ce7d7d951aa4632159643753b76da8ffd58ffd282fd107",
   "exitCode": 0,
   "signal": null,
   "timedOut": false,
   "spawnError": null,
   "summary": {
-    "testFiles": "Test Files  378 passed (378)",
-    "tests": "Tests  3182 passed (3182)"
+    "testFiles": "Test Files  379 passed (379)",
+    "tests": "Tests  3195 passed (3195)"
   },
   "outputTail": [
     "    at module.exports (/home/antigravity/Talent620/Jarvis/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)",
@@ -61,5 +61,5 @@
     "stderr | tests/chatsDegrade.test.ts > chats — brak cichej degradacji > gdy wszystkie próby padają → ok=false i warning o pełnej pamięci",
     "[chats] Nie udało się zapisać historii czatu — pamięć (localStorage) pełna."
   ],
-  "logPath": "project-memory/reports/logs/test-20261128T001150Z.log"
+  "logPath": "project-memory/reports/logs/test-20261128T022419Z.log"
 }
