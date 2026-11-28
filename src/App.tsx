@@ -22,6 +22,7 @@ const GoalStatusPanel = lazy(() => import("./components/GoalStatusPanel"));
 const ForgeWorkspace = lazy(() => import("./components/ForgeWorkspace"));
 const UpdateModal = lazy(() => import("./components/UpdateModal"));
 const FlowCockpit = lazy(() => import("./components/FlowCockpit"));
+const GuardianSoulModal = lazy(() => import("./components/GuardianSoulModal"));
 const MoneyHub = lazy(() => import("./components/MoneyHub"));
 const FinancialDashboard = lazy(() => import("./components/FinancialDashboard"));
 const Help = lazy(() => import("./components/Help"));
@@ -245,6 +246,7 @@ export default function App() {
   const showForge = route.screen === "forge"; const setShowForge = screenSetter("forge");
   const showUpdate = route.screen === "update"; const setShowUpdate = screenSetter("update");
   const showFlow = route.screen === "flow"; const setShowFlow = screenSetter("flow");
+  const showSoul = route.screen === "soul"; const setShowSoul = screenSetter("soul");
   const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
   const [showCmd, setShowCmd] = useState(false);
   const showRecall = route.screen === "recall"; const setShowRecall = screenSetter("recall");
@@ -333,6 +335,7 @@ export default function App() {
       open("goalStatus", "Cele (autonomia)", "🎯", "cele postep autonomia zatrzymaj wznow anuluj trwaly cel status"),
       open("forge", "Jarvis Forge — autonomiczne programowanie", "⚒", "forge kod programowanie agent repo testy debug naprawa git"),
       open("flow", "JARVIS Flow — Reżyser Skupienia", "⚡", "flow skupienie pomodoro focus parking mysli dzwiek szum alpha"),
+      open("soul", "Anioł Stróż & Kompas Życia", "🪽", "aniol stroz kompas zycia wartosci przymierze skarbiec zwyciestw kapsula czasu oddech motywacja"),
       open("update", "Aktualizuj JARVIS (Ubuntu / Windows / Android)", "⬇", "aktualizuj aktualizacja pobierz appimage deb exe apk ota nowa wersja"),
       open("studio", "Studio Obrazów", "🎨", "zdjecia edycja generuj obraz foto"),
       open("guardian", "Diagnoza i naprawa", "🩺", "napraw przyspiesz pomoc diagnoza strażnik"),
@@ -1680,6 +1683,7 @@ export default function App() {
         onVoice={() => setShowVoice(true)}
         onForge={() => setShowForge(true)}
         onFlow={() => setShowFlow(true)}
+        onSoul={() => setShowSoul(true)}
         onUpdate={() => setShowUpdate(true)}
         updateBadge={
           availableUpdate?.newer && availableUpdate.assetAvailable
@@ -1783,9 +1787,9 @@ export default function App() {
         </div>
       ))}
       <div className="soul-bar">
-        {(["AUTO", "BOJOWY", "KUMPEL", "ADWOKAT_DIABLA"] as PersonalityMode[]).map((mode) => {
+        {(["AUTO", "ANIOL_STROZ", "KUMPEL", "BOJOWY", "ADWOKAT_DIABLA"] as PersonalityMode[]).map((mode) => {
           const active = (store.settings.personalityMode || "AUTO") === mode;
-          const label = mode === "AUTO" ? "Auto" : PERSONALITY_MODES[mode].label;
+          const label = mode === "AUTO" ? "Auto" : `${PERSONALITY_MODES[mode].badge} ${PERSONALITY_MODES[mode].label}`;
           const hint = mode === "AUTO" ? "Router Refleks/Kora sam dobiera styl" : PERSONALITY_MODES[mode].shortHint;
           return (
             <button
@@ -2036,6 +2040,7 @@ export default function App() {
           onGoal={() => setShowGoal(true)}
           onForge={() => setShowForge(true)}
           onFlow={() => setShowFlow(true)}
+          onSoul={() => setShowSoul(true)}
           onUpdate={() => setShowUpdate(true)}
           onGrowthDay={() => setShowGrowthDay(true)}
           onCandidates={() => setShowCandidates(true)}
@@ -2191,6 +2196,16 @@ export default function App() {
           <FlowCockpit
             onClose={() => setShowFlow(false)}
             onDebrief={(prompt) => {
+              void handleSend(prompt);
+            }}
+          />
+        </ScreenBoundary>
+      )}
+      {showSoul && (
+        <ScreenBoundary name="Anioł Stróż" onBack={() => setShowSoul(false)}>
+          <GuardianSoulModal
+            onClose={() => setShowSoul(false)}
+            onStartTalk={(prompt) => {
               void handleSend(prompt);
             }}
           />

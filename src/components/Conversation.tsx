@@ -14,6 +14,7 @@ import { requestScreen } from "../lib/navIntent";
 import { lifeEntropy } from "../lib/lifeEntropy";
 import { ideaCollider, dayNumber } from "../lib/ideaCollider";
 import { providerShortName } from "../lib/providerNames";
+import { buildGuardianHomeWhisper, loadLifeCompass } from "../lib/lifeCompass";
 
 // Akcje pod odpowiedzią: odsłuchaj + kopiuj (z potwierdzeniem ✓) + regeneruj.
 function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {
@@ -151,6 +152,7 @@ export default function Conversation({
   onVoice,
   onForge,
   onFlow,
+  onSoul,
   onUpdate,
   updateBadge,
   tasksToday,
@@ -168,6 +170,7 @@ export default function Conversation({
   onVoice?: () => void;
   onForge?: () => void;
   onFlow?: () => void;
+  onSoul?: () => void;
   onUpdate?: () => void;
   updateBadge?: string;
   tasksToday?: number;
@@ -293,6 +296,40 @@ export default function Conversation({
               )}
             </div>
           )}
+          {/* 🪽 Anioł Stróż — żywa, czuła karta prowadzenia (zawsze dopasowana do pory dnia, Kapsuł Czasu i Przymierza) */}
+          {onSoul && (() => {
+            let whisper: ReturnType<typeof buildGuardianHomeWhisper> | null = null;
+            try { whisper = buildGuardianHomeWhisper(loadLifeCompass(), Date.now()); } catch { /* defensywnie */ }
+            if (!whisper) return null;
+            return (
+              <div className="guardian-home-card">
+                <div className="guardian-home-badge">{whisper.badge}</div>
+                <div className="guardian-home-title">{whisper.title}</div>
+                <div className="guardian-home-body muted">{whisper.body}</div>
+                <div className="guardian-home-actions">
+                  <button type="button" className="chip on" style={{ minHeight: 44 }} onClick={onSoul}>
+                    🪽 {whisper.primaryLabel}
+                  </button>
+                  {!needsSetup && (
+                    <button
+                      type="button"
+                      className="chip"
+                      style={{ minHeight: 44 }}
+                      onClick={() => {
+                        store.setSettings({ personalityMode: "ANIOL_STROZ" });
+                        onSuggest(
+                          whisper!.chatPrompt ||
+                            "Pogadaj ze mną szczerze jak mój anioł stróż i lojalny kumpel — sprawdź jak się mam i pomóż mi mądrze przeżyć ten dzień.",
+                        );
+                      }}
+                    >
+                      💬 Pogadaj ze mną
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
           {/* Dyskretny baner nowej wersji (gdy wykryta na GitHub) */}
           {updateBadge && onUpdate && (
             <button
@@ -305,14 +342,14 @@ export default function Conversation({
               <strong>Aktualizuj →</strong>
             </button>
           )}
-          {/* Kokpit Mocy: 4 główne filary jednym kliknięciem (Forge, Flow, Szef, Pamięć). */}
-          {!needsSetup && (onMemory || onBoss || onVoice || onForge || onFlow) && (
+          {/* Kokpit Mocy: 4 główne filary jednym kliknięciem (Anioł Stróż, Tryb Flow, Forge, Szef). */}
+          {!needsSetup && (onSoul || onMemory || onBoss || onVoice || onForge || onFlow) && (
             <div className="pillars">
-              <div className="pillars-tag">Jedno AI, które Cię zna, chroni skupienie, koduje i działa za Ciebie.</div>
+              <div className="pillars-tag">Twój anioł stróż, lojalny kumpel i osobisty system mocy — zawsze przy Tobie.</div>
               <div className="pillars-row">
-                {onForge && (
-                  <button type="button" className="pillar" style={{ minHeight: 44 }} onClick={onForge}>
-                    <span className="pillar-ico">⚒</span><b>Forge</b><small>autonomiczny kod</small>
+                {onSoul && (
+                  <button type="button" className="pillar" style={{ minHeight: 44 }} onClick={onSoul}>
+                    <span className="pillar-ico">🪽</span><b>Anioł Stróż</b><small>kompas i wartości</small>
                   </button>
                 )}
                 {onFlow && (
@@ -320,17 +357,22 @@ export default function Conversation({
                     <span className="pillar-ico">⚡</span><b>Tryb Flow</b><small>skupienie i rytm</small>
                   </button>
                 )}
+                {onForge && (
+                  <button type="button" className="pillar" style={{ minHeight: 44 }} onClick={onForge}>
+                    <span className="pillar-ico">⚒</span><b>Forge</b><small>autonomiczny kod</small>
+                  </button>
+                )}
                 {onBoss && (
                   <button type="button" className="pillar" style={{ minHeight: 44 }} onClick={onBoss}>
                     <span className="pillar-ico">⬢</span><b>Szef</b><small>zrób za mnie</small>
                   </button>
                 )}
-                {onMemory && (
+                {!onSoul && onMemory && (
                   <button type="button" className="pillar" style={{ minHeight: 44 }} onClick={onMemory}>
                     <span className="pillar-ico">🧠</span><b>Pamięta</b><small>zna Twoje życie</small>
                   </button>
                 )}
-                {!onForge && !onFlow && onVoice && (
+                {!onForge && !onFlow && !onSoul && onVoice && (
                   <button type="button" className="pillar" style={{ minHeight: 44 }} onClick={onVoice}>
                     <span className="pillar-ico">🎙</span><b>Rozmawia</b><small>naturalnie, głosem</small>
                   </button>

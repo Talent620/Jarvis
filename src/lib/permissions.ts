@@ -129,6 +129,8 @@ const RISK: Record<string, Risk> = {
   add_shopping_item: "write", add_calendar_event: "write", remember_fact: "write",
   create_scene: "write", set_timer: "write", add_tally_item: "write", add_journal_entry: "write",
   create_flashcards: "write",
+  // JARVIS Anioł Stróż & Kompas Życia — 100% lokalny, odwracalny zapis bez akcji wychodzących
+  save_life_victory: "write", save_life_promise: "write", life_compass_checkin: "write",
   // outbound — zewnętrzne lub nieodwracalne (wymaga zgody)
   gmail_send: "outbound", gmail_reply: "outbound", gcal_add: "outbound", clear_tally: "outbound", run_automation: "outbound",
   send_test_email: "outbound", send_offers_all: "outbound",

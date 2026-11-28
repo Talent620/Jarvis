@@ -24,6 +24,7 @@ export default function More({
   onGoal,
   onForge,
   onFlow,
+  onSoul,
   onUpdate,
   onGrowthDay,
   onCandidates,
@@ -70,6 +71,7 @@ export default function More({
   onGoal: () => void;
   onForge?: () => void;
   onFlow?: () => void;
+  onSoul?: () => void;
   onUpdate?: () => void;
   onGrowthDay: () => void;
   onCandidates: () => void;
@@ -107,6 +109,7 @@ export default function More({
 
   // Każda funkcja: krótka NAZWA (na kafelku) + OPIS (podtytuł kafelka i pole wyszukiwania).
   const items = [
+    ...(onSoul ? [{ id: "soul", icon: "🪽", name: "Anioł Stróż", desc: "Kompas Życia, 7 filarów, Przymierze, Skarbiec Zwycięstw i Oddech", fn: onSoul }] : []),
     ...(onForge ? [{ id: "forge", icon: "⚒", name: "Jarvis Forge", desc: "Autonomiczny inżynier: buduj, naprawiaj, testuj (0 USD)", fn: onForge }] : []),
     ...(onFlow ? [{ id: "flow", icon: "⚡", name: "Tryb Flow", desc: "Reżyser skupienia: sprinty, Parking Myśli, dźwięk offline", fn: onFlow }] : []),
     ...(onUpdate ? [{ id: "update", icon: "⬇", name: "Aktualizuj JARVIS", desc: "1-klik pobierania + Ubuntu .AppImage/.deb, Windows .exe, Android .apk", fn: onUpdate }] : []),

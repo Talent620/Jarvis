@@ -10,6 +10,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "Listopad 2026 — JARVIS v6.1 Anioł Stróż & Kompas Życia",
+    date: "2026-11-28",
+    items: [
+      "🪽 Nowy tryb duszy „Anioł Stróż” (1 klik na pasku pod czatem lub automatycznie w chwilach zwątpienia, rozdroży i późnej nocy): lojalny kolega i mądry opiekun — ciepły, szczery bez lizusostwa, z wbudowaną Tarczą Kryzysową.",
+      "🧭 Kompas Życia & 7 Filarów Charakteru (Prawda, Odwaga, Słowność, Spokój, Energia, Bliskość, Sens) z żywym 7-osiowym radarem SVG liczonym wyłącznie z Twoich realnych działań, Gwiazdą Północną („Kim się staję”), Wartościami i Granicami.",
+      "🛡 Przymierze ze Sobą (protokół Zero Wstydu): małe święte obietnice z 1-klikowym „Dotrzymałem” oraz „Wróć na kurs” po potknięciu — bez kasowania historii i bez samobiczowania.",
+      "🏆 Skarbiec Zwycięstw & ⏳ Kapsuły Czasu: zapisuj prawdziwe dowody swojej siły (JARVIS sam przypomina je, gdy masz gorszy dzień) oraz pisz zapieczętowane listy do przyszłego siebie, które odblokują się w wybranej dacie.",
+      "🌅 Poranny Kompas (30 s), 🌙 Wieczorne Lustro (z automatycznym wpisem do Dziennika) i 🫁 Przewodnik Oddechu 4-4-6 + uziemienie 5-4-3-2-1 — w 100% offline i prywatnie na Ubuntu, Windows, Androidzie (APK/OTA) oraz Web, z pełną kopią zapasową.",
+    ],
+  },
+  {
     version: "Listopad 2026 — JARVIS v6 Pioneer",
     date: "2026-11-27",
     items: [

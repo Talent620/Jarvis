@@ -37,6 +37,7 @@ const GROUP_TOOLS: Record<string, string[]> = {
   android: ["android_type", "android_tap", "android_global", "android_open_app", "android_open_settings"],
   info: ["get_weather", "get_news", "get_markets"],
   coding: ["autopilot_run", "autopilot_status", "autopilot_decide", "autopilot_rollback"],
+  life: ["save_life_victory", "save_life_promise", "life_compass_checkin"],
   system: ["set_mode", "set_preference", "set_theme", "set_voice", "switch_ai", "lock_assistant", "suggest_ai", "system_health", "self_check",
     "backup_data", "predictions", "deep_solve"],
 };
@@ -63,6 +64,11 @@ const GROUP_KEYWORDS: Record<string, string[]> = {
     "forge", "autopilot", "repozytorium", "repo", "kod", "kodowanie", "programowanie", "programuj",
     "napraw błąd", "napraw blad", "bug", "testy", "refaktor", "moduł", "modul", "zaimplementuj",
     "rollback", "git", "typescript", "javascript", "python", "commit",
+  ],
+  life: [
+    "anioł", "aniol", "stróż", "stroz", "kompas", "wartości", "wartosci", "obiecuj", "obietnic",
+    "przymierz", "zwycięstw", "zwyciestw", "dumn", "wdzięczn", "wdzieczn", "intencj", "wieczorn",
+    "porann", "sens", "motyw", "lepszym", "charakter", "oddech", "ciężki", "ciezki", "kapsuł", "kapsul",
   ],
   system: ["motyw", "ustaw tryb", "przełącz ai", "przelacz ai", "głos jarvisa", "glos jarvisa", "kopia", "backup", "diagnoza", "stan systemu", "preferencj", "stały umysł", "staly umysl", "stały głos", "staly glos", "nie zmieniaj głosu", "nie zmieniaj glosu", "stały model", "staly model", "zablokuj mózg", "zablokuj mozg", "stały mózg", "staly mozg", "który ai", "ktory ai", "który model", "ktory model", "najlepszy ai", "co polecasz", "jaki mózg", "jaki mozg", "mądrzejszy", "madrzejszy"],
 };

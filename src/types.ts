@@ -727,8 +727,8 @@ export interface Settings {
   profile: UserProfile;
   /** Preset osobowości: classic | concise | warm | witty | custom. */
   persona: string;
-  /** Aktywny tryb osobowości (Sprint 2): AUTO (router Refleks/Kora) | BOJOWY | KUMPEL | ADWOKAT_DIABLA. */
-  personalityMode?: "AUTO" | "BOJOWY" | "KUMPEL" | "ADWOKAT_DIABLA";
+  /** Aktywny tryb osobowości / duszy: AUTO (router Refleks/Kora) | BOJOWY | KUMPEL | ANIOL_STROZ | ADWOKAT_DIABLA. */
+  personalityMode?: "AUTO" | "BOJOWY" | "KUMPEL" | "ANIOL_STROZ" | "ADWOKAT_DIABLA";
   /** Protokół Mówionej Polszczyzny (voice_mode): max 2–3 zdania, zero markdown/URL pod TTS i barge-in. */
   voiceModeProtocol?: boolean;
   /** Dodatkowy, własny opis osobowości (zawsze doklejany). */

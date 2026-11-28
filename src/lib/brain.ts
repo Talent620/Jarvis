@@ -39,6 +39,7 @@ import { webllmSupported } from "./webllm";
 import { withBackoff, CircuitBreaker } from "./resilience";
 import { logError, recordLatency } from "./errorLog";
 import { buildSoulPromptBlock } from "./soulModes";
+import { buildLifeCompassPromptBlock, loadLifeCompass } from "./lifeCompass";
 import { buildSleepMemoryPromptBlock, consolidateOpenLoops, recordCorrectionLesson } from "./sleepCompute";
 import { buildSelfAwarenessPromptBlock } from "./selfManifest";
 import { VISION_ROUTABLE, PROFILE_LIST, taskModelFor, isKeylessProvider, modelHasVisionHeuristic, providerSupportsVision } from "./autocore/catalog";
@@ -393,6 +394,8 @@ export function systemPrompt(ctx: PromptContext = {}): string {
     `Charakter: ${tone}${extra}`,
     ``,
     soul.block,
+    ``,
+    buildLifeCompassPromptBlock(loadLifeCompass(), userText, now.getTime()),
     ``,
     buildSelfAwarenessPromptBlock(toolDefs.map((d) => d.name)),
     ``,

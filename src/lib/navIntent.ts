@@ -46,6 +46,7 @@ export const SCREENS: ScreenDef[] = [
   { id: "history", label: "Historia rozmów", aliases: ["historia", "historia rozmów", "historia rozmow", "poprzednie czaty"] },
   { id: "forge", label: "Jarvis Forge / Autopilot", aliases: ["forge", "jarvis forge", "autopilot kodu", "programowanie", "kodowanie", "autonomiczny programista"] },
   { id: "flow", label: "Tryb Flow — Reżyser Skupienia", aliases: ["flow", "tryb flow", "skupienie", "tryb skupienia", "pomodoro", "focus", "parking myśli", "parking mysli"] },
+  { id: "soul", label: "Anioł Stróż & Kompas Życia", aliases: ["anioł stróż", "aniol stroz", "anioł", "aniol", "kompas życia", "kompas zycia", "wartości", "wartosci", "przymierze", "skarbiec zwycięstw", "skarbiec zwyciestw", "kapsuła czasu", "kapsula czasu", "oddech"] },
   { id: "update", label: "Aktualizuj JARVIS", aliases: ["aktualizuj", "aktualizacja", "aktualizacje", "pobierz aktualizację", "pobierz aktualizacje", "nowa wersja", "update"] },
   { id: "admin", label: "Administrator", aliases: ["administrator", "panel admina", "licencje"] },
 ];

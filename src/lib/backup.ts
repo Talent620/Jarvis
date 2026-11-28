@@ -1,6 +1,7 @@
 import { store } from "./store";
 import { encryptText, decryptText } from "./cipher";
 import { loadChats, saveChats, type ChatSession } from "./chats";
+import { loadLifeCompass, saveLifeCompass, sanitizeLifeCompass } from "./lifeCompass";
 import type { AppData, Settings } from "../types";
 
 // Eksport/import danych (kopia zapasowa). Trzy poziomy:
@@ -39,13 +40,14 @@ export function sanitizeSafeSettings(raw: unknown): Partial<Settings> {
   return out as Partial<Settings>;
 }
 
-/** Zwykła kopia (bez sekretów): dane + wersjonowana sekcja bezpiecznych ustawień. */
+/** Zwykła kopia (bez sekretów): dane + wersjonowana sekcja bezpiecznych ustawień + Kompas Życia. */
 export function buildNormalPayload(): Record<string, unknown> {
   return {
     app: "jarvis",
     version: 1,
     exportedAt: Date.now(),
     data: dataDump(),
+    lifeCompass: loadLifeCompass(),
     safeSettings: pickSafeSettings(store.settings),
     safeSettingsVersion: 1,
   };
@@ -109,6 +111,9 @@ export function applyParsed(parsed: any): string {
   });
   // Historia rozmów (osobny magazyn) — przywróć, gdy kopia ją zawiera (pełna kopia).
   if (Array.isArray(parsed.chats)) saveChats(parsed.chats as ChatSession[]);
+  if (parsed.lifeCompass && typeof parsed.lifeCompass === "object") {
+    saveLifeCompass(sanitizeLifeCompass(parsed.lifeCompass));
+  }
   if (parsed.settings && typeof parsed.settings === "object") {
     const safe = sanitizeImportedSettings(parsed.settings, store.settings, (keys) =>
       typeof window !== "undefined" &&
@@ -191,7 +196,7 @@ function download(payload: unknown, name: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-/** Pełny ładunek kopii: dane + wszystkie ustawienia (w tym klucze) + historia rozmów. */
+/** Pełny ładunek kopii: dane + wszystkie ustawienia (w tym klucze) + historia rozmów + Kompas Życia. */
 export function buildFullPayload(): Record<string, unknown> {
   return {
     app: "jarvis",
@@ -199,6 +204,7 @@ export function buildFullPayload(): Record<string, unknown> {
     version: 1,
     exportedAt: Date.now(),
     data: dataDump(),
+    lifeCompass: loadLifeCompass(),
     settings: store.settings,
     // Historia rozmów trzymana osobno (localStorage) — w pełnej kopii też, by nie zginęła.
     chats: loadChats(),

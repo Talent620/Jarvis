@@ -51,6 +51,14 @@ import { applyBrainMode, BRAIN_MODES, type BrainModeId } from "./brainModes";
 import { recallEntities, worldSummary, getWorld } from "./worldModel";
 import { topPredictions } from "./predict";
 import { buildChiefBriefing, formatBriefing } from "./chiefOfStaff";
+import {
+  addLifePromise,
+  addProofVictory,
+  computeCharacterProfile,
+  loadLifeCompass,
+  normalizePillar,
+  upsertTodayRitual,
+} from "./lifeCompass";
 import type { ProviderId } from "./providers/types";
 import type { Citation, Settings, LeadStatus } from "../types";
 
@@ -268,6 +276,83 @@ const tools: Tool[] = [
         d.journal.unshift({ id: uid(), title: (title || "").trim(), body: String(body).trim(), tags: t, createdAt: now, updatedAt: now }),
       );
       return `Zapisałem w Twoim dzienniku${title ? `: „${title}"` : ""}.`;
+    },
+  },
+  {
+    def: {
+      name: "save_life_victory",
+      description:
+        "Zapisz realne zwycięstwo, przełamanie oporu, akt odwagi, dotrzymaną obietnicę lub wdzięczność użytkownika do Skarbca Zwycięstw (Anioł Stróż przypomni mu ten prawdziwy dowód siły w cięższym dniu).",
+      input_schema: obj(
+        {
+          text: str("Krótki, prawdziwy opis zwycięstwa lub dowodu siły"),
+          pillar: str("Filar charakteru: prawda | odwaga | slownosc | spokoj | energia | bliskosc | sens (opcjonalnie)"),
+        },
+        ["text"],
+      ),
+    },
+    run: ({ text, pillar }) => {
+      addProofVictory(String(text || ""), normalizePillar(pillar), "jarvis");
+      return `Zapisałem to w Twoim Skarbcu Zwycięstw: „${String(text || "").trim()}”. Przypomnę Ci ten dowód, gdy kiedyś zwątpisz.`;
+    },
+  },
+  {
+    def: {
+      name: "save_life_promise",
+      description:
+        "Dodaj nową osobistą obietnicę użytkownika do Przymierza ze Sobą (np. gdy mówi: obiecuję sobie codziennie..., pilnuj żebym...).",
+      input_schema: obj(
+        {
+          title: str("Treść małej, konkretnej obietnicy sobie"),
+          pillar: str("Filar: prawda | odwaga | slownosc | spokoj | energia | bliskosc | sens (opcjonalnie)"),
+          why: str("Dlaczego ta obietnica jest ważna (opcjonalnie)"),
+        },
+        ["title"],
+      ),
+    },
+    run: ({ title, pillar, why }) => {
+      addLifePromise(String(title || ""), normalizePillar(pillar), why ? String(why) : undefined);
+      return `Dopisałem do Twojego Przymierza ze Sobą: „${String(title || "").trim()}”. Będę Ci o niej życzliwie przypominać.`;
+    },
+  },
+  {
+    def: {
+      name: "life_compass_checkin",
+      description:
+        "Zapisz dzisiejszą poranną intencję albo wieczorną refleksję (z czego jesteś dumny / wdzięczny / lekcja na jutro) LUB odczytaj aktualny stan Kompasu Życia i 7 filarów charakteru.",
+      input_schema: obj({
+        morningIntention: str("Poranna intencja na dziś (opcjonalnie)"),
+        kindnessAct: str("Drobny akt dobra na dziś (opcjonalnie)"),
+        eveningProud: str("Jedna rzecz, z której użytkownik jest dziś dumny (opcjonalnie)"),
+        eveningGrateful: str("Jedna wdzięczność z dzisiaj (opcjonalnie)"),
+        eveningLesson: str("Jedna spokojna lekcja na jutro (opcjonalnie)"),
+      }),
+    },
+    run: ({ morningIntention, kindnessAct, eveningProud, eveningGrateful, eveningLesson }) => {
+      const hasPatch = Boolean(morningIntention || kindnessAct || eveningProud || eveningGrateful || eveningLesson);
+      if (hasPatch) {
+        upsertTodayRitual({
+          ...(morningIntention ? { morningIntention: String(morningIntention) } : {}),
+          ...(kindnessAct ? { kindnessAct: String(kindnessAct) } : {}),
+          ...(eveningProud ? { eveningProud: String(eveningProud) } : {}),
+          ...(eveningGrateful ? { eveningGrateful: String(eveningGrateful) } : {}),
+          ...(eveningLesson ? { eveningLesson: String(eveningLesson) } : {}),
+        });
+        if (eveningProud) {
+          addProofVictory(String(eveningProud), "prawda", "ritual");
+        }
+        return "Zapisane w Twoim Kompasie Życia na dziś.";
+      }
+      const state = loadLifeCompass();
+      const prof = computeCharacterProfile(state, {
+        completedTasks: store.data.tasks.filter((t) => t.done).length,
+        journalEntries: store.data.journal.length,
+      });
+      return [
+        `Kompas Życia — wynik charakteru: ${prof.overallScore}/100 (najmocniejszy: ${prof.strongest.label} ${prof.strongest.score}/100; do czułej uwagi: ${prof.needsCare.label} ${prof.needsCare.score}/100).`,
+        `Dotrzymane obietnice: ${prof.keptTotal}, powroty na kurs: ${prof.comebacksTotal}, dowody w Skarbcu Zwycięstw: ${prof.proofCount}.`,
+        state.northStar ? `Gwiazda Północna: ${state.northStar}` : "Gwiazda Północna jeszcze nieustawiona.",
+      ].join(" ");
     },
   },
   {

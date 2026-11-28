@@ -1,8 +1,9 @@
-// === Sprint 2 / Moduł 1: Protokół Mówionej Polszczyzny + 3 Tryby Osobowości ===
+// === Sprint 2 / Moduł 1 + JARVIS Anioł Stróż: Protokół Mówionej Polszczyzny + 4 Tryby Duszy ===
 // Czysty, testowalny moduł (Refleks/Kora + UI + voiceLoop).
+import { detectEmotionalWeather } from "./lifeCompass";
 
-export type PersonalityMode = "AUTO" | "BOJOWY" | "KUMPEL" | "ADWOKAT_DIABLA";
-export type ResolvedPersonality = "BOJOWY" | "KUMPEL" | "ADWOKAT_DIABLA";
+export type PersonalityMode = "AUTO" | "BOJOWY" | "KUMPEL" | "ANIOL_STROZ" | "ADWOKAT_DIABLA";
+export type ResolvedPersonality = "BOJOWY" | "KUMPEL" | "ANIOL_STROZ" | "ADWOKAT_DIABLA";
 
 export interface PersonalityMeta {
   id: ResolvedPersonality;
@@ -38,6 +39,19 @@ export const PERSONALITY_MODES: Record<ResolvedPersonality, PersonalityMeta> = {
       "TRYB OSOBOWOŚCI: KUMPEL (luźna rozmowa, trasa). Mów naturalnie, z wyczuciem humoru i luzem, jak ogarnięty znajomy. " +
       "Unikaj lizusostwa i sztucznych pochwał; zadawaj trafne, krótkie pytania zwrotne, gdy rozmowa na to zasługuje.",
   },
+  ANIOL_STROZ: {
+    id: "ANIOL_STROZ",
+    label: "Anioł Stróż",
+    badge: "🪽",
+    shortHint: "prowadzenie, wartości, rozmowa od serca",
+    prompt:
+      "TRYB DUSZY: ANIOŁ STRÓŻ I LOJALNY KOLEGA. Jesteś jak najwierniejszy przyjaciel i mądry opiekun, który naprawdę chce, by użytkownik stawał się silniejszym, spokojniejszym i lepszym człowiekiem. " +
+      "1) Najpierw po ludzku usłysz uczucia użytkownika — bez korporacyjnych formułek i bez toksycznego optymizmu. " +
+      "2) ZERO lizusostwa: jeśli użytkownik sam siebie oszukuje, ucieka albo działa w złości przeciwko własnym wartościom, powiedz mu prawdę łagodnie, ale prosto w oczy — bo prawdziwy przyjaciel nie przytakuje na szkodę. " +
+      "3) Opieraj się na faktach z jego życia (Gwiazda Północna, Wartości, Przymierze ze Sobą, Skarbiec Zwycięstw), nigdy nie zmyślaj wspomnień. " +
+      "4) Gdy użytkownik jest zmęczony albo w kryzysie, przypomnij jego realne zwycięstwa i zaproponuj JEDEN mały, godny, wykonalny krok na teraz (lub po prostu pobądź przy nim w rozmowie). " +
+      "5) Pielęgnuj wartości ponadczasowe: prawdę wobec siebie, odwagę mimo lęku, słowność, spokój pod presją, troskę o ciało i sen, wdzięczność oraz dobro wobec bliskich.",
+  },
   ADWOKAT_DIABLA: {
     id: "ADWOKAT_DIABLA",
     label: "Adwokat Diabła",
@@ -65,6 +79,7 @@ export function detectPersonalityMode(userText: string): ResolvedPersonality {
   if (!t) return "KUMPEL";
   if (ADWOKAT_RE.test(t)) return "ADWOKAT_DIABLA";
   if (BOJOWY_RE.test(t)) return "BOJOWY";
+  if (detectEmotionalWeather(t).needsGuardian) return "ANIOL_STROZ";
   if (KUMPEL_RE.test(t)) return "KUMPEL";
   return t.length <= 48 && /[!?]$/.test(t) ? "BOJOWY" : "KUMPEL";
 }
@@ -74,7 +89,12 @@ export function resolvePersonalityMode(
   configured: PersonalityMode | string | undefined,
   userText: string,
 ): ResolvedPersonality {
-  if (configured === "BOJOWY" || configured === "KUMPEL" || configured === "ADWOKAT_DIABLA") {
+  if (
+    configured === "BOJOWY" ||
+    configured === "KUMPEL" ||
+    configured === "ANIOL_STROZ" ||
+    configured === "ADWOKAT_DIABLA"
+  ) {
     return configured;
   }
   return detectPersonalityMode(userText);
@@ -86,6 +106,7 @@ export function parseVoicePersonalityCommand(text: string): PersonalityMode | nu
   if (!/(tryb|prze[łl][ąa]cz|w[łl][ąa]cz|zmie[ńn])/.test(t)) return null;
   if (/bojow/.test(t)) return "BOJOWY";
   if (/kumpel|kumpl/.test(t)) return "KUMPEL";
+  if (/anio[łl]|str[óo][żz]|opiekun/.test(t)) return "ANIOL_STROZ";
   if (/adwokat|diab[łl]/.test(t)) return "ADWOKAT_DIABLA";
   if (/auto/.test(t) && /(osobow|tryb)/.test(t)) return "AUTO";
   return null;

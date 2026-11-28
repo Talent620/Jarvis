@@ -26,6 +26,7 @@ export const JARVIS_MODULES = [
   "OMNI-PILOT & Frontier Desktop Computer Use (Refleks <30ms, Hybryda AT-SPI2/UIA + Vision [0..1000], Dual-Track Strażnik Ekranu, Diagnostyka OS, RiskGuard + Kill-Switch Ctrl+Alt+X)",
   "JARVIS FORGE + AUTOPILOT ORCHESTRATOR (Jedno polecenie zero-config: Adaptive Intelligence, dynamiczne zespoły, 14 darmowych/lokalnych modeli 0 USD, git worktree, pamięć projektu/ADR, bramka zgody waiting_approval, testy, cross-model review, checkpointy i rollback)",
   "JARVIS FLOW — Reżyser Skupienia (100% offline sprinty 15/25/45 min, Parking Myśli → 1-klik Zadanie/Notatka, proceduralny Web Audio generator dźwięku, Momentum & debrief)",
+  "JARVIS ANIOŁ STRÓŻ & KOMPAS ŻYCIA (4. tryb duszy Anioł Stróż, 7 Filarów Charakteru z radarem SVG, Przymierze ze Sobą w protokole Zero-Wstydu, Skarbiec Zwycięstw, Kapsuły Czasu, Poranny Kompas / Wieczorne Lustro, Oddech 4-4-6, Tarcza Kryzysowa — 100% prywatnie offline)",
   "Centrum Aktualizacji 1-Klik (Topbar + ⌘K + natywny downloader Electron z paskiem postępu %, weryfikacją SHA256, auto chmod +x dla AppImage oraz katalog Ubuntu .AppImage/.deb, Windows .exe i Android APK/OTA)",
   "Bi-Temporal Core Memory + MCP Bridge",
 ] as const;
@@ -181,7 +182,7 @@ const ALLOWED_PROVIDERS = new Set([
   "auto", "modal", "anthropic", "gemini", "groq", "cerebras", "mistral", "cohere", "openrouter", "nvidia", "github", "ollama", "webllm",
 ]);
 const ALLOWED_VOICE_MODES = new Set<VoiceMode>(["system", "gemini", "eleven", "openai", "modal", "fish", "local"]);
-const ALLOWED_PERSONALITIES = new Set<PersonalityMode>(["AUTO", "BOJOWY", "KUMPEL", "ADWOKAT_DIABLA"]);
+const ALLOWED_PERSONALITIES = new Set<PersonalityMode>(["AUTO", "BOJOWY", "KUMPEL", "ANIOL_STROZ", "ADWOKAT_DIABLA"]);
 const ALLOWED_ELEVEN_MODELS = new Set(["eleven_flash_v2_5", "eleven_multilingual_v2"]);
 const ALLOWED_OPENAI_TTS_MODELS = new Set(["gpt-4o-mini-tts", "tts-1", "tts-1-hd"]);
 const ALLOWED_AUTONOMY = new Set(["STANDARD", "OPERATOR"]);
